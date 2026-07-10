@@ -7,41 +7,39 @@ completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: User reviews the drafted design spec (docs/superpowers/specs/2026-07-10-field-notes-design.md); on approval, decompose into MSPs via mitosis (plan-to-task-graph inside)
+next_step: Launch a FRESH mitosis run (new runId, NOT a resume of wf_6b26b84f-135) using the exact Workflow call in sessions/2026-07-10-02-journal-app-design.md. Fonts are pre-vendored so design-tokens should clear. Watch /workflows.
 branch: main
 ---
 
 ## Status
-Brainstorming through design Parts 1-3 complete and user-approved. All 14 reconciliation points resolved (decisions/2026-07-10-reconciliation-resolutions.md); client stack locked via cited research (decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift). The v1 design spec is DRAFTED at docs/superpowers/specs/2026-07-10-field-notes-design.md and passed self-review; awaiting user read. v1 = ENTIRE prototype minus server sync (local-only; sync/E2EE UI built but disabled), light-only, "Field Notes".
+Design complete + user-approved. Implementation BOOTSTRAPPED: Flutter 3.44.6 installed; minimal Phase 0 skeleton committed (Riverpod 3.3.2 + drift 2.34.1, analyze/test green); receipts CI installed; 3 OFL fonts vendored under assets/fonts/. Two mitosis runs failed on fixable issues (run 1: `sourcePrefix` double-slash ref; run 2: font-download blocked by the harness safety classifier) — BOTH root-caused and resolved. Repo clean: main == origin/main == 54a2c51, only `main`, no worktrees. Ready for a FRESH mitosis run (31 MSPs).
 
 ## Active Goal
-Get the drafted v1 design spec user-approved, then produce the implementation plan / MSP decomposition.
+Execute Field Notes v1 via mitosis (fresh run) — decompose + ship the 31 MSPs into the private repo.
 
 ## Next Step
-User reviews the drafted spec. On approval, route implementation through the mitosis skill (SPEC-shaped, multi-MSP); commit spec + ledger when the user asks (repo has no commits yet — branch first).
+Launch the fresh mitosis run (exact args in sessions/2026-07-10-02-journal-app-design.md and decisions/2026-07-10-mitosis-run-contract.md). Do NOT resume wf_6b26b84f-135 (spec changed since its cached decompose).
 
 ## Open Risks
-- macOS camera relies on the community camera_macos plugin (Flutter official camera excludes macOS) — verify before relying.
-- v2 (deferred): E2EE across devices — recovery-passphrase-derived key (Argon2) + QR device-2 pairing; standalone-to-server first-merge reconciliation rule still to be finalized when v2 is specced.
-- v1 forward-compat: local schema must carry stable UUID ids + updatedAt so v2 sync can migrate existing local data without a rewrite.
+- camera_macos community plugin + macOS video thumbnails — verify early (Phase 2).
+- Binary assets CANNOT be agent-downloaded (harness blocks curl/wget for agents AND main thread) — must be human-provided + committed (see fonts decision). Applies to sound effects / any future binaries.
+- Platform build toolchains (full Xcode + CocoaPods, Android SDK) not installed — needed only at Phase 8 (human step).
+- mitosis is multi-hour and opens ~31 PRs on the private repo; expect churn.
 
 ## Key Decisions
-- decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift; v1 schema conventions (ULID, updated_at, deleted_at, content-addressed media); version/device_id deferred
-- decisions/2026-07-10-reconciliation-resolutions.md — all 14 points resolved; v1 = prototype minus sync, light-only, "Field Notes"
+- decisions/2026-07-10-mitosis-run-contract.md — exact fresh-run inputs; sourcePrefix "msp" (no trailing slash)
+- decisions/2026-07-10-fonts-vendored-human-provided.md — vendored OFL fonts, human-provided (downloads blocked)
+- decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift; v1 schema conventions
+- decisions/2026-07-10-reconciliation-resolutions.md — all 14 points; v1 = prototype minus sync, light-only
 - decisions/2026-07-09-tech-stack.md — Flutter + SQLite both + custom REST sync + E2EE + Tailscale
-- decisions/2026-07-09-standalone-first.md — app works fully without a server; sync optional
-- decisions/2026-07-09-product-model.md — day/entry/memory model, 10 moods, streak, reminders, nav (gallery + streak clauses overridden by 2026-07-10 record)
-- decisions/2026-07-09-design-baseline.md — Field Notes prototype is the visual baseline
 
 ## Out of Scope
-- iOS (excluded — no dev account; 7-day resign pain)
-- Server-side search/thumbnails (impossible under E2EE; on-device only)
-- CRDTs, Postgres, MinIO, Cloudflare Tunnel, multi-user support
+- iOS; server-side search/thumbnails; CRDTs/Postgres/MinIO/Cloudflare Tunnel; multi-user; pooled Memories gallery.
 
 ## Pointers
-- docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
-- DesignSync project eafe8d73-b380-44be-9b2e-6431c0f35f26 — Field Notes.dc.html (the prototype)
+- docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 now notes pre-vendored fonts + skeleton status)
+- GitHub: SatanshuMishra/field-notes (PRIVATE; renamed from fireplace; local dir still "fireplace")
 
 ## Recent Sessions
+- sessions/2026-07-10-02-journal-app-design.md
 - sessions/2026-07-10-01-journal-app-design.md
-- sessions/2026-07-09-01-journal-app-design.md
