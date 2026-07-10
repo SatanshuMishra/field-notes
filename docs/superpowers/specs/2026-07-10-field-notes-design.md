@@ -7,6 +7,14 @@ Supersedes/extends: decisions/2026-07-09-*.md, decisions/2026-07-10-reconciliati
 
 ---
 
+## 0. Implementation status (2026-07-10)
+
+The minimal Phase 0 skeleton is already scaffolded and committed on `main` (HEAD): a buildable Flutter project named `field_notes` (org `dev.satanshumishra`, platforms macOS + Android), with `flutter_riverpod` 3.x + `riverpod_annotation` + `drift` + `drift_dev` + `sqlite3_flutter_libs` + `path_provider` + `path` wired in `pubspec.yaml`, a `ProviderScope`-wrapped placeholder `MaterialApp` (light theme), `flutter_lints`, and a passing smoke test. `flutter analyze` is clean and `flutter test` is green. The verify command is `flutter analyze && flutter test`.
+
+Remaining work for this decomposition: the rest of Phase 0 (design tokens, sticker-cutout widget kit, three fonts, adaptive shell, full Riverpod/drift wiring) plus Phases 1-8. Do NOT re-run `flutter create` or re-scaffold the project; build on the committed skeleton. Platform build toolchains (full Xcode + CocoaPods for macOS, Android SDK for Android) are not yet installed and are only needed at Phase 8 (manual device verification + sideload packaging), a human step.
+
+---
+
 ## 1. Summary (BLUF)
 
 Field Notes is a personal journaling app for macOS and Android with a cozy, hand-drawn cel-shaded aesthetic. Each day holds a set of entries (text, voice, or video) plus attached photo "memories," an optional single mood-flower, a streak, and a daily reminder.
