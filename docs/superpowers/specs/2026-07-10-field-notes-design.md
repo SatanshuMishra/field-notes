@@ -13,6 +13,8 @@ The minimal Phase 0 skeleton is already scaffolded and committed on `main` (HEAD
 
 Remaining work for this decomposition: the rest of Phase 0 (design tokens, sticker-cutout widget kit, three fonts, adaptive shell, full Riverpod/drift wiring) plus Phases 1-8. Do NOT re-run `flutter create` or re-scaffold the project; build on the committed skeleton. Platform build toolchains (full Xcode + CocoaPods for macOS, Android SDK for Android) are not yet installed and are only needed at Phase 8 (manual device verification + sideload packaging), a human step.
 
+**Fonts are pre-vendored — do NOT download them.** The three OFL font families are already committed on `main` under `assets/fonts/`: `Newsreader-Variable.ttf`, `Newsreader-Italic-Variable.ttf`, `InstrumentSans-Variable.ttf`, `Caveat-Variable.ttf`, plus `Newsreader-OFL.txt` / `InstrumentSans-OFL.txt` / `Caveat-OFL.txt` licenses. The harness safety layer blocks agents (and the main thread) from downloading binaries, so the `design-tokens` MSP's font step must ONLY register these existing files in `pubspec.yaml`'s `fonts:` block and build the typography scale — it must NOT run any `curl`/`wget` fetch and must NOT introduce the `google_fonts` package. Font family names to register: serif = `Newsreader`, sans = `Instrument Sans`, accent = `Caveat`.
+
 ---
 
 ## 1. Summary (BLUF)
