@@ -1,0 +1,29 @@
+{
+  "$schema": "./receipts.config.schema.json",
+  "version": 1,
+  "claim": {
+    "issue_link": "closes #(\\d+)",
+    "downgrade_tags": ["unverified-reasoned", "speculative", "reverted"]
+  },
+  "build": {
+    "sha_source": "git rev-parse HEAD"
+  },
+  "verify": {
+    "test_command": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter test",
+    "suite_command": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter test",
+    "require_fresh_base": "warn",
+    "live_drive": null,
+    "scopedCheckCmd": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter analyze",
+    "fullValidationCmd": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter analyze && flutter test"
+  },
+  "degrade": {
+    "on_no_receipt": "require-downgrade-tag",
+    "on_unreachable_build": "sha-bind-only"
+  },
+  "gates": {
+    "medium": "library",
+    "enabled": "all",
+    "G8": { "integration_branch": "main" },
+    "G10": { "mode": "warn" }
+  }
+}
