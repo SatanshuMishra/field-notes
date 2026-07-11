@@ -28,5 +28,11 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Field Notes uses the camera to record video moments and add photo memories to your journal.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Field Notes uses the microphone to record voice and video moments in your journal.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Field Notes needs access to your photo library so you can add photo memories to a journal entry.</string>
 </dict>
 </plist>
