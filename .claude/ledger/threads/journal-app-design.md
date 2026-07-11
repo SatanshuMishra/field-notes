@@ -7,27 +7,29 @@ completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: User is fixing the mitosis `await import()` blocker separately (inline prepare-plan.mjs + merge-policy.mjs into mitosis.js). Once it lands, grep mitosis.js for `await import` (must be none), pre-flight the repo, then launch a FRESH mitosis run per decisions/2026-07-10-mitosis-run-contract.md. Do NOT resume wf_05cbf0e7-609.
+next_step: From a FRESH session (NOT a near-full context): confirm HEAD==origin==ec7b959 + pre-flight clean (no stale worktrees; KEEP .mitosis/run.json + 4 remote PRs), then launch mitosis run 7 with the exact contract args (decisions/2026-07-10-mitosis-run-contract.md). Usage limit reset 17:30 so relaunch is viable. Expect the full run to span MULTIPLE usage windows — when it parks on a limit, relaunch to resume. Do NOT resume any prior run id.
 branch: main
 ---
 
 ## Status
-Design complete + user-approved; Phase 0 skeleton + fonts + receipts CI committed (main == origin/main == d3726e0). Field Notes v1 execution is blocked on the mitosis engine: FOUR runs have failed on four distinct, root-caused issues (latest: `await import()` unsupported by the Workflow sandbox). The prepare adopt-vs-bootstrap rearchitecture is verified logically correct for this repo; the user is fixing the import-loading blocker separately.
+Design complete + user-approved; Phase 0 skeleton + fonts + receipts CI committed. THE MITOSIS ENGINE IS PROVEN: run 5 (wf_2a220c77-2e6) ran end-to-end — decomposed 31 MSPs (1 cluster), built + opened PRs #1-4 (platform-permissions, mood-catalog, design-tokens, drift-database), but ALL CI-RED on a spurious `npm ci` in receipts.yml. Fix landed: deleted receipts.yml:16 `npm ci`, pushed origin/main == ec7b959. Run 6 (wf_0e9953fd-8e2) relaunched but FAILED at ~18min purely on the Claude USAGE LIMIT (16/20 agents: "hit your session limit · resets 5:30pm America/Edmonton") — NOT a code/engine bug. Limit reset 17:30; now past it. State clean + relaunch-ready (no stale worktrees, ec7b959==origin, .mitosis/run.json + 4 remote PRs intact).
 
 ## Active Goal
-Execute Field Notes v1 via mitosis (fresh run) — decompose + ship the 36 MSPs into the private repo.
+Execute Field Notes v1 via mitosis — ship all 31 MSPs into the private repo (SatanshuMishra/field-notes).
 
 ## Next Step
-Once the user confirms the mitosis import() fix landed: `grep -n "await import" ~/.claude/workflows/mitosis.js` must return nothing; pre-flight repo clean (remove any stale .mitosis/run.json; no msp/* branches; no worktrees); then launch the FRESH run with the exact args in decisions/2026-07-10-mitosis-run-contract.md (verbatim block also in sessions/2026-07-10-02). Do NOT resume wf_05cbf0e7-609.
+Relaunch mitosis run 7 from a fresh session with the contract args. The engine is proven and the CI bug is fixed (ec7b959) — no debugging needed. It rebuilds the 4 foundation MSPs onto their existing PRs #1-4 and builds the other 27. Because a full run exceeds one usage window, plan to relaunch-to-resume across windows until all 31 ship. On full success, decide merge policy (review-and-merge the green PRs vs relaunch autonomous) and land v1 on main. Do NOT resume any prior run id.
 
 ## Open Risks
-- mitosis engine stability: 4 consecutive early-stage failures (sourcePrefix double-slash, font-download block, weaken false-positive, await-import). Each root-caused; watch for a 5th mode at prepare/decompose before trusting a full run.
-- Binary assets CANNOT be agent-downloaded (harness blocks curl/wget); must be human-provided + committed. Applies to sound effects / future binaries.
+- Usage-window ceiling: a full 31-MSP run (~3.9M subagent tokens / 2h) exceeds one Claude usage window; run 6 died on it at ~18min. Expect multiple relaunch-to-resume cycles. Launch from a fresh context, not a near-full one.
+- Relaunch pre-flight is mandatory each time: remove any stale worktrees (branch-prep collides otherwise), KEEP .mitosis/run.json (MSP-id stability -> no duplicate PRs), leave remote PRs/branches.
+- Merge policy undecided: human-gated yields ~31 green PRs awaiting human merge; autonomous would auto-land v1 on main. See decisions/2026-07-11-receipts-ci-fix-and-relaunch-semantics.md.
+- Binary assets CANNOT be agent-downloaded (harness blocks curl/wget); human-provided + committed. Applies to sound effects / future binaries.
 - camera_macos community plugin + macOS video thumbnails — verify early (Phase 2).
 - Platform build toolchains (full Xcode + CocoaPods, Android SDK) not installed — needed only at Phase 8 (human step).
-- mitosis is multi-hour and opens ~36 PRs on the private repo; expect churn.
 
 ## Key Decisions
+- decisions/2026-07-11-receipts-ci-fix-and-relaunch-semantics.md — receipts.yml npm-ci fix (ec7b959); relaunch rebuilds open-PR MSPs; keep run.json / remove worktrees pre-flight
 - decisions/2026-07-10-mitosis-run-contract.md — exact fresh-run inputs; sourcePrefix "msp" (no trailing slash)
 - decisions/2026-07-10-fonts-vendored-human-provided.md — vendored OFL fonts, human-provided (downloads blocked)
 - decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift; v1 schema conventions
@@ -42,5 +44,5 @@ Once the user confirms the mitosis import() fix landed: `grep -n "await import" 
 - GitHub: SatanshuMishra/field-notes (PRIVATE; renamed from fireplace; local dir still "fireplace")
 
 ## Recent Sessions
+- sessions/2026-07-11-02-journal-app-design.md
 - sessions/2026-07-11-01-journal-app-design.md
-- sessions/2026-07-10-02-journal-app-design.md
