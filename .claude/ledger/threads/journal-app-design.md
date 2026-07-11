@@ -1,30 +1,31 @@
 ---
 thread: journal-app-design
 status: paused
-updated: 2026-07-10
+updated: 2026-07-11
 priority: high
 completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Launch a FRESH mitosis run (new runId, NOT a resume of wf_6b26b84f-135) using the exact Workflow call in sessions/2026-07-10-02-journal-app-design.md. Fonts are pre-vendored so design-tokens should clear. Watch /workflows.
+next_step: User is fixing the mitosis `await import()` blocker separately (inline prepare-plan.mjs + merge-policy.mjs into mitosis.js). Once it lands, grep mitosis.js for `await import` (must be none), pre-flight the repo, then launch a FRESH mitosis run per decisions/2026-07-10-mitosis-run-contract.md. Do NOT resume wf_05cbf0e7-609.
 branch: main
 ---
 
 ## Status
-Design complete + user-approved. Implementation BOOTSTRAPPED: Flutter 3.44.6 installed; minimal Phase 0 skeleton committed (Riverpod 3.3.2 + drift 2.34.1, analyze/test green); receipts CI installed; 3 OFL fonts vendored under assets/fonts/. Two mitosis runs failed on fixable issues (run 1: `sourcePrefix` double-slash ref; run 2: font-download blocked by the harness safety classifier) — BOTH root-caused and resolved. Repo clean: main == origin/main == 54a2c51, only `main`, no worktrees. Ready for a FRESH mitosis run (31 MSPs).
+Design complete + user-approved; Phase 0 skeleton + fonts + receipts CI committed (main == origin/main == d3726e0). Field Notes v1 execution is blocked on the mitosis engine: FOUR runs have failed on four distinct, root-caused issues (latest: `await import()` unsupported by the Workflow sandbox). The prepare adopt-vs-bootstrap rearchitecture is verified logically correct for this repo; the user is fixing the import-loading blocker separately.
 
 ## Active Goal
-Execute Field Notes v1 via mitosis (fresh run) — decompose + ship the 31 MSPs into the private repo.
+Execute Field Notes v1 via mitosis (fresh run) — decompose + ship the 36 MSPs into the private repo.
 
 ## Next Step
-Launch the fresh mitosis run (exact args in sessions/2026-07-10-02-journal-app-design.md and decisions/2026-07-10-mitosis-run-contract.md). Do NOT resume wf_6b26b84f-135 (spec changed since its cached decompose).
+Once the user confirms the mitosis import() fix landed: `grep -n "await import" ~/.claude/workflows/mitosis.js` must return nothing; pre-flight repo clean (remove any stale .mitosis/run.json; no msp/* branches; no worktrees); then launch the FRESH run with the exact args in decisions/2026-07-10-mitosis-run-contract.md (verbatim block also in sessions/2026-07-10-02). Do NOT resume wf_05cbf0e7-609.
 
 ## Open Risks
+- mitosis engine stability: 4 consecutive early-stage failures (sourcePrefix double-slash, font-download block, weaken false-positive, await-import). Each root-caused; watch for a 5th mode at prepare/decompose before trusting a full run.
+- Binary assets CANNOT be agent-downloaded (harness blocks curl/wget); must be human-provided + committed. Applies to sound effects / future binaries.
 - camera_macos community plugin + macOS video thumbnails — verify early (Phase 2).
-- Binary assets CANNOT be agent-downloaded (harness blocks curl/wget for agents AND main thread) — must be human-provided + committed (see fonts decision). Applies to sound effects / any future binaries.
 - Platform build toolchains (full Xcode + CocoaPods, Android SDK) not installed — needed only at Phase 8 (human step).
-- mitosis is multi-hour and opens ~31 PRs on the private repo; expect churn.
+- mitosis is multi-hour and opens ~36 PRs on the private repo; expect churn.
 
 ## Key Decisions
 - decisions/2026-07-10-mitosis-run-contract.md — exact fresh-run inputs; sourcePrefix "msp" (no trailing slash)
@@ -37,9 +38,9 @@ Launch the fresh mitosis run (exact args in sessions/2026-07-10-02-journal-app-d
 - iOS; server-side search/thumbnails; CRDTs/Postgres/MinIO/Cloudflare Tunnel; multi-user; pooled Memories gallery.
 
 ## Pointers
-- docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 now notes pre-vendored fonts + skeleton status)
+- docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 notes pre-vendored fonts + skeleton status)
 - GitHub: SatanshuMishra/field-notes (PRIVATE; renamed from fireplace; local dir still "fireplace")
 
 ## Recent Sessions
+- sessions/2026-07-11-01-journal-app-design.md
 - sessions/2026-07-10-02-journal-app-design.md
-- sessions/2026-07-10-01-journal-app-design.md

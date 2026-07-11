@@ -20,15 +20,16 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — design done; implementation bootstrapped (skeleton + fonts + receipts CI at 54a2c51); next = FRESH mitosis run
+- journal-app-design — paused — design done + bootstrapped; v1 execution blocked on mitosis engine (await import() unsupported by workflow sandbox); user fixing separately, then FRESH run
 
-## State snapshot (2026-07-10)
+## State snapshot (2026-07-11)
 - Flutter 3.44.6 installed; Phase 0 skeleton committed (analyze/test green); receipts CI live; 3 OFL fonts vendored.
-- Repo clean: main == origin/main == 54a2c51; only `main`; no worktrees. Two mitosis runs failed (both fixed); ready for a fresh run.
+- Repo clean: main == origin/main == d3726e0; only `main`; no worktrees; 0 `msp/*` branches. FOUR mitosis runs have failed on distinct root-caused issues (latest: `await import()` unsupported by the workflow sandbox); prepare adopt-vs-bootstrap logic verified correct.
 - GitHub repo renamed fireplace -> field-notes (PRIVATE); local directory still "fireplace".
 
 ## Pointers
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
 - .claude/ledger/threads/journal-app-design.md — current line of work
-- .claude/ledger/sessions/2026-07-10-02-journal-app-design.md — latest session (full fresh-run command)
+- .claude/ledger/sessions/2026-07-11-01-journal-app-design.md — latest session (4 mitosis failures diagnosed; import() fix pending)
+- .claude/ledger/sessions/2026-07-10-02-journal-app-design.md — full verbatim fresh-run Workflow command
