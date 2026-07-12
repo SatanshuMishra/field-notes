@@ -7,30 +7,29 @@ completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: From a FRESH session, pre-flight (HEAD 07e38fc local / origin ef3e8c6; run.json intact; leave the 3 ship worktrees in place — reused idempotently), then relaunch mitosis with the verbatim block in sessions/2026-07-11-03 but mergePolicy "human-gated". Merge each green PR it publishes via gh pr merge --squash (authorized this session), then relaunch the next dependency layer. Do NOT resume a prior run id.
+next_step: Fresh session -> Option B. Relaunch mitosis with mergePolicy "human-gated" to BUILD the ~24 unbuilt dependents against origin/main 5e73d67 (this is where the engine is genuinely needed). Merge each green PR via gh pr merge --squash (authorized pattern), then relaunch the next dependency layer. Do NOT resume run wf_a1015521-c4c.
 branch: main
 ---
 
 ## Status
-AUTONOMOUS PROVEN STRUCTURALLY BLOCKED. Run wf_b72ceb41-dd5 (mergePolicy "autonomous") ran to completion (~75min, 86 agents) and shipped 0: the harness safety classifier bars delegated ship agents from self-merging (Merge Without Review + Self-Approval), proactively, so they never publish — no PRs reached origin. domain-models/flower-svg-set/sticker-widget-kit are BUILT + tested on local integration branches but unshipped. Pivoted to human-gated policy. 4/31 remain the only merges (origin/main ef3e8c6).
+7/31 SHIPPED (origin/main 5e73d67). This session shipped the 3 second-layer foundations (domain-models #5, flower-svg-set #6, sticker-widget-kit #7) via DIRECT main-thread push+PR+squash after proving a mitosis relaunch was the wrong tool for already-built code (its ship step adds no receipt metadata; a plain push passes receipts CI). 24 unbuilt dependents remain.
 
 ## Active Goal
-Ship the remaining 27 Field Notes v1 MSPs to origin/main via HUMAN-GATED mitosis relaunches (agents publish green PRs + stop; main thread merges with per-session consent), layer by layer across usage windows.
+Ship all 31 Field Notes v1 MSPs to origin/main. Remaining work (Option B) = BUILD the 24 dependents via human-gated mitosis relaunches (agents publish green PRs; main thread merges), layer by layer across usage windows.
 
 ## Next Step
-Fresh session -> pre-flight -> relaunch mitosis with mergePolicy "human-gated" (verbatim block in sessions/2026-07-11-03, that one change) -> merge each green PR (authorized) -> relaunch next layer. Repeat until all 31 ship. Then Phase 8 (human toolchain install + local build/sideload).
+Fresh session -> relaunch mitosis (human-gated) to build the next dependency layer against origin/main 5e73d67 -> merge each green PR (main thread) -> relaunch next layer. Repeat until 31/31, then Phase 8.
 
 ## Open Risks
-- Publish-time gating (untested on human-gated): ship must `git push -u` a new branch + `gh pr create`. Session-03 showed fast-forward publish is NOT blocked and PR-open is not a merge, so it should pass — confirm on the first human-gated run.
-- Usage-window ceiling: layer-by-layer shipping spans many windows; launch each relaunch from a FRESH (not near-full) context — run 8 died launching near-full.
-- Preserve the 3 built worktrees/branches until shipped; relaunch reuses them idempotently (mitosis.js:672). Do NOT delete.
-- Lingering published-unmerged dependent: if a relaunch dies after `git push -u` but before merge, the next relaunch rebases + may need `--force-with-lease` (could re-hit the denial) — main-thread force-push resolves it.
-- Local launch blocked until Phase 8: full Xcode+CocoaPods + Android SDK not installed.
+- Two ship modes now proven: (a) DIRECT main-thread ship works for ALREADY-BUILT branches (used this session); (b) mitosis is needed only to BUILD unbuilt code. Do not route already-built branches through the engine.
+- Launch each mitosis relaunch from a FRESH (not near-full) context — runs die when launched near-full (run 8, and wf_a1015521-c4c killed on process exit).
+- Delegated ship agents cannot self-merge (harness classifier) and human-gated agents publish-then-stop; main thread does every merge.
+- Local launch blocked until Phase 8 (full Xcode+CocoaPods + Android SDK not installed).
 - Binary assets cannot be agent-downloaded; human-provided + committed.
 
 ## Key Decisions
-- decisions/2026-07-12-human-gated-merge-policy.md — autonomous structurally blocked; human-gated + main-thread merge, layer-by-layer
-- decisions/2026-07-11-foundations-shipped-autonomous-policy.md — 4 foundations merged (ef3e8c6); autonomous-for-27 part SUPERSEDED
+- decisions/2026-07-12-direct-ship-built-msps.md — direct main-thread ship of already-built MSPs (Option A); engine reserved for building unbuilt dependents (Option B)
+- decisions/2026-07-12-human-gated-merge-policy.md — autonomous structurally blocked; human-gated + main-thread merge (governs Option B builds)
 - decisions/2026-07-11-receipts-ci-fix-and-relaunch-semantics.md — receipts.yml npm-ci fix (ec7b959); relaunch/keep-run.json semantics
 - decisions/2026-07-10-mitosis-run-contract.md — exact fresh-run inputs; sourcePrefix "msp"
 - decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift; v1 schema conventions
@@ -41,11 +40,11 @@ Fresh session -> pre-flight -> relaunch mitosis with mergePolicy "human-gated" (
 
 ## Pointers
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 notes pre-vendored fonts + skeleton status)
-- .mitosis/run.json — 31 MSP manifest (KEEP across relaunches; MSP-id stability -> PR reuse)
-- sessions/2026-07-11-03-journal-app-design.md — verbatim relaunch block (change mergePolicy to "human-gated")
+- .mitosis/run.json — 31 MSP manifest (KEEP across relaunches; MSP-id stability -> PR reuse; done-oracle skips the 7 merged)
+- sessions/2026-07-12-02-journal-app-design.md — this session (Option A: 3 direct-shipped; direct-vs-engine lesson)
 - GitHub: SatanshuMishra/field-notes (PRIVATE; renamed from fireplace; local dir still "fireplace")
 
 ## Recent Sessions
+- sessions/2026-07-12-02-journal-app-design.md
 - sessions/2026-07-12-01-journal-app-design.md
 - sessions/2026-07-11-04-journal-app-design.md
-- sessions/2026-07-11-03-journal-app-design.md
