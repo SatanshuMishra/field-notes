@@ -2,8 +2,19 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 
 import 'settings_harness.dart';
+
+Border _borderOf(WidgetTester tester) {
+  final DecoratedBox box = tester.widget<DecoratedBox>(
+    find.descendant(
+      of: find.byType(SettingsTextField),
+      matching: find.byType(DecoratedBox),
+    ),
+  );
+  return (box.decoration as BoxDecoration).border! as Border;
+}
 
 void main() {
   group('SettingsTextField', () {
@@ -66,6 +77,61 @@ void main() {
           )
           .opacity;
       expect(opacity, 0.5);
+    });
+
+    testWidgets('gains focus and shows the coral border when tapped',
+        (WidgetTester tester) async {
+      final TextEditingController controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        settingsHarness(
+          SizedBox(
+            width: 260,
+            child: SettingsTextField(controller: controller),
+          ),
+        ),
+      );
+
+      expect(_borderOf(tester).top.color, Palette.ink);
+
+      final EditableTextState before = tester.state<EditableTextState>(
+        find.byType(EditableText),
+      );
+      expect(before.widget.focusNode.hasFocus, isFalse);
+
+      await tester.tap(find.byType(SettingsTextField));
+      await tester.pump();
+
+      final EditableTextState after = tester.state<EditableTextState>(
+        find.byType(EditableText),
+      );
+      expect(after.widget.focusNode.hasFocus, isTrue);
+      expect(_borderOf(tester).top.color, Palette.coral);
+    });
+
+    testWidgets('cannot be focused by tap when disabled',
+        (WidgetTester tester) async {
+      final TextEditingController controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        settingsHarness(
+          SizedBox(
+            width: 260,
+            child: SettingsTextField(controller: controller, enabled: false),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(SettingsTextField));
+      await tester.pump();
+
+      final EditableTextState state = tester.state<EditableTextState>(
+        find.byType(EditableText),
+      );
+      expect(state.widget.focusNode.hasFocus, isFalse);
+      expect(state.widget.focusNode.canRequestFocus, isFalse);
     });
   });
 
