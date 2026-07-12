@@ -37,7 +37,12 @@ class SettingsFieldRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 16),
-        control,
+        Flexible(
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: control,
+          ),
+        ),
       ],
     );
   }
