@@ -5,14 +5,14 @@ void main() {
   const crockfordBase32 = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
   group('newId', () {
-    test('returns a 26-character Crockford base32 ULID', () {
+    test('returns a 26-character canonical Crockford base32 ULID', () {
       final id = newId();
       expect(id.length, 26);
       for (final char in id.split('')) {
         expect(
-          crockfordBase32.contains(char),
+          crockfordBase32.contains(char.toUpperCase()),
           isTrue,
-          reason: 'unexpected character "$char" in "$id"',
+          reason: 'unexpected non-Crockford character "$char" in "$id"',
         );
       }
     });
