@@ -48,13 +48,10 @@ class StickerButton extends StatelessWidget {
                     icon!,
                     const SizedBox(width: 8),
                   ],
-                  Flexible(
-                    child: Text(
-                      label,
-                      overflow: TextOverflow.ellipsis,
-                      style: TypographyTokens.buttonSans
-                          .copyWith(color: colors.foreground),
-                    ),
+                  Text(
+                    label,
+                    style: TypographyTokens.buttonSans
+                        .copyWith(color: colors.foreground),
                   ),
                 ],
               ),
