@@ -67,6 +67,57 @@ void main() {
           .opacity;
       expect(opacity, 0.5);
     });
+
+    testWidgets('gains focus when tapped', (WidgetTester tester) async {
+      final TextEditingController controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        settingsHarness(
+          SizedBox(
+            width: 260,
+            child: SettingsTextField(controller: controller),
+          ),
+        ),
+      );
+
+      final EditableText before =
+          tester.widget<EditableText>(find.byType(EditableText));
+      expect(before.focusNode.hasFocus, isFalse);
+
+      await tester.tap(find.byType(SettingsTextField));
+      await tester.pump();
+
+      final EditableText after =
+          tester.widget<EditableText>(find.byType(EditableText));
+      expect(after.focusNode.hasFocus, isTrue);
+    });
+
+    testWidgets('cannot gain focus via tap when disabled',
+        (WidgetTester tester) async {
+      final TextEditingController controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        settingsHarness(
+          SizedBox(
+            width: 260,
+            child: SettingsTextField(
+              controller: controller,
+              enabled: false,
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byType(SettingsTextField));
+      await tester.pump();
+
+      final EditableText editable =
+          tester.widget<EditableText>(find.byType(EditableText));
+      expect(editable.focusNode.canRequestFocus, isFalse);
+      expect(editable.focusNode.hasFocus, isFalse);
+    });
   });
 
   group('SettingsSecretField', () {

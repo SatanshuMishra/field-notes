@@ -25,14 +25,31 @@ class SettingsTextField extends StatefulWidget {
 }
 
 class _SettingsTextFieldState extends State<SettingsTextField> {
+  final GlobalKey<EditableTextState> _editableTextKey =
+      GlobalKey<EditableTextState>();
   late final FocusNode _focusNode;
   bool _focused = false;
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode();
+    _focusNode = FocusNode(
+      canRequestFocus: widget.enabled,
+      skipTraversal: !widget.enabled,
+    );
     _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.enabled != widget.enabled) {
+      _focusNode.canRequestFocus = widget.enabled;
+      _focusNode.skipTraversal = !widget.enabled;
+      if (!widget.enabled && _focusNode.hasFocus) {
+        _focusNode.unfocus();
+      }
+    }
   }
 
   void _handleFocusChange() {
@@ -44,6 +61,24 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
     _focusNode.removeListener(_handleFocusChange);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleTapDown(TapDownDetails details) {
+    if (!widget.enabled) {
+      return;
+    }
+    _editableTextKey.currentState?.renderEditable.handleTapDown(details);
+  }
+
+  void _handleTapUp(TapUpDetails details) {
+    if (!widget.enabled) {
+      return;
+    }
+    if (!_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+    }
+    _editableTextKey.currentState?.renderEditable
+        .selectPosition(cause: SelectionChangedCause.tap);
   }
 
   @override
@@ -59,37 +94,51 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Stack(
-            alignment: Alignment.centerLeft,
-            children: <Widget>[
-              if (widget.hintText != null)
-                IgnorePointer(
-                  child: ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: widget.controller,
-                    builder: (BuildContext context, TextEditingValue value, _) {
-                      if (value.text.isNotEmpty) {
-                        return const SizedBox.shrink();
-                      }
-                      return Text(
-                        widget.hintText!,
-                        style: TypographyTokens.bodySans
-                            .copyWith(color: Palette.placeholder),
-                      );
-                    },
-                  ),
+          child: MergeSemantics(
+            child: Semantics(
+              label: widget.hintText,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: _handleTapDown,
+                onTapUp: _handleTapUp,
+                child: Stack(
+                  alignment: Alignment.centerLeft,
+                  children: <Widget>[
+                    if (widget.hintText != null)
+                      ExcludeSemantics(
+                        child: IgnorePointer(
+                          child: ValueListenableBuilder<TextEditingValue>(
+                            valueListenable: widget.controller,
+                            builder: (BuildContext context,
+                                TextEditingValue value, _) {
+                              if (value.text.isNotEmpty) {
+                                return const SizedBox.shrink();
+                              }
+                              return Text(
+                                widget.hintText!,
+                                style: TypographyTokens.bodySans
+                                    .copyWith(color: Palette.placeholder),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    EditableText(
+                      key: _editableTextKey,
+                      controller: widget.controller,
+                      focusNode: _focusNode,
+                      readOnly: !widget.enabled,
+                      obscureText: widget.obscureText,
+                      keyboardType: widget.keyboardType ?? TextInputType.text,
+                      style: TypographyTokens.bodySans,
+                      cursorColor: Palette.coral,
+                      backgroundCursorColor: Palette.muted,
+                      onChanged: widget.onChanged,
+                    ),
+                  ],
                 ),
-              EditableText(
-                controller: widget.controller,
-                focusNode: _focusNode,
-                readOnly: !widget.enabled,
-                obscureText: widget.obscureText,
-                keyboardType: widget.keyboardType ?? TextInputType.text,
-                style: TypographyTokens.bodySans,
-                cursorColor: Palette.coral,
-                backgroundCursorColor: Palette.muted,
-                onChanged: widget.onChanged,
               ),
-            ],
+            ),
           ),
         ),
       ),
