@@ -11,6 +11,7 @@ import '../database/app_database.dart' as db;
 import 'blob_paths.dart';
 import 'content_hash.dart';
 import 'media_exceptions.dart';
+import 'media_gc.dart';
 
 const String _tmpSubdir = '.tmp';
 
@@ -87,6 +88,11 @@ class FilesystemMediaStore implements MediaStore {
 
   @override
   String absolutePath(MediaBlob blob) => p.join(_root.path, blob.relPath);
+
+  @override
+  Future<int> collectGarbage() {
+    return MediaGarbageCollector(database: _db, root: _root).collectGarbage();
+  }
 
   Future<MediaBlob> _finalize({
     required String id,
