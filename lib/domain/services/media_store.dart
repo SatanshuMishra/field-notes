@@ -25,4 +25,6 @@ abstract interface class MediaStore {
   Future<MediaBlob?> blobById(String id);
 
   String absolutePath(MediaBlob blob);
+
+  Future<int> collectGarbage();
 }
