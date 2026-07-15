@@ -7,18 +7,19 @@ completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Fresh session -> relaunch mitosis (mergePolicy "human-gated", KEEP run.json) against origin/main 6339c6f to BUILD the 19 downstream MSPs (core-providers, capture-*, entry-cards, mood-picker, screens, streak-service, sound-effects, reminders, data-management, settings-screen, shell-nav-integration) + next layers; merge each green PR from main thread (re-confirm merge consent to clear the classifier). VERIFY published PRs via `gh pr list`, not the run summary. Do NOT resume any prior run id.
+next_step: Fresh session -> MERGE published PR #14 core-providers first (re-confirm consent; classifier-gated) to unblock the next layer, THEN relaunch mitosis (mergePolicy "human-gated", KEEP run.json) against origin/main to BUILD the 19 downstream MSPs (core-providers, capture-*, entry-cards, mood-picker, screens, streak-service, sound-effects, reminders, data-management, settings-screen, shell-nav-integration) + next layers; merge each green PR from main thread (re-confirm merge consent to clear the classifier). VERIFY published PRs via `gh pr list`, not the run summary. Do NOT resume any prior run id.
 branch: main
 ---
 
 ## Status
+PAUSED mid-relaunch (2026-07-14 session-02): human-gated run wf_613aa85c-0f8 published PR #14 core-providers (CLEAN, UNMERGED), then I STOPPED it cleanly (context near limit; TaskStop — NOT a usage-limit kill). origin/main still 6339c6f. Run wf_613aa85c-0f8 STOPPED — do NOT resume it or any prior run id; recover via fresh relaunch (done-oracle fast-skips merged). VERIFY published PRs via `gh pr list`, not the run summary.
 13/31 SHIPPED (origin/main 6339c6f). Session 2026-07-14 ran the human-gated relaunch loop 8 -> 13/31: 3 runs published green PRs, main thread merged 5 under per-batch consent — #9 feedback-motion-kit, #10 settings-fields-kit, #11 journal-repository, #12 settings-repository, #13 media-store. LAYER-1 + repository + media layer COMPLETE. 19 downstream dependents remain, all now unblocked by media-store #13.
 
 ## Active Goal
 Ship all 31 Field Notes v1 MSPs to origin/main. Remaining (Option B) = BUILD the 19 downstream dependents via human-gated mitosis relaunches (agents publish green PRs; main thread merges), layer by layer across usage windows.
 
 ## Next Step
-Fresh session -> relaunch mitosis (human-gated) against origin/main 6339c6f to build the 19 downstream MSPs -> merge each green PR (main thread, re-confirm consent) -> relaunch next layer. Repeat until 31/31, then Phase 8.
+Fresh session -> merge published PR #14 core-providers first (main thread, re-confirm consent) -> relaunch mitosis (human-gated, KEEP run.json) to build the next downstream MSPs -> merge each green PR (consent) -> relaunch next layer. Repeat until 31/31, then Phase 8.
 
 ## Open Risks
 - The mitosis `result.shipped` array is MISLEADING — it lists only done-oracle fast-skips (already-merged), NOT PRs the run just published. Always verify via `gh pr list --state open`; the summary hid every newly-published PR this session.
@@ -47,6 +48,7 @@ Fresh session -> relaunch mitosis (human-gated) against origin/main 6339c6f to b
 - GitHub: SatanshuMishra/field-notes (PRIVATE; renamed from fireplace; local dir still "fireplace")
 
 ## Recent Sessions
+- sessions/2026-07-14-02-journal-app-design.md
 - sessions/2026-07-14-01-journal-app-design.md
 - sessions/2026-07-12-03-journal-app-design.md
 - sessions/2026-07-12-02-journal-app-design.md

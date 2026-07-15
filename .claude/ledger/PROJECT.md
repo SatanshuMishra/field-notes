@@ -24,7 +24,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 13/31 shipped (6339c6f); #9-#13 merged (motion-kit, settings-fields, journal-repo, settings-repo, media-store); layer-1+repo+media complete; next = Option B: human-gated relaunch against 6339c6f to BUILD the 19 remaining downstream dependents, layer-by-layer (multi-window; session-limit bound)
+- journal-app-design — paused — 13/31 merged (6339c6f) + PR #14 core-providers published-but-UNMERGED; run wf_613aa85c-0f8 STOPPED cleanly mid-relaunch (context limit). Next = merge #14 first, then human-gated relaunch to BUILD remaining downstream dependents, layer-by-layer (multi-window)
 
 ## State snapshot (2026-07-14)
 - Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 6339c6f (13 squash-merges); local main reconciled (ledger commits rebased atop origin/main).
@@ -37,6 +37,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
 - .claude/ledger/threads/journal-app-design.md — current line of work
-- .claude/ledger/sessions/2026-07-14-01-journal-app-design.md — latest session (8 -> 13/31; layer-1+repo+media complete; shipped-array lesson)
+- .claude/ledger/sessions/2026-07-14-02-journal-app-design.md — latest session (relaunch wf_613aa85c-0f8 published PR #14 core-providers, stopped cleanly at context limit; merge #14 first next session)
+- .claude/ledger/sessions/2026-07-14-01-journal-app-design.md — 8 -> 13/31; layer-1+repo+media complete; shipped-array lesson
 - .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch block (contract args; flip mergePolicy to "human-gated")
 - .mitosis/run.json — 31 MSP manifest (KEEP across relaunches for PR reuse)
