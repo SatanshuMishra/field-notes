@@ -7,30 +7,32 @@ completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Fresh session (CLEAN context) -> relaunch mitosis human-gated (KEEP run.json; contract in sessions/2026-07-11-03) against origin/main 66a12a46. Expect the 7 session-limit MSPs to build + publish; expect entry-cards to re-park on its deterministic add/add conflict. VERIFY published PRs via `gh pr list --state open`, NOT result.shipped. Merge each green PR from the main thread under explicit per-batch consent. Do NOT resume any prior run id.
+next_step: Fresh session (CLEAN context) -> LAUNCH batch 1 mitosis human-gated. run.json is ALREADY fixed+trimmed to 18 MSPs (14 merged + mood-picker/streak-service/sound-effects/data-management), one compact line, reuse-gate VERIFIED. Use the sessions/2026-07-11-03 contract but with `mergePolicy:"human-gated"` (NOT its autonomous line). Expect 4 PRs; verify via `gh pr list --state open`; merge under per-batch consent. Do NOT resume any prior run id.
 branch: main
 ---
 
 ## Status
-PAUSED at 14/31 SHIPPED (origin/main 66a12a46; local main b359ddc, reconciled — contains core-providers). Session 2026-07-16-01 merged PR #14 core-providers (13 -> 14/31), then burned three mitosis launches for ZERO new PRs: wf_f28d7d12-1cd died in a ~3h idle gap (process exit), wf_bfb12095-952 ran ~2h and hit the account session limit (parking all 17 remaining MSPs, 0 published), wf_1245a178-eaf was launched at ~83% context and stopped cleanly. A fresh usage window (reset 11:30pm MDT Jul 15) was UNUSED at handoff. All three runs dead — never resume any run id.
+PAUSED at 14/31 SHIPPED (origin/main 66a12a4; local main 3f40f8f, contains core-providers — reconciliation invariant holds). Session 2026-07-16-02 shipped no code: it FOUND the root cause of every failed relaunch (run.json was pretty-printed -> `foldRunManifest` returned null -> engine silently fresh-decomposed all 31 MSPs + overwrote the file every run, burning the window before any MSP work). Fixed run.json to one compact line AND trimmed it to batch 1 (18 MSPs), verified against the engine's real fold+reuse logic. Did NOT launch (context hit 72%; launching near-full is the proven kill condition).
 
 ## Active Goal
-Ship all 31 Field Notes v1 MSPs to origin/main. Remaining (Option B) = BUILD the 17 downstream dependents via human-gated mitosis relaunches (agents publish green PRs; main thread merges), layer by layer across usage windows.
+Ship all 31 Field Notes v1 MSPs to origin/main by BUILDING the downstream dependents in session-sized batches via human-gated mitosis (agents publish green PRs; main thread merges under consent). Batch 1 staged: mood-picker, streak-service, sound-effects, data-management.
 
 ## Next Step
-Fresh session, CLEAN context -> relaunch mitosis human-gated -> verify via `gh pr list --state open` -> merge green PRs under per-batch consent -> repeat until 31/31, then Phase 8. Fix entry-cards harness ownership before the screens layer.
+Fresh session, CLEAN context -> launch batch 1 (run.json already staged) -> confirm the engine log says it SKIPPED Decompose (reuse fired) -> verify `gh pr list --state open` -> merge 4 green PRs under per-batch consent. Then re-derive batch 2 from `.mitosis/run.json.pristine-backup` via `.mitosis/batch-tooling/`.
 
 ## Open Risks
-- **entry-cards is STRUCTURALLY broken (new 2026-07-16):** add/add conflict on `test/features/entry_cards/support/entry_cards_harness.dart`, created independently by BOTH `task-media-resolver-harness` (de79f13, 137-line version) and `task-note-body`. A task-graph ownership defect — DETERMINISTIC; re-parks every relaunch until the plan gives that file exactly one owner. Blocks 5 screen MSPs (today-screen, day-detail, calendar-screen, search-screen, shell-nav-integration).
-- The mitosis `result.shipped` array is MISLEADING — it lists only done-oracle fast-skips (already-merged), NOT PRs the run just published. Always verify via `gh pr list --state open`. Re-confirmed 2026-07-16: all 14 entries were fast-skips; 0 published.
-- SESSION-LIMIT bound: a full run exhausts a usage window (~2h). Multi-window relaunch-to-resume; the done-oracle skips the merged, so each relaunch does less. Park checkpoints may FAIL to persist when the limit hits (written=null), so parked MSPs rebuild fresh from plan — idempotent, but no partial reuse.
-- Launch each relaunch from a FRESH (not near-full) context — runs die when launched near-full. PROVEN AGAIN 2026-07-16: a run launched at ~83% context had to be stopped immediately; an earlier run died when its launching process exited.
-- Human-gated agents publish-then-stop (PROVEN); the main thread does every merge, and the classifier requires EXPLICIT per-batch merge consent even for the main thread.
-- The safety classifier (opus-4-8) was UNAVAILABLE when reviewing `parallelize:garden-screen` and `sec:streak-service` on wf_bfb12095-952 — that work is unverified; re-review if reused.
-- Leftover local msp/* branches (~90) and worktrees (~16) are safe (branch-prep does observe-then-converge). run.json is stale-but-self-healing via the gh/git done-oracle.
+- **The engine has NO MSP-filtering input** (audited): scoping is done ONLY by out-of-band editing of run.json's `msps[]`. A trimmed manifest that fails the reuse gate SILENTLY reverts to fresh-decompose-and-overwrite (no error). Always run `node .mitosis/batch-tooling/verify_manifest.js` before launch.
+- **run.json fold is fragile:** it MUST stay one compact line (base object) + optional append-only JSONL deltas. Any pretty-print breaks fold -> silent full re-decompose. `.mitosis/` is gitignored, so backups live there but are NOT committed — `.mitosis/run.json.pristine-backup` is the durable 31-MSP source of truth for future batches.
+- **entry-cards is STRUCTURALLY broken:** add/add conflict on `test/features/entry_cards/support/entry_cards_harness.dart`, created independently by BOTH `task-media-resolver-harness` (de79f13) and `task-note-body`. DETERMINISTIC; excluded from batches until the plan gives that file one owner. Blocks 5 screen MSPs.
+- The mitosis `result.shipped` array is MISLEADING — only done-oracle fast-skips, NOT PRs just published. Always verify via `gh pr list --state open`.
+- SESSION-LIMIT bound: a run exhausts a ~2h window. Batch-scoping (this session's fix) keeps a run inside one window. Park checkpoints may fail to persist at the limit (written=null) -> parked MSPs rebuild fresh (idempotent).
+- Launch each relaunch from a FRESH (not near-full) context — runs die when launched near-full (proven twice).
+- Human-gated agents publish-then-stop (PROVEN); main thread does every merge; the classifier requires EXPLICIT per-batch merge consent even for the main thread.
+- The safety classifier (opus-4-8) was UNAVAILABLE when reviewing `parallelize:garden-screen` and `sec:streak-service` on wf_bfb12095-952 — unverified; re-review if reused. 6 leftover batch-MSP worktrees not cleaned (destructive; needs consent).
 - Local launch blocked until Phase 8 (full Xcode+CocoaPods + Android SDK not installed). Binary assets human-provided + committed.
 
 ## Key Decisions
+- decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md — run.json must be one compact line (fold defect = silent full re-decompose); scope batches by out-of-band trim from the pristine backup; batch 1 = 4 leaf MSPs
 - decisions/2026-07-16-pre-relaunch-main-reconciliation.md — reconcile local main onto origin/main before EVERY relaunch (engine cuts worktrees from the bare LOCAL `main` ref)
 - decisions/2026-07-12-direct-ship-built-msps.md — direct main-thread ship of already-built MSPs (Option A); engine builds unbuilt dependents (Option B)
 - decisions/2026-07-12-human-gated-merge-policy.md — autonomous structurally blocked; human-gated + main-thread merge (governs Option B builds)
@@ -44,14 +46,16 @@ Fresh session, CLEAN context -> relaunch mitosis human-gated -> verify via `gh p
 
 ## Pointers
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 notes pre-vendored fonts + skeleton status)
-- .mitosis/run.json — 31 MSP manifest (KEEP across relaunches; MSP-id stability -> PR reuse; done-oracle skips the 14 merged)
+- .mitosis/run.json — CURRENTLY trimmed to batch 1 (18 MSPs, one compact line). NOT the full manifest anymore.
+- .mitosis/run.json.pristine-backup — durable untouched 31-MSP manifest (source of truth for deriving future batches; gitignored, not committed)
+- .mitosis/batch-tooling/ — trim_manifest.py (edit BATCH list) + verify_manifest.js (replays engine fold+reuse); gitignored
 - .mitosis/entry-cards.plan.md — the plan whose task graph carries the harness-ownership defect
-- sessions/2026-07-16-01-journal-app-design.md — latest (merged #14; 3 dead runs; entry-cards defect; full parked breakdown)
-- sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch block (contract args; mergePolicy "human-gated")
+- sessions/2026-07-16-02-journal-app-design.md — latest (fold-defect root cause; run.json fixed+trimmed; batch tooling)
+- sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch contract block (use its args, set mergePolicy "human-gated")
 - GitHub: SatanshuMishra/field-notes (PRIVATE; renamed from fireplace; local dir still "fireplace")
 
 ## Recent Sessions
+- sessions/2026-07-16-02-journal-app-design.md
 - sessions/2026-07-16-01-journal-app-design.md
 - sessions/2026-07-14-02-journal-app-design.md
 - sessions/2026-07-14-01-journal-app-design.md
-- sessions/2026-07-12-03-journal-app-design.md
