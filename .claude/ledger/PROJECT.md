@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-19-pubspec-parallel-conflict.md — pubspec.yaml conflicts are systemic; merge batch PRs one-at-a-time + union-merge each dep-adding PR (regen lock via flutter pub get)
 - decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md — run.json MUST be one compact line (pretty-print breaks `foldRunManifest` -> silent full re-decompose + overwrite); engine has NO MSP-filter input, so scope batches by out-of-band trim from the pristine backup; batch 1 = 4 leaf MSPs
 - decisions/2026-07-16-pre-relaunch-main-reconciliation.md — reconcile local main onto origin/main before EVERY mitosis relaunch; the engine cuts worktrees from the bare LOCAL `main` ref (mitosis.js:946/:1114), so local main must contain every merged dependency
 - decisions/2026-07-12-direct-ship-built-msps.md — ship the 3 ALREADY-BUILT foundations via main-thread push+PR+squash-merge (not a mitosis relaunch); engine reserved for building the unbuilt dependents (Option B)
@@ -26,23 +27,23 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 14/31 merged (origin/main 66a12a4). Root cause of every failed relaunch FOUND (run.json pretty-print broke fold -> silent full re-decompose). run.json now fixed to one compact line + trimmed to batch 1 (mood-picker/streak-service/sound-effects/data-management), reuse VERIFIED. Next = LAUNCH batch 1 human-gated from a CLEAN context
+- journal-app-design — paused — 16/31 merged (origin/main 6ce4189). Batch 1 shipped with reuse FIRED (no window burn): #15 mood-picker + #16 sound-effects merged; #17 data-management open (pubspec.yaml union conflict); #18 streak-service open (CI running). Next = finish tail -> 18/31, then batch 2 per plans/2026-07-19-next-round.md
 
-## State snapshot (2026-07-16)
-- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 66a12a4 (14 squash-merges); local main 3f40f8f contains core-providers (reconciliation invariant holds).
-- 14/31 SHIPPED: platform-permissions, mood-catalog, design-tokens, drift-database (#1-4), domain-models (#5), flower-svg-set (#6), sticker-widget-kit (#7), app-shell (#8), feedback-motion-kit (#9), settings-fields-kit (#10), journal-repository (#11), settings-repository (#12), media-store (#13), core-providers (#14). 17 unbuilt downstream dependents remain.
-- ROOT CAUSE (2026-07-16-02): run.json was pretty-printed -> `foldRunManifest` returned null -> engine silently fresh-decomposed all 31 MSPs + overwrote the file on EVERY relaunch, burning the ~2h window before any MSP work. The engine exposes NO MSP-filter input. Fix: keep run.json as ONE compact line; scope work by out-of-band trimming `msps[]` from `.mitosis/run.json.pristine-backup`. See decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md.
-- BATCH PLAN: batch 1 (staged, verified) = mood-picker, streak-service, sound-effects, data-management. entry-cards EXCLUDED (deterministic add/add on entry_cards_harness.dart, two owners; blocks 5 screens) until its plan gives that file one owner. Tooling: `.mitosis/batch-tooling/{trim_manifest.py,verify_manifest.js}`.
-- LESSONS: `result.shipped` is MISLEADING (only fast-skips) — verify via `gh pr list --state open`. Runs die on the ~2h session limit AND when launched near-full context. Human-gated agents publish-then-stop; the classifier gates every main-thread `gh pr merge`, needing explicit per-batch consent.
-- NEXT (fresh session): launch batch 1 human-gated (run.json already staged) via the sessions/2026-07-11-03 contract (set mergePolicy "human-gated"); confirm reuse fired (log skips Decompose); verify open PRs; merge under consent; then derive batch 2 from the pristine backup. Do NOT resume any prior run id.
+## State snapshot (2026-07-19)
+- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 6ce4189 (16 squash-merges). Local main b35ee7a is BEHIND origin by the 2 new merges — reconcile before any relaunch (engine cuts worktrees from local main).
+- 16/31 SHIPPED: the 14 foundations + mood-picker (#15) + sound-effects (#16). OPEN: data-management (#17, DIRTY — pubspec.yaml union conflict only) + streak-service (#18, CI running). 13 unbuilt dependents remain after those two land.
+- BATCH 1 VALIDATED THE FOLD FIX: run wf_8a56361d-387 completed with reuse FIRED (engine skipped fresh Decompose, confirmed at runtime) — the silent re-decompose that burned every prior window did not recur.
+- NEXT ROUND is fully planned in `.claude/ledger/plans/2026-07-19-next-round.md` (turnkey, stages A-H): finish tail (#18 then #17 union-merge -> 18/31), reconcile local main, then batch 2 = capture-core + entry-cards + reminders (PROPOSED; entry-cards fix-and-include). Fix `verify_manifest.js`'s hardcoded merged-count (14 -> 18) before trusting its preview.
+- LESSONS: `result.shipped` is MISLEADING — verify via `gh pr list --state open`. pubspec.yaml conflicts are systemic (merge one-at-a-time + union). Classifier blocks DELEGATED gh create/merge but ALLOWS the main thread with per-batch consent. Launch from a FRESH context; the engine REUSES existing worktrees so clean batch leftovers first.
 - GitHub repo renamed fireplace -> field-notes (PRIVATE); local directory still "fireplace".
 
 ## Pointers
+- .claude/ledger/plans/2026-07-19-next-round.md — TURNKEY next-round plan (tail + batch 2), stages A-H
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
 - .claude/ledger/threads/journal-app-design.md — current line of work
-- .claude/ledger/sessions/2026-07-16-02-journal-app-design.md — latest (fold-defect root cause; run.json fixed+trimmed to batch 1; batch tooling; did NOT launch)
-- .claude/ledger/sessions/2026-07-16-01-journal-app-design.md — merged #14 -> 14/31; 3 dead runs, 0 published; entry-cards defect
+- .claude/ledger/sessions/2026-07-19-01-journal-app-design.md — latest (batch 1: reuse fired; #15/#16 merged -> 16/31; #17/#18 open; Fable next-round plan)
+- .claude/ledger/sessions/2026-07-16-02-journal-app-design.md — fold-defect root cause; run.json fixed+trimmed to batch 1
 - .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch block (contract args; flip mergePolicy to "human-gated")
 - .mitosis/run.json — CURRENTLY trimmed to batch 1 (18 MSPs, one compact line), NOT the full manifest
 - .mitosis/run.json.pristine-backup — durable 31-MSP source of truth (gitignored, uncommitted)
