@@ -30,7 +30,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - journal-app-design — paused — 16/31 merged (origin/main 6ce4189). Batch 1 shipped with reuse FIRED (no window burn): #15 mood-picker + #16 sound-effects merged; #17 data-management open (pubspec.yaml union conflict); #18 streak-service open (CI running). Next = finish tail -> 18/31, then batch 2 per plans/2026-07-19-next-round.md
 
 ## State snapshot (2026-07-19)
-- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 6ce4189 (16 squash-merges). Local main b35ee7a is BEHIND origin by the 2 new merges — reconcile before any relaunch (engine cuts worktrees from local main).
+- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 6ce4189 (16 squash-merges). Local main 9b46d3c is BEHIND origin by the 2 new merges — reconcile before any relaunch (engine cuts worktrees from local main).
 - 16/31 SHIPPED: the 14 foundations + mood-picker (#15) + sound-effects (#16). OPEN: data-management (#17, DIRTY — pubspec.yaml union conflict only) + streak-service (#18, CI running). 13 unbuilt dependents remain after those two land.
 - BATCH 1 VALIDATED THE FOLD FIX: run wf_8a56361d-387 completed with reuse FIRED (engine skipped fresh Decompose, confirmed at runtime) — the silent re-decompose that burned every prior window did not recur.
 - NEXT ROUND is fully planned in `.claude/ledger/plans/2026-07-19-next-round.md` (turnkey, stages A-H): finish tail (#18 then #17 union-merge -> 18/31), reconcile local main, then batch 2 = capture-core + entry-cards + reminders (PROPOSED; entry-cards fix-and-include). Fix `verify_manifest.js`'s hardcoded merged-count (14 -> 18) before trusting its preview.

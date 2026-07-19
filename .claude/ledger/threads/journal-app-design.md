@@ -1,6 +1,6 @@
 ---
 thread: journal-app-design
-status: paused
+status: active
 updated: 2026-07-19
 priority: high
 completion_criteria:
@@ -12,7 +12,7 @@ branch: main
 ---
 
 ## Status
-PAUSED at 16/31 merged (origin/main 6ce4189; local main b35ee7a, now BEHIND origin by the 2 merges — reconcile before any relaunch). Batch 1 launched+completed with reuse FIRED for the first time (no window burn) via run wf_8a56361d-387: mood-picker (#15) + sound-effects (#16) merged; data-management (#17) open+DIRTY (pubspec.yaml union conflict only); streak-service (#18) open, CI running (opened from main thread after the classifier blocked the delegated ship agent's PR-create).
+PAUSED at 16/31 merged (origin/main 6ce4189; local main 9b46d3c, now BEHIND origin by the 2 merges — reconcile before any relaunch). Batch 1 launched+completed with reuse FIRED for the first time (no window burn) via run wf_8a56361d-387: mood-picker (#15) + sound-effects (#16) merged; data-management (#17) open+DIRTY (pubspec.yaml union conflict only); streak-service (#18) open, CI running (opened from main thread after the classifier blocked the delegated ship agent's PR-create).
 
 ## Active Goal
 Ship all 31 Field Notes v1 MSPs to origin/main by building downstream dependents in session-sized batches via human-gated mitosis (agents publish green PRs; main thread merges under consent). Immediate: finish batch 1's tail (#17/#18 -> 18/31), then batch 2.
