@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-19-entry-cards-fix-and-batch-2.md — batch 2 = capture-core + entry-cards + reminders; entry-cards fixed-and-included (harness single-ownership); garden-screen deferred to batch 3
 - decisions/2026-07-19-pubspec-parallel-conflict.md — pubspec.yaml conflicts are systemic; merge batch PRs one-at-a-time + union-merge each dep-adding PR (regen lock via flutter pub get)
 - decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md — run.json MUST be one compact line (pretty-print breaks `foldRunManifest` -> silent full re-decompose + overwrite); engine has NO MSP-filter input, so scope batches by out-of-band trim from the pristine backup; batch 1 = 4 leaf MSPs
 - decisions/2026-07-16-pre-relaunch-main-reconciliation.md — reconcile local main onto origin/main before EVERY mitosis relaunch; the engine cuts worktrees from the bare LOCAL `main` ref (mitosis.js:946/:1114), so local main must contain every merged dependency
@@ -27,25 +28,25 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 16/31 merged (origin/main 6ce4189). Batch 1 shipped with reuse FIRED (no window burn): #15 mood-picker + #16 sound-effects merged; #17 data-management open (pubspec.yaml union conflict); #18 streak-service open (CI running). Next = finish tail -> 18/31, then batch 2 per plans/2026-07-19-next-round.md
+- journal-app-design — paused — 18/31 merged (origin/main 326686a), no open PRs. Batch 2 (capture-core + entry-cards + reminders) is user-approved, staged, and verified GO. ONLY the launch remains — run it as the first major action of a fresh session per plans/2026-07-19-next-round.md Stage F3.
 
 ## State snapshot (2026-07-19)
-- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 6ce4189 (16 squash-merges). Local main 9b46d3c is BEHIND origin by the 2 new merges — reconcile before any relaunch (engine cuts worktrees from local main).
-- 16/31 SHIPPED: the 14 foundations + mood-picker (#15) + sound-effects (#16). OPEN: data-management (#17, DIRTY — pubspec.yaml union conflict only) + streak-service (#18, CI running). 13 unbuilt dependents remain after those two land.
+- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 326686a (18 squash-merges). Local main RECONCILED (11 ahead / 0 behind).
+- 18/31 SHIPPED: the 14 foundations + mood-picker (#15), sound-effects (#16), streak-service (#18), data-management (#17). No PRs open. 13 unbuilt dependents remain.
 - BATCH 1 VALIDATED THE FOLD FIX: run wf_8a56361d-387 completed with reuse FIRED (engine skipped fresh Decompose, confirmed at runtime) — the silent re-decompose that burned every prior window did not recur.
-- NEXT ROUND is fully planned in `.claude/ledger/plans/2026-07-19-next-round.md` (turnkey, stages A-H): finish tail (#18 then #17 union-merge -> 18/31), reconcile local main, then batch 2 = capture-core + entry-cards + reminders (PROPOSED; entry-cards fix-and-include). Fix `verify_manifest.js`'s hardcoded merged-count (14 -> 18) before trusting its preview.
+- BATCH 2 IS STAGED AND VERIFIED GO (2026-07-19-02): entry-cards plan fixed (harness single-ownership), batch-tooling merged set corrected to 18, run.json re-derived from pristine (21 msps, 2 lines, park delta retained), stale worktrees/branches/graph artifacts cleaned, full assertion block passed. Launch only — do NOT re-stage or resume a prior run id.
 - LESSONS: `result.shipped` is MISLEADING — verify via `gh pr list --state open`. pubspec.yaml conflicts are systemic (merge one-at-a-time + union). Classifier blocks DELEGATED gh create/merge but ALLOWS the main thread with per-batch consent. Launch from a FRESH context; the engine REUSES existing worktrees so clean batch leftovers first.
 - GitHub repo renamed fireplace -> field-notes (PRIVATE); local directory still "fireplace".
 
 ## Pointers
-- .claude/ledger/plans/2026-07-19-next-round.md — TURNKEY next-round plan (tail + batch 2), stages A-H
+- .claude/ledger/plans/2026-07-19-next-round.md — TURNKEY plan; Stages A-F DONE, resume at F3 (launch)
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
 - .claude/ledger/threads/journal-app-design.md — current line of work
-- .claude/ledger/sessions/2026-07-19-01-journal-app-design.md — latest (batch 1: reuse fired; #15/#16 merged -> 16/31; #17/#18 open; Fable next-round plan)
+- .claude/ledger/sessions/2026-07-19-02-journal-app-design.md — latest (tail closed -> 18/31; batch 2 staged + verified GO; launch deferred to fresh context)
 - .claude/ledger/sessions/2026-07-16-02-journal-app-design.md — fold-defect root cause; run.json fixed+trimmed to batch 1
 - .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch block (contract args; flip mergePolicy to "human-gated")
-- .mitosis/run.json — CURRENTLY trimmed to batch 1 (18 MSPs, one compact line), NOT the full manifest
+- .mitosis/run.json — STAGED for batch 2 (21 MSPs; base line + entry-cards park delta = 2 lines)
 - .mitosis/run.json.pristine-backup — durable 31-MSP source of truth (gitignored, uncommitted)
 - .mitosis/batch-tooling/ — trim + verify scripts for deriving future batches
 - .mitosis/entry-cards.plan.md — plan carrying the harness-ownership defect
