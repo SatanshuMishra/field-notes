@@ -4,8 +4,7 @@ Thread: journal-app-design
 
 ## Context
 At 18/31 merged, four MSPs are dispatchable: capture-core, entry-cards, reminders, garden-screen.
-entry-cards had parked the engine with an add/add conflict on the shared test harness
-`test/features/entry_cards/support/entry_cards_harness.dart`.
+entry-cards had parked the engine with an add/add conflict on its shared test harness.
 
 ## Decision
 Batch 2 = capture-core + entry-cards + reminders. entry-cards is FIXED AND INCLUDED, not deferred;
