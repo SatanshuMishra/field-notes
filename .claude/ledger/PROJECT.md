@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-20-batch-3-scoping.md — batch 3 = the 4 conflict-free screens (today/day-detail/garden/settings); the 3 capture-* deferred to batch 4 for serial merges; the reminders day-2 follow-up needs a NEW msp id (the merged `reminders` unit is skipped by the reconcile) so it is authored in batch 4, not here
 - decisions/2026-07-20-keep-stale-worktrees.md — the ~24 .fireplace-worktrees checkouts are KEPT for manual testing after build/deploy; cleanup is never to be proposed again
 - decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — NEITHER GitHub check runs a Dart test (receipts = node-only, 15s; D6 has no Dart import grapher and passes vacuously). Run `fullValidationCmd` locally against the PR head worktree before every merge; never accept receiptsPass/d6Pass as evidence
 - decisions/2026-07-20-reminders-day2-prearm-followup.md — reminders ships arming only the NEXT occurrence; day-2+ reach deferred to a batch-3 follow-up MSP (pre-arm ids 1001..1007, inside the existing fileScope)
