@@ -14,6 +14,13 @@ Rationale is the green-branch invariant (`rules/common/git/pull-requests.md`): a
 
 The second surviving finding (MEDIUM, in-scope): the Task 4 adapter's `bool _initialized` latch is set after two awaits, so concurrent `_ensureInitialized` calls re-run `tz_data.initializeTimeZones()`, whose tail calls `setLocalLocation(_utc)` (`timezone-0.11.1/lib/src/env.dart:49-57`) — an in-flight `schedule()` can then compute `tz.TZDateTime.from(at, tz.local)` against UTC and fire at the wrong absolute instant. Fixed within fileScope: cache the init Future (`Future<void>? _ready`) and serialize `ReminderCoordinator.sync` with a last-wins guard.
 
+## Verified toolchain constraint (2026-07-20)
+There is NO Android SDK on this machine: `flutter doctor` reports "Unable to locate Android SDK"; `ANDROID_HOME`/`ANDROID_SDK_ROOT` are unset; nothing at `~/Library/Android/sdk`, `~/Android/Sdk`, `/usr/local/share/android-sdk`, or `/opt/homebrew/share/android-sdk`. Therefore `flutter build apk` is impossible for the worker, the orchestrator, and CI alike.
+
+Two rulings follow. (1) `receipts.config.json` is NOT extended with an Android build — it would fail instantly for lack of an SDK and break every gate for every MSP. File-content assertion (positive/negative greps plus a 6-insertions-0-deletions diff assertion) is therefore not a weak substitute for a gate; it is the strongest verification that exists here. (2) The worker must not attempt the build or install an SDK, and records it as a known-unavailable manual item.
+
+Honesty correction: the review finding called this "a regression to a currently-buildable target." That premise is wrong — Android is not buildable here with or without the change. The accurate claim is that the repo's Android config is incorrect for any machine that DOES have the toolchain; the fix is still correct and still ships, but it is unverifiable by execution in this environment.
+
 ## Consequences
 The worker must NOT copy the plugin README's `kotlinOptions` block verbatim — this project already uses the modern `kotlin { compilerOptions { jvmTarget } }` form and has Java 17 source/target set. Only three additions are needed: `multiDexEnabled = true`, `isCoreLibraryDesugaringEnabled = true`, and `coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")`.
 
