@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-19-symlink-guard-defect.md — all 7 `~/.claude/lib/superpowers-parallel` CLIs were silent no-ops under the lib symlink (main() guard compared import.meta.url to a literal argv[1]); fixed with the realpath idiom. The engine logs NOTHING on this path, so pre-flight the fold CLI's stdout before EVERY launch
 - decisions/2026-07-19-entry-cards-fix-and-batch-2.md — batch 2 = capture-core + entry-cards + reminders; entry-cards fixed-and-included (harness single-ownership); garden-screen deferred to batch 3
 - decisions/2026-07-19-pubspec-parallel-conflict.md — pubspec.yaml conflicts are systemic; merge batch PRs one-at-a-time + union-merge each dep-adding PR (regen lock via flutter pub get)
 - decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md — run.json MUST be one compact line (pretty-print breaks `foldRunManifest` -> silent full re-decompose + overwrite); engine has NO MSP-filter input, so scope batches by out-of-band trim from the pristine backup; batch 1 = 4 leaf MSPs
@@ -28,14 +29,14 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 18/31 merged (origin/main 326686a), no open PRs. Batch 2 (capture-core + entry-cards + reminders) is user-approved, staged, and verified GO. ONLY the launch remains — run it as the first major action of a fresh session per plans/2026-07-19-next-round.md Stage F3.
+- journal-app-design — paused — 20/31 merged (origin/main 146751e), no open PRs. Batch 2 landed capture-core (#19) + entry-cards (#20); reminders parked at plan-review. Next: fix .mitosis/reminders.plan.md and relaunch to reach 21/31.
 
 ## State snapshot (2026-07-19)
-- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 326686a (18 squash-merges). Local main RECONCILED (11 ahead / 0 behind).
-- 18/31 SHIPPED: the 14 foundations + mood-picker (#15), sound-effects (#16), streak-service (#18), data-management (#17). No PRs open. 13 unbuilt dependents remain.
-- BATCH 1 VALIDATED THE FOLD FIX: run wf_8a56361d-387 completed with reuse FIRED (engine skipped fresh Decompose, confirmed at runtime) — the silent re-decompose that burned every prior window did not recur.
-- BATCH 2 IS STAGED AND VERIFIED GO (2026-07-19-02): entry-cards plan fixed (harness single-ownership), batch-tooling merged set corrected to 18, run.json re-derived from pristine (21 msps, 2 lines, park delta retained), stale worktrees/branches/graph artifacts cleaned, full assertion block passed. Launch only — do NOT re-stage or resume a prior run id.
-- LESSONS: `result.shipped` is MISLEADING — verify via `gh pr list --state open`. pubspec.yaml conflicts are systemic (merge one-at-a-time + union). Classifier blocks DELEGATED gh create/merge but ALLOWS the main thread with per-batch consent. Launch from a FRESH context; the engine REUSES existing worktrees so clean batch leftovers first.
+- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 146751e (20 squash-merges). Local main is BEHIND by 2 squashes — reconcile before relaunch.
+- 20/31 SHIPPED: the 14 foundations + mood-picker (#15), sound-effects (#16), streak-service (#18), data-management (#17), capture-core (#19), entry-cards (#20). No PRs open. 11 unbuilt dependents remain.
+- BATCH 2 (wf_1a14ffc9-038): reuse fired, no Decompose, entry-cards resumed at `execute` off its fixed plan and the harness single-ownership fix held through to merge. reminders parked at plan-review (review did not converge in 3 iterations).
+- THE SYMLINK DEFECT (decisions/2026-07-19-symlink-guard-defect.md): all 7 CLIs under ~/.claude/lib/superpowers-parallel/ were silent no-ops (exit 0, zero bytes) because the main() guard compares a realpath to a literal argv[1] path. It made the engine silently full-re-decompose with NO log line — engine logs CANNOT catch it. Fixed in all 7; THE FIX IS UNCOMMITTED in the .windful-ocean working tree.
+- LESSONS: exit code 0 is NOT evidence a Node CLI ran — pre-flight the fold CLI's stdout before EVERY launch. `result.shipped` is MISLEADING — verify via `gh pr list --state open`. pubspec.yaml conflicts are systemic (merge one-at-a-time + union). Classifier blocks DELEGATED gh create/merge but ALLOWS the main thread with per-batch consent. Investigate run `failures` rather than trusting them: batch 2's `git branch -f` security warning was a proven false alarm (the branch did not previously exist).
 - GitHub repo renamed fireplace -> field-notes (PRIVATE); local directory still "fireplace".
 
 ## Pointers
@@ -43,7 +44,8 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
 - .claude/ledger/threads/journal-app-design.md — current line of work
-- .claude/ledger/sessions/2026-07-19-02-journal-app-design.md — latest (tail closed -> 18/31; batch 2 staged + verified GO; launch deferred to fresh context)
+- .claude/ledger/sessions/2026-07-19-03-journal-app-design.md — latest (symlink CLI defect found+fixed; batch 2 -> 20/31; reminders parked)
+- .claude/ledger/sessions/2026-07-19-02-journal-app-design.md — batch 2 staging + verification
 - .claude/ledger/sessions/2026-07-16-02-journal-app-design.md — fold-defect root cause; run.json fixed+trimmed to batch 1
 - .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch block (contract args; flip mergePolicy to "human-gated")
 - .mitosis/run.json — STAGED for batch 2 (21 MSPs; base line + entry-cards park delta = 2 lines)
