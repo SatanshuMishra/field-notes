@@ -18,18 +18,15 @@ class GardenScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final int resolvedYear = year ?? DateTime.now().year;
     final AsyncValue<List<Day>> days = ref.watch(allDaysProvider);
-    final List<Day>? loaded = days.value;
-    if (loaded != null) {
-      return GardenView(
-        blooms: gardenBloomsForYear(loaded, resolvedYear),
-        tally: moodTally(loaded, resolvedYear),
+    return days.when(
+      data: (List<Day> list) => GardenView(
+        blooms: gardenBloomsForYear(list, resolvedYear),
+        tally: moodTally(list, resolvedYear),
         year: resolvedYear,
-      );
-    }
-    if (days.hasError) {
-      return const _GardenError();
-    }
-    return const _GardenLoading();
+      ),
+      loading: () => const _GardenLoading(),
+      error: (Object error, StackTrace stackTrace) => const _GardenError(),
+    );
   }
 }
 

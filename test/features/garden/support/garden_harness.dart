@@ -8,6 +8,7 @@ Widget gardenHarness(
   List<Override> overrides = const <Override>[],
 }) {
   return ProviderScope(
+    retry: (int retryCount, Object error) => null,
     overrides: overrides,
     child: MaterialApp(
       debugShowCheckedModeBanner: false,

@@ -90,4 +90,32 @@ void main() {
     expect(find.byType(EmptyStatePlaceholder), findsOneWidget);
     expect(find.textContaining('could not be loaded'), findsOneWidget);
   });
+
+  testWidgets('surfaces the error even after a prior successful emission',
+      (WidgetTester tester) async {
+    final StreamController<List<Day>> controller =
+        StreamController<List<Day>>();
+    addTearDown(controller.close);
+
+    await tester.pumpWidget(
+      gardenHarness(
+        const GardenScreen(year: 2026),
+        overrides: <Override>[
+          allDaysProvider.overrideWith((_) => controller.stream),
+        ],
+      ),
+    );
+
+    controller.add(<Day>[dayOf('2026-03-01', mood: Mood.happy)]);
+    await tester.pump();
+
+    expect(find.byType(GardenView), findsOneWidget);
+
+    controller.addError(Exception('boom'));
+    await tester.pump();
+
+    expect(find.byType(GardenView), findsNothing);
+    expect(find.byType(EmptyStatePlaceholder), findsOneWidget);
+    expect(find.textContaining('could not be loaded'), findsOneWidget);
+  });
 }
