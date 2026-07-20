@@ -1,29 +1,12 @@
-# Reminders day-2+ coverage deferred to a batch-3 follow-up MSP
-
 Status: accepted
 Date: 2026-07-20
+Thread: journal-app-design
+
+## Context
+reminders (PR #21) arms only the NEXT single occurrence; nothing re-arms day N+1 until a provider rebuild, i.e. until the app is launched. A user who ignores the reminder and never reopens the app gets no reminder on subsequent days — which is precisely the target user of a journaling reminder. The obvious fix, `zonedSchedule(..., matchDateTimeComponents: DateTimeComponents.time)`, was correctly rejected against verified plugin source: on Android `getNextFireDateMatchingDateTimeComponents` discards the scheduled DATE and rebuilds from today + time-of-day, so a suppression schedule for tomorrow would fire TONIGHT, violating spec §6.4; on macOS `DateTimeComponents.time` maps to a `.day`-inclusive `UNCalendarNotificationTrigger`, i.e. a MONTHLY repeat, not daily.
 
 ## Decision
+Ship #21 with the one-shot form and defer day-2+ reach to a follow-up MSP queued with batch 3. User chose this over blocking the merge or accepting the residual permanently.
 
-reminders (PR #21) ships arming only the NEXT single occurrence. A user who ignores the
-notification and never reopens the app receives no reminder on subsequent days. User accepted
-this residual and directed that the fix be queued as a follow-up MSP alongside the batch-3
-candidates, not as a blocker on #21.
-
-## Why the obvious fix is not the fix
-
-`zonedSchedule(..., matchDateTimeComponents: DateTimeComponents.time)` was evaluated and
-rejected against verified plugin source:
-- Android discards the scheduled DATE and rebuilds from today + time-of-day, so the
-  suppression case (entry exists today -> schedule tomorrow) would fire TONIGHT, violating
-  spec §6.4.
-- macOS maps `DateTimeComponents.time` to a `.day`-inclusive `UNCalendarNotificationTrigger`,
-  i.e. a MONTHLY repeat, not daily.
-
-## The follow-up's actual shape
-
-Plan review raised, as advisory, the middle option the plan never evaluated: pre-arm N one-shot
-occurrences (ids 1001..1007) on each sync instead of exactly one. It preserves §6.4 suppression
-because an entry can only be created by opening the app, which rebuilds `reminderSyncProvider`
-and re-arms the whole window from scratch. It sits INSIDE the existing reminders fileScope.
-Prefer it over a boot/periodic background worker, which needs out-of-scope platform files.
+## Consequences
+The plan's alternatives analysis was incomplete, and the follow-up should close that gap rather than repeat it: plan review raised, as advisory non-blocking, a middle option neither the plan nor the review's own recommendation considered — pre-arm N one-shot occurrences (ids 1001..1007) on each sync instead of exactly one. It preserves §6.4 suppression exactly, because an entry can only be created by opening the app, which rebuilds `reminderSyncProvider` and re-arms the whole window from scratch, so no stale day can fire against a day that has gained an entry. It sits INSIDE the existing reminders fileScope. Prefer it over a boot/periodic background worker, which needs out-of-scope platform files. Until it ships, v1 reminders are honestly "reminders for users who open the app".

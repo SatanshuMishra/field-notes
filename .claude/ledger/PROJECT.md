@@ -1,4 +1,4 @@
-# Fireplace — Project Ledger
+# Field Notes — Project Ledger
 
 ## Goal
 A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded aesthetic (prototype "Field Notes"). Daily entries as voice/video/text plus photo "memories," one mood-flower per day, streaks, daily reminders. Local-first, optionally syncing end-to-end-encrypted through the user's self-hosted Arch Linux server. Open-source on GitHub (repo SatanshuMishra/field-notes, private for now).
@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-20-keep-stale-worktrees.md — the ~24 .fireplace-worktrees checkouts are KEPT for manual testing after build/deploy; cleanup is never to be proposed again
 - decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — NEITHER GitHub check runs a Dart test (receipts = node-only, 15s; D6 has no Dart import grapher and passes vacuously). Run `fullValidationCmd` locally against the PR head worktree before every merge; never accept receiptsPass/d6Pass as evidence
 - decisions/2026-07-20-reminders-day2-prearm-followup.md — reminders ships arming only the NEXT occurrence; day-2+ reach deferred to a batch-3 follow-up MSP (pre-arm ids 1001..1007, inside the existing fileScope)
 - decisions/2026-07-20-reminders-android-desugaring-scope.md — reminders' fileScope expanded by one file (android/app/build.gradle.kts) so it ships the flutter_local_notifications desugaring config in the same PR; receipts CI runs no Android build and cannot catch this
@@ -32,7 +33,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — active — 21/31 merged, 0 open PRs. reminders shipped 2026-07-20 via run wf_00757aaa-c12 (human-gated, 34 agents, 0 errors, 9.1h); PR #21 squash-merged after local full validation. Next: batch 3 (10 unbuilt dependents + the reminders day-2 follow-up).
+- journal-app-design — paused — 21/31 merged, 0 open PRs. reminders shipped 2026-07-20 via run wf_00757aaa-c12 (human-gated, 34 agents, 0 errors, 9.1h); PR #21 squash-merged after local full validation. Next: batch 3 (10 unbuilt dependents + the reminders day-2 follow-up).
 
 ## State snapshot (2026-07-20)
 - Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. 21 squash-merges + ledger commits on origin/main.
@@ -46,7 +47,8 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - BATCH 2 (wf_1a14ffc9-038): reuse fired, no Decompose, entry-cards resumed at `execute` off its fixed plan and the harness single-ownership fix held through to merge. reminders parked at plan-review (review did not converge in 3 iterations).
 - THE SYMLINK DEFECT (decisions/2026-07-19-symlink-guard-defect.md): all 7 CLIs under ~/.claude/lib/superpowers-parallel/ were silent no-ops (exit 0, zero bytes) because the main() guard compares a realpath to a literal argv[1] path. It made the engine silently full-re-decompose with NO log line — engine logs CANNOT catch it. Fixed in all 7; THE FIX IS UNCOMMITTED in the .windful-ocean working tree.
 - LESSONS: exit code 0 is NOT evidence a Node CLI ran — pre-flight the fold CLI's stdout before EVERY launch. `result.shipped` is MISLEADING — verify via `gh pr list --state open`. pubspec.yaml conflicts are systemic (merge one-at-a-time + union). Classifier blocks DELEGATED gh create/merge but ALLOWS the main thread with per-batch consent. Investigate run `failures` rather than trusting them: batch 2's `git branch -f` security warning was a proven false alarm (the branch did not previously exist).
-- GitHub repo renamed fireplace -> field-notes (PRIVATE); local directory still "fireplace".
+- THE PROJECT IS NAMED "field-notes" (repo https://github.com/SatanshuMishra/field-notes, PRIVATE). "fireplace" is NOT the project name — it survives only as the local directory path and the .fireplace-worktrees root, both legacy and both load-bearing for hardcoded paths. Never call the project fireplace. The `origin` remote was repointed to the field-notes URL on 2026-07-20 (the old URL only worked via a 301 redirect); this supersedes the "repoint was denied" note in decisions/2026-07-10-mitosis-run-contract.md.
+- WORKTREES ARE KEPT ON PURPOSE (decisions/2026-07-20-keep-stale-worktrees.md). Do not propose cleanup.
 
 ## Pointers
 - .claude/ledger/plans/2026-07-19-next-round.md — TURNKEY plan; Stages A-F DONE, resume at F3 (launch)
@@ -59,5 +61,5 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch block (contract args; flip mergePolicy to "human-gated")
 - .mitosis/run.json — STAGED for batch 2 (21 MSPs; base line + entry-cards park delta = 2 lines)
 - .mitosis/run.json.pristine-backup — durable 31-MSP source of truth (gitignored, uncommitted)
-- .mitosis/batch-tooling/ — trim + verify scripts for deriving future batches
+- .mitosis/batch-tooling/ — trim + verify scripts; MERGED=21, BATCH=[] (fill BATCH with batch-3 ids)
 - .mitosis/entry-cards.plan.md — plan carrying the harness-ownership defect

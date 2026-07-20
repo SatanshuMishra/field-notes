@@ -1,13 +1,13 @@
 ---
 thread: journal-app-design
-status: active
+status: paused
 updated: 2026-07-20
 priority: high
 completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Plan batch 3 from the 10 remaining dependents (capture-photo/voice/video, today-screen, day-detail, garden-screen, settings-screen, +3) plus the reminders day-2 pre-arm follow-up. Bump .mitosis/batch-tooling MERGED set 18 -> 21 BEFORE trimming, or trim_manifest.py fires FATAL on dependsOn.
+next_step: Plan batch 3 from the 10 remaining dependents (capture-photo/voice/video, today-screen, day-detail, garden-screen, settings-screen, +3) plus the reminders day-2 pre-arm follow-up. batch-tooling MERGED is already bumped to 21 and BATCH is empty — fill BATCH with the chosen batch-3 ids, then trim from the pristine backup.
 branch: main
 ---
 
@@ -23,7 +23,7 @@ human-gated mitosis (agents publish green PRs; main thread merges under consent)
 to reach 21/31.
 
 ## Next Step
-Plan batch 3. Bump the batch-tooling MERGED set 18 -> 21 first.
+Plan batch 3. Tooling is already primed (MERGED=21, BATCH=[]).
 
 ## Open Risks
 - CI IS HOLLOW FOR DART (decisions/2026-07-20-ci-gates-are-hollow-for-dart.md). Neither check runs a Dart
@@ -40,10 +40,10 @@ Plan batch 3. Bump the batch-tooling MERGED set 18 -> 21 first.
   capture-* MSPs add plugins and regenerate both. Merge them one-at-a-time and regenerate, never hand-resolve.
 - Classifier blocks DELEGATED `gh pr create`/`gh pr merge`; the main thread creates and merges them.
 - `result.shipped` is MISLEADING; truth = `gh pr list` + `git ls-remote`.
-- 16 stale worktrees remain on disk (left by user choice). Harmless for a reminders-only run; cleanup is
-  destructive and must happen between runs, never mid-run.
-- batch-tooling MERGED set is stale at 18 (must be 20 before batch 3); verify_manifest.js misreports
-  capture-core/entry-cards as "will BUILD". Trust the live engine, not that preview.
+- Worktrees are KEPT ON PURPOSE for manual testing (decisions/2026-07-20-keep-stale-worktrees.md).
+  This is not an open item; never propose cleanup again.
+- batch-tooling MERGED is now 21 and BATCH is empty (fixed 2026-07-20). verify_manifest.js is still only a
+  preview — trust the live engine over it.
 - 3 files still carry the symlink guard defect (task chip task_ecab775c), incl. a hook that FAILS OPEN.
 
 ## Key Decisions
@@ -65,18 +65,16 @@ Plan batch 3. Bump the batch-tooling MERGED set 18 -> 21 first.
   gallery. All sync/server work is v2 (settings-screen ships an inert disabled sync shell).
 
 ## Pointers
-- .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — VERBATIM launch block at lines 38-62
-  (change mergePolicy to "human-gated")
+- .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — VERBATIM launch block, lines 38-62 (set mergePolicy "human-gated"); proven end-to-end on 2026-07-20
 - .claude/ledger/plans/2026-07-19-next-round.md — Stages A-G done for batch 2; G3/H still apply
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 = implementation status)
-- .mitosis/run.json — batch-2 manifest (21 msps); reminders parked at plan-review; do NOT re-trim or hand-edit
+- .mitosis/run.json — spent batch-2 manifest; re-trim from the pristine backup for batch 3, never hand-edit
 - .mitosis/run.json.pristine-backup — durable untouched 31-MSP manifest (gitignored)
-- .mitosis/reminders.plan.md — REWRITTEN this session (1372 lines, 7 tasks); ready for re-review
-- .mitosis/batch-tooling/ — trim + verify scripts (MERGED set must be bumped 18 -> 20 next batch)
-- GitHub: SatanshuMishra/field-notes (PRIVATE; renamed from fireplace; local dir still "fireplace")
+- .mitosis/batch-tooling/ — trim + verify scripts; MERGED=21, BATCH=[] (fill BATCH for batch 3)
+- GitHub: https://github.com/SatanshuMishra/field-notes (PRIVATE). The project is named field-notes;
+  "fireplace" is only the legacy local dir + worktree-root path. origin repointed 2026-07-20.
 
 ## Recent Sessions
+- sessions/2026-07-20-02-journal-app-design.md — reminders shipped, 21/31; CI found hollow
 - sessions/2026-07-20-01-journal-app-design.md
 - sessions/2026-07-19-03-journal-app-design.md
-- sessions/2026-07-19-02-journal-app-design.md
-- sessions/2026-07-19-01-journal-app-design.md
