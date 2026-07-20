@@ -30,10 +30,14 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 20/31 merged (origin/main 146751e), no open PRs. Batch 2 landed capture-core (#19) + entry-cards (#20); reminders parked at plan-review. Next: fix .mitosis/reminders.plan.md and relaunch to reach 21/31.
+- journal-app-design — paused — 20/31 merged (origin/main 153e7eb), no open PRs. Main reconciled; reminders plan REWRITTEN and relaunch fully staged but deliberately not launched (context). Next: re-run fold pre-flight, then launch with mergePolicy "human-gated" to reach 21/31.
 
-## State snapshot (2026-07-19)
-- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 146751e (20 squash-merges). Local main is BEHIND by 2 squashes — reconcile before relaunch.
+## State snapshot (2026-07-20)
+- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. origin/main == 153e7eb (20 squash-merges + ledger). Local main RECONCILED 0/0, tree clean.
+- RELAUNCH IS STAGED, NOT LAUNCHED. reminders.plan.md rewritten against the recovered review findings; all 3 pre-flight checks green. Launch block: sessions/2026-07-11-03 lines 38-62 with mergePolicy "human-gated".
+- Relaunch proven SAFE: skip/build is decided by a LIVE `gh pr list --state merged` reconcile, not by run.json `status`. The 17 merged-but-"planned" units are skipped at the top of runUnit(). Stale status/resumePoint fields are inert.
+- NO ANDROID SDK on this machine — `flutter build apk` is impossible, and receipts CI never builds Android. File-content assertion is the only receipt for the new desugaring task; do NOT add an Android build to receipts.config.json.
+- Plan-review findings are NEVER persisted by the engine; recover them from the harness journal at ~/.claude/projects/<slug>/<session>/subagents/workflows/<runId>/journal.jsonl.
 - 20/31 SHIPPED: the 14 foundations + mood-picker (#15), sound-effects (#16), streak-service (#18), data-management (#17), capture-core (#19), entry-cards (#20). No PRs open. 11 unbuilt dependents remain.
 - BATCH 2 (wf_1a14ffc9-038): reuse fired, no Decompose, entry-cards resumed at `execute` off its fixed plan and the harness single-ownership fix held through to merge. reminders parked at plan-review (review did not converge in 3 iterations).
 - THE SYMLINK DEFECT (decisions/2026-07-19-symlink-guard-defect.md): all 7 CLIs under ~/.claude/lib/superpowers-parallel/ were silent no-ops (exit 0, zero bytes) because the main() guard compares a realpath to a literal argv[1] path. It made the engine silently full-re-decompose with NO log line — engine logs CANNOT catch it. Fixed in all 7; THE FIX IS UNCOMMITTED in the .windful-ocean working tree.
