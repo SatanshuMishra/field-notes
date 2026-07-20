@@ -1,0 +1,113 @@
+import 'dart:io';
+
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/entry_cards/cards/voice_body.dart';
+import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
+import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
+import 'package:field_notes/features/entry_cards/playback/audio_playback.dart';
+
+import '../support/entry_cards_harness.dart';
+import '../support/fake_audio_player.dart';
+
+void main() {
+  group('VoiceBody', () {
+    testWidgets('loads the resolved audio and toggles play/pause',
+        (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      final FakeEntryAudioPlayer player = FakeEntryAudioPlayer();
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'aud',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'aud', relPath: 'a.m4a', kind: MediaKind.audio),
+            file: File('/tmp/a.m4a'),
+          ),
+        );
+
+      await tester.pumpWidget(
+        cardHarness(
+          VoiceBody(
+            entry:
+                entryOf(type: EntryType.voice, mediaId: 'aud', durationMs: 65000),
+            resolver: resolver,
+            playerFactory: () => player,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(player.loadCalls, <String>['/tmp/a.m4a']);
+      expect(find.bySemanticsLabel('Play'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey<String>('voice-play-toggle')));
+      await tester.pump();
+      expect(player.playCalls, 1);
+
+      player.emitState(AudioPlaybackState.playing);
+      await tester.pump();
+      expect(find.bySemanticsLabel('Pause'), findsOneWidget);
+      expect(find.bySemanticsLabel('Play'), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey<String>('voice-play-toggle')));
+      await tester.pump();
+      expect(player.pauseCalls, 1);
+
+      handle.dispose();
+    });
+
+    testWidgets('renders the total duration and updates the position',
+        (WidgetTester tester) async {
+      final FakeEntryAudioPlayer player = FakeEntryAudioPlayer();
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'aud',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'aud', relPath: 'a.m4a', kind: MediaKind.audio),
+            file: File('/tmp/a.m4a'),
+          ),
+        );
+
+      await tester.pumpWidget(
+        cardHarness(
+          VoiceBody(
+            entry:
+                entryOf(type: EntryType.voice, mediaId: 'aud', durationMs: 65000),
+            resolver: resolver,
+            playerFactory: () => player,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('0:00 / 1:05'), findsOneWidget);
+
+      player.emitPosition(const Duration(seconds: 12));
+      await tester.pump();
+      expect(find.text('0:12 / 1:05'), findsOneWidget);
+    });
+
+    testWidgets('shows a non-destructive placeholder for missing audio',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        cardHarness(
+          VoiceBody(
+            entry:
+                entryOf(type: EntryType.voice, mediaId: 'gone', durationMs: 1000),
+            resolver: FakeMediaResolver(),
+            playerFactory: () => FakeEntryAudioPlayer(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('voice-play-toggle')),
+        findsNothing,
+      );
+    });
+  });
+}
