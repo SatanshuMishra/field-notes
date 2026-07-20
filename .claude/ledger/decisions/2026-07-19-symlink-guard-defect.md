@@ -17,7 +17,7 @@ mitosis.js:23 LIB_DIR at the realpath.
 - Standing rule: exit 0 is NOT evidence a Node CLI ran — pre-flight the fold CLI's stdout and assert
   the msp count before EVERY launch; engine logs cannot catch this. 829/829 lib tests pass.
 - The fix is UNCOMMITTED in .windful-ocean (user's global config repo, their call).
-- Rejected LIB_DIR one-liner: leaves the CLIs broken for callers using a hardcoded ~/.claude path
+- Rejected LIB_DIR one-liner: leaves CLIs broken for hardcoded ~/.claude callers
   (plan-to-task-graph/SKILL.md:40 -> wave-planner), exercised by this very batch.
-- 3 files still carry it (chip task_ecab775c), incl. hooks/block-inline-engine.mjs — a blocking hook
-  that therefore FAILS OPEN.
+- 3 files still carry it (chip task_ecab775c), incl. the blocking hook block-inline-engine.mjs, which
+  therefore FAILS OPEN.
