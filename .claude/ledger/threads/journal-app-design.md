@@ -1,21 +1,21 @@
 ---
 thread: journal-app-design
-status: paused
+status: active
 updated: 2026-07-20
 priority: high
 completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Re-run the fold pre-flight and confirm main is 0/0, then launch the mitosis relaunch using the block in sessions/2026-07-11-03 lines 38-62 with mergePolicy "human-gated". reminders resumes at plan-review off the rewritten plan.
+next_step: Plan batch 3 from the 10 remaining dependents (capture-photo/voice/video, today-screen, day-detail, garden-screen, settings-screen, +3) plus the reminders day-2 pre-arm follow-up. Bump .mitosis/batch-tooling MERGED set 18 -> 21 BEFORE trimming, or trim_manifest.py fires FATAL on dependsOn.
 branch: main
 ---
 
 ## Status
-PAUSED at 20/31 merged (origin/main 153e7eb + ledger commits), no open PRs. This session did NOT build code:
-it reconciled main, proved a relaunch safe, recovered the lost plan-review findings, ruled on a scope grant,
-and rewrote .mitosis/reminders.plan.md. The run is fully staged but deliberately NOT launched (context hit 80%
-and the project's fresh-context discipline forbids starting a ~3h run there).
+21/31 merged, 0 open PRs. The staged relaunch was launched (wf_00757aaa-c12, human-gated, 34 agents, 0 errors,
+9.1h): manifest reuse fired, 20 units skipped via the live merged-PR reconcile, reminders resumed at plan-review
+off the rewritten plan and built all 7 tasks. PR #21 was verified locally (analyze clean, 405/405 suite, 23/23
+reminders subset at HEAD 78bdb6b) and squash-merged under user consent.
 
 ## Active Goal
 Ship all 31 Field Notes v1 MSPs to origin/main by building downstream dependents in session-sized batches via
@@ -23,20 +23,21 @@ human-gated mitosis (agents publish green PRs; main thread merges under consent)
 to reach 21/31.
 
 ## Next Step
-Launch the relaunch. Everything is verified; it is one Workflow call. Re-run the fold pre-flight first.
+Plan batch 3. Bump the batch-tooling MERGED set 18 -> 21 first.
 
 ## Open Risks
+- CI IS HOLLOW FOR DART (decisions/2026-07-20-ci-gates-are-hollow-for-dart.md). Neither check runs a Dart
+  test; d6Pass is vacuous. Run fullValidationCmd locally against the PR head worktree before EVERY merge.
 - THE GUARD FIX IS UNCOMMITTED in /Users/satanshumishra/Documents/DevLabs/.windful-ocean. If that tree is
   reverted, every mitosis launch silently full-re-decomposes with NO log line.
 - Exit code 0 is NOT evidence a Node CLI ran. Pre-flight the fold CLI's stdout before every launch.
-- Do NOT hand-edit run.json's base line before a launch. It must stay valid single-line JSON or all 21 units
-  full-re-decompose and the manifest is overwritten. Editing fileScope there is also INERT for a plan-review
-  resume — the plan document on disk is the only surface that reaches the reviewer.
-- No Android SDK on this machine, so `flutter build apk` cannot verify the new Task 2 desugaring change, and
-  receipts CI never builds Android. File-content assertion is the only available receipt; do not add an
-  Android build to receipts.config.json (it would break every gate for every MSP).
-- pubspec.yaml conflicts are SYSTEMIC. reminders adds flutter_local_notifications + timezone onto a main that
-  now carries just_audio + video_player; apply the union procedure at merge.
+- Do NOT hand-edit run.json's base line before a launch. It must stay valid single-line JSON. Editing
+  fileScope there is also INERT for a plan-review resume — the plan on disk is the only surface that reaches
+  the reviewer. (Confirmed live: #21's scope grant reached the worker only via the plan document.)
+- No Android SDK on this machine. The Task 2 desugaring config in #21 is verified by file content only and
+  has NEVER been compiled. Do not add an Android build to receipts.config.json.
+- TWO systemic conflict files now: pubspec.yaml AND macos/Flutter/GeneratedPluginRegistrant.swift. All three
+  capture-* MSPs add plugins and regenerate both. Merge them one-at-a-time and regenerate, never hand-resolve.
 - Classifier blocks DELEGATED `gh pr create`/`gh pr merge`; the main thread creates and merges them.
 - `result.shipped` is MISLEADING; truth = `gh pr list` + `git ls-remote`.
 - 16 stale worktrees remain on disk (left by user choice). Harmless for a reminders-only run; cleanup is
@@ -46,6 +47,8 @@ Launch the relaunch. Everything is verified; it is one Workflow call. Re-run the
 - 3 files still carry the symlink guard defect (task chip task_ecab775c), incl. a hook that FAILS OPEN.
 
 ## Key Decisions
+- decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — local validation before every merge; CI proves nothing
+- decisions/2026-07-20-reminders-day2-prearm-followup.md — day-2+ reach deferred to a batch-3 follow-up MSP
 - decisions/2026-07-20-reminders-android-desugaring-scope.md — reminders' fileScope expanded by one file
   (android/app/build.gradle.kts) so it ships the desugaring config in the same PR; CI cannot catch this
 - decisions/2026-07-19-symlink-guard-defect.md — all 7 CLIs were silent no-ops; pre-flight the fold CLI
