@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-20-reminders-android-desugaring-scope.md — reminders' fileScope expanded by one file (android/app/build.gradle.kts) so it ships the flutter_local_notifications desugaring config in the same PR; receipts CI runs no Android build and cannot catch this
 - decisions/2026-07-19-symlink-guard-defect.md — all 7 `~/.claude/lib/superpowers-parallel` CLIs were silent no-ops under the lib symlink (main() guard compared import.meta.url to a literal argv[1]); fixed with the realpath idiom. The engine logs NOTHING on this path, so pre-flight the fold CLI's stdout before EVERY launch
 - decisions/2026-07-19-entry-cards-fix-and-batch-2.md — batch 2 = capture-core + entry-cards + reminders; entry-cards fixed-and-included (harness single-ownership); garden-screen deferred to batch 3
 - decisions/2026-07-19-pubspec-parallel-conflict.md — pubspec.yaml conflicts are systemic; merge batch PRs one-at-a-time + union-merge each dep-adding PR (regen lock via flutter pub get)
