@@ -10,7 +10,8 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
-- decisions/2026-07-20-batch-3-scoping.md — batch 3 = the 4 conflict-free screens (today/day-detail/garden/settings); the 3 capture-* deferred to batch 4 for serial merges; the reminders day-2 follow-up needs a NEW msp id (the merged `reminders` unit is skipped by the reconcile) so it is authored in batch 4, not here
+- decisions/2026-07-20-one-run-completion-frontier-train.md — the engine does FRONTIER-TRAIN build-ahead (code-verified): ONE human-gated run completes all 31 if PRs are merged promptly; fix the 2 parked plans first; batching was an expired debugging control, not an engine limit
+- decisions/2026-07-20-batch-3-scoping.md — batch-3 four-screen scope; the capture-* "contention" reasoning was a merge-time vs build-time error the user corrected (superseded in spirit by the one-run decision)
 - decisions/2026-07-20-keep-stale-worktrees.md — the ~24 .fireplace-worktrees checkouts are KEPT for manual testing after build/deploy; cleanup is never to be proposed again
 - decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — NEITHER GitHub check runs a Dart test (receipts = node-only, 15s; D6 has no Dart import grapher and passes vacuously). Run `fullValidationCmd` locally against the PR head worktree before every merge; never accept receiptsPass/d6Pass as evidence
 - decisions/2026-07-20-reminders-day2-prearm-followup.md — reminders ships arming only the NEXT occurrence; day-2+ reach deferred to a batch-3 follow-up MSP (pre-arm ids 1001..1007, inside the existing fileScope)
@@ -34,15 +35,15 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 21/31 merged, 0 open PRs. reminders shipped 2026-07-20 via run wf_00757aaa-c12 (human-gated, 34 agents, 0 errors, 9.1h); PR #21 squash-merged after local full validation. Next: batch 3 (10 unbuilt dependents + the reminders day-2 follow-up).
+- journal-app-design — paused — 23/31 merged, 0 open PRs (garden-screen #22, day-detail #23 merged by user). FINAL all-8-remaining run STAGED (fold-verified) but not launched; today-screen/settings-screen parked plans being fixed. Next: verify fixes, pre-flight, launch one run, merge PRs promptly for 31/31.
 
 ## State snapshot (2026-07-20)
-- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. 21 squash-merges + ledger commits on origin/main.
-- BATCH 3 IS THE NEXT RUN. The 2026-07-11-03 launch block (lines 38-62) with mergePolicy "human-gated" is the proven contract — it ran clean end-to-end on 2026-07-20. Pre-flight (guard fix 7/7, fold CLI stdout non-empty, main 0/0) before every launch.
+- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. 23 squash-merges + ledger commits on origin/main.
+- ONE FINAL RUN IS STAGED (all 31 msps in .mitosis/run.json, fold-verified; today-screen/settings-screen parked@plan-review with plans being fixed). The engine's FRONTIER-TRAIN build-ahead (decisions/2026-07-20-one-run-completion-frontier-train.md) means one human-gated run reaches 31/31 if PRs are merged promptly. Launch = 2026-07-11-03 block, "human-gated". Pre-flight (guard 7/7, fold CLI stdout non-empty, main 0/0) every launch.
 - Relaunch proven SAFE: skip/build is decided by a LIVE `gh pr list --state merged` reconcile, not by run.json `status`. The 17 merged-but-"planned" units are skipped at the top of runUnit(). Stale status/resumePoint fields are inert.
 - NO ANDROID SDK on this machine — `flutter build apk` is impossible, and receipts CI never builds Android. File-content assertion is the only receipt for the new desugaring task; do NOT add an Android build to receipts.config.json.
 - Plan-review findings are NEVER persisted by the engine; recover them from the harness journal at ~/.claude/projects/<slug>/<session>/subagents/workflows/<runId>/journal.jsonl.
-- 21/31 SHIPPED: the 14 foundations + mood-picker (#15), sound-effects (#16), streak-service (#18), data-management (#17), capture-core (#19), entry-cards (#20), reminders (#21). No PRs open. 10 unbuilt dependents remain: capture-photo, capture-voice, capture-video, today-screen, day-detail, garden-screen, settings-screen (+3).
+- 23/31 SHIPPED: the 14 foundations + mood-picker (#15), sound-effects (#16), streak-service (#18), data-management (#17), capture-core (#19), entry-cards (#20), reminders (#21), garden-screen (#22), day-detail (#23). No PRs open. 8 remaining in the staged run: capture-photo/voice/video, today-screen, settings-screen, calendar-screen, search-screen, shell-nav-integration.
 - BATCH 3 (wf_00757aaa-c12 proved the pattern): reuse fired, no Decompose, run.json untouched (18258 bytes, mtime unchanged). 20 units skipped by the live merged-PR reconcile; only reminders built, resuming at plan-review off the rewritten plan. 34 agents, 0 errors, 9.1h.
 - macos/Flutter/GeneratedPluginRegistrant.swift shipped in #21 despite the plan ordering it reverted. Content is byte-identical to what `flutter pub get` regenerates, so it was harmless — but capture-photo/voice/video all add plugins and will all regenerate this same file. Treat it as a SECOND systemic conflict file alongside pubspec.yaml: merge those three one-at-a-time and regenerate rather than hand-resolving.
 - BATCH 2 (wf_1a14ffc9-038): reuse fired, no Decompose, entry-cards resumed at `execute` off its fixed plan and the harness single-ownership fix held through to merge. reminders parked at plan-review (review did not converge in 3 iterations).
