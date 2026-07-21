@@ -11,6 +11,7 @@ class SidebarShell extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     required this.onSound,
+    required this.streak,
     required this.body,
   });
 
@@ -18,6 +19,7 @@ class SidebarShell extends StatelessWidget {
   final ShellDestination selected;
   final ValueChanged<ShellDestination> onSelect;
   final VoidCallback onSound;
+  final Widget streak;
   final Widget body;
 
   @override
@@ -82,7 +84,7 @@ class SidebarShell extends StatelessWidget {
             const SizedBox(height: 20),
             for (final ShellDestination d in destinations) _railItem(d),
             const Spacer(),
-            _streakCard(),
+            streak,
             const SizedBox(height: 12),
             StickerButton(
               key: const ValueKey<String>('settings-button'),
@@ -147,21 +149,4 @@ class SidebarShell extends StatelessWidget {
     );
   }
 
-  Widget _streakCard() {
-    return StickerCard(
-      key: const ValueKey<String>('streak-card'),
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: <Widget>[
-          const Icon(
-            Icons.local_fire_department,
-            size: 18,
-            color: Palette.coral,
-          ),
-          const SizedBox(width: 8),
-          const Text('Streak', style: TypographyTokens.streakAccent),
-        ],
-      ),
-    );
-  }
 }
