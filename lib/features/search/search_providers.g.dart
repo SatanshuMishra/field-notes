@@ -105,7 +105,7 @@ final class SearchDayViewsProvider
   }
 }
 
-String _$searchDayViewsHash() => r'2a47d54ca677ba1c3f815ecaff3316bfe6f8de98';
+String _$searchDayViewsHash() => r'de88cceeb3b514f8da0979365214390995ed1d52';
 
 @ProviderFor(searchResults)
 final searchResultsProvider = SearchResultsProvider._();
