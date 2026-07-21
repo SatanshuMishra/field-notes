@@ -8,25 +8,27 @@ void main() {
   testWidgets('renders a labelled, non-interactive pairing code',
       (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
-    useWideSurface(tester);
-    await tester.pumpWidget(
-      settingsFeatureHarness(const PairingQrPlaceholder()),
-    );
+    try {
+      useWideSurface(tester);
+      await tester.pumpWidget(
+        settingsFeatureHarness(const PairingQrPlaceholder()),
+      );
 
-    expect(find.byType(PairingQrPlaceholder), findsOneWidget);
-    expect(
-      find.bySemanticsLabel('Device pairing code'),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: find.byType(PairingQrPlaceholder),
-        matching: find.byType(GestureDetector),
-      ),
-      findsNothing,
-    );
-
-    handle.dispose();
+      expect(find.byType(PairingQrPlaceholder), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Device pairing code'),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(PairingQrPlaceholder),
+          matching: find.byType(GestureDetector),
+        ),
+        findsNothing,
+      );
+    } finally {
+      handle.dispose();
+    }
   });
 
   testWidgets('sizes itself to the requested edge length',
