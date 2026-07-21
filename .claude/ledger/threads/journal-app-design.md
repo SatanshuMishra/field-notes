@@ -1,78 +1,66 @@
 ---
 thread: journal-app-design
 status: paused
-updated: 2026-07-20
+updated: 2026-07-21
 priority: high
 completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Verify the two plan-fix agents' edits landed in .mitosis/{today-screen,settings-screen}.plan.md, run the 3 pre-flights, then LAUNCH the one final all-remaining-units run (2026-07-11-03 block, mergePolicy "human-gated") and merge each green PR PROMPTLY.
+next_step: FRESH context. Confirm pristine (tree clean, origin/main...main 0 0, run.json 6 lines, no worktrees/branches for the 5 parked units), run the 3 pre-flights, then LAUNCH the same verbatim 2026-07-11-03 block (mergePolicy "human-gated", NOT resumeFromRunId). Validate+merge each PR promptly; capture-* one-at-a-time with regen; shell-nav last.
 branch: main
 ---
 
 ## Status
-23/31 merged, 0 open PRs (garden-screen #22, day-detail #23 merged by user this session). The FINAL run is
-STAGED but NOT launched: .mitosis/run.json holds all 31 msps with today-screen/settings-screen parked at
-plan-review; their plans are being fixed by two background agents. One run should reach 31/31.
+26/31 merged, 0 open PRs. Final run wf_2a283cde-9d0 shipped 3 screens (today #24, calendar #25, search
+#26 — each locally validated 515/539/566 tests) then hit the SESSION USAGE LIMIT and ended `partial`,
+parking the last 5. Repo left PRISTINE and relaunch-ready (cleaned, reconciled, Stage-F'd).
 
 ## Active Goal
-Complete all 31 Field Notes v1 MSPs in AS FEW mitosis flows as possible — one final human-gated run carrying
-all 8 remaining units, human merging green PRs promptly so the frontier-train build-ahead lands
-shell-nav-integration in the same run.
+Complete the last 5 Field Notes v1 MSPs (settings-screen, capture-photo/voice/video, shell-nav-
+integration) via ONE fresh-context relaunch-to-resume, merging PRs promptly, for 31/31.
 
 ## Next Step
-Plan fixes CONFIRMED on disk (2026-07-20-03): today-screen plan already addressed its only review's 3
-findings (fix agent made no edit); settings-screen plan now carries the 6 `misc.dart` imports +
-feedback-motion-kit acknowledgment. So: 3 pre-flights -> launch the final run -> merge PRs promptly.
+Fresh session: verify pristine, pre-flight (guard 7/7, fold CLI stdout=31 msps, main 0/0), launch the
+verbatim 2026-07-11-03 block. The 26 merged fast-skip via the LIVE `gh pr list --state merged` reconcile;
+settings-screen resumes at plan-review (preserves its fixed plan); capture-*/shell-nav rebuild fresh
+(their final parks were NOT persisted — the usage limit failed every park-checkpoint).
 
 ## Open Risks
-- CI IS HOLLOW FOR DART (decisions/2026-07-20-ci-gates-are-hollow-for-dart.md). Run fullValidationCmd locally
-  against each PR head worktree before EVERY merge.
-- Adversarial plan-review may re-park today-screen/settings-screen with NEW findings on relaunch. All KNOWN
-  findings are addressed on disk; today-screen had only ONE distinct review (no unaddressed finding found).
-  today-screen re-parking blocks ONLY shell-nav-integration; the other 6 units ship regardless — so a
-  re-park costs at most one cheap follow-up, not the whole run. If it re-parks, recover the NEW finding from
-  the relaunch journal and fix, then resume.
-- MERGE PROMPTLY to stay at one flow: frontier-train poll budget is 6 cycles x <=300s (resets per merge). Slow
-  merges -> shell-nav-integration parks -> one cheap relaunch resume (not a rebuild).
-- capture-photo/voice/video each add pub deps AND regenerate macos/Flutter/GeneratedPluginRegistrant.swift:
-  merge one-at-a-time with `flutter pub get` regeneration, never hand-resolve. pubspec.yaml also systemic.
-- The fold PROPAGATES parked status through dependsOn; keep only today/settings park deltas in run.json (the
-  stale entry-cards park was removed this session). shell-nav@null propagation is benign (runs fresh pipeline).
-- Do NOT hand-edit run.json's base line or re-trim unless rebuilding the manifest; it is staged + fold-verified.
-- `.mitosis/` is gitignored — staged run.json + batch-tooling live only on this machine.
-- No Android SDK: capture-* Android bits never compile here; file-content receipts only.
-- 3 files still carry the symlink guard defect (task chip task_ecab775c); 7-CLI fix committed, run-engine.mjs
-  dirty in .windful-ocean.
+- MITOSIS RELAUNCH MUST BE FRESH-CONTEXT (runs die when launched near-full; proven). This is why this
+  session handed off instead of relaunching.
+- CI IS HOLLOW FOR DART. Run fullValidationCmd locally (FOREGROUND) against each PR head before EVERY
+  merge. See decisions/2026-07-20-ci-gates-are-hollow-for-dart.md.
+- capture-photo/voice/video each add pub deps AND regenerate macos/Flutter/GeneratedPluginRegistrant.swift
+  → merge ONE-AT-A-TIME with `flutter pub get` regen; pubspec.yaml also systemic. shell-nav merges last.
+- settings-screen's plan re-review may re-park with a NEW finding (blocks ONLY shell-nav; other 4 ship).
+- The run can hit the usage limit again mid-relaunch → cheap relaunch-to-resume on the SAME run.json.
+- `.mitosis/` is gitignored: staged run.json + batch-tooling live only on this machine.
 
 ## Key Decisions
-- decisions/2026-07-20-one-run-completion-frontier-train.md — one run completes the app (frontier-train,
-  code-verified); fix parked plans first; include all 8; merge promptly
-- decisions/2026-07-20-batch-3-scoping.md — batch-3 four-screen scope (the reasoning the user corrected)
+- decisions/2026-07-20-one-run-completion-frontier-train.md — one run completes the app (frontier-train);
+  the engine now also CREATES the PRs itself in human-gated mode (observed this session; I only merge)
 - decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — local validation before every merge
-- decisions/2026-07-20-reminders-day2-prearm-followup.md — day-2 reach deferred (needs a NEW msp id; NOT in
-  this run — the merged `reminders` unit is skipped by the reconcile; author it after 31/31)
 - decisions/2026-07-19-pubspec-parallel-conflict.md — systemic pubspec conflict; serial union merges
-- decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md — run.json one compact line
+- decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md — run.json one compact base line
+- decisions/2026-07-16-pre-relaunch-main-reconciliation.md — reconcile local main before EVERY relaunch
 - decisions/2026-07-12-human-gated-merge-policy.md — human-gated + main-thread/user merge under consent
 - decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift; v1 schema conventions
 
 ## Out of Scope
 - iOS; server-side search/thumbnails; CRDTs/Postgres/MinIO/Cloudflare Tunnel; multi-user; pooled Memories
   gallery. All sync/server work is v2 (settings-screen ships an inert disabled sync shell). The reminders
-  day-2 pre-arm follow-up MSP is post-31 work, not this run.
+  day-2 pre-arm follow-up MSP is post-31 work (needs a NEW msp id; not in this run).
 
 ## Pointers
-- .mitosis/run.json — STAGED final 31-msp manifest (fold-verified; today/settings parked@plan-review)
-- .mitosis/run.json.pristine-backup — untouched 31-MSP source (md5 a7ca0a4f...); gitignored
-- .mitosis/batch-tooling/ — MERGED=23, BATCH=8; parks/today-settings-parks.jsonl = preserved park deltas
-- .mitosis/{today-screen,settings-screen}.plan.md — parked plans being fixed (verify before launch)
-- .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — VERBATIM launch block (set "human-gated")
+- .mitosis/run.json — STAGED 31-msp manifest (6 lines: base + today/settings park deltas + 3 built)
+- .mitosis/run.json.pristine-backup — untouched 31-MSP source (md5 a7ca0a4f…); gitignored
+- .mitosis/settings-screen.plan.md — FIXED parked plan (preserve; resumes at plan-review)
+- .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — VERBATIM launch block (mergePolicy human-gated)
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 = implementation status)
 - GitHub: https://github.com/SatanshuMishra/field-notes (PRIVATE). Project name is field-notes.
 
 ## Recent Sessions
+- sessions/2026-07-21-01-journal-app-design.md — final run: 26/31, usage-limit parked 5, repo pristine
 - sessions/2026-07-20-03-journal-app-design.md — 23/31; engine verified; final run staged, not launched
 - sessions/2026-07-20-02-journal-app-design.md — reminders shipped, 21/31; CI found hollow
-- sessions/2026-07-20-01-journal-app-design.md
