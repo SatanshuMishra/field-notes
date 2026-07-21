@@ -56,3 +56,45 @@ final class SettingsControllerProvider
 
 String _$settingsControllerHash() =>
     r'5d94ee532f876243fdd455b60499e0981bf5fcca';
+
+@ProviderFor(settingsDataController)
+final settingsDataControllerProvider = SettingsDataControllerProvider._();
+
+final class SettingsDataControllerProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<SettingsDataController>,
+          SettingsDataController,
+          FutureOr<SettingsDataController>
+        >
+    with
+        $FutureModifier<SettingsDataController>,
+        $FutureProvider<SettingsDataController> {
+  SettingsDataControllerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'settingsDataControllerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$settingsDataControllerHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<SettingsDataController> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<SettingsDataController> create(Ref ref) {
+    return settingsDataController(ref);
+  }
+}
+
+String _$settingsDataControllerHash() =>
+    r'4b2b94595bab68e869b7f1e14241e14be4e516a6';
