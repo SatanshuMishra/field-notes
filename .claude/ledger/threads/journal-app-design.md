@@ -22,13 +22,18 @@ all 8 remaining units, human merging green PRs promptly so the frontier-train bu
 shell-nav-integration in the same run.
 
 ## Next Step
-Verify plan fixes landed -> 3 pre-flights -> launch the final run -> merge PRs promptly.
+Plan fixes CONFIRMED on disk (2026-07-20-03): today-screen plan already addressed its only review's 3
+findings (fix agent made no edit); settings-screen plan now carries the 6 `misc.dart` imports +
+feedback-motion-kit acknowledgment. So: 3 pre-flights -> launch the final run -> merge PRs promptly.
 
 ## Open Risks
 - CI IS HOLLOW FOR DART (decisions/2026-07-20-ci-gates-are-hollow-for-dart.md). Run fullValidationCmd locally
   against each PR head worktree before EVERY merge.
-- Adversarial plan-review may re-park today-screen/settings-screen with NEW findings after the fixes. Blocking
-  findings are addressed (today §4 DAG; settings Override import) but convergence is not guaranteed.
+- Adversarial plan-review may re-park today-screen/settings-screen with NEW findings on relaunch. All KNOWN
+  findings are addressed on disk; today-screen had only ONE distinct review (no unaddressed finding found).
+  today-screen re-parking blocks ONLY shell-nav-integration; the other 6 units ship regardless — so a
+  re-park costs at most one cheap follow-up, not the whole run. If it re-parks, recover the NEW finding from
+  the relaunch journal and fix, then resume.
 - MERGE PROMPTLY to stay at one flow: frontier-train poll budget is 6 cycles x <=300s (resets per merge). Slow
   merges -> shell-nav-integration parks -> one cheap relaunch resume (not a rebuild).
 - capture-photo/voice/video each add pub deps AND regenerate macos/Flutter/GeneratedPluginRegistrant.swift:
