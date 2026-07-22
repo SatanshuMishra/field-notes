@@ -10,7 +10,8 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
-- decisions/2026-07-22-save-hang-timeout-noop-root-cause.md — REAL save-hang cause: PR #32 "bounded timeout" was a NO-OP (TimeoutException re-awaited the same unbounded future); never-completing native stop() hung "Saving...". Fixed in voice/text/video (branch fix/capture-save-hang, 0a9902c) + receipts. Corrects the timeout claim below. OPEN: does real-mic voice actually persist, or only fail-gracefully?
+- decisions/2026-07-22-capture-finalize-fix-strategy.md — voice=record 7.x upgrade (DONE+verified); video=vendor camera_macos->AVCaptureMovieFileOutput; +disk-verify guardrail
+- decisions/2026-07-22-save-hang-timeout-noop-root-cause.md — bounded timeout fails GRACEFULLY but does not persist; real fixes are native (see strategy above)
 - decisions/2026-07-22-black-window-standalone-binary.md — BLACK window = launching the standalone .app binary yields no first frame (null layer tree); `flutter run -d macos` renders. Always run via `flutter run`, never the raw binary. VM screenshot works only against a flutter-run instance
 - decisions/2026-07-21-capture-flow-root-cause-and-fix.md — capture flows: note/voice save-hang (Riverpod retry-limbo, provider_container.dart:948) + video start()/_ready deadlock FIXED; "no prompt" = ad-hoc-signing/TCC env limit [timeout claim corrected by 2026-07-22-save-hang-timeout-noop-root-cause.md]
 - decisions/2026-07-21-vm-rpc-screenshot-for-visual-verification.md — screenshot the running macOS app via the `_flutter.screenshot` VM Service RPC (scratchpad/vm_screenshot.dart); `screencapture` is blocked because Claude Desktop lacks Screen Recording TCC until a full quit+reopen. Screenshotting is unblocked; click-driving still needs Accessibility (same relaunch)
@@ -41,7 +42,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — DB round-trip PROVEN on macOS; then real-mic voice save hung ("Saving..."). Root cause = the PR #32 timeout was a no-op; fixed voice/text/video on branch fix/capture-save-hang (0a9902c, unpushed). Next = verify real voice actually persists + push/PR. See sessions/2026-07-22-01.
+- journal-app-design — paused — 2 root causes; VOICE fixed+verified (record 7.x, branch fix/macos-capture-finalize); VIDEO fix decided (vendor camera_macos->AVCaptureMovieFileOutput) but unbuilt. Next = build video + disk-verify guardrail + PR. See sessions/2026-07-22-02.
 
 ## State snapshot (2026-07-22)
 - DB ROUND-TRIP PROVEN (session 2026-07-22-01): real capture write path stored 2 new entries into the on-disk DB (~/Library/Containers/dev.satanshumishra.fieldNotes/Data/Documents/field_notes.sqlite); a separate sqlite3 process confirmed them AFTER the writer exited (entries 2->4); live app rendered DB rows (live-feed-01.png). Store+retrieve are proven end-to-end.
