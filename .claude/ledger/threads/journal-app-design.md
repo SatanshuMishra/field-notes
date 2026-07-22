@@ -1,6 +1,6 @@
 ---
 thread: journal-app-design
-status: paused
+status: active
 updated: 2026-07-22
 priority: high
 completion_criteria:
