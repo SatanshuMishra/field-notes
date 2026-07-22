@@ -7,35 +7,31 @@ completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: shell-nav is BUILT + open as PR #31 (delegated implementer on origin/main; independently validated 660 tests, analyze clean, both CI checks green). The HUMAN squash-merges PR #31 -> 31/31 (v1 implementation complete). Then reconcile local main (4 behind / 2 ahead).
+next_step: 31/31 SHIPPED + local main reconciled (b542a4b = origin/main 54b81a2 + ledger). App is code-complete. Fresh session: finalize (recommend DEFER the reminders day-2 follow-up) then build + run locally on macOS for testing — gate is the Phase 8 HUMAN toolchain install (Xcode/CocoaPods; Android SDK absent). Full plan in sessions/2026-07-21-04. No mitosis anywhere.
 branch: main
 ---
 
 ## Status
-30/31 merged, origin/main = bf527a4. shell-nav-integration is BUILT and open as PR #31
-(msp/shell-nav-integration @ baa2304, based on origin/main), independently validated (660 tests,
-analyze clean, both CI checks green), awaiting the HUMAN's final squash-merge -> 31/31.
+31/31 SHIPPED — all MSPs merged (origin/main 54b81a2, PR #31 merged). App is code-complete:
+lib/main.dart is a runnable entry, zero stray TODO/UnimplementedError (only the intentional inert v2
+sync placeholder). Local main reconciled to origin/main (b542a4b + 3 unpushed ledger commits).
 
 ## Active Goal
-Merge PR #31 (shell-nav-integration) for 31/31 — Field Notes v1 implementation complete.
+Finalize the minimal remaining parts and build + run Field Notes v1 locally (macOS) for manual testing.
 
 ## Next Step
-The HUMAN squash-merges PR #31 (https://github.com/SatanshuMishra/field-notes/pull/31) -> 31/31.
-Then reconcile local main onto origin/main. Post-31: reminders day-2 pre-arm MSP + Phase 8 human
-toolchain install (Xcode/CocoaPods, Android SDK) for a local run.
+Follow the recommended plan in sessions/2026-07-21-04: workspace is clean + app code-complete; decide
+reminders day-2 follow-up (recommend DEFER); then drive the macOS local build/run (`flutter run -d
+macos`; the `run` skill can help) — the gate is the Phase 8 HUMAN toolchain install (full Xcode +
+CocoaPods; Android SDK absent). Then a manual test pass against the spec. No mitosis relaunch anywhere.
 
 ## Open Risks
-- LOCAL main is 4 BEHIND / 2 AHEAD of origin/main (it never pulled the #27-#30 squash-merges; the 2
-  ahead are ledger commits). RECONCILE local main onto origin/main BEFORE the relaunch — the engine
-  cuts worktrees from the local main ref. See decisions/2026-07-16-pre-relaunch-main-reconciliation.md.
-- `gh pr merge` + REST merge are HOOK-BLOCKED for all callers incl. the agent — the HUMAN merges every
-  PR after the agent validates. See decisions/2026-07-21-gh-merge-hook-blocked-human-merges.md.
-- MITOSIS RELAUNCH MUST BE FRESH-CONTEXT (runs die when launched near-full; proven).
-- CI IS HOLLOW FOR DART — run fullValidationCmd locally (FOREGROUND) against the PR head before merge.
-- If shell-nav re-parks on composition despite the refs, fallback = authorize the engine's
-  `git branch -f msp/shell-nav-integration-integration origin/main` (all 4 parents ARE in main).
-- Engine checkpoint force-pushes are classifier-blocked; shell-nav has no dependents so its own
-  checkpoint not persisting is harmless.
+- LOCAL-RUN GATE: Phase 8 toolchain is a HUMAN install (agent cannot — downloads blocked): full Xcode +
+  CocoaPods for macOS. Android SDK is ABSENT (no `flutter build apk`); macOS is the viable first target.
+- reminders day-2+ reach is NOT built yet (deferred follow-up MSP; needs a new msp id). The app arms only
+  the NEXT reminder occurrence. Decide build-now vs defer with the user (recommend defer until after test).
+- `gh pr merge` stays agent-blocked for any future PR (the HUMAN merges). Local main is 3 ledger commits
+  ahead of origin (unpushed, per the established pattern); push is optional.
 
 ## Key Decisions
 - decisions/2026-07-21-shellnav-built-via-delegated-implementer.md — shell-nav BUILT via a delegated
@@ -62,6 +58,7 @@ toolchain install (Xcode/CocoaPods, Android SDK) for a local run.
 - GitHub: https://github.com/SatanshuMishra/field-notes (PRIVATE). Project name is field-notes.
 
 ## Recent Sessions
+- sessions/2026-07-21-04-journal-app-design.md — 31/31 confirmed; local main reconciled; app code-complete; hand-off for local-run phase
 - sessions/2026-07-21-03-journal-app-design.md — shell-nav BUILT via delegated implementer; PR #31 open + validated (660 tests); awaiting merge
 - sessions/2026-07-21-02-journal-app-design.md — 26→30/31; gh-merge hook-block found; shell-nav parked+unblocked
 - sessions/2026-07-21-01-journal-app-design.md — final run: 26/31, usage-limit parked 5, repo pristine

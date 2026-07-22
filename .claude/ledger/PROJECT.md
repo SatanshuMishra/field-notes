@@ -37,7 +37,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 30/31 merged. shell-nav-integration BUILT (delegated implementer, PR #31) and validated (660 tests, CI green); awaiting the HUMAN's final squash-merge -> 31/31. Next: merge PR #31.
+- journal-app-design — paused — 31/31 SHIPPED (all v1 MSPs merged; origin/main 54b81a2). App code-complete + local main reconciled. Next phase: build/run locally (macOS) for testing — gate is the Phase 8 human toolchain install. See sessions/2026-07-21-04.
 
 ## State snapshot (2026-07-21)
 - Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. 26 squash-merges + ledger commits on origin/main (main = ca2e6f0).
@@ -46,7 +46,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Relaunch proven SAFE: skip/build is decided by a LIVE `gh pr list --state merged` reconcile, not by run.json `status`. The 17 merged-but-"planned" units are skipped at the top of runUnit(). Stale status/resumePoint fields are inert.
 - NO ANDROID SDK on this machine — `flutter build apk` is impossible, and receipts CI never builds Android. File-content assertion is the only receipt for the new desugaring task; do NOT add an Android build to receipts.config.json.
 - Plan-review findings are NEVER persisted by the engine; recover them from the harness journal at ~/.claude/projects/<slug>/<session>/subagents/workflows/<runId>/journal.jsonl.
-- 30/31 SHIPPED: the prior 26 + capture-photo (#27), settings-screen (#28), capture-voice (#29), capture-video (#30). No PRs open. 1 remaining: shell-nav-integration — UNBUILT, parked at composition and now unblocked (4 parent checkpoint refs all present on origin under refs/mitosis/5385f00d/).
+- 31/31 SHIPPED: all v1 MSPs merged (origin/main 54b81a2). shell-nav-integration (#31) was built via a delegated implementer on origin/main and human-merged. App is code-complete (main.dart runnable; no stray TODOs; only the inert v2 sync placeholder). Local main reconciled. Remaining work is the LOCAL RUN phase (macOS build/run for testing), not more MSPs.
 - BATCH 3 (wf_00757aaa-c12 proved the pattern): reuse fired, no Decompose, run.json untouched (18258 bytes, mtime unchanged). 20 units skipped by the live merged-PR reconcile; only reminders built, resuming at plan-review off the rewritten plan. 34 agents, 0 errors, 9.1h.
 - macos/Flutter/GeneratedPluginRegistrant.swift shipped in #21 despite the plan ordering it reverted. Content is byte-identical to what `flutter pub get` regenerates, so it was harmless — but capture-photo/voice/video all add plugins and will all regenerate this same file. Treat it as a SECOND systemic conflict file alongside pubspec.yaml: merge those three one-at-a-time and regenerate rather than hand-resolving.
 - BATCH 2 (wf_1a14ffc9-038): reuse fired, no Decompose, entry-cards resumed at `execute` off its fixed plan and the harness single-ownership fix held through to merge. reminders parked at plan-review (review did not converge in 3 iterations).
