@@ -3,22 +3,18 @@ Date: 2026-07-21
 Thread: journal-app-design
 
 ## Context
-Visual verification of the running macOS app needs a screenshot, but `screencapture` fails with
-"could not create image from display": the shell's host process is com.anthropic.claudefordesktop,
-which lacks Screen Recording TCC, and macOS only activates the grant after a full quit+reopen of
-Claude Desktop. `flutter screenshot` can't substitute either (`device` type needs the same TCC;
-`skia` type emits a non-viewable .skp; `rasterizer` was removed in Flutter 3.44).
+Visual verification of the running macOS app needs a screenshot, but `screencapture` fails
+("could not create image from display"): the host process is com.anthropic.claudefordesktop, which
+lacks Screen Recording TCC until a full Claude Desktop quit+reopen. `flutter screenshot` can't
+substitute (`device` needs the same TCC; `skia` emits a non-viewable .skp; `rasterizer` gone in 3.44).
 
 ## Decision
-Capture the running Flutter app's frame by calling the engine RPC `_flutter.screenshot` over the
-Dart VM Service WebSocket, decoding the base64 PNG. Reusable script: scratchpad/vm_screenshot.dart,
-run as `dart vm_screenshot.dart ws://127.0.0.1:<port>/<token>/ws <out.png>`. Derive the WS URL from
-the app's stderr line "Dart VM service is listening on http://...". This is the standard visual-check
-path for macOS in this environment.
+Capture frames via the engine RPC `_flutter.screenshot` over the Dart VM Service WebSocket, decoding
+the base64 PNG. Script: scratchpad/vm_screenshot.dart, run `dart vm_screenshot.dart
+ws://127.0.0.1:<port>/<token>/ws <out.png>`; get the WS URL from the app's "Dart VM service is
+listening on http://..." stderr line. Launch the app directly (not `open`) to capture that line.
 
 ## Consequences
-- Screenshots need NO Screen Recording permission and work in-session, every session.
-- Only screenshotting is unblocked. DRIVING the app (click/keyboard injection via Accessibility) is
-  still TCC-gated and needs a full Claude Desktop quit+reopen. Rejected the quit+reopen-first path as
-  the default because the VM RPC removes the need for it just to see the UI.
-- Launch the app directly (not via `open`) to capture stderr + the VM service URL in one shell.
+- Screenshots need NO Screen Recording permission; works every session.
+- Only screenshotting is unblocked; click-driving (Accessibility) still needs the Claude Desktop
+  quit+reopen. Full detail: sessions/2026-07-21-05-journal-app-design.md.
