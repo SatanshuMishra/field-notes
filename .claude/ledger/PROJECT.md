@@ -42,7 +42,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 2 root causes; VOICE fixed+verified (record 7.x, branch fix/macos-capture-finalize); VIDEO fix decided (vendor camera_macos->AVCaptureMovieFileOutput) but unbuilt. Next = build video + disk-verify guardrail + PR. See sessions/2026-07-22-02.
+- journal-app-design — paused — VOICE + VIDEO macOS capture fixed; video via vendored camera_macos->AVCaptureMovieFileOutput + disk-verify guardrail, hardened over 2 reviews. PR #33 OPEN, awaiting human camera validation + merge. See sessions/2026-07-22-03.
 
 ## State snapshot (2026-07-22)
 - DB ROUND-TRIP PROVEN (session 2026-07-22-01): real capture write path stored 2 new entries into the on-disk DB (~/Library/Containers/dev.satanshumishra.fieldNotes/Data/Documents/field_notes.sqlite); a separate sqlite3 process confirmed them AFTER the writer exited (entries 2->4); live app rendered DB rows (live-feed-01.png). Store+retrieve are proven end-to-end.
