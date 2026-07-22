@@ -53,8 +53,9 @@ Future<void> _openComposer(WidgetTester tester) async {
 
 Future<void> _startRecording(WidgetTester tester) async {
   await tester.tap(find.text('Record'));
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 50));
+  for (int i = 0; i < 4; i++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
 
 void main() {
@@ -140,8 +141,37 @@ void main() {
     expect(find.byType(VideoRecorderSheet), findsNothing);
   });
 
-  testWidgets('a denied camera shows the permission message and records nothing',
-      (WidgetTester tester) async {
+  testWidgets(
+      'a granted camera shows the live capture UI and never surfaces a denied '
+      'state', (WidgetTester tester) async {
+    final FakeVideoRecorder recorder = FakeVideoRecorder();
+    final FakeCaptureService service = FakeCaptureService();
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: service,
+        onResult: (String? id) {},
+      ),
+    );
+
+    await _openComposer(tester);
+    await _startRecording(tester);
+
+    expect(recorder.startCalls, 1);
+    expect(find.byKey(const ValueKey('fake-video-preview')), findsOneWidget);
+    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text(cameraPermissionMessage), findsNothing);
+    expect(find.text('Try again'), findsNothing);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets(
+      'a denied camera shows the denied-state UI with guidance and a retry, and '
+      'records nothing', (WidgetTester tester) async {
     final FakeVideoRecorder recorder = FakeVideoRecorder(permission: false);
     final FakeCaptureService service = FakeCaptureService();
     String? result = 'unset';
@@ -158,10 +188,49 @@ void main() {
     await _startRecording(tester);
 
     expect(find.text(cameraPermissionMessage), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Record'), findsNothing);
     expect(recorder.startCalls, 0);
     expect(service.requests, isEmpty);
     expect(find.byKey(const ValueKey('fake-video-preview')), findsNothing);
     expect(result, 'unset');
+
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(find.text('Try again'), findsOneWidget);
+    expect(recorder.startCalls, 0);
+  });
+
+  testWidgets(
+      'a camera that never becomes ready surfaces the timeout guidance and '
+      'returns to idle so the user can retry', (WidgetTester tester) async {
+    final FakeVideoRecorder recorder = FakeVideoRecorder(
+      startError: const VideoRecorderException(videoStartTimeoutMessage),
+    );
+    final FakeCaptureService service = FakeCaptureService();
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: service,
+        onResult: (String? id) {},
+      ),
+    );
+
+    await _openComposer(tester);
+    await _startRecording(tester);
+
+    expect(recorder.startCalls, 1);
+    expect(find.text(videoStartTimeoutMessage), findsOneWidget);
+    expect(find.text('Record'), findsOneWidget);
+    expect(find.text('Stop & save'), findsNothing);
+    expect(find.byKey(const ValueKey('fake-video-preview')), findsNothing);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
   });
 
   testWidgets('a failed save surfaces the reason and stays open to retry',
