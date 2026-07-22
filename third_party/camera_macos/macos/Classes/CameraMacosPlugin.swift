@@ -1074,12 +1074,19 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         let ok = (error == nil) || (((error as NSError?)?.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as? Bool) == true)
         let size = ((try? FileManager.default.attributesOfItem(atPath: outputFileURL.path)[.size]) as? NSNumber)?.int64Value ?? 0
         if let pending = pending {
+            let urlPath = outputFileURL.absoluteURL.path
             if ok, size > 0 {
                 print("Video Recorded And Saved At: \(outputFileURL.absoluteURL)")
-                pending(["videoData": nil, "url": outputFileURL.absoluteURL.path, "error": nil] as [String: Any?])
+                let successPayload = ["videoData": nil, "url": urlPath, "error": nil] as [String: Any?]
+                DispatchQueue.main.async {
+                    pending(successPayload)
+                }
             } else {
-                let detail: String = error?.localizedDescription ?? "File is empty at url: \(outputFileURL.absoluteURL.path)"
-                pending(FlutterError(code: "MOVIE_FILE_OUTPUT_FAIL", message: "File not saved at \(outputFileURL.absoluteURL.path) - \(detail)", details: nil).toFlutterResult)
+                let detail: String = error?.localizedDescription ?? "File is empty at url: \(urlPath)"
+                let errorPayload = FlutterError(code: "MOVIE_FILE_OUTPUT_FAIL", message: "File not saved at \(urlPath) - \(detail)", details: nil).toFlutterResult
+                DispatchQueue.main.async {
+                    pending(errorPayload)
+                }
             }
             return
         }
