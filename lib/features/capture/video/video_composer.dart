@@ -18,10 +18,17 @@ import 'video_timeline.dart';
 const String unexpectedVideoSaveMessage =
     'Could not save your video. Please try again.';
 
+const Duration videoSaveTimeout = Duration(seconds: 20);
+
 class VideoComposerConnector extends ConsumerStatefulWidget {
-  const VideoComposerConnector({super.key, required this.date});
+  const VideoComposerConnector({
+    super.key,
+    required this.date,
+    this.saveTimeout = videoSaveTimeout,
+  });
 
   final String date;
+  final Duration saveTimeout;
 
   @override
   ConsumerState<VideoComposerConnector> createState() =>
@@ -41,15 +48,29 @@ class _VideoComposerConnectorState
   Future<void> _start() async {
     setState(() => _errorMessage = null);
     final VideoRecorder recorder = _recorder;
+    final bool granted;
     try {
-      final bool granted = await recorder.hasPermission();
+      granted = await recorder.hasPermission();
+    } catch (_) {
       if (!mounted) {
         return;
       }
-      if (!granted) {
-        setState(() => _errorMessage = cameraPermissionMessage);
-        return;
-      }
+      setState(() => _phase = VideoRecorderPhase.denied);
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    if (!granted) {
+      setState(() => _phase = VideoRecorderPhase.denied);
+      return;
+    }
+    setState(() {
+      _preview = recorder.buildPreview();
+      _phase = VideoRecorderPhase.arming;
+      _nudgeMessage = null;
+    });
+    try {
       await recorder.start();
       if (!mounted) {
         return;
@@ -57,14 +78,17 @@ class _VideoComposerConnectorState
       setState(() {
         _preview = recorder.buildPreview();
         _phase = VideoRecorderPhase.recording;
-        _nudgeMessage = null;
       });
       _scheduleTimeline();
     } on VideoRecorderException catch (error) {
       if (!mounted) {
         return;
       }
-      setState(() => _errorMessage = error.message);
+      setState(() {
+        _phase = VideoRecorderPhase.idle;
+        _preview = null;
+        _errorMessage = error.message;
+      });
     }
   }
 
@@ -103,29 +127,41 @@ class _VideoComposerConnectorState
       _errorMessage = null;
       _nudgeMessage = null;
     });
+    String? entryId;
+    final Future<String> pending = _persist();
     try {
-      final VideoRecording recording = await _recorder.stop();
-      final CaptureService service =
-          await ref.read(captureServiceProvider.future);
-      final CaptureResult result = await service.capture(
-        VideoCaptureRequest(
-          date: widget.date,
-          video: recording.media,
-          durationMs: recording.durationMs,
-          thumbnail: recording.thumbnail,
-        ),
-      );
-      if (!mounted) {
-        return;
+      try {
+        entryId = await pending.timeout(widget.saveTimeout);
+      } on TimeoutException {
+        entryId = await pending;
       }
-      Navigator.of(context).pop(result.entry.id);
     } on VideoRecorderException catch (error) {
       _failBackToRecording(error.message);
     } on CaptureException catch (error) {
       _failBackToRecording(error.message);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Video save failed: $error\n$stackTrace');
       _failBackToRecording(unexpectedVideoSaveMessage);
     }
+    if (entryId == null || !mounted) {
+      return;
+    }
+    Navigator.of(context).pop(entryId);
+  }
+
+  Future<String> _persist() async {
+    final VideoRecording recording = await _recorder.stop();
+    final CaptureService service =
+        await ref.read(captureServiceProvider.future);
+    final CaptureResult result = await service.capture(
+      VideoCaptureRequest(
+        date: widget.date,
+        video: recording.media,
+        durationMs: recording.durationMs,
+        thumbnail: recording.thumbnail,
+      ),
+    );
+    return result.entry.id;
   }
 
   void _failBackToRecording(String message) {
@@ -140,7 +176,8 @@ class _VideoComposerConnectorState
 
   Future<void> _cancel() async {
     _cancelTimers();
-    if (_phase == VideoRecorderPhase.recording) {
+    if (_phase == VideoRecorderPhase.recording ||
+        _phase == VideoRecorderPhase.arming) {
       await _recorder.cancel();
     }
     if (!mounted) {
@@ -159,7 +196,10 @@ class _VideoComposerConnectorState
   Widget build(BuildContext context) {
     return VideoRecorderSheet(
       phase: _phase,
-      preview: _phase == VideoRecorderPhase.recording ? _preview : null,
+      preview: (_phase == VideoRecorderPhase.arming ||
+              _phase == VideoRecorderPhase.recording)
+          ? _preview
+          : null,
       nudgeMessage: _nudgeMessage,
       errorMessage: _errorMessage,
       onStart: _start,

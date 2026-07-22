@@ -5,7 +5,9 @@ import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
-enum VideoRecorderPhase { idle, recording, saving }
+import 'video_recorder.dart';
+
+enum VideoRecorderPhase { idle, arming, recording, saving, denied }
 
 class VideoRecorderSheet extends StatelessWidget {
   const VideoRecorderSheet({
@@ -19,12 +21,16 @@ class VideoRecorderSheet extends StatelessWidget {
     this.errorMessage,
     this.title = 'Record video',
     this.armedHint = 'Tap record when you are ready.',
+    this.armingHint = 'Getting the camera ready…',
     this.recordingHint = 'Recording…',
     this.savingHint = 'Saving your video…',
     this.capHint = 'Auto-stops at 30:00.',
+    this.deniedMessage = cameraPermissionMessage,
     this.startLabel = 'Record',
     this.stopLabel = 'Stop & save',
     this.savingLabel = 'Saving…',
+    this.armingLabel = 'Preparing…',
+    this.tryAgainLabel = 'Try again',
     this.cancelLabel = 'Cancel',
     this.maxWidth = 460,
   });
@@ -38,17 +44,23 @@ class VideoRecorderSheet extends StatelessWidget {
   final String? errorMessage;
   final String title;
   final String armedHint;
+  final String armingHint;
   final String recordingHint;
   final String savingHint;
   final String capHint;
+  final String deniedMessage;
   final String startLabel;
   final String stopLabel;
   final String savingLabel;
+  final String armingLabel;
+  final String tryAgainLabel;
   final String cancelLabel;
   final double maxWidth;
 
   bool get _isRecording => phase == VideoRecorderPhase.recording;
+  bool get _isArming => phase == VideoRecorderPhase.arming;
   bool get _isSaving => phase == VideoRecorderPhase.saving;
+  bool get _isDenied => phase == VideoRecorderPhase.denied;
 
   @override
   Widget build(BuildContext context) {
@@ -70,9 +82,11 @@ class VideoRecorderSheet extends StatelessWidget {
                 phase: phase,
                 preview: preview,
                 armedHint: armedHint,
+                armingHint: armingHint,
                 recordingHint: recordingHint,
                 savingHint: savingHint,
                 capHint: capHint,
+                deniedMessage: deniedMessage,
               ),
               if (_isRecording && nudgeMessage != null) ...<Widget>[
                 const SizedBox(height: 12),
@@ -110,8 +124,14 @@ class VideoRecorderSheet extends StatelessWidget {
     if (_isSaving) {
       return StickerButton(label: savingLabel, onPressed: null);
     }
+    if (_isArming) {
+      return StickerButton(label: armingLabel, onPressed: null);
+    }
     if (_isRecording) {
       return StickerButton(label: stopLabel, onPressed: onStop);
+    }
+    if (_isDenied) {
+      return StickerButton(label: tryAgainLabel, onPressed: onStart);
     }
     return StickerButton(label: startLabel, onPressed: onStart);
   }
@@ -122,17 +142,21 @@ class _VideoStage extends StatelessWidget {
     required this.phase,
     required this.preview,
     required this.armedHint,
+    required this.armingHint,
     required this.recordingHint,
     required this.savingHint,
     required this.capHint,
+    required this.deniedMessage,
   });
 
   final VideoRecorderPhase phase;
   final Widget? preview;
   final String armedHint;
+  final String armingHint;
   final String recordingHint;
   final String savingHint;
   final String capHint;
+  final String deniedMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -161,7 +185,25 @@ class _VideoStage extends StatelessWidget {
             ),
           ],
         ),
+      VideoRecorderPhase.arming => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            _previewFrame(preview),
+            const SizedBox(height: 12),
+            _stageMessage(armingHint, Palette.mutedDeep),
+          ],
+        ),
       VideoRecorderPhase.saving => _stageMessage(savingHint, Palette.muted),
+      VideoRecorderPhase.denied => Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const CrossHatchPlaceholder(height: 160),
+            const SizedBox(height: 12),
+            _stageMessage(deniedMessage, Palette.danger),
+          ],
+        ),
       VideoRecorderPhase.idle => Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,

@@ -1,78 +1,59 @@
 ---
 thread: journal-app-design
 status: paused
-updated: 2026-07-20
+updated: 2026-07-21
 priority: high
 completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Verify the two plan-fix agents' edits landed in .mitosis/{today-screen,settings-screen}.plan.md, run the 3 pre-flights, then LAUNCH the one final all-remaining-units run (2026-07-11-03 block, mergePolicy "human-gated") and merge each green PR PROMPTLY.
+next_step: DEBUG/TROUBLESHOOT phase. App is 31/31 and now BUILDS + RUNS on macOS (home screen visually confirmed against live data; Xcode 26.6 + CocoaPods 1.17.0 installed). Per the user, on resume PRESENT the brief and WAIT for SPECIFIC debug instructions — do NOT auto-start a test pass or debugging. Visual checks via scratchpad/vm_screenshot.dart (TCC-free); click-driving needs a Claude Desktop quit+reopen for Accessibility. Full detail in sessions/2026-07-21-05.
 branch: main
 ---
 
 ## Status
-23/31 merged, 0 open PRs (garden-screen #22, day-detail #23 merged by user this session). The FINAL run is
-STAGED but NOT launched: .mitosis/run.json holds all 31 msps with today-screen/settings-screen parked at
-plan-review; their plans are being fixed by two background agents. One run should reach 31/31.
+31/31 SHIPPED and now VERIFIED-RUNNABLE on macOS: analyze clean, 660/660 tests pass on the
+integrated main, `flutter build macos --debug` succeeds, and the app launches + renders its designed
+home screen against live DB data. Next phase per the user is debug/troubleshoot, awaiting specifics.
 
 ## Active Goal
-Complete all 31 Field Notes v1 MSPs in AS FEW mitosis flows as possible — one final human-gated run carrying
-all 8 remaining units, human merging green PRs promptly so the frontier-train build-ahead lands
-shell-nav-integration in the same run.
+Debug and troubleshoot Field Notes v1 on macOS, driven by the user's specific instructions.
 
 ## Next Step
-Plan fixes CONFIRMED on disk (2026-07-20-03): today-screen plan already addressed its only review's 3
-findings (fix agent made no edit); settings-screen plan now carries the 6 `misc.dart` imports +
-feedback-motion-kit acknowledgment. So: 3 pre-flights -> launch the final run -> merge PRs promptly.
+On resume: present the Resumption Brief and STOP. Do NOT begin any debugging or test pass until the
+user gives a specific instruction. Then relaunch the app and use scratchpad/vm_screenshot.dart for
+visual checks; quit+reopen Claude Desktop only if click-driving (Accessibility) is required.
 
 ## Open Risks
-- CI IS HOLLOW FOR DART (decisions/2026-07-20-ci-gates-are-hollow-for-dart.md). Run fullValidationCmd locally
-  against each PR head worktree before EVERY merge.
-- Adversarial plan-review may re-park today-screen/settings-screen with NEW findings on relaunch. All KNOWN
-  findings are addressed on disk; today-screen had only ONE distinct review (no unaddressed finding found).
-  today-screen re-parking blocks ONLY shell-nav-integration; the other 6 units ship regardless — so a
-  re-park costs at most one cheap follow-up, not the whole run. If it re-parks, recover the NEW finding from
-  the relaunch journal and fix, then resume.
-- MERGE PROMPTLY to stay at one flow: frontier-train poll budget is 6 cycles x <=300s (resets per merge). Slow
-  merges -> shell-nav-integration parks -> one cheap relaunch resume (not a rebuild).
-- capture-photo/voice/video each add pub deps AND regenerate macos/Flutter/GeneratedPluginRegistrant.swift:
-  merge one-at-a-time with `flutter pub get` regeneration, never hand-resolve. pubspec.yaml also systemic.
-- The fold PROPAGATES parked status through dependsOn; keep only today/settings park deltas in run.json (the
-  stale entry-cards park was removed this session). shell-nav@null propagation is benign (runs fresh pipeline).
-- Do NOT hand-edit run.json's base line or re-trim unless rebuilding the manifest; it is staged + fold-verified.
-- `.mitosis/` is gitignored — staged run.json + batch-tooling live only on this machine.
-- No Android SDK: capture-* Android bits never compile here; file-content receipts only.
-- 3 files still carry the symlink guard defect (task chip task_ecab775c); 7-CLI fix committed, run-engine.mjs
-  dirty in .windful-ocean.
+- DRIVING the app (click/keyboard) needs Accessibility TCC -> full Claude Desktop quit+reopen.
+  SCREENSHOTTING is unblocked via the VM RPC. `screencapture` stays blocked until that relaunch.
+- Uncommitted macOS pod-install artifacts in the working tree (xcconfig, project.pbxproj,
+  contents.xcworkspacedata modified; Podfile + Podfile.lock untracked) — regenerable; commit-vs-ignore TBD.
+- Reminders day-2+ reach still unbuilt (deferred MSP). Android SDK absent (macOS is the only target).
+- Local main is 4 ledger commits ahead of origin (unpushed, per pattern).
 
 ## Key Decisions
-- decisions/2026-07-20-one-run-completion-frontier-train.md — one run completes the app (frontier-train,
-  code-verified); fix parked plans first; include all 8; merge promptly
-- decisions/2026-07-20-batch-3-scoping.md — batch-3 four-screen scope (the reasoning the user corrected)
-- decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — local validation before every merge
-- decisions/2026-07-20-reminders-day2-prearm-followup.md — day-2 reach deferred (needs a NEW msp id; NOT in
-  this run — the merged `reminders` unit is skipped by the reconcile; author it after 31/31)
-- decisions/2026-07-19-pubspec-parallel-conflict.md — systemic pubspec conflict; serial union merges
-- decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md — run.json one compact line
-- decisions/2026-07-12-human-gated-merge-policy.md — human-gated + main-thread/user merge under consent
+- decisions/2026-07-21-vm-rpc-screenshot-for-visual-verification.md — screenshot via `_flutter.screenshot` VM RPC (screencapture is TCC-blocked)
+- decisions/2026-07-21-gh-merge-hook-blocked-human-merges.md — the HUMAN merges every PR
+- decisions/2026-07-20-reminders-day2-prearm-followup.md — reminders day-2 follow-up DEFERRED
+- decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — CI runs no Dart test; validate locally
 - decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift; v1 schema conventions
 
 ## Out of Scope
-- iOS; server-side search/thumbnails; CRDTs/Postgres/MinIO/Cloudflare Tunnel; multi-user; pooled Memories
-  gallery. All sync/server work is v2 (settings-screen ships an inert disabled sync shell). The reminders
-  day-2 pre-arm follow-up MSP is post-31 work, not this run.
+- iOS; server-side search/thumbnails; CRDTs/Postgres/MinIO/Cloudflare Tunnel; multi-user; pooled
+  Memories gallery. All sync/server work is v2 (settings ships an inert disabled sync shell). The
+  reminders day-2 pre-arm follow-up MSP is post-31 work (new msp id; not in this run).
 
 ## Pointers
-- .mitosis/run.json — STAGED final 31-msp manifest (fold-verified; today/settings parked@plan-review)
-- .mitosis/run.json.pristine-backup — untouched 31-MSP source (md5 a7ca0a4f...); gitignored
-- .mitosis/batch-tooling/ — MERGED=23, BATCH=8; parks/today-settings-parks.jsonl = preserved park deltas
-- .mitosis/{today-screen,settings-screen}.plan.md — parked plans being fixed (verify before launch)
-- .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — VERBATIM launch block (set "human-gated")
+- build/macos/Build/Products/Debug/field_notes.app — built macOS debug bundle (relaunch via `open`)
+- /private/tmp/claude-501/-Users-satanshumishra-Documents-DevLabs-fireplace/f6e6c7d7-5a3f-4705-83c7-e0eb686bb1da/scratchpad/vm_screenshot.dart — TCC-free screenshot tool
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec (§0 = implementation status)
+- .mitosis/run.json.pristine-backup — untouched 31-MSP source; gitignored
 - GitHub: https://github.com/SatanshuMishra/field-notes (PRIVATE). Project name is field-notes.
 
 ## Recent Sessions
-- sessions/2026-07-20-03-journal-app-design.md — 23/31; engine verified; final run staged, not launched
-- sessions/2026-07-20-02-journal-app-design.md — reminders shipped, 21/31; CI found hollow
-- sessions/2026-07-20-01-journal-app-design.md
+- sessions/2026-07-21-05-journal-app-design.md — verified integrated main (660/660); Xcode+CocoaPods installed; first macOS build + run + visual confirm; hand-off to debug phase
+- sessions/2026-07-21-04-journal-app-design.md — 31/31 confirmed; local main reconciled; app code-complete
+- sessions/2026-07-21-03-journal-app-design.md — shell-nav BUILT via delegated implementer; PR #31 validated
+- sessions/2026-07-21-02-journal-app-design.md — 26→30/31; gh-merge hook-block found; shell-nav parked+unblocked
+- sessions/2026-07-21-01-journal-app-design.md — final run: 26/31, usage-limit parked 5, repo pristine
