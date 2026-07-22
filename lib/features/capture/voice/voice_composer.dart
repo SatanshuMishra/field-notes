@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,10 +17,17 @@ import 'voice_recorder_sheet.dart';
 const String unexpectedVoiceSaveMessage =
     'Could not save your recording. Please try again.';
 
+const Duration voiceSaveTimeout = Duration(seconds: 20);
+
 class VoiceComposerConnector extends ConsumerStatefulWidget {
-  const VoiceComposerConnector({super.key, required this.date});
+  const VoiceComposerConnector({
+    super.key,
+    required this.date,
+    this.saveTimeout = voiceSaveTimeout,
+  });
 
   final String date;
+  final Duration saveTimeout;
 
   @override
   ConsumerState<VoiceComposerConnector> createState() =>
@@ -62,28 +71,40 @@ class _VoiceComposerConnectorState
       _phase = VoiceRecorderPhase.saving;
       _errorMessage = null;
     });
+    String? entryId;
+    final Future<String> pending = _persist();
     try {
-      final VoiceRecording recording = await _recorder.stop();
-      final CaptureService service =
-          await ref.read(captureServiceProvider.future);
-      final CaptureResult result = await service.capture(
-        VoiceCaptureRequest(
-          date: widget.date,
-          audio: recording.media,
-          durationMs: recording.durationMs,
-        ),
-      );
-      if (!mounted) {
-        return;
+      try {
+        entryId = await pending.timeout(widget.saveTimeout);
+      } on TimeoutException {
+        entryId = await pending;
       }
-      Navigator.of(context).pop(result.entry.id);
     } on VoiceRecorderException catch (error) {
       _failBackToRecording(error.message);
     } on CaptureException catch (error) {
       _failBackToRecording(error.message);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Voice save failed: $error\n$stackTrace');
       _failBackToRecording(unexpectedVoiceSaveMessage);
     }
+    if (entryId == null || !mounted) {
+      return;
+    }
+    Navigator.of(context).pop(entryId);
+  }
+
+  Future<String> _persist() async {
+    final VoiceRecording recording = await _recorder.stop();
+    final CaptureService service =
+        await ref.read(captureServiceProvider.future);
+    final CaptureResult result = await service.capture(
+      VoiceCaptureRequest(
+        date: widget.date,
+        audio: recording.media,
+        durationMs: recording.durationMs,
+      ),
+    );
+    return result.entry.id;
   }
 
   void _failBackToRecording(String message) {

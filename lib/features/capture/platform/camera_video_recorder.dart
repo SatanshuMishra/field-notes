@@ -138,10 +138,13 @@ class CameraVideoRecorder implements VideoRecorder {
 }
 
 class CameraMacosVideoRecorder implements VideoRecorder {
-  final Completer<CameraMacOSController> _ready =
-      Completer<CameraMacOSController>();
   final Stopwatch _elapsed = Stopwatch();
+  Completer<CameraMacOSController>? _ready;
+  Widget? _preview;
   CameraMacOSController? _controller;
+
+  Completer<CameraMacOSController> _session() =>
+      _ready ??= Completer<CameraMacOSController>();
 
   @override
   Future<bool> hasPermission() async {
@@ -156,8 +159,10 @@ class CameraMacosVideoRecorder implements VideoRecorder {
 
   @override
   Future<void> start() async {
+    final Completer<CameraMacOSController> ready = _session();
     try {
-      final CameraMacOSController controller = await _ready.future;
+      final CameraMacOSController controller =
+          await ready.future.timeout(cameraStartTimeout);
       await controller.recordVideo(
         maxVideoDuration: videoHardCapSeconds,
       );
@@ -165,8 +170,17 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       _elapsed
         ..reset()
         ..start();
+    } on TimeoutException {
+      _elapsed.stop();
+      _resetSession();
+      throw const VideoRecorderException(videoStartTimeoutMessage);
+    } on VideoRecorderException {
+      _elapsed.stop();
+      _resetSession();
+      rethrow;
     } catch (error) {
       _elapsed.stop();
+      _resetSession();
       throw VideoRecorderException(videoStartMessage, cause: error);
     }
   }
@@ -198,7 +212,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
     } catch (error) {
       throw VideoRecorderException(videoStopMessage, cause: error);
     } finally {
-      _controller = null;
+      _resetSession();
     }
   }
 
@@ -206,7 +220,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
   Future<void> cancel() async {
     _elapsed.stop();
     final CameraMacOSController? controller = _controller;
-    _controller = null;
+    _resetSession();
     if (controller == null) {
       return;
     }
@@ -219,21 +233,43 @@ class CameraMacosVideoRecorder implements VideoRecorder {
 
   @override
   Future<void> dispose() async {
-    _controller = null;
+    _resetSession();
   }
 
   @override
   Widget buildPreview() {
-    return CameraMacOSView(
+    final Widget? existing = _preview;
+    if (existing != null) {
+      return existing;
+    }
+    final Completer<CameraMacOSController> ready = _session();
+    final Widget view = CameraMacOSView(
       cameraMode: CameraMacOSMode.video,
       fit: BoxFit.cover,
       onCameraInizialized: (CameraMacOSController controller) {
-        if (!_ready.isCompleted) {
-          _ready.complete(controller);
+        if (!ready.isCompleted) {
+          ready.complete(controller);
         }
       },
+      onCameraLoading: (Object? error) {
+        if (error != null && !ready.isCompleted) {
+          ready.completeError(
+            const VideoRecorderException(videoStartMessage),
+          );
+        }
+        return const ColoredBox(color: Color(0xFF000000));
+      },
     );
+    _preview = view;
+    return view;
+  }
+
+  void _resetSession() {
+    _controller = null;
+    _preview = null;
+    _ready = null;
   }
 }
 
 const double videoHardCapSeconds = 30 * 60;
+const Duration cameraStartTimeout = Duration(seconds: 12);

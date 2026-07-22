@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
@@ -72,6 +74,79 @@ class FakeVideoRecorder implements VideoRecorder {
   @override
   Widget buildPreview() =>
       const SizedBox(key: ValueKey('fake-video-preview'), width: 120, height: 120);
+}
+
+class DeferredReadyVideoRecorder implements VideoRecorder {
+  DeferredReadyVideoRecorder({this.permission = true});
+
+  final bool permission;
+  final Completer<void> _ready = Completer<void>();
+  Widget? _preview;
+
+  bool started = false;
+  int startCalls = 0;
+  int stopCalls = 0;
+  int cancelCalls = 0;
+  int disposeCalls = 0;
+
+  @override
+  Future<bool> hasPermission() async => permission;
+
+  @override
+  Future<void> start() async {
+    startCalls++;
+    await _ready.future;
+    started = true;
+  }
+
+  @override
+  Future<VideoRecording> stop() async {
+    stopCalls++;
+    return const VideoRecording(
+      media: CaptureBytes(bytes: <int>[1], mime: 'video/mp4', durationMs: 1),
+      durationMs: 1,
+    );
+  }
+
+  @override
+  Future<void> cancel() async {
+    cancelCalls++;
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposeCalls++;
+  }
+
+  @override
+  Widget buildPreview() => _preview ??= _ReadySignal(
+        onReady: () {
+          if (!_ready.isCompleted) {
+            _ready.complete();
+          }
+        },
+      );
+}
+
+class _ReadySignal extends StatefulWidget {
+  const _ReadySignal({required this.onReady});
+
+  final VoidCallback onReady;
+
+  @override
+  State<_ReadySignal> createState() => _ReadySignalState();
+}
+
+class _ReadySignalState extends State<_ReadySignal> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => widget.onReady());
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      const SizedBox(key: ValueKey('deferred-preview'), width: 120, height: 120);
 }
 
 class FakeCaptureService implements CaptureService {

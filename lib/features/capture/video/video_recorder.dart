@@ -7,6 +7,9 @@ const String cameraPermissionMessage =
     'on in your system settings and try again.';
 const String videoStartMessage =
     'Could not start recording. Check your camera and try again.';
+const String videoStartTimeoutMessage =
+    'The camera did not respond. Make sure Field Notes has camera access in '
+    'System Settings, then try again.';
 const String videoStopMessage =
     'Could not finish that recording. Nothing was saved — please try again.';
 

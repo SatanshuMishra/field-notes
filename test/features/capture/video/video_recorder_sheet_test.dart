@@ -152,4 +152,53 @@ void main() {
     expect(find.text('Saving…'), findsOneWidget);
     expect(find.byType(Blink), findsNothing);
   });
+
+  testWidgets('the arming phase shows the live preview without a Stop action',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      videoHarness(
+        VideoRecorderSheet(
+          phase: VideoRecorderPhase.arming,
+          preview: const SizedBox(key: ValueKey('preview'), width: 80, height: 80),
+          onStart: () {},
+          onStop: () {},
+          onCancel: () {},
+        ),
+      ),
+    );
+
+    expect(find.byKey(const ValueKey('preview')), findsOneWidget);
+    expect(find.text('Preparing…'), findsOneWidget);
+    expect(find.text('Stop & save'), findsNothing);
+    expect(find.byType(Blink), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+      'the denied phase surfaces guidance and offers Try again over Record',
+      (WidgetTester tester) async {
+    int retries = 0;
+
+    await tester.pumpWidget(
+      videoHarness(
+        VideoRecorderSheet(
+          phase: VideoRecorderPhase.denied,
+          deniedMessage: 'Enable Camera access in System Settings.',
+          onStart: () => retries++,
+          onStop: () {},
+          onCancel: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('Enable Camera access in System Settings.'), findsOneWidget);
+    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text('Record'), findsNothing);
+
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+
+    expect(retries, 1);
+  });
 }
