@@ -16,6 +16,7 @@ SidebarShell _shell({
     selected: selected,
     onSelect: onSelect ?? (_) {},
     onSound: onSound ?? () {},
+    streak: const SizedBox.shrink(),
     body: const SizedBox.shrink(),
   );
 }
