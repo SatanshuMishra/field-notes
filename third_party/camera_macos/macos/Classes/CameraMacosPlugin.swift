@@ -51,6 +51,7 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     var cameraView: NSView!
     var useMovieFileOutput: Bool!
     var savedResult: FlutterResult!
+    var autoFinishedURL: String?
     var factory: CameraMacOSNativeFactory!
     var previewLayer: AVCaptureVideoPreviewLayer!
 
@@ -726,7 +727,9 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         // Set up the AVAssetWriter (to write to file)
         do {
             if(!isRecording) {
-                
+
+                self.autoFinishedURL = nil
+
                 let shouldRecordAudio = arguments["enableAudio"] as? Bool ?? true
                 
                 self.enableAudio = shouldRecordAudio
@@ -892,6 +895,11 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
             return
         }
         if(!self.isRecording) {
+            if let stashedURL = self.autoFinishedURL {
+                self.autoFinishedURL = nil
+                result(["videoData": nil, "url": stashedURL, "error": nil] as [String: Any?])
+                return
+            }
             result(FlutterError(code: "CAMERA_NOT_RECORDING_ERROR", message: "Camera not recording", details: nil).toFlutterResult)
             return
         }
@@ -1064,14 +1072,19 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         let pending = self.savedResult
         self.savedResult = nil
         let ok = (error == nil) || (((error as NSError?)?.userInfo[AVErrorRecordingSuccessfullyFinishedKey] as? Bool) == true)
+        let size = ((try? FileManager.default.attributesOfItem(atPath: outputFileURL.path)[.size]) as? NSNumber)?.int64Value ?? 0
         if let pending = pending {
-            if ok, let videoData = try? Data(contentsOf: outputFileURL), !videoData.isEmpty {
+            if ok, size > 0 {
                 print("Video Recorded And Saved At: \(outputFileURL.absoluteURL)")
-                pending(["videoData": videoData, "url": outputFileURL.absoluteURL.path, "error": nil] as [String:Any?])
+                pending(["videoData": nil, "url": outputFileURL.absoluteURL.path, "error": nil] as [String: Any?])
             } else {
                 let detail: String = error?.localizedDescription ?? "File is empty at url: \(outputFileURL.absoluteURL.path)"
                 pending(FlutterError(code: "MOVIE_FILE_OUTPUT_FAIL", message: "File not saved at \(outputFileURL.absoluteURL.path) - \(detail)", details: nil).toFlutterResult)
             }
+            return
+        }
+        if ok {
+            self.autoFinishedURL = outputFileURL.absoluteURL.path
             return
         }
         if !ok {
