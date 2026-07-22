@@ -13,6 +13,7 @@ class FieldNotesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
+      retry: (retryCount, error) => null,
       overrides: [
         captureRoutesProvider.overrideWithValue(appCaptureRoutes),
       ],

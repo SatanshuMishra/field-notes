@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,10 +15,17 @@ import 'text_composer_sheet.dart';
 const String unexpectedSaveMessage =
     'Could not save your note. Please try again.';
 
+const Duration textSaveTimeout = Duration(seconds: 20);
+
 class TextComposerConnector extends ConsumerStatefulWidget {
-  const TextComposerConnector({super.key, required this.date});
+  const TextComposerConnector({
+    super.key,
+    required this.date,
+    this.saveTimeout = textSaveTimeout,
+  });
 
   final String date;
+  final Duration saveTimeout;
 
   @override
   ConsumerState<TextComposerConnector> createState() =>
@@ -32,33 +41,43 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
       _isSaving = true;
       _errorMessage = null;
     });
+    String? entryId;
+    final Future<String> pending = _persist(text);
     try {
-      final CaptureService service =
-          await ref.read(captureServiceProvider.future);
-      final CaptureResult result = await service.capture(
-        TextCaptureRequest(date: widget.date, text: text),
-      );
-      if (!mounted) {
-        return;
+      try {
+        entryId = await pending.timeout(widget.saveTimeout);
+      } on TimeoutException {
+        entryId = await pending;
       }
-      Navigator.of(context).pop(result.entry.id);
     } on CaptureException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _isSaving = false;
-        _errorMessage = error.message;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _isSaving = false;
-        _errorMessage = unexpectedSaveMessage;
-      });
+      _fail(error.message);
+    } catch (error, stackTrace) {
+      debugPrint('Note save failed: $error\n$stackTrace');
+      _fail(unexpectedSaveMessage);
     }
+    if (entryId == null || !mounted) {
+      return;
+    }
+    Navigator.of(context).pop(entryId);
+  }
+
+  Future<String> _persist(String text) async {
+    final CaptureService service =
+        await ref.read(captureServiceProvider.future);
+    final CaptureResult result = await service.capture(
+      TextCaptureRequest(date: widget.date, text: text),
+    );
+    return result.entry.id;
+  }
+
+  void _fail(String message) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _isSaving = false;
+      _errorMessage = message;
+    });
   }
 
   @override
