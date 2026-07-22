@@ -1,6 +1,6 @@
 ---
 date: 2026-07-21
-status: accepted
+status: superseded-by: 2026-07-21-shellnav-built-via-delegated-implementer.md
 ---
 
 # shell-nav parked on missing checkpoint refs; unblocked by creating them (30/31 -> ready for 31/31)

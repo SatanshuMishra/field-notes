@@ -10,7 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
-- decisions/2026-07-21-shellnav-checkpoint-refs-unblock.md — shell-nav (last unit) parked at composition on 2 missing parent checkpoint refs (settings-screen/capture-voice; their engine force-pushes were classifier-blocked); recreated them non-destructively so a fresh relaunch composes + builds shell-nav for 31/31
+- decisions/2026-07-21-shellnav-built-via-delegated-implementer.md — shell-nav BUILT via a delegated implementer on origin/main (fresh-context rule barred a mitosis relaunch; also sidesteps the checkpoint composition); PR #31 open + independently validated (660 tests, CI green), awaiting the HUMAN's final merge -> 31/31
 - decisions/2026-07-21-gh-merge-hook-blocked-human-merges.md — `gh pr merge` + the REST merge endpoint are hook-blocked for ALL callers incl. the main thread; the HUMAN merges each PR on GitHub after the agent validates locally. Supersedes the merge mechanism of 2026-07-12-human-gated-merge-policy. `git push` still works, so the agent can still resolve capture-* branch conflicts.
 - decisions/2026-07-20-one-run-completion-frontier-train.md — the engine does FRONTIER-TRAIN build-ahead (code-verified): ONE human-gated run completes all 31 if PRs are merged promptly; fix the 2 parked plans first; batching was an expired debugging control, not an engine limit
 - decisions/2026-07-20-batch-3-scoping.md — batch-3 four-screen scope; the capture-* "contention" reasoning was a merge-time vs build-time error the user corrected (superseded in spirit by the one-run decision)
@@ -37,7 +37,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — 30/31 merged, 0 open PRs. Run wf_888cd869-d28 shipped capture-photo #27, settings-screen #28, capture-voice #29, capture-video #30 (agent-validated, human-merged) then ended partial; shell-nav-integration parked at composition and now UNBLOCKED. Next: fresh-context relaunch to build shell-nav for 31/31.
+- journal-app-design — paused — 30/31 merged. shell-nav-integration BUILT (delegated implementer, PR #31) and validated (660 tests, CI green); awaiting the HUMAN's final squash-merge -> 31/31. Next: merge PR #31.
 
 ## State snapshot (2026-07-21)
 - Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. 26 squash-merges + ledger commits on origin/main (main = ca2e6f0).
