@@ -15,6 +15,9 @@ import 'text_composer_sheet.dart';
 const String unexpectedSaveMessage =
     'Could not save your note. Please try again.';
 
+const String textSaveTimeoutMessage =
+    'Saving took too long. Nothing was saved — please try again.';
+
 const Duration textSaveTimeout = Duration(seconds: 20);
 
 class TextComposerConnector extends ConsumerStatefulWidget {
@@ -44,11 +47,10 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
     String? entryId;
     final Future<String> pending = _persist(text);
     try {
-      try {
-        entryId = await pending.timeout(widget.saveTimeout);
-      } on TimeoutException {
-        entryId = await pending;
-      }
+      entryId = await pending.timeout(widget.saveTimeout);
+    } on TimeoutException {
+      unawaited(pending.then((_) {}, onError: (_) {}));
+      _fail(textSaveTimeoutMessage);
     } on CaptureException catch (error) {
       _fail(error.message);
     } catch (error, stackTrace) {

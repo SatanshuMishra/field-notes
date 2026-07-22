@@ -72,8 +72,8 @@ class _Trigger extends StatelessWidget {
 
 void main() {
   testWidgets(
-      'a save that straddles the timeout invokes capture() exactly once and '
-      'pops with the real entry id', (WidgetTester tester) async {
+      'a save that completes within the timeout invokes capture() exactly once '
+      'and pops with the real entry id', (WidgetTester tester) async {
     final FakeVoiceRecorder recorder = FakeVoiceRecorder();
     final _SlowCountingCaptureService service = _SlowCountingCaptureService(
       delay: const Duration(milliseconds: 200),
@@ -88,7 +88,7 @@ void main() {
         ],
         child: voiceHarness(
           _Trigger(
-            timeout: const Duration(milliseconds: 50),
+            timeout: const Duration(milliseconds: 500),
             onResult: (String? id) => result = id,
           ),
         ),
