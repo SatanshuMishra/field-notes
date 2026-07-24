@@ -10,6 +10,7 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 
+import 'camera_selection.dart';
 import 'video_recorder.dart';
 import 'video_recorder_provider.dart';
 import 'video_recorder_sheet.dart';
@@ -23,15 +24,19 @@ const String videoSaveTimeoutMessage =
 
 const Duration videoSaveTimeout = Duration(seconds: 20);
 
+const Duration cameraReleaseTimeout = Duration(seconds: 6);
+
 class VideoComposerConnector extends ConsumerStatefulWidget {
   const VideoComposerConnector({
     super.key,
     required this.date,
     this.saveTimeout = videoSaveTimeout,
+    this.releaseTimeout = cameraReleaseTimeout,
   });
 
   final String date;
   final Duration saveTimeout;
+  final Duration releaseTimeout;
 
   @override
   ConsumerState<VideoComposerConnector> createState() =>
@@ -40,59 +45,157 @@ class VideoComposerConnector extends ConsumerStatefulWidget {
 
 class _VideoComposerConnectorState
     extends ConsumerState<VideoComposerConnector> {
-  VideoRecorderPhase _phase = VideoRecorderPhase.idle;
+  VideoRecorderPhase _phase = VideoRecorderPhase.preparing;
   String? _errorMessage;
+  String? _deniedMessage;
   String? _nudgeMessage;
   Widget? _preview;
+  List<VideoCaptureDevice> _devices = const <VideoCaptureDevice>[];
+  String? _deviceId;
+  bool _released = false;
+  bool _switching = false;
   final List<Timer> _timers = <Timer>[];
+  late final VideoRecorder _recorder;
 
-  VideoRecorder get _recorder => ref.read(videoRecorderProvider);
+  @override
+  void initState() {
+    super.initState();
+    _recorder = ref.read(videoRecorderProvider);
+    unawaited(_prepare());
+  }
 
-  Future<void> _start() async {
-    setState(() => _errorMessage = null);
-    final VideoRecorder recorder = _recorder;
-    final bool granted;
+  Future<void> _prepare() async {
+    final List<VideoCaptureDevice> devices;
     try {
-      granted = await recorder.hasPermission();
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(() => _phase = VideoRecorderPhase.denied);
+      devices = await _recorder.listDevices();
+    } on VideoRecorderException catch (error) {
+      _showDenied(message: error.message);
+      return;
+    } catch (error, stackTrace) {
+      debugPrint('Camera enumeration failed: $error\n$stackTrace');
+      _showDenied(message: videoDeviceListMessage);
       return;
     }
     if (!mounted) {
       return;
     }
-    if (!granted) {
-      setState(() => _phase = VideoRecorderPhase.denied);
+    final String? deviceId = resolveCameraDeviceId(
+      devices: devices,
+      rememberedId: ref.read(selectedCameraDeviceProvider),
+    );
+    if (deviceId == null) {
+      _showDenied();
+      return;
+    }
+    ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
+    setState(() {
+      _devices = List<VideoCaptureDevice>.unmodifiable(devices);
+      _deviceId = deviceId;
+      _preview = _recorder.openSession(deviceId);
+      _phase = VideoRecorderPhase.idle;
+      _errorMessage = null;
+      _deniedMessage = null;
+    });
+  }
+
+  void _showDenied({String? message}) {
+    if (!mounted) {
       return;
     }
     setState(() {
-      _preview = recorder.buildPreview();
+      _phase = VideoRecorderPhase.denied;
+      _preview = null;
+      _devices = const <VideoCaptureDevice>[];
+      _deviceId = null;
+      _errorMessage = null;
+      _deniedMessage = message;
+    });
+  }
+
+  Future<void> _selectDevice(String deviceId) async {
+    if (_switching ||
+        _phase != VideoRecorderPhase.idle ||
+        deviceId == _deviceId) {
+      return;
+    }
+    _switching = true;
+    setState(() {
+      _phase = VideoRecorderPhase.preparing;
+      _preview = null;
+      _errorMessage = null;
+      _deviceId = deviceId;
+    });
+    String? failure;
+    try {
+      await _recorder.release().timeout(widget.releaseTimeout);
+    } on TimeoutException {
+      failure = videoDeviceSwitchMessage;
+    } on VideoRecorderException catch (error) {
+      failure = error.message;
+    } catch (error, stackTrace) {
+      debugPrint('Camera release failed: $error\n$stackTrace');
+      failure = videoDeviceSwitchMessage;
+    }
+    _switching = false;
+    if (!mounted) {
+      return;
+    }
+    ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
+    setState(() {
+      _preview = _recorder.openSession(deviceId);
+      _phase = VideoRecorderPhase.idle;
+      _errorMessage = failure;
+    });
+  }
+
+  Future<void> _start() async {
+    if (_phase == VideoRecorderPhase.denied) {
+      setState(() {
+        _phase = VideoRecorderPhase.preparing;
+        _errorMessage = null;
+      });
+      await _prepare();
+      return;
+    }
+    if (_phase != VideoRecorderPhase.idle) {
+      return;
+    }
+    final String? deviceId = _deviceId;
+    if (deviceId == null) {
+      _showDenied();
+      return;
+    }
+    setState(() {
       _phase = VideoRecorderPhase.arming;
+      _errorMessage = null;
       _nudgeMessage = null;
     });
     try {
-      await recorder.start();
+      await _recorder.start();
       if (!mounted) {
         return;
       }
       setState(() {
-        _preview = recorder.buildPreview();
+        _preview = _recorder.openSession(deviceId);
         _phase = VideoRecorderPhase.recording;
       });
       _scheduleTimeline();
     } on VideoRecorderException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _phase = VideoRecorderPhase.idle;
-        _preview = null;
-        _errorMessage = error.message;
-      });
+      _failBackToIdle(error.message);
+    } catch (error, stackTrace) {
+      debugPrint('Video start failed: $error\n$stackTrace');
+      _failBackToIdle(videoStartMessage);
     }
+  }
+
+  void _failBackToIdle(String message) {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _phase = VideoRecorderPhase.idle;
+      _errorMessage = message;
+    });
   }
 
   void _scheduleTimeline() {
@@ -148,6 +251,10 @@ class _VideoComposerConnectorState
     if (entryId == null || !mounted) {
       return;
     }
+    await _release();
+    if (!mounted) {
+      return;
+    }
     Navigator.of(context).pop(entryId);
   }
 
@@ -180,17 +287,37 @@ class _VideoComposerConnectorState
     _cancelTimers();
     if (_phase == VideoRecorderPhase.recording ||
         _phase == VideoRecorderPhase.arming) {
-      await _recorder.cancel();
+      try {
+        await _recorder.cancel();
+      } catch (error, stackTrace) {
+        debugPrint('Video cancel failed: $error\n$stackTrace');
+      }
     }
+    await _release();
     if (!mounted) {
       return;
     }
     Navigator.of(context).pop();
   }
 
+  Future<void> _release() async {
+    if (_released) {
+      return;
+    }
+    _released = true;
+    try {
+      await _recorder.release().timeout(widget.releaseTimeout);
+    } on TimeoutException {
+      debugPrint('Camera release timed out');
+    } catch (error, stackTrace) {
+      debugPrint('Camera release failed: $error\n$stackTrace');
+    }
+  }
+
   @override
   void dispose() {
     _cancelTimers();
+    unawaited(_release());
     super.dispose();
   }
 
@@ -198,12 +325,13 @@ class _VideoComposerConnectorState
   Widget build(BuildContext context) {
     return VideoRecorderSheet(
       phase: _phase,
-      preview: (_phase == VideoRecorderPhase.arming ||
-              _phase == VideoRecorderPhase.recording)
-          ? _preview
-          : null,
+      preview: _preview,
+      devices: _devices,
+      selectedDeviceId: _deviceId,
+      onDeviceChanged: _selectDevice,
       nudgeMessage: _nudgeMessage,
       errorMessage: _errorMessage,
+      deniedMessage: _deniedMessage ?? cameraPermissionMessage,
       onStart: _start,
       onStop: _stop,
       onCancel: _cancel,

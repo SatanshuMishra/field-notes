@@ -25,7 +25,20 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     var audioDevice: AVCaptureDevice?
     
     // Image to be sent to the texture
-    var latestBuffer: CVImageBuffer!
+    private let latestBufferLock = NSLock()
+    private var latestBufferStorage: CVImageBuffer?
+    var latestBuffer: CVImageBuffer? {
+        get {
+            latestBufferLock.lock()
+            defer { latestBufferLock.unlock() }
+            return latestBufferStorage
+        }
+        set {
+            latestBufferLock.lock()
+            latestBufferStorage = newValue
+            latestBufferLock.unlock()
+        }
+    }
     
     // The asset writer to write a file on disk
     var videoWriter: AVAssetWriter!
@@ -92,19 +105,24 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     }
     
     public func copyPixelBuffer() -> Unmanaged<CVPixelBuffer>? {
-        if latestBuffer == nil {
+        guard let buffer = latestBuffer else {
             return nil
         }
-        if let imageStreamHandler = self.imageStreamHandler {
-            let u = imageFromSampleBuffer(imageBuffer: latestBuffer)!
+        if let imageStreamHandler = self.imageStreamHandler,
+           imageStreamHandler.eventSink != nil,
+           let u = imageFromSampleBuffer(imageBuffer: buffer) {
             let bytesPerRow = u.bytesPerRow
             let width = Int(u.size.width)
             let height = Int(u.size.height)
-            
+
             DispatchQueue.main.async {
                 do {
-                    let newData:Data = Data(bytes: u.bitmapData!, count: Int(bytesPerRow*height))
-                    
+                    guard let bitmapData = u.bitmapData else {
+                        imageStreamHandler.error(code: "IMAGE_STREAM_ERROR", message: "Frame had no bitmap data")
+                        return
+                    }
+                    let newData:Data = Data(bytes: bitmapData, count: Int(bytesPerRow*height))
+
                     try imageStreamHandler.success([
                         "width": width,
                         "height": height,
@@ -116,8 +134,8 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                 }
             }
         }
-        
-        return Unmanaged<CVPixelBuffer>.passRetained(latestBuffer)
+
+        return Unmanaged<CVPixelBuffer>.passRetained(buffer)
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -614,29 +632,32 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
             result(["imageData": imageData, "error": nil])
         }
         else{
-            let nsImage = imageFromSampleBuffer(imageBuffer: latestBuffer)
-            if nsImage != nil{
-                let imageData = Data(bytes: nsImage!.bitmapData!, count: Int(nsImage!.bytesPerRow*Int(nsImage!.size.height)))
-                result(["imageData": imageData, "error": nil])
-            }else {
+            guard let imageBuffer = latestBuffer,
+                  let nsImage = imageFromSampleBuffer(imageBuffer: imageBuffer),
+                  let bitmapData = nsImage.bitmapData else {
                 result(["error": FlutterError(code: "PHOTO_OUTPUT_ERROR", message: "imageData is empty or invalid", details: nil).toMap])
                 return
             }
+            let imageData = Data(bytes: bitmapData, count: Int(nsImage.bytesPerRow*Int(nsImage.size.height)))
+            result(["imageData": imageData, "error": nil])
         }
     }
     
     func imageFromSampleBuffer(imageBuffer: CVPixelBuffer) -> NSBitmapImageRep? {
         CVPixelBufferLockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: 0))
-        
+        defer {
+            CVPixelBufferUnlockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: 0))
+        }
+
         guard let baseAddress: UnsafeMutableRawPointer = CVPixelBufferGetBaseAddress(imageBuffer) else {
             return nil
         }
         let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
         let width = CVPixelBufferGetWidth(imageBuffer)
         let height = CVPixelBufferGetHeight(imageBuffer)
-        
+
         let colorSpace = CGColorSpaceCreateDeviceRGB();
-        
+
         // Create a bitmap graphics context with the sample buffer data
         guard let context = CGContext(
             data: baseAddress,
@@ -649,10 +670,10 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         )else {
             return nil
         }
-        let quartzImage = context.makeImage()!
-        
-        CVPixelBufferUnlockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: 0))
-        
+        guard let quartzImage = context.makeImage() else {
+            return nil
+        }
+
         // Create an image object from the Quartz image
         if resSize == nil || resSize!.width >= CGFloat(width){
             if zoomLevel > 1.0{
