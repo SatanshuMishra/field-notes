@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-24-blob-extension-playback-root-cause.md — extensionless SHA-256 blobs broke playback: AVFoundation picks its demuxer from the path UTI and never content-sniffs local files, so both video_player and just_audio failed together (-12847/-11828). Store the extension in rel_path + backfill + resilient read path (PR #35). Export was broken identically. Link shim rejected (dart:io has no hard-link API; links outside blobs/ defeat Delete-All and GC)
 - decisions/2026-07-24-combined-camera-deps-pr.md — camera-lifecycle + dep-sweep ship as ONE branch (PR #34); diffs share zero files. camera 0.12.x CANNOT register a competing macOS camera plugin (no `macos:` platform key; camera_avfoundation ships no macos/ dir) — verified 4 layers, retires the registrant guard for the macOS camera path
 - decisions/2026-07-24-camera-preview-lifecycle-root-causes.md — the 4 reported capture defects (dead preview, camera never released, wrong device) were ALL Dart-side; the vendored plugin already exposed destroy/deviceId/listDevices. Gate release on a destroy-intent flag, never on controller presence
 - decisions/2026-07-24-share-plus-13-blocked-by-file-picker.md — share_plus 13.x needs win32 ^6 vs file_picker 11.0.2's ^5.9.0; "Resolvable" in pub outdated hides that it needs a PRERELEASE file_picker. Also confirms build_runner/drift_dev are pinned by riverpod_generator's analyzer ^12 ceiling
@@ -44,12 +45,11 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — PR #34 MERGED (e0ee77d) and camera work hardware-verified. NEW CRITICAL: saved voice+video entries will not PLAY BACK ("Can't play this video/recording"). Next session reproduces + root-causes on a branch cut from origin/main; local main is STALE. See sessions/2026-07-24-06.
+- journal-app-design — paused — Playback root-caused and FIXED in PR #35 (open, branch fix/media-blob-extension-playback): extensionless blobs broke AVFoundation. 737 tests, analyze clean, real-natives macOS receipt RED->GREEN, migration dry-run on a copy of the live container passed. Awaiting the human's hardware test + merge. See sessions/2026-07-24-07.
 
 ## State snapshot (2026-07-22)
 - DB ROUND-TRIP PROVEN (session 2026-07-22-01): real capture write path stored 2 new entries into the on-disk DB (~/Library/Containers/dev.satanshumishra.fieldNotes/Data/Documents/field_notes.sqlite); a separate sqlite3 process confirmed them AFTER the writer exited (entries 2->4); live app rendered DB rows (live-feed-01.png). Store+retrieve are proven end-to-end.
 - CAPTURE SAVE-HANG (real bug, fixed): PR #32's save `.timeout()` was a NO-OP — on TimeoutException it re-awaited the same unbounded future, so a never-completing native recorder.stop() hung "Saving..." forever. Fixed in voice/text/video (branch fix/capture-save-hang, commit 0a9902c) + save-hang receipts (RED->GREEN); analyze clean. UNPUSHED, no PR. OPEN: whether a real-mic voice save now actually PERSISTS or only fails-gracefully (native stop() may never return). decisions/2026-07-22-save-hang-timeout-noop-root-cause.md.
-- BLACK WINDOW (resolved): the standalone .app binary launch yields no first frame (null layer tree); `flutter run -d macos` renders. ALWAYS run via `flutter run`; VM screenshot works only against a flutter-run instance. decisions/2026-07-22-black-window-standalone-binary.md.
 
 ## State snapshot (2026-07-21)
 - CAPTURE FLOWS COMPLETE (session 07): note/voice save-hang + video deadlock FIXED; 4 code-review touch-ups applied (finally-flash removed, single-flight timeout-dedupe, error logging, one root ProviderScope); the COMPLETE real-UI app test PASSES 3/3 on -d macos (integration_test/capture_ui_flow_test.dart drives real widgets Save->dismiss->card). analyze clean; full host suite 671 green. Shipped in PR #32, human-merged (origin/main c2fbefd). Live VM screenshots deferred; real camera/mic+TCC human-gated. See sessions/2026-07-21-07.
