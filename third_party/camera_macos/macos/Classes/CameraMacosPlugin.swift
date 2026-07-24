@@ -502,11 +502,6 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                                 if connection.isVideoMirroringSupported {
                                     connection.isVideoMirrored = self.isVideoMirrored
                                 }
-//                                #if compiler(<5.8.1)
-                                    if #available(macOS 14.0, *), connection.isVideoRotationAngleSupported(self.orientation){
-                                        connection.videoRotationAngle = self.orientation
-                                    }
-//                                #endif
                             }
                             outputInitialized = true
                         }
@@ -519,9 +514,6 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                             for connection in previewVideoOutput.connections {
                                 if connection.isVideoMirroringSupported {
                                     connection.isVideoMirrored = self.isVideoMirrored
-                                }
-                                if #available(macOS 14.0, *), connection.isVideoRotationAngleSupported(self.orientation){
-                                    connection.videoRotationAngle = self.orientation
                                 }
                             }
                         }
@@ -536,15 +528,10 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                                 if connection.isVideoMirroringSupported {
                                     connection.isVideoMirrored = self.isVideoMirrored
                                 }
-//                                #if compiler(<5.8.1)
-                                if #available(macOS 14.0, *),  connection.isVideoRotationAngleSupported(self.orientation){
-                                        connection.videoRotationAngle = self.orientation
-                                    }
-//                                #endif
                             }
                             outputInitialized = true
                         }
-                        
+
                         // Add audio buffering output
                         if shouldRecordAudio {
                             let audioOutput = AVCaptureAudioDataOutput()
