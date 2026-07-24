@@ -32,19 +32,21 @@ const List<VideoCaptureDevice> fakeVideoDevices = <VideoCaptureDevice>[
 
 class FakeVideoRecorder implements VideoRecorder {
   FakeVideoRecorder({
-    this.permission = true,
     this.recording,
     this.startError,
     this.stopError,
-    this.devices = fakeVideoDevices,
+    List<VideoCaptureDevice> devices = fakeVideoDevices,
     this.listError,
-  });
+    this.releaseError,
+    this.livePreview = true,
+  }) : devices = List<VideoCaptureDevice>.of(devices);
 
-  final bool permission;
   final VideoRecording? recording;
   final VideoRecorderException? startError;
   final VideoRecorderException? stopError;
   final VideoRecorderException? listError;
+  final VideoRecorderException? releaseError;
+  final bool livePreview;
   List<VideoCaptureDevice> devices;
 
   int startCalls = 0;
@@ -53,13 +55,11 @@ class FakeVideoRecorder implements VideoRecorder {
   int releaseCalls = 0;
   int disposeCalls = 0;
   int listCalls = 0;
+  bool _sessionLive = false;
   final List<String> previewDeviceIds = <String>[];
 
   String? get previewDeviceId =>
       previewDeviceIds.isEmpty ? null : previewDeviceIds.last;
-
-  @override
-  Future<bool> hasPermission() async => permission;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
@@ -68,7 +68,7 @@ class FakeVideoRecorder implements VideoRecorder {
     if (error != null) {
       throw error;
     }
-    return devices;
+    return List<VideoCaptureDevice>.of(devices);
   }
 
   @override
@@ -106,17 +106,30 @@ class FakeVideoRecorder implements VideoRecorder {
 
   @override
   Future<void> release() async {
+    if (!_sessionLive) {
+      return;
+    }
+    _sessionLive = false;
     releaseCalls++;
+    final VideoRecorderException? error = releaseError;
+    if (error != null) {
+      throw error;
+    }
   }
 
   @override
   Future<void> dispose() async {
     disposeCalls++;
+    await release();
   }
 
   @override
-  Widget buildPreview(String deviceId) {
+  Widget? openSession(String deviceId) {
     previewDeviceIds.add(deviceId);
+    _sessionLive = true;
+    if (!livePreview) {
+      return null;
+    }
     return SizedBox(
       key: ValueKey<String>('fake-video-preview-$deviceId'),
       width: 120,
@@ -126,11 +139,11 @@ class FakeVideoRecorder implements VideoRecorder {
 }
 
 class DeferredReadyVideoRecorder implements VideoRecorder {
-  DeferredReadyVideoRecorder({this.permission = true});
+  DeferredReadyVideoRecorder();
 
-  final bool permission;
   final Completer<void> _ready = Completer<void>();
   Widget? _preview;
+  bool _sessionLive = false;
 
   bool started = false;
   int startCalls = 0;
@@ -140,10 +153,8 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
   int disposeCalls = 0;
 
   @override
-  Future<bool> hasPermission() async => permission;
-
-  @override
-  Future<List<VideoCaptureDevice>> listDevices() async => fakeVideoDevices;
+  Future<List<VideoCaptureDevice>> listDevices() async =>
+      List<VideoCaptureDevice>.of(fakeVideoDevices);
 
   @override
   Future<void> start() async {
@@ -168,22 +179,30 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
 
   @override
   Future<void> release() async {
+    if (!_sessionLive) {
+      return;
+    }
+    _sessionLive = false;
     releaseCalls++;
   }
 
   @override
   Future<void> dispose() async {
     disposeCalls++;
+    await release();
   }
 
   @override
-  Widget buildPreview(String deviceId) => _preview ??= _ReadySignal(
-        onReady: () {
-          if (!_ready.isCompleted) {
-            _ready.complete();
-          }
-        },
-      );
+  Widget? openSession(String deviceId) {
+    _sessionLive = true;
+    return _preview ??= _ReadySignal(
+      onReady: () {
+        if (!_ready.isCompleted) {
+          _ready.complete();
+        }
+      },
+    );
+  }
 }
 
 class _ReadySignal extends StatefulWidget {

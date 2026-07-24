@@ -172,7 +172,8 @@ void main() {
   testWidgets(
       'a denied camera shows the denied-state UI with guidance and a retry, and '
       'records nothing', (WidgetTester tester) async {
-    final FakeVideoRecorder recorder = FakeVideoRecorder(permission: false);
+    final FakeVideoRecorder recorder =
+        FakeVideoRecorder(devices: const <VideoCaptureDevice>[]);
     final FakeCaptureService service = FakeCaptureService();
     String? result = 'unset';
 

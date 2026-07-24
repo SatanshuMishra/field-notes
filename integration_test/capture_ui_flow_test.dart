@@ -229,10 +229,11 @@ void main() {
     expect(videoRecorder.previewDeviceId, 'usb-id');
     expect(fakeVideoPreview(deviceId: 'usb-id'), findsOneWidget);
 
+    final int releasesBeforeCancel = videoRecorder.releaseCalls;
     await tester.tap(find.text('Cancel'));
     await _settle(tester, times: 6);
 
     expect(find.byType(VideoRecorderSheet), findsNothing);
-    expect(videoRecorder.releaseCalls, greaterThanOrEqualTo(1));
+    expect(videoRecorder.releaseCalls, releasesBeforeCancel + 1);
   });
 }

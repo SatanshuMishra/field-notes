@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/material.dart';
@@ -22,9 +24,13 @@ const Map<String, Object?> _usbDevice = <String, Object?>{
 
 class _NativeCameraSpy {
   final List<MethodCall> calls = <MethodCall>[];
+  Completer<void>? initGate;
 
   List<String> get methods =>
       calls.map((MethodCall call) => call.method).toList();
+
+  int countOf(String method) =>
+      methods.where((String m) => m == method).length;
 
   Map<Object?, Object?> argumentsOf(String method) {
     return calls.firstWhere((MethodCall call) => call.method == method).arguments
@@ -39,6 +45,10 @@ class _NativeCameraSpy {
           'devices': <Map<String, Object?>>[_builtInDevice, _usbDevice],
         };
       case 'initialize':
+        final Completer<void>? gate = initGate;
+        if (gate != null) {
+          await gate.future;
+        }
         return <String, Object?>{
           'textureId': 7,
           'size': <String, Object?>{'width': 1280.0, 'height': 720.0},
@@ -85,7 +95,7 @@ void main() {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
     await tester.pumpWidget(
-      MaterialApp(home: SizedBox(child: recorder.buildPreview('usb-id'))),
+      MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
     );
     await tester.pump();
 
@@ -101,7 +111,7 @@ void main() {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
     await tester.pumpWidget(
-      MaterialApp(home: SizedBox(child: recorder.buildPreview('built-in-id'))),
+      MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
     );
     await tester.pump();
     expect(native.methods, isNot(contains('destroy')));
@@ -121,7 +131,7 @@ void main() {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
     await tester.pumpWidget(
-      MaterialApp(home: SizedBox(child: recorder.buildPreview('built-in-id'))),
+      MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
     );
     await tester.pump();
 
@@ -134,6 +144,60 @@ void main() {
       hasLength(1),
     );
 
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+      'releasing during the init warmup still destroys the session once it '
+      'materialises', (WidgetTester tester) async {
+    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
+    final Completer<void> initGate = Completer<void>();
+    native.initGate = initGate;
+
+    await tester.pumpWidget(
+      MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
+    );
+    await tester.pump();
+
+    expect(native.methods, contains('initialize'));
+    expect(native.countOf('destroy'), 0);
+
+    await recorder.release();
+    expect(native.countOf('destroy'), 0);
+
+    initGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(native.countOf('destroy'), 1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+      'a controller that arrives after release is not adopted by the next '
+      'session', (WidgetTester tester) async {
+    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
+    final Completer<void> firstInit = Completer<void>();
+    native.initGate = firstInit;
+
+    await tester.pumpWidget(
+      MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
+    );
+    await tester.pump();
+    await recorder.release();
+
+    native.initGate = null;
+    await tester.pumpWidget(
+      MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
+    );
+    await tester.pump();
+
+    firstInit.complete();
+    await tester.pumpAndSettle();
+
+    expect(native.countOf('destroy'), greaterThanOrEqualTo(1));
+
+    await recorder.release();
     await tester.pumpWidget(const SizedBox.shrink());
   });
 }
