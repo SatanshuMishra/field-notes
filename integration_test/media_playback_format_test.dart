@@ -10,6 +10,7 @@ import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_player_impl.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:path/path.dart' as p;
 
 import 'fixtures/tiny_media_fixtures.dart';
 
@@ -45,6 +46,7 @@ void main() {
 
     final resolved = await MediaStoreResolver(store).resolve(blob.id);
     expect(resolved.isAvailable, isTrue);
+    expect(p.extension(resolved.file!.path), isNotEmpty);
 
     final EntryVideoPlayer player = createVideoPlayerEntryPlayer();
     addTearDown(player.dispose);
@@ -64,6 +66,7 @@ void main() {
 
     final resolved = await MediaStoreResolver(store).resolve(blob.id);
     expect(resolved.isAvailable, isTrue);
+    expect(p.extension(resolved.file!.path), isNotEmpty);
 
     final player = createJustAudioPlayer();
     addTearDown(player.dispose);
