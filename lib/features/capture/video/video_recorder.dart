@@ -16,6 +16,9 @@ const String videoDeviceListMessage =
     'Could not find a camera. Connect one and try again.';
 const String videoDeviceSwitchMessage =
     'Could not switch cameras. Try picking one again.';
+const String videoReleaseMessage =
+    'The camera did not shut down cleanly. Quit and reopen Field Notes if the '
+    'camera light stays on.';
 
 class VideoCaptureDevice {
   const VideoCaptureDevice({required this.id, required this.label});
@@ -59,9 +62,9 @@ class VideoRecorderException implements Exception {
 }
 
 abstract interface class VideoRecorder {
-  Future<bool> hasPermission();
-
   Future<List<VideoCaptureDevice>> listDevices();
+
+  Widget? openSession(String deviceId);
 
   Future<void> start();
 
@@ -72,6 +75,4 @@ abstract interface class VideoRecorder {
   Future<void> release();
 
   Future<void> dispose();
-
-  Widget buildPreview(String deviceId);
 }

@@ -8,7 +8,7 @@ import 'package:field_notes/design/widgets/widgets.dart';
 import 'camera_picker.dart';
 import 'video_recorder.dart';
 
-enum VideoRecorderPhase { idle, arming, recording, saving, denied }
+enum VideoRecorderPhase { preparing, idle, arming, recording, saving, denied }
 
 class VideoRecorderSheet extends StatelessWidget {
   const VideoRecorderSheet({
@@ -67,7 +67,8 @@ class VideoRecorderSheet extends StatelessWidget {
   final double maxWidth;
 
   bool get _isRecording => phase == VideoRecorderPhase.recording;
-  bool get _isArming => phase == VideoRecorderPhase.arming;
+  bool get _isPreparing =>
+      phase == VideoRecorderPhase.preparing || phase == VideoRecorderPhase.arming;
   bool get _isSaving => phase == VideoRecorderPhase.saving;
   bool get _isDenied => phase == VideoRecorderPhase.denied;
   bool get _isIdle => phase == VideoRecorderPhase.idle;
@@ -145,7 +146,7 @@ class VideoRecorderSheet extends StatelessWidget {
     if (_isSaving) {
       return StickerButton(label: savingLabel, onPressed: null);
     }
-    if (_isArming) {
+    if (_isPreparing) {
       return StickerButton(label: armingLabel, onPressed: null);
     }
     if (_isRecording) {
@@ -206,7 +207,9 @@ class _VideoStage extends StatelessWidget {
             ),
           ],
         ),
-      VideoRecorderPhase.arming => Column(
+      VideoRecorderPhase.preparing ||
+      VideoRecorderPhase.arming =>
+        Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[

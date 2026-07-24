@@ -24,15 +24,19 @@ const String videoSaveTimeoutMessage =
 
 const Duration videoSaveTimeout = Duration(seconds: 20);
 
+const Duration cameraReleaseTimeout = Duration(seconds: 6);
+
 class VideoComposerConnector extends ConsumerStatefulWidget {
   const VideoComposerConnector({
     super.key,
     required this.date,
     this.saveTimeout = videoSaveTimeout,
+    this.releaseTimeout = cameraReleaseTimeout,
   });
 
   final String date;
   final Duration saveTimeout;
+  final Duration releaseTimeout;
 
   @override
   ConsumerState<VideoComposerConnector> createState() =>
@@ -41,8 +45,9 @@ class VideoComposerConnector extends ConsumerStatefulWidget {
 
 class _VideoComposerConnectorState
     extends ConsumerState<VideoComposerConnector> {
-  VideoRecorderPhase _phase = VideoRecorderPhase.arming;
+  VideoRecorderPhase _phase = VideoRecorderPhase.preparing;
   String? _errorMessage;
+  String? _deniedMessage;
   String? _nudgeMessage;
   Widget? _preview;
   List<VideoCaptureDevice> _devices = const <VideoCaptureDevice>[];
@@ -60,21 +65,6 @@ class _VideoComposerConnectorState
   }
 
   Future<void> _prepare() async {
-    final bool granted;
-    try {
-      granted = await _recorder.hasPermission();
-    } catch (error, stackTrace) {
-      debugPrint('Camera permission check failed: $error\n$stackTrace');
-      _showDenied();
-      return;
-    }
-    if (!mounted) {
-      return;
-    }
-    if (!granted) {
-      _showDenied();
-      return;
-    }
     final List<VideoCaptureDevice> devices;
     try {
       devices = await _recorder.listDevices();
@@ -101,9 +91,10 @@ class _VideoComposerConnectorState
     setState(() {
       _devices = List<VideoCaptureDevice>.unmodifiable(devices);
       _deviceId = deviceId;
-      _preview = _recorder.buildPreview(deviceId);
+      _preview = _recorder.openSession(deviceId);
       _phase = VideoRecorderPhase.idle;
       _errorMessage = null;
+      _deniedMessage = null;
     });
   }
 
@@ -116,7 +107,8 @@ class _VideoComposerConnectorState
       _preview = null;
       _devices = const <VideoCaptureDevice>[];
       _deviceId = null;
-      _errorMessage = message;
+      _errorMessage = null;
+      _deniedMessage = message;
     });
   }
 
@@ -128,14 +120,18 @@ class _VideoComposerConnectorState
     }
     _switching = true;
     setState(() {
-      _phase = VideoRecorderPhase.arming;
+      _phase = VideoRecorderPhase.preparing;
       _preview = null;
       _errorMessage = null;
       _deviceId = deviceId;
     });
     String? failure;
     try {
-      await _recorder.release();
+      await _recorder.release().timeout(widget.releaseTimeout);
+    } on TimeoutException {
+      failure = videoDeviceSwitchMessage;
+    } on VideoRecorderException catch (error) {
+      failure = error.message;
     } catch (error, stackTrace) {
       debugPrint('Camera release failed: $error\n$stackTrace');
       failure = videoDeviceSwitchMessage;
@@ -146,7 +142,7 @@ class _VideoComposerConnectorState
     }
     ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
     setState(() {
-      _preview = _recorder.buildPreview(deviceId);
+      _preview = _recorder.openSession(deviceId);
       _phase = VideoRecorderPhase.idle;
       _errorMessage = failure;
     });
@@ -155,7 +151,7 @@ class _VideoComposerConnectorState
   Future<void> _start() async {
     if (_phase == VideoRecorderPhase.denied) {
       setState(() {
-        _phase = VideoRecorderPhase.arming;
+        _phase = VideoRecorderPhase.preparing;
         _errorMessage = null;
       });
       await _prepare();
@@ -180,7 +176,7 @@ class _VideoComposerConnectorState
         return;
       }
       setState(() {
-        _preview = _recorder.buildPreview(deviceId);
+        _preview = _recorder.openSession(deviceId);
         _phase = VideoRecorderPhase.recording;
       });
       _scheduleTimeline();
@@ -289,7 +285,8 @@ class _VideoComposerConnectorState
 
   Future<void> _cancel() async {
     _cancelTimers();
-    if (_phase == VideoRecorderPhase.recording) {
+    if (_phase == VideoRecorderPhase.recording ||
+        _phase == VideoRecorderPhase.arming) {
       try {
         await _recorder.cancel();
       } catch (error, stackTrace) {
@@ -309,7 +306,9 @@ class _VideoComposerConnectorState
     }
     _released = true;
     try {
-      await _recorder.release();
+      await _recorder.release().timeout(widget.releaseTimeout);
+    } on TimeoutException {
+      debugPrint('Camera release timed out');
     } catch (error, stackTrace) {
       debugPrint('Camera release failed: $error\n$stackTrace');
     }
@@ -332,6 +331,7 @@ class _VideoComposerConnectorState
       onDeviceChanged: _selectDevice,
       nudgeMessage: _nudgeMessage,
       errorMessage: _errorMessage,
+      deniedMessage: _deniedMessage ?? cameraPermissionMessage,
       onStart: _start,
       onStop: _stop,
       onCancel: _cancel,
