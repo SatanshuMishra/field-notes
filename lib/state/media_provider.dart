@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:field_notes/data/media/blob_extension_backfill.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/state/database_provider.dart';
@@ -21,5 +22,6 @@ Future<Directory> mediaRoot(Ref ref) async {
 Future<MediaStore> mediaStore(Ref ref) async {
   final database = ref.watch(databaseProvider);
   final root = await ref.watch(mediaRootProvider.future);
+  await BlobExtensionBackfill(database: database, root: root).run();
   return FilesystemMediaStore(database: database, root: root);
 }

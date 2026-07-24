@@ -41,7 +41,15 @@ void main() {
     );
 
     expect(blob.id, sha256Hex(bytes));
-    expect(blob.relPath, relPathForId(blob.id));
+    expect(
+      blob.relPath,
+      relPathForBlob(
+        id: blob.id,
+        mime: 'image/jpeg',
+        kind: MediaKind.photo,
+      ),
+    );
+    expect(p.extension(blob.relPath), '.jpg');
     expect(blob.mime, 'image/jpeg');
     expect(blob.kind, MediaKind.photo);
     expect(blob.bytes, 4);

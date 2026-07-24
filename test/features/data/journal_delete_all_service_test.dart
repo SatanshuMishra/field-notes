@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/media/content_hash.dart';
+import 'package:field_notes/domain/models/media_kind.dart';
 import 'package:field_notes/features/data/journal_delete_all_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -15,7 +16,8 @@ Future<String> seedBlobWithFile(
   List<int> bytes,
 ) async {
   final id = sha256Hex(bytes);
-  final relPath = relPathForId(id);
+  final relPath =
+      relPathForBlob(id: id, mime: 'image/jpeg', kind: MediaKind.photo);
   final file = File(p.join(root.path, relPath));
   await file.parent.create(recursive: true);
   await file.writeAsBytes(bytes, flush: true);

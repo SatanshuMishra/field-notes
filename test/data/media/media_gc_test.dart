@@ -90,6 +90,18 @@ void main() {
     await orphanFile.create(recursive: true);
     await orphanFile.writeAsBytes([9, 9]);
 
+    final extensionedOrphanId = sha256Hex([8, 8]);
+    final extensionedOrphanFile = File(p.join(
+      root.path,
+      relPathForBlob(
+        id: extensionedOrphanId,
+        mime: 'video/quicktime',
+        kind: MediaKind.video,
+      ),
+    ));
+    await extensionedOrphanFile.create(recursive: true);
+    await extensionedOrphanFile.writeAsBytes([8, 8]);
+
     final removed = await store.collectGarbage();
 
     expect(File(store.absolutePath(video)).existsSync(), isTrue);
@@ -98,6 +110,7 @@ void main() {
     expect(File(store.absolutePath(deadAudio)).existsSync(), isFalse);
     expect(File(store.absolutePath(unreferenced)).existsSync(), isFalse);
     expect(orphanFile.existsSync(), isFalse);
+    expect(extensionedOrphanFile.existsSync(), isFalse);
 
     expect(await store.blobById(video.id), isNotNull);
     expect(await store.blobById(deadAudio.id), isNull);
