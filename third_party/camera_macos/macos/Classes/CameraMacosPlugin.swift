@@ -109,6 +109,7 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
             return nil
         }
         if let imageStreamHandler = self.imageStreamHandler,
+           imageStreamHandler.eventSink != nil,
            let u = imageFromSampleBuffer(imageBuffer: buffer) {
             let bytesPerRow = u.bytesPerRow
             let width = Int(u.size.width)
@@ -644,16 +645,19 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     
     func imageFromSampleBuffer(imageBuffer: CVPixelBuffer) -> NSBitmapImageRep? {
         CVPixelBufferLockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: 0))
-        
+        defer {
+            CVPixelBufferUnlockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: 0))
+        }
+
         guard let baseAddress: UnsafeMutableRawPointer = CVPixelBufferGetBaseAddress(imageBuffer) else {
             return nil
         }
         let bytesPerRow = CVPixelBufferGetBytesPerRow(imageBuffer)
         let width = CVPixelBufferGetWidth(imageBuffer)
         let height = CVPixelBufferGetHeight(imageBuffer)
-        
+
         let colorSpace = CGColorSpaceCreateDeviceRGB();
-        
+
         // Create a bitmap graphics context with the sample buffer data
         guard let context = CGContext(
             data: baseAddress,
@@ -666,10 +670,10 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         )else {
             return nil
         }
-        let quartzImage = context.makeImage()!
-        
-        CVPixelBufferUnlockBaseAddress(imageBuffer, CVPixelBufferLockFlags(rawValue: 0))
-        
+        guard let quartzImage = context.makeImage() else {
+            return nil
+        }
+
         // Create an image object from the Quartz image
         if resSize == nil || resSize!.width >= CGFloat(width){
             if zoomLevel > 1.0{
