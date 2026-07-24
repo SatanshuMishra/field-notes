@@ -31,7 +31,7 @@ Future<SettingsDataController> settingsDataController(Ref ref) async {
     exportRunner: ExportRunner(
       exportService: JournalExportService(
         database: database,
-        mediaRoot: root,
+        mediaStore: await ref.watch(mediaStoreProvider.future),
       ),
       delivery: defaultExportDelivery(),
     ),

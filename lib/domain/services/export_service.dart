@@ -49,6 +49,7 @@ class ExportBundle {
     required this.manifest,
     required this.journalJson,
     required this.mediaFiles,
+    this.skippedMediaIds = const <String>[],
   });
 
   static const String manifestFileName = 'manifest.json';
@@ -57,6 +58,7 @@ class ExportBundle {
   final ExportManifest manifest;
   final String journalJson;
   final Map<String, List<int>> mediaFiles;
+  final List<String> skippedMediaIds;
 
   String get suggestedFileName {
     final at = DateTime.fromMillisecondsSinceEpoch(
