@@ -1,9 +1,14 @@
+import 'dart:io';
+
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 
 import 'capture_date.dart';
+
+const Duration _mediaReadyPollInterval = Duration(milliseconds: 50);
+const int _mediaReadyPollAttempts = 20;
 
 const String blankTextMessage = 'Add a few words before saving your note.';
 const String invalidDateMessage =
@@ -12,6 +17,8 @@ const String invalidDurationMessage =
     'That recording has no length. Nothing was saved.';
 const String mediaWriteMessage =
     'Could not save your media. Check your available space and try again.';
+const String mediaMissingMessage =
+    'That recording did not finish saving. Nothing was saved — please try again.';
 const String entryWriteMessage =
     'Could not save your entry. Nothing was saved — please try again.';
 const String photoAttachMessage =
@@ -126,6 +133,10 @@ class JournalCaptureService implements CaptureService {
   }
 
   Future<MediaBlob> _finalize(CaptureMedia payload, MediaKind kind) async {
+    if (payload is CaptureFile &&
+        (kind == MediaKind.audio || kind == MediaKind.video)) {
+      await _awaitFileReady(payload.file);
+    }
     try {
       return await switch (payload) {
         CaptureBytes m => media.putBytes(
@@ -147,6 +158,26 @@ class JournalCaptureService implements CaptureService {
       };
     } catch (error) {
       throw CaptureException(mediaWriteMessage, cause: error);
+    }
+  }
+
+  Future<void> _awaitFileReady(File file) async {
+    for (var attempt = 0;; attempt++) {
+      if (_isFileReady(file)) {
+        return;
+      }
+      if (attempt >= _mediaReadyPollAttempts) {
+        throw const CaptureException(mediaMissingMessage);
+      }
+      await Future<void>.delayed(_mediaReadyPollInterval);
+    }
+  }
+
+  bool _isFileReady(File file) {
+    try {
+      return file.existsSync() && file.lengthSync() > 0;
+    } catch (_) {
+      return false;
     }
   }
 }

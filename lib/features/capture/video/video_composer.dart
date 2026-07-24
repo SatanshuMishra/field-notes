@@ -18,6 +18,9 @@ import 'video_timeline.dart';
 const String unexpectedVideoSaveMessage =
     'Could not save your video. Please try again.';
 
+const String videoSaveTimeoutMessage =
+    'Saving took too long. Nothing was saved — please try again.';
+
 const Duration videoSaveTimeout = Duration(seconds: 20);
 
 class VideoComposerConnector extends ConsumerStatefulWidget {
@@ -130,11 +133,10 @@ class _VideoComposerConnectorState
     String? entryId;
     final Future<String> pending = _persist();
     try {
-      try {
-        entryId = await pending.timeout(widget.saveTimeout);
-      } on TimeoutException {
-        entryId = await pending;
-      }
+      entryId = await pending.timeout(widget.saveTimeout);
+    } on TimeoutException {
+      unawaited(pending.then((_) {}, onError: (_) {}));
+      _failBackToRecording(videoSaveTimeoutMessage);
     } on VideoRecorderException catch (error) {
       _failBackToRecording(error.message);
     } on CaptureException catch (error) {

@@ -1,0 +1,110 @@
+import 'dart:async';
+
+import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/voice/voice_composer.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'voice_test_support.dart';
+
+class _HangingStopRecorder implements VoiceRecorder {
+  final Completer<VoiceRecording> _never = Completer<VoiceRecording>();
+  int stopCalls = 0;
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<VoiceRecording> stop() {
+    stopCalls++;
+    return _never.future;
+  }
+
+  @override
+  Future<void> cancel() async {}
+
+  @override
+  Future<void> dispose() async {}
+}
+
+class _Trigger extends StatelessWidget {
+  const _Trigger({required this.timeout});
+
+  final Duration timeout;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () async => showGeneralDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        barrierLabel: 'Dismiss voice recorder',
+        pageBuilder: (
+          BuildContext dialogContext,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+        ) {
+          return VoiceComposerConnector(
+            date: '2026-07-21',
+            saveTimeout: timeout,
+          );
+        },
+      ),
+      child: const Text('open'),
+    );
+  }
+}
+
+void main() {
+  testWidgets(
+      'when the recorder stop() never completes, the save is bounded: the '
+      '"Saving…" state clears and a timeout error is surfaced instead of '
+      'hanging', (WidgetTester tester) async {
+    final _HangingStopRecorder recorder = _HangingStopRecorder();
+    final FakeCaptureService service = FakeCaptureService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          voiceRecorderProvider.overrideWith((Ref ref) => recorder),
+          captureServiceProvider.overrideWith((Ref ref) => service),
+        ],
+        child: voiceHarness(
+          const _Trigger(timeout: Duration(milliseconds: 100)),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    await tester.tap(find.text('Record'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 20));
+
+    await tester.tap(find.text('Stop & save'));
+    await tester.pump();
+    expect(find.text('Saving…'), findsOneWidget);
+
+    await tester.pump(const Duration(milliseconds: 150));
+
+    expect(recorder.stopCalls, 1);
+    expect(service.requests, isEmpty);
+    expect(find.text(voiceSaveTimeoutMessage), findsOneWidget);
+    expect(find.text('Saving…'), findsNothing);
+    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.byType(VoiceRecorderSheet), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+}

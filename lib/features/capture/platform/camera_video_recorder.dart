@@ -246,6 +246,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
     final Widget view = CameraMacOSView(
       cameraMode: CameraMacOSMode.video,
       fit: BoxFit.cover,
+      useMovieFileOutput: true,
       onCameraInizialized: (CameraMacOSController controller) {
         if (!ready.isCompleted) {
           ready.complete(controller);

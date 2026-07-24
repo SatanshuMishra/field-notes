@@ -14,6 +14,11 @@ const AudioEncoder voiceRecordingEncoder = AudioEncoder.aacLc;
 String voiceRecordingFileName(int nowMs) =>
     'voice_$nowMs.$voiceRecordingExtension';
 
+Future<String> resolveVoiceRecordingPath(Directory directory, int nowMs) async {
+  await directory.create(recursive: true);
+  return p.join(directory.path, voiceRecordingFileName(nowMs));
+}
+
 class RecordVoiceRecorder implements VoiceRecorder {
   RecordVoiceRecorder({AudioRecorder? recorder})
       : _recorder = recorder ?? AudioRecorder();
@@ -29,9 +34,9 @@ class RecordVoiceRecorder implements VoiceRecorder {
   Future<void> start() async {
     try {
       final Directory directory = await getTemporaryDirectory();
-      final String path = p.join(
-        directory.path,
-        voiceRecordingFileName(DateTime.now().millisecondsSinceEpoch),
+      final String path = await resolveVoiceRecordingPath(
+        directory,
+        DateTime.now().millisecondsSinceEpoch,
       );
       _elapsed
         ..reset()

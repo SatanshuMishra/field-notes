@@ -17,6 +17,9 @@ import 'voice_recorder_sheet.dart';
 const String unexpectedVoiceSaveMessage =
     'Could not save your recording. Please try again.';
 
+const String voiceSaveTimeoutMessage =
+    'Saving took too long. Nothing was saved — please try again.';
+
 const Duration voiceSaveTimeout = Duration(seconds: 20);
 
 class VoiceComposerConnector extends ConsumerStatefulWidget {
@@ -74,11 +77,10 @@ class _VoiceComposerConnectorState
     String? entryId;
     final Future<String> pending = _persist();
     try {
-      try {
-        entryId = await pending.timeout(widget.saveTimeout);
-      } on TimeoutException {
-        entryId = await pending;
-      }
+      entryId = await pending.timeout(widget.saveTimeout);
+    } on TimeoutException {
+      unawaited(pending.then((_) {}, onError: (_) {}));
+      _failBackToRecording(voiceSaveTimeoutMessage);
     } on VoiceRecorderException catch (error) {
       _failBackToRecording(error.message);
     } on CaptureException catch (error) {
