@@ -10,6 +10,8 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-24-camera-preview-lifecycle-root-causes.md — the 4 reported capture defects (dead preview, camera never released, wrong device) were ALL Dart-side; the vendored plugin already exposed destroy/deviceId/listDevices. Gate release on a destroy-intent flag, never on controller presence
+- decisions/2026-07-24-share-plus-13-blocked-by-file-picker.md — share_plus 13.x needs win32 ^6 vs file_picker 11.0.2's ^5.9.0; "Resolvable" in pub outdated hides that it needs a PRERELEASE file_picker. Also confirms build_runner/drift_dev are pinned by riverpod_generator's analyzer ^12 ceiling
 - decisions/2026-07-24-macos-videorotationangle-crash.md — REAL macOS video crash = AVCaptureConnection.videoRotationAngle setter throwing on macOS 26 _Tundra (not a save-path bug); fix = delete the three rotation-angle sets. VERIFIED on the real camera; shipped in PR #33 (a714961)
 - decisions/2026-07-22-capture-finalize-fix-strategy.md — voice=record 7.x upgrade (DONE+verified); video=vendor camera_macos->AVCaptureMovieFileOutput; +disk-verify guardrail
 - decisions/2026-07-22-save-hang-timeout-noop-root-cause.md — bounded timeout fails GRACEFULLY but does not persist; real fixes are native (see strategy above)
@@ -32,8 +34,6 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-12-direct-ship-built-msps.md — ship the 3 ALREADY-BUILT foundations via main-thread push+PR+squash-merge (not a mitosis relaunch); engine reserved for building the unbuilt dependents (Option B)
 - decisions/2026-07-12-human-gated-merge-policy.md — autonomous is structurally blocked by the harness classifier (delegated agents can't self-merge); switched to mitosis "human-gated" mode + main-thread merge with per-session consent, layer-by-layer (still governs Option B builds)
 - decisions/2026-07-11-foundations-shipped-autonomous-policy.md — force-push authorized; 4 foundation PRs merged (origin/main ef3e8c6, 4/31 shipped); autonomous-for-27 part SUPERSEDED by 2026-07-12-human-gated-merge-policy.md
-- decisions/2026-07-11-receipts-ci-fix-and-relaunch-semantics.md — receipts.yml npm-ci fix (ec7b959); relaunch rebuilds open-PR MSPs; keep run.json + remove worktrees each relaunch
-- decisions/2026-07-10-mitosis-run-contract.md — fresh mitosis run inputs; sourcePrefix "msp" (no trailing slash)
 - decisions/2026-07-10-fonts-vendored-human-provided.md — vendored OFL fonts, human-provided (downloads blocked)
 - decisions/2026-07-10-client-implementation-stack.md — Riverpod 3.x + drift; ULID/updated_at/deleted_at/content-addressed media in v1
 - decisions/2026-07-10-reconciliation-resolutions.md — all 14 reconciliation points resolved; v1 = prototype minus sync, light-only, "Field Notes"
@@ -43,7 +43,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — real macOS voice + video capture saves SHIPPED + MERGED (PR #33, squash 902a659 on main); both hardware-verified. Awaiting the user's next-work instructions. See sessions/2026-07-24-04.
+- journal-app-design — paused — two UNMERGED branches, green locally but NEITHER hardware-verified: fix/macos-camera-lifecycle (preview-on-open, camera release, device picker, Swift frame-buffer races) and chore/package-upgrade. See sessions/2026-07-24-05.
 
 ## State snapshot (2026-07-22)
 - DB ROUND-TRIP PROVEN (session 2026-07-22-01): real capture write path stored 2 new entries into the on-disk DB (~/Library/Containers/dev.satanshumishra.fieldNotes/Data/Documents/field_notes.sqlite); a separate sqlite3 process confirmed them AFTER the writer exited (entries 2->4); live app rendered DB rows (live-feed-01.png). Store+retrieve are proven end-to-end.
@@ -68,7 +68,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
 - .claude/ledger/threads/journal-app-design.md — current line of work
-- .claude/ledger/sessions/2026-07-24-03-journal-app-design.md — latest (VIDCAP stripped; videoRotationAngle crash fix shipped; PR #33 mergeable)
+- .claude/ledger/sessions/2026-07-24-05-journal-app-design.md — latest (camera lifecycle fixes + package upgrade; both unmerged, awaiting hardware verification)
 - integration_test/capture_ui_flow_test.dart — real-UI -d macos capture receipt (note/voice/video)
 - .claude/ledger/sessions/2026-07-19-02-journal-app-design.md — batch 2 staging + verification
 - .claude/ledger/sessions/2026-07-16-02-journal-app-design.md — fold-defect root cause; run.json fixed+trimmed to batch 1
