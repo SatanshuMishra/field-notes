@@ -1,17 +1,22 @@
 ---
 thread: journal-app-design
-status: paused
+status: done
 updated: 2026-07-24
 priority: high
 completion_criteria:
-  - Design spec written to docs/superpowers/specs/ and user-approved
-  - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
-  - Implementation plan produced via the writing-plans skill
-next_step: HUMAN ACTION. Hardware-test PR #35 via `flutter run -d macos` per the PR's manual test plan, then merge it on GitHub. Also answer whether to delete the two junk voice entries.
-branch: fix/media-blob-extension-playback (PR #35, open)
+  - [x] Design spec written to docs/superpowers/specs/ and user-approved
+  - [x] 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
+  - [x] Implementation plan produced via the writing-plans skill
+closure: All three criteria are met — the v1 design spec was written and approved, all four starred reconciliation decisions were resolved, and the implementation plan was produced and executed to 31/31 shipped MSPs; post-ship bug work continues in threads/post-ship-hardening.md.
+next_step: "-"
+branch: "-"
 ---
 
 ## Status
+CLOSED 2026-07-24 by human decision. Design, planning and the full v1 build are complete (31/31 MSPs
+shipped). Post-ship hardening — including the open PR #35 — moved to threads/post-ship-hardening.md.
+
+## Historical Status
 Playback root-caused and fixed. Media blobs were stored as extensionless SHA-256 files; AVFoundation
 picks its demuxer from the path UTI and never content-sniffs, so every blob was rejected (`-12847`
 video, `-11828` audio) and both engines failed together. PR #35 stores the extension in `rel_path`,
@@ -20,33 +25,10 @@ Verified 737 tests, analyze clean, a real-natives macOS receipt RED-then-GREEN, 
 dry-run against a copy of the live container. Awaiting the human's hardware test and merge.
 
 ## Active Goal
-Get PR #35 hardware-tested and merged so saved voice and video entries play back.
-
-## Next Step
-Human: run `flutter run -d macos` (never the raw binary) and follow the PR's manual test plan — three
-video entries and two of four voice entries should play; the other two voice entries should still show
-the placeholder (junk bytes, expected). Then merge #35 on GitHub.
+- Achieved and closed. Post-ship work continues in threads/post-ship-hardening.md.
 
 ## Open Risks
-- Playback is verified by an automated real-natives receipt and a dry-run on copied real data, but NOT
-  yet by a human on the live app. The backfill renames real journal media on first launch after merge.
-- Backup of the live container: /Users/satanshumishra/field-notes-container-backup-2026-07-24 (21MB,
-  all 6 blob sha256 verified). Restore from there if the first real launch goes wrong.
-- Two of four live voice entries reference a 4096-byte synthetic blob written by
-  integration_test/capture_save_persist_test.dart against the REAL container. Never playable; unchanged
-  by this fix. Deleting them is a pending human decision.
-- Integration tests still write into the user's real journal container (task chip spawned).
-- Entry cards still swallow every playback exception via `catch (_)`, which masked this bug entirely
-  (task chip spawned).
-- `videoRecordingMime` declares video/mp4 while macOS writes QuickTime; harmless, deliberately unbundled.
-- Wall-clock `duration_ms` overstates real media duration on every row.
-- completion_criteria are design-spec-era and all appear met, yet this thread keeps absorbing post-ship
-  bug work. Criteria are never edited retroactively — needs a human call to close and re-scope.
-- Swift concurrency fixes argued from code + compile/link, not runtime race reproductions.
-- Android/iOS capture path has unit-level receipts only; no Android SDK on this machine.
-- Remembered camera does not persist across app restarts (keepAlive provider only).
-- share_plus pinned at 12.x; build_runner/drift_dev pinned by an upstream analyzer ceiling.
-- sqlite3_flutter_libs is EOL and seemingly unused but may supply drift's native SQLite binaries.
+- Carried forward to threads/post-ship-hardening.md; see also sessions/2026-07-24-07-journal-app-design.md.
 
 ## Key Decisions
 - decisions/2026-07-24-blob-extension-playback-root-cause.md — extensionless blobs broke AVFoundation; store the extension, backfill, resilient read path; link shim and plugin forks rejected

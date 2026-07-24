@@ -45,11 +45,11 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - decisions/2026-07-09-design-baseline.md — Field Notes prototype is the canonical visual baseline
 
 ## Threads
-- journal-app-design — paused — Playback root-caused and FIXED in PR #35 (open, branch fix/media-blob-extension-playback): extensionless blobs broke AVFoundation. 737 tests, analyze clean, real-natives macOS receipt RED->GREEN, migration dry-run on a copy of the live container passed. Awaiting the human's hardware test + merge. See sessions/2026-07-24-07.
+- journal-app-design — done — closed 2026-07-24: design, planning and the 31/31 v1 build are complete; all completion_criteria met. Post-ship bug work moved to post-ship-hardening.
+- post-ship-hardening — paused — Playback root-caused and FIXED in PR #35 (open, branch fix/media-blob-extension-playback): extensionless blobs broke AVFoundation. 737 tests, analyze clean, real-natives macOS receipt RED->GREEN, migration dry-run on a copy of the live container passed. Awaiting the human's hardware test + merge. See sessions/2026-07-24-07.
 
 ## State snapshot (2026-07-22)
 - DB ROUND-TRIP PROVEN (session 2026-07-22-01): real capture write path stored 2 new entries into the on-disk DB (~/Library/Containers/dev.satanshumishra.fieldNotes/Data/Documents/field_notes.sqlite); a separate sqlite3 process confirmed them AFTER the writer exited (entries 2->4); live app rendered DB rows (live-feed-01.png). Store+retrieve are proven end-to-end.
-- CAPTURE SAVE-HANG (real bug, fixed): PR #32's save `.timeout()` was a NO-OP — on TimeoutException it re-awaited the same unbounded future, so a never-completing native recorder.stop() hung "Saving..." forever. Fixed in voice/text/video (branch fix/capture-save-hang, commit 0a9902c) + save-hang receipts (RED->GREEN); analyze clean. UNPUSHED, no PR. OPEN: whether a real-mic voice save now actually PERSISTS or only fails-gracefully (native stop() may never return). decisions/2026-07-22-save-hang-timeout-noop-root-cause.md.
 
 ## State snapshot (2026-07-21)
 - CAPTURE FLOWS COMPLETE (session 07): note/voice save-hang + video deadlock FIXED; 4 code-review touch-ups applied (finally-flash removed, single-flight timeout-dedupe, error logging, one root ProviderScope); the COMPLETE real-UI app test PASSES 3/3 on -d macos (integration_test/capture_ui_flow_test.dart drives real widgets Save->dismiss->card). analyze clean; full host suite 671 green. Shipped in PR #32, human-merged (origin/main c2fbefd). Live VM screenshots deferred; real camera/mic+TCC human-gated. See sessions/2026-07-21-07.
