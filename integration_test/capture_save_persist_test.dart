@@ -1,11 +1,14 @@
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/state/database_provider.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import 'support/integration_sandbox.dart';
+import 'support/path_provider_stand_in.dart';
+
 const Duration _bound = Duration(seconds: 30);
+const String _standInPrefix = 'field-notes-guard';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -13,7 +16,13 @@ void main() {
   testWidgets(
       'note save persists an entry row on the real macOS build without hanging',
       (tester) async {
-    final container = ProviderContainer(retry: (_, _) => null);
+    await installPathProviderStandIn(
+      prefix: _standInPrefix,
+      label: 'note-save',
+    );
+    final sandbox = await IntegrationSandbox.create('note-save');
+    addTearDown(sandbox.dispose);
+    final container = sandbox.createContainer();
     addTearDown(container.dispose);
     final db = container.read(databaseProvider);
 
@@ -37,7 +46,13 @@ void main() {
   testWidgets(
       'voice save persists an entry row and media blob on the real macOS build',
       (tester) async {
-    final container = ProviderContainer(retry: (_, _) => null);
+    await installPathProviderStandIn(
+      prefix: _standInPrefix,
+      label: 'voice-save',
+    );
+    final sandbox = await IntegrationSandbox.create('voice-save');
+    addTearDown(sandbox.dispose);
+    final container = sandbox.createContainer();
     addTearDown(container.dispose);
     final db = container.read(databaseProvider);
 
