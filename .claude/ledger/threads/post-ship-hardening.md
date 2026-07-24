@@ -16,6 +16,9 @@ branch: fix/media-blob-extension-playback (PR #35, open)
 Successor to journal-app-design (closed done 2026-07-24), which had covered design, planning and the
 31/31 v1 build. This thread carries post-ship bug work only. First item: PR #35, which root-caused and
 fixed voice+video playback plus a silently broken export.
+NOTE: the human merged PR #36 (entry-card exception logging + post-load video error surfacing) INTO the
+same branch mid-session, so PR #35 now carries both changes. Combined branch re-verified after the
+merge: `flutter analyze` clean, `flutter test` 737 passing.
 
 ## Active Goal
 Get PR #35 hardware-tested and merged, then close the two hygiene gaps it exposed.
