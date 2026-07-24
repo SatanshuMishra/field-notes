@@ -1,7 +1,6 @@
 # Combined camera-lifecycle + dependency-upgrade into one PR
 
-Status: accepted
-Date: 2026-07-24
+Status: accepted | Date: 2026-07-24
 
 ## Decision
 `fix/macos-camera-lifecycle` and `chore/package-upgrade` ship as ONE branch
