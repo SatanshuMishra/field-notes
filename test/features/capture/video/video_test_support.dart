@@ -44,8 +44,8 @@ class FakeVideoRecorder implements VideoRecorder {
   final VideoRecording? recording;
   final VideoRecorderException? startError;
   final VideoRecorderException? stopError;
-  final List<VideoCaptureDevice> devices;
   final VideoRecorderException? listError;
+  List<VideoCaptureDevice> devices;
 
   int startCalls = 0;
   int stopCalls = 0;

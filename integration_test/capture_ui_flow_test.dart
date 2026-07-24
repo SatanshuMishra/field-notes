@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
+import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
@@ -159,6 +161,7 @@ void main() {
     addTearDown(database.close);
     final Directory mediaRoot = _tempMediaRoot('video');
     addTearDown(() => mediaRoot.deleteSync(recursive: true));
+    final FakeVideoRecorder videoRecorder = FakeVideoRecorder();
 
     await _pumpApp(
       tester,
@@ -166,12 +169,18 @@ void main() {
         database: database,
         mediaRoot: mediaRoot,
         voiceRecorder: FakeVoiceRecorder(),
-        videoRecorder: FakeVideoRecorder(),
+        videoRecorder: videoRecorder,
       ),
     );
 
     await _openChooserAndPick(tester, 'Record video');
     expect(find.byType(VideoRecorderSheet), findsOneWidget);
+
+    expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
+    expect(find.byType(CrossHatchPlaceholder), findsNothing);
+    expect(find.byType(CameraPicker), findsOneWidget);
+    expect(find.text('Built-in Camera'), findsOneWidget);
+    expect(videoRecorder.releaseCalls, 0);
 
     await tester.tap(find.text('Record'));
     await _settle(tester);
@@ -185,5 +194,45 @@ void main() {
 
     expect(find.byType(VideoRecorderSheet), findsNothing);
     expect(find.byType(VideoBody), findsOneWidget);
+    expect(videoRecorder.releaseCalls, 1);
+  });
+
+  testWidgets(
+      'switching cameras in the real capture UI re-previews the picked camera '
+      'and releases the camera when the sheet is dismissed',
+      (WidgetTester tester) async {
+    final AppDatabase database = await _openInMemoryDatabase();
+    addTearDown(database.close);
+    final Directory mediaRoot = _tempMediaRoot('video-picker');
+    addTearDown(() => mediaRoot.deleteSync(recursive: true));
+    final FakeVideoRecorder videoRecorder = FakeVideoRecorder();
+
+    await _pumpApp(
+      tester,
+      _uiFlowOverrides(
+        database: database,
+        mediaRoot: mediaRoot,
+        voiceRecorder: FakeVoiceRecorder(),
+        videoRecorder: videoRecorder,
+      ),
+    );
+
+    await _openChooserAndPick(tester, 'Record video');
+    expect(find.byType(VideoRecorderSheet), findsOneWidget);
+
+    await tester.tap(find.text('Built-in Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('USB Camera'));
+    await tester.pumpAndSettle();
+    await _settle(tester);
+
+    expect(videoRecorder.previewDeviceId, 'usb-id');
+    expect(fakeVideoPreview(deviceId: 'usb-id'), findsOneWidget);
+
+    await tester.tap(find.text('Cancel'));
+    await _settle(tester, times: 6);
+
+    expect(find.byType(VideoRecorderSheet), findsNothing);
+    expect(videoRecorder.releaseCalls, greaterThanOrEqualTo(1));
   });
 }

@@ -185,7 +185,6 @@ void main() {
     );
 
     await _openComposer(tester);
-    await _startRecording(tester);
 
     expect(find.text(cameraPermissionMessage), findsOneWidget);
     expect(find.text('Try again'), findsOneWidget);
@@ -226,7 +225,7 @@ void main() {
     expect(find.text(videoStartTimeoutMessage), findsOneWidget);
     expect(find.text('Record'), findsOneWidget);
     expect(find.text('Stop & save'), findsNothing);
-    expect(fakeVideoPreview(), findsNothing);
+    expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
 
     await tester.tap(find.text('Cancel'));
     await tester.pump();
