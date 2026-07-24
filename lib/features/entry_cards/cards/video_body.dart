@@ -85,6 +85,9 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     setState(() => _state = state);
+    if (state == VideoPlaybackState.error) {
+      _markUnavailable();
+    }
   }
 
   bool get _surfaceReady =>
