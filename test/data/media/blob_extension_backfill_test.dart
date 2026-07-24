@@ -196,4 +196,156 @@ void main() {
       isFalse,
     );
   });
+
+  test('reclaims the legacy copy when both paths hold the same blob', () async {
+    final bytes = [7, 7, 7, 7];
+    final id = sha256Hex(bytes);
+    final legacy = relPathForId(id);
+    final target =
+        relPathForBlob(id: id, mime: 'video/quicktime', kind: MediaKind.video);
+    await writeAt(legacy, bytes);
+    await writeAt(target, bytes);
+    await insertRow(
+      bytes: bytes,
+      mime: 'video/quicktime',
+      kind: MediaKind.video,
+      relPath: legacy,
+    );
+
+    final result = await backfill.run();
+
+    expect(result.adopted, 1);
+    expect(result.failed, 0);
+    expect(await storedRelPath(id), target);
+    expect(File(p.join(root.path, legacy)).existsSync(), isFalse);
+    final kept = File(p.join(root.path, target));
+    expect(sha256Hex(await kept.readAsBytes()), id);
+  });
+
+  test('keeps both copies when the legacy size contradicts the row', () async {
+    final bytes = [8, 8, 8, 8];
+    final id = sha256Hex(bytes);
+    final legacy = relPathForId(id);
+    final target =
+        relPathForBlob(id: id, mime: 'audio/mp4', kind: MediaKind.audio);
+    await writeAt(legacy, <int>[8]);
+    await writeAt(target, bytes);
+    await insertRow(
+      bytes: bytes,
+      mime: 'audio/mp4',
+      kind: MediaKind.audio,
+      relPath: legacy,
+    );
+
+    final result = await backfill.run();
+
+    expect(result.adopted, 1);
+    expect(await storedRelPath(id), target);
+    expect(File(p.join(root.path, legacy)).existsSync(), isTrue);
+    expect(File(p.join(root.path, target)).existsSync(), isTrue);
+  });
+
+  test('fails a row whose kind cannot be parsed and leaves the file alone',
+      () async {
+    final bytes = [9, 9, 9];
+    final id = sha256Hex(bytes);
+    final legacy = relPathForId(id);
+    await writeAt(legacy, bytes);
+    await db.into(db.mediaBlobs).insert(
+          MediaBlobsCompanion.insert(
+            id: id,
+            relPath: legacy,
+            mime: 'video/quicktime',
+            kind: 'hologram',
+            bytes: bytes.length,
+            createdAt: 0,
+          ),
+        );
+
+    final result = await backfill.run();
+
+    expect(result.failed, 1);
+    expect(result.renamed, 0);
+    expect(result.adopted, 0);
+    expect(await storedRelPath(id), legacy);
+    final untouched = File(p.join(root.path, legacy));
+    expect(untouched.existsSync(), isTrue);
+    expect(sha256Hex(await untouched.readAsBytes()), id);
+  });
+
+  test('refuses a row whose rel_path escapes the media root', () async {
+    final outside = await Directory.systemTemp.createTemp('fn_outside');
+    addTearDown(() => outside.delete(recursive: true));
+    final bytes = [10, 10, 10];
+    final id = sha256Hex(bytes);
+    final intruder = File(p.join(outside.path, 'secret'));
+    await intruder.writeAsBytes(bytes, flush: true);
+    expect(
+      intruder.path,
+      isNot(contains('.')),
+      reason: 'the containment guard must be reached past the pending filter',
+    );
+
+    await insertRow(
+      bytes: bytes,
+      mime: 'video/quicktime',
+      kind: MediaKind.video,
+      relPath: intruder.path,
+    );
+
+    final result = await backfill.run();
+
+    expect(result.failed, 1);
+    expect(result.renamed, 0);
+    expect(result.adopted, 0);
+    expect(await storedRelPath(id), intruder.path);
+    expect(intruder.existsSync(), isTrue);
+    expect(
+      File(p.join(
+        root.path,
+        relPathForBlob(
+          id: id,
+          mime: 'video/quicktime',
+          kind: MediaKind.video,
+        ),
+      )).existsSync(),
+      isFalse,
+    );
+  });
+
+  test('converges when two runs race over the same rows', () async {
+    final seeds = <List<int>>[
+      [20, 20, 20],
+      [21, 21, 21],
+      [22, 22, 22],
+    ];
+    final ids = <String>[];
+    for (final bytes in seeds) {
+      final id = sha256Hex(bytes);
+      await writeAt(relPathForId(id), bytes);
+      ids.add(await insertRow(
+        bytes: bytes,
+        mime: 'audio/mp4',
+        kind: MediaKind.audio,
+        relPath: relPathForId(id),
+      ));
+    }
+
+    await Future.wait<BlobExtensionBackfillResult>(
+      <Future<BlobExtensionBackfillResult>>[backfill.run(), backfill.run()],
+    );
+
+    for (final id in ids) {
+      final target =
+          relPathForBlob(id: id, mime: 'audio/mp4', kind: MediaKind.audio);
+      expect(await storedRelPath(id), target);
+      expect(File(p.join(root.path, relPathForId(id))).existsSync(), isFalse);
+      final migrated = File(p.join(root.path, target));
+      expect(migrated.existsSync(), isTrue);
+      expect(sha256Hex(await migrated.readAsBytes()), id);
+    }
+
+    final settled = await backfill.run();
+    expect(settled.scanned, 0);
+  });
 }
