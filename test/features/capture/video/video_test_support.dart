@@ -4,6 +4,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Widget videoHarness(Widget child) {
   return MaterialApp(
@@ -12,26 +13,63 @@ Widget videoHarness(Widget child) {
   );
 }
 
+Finder fakeVideoPreview({String? deviceId}) {
+  return find.byWidgetPredicate((Widget widget) {
+    final Key? key = widget.key;
+    if (key is! ValueKey<String>) {
+      return false;
+    }
+    return deviceId == null
+        ? key.value.startsWith('fake-video-preview-')
+        : key.value == 'fake-video-preview-$deviceId';
+  });
+}
+
+const List<VideoCaptureDevice> fakeVideoDevices = <VideoCaptureDevice>[
+  VideoCaptureDevice(id: 'built-in-id', label: 'Built-in Camera'),
+  VideoCaptureDevice(id: 'usb-id', label: 'USB Camera'),
+];
+
 class FakeVideoRecorder implements VideoRecorder {
   FakeVideoRecorder({
     this.permission = true,
     this.recording,
     this.startError,
     this.stopError,
+    this.devices = fakeVideoDevices,
+    this.listError,
   });
 
   final bool permission;
   final VideoRecording? recording;
   final VideoRecorderException? startError;
   final VideoRecorderException? stopError;
+  final List<VideoCaptureDevice> devices;
+  final VideoRecorderException? listError;
 
   int startCalls = 0;
   int stopCalls = 0;
   int cancelCalls = 0;
+  int releaseCalls = 0;
   int disposeCalls = 0;
+  int listCalls = 0;
+  final List<String> previewDeviceIds = <String>[];
+
+  String? get previewDeviceId =>
+      previewDeviceIds.isEmpty ? null : previewDeviceIds.last;
 
   @override
   Future<bool> hasPermission() async => permission;
+
+  @override
+  Future<List<VideoCaptureDevice>> listDevices() async {
+    listCalls++;
+    final VideoRecorderException? error = listError;
+    if (error != null) {
+      throw error;
+    }
+    return devices;
+  }
 
   @override
   Future<void> start() async {
@@ -67,13 +105,24 @@ class FakeVideoRecorder implements VideoRecorder {
   }
 
   @override
+  Future<void> release() async {
+    releaseCalls++;
+  }
+
+  @override
   Future<void> dispose() async {
     disposeCalls++;
   }
 
   @override
-  Widget buildPreview() =>
-      const SizedBox(key: ValueKey('fake-video-preview'), width: 120, height: 120);
+  Widget buildPreview(String deviceId) {
+    previewDeviceIds.add(deviceId);
+    return SizedBox(
+      key: ValueKey<String>('fake-video-preview-$deviceId'),
+      width: 120,
+      height: 120,
+    );
+  }
 }
 
 class DeferredReadyVideoRecorder implements VideoRecorder {
@@ -87,10 +136,14 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
   int startCalls = 0;
   int stopCalls = 0;
   int cancelCalls = 0;
+  int releaseCalls = 0;
   int disposeCalls = 0;
 
   @override
   Future<bool> hasPermission() async => permission;
+
+  @override
+  Future<List<VideoCaptureDevice>> listDevices() async => fakeVideoDevices;
 
   @override
   Future<void> start() async {
@@ -114,12 +167,17 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
   }
 
   @override
+  Future<void> release() async {
+    releaseCalls++;
+  }
+
+  @override
   Future<void> dispose() async {
     disposeCalls++;
   }
 
   @override
-  Widget buildPreview() => _preview ??= _ReadySignal(
+  Widget buildPreview(String deviceId) => _preview ??= _ReadySignal(
         onReady: () {
           if (!_ready.isCompleted) {
             _ready.complete();

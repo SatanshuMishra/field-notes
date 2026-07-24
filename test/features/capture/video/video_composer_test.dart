@@ -78,7 +78,7 @@ void main() {
     await _startRecording(tester);
 
     expect(recorder.startCalls, 1);
-    expect(find.byKey(const ValueKey('fake-video-preview')), findsOneWidget);
+    expect(fakeVideoPreview(), findsOneWidget);
 
     await tester.pump(const Duration(minutes: 5));
     await tester.pump();
@@ -159,7 +159,7 @@ void main() {
     await _startRecording(tester);
 
     expect(recorder.startCalls, 1);
-    expect(find.byKey(const ValueKey('fake-video-preview')), findsOneWidget);
+    expect(fakeVideoPreview(), findsOneWidget);
     expect(find.text('Stop & save'), findsOneWidget);
     expect(find.text(cameraPermissionMessage), findsNothing);
     expect(find.text('Try again'), findsNothing);
@@ -192,7 +192,7 @@ void main() {
     expect(find.text('Record'), findsNothing);
     expect(recorder.startCalls, 0);
     expect(service.requests, isEmpty);
-    expect(find.byKey(const ValueKey('fake-video-preview')), findsNothing);
+    expect(fakeVideoPreview(), findsNothing);
     expect(result, 'unset');
 
     await tester.tap(find.text('Try again'));
@@ -226,7 +226,7 @@ void main() {
     expect(find.text(videoStartTimeoutMessage), findsOneWidget);
     expect(find.text('Record'), findsOneWidget);
     expect(find.text('Stop & save'), findsNothing);
-    expect(find.byKey(const ValueKey('fake-video-preview')), findsNothing);
+    expect(fakeVideoPreview(), findsNothing);
 
     await tester.tap(find.text('Cancel'));
     await tester.pump();

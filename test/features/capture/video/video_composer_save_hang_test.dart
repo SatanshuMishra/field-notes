@@ -15,9 +15,13 @@ import 'video_test_support.dart';
 class _HangingStopRecorder implements VideoRecorder {
   final Completer<VideoRecording> _never = Completer<VideoRecording>();
   int stopCalls = 0;
+  int releaseCalls = 0;
 
   @override
   Future<bool> hasPermission() async => true;
+
+  @override
+  Future<List<VideoCaptureDevice>> listDevices() async => fakeVideoDevices;
 
   @override
   Future<void> start() async {}
@@ -32,10 +36,15 @@ class _HangingStopRecorder implements VideoRecorder {
   Future<void> cancel() async {}
 
   @override
+  Future<void> release() async {
+    releaseCalls++;
+  }
+
+  @override
   Future<void> dispose() async {}
 
   @override
-  Widget buildPreview() => const SizedBox(
+  Widget buildPreview(String deviceId) => const SizedBox(
         key: ValueKey('hang-video-preview'),
         width: 120,
         height: 120,

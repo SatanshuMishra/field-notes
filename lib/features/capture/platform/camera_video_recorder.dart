@@ -24,6 +24,7 @@ VideoRecorder createPlatformVideoRecorder() =>
 
 class CameraVideoRecorder implements VideoRecorder {
   CameraController? _controller;
+  String? _deviceId;
   final Stopwatch _elapsed = Stopwatch();
 
   @override
@@ -37,6 +38,19 @@ class CameraVideoRecorder implements VideoRecorder {
   }
 
   @override
+  Future<List<VideoCaptureDevice>> listDevices() async {
+    try {
+      final List<CameraDescription> cameras = await availableCameras();
+      return <VideoCaptureDevice>[
+        for (final CameraDescription camera in cameras)
+          VideoCaptureDevice(id: camera.name, label: camera.name),
+      ];
+    } catch (error) {
+      throw VideoRecorderException(videoDeviceListMessage, cause: error);
+    }
+  }
+
+  @override
   Future<void> start() async {
     try {
       final List<CameraDescription> cameras = await availableCameras();
@@ -44,7 +58,7 @@ class CameraVideoRecorder implements VideoRecorder {
         throw const VideoRecorderException(videoStartMessage);
       }
       final CameraController controller = CameraController(
-        cameras.first,
+        _selected(cameras),
         ResolutionPreset.high,
         enableAudio: true,
       );
@@ -122,18 +136,43 @@ class CameraVideoRecorder implements VideoRecorder {
   }
 
   @override
-  Future<void> dispose() async {
-    await _controller?.dispose();
+  Future<void> release() async {
+    _elapsed.stop();
+    final CameraController? controller = _controller;
     _controller = null;
+    if (controller == null) {
+      return;
+    }
+    try {
+      await controller.dispose();
+    } catch (error, stackTrace) {
+      debugPrint('Camera release failed: $error\n$stackTrace');
+    }
   }
 
   @override
-  Widget buildPreview() {
+  Future<void> dispose() async {
+    await release();
+  }
+
+  @override
+  Widget buildPreview(String deviceId) {
+    _deviceId = deviceId;
     final CameraController? controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
       return const SizedBox.shrink();
     }
     return CameraPreview(controller);
+  }
+
+  CameraDescription _selected(List<CameraDescription> cameras) {
+    final String? deviceId = _deviceId;
+    for (final CameraDescription camera in cameras) {
+      if (camera.name == deviceId) {
+        return camera;
+      }
+    }
+    return cameras.first;
   }
 }
 
@@ -141,6 +180,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
   final Stopwatch _elapsed = Stopwatch();
   Completer<CameraMacOSController>? _ready;
   Widget? _preview;
+  String? _previewDeviceId;
   CameraMacOSController? _controller;
 
   Completer<CameraMacOSController> _session() =>
@@ -149,12 +189,32 @@ class CameraMacosVideoRecorder implements VideoRecorder {
   @override
   Future<bool> hasPermission() async {
     try {
-      final List<CameraMacOSDevice> videoDevices = await CameraMacOS.instance
-          .listDevices(deviceType: CameraMacOSDeviceType.video);
-      return videoDevices.isNotEmpty;
+      final List<VideoCaptureDevice> devices = await listDevices();
+      return devices.isNotEmpty;
     } catch (error) {
       return false;
     }
+  }
+
+  @override
+  Future<List<VideoCaptureDevice>> listDevices() async {
+    final List<CameraMacOSDevice> devices;
+    try {
+      devices = await CameraMacOS.instance
+          .listDevices(deviceType: CameraMacOSDeviceType.video);
+    } catch (error) {
+      throw VideoRecorderException(videoDeviceListMessage, cause: error);
+    }
+    return <VideoCaptureDevice>[
+      for (final CameraMacOSDevice device in devices)
+        if (device.deviceId.isNotEmpty)
+          VideoCaptureDevice(id: device.deviceId, label: _deviceLabel(device)),
+    ];
+  }
+
+  String _deviceLabel(CameraMacOSDevice device) {
+    final String? name = device.localizedName;
+    return name == null || name.isEmpty ? device.deviceId : name;
   }
 
   @override
@@ -172,15 +232,12 @@ class CameraMacosVideoRecorder implements VideoRecorder {
         ..start();
     } on TimeoutException {
       _elapsed.stop();
-      _resetSession();
       throw const VideoRecorderException(videoStartTimeoutMessage);
     } on VideoRecorderException {
       _elapsed.stop();
-      _resetSession();
       rethrow;
     } catch (error) {
       _elapsed.stop();
-      _resetSession();
       throw VideoRecorderException(videoStartMessage, cause: error);
     }
   }
@@ -211,8 +268,6 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       rethrow;
     } catch (error) {
       throw VideoRecorderException(videoStopMessage, cause: error);
-    } finally {
-      _resetSession();
     }
   }
 
@@ -220,34 +275,53 @@ class CameraMacosVideoRecorder implements VideoRecorder {
   Future<void> cancel() async {
     _elapsed.stop();
     final CameraMacOSController? controller = _controller;
-    _resetSession();
     if (controller == null) {
       return;
     }
     try {
       await controller.stopRecording();
-    } catch (error) {
+    } catch (error, stackTrace) {
+      debugPrint('Video cancel failed: $error\n$stackTrace');
+    }
+  }
+
+  @override
+  Future<void> release() async {
+    _elapsed.stop();
+    final CameraMacOSController? controller = _controller;
+    _resetSession();
+    if (controller == null) {
       return;
+    }
+    try {
+      await controller.destroy();
+    } catch (error, stackTrace) {
+      debugPrint('Camera release failed: $error\n$stackTrace');
     }
   }
 
   @override
   Future<void> dispose() async {
-    _resetSession();
+    await release();
   }
 
   @override
-  Widget buildPreview() {
+  Widget buildPreview(String deviceId) {
     final Widget? existing = _preview;
-    if (existing != null) {
+    if (existing != null && _previewDeviceId == deviceId) {
       return existing;
     }
-    final Completer<CameraMacOSController> ready = _session();
+    final Completer<CameraMacOSController> ready =
+        Completer<CameraMacOSController>();
+    _ready = ready;
     final Widget view = CameraMacOSView(
+      key: ValueKey<String>('camera-preview-$deviceId'),
+      deviceId: deviceId,
       cameraMode: CameraMacOSMode.video,
       fit: BoxFit.cover,
       useMovieFileOutput: true,
       onCameraInizialized: (CameraMacOSController controller) {
+        _controller = controller;
         if (!ready.isCompleted) {
           ready.complete(controller);
         }
@@ -262,12 +336,14 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       },
     );
     _preview = view;
+    _previewDeviceId = deviceId;
     return view;
   }
 
   void _resetSession() {
     _controller = null;
     _preview = null;
+    _previewDeviceId = null;
     _ready = null;
   }
 }

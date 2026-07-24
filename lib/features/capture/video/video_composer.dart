@@ -10,6 +10,7 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 
+import 'camera_selection.dart';
 import 'video_recorder.dart';
 import 'video_recorder_provider.dart';
 import 'video_recorder_sheet.dart';
@@ -68,8 +69,32 @@ class _VideoComposerConnectorState
       setState(() => _phase = VideoRecorderPhase.denied);
       return;
     }
+    final List<VideoCaptureDevice> devices;
+    try {
+      devices = await recorder.listDevices();
+    } on VideoRecorderException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _phase = VideoRecorderPhase.denied;
+        _errorMessage = error.message;
+      });
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    final String? deviceId = resolveCameraDeviceId(
+      devices: devices,
+      rememberedId: null,
+    );
+    if (deviceId == null) {
+      setState(() => _phase = VideoRecorderPhase.denied);
+      return;
+    }
     setState(() {
-      _preview = recorder.buildPreview();
+      _preview = recorder.buildPreview(deviceId);
       _phase = VideoRecorderPhase.arming;
       _nudgeMessage = null;
     });
@@ -79,7 +104,7 @@ class _VideoComposerConnectorState
         return;
       }
       setState(() {
-        _preview = recorder.buildPreview();
+        _preview = recorder.buildPreview(deviceId);
         _phase = VideoRecorderPhase.recording;
       });
       _scheduleTimeline();
