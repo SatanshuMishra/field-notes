@@ -1,27 +1,28 @@
 ---
 thread: journal-app-design
-status: paused
+status: active
 updated: 2026-07-24
 priority: high
 completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: Human hardware-verifies fix/macos-camera-lifecycle via `flutter run -d macos` (preview live on modal open; menu-bar indicator ON at open and OFF after close/cancel; picker switches built-in vs external for both preview and recording), then merges it and chore/package-upgrade.
-branch: fix/macos-camera-lifecycle
+next_step: Human hardware-verifies PR #34 (branch fix/macos-camera-lifecycle-and-deps, already checked out) via `flutter run -d macos` (preview live on modal open; menu-bar indicator ON at open and OFF after close/cancel; picker switches built-in vs external for both preview and recording), then merges PR #34.
+branch: fix/macos-camera-lifecycle-and-deps
 ---
 
 ## Status
-Two unmerged branches, both green locally, NEITHER hardware-verified. `fix/macos-camera-lifecycle` fixes
-the four reported macOS video-capture defects (dead preview, camera never released, no device picker, plus
-Swift frame-buffer races). `chore/package-upgrade` carries the dependency sweep in a separate worktree.
+Both branches are now merged into `fix/macos-camera-lifecycle-and-deps` and opened as PR #34 (zero
+conflicts; the diffs share no files). The MERGED result was re-verified from scratch: analyze clean,
+704 unit + 4 macOS integration passing, macOS debug build OK. Still NOT hardware-verified.
 
 ## Active Goal
-Get the camera lifecycle fixes confirmed on real hardware, then merge both branches.
+Get the camera lifecycle fixes confirmed on real hardware, then merge PR #34.
 
 ## Next Step
-Human runs `flutter run -d macos` on fix/macos-camera-lifecycle and confirms the indicator turns OFF after
-closing the modal, and that the picker actually switches cameras. Never launch the raw .app binary.
+Human runs `flutter run -d macos` on the already-checked-out fix/macos-camera-lifecycle-and-deps and
+confirms the indicator turns OFF after closing the modal, and that the picker actually switches cameras.
+Never launch the raw .app binary.
 
 ## Open Risks
 - No hardware verification of ANY camera change. Menu-bar indicator behavior is unobservable to the agent;
@@ -34,6 +35,7 @@ closing the modal, and that the picker actually switches cameras. Never launch t
   it needs a runtime-verified cleanup, not a pub upgrade.
 
 ## Key Decisions
+- decisions/2026-07-24-combined-camera-deps-pr.md — both branches ship as one PR (#34); camera 0.12.x cannot register a competing macOS camera plugin
 - decisions/2026-07-24-camera-preview-lifecycle-root-causes.md — all four defects were Dart-side; the vendored plugin already exposed what was needed
 - decisions/2026-07-24-share-plus-13-blocked-by-file-picker.md — share_plus 13.x unreachable without a prerelease file_picker
 - decisions/2026-07-24-macos-videorotationangle-crash.md — REAL crash = videoRotationAngle setter, not save-path

@@ -10,6 +10,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-24-combined-camera-deps-pr.md — camera-lifecycle + dep-sweep ship as ONE branch (PR #34); diffs share zero files. camera 0.12.x CANNOT register a competing macOS camera plugin (no `macos:` platform key; camera_avfoundation ships no macos/ dir) — verified 4 layers, retires the registrant guard for the macOS camera path
 - decisions/2026-07-24-camera-preview-lifecycle-root-causes.md — the 4 reported capture defects (dead preview, camera never released, wrong device) were ALL Dart-side; the vendored plugin already exposed destroy/deviceId/listDevices. Gate release on a destroy-intent flag, never on controller presence
 - decisions/2026-07-24-share-plus-13-blocked-by-file-picker.md — share_plus 13.x needs win32 ^6 vs file_picker 11.0.2's ^5.9.0; "Resolvable" in pub outdated hides that it needs a PRERELEASE file_picker. Also confirms build_runner/drift_dev are pinned by riverpod_generator's analyzer ^12 ceiling
 - decisions/2026-07-24-macos-videorotationangle-crash.md — REAL macOS video crash = AVCaptureConnection.videoRotationAngle setter throwing on macOS 26 _Tundra (not a save-path bug); fix = delete the three rotation-angle sets. VERIFIED on the real camera; shipped in PR #33 (a714961)
