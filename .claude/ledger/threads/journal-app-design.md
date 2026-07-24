@@ -7,32 +7,30 @@ completion_criteria:
   - Design spec written to docs/superpowers/specs/ and user-approved
   - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
   - Implementation plan produced via the writing-plans skill
-next_step: HUMAN merges PR #33 on GitHub (gh pr merge agent-blocked). PR #33 carries both the videoRotationAngle crash fix (a714961) and the H2 main-thread reply fix (301232b), and RESTORES the bounded-timeout fail-safe (0a9902c) to main. After merge, reconcile local main onto origin/main; the two post-merge follow-ups are optional.
-branch: fix/macos-capture-finalize
+next_step: AWAIT the user's SPECIFIC instructions for the next line of work; do NOT auto-select. Real voice + video capture saves are shipped and merged to main (902a659). Candidate post-merge follow-ups exist (latestBuffer preview-frame race; 30-min auto-stop UI push) but claim none without direction.
+branch: main
 ---
 
 ## Status
-Real macOS video capture FIXED and VERIFIED on the actual camera (human run 2026-07-24). Root cause was
-AVCaptureConnection.videoRotationAngle throwing on macOS 26 _Tundra the instant camera TCC was granted
-(the isVideoRotationAngleSupported guard returns true, then the setter throws the legacy setVideoOrientation
-error Swift cannot catch) — never a save-path bug. Fix = delete the three rotation-angle sets. Verified
-run records+saves a 669KB/7.3s clip; entry appears and plays. Both the crash fix and 301232b validated.
-VIDCAP instrumentation stripped; crash fix committed (a714961) + pushed. Voice already hardware-verified.
+Real macOS voice + video capture saves are SHIPPED and MERGED. PR #33 merged to origin/main as squash
+902a659, landing: the videoRotationAngle crash fix, the H2 main-thread channel-reply fix, the
+self-finalizing AVCaptureMovieFileOutput recording path, the on-disk media verify guardrail, the voice
+record 7.x upgrade + dir-create, and the bounded-timeout fail-safe (0a9902c). Both voice and video were
+hardware-verified on the real camera/mic before merge. Local main reconciled to 902a659; working tree clean.
 
 ## Active Goal
-Land real voice + video capture saves on macOS via PR #33 (OPEN / MERGEABLE, awaiting human merge).
+Capture (voice + video) is complete. Awaiting the user's direction for the next line of work.
 
 ## Next Step
-Human merges PR #33 on GitHub (agent cannot merge). If any defect surfaces, iterate on
-fix/macos-capture-finalize (git push works).
+Await the user's specific instructions in the fresh session; do not auto-select work.
 
 ## Open Risks
-- main LACKS the bounded-timeout fail-safe (0a9902c) until PR #33 merges; PR #33 restores it on merge.
-- gh pr merge (and the REST merge endpoint) are hook-blocked for all callers — the HUMAN must merge.
-- Follow-up 1 (post-merge): latestBuffer preview-frame lockless race — PRE-EXISTING upstream, not
-  introduced here; a fix needs real-camera testing.
-- Follow-up 2 (post-merge): 30-min max-duration auto-stop is recoverable on next stop but the UI won't
-  reflect it; wire an onVideoRecordingFinished push callback into the app.
+- Follow-up 1 (post-merge, unclaimed): latestBuffer preview-frame lockless race — PRE-EXISTING upstream,
+  not introduced here; a fix needs real-camera testing.
+- Follow-up 2 (post-merge, unclaimed): 30-min max-duration auto-stop is recoverable on next stop but the
+  UI won't reflect it; wire an onVideoRecordingFinished push callback into the app.
+- Branch fix/macos-capture-finalize is merged (squash) and deletable local+remote — left in place;
+  branch deletion is destructive and needs explicit confirmation.
 
 ## Key Decisions
 - decisions/2026-07-24-macos-videorotationangle-crash.md — REAL crash = videoRotationAngle setter, not save-path
@@ -46,14 +44,13 @@ fix/macos-capture-finalize (git push works).
   pooled Memories gallery. All sync/server work is v2. Reminders day-2 pre-arm is post-31.
 
 ## Pointers
-- PR: https://github.com/SatanshuMishra/field-notes/pull/33 (base main, head fix/macos-capture-finalize)
-- third_party/camera_macos/macos/Classes/CameraMacosPlugin.swift — initCamera (crash fix); movie-output delegate (301232b H2 fix)
+- third_party/camera_macos/macos/Classes/CameraMacosPlugin.swift — initCamera (crash fix); movie-output delegate (H2 fix)
 - lib/features/capture/core/journal_capture_service.dart — disk-verify guardrail (_finalize/_awaitFileReady)
 - lib/features/capture/video/video_composer.dart — "Saving..." + 20s persist timeout
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec
 
 ## Recent Sessions
-- sessions/2026-07-24-03-journal-app-design.md — SHIP: VIDCAP stripped, crash fix committed (a714961) + pushed; PR #33 mergeable
+- sessions/2026-07-24-04-journal-app-design.md — PR #33 MERGED (902a659); local main reconciled; awaiting instructions
+- sessions/2026-07-24-03-journal-app-design.md — SHIP: VIDCAP stripped, crash fix committed + pushed
 - sessions/2026-07-24-02-journal-app-design.md — video VERIFIED working (human run); SHIP steps recorded
 - sessions/2026-07-24-01-journal-app-design.md — REAL crash found (videoRotationAngle) + fixed
-- sessions/2026-07-22-03-journal-app-design.md — video BUILT + guardrail + 2 review passes; PR #33 opened
