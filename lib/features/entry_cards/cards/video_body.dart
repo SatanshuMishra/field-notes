@@ -40,7 +40,8 @@ class _VideoBodyState extends State<VideoBody> {
     final ResolvedMedia media;
     try {
       media = await widget.resolver.resolve(widget.entry.mediaId);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Video media resolve failed: $error\n$stackTrace');
       _markUnavailable();
       return;
     }
@@ -55,7 +56,10 @@ class _VideoBodyState extends State<VideoBody> {
     _player = player;
     _stateSub = player.stateStream.listen(
       _onState,
-      onError: (Object _) => _markUnavailable(),
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Video playback stream failed: $error\n$stackTrace');
+        _markUnavailable();
+      },
     );
     try {
       await player.load(media.file!.path);
@@ -63,7 +67,8 @@ class _VideoBodyState extends State<VideoBody> {
         return;
       }
       await player.play();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Video playback failed: $error\n$stackTrace');
       _markUnavailable();
     }
   }
@@ -80,6 +85,9 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     setState(() => _state = state);
+    if (state == VideoPlaybackState.error) {
+      _markUnavailable();
+    }
   }
 
   bool get _surfaceReady =>

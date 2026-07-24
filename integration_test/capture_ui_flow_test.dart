@@ -1,8 +1,4 @@
-import 'dart:io';
-
-import 'package:drift/native.dart';
 import 'package:field_notes/app/app.dart';
-import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/capture/video/camera_picker.dart';
@@ -12,8 +8,6 @@ import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart'
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/today/today_providers.dart';
-import 'package:field_notes/state/database_provider.dart';
-import 'package:field_notes/state/media_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -22,25 +16,18 @@ import 'package:integration_test/integration_test.dart';
 
 import '../test/features/capture/video/video_test_support.dart';
 import '../test/features/capture/voice/voice_test_support.dart';
+import 'support/integration_sandbox.dart';
 
 const Duration _step = Duration(milliseconds: 100);
 final DateTime _pinnedNow = DateTime(2026, 7, 21, 9, 30);
 
-Future<AppDatabase> _openInMemoryDatabase() async =>
-    AppDatabase(NativeDatabase.memory());
-
-Directory _tempMediaRoot(String label) =>
-    Directory.systemTemp.createTempSync('field-notes-ui-flow-$label-');
-
 List<Override> _uiFlowOverrides({
-  required AppDatabase database,
-  required Directory mediaRoot,
+  required IntegrationSandbox sandbox,
   required FakeVoiceRecorder voiceRecorder,
   required FakeVideoRecorder videoRecorder,
 }) {
   return <Override>[
-    databaseProvider.overrideWithValue(database),
-    mediaRootProvider.overrideWith((Ref ref) async => mediaRoot),
+    ...sandbox.overrides,
     todayClockProvider.overrideWithValue(() => _pinnedNow),
     voiceRecorderProvider.overrideWithValue(voiceRecorder),
     videoRecorderProvider.overrideWithValue(videoRecorder),
@@ -85,16 +72,13 @@ void main() {
   testWidgets(
       'writing a note through the real capture UI shows it in the today feed',
       (WidgetTester tester) async {
-    final AppDatabase database = await _openInMemoryDatabase();
-    addTearDown(database.close);
-    final Directory mediaRoot = _tempMediaRoot('note');
-    addTearDown(() => mediaRoot.deleteSync(recursive: true));
+    final IntegrationSandbox sandbox = await IntegrationSandbox.create('note');
+    addTearDown(sandbox.dispose);
 
     await _pumpApp(
       tester,
       _uiFlowOverrides(
-        database: database,
-        mediaRoot: mediaRoot,
+        sandbox: sandbox,
         voiceRecorder: FakeVoiceRecorder(),
         videoRecorder: FakeVideoRecorder(),
       ),
@@ -122,16 +106,13 @@ void main() {
   testWidgets(
       'recording voice through the real capture UI shows an entry in the today feed',
       (WidgetTester tester) async {
-    final AppDatabase database = await _openInMemoryDatabase();
-    addTearDown(database.close);
-    final Directory mediaRoot = _tempMediaRoot('voice');
-    addTearDown(() => mediaRoot.deleteSync(recursive: true));
+    final IntegrationSandbox sandbox = await IntegrationSandbox.create('voice');
+    addTearDown(sandbox.dispose);
 
     await _pumpApp(
       tester,
       _uiFlowOverrides(
-        database: database,
-        mediaRoot: mediaRoot,
+        sandbox: sandbox,
         voiceRecorder: FakeVoiceRecorder(),
         videoRecorder: FakeVideoRecorder(),
       ),
@@ -157,17 +138,14 @@ void main() {
   testWidgets(
       'recording video through the real capture UI shows an entry in the today feed',
       (WidgetTester tester) async {
-    final AppDatabase database = await _openInMemoryDatabase();
-    addTearDown(database.close);
-    final Directory mediaRoot = _tempMediaRoot('video');
-    addTearDown(() => mediaRoot.deleteSync(recursive: true));
+    final IntegrationSandbox sandbox = await IntegrationSandbox.create('video');
+    addTearDown(sandbox.dispose);
     final FakeVideoRecorder videoRecorder = FakeVideoRecorder();
 
     await _pumpApp(
       tester,
       _uiFlowOverrides(
-        database: database,
-        mediaRoot: mediaRoot,
+        sandbox: sandbox,
         voiceRecorder: FakeVoiceRecorder(),
         videoRecorder: videoRecorder,
       ),
@@ -201,17 +179,15 @@ void main() {
       'switching cameras in the real capture UI re-previews the picked camera '
       'and releases the camera when the sheet is dismissed',
       (WidgetTester tester) async {
-    final AppDatabase database = await _openInMemoryDatabase();
-    addTearDown(database.close);
-    final Directory mediaRoot = _tempMediaRoot('video-picker');
-    addTearDown(() => mediaRoot.deleteSync(recursive: true));
+    final IntegrationSandbox sandbox =
+        await IntegrationSandbox.create('video-picker');
+    addTearDown(sandbox.dispose);
     final FakeVideoRecorder videoRecorder = FakeVideoRecorder();
 
     await _pumpApp(
       tester,
       _uiFlowOverrides(
-        database: database,
-        mediaRoot: mediaRoot,
+        sandbox: sandbox,
         voiceRecorder: FakeVoiceRecorder(),
         videoRecorder: videoRecorder,
       ),

@@ -1,10 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:path/path.dart' as p;
+import 'package:flutter/foundation.dart';
 
 import '../../data/database/app_database.dart' as db;
+import '../../data/media/blob_paths.dart';
+import '../../data/media/media_exceptions.dart';
 import '../../domain/services/export_service.dart';
+import '../../domain/services/media_store.dart';
 import 'data_exceptions.dart';
 
 const int exportFormatVersion = 1;
@@ -15,13 +18,13 @@ int _systemMillis() => DateTime.now().millisecondsSinceEpoch;
 class JournalExportService implements ExportService {
   JournalExportService({
     required db.AppDatabase database,
-    required this._mediaRoot,
+    required this._mediaStore,
     int Function()? clock,
   })  : _db = database,
         _clock = clock ?? _systemMillis;
 
   final db.AppDatabase _db;
-  final Directory _mediaRoot;
+  final MediaStore _mediaStore;
   final int Function() _clock;
 
   @override
@@ -42,11 +45,18 @@ class JournalExportService implements ExportService {
       };
 
       final mediaFiles = <String, List<int>>{};
+      final skippedMediaIds = <String>[];
       for (final blob in blobs) {
-        final file = File(p.join(_mediaRoot.path, blob.relPath));
-        if (await file.exists()) {
-          mediaFiles[blob.relPath] = await file.readAsBytes();
+        final bytes = await _readMediaBytes(blob.id);
+        if (bytes == null) {
+          skippedMediaIds.add(blob.id);
+          continue;
         }
+        mediaFiles[bytes.archiveName] = bytes.content;
+      }
+      if (skippedMediaIds.isNotEmpty) {
+        debugPrint('Export skipped ${skippedMediaIds.length} unreadable media '
+            'blobs: ${skippedMediaIds.join(', ')}');
       }
 
       final manifest = ExportManifest(
@@ -65,11 +75,41 @@ class JournalExportService implements ExportService {
         manifest: manifest,
         journalJson: const JsonEncoder.withIndent('  ').convert(journal),
         mediaFiles: mediaFiles,
+        skippedMediaIds: List<String>.unmodifiable(skippedMediaIds),
       );
     } on ExportException {
       rethrow;
     } catch (error) {
       throw ExportException('failed to build export bundle', error);
+    }
+  }
+
+  Future<({String archiveName, List<int> content})?> _readMediaBytes(
+    String id,
+  ) async {
+    try {
+      final blob = await _mediaStore.blobById(id);
+      if (blob == null) {
+        return null;
+      }
+      final file = File(_mediaStore.absolutePath(blob));
+      if (!await file.exists()) {
+        return null;
+      }
+      return (
+        archiveName: relPathForBlob(
+          id: blob.id,
+          mime: blob.mime,
+          kind: blob.kind,
+        ),
+        content: await file.readAsBytes(),
+      );
+    } on MediaReadException catch (error) {
+      debugPrint('Export could not read media blob "$id": $error');
+      return null;
+    } on FileSystemException catch (error) {
+      debugPrint('Export could not read media blob "$id": $error');
+      return null;
     }
   }
 

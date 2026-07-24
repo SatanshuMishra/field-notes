@@ -1,48 +1,41 @@
 ---
 thread: journal-app-design
-status: paused
+status: done
 updated: 2026-07-24
 priority: high
 completion_criteria:
-  - Design spec written to docs/superpowers/specs/ and user-approved
-  - 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
-  - Implementation plan produced via the writing-plans skill
-next_step: FRESH SESSION. Reproduce the voice+video playback failure via `flutter run -d macos`, root-cause it fully, fix on a dedicated branch cut from origin/main (local main is STALE), verify, open a PR, return to the human for manual testing.
-branch: origin/main (e0ee77d) — the playback fix gets its own branch
+  - [x] Design spec written to docs/superpowers/specs/ and user-approved
+  - [x] 4 starred reconciliation decisions resolved (E2EE/pairing UX, app name, v1 scope, dark mode)
+  - [x] Implementation plan produced via the writing-plans skill
+closure: All three criteria are met — the v1 design spec was written and approved, all four starred reconciliation decisions were resolved, and the implementation plan was produced and executed to 31/31 shipped MSPs; post-ship bug work continues in threads/post-ship-hardening.md.
+next_step: "-"
+branch: "-"
 ---
 
 ## Status
-PR #34 MERGED (squash e0ee77d): macOS camera lifecycle fixes + dependency sweep. Human hardware-verified
-the camera work this session, so preview-on-open, camera release, and the device picker are CONFIRMED.
-NEW CRITICAL defect reported immediately after: saved voice and video entries will not PLAY BACK.
+CLOSED 2026-07-24 by human decision. Design, planning and the full v1 build are complete (31/31 MSPs
+shipped). Post-ship hardening — including the open PR #35 — moved to threads/post-ship-hardening.md.
+
+## Historical Status
+Playback root-caused and fixed. Media blobs were stored as extensionless SHA-256 files; AVFoundation
+picks its demuxer from the path UTI and never content-sniffs, so every blob was rejected (`-12847`
+video, `-11828` audio) and both engines failed together. PR #35 stores the extension in `rel_path`,
+backfills existing rows, and adds a resilient read path. Export was broken identically and is fixed too.
+Verified 737 tests, analyze clean, a real-natives macOS receipt RED-then-GREEN, and a full migration
+dry-run against a copy of the live container. Awaiting the human's hardware test and merge.
 
 ## Active Goal
-Restore playback for saved voice and video entries. Capture/save is proven; playback is not.
-
-## Next Step
-Fresh session. Reproduce "Can't play this video" / "Can't play this recording" in the Today feed via
-`flutter run -d macos` (never the raw .app binary). Root-cause fully before proposing a fix, fix it on a
-dedicated branch cut from origin/main, verify, open a PR, then hand back for manual testing.
+- Achieved and closed. Post-ship work continues in threads/post-ship-hardening.md.
 
 ## Open Risks
-- Playback has NEVER been hardware-exercised. Save was proven in PR #33; the read/render path was not.
-  Unknown whether the fault is the stored path, the file bytes, the player widget, or macOS sandbox reach.
-- Local `main` is STALE and diverged (6ca6544 vs origin/main e0ee77d). The agent could not `git reset`
-  (harness gates destructive git even with explicit human consent). Branch from origin/main.
-- This thread's completion_criteria are design-spec-era and all appear met, yet the thread keeps absorbing
-  post-ship bug work. Criteria are never edited retroactively — needs a human call to close and re-scope.
-- Swift concurrency fixes are argued from code + compile/link, not runtime race reproductions.
-- Android/iOS capture path has unit-level receipts only; no Android SDK on this machine.
-- Remembered camera does not persist across app restarts (keepAlive provider only).
-- share_plus is pinned at 12.x indefinitely; build_runner/drift_dev pinned by an upstream analyzer ceiling.
-- sqlite3_flutter_libs is EOL and seemingly unused but may supply drift's native SQLite binaries; removing
-  it needs a runtime-verified cleanup, not a pub upgrade.
+- Carried forward to threads/post-ship-hardening.md; see also sessions/2026-07-24-07-journal-app-design.md.
 
 ## Key Decisions
-- decisions/2026-07-24-combined-camera-deps-pr.md — both branches shipped as one PR (#34); camera 0.12.x cannot register a competing macOS camera plugin
-- decisions/2026-07-24-camera-preview-lifecycle-root-causes.md — all four defects were Dart-side; the vendored plugin already exposed what was needed
-- decisions/2026-07-24-share-plus-13-blocked-by-file-picker.md — share_plus 13.x unreachable without a prerelease file_picker
-- decisions/2026-07-24-macos-videorotationangle-crash.md — REAL crash = videoRotationAngle setter, not save-path
+- decisions/2026-07-24-blob-extension-playback-root-cause.md — extensionless blobs broke AVFoundation; store the extension, backfill, resilient read path; link shim and plugin forks rejected
+- decisions/2026-07-24-combined-camera-deps-pr.md — camera-lifecycle + dep sweep shipped as one PR (#34)
+- decisions/2026-07-24-camera-preview-lifecycle-root-causes.md — all four camera defects were Dart-side
+- decisions/2026-07-24-share-plus-13-blocked-by-file-picker.md — share_plus 13.x needs a prerelease file_picker
+- decisions/2026-07-24-macos-videorotationangle-crash.md — REAL crash = videoRotationAngle setter
 - decisions/2026-07-22-black-window-standalone-binary.md — always `flutter run -d macos`, never the raw binary
 - decisions/2026-07-21-gh-merge-hook-blocked-human-merges.md — human merges each PR; gh pr merge agent-blocked
 - decisions/2026-07-20-ci-gates-are-hollow-for-dart.md — GitHub checks run NO Dart test; local validation is the only real gate
@@ -53,14 +46,16 @@ dedicated branch cut from origin/main, verify, open a PR, then hand back for man
   pooled Memories gallery. All sync/server work is v2. Reminders day-2 pre-arm is post-31.
 
 ## Pointers
-- lib/features/entry_cards/cards/video_body.dart:102 — renders "Can't play this video"; playback entry point
-- lib/features/entry_cards/cards/voice_body.dart:137 — renders "Can't play this recording"
-- lib/features/capture/platform/camera_video_recorder.dart — session lifecycle, release/destroy, device listing
-- lib/features/capture/video/video_composer.dart — modal orchestration, prepare/release/device-switch
+- lib/data/media/blob_paths.dart — extension derivation + `idFromRelPath`, the GC keystone
+- lib/data/media/blob_extension_backfill.dart — the startup migration that renames real journal media
+- lib/data/media/filesystem_media_store.dart — three-candidate `absolutePath` fallback
+- integration_test/media_playback_format_test.dart — real-natives macOS playback receipt
+- lib/features/entry_cards/cards/video_body.dart — renders "Can't play this video"
+- lib/features/entry_cards/cards/voice_body.dart — renders "Can't play this recording"
 - third_party/camera_macos/LOCAL_MODIFICATIONS.md — vendored Swift delta; read before any re-vendor
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 spec
 
 ## Recent Sessions
-- sessions/2026-07-24-06-journal-app-design.md — PR #34 MERGED (e0ee77d) + camera hardware-verified; NEW critical playback defect reported
-- sessions/2026-07-24-05-journal-app-design.md — camera lifecycle fixes + package upgrade, both unmerged
-- sessions/2026-07-24-04-journal-app-design.md — PR #33 MERGED (902a659); local main reconciled
+- sessions/2026-07-24-07-journal-app-design.md — playback root-caused + fixed; PR #35 open, awaiting hardware test
+- sessions/2026-07-24-06-journal-app-design.md — PR #34 MERGED; camera hardware-verified; playback defect reported
+- sessions/2026-07-24-05-journal-app-design.md — camera lifecycle fixes + package upgrade

@@ -45,7 +45,8 @@ class _VoiceBodyState extends State<VoiceBody> {
     final ResolvedMedia media;
     try {
       media = await widget.resolver.resolve(widget.entry.mediaId);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Voice media resolve failed: $error\n$stackTrace');
       _markUnavailable();
       return;
     }
@@ -60,11 +61,17 @@ class _VoiceBodyState extends State<VoiceBody> {
     _player = player;
     _stateSub = player.stateStream.listen(
       _onState,
-      onError: (Object _) => _markUnavailable(),
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Voice playback stream failed: $error\n$stackTrace');
+        _markUnavailable();
+      },
     );
     _positionSub = player.positionStream.listen(
       _onPosition,
-      onError: (Object _) => _markUnavailable(),
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Voice position stream failed: $error\n$stackTrace');
+        _markUnavailable();
+      },
     );
     try {
       await player.load(media.file!.path);
@@ -72,7 +79,8 @@ class _VoiceBodyState extends State<VoiceBody> {
         return;
       }
       setState(() => _ready = true);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Voice playback load failed: $error\n$stackTrace');
       _markUnavailable();
     }
   }
@@ -117,7 +125,8 @@ class _VoiceBodyState extends State<VoiceBody> {
         await player.seek(Duration.zero);
       }
       await player.play();
-    } catch (_) {
+    } catch (error, stackTrace) {
+      debugPrint('Voice playback toggle failed: $error\n$stackTrace');
       _markUnavailable();
     }
   }

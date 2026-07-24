@@ -2,11 +2,12 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/database/app_database.dart' hide MediaBlob;
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/media/content_hash.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/media/media_exceptions.dart';
+import 'package:field_notes/domain/models/media_blob.dart';
 import 'package:field_notes/domain/models/media_kind.dart';
 
 import 'media_test_support.dart';
@@ -41,7 +42,15 @@ void main() {
     );
 
     expect(blob.id, sha256Hex(bytes));
-    expect(blob.relPath, relPathForId(blob.id));
+    expect(
+      blob.relPath,
+      relPathForBlob(
+        id: blob.id,
+        mime: 'image/jpeg',
+        kind: MediaKind.photo,
+      ),
+    );
+    expect(p.extension(blob.relPath), '.jpg');
     expect(blob.mime, 'image/jpeg');
     expect(blob.kind, MediaKind.photo);
     expect(blob.bytes, 4);
@@ -119,6 +128,69 @@ void main() {
     expect(rows.length, 1);
 
     await srcDir.delete(recursive: true);
+  });
+
+  test('absolutePath falls back to a legacy file the row still points past',
+      () async {
+    final bytes = [7, 7, 7, 7];
+    final id = sha256Hex(bytes);
+    final legacy = relPathForId(id);
+    await File(p.join(root.path, legacy)).create(recursive: true);
+    await File(p.join(root.path, legacy)).writeAsBytes(bytes, flush: true);
+
+    final blob = MediaBlob(
+      id: id,
+      relPath: relPathForBlob(
+        id: id,
+        mime: 'audio/mp4',
+        kind: MediaKind.audio,
+      ),
+      mime: 'audio/mp4',
+      kind: MediaKind.audio,
+      bytes: bytes.length,
+      createdAt: 0,
+    );
+
+    expect(store.absolutePath(blob), p.join(root.path, legacy));
+  });
+
+  test('absolutePath falls back to the derived path a stale row misses',
+      () async {
+    final bytes = [8, 8, 8, 8];
+    final blob = await store.putBytes(
+      bytes: bytes,
+      mime: 'audio/mp4',
+      kind: MediaKind.audio,
+    );
+    final stale = MediaBlob(
+      id: blob.id,
+      relPath: relPathForId(blob.id),
+      mime: blob.mime,
+      kind: blob.kind,
+      bytes: blob.bytes,
+      createdAt: blob.createdAt,
+    );
+
+    expect(
+      store.absolutePath(stale),
+      p.join(root.path, blob.relPath),
+    );
+  });
+
+  test('absolutePath returns the stored path when nothing exists on disk', () {
+    final id = sha256Hex([9, 9, 9, 9]);
+    final relPath =
+        relPathForBlob(id: id, mime: 'image/jpeg', kind: MediaKind.photo);
+    final blob = MediaBlob(
+      id: id,
+      relPath: relPath,
+      mime: 'image/jpeg',
+      kind: MediaKind.photo,
+      bytes: 4,
+      createdAt: 0,
+    );
+
+    expect(store.absolutePath(blob), p.join(root.path, relPath));
   });
 
   test('a write failure surfaces MediaWriteException and stores no row',

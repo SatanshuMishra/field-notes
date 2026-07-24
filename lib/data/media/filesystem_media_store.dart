@@ -87,7 +87,33 @@ class FilesystemMediaStore implements MediaStore {
   }
 
   @override
-  String absolutePath(MediaBlob blob) => p.join(_root.path, blob.relPath);
+  String absolutePath(MediaBlob blob) {
+    final stored = p.join(_root.path, blob.relPath);
+    if (_existsSync(stored) || blob.id.length <= blobShardLength) {
+      return stored;
+    }
+    final fallbacks = <String>[
+      p.join(
+        _root.path,
+        relPathForBlob(id: blob.id, mime: blob.mime, kind: blob.kind),
+      ),
+      p.join(_root.path, relPathForId(blob.id)),
+    ];
+    for (final candidate in fallbacks) {
+      if (_existsSync(candidate)) {
+        return candidate;
+      }
+    }
+    return stored;
+  }
+
+  bool _existsSync(String path) {
+    try {
+      return File(path).existsSync();
+    } on FileSystemException {
+      return false;
+    }
+  }
 
   @override
   Future<int> collectGarbage() {
@@ -109,7 +135,7 @@ class FilesystemMediaStore implements MediaStore {
       return existing;
     }
 
-    final relPath = relPathForId(id);
+    final relPath = relPathForBlob(id: id, mime: mime, kind: kind);
     final finalPath = p.join(_root.path, relPath);
     await _atomicWrite(finalPath: finalPath, write: write, id: id);
 

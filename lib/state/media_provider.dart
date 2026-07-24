@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/media/blob_extension_backfill.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/state/database_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -21,5 +24,14 @@ Future<Directory> mediaRoot(Ref ref) async {
 Future<MediaStore> mediaStore(Ref ref) async {
   final database = ref.watch(databaseProvider);
   final root = await ref.watch(mediaRootProvider.future);
+  await _runBackfill(database, root);
   return FilesystemMediaStore(database: database, root: root);
+}
+
+Future<void> _runBackfill(AppDatabase database, Directory root) async {
+  try {
+    await BlobExtensionBackfill(database: database, root: root).run();
+  } catch (error, stackTrace) {
+    debugPrint('Media blob extension backfill skipped: $error\n$stackTrace');
+  }
 }

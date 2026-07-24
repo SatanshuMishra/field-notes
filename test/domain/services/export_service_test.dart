@@ -6,6 +6,8 @@ import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/media/content_hash.dart';
+import 'package:field_notes/data/media/filesystem_media_store.dart';
+import 'package:field_notes/domain/models/media_kind.dart';
 import 'package:field_notes/features/data/journal_export_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
@@ -18,7 +20,11 @@ Future<String> seedBlob(
   String kind,
 ) async {
   final id = sha256Hex(bytes);
-  final relPath = relPathForId(id);
+  final relPath = relPathForBlob(
+    id: id,
+    mime: mime,
+    kind: MediaKind.fromId(kind)!,
+  );
   final file = File(p.join(root.path, relPath));
   await file.parent.create(recursive: true);
   await file.writeAsBytes(bytes, flush: true);
@@ -45,7 +51,7 @@ void main() {
     root = await Directory.systemTemp.createTemp('fn_export');
     service = JournalExportService(
       database: db,
-      mediaRoot: root,
+      mediaStore: FilesystemMediaStore(database: db, root: root),
       clock: () => 1751000000000,
     );
   });
@@ -142,14 +148,28 @@ void main() {
     expect(audioBlob['mime'], 'audio/aac');
     expect(audioBlob['kind'], 'audio');
     expect(audioBlob['bytes'], audioBytes.length);
-    expect(audioBlob['relPath'], relPathForId(audioId));
+    expect(
+      audioBlob['relPath'],
+      relPathForBlob(id: audioId, mime: 'audio/aac', kind: MediaKind.audio),
+    );
 
     final settings = journal['settings'] as Map<String, Object?>;
     expect(settings['text_size'], '2');
     expect(settings['sound_enabled'], 'false');
 
-    expect(bundle.mediaFiles[relPathForId(photoId)], photoBytes);
-    expect(bundle.mediaFiles[relPathForId(audioId)], audioBytes);
+    expect(
+      bundle.mediaFiles[
+          relPathForBlob(id: photoId, mime: 'image/jpeg', kind: MediaKind.photo)],
+      photoBytes,
+    );
+    expect(
+      bundle.mediaFiles[
+          relPathForBlob(id: audioId, mime: 'audio/aac', kind: MediaKind.audio)],
+      audioBytes,
+    );
+    for (final key in bundle.mediaFiles.keys) {
+      expect(p.extension(key), isNotEmpty, reason: 'archive entry $key');
+    }
     expect(bundle.suggestedFileName, 'field-notes-export-20250627-045320.zip');
   });
 
@@ -170,5 +190,33 @@ void main() {
 
     expect(bundle.manifest.stats.mediaBlobCount, 1);
     expect(bundle.mediaFiles, isEmpty);
+    expect(bundle.skippedMediaIds, ['a1b2c3']);
+  });
+
+  test('buildBundle exports a blob whose row still points at the legacy path',
+      () async {
+    final bytes = [4, 4, 4, 4];
+    final id = sha256Hex(bytes);
+    final migrated =
+        relPathForBlob(id: id, mime: 'video/quicktime', kind: MediaKind.video);
+    final file = File(p.join(root.path, migrated));
+    await file.parent.create(recursive: true);
+    await file.writeAsBytes(bytes, flush: true);
+    await db.into(db.mediaBlobs).insert(
+          MediaBlobsCompanion.insert(
+            id: id,
+            relPath: relPathForId(id),
+            mime: 'video/quicktime',
+            kind: 'video',
+            bytes: bytes.length,
+            createdAt: 0,
+          ),
+        );
+
+    final bundle = await service.buildBundle();
+
+    expect(bundle.skippedMediaIds, isEmpty);
+    expect(bundle.mediaFiles[migrated], bytes);
+    expect(p.extension(bundle.mediaFiles.keys.single), '.mov');
   });
 }

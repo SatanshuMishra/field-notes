@@ -42,6 +42,10 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
       return;
     }
     if (controller.value.hasError) {
+      debugPrint(
+        'Video controller reported an error: '
+        '${controller.value.errorDescription}',
+      );
       _setState(VideoPlaybackState.error);
       return;
     }
