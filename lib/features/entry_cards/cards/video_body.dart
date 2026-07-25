@@ -71,6 +71,10 @@ class _VideoBodyState extends State<VideoBody> {
   @override
   void initState() {
     super.initState();
+    if (_hasCapturedPoster) {
+      _enterPhase(_VideoPhase.waiting);
+      return;
+    }
     _startPrepare(VideoSlotEvictionRights.none);
   }
 
@@ -472,6 +476,8 @@ class _VideoBodyState extends State<VideoBody> {
 
   bool get _canClaimSlot => _phase == _VideoPhase.waiting;
 
+  bool get _needsMediaResolution => _mediaFile == null;
+
   bool get _muted => _volume <= 0;
 
   bool get _isRenderingVideo =>
@@ -480,8 +486,9 @@ class _VideoBodyState extends State<VideoBody> {
           _state == VideoPlaybackState.paused ||
           _state == VideoPlaybackState.completed);
 
-  bool get _showCapturedPoster =>
-      widget.entry.thumbnailMediaId != null && !_isRenderingVideo;
+  bool get _hasCapturedPoster => widget.entry.thumbnailMediaId != null;
+
+  bool get _showCapturedPoster => _hasCapturedPoster && !_isRenderingVideo;
 
   Duration? get _total {
     final Duration? reported = _player?.duration;
@@ -549,13 +556,16 @@ class _VideoBodyState extends State<VideoBody> {
     }
     if (_canClaimSlot) {
       _playWhenReady = true;
-      _guard(
-        _attemptLoad(VideoSlotEvictionRights.evictUnpinned),
-        'Video slot claim failed',
-      );
+      _guard(_claimSlotForIntent(), 'Video slot claim failed');
       return;
     }
     _guard(_toggle(), 'Video playback toggle failed');
+  }
+
+  Future<void> _claimSlotForIntent() {
+    const VideoSlotEvictionRights rights =
+        VideoSlotEvictionRights.evictUnpinned;
+    return _needsMediaResolution ? _prepare(rights) : _attemptLoad(rights);
   }
 
   Future<void> _toggle() async {

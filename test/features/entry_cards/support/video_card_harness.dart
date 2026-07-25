@@ -96,6 +96,52 @@ LruVideoSlots slotsWithCapOf(int cap) {
   return slots;
 }
 
+class RecordingVideoSlots implements VideoSlots {
+  RecordingVideoSlots(this._inner);
+
+  final VideoSlots _inner;
+  final List<VideoSlotEvictionRights> acquireCalls =
+      <VideoSlotEvictionRights>[];
+
+  @override
+  VideoSlotToken? acquire({
+    required VideoSlotEviction onEvicted,
+    required VideoSlotEvictionRights evictionRights,
+  }) {
+    acquireCalls.add(evictionRights);
+    return _inner.acquire(onEvicted: onEvicted, evictionRights: evictionRights);
+  }
+
+  @override
+  bool holds(VideoSlotToken? token) => _inner.holds(token);
+
+  @override
+  void release(VideoSlotToken? token) => _inner.release(token);
+
+  @override
+  void pin(VideoSlotToken? token) => _inner.pin(token);
+
+  @override
+  void unpin(VideoSlotToken? token) => _inner.unpin(token);
+
+  @override
+  void touch(VideoSlotToken? token) => _inner.touch(token);
+
+  @override
+  bool addSlotFreedListener(VideoSlotFreedListener listener) =>
+      _inner.addSlotFreedListener(listener);
+
+  @override
+  void removeSlotFreedListener(VideoSlotFreedListener listener) =>
+      _inner.removeSlotFreedListener(listener);
+
+  @override
+  void dispose() => _inner.dispose();
+}
+
+RecordingVideoSlots recordingSlotsWithCapOf(int cap) =>
+    RecordingVideoSlots(slotsWithCapOf(cap));
+
 TargetPlatformVariant useTargetPlatform(TargetPlatform platform) =>
     TargetPlatformVariant.only(platform);
 
