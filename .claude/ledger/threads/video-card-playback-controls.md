@@ -34,17 +34,16 @@ ledger the #39 squash stranded — then fast-forward LOCAL `main` (the engine cu
 ref). Then retry the mitosis dispatch: spec
 `docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md`, `baseBranch: main`,
 `sourcePrefix: msp/`, verify+build seeds verbatim from `receipts.config.json`, fresh `worktreeRoot` outside
-the repo, `fixLoopMax: 2`, MSPs 1-3 only. SEPARATELY and independently, the macOS hardware check is still
-unrun and is the ONLY thing that can close this thread: `flutter run -d macos`, never the raw binary — confirm
-a real preview frame not the red placeholder; hover reveals controls and 3s idle hides them while playing;
-pause/resume shows them again for the full delay; replay, scrub and mute work; a day past the cap degrades to
-neutral with an announced refusal, not red.
+the repo, `fixLoopMax: 2`, MSPs 1-3 only. SEPARATELY, the macOS hardware check is still unrun and is the ONLY
+thing that can close this thread — `flutter run -d macos`, never the raw binary: a real preview frame not the
+red placeholder; hover reveals controls and 3s idle hides them while playing; pause/resume shows them again
+for the full delay; replay, scrub and mute work; a day past the cap degrades to neutral with an announced
+refusal, not red.
 
 ## Open Risks
 - Merged-but-unconfirmed is the live hazard: `da0a487` ships on `main`, yet the hardware run four criteria
   demand by name has never happened. The merge retired the branch blocker WITHOUT retiring the evidence gap,
-  and a merged PR reads as "done" to anyone who did not write this line. CI runs NO Dart tests, so its green
-  is vacuous; local `flutter test` plus the hardware run is the only gate.
+  and a merged PR reads as "done" to anyone who did not write this line. CI runs NO Dart tests: green is vacuous.
 - The Phase-1a `takePicture` format trap, the MSP-2 mutation-check mandate, the unreceipted responsive band and the missing `EntriesDao` pagination are all carried in full in the spec — read it, not this line.
 - Voice cards remain unswept twins (uncapped eager init, no retry, 40x40 tap target); `video_body.dart` is 672 lines, its controller-extraction seam where both CRITICALs lived.
 - GitHub squash merges stranded post-snapshot commits TWICE on 2026-07-25 (#38, then #39 on the very commit documenting it). Verify `git diff --stat origin/main <remote-tip>` before deleting any merged branch.
