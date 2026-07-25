@@ -34,23 +34,49 @@ class _VoiceBodyState extends State<VoiceBody> {
   Duration _position = Duration.zero;
   bool _unavailable = false;
   bool _ready = false;
+  int _generation = 0;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_prepare());
+    _startPrepare();
+  }
+
+  @override
+  void didUpdateWidget(VoiceBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.resolver, widget.resolver)) {
+      return;
+    }
+    _teardownPlayer();
+    _state = AudioPlaybackState.idle;
+    _position = Duration.zero;
+    _unavailable = false;
+    _ready = false;
+    _startPrepare();
+  }
+
+  void _startPrepare() {
+    unawaited(
+      _prepare().catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Voice prepare failed: $error\n$stackTrace');
+      }),
+    );
   }
 
   Future<void> _prepare() async {
+    final int gen = ++_generation;
     final ResolvedMedia media;
     try {
       media = await widget.resolver.resolve(widget.entry.mediaId);
     } catch (error, stackTrace) {
       debugPrint('Voice media resolve failed: $error\n$stackTrace');
-      _markUnavailable();
+      if (_isCurrent(gen)) {
+        _markUnavailable();
+      }
       return;
     }
-    if (!mounted) {
+    if (!_isCurrent(gen)) {
       return;
     }
     if (!media.isAvailable || media.file == null) {
@@ -75,14 +101,29 @@ class _VoiceBodyState extends State<VoiceBody> {
     );
     try {
       await player.load(media.file!.path);
-      if (!mounted) {
-        return;
-      }
-      setState(() => _ready = true);
     } catch (error, stackTrace) {
       debugPrint('Voice playback load failed: $error\n$stackTrace');
-      _markUnavailable();
+      if (_isCurrent(gen)) {
+        _markUnavailable();
+      }
+      return;
     }
+    if (!_isCurrent(gen)) {
+      return;
+    }
+    setState(() => _ready = true);
+  }
+
+  bool _isCurrent(int gen) => mounted && gen == _generation;
+
+  void _teardownPlayer() {
+    final EntryAudioPlayer? player = _player;
+    _player = null;
+    unawaited(_stateSub?.cancel());
+    unawaited(_positionSub?.cancel());
+    _stateSub = null;
+    _positionSub = null;
+    unawaited(player?.dispose());
   }
 
   void _markUnavailable() {
@@ -133,9 +174,8 @@ class _VoiceBodyState extends State<VoiceBody> {
 
   @override
   void dispose() {
-    unawaited(_stateSub?.cancel());
-    unawaited(_positionSub?.cancel());
-    unawaited(_player?.dispose());
+    _generation += 1;
+    _teardownPlayer();
     super.dispose();
   }
 

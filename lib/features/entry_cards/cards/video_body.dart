@@ -76,6 +76,16 @@ class _VideoBodyState extends State<VideoBody> {
     _startPrepare(VideoSlotEvictionRights.none);
   }
 
+  @override
+  void didUpdateWidget(VideoBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (identical(oldWidget.resolver, widget.resolver)) {
+      return;
+    }
+    _mediaFile = null;
+    _restart(VideoSlotEvictionRights.none);
+  }
+
   void _startPrepare(VideoSlotEvictionRights rights) =>
       _guard(_prepare(rights), 'Video prepare failed');
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -17,8 +19,8 @@ class _PendingMediaResolver implements MediaResolver {
   const _PendingMediaResolver();
 
   @override
-  Future<ResolvedMedia> resolve(String? mediaId) async =>
-      const ResolvedMedia.missing();
+  Future<ResolvedMedia> resolve(String? mediaId) =>
+      Completer<ResolvedMedia>().future;
 }
 
 class TodayEntryFeed extends ConsumerWidget {
