@@ -47,7 +47,8 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 
 ## Threads
 - journal-app-design — done — closed 2026-07-24: design, planning and the 31/31 v1 build are complete; all completion_criteria met. Post-ship bug work moved to post-ship-hardening.
-- post-ship-hardening — paused — Playback root-caused and FIXED in PR #35 (open, branch fix/media-blob-extension-playback): extensionless blobs broke AVFoundation. 737 tests, analyze clean, real-natives macOS receipt RED->GREEN, migration dry-run on a copy of the live container passed. Awaiting the human's hardware test + merge. See sessions/2026-07-24-07.
+- post-ship-hardening — paused — PR #35 MERGED (5cb5bad) and hardware-confirmed: video plays, new voice plays repeatedly. 2 criteria remain: stop integration tests writing into the real container, and confirm an exported ZIP carries extensions.
+- video-card-playback-controls — paused — NEXT UP. Two pre-existing video-card defects root-caused (no preview frame; no controls after playback), design decided, hover-reveal spec written, branch fix/video-card-preview-and-controls cut clean from 5cb5bad. No implementation started. Read plans/2026-07-24-video-card-controls-spec.md first.
 
 ## State snapshot (2026-07-22)
 - DB ROUND-TRIP PROVEN (session 2026-07-22-01): real capture write path stored 2 new entries into the on-disk DB (~/Library/Containers/dev.satanshumishra.fieldNotes/Data/Documents/field_notes.sqlite); a separate sqlite3 process confirmed them AFTER the writer exited (entries 2->4); live app rendered DB rows (live-feed-01.png). Store+retrieve are proven end-to-end.
