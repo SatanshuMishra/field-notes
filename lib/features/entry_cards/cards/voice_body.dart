@@ -45,7 +45,7 @@ class _VoiceBodyState extends State<VoiceBody> {
   @override
   void didUpdateWidget(VoiceBody oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (identical(oldWidget.resolver, widget.resolver)) {
+    if (!_needsRePrepare(oldWidget)) {
       return;
     }
     _teardownPlayer();
@@ -54,6 +54,16 @@ class _VoiceBodyState extends State<VoiceBody> {
     _unavailable = false;
     _ready = false;
     _startPrepare();
+  }
+
+  bool _needsRePrepare(VoiceBody oldWidget) {
+    if (oldWidget.entry.mediaId != widget.entry.mediaId) {
+      return true;
+    }
+    if (identical(oldWidget.resolver, widget.resolver)) {
+      return false;
+    }
+    return !_ready;
   }
 
   void _startPrepare() {
@@ -66,9 +76,10 @@ class _VoiceBodyState extends State<VoiceBody> {
 
   Future<void> _prepare() async {
     final int gen = ++_generation;
+    final String? mediaId = widget.entry.mediaId;
     final ResolvedMedia media;
     try {
-      media = await widget.resolver.resolve(widget.entry.mediaId);
+      media = await widget.resolver.resolve(mediaId);
     } catch (error, stackTrace) {
       debugPrint('Voice media resolve failed: $error\n$stackTrace');
       if (_isCurrent(gen)) {
