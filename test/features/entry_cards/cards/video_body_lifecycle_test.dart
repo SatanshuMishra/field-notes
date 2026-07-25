@@ -355,6 +355,47 @@ void main() {
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
       expect(surfaceMounted(tester, 0), isTrue);
     });
+
+    testWidgets('a mid playback error reclaims a slot from an unpinned sibling',
+        (WidgetTester tester) async {
+      final LruVideoSlots slots = slotsWithCapOf(2);
+      final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
+
+      await tester.pumpWidget(
+        videoCardColumn(
+          resolver: videoResolverFor(videoFixtureFile()),
+          playerFactory: videoFactoryInto(built),
+          slots: slots,
+          indices: <int>[0, 1, 2],
+        ),
+      );
+      await tester.pump();
+
+      expect(built, hasLength(2));
+      expect(surfaceMounted(tester, 2), isFalse);
+
+      built[0].emitState(VideoPlaybackState.playing);
+      built[0].emitPosition(const Duration(seconds: 5));
+      await tester.pump();
+
+      built[0].emitState(VideoPlaybackState.error);
+      await tester.pump();
+      await tester.pump();
+
+      expect(built, hasLength(3));
+      expect(surfaceMounted(tester, 2), isTrue);
+
+      await tester.pump(pastFirstBackoff);
+      await tester.pump();
+
+      expect(built, hasLength(4));
+      expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+      expect(surfaceMounted(tester, 0), isTrue);
+      expect(readyControlsEnabled(tester, 0), isTrue);
+      expect(built[0].disposeCalls, 1);
+      expect(built[1].disposeCalls, 1);
+      expect(built[3].seekCalls, <Duration>[const Duration(seconds: 5)]);
+    });
   });
 
   group('VideoBody recovery of the control surface', () {

@@ -391,7 +391,7 @@ class _VideoBodyState extends State<VideoBody> {
       _markUnavailable();
       return;
     }
-    _failAttempt(file, VideoSlotEvictionRights.none);
+    _failAttempt(file, VideoSlotEvictionRights.evictUnpinned);
   }
 
   void _onPosition(Duration position) {
