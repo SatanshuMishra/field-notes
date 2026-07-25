@@ -70,7 +70,7 @@ class _VideoScrubberState extends State<VideoScrubber> {
   @override
   void didUpdateWidget(VideoScrubber oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.onSeek == null) {
+    if (!_enabled) {
       _dragPosition = null;
     }
   }
