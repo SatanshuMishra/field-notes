@@ -109,5 +109,94 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets('a new resolver identity re-prepares an unavailable card',
+        (WidgetTester tester) async {
+      final List<FakeEntryAudioPlayer> built = <FakeEntryAudioPlayer>[];
+      final FakeMediaResolver settled = FakeMediaResolver()
+        ..set(
+          'aud',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'aud', relPath: 'a.m4a', kind: MediaKind.audio),
+            file: File('/tmp/a.m4a'),
+          ),
+        );
+
+      Widget card(MediaResolver resolver) => cardHarness(
+            VoiceBody(
+              entry: entryOf(
+                type: EntryType.voice,
+                mediaId: 'aud',
+                durationMs: 65000,
+              ),
+              resolver: resolver,
+              playerFactory: () {
+                final FakeEntryAudioPlayer player = FakeEntryAudioPlayer();
+                built.add(player);
+                return player;
+              },
+            ),
+          );
+
+      await tester.pumpWidget(card(FakeMediaResolver()));
+      await tester.pump();
+
+      expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
+      expect(built, isEmpty);
+
+      await tester.pumpWidget(card(settled));
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+      expect(built, hasLength(1));
+      expect(built.single.loadCalls, <String>['/tmp/a.m4a']);
+      expect(
+        find.byKey(const ValueKey<String>('voice-play-toggle')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a new resolver identity disposes the previous player',
+        (WidgetTester tester) async {
+      final List<FakeEntryAudioPlayer> built = <FakeEntryAudioPlayer>[];
+      FakeMediaResolver resolverWithAudio() => FakeMediaResolver()
+        ..set(
+          'aud',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'aud', relPath: 'a.m4a', kind: MediaKind.audio),
+            file: File('/tmp/a.m4a'),
+          ),
+        );
+
+      Widget card(MediaResolver resolver) => cardHarness(
+            VoiceBody(
+              entry: entryOf(
+                type: EntryType.voice,
+                mediaId: 'aud',
+                durationMs: 65000,
+              ),
+              resolver: resolver,
+              playerFactory: () {
+                final FakeEntryAudioPlayer player = FakeEntryAudioPlayer();
+                built.add(player);
+                return player;
+              },
+            ),
+          );
+
+      await tester.pumpWidget(card(resolverWithAudio()));
+      await tester.pump();
+      expect(built, hasLength(1));
+
+      await tester.pumpWidget(card(resolverWithAudio()));
+      await tester.pump();
+      await tester.pump();
+
+      expect(built, hasLength(2));
+      expect(built[0].disposeCalls, 1);
+      expect(built[1].loadCalls, <String>['/tmp/a.m4a']);
+      expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+    });
   });
 }

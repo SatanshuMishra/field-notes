@@ -28,6 +28,12 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
 
   void emitPosition(Duration position) => _positionController.add(position);
 
+  void emitStateError(Object error) =>
+      _stateController.addError(error, StackTrace.empty);
+
+  void emitPositionError(Object error) =>
+      _positionController.addError(error, StackTrace.empty);
+
   @override
   Future<void> load(String filePath) async {
     loadCalls.add(filePath);

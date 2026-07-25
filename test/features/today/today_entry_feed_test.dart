@@ -6,6 +6,7 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,33 @@ List<Override> _overrides({
     ),
     todayMediaResolverProvider
         .overrideWith((Ref ref) async => const StubMediaResolver()),
+  ];
+}
+
+List<Override> _videoEntryOverrides({
+  required Future<MediaResolver> resolver,
+  required EntryVideoPlayer Function() buildPlayer,
+  required VideoSlots slots,
+}) {
+  return <Override>[
+    entriesForDateProvider.overrideWith(
+      (Ref ref, String date) => Stream<List<Entry>>.value(<Entry>[
+        todayTestEntry(
+          id: 'entry-1',
+          type: EntryType.video,
+          textContent: null,
+          mediaId: 'vid',
+          durationMs: 4000,
+        ),
+      ]),
+    ),
+    photosForEntryProvider.overrideWith(
+      (Ref ref, String entryId) =>
+          Stream<List<EntryPhoto>>.value(const <EntryPhoto>[]),
+    ),
+    todayMediaResolverProvider.overrideWith((Ref ref) => resolver),
+    todayVideoPlayerFactoryProvider.overrideWithValue(buildPlayer),
+    videoSlotsProvider.overrideWithValue(slots),
   ];
 }
 
@@ -150,50 +178,68 @@ void main() {
     slots.pin(occupant);
 
     final File file = _writtenVideoFile();
-    final StreamController<List<Entry>> entries =
-        StreamController<List<Entry>>.broadcast();
-    addTearDown(entries.close);
+    final Completer<MediaResolver> pending = Completer<MediaResolver>();
 
     int playersBuilt = 0;
     await pumpToday(
       tester,
       const TodayEntryFeed(date: '2026-07-19'),
-      overrides: <Override>[
-        entriesForDateProvider.overrideWith(
-          (Ref ref, String date) => entries.stream,
-        ),
-        photosForEntryProvider.overrideWith(
-          (Ref ref, String entryId) =>
-              Stream<List<EntryPhoto>>.value(const <EntryPhoto>[]),
-        ),
-        todayMediaResolverProvider.overrideWith(
-          (Ref ref) async => _AvailableVideoResolver(file),
-        ),
-        todayVideoPlayerFactoryProvider.overrideWithValue(() {
+      overrides: _videoEntryOverrides(
+        resolver: pending.future,
+        buildPlayer: () {
           playersBuilt++;
           return FakeEntryVideoPlayer();
-        }),
-        videoSlotsProvider.overrideWithValue(slots),
-      ],
+        },
+        slots: slots,
+      ),
     );
 
-    entries.add(<Entry>[todayTestEntry(id: 'entry-1', textContent: 'warm up')]);
-    await tester.pumpAndSettle();
-
-    entries.add(<Entry>[
-      todayTestEntry(
-        id: 'entry-2',
-        type: EntryType.video,
-        textContent: null,
-        mediaId: 'vid',
-        durationMs: 4000,
-      ),
-    ]);
+    pending.complete(_AvailableVideoResolver(file));
     await tester.pumpAndSettle();
 
     expect(find.byType(VideoBody), findsOneWidget);
     expect(find.byType(CorruptMediaPlaceholder), findsNothing);
     expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
     expect(playersBuilt, 0);
+  });
+
+  testWidgets('loads a video card mounted before the media resolver settles',
+      (WidgetTester tester) async {
+    final LruVideoSlots slots = LruVideoSlots(cap: 1);
+    addTearDown(slots.dispose);
+
+    final File file = _writtenVideoFile();
+    final Completer<MediaResolver> pending = Completer<MediaResolver>();
+    final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
+
+    await pumpToday(
+      tester,
+      const TodayEntryFeed(date: '2026-07-19'),
+      overrides: _videoEntryOverrides(
+        resolver: pending.future,
+        buildPlayer: () {
+          final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+          built.add(player);
+          return player;
+        },
+        slots: slots,
+      ),
+    );
+
+    expect(find.byType(VideoBody), findsOneWidget);
+    expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+    expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+    expect(built, isEmpty);
+
+    pending.complete(_AvailableVideoResolver(file));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+    expect(built, hasLength(1));
+    expect(built.single.loadCalls, <String>[file.path]);
+    expect(
+      find.byKey(const ValueKey<String>('fake-video-surface')),
+      findsOneWidget,
+    );
   });
 }
