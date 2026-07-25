@@ -15,6 +15,7 @@ abstract interface class EntryVideoPlayer {
   Future<void> play();
   Future<void> pause();
   Future<void> seek(Duration position);
+  Future<void> setVolume(double volume);
   Duration? get duration;
   Stream<Duration> get positionStream;
   Widget buildSurface();

@@ -99,6 +99,11 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
   }
 
   @override
+  Future<void> setVolume(double volume) async {
+    await _controller?.setVolume(volume.clamp(0.0, 1.0));
+  }
+
+  @override
   Duration? get duration {
     final vp.VideoPlayerController? controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
