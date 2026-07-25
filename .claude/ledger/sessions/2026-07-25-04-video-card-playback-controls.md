@@ -71,11 +71,15 @@ left holding an over-cap decision record pointing at a file that did not exist. 
 - `post-ship-hardening` sibling thread untouched, still paused.
 
 ## Pick up here
-Merge PR #39 FIRST — that puts the spec on `main` so every mitosis worktree can read it at a repo-relative
-path. The scratchpad copy used this session lives at a session-scoped path that will NOT exist in a fresh
-session; do not reuse it. Merging is the HUMAN's action: per
+PR #39 is MERGED as `8bef597`, so the spec IS on `main` and every mitosis worktree can read it at a
+repo-relative path. The scratchpad copy used this session lives at a session-scoped path that will NOT exist
+in a fresh session; do not reuse it.
+
+Merge PR #40 FIRST — it carries this very session log and both new decision records, which the #39 squash
+stranded (the hazard recurred on the commit documenting it; see below). Merging is the HUMAN's action: per
 `decisions/2026-07-21-gh-merge-hook-blocked-human-merges.md`, `gh pr merge` and the REST merge endpoint are
-hook-blocked for all callers including the main thread.
+hook-blocked for all callers including the main thread. After merging, verify with
+`git diff --stat origin/main origin/chore/ledger-handoff-session-04` before deleting the branch.
 
 Then dispatch mitosis with: spec
 `docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md`, `baseBranch: main`,

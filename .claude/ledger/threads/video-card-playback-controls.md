@@ -13,7 +13,7 @@ completion_criteria:
   - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
   - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
   - Red-before-green receipt exists for each of the two reported defects
-next_step: Merge PR #39 (green, docs only), then retry the mitosis dispatch that a classifier outage blocked. Separately, the human macOS hardware run is still unperformed and is the only thing that can close this thread.
+next_step: Merge PR #40 (the session-04 ledger, stranded by the #39 squash), fast-forward local main, then retry the mitosis dispatch that a classifier outage blocked. Separately, the human macOS hardware run is still unperformed and is the only thing that can close this thread.
 branch: main (was fix/video-card-preview-and-controls, merged 2026-07-25)
 ---
 
@@ -29,8 +29,9 @@ Give the video entry card a real preview frame and a working control surface on 
 architecture, without a resource ceiling that reinstates the red placeholder.
 
 ## Next Step
-Merge PR #39 first (green, docs only) — that puts the spec on `main` so every mitosis worktree reads it at a
-repo-relative path. Then retry the mitosis dispatch: spec
+PR #39 is MERGED (`8bef597`), so the spec is on `main`. Merge PR #40 first — it carries the session-04
+ledger the #39 squash stranded — then fast-forward LOCAL `main` (the engine cuts worktrees from the local
+ref). Then retry the mitosis dispatch: spec
 `docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md`, `baseBranch: main`,
 `sourcePrefix: msp/`, verify+build seeds verbatim from `receipts.config.json`, fresh `worktreeRoot` outside
 the repo, `fixLoopMax: 2`, MSPs 1-3 only. SEPARATELY and independently, the macOS hardware check is still
