@@ -1,7 +1,7 @@
 ---
 thread: video-card-playback-controls
-status: paused
-updated: 2026-07-24
+status: active
+updated: 2026-07-25
 priority: high
 completion_criteria:
   - A video card shows a real preview frame before playback, never the red corrupt placeholder, human-confirmed on macOS hardware
@@ -13,14 +13,15 @@ completion_criteria:
   - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
   - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
   - Red-before-green receipt exists for each of the two reported defects
-next_step: Apply the eleven fully-specified review fixes listed in sessions/2026-07-24-10 (four MEDIUM, six LOW, one revert of my own bad instruction), then build the hover-reveal overlay in its own file.
+next_step: HUMAN hardware run — `flutter run -d macos`, never the raw binary. Confirm the preview frame, hover reveal, 3s auto-hide, pause/resume, and that a day with more videos than the cap degrades to neutral rather than red.
 branch: fix/video-card-preview-and-controls
 ---
 
 ## Status
-Decoder gating and the structural retry split are BUILT and reviewed twice. 22 code commits ahead of
-`origin/main` (+4985/-243 across 38 files) at `1bbeef7`; 23 with the ledger commit `98909b3` on top.
-Analyze clean, 825 tests green at `1bbeef7`, re-verified independently at hand-off. Six of nine
+All eleven review fixes APPLIED and the hover-reveal overlay BUILT. 28 commits ahead of `origin/main`
+(still `5cb5bad`), analyze clean, 856 tests green at `acf0976`, verified by the orchestrator independently
+of every subagent claim. All nine completion criteria are met IN CODE; NOTHING is hardware-confirmed, which
+is the single remaining gate. Branch has no upstream — never pushed. Six of nine
 criteria met in code; NOTHING is hardware-confirmed. Two rounds found three CRITICALs, all fixed and
 mutation-verified; a third returned APPROVE-WITH-FIXES and those eleven fixes are specified but NOT applied.
 
@@ -29,10 +30,12 @@ Give the video entry card a real preview frame and a working control surface on 
 architecture, without a resource ceiling that reinstates the red placeholder.
 
 ## Next Step
-Apply the eleven fixes under "the exact fix list" in `sessions/2026-07-24-10-video-card-playback-controls.md`
-— each carries file:line and the fix, so nothing needs re-deriving. Stage behaviour fixes separately from the
-test-integrity fix, red-first per fix, mutation-check the mute-lie item. Do NOT open a fourth review round on
-`video_body.dart`: severity went CRITICAL -> CRITICAL -> MEDIUM and the remainder is specified.
+Hand to the HUMAN for `flutter run -d macos` (never the raw binary). Confirm: a real preview frame rather
+than the red placeholder; hover reveals the controls and 3s idle hides them while playing; pausing and
+resuming shows them again for the full delay; replay, scrub and mute all work; and a day with more videos
+than the cap degrades to neutral with an announced refusal rather than red. Only after that is any of this
+real. Do NOT open another review round on `video_body.dart` — severity went CRITICAL -> CRITICAL -> MEDIUM
+and every specified item is applied.
 
 ## Open Risks
 - The suite was green and structurally BLIND for a whole round: every receipt drove one card at `cap: 1` against a synthetic pinned occupant, so the production path (N unpinned holders, an N+1th mounting, eviction landing mid-load) had zero coverage and hid two CRITICALs. Multi-card receipts now exist — treat any new single-card-only receipt as suspect.
@@ -63,7 +66,9 @@ test-integrity fix, red-first per fix, mutation-check the mute-lie item. Do NOT 
   extraction from `video_body.dart`.
 
 ## Pointers
-- .claude/ledger/plans/2026-07-24-video-card-controls-spec.md — state machine, platform split, a11y floors; receipts 3-5 are the unbuilt overlay work
+- .claude/ledger/plans/2026-07-24-video-controls-overlay-plan.md — the executable overlay plan; SUPERSEDES the spec below wherever they disagree and lists seven corrections found against the code
+- .claude/ledger/plans/2026-07-24-video-card-controls-spec.md — original spec; its w3c/wcag#2007 citation is wrong (that issue is SC 2.4.7, not 1.4.13) and its "no hand-rolled seek-then-play for replay" line is stale
+- lib/features/entry_cards/cards/video_controls_overlay.dart + test/.../cards/video_controls_overlay_test.dart — the overlay, its pure predicates, and 9 receipts
 - lib/features/entry_cards/playback/video_slots.dart + video_slots_provider.dart — the capped LRU registry
 - lib/features/entry_cards/cards/ — video_body.dart (phase machine), video_control_bar.dart, video_scrubber.dart, video_transport.dart, voice_body.dart (the architecture mirrored)
 - lib/features/entry_cards/playback/video_player_impl.dart — `videoStateFromValue`, load-bearing mapping
