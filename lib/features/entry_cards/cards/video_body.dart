@@ -12,6 +12,7 @@ import '../playback/video_playback.dart';
 import '../playback/video_slots.dart';
 import 'video_control_bar.dart';
 import 'video_scrubber.dart';
+import 'video_transport.dart';
 
 const Duration _defaultLoadTimeout = Duration(seconds: 8);
 const List<Duration> _defaultRetryBackoff = <Duration>[
@@ -19,13 +20,8 @@ const List<Duration> _defaultRetryBackoff = <Duration>[
   Duration(milliseconds: 1200),
 ];
 const double _videoHeight = 200;
-const double _transportSize = 56;
-const double _transportGlyph = 18;
 const double _controlInset = 8;
 const double _fullVolume = 1.0;
-const Border _transportFocusOutline = Border.fromBorderSide(
-  BorderSide(color: Palette.ink, width: 3),
-);
 
 enum _VideoPhase { waiting, preparing, ready, retrying, unavailable }
 
@@ -595,7 +591,7 @@ class _VideoBodyState extends State<VideoBody> {
           height: _videoHeight,
         ),
       Center(
-        child: _VideoTransport(
+        child: VideoTransport(
           isPlaying: _isPlaying,
           onTap: _ready || _canClaimSlot ? _onTransportTap : null,
         ),
@@ -616,100 +612,4 @@ class _VideoBodyState extends State<VideoBody> {
       ),
     ];
   }
-}
-
-class _VideoTransport extends StatefulWidget {
-  const _VideoTransport({required this.isPlaying, required this.onTap});
-
-  final bool isPlaying;
-  final VoidCallback? onTap;
-
-  @override
-  State<_VideoTransport> createState() => _VideoTransportState();
-}
-
-class _VideoTransportState extends State<_VideoTransport> {
-  bool _focused = false;
-
-  void _onFocusHighlight(bool focused) {
-    if (!mounted || focused == _focused) {
-      return;
-    }
-    setState(() => _focused = focused);
-  }
-
-  Object? _activate(Intent intent) {
-    widget.onTap?.call();
-    return null;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bool enabled = widget.onTap != null;
-    return FocusableActionDetector(
-      enabled: enabled,
-      onShowFocusHighlight: _onFocusHighlight,
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: _activate),
-      },
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: widget.isPlaying ? 'Pause video' : 'Play video',
-        child: GestureDetector(
-          key: const ValueKey<String>('video-play-toggle'),
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: Opacity(
-            opacity: enabled ? 1.0 : 0.5,
-            child: Container(
-              width: _transportSize,
-              height: _transportSize,
-              decoration: BoxDecoration(
-                color: Palette.coral,
-                shape: BoxShape.circle,
-                border: _focused ? _transportFocusOutline : Shapes.outline,
-              ),
-              child: Center(
-                child: CustomPaint(
-                  size: const Size(_transportGlyph, _transportGlyph),
-                  painter: _TransportGlyph(isPlaying: widget.isPlaying),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TransportGlyph extends CustomPainter {
-  const _TransportGlyph({required this.isPlaying});
-
-  final bool isPlaying;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint fill = Paint()..color = Palette.cardBright;
-    if (isPlaying) {
-      final double barWidth = size.width * 0.3;
-      canvas.drawRect(Rect.fromLTWH(0, 0, barWidth, size.height), fill);
-      canvas.drawRect(
-        Rect.fromLTWH(size.width - barWidth, 0, barWidth, size.height),
-        fill,
-      );
-      return;
-    }
-    final Path triangle = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, size.height / 2)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(triangle, fill);
-  }
-
-  @override
-  bool shouldRepaint(_TransportGlyph oldDelegate) =>
-      isPlaying != oldDelegate.isPlaying;
 }
