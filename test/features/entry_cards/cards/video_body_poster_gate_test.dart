@@ -135,6 +135,56 @@ void main() {
       expect(built.single.playCalls, 0);
     });
 
+    testWidgets(
+      'a resolver identity change on a still-gated card claims no slot',
+      (WidgetTester tester) async {
+        final RecordingVideoSlots slots = recordingSlotsWithCapOf(1);
+        final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
+        final File file = videoFixtureFile();
+        final File poster = posterFixtureFile();
+        final EntryVideoPlayerFactory playerFactory = videoFactoryInto(built);
+
+        await tester.pumpWidget(
+          videoCardColumn(
+            resolver: videoResolverFor(file, poster: poster),
+            playerFactory: playerFactory,
+            slots: slots,
+            indices: <int>[0],
+            thumbnailMediaId: 'thumb',
+          ),
+        );
+        await tester.pump();
+
+        expect(slots.acquireCalls, isEmpty);
+
+        await tester.pumpWidget(
+          videoCardColumn(
+            resolver: videoResolverFor(file, poster: poster),
+            playerFactory: playerFactory,
+            slots: slots,
+            indices: <int>[0],
+            thumbnailMediaId: 'thumb',
+          ),
+        );
+        await tester.pump();
+
+        expect(slots.acquireCalls, isEmpty);
+        expect(built, isEmpty);
+        expect(tapEnabled(tester, inCard(0, videoPlayToggleKey)), isTrue);
+
+        await tester.tap(inCard(0, videoPlayToggleKey));
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          slots.acquireCalls,
+          <VideoSlotEvictionRights>[VideoSlotEvictionRights.evictUnpinned],
+        );
+        expect(built, hasLength(1));
+        expect(built.single.loadCalls, <String>[file.path]);
+      },
+    );
+
     testWidgets('a missing clip behind a poster is reported only at the tap', (
       WidgetTester tester,
     ) async {
