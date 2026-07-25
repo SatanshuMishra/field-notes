@@ -106,6 +106,21 @@ void main() {
     await recorder.release();
   });
 
+  testWidgets('the preview initialises the camera in the jpeg still format',
+      (WidgetTester tester) async {
+    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
+
+    await tester.pumpWidget(
+      MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
+    );
+    await tester.pump();
+
+    expect(native.argumentsOf('initialize')['pformat'], 'jpg');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await recorder.release();
+  });
+
   testWidgets('releasing the recorder destroys the native capture session',
       (WidgetTester tester) async {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
