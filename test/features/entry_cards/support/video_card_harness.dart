@@ -19,6 +19,8 @@ const ValueKey<String> videoMuteToggleKey =
 const ValueKey<String> videoScrubBarKey = ValueKey<String>('video-scrub-bar');
 const ValueKey<String> videoSurfaceKey =
     ValueKey<String>('fake-video-surface');
+const ValueKey<String> videoSurfaceTapKey =
+    ValueKey<String>('video-surface-tap');
 const ValueKey<String> mediaRetryKey = ValueKey<String>('media-retry');
 
 const Duration videoLoadTimeout = Duration(milliseconds: 100);
@@ -94,6 +96,16 @@ LruVideoSlots slotsWithCapOf(int cap) {
   return slots;
 }
 
+TargetPlatformVariant useTargetPlatform(TargetPlatform platform) =>
+    TargetPlatformVariant.only(platform);
+
+Offset videoSurfacePoint(WidgetTester tester, int index) =>
+    tester.getRect(inCard(index, videoSurfaceTapKey)).topLeft +
+    const Offset(20, 20);
+
+Offset videoPointClearOfTheCard(WidgetTester tester, int index) =>
+    tester.getRect(cardAt(index)).bottomRight + const Offset(40, 40);
+
 Widget videoCardColumn({
   required MediaResolver resolver,
   required EntryVideoPlayerFactory playerFactory,
@@ -101,8 +113,10 @@ Widget videoCardColumn({
   required List<int> indices,
   String? thumbnailMediaId,
   int? durationMs = 65000,
+  MediaQueryData media = const MediaQueryData(),
 }) {
   return cardHarness(
+    data: media,
     SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,

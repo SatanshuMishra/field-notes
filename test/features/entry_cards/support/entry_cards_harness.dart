@@ -8,11 +8,15 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 
-Widget cardHarness(Widget child, {double width = 360}) {
+Widget cardHarness(
+  Widget child, {
+  double width = 360,
+  MediaQueryData data = const MediaQueryData(),
+}) {
   return Directionality(
     textDirection: TextDirection.ltr,
     child: MediaQuery(
-      data: const MediaQueryData(),
+      data: data,
       child: Align(
         alignment: Alignment.topLeft,
         child: SizedBox(width: width, child: child),

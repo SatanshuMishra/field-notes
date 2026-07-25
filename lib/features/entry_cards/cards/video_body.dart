@@ -11,6 +11,7 @@ import '../media/media_resolver.dart';
 import '../playback/video_playback.dart';
 import '../playback/video_slots.dart';
 import 'video_control_bar.dart';
+import 'video_controls_overlay.dart';
 import 'video_scrubber.dart';
 import 'video_transport.dart';
 
@@ -20,7 +21,6 @@ const List<Duration> _defaultRetryBackoff = <Duration>[
   Duration(milliseconds: 1200),
 ];
 const double _videoHeight = 200;
-const double _controlInset = 8;
 const double _fullVolume = 1.0;
 
 enum _VideoPhase { waiting, preparing, ready, retrying, unavailable }
@@ -641,25 +641,23 @@ class _VideoBodyState extends State<VideoBody> {
           errorLabel: 'Video',
           height: _videoHeight,
         ),
-      Center(
-        child: VideoTransport(
+      if (_claimDenied)
+        const Positioned(
+          left: videoControlInset,
+          right: videoControlInset,
+          top: videoControlInset,
+          child: Center(child: VideoTransportBusyNotice()),
+        ),
+      VideoControlsOverlay(
+        controlsEnabled: _ready,
+        isPlaying: _isPlaying,
+        onToggle: _ready || _canClaimSlot ? _onTransportTap : null,
+        transport: VideoTransport(
           isPlaying: _isPlaying,
           onTap: _ready || _canClaimSlot ? _onTransportTap : null,
           hint: _claimDenied ? videoTransportBusyHint : null,
         ),
-      ),
-      if (_claimDenied)
-        const Positioned(
-          left: _controlInset,
-          right: _controlInset,
-          top: _controlInset,
-          child: Center(child: VideoTransportBusyNotice()),
-        ),
-      Positioned(
-        left: _controlInset,
-        right: _controlInset,
-        bottom: _controlInset,
-        child: VideoControlBar(
+        controlBar: VideoControlBar(
           position: _position,
           total: _total,
           muted: _muted,
