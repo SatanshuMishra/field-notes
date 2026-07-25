@@ -10,18 +10,23 @@ typedef VideoSlotErrorReporter = void Function(
 
 const int assumedConcurrentVideoDecoderCap = 6;
 
+enum VideoSlotEvictionRights { none, evictUnpinned }
+
 final class VideoSlotToken {
   VideoSlotToken._();
 }
 
 abstract interface class VideoSlots {
-  VideoSlotToken? acquire({required VideoSlotEviction onEvicted});
+  VideoSlotToken? acquire({
+    required VideoSlotEviction onEvicted,
+    required VideoSlotEvictionRights evictionRights,
+  });
   bool holds(VideoSlotToken? token);
   void release(VideoSlotToken? token);
   void pin(VideoSlotToken? token);
   void unpin(VideoSlotToken? token);
   void touch(VideoSlotToken? token);
-  void addSlotFreedListener(VideoSlotFreedListener listener);
+  bool addSlotFreedListener(VideoSlotFreedListener listener);
   void removeSlotFreedListener(VideoSlotFreedListener listener);
   void dispose();
 }
@@ -58,12 +63,18 @@ final class LruVideoSlots implements VideoSlots {
   bool _disposed = false;
 
   @override
-  VideoSlotToken? acquire({required VideoSlotEviction onEvicted}) {
+  VideoSlotToken? acquire({
+    required VideoSlotEviction onEvicted,
+    required VideoSlotEvictionRights evictionRights,
+  }) {
     if (_disposed) {
       return null;
     }
     if (_holders.length < cap) {
       return _grant(onEvicted);
+    }
+    if (evictionRights == VideoSlotEvictionRights.none) {
+      return null;
     }
     final VideoSlotToken? victim = _leastRecentlyUsedUnpinned();
     if (victim == null) {
@@ -129,11 +140,14 @@ final class LruVideoSlots implements VideoSlots {
   }
 
   @override
-  void addSlotFreedListener(VideoSlotFreedListener listener) {
-    if (_disposed || _slotFreedListeners.contains(listener)) {
-      return;
+  bool addSlotFreedListener(VideoSlotFreedListener listener) {
+    if (_disposed) {
+      return false;
     }
-    _slotFreedListeners.add(listener);
+    if (!_slotFreedListeners.contains(listener)) {
+      _slotFreedListeners.add(listener);
+    }
+    return true;
   }
 
   @override
@@ -223,7 +237,10 @@ final class UnlimitedVideoSlots implements VideoSlots {
   const UnlimitedVideoSlots();
 
   @override
-  VideoSlotToken acquire({required VideoSlotEviction onEvicted}) =>
+  VideoSlotToken acquire({
+    required VideoSlotEviction onEvicted,
+    required VideoSlotEvictionRights evictionRights,
+  }) =>
       VideoSlotToken._();
 
   @override
@@ -242,7 +259,7 @@ final class UnlimitedVideoSlots implements VideoSlots {
   void touch(VideoSlotToken? token) {}
 
   @override
-  void addSlotFreedListener(VideoSlotFreedListener listener) {}
+  bool addSlotFreedListener(VideoSlotFreedListener listener) => true;
 
   @override
   void removeSlotFreedListener(VideoSlotFreedListener listener) {}

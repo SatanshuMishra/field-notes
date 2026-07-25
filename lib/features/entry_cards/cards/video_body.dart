@@ -100,8 +100,10 @@ class _VideoBodyState extends State<VideoBody> {
     if (!mounted || file == null) {
       return;
     }
-    final VideoSlotToken? token =
-        widget.slots.acquire(onEvicted: _onSlotEvicted);
+    final VideoSlotToken? token = widget.slots.acquire(
+      onEvicted: _onSlotEvicted,
+      evictionRights: VideoSlotEvictionRights.evictUnpinned,
+    );
     if (token == null) {
       _enterWaiting();
       return;

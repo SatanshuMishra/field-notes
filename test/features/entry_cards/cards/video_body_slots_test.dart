@@ -96,7 +96,10 @@ LruVideoSlots _slotsWithCapOf(int cap) {
 }
 
 VideoSlotToken? _pinnedOccupantOf(VideoSlots slots) {
-  final VideoSlotToken? token = slots.acquire(onEvicted: () {});
+  final VideoSlotToken? token = slots.acquire(
+    onEvicted: () {},
+    evictionRights: VideoSlotEvictionRights.evictUnpinned,
+  );
   slots.pin(token);
   return token;
 }
@@ -314,7 +317,10 @@ void main() {
       await tester.pump();
       expect(find.byKey(_surface), findsOneWidget);
 
-      final VideoSlotToken? intruder = slots.acquire(onEvicted: () {});
+      final VideoSlotToken? intruder = slots.acquire(
+        onEvicted: () {},
+        evictionRights: VideoSlotEvictionRights.evictUnpinned,
+      );
       expect(intruder, isNotNull);
       await tester.pump();
 
@@ -412,7 +418,13 @@ void main() {
       built.single.emitState(VideoPlaybackState.playing);
       await tester.pump();
 
-      expect(slots.acquire(onEvicted: () {}), isNull);
+      expect(
+        slots.acquire(
+          onEvicted: () {},
+          evictionRights: VideoSlotEvictionRights.evictUnpinned,
+        ),
+        isNull,
+      );
       await tester.pump();
 
       expect(find.byKey(_surface), findsOneWidget);

@@ -143,7 +143,10 @@ void main() {
       (WidgetTester tester) async {
     final LruVideoSlots slots = LruVideoSlots(cap: 1);
     addTearDown(slots.dispose);
-    final VideoSlotToken? occupant = slots.acquire(onEvicted: () {});
+    final VideoSlotToken? occupant = slots.acquire(
+      onEvicted: () {},
+      evictionRights: VideoSlotEvictionRights.evictUnpinned,
+    );
     slots.pin(occupant);
 
     final File file = _writtenVideoFile();
