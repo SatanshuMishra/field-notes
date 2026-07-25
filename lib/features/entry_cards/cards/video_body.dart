@@ -153,7 +153,14 @@ class _VideoBodyState extends State<VideoBody> {
       _enterPhase(_VideoPhase.ready);
       _attempt = 0;
     });
+    await _restoreVolume(player);
+    if (!_isCurrentAttempt(gen, token)) {
+      return;
+    }
     await _resumeIfInterrupted();
+    if (!_isCurrentAttempt(gen, token)) {
+      return;
+    }
     await _playIfRequested();
   }
 
@@ -179,6 +186,17 @@ class _VideoBodyState extends State<VideoBody> {
         _onPlaybackFailure();
       },
     );
+  }
+
+  Future<void> _restoreVolume(EntryVideoPlayer player) async {
+    if (_volume == _fullVolume) {
+      return;
+    }
+    try {
+      await player.setVolume(_volume);
+    } catch (error, stackTrace) {
+      debugPrint('Video volume restore failed: $error\n$stackTrace');
+    }
   }
 
   Future<void> _resumeIfInterrupted() async {
@@ -369,15 +387,21 @@ class _VideoBodyState extends State<VideoBody> {
     }
   }
 
-  void _onPlaybackFailure() => scheduleMicrotask(
+  void _onPlaybackFailure() => _scheduleRecovery(_generation, _token);
+
+  void _scheduleRecovery(int gen, VideoSlotToken? token) => scheduleMicrotask(
         () => _guard(
-          _recoverFromPlaybackError(),
+          _recoverFromPlaybackError(gen, token),
           'Video playback recovery failed',
         ),
       );
 
-  Future<void> _recoverFromPlaybackError() async {
-    if (!mounted) {
+  Future<void> _recoverFromPlaybackError(
+    int gen,
+    VideoSlotToken? token,
+  ) async {
+    if (token == null || !_isCurrentAttempt(gen, token)) {
+      debugPrint('Video playback error arrived from a stale attempt');
       return;
     }
     if (_phase != _VideoPhase.ready && _phase != _VideoPhase.preparing) {
@@ -470,9 +494,11 @@ class _VideoBodyState extends State<VideoBody> {
 
   Future<void> _toggleMute() async {
     final EntryVideoPlayer? player = _player;
-    if (player == null) {
+    final VideoSlotToken? token = _token;
+    if (player == null || token == null) {
       return;
     }
+    final int gen = _generation;
     final double restored =
         _volumeBeforeMute > 0 ? _volumeBeforeMute : _fullVolume;
     final double target = _muted ? restored : 0.0;
@@ -483,7 +509,7 @@ class _VideoBodyState extends State<VideoBody> {
       debugPrint('Video volume change failed: $error\n$stackTrace');
       return;
     }
-    if (!mounted) {
+    if (!_isCurrentAttempt(gen, token)) {
       return;
     }
     setState(() {
@@ -508,6 +534,7 @@ class _VideoBodyState extends State<VideoBody> {
 
   Future<void> _toggle() async {
     final EntryVideoPlayer? player = _player;
+    final VideoSlotToken? token = _token;
     if (player == null) {
       return;
     }
@@ -515,31 +542,34 @@ class _VideoBodyState extends State<VideoBody> {
       await _play();
       return;
     }
+    final int gen = _generation;
     try {
       await player.pause();
-      widget.slots.unpin(_token);
+      widget.slots.unpin(token);
     } catch (error, stackTrace) {
       debugPrint('Video playback pause failed: $error\n$stackTrace');
-      widget.slots.unpin(_token);
-      _onPlaybackFailure();
+      widget.slots.unpin(token);
+      _scheduleRecovery(gen, token);
     }
   }
 
   Future<void> _play() async {
     final EntryVideoPlayer? player = _player;
+    final VideoSlotToken? token = _token;
     if (player == null) {
       return;
     }
+    final int gen = _generation;
     try {
       if (_state == VideoPlaybackState.completed) {
         await player.seek(Duration.zero);
       }
-      widget.slots.pin(_token);
+      widget.slots.pin(token);
       await player.play();
     } catch (error, stackTrace) {
       debugPrint('Video playback start failed: $error\n$stackTrace');
-      widget.slots.unpin(_token);
-      _onPlaybackFailure();
+      widget.slots.unpin(token);
+      _scheduleRecovery(gen, token);
     }
   }
 
@@ -549,9 +579,7 @@ class _VideoBodyState extends State<VideoBody> {
     _retryTimer?.cancel();
     _retryTimer = null;
     _stopListeningForSlots();
-    unawaited(_stateSub?.cancel());
-    unawaited(_positionSub?.cancel());
-    unawaited(_player?.dispose());
+    _teardownPlayer();
     final VideoSlotToken? token = _token;
     _token = null;
     widget.slots.release(token);
