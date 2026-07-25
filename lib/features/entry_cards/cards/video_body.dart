@@ -45,7 +45,7 @@ class VideoBody extends StatefulWidget {
   final EntryVideoPlayerFactory playerFactory;
   final VideoSlots slots;
   final Duration loadTimeout;
-  final List<Duration> retryBackoff;
+  final Iterable<Duration> retryBackoff;
 
   @override
   State<VideoBody> createState() => _VideoBodyState();
@@ -64,27 +64,42 @@ class _VideoBodyState extends State<VideoBody> {
   VideoSlotToken? _token;
   Timer? _retryTimer;
   int _attempt = 0;
+  int _generation = 0;
   Duration _resumeFrom = Duration.zero;
   bool _listeningForSlots = false;
-  bool _hasPlayed = false;
   bool _scrubbing = false;
+  bool _playWhenReady = false;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_prepare());
+    _startPrepare(VideoSlotEvictionRights.none);
   }
 
-  Future<void> _prepare() async {
+  void _startPrepare(VideoSlotEvictionRights rights) =>
+      _guard(_prepare(rights), 'Video prepare failed');
+
+  void _guard(Future<void> work, String label) {
+    unawaited(
+      work.catchError((Object error, StackTrace stackTrace) {
+        debugPrint('$label: $error\n$stackTrace');
+      }),
+    );
+  }
+
+  Future<void> _prepare(VideoSlotEvictionRights rights) async {
+    final int gen = _generation;
     final ResolvedMedia media;
     try {
       media = await widget.resolver.resolve(widget.entry.mediaId);
     } catch (error, stackTrace) {
       debugPrint('Video media resolve failed: $error\n$stackTrace');
-      _markUnavailable();
+      if (_isCurrentGeneration(gen)) {
+        _markUnavailable();
+      }
       return;
     }
-    if (!mounted) {
+    if (!_isCurrentGeneration(gen)) {
       return;
     }
     if (!media.isAvailable || media.file == null) {
@@ -92,24 +107,25 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     _mediaFile = media.file;
-    await _attemptLoad();
+    await _attemptLoad(rights);
   }
 
-  Future<void> _attemptLoad() async {
+  Future<void> _attemptLoad(VideoSlotEvictionRights rights) async {
     final File? file = _mediaFile;
     if (!mounted || file == null) {
       return;
     }
     final VideoSlotToken? token = widget.slots.acquire(
       onEvicted: _onSlotEvicted,
-      evictionRights: VideoSlotEvictionRights.evictUnpinned,
+      evictionRights: rights,
     );
     if (token == null) {
       _enterWaiting();
       return;
     }
+    final int gen = ++_generation;
     _token = token;
-    setState(() => _phase = _VideoPhase.preparing);
+    setState(() => _enterPhase(_VideoPhase.preparing));
     final EntryVideoPlayer player = widget.playerFactory();
     _player = player;
     _subscribe(player);
@@ -117,33 +133,44 @@ class _VideoBodyState extends State<VideoBody> {
       await player.load(file.path).timeout(widget.loadTimeout);
     } catch (error, stackTrace) {
       debugPrint('Video playback load failed: $error\n$stackTrace');
+      if (!_isCurrentAttempt(gen, token)) {
+        return;
+      }
       _releasePlayerAndSlot();
-      _failAttempt(file);
+      _failAttempt(file, rights);
       return;
     }
-    if (!mounted) {
+    if (!_isCurrentAttempt(gen, token)) {
       return;
     }
     setState(() {
-      _phase = _VideoPhase.ready;
+      _enterPhase(_VideoPhase.ready);
       _attempt = 0;
     });
     await _resumeIfInterrupted();
+    await _playIfRequested();
   }
+
+  bool _isCurrentGeneration(int gen) => mounted && gen == _generation;
+
+  bool _isCurrentAttempt(int gen, VideoSlotToken token) =>
+      _isCurrentGeneration(gen) &&
+      identical(token, _token) &&
+      widget.slots.holds(token);
 
   void _subscribe(EntryVideoPlayer player) {
     _stateSub = player.stateStream.listen(
       _onState,
       onError: (Object error, StackTrace stackTrace) {
         debugPrint('Video playback stream failed: $error\n$stackTrace');
-        _markUnavailable();
+        _onPlaybackFailure();
       },
     );
     _positionSub = player.positionStream.listen(
       _onPosition,
       onError: (Object error, StackTrace stackTrace) {
         debugPrint('Video position stream failed: $error\n$stackTrace');
-        _markUnavailable();
+        _onPlaybackFailure();
       },
     );
   }
@@ -157,7 +184,15 @@ class _VideoBodyState extends State<VideoBody> {
     await _seek(resume);
   }
 
-  void _failAttempt(File file) {
+  Future<void> _playIfRequested() async {
+    if (!_playWhenReady) {
+      return;
+    }
+    _playWhenReady = false;
+    await _play();
+  }
+
+  void _failAttempt(File file, VideoSlotEvictionRights rights) {
     if (!mounted) {
       return;
     }
@@ -166,7 +201,7 @@ class _VideoBodyState extends State<VideoBody> {
       _markUnavailable();
       return;
     }
-    _scheduleRetry();
+    _scheduleRetry(rights);
   }
 
   bool _isStructurallyUnplayable(File file) {
@@ -174,44 +209,85 @@ class _VideoBodyState extends State<VideoBody> {
       return !file.existsSync() || file.lengthSync() == 0;
     } catch (error, stackTrace) {
       debugPrint('Video media probe failed: $error\n$stackTrace');
-      return true;
+      return false;
     }
   }
 
-  void _scheduleRetry() {
-    final Duration delay = widget.retryBackoff[_attempt];
+  void _scheduleRetry(VideoSlotEvictionRights rights) {
+    final Duration delay = widget.retryBackoff.elementAt(_attempt);
     _retryTimer?.cancel();
     setState(() {
       _attempt += 1;
-      _phase = _VideoPhase.retrying;
+      _enterPhase(_VideoPhase.retrying);
     });
-    _retryTimer = Timer(delay, () => unawaited(_attemptLoad()));
+    _retryTimer = Timer(
+      delay,
+      () => _guard(_attemptLoad(rights), 'Video retry failed'),
+    );
+  }
+
+  void _enterPhase(_VideoPhase phase) {
+    if (phase != _VideoPhase.waiting) {
+      _stopListeningForSlots();
+    }
+    if (phase != _VideoPhase.ready) {
+      _scrubbing = false;
+    }
+    _phase = phase;
   }
 
   void _enterWaiting() {
     if (!mounted) {
       return;
     }
+    _playWhenReady = false;
+    _phase = _VideoPhase.waiting;
+    _scrubbing = false;
     _listenForSlots();
-    setState(() => _phase = _VideoPhase.waiting);
+    scheduleMicrotask(_rebuild);
+  }
+
+  void _rebuild() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {});
   }
 
   void _listenForSlots() {
     if (_listeningForSlots) {
       return;
     }
-    _listeningForSlots = true;
-    widget.slots.addSlotFreedListener(_onSlotFreed);
+    _listeningForSlots = widget.slots.addSlotFreedListener(_onSlotFreed);
+  }
+
+  void _stopListeningForSlots() {
+    if (!_listeningForSlots) {
+      return;
+    }
+    _listeningForSlots = false;
+    widget.slots.removeSlotFreedListener(_onSlotFreed);
   }
 
   void _onSlotFreed() {
     if (!mounted || _phase != _VideoPhase.waiting) {
       return;
     }
-    unawaited(_attemptLoad());
+    scheduleMicrotask(_wakeFromWaiting);
+  }
+
+  void _wakeFromWaiting() {
+    if (!mounted || _phase != _VideoPhase.waiting) {
+      return;
+    }
+    _guard(
+      _attemptLoad(VideoSlotEvictionRights.none),
+      'Video slot wake-up failed',
+    );
   }
 
   void _onSlotEvicted() {
+    _generation += 1;
     _token = null;
     _retryTimer?.cancel();
     _retryTimer = null;
@@ -224,6 +300,7 @@ class _VideoBodyState extends State<VideoBody> {
     final EntryVideoPlayer? player = _player;
     _player = null;
     _state = VideoPlaybackState.idle;
+    _scrubbing = false;
     unawaited(_stateSub?.cancel());
     unawaited(_positionSub?.cancel());
     _stateSub = null;
@@ -232,21 +309,24 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   void _releasePlayerAndSlot() {
+    _generation += 1;
     _teardownPlayer();
-    widget.slots.release(_token);
+    final VideoSlotToken? token = _token;
     _token = null;
+    widget.slots.release(token);
   }
 
   void _markUnavailable() {
     if (!mounted) {
       return;
     }
-    setState(() => _phase = _VideoPhase.unavailable);
+    _playWhenReady = false;
+    setState(() => _enterPhase(_VideoPhase.unavailable));
   }
 
-  void _onRetryPressed() => unawaited(_retry());
+  void _onRetryPressed() => _restart(VideoSlotEvictionRights.evictUnpinned);
 
-  Future<void> _retry() async {
+  void _restart(VideoSlotEvictionRights rights) {
     if (!mounted) {
       return;
     }
@@ -255,9 +335,9 @@ class _VideoBodyState extends State<VideoBody> {
     _releasePlayerAndSlot();
     setState(() {
       _attempt = 0;
-      _phase = _VideoPhase.preparing;
+      _enterPhase(_VideoPhase.preparing);
     });
-    await _prepare();
+    _startPrepare(rights);
   }
 
   void _onState(VideoPlaybackState state) {
@@ -265,13 +345,10 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     if (state == VideoPlaybackState.error) {
-      scheduleMicrotask(() => unawaited(_recoverFromPlaybackError()));
+      _onPlaybackFailure();
       return;
     }
-    setState(() {
-      _state = state;
-      _hasPlayed = _hasPlayed || state == VideoPlaybackState.playing;
-    });
+    setState(() => _state = state);
     _syncPin(state);
   }
 
@@ -286,8 +363,19 @@ class _VideoBodyState extends State<VideoBody> {
     }
   }
 
+  void _onPlaybackFailure() => scheduleMicrotask(
+        () => _guard(
+          _recoverFromPlaybackError(),
+          'Video playback recovery failed',
+        ),
+      );
+
   Future<void> _recoverFromPlaybackError() async {
-    if (!mounted || _phase != _VideoPhase.ready) {
+    if (!mounted) {
+      return;
+    }
+    if (_phase != _VideoPhase.ready && _phase != _VideoPhase.preparing) {
+      debugPrint('Video playback error arrived with no live attempt: $_phase');
       return;
     }
     _resumeFrom = _position;
@@ -297,7 +385,7 @@ class _VideoBodyState extends State<VideoBody> {
       _markUnavailable();
       return;
     }
-    _failAttempt(file);
+    _failAttempt(file, VideoSlotEvictionRights.none);
   }
 
   void _onPosition(Duration position) {
@@ -329,10 +417,18 @@ class _VideoBodyState extends State<VideoBody> {
 
   bool get _ready => _phase == _VideoPhase.ready;
 
+  bool get _canClaimSlot => _phase == _VideoPhase.waiting;
+
   bool get _muted => _volume <= 0;
 
+  bool get _isRenderingVideo =>
+      _player != null &&
+      (_state == VideoPlaybackState.playing ||
+          _state == VideoPlaybackState.paused ||
+          _state == VideoPlaybackState.completed);
+
   bool get _showCapturedPoster =>
-      !_hasPlayed && widget.entry.thumbnailMediaId != null;
+      widget.entry.thumbnailMediaId != null && !_isRenderingVideo;
 
   Duration? get _total {
     final Duration? reported = _player?.duration;
@@ -392,38 +488,67 @@ class _VideoBodyState extends State<VideoBody> {
     });
   }
 
+  void _onTransportTap() {
+    if (_canClaimSlot) {
+      _playWhenReady = true;
+      _guard(
+        _attemptLoad(VideoSlotEvictionRights.evictUnpinned),
+        'Video slot claim failed',
+      );
+      return;
+    }
+    _guard(_toggle(), 'Video playback toggle failed');
+  }
+
   Future<void> _toggle() async {
     final EntryVideoPlayer? player = _player;
     if (player == null) {
       return;
     }
+    if (!_isPlaying) {
+      await _play();
+      return;
+    }
     try {
-      if (_isPlaying) {
-        await player.pause();
-        widget.slots.unpin(_token);
-        return;
-      }
+      await player.pause();
+      widget.slots.unpin(_token);
+    } catch (error, stackTrace) {
+      debugPrint('Video playback pause failed: $error\n$stackTrace');
+      widget.slots.unpin(_token);
+      _onPlaybackFailure();
+    }
+  }
+
+  Future<void> _play() async {
+    final EntryVideoPlayer? player = _player;
+    if (player == null) {
+      return;
+    }
+    try {
       if (_state == VideoPlaybackState.completed) {
         await player.seek(Duration.zero);
       }
       widget.slots.pin(_token);
       await player.play();
     } catch (error, stackTrace) {
-      debugPrint('Video playback toggle failed: $error\n$stackTrace');
+      debugPrint('Video playback start failed: $error\n$stackTrace');
       widget.slots.unpin(_token);
-      unawaited(_recoverFromPlaybackError());
+      _onPlaybackFailure();
     }
   }
 
   @override
   void dispose() {
+    _generation += 1;
     _retryTimer?.cancel();
-    widget.slots.removeSlotFreedListener(_onSlotFreed);
+    _retryTimer = null;
+    _stopListeningForSlots();
     unawaited(_stateSub?.cancel());
     unawaited(_positionSub?.cancel());
     unawaited(_player?.dispose());
-    widget.slots.release(_token);
+    final VideoSlotToken? token = _token;
     _token = null;
+    widget.slots.release(token);
     super.dispose();
   }
 
@@ -439,46 +564,47 @@ class _VideoBodyState extends State<VideoBody> {
     return SizedBox(
       height: _videoHeight,
       width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          const NeutralMediaPlaceholder(height: _videoHeight),
-          ClipRRect(
-            borderRadius: Shapes.cardBorderRadius,
-            child: Center(
-              child: _player?.buildSurface() ?? const SizedBox.shrink(),
-            ),
-          ),
-          if (_showCapturedPoster)
-            MediaImage(
-              resolver: widget.resolver,
-              mediaId: widget.entry.thumbnailMediaId,
-              errorLabel: 'Video',
-              height: _videoHeight,
-            ),
-          Center(
-            child: _VideoTransport(
-              isPlaying: _isPlaying,
-              onTap: _ready ? _toggle : null,
-            ),
-          ),
-          Positioned(
-            left: _controlInset,
-            right: _controlInset,
-            bottom: _controlInset,
-            child: VideoControlBar(
-              position: _position,
-              total: _total,
-              muted: _muted,
-              onSeek: _ready ? _seek : null,
-              onScrubUpdate: _ready ? _onScrubUpdate : null,
-              onScrubEnd: _ready ? _onScrubEnd : null,
-              onToggleMute: _ready ? _toggleMute : null,
-            ),
-          ),
-        ],
-      ),
+      child: Stack(fit: StackFit.expand, children: _layers()),
     );
+  }
+
+  List<Widget> _layers() {
+    return <Widget>[
+      const NeutralMediaPlaceholder(height: _videoHeight),
+      ClipRRect(
+        borderRadius: Shapes.cardBorderRadius,
+        child: Center(
+          child: _player?.buildSurface() ?? const SizedBox.shrink(),
+        ),
+      ),
+      if (_showCapturedPoster)
+        MediaImage(
+          resolver: widget.resolver,
+          mediaId: widget.entry.thumbnailMediaId,
+          errorLabel: 'Video',
+          height: _videoHeight,
+        ),
+      Center(
+        child: _VideoTransport(
+          isPlaying: _isPlaying,
+          onTap: _ready || _canClaimSlot ? _onTransportTap : null,
+        ),
+      ),
+      Positioned(
+        left: _controlInset,
+        right: _controlInset,
+        bottom: _controlInset,
+        child: VideoControlBar(
+          position: _position,
+          total: _total,
+          muted: _muted,
+          onSeek: _ready ? _seek : null,
+          onScrubUpdate: _ready ? _onScrubUpdate : null,
+          onScrubEnd: _ready ? _onScrubEnd : null,
+          onToggleMute: _ready ? _toggleMute : null,
+        ),
+      ),
+    ];
   }
 }
 

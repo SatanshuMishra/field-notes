@@ -67,6 +67,14 @@ class _VideoScrubberState extends State<VideoScrubber> {
   bool _focused = false;
   Duration? _dragPosition;
 
+  @override
+  void didUpdateWidget(VideoScrubber oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.onSeek == null) {
+      _dragPosition = null;
+    }
+  }
+
   Duration? get _total {
     final Duration? total = widget.total;
     if (total == null || total <= Duration.zero) {

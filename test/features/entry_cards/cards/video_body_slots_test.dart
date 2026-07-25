@@ -106,7 +106,7 @@ VideoSlotToken? _pinnedOccupantOf(VideoSlots slots) {
 
 void main() {
   group('VideoBody decoder slot gating', () {
-    testWidgets('renders neutral with disabled controls when the cap denies a '
+    testWidgets('renders neutral with a claim affordance when the cap denies a '
         'slot', (WidgetTester tester) async {
       final LruVideoSlots slots = _slotsWithCapOf(1);
       final VideoSlotToken? occupant = _pinnedOccupantOf(slots);
@@ -126,7 +126,7 @@ void main() {
       expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
       expect(built, isEmpty);
       expect(find.byKey(_surface), findsNothing);
-      expect(_enabled(tester, _playToggle), isFalse);
+      expect(_enabled(tester, _playToggle), isTrue);
       expect(_enabled(tester, _muteToggle), isFalse);
     });
 
@@ -323,12 +323,14 @@ void main() {
       );
       expect(intruder, isNotNull);
       await tester.pump();
+      await tester.pump();
 
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
       expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
       expect(find.byKey(_surface), findsNothing);
       expect(built.single.disposeCalls, 1);
-      expect(_enabled(tester, _playToggle), isFalse);
+      expect(_enabled(tester, _playToggle), isTrue);
+      expect(_enabled(tester, _muteToggle), isFalse);
     });
 
     testWidgets('reaching ready restores the full retry budget', (

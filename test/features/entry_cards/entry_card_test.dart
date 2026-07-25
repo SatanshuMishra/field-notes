@@ -19,6 +19,7 @@ void main() {
           EntryCard(
             entry: entryOf(type: EntryType.text, textContent: 'hello world'),
             resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -38,6 +39,7 @@ void main() {
             entry: entryOf(type: EntryType.text, textContent: 'trip'),
             resolver: FakeMediaResolver(),
             photos: <EntryPhoto>[photoOf(id: 'p', mediaId: 'm')],
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -57,6 +59,7 @@ void main() {
             resolver: FakeMediaResolver(),
             onEdit: () => edits++,
             onDelete: () => deletes++,
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -78,6 +81,7 @@ void main() {
           EntryCard(
             entry: entryOf(type: EntryType.text, textContent: 'read only'),
             resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -104,6 +108,7 @@ void main() {
                 entryOf(type: EntryType.voice, mediaId: 'aud', durationMs: 3000),
             resolver: resolver,
             audioPlayerFactory: () => FakeEntryAudioPlayer(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -150,6 +155,7 @@ void main() {
             entry:
                 entryOf(type: EntryType.voice, mediaId: 'aud', durationMs: 3000),
             resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );

@@ -360,7 +360,6 @@ void main() {
       WidgetTester tester,
     ) async {
       final SemanticsHandle handle = tester.ensureSemantics();
-      addTearDown(handle.dispose);
       final LruVideoSlots slots = slotsWithCapOf(1);
       final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
 
@@ -388,6 +387,7 @@ void main() {
         evictionRights: VideoSlotEvictionRights.evictUnpinned,
       );
       await tester.pump();
+      await tester.pump();
       await gesture.up();
       await tester.pump();
 
@@ -408,6 +408,7 @@ void main() {
             .value,
         '0:40 of 1:05',
       );
+      handle.dispose();
     });
 
     testWidgets('an evicted card shows its captured poster again', (
@@ -445,6 +446,7 @@ void main() {
         evictionRights: VideoSlotEvictionRights.evictUnpinned,
       );
       expect(intruder, isNotNull);
+      await tester.pump();
       await tester.pump();
 
       expect(find.byType(MediaImage), findsOneWidget);

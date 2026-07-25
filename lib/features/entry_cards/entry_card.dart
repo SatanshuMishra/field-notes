@@ -18,10 +18,10 @@ class EntryCard extends StatelessWidget {
     super.key,
     required this.entry,
     required this.resolver,
+    required this.videoSlots,
     this.photos = const <EntryPhoto>[],
     this.audioPlayerFactory,
     this.videoPlayerFactory,
-    this.videoSlots,
     this.onEdit,
     this.onDelete,
     this.surface = Palette.cardWarm,
@@ -32,7 +32,7 @@ class EntryCard extends StatelessWidget {
   final List<EntryPhoto> photos;
   final EntryAudioPlayerFactory? audioPlayerFactory;
   final EntryVideoPlayerFactory? videoPlayerFactory;
-  final VideoSlots? videoSlots;
+  final VideoSlots videoSlots;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final Color surface;
@@ -98,8 +98,7 @@ class EntryCard extends StatelessWidget {
         );
       case EntryType.video:
         final EntryVideoPlayerFactory? factory = videoPlayerFactory;
-        final VideoSlots? slots = videoSlots;
-        if (factory == null || slots == null) {
+        if (factory == null) {
           return const CorruptMediaPlaceholder(
             label: 'Playback unavailable',
             height: 200,
@@ -109,7 +108,7 @@ class EntryCard extends StatelessWidget {
           entry: entry,
           resolver: resolver,
           playerFactory: factory,
-          slots: slots,
+          slots: videoSlots,
         );
     }
   }
