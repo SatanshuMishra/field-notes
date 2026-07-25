@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:camera_macos/camera_macos.dart';
 import 'package:flutter/widgets.dart';
+import 'package:path/path.dart' as p;
 
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
@@ -18,6 +19,11 @@ String videoRecordingFileName(int nowMs) =>
 
 String videoThumbnailFileName(int nowMs) =>
     'video_thumb_$nowMs.$videoThumbnailExtension';
+
+Future<String> resolveVideoThumbnailPath(Directory directory, int nowMs) async {
+  await directory.create(recursive: true);
+  return p.join(directory.path, videoThumbnailFileName(nowMs));
+}
 
 VideoRecorder createPlatformVideoRecorder() =>
     Platform.isMacOS ? CameraMacosVideoRecorder() : CameraVideoRecorder();
