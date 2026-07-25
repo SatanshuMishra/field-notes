@@ -98,7 +98,8 @@ class EntryCard extends StatelessWidget {
         );
       case EntryType.video:
         final EntryVideoPlayerFactory? factory = videoPlayerFactory;
-        if (factory == null) {
+        final VideoSlots? slots = videoSlots;
+        if (factory == null || slots == null) {
           return const CorruptMediaPlaceholder(
             label: 'Playback unavailable',
             height: 200,
@@ -108,7 +109,7 @@ class EntryCard extends StatelessWidget {
           entry: entry,
           resolver: resolver,
           playerFactory: factory,
-          slots: videoSlots ?? const UnlimitedVideoSlots(),
+          slots: slots,
         );
     }
   }

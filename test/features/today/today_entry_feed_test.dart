@@ -143,7 +143,13 @@ void main() {
       (WidgetTester tester) async {
     final LruVideoSlots slots = LruVideoSlots(cap: 1);
     addTearDown(slots.dispose);
-    expect(slots.acquire(onEvicted: () {}), isNotNull);
+    final VideoSlotToken? occupant = slots.acquire(onEvicted: () {});
+    slots.pin(occupant);
+
+    final File file = _writtenVideoFile();
+    final StreamController<List<Entry>> entries =
+        StreamController<List<Entry>>.broadcast();
+    addTearDown(entries.close);
 
     int playersBuilt = 0;
     await pumpToday(
@@ -151,22 +157,14 @@ void main() {
       const TodayEntryFeed(date: '2026-07-19'),
       overrides: <Override>[
         entriesForDateProvider.overrideWith(
-          (Ref ref, String date) => Stream<List<Entry>>.value(<Entry>[
-            todayTestEntry(
-              id: 'entry-1',
-              type: EntryType.video,
-              textContent: null,
-              mediaId: 'vid',
-              durationMs: 4000,
-            ),
-          ]),
+          (Ref ref, String date) => entries.stream,
         ),
         photosForEntryProvider.overrideWith(
           (Ref ref, String entryId) =>
               Stream<List<EntryPhoto>>.value(const <EntryPhoto>[]),
         ),
         todayMediaResolverProvider.overrideWith(
-          (Ref ref) async => _AvailableVideoResolver(_writtenVideoFile()),
+          (Ref ref) async => _AvailableVideoResolver(file),
         ),
         todayVideoPlayerFactoryProvider.overrideWithValue(() {
           playersBuilt++;
@@ -175,6 +173,20 @@ void main() {
         videoSlotsProvider.overrideWithValue(slots),
       ],
     );
+
+    entries.add(<Entry>[todayTestEntry(id: 'entry-1', textContent: 'warm up')]);
+    await tester.pumpAndSettle();
+
+    entries.add(<Entry>[
+      todayTestEntry(
+        id: 'entry-2',
+        type: EntryType.video,
+        textContent: null,
+        mediaId: 'vid',
+        durationMs: 4000,
+      ),
+    ]);
+    await tester.pumpAndSettle();
 
     expect(find.byType(VideoBody), findsOneWidget);
     expect(find.byType(CorruptMediaPlaceholder), findsNothing);

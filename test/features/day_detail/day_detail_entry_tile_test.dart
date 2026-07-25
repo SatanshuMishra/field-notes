@@ -148,7 +148,8 @@ void main() {
 
     final LruVideoSlots slots = LruVideoSlots(cap: 1);
     addTearDown(slots.dispose);
-    expect(slots.acquire(onEvicted: () {}), isNotNull);
+    final VideoSlotToken? occupant = slots.acquire(onEvicted: () {});
+    slots.pin(occupant);
 
     final Entry entry = entryOf(
       type: EntryType.video,

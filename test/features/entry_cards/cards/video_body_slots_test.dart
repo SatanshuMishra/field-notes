@@ -95,13 +95,19 @@ LruVideoSlots _slotsWithCapOf(int cap) {
   return slots;
 }
 
+VideoSlotToken? _pinnedOccupantOf(VideoSlots slots) {
+  final VideoSlotToken? token = slots.acquire(onEvicted: () {});
+  slots.pin(token);
+  return token;
+}
+
 void main() {
   group('VideoBody decoder slot gating', () {
     testWidgets('renders neutral with disabled controls when the cap denies a '
         'slot', (WidgetTester tester) async {
       final LruVideoSlots slots = _slotsWithCapOf(1);
-      final VideoSlotToken? occupant = slots.acquire(onEvicted: () {});
-      expect(occupant, isNotNull);
+      final VideoSlotToken? occupant = _pinnedOccupantOf(slots);
+      expect(slots.holds(occupant), isTrue);
 
       final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
       await tester.pumpWidget(
@@ -125,7 +131,7 @@ void main() {
       WidgetTester tester,
     ) async {
       final LruVideoSlots slots = _slotsWithCapOf(1);
-      final VideoSlotToken? occupant = slots.acquire(onEvicted: () {});
+      final VideoSlotToken? occupant = _pinnedOccupantOf(slots);
       final File file = _videoFile();
       final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
 

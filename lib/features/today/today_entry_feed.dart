@@ -101,6 +101,7 @@ class TodayEntryTile extends ConsumerWidget {
       photos: photos,
       audioPlayerFactory: ref.watch(todayAudioPlayerFactoryProvider),
       videoPlayerFactory: ref.watch(todayVideoPlayerFactoryProvider),
+      videoSlots: ref.watch(videoSlotsProvider),
     );
   }
 }
