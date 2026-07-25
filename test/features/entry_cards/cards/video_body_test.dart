@@ -14,8 +14,9 @@ import '../support/fake_video_player.dart';
 
 void main() {
   group('VideoBody', () {
-    testWidgets('shows the thumbnail and duration before playback',
-        (WidgetTester tester) async {
+    testWidgets('shows the thumbnail and duration before playback', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         cardHarness(
           VideoBody(
@@ -43,8 +44,9 @@ void main() {
       );
     });
 
-    testWidgets('loads and mounts the player surface on play',
-        (WidgetTester tester) async {
+    testWidgets('loads and mounts the player surface on play', (
+      WidgetTester tester,
+    ) async {
       final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
       final FakeMediaResolver resolver = FakeMediaResolver()
         ..set(
@@ -86,8 +88,9 @@ void main() {
       );
     });
 
-    testWidgets('shows a non-destructive placeholder for missing video',
-        (WidgetTester tester) async {
+    testWidgets('shows a non-destructive placeholder for missing video', (
+      WidgetTester tester,
+    ) async {
       final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
       await tester.pumpWidget(
         cardHarness(
@@ -110,6 +113,98 @@ void main() {
 
       expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
       expect(player.loadCalls, isEmpty);
+    });
+
+    testWidgets(
+      'shows the play affordance instead of a corrupt placeholder when no poster was captured',
+      (WidgetTester tester) async {
+        final FakeMediaResolver resolver = FakeMediaResolver()
+          ..set(
+            'vid',
+            ResolvedMedia.available(
+              blob: blobOf(id: 'vid', relPath: 'v.mp4', kind: MediaKind.video),
+              file: File('/tmp/v.mp4'),
+            ),
+          );
+
+        await tester.pumpWidget(
+          cardHarness(
+            VideoBody(
+              entry: entryOf(
+                type: EntryType.video,
+                mediaId: 'vid',
+                thumbnailMediaId: null,
+                durationMs: 65000,
+              ),
+              resolver: resolver,
+              playerFactory: () => FakeEntryVideoPlayer(),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+        expect(
+          find.byKey(const ValueKey<String>('video-play-toggle')),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('keeps a working play/pause control reachable while playing', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      try {
+        final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+        final FakeMediaResolver resolver = FakeMediaResolver()
+          ..set(
+            'vid',
+            ResolvedMedia.available(
+              blob: blobOf(id: 'vid', relPath: 'v.mp4', kind: MediaKind.video),
+              file: File('/tmp/v.mp4'),
+            ),
+          );
+
+        await tester.pumpWidget(
+          cardHarness(
+            VideoBody(
+              entry: entryOf(
+                type: EntryType.video,
+                mediaId: 'vid',
+                thumbnailMediaId: 'thumb',
+                durationMs: 65000,
+              ),
+              resolver: resolver,
+              playerFactory: () => player,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('video-play-toggle')),
+        );
+        await tester.pump();
+
+        player.emitState(VideoPlaybackState.playing);
+        await tester.pump();
+
+        expect(
+          find.byKey(const ValueKey<String>('video-play-toggle')),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel('Pause video'), findsOneWidget);
+
+        await tester.tap(
+          find.byKey(const ValueKey<String>('video-play-toggle')),
+        );
+        await tester.pump();
+
+        expect(player.pauseCalls, 1);
+      } finally {
+        handle.dispose();
+      }
     });
   });
 }
