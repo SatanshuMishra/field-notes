@@ -19,7 +19,7 @@ VideoPlaybackState videoStateFromValue({
   if (!isInitialized) {
     return current;
   }
-  if (isCompleted) {
+  if (isCompleted && !isPlaying) {
     return VideoPlaybackState.completed;
   }
   return isPlaying ? VideoPlaybackState.playing : VideoPlaybackState.paused;

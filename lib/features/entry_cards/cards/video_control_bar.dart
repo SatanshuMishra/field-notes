@@ -18,6 +18,8 @@ class VideoControlBar extends StatelessWidget {
     required this.total,
     required this.muted,
     required this.onSeek,
+    required this.onScrubUpdate,
+    required this.onScrubEnd,
     required this.onToggleMute,
   });
 
@@ -25,6 +27,8 @@ class VideoControlBar extends StatelessWidget {
   final Duration? total;
   final bool muted;
   final ValueChanged<Duration>? onSeek;
+  final ValueChanged<Duration>? onScrubUpdate;
+  final VoidCallback? onScrubEnd;
   final VoidCallback? onToggleMute;
 
   @override
@@ -44,6 +48,8 @@ class VideoControlBar extends StatelessWidget {
                 position: position,
                 total: total,
                 onSeek: onSeek,
+                onScrubUpdate: onScrubUpdate,
+                onScrubEnd: onScrubEnd,
               ),
             ),
             const SizedBox(width: 8),

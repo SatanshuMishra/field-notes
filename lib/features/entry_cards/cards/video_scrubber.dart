@@ -7,7 +7,7 @@ import '../util/duration_format.dart';
 const double scrubberHeight = 48;
 const double _trackHeight = 8;
 const double _trackRadius = _trackHeight / 2;
-const double _handleRadius = 7;
+const double scrubberHandleRadius = 7.0;
 const double _focusStroke = 3;
 const Duration scrubberKeyboardStep = Duration(seconds: 5);
 
@@ -49,11 +49,15 @@ class VideoScrubber extends StatefulWidget {
     required this.position,
     required this.total,
     required this.onSeek,
+    required this.onScrubUpdate,
+    required this.onScrubEnd,
   });
 
   final Duration position;
   final Duration? total;
   final ValueChanged<Duration>? onSeek;
+  final ValueChanged<Duration>? onScrubUpdate;
+  final VoidCallback? onScrubEnd;
 
   @override
   State<VideoScrubber> createState() => _VideoScrubberState();
@@ -61,6 +65,7 @@ class VideoScrubber extends StatefulWidget {
 
 class _VideoScrubberState extends State<VideoScrubber> {
   bool _focused = false;
+  Duration? _dragPosition;
 
   Duration? get _total {
     final Duration? total = widget.total;
@@ -77,7 +82,7 @@ class _VideoScrubberState extends State<VideoScrubber> {
     if (total == null) {
       return Duration.zero;
     }
-    return clampPlaybackPosition(widget.position, total);
+    return clampPlaybackPosition(_dragPosition ?? widget.position, total);
   }
 
   double get _fraction {
@@ -104,13 +109,41 @@ class _VideoScrubberState extends State<VideoScrubber> {
     onSeek(clampPlaybackPosition(position, total));
   }
 
-  void _seekToOffset(double dx, double width) {
+  Duration? _positionForOffset(double dx, double width) {
     final Duration? total = _total;
-    if (total == null || !width.isFinite || width <= 0) {
+    final double span = width - scrubberHandleRadius * 2;
+    if (total == null || !width.isFinite || span <= 0) {
+      return null;
+    }
+    final double fraction =
+        ((dx - scrubberHandleRadius) / span).clamp(0.0, 1.0);
+    return Duration(milliseconds: (total.inMilliseconds * fraction).round());
+  }
+
+  void _seekToOffset(double dx, double width) {
+    final Duration? position = _positionForOffset(dx, width);
+    if (position == null) {
       return;
     }
-    final double fraction = (dx / width).clamp(0.0, 1.0);
-    _emit(Duration(milliseconds: (total.inMilliseconds * fraction).round()));
+    _emit(position);
+  }
+
+  void _previewOffset(double dx, double width) {
+    final Duration? position = _positionForOffset(dx, width);
+    if (position == null) {
+      return;
+    }
+    setState(() => _dragPosition = position);
+    widget.onScrubUpdate?.call(position);
+  }
+
+  void _endDrag() {
+    final Duration? position = _dragPosition;
+    setState(() => _dragPosition = null);
+    if (position != null) {
+      _emit(position);
+    }
+    widget.onScrubEnd?.call();
   }
 
   Duration _stepped(int steps) {
@@ -178,12 +211,15 @@ class _VideoScrubberState extends State<VideoScrubber> {
                   : null,
               onHorizontalDragStart: enabled
                   ? (DragStartDetails details) =>
-                      _seekToOffset(details.localPosition.dx, width)
+                      _previewOffset(details.localPosition.dx, width)
                   : null,
               onHorizontalDragUpdate: enabled
                   ? (DragUpdateDetails details) =>
-                      _seekToOffset(details.localPosition.dx, width)
+                      _previewOffset(details.localPosition.dx, width)
                   : null,
+              onHorizontalDragEnd:
+                  enabled ? (DragEndDetails details) => _endDrag() : null,
+              onHorizontalDragCancel: enabled ? _endDrag : null,
               child: Opacity(
                 opacity: enabled ? 1.0 : 0.5,
                 child: SizedBox(
@@ -212,8 +248,8 @@ class _ScrubberPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double left = _handleRadius;
-    final double right = size.width - _handleRadius;
+    final double left = scrubberHandleRadius;
+    final double right = size.width - scrubberHandleRadius;
     if (right <= left) {
       return;
     }
@@ -249,10 +285,10 @@ class _ScrubberPainter extends CustomPainter {
     );
 
     final Offset handle = Offset(left + filled, centerY);
-    canvas.drawCircle(handle, _handleRadius, Paint()..color = Palette.coral);
+    canvas.drawCircle(handle, scrubberHandleRadius, Paint()..color = Palette.coral);
     canvas.drawCircle(
       handle,
-      _handleRadius,
+      scrubberHandleRadius,
       Paint()
         ..color = Palette.ink
         ..style = PaintingStyle.stroke

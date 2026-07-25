@@ -26,12 +26,21 @@ void main() {
         expected: VideoPlaybackState.completed,
       ),
       (
-        name: 'maps completed ahead of a stale isPlaying flag',
+        name: 'maps a seek to the end during playback to playing',
         hasError: false,
         isInitialized: true,
         isCompleted: true,
         isPlaying: true,
         current: VideoPlaybackState.playing,
+        expected: VideoPlaybackState.playing,
+      ),
+      (
+        name: 'maps a seek to the end while paused to completed',
+        hasError: false,
+        isInitialized: true,
+        isCompleted: true,
+        isPlaying: false,
+        current: VideoPlaybackState.paused,
         expected: VideoPlaybackState.completed,
       ),
       (

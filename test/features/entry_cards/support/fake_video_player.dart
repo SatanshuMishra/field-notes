@@ -15,6 +15,7 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
   final List<double> volumeCalls = <double>[];
   int playCalls = 0;
   int pauseCalls = 0;
+  Object? seekError;
   VideoPlaybackState _state = VideoPlaybackState.idle;
 
   void emitState(VideoPlaybackState state) {
@@ -34,7 +35,13 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
   Future<void> pause() async => pauseCalls++;
 
   @override
-  Future<void> seek(Duration position) async => seekCalls.add(position);
+  Future<void> seek(Duration position) async {
+    final Object? error = seekError;
+    if (error != null) {
+      throw error;
+    }
+    seekCalls.add(position);
+  }
 
   @override
   Future<void> setVolume(double volume) async => volumeCalls.add(volume);

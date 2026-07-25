@@ -47,6 +47,7 @@ class _VideoBodyState extends State<VideoBody> {
   bool _unavailable = false;
   bool _ready = false;
   bool _hasPlayed = false;
+  bool _scrubbing = false;
 
   @override
   void initState() {
@@ -123,10 +124,28 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   void _onPosition(Duration position) {
-    if (!mounted) {
+    if (!mounted || _scrubbing) {
       return;
     }
     setState(() => _position = position);
+  }
+
+  void _onScrubUpdate(Duration position) {
+    final Duration? total = _total;
+    if (!mounted || total == null) {
+      return;
+    }
+    setState(() {
+      _scrubbing = true;
+      _position = clampPlaybackPosition(position, total);
+    });
+  }
+
+  void _onScrubEnd() {
+    if (!mounted) {
+      return;
+    }
+    _scrubbing = false;
   }
 
   bool get _isPlaying => _state == VideoPlaybackState.playing;
@@ -155,11 +174,16 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     final Duration target = clampPlaybackPosition(position, total);
+    final Duration previous = _position;
     setState(() => _position = target);
     try {
       await player.seek(target);
     } catch (error, stackTrace) {
       debugPrint('Video seek failed: $error\n$stackTrace');
+      if (!mounted) {
+        return;
+      }
+      setState(() => _position = previous);
     }
   }
 
@@ -260,6 +284,8 @@ class _VideoBodyState extends State<VideoBody> {
               total: _total,
               muted: _muted,
               onSeek: _ready ? _seek : null,
+              onScrubUpdate: _ready ? _onScrubUpdate : null,
+              onScrubEnd: _ready ? _onScrubEnd : null,
               onToggleMute: _ready ? _toggleMute : null,
             ),
           ),

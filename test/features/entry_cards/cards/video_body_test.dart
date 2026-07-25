@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
+import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
@@ -86,7 +87,30 @@ void main() {
       );
     });
 
-    testWidgets('seeks while dragging along the scrub bar', (
+    testWidgets('maps a tap to the inset track the handle is painted on', (
+      WidgetTester tester,
+    ) async {
+      final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+      await tester.pumpWidget(
+        _videoCard(resolver: _resolverWithVideo(), player: player),
+      );
+      await tester.pump();
+
+      final Rect bar = tester.getRect(find.byKey(_scrubBar));
+      await tester.tapAt(Offset(bar.left + scrubberHandleRadius, bar.center.dy));
+      await tester.pump();
+
+      expect(player.seekCalls, <Duration>[Duration.zero]);
+
+      await tester.tapAt(
+        Offset(bar.right - scrubberHandleRadius, bar.center.dy),
+      );
+      await tester.pump();
+
+      expect(player.seekCalls.last, const Duration(milliseconds: 65000));
+    });
+
+    testWidgets('coalesces a drag into a single seek at the released offset', (
       WidgetTester tester,
     ) async {
       final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
@@ -100,12 +124,69 @@ void main() {
         Offset(bar.left + 1, bar.center.dy),
       );
       await gesture.moveTo(Offset(bar.center.dx, bar.center.dy));
+      await tester.pump();
+
+      expect(player.seekCalls, isEmpty);
+      expect(find.text('0:32 / 1:05'), findsOneWidget);
+
       await gesture.moveTo(Offset(bar.right + 40, bar.center.dy));
       await gesture.up();
       await tester.pump();
 
-      expect(player.seekCalls.first.inMilliseconds, closeTo(32500, 2000));
-      expect(player.seekCalls.last, const Duration(milliseconds: 65000));
+      expect(player.seekCalls, <Duration>[const Duration(milliseconds: 65000)]);
+    });
+
+    testWidgets('ignores polled positions while the handle is being dragged', (
+      WidgetTester tester,
+    ) async {
+      final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+      await tester.pumpWidget(
+        _videoCard(resolver: _resolverWithVideo(), player: player),
+      );
+      await tester.pump();
+
+      final Rect bar = tester.getRect(find.byKey(_scrubBar));
+      final TestGesture gesture = await tester.startGesture(
+        Offset(bar.center.dx - 40, bar.center.dy),
+      );
+      await gesture.moveTo(Offset(bar.center.dx, bar.center.dy));
+      await tester.pump();
+
+      player.emitPosition(const Duration(seconds: 3));
+      await tester.pump();
+
+      expect(find.text('0:32 / 1:05'), findsOneWidget);
+
+      await gesture.up();
+      await tester.pump();
+
+      player.emitPosition(const Duration(seconds: 40));
+      await tester.pump();
+
+      expect(find.text('0:40 / 1:05'), findsOneWidget);
+    });
+
+    testWidgets('restores the previous position when a seek fails', (
+      WidgetTester tester,
+    ) async {
+      final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+      await tester.pumpWidget(
+        _videoCard(resolver: _resolverWithVideo(), player: player),
+      );
+      await tester.pump();
+
+      player.emitPosition(const Duration(seconds: 12));
+      await tester.pump();
+
+      expect(find.text('0:12 / 1:05'), findsOneWidget);
+
+      player.seekError = StateError('seek rejected');
+      final Rect bar = tester.getRect(find.byKey(_scrubBar));
+      await tester.tapAt(Offset(bar.center.dx, bar.center.dy));
+      await tester.pump();
+
+      expect(player.seekCalls, isEmpty);
+      expect(find.text('0:12 / 1:05'), findsOneWidget);
     });
 
     testWidgets('seeks with the keyboard while the scrub bar holds focus', (
