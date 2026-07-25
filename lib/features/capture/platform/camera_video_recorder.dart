@@ -245,6 +245,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       cameraMode: CameraMacOSMode.video,
       fit: BoxFit.cover,
       useMovieFileOutput: true,
+      pictureFormat: PictureFormat.jpg,
       onCameraInizialized: (CameraMacOSController controller) =>
           _onControllerReady(ready, controller),
       onCameraLoading: (Object? error) {
