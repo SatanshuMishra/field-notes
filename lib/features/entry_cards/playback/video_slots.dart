@@ -16,6 +16,7 @@ final class VideoSlotToken {
 
 abstract interface class VideoSlots {
   VideoSlotToken? acquire({required VideoSlotEviction onEvicted});
+  bool holds(VideoSlotToken? token);
   void release(VideoSlotToken? token);
   void pin(VideoSlotToken? token);
   void unpin(VideoSlotToken? token);
@@ -51,9 +52,16 @@ final class LruVideoSlots implements VideoSlots {
       LinkedHashMap<VideoSlotToken, _SlotHolder>();
   final List<VideoSlotFreedListener> _slotFreedListeners =
       <VideoSlotFreedListener>[];
+  final Set<VideoSlotToken> _granting = <VideoSlotToken>{};
+  bool _notifying = false;
+  bool _notifyPending = false;
+  bool _disposed = false;
 
   @override
   VideoSlotToken? acquire({required VideoSlotEviction onEvicted}) {
+    if (_disposed) {
+      return null;
+    }
     if (_holders.length < cap) {
       return _grant(onEvicted);
     }
@@ -61,31 +69,56 @@ final class LruVideoSlots implements VideoSlots {
     if (victim == null) {
       return null;
     }
-    final _SlotHolder? evicted = _holders.remove(victim);
+    final _SlotHolder evicted = _holders.remove(victim)!;
     final VideoSlotToken token = _grant(onEvicted);
-    if (evicted != null) {
+    _granting.add(token);
+    try {
       _invoke(evicted.onEvicted);
+    } finally {
+      _granting.remove(token);
     }
     return token;
   }
 
   @override
+  bool holds(VideoSlotToken? token) =>
+      token != null && _holders.containsKey(token);
+
+  @override
   void release(VideoSlotToken? token) {
-    if (token == null || _holders.remove(token) == null) {
+    if (token == null || _disposed || _holders.remove(token) == null) {
       return;
     }
     _notifySlotFreed();
   }
 
   @override
-  void pin(VideoSlotToken? token) => _setPinned(token, true);
+  void pin(VideoSlotToken? token) {
+    if (token == null || _disposed) {
+      return;
+    }
+    final _SlotHolder? holder = _holders[token];
+    if (holder == null || holder.pinned) {
+      return;
+    }
+    _holders[token] = holder.withPinned(true);
+  }
 
   @override
-  void unpin(VideoSlotToken? token) => _setPinned(token, false);
+  void unpin(VideoSlotToken? token) {
+    if (token == null || _disposed) {
+      return;
+    }
+    final _SlotHolder? holder = _holders.remove(token);
+    if (holder == null) {
+      return;
+    }
+    _holders[token] = holder.withPinned(false);
+  }
 
   @override
   void touch(VideoSlotToken? token) {
-    if (token == null) {
+    if (token == null || _disposed) {
       return;
     }
     final _SlotHolder? holder = _holders.remove(token);
@@ -97,7 +130,7 @@ final class LruVideoSlots implements VideoSlots {
 
   @override
   void addSlotFreedListener(VideoSlotFreedListener listener) {
-    if (_slotFreedListeners.contains(listener)) {
+    if (_disposed || _slotFreedListeners.contains(listener)) {
       return;
     }
     _slotFreedListeners.add(listener);
@@ -110,8 +143,17 @@ final class LruVideoSlots implements VideoSlots {
 
   @override
   void dispose() {
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    final List<_SlotHolder> abandoned = List<_SlotHolder>.of(_holders.values);
     _holders.clear();
+    _granting.clear();
     _slotFreedListeners.clear();
+    for (final _SlotHolder holder in abandoned) {
+      _invoke(holder.onEvicted);
+    }
   }
 
   VideoSlotToken _grant(VideoSlotEviction onEvicted) {
@@ -123,25 +165,33 @@ final class LruVideoSlots implements VideoSlots {
   VideoSlotToken? _leastRecentlyUsedUnpinned() {
     for (final MapEntry<VideoSlotToken, _SlotHolder> entry
         in _holders.entries) {
-      if (!entry.value.pinned) {
-        return entry.key;
+      if (entry.value.pinned || _granting.contains(entry.key)) {
+        continue;
       }
+      return entry.key;
     }
     return null;
   }
 
-  void _setPinned(VideoSlotToken? token, bool pinned) {
-    if (token == null) {
+  void _notifySlotFreed() {
+    if (_notifying) {
+      _notifyPending = true;
       return;
     }
-    final _SlotHolder? holder = _holders[token];
-    if (holder == null || holder.pinned == pinned) {
-      return;
+    _notifying = true;
+    try {
+      _runSlotFreedPass();
+      while (_notifyPending) {
+        _notifyPending = false;
+        _runSlotFreedPass();
+      }
+    } finally {
+      _notifying = false;
+      _notifyPending = false;
     }
-    _holders[token] = holder.withPinned(pinned);
   }
 
-  void _notifySlotFreed() {
+  void _runSlotFreedPass() {
     for (final VideoSlotFreedListener listener
         in List<VideoSlotFreedListener>.of(_slotFreedListeners)) {
       if (!_slotFreedListeners.contains(listener)) {
@@ -175,6 +225,9 @@ final class UnlimitedVideoSlots implements VideoSlots {
   @override
   VideoSlotToken acquire({required VideoSlotEviction onEvicted}) =>
       VideoSlotToken._();
+
+  @override
+  bool holds(VideoSlotToken? token) => token != null;
 
   @override
   void release(VideoSlotToken? token) {}

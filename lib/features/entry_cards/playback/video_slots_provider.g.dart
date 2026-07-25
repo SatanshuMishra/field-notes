@@ -48,4 +48,4 @@ final class VideoSlotsProvider
   }
 }
 
-String _$videoSlotsHash() => r'eb3b7ac5427f589beb35c7c867b11ebaf9ce9904';
+String _$videoSlotsHash() => r'cfbab1e41a854fa7864b3e97dcfca7caa24469c1';

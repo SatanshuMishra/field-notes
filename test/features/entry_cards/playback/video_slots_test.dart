@@ -45,15 +45,36 @@ void main() {
       expect(evicted, <String>['holder0']);
     });
 
+    test('reports whether a token still holds a slot', () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 1);
+      final LruVideoSlots other = LruVideoSlots(cap: 1);
+      final VideoSlotToken? token = slots.acquire(onEvicted: evictionOf('a'));
+      final VideoSlotToken? foreign =
+          other.acquire(onEvicted: evictionOf('foreign'));
+      expect(token, isNotNull);
+      expect(foreign, isNotNull);
+
+      expect(slots.holds(token), isTrue);
+      expect(slots.holds(foreign), isFalse);
+      expect(slots.holds(null), isFalse);
+
+      slots.release(token);
+
+      expect(slots.holds(token), isFalse);
+    });
+
     test('evicts the least recently used unpinned holder at the cap', () {
       final LruVideoSlots slots = LruVideoSlots(cap: 2);
-      slots.acquire(onEvicted: evictionOf('a'));
-      slots.acquire(onEvicted: evictionOf('b'));
+      final VideoSlotToken? first = slots.acquire(onEvicted: evictionOf('a'));
+      final VideoSlotToken? second = slots.acquire(onEvicted: evictionOf('b'));
 
       final VideoSlotToken? third = slots.acquire(onEvicted: evictionOf('c'));
 
       expect(third, isNotNull);
       expect(evicted, <String>['a']);
+      expect(slots.holds(first), isFalse);
+      expect(slots.holds(second), isTrue);
+      expect(slots.holds(third), isTrue);
     });
 
     test('notifies only the evicted holder and only once', () {
@@ -134,21 +155,52 @@ void main() {
       expect(evicted, isEmpty);
     });
 
-    test('clears the pin as well as the slot when a pinned holder releases',
-        () {
-      final LruVideoSlots slots = LruVideoSlots(cap: 2);
-      final VideoSlotToken? first = slots.acquire(onEvicted: evictionOf('a'));
-      final VideoSlotToken? second = slots.acquire(onEvicted: evictionOf('b'));
-      expect(first, isNotNull);
-      expect(second, isNotNull);
-      slots.pin(first);
-      slots.pin(second);
+    test('does not resurrect a released token through pin, touch or unpin', () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 3);
+      final VideoSlotToken? dead = slots.acquire(onEvicted: evictionOf('dead'));
+      slots.acquire(onEvicted: evictionOf('b'));
+      slots.acquire(onEvicted: evictionOf('c'));
+      expect(dead, isNotNull);
+      slots.release(dead);
+      expect(slots.holds(dead), isFalse);
 
-      slots.release(first);
+      slots.pin(dead);
+      slots.touch(dead);
+      slots.unpin(dead);
 
-      expect(slots.acquire(onEvicted: evictionOf('c')), isNotNull);
+      expect(slots.holds(dead), isFalse);
       expect(slots.acquire(onEvicted: evictionOf('d')), isNotNull);
-      expect(evicted, <String>['c']);
+      expect(evicted, isEmpty);
+      expect(slots.acquire(onEvicted: evictionOf('e')), isNotNull);
+      expect(evicted, <String>['b']);
+    });
+
+    test('leaves a holder where it is in the eviction order when it pins', () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 3);
+      final VideoSlotToken? first = slots.acquire(onEvicted: evictionOf('a'));
+      slots.acquire(onEvicted: evictionOf('b'));
+      slots.acquire(onEvicted: evictionOf('c'));
+      expect(first, isNotNull);
+
+      slots.pin(first);
+      slots.dispose();
+
+      expect(evicted, <String>['a', 'b', 'c']);
+    });
+
+    test('refreshes recency when a holder unpins', () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 3);
+      final VideoSlotToken? first = slots.acquire(onEvicted: evictionOf('a'));
+      slots.acquire(onEvicted: evictionOf('b'));
+      slots.acquire(onEvicted: evictionOf('c'));
+      expect(first, isNotNull);
+      slots.pin(first);
+
+      slots.unpin(first);
+
+      expect(slots.acquire(onEvicted: evictionOf('d')), isNotNull);
+      expect(evicted, <String>['b']);
+      expect(slots.holds(first), isTrue);
     });
 
     test('spares a touched holder from being the next eviction victim', () {
@@ -198,6 +250,93 @@ void main() {
       expect(evicted, <String>['reentrant', 'b']);
     });
 
+    test('coalesces slot freed notification when a listener releases in turn',
+        () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 3);
+      final VideoSlotToken? first = slots.acquire(onEvicted: evictionOf('a'));
+      final VideoSlotToken? second = slots.acquire(onEvicted: evictionOf('b'));
+      expect(first, isNotNull);
+      expect(second, isNotNull);
+      int depth = 0;
+      int deepest = 0;
+      slots.addSlotFreedListener(() {
+        depth += 1;
+        deepest = depth > deepest ? depth : deepest;
+        freed.add('cascade');
+        slots.release(second);
+        depth -= 1;
+      });
+      slots.addSlotFreedListener(freedListener('observer'));
+
+      slots.release(first);
+
+      expect(deepest, 1);
+      expect(freed, <String>['cascade', 'observer', 'cascade', 'observer']);
+    });
+
+    test('never evicts an in-flight grant from a reentrant acquire at cap one',
+        () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 1);
+      VideoSlotToken? inner;
+      bool innerAttempted = false;
+      slots.acquire(onEvicted: () {
+        evicted.add('victim');
+        innerAttempted = true;
+        inner = slots.acquire(onEvicted: evictionOf('inner'));
+      });
+
+      final VideoSlotToken? outer = slots.acquire(onEvicted: evictionOf('outer'));
+
+      expect(innerAttempted, isTrue);
+      expect(inner, isNull);
+      expect(outer, isNotNull);
+      expect(evicted, <String>['victim']);
+      expect(slots.holds(outer), isTrue);
+    });
+
+    test('spares an in-flight grant when a reentrant acquire has no other victim',
+        () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 2);
+      VideoSlotToken? inner;
+      slots.acquire(onEvicted: () {
+        evicted.add('victim');
+        inner = slots.acquire(onEvicted: evictionOf('inner'));
+      });
+      final VideoSlotToken? pinned =
+          slots.acquire(onEvicted: evictionOf('pinned'));
+      expect(pinned, isNotNull);
+      slots.pin(pinned);
+
+      final VideoSlotToken? outer = slots.acquire(onEvicted: evictionOf('outer'));
+
+      expect(inner, isNull);
+      expect(outer, isNotNull);
+      expect(evicted, <String>['victim']);
+      expect(slots.holds(outer), isTrue);
+      expect(slots.holds(pinned), isTrue);
+    });
+
+    test('lets a reentrant acquire evict a genuinely different holder', () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 2);
+      VideoSlotToken? inner;
+      slots.acquire(onEvicted: () {
+        evicted.add('victim');
+        inner = slots.acquire(onEvicted: evictionOf('inner'));
+      });
+      final VideoSlotToken? survivor =
+          slots.acquire(onEvicted: evictionOf('survivor'));
+      expect(survivor, isNotNull);
+
+      final VideoSlotToken? outer = slots.acquire(onEvicted: evictionOf('outer'));
+
+      expect(outer, isNotNull);
+      expect(inner, isNotNull);
+      expect(evicted, <String>['victim', 'survivor']);
+      expect(slots.holds(outer), isTrue);
+      expect(slots.holds(inner), isTrue);
+      expect(slots.holds(survivor), isFalse);
+    });
+
     test('reports a throwing eviction callback and keeps granting', () {
       final List<Object> errors = <Object>[];
       final LruVideoSlots slots = LruVideoSlots(
@@ -215,20 +354,42 @@ void main() {
       expect(evicted, <String>['b']);
     });
 
-    test('drops slot freed listeners on dispose', () {
-      final LruVideoSlots slots = LruVideoSlots(cap: 2);
+    test('tears down every live holder and latches shut on dispose', () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 3);
       slots.addSlotFreedListener(freedListener('waiting'));
       final VideoSlotToken? first = slots.acquire(onEvicted: evictionOf('a'));
+      final VideoSlotToken? second = slots.acquire(onEvicted: evictionOf('b'));
       expect(first, isNotNull);
-      slots.release(first);
-      expect(freed, <String>['waiting']);
+      expect(second, isNotNull);
+      slots.pin(second);
 
       slots.dispose();
 
-      final VideoSlotToken? second = slots.acquire(onEvicted: evictionOf('b'));
-      expect(second, isNotNull);
-      slots.release(second);
-      expect(freed, <String>['waiting']);
+      expect(evicted, <String>['a', 'b']);
+      expect(slots.holds(first), isFalse);
+      expect(slots.holds(second), isFalse);
+      expect(freed, isEmpty);
+      expect(slots.acquire(onEvicted: evictionOf('c')), isNull);
+    });
+
+    test('ignores every mutator once disposed', () {
+      final LruVideoSlots slots = LruVideoSlots(cap: 2);
+      final VideoSlotToken? first = slots.acquire(onEvicted: evictionOf('a'));
+      expect(first, isNotNull);
+
+      slots.dispose();
+      expect(evicted, <String>['a']);
+
+      slots.addSlotFreedListener(freedListener('late'));
+      slots.release(first);
+      slots.pin(first);
+      slots.touch(first);
+      slots.unpin(first);
+      slots.dispose();
+
+      expect(evicted, <String>['a']);
+      expect(freed, isEmpty);
+      expect(slots.holds(first), isFalse);
     });
 
     test('rejects a cap below one', () {
@@ -253,6 +414,9 @@ void main() {
 
       expect(tokens.toSet(), hasLength(tokens.length));
       expect(evicted, isEmpty);
+      expect(slots.holds(tokens.first), isTrue);
+      expect(slots.holds(tokens.last), isTrue);
+      expect(slots.holds(null), isFalse);
     });
 
     test('ignores release, pin, touch and listener calls', () {
