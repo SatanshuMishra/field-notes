@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
@@ -13,6 +14,19 @@ import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 import '../support/entry_cards_harness.dart';
 import '../support/fake_video_player.dart';
 import '../support/video_card_harness.dart';
+
+class _GatedMediaResolver implements MediaResolver {
+  _GatedMediaResolver(this._inner);
+
+  final MediaResolver _inner;
+  final Completer<void> gate = Completer<void>();
+
+  @override
+  Future<ResolvedMedia> resolve(String? mediaId) async {
+    await gate.future;
+    return _inner.resolve(mediaId);
+  }
+}
 
 FakeMediaResolver _posterOnlyResolver() => FakeMediaResolver()
   ..set(
@@ -182,6 +196,57 @@ void main() {
         );
         expect(built, hasLength(1));
         expect(built.single.loadCalls, <String>[file.path]);
+      },
+    );
+
+    testWidgets(
+      'a resolver swap mid-resolve leaves a gated tap claiming nothing',
+      (WidgetTester tester) async {
+        final RecordingVideoSlots slots = recordingSlotsWithCapOf(1);
+        final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
+        final File file = videoFixtureFile();
+        final File poster = posterFixtureFile();
+        final EntryVideoPlayerFactory playerFactory = videoFactoryInto(built);
+        final _GatedMediaResolver staleResolver = _GatedMediaResolver(
+          videoResolverFor(file, poster: poster),
+        );
+
+        await tester.pumpWidget(
+          videoCardColumn(
+            resolver: staleResolver,
+            playerFactory: playerFactory,
+            slots: slots,
+            indices: <int>[0],
+            thumbnailMediaId: 'thumb',
+          ),
+        );
+        await tester.pump();
+
+        await tester.tap(inCard(0, videoPlayToggleKey));
+        await tester.pump();
+
+        expect(slots.acquireCalls, isEmpty);
+        expect(staleResolver.gate.isCompleted, isFalse);
+
+        await tester.pumpWidget(
+          videoCardColumn(
+            resolver: videoResolverFor(file, poster: poster),
+            playerFactory: playerFactory,
+            slots: slots,
+            indices: <int>[0],
+            thumbnailMediaId: 'thumb',
+          ),
+        );
+        await tester.pump();
+
+        staleResolver.gate.complete();
+        await tester.pump();
+        await tester.pump();
+        await tester.pump();
+
+        expect(slots.acquireCalls, isEmpty);
+        expect(built, isEmpty);
+        expect(tapEnabled(tester, inCard(0, videoPlayToggleKey)), isTrue);
       },
     );
 

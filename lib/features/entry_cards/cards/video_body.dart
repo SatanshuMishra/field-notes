@@ -88,6 +88,9 @@ class _VideoBodyState extends State<VideoBody> {
     final bool staysGated = _hasCapturedPoster && _needsMediaResolution;
     _mediaFile = null;
     if (staysGated) {
+      _retryTimer?.cancel();
+      _generation += 1;
+      _playWhenReady = false;
       _enterPhase(_VideoPhase.waiting);
       return;
     }
@@ -331,7 +334,7 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     _guard(
-      _resolveThenLoad(VideoSlotEvictionRights.none),
+      _attemptLoad(VideoSlotEvictionRights.none),
       'Video slot wake-up failed',
     );
   }
@@ -567,11 +570,11 @@ class _VideoBodyState extends State<VideoBody> {
     _guard(_toggle(), 'Video playback toggle failed');
   }
 
-  Future<void> _claimSlotForIntent() =>
-      _resolveThenLoad(VideoSlotEvictionRights.evictUnpinned);
-
-  Future<void> _resolveThenLoad(VideoSlotEvictionRights rights) =>
-      _needsMediaResolution ? _prepare(rights) : _attemptLoad(rights);
+  Future<void> _claimSlotForIntent() {
+    const VideoSlotEvictionRights rights =
+        VideoSlotEvictionRights.evictUnpinned;
+    return _needsMediaResolution ? _prepare(rights) : _attemptLoad(rights);
+  }
 
   Future<void> _toggle() async {
     final EntryVideoPlayer? player = _player;
