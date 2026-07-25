@@ -1,13 +1,13 @@
 # Video poster-first decode gate and feed virtualization
 
-Status: proposed, not yet authorized for execution. Project name is **field-notes** (the on-disk directory `fireplace` is a legacy path only, not the product name).
+Status: AUTHORIZED for execution 2026-07-25, MSPs 1-3 only; MSP 4 remains unauthorized. Project name is **field-notes** (the on-disk directory `fireplace` is a legacy path only, not the product name).
 
 This spec is written for a fresh `mitosis` session with no memory of the analysis that produced it. Every claim about existing code below was verified against the repository at commit range ending `3a24ff6` on branch `fix/video-card-preview-and-controls`; line numbers are exact as of that point but may drift — re-verify with Read/Grep before editing, since the code, not this document, is the source of truth.
 
 ## Preconditions (blocking, read first)
 
-1. **PR #38 must land before any MSP in this spec starts.** Every seam this spec touches — `VideoSlots`/`LruVideoSlots` (`lib/features/entry_cards/playback/video_slots.dart`), the `VideoBody` phase machine (`lib/features/entry_cards/cards/video_body.dart`), and the controls overlay — was introduced on that PR. It is tracked at https://github.com/SatanshuMishra/field-notes/pull/38; per this repo's own continuity ledger (`.claude/ledger/threads/video-card-playback-controls.md`, "Status" section, updated 2026-07-25) the PR is **open and mergeable against `main`** (54 files, +7348/-267, 38 commits ahead of `origin/main`), with all nine of its own completion criteria met in code but **nothing hardware-confirmed** — a human macOS hardware run is still outstanding. A live fetch of the PR URL to re-confirm state at execution time is recommended; a WebFetch attempt during authoring returned 404 (likely an auth/tooling limitation, not evidence the PR is gone) — use `gh pr view 38` to reconfirm before starting.
-2. Do not start any MSP below against a tree that lacks these files. Either wait for PR #38 to merge to `main`, or branch this work from `fix/video-card-preview-and-controls` directly.
+1. **SATISFIED as of 2026-07-25.** PR #38 is **MERGED** to `main` as squash commit `da0a487` (verified via `gh pr view 38`). Every seam this spec touches — `VideoSlots`/`LruVideoSlots` (`lib/features/entry_cards/playback/video_slots.dart`), the `VideoBody` phase machine (`lib/features/entry_cards/cards/video_body.dart`), and the controls overlay — is now on `main`. Branch all MSP work from `main`. Note that merging did NOT perform the human macOS hardware run those nine criteria demand; that gap is tracked in the ledger thread and is independent of this spec's execution.
+2. Do not start any MSP below against a tree that lacks these files — confirm `lib/features/entry_cards/playback/video_slots.dart` exists on your base before editing.
 3. This project's CI runs no Dart tests (stated by the task owner; corroborated by the ledger's repeated warnings that "green checks on PR #38 are vacuous"). Treat every green GitHub check on any MSP branch as non-evidence. `flutter test` run locally, plus an eventual human macOS/Android hardware pass, are the only real gates.
 
 ## Problem
