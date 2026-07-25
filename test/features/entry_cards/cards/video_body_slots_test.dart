@@ -25,6 +25,7 @@ const List<Duration> _backoff = <Duration>[
   Duration(milliseconds: 20),
 ];
 const Duration _pastBackoff = Duration(milliseconds: 200);
+const String _busyNotice = "Can't start this video right now";
 
 typedef _PlayerSetup = void Function(FakeEntryVideoPlayer player, int index);
 
@@ -106,8 +107,8 @@ VideoSlotToken? _pinnedOccupantOf(VideoSlots slots) {
 
 void main() {
   group('VideoBody decoder slot gating', () {
-    testWidgets('renders neutral with a claim affordance when the cap denies a '
-        'slot', (WidgetTester tester) async {
+    testWidgets('renders neutral, then answers a tap with an announced refusal '
+        'when the cap denies a slot', (WidgetTester tester) async {
       final LruVideoSlots slots = _slotsWithCapOf(1);
       final VideoSlotToken? occupant = _pinnedOccupantOf(slots);
       expect(slots.holds(occupant), isTrue);
@@ -126,8 +127,18 @@ void main() {
       expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
       expect(built, isEmpty);
       expect(find.byKey(_surface), findsNothing);
+      expect(find.text(_busyNotice), findsNothing);
       expect(_enabled(tester, _playToggle), isTrue);
       expect(_enabled(tester, _muteToggle), isFalse);
+
+      await tester.tap(find.byKey(_playToggle));
+      await tester.pump();
+      await tester.pump();
+
+      expect(built, isEmpty);
+      expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+      expect(find.text(_busyNotice), findsOneWidget);
+      expect(_enabled(tester, _playToggle), isTrue);
     });
 
     testWidgets('a freed slot promotes a waiting card to loaded', (

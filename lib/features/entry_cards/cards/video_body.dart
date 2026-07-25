@@ -41,7 +41,7 @@ class VideoBody extends StatefulWidget {
   final EntryVideoPlayerFactory playerFactory;
   final VideoSlots slots;
   final Duration loadTimeout;
-  final Iterable<Duration> retryBackoff;
+  final List<Duration> retryBackoff;
 
   @override
   State<VideoBody> createState() => _VideoBodyState();
@@ -65,6 +65,7 @@ class _VideoBodyState extends State<VideoBody> {
   bool _listeningForSlots = false;
   bool _scrubbing = false;
   bool _playWhenReady = false;
+  bool _claimDenied = false;
 
   @override
   void initState() {
@@ -75,7 +76,8 @@ class _VideoBodyState extends State<VideoBody> {
   @override
   void didUpdateWidget(VideoBody oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (identical(oldWidget.resolver, widget.resolver)) {
+    if (identical(oldWidget.resolver, widget.resolver) &&
+        oldWidget.entry.mediaId == widget.entry.mediaId) {
       return;
     }
     _mediaFile = null;
@@ -121,17 +123,21 @@ class _VideoBodyState extends State<VideoBody> {
     if (!mounted || file == null) {
       return;
     }
-    final VideoSlotToken? token = widget.slots.acquire(
-      onEvicted: _onSlotEvicted,
-      evictionRights: rights,
-    );
+    final VideoSlotToken? token = _retainedSlot() ??
+        widget.slots.acquire(
+          onEvicted: _onSlotEvicted,
+          evictionRights: rights,
+        );
     if (token == null) {
-      _enterWaiting();
+      _enterWaiting(denied: rights == VideoSlotEvictionRights.evictUnpinned);
       return;
     }
     final int gen = ++_generation;
     _token = token;
-    setState(() => _enterPhase(_VideoPhase.preparing));
+    setState(() {
+      _claimDenied = false;
+      _enterPhase(_VideoPhase.preparing);
+    });
     final EntryVideoPlayer player = widget.playerFactory();
     _player = player;
     _subscribe(player);
@@ -162,6 +168,15 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     await _playIfRequested();
+  }
+
+  VideoSlotToken? _retainedSlot() {
+    final VideoSlotToken? token = _token;
+    if (token == null || !widget.slots.holds(token)) {
+      return null;
+    }
+    widget.slots.touch(token);
+    return token;
   }
 
   bool _isCurrentGeneration(int gen) => mounted && gen == _generation;
@@ -238,7 +253,7 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   void _scheduleRetry(VideoSlotEvictionRights rights) {
-    final Duration delay = widget.retryBackoff.elementAt(_attempt);
+    final Duration delay = widget.retryBackoff[_attempt];
     _retryTimer?.cancel();
     setState(() {
       _attempt += 1;
@@ -260,11 +275,12 @@ class _VideoBodyState extends State<VideoBody> {
     _phase = phase;
   }
 
-  void _enterWaiting() {
+  void _enterWaiting({bool denied = false}) {
     if (!mounted) {
       return;
     }
     _playWhenReady = false;
+    _claimDenied = _claimDenied || denied;
     _phase = _VideoPhase.waiting;
     _scrubbing = false;
     _listenForSlots();
@@ -332,12 +348,16 @@ class _VideoBodyState extends State<VideoBody> {
     unawaited(player?.dispose());
   }
 
-  void _releasePlayerAndSlot() {
-    _generation += 1;
-    _teardownPlayer();
+  void _releaseSlot() {
     final VideoSlotToken? token = _token;
     _token = null;
     widget.slots.release(token);
+  }
+
+  void _releasePlayerAndSlot() {
+    _generation += 1;
+    _teardownPlayer();
+    _releaseSlot();
   }
 
   void _markUnavailable() {
@@ -345,6 +365,7 @@ class _VideoBodyState extends State<VideoBody> {
       return;
     }
     _playWhenReady = false;
+    _releaseSlot();
     setState(() => _enterPhase(_VideoPhase.unavailable));
   }
 
@@ -356,7 +377,8 @@ class _VideoBodyState extends State<VideoBody> {
     }
     _retryTimer?.cancel();
     _retryTimer = null;
-    _releasePlayerAndSlot();
+    _generation += 1;
+    _teardownPlayer();
     setState(() {
       _attempt = 0;
       _enterPhase(_VideoPhase.preparing);
@@ -521,6 +543,9 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   void _onTransportTap() {
+    if (!_ready && !_canClaimSlot) {
+      return;
+    }
     if (_canClaimSlot) {
       _playWhenReady = true;
       _guard(
@@ -580,9 +605,7 @@ class _VideoBodyState extends State<VideoBody> {
     _retryTimer = null;
     _stopListeningForSlots();
     _teardownPlayer();
-    final VideoSlotToken? token = _token;
-    _token = null;
-    widget.slots.release(token);
+    _releaseSlot();
     super.dispose();
   }
 
@@ -622,8 +645,16 @@ class _VideoBodyState extends State<VideoBody> {
         child: VideoTransport(
           isPlaying: _isPlaying,
           onTap: _ready || _canClaimSlot ? _onTransportTap : null,
+          hint: _claimDenied ? videoTransportBusyHint : null,
         ),
       ),
+      if (_claimDenied)
+        const Positioned(
+          left: _controlInset,
+          right: _controlInset,
+          top: _controlInset,
+          child: Center(child: VideoTransportBusyNotice()),
+        ),
       Positioned(
         left: _controlInset,
         right: _controlInset,

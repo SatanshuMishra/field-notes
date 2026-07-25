@@ -8,15 +8,20 @@ const Border _transportFocusOutline = Border.fromBorderSide(
   BorderSide(color: Palette.ink, width: 3),
 );
 
+const String videoTransportBusyNotice = "Can't start this video right now";
+const String videoTransportBusyHint = 'Tap to try again';
+
 class VideoTransport extends StatefulWidget {
   const VideoTransport({
     super.key,
     required this.isPlaying,
     required this.onTap,
+    this.hint,
   });
 
   final bool isPlaying;
   final VoidCallback? onTap;
+  final String? hint;
 
   @override
   State<VideoTransport> createState() => _VideoTransportState();
@@ -50,6 +55,7 @@ class _VideoTransportState extends State<VideoTransport> {
         button: true,
         enabled: enabled,
         label: widget.isPlaying ? 'Pause video' : 'Play video',
+        hint: widget.hint,
         child: GestureDetector(
           key: const ValueKey<String>('video-play-toggle'),
           behavior: HitTestBehavior.opaque,
@@ -70,6 +76,37 @@ class _VideoTransportState extends State<VideoTransport> {
                   painter: _TransportGlyph(isPlaying: widget.isPlaying),
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class VideoTransportBusyNotice extends StatelessWidget {
+  const VideoTransportBusyNotice({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: videoTransportBusyNotice,
+      child: const DecoratedBox(
+        decoration: BoxDecoration(
+          color: Palette.cardWarm,
+          border: Shapes.outline,
+          borderRadius: Shapes.buttonBorderRadius,
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: ExcludeSemantics(
+            child: Text(
+              videoTransportBusyNotice,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              style: TypographyTokens.captionSans,
             ),
           ),
         ),
