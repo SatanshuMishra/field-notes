@@ -166,11 +166,13 @@ void main() {
       final LruVideoSlots slots = slotsWithCapOf(1);
       final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
       final File file = videoFixtureFile();
+      final FakeMediaResolver resolver = videoResolverFor(file);
+      final EntryVideoPlayerFactory factory = videoFactoryInto(built);
 
       await tester.pumpWidget(
         videoCardColumn(
-          resolver: videoResolverFor(file),
-          playerFactory: videoFactoryInto(built),
+          resolver: resolver,
+          playerFactory: factory,
           slots: slots,
           indices: <int>[0, 1],
         ),
@@ -183,8 +185,8 @@ void main() {
 
       await tester.pumpWidget(
         videoCardColumn(
-          resolver: videoResolverFor(file),
-          playerFactory: videoFactoryInto(built),
+          resolver: resolver,
+          playerFactory: factory,
           slots: slots,
           indices: <int>[1],
         ),
