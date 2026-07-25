@@ -6,13 +6,35 @@ import 'package:video_player/video_player.dart' as vp;
 
 import 'video_playback.dart';
 
+VideoPlaybackState videoStateFromValue({
+  required bool hasError,
+  required bool isInitialized,
+  required bool isCompleted,
+  required bool isPlaying,
+  required VideoPlaybackState current,
+}) {
+  if (hasError) {
+    return VideoPlaybackState.error;
+  }
+  if (!isInitialized) {
+    return current;
+  }
+  if (isCompleted) {
+    return VideoPlaybackState.completed;
+  }
+  return isPlaying ? VideoPlaybackState.playing : VideoPlaybackState.paused;
+}
+
 class VideoPlayerEntryPlayer implements EntryVideoPlayer {
   VideoPlayerEntryPlayer();
 
   vp.VideoPlayerController? _controller;
   final StreamController<VideoPlaybackState> _stateController =
       StreamController<VideoPlaybackState>.broadcast();
+  final StreamController<Duration> _positionController =
+      StreamController<Duration>.broadcast();
   VideoPlaybackState _state = VideoPlaybackState.idle;
+  Duration? _lastPosition;
 
   @override
   VideoPlaybackState get state => _state;
@@ -41,22 +63,24 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
     if (controller == null) {
       return;
     }
-    if (controller.value.hasError) {
+    final vp.VideoPlayerValue value = controller.value;
+    if (value.hasError) {
       debugPrint(
-        'Video controller reported an error: '
-        '${controller.value.errorDescription}',
+        'Video controller reported an error: ${value.errorDescription}',
       );
-      _setState(VideoPlaybackState.error);
-      return;
-    }
-    if (!controller.value.isInitialized) {
-      return;
     }
     _setState(
-      controller.value.isPlaying
-          ? VideoPlaybackState.playing
-          : VideoPlaybackState.paused,
+      videoStateFromValue(
+        hasError: value.hasError,
+        isInitialized: value.isInitialized,
+        isCompleted: value.isCompleted,
+        isPlaying: value.isPlaying,
+        current: _state,
+      ),
     );
+    if (value.isInitialized) {
+      _emitPosition(value.position);
+    }
   }
 
   @override
@@ -68,6 +92,23 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
   Future<void> pause() async {
     await _controller?.pause();
   }
+
+  @override
+  Future<void> seek(Duration position) async {
+    await _controller?.seekTo(position);
+  }
+
+  @override
+  Duration? get duration {
+    final vp.VideoPlayerController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return null;
+    }
+    return controller.value.duration;
+  }
+
+  @override
+  Stream<Duration> get positionStream => _positionController.stream;
 
   @override
   Widget buildSurface() {
@@ -86,12 +127,26 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
     _controller?.removeListener(_onValue);
     await _controller?.dispose();
     await _stateController.close();
+    await _positionController.close();
   }
 
   void _setState(VideoPlaybackState state) {
+    if (state == _state) {
+      return;
+    }
     _state = state;
     if (!_stateController.isClosed) {
       _stateController.add(state);
+    }
+  }
+
+  void _emitPosition(Duration position) {
+    if (position == _lastPosition) {
+      return;
+    }
+    _lastPosition = position;
+    if (!_positionController.isClosed) {
+      _positionController.add(position);
     }
   }
 }
