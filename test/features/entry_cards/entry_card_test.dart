@@ -8,6 +8,7 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart';
 
 import 'support/entry_cards_harness.dart';
 import 'support/fake_audio_player.dart';
+import 'support/fake_video_player.dart';
 
 void main() {
   group('EntryCard', () {
@@ -110,6 +111,33 @@ void main() {
 
       expect(find.byType(VoiceBody), findsOneWidget);
       expect(find.text('Voice note'), findsOneWidget);
+    });
+
+    testWidgets('dispatches a video entry to VideoBody with its factory',
+        (WidgetTester tester) async {
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'vid',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'vid', relPath: 'v.mp4', kind: MediaKind.video),
+            file: File('/tmp/v.mp4'),
+          ),
+        );
+
+      await tester.pumpWidget(
+        cardHarness(
+          EntryCard(
+            entry:
+                entryOf(type: EntryType.video, mediaId: 'vid', durationMs: 3000),
+            resolver: resolver,
+            videoPlayerFactory: () => FakeEntryVideoPlayer(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(VideoBody), findsOneWidget);
+      expect(find.text('Video'), findsOneWidget);
     });
 
     testWidgets(

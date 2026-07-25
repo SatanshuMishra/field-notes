@@ -73,6 +73,7 @@ void main() {
         await tester.pump();
 
         expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+        expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
       },
     );
 

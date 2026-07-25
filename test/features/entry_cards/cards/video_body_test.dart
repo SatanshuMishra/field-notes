@@ -44,7 +44,7 @@ void main() {
       );
     });
 
-    testWidgets('loads and mounts the player surface on play', (
+    testWidgets('loads and mounts the player surface without autoplaying', (
       WidgetTester tester,
     ) async {
       final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
@@ -73,19 +73,18 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(const ValueKey<String>('video-play-toggle')));
-      await tester.pump();
-
       expect(player.loadCalls, <String>['/tmp/v.mp4']);
-      expect(player.playCalls, 1);
-
-      player.emitState(VideoPlaybackState.playing);
-      await tester.pump();
-
+      expect(player.playCalls, 0);
       expect(
         find.byKey(const ValueKey<String>('fake-video-surface')),
         findsOneWidget,
       );
+
+      await tester.tap(find.byKey(const ValueKey<String>('video-play-toggle')));
+      await tester.pump();
+
+      expect(player.playCalls, 1);
+      expect(player.loadCalls, <String>['/tmp/v.mp4']);
     });
 
     testWidgets('shows a non-destructive placeholder for missing video', (
@@ -144,6 +143,7 @@ void main() {
         await tester.pump();
 
         expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+        expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
         expect(
           find.byKey(const ValueKey<String>('video-play-toggle')),
           findsOneWidget,
@@ -205,6 +205,50 @@ void main() {
       } finally {
         handle.dispose();
       }
+    });
+
+    testWidgets('replays from the start once playback has completed', (
+      WidgetTester tester,
+    ) async {
+      final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'vid',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'vid', relPath: 'v.mp4', kind: MediaKind.video),
+            file: File('/tmp/v.mp4'),
+          ),
+        );
+
+      await tester.pumpWidget(
+        cardHarness(
+          VideoBody(
+            entry: entryOf(
+              type: EntryType.video,
+              mediaId: 'vid',
+              thumbnailMediaId: 'thumb',
+              durationMs: 65000,
+            ),
+            resolver: resolver,
+            playerFactory: () => player,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      player.emitState(VideoPlaybackState.completed);
+      await tester.pump();
+
+      expect(
+        find.byKey(const ValueKey<String>('video-play-toggle')),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const ValueKey<String>('video-play-toggle')));
+      await tester.pump();
+
+      expect(player.seekCalls, <Duration>[Duration.zero]);
+      expect(player.playCalls, 1);
     });
   });
 }

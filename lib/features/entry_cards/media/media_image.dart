@@ -28,15 +28,15 @@ class MediaImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? id = mediaId;
+    if (id == null || id.isEmpty) {
+      return _neutral();
+    }
     return FutureBuilder<ResolvedMedia>(
-      future: resolver.resolve(mediaId),
+      future: resolver.resolve(id),
       builder: (BuildContext context, AsyncSnapshot<ResolvedMedia> snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return NeutralMediaPlaceholder(
-            width: width,
-            height: height,
-            borderRadius: borderRadius,
-          );
+          return _neutral();
         }
         final ResolvedMedia? media = snapshot.data;
         final File? file = media?.file;
@@ -61,6 +61,12 @@ class MediaImage extends StatelessWidget {
       },
     );
   }
+
+  Widget _neutral() => NeutralMediaPlaceholder(
+        width: width,
+        height: height,
+        borderRadius: borderRadius,
+      );
 
   Widget _corrupt() => CorruptMediaPlaceholder(
         label: errorLabel,
