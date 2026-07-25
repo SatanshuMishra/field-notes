@@ -6,6 +6,9 @@ import 'package:video_player/video_player.dart' as vp;
 
 import 'video_playback.dart';
 
+const double _fallbackAspectRatio = 1.0;
+const double _surfaceUnitHeight = 1.0;
+
 VideoPlaybackState videoStateFromValue({
   required bool hasError,
   required bool isInitialized,
@@ -121,9 +124,17 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
     if (controller == null || !controller.value.isInitialized) {
       return const SizedBox.shrink();
     }
-    return AspectRatio(
-      aspectRatio: controller.value.aspectRatio,
-      child: vp.VideoPlayer(controller),
+    final double reported = controller.value.aspectRatio;
+    final double ratio =
+        reported.isFinite && reported > 0 ? reported : _fallbackAspectRatio;
+    return FittedBox(
+      fit: BoxFit.cover,
+      clipBehavior: Clip.hardEdge,
+      child: SizedBox(
+        width: ratio,
+        height: _surfaceUnitHeight,
+        child: vp.VideoPlayer(controller),
+      ),
     );
   }
 

@@ -20,7 +20,8 @@ const List<Duration> _defaultRetryBackoff = <Duration>[
   Duration(milliseconds: 400),
   Duration(milliseconds: 1200),
 ];
-const double _videoHeight = 200;
+const double _videoAspectRatio = 21 / 9;
+const double _videoMinHeight = 200;
 const double _fullVolume = 1.0;
 
 enum _VideoPhase { waiting, preparing, ready, retrying, unavailable }
@@ -612,34 +613,35 @@ class _VideoBodyState extends State<VideoBody> {
   @override
   Widget build(BuildContext context) {
     if (_phase == _VideoPhase.unavailable) {
-      return CorruptMediaPlaceholder(
-        label: "Can't play this video",
-        height: _videoHeight,
-        onRetry: _onRetryPressed,
+      return _previewBox(
+        CorruptMediaPlaceholder(
+          label: "Can't play this video",
+          onRetry: _onRetryPressed,
+        ),
       );
     }
-    return SizedBox(
-      height: _videoHeight,
-      width: double.infinity,
-      child: Stack(fit: StackFit.expand, children: _layers()),
+    return _previewBox(Stack(fit: StackFit.expand, children: _layers()));
+  }
+
+  Widget _previewBox(Widget child) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _videoMinHeight),
+      child: AspectRatio(aspectRatio: _videoAspectRatio, child: child),
     );
   }
 
   List<Widget> _layers() {
     return <Widget>[
-      const NeutralMediaPlaceholder(height: _videoHeight),
+      const NeutralMediaPlaceholder(),
       ClipRRect(
         borderRadius: Shapes.cardBorderRadius,
-        child: Center(
-          child: _player?.buildSurface() ?? const SizedBox.shrink(),
-        ),
+        child: _player?.buildSurface() ?? const SizedBox.shrink(),
       ),
       if (_showCapturedPoster)
         MediaImage(
           resolver: widget.resolver,
           mediaId: widget.entry.thumbnailMediaId,
           errorLabel: 'Video',
-          height: _videoHeight,
         ),
       if (_claimDenied)
         const Positioned(
