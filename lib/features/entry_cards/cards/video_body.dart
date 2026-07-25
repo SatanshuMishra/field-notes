@@ -8,9 +8,15 @@ import '../media/media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/video_playback.dart';
+import '../playback/video_slots.dart';
 import 'video_control_bar.dart';
 import 'video_scrubber.dart';
 
+const Duration _defaultLoadTimeout = Duration(seconds: 8);
+const List<Duration> _defaultRetryBackoff = <Duration>[
+  Duration(milliseconds: 400),
+  Duration(milliseconds: 1200),
+];
 const double _videoHeight = 200;
 const double _transportSize = 56;
 const double _transportGlyph = 18;
@@ -26,11 +32,17 @@ class VideoBody extends StatefulWidget {
     required this.entry,
     required this.resolver,
     required this.playerFactory,
+    required this.slots,
+    this.loadTimeout = _defaultLoadTimeout,
+    this.retryBackoff = _defaultRetryBackoff,
   });
 
   final Entry entry;
   final MediaResolver resolver;
   final EntryVideoPlayerFactory playerFactory;
+  final VideoSlots slots;
+  final Duration loadTimeout;
+  final List<Duration> retryBackoff;
 
   @override
   State<VideoBody> createState() => _VideoBodyState();

@@ -131,6 +131,7 @@ void main() {
                 entryOf(type: EntryType.video, mediaId: 'vid', durationMs: 3000),
             resolver: resolver,
             videoPlayerFactory: () => FakeEntryVideoPlayer(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );

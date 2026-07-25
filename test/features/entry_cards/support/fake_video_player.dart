@@ -15,7 +15,10 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
   final List<double> volumeCalls = <double>[];
   int playCalls = 0;
   int pauseCalls = 0;
+  int disposeCalls = 0;
   Object? seekError;
+  Object? loadError;
+  Completer<void>? loadGate;
   VideoPlaybackState _state = VideoPlaybackState.idle;
 
   void emitState(VideoPlaybackState state) {
@@ -26,7 +29,17 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
   void emitPosition(Duration position) => _positionController.add(position);
 
   @override
-  Future<void> load(String filePath) async => loadCalls.add(filePath);
+  Future<void> load(String filePath) async {
+    loadCalls.add(filePath);
+    final Completer<void>? gate = loadGate;
+    if (gate != null) {
+      await gate.future;
+    }
+    final Object? error = loadError;
+    if (error != null) {
+      throw error;
+    }
+  }
 
   @override
   Future<void> play() async => playCalls++;
@@ -67,6 +80,7 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
 
   @override
   Future<void> dispose() async {
+    disposeCalls++;
     await _stateController.close();
     await _positionController.close();
   }

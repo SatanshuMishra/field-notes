@@ -10,6 +10,7 @@ import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
+import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 
 import '../support/entry_cards_harness.dart';
 import '../support/fake_video_player.dart';
@@ -44,6 +45,7 @@ Widget _videoCard({
       ),
       resolver: resolver,
       playerFactory: () => player,
+      slots: const UnlimitedVideoSlots(),
     ),
   );
 }
@@ -317,6 +319,7 @@ void main() {
             ),
             resolver: resolver,
             playerFactory: () => player,
+            slots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -351,6 +354,7 @@ void main() {
             ),
             resolver: FakeMediaResolver(),
             playerFactory: () => player,
+            slots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -386,6 +390,7 @@ void main() {
               ),
               resolver: resolver,
               playerFactory: () => FakeEntryVideoPlayer(),
+              slots: const UnlimitedVideoSlots(),
             ),
           ),
         );
@@ -426,6 +431,7 @@ void main() {
               ),
               resolver: resolver,
               playerFactory: () => player,
+              slots: const UnlimitedVideoSlots(),
             ),
           ),
         );
@@ -480,6 +486,7 @@ void main() {
             ),
             resolver: resolver,
             playerFactory: () => player,
+            slots: const UnlimitedVideoSlots(),
           ),
         ),
       );

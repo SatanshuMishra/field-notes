@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -16,10 +18,12 @@ Widget _tileApp({
   MediaResolver? resolver,
   VoidCallback? onEdit,
   VoidCallback? onDelete,
+  List<Override> overrides = const <Override>[],
 }) {
   return ProviderScope(
     overrides: <Override>[
       journalRepositoryProvider.overrideWithValue(repository),
+      ...overrides,
     ],
     child: dayDetailHarness(
       SizedBox(
@@ -129,5 +133,46 @@ void main() {
     await tester.pump();
 
     expect(find.byType(InlinePhotoStrip), findsNothing);
+  });
+
+  testWidgets('a video entry receives the shared decoder slot registry',
+      (WidgetTester tester) async {
+    final Directory dir = Directory.systemTemp.createTempSync('day_video');
+    addTearDown(() {
+      if (dir.existsSync()) {
+        dir.deleteSync(recursive: true);
+      }
+    });
+    final File file = File('${dir.path}/v.mp4');
+    file.writeAsBytesSync(<int>[0, 1, 2, 3]);
+
+    final LruVideoSlots slots = LruVideoSlots(cap: 1);
+    addTearDown(slots.dispose);
+    expect(slots.acquire(onEvicted: () {}), isNotNull);
+
+    final Entry entry = entryOf(
+      type: EntryType.video,
+      mediaId: 'vid',
+      durationMs: 4000,
+    );
+
+    await tester.pumpWidget(
+      _tileApp(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        entry: entry,
+        resolver: FakeMediaResolver(<String, ResolvedMedia>{
+          'vid': ResolvedMedia.available(
+            blob: blobOf(id: 'vid', relPath: 'v.mp4', kind: MediaKind.video),
+            file: file,
+          ),
+        }),
+        overrides: <Override>[videoSlotsProvider.overrideWithValue(slots)],
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(VideoBody), findsOneWidget);
+    expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+    expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
   });
 }

@@ -10,12 +10,14 @@ class CorruptMediaPlaceholder extends StatelessWidget {
     this.width,
     this.height,
     this.borderRadius = Shapes.cardBorderRadius,
+    this.onRetry,
   });
 
   final String label;
   final double? width;
   final double? height;
   final BorderRadius borderRadius;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
