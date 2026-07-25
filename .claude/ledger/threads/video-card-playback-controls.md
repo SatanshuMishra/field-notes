@@ -35,10 +35,10 @@ ref). Then retry the mitosis dispatch: spec
 `docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md`, `baseBranch: main`,
 `sourcePrefix: msp/`, verify+build seeds verbatim from `receipts.config.json`, fresh `worktreeRoot` outside
 the repo, `fixLoopMax: 2`, MSPs 1-3 only. SEPARATELY and independently, the macOS hardware check is still
-unrun and is the ONLY thing that can close this thread: `flutter run -d macos`, never the raw binary —
-confirm a real preview frame not the red placeholder; hover reveals controls and 3s idle hides them while
-playing; pause/resume shows them again for the full delay; replay, scrub and mute work; a day past the cap
-degrades to neutral with an announced refusal, not red.
+unrun and is the ONLY thing that can close this thread: `flutter run -d macos`, never the raw binary — confirm
+a real preview frame not the red placeholder; hover reveals controls and 3s idle hides them while playing;
+pause/resume shows them again for the full delay; replay, scrub and mute work; a day past the cap degrades to
+neutral with an announced refusal, not red.
 
 ## Open Risks
 - Merged-but-unconfirmed is the live hazard: `da0a487` ships on `main`, yet the hardware run four criteria
@@ -47,7 +47,7 @@ degrades to neutral with an announced refusal, not red.
   is vacuous; local `flutter test` plus the hardware run is the only gate.
 - The Phase-1a `takePicture` format trap, the MSP-2 mutation-check mandate, the unreceipted responsive band and the missing `EntriesDao` pagination are all carried in full in the spec — read it, not this line.
 - Voice cards remain unswept twins (uncapped eager init, no retry, 40x40 tap target); `video_body.dart` is 672 lines, its controller-extraction seam where both CRITICALs lived.
-- A classifier outage blocked `Workflow` and write-class `Bash` at the end of session 04. If it persists, mitosis cannot dispatch and ledger commits cannot land; read-only tools and Write/Edit were unaffected.
+- GitHub squash merges stranded post-snapshot commits TWICE on 2026-07-25 (#38, then #39 on the very commit documenting it). Verify `git diff --stat origin/main <remote-tip>` before deleting any merged branch.
 
 ## Key Decisions
 - decisions/2026-07-25-poster-first-supersedes-eager-decode.md — poster-first root fix; cap stays 6 global
