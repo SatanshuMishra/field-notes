@@ -10,6 +10,9 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - Binary assets must be human-provided + committed (harness blocks agent/main-thread downloads).
 
 ## Active Decisions
+- decisions/2026-07-24-playback-recovery-counts-as-interactive.md — mid-playback error recovery re-acquires WITH eviction rights; a watched card is user-driven, not passive. Supplements the non-evicting-acquire record, which review flagged as contradicting the shipped code
+- decisions/2026-07-24-non-evicting-acquire-for-passive-mount.md — passive acquisition (mount, slot-freed wake-up, resolver re-prepare) acquires WITHOUT eviction rights; only user-driven acquisition may evict. Fixes a wake/evict stampede (one release made every waiting card evict a healthy holder, cascading) and the first-paint inversion in one change
+- decisions/2026-07-24-video-decoder-slot-cap-and-structural-retry.md — gate `_prepare()` on a hard-capped LRU `VideoSlots` registry (cap 6, pin-while-playing), `initState` trigger unchanged; classify failures STRUCTURALLY because retryability is unreadable from the error (macOS drops `error.code`, Android passes `details: null`, and exhaustion may STALL rather than throw since `initialize()` has no timeout). Slivers rejected (macOS Today is `withRail` in a `SingleChildScrollView`); interaction gating rejected (the macOS recorder writes no thumbnail, so poster slot 1 is dead there forever); viewport gating deferred behind the hardware run
 - decisions/2026-07-24-eager-init-decoder-ceiling.md — the feeds are non-lazy Columns, so eager per-card video init can exhaust the device's bounded decoder pool (~8-16 H.264), and the failure path renders the RED placeholder this branch exists to remove. Gating init (visibility or first interaction) + a retryable-vs-corrupt split is IN the video-card thread's scope and sequenced BEFORE the overlay; qualifies but does not supersede the eager-player decision
 - decisions/2026-07-24-video-card-eager-player-and-controls.md — the 2 post-merge video defects are BOTH pre-existing and share one root: the card lazily latches to a bare chrome-less `VideoPlayer` and macOS capture never writes a thumbnail, which `MediaImage` renders as the RED corrupt placeholder. Fix = rebuild on the voice card's architecture (eager init, never swap the tree, poster as a fallback slot, red reserved for real failure) + hover-reveal controls. Native poster extraction and a 2nd blob migration rejected as disproportionate
 - decisions/2026-07-24-blob-extension-playback-root-cause.md — extensionless SHA-256 blobs broke playback: AVFoundation picks its demuxer from the path UTI and never content-sniffs local files, so both video_player and just_audio failed together (-12847/-11828). Store the extension in rel_path + backfill + resilient read path (PR #35). Export was broken identically. Link shim rejected (dart:io has no hard-link API; links outside blobs/ defeat Delete-All and GC)
@@ -49,7 +52,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 ## Threads
 - journal-app-design — done — closed 2026-07-24: design, planning and the 31/31 v1 build are complete; all completion_criteria met. Post-ship bug work moved to post-ship-hardening.
 - post-ship-hardening — paused — PR #35 MERGED (5cb5bad) and hardware-confirmed: video plays, new voice plays repeatedly. 2 criteria remain: stop integration tests writing into the real container, and confirm an exported ZIP carries extensions.
-- video-card-playback-controls — paused — NEXT UP. Both defects FIXED IN CODE on fix/video-card-preview-and-controls (7 commits, +1894/-183, analyze clean, 764 tests green, 3 red-before/green-after receipts). Nothing human-confirmed on hardware. Remaining: decoder gating (do FIRST), hover-reveal overlay, then the hardware test.
+- video-card-playback-controls — paused — decoder gating + structural retry BUILT and reviewed twice on fix/video-card-preview-and-controls (23 commits ahead of origin/main, +4985/-243, analyze clean, 825 tests green at 1bbeef7, three CRITICALs found and mutation-verified fixed). 6/9 criteria met in code, NOTHING hardware-confirmed. Remaining: eleven specified review fixes (sessions/2026-07-24-10), then the hover-reveal overlay, then the hardware test.
 
 ## State snapshot (2026-07-22)
 - DB ROUND-TRIP PROVEN (session 2026-07-22-01): real capture write path stored 2 new entries into the on-disk DB (~/Library/Containers/dev.satanshumishra.fieldNotes/Data/Documents/field_notes.sqlite); a separate sqlite3 process confirmed them AFTER the writer exited (entries 2->4); live app rendered DB rows (live-feed-01.png). Store+retrieve are proven end-to-end.
@@ -68,13 +71,10 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 - .claude/ledger/plans/2026-07-19-next-round.md — TURNKEY plan; Stages A-F DONE, resume at F3 (launch)
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
-- .claude/ledger/threads/journal-app-design.md — current line of work
-- .claude/ledger/sessions/2026-07-24-05-journal-app-design.md — latest (camera lifecycle fixes + package upgrade; both unmerged, awaiting hardware verification)
+- .claude/ledger/threads/video-card-playback-controls.md — current line of work
+- .claude/ledger/sessions/2026-07-24-10-video-card-playback-controls.md — latest (decoder gating + structural retry built and reviewed; eleven remaining fixes specified in full)
 - integration_test/capture_ui_flow_test.dart — real-UI -d macos capture receipt (note/voice/video)
 - .claude/ledger/sessions/2026-07-19-02-journal-app-design.md — batch 2 staging + verification
 - .claude/ledger/sessions/2026-07-16-02-journal-app-design.md — fold-defect root cause; run.json fixed+trimmed to batch 1
 - .claude/ledger/sessions/2026-07-11-03-journal-app-design.md — verbatim mitosis relaunch block (contract args; flip mergePolicy to "human-gated")
-- .mitosis/run.json — STAGED for batch 2 (21 MSPs; base line + entry-cards park delta = 2 lines)
-- .mitosis/run.json.pristine-backup — durable 31-MSP source of truth (gitignored, uncommitted)
-- .mitosis/batch-tooling/ — trim + verify scripts; MERGED=21, BATCH=[] (fill BATCH with batch-3 ids)
-- .mitosis/entry-cards.plan.md — plan carrying the harness-ownership defect
+- .mitosis/ — engine-era artifacts, all historical now that 31/31 shipped (run.json staged for batch 2, run.json.pristine-backup as the durable 31-MSP source, batch-tooling/ trim+verify scripts, entry-cards.plan.md carrying the harness-ownership defect)
