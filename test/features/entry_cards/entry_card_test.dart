@@ -8,6 +8,7 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart';
 
 import 'support/entry_cards_harness.dart';
 import 'support/fake_audio_player.dart';
+import 'support/fake_video_player.dart';
 
 void main() {
   group('EntryCard', () {
@@ -18,6 +19,7 @@ void main() {
           EntryCard(
             entry: entryOf(type: EntryType.text, textContent: 'hello world'),
             resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -37,6 +39,7 @@ void main() {
             entry: entryOf(type: EntryType.text, textContent: 'trip'),
             resolver: FakeMediaResolver(),
             photos: <EntryPhoto>[photoOf(id: 'p', mediaId: 'm')],
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -56,6 +59,7 @@ void main() {
             resolver: FakeMediaResolver(),
             onEdit: () => edits++,
             onDelete: () => deletes++,
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -77,6 +81,7 @@ void main() {
           EntryCard(
             entry: entryOf(type: EntryType.text, textContent: 'read only'),
             resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -103,6 +108,7 @@ void main() {
                 entryOf(type: EntryType.voice, mediaId: 'aud', durationMs: 3000),
             resolver: resolver,
             audioPlayerFactory: () => FakeEntryAudioPlayer(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
@@ -110,6 +116,34 @@ void main() {
 
       expect(find.byType(VoiceBody), findsOneWidget);
       expect(find.text('Voice note'), findsOneWidget);
+    });
+
+    testWidgets('dispatches a video entry to VideoBody with its factory',
+        (WidgetTester tester) async {
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'vid',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'vid', relPath: 'v.mp4', kind: MediaKind.video),
+            file: File('/tmp/v.mp4'),
+          ),
+        );
+
+      await tester.pumpWidget(
+        cardHarness(
+          EntryCard(
+            entry:
+                entryOf(type: EntryType.video, mediaId: 'vid', durationMs: 3000),
+            resolver: resolver,
+            videoPlayerFactory: () => FakeEntryVideoPlayer(),
+            videoSlots: const UnlimitedVideoSlots(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(VideoBody), findsOneWidget);
+      expect(find.text('Video'), findsOneWidget);
     });
 
     testWidgets(
@@ -121,6 +155,7 @@ void main() {
             entry:
                 entryOf(type: EntryType.voice, mediaId: 'aud', durationMs: 3000),
             resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );

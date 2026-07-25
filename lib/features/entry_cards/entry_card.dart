@@ -11,12 +11,14 @@ import 'media/media_placeholders.dart';
 import 'media/media_resolver.dart';
 import 'playback/audio_playback.dart';
 import 'playback/video_playback.dart';
+import 'playback/video_slots.dart';
 
 class EntryCard extends StatelessWidget {
   const EntryCard({
     super.key,
     required this.entry,
     required this.resolver,
+    required this.videoSlots,
     this.photos = const <EntryPhoto>[],
     this.audioPlayerFactory,
     this.videoPlayerFactory,
@@ -30,6 +32,7 @@ class EntryCard extends StatelessWidget {
   final List<EntryPhoto> photos;
   final EntryAudioPlayerFactory? audioPlayerFactory;
   final EntryVideoPlayerFactory? videoPlayerFactory;
+  final VideoSlots videoSlots;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
   final Color surface;
@@ -105,6 +108,7 @@ class EntryCard extends StatelessWidget {
           entry: entry,
           resolver: resolver,
           playerFactory: factory,
+          slots: videoSlots,
         );
     }
   }

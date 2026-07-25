@@ -45,28 +45,41 @@ void main() {
         ),
       );
 
-    testWidgets('renders the loading placeholder until the media resolves',
-        (WidgetTester tester) async {
+    testWidgets('renders the loading placeholder until the media resolves', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(cardHarness(imageOf(resolverWithFile())));
 
-      expect(find.byType(LoadingMediaPlaceholder), findsOneWidget);
+      expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
       expect(find.byType(Image), findsNothing);
     });
 
-    testWidgets('renders the corrupt placeholder when media is missing',
-        (WidgetTester tester) async {
+    testWidgets('renders the corrupt placeholder when media is missing', (
+      WidgetTester tester,
+    ) async {
       final FakeMediaResolver resolver = FakeMediaResolver();
-      await tester.pumpWidget(
-        cardHarness(imageOf(resolver, mediaId: 'gone')),
-      );
+      await tester.pumpWidget(cardHarness(imageOf(resolver, mediaId: 'gone')));
       await tester.pump();
 
       expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
       expect(find.text('Photo'), findsOneWidget);
     });
 
-    testWidgets('renders an Image when the file resolves',
-        (WidgetTester tester) async {
+    testWidgets(
+      'does not render the corrupt placeholder when no id was ever assigned',
+      (WidgetTester tester) async {
+        final FakeMediaResolver resolver = FakeMediaResolver();
+        await tester.pumpWidget(cardHarness(imageOf(resolver, mediaId: null)));
+        await tester.pump();
+
+        expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+        expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+      },
+    );
+
+    testWidgets('renders an Image when the file resolves', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(cardHarness(imageOf(resolverWithFile())));
       await tester.pump();
       await tester.runAsync(

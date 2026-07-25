@@ -10,4 +10,6 @@ export 'playback/audio_playback.dart';
 export 'playback/just_audio_player.dart';
 export 'playback/video_playback.dart';
 export 'playback/video_player_impl.dart';
+export 'playback/video_slots.dart';
+export 'playback/video_slots_provider.dart';
 export 'util/duration_format.dart';

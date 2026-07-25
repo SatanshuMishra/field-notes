@@ -11,6 +11,7 @@ class FakeEntryAudioPlayer implements EntryAudioPlayer {
   final List<String> loadCalls = <String>[];
   int playCalls = 0;
   int pauseCalls = 0;
+  int disposeCalls = 0;
   AudioPlaybackState _state = AudioPlaybackState.idle;
 
   void emitState(AudioPlaybackState state) {
@@ -46,6 +47,7 @@ class FakeEntryAudioPlayer implements EntryAudioPlayer {
 
   @override
   Future<void> dispose() async {
+    disposeCalls++;
     await _stateController.close();
     await _positionController.close();
   }
