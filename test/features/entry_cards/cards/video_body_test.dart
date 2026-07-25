@@ -314,7 +314,7 @@ void main() {
             entry: entryOf(
               type: EntryType.video,
               mediaId: 'vid',
-              thumbnailMediaId: 'thumb',
+              thumbnailMediaId: null,
               durationMs: 65000,
             ),
             resolver: resolver,
@@ -349,7 +349,7 @@ void main() {
             entry: entryOf(
               type: EntryType.video,
               mediaId: 'gone',
-              thumbnailMediaId: 'thumb',
+              thumbnailMediaId: null,
               durationMs: 1000,
             ),
             resolver: FakeMediaResolver(),
@@ -426,7 +426,7 @@ void main() {
               entry: entryOf(
                 type: EntryType.video,
                 mediaId: 'vid',
-                thumbnailMediaId: 'thumb',
+                thumbnailMediaId: null,
                 durationMs: 65000,
               ),
               resolver: resolver,
@@ -481,7 +481,7 @@ void main() {
             entry: entryOf(
               type: EntryType.video,
               mediaId: 'vid',
-              thumbnailMediaId: 'thumb',
+              thumbnailMediaId: null,
               durationMs: 65000,
             ),
             resolver: resolver,
