@@ -8,11 +8,14 @@ import '../media/media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/video_playback.dart';
-import '../util/duration_format.dart';
+import 'video_control_bar.dart';
+import 'video_scrubber.dart';
 
 const double _videoHeight = 200;
 const double _transportSize = 56;
 const double _transportGlyph = 18;
+const double _controlInset = 8;
+const double _fullVolume = 1.0;
 const Border _transportFocusOutline = Border.fromBorderSide(
   BorderSide(color: Palette.ink, width: 3),
 );
@@ -38,6 +41,9 @@ class _VideoBodyState extends State<VideoBody> {
   StreamSubscription<VideoPlaybackState>? _stateSub;
   StreamSubscription<Duration>? _positionSub;
   VideoPlaybackState _state = VideoPlaybackState.idle;
+  Duration _position = Duration.zero;
+  double _volume = _fullVolume;
+  double _volumeBeforeMute = _fullVolume;
   bool _unavailable = false;
   bool _ready = false;
   bool _hasPlayed = false;
@@ -74,7 +80,7 @@ class _VideoBodyState extends State<VideoBody> {
       },
     );
     _positionSub = player.positionStream.listen(
-      null,
+      _onPosition,
       onError: (Object error, StackTrace stackTrace) {
         debugPrint('Video position stream failed: $error\n$stackTrace');
         _markUnavailable();
@@ -116,10 +122,72 @@ class _VideoBodyState extends State<VideoBody> {
     });
   }
 
+  void _onPosition(Duration position) {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _position = position);
+  }
+
   bool get _isPlaying => _state == VideoPlaybackState.playing;
 
+  bool get _muted => _volume <= 0;
+
   bool get _showCapturedPoster =>
-      !_unavailable && !_hasPlayed && widget.entry.thumbnailMediaId != null;
+      !_hasPlayed && widget.entry.thumbnailMediaId != null;
+
+  Duration? get _total {
+    final Duration? reported = _player?.duration;
+    if (reported != null && reported > Duration.zero) {
+      return reported;
+    }
+    final int? declared = widget.entry.durationMs;
+    if (declared == null || declared <= 0) {
+      return null;
+    }
+    return Duration(milliseconds: declared);
+  }
+
+  Future<void> _seek(Duration position) async {
+    final EntryVideoPlayer? player = _player;
+    final Duration? total = _total;
+    if (player == null || total == null) {
+      return;
+    }
+    final Duration target = clampPlaybackPosition(position, total);
+    setState(() => _position = target);
+    try {
+      await player.seek(target);
+    } catch (error, stackTrace) {
+      debugPrint('Video seek failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _toggleMute() async {
+    final EntryVideoPlayer? player = _player;
+    if (player == null) {
+      return;
+    }
+    final double restored =
+        _volumeBeforeMute > 0 ? _volumeBeforeMute : _fullVolume;
+    final double target = _muted ? restored : 0.0;
+    final double previous = _volume;
+    try {
+      await player.setVolume(target);
+    } catch (error, stackTrace) {
+      debugPrint('Video volume change failed: $error\n$stackTrace');
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      if (target <= 0) {
+        _volumeBeforeMute = previous;
+      }
+      _volume = target;
+    });
+  }
 
   Future<void> _toggle() async {
     final EntryVideoPlayer? player = _player;
@@ -151,13 +219,19 @@ class _VideoBodyState extends State<VideoBody> {
 
   @override
   Widget build(BuildContext context) {
+    if (_unavailable) {
+      return const CorruptMediaPlaceholder(
+        label: "Can't play this video",
+        height: _videoHeight,
+      );
+    }
     return SizedBox(
       height: _videoHeight,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          _poster(),
+          const NeutralMediaPlaceholder(height: _videoHeight),
           ClipRRect(
             borderRadius: Shapes.cardBorderRadius,
             child: Center(
@@ -171,53 +245,25 @@ class _VideoBodyState extends State<VideoBody> {
               errorLabel: 'Video',
               height: _videoHeight,
             ),
-          _DurationChip(durationMs: widget.entry.durationMs),
           Center(
             child: _VideoTransport(
               isPlaying: _isPlaying,
               onTap: _ready ? _toggle : null,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _poster() {
-    if (_unavailable) {
-      return const CorruptMediaPlaceholder(
-        label: "Can't play this video",
-        height: _videoHeight,
-      );
-    }
-    return const NeutralMediaPlaceholder(height: _videoHeight);
-  }
-}
-
-class _DurationChip extends StatelessWidget {
-  const _DurationChip({required this.durationMs});
-
-  final int? durationMs;
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      right: 8,
-      bottom: 8,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Palette.ink,
-          borderRadius: Shapes.buttonBorderRadius,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Text(
-            formatMediaDuration(durationMs),
-            style: TypographyTokens.captionSans.copyWith(
-              color: Palette.cardBright,
+          Positioned(
+            left: _controlInset,
+            right: _controlInset,
+            bottom: _controlInset,
+            child: VideoControlBar(
+              position: _position,
+              total: _total,
+              muted: _muted,
+              onSeek: _ready ? _seek : null,
+              onToggleMute: _ready ? _toggleMute : null,
             ),
           ),
-        ),
+        ],
       ),
     );
   }
