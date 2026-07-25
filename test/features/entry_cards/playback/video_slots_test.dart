@@ -239,7 +239,7 @@ void main() {
 
   group('UnlimitedVideoSlots', () {
     test('always grants and never evicts', () {
-      const UnlimitedVideoSlots slots = UnlimitedVideoSlots();
+      const VideoSlots slots = UnlimitedVideoSlots();
       final List<VideoSlotToken> tokens = <VideoSlotToken>[];
 
       for (int index = 0;
@@ -256,7 +256,7 @@ void main() {
     });
 
     test('ignores release, pin, touch and listener calls', () {
-      const UnlimitedVideoSlots slots = UnlimitedVideoSlots();
+      const VideoSlots slots = UnlimitedVideoSlots();
       final VideoSlotToken? token = slots.acquire(onEvicted: evictionOf('a'));
       expect(token, isNotNull);
       final VideoSlotFreedListener listener = freedListener('waiting');
