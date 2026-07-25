@@ -680,6 +680,10 @@ void main() {
 
       expect(find.byType(MediaImage), findsOneWidget);
 
+      await tester.tap(inCard(0, videoPlayToggleKey));
+      await tester.pump();
+      await tester.pump();
+
       built.single.emitState(VideoPlaybackState.playing);
       await tester.pump();
 
