@@ -18,8 +18,9 @@ branch: fix/video-card-preview-and-controls
 ---
 
 ## Status
-Decoder gating and the structural retry split are BUILT and reviewed twice. 23 commits ahead of `origin/main`
-(+4985/-243), analyze clean, 825 tests green at `1bbeef7`, re-verified independently at hand-off. Six of nine
+Decoder gating and the structural retry split are BUILT and reviewed twice. 22 code commits ahead of
+`origin/main` (+4985/-243 across 38 files) at `1bbeef7`; 23 with the ledger commit `98909b3` on top.
+Analyze clean, 825 tests green at `1bbeef7`, re-verified independently at hand-off. Six of nine
 criteria met in code; NOTHING is hardware-confirmed. Two rounds found three CRITICALs, all fixed and
 mutation-verified; a third returned APPROVE-WITH-FIXES and those eleven fixes are specified but NOT applied.
 
