@@ -13,7 +13,7 @@ completion_criteria:
   - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
   - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
   - Red-before-green receipt exists for each of the two reported defects
-next_step: WAIT for the user's specific follow-up instruction on the video-card-preview. Do not begin it unprompted. The standing gate behind it is the HUMAN hardware run — `flutter run -d macos`, never the raw binary.
+next_step: The preview follow-up is BUILT (width-driven 21:9 + cover fill, 8fe882f). The HUMAN hardware run is the only remaining gate — `flutter run -d macos`, never the raw binary. Retune `_videoAspectRatio` from what the run shows.
 branch: fix/video-card-preview-and-controls
 ---
 
@@ -50,6 +50,7 @@ and every specified item is applied.
 - Full remaining-item list, including everything inherited from sessions 09 and 10, is in `sessions/2026-07-25-01`.
 
 ## Key Decisions
+- decisions/2026-07-25-video-preview-width-driven-and-cover-filled.md — 21:9 from width, 200px floor, cover fill
 - decisions/2026-07-25-null-mutation-means-redundant-or-uncovered.md — decide which before acting
 - decisions/2026-07-24-restart-retains-its-decoder-slot.md — `_restart` never releases its slot
 - decisions/2026-07-24-denied-claim-uses-a-live-region.md — announced refusal, not a deprecated announce call
