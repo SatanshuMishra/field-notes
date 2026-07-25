@@ -34,7 +34,7 @@ final Uint8List _stillJpegBytes = Uint8List.fromList(<int>[
 class _NativeCameraSpy {
   final List<MethodCall> calls = <MethodCall>[];
   Completer<void>? initGate;
-  bool failTakePicture = false;
+  Map<String, Object?>? takePictureError;
 
   List<String> get methods =>
       calls.map((MethodCall call) => call.method).toList();
@@ -67,8 +67,9 @@ class _NativeCameraSpy {
       case 'startRecording':
         return <String, Object?>{'error': null};
       case 'takePicture':
-        if (failTakePicture) {
-          return <String, Object?>{'error': 'still capture failed'};
+        final Map<String, Object?>? failure = takePictureError;
+        if (failure != null) {
+          return <String, Object?>{'error': failure};
         }
         return <String, Object?>{
           'imageData': _stillJpegBytes,
@@ -279,12 +280,14 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets(
-      'a failed still capture degrades to a null thumbnail without losing the '
-      'recording', (WidgetTester tester) async {
+  testWidgets('a failed still capture still returns the finished recording',
+      (WidgetTester tester) async {
     final CameraMacosVideoRecorder recorder =
         CameraMacosVideoRecorder(temporaryDirectory: () async => temp);
-    native.failTakePicture = true;
+    native.takePictureError = <String, Object?>{
+      'code': 'PHOTO_OUTPUT_ERROR',
+      'message': 'imageData is empty or invalid',
+    };
 
     await tester.pumpWidget(
       MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
@@ -301,6 +304,7 @@ void main() {
     expect(native.methods, contains('stopRecording'));
     expect(recording.media.mime, videoRecordingMime);
     expect((recording.media as CaptureFile).file.path, _stoppedVideoPath);
+    expect(temp.listSync(), isEmpty);
 
     await recorder.release();
     await tester.pumpWidget(const SizedBox.shrink());
