@@ -50,7 +50,7 @@ void main() {
     ) async {
       await tester.pumpWidget(cardHarness(imageOf(resolverWithFile())));
 
-      expect(find.byType(LoadingMediaPlaceholder), findsOneWidget);
+      expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
       expect(find.byType(Image), findsNothing);
     });
 

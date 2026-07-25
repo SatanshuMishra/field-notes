@@ -32,7 +32,7 @@ class MediaImage extends StatelessWidget {
       future: resolver.resolve(mediaId),
       builder: (BuildContext context, AsyncSnapshot<ResolvedMedia> snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return LoadingMediaPlaceholder(
+          return NeutralMediaPlaceholder(
             width: width,
             height: height,
             borderRadius: borderRadius,

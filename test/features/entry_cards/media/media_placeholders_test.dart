@@ -30,11 +30,11 @@ void main() {
     });
   });
 
-  group('LoadingMediaPlaceholder', () {
+  group('NeutralMediaPlaceholder', () {
     testWidgets('renders a neutral cross-hatch with no label',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        cardHarness(const LoadingMediaPlaceholder(width: 80, height: 80)),
+        cardHarness(const NeutralMediaPlaceholder(width: 80, height: 80)),
       );
 
       expect(find.byType(CrossHatchPlaceholder), findsOneWidget);

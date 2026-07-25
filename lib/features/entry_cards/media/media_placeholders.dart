@@ -37,8 +37,8 @@ class CorruptMediaPlaceholder extends StatelessWidget {
   }
 }
 
-class LoadingMediaPlaceholder extends StatelessWidget {
-  const LoadingMediaPlaceholder({
+class NeutralMediaPlaceholder extends StatelessWidget {
+  const NeutralMediaPlaceholder({
     super.key,
     this.width,
     this.height,
