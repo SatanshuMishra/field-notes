@@ -15,9 +15,8 @@ import '../support/video_card_harness.dart';
 
 void main() {
   group('VideoBody under cap pressure', () {
-    testWidgets('three cards contending for two slots stay neutral or loaded', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('a card mounting past the cap waits instead of evicting a '
+        'sibling', (WidgetTester tester) async {
       final LruVideoSlots slots = slotsWithCapOf(2);
       final Completer<void> gate = Completer<void>();
       addTearDown(() {
@@ -50,16 +49,12 @@ void main() {
 
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
       expect(built, hasLength(2));
-      for (final FakeEntryVideoPlayer player in built) {
-        expect(player.disposeCalls, 0);
-      }
-      for (int index = 0; index < 3; index += 1) {
-        expect(
-          readyControlsEnabled(tester, index) && !surfaceMounted(tester, index),
-          isFalse,
-          reason: 'card $index enabled its controls with no video surface',
-        );
-      }
+      expect(built[0].disposeCalls, 0);
+      expect(built[1].disposeCalls, 0);
+      expect(surfaceMounted(tester, 0), isTrue);
+      expect(readyControlsEnabled(tester, 0), isTrue);
+      expect(surfaceMounted(tester, 2), isFalse);
+      expect(readyControlsEnabled(tester, 2), isFalse);
     });
 
     testWidgets('a card evicted mid load never reports itself loaded', (
