@@ -18,12 +18,12 @@ branch: fix/video-card-preview-and-controls
 ---
 
 ## Status
-All eleven review fixes APPLIED and the hover-reveal overlay BUILT. 28 commits ahead of `origin/main`
+All eleven review fixes APPLIED and the hover-reveal overlay BUILT. 35 commits ahead of `origin/main`
 (still `5cb5bad`), analyze clean, 856 tests green at `acf0976`, verified by the orchestrator independently
 of every subagent claim. All nine completion criteria are met IN CODE; NOTHING is hardware-confirmed, which
-is the single remaining gate. Branch has no upstream — never pushed. Six of nine
-criteria met in code; NOTHING is hardware-confirmed. Two rounds found three CRITICALs, all fixed and
-mutation-verified; a third returned APPROVE-WITH-FIXES and those eleven fixes are specified but NOT applied.
+is the single remaining gate. Branch has no upstream — never pushed. Three review rounds went
+CRITICAL -> CRITICAL -> MEDIUM; all three CRITICALs and all eleven MEDIUM/LOW fixes are applied and
+mutation-verified.
 
 ## Active Goal
 Give the video entry card a real preview frame and a working control surface on the voice card's
