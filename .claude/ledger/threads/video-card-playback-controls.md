@@ -13,25 +13,25 @@ completion_criteria:
   - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
   - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
   - Red-before-green receipt exists for each of the two reported defects
-next_step: Merge PR #40 (the session-04 ledger, stranded by the #39 squash), fast-forward local main, then retry the mitosis dispatch that a classifier outage blocked. Separately, the human macOS hardware run is still unperformed and is the only thing that can close this thread.
+next_step: PR #40 is MERGED (origin/main 4e39884), so no PR gate remains. Fast-forward local main, then retry the mitosis dispatch that a classifier outage blocked. Separately, the human macOS hardware run is still unperformed and is the only thing that can close this thread.
 branch: main (was fix/video-card-preview-and-controls, merged 2026-07-25)
 ---
 
 ## Status
 PR #38 MERGED to `main` as `da0a487` on 2026-07-25 (squash), so every seam this thread built now ships.
 All nine criteria are met IN CODE; the macOS hardware run STILL HAS NOT HAPPENED — the merge was a human
-action but not that one, and four criteria name it, so the DoD gate refuses `done`. Session 04 landed the
-spec + repaired ledger on PR #39 (green, UNMERGED) and recovered two files the #38 squash dropped, then hit
-a classifier outage that blocked the mitosis dispatch before it started. No production code since #38.
+action but not that one, and four criteria name it, so the DoD gate refuses `done`. PRs #39 (`8bef597`) and
+#40 (`4e39884`) are BOTH merged, so the spec and the session-04 ledger are on `origin/main`, and the #40
+squash stranded nothing (`git diff --stat origin/main cc235fb` empty). No production code since #38.
 
 ## Active Goal
 Give the video entry card a real preview frame and a working control surface on the voice card's
 architecture, without a resource ceiling that reinstates the red placeholder.
 
 ## Next Step
-PR #39 is MERGED (`8bef597`), so the spec is on `main`. Merge PR #40 first — it carries the session-04
-ledger the #39 squash stranded — then fast-forward LOCAL `main` (the engine cuts worktrees from the local
-ref). Then retry the mitosis dispatch: spec
+Both ledger PRs are merged, so no PR gate remains. FIRST fast-forward LOCAL `main` onto `origin/main` (3
+behind, at `4e39884`) — the engine cuts worktrees from the bare LOCAL ref, so a stale local `main` would
+build MSPs without the spec. Then retry the mitosis dispatch: spec
 `docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md`, `baseBranch: main`,
 `sourcePrefix: msp/`, verify+build seeds verbatim from `receipts.config.json`, fresh `worktreeRoot` outside
 the repo, `fixLoopMax: 2`, MSPs 1-3 only. SEPARATELY, the macOS hardware check is still unrun and is the ONLY
@@ -66,7 +66,7 @@ refusal, not red.
 ## Pointers
 - docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — THE NEXT WORK, 4 MSPs
 - https://github.com/SatanshuMishra/field-notes/pull/38 — MERGED 2026-07-25 as da0a487; body carries the hardware checklist that is still unrun
-- https://github.com/SatanshuMishra/field-notes/pull/39 — spec + repaired ledger; green, MERGEABLE, unmerged. Merge before dispatching mitosis.
+- PRs #39 (`8bef597`) + #40 (`4e39884`) — spec + session-04 ledger, both MERGED; remote branch `chore/ledger-handoff-session-04` is safe to delete (diff vs `origin/main` verified empty)
 - lib/features/entry_cards/playback/ — video_slots.dart (capped LRU registry), video_slots_provider.dart,
   video_player_impl.dart; cards/ — video_body.dart (phase machine; MSP 2's only lib/ file),
   video_controls_overlay.dart, video_control_bar.dart, video_scrubber.dart, voice_body.dart (mirrored)
