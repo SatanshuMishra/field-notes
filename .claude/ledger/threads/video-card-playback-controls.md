@@ -38,8 +38,7 @@ real. Do NOT open another review round on `video_body.dart` — severity went CR
 and every specified item is applied.
 
 ## Open Risks
-- The suite was green and structurally BLIND for a whole round: every receipt drove one card at `cap: 1` against a synthetic pinned occupant, so the production path (N unpinned holders, an N+1th mounting, eviction landing mid-load) had zero coverage and hid two CRITICALs. Multi-card receipts now exist — treat any new single-card-only receipt as suspect.
-- Three vacuous tests were caught by mutation, none by reading. Mutation-check every load-bearing receipt.
+- The suite was green and structurally BLIND for a whole round: every receipt drove one card at `cap: 1` against a synthetic pinned occupant, so the production path (N unpinned holders, an N+1th mounting, eviction landing mid-load) had zero coverage and hid two CRITICALs. Multi-card receipts now exist — treat any new single-card-only receipt as suspect. Four vacuous or unpinned receipts have now been caught by mutation and NONE by reading, so mutation-check every load-bearing receipt; when a mutation reds nothing, ask whether the code is redundant or the coverage is missing, because both look identical from the green.
 - First-frame-after-`initialize()` on macOS is UNVERIFIED. If blank, fill poster slot 2 via `CameraVideoRecorder._captureThumbnail` rather than redesigning — the macOS recorder writes no thumbnail (`camera_video_recorder.dart:345` vs `:77`), so slot 1 is dead there forever.
 - Two test-infrastructure traps, both found only by running: `setUp`/`tearDown` CANNOT restore `debugDefaultTargetPlatformOverride` (invariants are checked at the end of the test body, before tearDown) — use `TargetPlatformVariant` via `variant:`; and `find.bySemanticsLabel` reads a STALE `debugSemantics` cache, returning a match at full hide — use `find.semantics.byLabel`.
 - CI runs NO Dart tests. Local validation plus a human hardware run is the only real gate.
