@@ -35,15 +35,14 @@ independent, neither a resume, each needing a decision first. Any relaunch passe
 - MSP 2: SALVAGE (findings read in session 05's addendum — the park is a governance deadlock, the code is
   reviewer-validated and 42 receipts green at `3a7bd7f`). Ratify the didUpdateWidget gate as a spec
   amendment, run plan Task 3 (".mitosis/poster-first-decode-gate.plan.md:513", closes the MEDIUM), merge.
-- MSP 3: restart from the spec — no code exists; the plan failed adversarial review 3x for a small change.
+- MSP 3: restart from the spec — no code exists; its plan failed review 3x for a small change.
 
 ## Open Risks
 - Merged-but-unconfirmed is the live hazard: `da0a487` ships on `main`, yet the hardware run four criteria
   demand by name has never happened. CI runs NO Dart tests, so green checks are vacuous — local
   `fullValidationCmd` against the real head is the only gate that means anything.
-- Verifying the WRONG TREE is a demonstrated failure, not theoretical: a failed `git worktree add` plus a
-  missing `set -e` produced a green suite describing `main`, not the branch under test. Echo `TREE:`/`HEAD:`
-  in any validation command and read it before believing the result.
+- Verifying the WRONG TREE is a demonstrated failure: a failed `git worktree add` + missing `set -e` gave a
+  green suite describing `main`, not the branch. Echo `TREE:`/`HEAD:` in validation commands and read them.
 - NEVER run MSP 2's engine-proposed undo (`git branch -D msp/poster-first-decode-gate-integration`): the
   final reviewer itself says "do NOT silently revert" — the fifth edit closes a real Today-feed bypass.
 - The Phase-1a `takePicture` format trap, the MSP-2 mutation-check mandate, the unreceipted responsive band
@@ -72,7 +71,7 @@ independent, neither a resume, each needing a decision first. Any relaunch passe
 ## Pointers
 - docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — the 4-MSP spec
 - https://github.com/SatanshuMishra/field-notes/pull/41 — MSP 1, OPEN, locally green, awaiting human merge
-- .mitosis/day-detail-feed-virtualization.plan.md — MSP 3's plan, needs editing before relaunch
+- .mitosis/poster-first-decode-gate.plan.md — MSP 2's plan; Task 3 (:513) is the undispatched re-arm task
 - lib/features/entry_cards/playback/ + cards/video_body.dart (MSP 2's only lib/ file); lib/features/capture/platform/camera_video_recorder.dart is MSP 1's
 - Sibling thread: .claude/ledger/threads/post-ship-hardening.md, still paused
 
