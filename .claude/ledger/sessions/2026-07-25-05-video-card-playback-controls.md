@@ -99,6 +99,22 @@ Salvage path: ratify the fifth edit as a spec amendment, execute plan Task 3 (cl
 design), full local validation, then merge task-2 -> integration -> PR. Do NOT run the engine's
 `git branch -D` undo. MSP 3 verdict unchanged: no code exists; restart from the spec.
 
+## Addendum 2 (same session): PRs #41 and #42 reviewed and MERGED by the human
+- PR #41 MERGED as `a31130f` (2026-07-26T05:33Z) — MSP 1 (macOS capture thumbnail) is SHIPPED, 1 of 3.
+- PR #42 MERGED as `cae77ee` one squash later — the session-05 ledger is on `main`.
+- STRAND CHECKS, with a method refinement the next session must know: the session-04 command
+  (`git diff --stat origin/main <tip>`) is now NON-empty for BOTH tips, and that is a FALSE ALARM — once
+  main holds both merges, each tip trails main by the OTHER PR's content, so the raw stat is bidirectional
+  noise. The decisive form scopes the diff to the branch's own file class:
+  `git diff origin/main 95c245e -- lib test third_party` -> EMPTY (all #41 code landed);
+  `git diff origin/main 49b4823 -- .claude/ledger` -> EMPTY (all #42 ledger landed). Both clean, verified.
+  Run the raw stat BEFORE other merges land, or scope it; an unscoped stat after two merges always alarms.
+- Local `main` fast-forwarded `4e39884 -> cae77ee`. Post-merge ledger edits ride
+  `chore/ledger-handoff-session-05b`.
+- MSP 2 note for the salvage: its task branches were cut from `4e39884` (pre-#41 main). File scopes are
+  disjoint by spec design (capture vs entry_cards), so bringing the work onto current main should be
+  conflict-free — verify, don't assume.
+
 ## Demoted from PROJECT.md (80-line cap)
 Index line removed to make room for the new 2026-07-25 record. The decision FILE remains on disk and loads
 on demand; it belongs to the completed 31/31 build era:
