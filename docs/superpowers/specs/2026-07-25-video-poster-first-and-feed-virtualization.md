@@ -75,6 +75,8 @@ In `lib/features/entry_cards/cards/video_body.dart`, `initState` (`:72-75`) unco
 - Its consumer, `video_body.dart:640-645`: renders `MediaImage(resolver: widget.resolver, mediaId: widget.entry.thumbnailMediaId, errorLabel: 'Video')` inside the `Stack` built by `_layers()`.
 - The transport tap handler already exists at `_onTransportTap`, `video_body.dart:546-559`, which calls `_attemptLoad(VideoSlotEvictionRights.evictUnpinned)` when `_canClaimSlot` is true — this is the existing "user intent" entry point Phase 1b should route the deferred `_startPrepare`/`_attemptLoad` call through, rather than inventing a new one. (`_canClaimSlot` itself was not re-verified line-by-line in this pass; confirm its current definition before wiring into it.)
 
+**Amendment (ratified 2026-07-25):** `initState` is not the only passive entry into decode. `didUpdateWidget` re-enters via `_restart` whenever the resolver instance or `entry.mediaId` changes, and the Today feed does exactly this after first paint — `today_entry_feed.dart:56-57` swaps `_PendingMediaResolver` for the real resolver — so a gate on `initState` alone is bypassed by every poster card on Today. The gate therefore covers BOTH passive entry points: on any resolver or media-identity change, a poster-bearing card re-arms the gate — invalidating any in-flight prepare (generation bump, `_playWhenReady` cleared) and releasing any decoder slot it holds — instead of decoding. Only explicit user intent (`_onTransportTap`, `_onRetryPressed`) may acquire a slot on a poster-bearing card. This ratifies the review-round `didUpdateWidget` edits as in-scope and is implemented in final form by plan Task 3 (`_deferDecodeUntilIntent`). Ledger record: `.claude/ledger/decisions/2026-07-25-didupdatewidget-gate-ratified-as-amendment.md`.
+
 **Non-negotiable design properties:**
 
 1. **The gate keys off `thumbnailMediaId != null`, never off `defaultTargetPlatform` or any other platform check.** This makes the behavior platform-agnostic by construction: Android and iOS entries (which already carry thumbnails via the existing `_captureThumbnail` path) benefit immediately without any Android-specific code, and macOS benefits as soon as Phase 1a ships. Do not special-case any platform in this gate.
@@ -87,6 +89,7 @@ In `lib/features/entry_cards/cards/video_body.dart`, `initState` (`:72-75`) unco
 - The same card, after a simulated transport tap, does acquire a slot and proceeds through the existing prepare/load path.
 - A `VideoBody` whose `entry.thumbnailMediaId` is null continues to acquire a slot at mount exactly as it does today (no behavior change on this path).
 - No `defaultTargetPlatform`/`Platform.isX` check appears anywhere in the new gating logic.
+- (Amendment, 2026-07-25) A poster-bearing card whose resolver instance or `entry.mediaId` changes after mount does not acquire a slot — and releases any slot it already holds — until the next transport tap; this covers the Today-feed resolver swap.
 
 ## Phase 2 — Virtualize the Day-detail feed
 
