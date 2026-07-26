@@ -58,12 +58,12 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 ## Threads
 - journal-app-design — done — closed 2026-07-24: design, planning and the 31/31 v1 build are complete; all completion_criteria met. Post-ship bug work moved to post-ship-hardening.
 - post-ship-hardening — paused — PR #35 MERGED (5cb5bad) and hardware-confirmed: video plays, new voice plays repeatedly. 2 criteria remain: stop integration tests writing into the real container, and confirm an exported ZIP carries extensions.
-- video-card-playback-controls — paused — 9/9 criteria met IN CODE; MSPs 1+2 SHIPPED (PRs #41, #44). MSP 3 DISPATCH-READY: plan fixed against round-3 findings, Step 0 ruled pre-dispatch (Option B shrink-to-fit), spec Phase 2 amendment riding the session-07 handoff PR. NEXT: merge that PR FIRST (workers cut from local main must see the amendment), ff main, dispatch mitosis sourcePrefix `msp`, then the macOS hardware run the DoD gate demands.
+- video-card-playback-controls — paused — ALL 3 AUTHORIZED MSPs SHIPPED (#41, #44, #47; main 096b3c3) and hardware-confirmed by the user's manual test, retiring the merged-but-unconfirmed hazard. 9/9 criteria appear met; held PAUSED not done by explicit user choice. NEXT: explain MSP 4 (Phase 3 Today-feed virtualization) — what it is and why it was never authorized. Explainer only; do NOT dispatch mitosis.
 
 ## State snapshot (2026-07-22)
 - DB round-trip proof and the GeneratedPluginRegistrant conflict-file note — demoted verbatim to sessions/2026-07-25-03-video-card-playback-controls.md (cap enforcement). Both historical now that 31/31 shipped.
 - CAPTURE FLOWS COMPLETE + LOCAL RUN ACHIEVED — demoted verbatim to sessions/2026-07-24-09-video-card-playback-controls.md (cap enforcement). Load-bearing residue: always run via `flutter run -d macos`; screenshot through the `_flutter.screenshot` VM RPC (scratchpad/vm_screenshot.dart), `screencapture` is TCC-blocked; set LANG=en_US.UTF-8 for CocoaPods.
-- Flutter 3.44.6; Phase 0 skeleton + 3 OFL fonts committed. 26 squash-merges + ledger commits on origin/main (main = ca2e6f0).
+- EVERY mitosis PR fails this repo's `pr-title-lint`: the engine hardcodes the PR title `mitosis: <msp-id>` (no substitution permitted at ship stage), and the lint demands a Conventional Commits type. Retitle the PR before merging — the title also becomes the squash message. Hit on #47; will recur on every future run. Demoted to make room: sessions/2026-07-26-02-video-card-playback-controls.md
 - NO ANDROID SDK on this machine — `flutter build apk` is impossible, and receipts CI never builds Android. File-content assertion is the only receipt for the new desugaring task; do NOT add an Android build to receipts.config.json.
 - Mitosis engine-era residue (plan-review journal recovery, the symlink defect, engine lessons, .mitosis/ artifacts) — demoted verbatim to sessions/2026-07-25-01-video-card-playback-controls.md (cap enforcement). Historical now that 31/31 shipped and the app is code-complete.
 - 31/31 SHIPPED: all v1 MSPs merged (origin/main 54b81a2). shell-nav-integration (#31) was built via a delegated implementer on origin/main and human-merged. App is code-complete (main.dart runnable; no stray TODOs; only the inert v2 sync placeholder). Local main reconciled. Remaining work is the LOCAL RUN phase (macOS build/run for testing), not more MSPs.
@@ -73,7 +73,7 @@ A personal journaling app for macOS + Android with a cozy, hand-drawn cel-shaded
 ## Pointers
 - docs/superpowers/specs/2026-07-10-field-notes-design.md — v1 design spec (§0 = implementation status + pre-vendored fonts)
 - docs/design/prototype-analysis.md — full prototype extraction + 14 reconciliation points
-- docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — THE NEXT WORK: 4 MSPs (macOS capture thumbnail, poster-first decode gate, Day-detail virtualization, Today virtualization NOT authorized). Blocked on PR #38 merging. Execute via `mitosis` in a fresh session
+- docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — 3 of its 4 MSPs SHIPPED (#41, #44, #47). MSP 4 / Phase 3 (Today-feed virtualization) is CONDITIONAL and NOT authorized: it requires a post-Phase-1 profile on real hardware AND spec-owner review, never execution on prediction. Full rationale at :112, :128-131, :133, :135, :152, :159
 - .claude/ledger/threads/video-card-playback-controls.md — current line of work; its Recent Sessions list is the session trail
 - .claude/ledger/plans/2026-07-24-video-controls-overlay-plan.md — the executable overlay plan; supersedes the controls spec where they disagree
 - integration_test/capture_ui_flow_test.dart — real-UI -d macos capture receipt (note/voice/video)

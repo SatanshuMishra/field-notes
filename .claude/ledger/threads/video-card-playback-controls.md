@@ -13,35 +13,36 @@ completion_criteria:
   - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
   - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
   - Red-before-green receipt exists for each of the two reported defects
-next_step: Merge the session-07 handoff PR (it carries the spec amendment the workers must see), fast-forward local main, then dispatch mitosis for MSP 3 with sourcePrefix "msp" (bare token). Then the macOS hardware run, the only thing that can close this thread.
-branch: main (ledger + spec amendment on chore/ledger-handoff-session-07)
+next_step: EXPLAINER ONLY — explain what MSP 4 / Phase 3 (Today-feed virtualization) is and why it was never authorized despite being planned in the spec. Read the spec line pointers assembled in sessions/2026-07-26-02-video-card-playback-controls.md. Do NOT dispatch mitosis.
+branch: main (096b3c3)
 ---
 
 ## Status
-All nine criteria met IN CODE. MSPs 1+2 SHIPPED (PRs #41, #44). MSP 3 is DISPATCH-READY: its plan's
-round-3 adversarial findings are fixed (the anti-Option-B wobble claim verified false against the Flutter
-source and retracted), the blocking Step 0 ruling was obtained pre-dispatch (Option B, shrink-to-fit),
-and the spec's Phase 2 amendment ratifying bounded-position shrinkWrap is written — but uncommitted,
-riding the session-07 handoff branch. The macOS hardware run has still never happened; DoD refuses done.
+ALL THREE AUTHORIZED MSPs SHIPPED: #41 (macOS capture thumbnail), #44 (poster-first decode gate), #47
+(day-detail feed virtualization, main 096b3c3, Option B verified AT main). The macOS hardware run finally
+happened this session — the user ran manual testing and reported everything working as expected, retiring
+the thread's long-standing merged-but-unconfirmed hazard. All nine criteria now appear met, but the thread
+stays PAUSED, not done, by the user's explicit choice: they want MSP 4 explained before any closure.
 
 ## Active Goal
 Give the video entry card a real preview frame and a working control surface on the voice card's
 architecture, without a resource ceiling that reinstates the red placeholder.
 
 ## Next Step
-ORDERING IS LOAD-BEARING: (1) merge the session-07 handoff PR — it carries the spec's Phase 2 amendment,
-and the engine cuts worker worktrees from the bare LOCAL main ref, so an undispatched amendment means
-plan-review re-rejects against the unamended spec :154; (2) fast-forward local main; (3) dispatch mitosis
-for MSP 3 only, sourcePrefix "msp" (bare token, no slash). The plan's Step 0 is already RESOLVED (Option B
-ruling recorded verbatim in the plan) — no mid-run human gate remains. After MSP 3: the macOS hardware run
-closes the thread; MSP 4 stays unauthorized pending a post-Phase-1 profile.
+EXPLAINER, NOT EXECUTION. Explain what MSP 4 / Phase 3 (Today-feed virtualization) is and why it was never
+authorized even though the spec plans it. Do NOT dispatch mitosis: Phase 3 is unauthorized until a
+post-Phase-1 profile is taken AND reviewed by the spec owner. The answer is already assembled as spec line
+pointers in sessions/2026-07-26-02-video-card-playback-controls.md — read those ~8 spec lines, not the
+whole file. Short form: Phase 1 removed the decoder pressure that motivated Phase 3; cacheExtent means
+virtualization never made "only visible cards decode" true; and shrinkWrap cannot be reused there.
 
 ## Open Risks
-- Merged-but-unconfirmed remains the live hazard: poster-first is fully on main, yet no human has run the
-  app on macOS hardware. CI runs NO Dart tests; only local fullValidationCmd at an echoed TREE:/HEAD: counts.
-- Squash merges strand unpushed commits: hit again this session (PR #43 vs local a912055; recovered by
-  cherry-pick). Push the ledger branch right after every ledger commit; scope strand-check diffs to the
-  branch's own file class once multiple merges have landed.
+- MSP 3 was never validated locally: fullValidationCmd was NOT run against the PR head. receipts claimed
+  the G9 suite green, but decisions/2026-07-20-ci-gates-are-hollow-for-dart.md forbids trusting CI for
+  Dart — though that record predates the current receipts.config.json and may itself be stale. Unresolved.
+- Squash merges strand unpushed commits: always diff main against the branch tip before deleting a branch.
+- The repo is checked out on chore/ledger-handoff-session-07, NOT main, so grepping the working tree reads
+  PRE-MERGE files. Use `git show main:<path>`. This produced one false negative this session.
 - Voice cards remain unswept twins (uncapped eager init, no retry, 40x40 tap target); video_body.dart is
   ~700 lines, its controller-extraction seam where both CRITICALs lived.
 - The missing EntriesDao pagination and the unreceipted responsive band are carried in the spec — read it.
@@ -66,10 +67,10 @@ closes the thread; MSP 4 stays unauthorized pending a post-Phase-1 profile.
 
 ## Pointers
 - docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — the 4-MSP spec (Phase 1b now carries the ratified amendment)
-- .mitosis/day-detail-feed-virtualization.plan.md — MSP 3's plan, needs editing before relaunch
-- lib/features/entry_cards/cards/video_body.dart — the gate + _deferDecodeUntilIntent live here
+- that spec at :112, :128-131, :133, :135, :152, :159 — the whole MSP 4 answer; read only these lines
+- lib/features/day_detail/day_detail_panel.dart — MSP 3 shipped here; lib/features/today/ is MSP 4's target
 - Sibling thread: .claude/ledger/threads/post-ship-hardening.md, still paused
 
 ## Recent Sessions
-- sessions/2026-07-26-01-video-card-playback-controls.md — MSP 3 plan fixed, Option B ruled pre-dispatch, spec amended
-- sessions/2026-07-25-06-video-card-playback-controls.md — MSP 2 salvage: ratified, Task 3, PR #44 merged
+- sessions/2026-07-26-02-video-card-playback-controls.md — MSP 3 SHIPPED (PR #47); hardware-confirmed
+- sessions/2026-07-26-01-video-card-playback-controls.md — MSP 3 plan fixed, Option B ruled, spec amended
