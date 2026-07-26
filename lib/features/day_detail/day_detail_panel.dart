@@ -111,9 +111,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
               ],
               const SizedBox(height: 16),
               Flexible(
-                child: SingleChildScrollView(
-                  child: _content(entriesAsync, entries, resolverAsync),
-                ),
+                child: _content(entriesAsync, entries, resolverAsync),
               ),
             ],
           ),
@@ -140,21 +138,28 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       return const SizedBox.shrink();
     }
     final MediaResolver resolver = resolverAsync.requireValue;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        for (int index = 0; index < entries.length; index++) ...<Widget>[
-          if (index > 0) const SizedBox(height: 12),
-          DayDetailEntryTile(
-            key: ValueKey<String>(entries[index].id),
-            entry: entries[index],
-            resolver: resolver,
-            onEdit: () => _edit(entries[index]),
-            onDelete: () => _delete(entries[index]),
-          ),
-        ],
-      ],
+    return ListView.separated(
+      shrinkWrap: true,
+      padding: EdgeInsets.zero,
+      itemCount: entries.length,
+      findItemIndexCallback: (Key key) {
+        final int index = entries.indexWhere(
+          (Entry entry) => key == ValueKey<String>(entry.id),
+        );
+        return index < 0 ? null : index;
+      },
+      separatorBuilder: (BuildContext context, int index) =>
+          const SizedBox(height: 12),
+      itemBuilder: (BuildContext context, int index) {
+        final Entry entry = entries[index];
+        return DayDetailEntryTile(
+          key: ValueKey<String>(entry.id),
+          entry: entry,
+          resolver: resolver,
+          onEdit: () => _edit(entry),
+          onDelete: () => _delete(entry),
+        );
+      },
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/day_detail/day_detail_entry_tile.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -196,5 +197,44 @@ void main() {
     expect(find.byKey(const ValueKey<String>('entry-1')), findsNothing);
     expect(find.text('1 entry'), findsOneWidget);
     expect(find.text('Sunday, July 19'), findsOneWidget);
+  });
+
+  testWidgets('builds only a bounded subset of tiles for a large day',
+      (WidgetTester tester) async {
+    const int entryCount = 40;
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        for (int i = 0; i < entryCount; i++)
+          entryOf(
+            id: 'entry-$i',
+            type: EntryType.text,
+            textContent: 'journal note number $i for the day',
+          ),
+      ],
+    );
+
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+
+    final int builtTiles = find.byType(DayDetailEntryTile).evaluate().length;
+    expect(builtTiles, greaterThan(0));
+    expect(builtTiles, lessThan(entryCount));
+  });
+
+  testWidgets('a one-entry day keeps the list shrink-wrapped to its content',
+      (WidgetTester tester) async {
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        entryOf(id: 'entry-1', type: EntryType.text, textContent: 'a good day'),
+      ],
+    );
+
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+
+    final double listHeight = tester.getSize(find.byType(ListView)).height;
+    final double tileHeight =
+        tester.getSize(find.byKey(const ValueKey<String>('entry-1'))).height;
+    expect(listHeight, tileHeight);
   });
 }
