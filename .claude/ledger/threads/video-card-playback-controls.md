@@ -13,25 +13,25 @@ completion_criteria:
   - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
   - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
   - Red-before-green receipt exists for each of the two reported defects
-next_step: Merge PR #41 (MSP 1, locally validated green) and fast-forward local main. The two parked MSPs each need a human decision before any relaunch. Separately, the macOS hardware run is still unperformed and is the only thing that can close this thread.
-branch: main (ledger work on chore/ledger-handoff-session-05)
+next_step: Salvage MSP 2 in a fresh session — ratify the didUpdateWidget gate as a spec amendment, execute plan Task 3, validate, ship. Then restart MSP 3 from the spec. Separately, the macOS hardware run is still unperformed and is the only thing that can close this thread.
+branch: main (post-merge ledger on chore/ledger-handoff-session-05b)
 ---
 
 ## Status
 All nine criteria are met IN CODE by PR #38 (`da0a487`); the macOS hardware run STILL HAS NOT HAPPENED and
-four criteria name it, so the DoD gate refuses `done`. The poster-first spec then went to mitosis (run
-`wf_de373384-5d7`, 50 agents, ~100 min): MSP 1 reached PR #41 and validated green locally, MSP 2 and MSP 3
-PARKED. `overallStatus: failed`, `shipped: []` — nothing from this spec has merged yet.
+four criteria name it, so the DoD gate refuses `done`. Poster-first spec: MSP 1 SHIPPED — PR #41 MERGED as
+`a31130f`, strand-checked clean via the SCOPED diff (see session 05 addendum 2). MSP 2 parked with a
+SALVAGE verdict; MSP 3 parked, restart from spec. Ledger PR #42 MERGED as `cae77ee`; local main matches.
 
 ## Active Goal
 Give the video entry card a real preview frame and a working control surface on the voice card's
 architecture, without a resource ceiling that reinstates the red placeholder.
 
 ## Next Step
-Merge PR #41 — MSP 1 (macOS capture writes a JPEG thumbnail), `msp/macos-capture-thumbnail-integration` at
-`95c245e`, 8 commits ahead. Only merge-ready artifact; merging is the HUMAN's action. Validated at its real
-head: analyze clean, 861 tests vs `main`'s 856. Fast-forward local `main` after. Then dispose of the parks —
-independent, neither a resume, each needing a decision first. Any relaunch passes `sourcePrefix: "msp"`:
+PRs #41 and #42 are MERGED and local `main` sits at `cae77ee` — no PR gate remains. THE next action is the
+MSP 2 salvage, in a fresh session. MSP 2's task branches were cut from `4e39884` (pre-#41 main); file
+scopes are disjoint by spec design (capture vs entry_cards), so bringing them onto current main should be
+conflict-free — verify, don't assume. Any relaunch passes `sourcePrefix: "msp"`:
 - MSP 2: SALVAGE (findings read in session 05's addendum — the park is a governance deadlock, the code is
   reviewer-validated and 42 receipts green at `3a7bd7f`). Ratify the didUpdateWidget gate as a spec
   amendment, run plan Task 3 (".mitosis/poster-first-decode-gate.plan.md:513", closes the MEDIUM), merge.
@@ -70,7 +70,7 @@ independent, neither a resume, each needing a decision first. Any relaunch passe
 
 ## Pointers
 - docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — the 4-MSP spec
-- https://github.com/SatanshuMishra/field-notes/pull/41 — MSP 1, OPEN, locally green, awaiting human merge
+- https://github.com/SatanshuMishra/field-notes/pull/41 — MSP 1, MERGED as `a31130f` 2026-07-26T05:33Z
 - .mitosis/poster-first-decode-gate.plan.md — MSP 2's plan; Task 3 (:513) is the undispatched re-arm task
 - lib/features/entry_cards/playback/ + cards/video_body.dart (MSP 2's only lib/ file); lib/features/capture/platform/camera_video_recorder.dart is MSP 1's
 - Sibling thread: .claude/ledger/threads/post-ship-hardening.md, still paused
