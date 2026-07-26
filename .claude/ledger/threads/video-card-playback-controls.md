@@ -13,26 +13,28 @@ completion_criteria:
   - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
   - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
   - Red-before-green receipt exists for each of the two reported defects
-next_step: Restart MSP 3 from the spec — edit .mitosis/day-detail-feed-virtualization.plan.md against the adversarial findings, reconcile local main, relaunch mitosis with sourcePrefix "msp". Then the macOS hardware run, the only thing that can close this thread.
-branch: main (ledger on chore/ledger-handoff-session-06)
+next_step: Merge the session-07 handoff PR (it carries the spec amendment the workers must see), fast-forward local main, then dispatch mitosis for MSP 3 with sourcePrefix "msp" (bare token). Then the macOS hardware run, the only thing that can close this thread.
+branch: main (ledger + spec amendment on chore/ledger-handoff-session-07)
 ---
 
 ## Status
-All nine criteria met IN CODE. Poster-first spec: MSP 1 SHIPPED (PR #41, a31130f) and MSP 2 SHIPPED
-(PR #44, db59bbd — salvage complete: didUpdateWidget gate ratified as a spec amendment, plan Task 3
-executed, 868 tests green at the real head 1cfd36e). MSP 3 not started. The macOS hardware run four
-criteria name has still never happened, so the DoD gate refuses done.
+All nine criteria met IN CODE. MSPs 1+2 SHIPPED (PRs #41, #44). MSP 3 is DISPATCH-READY: its plan's
+round-3 adversarial findings are fixed (the anti-Option-B wobble claim verified false against the Flutter
+source and retracted), the blocking Step 0 ruling was obtained pre-dispatch (Option B, shrink-to-fit),
+and the spec's Phase 2 amendment ratifying bounded-position shrinkWrap is written — but uncommitted,
+riding the session-07 handoff branch. The macOS hardware run has still never happened; DoD refuses done.
 
 ## Active Goal
 Give the video entry card a real preview frame and a working control surface on the voice card's
 architecture, without a resource ceiling that reinstates the red placeholder.
 
 ## Next Step
-Restart MSP 3 (day-detail-feed-virtualization) from the spec: no code exists; its plan failed review 3x.
-Edit .mitosis/day-detail-feed-virtualization.plan.md against the adversarial findings, fast-forward local
-main first (engine cuts worktrees from the bare LOCAL ref), dispatch mitosis with sourcePrefix "msp"
-(bare token, no slash). After MSP 3: the macOS hardware run closes the thread; MSP 4 stays unauthorized
-pending a post-Phase-1 profile.
+ORDERING IS LOAD-BEARING: (1) merge the session-07 handoff PR — it carries the spec's Phase 2 amendment,
+and the engine cuts worker worktrees from the bare LOCAL main ref, so an undispatched amendment means
+plan-review re-rejects against the unamended spec :154; (2) fast-forward local main; (3) dispatch mitosis
+for MSP 3 only, sourcePrefix "msp" (bare token, no slash). The plan's Step 0 is already RESOLVED (Option B
+ruling recorded verbatim in the plan) — no mid-run human gate remains. After MSP 3: the macOS hardware run
+closes the thread; MSP 4 stays unauthorized pending a post-Phase-1 profile.
 
 ## Open Risks
 - Merged-but-unconfirmed remains the live hazard: poster-first is fully on main, yet no human has run the
@@ -45,6 +47,7 @@ pending a post-Phase-1 profile.
 - The missing EntriesDao pagination and the unreceipted responsive band are carried in the spec — read it.
 
 ## Key Decisions
+- decisions/2026-07-26-day-detail-shrinkwrap-option-b.md — MSP 3 ships shrinkWrap shrink-to-fit; spec rejection scoped to unbounded positions
 - decisions/2026-07-25-didupdatewidget-gate-ratified-as-amendment.md — gate covers BOTH passive entry points; Task 3 form supersedes staysGated
 - decisions/2026-07-25-poster-first-supersedes-eager-decode.md — poster-first root fix; cap stays 6 global
 - decisions/2026-07-25-source-prefix-is-a-bare-token.md — pass `msp`; the engine adds the slash
@@ -68,5 +71,5 @@ pending a post-Phase-1 profile.
 - Sibling thread: .claude/ledger/threads/post-ship-hardening.md, still paused
 
 ## Recent Sessions
+- sessions/2026-07-26-01-video-card-playback-controls.md — MSP 3 plan fixed, Option B ruled pre-dispatch, spec amended
 - sessions/2026-07-25-06-video-card-playback-controls.md — MSP 2 salvage: ratified, Task 3, PR #44 merged
-- sessions/2026-07-25-05-video-card-playback-controls.md — mitosis run: MSP 1 to PR #41, MSPs 2+3 parked
