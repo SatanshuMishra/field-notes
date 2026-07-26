@@ -85,13 +85,9 @@ class _VideoBodyState extends State<VideoBody> {
         oldWidget.entry.mediaId == widget.entry.mediaId) {
       return;
     }
-    final bool staysGated = _hasCapturedPoster && _needsMediaResolution;
     _mediaFile = null;
-    if (staysGated) {
-      _retryTimer?.cancel();
-      _generation += 1;
-      _playWhenReady = false;
-      _enterPhase(_VideoPhase.waiting);
+    if (_hasCapturedPoster) {
+      _deferDecodeUntilIntent();
       return;
     }
     _restart(VideoSlotEvictionRights.none);
@@ -397,6 +393,24 @@ class _VideoBodyState extends State<VideoBody> {
       _enterPhase(_VideoPhase.preparing);
     });
     _startPrepare(rights);
+  }
+
+  void _deferDecodeUntilIntent() {
+    if (!mounted) {
+      return;
+    }
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _generation += 1;
+    _playWhenReady = false;
+    _teardownPlayer();
+    _releaseSlot();
+    _stopListeningForSlots();
+    setState(() {
+      _attempt = 0;
+      _claimDenied = false;
+      _enterPhase(_VideoPhase.waiting);
+    });
   }
 
   void _onState(VideoPlaybackState state) {

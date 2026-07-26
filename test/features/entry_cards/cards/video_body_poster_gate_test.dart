@@ -279,5 +279,78 @@ void main() {
       expect(slots.acquireCalls, isEmpty);
       expect(built, isEmpty);
     });
+
+    testWidgets('a new media identity re-arms the gate instead of decoding', (
+      WidgetTester tester,
+    ) async {
+      final RecordingVideoSlots slots = recordingSlotsWithCapOf(1);
+      final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
+      final File first = videoFixtureFile(prefix: 'poster_gate_first');
+      final File second = videoFixtureFile(prefix: 'poster_gate_second');
+      final FakeMediaResolver resolver = _posterOnlyResolver()
+        ..set(
+          'vid',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'vid', relPath: 'vid.mp4', kind: MediaKind.video),
+            file: first,
+          ),
+        )
+        ..set(
+          'vid-next',
+          ResolvedMedia.available(
+            blob: blobOf(
+              id: 'vid-next',
+              relPath: 'vid-next.mp4',
+              kind: MediaKind.video,
+            ),
+            file: second,
+          ),
+        );
+      final EntryVideoPlayerFactory factory = videoFactoryInto(built);
+
+      await tester.pumpWidget(
+        _posterCardOfMediaId(
+          resolver: resolver,
+          playerFactory: factory,
+          slots: slots,
+          mediaId: 'vid',
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(inCard(0, videoPlayToggleKey));
+      await tester.pump();
+      await tester.pump();
+
+      expect(built, hasLength(1));
+      expect(built.single.loadCalls, <String>[first.path]);
+
+      await tester.pumpWidget(
+        _posterCardOfMediaId(
+          resolver: resolver,
+          playerFactory: factory,
+          slots: slots,
+          mediaId: 'vid-next',
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(built, hasLength(1));
+      expect(built.single.disposeCalls, 1);
+      expect(surfaceMounted(tester, 0), isFalse);
+      expect(find.byType(MediaImage), findsOneWidget);
+      expect(
+        slots.acquireCalls,
+        <VideoSlotEvictionRights>[VideoSlotEvictionRights.evictUnpinned],
+      );
+      expect(
+        slots.acquire(
+          onEvicted: () {},
+          evictionRights: VideoSlotEvictionRights.none,
+        ),
+        isNotNull,
+      );
+    });
   });
 }
