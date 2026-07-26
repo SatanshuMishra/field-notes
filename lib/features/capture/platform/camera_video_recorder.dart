@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:camera_macos/camera_macos.dart';
 import 'package:flutter/widgets.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
@@ -18,6 +20,11 @@ String videoRecordingFileName(int nowMs) =>
 
 String videoThumbnailFileName(int nowMs) =>
     'video_thumb_$nowMs.$videoThumbnailExtension';
+
+Future<String> resolveVideoThumbnailPath(Directory directory, int nowMs) async {
+  await directory.create(recursive: true);
+  return p.join(directory.path, videoThumbnailFileName(nowMs));
+}
 
 VideoRecorder createPlatformVideoRecorder() =>
     Platform.isMacOS ? CameraMacosVideoRecorder() : CameraVideoRecorder();
@@ -198,6 +205,10 @@ String _cameraLabel(
 }
 
 class CameraMacosVideoRecorder implements VideoRecorder {
+  CameraMacosVideoRecorder({Future<Directory> Function()? temporaryDirectory})
+      : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+
+  final Future<Directory> Function() _temporaryDirectory;
   final Stopwatch _elapsed = Stopwatch();
   Completer<CameraMacOSController>? _ready;
   Widget? _preview;
@@ -245,6 +256,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       cameraMode: CameraMacOSMode.video,
       fit: BoxFit.cover,
       useMovieFileOutput: true,
+      pictureFormat: PictureFormat.jpg,
       onCameraInizialized: (CameraMacOSController controller) =>
           _onControllerReady(ready, controller),
       onCameraLoading: (Object? error) {
@@ -337,6 +349,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       throw const VideoRecorderException(videoStopMessage);
     }
     try {
+      final CaptureMedia? thumbnail = await _captureThumbnail(controller);
       final CameraMacOSFile? file = await controller.stopRecording();
       final String? path = file?.url;
       if (path == null || path.isEmpty) {
@@ -349,11 +362,35 @@ class CameraMacosVideoRecorder implements VideoRecorder {
           durationMs: durationMs,
         ),
         durationMs: durationMs,
+        thumbnail: thumbnail,
       );
     } on VideoRecorderException {
       rethrow;
     } catch (error) {
       throw VideoRecorderException(videoStopMessage, cause: error);
+    }
+  }
+
+  Future<CaptureMedia?> _captureThumbnail(
+    CameraMacOSController controller,
+  ) async {
+    try {
+      final CameraMacOSFile? still = await controller.takePicture();
+      final List<int>? bytes = still?.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        return null;
+      }
+      final Directory directory = await _temporaryDirectory();
+      final String path = await resolveVideoThumbnailPath(
+        directory,
+        DateTime.now().millisecondsSinceEpoch,
+      );
+      final File file = File(path);
+      await file.writeAsBytes(bytes, flush: true);
+      return CaptureFile(file: file, mime: videoThumbnailMime);
+    } catch (error, stackTrace) {
+      debugPrint('Video thumbnail capture failed: $error\n$stackTrace');
+      return null;
     }
   }
 

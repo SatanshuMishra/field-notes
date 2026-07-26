@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 const MethodChannel _cameraChannel = MethodChannel('camera_macos');
 
@@ -22,9 +25,16 @@ const Map<String, Object?> _usbDevice = <String, Object?>{
   'deviceId': 'usb-id',
 };
 
+const String _stoppedVideoPath = '/tmp/field_notes_camera_macos_test.mp4';
+
+final Uint8List _stillJpegBytes = Uint8List.fromList(<int>[
+  0xFF, 0xD8, 0xFF, 0xDB, 0x00, 0x43, 0x00, 0x08, 0xFF, 0xD9,
+]);
+
 class _NativeCameraSpy {
   final List<MethodCall> calls = <MethodCall>[];
   Completer<void>? initGate;
+  Map<String, Object?>? takePictureError;
 
   List<String> get methods =>
       calls.map((MethodCall call) => call.method).toList();
@@ -54,6 +64,23 @@ class _NativeCameraSpy {
           'size': <String, Object?>{'width': 1280.0, 'height': 720.0},
           'devices': <Map<String, Object?>>[_builtInDevice, _usbDevice],
         };
+      case 'startRecording':
+        return <String, Object?>{'error': null};
+      case 'takePicture':
+        final Map<String, Object?>? failure = takePictureError;
+        if (failure != null) {
+          return <String, Object?>{'error': failure};
+        }
+        return <String, Object?>{
+          'imageData': _stillJpegBytes,
+          'error': null,
+        };
+      case 'stopRecording':
+        return <String, Object?>{
+          'url': _stoppedVideoPath,
+          'videoData': null,
+          'error': null,
+        };
       case 'destroy':
         return true;
       default:
@@ -66,16 +93,19 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _NativeCameraSpy native;
+  late Directory temp;
 
-  setUp(() {
+  setUp(() async {
     native = _NativeCameraSpy();
+    temp = await Directory.systemTemp.createTemp('camera_macos_thumb_');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_cameraChannel, native.handle);
   });
 
-  tearDown(() {
+  tearDown(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_cameraChannel, null);
+    await temp.delete(recursive: true);
   });
 
   test('listDevices maps the enumerated cameras to their ids and names',
@@ -101,6 +131,21 @@ void main() {
 
     expect(native.methods, contains('initialize'));
     expect(native.argumentsOf('initialize')['deviceId'], 'usb-id');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await recorder.release();
+  });
+
+  testWidgets('the preview initialises the camera in the jpeg still format',
+      (WidgetTester tester) async {
+    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
+
+    await tester.pumpWidget(
+      MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
+    );
+    await tester.pump();
+
+    expect(native.argumentsOf('initialize')['pformat'], 'jpg');
 
     await tester.pumpWidget(const SizedBox.shrink());
     await recorder.release();
@@ -196,6 +241,70 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(native.countOf('destroy'), greaterThanOrEqualTo(1));
+
+    await recorder.release();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('stopping a recording returns a jpeg thumbnail written to disk',
+      (WidgetTester tester) async {
+    final CameraMacosVideoRecorder recorder =
+        CameraMacosVideoRecorder(temporaryDirectory: () async => temp);
+
+    await tester.pumpWidget(
+      MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
+    );
+    await tester.pumpAndSettle();
+
+    late VideoRecording recording;
+    await tester.runAsync(() async {
+      await recorder.start();
+      recording = await recorder.stop();
+    });
+
+    final CaptureMedia? thumbnail = recording.thumbnail;
+    expect(thumbnail, isA<CaptureFile>());
+    expect(thumbnail!.mime, videoThumbnailMime);
+
+    final File written = (thumbnail as CaptureFile).file;
+    expect(p.isWithin(temp.path, written.path), isTrue);
+    expect(p.extension(written.path), '.jpg');
+    expect(written.readAsBytesSync(), _stillJpegBytes);
+    expect(written.readAsBytesSync().sublist(0, 2), <int>[0xFF, 0xD8]);
+
+    expect(native.methods, contains('takePicture'));
+    expect(recording.media.mime, videoRecordingMime);
+    expect((recording.media as CaptureFile).file.path, _stoppedVideoPath);
+
+    await recorder.release();
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('a failed still capture still returns the finished recording',
+      (WidgetTester tester) async {
+    final CameraMacosVideoRecorder recorder =
+        CameraMacosVideoRecorder(temporaryDirectory: () async => temp);
+    native.takePictureError = <String, Object?>{
+      'code': 'PHOTO_OUTPUT_ERROR',
+      'message': 'imageData is empty or invalid',
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
+    );
+    await tester.pumpAndSettle();
+
+    late VideoRecording recording;
+    await tester.runAsync(() async {
+      await recorder.start();
+      recording = await recorder.stop();
+    });
+
+    expect(recording.thumbnail, isNull);
+    expect(native.methods, contains('stopRecording'));
+    expect(recording.media.mime, videoRecordingMime);
+    expect((recording.media as CaptureFile).file.path, _stoppedVideoPath);
+    expect(temp.listSync(), isEmpty);
 
     await recorder.release();
     await tester.pumpWidget(const SizedBox.shrink());
