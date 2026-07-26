@@ -32,9 +32,10 @@ Merge PR #41 — MSP 1 (macOS capture writes a JPEG thumbnail), `msp/macos-captu
 `95c245e`, 8 commits ahead. Only merge-ready artifact; merging is the HUMAN's action. Validated at its real
 head: analyze clean, 861 tests vs `main`'s 856. Fast-forward local `main` after. Then dispose of the parks —
 independent, neither a resume, each needing a decision first. Any relaunch passes `sourcePrefix: "msp"`:
-- MSP 2 `poster-first-decode-gate`, parked at `execute`. Read the review findings out of its task-2
-  worktree (the engine truncated them), then decide salvage vs discard.
-- MSP 3 `day-detail-feed-virtualization`, parked at `plan-review`. Edit its plan against the findings.
+- MSP 2: SALVAGE (findings read in session 05's addendum — the park is a governance deadlock, the code is
+  reviewer-validated and 42 receipts green at `3a7bd7f`). Ratify the didUpdateWidget gate as a spec
+  amendment, run plan Task 3 (".mitosis/poster-first-decode-gate.plan.md:513", closes the MEDIUM), merge.
+- MSP 3: restart from the spec — no code exists; the plan failed adversarial review 3x for a small change.
 
 ## Open Risks
 - Merged-but-unconfirmed is the live hazard: `da0a487` ships on `main`, yet the hardware run four criteria
@@ -43,8 +44,8 @@ independent, neither a resume, each needing a decision first. Any relaunch passe
 - Verifying the WRONG TREE is a demonstrated failure, not theoretical: a failed `git worktree add` plus a
   missing `set -e` produced a green suite describing `main`, not the branch under test. Echo `TREE:`/`HEAD:`
   in any validation command and read it before believing the result.
-- MSP 2's undo (`git branch -D msp/poster-first-decode-gate-integration`) is UNRUN by design; that branch
-  holds the only copy of the work, so deleting it discards the whole MSP.
+- NEVER run MSP 2's engine-proposed undo (`git branch -D msp/poster-first-decode-gate-integration`): the
+  final reviewer itself says "do NOT silently revert" — the fifth edit closes a real Today-feed bypass.
 - The Phase-1a `takePicture` format trap, the MSP-2 mutation-check mandate, the unreceipted responsive band
   and the missing `EntriesDao` pagination are all carried in full in the spec — read it, not this line.
 - Voice cards remain unswept twins (uncapped eager init, no retry, 40x40 tap target); `video_body.dart` is

@@ -73,6 +73,32 @@ truncated review findings read out of its task-2 worktree before deciding whethe
 salvageable or the branch is discarded. MSP 3 needs its plan edited against the adversarial findings. A
 relaunch after either edit is a fresh dispatch — and it MUST pass `sourcePrefix: "msp"`, no slash.
 
+## Addendum (same session): MSP 2 park read out — verdict SALVAGE, not discard
+The untruncated findings live in the workflow journal
+(`~/.claude/projects/.../subagents/workflows/wf_de373384-5d7/journal.jsonl`), not only the worktree. Three
+review rounds reconstructed:
+- Round 1 (`b2edc83`): the four spec'd edits, executed EXACTLY ("no extra features, no skipped steps").
+  FAIL on a real HIGH: the gate covers `initState` only, and `today_entry_feed.dart:56-57` swaps
+  `_PendingMediaResolver` for the real resolver after first paint, so every poster card on Today re-enters
+  through `didUpdateWidget -> _restart` and acquires a decoder slot ungated. Reviewer's own words: "a gap
+  in the spec rather than implementer infidelity."
+- Round 2 (`e9db8b8`): gate added to `didUpdateWidget` but it dropped `_restart`'s invalidation (no
+  generation bump, `_playWhenReady` left set) — an in-flight tap-resolve could autoplay the OLD clip. FAIL.
+- Round 3 (`3a7bd7f`): invalidation added, the out-of-spec `_wakeFromWaiting` retarget reverted. FAIL on a
+  PROCEDURAL high only: "a fifth, unrequested edit... IMPORTANT CAVEAT: the underlying bypass is real,
+  verified independently... Fix: do NOT silently revert; escalate to the plan owner to ratify this as a
+  spec amendment." `fixLoopMax` can never converge on a ratification only a human can grant — the park is a
+  governance deadlock, not a code failure.
+- Remaining real gaps: MEDIUM — `staysGated` uses `_needsMediaResolution` as an intent proxy, so a
+  resolved poster card whose `entry.mediaId` changes re-acquires ungated; this is exactly Task 3 of the
+  MSP's own plan (".mitosis/poster-first-decode-gate.plan.md:513 — Re-arm the gate when the media identity
+  changes"), which the engine parked BEFORE dispatching. LOW — no visual feedback between tap and resolve.
+- Verified in the task-2 worktree at `3a7bd7f` (TREE/HEAD echoed): 42 tests green across
+  video_body_poster_gate_test.dart, video_body_test.dart, video_body_lifecycle_test.dart.
+Salvage path: ratify the fifth edit as a spec amendment, execute plan Task 3 (closes the MEDIUM by
+design), full local validation, then merge task-2 -> integration -> PR. Do NOT run the engine's
+`git branch -D` undo. MSP 3 verdict unchanged: no code exists; restart from the spec.
+
 ## Demoted from PROJECT.md (80-line cap)
 Index line removed to make room for the new 2026-07-25 record. The decision FILE remains on disk and loads
 on demand; it belongs to the completed 31/31 build era:
