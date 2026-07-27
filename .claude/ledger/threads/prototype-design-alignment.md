@@ -1,6 +1,6 @@
 ---
 thread: prototype-design-alignment
-status: paused
+status: active
 updated: 2026-07-27
 priority: high
 completion_criteria:
@@ -9,22 +9,22 @@ completion_criteria:
   - No dialog renders Flutter's yellow double-underline debug style (MSP A3)
   - The Today screen, right rail, nav rail, flower set, mood picker and capture surfaces are human-confirmed against the prototype on macOS hardware
   - OQ-3 and OQ-6 are answered or explicitly closed as out of scope
-next_step: Merge PR #50 (carries docs/specs/2026-07-27-prototype-alignment-cluster-a.md; receipts + pr-title-lint both green), then dispatch mitosis with `spec` = that SLICE path (not the parent), baseBranch main, sourcePrefix `msp` (NO trailing slash).
+next_step: Mitosis DISPATCHED for Cluster A (spec = the SLICE, baseBranch main, sourcePrefix `msp-cluster-a`, worktreeRoot .fireplace-worktrees-cluster-a, fixLoopMax 2). Retitle every PR the engine opens (`mitosis: <msp-id>` fails pr-title-lint), then shepherd the human-gated merges.
 branch: chore/ledger-handoff-session-08
 ---
 
 ## Status
-Parent spec and the `docs/prototype/` citation bundle are ON MAIN (PR #48, `9fb3e7f`). The Cluster A execution slice is written and committed (`3fb33e4`) but not yet on main. Nothing in `lib/` has changed; execution has not started.
+Parent spec, the `docs/prototype/` citation bundle and the Cluster A execution slice are ALL on origin/main (PR #48 `9fb3e7f`; PR #50 squashed as `74d7706`). Local `main` is 2 commits behind origin/main. Nothing in `lib/` has changed; execution has not started.
 
 ## Active Goal
 Align the shipped Flutter app with the Claude Design prototype's aesthetic without regressing any app-only capability, above all the video playback stack.
 
 ## Next Step
-Merge **PR #50** (human-gated; carries the slice + this ledger; receipts and pr-title-lint both SUCCESS). Then dispatch mitosis: `spec` = the SLICE, `repoRoot` = the repo root, `baseBranch` main, `sourcePrefix` `msp` with NO trailing slash, `verify`/`build` from `receipts.config.json`, `fixLoopMax` 2. A3 is dependency-free and can land in parallel with A1/A2.
+Reconcile local `main` onto `origin/main` (currently 2 behind; the engine cuts worktrees from the bare LOCAL main ref — decisions/2026-07-16-pre-relaunch-main-reconciliation.md). Then dispatch mitosis: `spec` = the SLICE, `repoRoot` = the repo root, `baseBranch` main, `sourcePrefix` `msp` with NO trailing slash, `verify`/`build` from `receipts.config.json`, `fixLoopMax` 2. A3 is dependency-free and can land in parallel with A1/A2.
 
 ## Open Risks
 - **Pass the SLICE as `spec`, never the parent.** Mitosis has no scope parameter and decomposes whatever document it is handed; the parent yields all 39 MSPs.
-- `sourcePrefix` must be `msp`, never `msp/` — the engine appends the slash itself and the trailing-slash form failed run 1 with the invalid ref `msp//...`.
+- `sourcePrefix` is `msp-cluster-a` — bare (never a trailing slash: `msp/` failed run 1) and run-distinct, because 241 refs already live under `msp/` and the engine reuses an existing branch instead of failing. See decisions/2026-07-27-source-prefix-is-run-distinct.md.
 - The spec has been wrong about citation line numbers once (two regions systematically off by one, three simply wrong; see §7). Implementers must re-open every cited line rather than trust the document. Two of those corrections land in A1's own target tables.
 - A2 and A4 have app-wide blast radius by design: A2 changes `bodySerif` 16 -> 13.5 (nine consumers), `displaySerif` to w500/1.0 and `captionSans` to w400 (33 consumers); A4 strips the shadow from all 20 secondary `StickerButton` call sites. Both require a human pass over Calendar, Garden, Search, Day Detail and Settings — screens no later MSP revisits.
 - With H1 undispatched there is no golden coverage, so §5.3 gate 2 (the 106 playback tests, run unmodified) is the only automated pixel-adjacent net in this run.
