@@ -112,4 +112,33 @@ void main() {
       expect(Palette.sunGlow, const Color(0x8CF4C960));
     });
   });
+
+  group('radius ladder', () {
+    test('the ladder exposes every prototype step in ascending order', () {
+      expect(
+        <double>[
+          Shapes.radiusXs,
+          Shapes.radiusIconButton,
+          Shapes.radiusThumb,
+          Shapes.radiusCell,
+          Shapes.radiusSm,
+          Shapes.radiusControl,
+          Shapes.radiusPill,
+          Shapes.radiusMd,
+          Shapes.radiusLg,
+          Shapes.radiusXl,
+          Shapes.radiusSheet,
+        ],
+        <double>[6, 8, 9, 10, 11, 12, 13, 14, 16, 20, 22],
+      );
+    });
+
+    test('derived shapes and dash metrics are unchanged', () {
+      expect(Shapes.cardRadius, const Radius.circular(16));
+      expect(Shapes.cardBorderRadius, BorderRadius.circular(16));
+      expect(Shapes.buttonBorderRadius, BorderRadius.circular(11));
+      expect(Shapes.dashLength, 6);
+      expect(Shapes.dashGap, 4);
+    });
+  });
 }
