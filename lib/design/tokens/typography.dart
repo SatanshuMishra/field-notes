@@ -19,8 +19,8 @@ abstract final class TypographyTokens {
   static const TextStyle displaySerif = TextStyle(
     fontFamily: serif,
     fontSize: 32,
-    fontWeight: FontWeight.w600,
-    height: 1.15,
+    fontWeight: FontWeight.w500,
+    height: 1.0,
     color: Palette.ink,
   );
 
@@ -62,7 +62,7 @@ abstract final class TypographyTokens {
 
   static const TextStyle bodySerif = TextStyle(
     fontFamily: serif,
-    fontSize: 16,
+    fontSize: 13.5,
     fontWeight: FontWeight.w400,
     height: 1.5,
     color: Palette.ink,
@@ -70,7 +70,7 @@ abstract final class TypographyTokens {
 
   static const TextStyle bodySerifItalic = TextStyle(
     fontFamily: serif,
-    fontSize: 16,
+    fontSize: 13.5,
     fontWeight: FontWeight.w400,
     fontStyle: FontStyle.italic,
     height: 1.5,
@@ -94,15 +94,17 @@ abstract final class TypographyTokens {
 
   static const TextStyle wordmarkAccent = TextStyle(
     fontFamily: accent,
-    fontSize: 28,
+    fontSize: 23,
     fontWeight: FontWeight.w700,
-    color: Palette.ink,
+    height: 0.85,
+    color: Palette.coral,
   );
 
   static const TextStyle streakAccent = TextStyle(
     fontFamily: accent,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: FontWeight.w700,
+    height: 1.0,
     color: Palette.coral,
   );
 
@@ -186,7 +188,7 @@ abstract final class TypographyTokens {
   static const TextStyle captionSans = TextStyle(
     fontFamily: sans,
     fontSize: 12,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w400,
     color: Palette.muted,
   );
 
