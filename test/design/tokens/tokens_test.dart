@@ -141,4 +141,70 @@ void main() {
       expect(Shapes.dashGap, 4);
     });
   });
+
+  group('shadow scale', () {
+    final hardScale = <(String, List<BoxShadow>, double, Color)>[
+      ('chip', Shadows.chip, 1.5, Palette.ink16),
+      ('cellFilled', Shadows.cellFilled, 1.5, Palette.ink18),
+      ('cellToday', Shadows.cellToday, 1.5, Palette.coral30),
+      ('control', Shadows.control, 1.5, Palette.ink),
+      ('cardDefault', Shadows.cardDefault, 2.0, Palette.ink16),
+      ('emphasis', Shadows.emphasis, 2.0, Palette.ink),
+      ('tileSelected', Shadows.tileSelected, 2.0, Palette.coral30),
+      ('phoneAction', Shadows.phoneAction, 2.5, Palette.ink),
+      ('hero', Shadows.hero, 3.0, Palette.ink20),
+      ('heroSoft', Shadows.heroSoft, 3.0, const Color(0x244A3B2E)),
+    ];
+
+    test('every hard shadow is one square zero-blur offset in its cited colour',
+        () {
+      for (final (name, shadow, offset, color) in hardScale) {
+        expect(shadow, hasLength(1),
+            reason: 'Shadows.$name must be a single hard shadow');
+        expect(shadow.single.offset, Offset(offset, offset),
+            reason: 'Shadows.$name offset');
+        expect(shadow.single.color, color, reason: 'Shadows.$name colour');
+        expect(shadow.single.blurRadius, 0, reason: 'Shadows.$name blur');
+        expect(shadow.single.spreadRadius, 0, reason: 'Shadows.$name spread');
+      }
+    });
+
+    test('the blurred lifts carry their cited geometry', () {
+      expect(Shadows.softLift.single.color, const Color(0x99322314));
+      expect(Shadows.softLift.single.offset, const Offset(0, 20));
+      expect(Shadows.softLift.single.blurRadius, 50);
+      expect(Shadows.softLift.single.spreadRadius, -16);
+
+      expect(Shadows.panelLift.single.color, const Color(0xB81E140A));
+      expect(Shadows.panelLift.single.offset, const Offset(0, 44));
+      expect(Shadows.panelLift.single.blurRadius, 96);
+      expect(Shadows.panelLift.single.spreadRadius, -30);
+    });
+
+    test('the picker and chooser sheet lifts are two distinct tokens', () {
+      expect(Shadows.pickerSheetLift.single.color, const Color(0x80322314));
+      expect(Shadows.pickerSheetLift.single.offset, const Offset(0, -12));
+      expect(Shadows.pickerSheetLift.single.blurRadius, 30);
+      expect(Shadows.pickerSheetLift.single.spreadRadius, -12);
+
+      expect(Shadows.chooserSheetLift.single.color, const Color(0x8C322314));
+      expect(Shadows.chooserSheetLift.single.offset, const Offset(0, -14));
+      expect(Shadows.chooserSheetLift.single.blurRadius, 34);
+      expect(Shadows.chooserSheetLift.single.spreadRadius, -14);
+
+      expect(Shadows.pickerSheetLift, isNot(Shadows.chooserSheetLift));
+    });
+
+    test('card and button aliases keep their pre-expansion values', () {
+      expect(Shadows.card.single.color, const Color(0x334A3B2E));
+      expect(Shadows.card.single.offset, const Offset(3, 3));
+      expect(Shadows.card.single.blurRadius, 0);
+      expect(Shadows.card.single.spreadRadius, 0);
+
+      expect(Shadows.button.single.color, Palette.ink);
+      expect(Shadows.button.single.offset, const Offset(1.5, 1.5));
+      expect(Shadows.button.single.blurRadius, 0);
+      expect(Shadows.button.single.spreadRadius, 0);
+    });
+  });
 }
