@@ -5,8 +5,45 @@ import 'package:flutter/widgets.dart';
 import '../tokens/tokens.dart';
 
 const double _hatchTintAlpha = 0.5;
-const double _photoBandWidth = 6;
-const double _photoBandPitch = 12;
+
+enum CrossHatchVariant { photo, video, viewport }
+
+class _HatchGeometry {
+  const _HatchGeometry({
+    required this.ground,
+    required this.band,
+    required this.bandWidth,
+    required this.bandPitch,
+  });
+
+  final Color ground;
+  final Color band;
+  final double bandWidth;
+  final double bandPitch;
+}
+
+_HatchGeometry _geometryFor(CrossHatchVariant variant) {
+  return switch (variant) {
+    CrossHatchVariant.photo => const _HatchGeometry(
+        ground: Palette.hatchMid,
+        band: Palette.hatchLight,
+        bandWidth: 6,
+        bandPitch: 12,
+      ),
+    CrossHatchVariant.video => const _HatchGeometry(
+        ground: Palette.hatchDark,
+        band: Palette.hatchMid,
+        bandWidth: 6,
+        bandPitch: 12,
+      ),
+    CrossHatchVariant.viewport => const _HatchGeometry(
+        ground: Palette.viewportDark,
+        band: Palette.viewportDarkAlt,
+        bandWidth: 8,
+        bandPitch: 16,
+      ),
+  };
+}
 
 class CrossHatchPlaceholder extends StatelessWidget {
   const CrossHatchPlaceholder({
@@ -14,6 +51,7 @@ class CrossHatchPlaceholder extends StatelessWidget {
     this.width,
     this.height,
     this.borderRadius = Shapes.cardBorderRadius,
+    this.variant = CrossHatchVariant.photo,
     this.background,
     this.hatchColor,
     this.child,
@@ -22,16 +60,18 @@ class CrossHatchPlaceholder extends StatelessWidget {
   final double? width;
   final double? height;
   final BorderRadius borderRadius;
+  final CrossHatchVariant variant;
   final Color? background;
   final Color? hatchColor;
   final Widget? child;
 
   @override
   Widget build(BuildContext context) {
-    final Color ground = background ?? Palette.hatchMid;
+    final _HatchGeometry geometry = _geometryFor(variant);
+    final Color ground = background ?? geometry.ground;
     final Color? tint = hatchColor;
     final Color band = tint == null
-        ? Palette.hatchLight
+        ? geometry.band
         : Color.alphaBlend(tint.withValues(alpha: _hatchTintAlpha), ground);
 
     return SizedBox(
@@ -45,7 +85,8 @@ class CrossHatchPlaceholder extends StatelessWidget {
         child: DecoratedBox(
           position: DecorationPosition.foreground,
           decoration: BoxDecoration(
-            border: Shapes.outline,
+            border:
+                variant == CrossHatchVariant.viewport ? null : Shapes.outline,
             borderRadius: borderRadius,
           ),
           child: ClipRRect(
@@ -54,8 +95,8 @@ class CrossHatchPlaceholder extends StatelessWidget {
               painter: CrossHatchPainter(
                 ground: ground,
                 band: band,
-                bandWidth: _photoBandWidth,
-                bandPitch: _photoBandPitch,
+                bandWidth: geometry.bandWidth,
+                bandPitch: geometry.bandPitch,
               ),
               child: Center(child: child),
             ),
