@@ -1,0 +1,1742 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Instrument+Sans:wght@400;500;600&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#d9cbb2;font-family:'Instrument Sans',system-ui,sans-serif;background-image:radial-gradient(120% 80% at 50% -10%,#e6d8bf,#cdbd9f)}
+  a{color:#b45c44}a:hover{color:#9a4832}
+  @keyframes fn-blink{50%{opacity:0}}
+  @keyframes fn-pulse{0%,100%{transform:scale(.9);opacity:.5}50%{transform:scale(1.25);opacity:.18}}
+  @keyframes fn-bob{0%,100%{transform:scaleY(.45)}50%{transform:scaleY(1)}}
+  @keyframes fn-rise{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+  @keyframes fn-pop{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+  @keyframes fn-sheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @keyframes fn-gsway{0%,100%{transform:rotate(-2.2deg)}50%{transform:rotate(2.2deg)}}
+  @keyframes fn-gsway2{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+  @keyframes fn-wing{0%,100%{transform:scaleX(1)}50%{transform:scaleX(.48)}}
+  @keyframes fn-fly1{0%{transform:translate(0,0) rotate(-6deg)}25%{transform:translate(74px,-36px) rotate(9deg)}50%{transform:translate(158px,8px) rotate(-4deg)}75%{transform:translate(94px,46px) rotate(8deg)}100%{transform:translate(0,0) rotate(-6deg)}}
+  @keyframes fn-fly2{0%{transform:translate(0,0) rotate(5deg)}30%{transform:translate(-64px,32px) rotate(-9deg)}60%{transform:translate(-138px,-12px) rotate(6deg)}100%{transform:translate(0,0) rotate(5deg)}}
+  @keyframes fn-fly3{0%{transform:translate(0,0)}50%{transform:translate(46px,-54px)}100%{transform:translate(0,0)}}
+  @keyframes fn-grow{from{opacity:0;transform:translateX(-50%) scale(.4)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+  .fn-wing-l{transform-box:fill-box;transform-origin:right center;animation:fn-wing .16s ease-in-out infinite}
+  .fn-wing-r{transform-box:fill-box;transform-origin:left center;animation:fn-wing .16s ease-in-out infinite}
+  .fn-scroll::-webkit-scrollbar{width:9px}
+  .fn-scroll::-webkit-scrollbar-thumb{background:rgba(74,59,46,.22);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+  .fn-scroll::-webkit-scrollbar-track{background:transparent}
+  @keyframes fn-fade{from{opacity:0}to{opacity:1}}
+  input.fn-in,select.fn-in{font-family:'Instrument Sans',sans-serif}
+  .fn-in::placeholder{color:#b3a58c}
+  .fn-in:focus{border-color:#c76a54!important}
+</style>
+<script src="./md-scrapbook.js"></script>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;gap:38px;padding:40px 30px;flex-wrap:wrap">
+
+  <!-- ============================ DESKTOP ============================ -->
+  <div style="width:1140px;flex:none;border-radius:15px;overflow:hidden;box-shadow:0 46px 104px -34px rgba(50,35,20,.62);border:1px solid rgba(74,59,46,.22)">
+    <div style="height:42px;background:#e4d6bf;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid rgba(74,59,46,.16)">
+      <div style="display:flex;gap:8px"><span style="width:12px;height:12px;border-radius:50%;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:50%;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:50%;background:#28c840"></span></div>
+      <div style="flex:1;text-align:center;font:600 14px 'Caveat',cursive;color:#a3866a">field notes — a journal of days</div>
+      <div style="width:56px"></div>
+    </div>
+
+    <div style="display:flex;height:724px;position:relative;background:radial-gradient(120% 60% at 15% 0%,rgba(199,106,84,.07),transparent 55%),linear-gradient(#efe2ce,#e9dcc4)">
+
+      <!-- ===== NAV RAIL ===== -->
+      <div style="width:216px;flex:none;padding:22px 16px;display:flex;flex-direction:column;border-right:1px dashed rgba(74,59,46,.22)">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:24px">
+          <span style="width:32px;height:32px;display:flex">{{ logoFlower }}</span>
+          <div style="font:700 23px/.85 'Caveat',cursive;color:#c76a54">field<br>notes</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ nav }}" as="item" hint-placeholder-count="4">
+            <div onClick="{{ item.onClick }}" style="{{ item.style }}"><span style="display:flex;width:18px;height:18px">{{ item.icon }}</span><span style="font:600 14px 'Instrument Sans'">{{ item.label }}</span></div>
+          </sc-for>
+        </div>
+        <div style="flex:1"></div>
+        <div style="background:#fff5ea;border:1.5px solid #4a3b2e;border-radius:14px;padding:12px 13px;box-shadow:2px 2px 0 #4a3b2e;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:7px"><span style="display:flex;width:17px;height:17px">{{ flameIcon }}</span><span style="font:700 24px 'Caveat',cursive;color:#c76a54;line-height:1">{{ streak }} days</span></div>
+          <div style="font:400 10px 'Instrument Sans';color:#a08a70;margin-top:3px">{{ streakNote }}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px">
+          <div onClick="{{ openSettings }}" title="Settings" style="{{ settingsBtnStyle }}"><span style="display:flex;width:15px;height:15px">{{ settingsIcon }}</span></div>
+          <div onClick="{{ toggleSound }}" title="Sound" style="{{ soundBtnStyle }}"><span style="display:flex;width:15px;height:15px">{{ soundIcon }}</span></div>
+          <div style="line-height:1.15"><div style="font:600 10px 'Instrument Sans';color:#4a3b2e">Synced to home</div><div style="font:400 8px 'Instrument Sans';color:#a08a70">your server · just now</div></div>
+        </div>
+      </div>
+
+      <!-- ===== MAIN ===== -->
+      <div style="flex:1;position:relative;overflow:hidden">
+
+        <!-- ---- TODAY ---- -->
+        <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;height:100%">
+          <div class="fn-scroll" style="flex:1;overflow-y:auto;padding:26px 34px">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between">
+              <div><div style="font:600 16px 'Caveat',cursive;color:#c76a54">{{ greeting }}</div><div style="font:500 34px/1 'Newsreader',serif;color:#4a3b2e;margin-top:1px">{{ longDate }}</div></div>
+            </div>
+
+            <sc-if value="{{ hasMood }}" hint-placeholder-val="{{ true }}">
+            <div style="margin-top:16px;background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:16px;padding:14px 18px;box-shadow:3px 3px 0 rgba(74,59,46,.2);display:flex;align-items:center;gap:15px">
+              <span style="display:flex;width:54px;height:54px">{{ moodFlowerLg }}</span>
+              <div style="flex:1"><div style="font:500 19px 'Newsreader',serif;color:#4a3b2e">Feeling {{ moodLabel }} today</div><div style="font:400 12px 'Instrument Sans';color:#a08a70">{{ moodFlowerName }} · your bloom for the day</div></div>
+              <div onClick="{{ toggleMoodPicker }}" style="font:600 11px 'Instrument Sans';color:#c76a54;border:1.5px solid #c76a54;border-radius:13px;padding:6px 13px;cursor:pointer">change</div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ noMood }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ toggleMoodPicker }}" style="margin-top:16px;background:#f8efe0;border:1.5px dashed #4a3b2e;border-radius:16px;padding:16px 18px;box-shadow:3px 3px 0 rgba(74,59,46,.14);display:flex;align-items:center;gap:15px;cursor:pointer">
+              <span style="display:flex;width:46px;height:46px;opacity:.5">{{ moodFlowerLg }}</span>
+              <div style="flex:1"><div style="font:500 19px 'Newsreader',serif;color:#4a3b2e">How are you feeling today?</div><div style="font:600 13px 'Caveat',cursive;color:#a08a70">tap to plant today's bloom</div></div>
+              <div style="font:600 11px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:13px;padding:6px 13px">choose</div>
+            </div>
+            </sc-if>
+
+            <div style="font:600 17px 'Caveat',cursive;color:#7d8450;margin:18px 0 12px">{{ feedLabel }}</div>
+
+            <sc-if value="{{ hasEntries }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ entries }}" as="e" hint-placeholder-count="3">
+                <div style="{{ e.cardStyle }}">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                    <span style="font:600 13px 'Caveat',cursive;color:#7d8450">{{ e.stamp }}</span>
+                    <span style="font:500 8px 'Instrument Sans';letter-spacing:.08em;text-transform:uppercase;color:#c76a54;background:rgba(199,106,84,.12);border-radius:8px;padding:2px 7px">{{ e.typeLabel }}</span>
+                  </div>
+                  <sc-if value="{{ e.isNote }}" hint-placeholder-val="{{ true }}">
+                    <div style="font:400 13.5px/1.5 'Newsreader',serif;color:#4a3b2e;white-space:pre-wrap">{{ e.text }}</div>
+                  </sc-if>
+                  <sc-if value="{{ e.isVoice }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;align-items:center;gap:12px">
+                      <div onClick="{{ e.onPlay }}" style="width:38px;height:38px;border-radius:50%;background:#c76a54;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid #4a3b2e;cursor:pointer"><span style="display:flex;width:15px;height:15px;margin-left:2px">{{ playIcon }}</span></div>
+                      <div style="flex:1;display:flex;gap:2.5px;align-items:center;height:24px">{{ e.wave }}</div>
+                      <span style="font:600 11px 'Instrument Sans';color:#a08a70">{{ e.dur }}</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ e.isVideo }}" hint-placeholder-val="{{ false }}">
+                    <div style="position:relative;height:130px;border-radius:10px;overflow:hidden;background:repeating-linear-gradient(45deg,#d9c9ae,#d9c9ae 6px,#e2d3ba 6px,#e2d3ba 12px);border:1.5px solid #4a3b2e">
+                      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,251,244,.92);border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center"><span style="display:flex;width:17px;height:17px;margin-left:2px">{{ playIconDark }}</span></div>
+                      <span style="position:absolute;bottom:8px;right:9px;font:600 10px 'Instrument Sans';color:#fff;background:rgba(42,36,29,.7);border-radius:8px;padding:2px 8px">{{ e.dur }}</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ e.hasPhotos }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed rgba(74,59,46,.25)">
+                      <sc-for list="{{ e.photos }}" as="p" hint-placeholder-count="2">
+                        <div style="width:56px;height:56px;border-radius:9px;background:repeating-linear-gradient(45deg,#e2d3ba,#e2d3ba 5px,#ecdfc8 5px,#ecdfc8 10px);border:1.5px solid #4a3b2e;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3px"><span style="font:500 6px ui-monospace,monospace;color:#8a7358">{{ p.label }}</span></div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+            <sc-if value="{{ noEntries }}" hint-placeholder-val="{{ false }}">
+              <div style="border:1.5px dashed rgba(74,59,46,.4);border-radius:16px;padding:34px 20px;text-align:center">
+                <div style="font:500 17px 'Newsreader',serif;color:#4a3b2e">Nothing planted yet today</div>
+                <div style="font:400 12px 'Instrument Sans';color:#a08a70;margin-top:3px">Capture a moment — write it, speak it, or film it.</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div class="fn-scroll" style="width:266px;flex:none;overflow-y:auto;padding:24px 20px;border-left:1px dashed rgba(74,59,46,.22);display:flex;flex-direction:column;gap:18px">
+            <div>
+              <div style="font:600 17px 'Caveat',cursive;color:#7d8450;margin-bottom:2px">this week's garden</div>
+              <div style="font:400 10px 'Instrument Sans';color:#a08a70;margin-bottom:11px">{{ weekRange }}</div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+                <sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
+                  <div onClick="{{ d.onClick }}" style="{{ d.style }}"><span style="display:flex;width:27px;height:27px;align-items:center;justify-content:center;margin:0 auto">{{ d.flower }}</span><div style="{{ d.labelStyle }}">{{ d.label }}</div></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="height:1px;background:rgba(74,59,46,.16)"></div>
+            <div>
+              <div style="font:600 17px 'Caveat',cursive;color:#7d8450;margin-bottom:10px">capture a moment</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <sc-for list="{{ captures }}" as="c" hint-placeholder-count="3">
+                  <div onClick="{{ c.onClick }}" style="{{ c.style }}"><span style="display:flex;width:17px;height:17px">{{ c.icon }}</span><span style="font:600 12px 'Instrument Sans'">{{ c.label }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="height:1px;background:rgba(74,59,46,.16)"></div>
+            <div>
+              <div style="font:600 17px 'Caveat',cursive;color:#7d8450;margin-bottom:9px">on this day</div>
+              <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:13px;overflow:hidden;box-shadow:2px 2px 0 rgba(74,59,46,.16)">
+                <div style="height:82px;background:repeating-linear-gradient(45deg,#e2d3ba,#e2d3ba 6px,#ecdfc8 6px,#ecdfc8 12px);display:flex;align-items:center;justify-content:center"><span style="font:500 7px ui-monospace,monospace;color:#a08a70">memory · 1 year ago</span></div>
+                <div style="padding:9px 11px"><div style="font:500 12px 'Newsreader',serif;color:#4a3b2e">The garden last summer</div><div style="font:400 9px 'Instrument Sans';color:#a08a70;margin-top:1px">Jul 5, 2024 · felt warm</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ---- CALENDAR ---- -->
+        <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;display:flex;flex-direction:column;padding:26px 34px 30px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:6px;flex:none">
+            <div style="display:flex;align-items:center;gap:16px">
+              <div><div style="font:600 16px 'Caveat',cursive;color:#c76a54">explore</div><div style="font:500 32px/1 'Newsreader',serif;color:#4a3b2e">{{ calTitle }}</div></div>
+              <div style="display:flex;gap:6px">
+                <div onClick="{{ calPrev }}" title="Previous month" style="width:34px;height:34px;border-radius:10px;background:#f8efe0;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)"><span style="display:flex;width:15px;height:15px">{{ chevLeft }}</span></div>
+                <div onClick="{{ calNext }}" title="Next month" style="width:34px;height:34px;border-radius:10px;background:#f8efe0;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)"><span style="display:flex;width:15px;height:15px">{{ chevRight }}</span></div>
+              </div>
+            </div>
+            <div style="font:400 12px 'Instrument Sans';color:#a08a70">tap a day to open it</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin:14px 0 6px;flex:none">
+            <sc-for list="{{ weekdayLabels }}" as="w" hint-placeholder-count="7"><div style="text-align:center;font:600 10px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#a08a70">{{ w }}</div></sc-for>
+          </div>
+          <div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;gap:8px">
+            <sc-for list="{{ calendar }}" as="c" hint-placeholder-count="35">
+              <div onClick="{{ c.onClick }}" style="{{ c.style }}">
+                <div style="{{ c.numStyle }}">{{ c.num }}</div>
+                <sc-if value="{{ c.hasFlower }}" hint-placeholder-val="{{ false }}"><span style="display:flex;width:40px;height:40px;align-items:center;justify-content:center">{{ c.flower }}</span></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ---- GARDEN (ambient meadow) ---- -->
+        <sc-if value="{{ isGarden }}" hint-placeholder-val="{{ false }}">
+        <div class="fn-scroll" style="height:100%;overflow-y:auto;padding:26px 34px 30px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:4px">
+            <div><div style="font:600 16px 'Caveat',cursive;color:#c76a54">your garden</div><div style="font:500 32px/1 'Newsreader',serif;color:#4a3b2e">Every day, a bloom</div></div>
+          </div>
+          <div style="font:400 12px 'Instrument Sans';color:#a08a70;margin-bottom:16px">{{ gardenCount }} days planted in 2025 · quietly filling in as the year goes</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
+            <sc-for list="{{ moodTally }}" as="m" hint-placeholder-count="7">
+              <div style="display:flex;align-items:center;gap:7px;background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:20px;padding:5px 12px 5px 6px;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)"><span style="display:flex;width:24px;height:24px">{{ m.chip }}</span><span style="font:500 12px 'Instrument Sans';color:#4a3b2e">{{ m.label }}</span><span style="font:600 12px 'Caveat',cursive;color:#c76a54">{{ m.count }}</span></div>
+            </sc-for>
+          </div>
+
+          <div style="position:relative;height:452px;border-radius:20px;overflow:hidden;border:1.5px solid rgba(74,59,46,.22);box-shadow:inset 0 3px 14px rgba(74,59,46,.12);background:linear-gradient(180deg,#eee6d2 0%,#ebe1c9 24%,#e7e3c6 30%,#d6dbac 39%,#c4ce95 53%,#b1bd80 70%,#a0b371 86%,#96aa69 100%)">
+            <!-- sun -->
+            <div style="position:absolute;top:24px;right:52px;width:92px;height:92px;border-radius:50%;background:radial-gradient(circle,rgba(244,201,96,.55),rgba(244,201,96,0) 70%)"></div>
+            <!-- atmospheric haze where far meadow meets sky (gives depth) -->
+            <div style="position:absolute;left:0;right:0;top:26%;height:96px;background:linear-gradient(180deg,rgba(243,238,222,.9),rgba(243,238,222,0));filter:blur(4px);z-index:1"></div>
+            <!-- soil bed the flowers are planted in -->
+            <div style="position:absolute;left:0;right:0;bottom:0;height:58px;z-index:1;background:linear-gradient(180deg,rgba(126,100,62,0) 0%,#8a6c44 46%,#775a37 100%)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:26px;z-index:1;background:radial-gradient(120% 140% at 50% 120%,rgba(60,44,26,.5),transparent 72%)"></div>
+
+            <sc-for list="{{ gardenPlants }}" as="g" hint-placeholder-count="80">
+              <div style="{{ g.style }}">{{ g.el }}</div>
+            </sc-for>
+
+            <div style="position:absolute;left:11%;top:14%;width:24px;height:24px;z-index:160;animation:fn-fly1 15s ease-in-out infinite">{{ butterfly }}</div>
+            <div style="position:absolute;right:16%;top:28%;width:22px;height:22px;z-index:160;animation:fn-fly2 18s ease-in-out infinite">{{ butterfly2 }}</div>
+            <div style="position:absolute;left:46%;top:50%;width:18px;height:18px;z-index:160;animation:fn-fly3 9s ease-in-out infinite">{{ bee }}</div>
+
+            <div style="position:absolute;left:16px;bottom:12px;font:600 12px 'Caveat',cursive;color:rgba(74,59,46,.7);z-index:170">Jul 2025 · still growing</div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ---- SEARCH / DAY SHELF ---- -->
+        <sc-if value="{{ isSearch }}" hint-placeholder-val="{{ false }}">
+        <div style="height:100%;display:flex;flex-direction:column;padding:26px 34px">
+          <div style="font:500 32px/1 'Newsreader',serif;color:#4a3b2e;margin-bottom:12px">Your days</div>
+          <div style="display:flex;align-items:center;gap:8px;background:#f6efe0;border:1.5px solid rgba(74,59,46,.3);border-radius:11px;padding:9px 13px;margin-bottom:14px">
+            <span style="display:flex;width:15px;height:15px">{{ searchIcon }}</span><span style="font:400 13px 'Instrument Sans';color:#a08a70">Search your days…</span>
+          </div>
+          <div class="fn-scroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ dayList }}" as="d" hint-placeholder-count="6">
+              <div onClick="{{ d.onClick }}" style="{{ d.style }}">
+                <span style="display:flex;width:40px;height:40px;flex:none">{{ d.flower }}</span>
+                <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><span style="font:600 14px 'Instrument Sans';color:#4a3b2e">{{ d.title }}</span><span style="font:500 10px 'Instrument Sans';color:#a08a70">{{ d.count }}</span></div><div style="font:400 12px/1.4 'Newsreader',serif;color:#8a7358;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.preview }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ---- SETTINGS (desktop) ---- -->
+        <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div class="fn-scroll" style="height:100%;overflow-y:auto;padding:26px 34px 34px">
+          <div style="margin-bottom:18px"><div style="font:600 16px 'Caveat',cursive;color:#c76a54">preferences</div><div style="font:500 32px/1 'Newsreader',serif;color:#4a3b2e">Settings</div><div style="font:400 12px 'Instrument Sans';color:#a08a70;margin-top:5px">A rough layout — placeholder fields the real build can reuse.</div></div>
+
+          <div style="max-width:620px;display:flex;flex-direction:column;gap:16px">
+
+            <!-- SECTION · SYNC & STORAGE -->
+            <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:16px;padding:16px 20px 6px;box-shadow:3px 3px 0 rgba(74,59,46,.16)">
+              <div style="font:600 17px 'Caveat',cursive;color:#7d8450">sync &amp; storage</div>
+              <div style="font:400 11px 'Instrument Sans';color:#a08a70;margin-bottom:4px">Keep your journal on one device, or sync it to a server you control.</div>
+
+              <!-- FIELD · segmented control (radio) -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Storage mode</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">where your entries live</div></div>
+                <div style="display:flex;gap:4px;background:#efe2ce;border:1.5px solid rgba(74,59,46,.25);border-radius:11px;padding:3px;flex:none">
+                  <sc-for list="{{ storageSeg }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.onClick }}" style="{{ o.style }}">{{ o.label }}</div></sc-for>
+                </div>
+              </div>
+
+              <!-- on-device fallback note -->
+              <sc-if value="{{ syncOff }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:10px;align-items:flex-start;padding:0 0 16px">
+                <span style="display:flex;width:16px;height:16px;margin-top:1px;flex:none">{{ gearIcon }}</span>
+                <div style="font:400 12px/1.5 'Newsreader',serif;color:#8a7358">Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.</div>
+              </div>
+              </sc-if>
+
+              <!-- server fields (shown when syncing) -->
+              <sc-if value="{{ syncOn }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <!-- FIELD · text input -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                  <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Server URL</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">your self-hosted sync endpoint</div></div>
+                  <input class="fn-in" type="url" placeholder="https://journal.example.com" style="flex:none;width:280px;box-sizing:border-box;font:400 13px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:11px;padding:10px 12px;outline:none">
+                </div>
+                <!-- FIELD · secret input -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                  <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Access token</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">kept private on this device</div></div>
+                  <input class="fn-in" type="password" placeholder="••••••••••••" style="flex:none;width:280px;box-sizing:border-box;font:400 13px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:11px;padding:10px 12px;outline:none">
+                </div>
+                <!-- FIELD · dropdown select -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                  <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Sync frequency</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">how often to push changes</div></div>
+                  <select class="fn-in" defaultValue="realtime" style="flex:none;width:280px;box-sizing:border-box;font:400 13px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:11px;padding:10px 12px;cursor:pointer;outline:none">
+                    <option value="realtime">Real-time</option>
+                    <option value="15m">Every 15 minutes</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="manual">Manual only</option>
+                  </select>
+                </div>
+                <!-- FIELD · status + button -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0 16px;border-top:1px dashed rgba(74,59,46,.18)">
+                  <div style="display:flex;align-items:center;gap:8px;font:600 11px 'Instrument Sans';color:#a08a70;background:rgba(74,59,46,.08);border-radius:20px;padding:6px 12px"><span style="width:7px;height:7px;border-radius:50%;background:#c9821f"></span>Not connected</div>
+                  <div style="font:600 12px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:11px;padding:9px 16px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer">Test connection</div>
+                </div>
+              </div>
+              </sc-if>
+            </div>
+
+            <!-- SECTION · REMINDERS & SOUND -->
+            <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:16px;padding:16px 20px 8px;box-shadow:3px 3px 0 rgba(74,59,46,.16)">
+              <div style="font:600 17px 'Caveat',cursive;color:#7d8450;margin-bottom:2px">reminders &amp; sound</div>
+              <!-- FIELD · toggle -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Daily reminder</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">a gentle nudge to plant the day</div></div>
+                <div onClick="{{ reminderToggle.onClick }}" style="{{ reminderToggle.trackStyle }}"><div style="{{ reminderToggle.knobStyle }}"></div></div>
+              </div>
+              <!-- FIELD · time input -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Reminder time</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">when the nudge arrives</div></div>
+                <input class="fn-in" type="time" defaultValue="20:30" style="flex:none;width:140px;box-sizing:border-box;font:400 13px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:11px;padding:9px 12px;outline:none">
+              </div>
+              <!-- FIELD · toggle -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0 16px;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Sound effects</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">page turns, pencil, chimes</div></div>
+                <div onClick="{{ soundToggle.onClick }}" style="{{ soundToggle.trackStyle }}"><div style="{{ soundToggle.knobStyle }}"></div></div>
+              </div>
+            </div>
+
+            <!-- SECTION · JOURNAL -->
+            <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:16px;padding:16px 20px 8px;box-shadow:3px 3px 0 rgba(74,59,46,.16)">
+              <div style="font:600 17px 'Caveat',cursive;color:#7d8450;margin-bottom:2px">journal</div>
+              <!-- FIELD · dropdown select -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Week starts on</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">calendar layout</div></div>
+                <select class="fn-in" defaultValue="mon" style="flex:none;width:180px;box-sizing:border-box;font:400 13px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:11px;padding:10px 12px;cursor:pointer;outline:none">
+                  <option value="mon">Monday</option>
+                  <option value="sun">Sunday</option>
+                </select>
+              </div>
+              <!-- FIELD · slider -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0 16px;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Text size</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">reading comfort</div></div>
+                <input class="fn-in" type="range" min="1" max="3" step="1" defaultValue="2" style="flex:none;width:180px;accent-color:#c76a54;cursor:pointer">
+              </div>
+            </div>
+
+            <!-- SECTION · DATA -->
+            <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:16px;padding:16px 20px 8px;box-shadow:3px 3px 0 rgba(74,59,46,.16)">
+              <div style="font:600 17px 'Caveat',cursive;color:#7d8450;margin-bottom:2px">data</div>
+              <!-- FIELD · secondary button -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Export entries</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">download a full copy</div></div>
+                <div style="font:600 12px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid #4a3b2e;border-radius:11px;padding:9px 16px;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.2);cursor:pointer">Export…</div>
+              </div>
+              <!-- FIELD · danger button -->
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 0 16px;border-top:1px dashed rgba(74,59,46,.18)">
+                <div><div style="font:600 13px 'Instrument Sans';color:#4a3b2e">Delete all data</div><div style="font:400 11px 'Instrument Sans';color:#a08a70">removes every entry on this device</div></div>
+                <div style="font:600 12px 'Instrument Sans';color:#c0392b;background:#fbecea;border:1.5px solid #c0392b;border-radius:11px;padding:9px 16px;cursor:pointer">Delete all…</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== DAY DETAIL (desktop) ===== -->
+        <sc-if value="{{ dayDetailOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ dd.onClose }}" style="position:absolute;inset:0;background:rgba(42,36,29,.34);display:flex;align-items:center;justify-content:center;z-index:44">
+          <div onClick="{{ stop }}" style="width:560px;max-height:86%;display:flex;flex-direction:column;background:#efe2ce;border:2px solid #4a3b2e;border-radius:20px;overflow:hidden;box-shadow:0 24px 60px -18px rgba(50,35,20,.65);animation:fn-pop .18s ease-out">
+            <div style="display:flex;align-items:center;gap:12px;padding:16px 18px;border-bottom:1.5px dashed rgba(74,59,46,.25);flex:none">
+              <div onClick="{{ dd.onClose }}" style="width:34px;height:34px;border-radius:10px;background:#f8efe0;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><span style="display:flex;width:16px;height:16px">{{ backIcon }}</span></div>
+              <div style="flex:1;min-width:0"><div style="font:600 13px 'Caveat',cursive;color:#c76a54">{{ dd.subtitle }}</div><div style="font:500 21px/1 'Newsreader',serif;color:#4a3b2e">{{ dd.title }}</div></div>
+            </div>
+            <div class="fn-scroll" style="flex:1;overflow-y:auto;padding:16px 18px 20px">
+              <sc-if value="{{ dd.hasMood }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;gap:13px;background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:16px;padding:11px 13px;box-shadow:2px 2px 0 rgba(74,59,46,.2);margin-bottom:15px">
+                <span style="display:flex;width:46px;height:46px;flex:none">{{ dd.flower }}</span>
+                <div style="flex:1;min-width:0"><div style="font:500 17px 'Newsreader',serif;color:#4a3b2e">Felt {{ dd.moodLabel }}</div><div style="font:400 10px 'Instrument Sans';color:#a08a70">{{ dd.flowerName }} · the day's bloom</div></div>
+                <div onClick="{{ dd.onChangeMood }}" style="font:600 12px 'Instrument Sans';color:#4a3b2e;background:#fff5ea;border:1.5px solid #4a3b2e;border-radius:11px;padding:8px 14px;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.2);cursor:pointer;flex:none">Change mood</div>
+              </div>
+              </sc-if>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 10px">
+                <div style="font:600 13px 'Caveat',cursive;color:#7d8450">{{ dd.count }} that day</div>
+                <div onClick="{{ dd.onAddNote }}" style="display:flex;align-items:center;gap:6px;font:600 12px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:11px;padding:7px 13px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer"><span style="display:flex;width:14px;height:14px">{{ plusIcon }}</span>Add a note</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:9px">
+                <sc-for list="{{ dd.entries }}" as="e" hint-placeholder-count="3">
+                  <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:14px;padding:11px 13px;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px">
+                      <div style="font:600 11px 'Caveat',cursive;color:#7d8450">{{ e.stamp }} · {{ e.typeLabel }}</div>
+                      <div style="display:flex;gap:6px;flex:none">
+                        <sc-if value="{{ e.canEdit }}" hint-placeholder-val="{{ true }}"><div onClick="{{ e.onEdit }}" title="Edit" style="width:28px;height:28px;border-radius:8px;background:#fffaf1;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="display:flex;width:14px;height:14px">{{ pencilIcon }}</span></div></sc-if>
+                        <div onClick="{{ e.onDelete }}" title="Delete" style="width:28px;height:28px;border-radius:8px;background:#fbecea;border:1.5px solid #c0392b;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="display:flex;width:14px;height:14px">{{ trashIcon }}</span></div>
+                      </div>
+                    </div>
+                    <sc-if value="{{ e.isNote }}" hint-placeholder-val="{{ true }}"><div style="font:400 13.5px/1.55 'Newsreader',serif;color:#4a3b2e;white-space:pre-wrap">{{ e.text }}</div></sc-if>
+                    <sc-if value="{{ e.isVoice }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:10px"><div onClick="{{ e.onPlay }}" style="width:30px;height:30px;border-radius:50%;background:#c76a54;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid #4a3b2e;cursor:pointer"><span style="display:flex;width:13px;height:13px;margin-left:2px">{{ playIcon }}</span></div><div style="flex:1;display:flex;gap:2px;align-items:center;height:18px">{{ e.wave }}</div><span style="font:600 10px 'Instrument Sans';color:#a08a70">{{ e.dur }}</span></div></sc-if>
+                    <sc-if value="{{ e.isVideo }}" hint-placeholder-val="{{ false }}"><div style="position:relative;height:96px;border-radius:9px;overflow:hidden;background:repeating-linear-gradient(45deg,#d9c9ae,#d9c9ae 5px,#e2d3ba 5px,#e2d3ba 10px);border:1.5px solid #4a3b2e"><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:36px;height:36px;border-radius:50%;background:rgba(255,251,244,.92);border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center"><span style="display:flex;width:14px;height:14px;margin-left:1px">{{ playIconDark }}</span></div><span style="position:absolute;bottom:7px;right:8px;font:600 9px 'Instrument Sans';color:#fff;background:rgba(42,36,29,.7);border-radius:6px;padding:1px 7px">{{ e.dur }}</span></div></sc-if>
+                    <sc-if value="{{ e.hasPhotos }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:6px;margin-top:8px"><sc-for list="{{ e.photos }}" as="p" hint-placeholder-count="2"><div style="width:52px;height:52px;border-radius:8px;background:repeating-linear-gradient(45deg,#e2d3ba,#e2d3ba 5px,#ecdfc8 5px,#ecdfc8 10px);border:1.5px solid #4a3b2e"></div></sc-for></div></sc-if>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== CONFIRM DIALOG (desktop) ===== -->
+        <sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ confirmNo }}" style="position:absolute;inset:0;background:rgba(42,36,29,.42);display:flex;align-items:center;justify-content:center;z-index:70">
+          <div onClick="{{ stop }}" style="width:370px;background:#f8efe0;border:2px solid #4a3b2e;border-radius:18px;padding:22px;box-shadow:0 22px 54px -16px rgba(50,35,20,.6);animation:fn-pop .16s ease-out">
+            <div style="font:500 20px 'Newsreader',serif;color:#4a3b2e">{{ confirmTitle }}</div>
+            <div style="font:400 13px/1.55 'Instrument Sans';color:#8a7358;margin-top:7px">{{ confirmMessage }}</div>
+            <div style="display:flex;gap:9px;margin-top:20px;justify-content:flex-end">
+              <div onClick="{{ confirmNo }}" style="font:600 12px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid #4a3b2e;border-radius:11px;padding:9px 16px;cursor:pointer">Cancel</div>
+              <div onClick="{{ confirmYes }}" style="{{ confirmYesStyle }}">{{ confirmLabel }}</div>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== MOOD PICKER (desktop) ===== -->
+        <sc-if value="{{ moodPickerOpen }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ closeMoodPicker }}" style="position:absolute;inset:0;background:rgba(42,36,29,.28);display:flex;align-items:center;justify-content:center;z-index:60">
+          <div onClick="{{ stop }}" style="width:420px;background:#f8efe0;border:2px solid #4a3b2e;border-radius:20px;padding:22px;box-shadow:0 20px 50px -16px rgba(50,35,20,.6);animation:fn-pop .18s ease-out">
+            <div style="font:500 21px 'Newsreader',serif;color:#4a3b2e;text-align:center">How are you feeling?</div>
+            <div style="font:600 14px 'Caveat',cursive;color:#a08a70;text-align:center;margin-top:1px">choose today's bloom</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px">
+              <sc-for list="{{ moodOptions }}" as="m" hint-placeholder-count="7">
+                <div onClick="{{ m.onClick }}" style="{{ m.style }}"><span style="display:flex;width:44px;height:44px">{{ m.flower }}</span><div style="font:600 11px 'Instrument Sans';color:#4a3b2e;margin-top:5px">{{ m.label }}</div><div style="font:400 9px 'Instrument Sans';color:#a08a70">{{ m.flowerName }}</div></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        </sc-if>
+
+        <!-- ===== TOAST (desktop) ===== -->
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:22px;left:50%;transform:translateX(-50%);background:#4a3b2e;color:#f6ead6;border-radius:22px;padding:10px 20px;font:600 13px 'Instrument Sans';box-shadow:0 10px 24px -8px rgba(0,0,0,.5);z-index:60;animation:fn-rise .22s ease-out;display:flex;align-items:center;gap:8px"><span style="display:flex;width:15px;height:15px">{{ checkIcon }}</span>{{ toast }}</div>
+        </sc-if>
+
+      </div>
+        <!-- ===== COMPOSER (desktop) ===== -->
+        <sc-if value="{{ composerOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;inset:0;background:radial-gradient(120% 100% at 50% 32%,rgba(42,32,22,.36),rgba(28,20,12,.62));backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;z-index:50;animation:fn-fade .22s ease">
+          <div style="position:relative;width:760px;background:#fbf3e4;border:2px solid #4a3b2e;border-radius:20px;overflow:hidden;box-shadow:0 44px 96px -30px rgba(30,20,10,.72);animation:fn-pop .2s ease-out">
+            <div style="position:absolute;top:-10px;right:-8px;width:120px;height:150px;opacity:.4;pointer-events:none;display:flex;z-index:0">{{ sprigArt }}</div>
+            <sc-if value="{{ isTextComposer }}" hint-placeholder-val="{{ true }}">
+            <div style="position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1.5px dashed rgba(74,59,46,.25)">
+              <div onClick="{{ closeComposer }}" style="cursor:pointer;display:flex;width:22px;height:22px">{{ closeIcon }}</div>
+              <div style="text-align:center;line-height:1.1"><div style="font:600 16px 'Caveat',cursive;color:#c76a54">{{ composerTitle }}</div><div style="font:400 9px 'Instrument Sans';color:#a08a70">{{ longDate }} · {{ clock }}</div></div>
+              <div onClick="{{ saveText }}" style="font:600 12px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:13px;padding:7px 15px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer">{{ composerSaveLabel }}</div>
+            </div>
+            <div style="position:relative;z-index:1;padding:0 18px 14px">
+              <div ref="{{ noteRef }}" style="position:relative;height:440px;margin:0 -18px;border-top:1px dashed rgba(74,59,46,.2)"></div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+                <div onClick="{{ addPhoto }}" style="display:flex;align-items:center;gap:7px;background:#c76a54;color:#fff;border:1.5px solid #4a3b2e;border-radius:11px;padding:8px 13px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer"><span style="display:flex;width:16px;height:16px">{{ photoIcon }}</span><span style="font:600 12px 'Instrument Sans'">Add memory</span></div>
+                <div style="flex:1"></div>
+                <span style="font:400 10px 'Instrument Sans';color:#a08a70;line-height:1.5;text-align:right"><b style="color:#7d6a52"># </b>title&nbsp; <b style="color:#7d6a52">- </b>list&nbsp; <b style="color:#7d6a52">1. </b>steps&nbsp; <b style="color:#7d6a52">&gt; </b>quote&nbsp; <b style="color:#7d6a52">[] </b>to-do</span>
+              </div>
+            </div>
+            </sc-if>
+            <sc-if value="{{ isVoiceComposer }}" hint-placeholder-val="{{ false }}">
+            <div style="padding:40px 22px 44px;text-align:center;position:relative">
+              <div onClick="{{ closeComposer }}" style="position:absolute;left:18px;top:18px;cursor:pointer;display:flex;width:22px;height:22px">{{ closeIcon }}</div>
+              <sc-if value="{{ recIdle }}" hint-placeholder-val="{{ true }}"><div style="font:600 16px 'Caveat',cursive;color:#c76a54;margin-top:4px">New voice memo</div></sc-if>
+              <sc-if value="{{ recRecording }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:4px"><span style="width:8px;height:8px;border-radius:50%;background:#c0392b;animation:fn-blink 1.2s step-end infinite"></span><span style="font:600 12px 'Instrument Sans';letter-spacing:.08em;text-transform:uppercase;color:#c0392b">Recording</span></div></sc-if>
+              <sc-if value="{{ recPaused }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;justify-content:center;gap:7px;margin-top:4px"><span style="width:8px;height:8px;border-radius:50%;background:#c9821f"></span><span style="font:600 12px 'Instrument Sans';letter-spacing:.08em;text-transform:uppercase;color:#c9821f">Paused</span></div></sc-if>
+              <div style="position:relative;width:150px;height:150px;margin:14px auto 6px;display:flex;align-items:center;justify-content:center">
+                <sc-if value="{{ recRecording }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(199,106,84,.4),transparent 68%);animation:fn-pulse 2.4s ease-in-out infinite"></div></sc-if>
+                <div onClick="{{ onRecTap }}" title="Start / pause recording" style="position:relative;width:92px;height:92px;border-radius:50%;background:#c76a54;border:2.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 24px -8px rgba(199,106,84,.7);cursor:pointer"><span style="display:flex;width:38px;height:38px">{{ recTapIcon }}</span></div>
+              </div>
+              <div style="font:400 38px 'Newsreader',serif;color:#4a3b2e">{{ recTime }}</div>
+              <div style="font:600 15px 'Caveat',cursive;color:#a08a70;margin-top:2px">{{ recVoiceHint }}</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:3px;height:40px;margin:12px 0 4px">
+                <sc-if value="{{ recRecording }}" hint-placeholder-val="{{ false }}">{{ liveWave }}</sc-if>
+                <sc-if value="{{ recNotRecording }}" hint-placeholder-val="{{ true }}"><div style="width:120px;height:2px;border-radius:2px;background:rgba(74,59,46,.18)"></div></sc-if>
+              </div>
+              <sc-if value="{{ recActive }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px">
+                <div onClick="{{ discardRec }}" style="display:inline-flex;align-items:center;gap:8px;background:#fbecea;color:#c0392b;border:1.5px solid #c0392b;border-radius:22px;padding:10px 18px;cursor:pointer"><span style="display:flex;width:15px;height:15px">{{ trashIcon }}</span><span style="font:600 13px 'Instrument Sans'">Discard</span></div>
+                <div onClick="{{ saveVoice }}" style="display:inline-flex;align-items:center;gap:9px;background:#c0392b;color:#fff;border:2px solid #4a3b2e;border-radius:22px;padding:11px 22px;box-shadow:2px 2px 0 #4a3b2e;cursor:pointer"><span style="width:15px;height:15px;border-radius:4px;background:#fff"></span><span style="font:600 13px 'Instrument Sans'">Save memo</span></div>
+              </div>
+              </sc-if>
+            </div>
+            </sc-if>
+            <sc-if value="{{ isVideoComposer }}" hint-placeholder-val="{{ false }}">
+            <div style="position:relative;height:480px;background:repeating-linear-gradient(45deg,#3a352e,#3a352e 8px,#443f37 8px,#443f37 16px)">
+              <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(15,13,11,.5),transparent 22%,transparent 68%,rgba(15,13,11,.72))"></div>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font:500 10px ui-monospace,monospace;color:rgba(255,255,255,.3);letter-spacing:.1em">CAMERA FEED</div>
+              <div onClick="{{ closeComposer }}" style="position:absolute;left:16px;top:16px;cursor:pointer;display:flex;width:22px;height:22px">{{ closeIconLight }}</div>
+              <div style="position:absolute;top:16px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:7px;background:rgba(15,13,11,.5);border-radius:14px;padding:5px 12px">
+                <sc-if value="{{ recRecording }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:#e0574a;animation:fn-blink 1.2s step-end infinite"></span></sc-if>
+                <sc-if value="{{ recPaused }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:#f0b34a"></span></sc-if>
+                <sc-if value="{{ recIdle }}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5)"></span></sc-if>
+                <span style="font:600 13px 'Instrument Sans';color:#fff">{{ recTime }}</span>
+              </div>
+              <div style="position:absolute;bottom:70px;left:0;right:0;text-align:center;font:600 13px 'Caveat',cursive;color:rgba(255,255,255,.72)">{{ recVideoHint }}</div>
+              <div style="position:absolute;bottom:22px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:30px">
+                <sc-if value="{{ recActive }}" hint-placeholder-val="{{ false }}"><div onClick="{{ discardRec }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:44px;height:44px;border-radius:50%;background:rgba(15,13,11,.5);border:1.5px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center"><span style="display:flex;width:18px;height:18px">{{ trashIconLight }}</span></div><span style="font:500 10px 'Instrument Sans';color:rgba(255,255,255,.75)">Discard</span></div></sc-if>
+                <div onClick="{{ onRecTap }}" title="Start / pause" style="width:70px;height:70px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none">
+                  <sc-if value="{{ recRecording }}" hint-placeholder-val="{{ false }}"><span style="display:flex;width:26px;height:26px">{{ pauseIconLight }}</span></sc-if>
+                  <sc-if value="{{ recNotRecording }}" hint-placeholder-val="{{ true }}"><div style="width:24px;height:24px;border-radius:50%;background:#e0574a"></div></sc-if>
+                </div>
+                <sc-if value="{{ recActive }}" hint-placeholder-val="{{ false }}"><div onClick="{{ saveVideo }}" style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer"><div style="width:44px;height:44px;border-radius:50%;background:#c76a54;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center"><span style="display:flex;width:18px;height:18px">{{ checkIconLight }}</span></div><span style="font:500 10px 'Instrument Sans';color:rgba(255,255,255,.85)">Save</span></div></sc-if>
+              </div>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+        </sc-if>
+    </div>
+  </div>
+
+  <!-- ============================ PHONE (standalone) ============================ -->
+  <div style="flex:none;width:322px;padding:11px;border-radius:46px;background:#211c16;box-shadow:0 34px 74px -24px rgba(50,35,20,.6)">
+    <div style="position:relative;width:300px;height:640px;border-radius:36px;overflow:hidden;background:#efe2ce">
+      <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:96px;height:22px;border-radius:14px;background:#211c16;z-index:30"></div>
+      <div style="position:absolute;inset:0;background:radial-gradient(120% 45% at 82% 0%,rgba(199,106,84,.14),transparent 60%),radial-gradient(90% 40% at 0% 100%,rgba(109,138,156,.13),transparent 55%)"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:44px;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:15px 24px 0;font:600 12px 'Instrument Sans';color:#4a3b2e"><span>{{ clock }}</span><span style="letter-spacing:2px;opacity:.5">• • ▮</span></div>
+
+      <!-- ---- PHONE: TODAY ---- -->
+      <sc-if value="{{ pIsToday }}" hint-placeholder-val="{{ true }}">
+      <div class="fn-scroll" style="position:absolute;inset:0;top:44px;bottom:74px;overflow-y:auto;padding:4px 18px 10px;z-index:5">
+        <div style="margin-top:6px;display:flex;justify-content:space-between;align-items:flex-start">
+          <div><div style="font:600 22px 'Caveat',cursive;color:#c76a54;transform:rotate(-2deg)">{{ greeting }}</div><div style="font:500 19px/1 'Newsreader',serif;color:#4a3b2e;margin-top:1px">{{ shortDate }}</div></div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div onClick="{{ pOpenSettings }}" title="Settings" style="width:34px;height:34px;border-radius:11px;background:#f8efe0;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;box-shadow:2px 2px 0 rgba(74,59,46,.18);cursor:pointer"><span style="display:flex;width:16px;height:16px">{{ pGearIcon }}</span></div>
+            <div style="text-align:center;background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:13px;padding:4px 9px 5px;box-shadow:2px 2px 0 #4a3b2e"><div style="font:700 15px 'Caveat',cursive;color:#c76a54;line-height:1">{{ streak }} days</div><div style="font:500 6px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#a08a70">streak</div></div>
+          </div>
+        </div>
+
+        <sc-if value="{{ hasMood }}" hint-placeholder-val="{{ true }}">
+        <div onClick="{{ pToggleMood }}" style="margin-top:11px;display:flex;align-items:center;gap:9px;background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:14px;padding:7px 11px 7px 8px;box-shadow:2px 2px 0 rgba(74,59,46,.22);cursor:pointer">
+          <span style="display:flex;width:30px;height:30px">{{ moodFlowerSm }}</span>
+          <div style="flex:1"><span style="font:500 14px 'Newsreader',serif;color:#4a3b2e">Feeling {{ moodLabel }}</span><div style="font:400 9px 'Instrument Sans';color:#a08a70">{{ moodFlowerName }} · today's bloom</div></div>
+          <span style="font:600 8px 'Instrument Sans';color:#c76a54;border:1.5px solid #c76a54;border-radius:11px;padding:3px 8px">change</span>
+        </div>
+        </sc-if>
+        <sc-if value="{{ noMood }}" hint-placeholder-val="{{ false }}">
+        <div onClick="{{ pToggleMood }}" style="margin-top:11px;display:flex;align-items:center;gap:9px;background:#f8efe0;border:1.5px dashed #4a3b2e;border-radius:14px;padding:9px 11px;cursor:pointer">
+          <div style="flex:1"><span style="font:500 14px 'Newsreader',serif;color:#4a3b2e">How are you feeling?</span><div style="font:600 10px 'Caveat',cursive;color:#a08a70">tap to plant today's bloom</div></div>
+          <span style="font:600 8px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:11px;padding:4px 9px">choose</span>
+        </div>
+        </sc-if>
+
+        <div style="font:600 14px 'Caveat',cursive;color:#7d8450;margin:12px 0 7px">{{ feedLabelShort }}</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ entries }}" as="e" hint-placeholder-count="3">
+            <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:13px;padding:10px 12px;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)">
+              <div style="font:600 11px 'Caveat',cursive;color:#7d8450;margin-bottom:2px">{{ e.stamp }} · {{ e.typeLabel }}</div>
+              <sc-if value="{{ e.isNote }}" hint-placeholder-val="{{ true }}"><div style="font:400 12px/1.45 'Newsreader',serif;color:#4a3b2e;white-space:pre-wrap">{{ e.textShort }}</div></sc-if>
+              <sc-if value="{{ e.isVoice }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:9px"><div onClick="{{ e.onPlay }}" style="width:28px;height:28px;border-radius:50%;background:#c76a54;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid #4a3b2e;cursor:pointer"><span style="display:flex;width:12px;height:12px;margin-left:2px">{{ playIcon }}</span></div><div style="flex:1;display:flex;gap:2px;align-items:center;height:16px">{{ e.waveSm }}</div><span style="font:600 9px 'Instrument Sans';color:#a08a70">{{ e.dur }}</span></div></sc-if>
+              <sc-if value="{{ e.isVideo }}" hint-placeholder-val="{{ false }}"><div style="position:relative;height:70px;border-radius:8px;overflow:hidden;background:repeating-linear-gradient(45deg,#d9c9ae,#d9c9ae 5px,#e2d3ba 5px,#e2d3ba 10px);border:1.5px solid #4a3b2e"><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:rgba(255,251,244,.9);border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center"><span style="display:flex;width:12px;height:12px;margin-left:1px">{{ playIconDark }}</span></div></div></sc-if>
+              <sc-if value="{{ e.hasPhotos }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:5px;margin-top:7px"><sc-for list="{{ e.photos }}" as="p" hint-placeholder-count="2"><div style="width:40px;height:40px;border-radius:7px;background:repeating-linear-gradient(45deg,#e2d3ba,#e2d3ba 5px,#ecdfc8 5px,#ecdfc8 10px);border:1.5px solid #4a3b2e"></div></sc-for></div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ---- PHONE: CALENDAR ---- -->
+      <sc-if value="{{ pIsCalendar }}" hint-placeholder-val="{{ false }}">
+      <div class="fn-scroll" style="position:absolute;inset:0;top:44px;bottom:74px;overflow-y:auto;padding:8px 16px 10px;z-index:5">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;margin:4px 0 8px">
+          <div><div style="font:600 14px 'Caveat',cursive;color:#c76a54">explore</div><div style="font:500 22px/1 'Newsreader',serif;color:#4a3b2e">{{ pCalTitle }}</div></div>
+          <div style="display:flex;gap:6px">
+            <div onClick="{{ pCalPrev }}" style="width:30px;height:30px;border-radius:9px;background:#f8efe0;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)"><span style="display:flex;width:13px;height:13px">{{ chevLeft }}</span></div>
+            <div onClick="{{ pCalNext }}" style="width:30px;height:30px;border-radius:9px;background:#f8efe0;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)"><span style="display:flex;width:13px;height:13px">{{ chevRight }}</span></div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:5px">
+          <sc-for list="{{ weekdayLabels }}" as="w" hint-placeholder-count="7"><div style="text-align:center;font:600 8px 'Instrument Sans';letter-spacing:.06em;text-transform:uppercase;color:#a08a70">{{ w }}</div></sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">
+          <sc-for list="{{ pCalendar }}" as="c" hint-placeholder-count="35">
+            <div onClick="{{ c.onClick }}" style="{{ c.style }}">
+              <div style="{{ c.numStyle }}">{{ c.num }}</div>
+              <sc-if value="{{ c.hasFlower }}" hint-placeholder-val="{{ false }}"><span style="display:flex;width:22px;height:22px;align-items:center;justify-content:center">{{ c.flower }}</span></sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ---- PHONE: GARDEN ---- -->
+      <sc-if value="{{ pIsGarden }}" hint-placeholder-val="{{ false }}">
+      <div class="fn-scroll" style="position:absolute;inset:0;top:44px;bottom:74px;overflow-y:auto;padding:8px 14px 12px;z-index:5">
+        <div style="margin:4px 2px 8px"><div style="font:600 14px 'Caveat',cursive;color:#c76a54">your garden</div><div style="font:500 21px/1 'Newsreader',serif;color:#4a3b2e">Every day, a bloom</div><div style="font:400 9px 'Instrument Sans';color:#a08a70;margin-top:3px">{{ gardenCount }} days planted in 2025</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <sc-for list="{{ moodTally }}" as="m" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:4px;background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:16px;padding:3px 9px 3px 4px"><span style="display:flex;width:17px;height:17px">{{ m.chip }}</span><span style="font:500 9px 'Instrument Sans';color:#4a3b2e">{{ m.label }}</span><span style="font:600 10px 'Caveat',cursive;color:#c76a54">{{ m.count }}</span></div>
+          </sc-for>
+        </div>
+        <div style="position:relative;height:320px;border-radius:16px;overflow:hidden;border:1.5px solid rgba(74,59,46,.22);box-shadow:inset 0 2px 10px rgba(74,59,46,.12);background:linear-gradient(180deg,#eee6d2 0%,#ebe1c9 24%,#e7e3c6 30%,#d6dbac 40%,#c4ce95 56%,#b1bd80 74%,#9caf6d 100%)">
+          <div style="position:absolute;top:14px;right:18px;width:56px;height:56px;border-radius:50%;background:radial-gradient(circle,rgba(244,201,96,.55),rgba(244,201,96,0) 70%)"></div>
+          <div style="position:absolute;left:0;right:0;top:26%;height:64px;background:linear-gradient(180deg,rgba(243,238,222,.9),rgba(243,238,222,0));filter:blur(3px);z-index:1"></div>
+          <div style="position:absolute;left:0;right:0;bottom:0;height:40px;z-index:1;background:linear-gradient(180deg,rgba(126,100,62,0) 0%,#8a6c44 50%,#775a37 100%)"></div>
+          <sc-for list="{{ pGardenPlants }}" as="g" hint-placeholder-count="40">
+            <div style="{{ g.style }}">{{ g.el }}</div>
+          </sc-for>
+          <div style="position:absolute;left:14%;top:18%;width:18px;height:18px;z-index:150;animation:fn-fly1 15s ease-in-out infinite">{{ butterfly }}</div>
+          <div style="position:absolute;left:52%;top:46%;width:14px;height:14px;z-index:150;animation:fn-fly3 9s ease-in-out infinite">{{ bee }}</div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ---- PHONE: SEARCH ---- -->
+      <sc-if value="{{ pIsSearch }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;top:44px;bottom:74px;display:flex;flex-direction:column;padding:8px 16px 10px;z-index:5">
+        <div style="font:500 21px/1 'Newsreader',serif;color:#4a3b2e;margin:4px 0 9px">Your days</div>
+        <div style="display:flex;align-items:center;gap:7px;background:#f6efe0;border:1.5px solid rgba(74,59,46,.3);border-radius:10px;padding:8px 11px;margin-bottom:10px">
+          <span style="display:flex;width:13px;height:13px">{{ searchIcon }}</span><span style="font:400 11px 'Instrument Sans';color:#a08a70">Search your days…</span>
+        </div>
+        <div class="fn-scroll" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:7px">
+          <sc-for list="{{ pDayList }}" as="d" hint-placeholder-count="6">
+            <div onClick="{{ d.onClick }}" style="{{ d.style }}">
+              <span style="display:flex;width:32px;height:32px;flex:none">{{ d.flower }}</span>
+              <div style="flex:1;min-width:0"><div style="display:flex;justify-content:space-between"><span style="font:600 12px 'Instrument Sans';color:#4a3b2e">{{ d.title }}</span><span style="font:500 8px 'Instrument Sans';color:#a08a70">{{ d.count }}</span></div><div style="font:400 10px/1.35 'Newsreader',serif;color:#8a7358;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.preview }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ---- PHONE: SETTINGS ---- -->
+      <sc-if value="{{ pIsSettings }}" hint-placeholder-val="{{ false }}">
+      <div class="fn-scroll" style="position:absolute;inset:0;top:44px;bottom:74px;overflow-y:auto;padding:8px 14px 14px;z-index:5">
+        <div style="margin:4px 2px 10px"><div style="font:600 14px 'Caveat',cursive;color:#c76a54">preferences</div><div style="font:500 21px/1 'Newsreader',serif;color:#4a3b2e">Settings</div></div>
+
+        <!-- SECTION · SYNC & STORAGE -->
+        <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:14px;padding:12px 14px 4px;box-shadow:2px 2px 0 rgba(74,59,46,.16);margin-bottom:11px">
+          <div style="font:600 14px 'Caveat',cursive;color:#7d8450">sync &amp; storage</div>
+          <div style="font:400 9.5px 'Instrument Sans';color:#a08a70;margin-bottom:4px">On-device, or synced to a server you control.</div>
+          <div style="padding:11px 0 12px;border-top:1px dashed rgba(74,59,46,.18)">
+            <div style="font:600 12px 'Instrument Sans';color:#4a3b2e;margin-bottom:8px">Storage mode</div>
+            <div style="display:flex;gap:4px;background:#efe2ce;border:1.5px solid rgba(74,59,46,.25);border-radius:10px;padding:3px">
+              <sc-for list="{{ storageSeg }}" as="o" hint-placeholder-count="2"><div onClick="{{ o.onClick }}" style="{{ o.style }}">{{ o.label }}</div></sc-for>
+            </div>
+          </div>
+          <sc-if value="{{ syncOff }}" hint-placeholder-val="{{ true }}">
+          <div style="font:400 11px/1.5 'Newsreader',serif;color:#8a7358;padding-bottom:12px">Entries stay on this device only — nothing is uploaded and there's no syncing across devices.</div>
+          </sc-if>
+          <sc-if value="{{ syncOn }}" hint-placeholder-val="{{ false }}">
+          <div style="padding-bottom:12px">
+            <div style="padding:11px 0 0;border-top:1px dashed rgba(74,59,46,.18)">
+              <div style="font:600 12px 'Instrument Sans';color:#4a3b2e;margin-bottom:6px">Server URL</div>
+              <input class="fn-in" type="url" placeholder="https://journal.example.com" style="width:100%;box-sizing:border-box;font:400 12px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:10px;padding:9px 11px;outline:none">
+            </div>
+            <div style="margin-top:10px">
+              <div style="font:600 12px 'Instrument Sans';color:#4a3b2e;margin-bottom:6px">Access token</div>
+              <input class="fn-in" type="password" placeholder="••••••••••••" style="width:100%;box-sizing:border-box;font:400 12px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:10px;padding:9px 11px;outline:none">
+            </div>
+            <div style="margin-top:10px">
+              <div style="font:600 12px 'Instrument Sans';color:#4a3b2e;margin-bottom:6px">Sync frequency</div>
+              <select class="fn-in" defaultValue="realtime" style="width:100%;box-sizing:border-box;font:400 12px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:10px;padding:9px 11px;cursor:pointer;outline:none">
+                <option value="realtime">Real-time</option>
+                <option value="15m">Every 15 minutes</option>
+                <option value="hourly">Hourly</option>
+                <option value="manual">Manual only</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px">
+              <div style="display:flex;align-items:center;gap:7px;font:600 10px 'Instrument Sans';color:#a08a70;background:rgba(74,59,46,.08);border-radius:18px;padding:5px 10px"><span style="width:6px;height:6px;border-radius:50%;background:#c9821f"></span>Not connected</div>
+              <div style="font:600 11px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:10px;padding:8px 13px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer">Test</div>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+
+        <!-- SECTION · REMINDERS & SOUND -->
+        <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:14px;padding:12px 14px 6px;box-shadow:2px 2px 0 rgba(74,59,46,.16);margin-bottom:11px">
+          <div style="font:600 14px 'Caveat',cursive;color:#7d8450;margin-bottom:2px">reminders &amp; sound</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px dashed rgba(74,59,46,.18)">
+            <div><div style="font:600 12px 'Instrument Sans';color:#4a3b2e">Daily reminder</div><div style="font:400 9.5px 'Instrument Sans';color:#a08a70">a gentle nudge each day</div></div>
+            <div onClick="{{ reminderToggle.onClick }}" style="{{ reminderToggle.trackStyle }}"><div style="{{ reminderToggle.knobStyle }}"></div></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px dashed rgba(74,59,46,.18)">
+            <div><div style="font:600 12px 'Instrument Sans';color:#4a3b2e">Reminder time</div></div>
+            <input class="fn-in" type="time" defaultValue="20:30" style="flex:none;width:120px;box-sizing:border-box;font:400 12px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:10px;padding:8px 10px;outline:none">
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0 12px;border-top:1px dashed rgba(74,59,46,.18)">
+            <div><div style="font:600 12px 'Instrument Sans';color:#4a3b2e">Sound effects</div><div style="font:400 9.5px 'Instrument Sans';color:#a08a70">page turns, pencil, chimes</div></div>
+            <div onClick="{{ soundToggle.onClick }}" style="{{ soundToggle.trackStyle }}"><div style="{{ soundToggle.knobStyle }}"></div></div>
+          </div>
+        </div>
+
+        <!-- SECTION · JOURNAL -->
+        <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:14px;padding:12px 14px 6px;box-shadow:2px 2px 0 rgba(74,59,46,.16);margin-bottom:11px">
+          <div style="font:600 14px 'Caveat',cursive;color:#7d8450;margin-bottom:2px">journal</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px dashed rgba(74,59,46,.18)">
+            <div><div style="font:600 12px 'Instrument Sans';color:#4a3b2e">Week starts on</div></div>
+            <select class="fn-in" defaultValue="mon" style="flex:none;width:130px;box-sizing:border-box;font:400 12px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid rgba(74,59,46,.35);border-radius:10px;padding:8px 10px;cursor:pointer;outline:none">
+              <option value="mon">Monday</option>
+              <option value="sun">Sunday</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0 12px;border-top:1px dashed rgba(74,59,46,.18)">
+            <div><div style="font:600 12px 'Instrument Sans';color:#4a3b2e">Text size</div></div>
+            <input class="fn-in" type="range" min="1" max="3" step="1" defaultValue="2" style="flex:none;width:130px;accent-color:#c76a54;cursor:pointer">
+          </div>
+        </div>
+
+        <!-- SECTION · DATA -->
+        <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:14px;padding:12px 14px 12px;box-shadow:2px 2px 0 rgba(74,59,46,.16)">
+          <div style="font:600 14px 'Caveat',cursive;color:#7d8450;margin-bottom:8px">data</div>
+          <div style="display:flex;gap:9px">
+            <div style="flex:1;text-align:center;font:600 11px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid #4a3b2e;border-radius:10px;padding:9px 0;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.2);cursor:pointer">Export…</div>
+            <div style="flex:1;text-align:center;font:600 11px 'Instrument Sans';color:#c0392b;background:#fbecea;border:1.5px solid #c0392b;border-radius:10px;padding:9px 0;cursor:pointer">Delete all…</div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE MOOD PICKER ===== -->
+      <sc-if value="{{ pMoodOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ pCloseMood }}" style="position:absolute;inset:0;background:rgba(42,36,29,.34);display:flex;align-items:flex-end;z-index:52">
+        <div onClick="{{ stop }}" style="width:100%;background:#f8efe0;border-top:2px solid #4a3b2e;border-radius:22px 22px 0 0;padding:18px 16px 22px;box-shadow:0 -12px 30px -12px rgba(50,35,20,.5);animation:fn-sheet .24s cubic-bezier(.2,.8,.2,1)">
+          <div style="width:38px;height:4px;border-radius:3px;background:rgba(74,59,46,.3);margin:0 auto 12px"></div>
+          <div style="font:500 18px 'Newsreader',serif;color:#4a3b2e;text-align:center">How are you feeling?</div>
+          <div style="font:600 12px 'Caveat',cursive;color:#a08a70;text-align:center;margin-top:1px">choose today's bloom</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px">
+            <sc-for list="{{ pMoodOptions }}" as="m" hint-placeholder-count="7">
+              <div onClick="{{ m.onClick }}" style="{{ m.style }}"><span style="display:flex;width:34px;height:34px">{{ m.flower }}</span><div style="font:600 9px 'Instrument Sans';color:#4a3b2e;margin-top:4px">{{ m.label }}</div></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE: CAPTURE CHOOSER ===== -->
+      <sc-if value="{{ pIsChoose }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ pCloseComposer }}" style="position:absolute;inset:0;background:rgba(42,36,29,.34);display:flex;align-items:flex-end;z-index:50">
+        <div onClick="{{ stop }}" style="width:100%;background:#efe2ce;border-top:2px solid #4a3b2e;border-radius:22px 22px 0 0;padding:16px 16px 22px;box-shadow:0 -14px 34px -14px rgba(50,35,20,.55);animation:fn-sheet .24s cubic-bezier(.2,.8,.2,1)">
+          <div style="width:38px;height:4px;border-radius:3px;background:rgba(74,59,46,.3);margin:0 auto 12px"></div>
+          <div style="font:500 17px 'Newsreader',serif;color:#4a3b2e;text-align:center">Capture a moment</div>
+          <div style="font:600 12px 'Caveat',cursive;color:#a08a70;text-align:center;margin-top:1px">how do you want to plant today?</div>
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:15px">
+            <div onClick="{{ pOpenText }}" style="display:flex;align-items:center;gap:12px;background:#c76a54;color:#fff;border:1.5px solid #4a3b2e;border-radius:14px;padding:13px 15px;box-shadow:2px 2px 0 #4a3b2e;cursor:pointer"><span style="display:flex;width:20px;height:20px">{{ pencilIconLt }}</span><div><div style="font:600 14px 'Instrument Sans'">Write a note</div><div style="font:400 10px 'Instrument Sans';opacity:.85">put the day into words</div></div></div>
+            <div onClick="{{ pOpenVoice }}" style="display:flex;align-items:center;gap:12px;background:#f8efe0;color:#4a3b2e;border:1.5px solid #4a3b2e;border-radius:14px;padding:13px 15px;cursor:pointer"><span style="display:flex;width:20px;height:20px">{{ micIconDk }}</span><div><div style="font:600 14px 'Instrument Sans'">Record voice</div><div style="font:400 10px 'Instrument Sans';color:#a08a70">speak it, hands-free</div></div></div>
+            <div onClick="{{ pOpenVideo }}" style="display:flex;align-items:center;gap:12px;background:#f8efe0;color:#4a3b2e;border:1.5px solid #4a3b2e;border-radius:14px;padding:13px 15px;cursor:pointer"><span style="display:flex;width:20px;height:20px">{{ videoIconDk }}</span><div><div style="font:600 14px 'Instrument Sans'">Record video</div><div style="font:400 10px 'Instrument Sans';color:#a08a70">a moving snapshot</div></div></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE: TEXT COMPOSER (sheet) ===== -->
+      <sc-if value="{{ pIsText }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:55;background:#fbf3e4;display:flex;flex-direction:column;animation:fn-pop .22s ease-out">
+        <div style="position:absolute;top:-8px;right:-8px;width:98px;height:124px;opacity:.36;pointer-events:none;display:flex;z-index:0">{{ pSprigArt }}</div>
+        <div style="position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:46px 16px 10px;border-bottom:1.5px dashed rgba(74,59,46,.22)">
+          <div onClick="{{ pCloseComposer }}" style="cursor:pointer;display:flex;width:22px;height:22px">{{ closeIcon }}</div>
+          <div style="text-align:center;line-height:1.05"><div style="font:600 16px 'Caveat',cursive;color:#c76a54">New note</div><div style="font:400 8px 'Instrument Sans';color:#a08a70">{{ shortDate }}</div></div>
+          <div onClick="{{ pSaveText }}" style="font:600 11px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:11px;padding:6px 13px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer">Save</div>
+        </div>
+        <div ref="{{ pNoteRef }}" style="position:relative;z-index:1;flex:1;min-height:0"></div>
+        <div style="position:relative;z-index:2;display:flex;align-items:center;gap:9px;padding:9px 14px 14px;border-top:1px dashed rgba(74,59,46,.2);background:#fbf3e4">
+          <div onClick="{{ pAddPhoto }}" style="display:flex;align-items:center;gap:6px;background:#c76a54;color:#fff;border:1.5px solid #4a3b2e;border-radius:10px;padding:7px 11px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer"><span style="display:flex;width:15px;height:15px">{{ photoIcon }}</span><span style="font:600 11px 'Instrument Sans'">Add memory</span></div>
+          <div style="flex:1"></div>
+          <span style="font:400 8.5px 'Instrument Sans';color:#a08a70;text-align:right;line-height:1.5"><b style="color:#7d6a52"># </b>title&nbsp; <b style="color:#7d6a52">- </b>list&nbsp; <b style="color:#7d6a52">1. </b>steps</span>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE: FULL-SCREEN VOICE RECORDER ===== -->
+      <sc-if value="{{ pIsVoice }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:55;background:radial-gradient(125% 62% at 50% 16%,#f5e8d2,#ecdcc0 60%,#e2d0b2);display:flex;flex-direction:column;align-items:center;animation:fn-pop .22s ease-out">
+        <div style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:50px 22px 0">
+          <div onClick="{{ pCloseComposer }}" style="cursor:pointer;display:flex;width:22px;height:22px">{{ closeIcon }}</div>
+          <div style="text-align:center;line-height:1.15"><div style="font:600 16px 'Caveat',cursive;color:#c76a54">New voice note</div><div style="font:400 9px 'Instrument Sans';color:#a08a70">{{ shortDate }} · {{ clock }}</div></div>
+          <div style="width:22px"></div>
+        </div>
+        <div style="height:22px;display:flex;align-items:center;justify-content:center;gap:7px;margin-top:20px">
+          <sc-if value="{{ pRecRecording }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:#c0392b;animation:fn-blink 1.2s step-end infinite"></span><span style="font:600 11px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#c0392b">Recording</span></sc-if>
+          <sc-if value="{{ pRecPaused }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:#c9821f"></span><span style="font:600 11px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#c9821f">Paused</span></sc-if>
+          <sc-if value="{{ pRecIdle }}" hint-placeholder-val="{{ true }}"><span style="font:600 11px 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:#a08a70">Ready</span></sc-if>
+        </div>
+        <div onClick="{{ pOnRecTap }}" style="position:relative;width:186px;height:186px;margin:26px auto 10px;display:flex;align-items:center;justify-content:center;cursor:pointer">
+          <sc-if value="{{ pRecRecording }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;width:186px;height:186px;border-radius:50%;background:radial-gradient(circle,rgba(199,106,84,.38),transparent 68%);animation:fn-pulse 2.6s ease-in-out infinite"></div><div style="position:absolute;width:138px;height:138px;border-radius:50%;background:radial-gradient(circle,rgba(199,106,84,.3),transparent 70%);animation:fn-pulse 2.6s ease-in-out infinite;animation-delay:-1.3s"></div></sc-if>
+          <div style="position:relative;width:112px;height:112px;border-radius:50%;background:#c76a54;border:3px solid #4a3b2e;display:flex;align-items:center;justify-content:center;box-shadow:0 16px 34px -10px rgba(199,106,84,.75)"><span style="display:flex;width:46px;height:46px">{{ pRecTapIcon }}</span></div>
+        </div>
+        <div style="font:400 52px/1 'Newsreader',serif;color:#4a3b2e;letter-spacing:.01em">{{ pRecTime }}</div>
+        <div style="font:600 15px 'Caveat',cursive;color:#a08a70;margin-top:6px">{{ pRecVoiceHint }}</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:4px;height:52px;width:78%;margin:22px 0 4px">
+          <sc-if value="{{ pRecRecording }}" hint-placeholder-val="{{ false }}">{{ liveWave }}</sc-if>
+          <sc-if value="{{ pRecNotRecording }}" hint-placeholder-val="{{ true }}"><div style="width:60%;height:2px;border-radius:2px;background:rgba(74,59,46,.18)"></div></sc-if>
+        </div>
+        <div style="flex:1"></div>
+        <div style="width:100%;display:flex;align-items:center;justify-content:center;gap:14px;padding:0 24px 40px">
+          <sc-if value="{{ pRecActive }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ pDiscardRec }}" style="display:inline-flex;align-items:center;gap:8px;background:#fbecea;color:#c0392b;border:1.5px solid #c0392b;border-radius:26px;padding:14px 18px;cursor:pointer;flex:none"><span style="display:flex;width:16px;height:16px">{{ trashIcon }}</span><span style="font:600 13px 'Instrument Sans'">Discard</span></div>
+          <div onClick="{{ pSaveVoice }}" style="flex:1;max-width:180px;display:flex;align-items:center;justify-content:center;gap:9px;background:#c0392b;color:#fff;border:2px solid #4a3b2e;border-radius:26px;padding:15px 20px;box-shadow:2.5px 2.5px 0 #4a3b2e;cursor:pointer"><span style="width:15px;height:15px;border-radius:4px;background:#fff"></span><span style="font:600 14px 'Instrument Sans'">Save memo</span></div>
+          </sc-if>
+          <sc-if value="{{ pRecIdle }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ pOnRecTap }}" style="flex:1;max-width:230px;display:flex;align-items:center;justify-content:center;gap:9px;background:#c76a54;color:#fff;border:2px solid #4a3b2e;border-radius:26px;padding:15px 20px;box-shadow:2.5px 2.5px 0 #4a3b2e;cursor:pointer"><span style="width:13px;height:13px;border-radius:50%;background:#fff"></span><span style="font:600 14px 'Instrument Sans'">Start recording</span></div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE: FULL-SCREEN VIDEO RECORDER ===== -->
+      <sc-if value="{{ pIsVideo }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:55;background:repeating-linear-gradient(45deg,#332f28,#332f28 9px,#3d3830 9px,#3d3830 18px);overflow:hidden;animation:fn-pop .22s ease-out">
+        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(15,13,11,.62),transparent 20%,transparent 60%,rgba(15,13,11,.78))"></div>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center"><div style="width:64px;height:64px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.3);margin:0 auto 10px;display:flex;align-items:center;justify-content:center"><span style="display:flex;width:28px;height:28px;opacity:.45">{{ camIcon }}</span></div><div style="font:500 9px ui-monospace,monospace;color:rgba(255,255,255,.32);letter-spacing:.14em">CAMERA FEED</div></div>
+        <div style="position:absolute;top:50px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 22px">
+          <div onClick="{{ pCloseComposer }}" style="cursor:pointer;display:flex;width:22px;height:22px">{{ closeIconLight }}</div>
+          <div style="display:flex;align-items:center;gap:7px;background:rgba(15,13,11,.55);border-radius:14px;padding:6px 13px">
+            <sc-if value="{{ pRecRecording }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:#e0574a;animation:fn-blink 1.2s step-end infinite"></span></sc-if>
+            <sc-if value="{{ pRecPaused }}" hint-placeholder-val="{{ false }}"><span style="width:8px;height:8px;border-radius:50%;background:#f0b34a"></span></sc-if>
+            <sc-if value="{{ pRecIdle }}" hint-placeholder-val="{{ true }}"><span style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5)"></span></sc-if>
+            <span style="font:600 13px 'Instrument Sans';color:#fff">{{ pRecTime }}</span>
+          </div>
+          <div style="width:34px;height:34px;border-radius:50%;background:rgba(15,13,11,.5);border:1.5px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="display:flex;width:16px;height:16px">{{ flipIcon }}</span></div>
+        </div>
+        <div style="position:absolute;bottom:104px;left:0;right:0;text-align:center;font:600 13px 'Caveat',cursive;color:rgba(255,255,255,.72)">{{ pRecVideoHint }}</div>
+        <div style="position:absolute;bottom:30px;left:0;right:0;display:flex;align-items:center;justify-content:center;gap:30px">
+          <sc-if value="{{ pRecActive }}" hint-placeholder-val="{{ false }}"><div onClick="{{ pDiscardRec }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer"><div style="width:50px;height:50px;border-radius:50%;background:rgba(15,13,11,.5);border:1.5px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center"><span style="display:flex;width:19px;height:19px">{{ trashIconLight }}</span></div><span style="font:500 10px 'Instrument Sans';color:rgba(255,255,255,.75)">Discard</span></div></sc-if>
+          <sc-if value="{{ pRecIdle }}" hint-placeholder-val="{{ true }}"><div style="width:50px"></div></sc-if>
+          <div onClick="{{ pOnRecTap }}" style="width:74px;height:74px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none">
+            <sc-if value="{{ pRecRecording }}" hint-placeholder-val="{{ false }}"><span style="display:flex;width:28px;height:28px">{{ pauseIconLight }}</span></sc-if>
+            <sc-if value="{{ pRecNotRecording }}" hint-placeholder-val="{{ true }}"><div style="width:28px;height:28px;border-radius:50%;background:#e0574a"></div></sc-if>
+          </div>
+          <sc-if value="{{ pRecActive }}" hint-placeholder-val="{{ false }}"><div onClick="{{ pSaveVideo }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer"><div style="width:50px;height:50px;border-radius:50%;background:#c76a54;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center"><span style="display:flex;width:19px;height:19px">{{ checkIconLight }}</span></div><span style="font:500 10px 'Instrument Sans';color:rgba(255,255,255,.85)">Save</span></div></sc-if>
+          <sc-if value="{{ pRecIdle }}" hint-placeholder-val="{{ true }}"><div style="width:50px"></div></sc-if>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE: DAY DETAIL ===== -->
+      <sc-if value="{{ pDayDetailOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:0;z-index:48;background:radial-gradient(120% 45% at 82% 0%,rgba(199,106,84,.14),transparent 60%),linear-gradient(#efe2ce,#e9dcc4);display:flex;flex-direction:column;animation:fn-pop .2s ease-out">
+        <div style="padding:50px 18px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px dashed rgba(74,59,46,.22)">
+          <div onClick="{{ pCloseDay }}" style="width:34px;height:34px;border-radius:10px;background:#f8efe0;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)"><span style="display:flex;width:16px;height:16px">{{ backIcon }}</span></div>
+          <div style="flex:1;min-width:0"><div style="font:600 12px 'Caveat',cursive;color:#c76a54">{{ pdd.subtitle }}</div><div style="font:500 18px/1 'Newsreader',serif;color:#4a3b2e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ pdd.title }}</div></div>
+        </div>
+        <div class="fn-scroll" style="flex:1;overflow-y:auto;padding:12px 16px 18px">
+          <sc-if value="{{ pdd.hasMood }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;align-items:center;gap:11px;background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:15px;padding:10px 12px 10px 10px;box-shadow:2px 2px 0 rgba(74,59,46,.2);margin-bottom:12px">
+            <span style="display:flex;width:40px;height:40px;flex:none">{{ pdd.flower }}</span>
+            <div style="flex:1;min-width:0"><div style="font:500 15px 'Newsreader',serif;color:#4a3b2e">Felt {{ pdd.moodLabel }}</div><div style="font:400 9px 'Instrument Sans';color:#a08a70">{{ pdd.flowerName }} · the day's bloom</div></div>
+            <div onClick="{{ pdd.onChangeMood }}" style="font:600 10px 'Instrument Sans';color:#4a3b2e;background:#fff5ea;border:1.5px solid #4a3b2e;border-radius:9px;padding:6px 10px;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.2);cursor:pointer;flex:none">Change</div>
+          </div>
+          </sc-if>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:2px 2px 8px">
+            <div style="font:600 12px 'Caveat',cursive;color:#7d8450">{{ pdd.count }} that day</div>
+            <div onClick="{{ pdd.onAddNote }}" style="display:flex;align-items:center;gap:5px;font:600 11px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:9px;padding:6px 11px;box-shadow:1.5px 1.5px 0 #4a3b2e;cursor:pointer"><span style="display:flex;width:12px;height:12px">{{ plusIcon }}</span>Add a note</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ pdd.entries }}" as="e" hint-placeholder-count="3">
+              <div style="background:#f8efe0;border:1.5px solid #4a3b2e;border-radius:13px;padding:10px 12px;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.16)">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+                  <div style="font:600 11px 'Caveat',cursive;color:#7d8450">{{ e.stamp }} · {{ e.typeLabel }}</div>
+                  <div style="display:flex;gap:6px;flex:none">
+                    <sc-if value="{{ e.canEdit }}" hint-placeholder-val="{{ true }}"><div onClick="{{ e.onEdit }}" style="width:26px;height:26px;border-radius:7px;background:#fffaf1;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="display:flex;width:13px;height:13px">{{ pencilIcon }}</span></div></sc-if>
+                    <div onClick="{{ e.onDelete }}" style="width:26px;height:26px;border-radius:7px;background:#fbecea;border:1.5px solid #c0392b;display:flex;align-items:center;justify-content:center;cursor:pointer"><span style="display:flex;width:13px;height:13px">{{ trashIcon }}</span></div>
+                  </div>
+                </div>
+                <sc-if value="{{ e.isNote }}" hint-placeholder-val="{{ true }}"><div style="font:400 12.5px/1.5 'Newsreader',serif;color:#4a3b2e;white-space:pre-wrap">{{ e.text }}</div></sc-if>
+                <sc-if value="{{ e.isVoice }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:9px"><div onClick="{{ e.onPlay }}" style="width:28px;height:28px;border-radius:50%;background:#c76a54;flex:none;display:flex;align-items:center;justify-content:center;border:1.5px solid #4a3b2e;cursor:pointer"><span style="display:flex;width:12px;height:12px;margin-left:2px">{{ playIcon }}</span></div><div style="flex:1;display:flex;gap:2px;align-items:center;height:16px">{{ e.waveSm }}</div><span style="font:600 9px 'Instrument Sans';color:#a08a70">{{ e.dur }}</span></div></sc-if>
+                <sc-if value="{{ e.isVideo }}" hint-placeholder-val="{{ false }}"><div style="position:relative;height:80px;border-radius:8px;overflow:hidden;background:repeating-linear-gradient(45deg,#d9c9ae,#d9c9ae 5px,#e2d3ba 5px,#e2d3ba 10px);border:1.5px solid #4a3b2e"><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px;height:32px;border-radius:50%;background:rgba(255,251,244,.92);border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center"><span style="display:flex;width:13px;height:13px;margin-left:1px">{{ playIconDark }}</span></div><span style="position:absolute;bottom:6px;right:7px;font:600 8px 'Instrument Sans';color:#fff;background:rgba(42,36,29,.7);border-radius:6px;padding:1px 6px">{{ e.dur }}</span></div></sc-if>
+                <sc-if value="{{ e.hasPhotos }}" hint-placeholder-val="{{ false }}"><div style="display:flex;gap:5px;margin-top:7px"><sc-for list="{{ e.photos }}" as="p" hint-placeholder-count="2"><div style="width:44px;height:44px;border-radius:7px;background:repeating-linear-gradient(45deg,#e2d3ba,#e2d3ba 5px,#ecdfc8 5px,#ecdfc8 10px);border:1.5px solid #4a3b2e"></div></sc-for></div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE CONFIRM DIALOG ===== -->
+      <sc-if value="{{ pConfirmOpen }}" hint-placeholder-val="{{ false }}">
+      <div onClick="{{ confirmNo }}" style="position:absolute;inset:0;background:rgba(42,36,29,.44);display:flex;align-items:center;justify-content:center;padding:24px;z-index:70">
+        <div onClick="{{ stop }}" style="width:100%;background:#f8efe0;border:2px solid #4a3b2e;border-radius:18px;padding:18px;box-shadow:0 20px 44px -14px rgba(50,35,20,.6);animation:fn-pop .16s ease-out">
+          <div style="font:500 18px 'Newsreader',serif;color:#4a3b2e">{{ confirmTitle }}</div>
+          <div style="font:400 12px/1.5 'Instrument Sans';color:#8a7358;margin-top:6px">{{ confirmMessage }}</div>
+          <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+            <div onClick="{{ confirmNo }}" style="font:600 11px 'Instrument Sans';color:#4a3b2e;background:#fffaf1;border:1.5px solid #4a3b2e;border-radius:10px;padding:8px 14px;cursor:pointer">Cancel</div>
+            <div onClick="{{ confirmYes }}" style="{{ confirmYesStyle }}">{{ confirmLabel }}</div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ===== PHONE TOAST ===== -->
+      <sc-if value="{{ pToast }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;bottom:84px;left:50%;transform:translateX(-50%);background:#4a3b2e;color:#f6ead6;border-radius:20px;padding:8px 16px;font:600 11px 'Instrument Sans';box-shadow:0 10px 24px -8px rgba(0,0,0,.5);z-index:60;animation:fn-rise .22s ease-out;display:flex;align-items:center;gap:7px;white-space:nowrap"><span style="display:flex;width:13px;height:13px">{{ checkIcon }}</span>{{ pToast }}</div>
+      </sc-if>
+
+      <!-- phone nav -->
+      <div style="position:absolute;bottom:12px;left:20px;right:20px;height:56px;background:#4a3b2e;border-radius:28px;display:flex;align-items:center;justify-content:space-around;z-index:35;box-shadow:0 8px 20px -6px rgba(74,59,46,.6)">
+        <sc-for list="{{ phoneNav }}" as="n" hint-placeholder-count="5"><div onClick="{{ n.onClick }}" style="{{ n.wrapStyle }}">{{ n.el }}</div></sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ REMINDER NOTIFICATIONS ============================ -->
+  <div style="flex:none;display:flex;flex-direction:column;align-items:center;gap:36px;width:100%;padding-top:14px">
+    <div style="text-align:center">
+      <div style="font:600 20px 'Caveat',cursive;color:#c76a54">the daily nudge</div>
+      <div style="font:400 12px 'Instrument Sans';color:#8a7358;margin-top:1px">a quiet 8:30 reminder to plant the day — how it lands on each device</div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;justify-content:center;gap:56px;flex-wrap:wrap">
+
+      <!-- ---- PHONE LOCK SCREEN ---- -->
+      <div style="flex:none;display:flex;flex-direction:column;align-items:center;gap:13px">
+        <div style="flex:none;width:322px;padding:11px;border-radius:46px;background:#211c16;box-shadow:0 34px 74px -24px rgba(50,35,20,.6)">
+          <div style="position:relative;width:300px;height:640px;border-radius:36px;overflow:hidden;background:linear-gradient(170deg,#3a3350 0%,#6a5570 30%,#a9748a 55%,#d68f7f 78%,#e9b489 100%)">
+            <div style="position:absolute;top:11px;left:50%;transform:translateX(-50%);width:96px;height:22px;border-radius:14px;background:#211c16;z-index:30"></div>
+            <!-- soft dusk sun + haze -->
+            <div style="position:absolute;bottom:120px;left:50%;transform:translateX(-50%);width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(255,224,178,.5),rgba(255,224,178,0) 68%)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;height:150px;background:linear-gradient(180deg,rgba(58,44,38,0),rgba(42,32,28,.55));"></div>
+            <!-- faint meadow silhouette -->
+            <div style="position:absolute;left:0;right:0;bottom:0;height:64px;background:repeating-linear-gradient(88deg,rgba(38,30,26,.55) 0 3px,transparent 3px 11px);mask-image:linear-gradient(180deg,transparent,#000 60%);-webkit-mask-image:linear-gradient(180deg,transparent,#000 60%)"></div>
+
+            <!-- status bar -->
+            <div style="position:absolute;top:0;left:0;right:0;height:44px;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:15px 24px 0;font:600 12px 'Instrument Sans';color:rgba(255,255,255,.92)"><span>8:30</span><span style="letter-spacing:2px;opacity:.7">• • ▮</span></div>
+
+            <!-- big clock -->
+            <div style="position:absolute;top:66px;left:0;right:0;text-align:center;color:#fff;z-index:10">
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;opacity:.85"><span style="display:flex;width:13px;height:13px">{{ lockIcon }}</span><span style="font:600 11px 'Instrument Sans';letter-spacing:.04em">Saturday, July 5</span></div>
+              <div style="font:300 76px/1 'Newsreader',serif;margin-top:6px;text-shadow:0 2px 18px rgba(0,0,0,.25)">8:30</div>
+            </div>
+
+            <!-- notification stack -->
+            <div style="position:absolute;left:14px;right:14px;top:210px;z-index:12">
+              <!-- peeking card behind -->
+              <div style="position:absolute;left:12px;right:12px;top:-11px;height:34px;background:rgba(248,239,224,.55);border-radius:20px;backdrop-filter:blur(6px)"></div>
+              <div style="position:relative;background:rgba(250,244,233,.9);border-radius:20px;padding:13px 14px;box-shadow:0 12px 30px -12px rgba(30,20,14,.5);backdrop-filter:blur(14px)">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="width:34px;height:34px;border-radius:9px;background:#fff5ea;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;padding:5px;flex:none">{{ logoFlower }}</div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:space-between"><span style="font:600 11px 'Instrument Sans';letter-spacing:.06em;text-transform:uppercase;color:#8a7358">Field Notes</span><span style="font:400 10px 'Instrument Sans';color:#a08a70">now</span></div>
+                </div>
+                <div style="font:500 16px 'Newsreader',serif;color:#3a2f26;margin-top:9px">A moment for today?</div>
+                <div style="font:400 12.5px/1.45 'Instrument Sans';color:#6a5c4a;margin-top:3px">You haven't planted today's bloom yet. Two quiet minutes is all it takes. 🌱</div>
+                <div style="display:flex;gap:8px;margin-top:11px">
+                  <div style="flex:1;text-align:center;font:600 11px 'Instrument Sans';color:#6a5c4a;background:rgba(74,59,46,.09);border-radius:11px;padding:8px 0">Later</div>
+                  <div style="flex:1.4;text-align:center;font:600 11px 'Instrument Sans';color:#fff;background:#c76a54;border-radius:11px;padding:8px 0;box-shadow:1.5px 1.5px 0 rgba(74,59,46,.3)">Write now</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- lock footer -->
+            <div style="position:absolute;bottom:52px;left:0;right:0;display:flex;justify-content:space-between;align-items:center;padding:0 34px;z-index:12">
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center"><span style="display:flex;width:18px;height:18px">{{ flashIcon }}</span></div>
+              <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center"><span style="display:flex;width:18px;height:18px">{{ camIcon }}</span></div>
+            </div>
+            <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);width:120px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);z-index:12"></div>
+          </div>
+        </div>
+        <div style="font:400 11px 'Instrument Sans';color:#8a7358">Lock screen · iOS</div>
+      </div>
+
+      <!-- ---- DESKTOP NOTIFICATION ---- -->
+      <div style="flex:none;display:flex;flex-direction:column;align-items:center;gap:13px">
+        <div style="position:relative;width:600px;height:392px;border-radius:15px;overflow:hidden;box-shadow:0 40px 90px -34px rgba(50,35,20,.6);border:1px solid rgba(74,59,46,.22);background:linear-gradient(160deg,#3a4a5a 0%,#6a6f78 34%,#b08a72 66%,#e2b789 100%)">
+          <!-- soft desktop glow -->
+          <div style="position:absolute;top:-40px;right:-30px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(255,229,180,.4),transparent 68%)"></div>
+          <!-- menu bar -->
+          <div style="position:absolute;top:0;left:0;right:0;height:28px;background:rgba(30,26,22,.32);backdrop-filter:blur(10px);display:flex;align-items:center;padding:0 15px;font:600 12px 'Instrument Sans';color:rgba(255,255,255,.92);z-index:5">
+            <div style="display:flex;align-items:center;gap:16px"><span style="display:flex;width:14px;height:14px">{{ appleGlyph }}</span><span style="font-weight:700">Field Notes</span><span style="font-weight:500;opacity:.85">File</span><span style="font-weight:500;opacity:.85">Entry</span><span style="font-weight:500;opacity:.85">View</span></div>
+            <div style="flex:1"></div>
+            <div style="display:flex;align-items:center;gap:14px;opacity:.92"><span style="letter-spacing:1px">▮ ▾</span><span>Sat 5 Jul</span><span>8:30 PM</span></div>
+          </div>
+
+          <!-- notification banner -->
+          <div style="position:absolute;top:44px;right:16px;width:352px;background:rgba(250,244,233,.82);border-radius:18px;padding:14px 15px;box-shadow:0 20px 44px -16px rgba(20,14,10,.55);backdrop-filter:blur(20px);z-index:6">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:38px;height:38px;border-radius:10px;background:#fff5ea;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;padding:6px;flex:none">{{ logoFlower }}</div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:space-between"><span style="font:600 12px 'Instrument Sans';letter-spacing:.05em;text-transform:uppercase;color:#8a7358">Field Notes · reminder</span><span style="font:400 11px 'Instrument Sans';color:#a08a70">now</span></div>
+            </div>
+            <div style="font:500 18px 'Newsreader',serif;color:#3a2f26;margin-top:10px">A moment for today?</div>
+            <div style="font:400 13px/1.5 'Instrument Sans';color:#6a5c4a;margin-top:3px">You've kept a 12-day streak — don't let it wilt. Plant a note, a voice memo, or a quick clip. 🌱</div>
+            <div style="display:flex;gap:9px;margin-top:13px">
+              <div style="text-align:center;font:600 12px 'Instrument Sans';color:#6a5c4a;background:rgba(74,59,46,.09);border-radius:12px;padding:9px 16px">Remind me at 9</div>
+              <div style="flex:1;text-align:center;font:600 12px 'Instrument Sans';color:#fff;background:#c76a54;border:1.5px solid #4a3b2e;border-radius:12px;padding:9px 0;box-shadow:1.5px 1.5px 0 #4a3b2e">Open Field Notes</div>
+            </div>
+          </div>
+
+          <!-- dock hint -->
+          <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:12px;align-items:flex-end;background:rgba(255,255,255,.2);backdrop-filter:blur(12px);border-radius:16px;padding:7px 12px;z-index:5">
+            <div style="width:40px;height:40px;border-radius:11px;background:#fff5ea;border:1.5px solid #4a3b2e;display:flex;align-items:center;justify-content:center;padding:6px;box-shadow:0 6px 14px -6px rgba(0,0,0,.4)">{{ logoFlower }}</div>
+            <div style="width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.4)"></div>
+            <div style="width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.3)"></div>
+            <div style="width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.35)"></div>
+          </div>
+        </div>
+        <div style="font:400 11px 'Instrument Sans';color:#8a7358">Notification banner · macOS</div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1560,&quot;height&quot;:820},&quot;startMood&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;happy&quot;,&quot;warm&quot;,&quot;love&quot;,&quot;calm&quot;,&quot;anxious&quot;,&quot;sad&quot;,&quot;angry&quot;],&quot;default&quot;:&quot;happy&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Behavior&quot;},&quot;soundOn&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Behavior&quot;}}">
+class Component extends DCLogic {
+  _t = {}; _ri = {}; _rs = {}; _rAcc = {};
+  mkDev(){ return { view:'today', moodOpen:false, composer:null, draft:'', draftPhotos:0, recTime:'0:00', recState:'idle', toast:null, dayDetail:null, editRef:null, addDay:null, moodTargetDay:null, calOffset:0 }; }
+  state = {
+    mood: this.props.startMood ?? 'happy',
+    soundOn: this.props.soundOn ?? true,
+    desktop: this.mkDev(),
+    phone: this.mkDev(),
+    entries: [
+      { id:1, type:'note', hour:8, min:12, part:'morning', text:"Woke before the alarm. The light came in soft and gold and I lay there a while, grateful, before the day asked anything of me." },
+      { id:2, type:'note', hour:14, min:30, part:'afternoon', text:"Walked the long way through the market and bought peonies from the woman who always remembers my name. Sat by the water and wrote for a while.", photos:[{label:'peonies'},{label:'water'}] },
+      { id:3, type:'voice', hour:18, min:5, part:'evening', dur:'0:47' },
+      { id:4, type:'video', hour:21, min:20, part:'night', dur:'1:38' },
+    ],
+    // past days are now editable — moods + entries live in state so they persist
+    pastMoods: { 1:'warm', 2:'love', 3:'anxious', 4:'sad' },
+    pastEntries: {
+      4:[{id:401,type:'note',hour:20,min:10,part:'evening',text:"A quiet, grey sort of day. Stayed in and let the hours go slow — tea, a book, the sound of rain on the sill."}],
+      3:[{id:301,type:'note',hour:9,min:5,part:'morning',text:"Too much on today. Kept losing the thread of things before I could hold them."},
+         {id:302,type:'voice',hour:22,min:40,part:'night',dur:'1:12'}],
+      2:[{id:201,type:'note',hour:8,min:30,part:'morning',text:"Woke happy for no reason at all. Kept it to myself like a small warm coin."},
+         {id:202,type:'note',hour:13,min:0,part:'afternoon',text:"Lunch in the park with M. We stayed past the shade moving.",photos:[{label:'park'}]},
+         {id:203,type:'voice',hour:17,min:20,part:'evening',dur:'0:38'},
+         {id:204,type:'video',hour:21,min:15,part:'night',dur:'0:52'}],
+      1:[{id:101,type:'note',hour:10,min:0,part:'morning',text:"Sun on the balcony all morning. Didn't move for a whole hour and felt no guilt."},
+         {id:102,type:'note',hour:19,min:0,part:'evening',text:"Made soup. Small and good and entirely enough."}],
+    },
+    confirm: null,
+    // placeholder settings — swap in real values in production
+    settings: { storage:'device', reminder:true },
+  };
+
+  // ---------- flower + icon art ----------
+  FLOWERS = {
+    happy:   { name:'Peony',        inner:'<g stroke="#8a4a4a" stroke-width="1.4" stroke-linejoin="round"><circle cx="22" cy="15" r="8" fill="#f2a9b2"/><circle cx="14" cy="22" r="8" fill="#ed97a4"/><circle cx="30" cy="22" r="8" fill="#ed97a4"/><circle cx="18" cy="29" r="8" fill="#f2a9b2"/><circle cx="26" cy="29" r="8" fill="#f2a9b2"/><circle cx="22" cy="23" r="6.5" fill="#e4788a"/></g>' },
+    warm:    { name:'Sunflower',    inner:'<g stroke="#9a6a2a" stroke-width="1"><g fill="#f2c14e"><ellipse cx="22" cy="9" rx="3.4" ry="7"/><ellipse cx="22" cy="9" rx="3.4" ry="7" transform="rotate(45 22 22)"/><ellipse cx="22" cy="9" rx="3.4" ry="7" transform="rotate(90 22 22)"/><ellipse cx="22" cy="9" rx="3.4" ry="7" transform="rotate(135 22 22)"/><ellipse cx="22" cy="9" rx="3.4" ry="7" transform="rotate(180 22 22)"/><ellipse cx="22" cy="9" rx="3.4" ry="7" transform="rotate(225 22 22)"/><ellipse cx="22" cy="9" rx="3.4" ry="7" transform="rotate(270 22 22)"/><ellipse cx="22" cy="9" rx="3.4" ry="7" transform="rotate(315 22 22)"/></g><circle cx="22" cy="22" r="7" fill="#7a4a24"/></g>' },
+    love:    { name:'Rose',         inner:'<g stroke="#7d2f3a" stroke-width="1.3"><circle cx="22" cy="22" r="14" fill="#d76a76"/><path d="M22 10a12 12 0 1 1-8 21" fill="none"/><path d="M22 14a8 8 0 1 1-5 14" fill="none"/><circle cx="22" cy="22" r="3.5" fill="#a83f4d" stroke="none"/></g>' },
+    _wiltingRose: { name:'Wilting rose', inner:'<g stroke="#4a5a68" stroke-width="1.3"><path d="M21 21 Q23 31 18 39" fill="none" stroke="#6f8060"/><g transform="rotate(-28 21 18)"><circle cx="21" cy="16" r="9" fill="#a2b3c0"/><path d="M21 8a8 8 0 1 1-6 14" fill="none"/></g></g>' },
+    _thistle: { name:'Thistle',      inner:'<g stroke-linecap="round"><g stroke="#7a4f8a" stroke-width="1.6"><line x1="22" y1="14" x2="22" y2="5"/><line x1="22" y1="14" x2="15" y2="7"/><line x1="22" y1="14" x2="29" y2="7"/><line x1="22" y1="14" x2="13" y2="12"/><line x1="22" y1="14" x2="31" y2="12"/></g><ellipse cx="22" cy="21" rx="8" ry="7" fill="#9b6fb0" stroke="#5a3a6a" stroke-width="1.3"/></g>' },
+    tired:   { name:'Poppy',        inner:'<g stroke="#7d2a24" stroke-width="1.3"><circle cx="22" cy="13" r="8" fill="#e0574a"/><circle cx="13" cy="24" r="8" fill="#e0574a"/><circle cx="31" cy="24" r="8" fill="#e0574a"/><circle cx="22" cy="30" r="8" fill="#e0574a"/><circle cx="22" cy="22" r="5" fill="#3a2420"/></g>' },
+    calm:    { name:'Lavender',     inner:'<g fill="#9a86c4" stroke="#6a5a8a" stroke-width="1"><ellipse cx="22" cy="6" rx="2.7" ry="3.7"/><ellipse cx="18" cy="11" rx="3" ry="4"/><ellipse cx="26" cy="11" rx="3" ry="4"/><ellipse cx="16" cy="17" rx="3.1" ry="4.2"/><ellipse cx="22" cy="16" rx="3.1" ry="4.2"/><ellipse cx="28" cy="17" rx="3.1" ry="4.2"/><ellipse cx="18" cy="23" rx="3" ry="4"/><ellipse cx="26" cy="23" rx="3" ry="4"/><ellipse cx="22" cy="29" rx="2.8" ry="3.8"/></g>' },
+    sad:      { name:'Bleeding Heart',  inner:'<g stroke-linejoin="round"><path d="M6 9 Q 20 4 36 11" fill="none" stroke="#6f8a4e" stroke-width="1.8" stroke-linecap="round"/><g stroke="#a8536c" stroke-width="1.3"><path d="M13 15 C 11.5 12 8 12.5 8.7 16 C 9.3 19 13 22.5 13 22.5 C 13 22.5 16.7 19 17.3 16 C 18 12.5 14.5 12 13 15 Z" fill="#e07d98"/><path d="M11.7 21 L13 26 L14.3 21 Z" fill="#fbeef0"/><path d="M22 18 C 20.5 15 17 15.5 17.7 19 C 18.3 22 22 25.5 22 25.5 C 22 25.5 25.7 22 26.3 19 C 27 15.5 23.5 15 22 18 Z" fill="#e07d98"/><path d="M20.7 24 L22 29 L23.3 24 Z" fill="#fbeef0"/><path d="M31 15 C 29.5 12 26 12.5 26.7 16 C 27.3 19 31 22.5 31 22.5 C 31 22.5 34.7 19 35.3 16 C 36 12.5 32.5 12 31 15 Z" fill="#e07d98"/><path d="M29.7 21 L31 26 L32.3 21 Z" fill="#fbeef0"/></g></g>' },
+    angry:    { name:'Red Spider Lily', inner:'<g fill="none" stroke-linecap="round"><g stroke="#d8342a" stroke-width="1.8"><path d="M22 23 Q 30 14 26 6"/><path d="M22 23 Q 34 18 34 9"/><path d="M22 23 Q 37 24 40 18"/><path d="M22 23 Q 14 14 18 6"/><path d="M22 23 Q 10 18 10 9"/><path d="M22 23 Q 7 24 4 18"/></g><g stroke="#a82218" stroke-width="1"><path d="M22 23 Q 25 9 21 3"/><path d="M22 23 Q 19 9 23 3"/><path d="M22 23 Q 38 13 42 7"/><path d="M22 23 Q 6 13 2 7"/></g></g><circle cx="22" cy="23" r="2.4" fill="#7d1a14"/>' },
+    anxious:  { name:'Aster',           inner:'<g stroke="#7a68a4" stroke-width="0.9"><g fill="#a892cf"><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(0 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(30 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(60 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(90 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(120 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(150 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(180 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(210 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(240 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(270 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(300 22 22)"/><ellipse cx="22" cy="8" rx="2.3" ry="7" transform="rotate(330 22 22)"/></g><circle cx="22" cy="22" r="5.5" fill="#f2c14e" stroke="#c98a2a" stroke-width="1.2"/></g>' },
+    hopeful:  { name:'Daffodil',        inner:'<g stroke="#d8b84a" stroke-width="1.2"><g fill="#f5df84"><ellipse cx="22" cy="9" rx="4" ry="8.5" transform="rotate(0 22 22)"/><ellipse cx="22" cy="9" rx="4" ry="8.5" transform="rotate(60 22 22)"/><ellipse cx="22" cy="9" rx="4" ry="8.5" transform="rotate(120 22 22)"/><ellipse cx="22" cy="9" rx="4" ry="8.5" transform="rotate(180 22 22)"/><ellipse cx="22" cy="9" rx="4" ry="8.5" transform="rotate(240 22 22)"/><ellipse cx="22" cy="9" rx="4" ry="8.5" transform="rotate(300 22 22)"/></g><circle cx="22" cy="22" r="7" fill="#f0a838" stroke="#c9821f" stroke-width="1.3"/><circle cx="22" cy="22" r="4" fill="#e88f22" stroke="none"/><circle cx="22" cy="22" r="1.8" fill="#8a5a12" stroke="none"/></g>' },
+    grateful: { name:'Chrysanthemum',   inner:'<g stroke="#b9701f" stroke-width="0.8"><g fill="#d98a3c"><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(0 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(30 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(60 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(90 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(120 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(150 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(180 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(210 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(240 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(270 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(300 22 22)"/><ellipse cx="22" cy="7" rx="2.2" ry="8" transform="rotate(330 22 22)"/></g><g fill="#efb663"><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(20 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(60 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(100 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(140 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(180 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(220 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(260 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(300 22 22)"/><ellipse cx="22" cy="12" rx="2" ry="6" transform="rotate(340 22 22)"/></g><circle cx="22" cy="22" r="3" fill="#a85f18" stroke="none"/></g>' },
+  };
+  MOOD_LABELS = { happy:'Happy', love:'Loved', warm:'Warm', calm:'Calm', grateful:'Grateful', hopeful:'Hopeful', anxious:'Anxious', tired:'Tired', sad:'Sad', angry:'Angry' };
+  MOOD_ORDER = ['happy','love','warm','grateful','hopeful','calm','anxious','tired','sad','angry'];
+
+  // compact bloom head only (chips, calendar, week, day shelf, mood picker)
+  flower(mood){
+    const f = this.FLOWERS[mood] || this.FLOWERS.happy;
+    return React.createElement('svg', { viewBox:'0 0 44 44', width:'100%', height:'100%', style:{display:'block'}, dangerouslySetInnerHTML:{__html:f.inner} });
+  }
+  // seeded RNG for a stable, natural-looking garden layout
+  rng(seed){ let s=seed>>>0; return ()=>{ s=(s+0x6D2B79F5)|0; let t=Math.imul(s^(s>>>15),1|s); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+
+  // COMPLETE botanical plant models — each mood has its own stem, leaves and bloom,
+  // drawn as one integrated plant true to its real-world counterpart (garden page only).
+  gardenPlant(mood){
+    this._gp = this._gp || {};
+    if(this._gp[mood]) return this._gp[mood];
+    let m;
+    if(mood==='warm'){                       // ── Sunflower: tall thick stalk, broad leaves, seeded disc
+      let pet=''; for(let i=0;i<15;i++){ pet+='<ellipse cx="50" cy="30" rx="5" ry="13.5" transform="rotate('+(i*24)+' 50 56)" fill="#f2c14e"/>'; }
+      const dots=[[50,50],[44,53],[56,53],[47,59],[53,59],[50,56],[42,57],[58,57],[50,63],[45,63],[55,63]].map(p=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="1.5"/>').join('');
+      m={vb:'0 0 100 240',ratio:2.4,svg:
+        '<path d="M50 240 C 48 182 54 120 50 86" fill="none" stroke="#5f7a3e" stroke-width="5.4" stroke-linecap="round"/>'
+       +'<g stroke="#4e6a34" stroke-width="2.3" stroke-linejoin="round" stroke-linecap="round">'
+       +'<path d="M50 152 C 26 140 9 150 10 172 C 21 177 23 188 34 181 C 41 190 51 182 50 152 Z" fill="#82a05a"/><path d="M50 152 Q 28 162 13 170" fill="none" stroke-width="1.3"/>'
+       +'<path d="M52 118 C 76 108 92 120 90 142 C 79 146 78 157 67 151 C 61 159 50 150 52 118 Z" fill="#8fae5c"/><path d="M52 118 Q 72 128 86 138" fill="none" stroke-width="1.3"/>'
+       +'</g><g stroke="#9a6a2a" stroke-width="1.3">'+pet+'<circle cx="50" cy="56" r="17" fill="#7a4a24"/></g><g fill="#5c3618">'+dots+'</g>'};
+    } else if(mood==='anxious'){             // ── Aster: wiry branching stems, narrow leaves, violet ray daisies
+      const daisy=(cx,cy,pl,dr)=>{ let p=''; const n=16; for(let i=0;i<n;i++){ p+='<ellipse cx="'+cx+'" cy="'+(cy-dr-pl*0.55).toFixed(1)+'" rx="1.9" ry="'+pl+'" transform="rotate('+(i*360/n)+' '+cx+' '+cy+')" fill="'+(i%2?'#a892cf':'#b6a2da')+'" stroke="#7a68a4" stroke-width="0.9"/>'; } return p+'<circle cx="'+cx+'" cy="'+cy+'" r="'+dr+'" fill="#f2c14e" stroke="#c98a2a" stroke-width="1.2"/>'; };
+      m={vb:'0 0 100 210',ratio:2.1,svg:
+        '<path d="M50 210 C 47 168 52 122 50 60" fill="none" stroke="#5f7a3e" stroke-width="3.4" stroke-linecap="round"/>'
+       +'<path d="M50 150 C 34 138 27 120 30 96" fill="none" stroke="#6f8a4e" stroke-width="2.5" stroke-linecap="round"/>'
+       +'<path d="M50 138 C 66 128 74 112 72 88" fill="none" stroke="#6f8a4e" stroke-width="2.5" stroke-linecap="round"/>'
+       +'<g stroke="#4e6a34" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" fill="none"><path d="M50 168 q -15 -4 -23 -15 M50 128 q 14 -5 21 -15"/></g>'
+       +'<g stroke="#4e6a34" stroke-width="1.4" stroke-linejoin="round"><path d="M44 156 l -17 -6 l 5 8 Z" fill="#82a05a"/><path d="M56 144 l 17 -6 l -5 8 Z" fill="#8fae5c"/></g>'
+       + daisy(30,90,8.5,4.4) + daisy(72,84,8.5,4.4) + daisy(50,54,11,5.5)};
+    } else if(mood==='sad'){                 // ── Bleeding Heart: arching raceme with pendant heart blooms
+      const heart=(cx,cy,s)=>{ const P=(x,y)=>((cx+x*s).toFixed(1)+' '+(cy+y*s).toFixed(1)); const d='M '+P(0,0.3)+' C '+P(-0.05,0.0)+' '+P(-0.62,-0.05)+' '+P(-0.62,0.34)+' C '+P(-0.62,0.68)+' '+P(-0.18,0.88)+' '+P(0,1.16)+' C '+P(0.18,0.88)+' '+P(0.62,0.68)+' '+P(0.62,0.34)+' C '+P(0.62,-0.05)+' '+P(0.05,0.0)+' '+P(0,0.3)+' Z'; return '<path d="'+d+'" fill="#e07d98" stroke="#a8536c" stroke-width="1.6" stroke-linejoin="round"/><path d="M '+P(-0.13,1.02)+' L '+P(0,1.5)+' L '+P(0.13,1.02)+' Z" fill="#fbeef0" stroke="#c98aa0" stroke-width="1"/>'; };
+      const pts=[[45,82],[56,74],[66,71],[76,73],[85,80]]; let peds='',hearts='';
+      pts.forEach(p=>{ peds+='<path d="M'+p[0]+' '+p[1]+' q 0 6 0 9" stroke="#6f8a4e" stroke-width="1.6" fill="none" stroke-linecap="round"/>'; hearts+=heart(p[0],p[1]+9,8); });
+      m={vb:'0 0 100 200',ratio:2.0,svg:
+        '<path d="M30 200 C 26 150 28 100 42 76 C 55 55 74 52 90 60" fill="none" stroke="#5f7a3e" stroke-width="3.4" stroke-linecap="round"/>'
+       +'<g stroke="#4e6a34" stroke-width="1.7" stroke-linejoin="round">'
+       +'<path d="M32 152 C 16 152 6 160 4 172 C 14 172 14 180 22 174 C 26 180 34 172 32 152 Z" fill="#8aa06a"/>'
+       +'<path d="M34 124 C 20 122 12 128 9 139 C 18 141 17 149 25 144 C 30 149 38 140 34 124 Z" fill="#96ac74"/>'
+       +'</g>'+peds+hearts};
+    } else if(mood==='angry'){               // ── Red Spider Lily: bare scape, recurved spidery petals, arching stamens
+      const cx=50, cy=60, n=6; let pet='', stam='';
+      for(let i=0;i<n;i++){ const a=(i*360/n-90)*Math.PI/180, dx=Math.cos(a), dy=Math.sin(a);
+        const ex=cx+dx*24, ey=cy+dy*24, cxo=cx+dx*14-dy*8, cyo=cy+dy*14+dx*8, hx=ex-dy*7, hy=ey+dx*7;
+        pet+='<path d="M'+cx+' '+cy+' Q '+cxo.toFixed(1)+' '+cyo.toFixed(1)+' '+ex.toFixed(1)+' '+ey.toFixed(1)+' Q '+(ex-dy*4).toFixed(1)+' '+(ey+dx*4).toFixed(1)+' '+hx.toFixed(1)+' '+hy.toFixed(1)+'" fill="none" stroke="#d8342a" stroke-width="2.6" stroke-linecap="round"/>';
+        const sx=cx+dx*30, sy=cy+dy*30-18, scx=cx+dx*20-dy*4;
+        stam+='<path d="M'+cx+' '+cy+' Q '+scx.toFixed(1)+' '+(cy+dy*16-6).toFixed(1)+' '+sx.toFixed(1)+' '+sy.toFixed(1)+'" fill="none" stroke="#c22a20" stroke-width="1.2"/><circle cx="'+sx.toFixed(1)+'" cy="'+sy.toFixed(1)+'" r="1.7" fill="#7d1a14"/>';
+      }
+      m={vb:'0 0 100 214',ratio:2.14,svg:
+        '<path d="M50 214 C 49 164 51 112 50 66" fill="none" stroke="#6a7d46" stroke-width="3.2" stroke-linecap="round"/>'
+       +'<g>'+pet+'</g><g>'+stam+'</g><circle cx="50" cy="60" r="3.6" fill="#a82218"/>'};
+    } else if(mood==='hopeful'){             // ── Daffodil: upright stem, strappy leaves, trumpet corona
+      let pet=''; for(let i=0;i<6;i++){ pet+='<ellipse cx="50" cy="43" rx="7" ry="14" transform="rotate('+(i*60)+' 50 60)" fill="#f5df84" stroke="#d8b84a" stroke-width="1.5"/>'; }
+      m={vb:'0 0 100 214',ratio:2.14,svg:
+        '<path d="M50 214 C 48 162 52 110 50 66" fill="none" stroke="#5f7a3e" stroke-width="3.8" stroke-linecap="round"/>'
+       +'<g stroke="#4e6a34" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">'
+       +'<path d="M50 212 C 40 170 36 122 41 84 C 47 124 49 170 50 212 Z" fill="#7f9a4f"/>'
+       +'<path d="M50 212 C 60 172 64 126 59 90 C 53 128 51 172 50 212 Z" fill="#8fae5c"/>'
+       +'</g>'
+       +'<g>'+pet+'</g>'
+       +'<circle cx="50" cy="60" r="11" fill="#f0a838" stroke="#c9821f" stroke-width="1.8"/>'
+       +'<circle cx="50" cy="60" r="6.5" fill="#e88f22" stroke="#c9821f" stroke-width="1.3"/>'
+       +'<circle cx="50" cy="60" r="2.6" fill="#8a5a12"/>'};
+    } else if(mood==='grateful'){            // ── Chrysanthemum: bushy stem, lobed leaves, dense pom bloom
+      const cx=50, cy=64; let pom='';
+      const rings=[{r:22,ry:12,n:18,c:'#d98a3c'},{r:16,ry:10,n:15,c:'#e6a04e'},{r:11,ry:7.5,n:12,c:'#efb663'},{r:6,ry:5,n:9,c:'#f6cd86'}];
+      rings.forEach((rg,ri)=>{ for(let i=0;i<rg.n;i++){ const a=i*360/rg.n+(ri%2?11:0); pom+='<ellipse cx="'+cx+'" cy="'+(cy-rg.r).toFixed(1)+'" rx="2.5" ry="'+rg.ry+'" transform="rotate('+a.toFixed(1)+' '+cx+' '+cy+')" fill="'+rg.c+'" stroke="#b9701f" stroke-width="0.8"/>'; } });
+      pom+='<circle cx="'+cx+'" cy="'+cy+'" r="3.4" fill="#a85f18"/>';
+      m={vb:'0 0 100 196',ratio:1.96,svg:
+        '<path d="M50 196 C 47 152 53 112 50 88" fill="none" stroke="#5f7a3e" stroke-width="4.2" stroke-linecap="round"/>'
+       +'<g stroke="#4e6a34" stroke-width="2" stroke-linejoin="round" stroke-linecap="round">'
+       +'<path d="M50 152 C 34 152 22 145 13 154 C 22 158 21 166 30 163 C 31 170 40 167 43 160 C 48 163 53 156 50 152 Z" fill="#82a05a"/>'
+       +'<path d="M50 130 C 66 130 78 123 87 132 C 78 136 79 144 70 141 C 69 148 60 145 57 138 C 52 141 47 134 50 130 Z" fill="#8fae5c"/>'
+       +'</g><g>'+pom+'</g>'};
+    } else if(mood==='love'){                // ── Rose: thorned stem, compound leaflets, spiral bloom
+      m={vb:'0 0 100 205',ratio:2.05,svg:
+        '<path d="M50 205 C 47 165 53 128 50 98" fill="none" stroke="#5f7a3e" stroke-width="4" stroke-linecap="round"/>'
+       +'<path d="M49 150 l -9 -4 l 6 7 Z" fill="#5f7a3e"/><path d="M51 128 l 9 -4 l -6 7 Z" fill="#5f7a3e"/>'
+       +'<g stroke="#4e6a34" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">'
+       +'<path d="M50 146 q -15 3 -29 -1" fill="none"/><path d="M36 145 c -4 -7 -12 -7 -15 0 c 4 6 11 6 15 0 Z" fill="#82a05a"/><path d="M24 146 c -4 -7 -12 -7 -15 0 c 4 6 11 6 15 0 Z" fill="#8fae5c"/>'
+       +'<path d="M50 130 q 15 3 29 -1" fill="none"/><path d="M64 129 c 4 -7 12 -7 15 0 c -4 6 -11 6 -15 0 Z" fill="#8fae5c"/>'
+       +'</g><g stroke="#7d2f3a" stroke-width="2.4" stroke-linejoin="round">'
+       +'<circle cx="50" cy="74" r="16" fill="#d76a76"/><path d="M50 60 a13.5 13.5 0 1 1 -9 24" fill="none"/><path d="M50 65 a9 9 0 1 1 -6 16" fill="none"/><circle cx="50" cy="74" r="4" fill="#a83f4d" stroke="none"/>'
+       +'<path d="M38 88 q -5 7 -2 13 M62 88 q 5 7 2 13" fill="none" stroke="#5f7a3e" stroke-width="2"/></g>'};
+    } else if(mood==='calm'){                // ── Lavender: multi-stem clump, silvery leaves, floret spikes
+      const tips=[[30,72],[40,56],[50,48],[60,56],[70,72]]; let stems='',spikes='';
+      tips.forEach((t,i)=>{ const bx=50+(t[0]-50)*0.12; stems+='<path d="M'+bx+' 185 Q '+(((bx+t[0])/2)+(i-2)*3).toFixed(1)+' '+((185+t[1])/2).toFixed(1)+' '+t[0]+' '+t[1]+'" fill="none" stroke="#6f8a4e" stroke-width="2.6" stroke-linecap="round"/>';
+        for(let k=0;k<6;k++){ spikes+='<ellipse cx="'+(t[0]+(k%2?0.8:-0.8))+'" cy="'+(t[1]-k*6.2).toFixed(1)+'" rx="3.1" ry="4.2" fill="'+(k%2?'#9a86c4':'#8a74b8')+'" stroke="#6a5a8a" stroke-width="1"/>'; } });
+      m={vb:'0 0 100 190',ratio:1.9,svg:
+        '<g stroke="#4e6a34" stroke-width="1.7" stroke-linejoin="round">'
+       +'<path d="M50 188 C 40 178 34 166 34 150 C 42 160 48 172 50 188 Z" fill="#8fae5c"/>'
+       +'<path d="M50 188 C 60 178 66 166 66 150 C 58 160 52 172 50 188 Z" fill="#82a05a"/>'
+       +'<path d="M50 188 C 44 176 41 164 42 150 C 47 162 50 174 50 188 Z" fill="#93a35e"/>'
+       +'</g>'+stems+spikes};
+    } else if(mood==='tired'){               // ── Poppy: thin wiry stem, feathery leaves, nodding bud
+      let stam=''; for(let i=0;i<11;i++){ const a=(i*360/11)*Math.PI/180; stam+='<path d="M50 64 L '+(50+Math.cos(a)*9).toFixed(1)+' '+(64+Math.sin(a)*9).toFixed(1)+'" stroke="#3a2420" stroke-width="1.3"/>'; }
+      m={vb:'0 0 100 236',ratio:2.36,svg:
+        '<path d="M50 236 C 46 180 55 120 50 72" fill="none" stroke="#6f8a4e" stroke-width="3" stroke-linecap="round"/>'
+       +'<path d="M50 152 C 62 140 71 120 66 104" fill="none" stroke="#6f8a4e" stroke-width="2.3" stroke-linecap="round"/>'
+       +'<g transform="rotate(18 66 100)"><ellipse cx="66" cy="98" rx="6" ry="8.5" fill="#7f9a4f" stroke="#4e6a34" stroke-width="1.7"/><path d="M62 96 q4 -4 8 0" stroke="#4e6a34" stroke-width="1.1" fill="none"/></g>'
+       +'<g stroke-linecap="round" fill="none"><path d="M50 176 q -13 -1 -23 -11 M50 180 q -12 4 -21 3 M50 172 q -11 -8 -17 -18" stroke="#7f9a4f" stroke-width="1.8"/><path d="M50 177 q 13 -1 23 -11 M50 181 q 12 4 21 3" stroke="#82a05a" stroke-width="1.8"/></g>'
+       +'<g stroke="#7d2a24" stroke-width="2.2" stroke-linejoin="round">'
+       +'<ellipse cx="50" cy="56" rx="15" ry="13" fill="#e0574a"/><ellipse cx="38" cy="65" rx="12" ry="11" fill="#d84a3d"/><ellipse cx="62" cy="65" rx="12" ry="11" fill="#d84a3d"/><ellipse cx="50" cy="70" rx="13.5" ry="11" fill="#e0574a"/><circle cx="50" cy="64" r="6.5" fill="#3a2420" stroke="none"/>'
+       +'</g><g>'+stam+'</g>'};
+    } else if(mood==='_wiltingRose'){        // ── (legacy, retained but unused) Wilting bloom
+      m={vb:'0 0 100 196',ratio:1.96,svg:
+        '<path d="M50 196 C 49 152 53 112 50 86 C 48 72 39 66 29 71" fill="none" stroke="#6f8a4e" stroke-width="3.5" stroke-linecap="round"/>'
+       +'<g stroke="#4e6a34" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round">'
+       +'<path d="M50 150 C 34 157 22 153 14 163 C 24 165 26 173 34 167 C 40 173 50 164 50 150 Z" fill="#7f9a4f"/>'
+       +'<path d="M51 124 C 66 131 76 127 84 137 C 74 139 72 147 64 141 C 58 147 49 138 51 124 Z" fill="#8fae5c"/>'
+       +'</g><g stroke="#4a5a68" stroke-width="2.2" stroke-linejoin="round" transform="rotate(-22 30 72)">'
+       +'<circle cx="30" cy="76" r="12" fill="#a2b3c0"/><circle cx="21" cy="82" r="9" fill="#93a6b4"/><circle cx="39" cy="82" r="9" fill="#93a6b4"/><circle cx="30" cy="88" r="8" fill="#8497a6"/><circle cx="30" cy="80" r="4.5" fill="#6f8494" stroke="none"/>'
+       +'</g>'};
+    } else if(mood==='_thistle'){            // ── (legacy, retained but unused) Thistle
+      let burst=''; for(let i=0;i<13;i++){ const a=(-56+i*(112/12)-90)*Math.PI/180; burst+='<path d="M50 74 L '+(50+Math.cos(a)*19).toFixed(1)+' '+(74+Math.sin(a)*19).toFixed(1)+'" stroke="'+(i%2?'#9b6fb0':'#8358a0')+'"/>'; }
+      m={vb:'0 0 100 206',ratio:2.06,svg:
+        '<path d="M50 206 C 48 160 53 118 50 84" fill="none" stroke="#5f7a3e" stroke-width="3.6" stroke-linecap="round"/>'
+       +'<g stroke="#5f7a3e" stroke-width="1.6" stroke-linecap="round"><path d="M49 172 l -6 -3 M51 158 l 6 -3 M49 142 l -6 -3 M51 128 l 6 -3 M49 112 l -6 -3"/></g>'
+       +'<g stroke="#4e6a34" stroke-width="1.7" stroke-linejoin="round">'
+       +'<path d="M50 166 L 30 159 L 37 163 L 25 161 L 33 167 L 23 167 L 35 173 L 27 177 L 43 175 L 50 179 Z" fill="#93a35e"/>'
+       +'<path d="M50 140 L 70 133 L 63 137 L 75 135 L 67 141 L 77 141 L 65 147 L 73 151 L 57 149 L 50 153 Z" fill="#8fae5c"/>'
+       +'</g><g stroke="#7a4f8a" stroke-width="1.8" stroke-linecap="round">'+burst+'</g>'
+       +'<g stroke="#5a3a6a" stroke-width="1.6" stroke-linejoin="round"><path d="M50 92 C 39 92 35 82 40 73 C 45 79 55 79 60 73 C 65 82 61 92 50 92 Z" fill="#8fae5c"/><path d="M43 88 l6 -6 M50 90 l6 -8 M45 81 l7 -5 M55 88 l-5 -6" stroke="#5a3a6a" stroke-width="1" fill="none"/></g>'};
+    } else {                                 // ── Peony (happy, default): sturdy stem, broad lobed leaves, layered bloom
+      m={vb:'0 0 100 190',ratio:1.9,svg:
+        '<path d="M50 190 C 46 150 53 116 50 92" fill="none" stroke="#5f7a3e" stroke-width="4.6" stroke-linecap="round"/>'
+       +'<g stroke="#4e6a34" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round">'
+       +'<path d="M50 148 C 32 148 18 140 9 149 C 19 154 17 162 27 160 C 27 168 37 166 41 159 C 47 163 53 156 50 148 Z" fill="#82a05a"/><path d="M50 148 Q 30 150 12 150" fill="none" stroke-width="1.3"/>'
+       +'<path d="M50 126 C 68 126 82 118 91 127 C 81 132 83 140 73 138 C 73 146 63 144 59 137 C 53 141 47 134 50 126 Z" fill="#8fae5c"/><path d="M50 126 Q 70 128 88 129" fill="none" stroke-width="1.3"/>'
+       +'</g><g stroke="#8a4a4a" stroke-width="2.3" stroke-linejoin="round">'
+       +'<circle cx="50" cy="64" r="15" fill="#f2a9b2"/><circle cx="34" cy="74" r="14" fill="#ed97a4"/><circle cx="66" cy="74" r="14" fill="#ed97a4"/><circle cx="41" cy="87" r="13.5" fill="#f2a9b2"/><circle cx="59" cy="87" r="13.5" fill="#f2a9b2"/><circle cx="50" cy="78" r="12" fill="#e4788a"/>'
+       +'<path d="M44 78 q6 -7 12 0" fill="none" stroke="#c95f72" stroke-width="1.5"/></g>'};
+    }
+    this._gp[mood]=m; return m;
+  }
+  plantSvg(model){ return React.createElement('svg',{viewBox:model.vb,width:'100%',height:'100%',preserveAspectRatio:'xMidYMax meet',style:{display:'block',overflow:'visible'},dangerouslySetInnerHTML:{__html:model.svg}}); }
+
+  // a tuft of grass blades — the ground layer flowers grow out of
+  grassTuft(variant){
+    const cols=[['#7f9a4f','#6c8a40'],['#8aa657','#748f44'],['#93a35e','#7d9247']][variant%3];
+    const base=54, cx=30, blades=[[-36,42],[-22,50],[-9,55],[5,54],[19,49],[32,41]];
+    let s='';
+    blades.forEach((b,i)=>{ const rad=(b[0]-90)*Math.PI/180, len=b[1]; const tx=cx+Math.cos(rad)*len, ty=base+Math.sin(rad)*len; const mx=cx+Math.cos(rad)*len*0.5+b[0]*0.12, my=base+Math.sin(rad)*len*0.5; s+='<path d="M'+cx+' '+base+' Q '+mx.toFixed(1)+' '+my.toFixed(1)+' '+tx.toFixed(1)+' '+ty.toFixed(1)+'" fill="none" stroke="'+(i%2?cols[1]:cols[0])+'" stroke-width="'+(3.2-Math.abs(b[0])*0.02).toFixed(1)+'" stroke-linecap="round"/>'; });
+    return {vb:'0 0 60 60',ratio:1,svg:s};
+  }
+  butterfly(a,b){
+    a=a||'#d98b74'; b=b||'#c9765f';
+    const inner='<g><ellipse class="fn-wing-l" cx="7" cy="9" rx="6" ry="7.5" fill="'+a+'"/><ellipse class="fn-wing-l" cx="9" cy="16" rx="4.4" ry="5.4" fill="'+b+'"/><ellipse class="fn-wing-r" cx="17" cy="9" rx="6" ry="7.5" fill="'+a+'"/><ellipse class="fn-wing-r" cx="15" cy="16" rx="4.4" ry="5.4" fill="'+b+'"/><ellipse cx="12" cy="11.5" rx="1.3" ry="6" fill="#4a3b2e"/></g>';
+    return React.createElement('svg',{viewBox:'0 0 24 24',width:'100%',height:'100%',style:{display:'block',overflow:'visible'},dangerouslySetInnerHTML:{__html:inner}});
+  }
+  bee(){
+    const inner='<g><ellipse class="fn-wing-l" cx="8" cy="9" rx="4.2" ry="5" fill="#eaddc4" opacity=".85"/><ellipse class="fn-wing-r" cx="16" cy="9" rx="4.2" ry="5" fill="#eaddc4" opacity=".85"/><ellipse cx="12" cy="14" rx="6" ry="4.6" fill="#f2c14e" stroke="#8a5a24" stroke-width="1"/><path d="M10 10.2 v7.6 M13 9.7 v8.6" stroke="#8a5a24" stroke-width="1.5"/></g>';
+    return React.createElement('svg',{viewBox:'0 0 24 24',width:'100%',height:'100%',style:{display:'block',overflow:'visible'},dangerouslySetInnerHTML:{__html:inner}});
+  }
+  ICONS = {
+    home:'<path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/>',
+    calendar:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M9 3v4M15 3v4"/>',
+    garden:'<circle cx="12" cy="9" r="3"/><circle cx="8" cy="13" r="3"/><circle cx="16" cy="13" r="3"/><path d="M12 12v9"/>',
+    search:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/>',
+    plus:'<path d="M12 5v14M5 12h14"/>',
+    pencil:'<path d="M4 17l8-11 8 11"/><path d="M6 20h12"/>',
+    mic:'<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4"/>',
+    video:'<rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/>',
+    photo:'<rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.2"/>',
+    play:'<path d="M8 5v14l11-7z"/>',
+    flame:'<path d="M12 3c3 4 5 6 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3-1-3 1-5 1-8Z"/>',
+    close:'<path d="M6 6l12 12M18 6L6 18"/>',
+    trash:'<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
+    pause:'<rect x="7" y="5" width="3.6" height="14" rx="1.2"/><rect x="13.4" y="5" width="3.6" height="14" rx="1.2"/>',
+    back:'<path d="M15 5l-7 7 7 7"/>',
+    fwd:'<path d="M9 5l7 7-7 7"/>',
+    gear:'<path d="M17.9 9.6L21.2 9.9L21.2 14.1L17.9 14.5L20 17L17 20L14.5 17.9L14.1 21.2L9.9 21.2L9.6 17.9L7 20L4 17L6.1 14.5L2.8 14.1L2.8 9.9L6.1 9.6L4 7L7 4L9.6 6.1L9.9 2.8L14.1 2.8L14.5 6.1L17 4L20 7Z"/><circle cx="12" cy="12" r="3.4"/>',
+    flip:'<path d="M3 8a9 9 0 0 1 15-3l3 3M21 16a9 9 0 0 1-15 3l-3-3"/><path d="M18 3v5h-5M6 21v-5h5"/>',
+    check:'<path d="M5 13l4 4L19 7"/>',
+    soundOn:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6"/>',
+    soundOff:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l4 6M21 9l-4 6"/>',
+    lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+    flash:'<path d="M13 2L5 13h6l-1 9 8-12h-6z"/>',
+    cam:'<rect x="3" y="7" width="18" height="13" rx="2.5"/><circle cx="12" cy="13.5" r="3.6"/><path d="M8 7l1.4-2.4h5.2L16 7"/>',
+    appleGlyph:'<circle cx="12" cy="12" r="6.5"/>',
+  };
+  icon(name, opt){
+    opt = opt || {};
+    const inner = this.ICONS[name] || '';
+    const attrs = { viewBox:'0 0 24 24', width:'100%', height:'100%', style:{display:'block'}, dangerouslySetInnerHTML:{__html:inner} };
+    attrs.fill = opt.fill || 'none';
+    if (opt.stroke){ attrs.stroke = opt.stroke; attrs.strokeWidth = opt.sw || 2; attrs.strokeLinecap='round'; attrs.strokeLinejoin='round'; }
+    return React.createElement('svg', attrs);
+  }
+  bars(heights, opt){
+    opt = opt || {};
+    const w = opt.w || 3, gap = opt.gap || 2.5;
+    return React.createElement('div', { style:{display:'flex',gap:gap+'px',alignItems:'center',height:'100%'} },
+      heights.map((h,i)=>React.createElement('div',{ key:i, style:{ width:w+'px', height:(h*100)+'%', background: h>0.62?'#c76a54':(h>0.42?'#dcae9a':'#e3c4b2'), borderRadius:'2px' } })));
+  }
+  liveBars(){
+    const hs=[0.3,0.65,0.95,0.5,0.8,0.4,1,0.55,0.85,0.35,0.7,0.45];
+    return React.createElement('div',{style:{display:'flex',gap:'3px',alignItems:'center',height:'100%'}},
+      hs.map((h,i)=>React.createElement('div',{key:i,style:{width:'4px',height:(h*100)+'%',background:h>0.6?'#c76a54':'#dcae9a',borderRadius:'3px',transformOrigin:'center',animation:`fn-bob ${0.7+(i%4)*0.15}s ease-in-out infinite`}})));
+  }
+
+  // ---------- sound: authentic journal foley (synthesized) ----------
+  ensureAudio(){ if(!this._ac){ try{ this._ac = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return this._ac; }
+  noiseBuf(ac, dur, shape){
+    const len = Math.max(1, Math.floor(ac.sampleRate*dur));
+    const b = ac.createBuffer(1, len, ac.sampleRate), d = b.getChannelData(0);
+    for(let i=0;i<len;i++){ const t=i/len; d[i]=(Math.random()*2-1)*(shape?shape(t):1); }
+    return b;
+  }
+  play(kind){
+    if(!this.state.soundOn) return;
+    const ac = this.ensureAudio(); if(!ac) return;
+    if(ac.state==='suspended') ac.resume();
+    const now = ac.currentTime;
+    const noise = (dur, shape, fType, f0, f1, q, gain, attack)=>{
+      const src = ac.createBufferSource(); src.buffer = this.noiseBuf(ac, dur, shape);
+      const filt = ac.createBiquadFilter(); filt.type = fType; filt.Q.value = q||0.7;
+      filt.frequency.setValueAtTime(f0, now); if(f1) filt.frequency.exponentialRampToValueAtTime(f1, now+dur*0.8);
+      const g = ac.createGain(); g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(gain, now+(attack||0.012)); g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+      src.connect(filt).connect(g).connect(ac.destination); src.start(now); src.stop(now+dur+0.02);
+    };
+    const thump = (f0, f1, gain, dur)=>{
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(f0, now); o.frequency.exponentialRampToValueAtTime(f1, now+dur*0.7);
+      g.gain.setValueAtTime(gain, now); g.gain.exponentialRampToValueAtTime(0.0001, now+dur);
+      o.connect(g).connect(ac.destination); o.start(now); o.stop(now+dur+0.02);
+    };
+    if(kind==='pageflip'){
+      // airy paper whoosh sweeping up, then a soft flick + low settle
+      noise(0.34, t=>Math.sin(Math.PI*t), 'bandpass', 620, 3400, 0.6, 0.15);
+      setTimeout(()=>{ const n=ac.currentTime; const s=ac.createBufferSource(); s.buffer=this.noiseBuf(ac,0.06,t=>Math.pow(1-t,1.4)); const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=2600; const g=ac.createGain(); g.gain.setValueAtTime(0.14,n); g.gain.exponentialRampToValueAtTime(0.0001,n+0.06); s.connect(f).connect(g).connect(ac.destination); s.start(n); }, 150);
+      thump(150, 78, 0.05, 0.16);
+    } else if(kind==='pencil'){
+      // graphite scritch — modulated noise strokes on paper
+      noise(0.28, t=>(0.45+0.55*Math.abs(Math.sin(t*Math.PI*7)))*Math.pow(1-t,0.5), 'bandpass', 2600, 2100, 1.3, 0.11);
+      noise(0.28, ()=>Math.random(), 'highpass', 4200, 0, 0.7, 0.02);
+    } else if(kind==='eraser'){
+      // rubber-on-paper rubbing, back-and-forth
+      noise(0.36, t=>(0.4+0.6*Math.abs(Math.sin(t*Math.PI*10))), 'lowpass', 1500, 900, 0.6, 0.12);
+    } else if(kind==='bookclose'){
+      // soft cover close — low woody thunk + short air
+      thump(210, 66, 0.13, 0.22);
+      noise(0.12, t=>Math.pow(1-t,1.2), 'lowpass', 700, 0, 0.6, 0.09);
+    } else { // 'tap' — gentle pencil dot
+      noise(0.05, t=>Math.pow(1-t,1.6), 'bandpass', 2200, 0, 0.9, 0.06);
+      thump(320, 200, 0.04, 0.06);
+    }
+  }
+
+  // ---------- helpers ----------
+  now(){ return new Date(); }
+  fmtClock(d){ let h=d.getHours(), m=d.getMinutes(); return (h<10?'0':'')+h+':'+(m<10?'0':'')+m; }
+  fmtStamp(h,m){ return (h<10?'0':'')+h+':'+(m<10?'0':'')+m+' · '; }
+  partOfDay(h){ return h<12?'morning':h<17?'afternoon':h<21?'evening':'night'; }
+  greetingFor(h){ return h<12?'Good morning':h<17?'Good afternoon':h<21?'Good evening':'Good night'; }
+  st(o){ return Object.entries(o).map(([k,v])=>k.replace(/[A-Z]/g,x=>'-'+x.toLowerCase())+':'+v).join(';'); }
+
+  // ---------- device-agnostic actions ----------
+  patch(dev, p, cb){ this.setState(s=>({[dev]:{...s[dev], ...p}}), cb); }
+  flash(dev, msg){ if(this._t[dev]) clearTimeout(this._t[dev]); this.patch(dev,{toast:msg}); this._t[dev]=setTimeout(()=>this.patch(dev,{toast:null}),1900); }
+  setView(dev, v){ this.play('pageflip'); this.patch(dev,{view:v, moodOpen:false}); }
+  toggleMood(dev){ this.play('tap'); this.setState(s=>({[dev]:{...s[dev], moodOpen:!s[dev].moodOpen}})); }
+  closeMood(dev){ this.patch(dev,{moodOpen:false, moodTargetDay:null}); }
+  // --- unified day accessors (today = day 5 lives on state.mood/entries; past days in state.pastMoods/pastEntries) ---
+  dayMoodFor(day){ return day===5 ? this.state.mood : (this.state.pastMoods[day]||null); }
+  dayEntriesFor(day){ return day===5 ? this.state.entries : (this.state.pastEntries[day]||[]); }
+  setDayMood(day, m){ if(day===5) this.setState({mood:m}); else this.setState(s=>({pastMoods:{...s.pastMoods, [day]:m}})); }
+  updateDayEntries(day, fn){ if(day===5) this.setState(s=>({entries:fn(s.entries)})); else this.setState(s=>({pastEntries:{...s.pastEntries, [day]:fn(s.pastEntries[day]||[])}})); }
+  addEntryToDay(day, entry){ const d=this.now(), h=d.getHours(), mn=d.getMinutes(); const base={ id:Date.now(), hour:h, min:mn, part:this.partOfDay(h) }; this.updateDayEntries(day, arr=>[{...base,...entry}, ...arr]); }
+  dayLabel(day){ return day===5 ? 'today' : (this.dayNames[day] ? this.dayNames[day].split(', ')[1] : 'July '+day); }
+
+  // --- confirmation gate — every edit/delete/mood change routes through here ---
+  askConfirm(dev, cfg){ this.play('tap'); this.setState({confirm:{...cfg, dev}}); }
+  confirmYes = ()=>{ const c=this.state.confirm; this.setState({confirm:null}, ()=>{ if(c&&c.onYes) c.onYes(); }); };
+  confirmNo = ()=>{ this.play('tap'); this.setState({confirm:null}); };
+
+  pickMood(dev, m){
+    const P=this.state[dev]; const day = P.moodTargetDay!=null ? P.moodTargetDay : 5;
+    const existing = this.dayMoodFor(day);
+    this.patch(dev,{moodOpen:false});
+    if(existing){
+      this.askConfirm(dev,{ title: day===5?"Change today's bloom?":'Change this day\u2019s bloom?', message:'Set '+this.dayLabel(day)+' to '+this.FLOWERS[m].name+' \u00b7 '+this.MOOD_LABELS[m]+'? Your current bloom will be replaced.', confirmLabel:'Change mood', danger:false, onYes:()=>this.doPickMood(dev,day,m) });
+    } else { this.doPickMood(dev,day,m); }
+  }
+  doPickMood(dev, day, m){ this.play('pencil'); this.setDayMood(day,m); this.patch(dev,{moodTargetDay:null}); this.flash(dev,'Mood planted \u00b7 '+this.FLOWERS[m].name); }
+  askChangeMood(dev, day){ this.play('tap'); this.patch(dev,{moodOpen:true, moodTargetDay:day}); }
+
+  beginEditNote(dev, day, entry){ this.play('tap'); this._pendSeed=this._pendSeed||{}; this._pendSeed[dev]= entry.html? {html:entry.html} : {blocks:(entry.text||'').split('\n').map(line=>({type:'p',text:line}))}; this.patch(dev,{composer:'text', draft:entry.text||'', draftPhotos:(entry.photos?entry.photos.length:0), editRef:{day, id:entry.id}, addDay:null}); }
+  beginAddNote(dev, day){ this.play('tap'); this._pendSeed=this._pendSeed||{}; this._pendSeed[dev]=null; this.patch(dev,{composer:'text', draft:'', draftPhotos:0, editRef:null, addDay:day}); }
+  doSaveEdit(dev, ref, t, html, pc){ this.play('pencil'); this.updateDayEntries(ref.day, arr=>arr.map(e=>{ if(e.id!==ref.id) return e; const n={...e, text:t, html}; if(pc!=null) n.photos = pc>0?Array.from({length:Math.min(pc,3)},()=>({label:'photo'})):undefined; return n; })); this.patch(dev,{composer:null, draft:'', draftPhotos:0, editRef:null}); this.flash(dev,'Entry updated'); }
+  askDeleteEntry(dev, day, id){ this.askConfirm(dev,{ title:'Delete this entry?', message:'This log will be removed from '+this.dayLabel(day)+'. This can\u2019t be undone.', confirmLabel:'Delete', danger:true, onYes:()=>this.doDeleteEntry(dev,day,id) }); }
+  doDeleteEntry(dev, day, id){ this.play('bookclose'); this.updateDayEntries(day, arr=>arr.filter(e=>e.id!==id)); this.flash(dev,'Entry deleted'); }
+  openChooser(dev){ this.play('tap'); this.patch(dev,{composer:'choose'}); }
+  // opening a recorder ARMS it (idle) — recording only starts when the user taps record
+  openComposer(dev, kind){ this.play('tap'); const p={composer:kind}; if(kind==='text'){ this._pendSeed=this._pendSeed||{}; this._pendSeed[dev]=null; p.draft=''; p.draftPhotos=0; p.editRef=null; p.addDay=null; } else { p.recTime='0:00'; p.recState='idle'; this._rAcc[dev]=0; } this.patch(dev,p); }
+  closeComposer(dev){ this.stopRec(dev); this._rAcc[dev]=0; if(this._eng&&this._eng[dev]){ this._eng[dev].destroy(); this._eng[dev]=null; if(this._engEl)this._engEl[dev]=null; } this.patch(dev,{composer:null, editRef:null, addDay:null, recState:'idle', recTime:'0:00'}); }
+  _engRef(dev){ this._erf=this._erf||{}; if(!this._erf[dev]) this._erf[dev]=(el)=>this._mountNote(dev,el); return this._erf[dev]; }
+  _mountNote(dev, el){
+    this._eng=this._eng||{}; this._engEl=this._engEl||{};
+    if(!el){ if(this._eng[dev]){ this._eng[dev].destroy(); this._eng[dev]=null; } this._engEl[dev]=null; return; }
+    if(this._eng[dev] && this._engEl[dev]===el) return;
+    const seed=(this._pendSeed&&this._pendSeed[dev])||{blocks:[{type:'p',text:''}]};
+    const run=()=>{ if(!window.MarkdownScrapbook){ this._mt=setTimeout(run,50); return; } if(this._eng[dev]) this._eng[dev].destroy();
+      this._eng[dev]=new window.MarkdownScrapbook(el,{ lined:false, ink:'#4a3b2e', accent:'#c76a54', paper:'#fbf3e4', photoStyle:'tape', linedTop:14, placeholder:'Start writing\u2026  try \u201c# \u201d for a title, \u201c- \u201d for a list, \u201c1. \u201d for steps', seed }); this._engEl[dev]=el; };
+    run();
+  }
+  sprigArt(){ return React.createElement('svg',{viewBox:'0 0 120 150',width:'100%',height:'100%',style:{display:'block',overflow:'visible'},dangerouslySetInnerHTML:{__html:'<g fill="none" stroke="#8a9a63" stroke-width="2.2" stroke-linecap="round"><path d="M96 6 C 70 34 58 70 60 146"/><path d="M60 40 C 44 34 34 40 30 54 C 48 56 56 52 60 40 Z" fill="#9bb078" stroke-width="1.6"/><path d="M64 62 C 82 56 92 62 96 76 C 78 78 70 74 64 62 Z" fill="#8fa66c" stroke-width="1.6"/><path d="M58 88 C 42 82 32 88 28 102 C 46 104 54 100 58 88 Z" fill="#a3b782" stroke-width="1.6"/></g>'}}); }
+  // recording state machine: idle -> recording <-> paused -> save/discard
+  beginRec(dev){ this.play('tap'); this._rAcc[dev]=0; this.patch(dev,{recState:'recording'},()=>this.startRec(dev)); }
+  pauseRec(dev){ this.play('tap'); this._rAcc[dev]=(this._rAcc[dev]||0)+(Date.now()-(this._rs[dev]||Date.now())); this.stopRec(dev); this.patch(dev,{recState:'paused'}); }
+  resumeRec(dev){ this.play('tap'); this.patch(dev,{recState:'recording'},()=>this.startRec(dev)); }
+  recTap(dev){ const r=this.state[dev].recState||'idle'; if(r==='idle') this.beginRec(dev); else if(r==='recording') this.pauseRec(dev); else this.resumeRec(dev); }
+  askDiscardRec(dev){ if((this.state[dev].recState||'idle')==='idle'){ this.closeComposer(dev); return; } this.askConfirm(dev,{ title:'Discard this recording?', message:'This take will be thrown away and nothing will be saved.', confirmLabel:'Discard', danger:true, onYes:()=>this.discardRec(dev) }); }
+  discardRec(dev){ this.stopRec(dev); this._rAcc[dev]=0; this.play('bookclose'); this.patch(dev,{composer:null, recState:'idle', recTime:'0:00'}); this.flash(dev,'Recording discarded'); }
+  onDraft(dev, e){ const v=e.target.value; this.patch(dev,{draft:v}); }
+  addPhoto(dev){ this.play('tap'); const eng=this._eng&&this._eng[dev]; if(eng){ eng.addPhoto(); this.flash(dev,'Memory added \u2014 drag, rotate & resize it'); } }
+  addEntry(entry){ const d=this.now(), h=d.getHours(), m=d.getMinutes(); const base={ id:Date.now(), hour:h, min:m, part:this.partOfDay(h) }; this.setState(s=>({ entries:[{...base,...entry}, ...s.entries] })); }
+  saveText(dev){
+    const eng=this._eng&&this._eng[dev];
+    const t = eng? eng.getText() : (this.state[dev].draft||'').trim();
+    const html = eng? eng.getHTML() : '';
+    const pc = eng? eng.photoCount() : (this.state[dev].draftPhotos||0);
+    if(!t && pc===0){ this.flash(dev,'Write something first'); return; }
+    const ref=this.state[dev].editRef;
+    if(ref){ this.askConfirm(dev,{ title:'Save changes?', message:'Update this note with your edits?', confirmLabel:'Save changes', danger:false, onYes:()=>this.doSaveEdit(dev,ref,t,html,pc) }); return; }
+    this.play('pencil'); const entry={type:'note', text:t, html}; if(pc>0){ entry.photos=Array.from({length:Math.min(pc,3)},()=>({label:'photo'})); }
+    const day=this.state[dev].addDay!=null?this.state[dev].addDay:5;
+    this.addEntryToDay(day, entry); this.patch(dev,{composer:null, draft:'', draftPhotos:0, addDay:null});
+    this.flash(dev, day===5?'Saved to today':'Saved to '+this.dayLabel(day));
+  }
+  saveVoice(dev){ if((this.state[dev].recState||'idle')==='idle') return; this.stopRec(dev); this._rAcc[dev]=0; this.play('bookclose'); this.addEntry({type:'voice', dur:this.state[dev].recTime==='0:00'?'0:12':this.state[dev].recTime}); this.patch(dev,{composer:null, recState:'idle', recTime:'0:00'}); this.flash(dev,'Voice memo saved'); }
+  saveVideo(dev){ if((this.state[dev].recState||'idle')==='idle') return; this.stopRec(dev); this._rAcc[dev]=0; this.play('bookclose'); this.addEntry({type:'video', dur:this.state[dev].recTime==='0:00'?'0:08':this.state[dev].recTime}); this.patch(dev,{composer:null, recState:'idle', recTime:'0:00'}); this.flash(dev,'Video saved'); }
+  startRec(dev){ this._rs[dev]=Date.now(); if(this._ri[dev]) clearInterval(this._ri[dev]); this._ri[dev]=setInterval(()=>{ const ms=(this._rAcc[dev]||0)+(Date.now()-this._rs[dev]); const s=Math.floor(ms/1000); this.patch(dev,{recTime:Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60)}); },250); }
+  stopRec(dev){ if(this._ri[dev]){ clearInterval(this._ri[dev]); this._ri[dev]=null; } }
+  toggleSound = ()=>{ this.setState(s=>({soundOn:!s.soundOn}), ()=>this.play('tap')); };
+  stop = (e)=>{ if(e&&e.stopPropagation) e.stopPropagation(); };
+  componentWillUnmount(){ Object.keys(this._ri).forEach(k=>this.stopRec(k)); Object.values(this._t).forEach(t=>clearTimeout(t)); clearTimeout(this._mt); if(this._eng) Object.values(this._eng).forEach(e=>e&&e.destroy()); }
+
+  // ---------- static sample data ----------
+  weekData(){ return [ {n:'Mon',m:'anxious'},{n:'Tue',m:'warm'},{n:'Wed',m:'love'},{n:'Thu',m:'calm'},{n:'Fri',m:'sad'},{n:'Sat',m:this.state.mood,today:true},{n:'Sun',m:null} ]; }
+  monthMoods(){ return {...this.state.pastMoods, 5:this.state.mood}; }
+  dayShelf(){ return [
+    {title:'Today · Sat 5', m:this.state.mood, count:this.state.entries.length+' logs', preview:'The peonies finally opened all the way…', today:true, view:'today', day:5},
+    {title:'Fri 4', m:'sad', count:'1 log', preview:'A quiet, grey sort of day. Stayed in.', day:4},
+    {title:'Thu 3', m:'anxious', count:'2 logs', preview:'Too much on. Kept losing the thread.', day:3},
+    {title:'Wed 2', m:'love', count:'4 logs', preview:'Dinner with M — laughed till late.', day:2},
+    {title:'Tue 1', m:'warm', count:'2 logs', preview:'Sun on the balcony all morning.', day:1},
+    {title:'Mon Jun 30', m:'anxious', count:'1 log', preview:'Deadline week. Breathe.', day:null},
+  ]; }
+
+  // full days for the phone day-detail screen (day 5 = live entries)
+  DAY_ENTRIES = {
+    4:[{type:'note',hour:20,min:10,part:'evening',text:"A quiet, grey sort of day. Stayed in and let the hours go slow — tea, a book, the sound of rain on the sill."}],
+    3:[{type:'note',hour:9,min:5,part:'morning',text:"Too much on today. Kept losing the thread of things before I could hold them."},
+       {type:'voice',hour:22,min:40,part:'night',dur:'1:12'}],
+    2:[{type:'note',hour:8,min:30,part:'morning',text:"Woke happy for no reason at all. Kept it to myself like a small warm coin."},
+       {type:'note',hour:13,min:0,part:'afternoon',text:"Lunch in the park with M. We stayed past the shade moving.",photos:[{label:'park'}]},
+       {type:'voice',hour:17,min:20,part:'evening',dur:'0:38'},
+       {type:'video',hour:21,min:15,part:'night',dur:'0:52'}],
+    1:[{type:'note',hour:10,min:0,part:'morning',text:"Sun on the balcony all morning. Didn't move for a whole hour and felt no guilt."},
+       {type:'note',hour:19,min:0,part:'evening',text:"Made soup. Small and good and entirely enough."}],
+  };
+  dayNames = {1:'Tuesday, July 1',2:'Wednesday, July 2',3:'Thursday, July 3',4:'Friday, July 4',5:'Saturday, July 5'};
+  dayMeta(day){
+    return { day, mood:this.dayMoodFor(day), title:this.dayNames[day]||('July '+day), entries:this.dayEntriesFor(day) };
+  }
+  // shared day-detail view-model (desktop + phone), with per-entry edit/delete handlers
+  dayDetailVals(dev){
+    const day=this.state[dev].dayDetail;
+    if(day==null) return { open:false, title:'', subtitle:'', hasMood:false, flower:null, moodLabel:'', flowerName:'', count:'0 logs', hasEntries:false, entries:[], onClose:()=>{}, onChangeMood:()=>{}, onAddNote:()=>{} };
+    const mood=this.dayMoodFor(day); const F=this.FLOWERS[mood]||this.FLOWERS.happy;
+    const raw=this.dayEntriesFor(day);
+    const entries=raw.map(e=>{ const m=this.mapEntry(e); return { ...m, canEdit:m.isNote, onEdit:()=>this.beginEditNote(dev,day,e), onDelete:()=>this.askDeleteEntry(dev,day,e.id) }; });
+    return { open:true, title:this.dayNames[day]||('July '+day), subtitle:(day===5?'today \u00b7 in your garden':'a day in the garden'),
+      hasMood:!!mood, flower:mood?this.flower(mood):null, moodLabel:this.MOOD_LABELS[mood]||'', flowerName:F.name,
+      count:raw.length+' log'+(raw.length===1?'':'s'), hasEntries:raw.length>0, entries,
+      onClose:()=>this.closeDay(dev), onChangeMood:()=>this.askChangeMood(dev,day), onAddNote:()=>this.beginAddNote(dev,day) };
+  }
+  openDay(dev, day){ this.play('pageflip'); this.patch(dev,{dayDetail:day}); }
+  closeDay(dev){ this.play('pageflip'); this.patch(dev,{dayDetail:null}); }
+
+  // deterministic year of plantings (stable across renders)
+  gardenSeed(){
+    if(this._garden) return this._garden;
+    const seed=(n)=>{ const x=Math.sin(n*127.1+31.7)*43758.5453; return x-Math.floor(x); };
+    const W=['happy','happy','happy','warm','warm','warm','love','love','calm','calm','anxious','anxious','sad','angry'];
+    const N=138; const arr=[];
+    for(let i=0;i<N;i++){
+      const r1=seed(i*3+1), r2=seed(i*3+2), r3=seed(i*3+3), r4=seed(i*7+5);
+      arr.push({ mood:W[Math.floor(r1*W.length)], left:2+r2*94, depth:r3, delay:+(r4*6).toFixed(2) });
+    }
+    arr.sort((a,b)=>a.depth-b.depth); // back-to-front paint order
+    this._garden = arr; return arr;
+  }
+  // Build a realistic garden bed: flowers planted in clustered drifts among grass,
+  // laid out with atmospheric depth (far = higher/smaller/hazier, near = lower/larger/sharp).
+  buildScene(H, count, isPhone){
+    const rnd=this.rng(isPhone?9137:4271);
+    const moodsW=['happy','happy','love','warm','warm','calm','grateful','hopeful','anxious','tired','sad','angry','calm','happy','grateful'];
+    // drift centres — same species tend to grow together
+    const nClust=Math.max(5,Math.round(count/6)), clusters=[];
+    for(let i=0;i<nClust;i++) clusters.push({left:3+rnd()*94, depth:rnd(), mood:moodsW[Math.floor(rnd()*moodsW.length)]});
+    const items=[];
+    for(let i=0;i<count;i++){
+      const c=clusters[Math.floor(rnd()*clusters.length)];
+      const mood=rnd()<0.72?c.mood:moodsW[Math.floor(rnd()*moodsW.length)];
+      const left=Math.max(1.5,Math.min(98.5,c.left+(rnd()-0.5)*17));
+      const depth=Math.min(1,Math.max(0,c.depth+(rnd()-0.5)*0.5));
+      items.push({kind:'flower',mood,left,depth,dur:(3.6+rnd()*2.4).toFixed(1),phase:(rnd()*4).toFixed(2)});
+    }
+    // grass scattered throughout + a denser anchoring band at the very front
+    const nGrass=Math.round(count*0.85);
+    for(let i=0;i<nGrass;i++) items.push({kind:'grass',variant:Math.floor(rnd()*3),left:0.5+rnd()*99,depth:Math.min(1,Math.max(0,rnd()*1.02)),dur:(4+rnd()*3).toFixed(1),phase:(rnd()*4).toFixed(2)});
+    const nFront=isPhone?7:14;
+    for(let i=0;i<nFront;i++) items.push({kind:'grass',variant:Math.floor(rnd()*3),left:(i+rnd()*0.7)/nFront*100,depth:0.9+rnd()*0.12,dur:(4.5+rnd()*2.5).toFixed(1),phase:(rnd()*4).toFixed(2)});
+    items.sort((a,b)=>a.depth-b.depth);   // paint back-to-front
+    return items.map((it,idx)=> it.kind==='grass'? this._grassItem(it,H,idx+2,isPhone) : this._flowerItem(it,H,idx+2,isPhone));
+  }
+  _flowerItem(it,H,z,isPhone){
+    const model=this.gardenPlant(it.mood), near=it.depth;
+    const w=Math.round((isPhone?38:54)*(0.4+near*0.9)), h=Math.round(w*model.ratio);
+    const bottom=Math.round((1-near)*(H*0.5)-near*6), blur=near>0.82?0:(1-near)*1.7;
+    return { el:React.createElement('div',{style:{width:'100%',height:'100%',transformOrigin:'bottom center',animation:'fn-gsway '+it.dur+'s ease-in-out infinite',animationDelay:'-'+it.phase+'s'}}, this.plantSvg(model)),
+      style:this.st({position:'absolute',left:it.left.toFixed(2)+'%',bottom:bottom+'px',width:w+'px',height:h+'px',transform:'translateX(-50%)',transformOrigin:'bottom center',zIndex:z,opacity:(0.6+near*0.4).toFixed(2),filter:blur>0.05?'blur('+blur.toFixed(2)+'px)':'none',pointerEvents:'none'}) };
+  }
+  _grassItem(it,H,z,isPhone){
+    const model=this.grassTuft(it.variant), near=it.depth;
+    const w=Math.round((isPhone?24:34)*(0.5+near*0.95)), h=Math.round(w*0.9);
+    const bottom=Math.round((1-near)*(H*0.5)-near*5), blur=near>0.82?0:(1-near)*1.5;
+    return { el:React.createElement('div',{style:{width:'100%',height:'100%',transformOrigin:'bottom center',animation:'fn-gsway2 '+it.dur+'s ease-in-out infinite',animationDelay:'-'+it.phase+'s'}}, this.plantSvg(model)),
+      style:this.st({position:'absolute',left:it.left.toFixed(2)+'%',bottom:bottom+'px',width:w+'px',height:h+'px',transform:'translateX(-50%)',transformOrigin:'bottom center',zIndex:z,opacity:(0.55+near*0.45).toFixed(2),filter:blur>0.05?'blur('+blur.toFixed(2)+'px)':'none',pointerEvents:'none'}) };
+  }
+
+  // month navigation: offset 0 = July 2025 (the month with sample data)
+  monthInfo(dev){
+    const off=this.state[dev].calOffset||0;
+    const dt=new Date(2025,6+off,1);
+    const y=dt.getFullYear(), mo=dt.getMonth();
+    const names=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return { title:names[mo]+' '+y, year:y, month:mo, lead:(dt.getDay()+6)%7, dim:new Date(y,mo+1,0).getDate(), isBase:off===0 };
+  }
+  changeMonth(dev, delta){ this.play('pageflip'); this.patch(dev,{calOffset:(this.state[dev].calOffset||0)+delta}); }
+  // settings helpers (placeholder — wire to real persistence in production)
+  setSetting(k,v){ this.play('tap'); this.setState(s=>({settings:{...s.settings,[k]:v}})); }
+  toggleSetting(k){ this.play('tap'); this.setState(s=>({settings:{...s.settings,[k]:!s.settings[k]}})); }
+  toggleVM(on, onClick){
+    return { on, onClick,
+      trackStyle:this.st({width:'44px',height:'26px',borderRadius:'13px',background:on?'#c76a54':'#d8c7ab',border:'1.5px solid #4a3b2e',display:'flex',alignItems:'center',padding:'2px',cursor:'pointer',flex:'none',boxShadow:'inset 1px 1px 0 rgba(74,59,46,.14)'}),
+      knobStyle:this.st({width:'18px',height:'18px',borderRadius:'50%',background:'#fffaf1',border:'1.5px solid #4a3b2e',marginLeft:on?'18px':'0',transition:'margin .14s ease'}) };
+  }
+  segVM(opts, cur, onPick){
+    return opts.map(([val,label])=>({ label, onClick:()=>onPick(val),
+      style:this.st(cur===val?{flex:'1',whiteSpace:'nowrap',textAlign:'center',font:"600 12px 'Instrument Sans'",color:'#fff',background:'#c76a54',border:'1.5px solid #4a3b2e',borderRadius:'9px',padding:'8px 10px',boxShadow:'1.5px 1.5px 0 #4a3b2e',cursor:'pointer'}
+                                :{flex:'1',whiteSpace:'nowrap',textAlign:'center',font:"600 12px 'Instrument Sans'",color:'#6a5c4a',background:'transparent',border:'1.5px solid transparent',borderRadius:'9px',padding:'8px 10px',cursor:'pointer'}) }));
+  }
+
+  calBuild(dev, compact, detail){
+    const mm=this.monthMoods();
+    const info=this.monthInfo(dev);
+    const cal=[];
+    for(let i=0;i<info.lead;i++) cal.push({empty:true, style:this.st({}), numStyle:this.st({}), num:'', hasFlower:false, onClick:()=>{}});
+    for(let day=1; day<=info.dim; day++){
+      const m=info.isBase? mm[day] : null; const today=info.isBase&&day===5; const future=info.isBase&&day>5; const clickable=info.isBase&&day<=5;
+      cal.push({
+        num:day, hasFlower:!!m, flower: m?this.flower(m):null,
+        onClick:()=>{ if(clickable){ if(day===5) this.setView(dev,'today'); else if(detail) this.openDay(dev,day); else this.setView(dev,'today'); } },
+        style:this.st({position:'relative',height:'100%',minHeight:(compact?'40px':'62px'),borderRadius:(compact?'9px':'12px'),padding:(compact?'3px':'6px'),display:'flex',alignItems:'center',justifyContent:'center',
+          background: today?'#fff5ea':(m?'#f8efe0':'transparent'),
+          border: today?'1.5px solid #c76a54':(m?'1.5px solid rgba(74,59,46,.25)':'1.5px dashed rgba(74,59,46,.16)'),
+          boxShadow: today?(compact?'1.5px 1.5px 0 rgba(199,106,84,.28)':'2px 2px 0 rgba(199,106,84,.28)'):(m?'1.5px 1.5px 0 rgba(74,59,46,.12)':'none'),
+          opacity: future?'.5':'1', cursor: clickable?'pointer':'default'}),
+        numStyle:this.st({position:'absolute',top:(compact?'3px':'7px'),left:(compact?'4px':'9px'),font:'600 '+(compact?'9px':'12px')+' \'Instrument Sans\'',color: today?'#c76a54':'#8a7358'}),
+      });
+    }
+    return cal;
+  }
+  dayListBuild(dev, compact, detail){
+    return this.dayShelf().map(x=>({
+      title:x.title, count:x.count, preview:x.preview, flower:this.flower(x.m),
+      onClick:()=>{ if(detail && x.day!=null){ this.openDay(dev,x.day); } else if(x.view){ this.setView(dev,'today'); } },
+      style:this.st(x.today?{display:'flex',gap:(compact?'10px':'12px'),padding:(compact?'10px':'12px'),borderRadius:'13px',background:'#fff5ea',border:'1.5px solid #c76a54',boxShadow:'2px 2px 0 rgba(199,106,84,.28)',cursor:'pointer'}
+                          :{display:'flex',gap:(compact?'10px':'12px'),padding:(compact?'10px':'12px'),borderRadius:'13px',border:'1.5px solid transparent',cursor:'pointer'}),
+    }));
+  }
+  moodOptBuild(dev, compact){
+    const mood=this.state.mood;
+    return this.MOOD_ORDER.map(m=>({
+      label:this.MOOD_LABELS[m], flowerName:this.FLOWERS[m].name, flower:this.flower(m),
+      onClick:()=>this.pickMood(dev,m),
+      style:this.st(m===mood?{display:'flex',flexDirection:'column',alignItems:'center',padding:(compact?'8px 4px':'11px 6px'),borderRadius:'14px',background:'#fff5ea',border:'2px solid #c76a54',boxShadow:'2px 2px 0 rgba(199,106,84,.3)',cursor:'pointer'}
+                            :{display:'flex',flexDirection:'column',alignItems:'center',padding:(compact?'8px 4px':'11px 6px'),borderRadius:'14px',background:'#fffaf1',border:'1.5px solid rgba(74,59,46,.2)',cursor:'pointer'}),
+    }));
+  }
+  navBuild(dev){
+    const cur=this.state[dev].view;
+    const navDef=[['today','Today','home'],['calendar','Calendar','calendar'],['garden','Garden','garden'],['search','Search','search']];
+    return navDef.map(([k,label,ic])=>{
+      const active=cur===k;
+      return { label, icon:this.icon(ic, ic==='home'?{fill:active?'#fff':'#6a5c4a'}:{stroke:active?'#fff':'#6a5c4a'}),
+        onClick:()=>this.setView(dev,k),
+        style:this.st(active?{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',borderRadius:'12px',background:'#c76a54',color:'#fff',border:'1.5px solid #4a3b2e',boxShadow:'2px 2px 0 #4a3b2e',cursor:'pointer'}
+                            :{display:'flex',alignItems:'center',gap:'10px',padding:'9px 12px',borderRadius:'12px',color:'#6a5c4a',cursor:'pointer'}) };
+    });
+  }
+
+  mapEntry(e){
+    const st=(o)=>this.st(o);
+    const isNote=e.type==='note', isVoice=e.type==='voice', isVideo=e.type==='video';
+    const tilt = e.id%2? '-.5deg':'.4deg';
+    return { ...e,
+      stamp:this.fmtStamp(e.hour,e.min)+e.part,
+      typeLabel:isNote?'note':isVoice?'voice':isVideo?'video':'photo',
+      isNote, isVoice, isVideo,
+      text:e.text||'', textShort:isNote?((e.text||'').length>96?e.text.slice(0,96)+'…':e.text):'',
+      hasPhotos:!!(e.photos&&e.photos.length), photos:e.photos||[], dur:e.dur||'',
+      wave:this.bars([0.4,0.75,1,0.55,0.85,0.35,0.7,0.5,0.9,0.45,0.65,0.8,0.38,0.6]),
+      waveSm:this.bars([0.4,0.8,1,0.5,0.85,0.4,0.7,0.9,0.45],{w:3,gap:2}),
+      onPlay:()=>this.play('tap'),
+      cardStyle:st({background:'#f8efe0',border:'1.5px solid #4a3b2e',borderRadius:'14px',padding:'13px 15px',boxShadow:'2px 2px 0 rgba(74,59,46,.16)',transform:'rotate('+tilt+')'}),
+    };
+  }
+
+  renderVals(){
+    const S=this.state, D=S.desktop, P=S.phone, d=this.now(), h=d.getHours();
+    const mood=S.mood, hasMood=!!mood, F=this.FLOWERS[mood]||this.FLOWERS.happy;
+    const st=(o)=>this.st(o);
+
+    // entries (shared feed)
+    const entries=S.entries.map(e=>this.mapEntry(e));
+
+    // desktop captures
+    const capBase=(primary)=>st(primary?{display:'flex',alignItems:'center',gap:'10px',background:'#c76a54',color:'#fff',border:'1.5px solid #4a3b2e',borderRadius:'12px',padding:'10px 13px',boxShadow:'2px 2px 0 #4a3b2e',cursor:'pointer'}
+                                       :{display:'flex',alignItems:'center',gap:'10px',background:'#f8efe0',color:'#4a3b2e',border:'1.5px solid #4a3b2e',borderRadius:'12px',padding:'10px 13px',cursor:'pointer'});
+    const captures=[
+      {label:'Write a note', icon:this.icon('pencil',{stroke:'#fff'}), onClick:()=>this.openComposer('desktop','text'), style:capBase(true)},
+      {label:'Record voice', icon:this.icon('mic',{stroke:'#4a3b2e'}), onClick:()=>this.openComposer('desktop','voice'), style:capBase(false)},
+      {label:'Record video', icon:this.icon('video',{stroke:'#4a3b2e'}), onClick:()=>this.openComposer('desktop','video'), style:capBase(false)},
+    ];
+
+    // week garden (desktop rail)
+    const week=this.weekData().map(w=>({
+      label:w.n,
+      flower: w.m? this.flower(w.m) : React.createElement('div',{style:{width:'27px',height:'27px',borderRadius:'50%',border:'1.5px dashed #c3b39a'}}),
+      onClick:()=>this.setView('desktop','calendar'),
+      style:st(w.today?{textAlign:'center',background:'#fff5ea',border:'1.5px solid #c76a54',borderRadius:'10px',padding:'6px 0 4px',boxShadow:'1.5px 1.5px 0 rgba(199,106,84,.3)',cursor:'pointer'}
+                     :(w.m?{textAlign:'center',background:'#f8efe0',border:'1.5px solid #4a3b2e',borderRadius:'10px',padding:'6px 0 4px',boxShadow:'1.5px 1.5px 0 rgba(74,59,46,.18)',cursor:'pointer'}
+                          :{textAlign:'center',background:'transparent',border:'1.5px dashed rgba(74,59,46,.35)',borderRadius:'10px',padding:'6px 0 4px',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center'})),
+      labelStyle:st({font:'600 8px \'Instrument Sans\'',color:w.today?'#c76a54':(w.m?'#a08a70':'#c3b39a'),marginTop:'1px'}),
+    }));
+
+    // garden meadow + tally (from actual plantings)
+    const counts={}; this.gardenSeed().forEach(p=>counts[p.mood]=(counts[p.mood]||0)+1);
+    const moodTally=this.MOOD_ORDER.filter(m=>counts[m]).map(m=>({label:this.MOOD_LABELS[m], chip:this.flower(m), count:counts[m]}));
+    const gardenPlants=this.buildScene(452, 72, false);
+    const pGardenPlants=this.buildScene(320, 34, true);
+    const gardenCount=this.gardenSeed().length;
+
+    // phone nav
+    const pNav=this.navBuild('phone');
+    const pNavDef=[['today','home'],['calendar','calendar'],['__add','plus'],['garden','garden'],['search','search']];
+    let ni=0;
+    const phoneNav=pNavDef.map(([k,ic])=>{
+      if(k==='__add') return { onClick:()=>this.openChooser('phone'), wrapStyle:st({display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer'}),
+        el:React.createElement('div',{style:{width:'44px',height:'44px',borderRadius:'50%',background:'#c76a54',display:'flex',alignItems:'center',justifyContent:'center',marginTop:'-18px',border:'3px solid #efe2ce'}}, React.createElement('div',{style:{width:'20px',height:'20px'}}, this.icon('plus',{stroke:'#fff',sw:2.6}))) };
+      const active=P.view===k;
+      return { onClick:()=>this.setView('phone',k), wrapStyle:st({display:'flex',alignItems:'center',justifyContent:'center',width:'30px',height:'30px',cursor:'pointer'}),
+        el:React.createElement('div',{style:{width:'20px',height:'20px'}}, this.icon(ic, ic==='home'?{fill:active?'#f2c14e':'#c9b79c'}:{stroke:active?'#f2c14e':'#c9b79c'})) };
+    });
+
+    // settings view-models (global settings, shared by desktop + phone)
+    const set=S.settings;
+    const storageSeg=this.segVM([['device','On this device'],['server','Sync to server']], set.storage, (v)=>this.setSetting('storage',v));
+    const reminderToggle=this.toggleVM(set.reminder, ()=>this.toggleSetting('reminder'));
+    const soundToggle=this.toggleVM(S.soundOn, this.toggleSound);
+
+    return {
+      // ---- settings ----
+      isSettings:D.view==='settings', pIsSettings:P.view==='settings',
+      openSettings:()=>this.setView('desktop','settings'), pOpenSettings:()=>this.setView('phone','settings'),
+      gearIcon:this.icon('gear',{stroke:'#4a3b2e',sw:1.8}),
+      settingsBtnStyle:st({width:'30px',height:'30px',borderRadius:'8px',background:D.view==='settings'?'#c76a54':'#fff5ea',border:'1.5px solid #4a3b2e',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:'7px'}),
+      settingsIcon:this.icon('gear',{stroke:D.view==='settings'?'#fff':'#4a3b2e',sw:1.8}),
+      pGearIcon:this.icon('gear',{stroke:'#4a3b2e',sw:1.8}),
+      storageSeg, syncOn:set.storage==='server', syncOff:set.storage!=='server',
+      reminderToggle, soundToggle,
+      // ---- calendar month navigation ----
+      calTitle:this.monthInfo('desktop').title, pCalTitle:this.monthInfo('phone').title,
+      calPrev:()=>this.changeMonth('desktop',-1), calNext:()=>this.changeMonth('desktop',1),
+      pCalPrev:()=>this.changeMonth('phone',-1), pCalNext:()=>this.changeMonth('phone',1),
+      chevLeft:this.icon('back',{stroke:'#4a3b2e',sw:2.2}), chevRight:this.icon('fwd',{stroke:'#4a3b2e',sw:2.2}),
+      // ---- desktop view flags ----
+      isToday:D.view==='today', isCalendar:D.view==='calendar', isGarden:D.view==='garden', isSearch:D.view==='search',
+      // ---- phone view flags ----
+      pIsToday:P.view==='today', pIsCalendar:P.view==='calendar', pIsGarden:P.view==='garden', pIsSearch:P.view==='search',
+      // ---- shared header ----
+      greeting:this.greetingFor(h), longDate:'Saturday, July 5', shortDate:'Sat, July 5', clock:this.fmtClock(d),
+      streak:12, streakNote:'longest streak yet', weekRange:'Jun 30 – Jul 6', weekdayLabels:['M','T','W','T','F','S','S'],
+      // ---- mood (shared) ----
+      hasMood, noMood:!hasMood, mood, moodLabel:this.MOOD_LABELS[mood]||'', moodFlowerName:F.name,
+      moodFlowerLg:this.flower(mood), moodFlowerSm:this.flower(mood),
+      // ---- feed ----
+      entries, hasEntries:entries.length>0, noEntries:entries.length===0,
+      feedLabel:'today · '+entries.length+' log'+(entries.length===1?'':'s'),
+      feedLabelShort:'today · '+entries.length+' log'+(entries.length===1?'':'s'),
+      // ---- art singletons ----
+      logoFlower:this.flower('happy'), flameIcon:this.icon('flame',{fill:'#c76a54'}),
+      plusIcon:this.icon('plus',{stroke:'#fff'}), playIcon:this.icon('play',{fill:'#fff'}),
+      playIconDark:this.icon('play',{fill:'#4a3b2e'}), searchIcon:this.icon('search',{stroke:'#a08a70'}),
+      photoIcon:this.icon('photo',{stroke:'#4a3b2e'}), checkIcon:this.icon('check',{stroke:'#8fbf7a',sw:2.6}),
+      closeIcon:this.icon('close',{stroke:'#4a3b2e',sw:2.2}), closeIconLight:this.icon('close',{stroke:'#fff',sw:2.2}),
+      backIcon:this.icon('back',{stroke:'#4a3b2e',sw:2.4}), flipIcon:this.icon('flip',{stroke:'#fff',sw:2}),
+      lockIcon:this.icon('lock',{stroke:'#fff',sw:2}), flashIcon:this.icon('flash',{fill:'#fff'}),
+      camIcon:this.icon('cam',{stroke:'#fff',sw:2}), appleGlyph:this.icon('appleGlyph',{fill:'#fff'}),
+      micIconLg:this.icon('mic',{stroke:'#fff',sw:2}),
+      pencilIconLt:this.icon('pencil',{stroke:'#fff'}), micIconDk:this.icon('mic',{stroke:'#4a3b2e'}), videoIconDk:this.icon('video',{stroke:'#4a3b2e'}),
+      pencilIcon:this.icon('pencil',{stroke:'#4a3b2e',sw:1.8}), trashIcon:this.icon('trash',{stroke:'#c0392b',sw:1.8}),
+      trashIconLight:this.icon('trash',{stroke:'#fff',sw:1.8}), pauseIconLight:this.icon('pause',{fill:'#fff'}), checkIconLight:this.icon('check',{stroke:'#fff',sw:2.4}),
+      soundIcon:this.icon(S.soundOn?'soundOn':'soundOff',{stroke:'#4a3b2e',sw:1.8}),
+      soundBtnStyle:st({width:'30px',height:'30px',borderRadius:'8px',background:S.soundOn?'#fff5ea':'#f8efe0',border:'1.5px solid #4a3b2e',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',padding:'7px'}),
+      butterfly:this.butterfly('#d98b74','#c9765f'), butterfly2:this.butterfly('#b7a3d0','#9a86c4'), bee:this.bee(),
+      // ---- desktop nav / rails / views ----
+      nav:this.navBuild('desktop'), captures, week,
+      calendar:this.calBuild('desktop',false,true), dayList:this.dayListBuild('desktop',false,true),
+      moodTally, gardenPlants, gardenCount,
+      // ---- desktop day-detail + confirm ----
+      dayDetailOpen:D.dayDetail!=null, dd:this.dayDetailVals('desktop'),
+      confirmOpen: !!S.confirm && S.confirm.dev==='desktop',
+      confirmTitle: S.confirm?S.confirm.title:'', confirmMessage: S.confirm?S.confirm.message:'', confirmLabel: S.confirm?S.confirm.confirmLabel:'OK',
+      confirmYesStyle: st(S.confirm&&S.confirm.danger?{font:"600 12px 'Instrument Sans'",color:'#fff',background:'#c0392b',border:'1.5px solid #4a3b2e',borderRadius:'11px',padding:'9px 16px',boxShadow:'1.5px 1.5px 0 #4a3b2e',cursor:'pointer'}:{font:"600 12px 'Instrument Sans'",color:'#fff',background:'#c76a54',border:'1.5px solid #4a3b2e',borderRadius:'11px',padding:'9px 16px',boxShadow:'1.5px 1.5px 0 #4a3b2e',cursor:'pointer'}),
+      confirmYes:this.confirmYes, confirmNo:this.confirmNo,
+      composerTitle: D.editRef?'Edit note':(D.addDay!=null&&D.addDay!==5?'New note \u00b7 '+this.dayLabel(D.addDay):'New note'),
+      composerSaveLabel: D.editRef?'Save changes':'Save',
+      // ---- desktop picker / composer / toast ----
+      moodPickerOpen:D.moodOpen, moodOptions:this.moodOptBuild('desktop',false),
+      composerOpen:!!D.composer, isTextComposer:D.composer==='text', isVoiceComposer:D.composer==='voice', isVideoComposer:D.composer==='video',
+      draft:D.draft, draftHint:D.draftPhotos>0?(D.draftPhotos+' photo'+(D.draftPhotos>1?'s':'')+' attached'):'attach a memory', recTime:D.recTime,
+      liveWave:this.liveBars(), toast:D.toast,
+      // ---- desktop recorder state ----
+      recIdle:(D.recState||'idle')==='idle', recRecording:D.recState==='recording', recPaused:D.recState==='paused', recActive:(D.recState||'idle')!=='idle', recNotRecording:(D.recState||'idle')!=='recording',
+      recVoiceHint:(D.recState==='recording'?'listening… speak freely':(D.recState==='paused'?'paused · resume when you\u2019re ready':'tap the mic when you\u2019re ready')),
+      recVideoHint:(D.recState==='recording'?'recording… tap pause or stop':(D.recState==='paused'?'paused · resume or save your clip':'tap the button to start recording')),
+      recTapIcon:(D.recState==='recording'?this.icon('pause',{fill:'#fff'}):this.icon('mic',{stroke:'#fff',sw:2})),
+      onRecTap:()=>this.recTap('desktop'), discardRec:()=>this.askDiscardRec('desktop'),
+      // ---- desktop handlers ----
+      openText:()=>this.openComposer('desktop','text'),
+      toggleMoodPicker:()=>this.toggleMood('desktop'), closeMoodPicker:()=>this.closeMood('desktop'), stop:this.stop,
+      closeComposer:()=>this.closeComposer('desktop'), onDraft:(e)=>this.onDraft('desktop',e),
+      saveText:()=>this.saveText('desktop'), saveVoice:()=>this.saveVoice('desktop'), saveVideo:()=>this.saveVideo('desktop'), addPhoto:()=>this.addPhoto('desktop'),
+      noteRef:this._engRef('desktop'), sprigArt:this.sprigArt(),
+      toggleSound:this.toggleSound,
+      // ---- phone nav / views ----
+      phoneNav, pCalendar:this.calBuild('phone',true,true), pDayList:this.dayListBuild('phone',true,true), pGardenPlants,
+      // ---- phone day-detail screen ----
+      pDayDetailOpen: P.dayDetail!=null,
+      pdd:this.dayDetailVals('phone'),
+      pConfirmOpen: !!S.confirm && S.confirm.dev==='phone',
+      pCloseDay:()=>this.closeDay('phone'),
+      // ---- phone picker / composer / toast ----
+      pMoodOpen:P.moodOpen, pMoodOptions:this.moodOptBuild('phone',true),
+      pComposerOpen:!!P.composer, pIsChoose:P.composer==='choose', pIsText:P.composer==='text', pIsVoice:P.composer==='voice', pIsVideo:P.composer==='video',
+      pOpenText:()=>this.openComposer('phone','text'), pOpenVoice:()=>this.openComposer('phone','voice'), pOpenVideo:()=>this.openComposer('phone','video'),
+      pDraft:P.draft, pDraftHint:P.draftPhotos>0?(P.draftPhotos+' photo'+(P.draftPhotos>1?'s':'')+' attached'):'attach a memory', pRecTime:P.recTime, pToast:P.toast,
+      // ---- phone recorder state ----
+      pRecIdle:(P.recState||'idle')==='idle', pRecRecording:P.recState==='recording', pRecPaused:P.recState==='paused', pRecActive:(P.recState||'idle')!=='idle', pRecNotRecording:(P.recState||'idle')!=='recording',
+      pRecVoiceHint:(P.recState==='recording'?'listening… speak freely':(P.recState==='paused'?'paused · resume when ready':'tap the mic when you\u2019re ready')),
+      pRecVideoHint:(P.recState==='recording'?'recording…':(P.recState==='paused'?'paused':'tap to start recording')),
+      pRecTapIcon:(P.recState==='recording'?this.icon('pause',{fill:'#fff'}):this.icon('mic',{stroke:'#fff',sw:2})),
+      pOnRecTap:()=>this.recTap('phone'), pDiscardRec:()=>this.askDiscardRec('phone'),
+      // ---- phone handlers ----
+      pToggleMood:()=>this.toggleMood('phone'), pCloseMood:()=>this.closeMood('phone'),
+      pCloseComposer:()=>this.closeComposer('phone'), pOnDraft:(e)=>this.onDraft('phone',e),
+      pSaveText:()=>this.saveText('phone'), pSaveVoice:()=>this.saveVoice('phone'), pSaveVideo:()=>this.saveVideo('phone'), pAddPhoto:()=>this.addPhoto('phone'),
+      pNoteRef:this._engRef('phone'), pSprigArt:this.sprigArt(),
+    };
+  }
+}
+</script>
+</body>
+</html>
