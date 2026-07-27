@@ -1,4 +1,4 @@
-Status: accepted
+Status: superseded-by: 2026-07-27-source-prefix-is-run-distinct.md
 Date: 2026-07-25
 Thread: video-card-playback-controls
 
