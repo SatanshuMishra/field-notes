@@ -27,7 +27,7 @@ class ThisWeekGarden extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(title, style: TypographyTokens.eyebrowAccent),
+          Text(title, style: TypographyTokens.sectionHeaderAccent),
           const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,

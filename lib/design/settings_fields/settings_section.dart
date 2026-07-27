@@ -32,7 +32,7 @@ class SettingsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(title, style: TypographyTokens.eyebrowAccent),
+          Text(title, style: TypographyTokens.sectionHeaderAccent),
           if (subtitle != null) ...<Widget>[
             const SizedBox(height: 2),
             Text(

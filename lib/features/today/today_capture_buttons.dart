@@ -74,7 +74,7 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(widget.title, style: TypographyTokens.eyebrowAccent),
+          Text(widget.title, style: TypographyTokens.sectionHeaderAccent),
           const SizedBox(height: 10),
           StickerButton(label: 'Capture', onPressed: _openChooser),
           for (final (CaptureOption option, CaptureRoute route)

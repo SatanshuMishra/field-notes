@@ -60,7 +60,7 @@ class EntryCard extends StatelessWidget {
   Widget _header() {
     return Row(
       children: <Widget>[
-        Text(_eyebrow(entry.type), style: TypographyTokens.eyebrowAccent),
+        Text(_eyebrow(entry.type), style: TypographyTokens.sectionHeaderAccent),
         const Spacer(),
         if (onEdit != null)
           StickerButton(

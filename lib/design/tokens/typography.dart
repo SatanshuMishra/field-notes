@@ -106,13 +106,6 @@ abstract final class TypographyTokens {
     color: Palette.coral,
   );
 
-  static const TextStyle eyebrowAccent = TextStyle(
-    fontFamily: accent,
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    color: Palette.sage,
-  );
-
   static const TextStyle sectionHeaderAccent = TextStyle(
     fontFamily: accent,
     fontSize: 17,
