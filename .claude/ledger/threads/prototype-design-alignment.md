@@ -9,7 +9,7 @@ completion_criteria:
   - No dialog renders Flutter's yellow double-underline debug style (MSP A3)
   - The Today screen, right rail, nav rail, flower set, mood picker and capture surfaces are human-confirmed against the prototype on macOS hardware
   - OQ-3 and OQ-6 are answered or explicitly closed as out of scope
-next_step: Merge the PR carrying docs/specs/2026-07-27-prototype-alignment-cluster-a.md, then dispatch mitosis with `spec` = that SLICE path (not the parent), baseBranch main, sourcePrefix `msp` (NO trailing slash).
+next_step: Merge PR #50 (carries docs/specs/2026-07-27-prototype-alignment-cluster-a.md; receipts + pr-title-lint both green), then dispatch mitosis with `spec` = that SLICE path (not the parent), baseBranch main, sourcePrefix `msp` (NO trailing slash).
 branch: chore/ledger-handoff-session-08
 ---
 
@@ -20,7 +20,7 @@ Parent spec and the `docs/prototype/` citation bundle are ON MAIN (PR #48, `9fb3
 Align the shipped Flutter app with the Claude Design prototype's aesthetic without regressing any app-only capability, above all the video playback stack.
 
 ## Next Step
-Merge the PR carrying `docs/specs/2026-07-27-prototype-alignment-cluster-a.md` (human-gated). Then dispatch mitosis: `spec` = the SLICE, `repoRoot` = the repo root, `baseBranch` main, `sourcePrefix` `msp` with NO trailing slash, `verify`/`build` from `receipts.config.json`, `fixLoopMax` 2. A3 is dependency-free and can land in parallel with A1/A2.
+Merge **PR #50** (human-gated; carries the slice + this ledger; receipts and pr-title-lint both SUCCESS). Then dispatch mitosis: `spec` = the SLICE, `repoRoot` = the repo root, `baseBranch` main, `sourcePrefix` `msp` with NO trailing slash, `verify`/`build` from `receipts.config.json`, `fixLoopMax` 2. A3 is dependency-free and can land in parallel with A1/A2.
 
 ## Open Risks
 - **Pass the SLICE as `spec`, never the parent.** Mitosis has no scope parameter and decomposes whatever document it is handed; the parent yields all 39 MSPs.
