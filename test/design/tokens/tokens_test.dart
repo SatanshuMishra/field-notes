@@ -49,4 +49,67 @@ void main() {
       expect(Shapes.outline.top.color, Palette.ink);
     });
   });
+
+  group('palette alpha ladders', () {
+    test('every ink alpha token is Palette.ink at the documented opacity', () {
+      final ladder = <(String, Color, int)>[
+        ('ink08', Palette.ink08, 0x14),
+        ('ink12', Palette.ink12, 0x1F),
+        ('ink16', Palette.ink16, 0x29),
+        ('ink18', Palette.ink18, 0x2E),
+        ('ink20', Palette.ink20, 0x33),
+        ('ink22', Palette.ink22, 0x38),
+        ('ink25', Palette.ink25, 0x40),
+        ('ink30', Palette.ink30, 0x4D),
+        ('ink35', Palette.ink35, 0x59),
+        ('ink40', Palette.ink40, 0x66),
+      ];
+
+      for (final (name, color, alpha) in ladder) {
+        expect(color.toARGB32() >> 24, alpha,
+            reason: 'Palette.$name carries the wrong alpha');
+        expect(color.toARGB32() & 0x00FFFFFF,
+            Palette.ink.toARGB32() & 0x00FFFFFF,
+            reason: 'Palette.$name must be Palette.ink at a reduced opacity');
+      }
+    });
+
+    test('every coral alpha token is Palette.coral at the documented opacity',
+        () {
+      final ladder = <(String, Color, int)>[
+        ('coral12', Palette.coral12, 0x1F),
+        ('coral30', Palette.coral30, 0x4D),
+      ];
+
+      for (final (name, color, alpha) in ladder) {
+        expect(color.toARGB32() >> 24, alpha,
+            reason: 'Palette.$name carries the wrong alpha');
+        expect(color.toARGB32() & 0x00FFFFFF,
+            Palette.coral.toARGB32() & 0x00FFFFFF,
+            reason: 'Palette.$name must be Palette.coral at a reduced opacity');
+      }
+    });
+
+    test('prototype named colours match their cited source values', () {
+      expect(Palette.inkSoft, const Color(0xFF6A5C4A));
+      expect(Palette.windowTitle, const Color(0xFFA3866A));
+      expect(Palette.recordFill, const Color(0xFFE0574A));
+      expect(Palette.dashMuted, const Color(0xFFC3B39A));
+      expect(Palette.onAccent, const Color(0xFFFFFFFF));
+      expect(Palette.hatchLight, const Color(0xFFECDFC8));
+      expect(Palette.hatchMid, const Color(0xFFE2D3BA));
+      expect(Palette.hatchDark, const Color(0xFFD9C9AE));
+      expect(Palette.viewportDark, const Color(0xFF3A352E));
+      expect(Palette.viewportDarkAlt, const Color(0xFF443F37));
+    });
+
+    test('pre-existing palette members keep their values', () {
+      expect(Palette.ink, const Color(0xFF4A3B2E));
+      expect(Palette.coral, const Color(0xFFC76A54));
+      expect(Palette.cardWarm, const Color(0xFFF8EFE0));
+      expect(Palette.cardBright, const Color(0xFFFFFAF1));
+      expect(Palette.panelCoralTint, const Color(0x12C76A54));
+      expect(Palette.sunGlow, const Color(0x8CF4C960));
+    });
+  });
 }
