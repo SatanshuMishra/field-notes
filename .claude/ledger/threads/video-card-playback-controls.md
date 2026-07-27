@@ -1,53 +1,55 @@
 ---
 thread: video-card-playback-controls
-status: paused
+status: done
 updated: 2026-07-26
 priority: high
 completion_criteria:
-  - A video card shows a real preview frame before playback, never the red corrupt placeholder, human-confirmed on macOS hardware
-  - A played video can be replayed, paused, scrubbed and muted from the card, human-confirmed
-  - Red placeholder appears only on genuine media failure, never for an absent poster
-  - EntryVideoPlayer reaches parity with EntryAudioPlayer (seek, positionStream, duration, completed)
-  - Video controller init is gated so a day of video entries cannot exhaust the device decoder ceiling
-  - _markUnavailable distinguishes retryable decoder unavailability from genuine corruption, with a retry path
-  - Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform
-  - Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label
-  - Red-before-green receipt exists for each of the two reported defects
-next_step: EXPLAINER ONLY — explain what MSP 4 / Phase 3 (Today-feed virtualization) is and why it was never authorized despite being planned in the spec. Read the spec line pointers assembled in sessions/2026-07-26-02-video-card-playback-controls.md. Do NOT dispatch mitosis.
-branch: main (096b3c3)
+  - "[x] A video card shows a real preview frame before playback, never the red corrupt placeholder, human-confirmed on macOS hardware"
+  - "[x] A played video can be replayed, paused, scrubbed and muted from the card, human-confirmed"
+  - "[x] Red placeholder appears only on genuine media failure, never for an absent poster"
+  - "[x] EntryVideoPlayer reaches parity with EntryAudioPlayer (seek, positionStream, duration, completed)"
+  - "[x] Video controller init is gated so a day of video entries cannot exhaust the device decoder ceiling"
+  - "[x] _markUnavailable distinguishes retryable decoder unavailability from genuine corruption, with a retry path"
+  - "[x] Hover-reveal overlay behaves per spec on macOS pointer AND Android touch, with the macOS path covered by a test that overrides defaultTargetPlatform"
+  - "[x] Every control meets the 48x48 logical-px tap-target floor and is keyboard reachable with a Semantics label"
+  - "[x] Red-before-green receipt exists for each of the two reported defects"
+next_step: "-"
+branch: chore/ledger-handoff-session-07 (UNMERGED to main 096b3c3 — merge before resuming any thread)
 ---
 
+## Closure
+Closed 2026-07-26: the video entry card shows a real preview frame and a full working control surface on
+a capped, retryable decoder architecture — all nine criteria verified against main (096b3c3) by a
+per-criterion evidence audit and confirmed by the user's manual macOS run.
+
 ## Status
-ALL THREE AUTHORIZED MSPs SHIPPED: #41 (macOS capture thumbnail), #44 (poster-first decode gate), #47
-(day-detail feed virtualization, main 096b3c3, Option B verified AT main). The macOS hardware run finally
-happened this session — the user ran manual testing and reported everything working as expected, retiring
-the thread's long-standing merged-but-unconfirmed hazard. All nine criteria now appear met, but the thread
-stays PAUSED, not done, by the user's explicit choice: they want MSP 4 explained before any closure.
+DONE. Three MSPs shipped — #41 (macOS capture thumbnail), #44 (poster-first decode gate), #47 (day-detail
+feed virtualization, Option B) — and the user's 2026-07-26 macOS run confirmed them, retiring the
+merged-but-unconfirmed hazard. Session 03 delivered the MSP 4 explainer, recorded MSP 4 as not
+authorized, and passed the DoD gate on verified `path:line` evidence, replacing the "appear met" hedge.
 
 ## Active Goal
-Give the video entry card a real preview frame and a working control surface on the voice card's
-architecture, without a resource ceiling that reinstates the red placeholder.
+Achieved: give the video entry card a real preview frame and a working control surface on the voice
+card's architecture, without a resource ceiling that reinstates the red placeholder.
 
 ## Next Step
-EXPLAINER, NOT EXECUTION. Explain what MSP 4 / Phase 3 (Today-feed virtualization) is and why it was never
-authorized even though the spec plans it. Do NOT dispatch mitosis: Phase 3 is unauthorized until a
-post-Phase-1 profile is taken AND reviewed by the spec owner. The answer is already assembled as spec line
-pointers in sessions/2026-07-26-02-video-card-playback-controls.md — read those ~8 spec lines, not the
-whole file. Short form: Phase 1 removed the decoder pressure that motivated Phase 3; cacheExtent means
-virtualization never made "only visible cards decode" true; and shrinkWrap cannot be reused there.
+None — terminal. Reopening creates a NEW thread referencing this one. Next session opens a FRESH thread;
+first merge `chore/ledger-handoff-session-07` to main or it starts from a ledger still showing this paused.
 
 ## Open Risks
-- MSP 3 was never validated locally: fullValidationCmd was NOT run against the PR head. receipts claimed
-  the G9 suite green, but decisions/2026-07-20-ci-gates-are-hollow-for-dart.md forbids trusting CI for
-  Dart — though that record predates the current receipts.config.json and may itself be stale. Unresolved.
+Carried into closure by acceptance, not oversight — none blocked the criteria:
+- MSP 3 was never validated locally: `fullValidationCmd` was NOT run against the PR head. The manual
+  hardware pass covers user-visible behavior, not the automated suite.
+- Play/pause + mute keyboard reachability rests on code inspection (`FocusableActionDetector` +
+  `Semantics`), not a `sendKeyEvent` test; the scrubber and retry button do have runtime key assertions.
+- Voice cards remain unswept twins (uncapped eager init, no retry, 40x40 tap target); `video_body.dart`
+  is ~700 lines, its controller-extraction seam where both CRITICALs lived.
 - Squash merges strand unpushed commits: always diff main against the branch tip before deleting a branch.
-- The repo is checked out on chore/ledger-handoff-session-07, NOT main, so grepping the working tree reads
-  PRE-MERGE files. Use `git show main:<path>`. This produced one false negative this session.
-- Voice cards remain unswept twins (uncapped eager init, no retry, 40x40 tap target); video_body.dart is
-  ~700 lines, its controller-extraction seam where both CRITICALs lived.
-- The missing EntriesDao pagination and the unreceipted responsive band are carried in the spec — read it.
+- Spec line pointers are WORKING-TREE-relative on this branch (it carries the amendment, main does not);
+  read them from the working tree, never via `git show main:`.
 
 ## Key Decisions
+- decisions/2026-07-26-msp4-today-virtualization-not-authorized.md — MSP 4 not authorized; thread closes without it
 - decisions/2026-07-26-day-detail-shrinkwrap-option-b.md — MSP 3 ships shrinkWrap shrink-to-fit; spec rejection scoped to unbounded positions
 - decisions/2026-07-25-didupdatewidget-gate-ratified-as-amendment.md — gate covers BOTH passive entry points; Task 3 form supersedes staysGated
 - decisions/2026-07-25-poster-first-supersedes-eager-decode.md — poster-first root fix; cap stays 6 global
@@ -63,14 +65,16 @@ virtualization never made "only visible cards decode" true; and shrinkWrap canno
   Controller extraction from `video_body.dart`; touch double-tap seek; scrubber hover-thickening.
 - Any thumbnail backfill or file-based frame extractor: current data is temporary, purged before release.
   Editing the vendored `third_party/camera_macos` source.
-- MSP 4 (Today virtualization) stays unauthorized, conditional on a post-Phase-1 profile.
+- MSP 4 (Today virtualization) — permanently out of this thread; see its decision record.
 
 ## Pointers
-- docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — the 4-MSP spec (Phase 1b now carries the ratified amendment)
+- docs/superpowers/specs/2026-07-25-video-poster-first-and-feed-virtualization.md — the 4-MSP spec; 3 of 4 shipped
 - that spec at :112, :128-131, :133, :135, :152, :159 — the whole MSP 4 answer; read only these lines
-- lib/features/day_detail/day_detail_panel.dart — MSP 3 shipped here; lib/features/today/ is MSP 4's target
+- lib/features/entry_cards/cards/video_body.dart — the card; playback/video_slots.dart — the capped LRU
+- lib/features/day_detail/day_detail_panel.dart — MSP 3 shipped here; lib/features/today/ was MSP 4's target
 - Sibling thread: .claude/ledger/threads/post-ship-hardening.md, still paused
 
 ## Recent Sessions
+- sessions/2026-07-26-03-video-card-playback-controls.md — MSP 4 explainer delivered; DoD audit; thread CLOSED
 - sessions/2026-07-26-02-video-card-playback-controls.md — MSP 3 SHIPPED (PR #47); hardware-confirmed
 - sessions/2026-07-26-01-video-card-playback-controls.md — MSP 3 plan fixed, Option B ruled, spec amended
