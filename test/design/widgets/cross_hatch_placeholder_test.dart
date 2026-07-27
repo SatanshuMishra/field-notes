@@ -100,30 +100,72 @@ void main() {
       expect(find.text('unreadable'), findsOneWidget);
     });
 
-    testWidgets('paints the photo band pair by default',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        stickerHarness(
-          const SizedBox(
-            width: 120,
-            height: 90,
-            child: CrossHatchPlaceholder(),
+    testWidgets('resolves each variant to its two-tone band pair, '
+        'defaulting to photo', (WidgetTester tester) async {
+      Future<CrossHatchPainter> painterFor(CrossHatchVariant? variant) async {
+        await tester.pumpWidget(
+          stickerHarness(
+            SizedBox(
+              width: 120,
+              height: 90,
+              child: variant == null
+                  ? const CrossHatchPlaceholder()
+                  : CrossHatchPlaceholder(variant: variant),
+            ),
           ),
-        ),
+        );
+        return _painterOf(tester);
+      }
+
+      final CrossHatchPainter fallback = await painterFor(null);
+      expect(fallback.ground, Palette.hatchMid);
+      expect(fallback.band, Palette.hatchLight);
+      expect(fallback.bandWidth, 6);
+      expect(fallback.bandPitch, 12);
+
+      final CrossHatchPainter photo =
+          await painterFor(CrossHatchVariant.photo);
+      expect(photo.ground, Palette.hatchMid);
+      expect(photo.band, Palette.hatchLight);
+
+      final CrossHatchPainter video =
+          await painterFor(CrossHatchVariant.video);
+      expect(video.ground, Palette.hatchDark);
+      expect(video.band, Palette.hatchMid);
+      expect(video.bandWidth, 6);
+      expect(video.bandPitch, 12);
+      expect(
+        video.ground.computeLuminance(),
+        lessThan(photo.ground.computeLuminance()),
       );
 
-      final CrossHatchPainter painter = _painterOf(tester);
-      expect(painter.ground, Palette.hatchMid);
-      expect(painter.band, Palette.hatchLight);
-      expect(painter.bandWidth, 6);
-      expect(painter.bandPitch, 12);
+      final CrossHatchPainter viewport =
+          await painterFor(CrossHatchVariant.viewport);
+      expect(viewport.ground, Palette.viewportDark);
+      expect(viewport.band, Palette.viewportDarkAlt);
+      expect(viewport.bandWidth, 8);
+      expect(viewport.bandPitch, 16);
     });
 
-    testWidgets('paints the ink outline over the band fill',
-        (WidgetTester tester) async {
+    testWidgets('paints the ink outline over the band fill, except on the '
+        'viewport variant', (WidgetTester tester) async {
       expect(
         await _edgeColours(tester, const CrossHatchPlaceholder()),
         everyElement(Palette.ink),
+      );
+      expect(
+        await _edgeColours(
+          tester,
+          const CrossHatchPlaceholder(variant: CrossHatchVariant.video),
+        ),
+        everyElement(Palette.ink),
+      );
+      expect(
+        await _edgeColours(
+          tester,
+          const CrossHatchPlaceholder(variant: CrossHatchVariant.viewport),
+        ),
+        everyElement(isNot(Palette.ink)),
       );
     });
 
