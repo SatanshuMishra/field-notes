@@ -27,7 +27,7 @@ class CalendarHeader extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('explore', style: TypographyTokens.eyebrowAccent),
+              Text('explore', style: TypographyTokens.sectionHeaderAccent),
               const SizedBox(height: 2),
               Text(month.title, style: TypographyTokens.titleSerif),
             ],
