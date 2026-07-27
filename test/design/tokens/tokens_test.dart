@@ -244,6 +244,33 @@ void main() {
           isNot(TypographyTokens.sectionHeaderAccent.fontSize));
     });
 
+    test('the retuned tokens carry their prototype metrics', () {
+      expect(TypographyTokens.bodySerif.fontSize, 13.5);
+      expect(TypographyTokens.bodySerif.fontWeight, FontWeight.w400);
+      expect(TypographyTokens.bodySerif.height, 1.5);
+
+      expect(TypographyTokens.displaySerif.fontSize, 32);
+      expect(TypographyTokens.displaySerif.fontWeight, FontWeight.w500);
+      expect(TypographyTokens.displaySerif.height, 1.0);
+
+      expect(TypographyTokens.captionSans.fontSize, 12);
+      expect(TypographyTokens.captionSans.fontWeight, FontWeight.w400);
+      expect(TypographyTokens.captionSans.color, Palette.muted);
+
+      expect(TypographyTokens.streakAccent.fontSize, 24);
+      expect(TypographyTokens.streakAccent.height, 1.0);
+      expect(TypographyTokens.streakAccent.color, Palette.coral);
+
+      expect(TypographyTokens.wordmarkAccent.fontSize, 23);
+      expect(TypographyTokens.wordmarkAccent.height, 0.85);
+      expect(TypographyTokens.wordmarkAccent.color, Palette.coral);
+
+      expect(TypographyTokens.bodySerifItalic.fontSize,
+          TypographyTokens.bodySerif.fontSize,
+          reason: 'the italic body face shares the roman body metric');
+      expect(TypographyTokens.bodySerifItalic.fontStyle, FontStyle.italic);
+    });
+
     test('the serif ladder descends through every prototype size', () {
       expect(
         <double?>[
