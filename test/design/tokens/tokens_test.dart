@@ -27,7 +27,10 @@ void main() {
     test('scale styles reference the declared families', () {
       expect(TypographyTokens.bodySerif.fontFamily, TypographyTokens.serif);
       expect(TypographyTokens.labelSans.fontFamily, TypographyTokens.sans);
-      expect(TypographyTokens.eyebrowAccent.fontFamily, TypographyTokens.accent);
+      expect(TypographyTokens.sectionHeaderAccent.fontFamily,
+          TypographyTokens.accent);
+      expect(TypographyTokens.pageEyebrowAccent.fontFamily,
+          TypographyTokens.accent);
     });
 
     test('the mono tokens use the generic family, not a vendored one', () {

@@ -97,7 +97,7 @@ class OnThisDayCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(title, style: TypographyTokens.eyebrowAccent),
+          Text(title, style: TypographyTokens.sectionHeaderAccent),
           const SizedBox(height: 10),
           child,
         ],
