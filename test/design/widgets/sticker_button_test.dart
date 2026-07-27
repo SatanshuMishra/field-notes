@@ -16,6 +16,21 @@ BoxDecoration _buttonDecoration(WidgetTester tester) {
   return box.decoration as BoxDecoration;
 }
 
+EdgeInsetsGeometry _buttonPadding(WidgetTester tester) {
+  return tester
+      .widget<Padding>(
+        find.descendant(
+          of: find.byType(StickerButton),
+          matching: find.byType(Padding),
+        ),
+      )
+      .padding;
+}
+
+Color? _labelColour(WidgetTester tester, String label) {
+  return tester.widget<Text>(find.text(label)).style?.color;
+}
+
 double _opacity(WidgetTester tester) {
   return tester
       .widget<Opacity>(
@@ -25,6 +40,14 @@ double _opacity(WidgetTester tester) {
         ),
       )
       .opacity;
+}
+
+Widget _button(StickerButtonVariant variant) {
+  return StickerButton(
+    label: 'Go',
+    variant: variant,
+    onPressed: () {},
+  );
 }
 
 void main() {
@@ -57,42 +80,70 @@ void main() {
       await tester.tap(find.byType(StickerButton), warnIfMissed: false);
     });
 
-    testWidgets('carries the hard button shadow and outline',
+    testWidgets('outlines every variant in 1.5px ink',
         (WidgetTester tester) async {
-      await tester.pumpWidget(
-        stickerHarness(
-          StickerButton(label: 'Go', onPressed: () {}),
-        ),
-      );
+      for (final StickerButtonVariant variant in StickerButtonVariant.values) {
+        await tester.pumpWidget(stickerHarness(_button(variant)));
 
-      final BoxDecoration deco = _buttonDecoration(tester);
-      expect(deco.boxShadow, Shadows.button);
-      expect(deco.borderRadius, Shapes.buttonBorderRadius);
-      expect((deco.border! as Border).top.color, Palette.ink);
+        final Border border = _buttonDecoration(tester).border! as Border;
+        expect(border.top.color, Palette.ink, reason: '$variant border colour');
+        expect(
+          border.top.width,
+          Shapes.outlineWidth,
+          reason: '$variant border width',
+        );
+      }
     });
 
-    testWidgets('fills with the coral primary colour by default',
+    testWidgets('lifts the default primary variant on the emphasis shadow',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         stickerHarness(StickerButton(label: 'Go', onPressed: () {})),
       );
 
-      expect(_buttonDecoration(tester).color, Palette.coral);
+      final BoxDecoration deco = _buttonDecoration(tester);
+      expect(deco.boxShadow, Shadows.emphasis);
+      expect(deco.color, Palette.coral);
+      expect(deco.borderRadius, BorderRadius.circular(Shapes.radiusControl));
+      expect(_labelColour(tester, 'Go'), Palette.onAccent);
+      expect(
+        _buttonPadding(tester),
+        const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+      );
     });
 
-    testWidgets('fills with the danger surface for the danger variant',
+    testWidgets('drops the shadow entirely for the secondary variant',
         (WidgetTester tester) async {
       await tester.pumpWidget(
-        stickerHarness(
-          StickerButton(
-            label: 'Delete all',
-            variant: StickerButtonVariant.danger,
-            onPressed: () {},
-          ),
-        ),
+        stickerHarness(_button(StickerButtonVariant.secondary)),
       );
 
-      expect(_buttonDecoration(tester).color, Palette.dangerSurface);
+      final BoxDecoration deco = _buttonDecoration(tester);
+      expect(deco.boxShadow, isNull);
+      expect(deco.color, Palette.cardWarm);
+      expect(deco.borderRadius, BorderRadius.circular(Shapes.radiusControl));
+      expect(_labelColour(tester, 'Go'), Palette.ink);
+      expect(
+        _buttonPadding(tester),
+        const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+      );
+    });
+
+    testWidgets('fills the danger variant red on the control shadow',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        stickerHarness(_button(StickerButtonVariant.danger)),
+      );
+
+      final BoxDecoration deco = _buttonDecoration(tester);
+      expect(deco.boxShadow, Shadows.control);
+      expect(deco.color, Palette.danger);
+      expect(deco.borderRadius, Shapes.buttonBorderRadius);
+      expect(_labelColour(tester, 'Go'), Palette.onAccent);
+      expect(
+        _buttonPadding(tester),
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+      );
     });
   });
 }

@@ -4,6 +4,17 @@ import '../tokens/tokens.dart';
 
 enum StickerButtonVariant { primary, secondary, danger }
 
+const BorderRadius _controlBorderRadius =
+    BorderRadius.all(Radius.circular(Shapes.radiusControl));
+
+const EdgeInsets _capturePadding =
+    EdgeInsets.symmetric(horizontal: 13, vertical: 10);
+
+const EdgeInsets _confirmPadding =
+    EdgeInsets.symmetric(horizontal: 16, vertical: 9);
+
+const double _iconGap = 10;
+
 class StickerButton extends StatelessWidget {
   const StickerButton({
     super.key,
@@ -22,7 +33,7 @@ class StickerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _StickerButtonColors colors = _StickerButtonColors.of(variant);
+    final _StickerButtonStyle style = _StickerButtonStyle.of(variant);
     return Semantics(
       button: true,
       enabled: isEnabled,
@@ -34,24 +45,24 @@ class StickerButton extends StatelessWidget {
           onTap: onPressed,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: colors.background,
+              color: style.background,
               border: Shapes.outline,
-              borderRadius: Shapes.buttonBorderRadius,
-              boxShadow: Shadows.button,
+              borderRadius: style.borderRadius,
+              boxShadow: style.shadow,
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              padding: style.padding,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   if (icon != null) ...<Widget>[
                     icon!,
-                    const SizedBox(width: 8),
+                    const SizedBox(width: _iconGap),
                   ],
                   Text(
                     label,
                     style: TypographyTokens.buttonSans
-                        .copyWith(color: colors.foreground),
+                        .copyWith(color: style.foreground),
                   ),
                 ],
               ),
@@ -63,31 +74,46 @@ class StickerButton extends StatelessWidget {
   }
 }
 
-class _StickerButtonColors {
-  const _StickerButtonColors({
+class _StickerButtonStyle {
+  const _StickerButtonStyle({
     required this.background,
     required this.foreground,
+    required this.borderRadius,
+    required this.padding,
+    required this.shadow,
   });
 
   final Color background;
   final Color foreground;
+  final BorderRadius borderRadius;
+  final EdgeInsets padding;
+  final List<BoxShadow>? shadow;
 
-  static _StickerButtonColors of(StickerButtonVariant variant) {
+  static _StickerButtonStyle of(StickerButtonVariant variant) {
     switch (variant) {
       case StickerButtonVariant.primary:
-        return const _StickerButtonColors(
+        return const _StickerButtonStyle(
           background: Palette.coral,
-          foreground: Palette.cardBright,
+          foreground: Palette.onAccent,
+          borderRadius: _controlBorderRadius,
+          padding: _capturePadding,
+          shadow: Shadows.emphasis,
         );
       case StickerButtonVariant.secondary:
-        return const _StickerButtonColors(
-          background: Palette.cardBright,
+        return const _StickerButtonStyle(
+          background: Palette.cardWarm,
           foreground: Palette.ink,
+          borderRadius: _controlBorderRadius,
+          padding: _capturePadding,
+          shadow: null,
         );
       case StickerButtonVariant.danger:
-        return const _StickerButtonColors(
-          background: Palette.dangerSurface,
-          foreground: Palette.danger,
+        return const _StickerButtonStyle(
+          background: Palette.danger,
+          foreground: Palette.onAccent,
+          borderRadius: Shapes.buttonBorderRadius,
+          padding: _confirmPadding,
+          shadow: Shadows.control,
         );
     }
   }
