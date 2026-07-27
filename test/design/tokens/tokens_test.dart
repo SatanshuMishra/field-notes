@@ -29,6 +29,18 @@ void main() {
       expect(TypographyTokens.labelSans.fontFamily, TypographyTokens.sans);
       expect(TypographyTokens.eyebrowAccent.fontFamily, TypographyTokens.accent);
     });
+
+    test('the mono tokens use the generic family, not a vendored one', () {
+      expect(TypographyTokens.mono, 'monospace');
+      expect(pubspec, isNot(contains('family: monospace')),
+          reason: 'monospace is the CSS generic, never a vendored family');
+      expect(TypographyTokens.monoMicroSans.fontFamily, TypographyTokens.mono);
+      expect(TypographyTokens.monoMicroSans.fontSize, 7);
+      expect(TypographyTokens.monoMicroSans.color, Palette.muted);
+      expect(TypographyTokens.monoThumbSans.fontFamily, TypographyTokens.mono);
+      expect(TypographyTokens.monoThumbSans.fontSize, 6);
+      expect(TypographyTokens.monoThumbSans.color, Palette.mutedDeep);
+    });
   });
 
   group('sticker-cutout surface tokens', () {
@@ -205,6 +217,120 @@ void main() {
       expect(Shadows.button.single.offset, const Offset(1.5, 1.5));
       expect(Shadows.button.single.blurRadius, 0);
       expect(Shadows.button.single.spreadRadius, 0);
+    });
+  });
+
+  group('typography roles', () {
+    test('the two Caveat roles are distinct in size and colour', () {
+      expect(TypographyTokens.pageEyebrowAccent.fontFamily,
+          TypographyTokens.accent);
+      expect(TypographyTokens.pageEyebrowAccent.fontSize, 16);
+      expect(TypographyTokens.pageEyebrowAccent.fontWeight, FontWeight.w600);
+      expect(TypographyTokens.pageEyebrowAccent.color, Palette.coral);
+
+      expect(TypographyTokens.sectionHeaderAccent.fontFamily,
+          TypographyTokens.accent);
+      expect(TypographyTokens.sectionHeaderAccent.fontSize, 17);
+      expect(TypographyTokens.sectionHeaderAccent.fontWeight, FontWeight.w600);
+      expect(TypographyTokens.sectionHeaderAccent.color, Palette.sage);
+
+      expect(TypographyTokens.pageEyebrowAccent.color,
+          isNot(TypographyTokens.sectionHeaderAccent.color),
+          reason: 'the page eyebrow and the section header are two roles');
+      expect(TypographyTokens.pageEyebrowAccent.fontSize,
+          isNot(TypographyTokens.sectionHeaderAccent.fontSize));
+    });
+
+    test('the serif ladder descends through every prototype size', () {
+      expect(
+        <double?>[
+          TypographyTokens.displaySerifToday.fontSize,
+          TypographyTokens.headlineSerif.fontSize,
+          TypographyTokens.bannerSerif.fontSize,
+          TypographyTokens.sectionSerif.fontSize,
+          TypographyTokens.bodySerifSecondary.fontSize,
+          TypographyTokens.memoryTitleSerif.fontSize,
+        ],
+        <double>[34, 21, 19, 17, 12, 12],
+      );
+
+      for (final TextStyle style in <TextStyle>[
+        TypographyTokens.displaySerifToday,
+        TypographyTokens.headlineSerif,
+        TypographyTokens.bannerSerif,
+        TypographyTokens.sectionSerif,
+        TypographyTokens.bodySerifSecondary,
+        TypographyTokens.memoryTitleSerif,
+      ]) {
+        expect(style.fontFamily, TypographyTokens.serif);
+      }
+
+      expect(TypographyTokens.displaySerifToday.height, 1.0);
+      expect(TypographyTokens.bodySerifSecondary.color, Palette.mutedDeep);
+    });
+
+    test('the caption ladder descends and stays on the sans family', () {
+      final List<(TextStyle, double)> ladder = <(TextStyle, double)>[
+        (TypographyTokens.caption11Sans, 11),
+        (TypographyTokens.caption10Sans, 10),
+        (TypographyTokens.caption9Sans, 9),
+        (TypographyTokens.caption8Sans, 8),
+      ];
+
+      for (final (TextStyle style, double size) in ladder) {
+        expect(style.fontFamily, TypographyTokens.sans);
+        expect(style.fontSize, size);
+      }
+
+      expect(TypographyTokens.caption11Sans.color, Palette.coral);
+      expect(TypographyTokens.caption10Sans.color, Palette.muted);
+      expect(TypographyTokens.caption9Sans.color, Palette.muted);
+    });
+
+    test('state-coloured tokens leave colour to the call site', () {
+      expect(TypographyTokens.navLabelSans.color, isNull);
+      expect(TypographyTokens.captureLabelSans.color, isNull);
+      expect(TypographyTokens.caption8Sans.color, isNull);
+    });
+
+    test('the micro chip token carries 0.08em of tracking at 8px', () {
+      expect(TypographyTokens.chipMicroSans.fontSize, 8);
+      expect(TypographyTokens.chipMicroSans.letterSpacing, 0.64);
+      expect(TypographyTokens.chipMicroSans.color, Palette.coral);
+    });
+
+    test('the accent roles carry their cited prototype metrics', () {
+      expect(TypographyTokens.stampAccent.fontSize, 13);
+      expect(TypographyTokens.stampAccent.color, Palette.sage);
+      expect(TypographyTokens.promptAccent.fontSize, 13);
+      expect(TypographyTokens.promptAccent.color, Palette.muted);
+      expect(TypographyTokens.subtitleAccent.fontSize, 14);
+      expect(TypographyTokens.subtitleAccent.color, Palette.muted);
+      expect(TypographyTokens.composerTitleAccent.fontSize, 16);
+      expect(TypographyTokens.composerTitleAccent.color, Palette.coral);
+      expect(TypographyTokens.windowTitleAccent.fontSize, 14);
+      expect(TypographyTokens.windowTitleAccent.color, Palette.windowTitle);
+
+      for (final TextStyle style in <TextStyle>[
+        TypographyTokens.stampAccent,
+        TypographyTokens.promptAccent,
+        TypographyTokens.subtitleAccent,
+        TypographyTokens.composerTitleAccent,
+        TypographyTokens.windowTitleAccent,
+      ]) {
+        expect(style.fontFamily, TypographyTokens.accent);
+        expect(style.fontWeight, FontWeight.w600);
+      }
+    });
+
+    test('the sync pair splits weight and colour by rank', () {
+      expect(TypographyTokens.syncPrimarySans.fontSize, 10);
+      expect(TypographyTokens.syncPrimarySans.fontWeight, FontWeight.w600);
+      expect(TypographyTokens.syncPrimarySans.color, Palette.ink);
+
+      expect(TypographyTokens.syncSecondarySans.fontSize, 8);
+      expect(TypographyTokens.syncSecondarySans.fontWeight, FontWeight.w400);
+      expect(TypographyTokens.syncSecondarySans.color, Palette.muted);
     });
   });
 }
