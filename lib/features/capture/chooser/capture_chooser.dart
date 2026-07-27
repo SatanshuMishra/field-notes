@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -24,10 +25,12 @@ Future<EntryType?> showCaptureChooser(
       Animation<double> animation,
       Animation<double> secondaryAnimation,
     ) {
-      return CaptureChooserSheet(
-        availableTypes: availableTypes,
-        onOptionSelected: (EntryType type) =>
-            Navigator.of(dialogContext).pop(type),
+      return DialogHost(
+        child: CaptureChooserSheet(
+          availableTypes: availableTypes,
+          onOptionSelected: (EntryType type) =>
+              Navigator.of(dialogContext).pop(type),
+        ),
       );
     },
     transitionBuilder: (
