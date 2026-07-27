@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 
@@ -22,9 +23,11 @@ Future<Mood?> showMoodPicker(
       Animation<double> animation,
       Animation<double> secondaryAnimation,
     ) {
-      return MoodPickerSheet(
-        selected: selected,
-        onMoodSelected: (Mood mood) => Navigator.of(dialogContext).pop(mood),
+      return DialogHost(
+        child: MoodPickerSheet(
+          selected: selected,
+          onMoodSelected: (Mood mood) => Navigator.of(dialogContext).pop(mood),
+        ),
       );
     },
     transitionBuilder: (
