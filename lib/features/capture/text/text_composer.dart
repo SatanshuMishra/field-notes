@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -105,7 +106,7 @@ Future<String?> showTextComposer(BuildContext context, String date) {
       Animation<double> animation,
       Animation<double> secondaryAnimation,
     ) {
-      return TextComposerConnector(date: date);
+      return DialogHost(child: TextComposerConnector(date: date));
     },
     transitionBuilder: (
       BuildContext dialogContext,
