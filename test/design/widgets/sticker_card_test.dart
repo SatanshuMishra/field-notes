@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -51,6 +53,47 @@ void main() {
       );
 
       expect(_cardDecoration(tester).color, Palette.cardBright);
+    });
+
+    testWidgets('inserts no transform at the default rotation',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        stickerHarness(const StickerCard(child: Text('hello'))),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(StickerCard),
+          matching: find.byType(Transform),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('tilts about its centre when given a rotation',
+        (WidgetTester tester) async {
+      const double tiltDegrees = -0.5;
+
+      await tester.pumpWidget(
+        stickerHarness(
+          const StickerCard(
+            rotationDegrees: tiltDegrees,
+            child: Text('hello'),
+          ),
+        ),
+      );
+
+      final Transform transform = tester.widget<Transform>(
+        find.descendant(
+          of: find.byType(StickerCard),
+          matching: find.byType(Transform),
+        ),
+      );
+
+      expect(
+          transform.transform, Matrix4.rotationZ(tiltDegrees * math.pi / 180));
+      expect(transform.alignment, Alignment.center);
+      expect(find.text('hello'), findsOneWidget);
     });
   });
 }

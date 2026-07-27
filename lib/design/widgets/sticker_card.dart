@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
@@ -10,6 +12,7 @@ class StickerCard extends StatelessWidget {
     this.surface = Palette.cardWarm,
     this.borderRadius = Shapes.cardBorderRadius,
     this.shadow = Shadows.card,
+    this.rotationDegrees = 0,
   });
 
   final Widget child;
@@ -17,10 +20,11 @@ class StickerCard extends StatelessWidget {
   final Color surface;
   final BorderRadius borderRadius;
   final List<BoxShadow> shadow;
+  final double rotationDegrees;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    final Widget sticker = DecoratedBox(
       decoration: BoxDecoration(
         color: surface,
         border: Shapes.outline,
@@ -31,6 +35,15 @@ class StickerCard extends StatelessWidget {
         padding: padding,
         child: child,
       ),
+    );
+
+    if (rotationDegrees == 0) {
+      return sticker;
+    }
+
+    return Transform.rotate(
+      angle: rotationDegrees * math.pi / 180,
+      child: sticker,
     );
   }
 }
