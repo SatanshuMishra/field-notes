@@ -25,18 +25,24 @@ class SidebarShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.page,
+      backgroundColor: Palette.panelTop,
       body: Column(
         children: <Widget>[
           _titleBar(),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                _rail(),
-                const DashedDivider(axis: Axis.vertical),
-                Expanded(child: body),
-              ],
+            child: DecoratedBox(
+              decoration: _panelWash,
+              child: DecoratedBox(
+                decoration: _panelGlow,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _rail(),
+                    const DashedDivider(axis: Axis.vertical),
+                    Expanded(child: body),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
@@ -149,4 +155,51 @@ class SidebarShell extends StatelessWidget {
     );
   }
 
+}
+
+const double _panelGlowBaseRadius = 0.5;
+const double _panelGlowExtentX = 1.2;
+const double _panelGlowExtentY = 0.6;
+const double _panelGlowCentreX = 0.15;
+const double _panelGlowFadeStop = 0.55;
+
+const Color _panelCoralTintFade = Color(0x00C76A54);
+
+const BoxDecoration _panelWash = BoxDecoration(
+  gradient: LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[Palette.panelTop, Palette.panelBottom],
+  ),
+);
+
+const BoxDecoration _panelGlow = BoxDecoration(
+  gradient: RadialGradient(
+    center: Alignment(2 * _panelGlowCentreX - 1, -1),
+    radius: _panelGlowBaseRadius,
+    colors: <Color>[Palette.panelCoralTint, _panelCoralTintFade],
+    stops: <double>[0, _panelGlowFadeStop],
+    transform: _PanelGlowScale(),
+  ),
+);
+
+class _PanelGlowScale extends GradientTransform {
+  const _PanelGlowScale();
+
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
+    final double base = _panelGlowBaseRadius * bounds.shortestSide;
+    if (base <= 0) {
+      return Matrix4.identity();
+    }
+    final double scaleX = _panelGlowExtentX * bounds.width / base;
+    final double scaleY = _panelGlowExtentY * bounds.height / base;
+    final double centreX = bounds.left + _panelGlowCentreX * bounds.width;
+    final double centreY = bounds.top;
+    return Matrix4.identity()
+      ..setEntry(0, 0, scaleX)
+      ..setEntry(1, 1, scaleY)
+      ..setEntry(0, 3, centreX * (1 - scaleX))
+      ..setEntry(1, 3, centreY * (1 - scaleY));
+  }
 }
