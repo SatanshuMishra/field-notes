@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../design/flowers/flowers.dart';
 import '../../design/tokens/tokens.dart';
 import '../../design/widgets/widgets.dart';
+import '../../domain/mood/flower_kind.dart';
 import 'shell_destination.dart';
 
 class SidebarShell extends StatelessWidget {
@@ -106,8 +108,18 @@ class SidebarShell extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const Text('field notes', style: TypographyTokens.wordmarkAccent),
-            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                const FlowerBloom(kind: FlowerKind.peony, size: 32),
+                const SizedBox(width: 9),
+                const Text(
+                  'field\nnotes',
+                  style: TypographyTokens.wordmarkAccent,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             for (final ShellDestination d in destinations) _railItem(d),
             const Spacer(),
             streak,
