@@ -52,19 +52,35 @@ class SidebarShell extends StatelessWidget {
 
   Widget _titleBar() {
     return Container(
-      height: 36,
-      color: Palette.titleBar,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      alignment: Alignment.centerLeft,
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: const BoxDecoration(
+        color: Palette.titleBar,
+        border: Border(bottom: BorderSide(color: Palette.ink16, width: 1)),
+      ),
       child: Row(
-        key: const ValueKey<String>('traffic-lights'),
-        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _dot(Palette.trafficRed),
-          const SizedBox(width: 8),
-          _dot(Palette.trafficAmber),
-          const SizedBox(width: 8),
-          _dot(Palette.trafficGreen),
+          Row(
+            key: const ValueKey<String>('traffic-lights'),
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _dot(Palette.trafficRed),
+              const SizedBox(width: 8),
+              _dot(Palette.trafficAmber),
+              const SizedBox(width: 8),
+              _dot(Palette.trafficGreen),
+            ],
+          ),
+          const Expanded(
+            child: Text(
+              'field notes — a journal of days',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TypographyTokens.windowTitleAccent,
+            ),
+          ),
+          const SizedBox(width: 56),
         ],
       ),
     );

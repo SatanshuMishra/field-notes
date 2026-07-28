@@ -34,6 +34,13 @@ void main() {
       }
     });
 
+    testWidgets('the title bar shows the window caption',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(appHarness(_shell()));
+
+      expect(find.text('field notes — a journal of days'), findsOneWidget);
+    });
+
     testWidgets('a rail item reports its destination on tap',
         (WidgetTester tester) async {
       ShellDestination? picked;
