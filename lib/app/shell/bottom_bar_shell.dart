@@ -22,7 +22,7 @@ class BottomBarShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Palette.page,
+      backgroundColor: Palette.panelTop,
       body: SafeArea(
         bottom: false,
         child: Column(
