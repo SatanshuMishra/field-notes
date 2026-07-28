@@ -38,7 +38,11 @@ class SidebarShell extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     _rail(),
-                    const DashedDivider(axis: Axis.vertical),
+                    const DashedDivider(
+                      axis: Axis.vertical,
+                      thickness: 1.0,
+                      color: Palette.ink22,
+                    ),
                     Expanded(child: body),
                   ],
                 ),
@@ -96,9 +100,9 @@ class SidebarShell extends StatelessWidget {
 
   Widget _rail() {
     return SizedBox(
-      width: 248,
+      width: 216,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
