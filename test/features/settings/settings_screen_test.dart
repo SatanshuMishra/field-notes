@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
@@ -60,6 +63,23 @@ void main() {
     expect(find.byType(JournalSection), findsOneWidget);
     expect(find.byType(DataSection), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
+  });
+
+  testWidgets('shows the placeholder while settings are still loading',
+      (WidgetTester tester) async {
+    final StreamController<AppSettings> pending =
+        StreamController<AppSettings>();
+    addTearDown(pending.close);
+
+    await _pumpScreen(
+      tester,
+      repository: FakeSettingsRepository(),
+      settingsStream: pending.stream,
+    );
+
+    expect(find.byType(CrossHatchPlaceholder), findsOneWidget);
+    expect(find.byType(SyncStorageSection), findsNothing);
+    expect(find.text('Settings'), findsNothing);
   });
 
   testWidgets('shows a recoverable message when settings cannot load',

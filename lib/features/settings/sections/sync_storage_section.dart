@@ -112,11 +112,13 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
         const SettingsFieldRow(
           label: 'Connection',
           description: 'Sync is not available yet.',
-          control: Row(
-            mainAxisSize: MainAxisSize.min,
+          control: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            alignment: WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               SettingsStatusPill(label: 'Not connected'),
-              SizedBox(width: 12),
               StickerButton(
                 label: 'Test connection',
                 onPressed: null,
