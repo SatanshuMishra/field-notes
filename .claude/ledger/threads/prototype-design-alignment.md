@@ -1,6 +1,6 @@
 ---
 thread: prototype-design-alignment
-status: paused
+status: active
 updated: 2026-07-28
 priority: high
 completion_criteria:
@@ -9,18 +9,18 @@ completion_criteria:
   - No dialog renders Flutter's yellow double-underline debug style (MSP A3)
   - The Today screen, right rail, nav rail, flower set, mood picker and capture surfaces are human-confirmed against the prototype on macOS hardware
   - OQ-3 and OQ-6 are answered or explicitly closed as out of scope
-next_step: Dispatch Wave 1 of Cluster C — C1, C2, C4, C6 — as four parallel `implementer` agents in separate worktrees, each fenced to its rows in the slice's §0 file table. Do NOT dispatch mitosis (decisions/2026-07-28-cluster-c-skips-mitosis.md). One PR per MSP via `~/.claude/lib/superpowers-parallel/mitosis-git.mjs pr-create`; `fullValidationCmd` locally against each head before merge; rebase `--onto main` and revalidate between merges.
-branch: main
+next_step: Wave 1 (C1, C2, C4, C6) DISPATCHED as four parallel `implementer` agents on 2026-07-28, one worktree each under `.fireplace-worktrees-cluster-c/`, branches `msp-cluster-c/{c1-streak-card,c2-header-mood-set,c4-eyebrow-card-header,c6-feed-empty-state}` all cut from main `93c6865`. Collect their reports, then per MSP: `fullValidationCmd` locally against the head, one PR via `~/.claude/lib/superpowers-parallel/mitosis-git.mjs pr-create`, human merge, then rebase the next `--onto main` and revalidate. Then Wave 2 (C3 after C2, C5 after C4), then Wave 3 (C7).
+branch: msp-cluster-c/* (wave 1 worktrees); ledger on chore/ledger-handoff-session-17
 ---
 
 ## Status
-**CLUSTER B IS FULLY CLOSED** — B1-B4 merged (#62-#65) and the §5.4 macOS visual pass passed on 2026-07-28, which was its last gate. **The Cluster C slice is cut and merged** (#71, `93c6865`). 10 of the parent spec's 39 MSPs are shipped (A1-A5, B1-B4, plus the slice itself is infrastructure, not an MSP). `main` is `93c6865`, zero open PRs. **No Cluster C code exists yet** — execution has not started.
+**CLUSTER B IS FULLY CLOSED** — B1-B4 merged (#62-#65) and the §5.4 macOS visual pass passed on 2026-07-28, which was its last gate. **The Cluster C slice is cut and merged** (#71, `93c6865`). 10 of the parent spec's 39 MSPs are shipped (A1-A5, B1-B4, plus the slice itself is infrastructure, not an MSP). `main` is `93c6865`. **Cluster C execution STARTED 2026-07-28**: Wave 1 (C1, C2, C4, C6) dispatched as four parallel `implementer` agents, worktrees under `.fireplace-worktrees-cluster-c/`, branches off `93c6865`. No Cluster C code has merged yet.
 
 ## Active Goal
 Align the shipped Flutter app with the Claude Design prototype's aesthetic without regressing any app-only capability, above all the video playback stack.
 
 ## Next Step
-Dispatch Wave 1 (C1, C2, C4, C6) as parallel `implementer` agents. Waves are declared in the slice's §0 SERIALIZATION: only `mood_banner.dart` (C2+C3) and `entry_card.dart` (C4+C5) are shared files, plus a C5->C7 contract edge on `MediaImage`. Wave 2 is C3 and C5; Wave 3 is C7.
+Collect the four Wave 1 agent reports; then ship one MSP at a time — `fullValidationCmd` against the head, PR, human merge, rebase the next `--onto main`, revalidate. Waves are declared in the slice's §0 SERIALIZATION: only `mood_banner.dart` (C2+C3) and `entry_card.dart` (C4+C5) are shared files, plus a C5->C7 contract edge on `MediaImage`. Wave 2 is C3 and C5; Wave 3 is C7.
 
 ## Open Risks
 - **The four `integration_test/` flows (§5.3 gate 3) have never been run** — `fullValidationCmd` does not include them. Their first run will likely surface pre-existing failures unrelated to Cluster C; triage before blaming an MSP.
