@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../design/flowers/flowers.dart';
 import '../../design/tokens/tokens.dart';
 import '../../design/widgets/widgets.dart';
+import '../../domain/mood/flower_kind.dart';
 import 'shell_destination.dart';
 
 class SidebarShell extends StatelessWidget {
@@ -38,7 +40,11 @@ class SidebarShell extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     _rail(),
-                    const DashedDivider(axis: Axis.vertical),
+                    const DashedDivider(
+                      axis: Axis.vertical,
+                      thickness: 1.0,
+                      color: Palette.ink22,
+                    ),
                     Expanded(child: body),
                   ],
                 ),
@@ -96,14 +102,24 @@ class SidebarShell extends StatelessWidget {
 
   Widget _rail() {
     return SizedBox(
-      width: 248,
+      width: 216,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            const Text('field notes', style: TypographyTokens.wordmarkAccent),
-            const SizedBox(height: 20),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                const FlowerBloom(kind: FlowerKind.peony, size: 32),
+                const SizedBox(width: 9),
+                const Text(
+                  'field\nnotes',
+                  style: TypographyTokens.wordmarkAccent,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
             for (final ShellDestination d in destinations) _railItem(d),
             const Spacer(),
             streak,
