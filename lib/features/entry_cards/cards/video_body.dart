@@ -23,6 +23,8 @@ const List<Duration> _defaultRetryBackoff = <Duration>[
 const double _videoAspectRatio = 21 / 9;
 const double _videoMinHeight = 200;
 const double _fullVolume = 1.0;
+const BorderRadius _posterBorderRadius =
+    BorderRadius.all(Radius.circular(Shapes.radiusCell));
 
 enum _VideoPhase { waiting, preparing, ready, retrying, unavailable }
 
@@ -648,6 +650,7 @@ class _VideoBodyState extends State<VideoBody> {
       return _previewBox(
         CorruptMediaPlaceholder(
           label: "Can't play this video",
+          borderRadius: _posterBorderRadius,
           onRetry: _onRetryPressed,
         ),
       );
@@ -664,9 +667,9 @@ class _VideoBodyState extends State<VideoBody> {
 
   List<Widget> _layers() {
     return <Widget>[
-      const NeutralMediaPlaceholder(),
+      const NeutralMediaPlaceholder(borderRadius: _posterBorderRadius),
       ClipRRect(
-        borderRadius: Shapes.cardBorderRadius,
+        borderRadius: _posterBorderRadius,
         child: _player?.buildSurface() ?? const SizedBox.shrink(),
       ),
       if (_showCapturedPoster)
@@ -674,6 +677,7 @@ class _VideoBodyState extends State<VideoBody> {
           resolver: widget.resolver,
           mediaId: widget.entry.thumbnailMediaId,
           errorLabel: 'Video',
+          borderRadius: _posterBorderRadius,
         ),
       if (_claimDenied)
         const Positioned(
