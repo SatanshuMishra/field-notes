@@ -15,6 +15,11 @@ class NoteBody extends StatelessWidget {
         style: TypographyTokens.bodySerifItalic.copyWith(color: Palette.muted),
       );
     }
-    return Text(text, style: TypographyTokens.bodySerif);
+    return Text(
+      text,
+      style: TypographyTokens.bodySerif,
+      softWrap: true,
+      overflow: TextOverflow.clip,
+    );
   }
 }
