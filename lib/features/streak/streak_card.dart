@@ -1,8 +1,9 @@
+import 'package:field_notes/design/icons/flame_icon.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/features/streak/streak_providers.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class StreakCard extends ConsumerWidget {
@@ -14,15 +15,16 @@ class StreakCard extends ConsumerWidget {
     final String dayLabel = summary.current == 1 ? 'day' : 'days';
     return StickerCard(
       key: const ValueKey<String>('streak-card'),
-      padding: const EdgeInsets.all(12),
+      surface: Palette.cardLight,
+      borderRadius: const BorderRadius.all(
+        Radius.circular(Shapes.radiusMd),
+      ),
+      shadow: Shadows.emphasis,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 13),
       child: Row(
         children: <Widget>[
-          const Icon(
-            Icons.local_fire_department,
-            size: 18,
-            color: Palette.coral,
-          ),
-          const SizedBox(width: 8),
+          const FlameIcon(color: Palette.coral),
+          const SizedBox(width: 7),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -32,9 +34,10 @@ class StreakCard extends ConsumerWidget {
                   '${summary.current} $dayLabel',
                   style: TypographyTokens.streakAccent,
                 ),
+                const SizedBox(height: 3),
                 Text(
                   'longest streak yet: ${summary.longest}',
-                  style: TypographyTokens.captionSans,
+                  style: TypographyTokens.caption10Sans,
                 ),
               ],
             ),
