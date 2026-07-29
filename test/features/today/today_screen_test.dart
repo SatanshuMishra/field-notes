@@ -61,9 +61,9 @@ void main() {
     );
 
     expect(find.text('Good evening'), findsOneWidget);
-    expect(find.text('Sunday, July 19, 2026'), findsOneWidget);
-    expect(find.text('Calm'), findsOneWidget);
-    expect(find.text('Change mood'), findsOneWidget);
+    expect(find.text('Sunday, July 19'), findsOneWidget);
+    expect(find.text('Feeling Calm today'), findsOneWidget);
+    expect(find.text('change'), findsOneWidget);
     expect(find.text('morning walk'), findsOneWidget);
 
     expect(find.byType(ThisWeekGarden), findsNothing);

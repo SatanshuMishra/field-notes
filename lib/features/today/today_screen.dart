@@ -56,8 +56,8 @@ class TodayScreen extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        TodayHeader(greeting: greetingFor(now), longDate: longDateLabel(now)),
-        const SizedBox(height: 20),
+        TodayHeader(greeting: greetingFor(now), longDate: headerDateLabel(now)),
+        const SizedBox(height: 16),
         MoodBannerForDate(date: date),
         TodayFeedEyebrow(date: date),
         TodayEntryFeed(date: date),

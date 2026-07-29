@@ -35,8 +35,8 @@ void main() {
     expect(fake.moodWrites, <({String date, Mood? mood})>[
       (date: '2026-07-19', mood: Mood.calm),
     ]);
-    expect(find.text('Calm'), findsOneWidget);
-    expect(find.text('Change mood'), findsOneWidget);
+    expect(find.text('Feeling Calm today'), findsOneWidget);
+    expect(find.text('change'), findsOneWidget);
   });
 
   testWidgets('surfaces a non-destructive error when the write fails',

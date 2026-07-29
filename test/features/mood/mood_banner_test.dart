@@ -32,11 +32,11 @@ void main() {
       ),
     );
 
-    expect(find.text('Calm'), findsOneWidget);
-    expect(find.text('Change mood'), findsOneWidget);
+    expect(find.text('Feeling Calm today'), findsOneWidget);
+    expect(find.text('change'), findsOneWidget);
     expect(find.text('How are you feeling today?'), findsNothing);
 
-    await tester.tap(find.text('Change mood'));
+    await tester.tap(find.text('change'));
     expect(taps, 1);
   });
 
