@@ -50,5 +50,12 @@ Nothing in flight from this thread. Two spawned chip sessions run independently:
 - Standing and unchanged: `receipts.yml` runs unpinned third-party `shaheershoaib/receipts/enforcer@main` (chip `task_e10f4f7e`); A2/A4's app-wide blast radius never walked; the five A3 dialogs never separately opened; OQ-3 and OQ-6 open.
 - **WIP:** `post-ship-hardening` remains paused and unrelated. Surfaced for disposition, not auto-closed.
 
+## Cleanup (session tail)
+PR #66 merged (`3cdda5c`); the `task_c1e65dae` codegen chip landed as #67 (`c22cf1f`), so the stale `.g.dart` risk is CLOSED. `main` is `c22cf1f`.
+
+Deleted, local and remote: `chore/ledger-handoff-session-14`, `feat/b2-rail-geometry-lockup`, `feat/b3-nav-item-states`, `feat/b4-rail-footer`, `feat/b3-nav-states-icons`, `feat/b4-rail-footer-state`. Removed the two session worktrees `.fireplace-b3` and `.fireplace-b4`.
+
+**Kept by decision:** all 43 `.fireplace-worktrees-cluster-a/b` checkouts and every `msp-cluster-*` branch. `decisions/2026-07-20-keep-stale-worktrees.md` is an accepted standing directive to retain them for manual testing; the conflict with the cleanup instruction was surfaced and the user scoped cleanup to session scratch only. That decision is NOT superseded.
+
 ## Pick up here
 Cluster B needs no more code. The next action is the **human macOS visual pass** across Today, Calendar, Garden, Search and Settings plus the phone shell, checking the panel wash and corner glow, the 42px title bar with its centred caption, the 216px rail, the peony and two-line wordmark, the active/inactive treatment on each of the four destinations, and the footer strip with Settings open and sound toggled both ways. Only after that does Cluster C (Today centre column, C1-C7) get dispatched — and per this session's decision record, check `refs/mitosis/*` for stranded artifacts before assuming any cluster needs a fresh run.
