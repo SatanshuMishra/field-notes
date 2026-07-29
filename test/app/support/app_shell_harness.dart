@@ -1,6 +1,7 @@
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
+import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../features/settings/support/fake_settings_repository.dart';
+import '../../features/settings/support/recording_reminder_scheduler.dart';
 
 class FakeJournalRepository implements JournalRepository {
   @override
@@ -54,6 +56,8 @@ List<Override> shellOverrides() => <Override>[
       searchAllEntriesProvider.overrideWith(
         (_) => Stream<List<Entry>>.value(const <Entry>[]),
       ),
+      reminderClockProvider.overrideWithValue(() => DateTime(2026, 7, 20, 9)),
+      reminderSchedulerProvider.overrideWithValue(RecordingReminderScheduler()),
     ];
 
 Future<void> pumpShell(

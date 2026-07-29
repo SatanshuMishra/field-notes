@@ -1,22 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/sidebar_shell.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/search/search.dart';
 import 'package:field_notes/features/settings/settings.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today.dart';
+import 'package:field_notes/state/settings_providers.dart';
 
 import 'support/app_shell_harness.dart';
 
 Finder _body(ShellDestination d) => find.byKey(ValueKey<ShellDestination>(d));
 
 const Size _phoneSurface = Size(440, 900);
+
+List<Override> _loadedSettings() => <Override>[
+      appSettingsProvider.overrideWith(
+        (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+      ),
+    ];
+
+void _expectLoadedSettingsScreen() {
+  expect(find.byType(SettingsScreen), findsOneWidget);
+  expect(find.byType(CrossHatchPlaceholder), findsNothing);
+  expect(find.text('Settings'), findsOneWidget);
+  expect(find.byType(SyncStorageSection), findsOneWidget);
+}
 
 void main() {
   group('AppShell on macOS', () {
@@ -61,14 +79,14 @@ void main() {
       expect(find.byType(SearchScreen), findsOneWidget);
     });
 
-    testWidgets('the settings button renders the settings screen',
+    testWidgets('the settings button renders the loaded settings screen',
         (WidgetTester tester) async {
-      await pumpShell(tester, const AppShell());
+      await pumpShell(tester, const AppShell(), overrides: _loadedSettings());
 
       await tester.tap(find.byKey(const ValueKey<String>('settings-button')));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SettingsScreen), findsOneWidget);
+      _expectLoadedSettingsScreen();
     });
 
     testWidgets('surfaces the real streak card in the rail',
@@ -126,19 +144,20 @@ void main() {
       expect(find.byType(SearchScreen), findsOneWidget);
     });
 
-    testWidgets('the gear renders the settings screen',
+    testWidgets('the gear renders the loaded settings screen',
         (WidgetTester tester) async {
       await pumpShell(
         tester,
         const AppShell(),
         platform: TargetPlatform.android,
         surface: _phoneSurface,
+        overrides: _loadedSettings(),
       );
 
       await tester.tap(find.byKey(const ValueKey<String>('gear-button')));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(SettingsScreen), findsOneWidget);
+      _expectLoadedSettingsScreen();
     });
 
     testWidgets('the center capture invokes the injected callback',
