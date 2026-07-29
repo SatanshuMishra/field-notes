@@ -74,6 +74,6 @@ Get PR #82 merged by the user, then C3 off the post-C2 main; C7 last, after C5. 
 - receipts.config.json — `fullValidationCmd` is the local gate; baseline on `main` is 904 passed, 0 failed, analyze clean
 
 ## Recent Sessions
-- sessions/2026-07-28-06-prototype-design-alignment.md — **C6 shipped; the force-push block and the stale engine citations are here**
-- sessions/2026-07-28-05-prototype-design-alignment.md — read its C5 section before touching C5
-- sessions/2026-07-28-04- / -03- / -02- / -01-prototype-design-alignment.md
+- sessions/2026-07-28-07-prototype-design-alignment.md — **C5 validated and opened as PR #82; the three rulings, the resolved shadow/gap hazards and the demoted terminal threads are here**
+- sessions/2026-07-28-06-prototype-design-alignment.md — C6 shipped; the force-push block and the stale engine citations
+- sessions/2026-07-28-05- / -04- / -03- / -02- / -01-prototype-design-alignment.md
