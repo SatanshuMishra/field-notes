@@ -30,20 +30,24 @@ class SettingsSegmented<T> extends StatelessWidget {
   Widget build(BuildContext context) {
     return Opacity(
       opacity: enabled ? 1.0 : 0.5,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: Palette.panelTop,
-          border: Shapes.outline,
-          borderRadius: Shapes.buttonBorderRadius,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(3),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              for (final SettingsSegment<T> segment in segments)
-                _segmentTile(segment),
-            ],
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerRight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Palette.panelTop,
+            border: Shapes.outline,
+            borderRadius: Shapes.buttonBorderRadius,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (final SettingsSegment<T> segment in segments)
+                  _segmentTile(segment),
+              ],
+            ),
           ),
         ),
       ),
