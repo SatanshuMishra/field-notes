@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../design/flowers/flowers.dart';
+import '../../design/icons/nav_icons.dart';
 import '../../design/tokens/tokens.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/mood/flower_kind.dart';
@@ -160,6 +161,8 @@ class SidebarShell extends StatelessWidget {
 
   Widget _railItem(ShellDestination d) {
     final bool isSelected = d == selected;
+    final Color foreground = isSelected ? Palette.onAccent : Palette.inkSoft;
+    final NavGlyph? glyph = d.glyph;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: GestureDetector(
@@ -168,17 +171,26 @@ class SidebarShell extends StatelessWidget {
         onTap: () => onSelect(d),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: isSelected ? Palette.cardBright : null,
+            color: isSelected ? Palette.coral : null,
             border: isSelected ? Shapes.outline : null,
-            borderRadius: Shapes.buttonBorderRadius,
+            borderRadius: _navItemRadius,
+            boxShadow: isSelected ? Shadows.emphasis : null,
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
             child: Row(
               children: <Widget>[
-                Icon(d.icon, size: 18, color: Palette.ink),
+                if (glyph == null)
+                  Icon(d.icon, size: 18, color: foreground)
+                else
+                  NavIcon(glyph: glyph, color: foreground, size: 18),
                 const SizedBox(width: 10),
-                Text(d.label, style: TypographyTokens.labelSans),
+                Text(
+                  d.label,
+                  style: TypographyTokens.navLabelSans.copyWith(
+                    color: foreground,
+                  ),
+                ),
               ],
             ),
           ),
@@ -188,6 +200,10 @@ class SidebarShell extends StatelessWidget {
   }
 
 }
+
+const BorderRadius _navItemRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
 
 const double _panelGlowBaseRadius = 0.5;
 const double _panelGlowExtentX = 1.2;
