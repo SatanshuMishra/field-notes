@@ -16,6 +16,7 @@ class MediaImage extends StatelessWidget {
     this.height,
     this.borderRadius = Shapes.cardBorderRadius,
     this.fit = BoxFit.cover,
+    this.border,
   });
 
   final MediaResolver resolver;
@@ -25,9 +26,26 @@ class MediaImage extends StatelessWidget {
   final double? height;
   final BorderRadius borderRadius;
   final BoxFit fit;
+  final BoxBorder? border;
 
   @override
   Widget build(BuildContext context) {
+    return _framed(_content());
+  }
+
+  Widget _framed(Widget content) {
+    final BoxBorder? edge = border;
+    if (edge == null) {
+      return content;
+    }
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(border: edge, borderRadius: borderRadius),
+      child: content,
+    );
+  }
+
+  Widget _content() {
     final String? id = mediaId;
     if (id == null || id.isEmpty) {
       return _neutral();
