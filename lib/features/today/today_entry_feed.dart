@@ -11,7 +11,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'today_providers.dart';
 
-const String todayFeedEmptyMessage = 'Nothing captured yet today.';
+const String todayFeedEmptyHeadline = 'Nothing planted yet today';
+const String todayFeedEmptyMessage =
+    'Capture a moment — write it, speak it, or film it.';
 const String todayFeedErrorMessage = "Couldn't load today's entries.";
 const String todayMediaErrorMessage = "Couldn't load your media library.";
 
@@ -45,7 +47,14 @@ class TodayEntryFeed extends ConsumerWidget {
     }
     final List<Entry> entries = entriesAsync.requireValue;
     if (entries.isEmpty) {
-      return EmptyStatePlaceholder(message: emptyMessage);
+      return EmptyStatePlaceholder(
+        headline: todayFeedEmptyHeadline,
+        message: emptyMessage,
+        messageStyle: TypographyTokens.captionSans,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
+        borderColor: Palette.ink40,
+        borderRadius: Shapes.radiusLg,
+      );
     }
 
     final AsyncValue<MediaResolver> resolverAsync =
