@@ -1,3 +1,4 @@
+import 'package:field_notes/design/icons/flame_icon.dart';
 import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +19,7 @@ void main() {
         find.byKey(const ValueKey<String>('streak-card')),
         findsOneWidget,
       );
-      expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
+      expect(find.byType(FlameIcon), findsOneWidget);
       expect(find.text('3 days'), findsOneWidget);
       expect(find.text('longest streak yet: 5'), findsOneWidget);
     });
