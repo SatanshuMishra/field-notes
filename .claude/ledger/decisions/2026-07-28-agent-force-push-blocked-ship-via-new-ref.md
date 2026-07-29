@@ -1,4 +1,4 @@
-Status: accepted
+Status: superseded-by: 2026-07-28-force-push-permission-granted.md
 Date: 2026-07-28
 Thread: prototype-design-alignment
 
