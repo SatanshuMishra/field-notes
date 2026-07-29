@@ -15,7 +15,9 @@ Three mitosis dispatches on `docs/specs/2026-07-27-prototype-alignment-cluster-b
 |---|---|---|---|---|---|
 | 1 | `wf_8e873bff-4f1` | 88 | 6.51M | 17.8h | B1 shipped; B2 parked at `ship`; B3/B4 blocked |
 | 2 | `wf_2a155c53-317` | 11 | 0.82M | 42m | B2 re-executed and halted at `execute`; nothing shipped |
-| 3 | `wf_8567a217-c50` | in flight at hand-off | — | — | unknown |
+| 3 | `wf_8567a217-c50` | 11 | 0.72M | 24m | B2 halted at `execute` on a stale-branch collision; nothing shipped |
+
+**Run 3 completed after the hand-off was written.** It did NOT block on Serena — the blocking agent reported: `BLOCKED on workspace setup. No files changed, no commits, no mutations — the failed 'git worktree add' left nothing on disk. THE COLLISION: All three convergence branches in the dispatch instructions fail against actual repo state.` The task branch `msp-cluster-b/b2-rail-geometry-lockup/task-task-1` survived runs 1-2, so the worktree could not be created. **Cause: `sourcePrefix` was deliberately held at `msp-cluster-b` for manifest continuity while only `worktreeRoot` was rotated — which discards exactly the collision protection decisions/2026-07-27-source-prefix-is-run-distinct.md exists to provide.** The manifest-continuity reasoning was sound in isolation and wrong overall: a new slice spec gets a clean manifest AND a fresh prefix, satisfying both concerns. Serena's contribution is now untested — run 3 never reached semantic discovery.
 
 ## Tried and failed
 - **Run 1 parked B2 on an "ambiguous frontier state"** — no `builtSha` was recorded when the unit was marked built, so the engine refused to ship an unverified frontier tip (`mitosis.js:4288`). Root cause found: `builtSha` comes from the checkpoint-push agent's return value (`:4598`), and that agent family was blocked by the harness safety classifier for authorizing an unconfirmed `git push --force-with-lease` fallback (`:4586`). The JSONL manifest shows `"sha":null` for ALL FOUR units including B1 — B1 shipped only because it had no unmerged parent and never took the strict `requireSha: true` frontier path (`:4306`).

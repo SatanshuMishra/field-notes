@@ -9,12 +9,12 @@ completion_criteria:
   - No dialog renders Flutter's yellow double-underline debug style (MSP A3)
   - The Today screen, right rail, nav rail, flower set, mood picker and capture surfaces are human-confirmed against the prototype on macOS hardware
   - OQ-3 and OQ-6 are answered or explicitly closed as out of scope
-next_step: Read the outcome of mitosis run 3 `wf_8567a217-c50` (in flight at hand-off) via /workflows or by folding .mitosis/run.json. Nothing else should start before that result is known.
+next_step: Cut a B2-B4 execution slice with a NEW sourcePrefix and land it on main before dispatching. Run 3 died on a stale-branch collision caused by reusing `msp-cluster-b`; a new slice fixes the collision, the poisoned manifest, and the duplicate-B1 risk in one move. Deleting the stale `msp-cluster-b/*` task branches is the cheaper alternative but leaves the manifest dirty.
 branch: main
 ---
 
 ## Status
-**CLUSTER B IS ONE-QUARTER SHIPPED AFTER THREE DISPATCHES.** B1 merged as #62; `main` is `9a53222`. B2, B3 and B4 are all unshipped. Run 1 parked B2 at `ship` (no `builtSha`, root-caused to a classifier-blocked checkpoint-push agent); run 2 re-executed B2 and halted at `execute` on an unactivated Serena; run 3 `wf_8567a217-c50` was dispatched after activating Serena and is IN FLIGHT. 6 of the parent spec's 39 MSPs are shipped. Three runs have cost ~7.4M subagent tokens for one MSP.
+**CLUSTER B IS ONE-QUARTER SHIPPED AFTER THREE DISPATCHES.** B1 merged as #62; `main` is `9a53222`. B2, B3 and B4 are all unshipped. Run 1 parked B2 at `ship` (no `builtSha`, root-caused to a classifier-blocked checkpoint-push agent); run 2 re-executed B2 and halted at `execute` on an unactivated Serena; run 3 completed after hand-off and halted at `execute` again — NOT on Serena, but on a stale-branch collision: `git worktree add` failed because the `msp-cluster-b/b2-rail-geometry-lockup/task-task-1` branch survived from runs 1-2. 6 of the parent spec's 39 MSPs are shipped. Three runs cost ~8.1M subagent tokens for one MSP.
 
 ## Active Goal
 Align the shipped Flutter app with the Claude Design prototype's aesthetic without regressing any app-only capability, above all the video playback stack.
