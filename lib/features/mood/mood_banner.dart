@@ -13,7 +13,7 @@ class MoodBanner extends StatelessWidget {
     required this.mood,
     required this.onChangeMood,
     this.promptText = 'How are you feeling today?',
-    this.changeLabel = 'Change mood',
+    this.changeLabel = 'change',
   });
 
   final Mood? mood;
@@ -28,21 +28,74 @@ class MoodBanner extends StatelessWidget {
       return _MoodPrompt(text: promptText, onTap: onChangeMood);
     }
     return StickerCard(
-      surface: Palette.cardLight,
+      surface: Palette.cardWarm,
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
       child: Row(
         children: <Widget>[
-          FlowerBloom.forMood(current, size: 44),
-          const SizedBox(width: 12),
+          FlowerBloom.forMood(current, size: 54),
+          const SizedBox(width: _moodBannerGap),
           Expanded(
-            child: Text(current.label, style: TypographyTokens.titleSerif),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Feeling ${current.label} today',
+                  style: TypographyTokens.bannerSerif,
+                ),
+                Text(
+                  '${current.flower.label} · your bloom for the day',
+                  style: TypographyTokens.captionSans,
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 12),
-          StickerButton(
-            label: changeLabel,
-            variant: StickerButtonVariant.secondary,
-            onPressed: onChangeMood,
-          ),
+          const SizedBox(width: _moodBannerGap),
+          _MoodChangePill(label: changeLabel, onTap: onChangeMood),
         ],
+      ),
+    );
+  }
+}
+
+const double _moodBannerGap = 15;
+
+const BoxDecoration _changePillDecoration = BoxDecoration(
+  border: Border.fromBorderSide(
+    BorderSide(color: Palette.coral, width: Shapes.outlineWidth),
+  ),
+  borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusPill)),
+);
+
+const EdgeInsets _changePillPadding =
+    EdgeInsets.symmetric(vertical: 6, horizontal: 13);
+
+class _MoodChangePill extends StatelessWidget {
+  const _MoodChangePill({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isEnabled = onTap != null;
+    return Semantics(
+      button: isEnabled,
+      enabled: isEnabled,
+      label: label,
+      child: Opacity(
+        opacity: isEnabled ? 1.0 : 0.5,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: DecoratedBox(
+            decoration: _changePillDecoration,
+            child: Padding(
+              padding: _changePillPadding,
+              child: Text(label, style: TypographyTokens.caption11Sans),
+            ),
+          ),
+        ),
       ),
     );
   }

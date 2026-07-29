@@ -3,13 +3,23 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('greetingFor', () {
-    test('spans morning, afternoon and evening', () {
+    test('spans morning, afternoon, evening and night', () {
       expect(greetingFor(DateTime(2026, 7, 19, 0)), 'Good morning');
       expect(greetingFor(DateTime(2026, 7, 19, 11, 59)), 'Good morning');
       expect(greetingFor(DateTime(2026, 7, 19, 12)), 'Good afternoon');
       expect(greetingFor(DateTime(2026, 7, 19, 16, 59)), 'Good afternoon');
       expect(greetingFor(DateTime(2026, 7, 19, 17)), 'Good evening');
-      expect(greetingFor(DateTime(2026, 7, 19, 23, 59)), 'Good evening');
+      expect(greetingFor(DateTime(2026, 7, 19, 20, 59)), 'Good evening');
+      expect(greetingFor(DateTime(2026, 7, 19, 21)), 'Good night');
+      expect(greetingFor(DateTime(2026, 7, 19, 23, 59)), 'Good night');
+    });
+  });
+
+  group('headerDateLabel', () {
+    test('renders weekday, month name and day without the year', () {
+      expect(headerDateLabel(DateTime(2026, 7, 19)), 'Sunday, July 19');
+      expect(headerDateLabel(DateTime(2025, 1, 1)), 'Wednesday, January 1');
+      expect(headerDateLabel(DateTime(2024, 12, 31)), 'Tuesday, December 31');
     });
   });
 
