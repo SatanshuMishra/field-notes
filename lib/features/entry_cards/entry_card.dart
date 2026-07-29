@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../design/tokens/tokens.dart';
+import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/models/models.dart';
 import 'cards/note_body.dart';
@@ -12,6 +13,13 @@ import 'media/media_resolver.dart';
 import 'playback/audio_playback.dart';
 import 'playback/video_playback.dart';
 import 'playback/video_slots.dart';
+
+const String entryEditLabel = 'Edit';
+const String entryDeleteLabel = 'Delete';
+
+const double _headerGap = 4;
+const double _actionGap = 8;
+const int _maxEpochMs = 8640000000000000;
 
 class EntryCard extends StatelessWidget {
   const EntryCard({
@@ -46,7 +54,7 @@ class EntryCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           _header(),
-          const SizedBox(height: 8),
+          const SizedBox(height: _headerGap),
           _body(),
           if (photos.isNotEmpty) ...<Widget>[
             const SizedBox(height: 12),
@@ -58,24 +66,52 @@ class EntryCard extends StatelessWidget {
   }
 
   Widget _header() {
+    final VoidCallback? edit = onEdit;
+    final VoidCallback? delete = onDelete;
     return Row(
       children: <Widget>[
-        Text(_eyebrow(entry.type), style: TypographyTokens.sectionHeaderAccent),
+        Text(_stamp(entry.createdAt), style: TypographyTokens.stampAccent),
         const Spacer(),
-        if (onEdit != null)
-          StickerButton(
-            label: 'Edit',
-            variant: StickerButtonVariant.secondary,
-            onPressed: onEdit,
+        if (edit != null) ...<Widget>[
+          IconStickerButton(
+            glyph: IconStickerGlyph.edit,
+            glyphColor: Palette.ink,
+            background: Palette.cardLight,
+            semanticLabel: entryEditLabel,
+            onPressed: edit,
           ),
-        if (onEdit != null && onDelete != null) const SizedBox(width: 8),
-        if (onDelete != null)
-          StickerButton(
-            label: 'Delete',
-            variant: StickerButtonVariant.danger,
-            onPressed: onDelete,
+          const SizedBox(width: _actionGap),
+        ],
+        if (delete != null) ...<Widget>[
+          IconStickerButton(
+            glyph: IconStickerGlyph.trash,
+            glyphColor: Palette.danger,
+            background: Palette.cardLight,
+            semanticLabel: entryDeleteLabel,
+            onPressed: delete,
           ),
+          const SizedBox(width: _actionGap),
+        ],
+        _typeChip(entry.type),
       ],
+    );
+  }
+
+  Widget _typeChip(EntryType type) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Palette.coral12,
+        borderRadius: BorderRadius.all(
+          Radius.circular(Shapes.radiusIconButton),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 7),
+        child: Text(
+          _typeLabel(type).toUpperCase(),
+          style: TypographyTokens.chipMicroSans,
+        ),
+      ),
     );
   }
 
@@ -113,14 +149,37 @@ class EntryCard extends StatelessWidget {
     }
   }
 
-  String _eyebrow(EntryType type) {
+  String _typeLabel(EntryType type) {
     switch (type) {
       case EntryType.text:
-        return 'Note';
+        return 'note';
       case EntryType.voice:
-        return 'Voice note';
+        return 'voice';
       case EntryType.video:
-        return 'Video';
+        return 'video';
     }
+  }
+
+  String _stamp(int createdAt) {
+    if (createdAt < 0 || createdAt > _maxEpochMs) {
+      return '';
+    }
+    final DateTime at = DateTime.fromMillisecondsSinceEpoch(createdAt);
+    final String hour = at.hour.toString().padLeft(2, '0');
+    final String minute = at.minute.toString().padLeft(2, '0');
+    return '$hour:$minute · ${_partOfDay(at.hour)}';
+  }
+
+  String _partOfDay(int hour) {
+    if (hour < 12) {
+      return 'morning';
+    }
+    if (hour < 17) {
+      return 'afternoon';
+    }
+    if (hour < 21) {
+      return 'evening';
+    }
+    return 'night';
   }
 }

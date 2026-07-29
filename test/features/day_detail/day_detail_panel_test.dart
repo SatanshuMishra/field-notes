@@ -4,13 +4,20 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_entry_tile.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
+import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/state/state.dart';
 
 import 'support/day_detail_harness.dart';
+
+Finder _tileAction(String label) => find.byWidgetPredicate(
+      (Widget widget) =>
+          widget is IconStickerButton && widget.semanticLabel == label,
+    );
 
 Widget _panelApp(
   FakeJournalRepository repository, {
@@ -81,7 +88,7 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Edit'));
+    await tester.tap(_tileAction(entryEditLabel));
     await tester.pumpAndSettle();
 
     expect(find.text('Edit note'), findsOneWidget);
@@ -100,7 +107,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1 entry'), findsOneWidget);
 
-    await tester.tap(find.text('Delete'));
+    await tester.tap(_tileAction(entryDeleteLabel));
     await tester.pumpAndSettle();
 
     expect(repository.deletedEntryIds, <String>['entry-1']);
@@ -129,7 +136,7 @@ void main() {
     expect(survivor, findsOneWidget);
     final Element survivorElement = tester.element(survivor);
 
-    await tester.tap(find.text('Delete').first);
+    await tester.tap(_tileAction(entryDeleteLabel).first);
     await tester.pumpAndSettle();
 
     expect(repository.deletedEntryIds, <String>['entry-1']);
@@ -150,7 +157,7 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Delete'));
+    await tester.tap(_tileAction(entryDeleteLabel));
     await tester.pumpAndSettle();
 
     expect(repository.deletedEntryIds, isEmpty);

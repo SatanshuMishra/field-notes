@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
 
-enum IconStickerGlyph { gear, soundOn, soundOff }
+enum IconStickerGlyph { gear, soundOn, soundOff, edit, trash }
 
 const double _buttonExtent = 30;
 const double _glyphExtent = 15;
@@ -49,6 +49,14 @@ const List<Offset> _speakerOutline = <Offset>[
   Offset(13, 5),
   Offset(8, 9),
 ];
+
+const List<Offset> _editNib = <Offset>[
+  Offset(4, 17),
+  Offset(12, 6),
+  Offset(20, 17),
+];
+
+const Radius _trashCorner = Radius.circular(1);
 
 class IconStickerButton extends StatelessWidget {
   const IconStickerButton({
@@ -149,6 +157,10 @@ class IconStickerGlyphPainter extends CustomPainter {
         return _soundOn();
       case IconStickerGlyph.soundOff:
         return _soundOff();
+      case IconStickerGlyph.edit:
+        return _edit();
+      case IconStickerGlyph.trash:
+        return _trash();
     }
   }
 
@@ -173,6 +185,27 @@ class IconStickerGlyphPainter extends CustomPainter {
     ..lineTo(17, 15);
 
   Path _speaker() => Path()..addPolygon(_speakerOutline, true);
+
+  Path _edit() => Path()
+    ..addPolygon(_editNib, false)
+    ..moveTo(6, 20)
+    ..lineTo(18, 20);
+
+  Path _trash() => Path()
+    ..moveTo(4, 7)
+    ..lineTo(20, 7)
+    ..moveTo(9, 7)
+    ..lineTo(9, 5)
+    ..arcToPoint(const Offset(10, 4), radius: _trashCorner)
+    ..lineTo(14, 4)
+    ..arcToPoint(const Offset(15, 5), radius: _trashCorner)
+    ..lineTo(15, 7)
+    ..moveTo(6, 7)
+    ..lineTo(7, 20)
+    ..arcToPoint(const Offset(8, 21), radius: _trashCorner, clockwise: false)
+    ..lineTo(16, 21)
+    ..arcToPoint(const Offset(17, 20), radius: _trashCorner, clockwise: false)
+    ..lineTo(18, 7);
 
   @override
   bool shouldRepaint(covariant IconStickerGlyphPainter oldDelegate) =>
