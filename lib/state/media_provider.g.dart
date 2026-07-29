@@ -83,4 +83,4 @@ final class MediaStoreProvider
   }
 }
 
-String _$mediaStoreHash() => r'61df1c81042bb65f7c10e196a8b6be851d85654a';
+String _$mediaStoreHash() => r'6290792949e6f4ccf0569bf76cb05b37fbf70008';
