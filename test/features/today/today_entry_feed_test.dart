@@ -120,7 +120,8 @@ void main() {
       overrides: _overrides(entries: Stream<List<Entry>>.value(const <Entry>[])),
     );
 
-    expect(find.text('Nothing captured yet today.'), findsOneWidget);
+    expect(find.text(todayFeedEmptyHeadline), findsOneWidget);
+    expect(find.text(todayFeedEmptyMessage), findsOneWidget);
     expect(find.byType(EntryCard), findsNothing);
   });
 
