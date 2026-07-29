@@ -9,36 +9,37 @@ completion_criteria:
   - No dialog renders Flutter's yellow double-underline debug style (MSP A3)
   - The Today screen, right rail, nav rail, flower set, mood picker and capture surfaces are human-confirmed against the prototype on macOS hardware
   - OQ-3 and OQ-6 are answered or explicitly closed as out of scope
-next_step: Cut a B2-B4 execution slice with a NEW sourcePrefix and land it on main before dispatching. Run 3 died on a stale-branch collision caused by reusing `msp-cluster-b`; a new slice fixes the collision, the poisoned manifest, and the duplicate-B1 risk in one move. Deleting the stale `msp-cluster-b/*` task branches is the cheaper alternative but leaves the manifest dirty.
+next_step: Run the §5.4 macOS visual pass — Today, Calendar, Garden, Search, Settings on desktop plus the phone shell — via `flutter run -d macos`, never the standalone binary. It is the gate before Cluster C and the only check Cluster B has left; there is no golden coverage until H1 and the app cannot be agent-driven here. Then dispatch Cluster C, checking `refs/mitosis/*` for stranded artifacts first.
 branch: main
 ---
 
 ## Status
-**CLUSTER B IS ONE-QUARTER SHIPPED AFTER THREE DISPATCHES.** B1 merged as #62; `main` is `9a53222`. B2, B3 and B4 are all unshipped. Run 1 parked B2 at `ship` (no `builtSha`, root-caused to a classifier-blocked checkpoint-push agent); run 2 re-executed B2 and halted at `execute` on an unactivated Serena; run 3 completed after hand-off and halted at `execute` again — NOT on Serena, but on a stale-branch collision: `git worktree add` failed because the `msp-cluster-b/b2-rail-geometry-lockup/task-task-1` branch survived from runs 1-2. 6 of the parent spec's 39 MSPs are shipped. Three runs cost ~8.1M subagent tokens for one MSP.
+**CLUSTER B IS COMPLETE.** B1-B4 merged as #62/#63/#64/#65; `main` is `3786ac8`. 9 of the parent spec's 39 MSPs are shipped (A1-A5, B1-B4). The fourth mitosis dispatch was never needed: `refs/mitosis/55d6da7a/b3-nav-states-icons` at `54fd9ef` already held B2 AND B3 complete and rebased onto post-B1 main, so both were recovered, validated locally and hand-shipped. Only B4 lacked an artifact; it took one `implementer` dispatch. Cluster B's remaining gate is the §5.4 human macOS visual pass, which has not been run.
 
 ## Active Goal
 Align the shipped Flutter app with the Claude Design prototype's aesthetic without regressing any app-only capability, above all the video playback stack.
 
 ## Next Step
-Read run 3's outcome first — it is the only thing that can have changed since hand-off. If it shipped B2-B4, validate each PR head locally with `fullValidationCmd` before merging. If it blocked on Serena again, stop requiring Serena semantic discovery on this Dart repo rather than re-activating. If it parked elsewhere, cut a fresh B2-B4 slice rather than re-dispatching the same manifest a fourth time.
+Run the §5.4 macOS visual pass. It is Cluster B's only remaining gate and cannot be delegated — the app is not agent-drivable here (a backgrounded `flutter run` loses stdin and dies; the VM-service screenshot path is unavailable). Use `flutter run -d macos`, never the standalone binary, which renders a black window. Then Cluster C.
 
 ## Open Risks
-- **B2's approved work is unshipped and unvalidated.** The user approved shipping tip `97d91a8` as-is; the engine has no approve input, so the approval never took effect. `97d91a8` is `+21/-5` in `sidebar_shell.dart`, inside the fence, and no Dart has ever run against it.
-- **The checkpoint-push classifier block recurs on every cluster C-H** until `mitosis.js:4586` stops authorizing an unconfirmed `--force-with-lease`. It nulls `builtSha` run-wide.
-- **Serena activation is a partial, unverified fix** — it reported no language backend for Dart. See decisions/2026-07-28-mitosis-requires-serena-activation.md.
-- **B4 has no durable checkpoint ref** (its push was the blocked one); its relaunch behavior is unpredictable.
-- Run 2 ran `git reset --hard origin/main` on the b2 integration worktree without a clean-status check. Checked: no durable loss, all three checkpoint refs intact. Watch for it again.
-- **`sourcePrefix` and the manifest were deliberately not rotated for run 3** — wiping the manifest would re-execute merged B1 into a duplicate PR. Only `worktreeRoot` rotated.
-- **`.mitosis/run.json` is JSONL**, one record per line; the pretty-print warning in decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md does not describe it. Do not "fix" it.
-- A2 and A4's app-wide blast radius was never walked (Calendar, Garden, Search, Day Detail, Settings). Cluster B's §5.4 five-screen desktop pass is the natural place to catch it.
-- The five A3 dialogs were never separately opened. The slice's ~40 inherited citations are unverified beyond three spot-checks — §7 says re-open rather than trust.
+- **The §5.4 macOS visual pass is UNRUN and is the gate before Cluster C.** Cluster B is the chrome framing every screen and there is no automated pixel net until H1. Check the panel wash and corner glow, the 42px title bar with centred caption, the 216px rail, the peony and two-line wordmark, the active/inactive treatment on each of the four destinations in turn, and the footer strip with Settings open (gear terracotta) and sound toggled both ways. The streak card is expected to look unfinished — it is C1's, not a Cluster B defect.
+- **A live phone bug, found in passing and NOT fixed:** `lib/features/settings/sections/sync_storage_section.dart:115` overflows 219px at 440px width. Proven pre-existing at `54fd9ef`. `app_shell_test.dart` only passed because `appSettingsProvider` resolved late and `SettingsScreen` rendered its loading placeholder — any earlier subscription exposes it. Chip `task_31a15276`.
+- **Two committed `.g.dart` files are stale** (`settings_providers.g.dart`, `media_provider.g.dart`), so every `build_runner` run yields hash churn. Chip `task_c1e65dae`.
+- **The four `integration_test/` flows (§5.3 gate 3) have never been run** — `fullValidationCmd` does not include them.
+- **CI is not evidence.** Neither GitHub check runs a Dart test. All four Cluster B MSPs were gated on local `fullValidationCmd` runs only.
+- **The checkpoint-push classifier block will recur on any future mitosis run** until `mitosis.js:4586` stops authorizing an unconfirmed `--force-with-lease`. It nulls `builtSha` run-wide. It is why B2-B4 stranded.
+- **Serena activation is a partial, unverified fix** — it reported no language backend for Dart, and no run has since reached semantic discovery. See decisions/2026-07-28-mitosis-requires-serena-activation.md.
+- **Superseded branches left on origin, not deleted:** `feat/b3-nav-states-icons`, `feat/b4-rail-footer-state`, plus 14 stale `msp-cluster-b/*`. Harmless now; deletion needs explicit confirmation.
+- **`.mitosis/run.json` is JSONL**, one record per line, now 15 lines; the pretty-print warning in decisions/2026-07-16-manifest-fold-defect-and-batch-scoping.md does not describe it. Do not "fix" it.
+- A2 and A4's app-wide blast radius was never walked (Calendar, Garden, Search, Day Detail, Settings). The §5.4 pass is the natural place to catch it.
+- The five A3 dialogs were never separately opened. The slice's ~40 inherited citations are unverified beyond spot-checks — §7 says re-open rather than trust. B4's implementer re-verified its four cited lines and found no drift.
 - **`receipts.yml` has UNPINNED actions** including third-party `shaheershoaib/receipts/enforcer@main` running with the workflow token. Chip `task_e10f4f7e`.
-- **CI is not evidence.** Neither GitHub check runs a Dart test; #62 merged without `fullValidationCmd` ever running against it.
-- Do NOT edit a spec mid-run — `specContentHash` binds the resume record. Fetch before reporting divergence. With H1 undispatched there is no golden coverage.
-- `pr-title-lint` passed clean on #62; the long-standing prediction that Cluster B would park red on it did not materialise.
-- OQ-3 and OQ-6 unanswered; neither touches Cluster B. OQ-1 binds B4 and IS resolved.
+- Do NOT edit a spec mid-run — `specContentHash` binds the resume record.
+- OQ-3 and OQ-6 unanswered; neither touched Cluster B. OQ-1 bound B4 and IS resolved — truthful sync copy shipped.
 
 ## Key Decisions
+- decisions/2026-07-28-recover-stranded-checkpoints-over-redispatch.md — recover finished work from `refs/mitosis/*` and hand-ship it; never re-dispatch mitosis to re-implement what already exists. A single remaining MSP is not mitosis-shaped
 - decisions/2026-07-28-parked-ship-resumes-by-re-execution.md — a park at `ship` resumes by full re-execution, not checkpoint restore; the engine has no approve input; never wipe run.json to force a clean run
 - decisions/2026-07-28-mitosis-requires-serena-activation.md — activate Serena before any mitosis dispatch; the fix is partial and Dart may be unsupported
 - decisions/2026-07-27-shared-file-cluster-serializes.md — a shared file across a cluster's MSPs is a hard dependency edge, declared in the slice, not inferred by the engine
@@ -68,5 +69,6 @@ Read run 3's outcome first — it is the only thing that can have changed since 
 - Durable checkpoints on origin under `refs/mitosis/55d6da7a/` — b1 `749ed67`, b2 `97d91a8` (B2's approved artifact), b3 `54fd9ef`; b4 has none
 
 ## Recent Sessions
+- sessions/2026-07-28-02-prototype-design-alignment.md
 - sessions/2026-07-28-01-prototype-design-alignment.md
 - sessions/2026-07-27-08-prototype-design-alignment.md
