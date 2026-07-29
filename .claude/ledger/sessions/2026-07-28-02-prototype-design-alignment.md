@@ -51,7 +51,9 @@ Nothing in flight from this thread. Two spawned chip sessions run independently:
 - **WIP:** `post-ship-hardening` remains paused and unrelated. Surfaced for disposition, not auto-closed.
 
 ## Cleanup (session tail)
-PR #66 merged (`3cdda5c`); the `task_c1e65dae` codegen chip landed as #67 (`c22cf1f`), so the stale `.g.dart` risk is CLOSED. `main` is `c22cf1f`.
+PR #66 merged (`3cdda5c`); the `task_c1e65dae` codegen chip landed as #67 (`c22cf1f`), so the stale `.g.dart` risk is CLOSED; the ledger closeout merged as #68 (`f804e97`). **Final state: `main` is `f804e97`, zero open PRs, no stray branches.**
+
+Cap enforcement at this hand-off: PROJECT.md sat exactly at its 80-line cap, so `decisions/2026-07-26-day-detail-shrinkwrap-option-b.md` was demoted from the Active Decisions index to make room for `decisions/2026-07-28-stacked-msps-ship-sequentially.md`. The demoted record belongs to the closed `video-card-playback-controls` thread; its file remains on disk unchanged and is pointed to from PROJECT.md's demotion line. Its content: MSP 3's blocking Step 0 ruled `shrinkWrap: true` shrink-to-fit (Option B); bounded-position shrinkWrap virtualizes with no scroll wobble (`viewport.dart:2116-2119`, `:2153-2158`), so the spec's blanket rejection is scoped by amendment to unbounded positions; the prior wobble claim was false and had biased the brief toward the regressing option.
 
 Deleted, local and remote: `chore/ledger-handoff-session-14`, `feat/b2-rail-geometry-lockup`, `feat/b3-nav-item-states`, `feat/b4-rail-footer`, `feat/b3-nav-states-icons`, `feat/b4-rail-footer-state`. Removed the two session worktrees `.fireplace-b3` and `.fireplace-b4`.
 
