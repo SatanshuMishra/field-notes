@@ -67,8 +67,23 @@ const BoxDecoration _changePillDecoration = BoxDecoration(
   borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusPill)),
 );
 
-const EdgeInsets _changePillPadding =
+const BoxDecoration _choosePillDecoration = BoxDecoration(
+  color: Palette.coral,
+  border: Border.fromBorderSide(
+    BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
+  ),
+  borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusPill)),
+);
+
+const EdgeInsets _moodPillPadding =
     EdgeInsets.symmetric(vertical: 6, horizontal: 13);
+
+final TextStyle _choosePillLabelStyle =
+    TypographyTokens.caption11Sans.copyWith(color: Palette.onAccent);
+
+const double _promptBloomOpacity = 0.5;
+
+const double _promptBloomSize = 46;
 
 class _MoodChangePill extends StatelessWidget {
   const _MoodChangePill({required this.label, required this.onTap});
@@ -91,11 +106,28 @@ class _MoodChangePill extends StatelessWidget {
           child: DecoratedBox(
             decoration: _changePillDecoration,
             child: Padding(
-              padding: _changePillPadding,
+              padding: _moodPillPadding,
               child: Text(label, style: TypographyTokens.caption11Sans),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _MoodChoosePill extends StatelessWidget {
+  const _MoodChoosePill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: _choosePillDecoration,
+      child: Padding(
+        padding: _moodPillPadding,
+        child: Text(label, style: _choosePillLabelStyle),
       ),
     );
   }
@@ -118,11 +150,33 @@ class _MoodPrompt extends StatelessWidget {
         child: CustomPaint(
           painter: const MoodPromptBorderPainter(),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
-            child: Text(
-              text,
-              textAlign: TextAlign.center,
-              style: TypographyTokens.dateSerif,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: <Widget>[
+                const Opacity(
+                  opacity: _promptBloomOpacity,
+                  child: FlowerBloom(
+                    kind: FlowerKind.peony,
+                    size: _promptBloomSize,
+                  ),
+                ),
+                const SizedBox(width: _moodBannerGap),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(text, style: TypographyTokens.bannerSerif),
+                      Text(
+                        "tap to plant today's bloom",
+                        style: TypographyTokens.promptAccent,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: _moodBannerGap),
+                const _MoodChoosePill(label: 'choose'),
+              ],
             ),
           ),
         ),
