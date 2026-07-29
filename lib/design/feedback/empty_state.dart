@@ -4,28 +4,39 @@ import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
 
+const double _headlineGap = 3;
+
 class EmptyStatePlaceholder extends StatelessWidget {
   const EmptyStatePlaceholder({
     super.key,
     required this.message,
+    this.headline,
     this.icon,
     this.action,
     this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
     this.borderColor = Palette.ink,
+    this.borderRadius = Shapes.radiusMd,
+    this.headlineStyle,
     this.messageStyle,
   });
 
   final String message;
+  final String? headline;
   final Widget? icon;
   final Widget? action;
   final EdgeInsetsGeometry padding;
   final Color borderColor;
+  final double borderRadius;
+  final TextStyle? headlineStyle;
   final TextStyle? messageStyle;
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: DashedBorderPainter(color: borderColor),
+      painter: DashedBorderPainter(
+        color: borderColor,
+        radius: borderRadius,
+      ),
       child: Padding(
         padding: padding,
         child: Column(
@@ -35,6 +46,14 @@ class EmptyStatePlaceholder extends StatelessWidget {
             if (icon != null) ...<Widget>[
               icon!,
               const SizedBox(height: 12),
+            ],
+            if (headline != null) ...<Widget>[
+              Text(
+                headline!,
+                textAlign: TextAlign.center,
+                style: headlineStyle ?? TypographyTokens.sectionSerif,
+              ),
+              const SizedBox(height: _headlineGap),
             ],
             Text(
               message,
