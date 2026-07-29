@@ -21,6 +21,13 @@ const double _headerGap = 4;
 const double _actionGap = 8;
 const int _maxEpochMs = 8640000000000000;
 
+const double _tiltOddDegrees = -0.5;
+const double _tiltEvenDegrees = 0.4;
+const EdgeInsets _cardPadding =
+    EdgeInsets.symmetric(vertical: 13, horizontal: 15);
+const BorderRadius _cardBorderRadius =
+    BorderRadius.all(Radius.circular(Shapes.radiusMd));
+
 class EntryCard extends StatelessWidget {
   const EntryCard({
     super.key,
@@ -49,6 +56,10 @@ class EntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return StickerCard(
       surface: surface,
+      borderRadius: _cardBorderRadius,
+      shadow: Shadows.cardDefault,
+      padding: _cardPadding,
+      rotationDegrees: _tiltDegrees(entry.id),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -56,13 +67,17 @@ class EntryCard extends StatelessWidget {
           _header(),
           const SizedBox(height: _headerGap),
           _body(),
-          if (photos.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 12),
+          if (photos.isNotEmpty)
             InlinePhotoStrip(photos: photos, resolver: resolver),
-          ],
         ],
       ),
     );
+  }
+
+  double _tiltDegrees(String id) {
+    final int codeUnitSum =
+        id.codeUnits.fold<int>(0, (int total, int unit) => total + unit);
+    return codeUnitSum.isOdd ? _tiltOddDegrees : _tiltEvenDegrees;
   }
 
   Widget _header() {
