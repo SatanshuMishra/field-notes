@@ -27,6 +27,7 @@ const List<String> _weekdayNames = <String>[
 
 const int _afternoonHour = 12;
 const int _eveningHour = 17;
+const int _nightHour = 21;
 
 String greetingFor(DateTime moment) {
   final int hour = moment.toLocal().hour;
@@ -36,14 +37,21 @@ String greetingFor(DateTime moment) {
   if (hour < _eveningHour) {
     return 'Good afternoon';
   }
-  return 'Good evening';
+  if (hour < _nightHour) {
+    return 'Good evening';
+  }
+  return 'Good night';
 }
 
-String longDateLabel(DateTime moment) {
+String headerDateLabel(DateTime moment) {
   final DateTime local = moment.toLocal();
   final String weekday = _weekdayNames[local.weekday - 1];
   final String month = _monthNames[local.month - 1];
-  return '$weekday, $month ${local.day}, ${local.year}';
+  return '$weekday, $month ${local.day}';
+}
+
+String longDateLabel(DateTime moment) {
+  return '${headerDateLabel(moment)}, ${moment.toLocal().year}';
 }
 
 String shortWeekdayLabel(DateTime moment) {

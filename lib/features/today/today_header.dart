@@ -18,8 +18,8 @@ class TodayHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(greeting, style: TypographyTokens.pageEyebrowAccent),
-        const SizedBox(height: 4),
-        Text(longDate, style: TypographyTokens.displaySerif),
+        const SizedBox(height: 1),
+        Text(longDate, style: TypographyTokens.displaySerifToday),
       ],
     );
   }
