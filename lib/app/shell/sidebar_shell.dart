@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../design/flowers/flowers.dart';
 import '../../design/icons/nav_icons.dart';
 import '../../design/tokens/tokens.dart';
+import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/mood/flower_kind.dart';
 import 'shell_destination.dart';
@@ -16,6 +17,7 @@ class SidebarShell extends StatelessWidget {
     required this.onSound,
     required this.streak,
     required this.body,
+    this.soundOn = true,
   });
 
   final List<ShellDestination> destinations;
@@ -24,6 +26,7 @@ class SidebarShell extends StatelessWidget {
   final VoidCallback onSound;
   final Widget streak;
   final Widget body;
+  final bool soundOn;
 
   @override
   Widget build(BuildContext context) {
@@ -125,37 +128,59 @@ class SidebarShell extends StatelessWidget {
             const Spacer(),
             streak,
             const SizedBox(height: 12),
-            StickerButton(
-              key: const ValueKey<String>('settings-button'),
-              label: 'Settings',
-              variant: StickerButtonVariant.secondary,
-              icon: const Icon(
-                Icons.settings_outlined,
-                size: 16,
-                color: Palette.ink,
-              ),
-              onPressed: () => onSelect(ShellDestination.settings),
-            ),
-            const SizedBox(height: 8),
-            StickerButton(
-              key: const ValueKey<String>('sound-button'),
-              label: 'Sound',
-              variant: StickerButtonVariant.secondary,
-              icon: const Icon(
-                Icons.volume_up_outlined,
-                size: 16,
-                color: Palette.ink,
-              ),
-              onPressed: onSound,
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'On this device only',
-              style: TypographyTokens.captionSans,
-            ),
+            _footer(),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _footer() {
+    final bool settingsSelected = selected == ShellDestination.settings;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        IconStickerButton(
+          key: const ValueKey<String>('settings-button'),
+          glyph: IconStickerGlyph.gear,
+          glyphColor: settingsSelected ? Palette.onAccent : Palette.ink,
+          background: settingsSelected ? Palette.coral : Palette.cardLight,
+          semanticLabel: ShellDestination.settings.label,
+          onPressed: () => onSelect(ShellDestination.settings),
+        ),
+        const SizedBox(width: _footerGap),
+        IconStickerButton(
+          key: const ValueKey<String>('sound-button'),
+          glyph: soundOn ? IconStickerGlyph.soundOn : IconStickerGlyph.soundOff,
+          glyphColor: Palette.ink,
+          background: soundOn ? Palette.cardLight : Palette.cardWarm,
+          semanticLabel: soundOn ? _soundOnLabel : _soundOffLabel,
+          onPressed: onSound,
+        ),
+        const SizedBox(width: _footerGap),
+        Flexible(child: _syncCaption()),
+      ],
+    );
+  }
+
+  Widget _syncCaption() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          _syncPrimaryCopy,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _syncPrimaryStyle,
+        ),
+        Text(
+          _syncSecondaryCopy,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _syncSecondaryStyle,
+        ),
+      ],
     );
   }
 
@@ -204,6 +229,19 @@ class SidebarShell extends StatelessWidget {
 const BorderRadius _navItemRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
 );
+
+const double _footerGap = 9;
+const double _syncLineHeight = 1.15;
+const String _syncPrimaryCopy = 'Stored locally';
+const String _syncSecondaryCopy = 'on this device only';
+const String _soundOnLabel = 'Sound effects on';
+const String _soundOffLabel = 'Sound effects off';
+
+final TextStyle _syncPrimaryStyle =
+    TypographyTokens.syncPrimarySans.copyWith(height: _syncLineHeight);
+
+final TextStyle _syncSecondaryStyle =
+    TypographyTokens.syncSecondarySans.copyWith(height: _syncLineHeight);
 
 const double _panelGlowBaseRadius = 0.5;
 const double _panelGlowExtentX = 1.2;
