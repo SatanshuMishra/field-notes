@@ -127,7 +127,7 @@ class SidebarShell extends StatelessWidget {
             for (final ShellDestination d in destinations) _railItem(d),
             const Spacer(),
             streak,
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             _footer(),
           ],
         ),
