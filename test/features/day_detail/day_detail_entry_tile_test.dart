@@ -5,12 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_entry_tile.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/state/state.dart';
 
 import 'support/day_detail_harness.dart';
+
+Finder _tileAction(String label) => find.byWidgetPredicate(
+      (Widget widget) =>
+          widget is IconStickerButton && widget.semanticLabel == label,
+    );
 
 Widget _tileApp({
   required FakeJournalRepository repository,
@@ -61,9 +67,9 @@ void main() {
 
     expect(find.text('a good day'), findsOneWidget);
 
-    await tester.tap(find.text('Edit'));
+    await tester.tap(_tileAction(entryEditLabel));
     await tester.pump();
-    await tester.tap(find.text('Delete'));
+    await tester.tap(_tileAction(entryDeleteLabel));
     await tester.pump();
 
     expect(edits, 1);
@@ -89,8 +95,8 @@ void main() {
     await tester.pump();
 
     expect(isEditableEntry(entry), isFalse);
-    expect(find.text('Edit'), findsNothing);
-    expect(find.text('Delete'), findsOneWidget);
+    expect(_tileAction(entryEditLabel), findsNothing);
+    expect(_tileAction(entryDeleteLabel), findsOneWidget);
   });
 
   testWidgets('attached photos render inline', (WidgetTester tester) async {

@@ -1,7 +1,9 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
@@ -9,6 +11,11 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'support/entry_cards_harness.dart';
 import 'support/fake_audio_player.dart';
 import 'support/fake_video_player.dart';
+
+Finder cardAction(String label) => find.byWidgetPredicate(
+      (Widget widget) =>
+          widget is IconStickerButton && widget.semanticLabel == label,
+    );
 
 void main() {
   group('EntryCard', () {
@@ -28,7 +35,7 @@ void main() {
       expect(find.byType(StickerCard), findsOneWidget);
       expect(find.byType(NoteBody), findsOneWidget);
       expect(find.text('hello world'), findsOneWidget);
-      expect(find.text('Note'), findsOneWidget);
+      expect(find.text('NOTE'), findsOneWidget);
     });
 
     testWidgets('renders the inline photo strip when photos are attached',
@@ -65,11 +72,11 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.widgetWithText(StickerButton, 'Edit'), findsOneWidget);
-      expect(find.widgetWithText(StickerButton, 'Delete'), findsOneWidget);
+      expect(cardAction(entryEditLabel), findsOneWidget);
+      expect(cardAction(entryDeleteLabel), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(StickerButton, 'Edit'));
-      await tester.tap(find.widgetWithText(StickerButton, 'Delete'));
+      await tester.tap(cardAction(entryEditLabel));
+      await tester.tap(cardAction(entryDeleteLabel));
       expect(edits, 1);
       expect(deletes, 1);
     });
@@ -87,7 +94,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(StickerButton), findsNothing);
+      expect(find.byType(IconStickerButton), findsNothing);
     });
 
     testWidgets('dispatches a voice entry to VoiceBody with its factory',
@@ -115,7 +122,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(VoiceBody), findsOneWidget);
-      expect(find.text('Voice note'), findsOneWidget);
+      expect(find.text('VOICE'), findsOneWidget);
     });
 
     testWidgets('dispatches a video entry to VideoBody with its factory',
@@ -143,7 +150,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(VideoBody), findsOneWidget);
-      expect(find.text('Video'), findsOneWidget);
+      expect(find.text('VIDEO'), findsOneWidget);
     });
 
     testWidgets(

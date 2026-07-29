@@ -1,4 +1,7 @@
+import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/mood/mood.dart';
+import 'package:field_notes/state/state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +12,33 @@ import 'today_header.dart';
 import 'today_layout.dart';
 import 'today_providers.dart';
 import 'today_right_rail.dart';
+
+const EdgeInsets _feedEyebrowMargin = EdgeInsets.only(top: 18, bottom: 12);
+
+String todayFeedEyebrowLabel(int count) =>
+    'today · $count log${count == 1 ? '' : 's'}';
+
+class TodayFeedEyebrow extends ConsumerWidget {
+  const TodayFeedEyebrow({super.key, required this.date});
+
+  final String date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AsyncValue<List<Entry>> entriesAsync =
+        ref.watch(entriesForDateProvider(date));
+    final bool counted = entriesAsync.hasValue && !entriesAsync.hasError;
+    return Padding(
+      padding: _feedEyebrowMargin,
+      child: counted
+          ? Text(
+              todayFeedEyebrowLabel(entriesAsync.requireValue.length),
+              style: TypographyTokens.sectionHeaderAccent,
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+}
 
 class TodayScreen extends ConsumerWidget {
   const TodayScreen({super.key, this.layout});
@@ -29,7 +59,7 @@ class TodayScreen extends ConsumerWidget {
         TodayHeader(greeting: greetingFor(now), longDate: longDateLabel(now)),
         const SizedBox(height: 20),
         MoodBannerForDate(date: date),
-        const SizedBox(height: 20),
+        TodayFeedEyebrow(date: date),
         TodayEntryFeed(date: date),
       ],
     );
