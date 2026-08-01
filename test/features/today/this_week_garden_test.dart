@@ -1,8 +1,11 @@
+import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/today/this_week_garden.dart';
 import 'package:field_notes/features/today/today_week.dart';
+import 'package:field_notes/state/shell_navigation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/today_harness.dart';
@@ -46,6 +49,20 @@ void main() {
 
     expect(find.bySemanticsLabel('Sun, ${Mood.values[0].label}'), findsOneWidget);
     expect(find.bySemanticsLabel('Mon, no mood'), findsOneWidget);
+  });
+
+  testWidgets('tapping a day opens the calendar destination',
+      (WidgetTester tester) async {
+    await pumpToday(tester, ThisWeekGarden(cells: _cells()));
+
+    final ProviderContainer container =
+        ProviderScope.containerOf(tester.element(find.byType(ThisWeekGarden)));
+    expect(container.read(shellNavigationProvider), ShellDestination.today);
+
+    await tester.tap(find.text('Mon'));
+    await tester.pump();
+
+    expect(container.read(shellNavigationProvider), ShellDestination.calendar);
   });
 
   testWidgets('marks today with the coral accent', (WidgetTester tester) async {
