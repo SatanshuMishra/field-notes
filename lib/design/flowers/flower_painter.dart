@@ -8,31 +8,50 @@ import 'bloom_style.dart';
 import 'flower_spec.dart';
 
 class FlowerPainter extends CustomPainter {
-  const FlowerPainter(this.spec);
+  const FlowerPainter(this.spec, {this.headless = false});
+
+  static const double viewBox = 44;
 
   final FlowerSpec spec;
+  final bool headless;
 
   @override
   void paint(Canvas canvas, Size size) {
     final double d = size.shortestSide;
+    if (headless) {
+      canvas.save();
+      canvas.translate((size.width - d) / 2, (size.height - d) / 2);
+      canvas.clipRect(Rect.fromLTWH(0, 0, d, d));
+      canvas.scale(d / viewBox);
+      _paintBloom(
+        canvas,
+        const Size(viewBox, viewBox),
+        const Offset(viewBox / 2, viewBox / 2),
+        viewBox,
+      );
+      canvas.restore();
+      return;
+    }
     final Offset center = Offset(size.width / 2, size.height * 0.42);
+    if (spec.style != BloomStyle.heartPendants) {
+      _straightStem(canvas, size, center, d, _stroke(d));
+    }
+    _paintBloom(canvas, size, center, d);
+  }
+
+  void _paintBloom(Canvas canvas, Size size, Offset center, double d) {
     final Paint stroke = _stroke(d);
     switch (spec.style) {
       case BloomStyle.roundPetals:
       case BloomStyle.broadPetals:
-        _straightStem(canvas, size, center, d, stroke);
         _paintRadial(canvas, center, d, stroke, rounded: true);
       case BloomStyle.rayPetals:
-        _straightStem(canvas, size, center, d, stroke);
         _paintRadial(canvas, center, d, stroke, rounded: false);
       case BloomStyle.spiderPetals:
-        _straightStem(canvas, size, center, d, stroke);
         _paintSpider(canvas, center, d, stroke);
       case BloomStyle.spike:
-        _straightStem(canvas, size, center, d, stroke);
         _paintSpike(canvas, center, d, stroke);
       case BloomStyle.puff:
-        _straightStem(canvas, size, center, d, stroke);
         _paintPuff(canvas, center, d, stroke);
       case BloomStyle.heartPendants:
         _paintHearts(canvas, size, d, stroke);
@@ -40,9 +59,9 @@ class FlowerPainter extends CustomPainter {
   }
 
   Paint _stroke(double d) => Paint()
-    ..color = Palette.ink
+    ..color = spec.strokeColor
     ..style = PaintingStyle.stroke
-    ..strokeWidth = math.max(Shapes.outlineWidth, d * 0.03)
+    ..strokeWidth = spec.strokeWidth * d / viewBox
     ..strokeJoin = StrokeJoin.round
     ..strokeCap = StrokeCap.round;
 
@@ -232,5 +251,5 @@ class FlowerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant FlowerPainter oldDelegate) =>
-      oldDelegate.spec.kind != spec.kind;
+      oldDelegate.spec != spec || oldDelegate.headless != headless;
 }
