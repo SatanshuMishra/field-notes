@@ -104,6 +104,6 @@ void main() {
     expect(find.text('Record voice'), findsOneWidget);
     expect(find.text('Record video'), findsOneWidget);
     expect(find.text('on this day'), findsOneWidget);
-    expect(find.text('1 year ago'), findsOneWidget);
+    expect(find.text('memory · 1 year ago'), findsOneWidget);
   });
 }

@@ -25,6 +25,8 @@ const List<String> _weekdayNames = <String>[
   'Sunday',
 ];
 
+const int _monthAbbreviationLength = 3;
+
 const int _afternoonHour = 12;
 const int _eveningHour = 17;
 const int _nightHour = 21;
@@ -52,6 +54,13 @@ String headerDateLabel(DateTime moment) {
 
 String longDateLabel(DateTime moment) {
   return '${headerDateLabel(moment)}, ${moment.toLocal().year}';
+}
+
+String shortDateLabel(DateTime moment) {
+  final DateTime local = moment.toLocal();
+  final String month =
+      _monthNames[local.month - 1].substring(0, _monthAbbreviationLength);
+  return '$month ${local.day}, ${local.year}';
 }
 
 String shortWeekdayLabel(DateTime moment) {
