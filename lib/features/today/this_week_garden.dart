@@ -1,8 +1,11 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/state/shell_navigation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'today_date.dart';
 import 'today_week.dart';
@@ -139,20 +142,34 @@ class ThisWeekGarden extends StatelessWidget {
   }
 }
 
-class _WeekCell extends StatelessWidget {
+class _WeekCell extends ConsumerWidget {
   const _WeekCell({required this.cell, required this.bloomSize});
 
   final TodayWeekCell cell;
   final double bloomSize;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final Mood? mood = cell.mood;
+    void openCalendar() {
+      ref.read(shellNavigationProvider.notifier).select(
+            ShellDestination.calendar,
+          );
+    }
+
     return Semantics(
+      button: true,
+      onTap: openCalendar,
       label: mood == null
           ? '${cell.weekdayLabel}, no mood'
           : '${cell.weekdayLabel}, ${mood.label}',
-      child: ExcludeSemantics(child: _tile(mood)),
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: openCalendar,
+          child: _tile(mood),
+        ),
+      ),
     );
   }
 

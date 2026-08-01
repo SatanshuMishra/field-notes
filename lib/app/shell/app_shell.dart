@@ -7,6 +7,7 @@ import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today.dart';
+import 'package:field_notes/state/shell_navigation.dart';
 
 import 'bottom_bar_shell.dart';
 import 'shell_content.dart';
@@ -25,10 +26,8 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
-  ShellDestination _selected = ShellDestination.today;
-
   void _select(ShellDestination destination) {
-    setState(() => _selected = destination);
+    ref.read(shellNavigationProvider.notifier).select(destination);
   }
 
   Future<void> _openCapture() async {
@@ -47,7 +46,8 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   Widget build(BuildContext context) {
     final ShellLayout layout = resolveShellLayout(Theme.of(context).platform);
-    final Widget body = ShellContent(destination: _selected);
+    final ShellDestination selected = ref.watch(shellNavigationProvider);
+    final Widget body = ShellContent(destination: selected);
     final VoidCallback onCapture = widget.onCapturePressed ?? _openCapture;
     final VoidCallback onSound = widget.onSoundPressed ?? _toggleSound;
 
@@ -55,7 +55,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       case ShellLayout.sidebar:
         return SidebarShell(
           destinations: ShellDestination.primary,
-          selected: _selected,
+          selected: selected,
           onSelect: _select,
           onSound: onSound,
           soundOn: ref.watch(soundEnabledProvider),
@@ -65,7 +65,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       case ShellLayout.bottomBar:
         return BottomBarShell(
           destinations: ShellDestination.primary,
-          selected: _selected,
+          selected: selected,
           onSelect: _select,
           onCapture: onCapture,
           body: body,
