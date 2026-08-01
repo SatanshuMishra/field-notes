@@ -12,6 +12,7 @@ class FlowerPainter extends CustomPainter {
   const FlowerPainter(this.spec, {this.headless = false});
 
   static const double viewBox = 44;
+  static const double _headFraction = 0.64;
 
   final FlowerSpec spec;
   final bool headless;
@@ -43,7 +44,16 @@ class FlowerPainter extends CustomPainter {
   void _paintBloom(Canvas canvas, Size size, Offset center, double d) {
     final List<BloomPart>? parts = spec.parts;
     if (parts != null) {
-      _paintParts(canvas, size, parts);
+      if (headless) {
+        _paintPartList(canvas, parts);
+        return;
+      }
+      final double head = d * _headFraction;
+      canvas.save();
+      canvas.translate(center.dx - head / 2, center.dy - head / 2);
+      canvas.scale(head / viewBox);
+      _paintPartList(canvas, parts);
+      canvas.restore();
       return;
     }
     _paintProcedural(canvas, spec.procedural!, size, center, d);
@@ -71,16 +81,10 @@ class FlowerPainter extends CustomPainter {
     }
   }
 
-  void _paintParts(Canvas canvas, Size size, List<BloomPart> parts) {
-    final double d = size.shortestSide;
-    canvas.save();
-    canvas.translate((size.width - d) / 2, (size.height - d) / 2);
-    canvas.clipRect(Rect.fromLTWH(0, 0, d, d));
-    canvas.scale(d / viewBox);
+  void _paintPartList(Canvas canvas, List<BloomPart> parts) {
     for (final BloomPart part in parts) {
       _paintPart(canvas, part);
     }
-    canvas.restore();
   }
 
   void _paintPart(Canvas canvas, BloomPart part) {
