@@ -10,11 +10,11 @@ completion_criteria:
   - The Today screen, right rail, nav rail, flower set, mood picker and capture surfaces are human-confirmed against the prototype on macOS hardware
   - OQ-3 and OQ-6 are answered or explicitly closed as out of scope
 next_step: Compose docs/specs/2026-07-29-prototype-alignment-cluster-d.md from the verified recon in sessions/2026-07-29-02-prototype-design-alignment.md. Format, values, fence, wave graph and both rulings are settled — do NOT re-run the recon. Land it on main, then dispatch D1 alone, then D2/D3/D4 in parallel.
-branch: main `5f51c07`; working branch `docs/cluster-d-slice` at `e70bf25` (ledger only, slice not yet written)
+branch: `origin/main` `5866470` (PR #86 merged `e70bf25`+`41e0da8` as one squash; `docs/cluster-d-slice` is now spent and joins the orphan list). Slice still not written.
 ---
 
 ## Status
-**Cluster C is CLOSED — 16 of the parent spec's 39 MSPs are merged** (A1-A5, B1-B4, C1-C7). `origin/main` is `5f51c07`; zero open PRs. Two MSPs shipped knowingly incomplete: C5's 6px caption (OQ-6) and three of C7's four poster-chrome rows. Cluster D's slice inputs are fully verified but the slice itself is unwritten. Mitosis is excluded for the WHOLE remaining spec.
+**Cluster C is CLOSED — 16 of the parent spec's 39 MSPs are merged** (A1-A5, B1-B4, C1-C7). `origin/main` is `5866470`; zero open PRs. Two MSPs shipped knowingly incomplete: C5's 6px caption (OQ-6) and three of C7's four poster-chrome rows. Cluster D's slice inputs are fully verified but the slice itself is unwritten. Mitosis is excluded for the WHOLE remaining spec.
 
 ## Active Goal
 Align the shipped Flutter app with the Claude Design prototype's aesthetic without regressing any app-only capability, above all the video playback stack.
