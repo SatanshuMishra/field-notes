@@ -31,6 +31,15 @@ void main() {
     });
   });
 
+  group('shortDateLabel', () {
+    test('renders a three-letter month, day and year without the weekday', () {
+      expect(shortDateLabel(DateTime(2024, 7, 5)), 'Jul 5, 2024');
+      expect(shortDateLabel(DateTime(2025, 1, 1)), 'Jan 1, 2025');
+      expect(shortDateLabel(DateTime(2026, 9, 30)), 'Sep 30, 2026');
+      expect(shortDateLabel(DateTime(2024, 12, 31)), 'Dec 31, 2024');
+    });
+  });
+
   group('shortWeekdayLabel', () {
     test('abbreviates to three letters', () {
       expect(shortWeekdayLabel(DateTime(2026, 7, 19)), 'Sun');

@@ -1,5 +1,4 @@
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -17,6 +16,20 @@ const String onThisDayEmptyMessage =
 const String onThisDayErrorMessage = "Couldn't load your past-year memory.";
 
 const double _titleGap = 9;
+const double _bandHeight = 82;
+const double _metaGap = 1;
+const BorderRadius _cardRadius =
+    BorderRadius.all(Radius.circular(Shapes.radiusPill));
+const BorderRadius _bandRadius =
+    BorderRadius.vertical(top: Radius.circular(Shapes.radiusPill));
+const EdgeInsets _cardInsets =
+    EdgeInsets.symmetric(vertical: 9, horizontal: 11);
+
+String _bandCaption(int yearsAgo) => 'memory · ${yearsAgoLabel(yearsAgo)}';
+
+String _metaLabel({required String date, required Mood? mood}) {
+  return mood == null ? date : '$date · felt ${mood.label}';
+}
 
 class OnThisDayCard extends StatelessWidget {
   const OnThisDayCard({
@@ -38,55 +51,53 @@ class OnThisDayCard extends StatelessWidget {
     if (current == null) {
       return _shell(
         title: title,
-        child: EmptyStatePlaceholder(message: emptyMessage),
+        child: Padding(
+          padding: _cardInsets,
+          child: EmptyStatePlaceholder(message: emptyMessage),
+        ),
       );
     }
-    final Mood? mood = current.day.mood;
     final DateTime? moment = parseDateKey(current.day.date);
     final String? previewText = preview;
     return _shell(
       title: title,
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              if (mood != null) ...<Widget>[
-                FlowerBloom.forMood(mood, size: 34),
-                const SizedBox(width: 10),
-              ],
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      yearsAgoLabel(current.yearsAgo),
-                      style: TypographyTokens.labelSans,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      moment == null
-                          ? current.day.date
-                          : longDateLabel(moment),
-                      style: TypographyTokens.captionSans,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (previewText != null && previewText.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 10),
-            Text(
-              previewText,
-              style: TypographyTokens.bodySerifItalic,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+          CrossHatchPlaceholder(
+            height: _bandHeight,
+            borderRadius: _bandRadius,
+            child: Text(
+              _bandCaption(current.yearsAgo),
+              style: TypographyTokens.monoMicroSans,
             ),
-          ],
+          ),
+          Padding(
+            padding: _cardInsets,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                if (previewText != null && previewText.isNotEmpty) ...<Widget>[
+                  Text(
+                    previewText,
+                    style: TypographyTokens.memoryTitleSerif,
+                  ),
+                  const SizedBox(height: _metaGap),
+                ],
+                Text(
+                  _metaLabel(
+                    date: moment == null
+                        ? current.day.date
+                        : shortDateLabel(moment),
+                    mood: current.day.mood,
+                  ),
+                  style: TypographyTokens.caption9Sans,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -99,7 +110,13 @@ class OnThisDayCard extends StatelessWidget {
       children: <Widget>[
         Text(title, style: TypographyTokens.sectionHeaderAccent),
         const SizedBox(height: _titleGap),
-        StickerCard(surface: Palette.cardLight, child: child),
+        StickerCard(
+          surface: Palette.cardWarm,
+          borderRadius: _cardRadius,
+          shadow: Shadows.cardDefault,
+          padding: EdgeInsets.zero,
+          child: ClipRRect(borderRadius: _cardRadius, child: child),
+        ),
       ],
     );
   }
@@ -115,9 +132,12 @@ class OnThisDayRailCard extends ConsumerWidget {
     if (memoryAsync.hasError) {
       return OnThisDayCard._shell(
         title: onThisDayTitle,
-        child: Text(
-          onThisDayErrorMessage,
-          style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+        child: Padding(
+          padding: _cardInsets,
+          child: Text(
+            onThisDayErrorMessage,
+            style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+          ),
         ),
       );
     }

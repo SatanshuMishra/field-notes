@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/today/on_this_day_card.dart';
 import 'package:field_notes/features/today/today_memory.dart';
@@ -13,7 +14,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'support/today_harness.dart';
 
 void main() {
-  testWidgets('renders the memory with years-ago, long date, flower and preview',
+  testWidgets(
+      'renders the memory as a captioned band above a title and meta line',
       (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -27,10 +29,11 @@ void main() {
     );
 
     expect(find.text('on this day'), findsOneWidget);
-    expect(find.text('2 years ago'), findsOneWidget);
-    expect(find.text('Friday, July 19, 2024'), findsOneWidget);
+    expect(find.text('memory · 2 years ago'), findsOneWidget);
+    expect(find.text('Jul 19, 2024 · felt Calm'), findsOneWidget);
     expect(find.text('sun on the deck'), findsOneWidget);
-    expect(find.byType(FlowerBloom), findsOneWidget);
+    expect(find.byType(CrossHatchPlaceholder), findsOneWidget);
+    expect(find.byType(FlowerBloom), findsNothing);
   });
 
   testWidgets('renders an empty state when there is no memory',
@@ -65,7 +68,7 @@ void main() {
       ],
     );
 
-    expect(find.text('1 year ago'), findsOneWidget);
+    expect(find.text('memory · 1 year ago'), findsOneWidget);
     expect(find.text('first light'), findsOneWidget);
   });
 
@@ -97,7 +100,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('1 year ago'), findsOneWidget);
+    expect(find.text('memory · 1 year ago'), findsOneWidget);
   });
 
   testWidgets('the connector surfaces a friendly error when the lookup fails',
