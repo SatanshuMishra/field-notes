@@ -6,4 +6,5 @@ enum BloomStyle {
   spike,
   heartPendants,
   puff,
+  partList,
 }

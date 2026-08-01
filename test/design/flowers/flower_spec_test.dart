@@ -15,17 +15,29 @@ void main() {
     test('every spec carries drawable parameters', () {
       for (final kind in FlowerKind.values) {
         final spec = flowerSpecFor(kind);
-        expect(spec.petalCount, greaterThan(0), reason: kind.name);
-        expect(spec.petalLength, greaterThan(0), reason: kind.name);
-        expect(spec.petalWidth, greaterThan(0), reason: kind.name);
-        expect(spec.centerRadius, greaterThanOrEqualTo(0), reason: kind.name);
+        expect(spec.parts != null || spec.procedural != null, isTrue,
+            reason: kind.name);
+        expect(spec.parts != null && spec.procedural != null, isFalse,
+            reason: kind.name);
+        final parts = spec.parts;
+        if (parts != null) {
+          expect(parts, isNotEmpty, reason: kind.name);
+        }
+        final procedural = spec.procedural;
+        if (procedural != null) {
+          expect(procedural.petalCount, greaterThan(0), reason: kind.name);
+          expect(procedural.petalLength, greaterThan(0), reason: kind.name);
+          expect(procedural.petalWidth, greaterThan(0), reason: kind.name);
+          expect(procedural.centerRadius, greaterThanOrEqualTo(0),
+              reason: kind.name);
+        }
       }
     });
 
     test('only the wilting rose droops', () {
       for (final kind in FlowerKind.values) {
         expect(
-          flowerSpecFor(kind).droop,
+          flowerSpecFor(kind).procedural?.droop ?? false,
           kind == FlowerKind.wiltingRose,
           reason: kind.name,
         );
