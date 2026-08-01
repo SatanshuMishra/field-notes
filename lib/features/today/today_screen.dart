@@ -1,4 +1,5 @@
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/mood/mood.dart';
 import 'package:field_notes/state/state.dart';
@@ -14,6 +15,8 @@ import 'today_providers.dart';
 import 'today_right_rail.dart';
 
 const EdgeInsets _feedEyebrowMargin = EdgeInsets.only(top: 18, bottom: 12);
+
+const double _railSeamThickness = 1.0;
 
 String todayFeedEyebrowLabel(int count) =>
     'today · $count log${count == 1 ? '' : 's'}';
@@ -71,19 +74,25 @@ class TodayScreen extends ConsumerWidget {
           child: main,
         );
       case TodayLayout.withRail:
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(child: main),
-              const SizedBox(width: 24),
-              SizedBox(
-                width: todayRailWidth,
-                child: TodayRightRail(date: date),
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: main,
               ),
-            ],
-          ),
+            ),
+            const DashedDivider(
+              axis: Axis.vertical,
+              thickness: _railSeamThickness,
+              color: Palette.ink22,
+            ),
+            SizedBox(
+              width: todayRailWidth,
+              child: TodayRightRail(date: date),
+            ),
+          ],
         );
     }
   }

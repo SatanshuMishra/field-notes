@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-const double todayRailWidth = 300;
+const double todayRailWidth = 266;
 
 enum TodayLayout { stacked, withRail }
 

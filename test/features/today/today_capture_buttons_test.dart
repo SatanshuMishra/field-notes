@@ -38,7 +38,7 @@ void main() {
       ],
     );
 
-    expect(find.text('Quick capture'), findsOneWidget);
+    expect(find.text('capture a moment'), findsOneWidget);
 
     await tester.tap(find.text('Capture'));
     await tester.pumpAndSettle();

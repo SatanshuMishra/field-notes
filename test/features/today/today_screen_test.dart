@@ -67,8 +67,8 @@ void main() {
     expect(find.text('morning walk'), findsOneWidget);
 
     expect(find.byType(ThisWeekGarden), findsNothing);
-    expect(find.text('Quick capture'), findsNothing);
-    expect(find.text('On this day'), findsNothing);
+    expect(find.text('capture a moment'), findsNothing);
+    expect(find.text('on this day'), findsNothing);
   });
 
   testWidgets('rail layout adds this-week garden, capture buttons and memory',
@@ -84,10 +84,10 @@ void main() {
     expect(find.text('morning walk'), findsOneWidget);
 
     expect(find.byType(ThisWeekGarden), findsOneWidget);
-    expect(find.text('This week'), findsOneWidget);
-    expect(find.text('Quick capture'), findsOneWidget);
+    expect(find.text("this week's garden"), findsOneWidget);
+    expect(find.text('capture a moment'), findsOneWidget);
     expect(find.text('Capture'), findsOneWidget);
-    expect(find.text('On this day'), findsOneWidget);
+    expect(find.text('on this day'), findsOneWidget);
     expect(find.text('1 year ago'), findsOneWidget);
   });
 }

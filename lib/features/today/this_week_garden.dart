@@ -1,17 +1,20 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:flutter/widgets.dart';
 
 import 'today_week.dart';
 
+const String thisWeekGardenTitle = "this week's garden";
+
+const double _titleGap = 2;
+
 class ThisWeekGarden extends StatelessWidget {
   const ThisWeekGarden({
     super.key,
     required this.cells,
-    this.title = 'This week',
+    this.title = thisWeekGardenTitle,
     this.bloomSize = 26,
   });
 
@@ -21,23 +24,20 @@ class ThisWeekGarden extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StickerCard(
-      surface: Palette.cardLight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(title, style: TypographyTokens.sectionHeaderAccent),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              for (final TodayWeekCell cell in cells)
-                _WeekCell(cell: cell, bloomSize: bloomSize),
-            ],
-          ),
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(title, style: TypographyTokens.sectionHeaderAccent),
+        const SizedBox(height: _titleGap),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: <Widget>[
+            for (final TodayWeekCell cell in cells)
+              _WeekCell(cell: cell, bloomSize: bloomSize),
+          ],
+        ),
+      ],
     );
   }
 }
