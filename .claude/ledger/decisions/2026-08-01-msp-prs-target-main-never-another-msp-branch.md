@@ -1,4 +1,4 @@
-Status: accepted
+Status: superseded-by: 2026-08-01-cluster-e-ships-as-a-native-github-stack.md
 Date: 2026-08-01
 Thread: prototype-design-alignment
 
