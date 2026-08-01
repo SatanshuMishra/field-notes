@@ -47,7 +47,7 @@ class _MoodTallyChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            FlowerBloom.forMood(entry.mood, size: 18),
+            FlowerBloom.forMood(entry.mood, size: 24),
             const SizedBox(width: 6),
             Text('${entry.count}', style: TypographyTokens.labelSans),
             const SizedBox(width: 4),

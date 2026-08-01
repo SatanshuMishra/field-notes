@@ -46,9 +46,9 @@ class CalendarDayCell extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 SizedBox(
-                  height: 28,
+                  height: 40,
                   child: mood != null
-                      ? FlowerBloom.forMood(mood, size: 28)
+                      ? FlowerBloom.forMood(mood, size: 40)
                       : (journaled
                           ? const _ActivityDot()
                           : const SizedBox.shrink()),
