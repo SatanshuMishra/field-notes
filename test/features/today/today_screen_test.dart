@@ -7,11 +7,24 @@ import 'package:field_notes/features/today/today_memory.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/today_harness.dart';
+
+CaptureRouteRegistry _allCaptureRoutes() {
+  return captureOptions.fold(
+    CaptureRouteRegistry.empty,
+    (CaptureRouteRegistry registry, CaptureOption option) => registry.withRoute(
+      CaptureRoute(
+        type: option.type,
+        open: (BuildContext context, String date) async => null,
+      ),
+    ),
+  );
+}
 
 List<Override> _overrides() {
   return <Override>[
@@ -47,7 +60,7 @@ List<Override> _overrides() {
         yearsAgo: 1,
       ),
     ),
-    captureRoutesProvider.overrideWithValue(CaptureRouteRegistry.empty),
+    captureRoutesProvider.overrideWithValue(_allCaptureRoutes()),
   ];
 }
 
@@ -86,7 +99,10 @@ void main() {
     expect(find.byType(ThisWeekGarden), findsOneWidget);
     expect(find.text("this week's garden"), findsOneWidget);
     expect(find.text('capture a moment'), findsOneWidget);
-    expect(find.text('Capture'), findsOneWidget);
+    expect(find.text('Capture'), findsNothing);
+    expect(find.text('Write a note'), findsOneWidget);
+    expect(find.text('Record voice'), findsOneWidget);
+    expect(find.text('Record video'), findsOneWidget);
     expect(find.text('on this day'), findsOneWidget);
     expect(find.text('1 year ago'), findsOneWidget);
   });

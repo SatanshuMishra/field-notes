@@ -26,30 +26,6 @@ CaptureRouteRegistry _registry({
 }
 
 void main() {
-  testWidgets('the primary button opens the chooser and runs the chosen route',
-      (WidgetTester tester) async {
-    final List<String> openedDates = <String>[];
-    await pumpToday(
-      tester,
-      const TodayCaptureButtons(date: '2026-07-19'),
-      overrides: <Override>[
-        captureRoutesProvider
-            .overrideWithValue(_registry(openedDates: openedDates)),
-      ],
-    );
-
-    expect(find.text('capture a moment'), findsOneWidget);
-
-    await tester.tap(find.text('Capture'));
-    await tester.pumpAndSettle();
-    expect(find.text('Capture a moment'), findsOneWidget);
-
-    await tester.tap(find.text('Write a note').last);
-    await tester.pumpAndSettle();
-
-    expect(openedDates, <String>['2026-07-19']);
-  });
-
   testWidgets('renders a direct button only for registered capture types',
       (WidgetTester tester) async {
     final List<String> openedDates = <String>[];
@@ -62,6 +38,8 @@ void main() {
       ],
     );
 
+    expect(find.text('capture a moment'), findsOneWidget);
+    expect(find.text('Capture'), findsNothing);
     expect(find.text('Write a note'), findsOneWidget);
     expect(find.text('Record voice'), findsNothing);
     expect(find.text('Record video'), findsNothing);
