@@ -38,7 +38,7 @@ class FlowerBloom extends StatelessWidget {
       child: SizedBox.square(
         dimension: size,
         child: CustomPaint(
-          painter: FlowerPainter(flowerSpecFor(kind)),
+          painter: FlowerPainter(flowerSpecFor(kind), headless: true),
           size: Size.square(size),
         ),
       ),

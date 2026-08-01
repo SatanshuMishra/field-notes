@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/design/flowers/bloom_style.dart';
 import 'package:field_notes/design/flowers/flower_spec.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 
 void main() {
@@ -44,6 +45,33 @@ void main() {
       for (final mood in Mood.values) {
         expect(flowerSpecFor(mood.flower).kind, mood.flower, reason: mood.id);
       }
+    });
+
+    test('every selectable flower carries its own ink, never the shared ink token',
+        () {
+      for (final mood in moodOrder) {
+        final spec = flowerSpecFor(mood.flower);
+        expect(spec.strokeColor, isNot(Palette.ink), reason: mood.flower.name);
+        expect(spec.strokeWidth, greaterThan(0), reason: mood.flower.name);
+      }
+    });
+
+    test('each selectable flower is stroked at its prototype weight', () {
+      const Map<FlowerKind, double> expected = <FlowerKind, double>{
+        FlowerKind.chrysanthemum: 0.8,
+        FlowerKind.aster: 0.9,
+        FlowerKind.sunflower: 1.0,
+        FlowerKind.lavender: 1.0,
+        FlowerKind.daffodil: 1.2,
+        FlowerKind.rose: 1.3,
+        FlowerKind.poppy: 1.3,
+        FlowerKind.bleedingHeart: 1.3,
+        FlowerKind.peony: 1.4,
+        FlowerKind.redSpiderLily: 1.8,
+      };
+      expected.forEach((kind, width) {
+        expect(flowerSpecFor(kind).strokeWidth, width, reason: kind.name);
+      });
     });
   });
 }

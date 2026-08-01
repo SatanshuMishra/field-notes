@@ -17,6 +17,8 @@ class FlowerSpec {
     required this.centerRadius,
     required this.petalLength,
     required this.petalWidth,
+    required this.strokeColor,
+    required this.strokeWidth,
     this.droop = false,
     this.stemColor = Palette.gardenStem,
     this.leafColor = Palette.gardenLeaf,
@@ -31,6 +33,8 @@ class FlowerSpec {
   final double centerRadius;
   final double petalLength;
   final double petalWidth;
+  final Color strokeColor;
+  final double strokeWidth;
   final bool droop;
   final Color stemColor;
   final Color leafColor;
@@ -47,6 +51,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.12,
           petalLength: 0.32,
           petalWidth: 0.24,
+          strokeColor: FlowerColors.peonyStroke,
+          strokeWidth: 1.4,
         ),
       FlowerKind.rose => const FlowerSpec(
           kind: FlowerKind.rose,
@@ -58,6 +64,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.10,
           petalLength: 0.30,
           petalWidth: 0.26,
+          strokeColor: FlowerColors.roseStroke,
+          strokeWidth: 1.3,
         ),
       FlowerKind.sunflower => const FlowerSpec(
           kind: FlowerKind.sunflower,
@@ -69,6 +77,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.20,
           petalLength: 0.30,
           petalWidth: 0.10,
+          strokeColor: FlowerColors.sunflowerStroke,
+          strokeWidth: 1.0,
         ),
       FlowerKind.chrysanthemum => const FlowerSpec(
           kind: FlowerKind.chrysanthemum,
@@ -80,6 +90,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.12,
           petalLength: 0.32,
           petalWidth: 0.08,
+          strokeColor: FlowerColors.chrysanthemumStroke,
+          strokeWidth: 0.8,
         ),
       FlowerKind.daffodil => const FlowerSpec(
           kind: FlowerKind.daffodil,
@@ -91,6 +103,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.14,
           petalLength: 0.34,
           petalWidth: 0.16,
+          strokeColor: FlowerColors.daffodilStroke,
+          strokeWidth: 1.2,
         ),
       FlowerKind.lavender => const FlowerSpec(
           kind: FlowerKind.lavender,
@@ -102,6 +116,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.05,
           petalLength: 0.42,
           petalWidth: 0.12,
+          strokeColor: FlowerColors.lavenderStroke,
+          strokeWidth: 1.0,
         ),
       FlowerKind.aster => const FlowerSpec(
           kind: FlowerKind.aster,
@@ -113,6 +129,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.10,
           petalLength: 0.34,
           petalWidth: 0.06,
+          strokeColor: FlowerColors.asterStroke,
+          strokeWidth: 0.9,
         ),
       FlowerKind.poppy => const FlowerSpec(
           kind: FlowerKind.poppy,
@@ -124,6 +142,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.14,
           petalLength: 0.32,
           petalWidth: 0.34,
+          strokeColor: FlowerColors.poppyStroke,
+          strokeWidth: 1.3,
         ),
       FlowerKind.bleedingHeart => const FlowerSpec(
           kind: FlowerKind.bleedingHeart,
@@ -135,6 +155,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.02,
           petalLength: 0.20,
           petalWidth: 0.16,
+          strokeColor: FlowerColors.bleedingHeartStroke,
+          strokeWidth: 1.3,
         ),
       FlowerKind.redSpiderLily => const FlowerSpec(
           kind: FlowerKind.redSpiderLily,
@@ -146,6 +168,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.06,
           petalLength: 0.40,
           petalWidth: 0.12,
+          strokeColor: FlowerColors.spiderLilyStroke,
+          strokeWidth: 1.8,
         ),
       FlowerKind.wiltingRose => const FlowerSpec(
           kind: FlowerKind.wiltingRose,
@@ -157,6 +181,8 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.09,
           petalLength: 0.26,
           petalWidth: 0.24,
+          strokeColor: FlowerColors.wiltingRoseStroke,
+          strokeWidth: 1.3,
           droop: true,
         ),
       FlowerKind.thistle => const FlowerSpec(
@@ -169,5 +195,7 @@ FlowerSpec flowerSpecFor(FlowerKind kind) => switch (kind) {
           centerRadius: 0.12,
           petalLength: 0.26,
           petalWidth: 0.10,
+          strokeColor: FlowerColors.thistleStroke,
+          strokeWidth: 1.3,
         ),
     };
