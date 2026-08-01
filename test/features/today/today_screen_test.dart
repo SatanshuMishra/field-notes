@@ -88,6 +88,6 @@ void main() {
     expect(find.text('capture a moment'), findsOneWidget);
     expect(find.text('Capture'), findsOneWidget);
     expect(find.text('on this day'), findsOneWidget);
-    expect(find.text('1 year ago'), findsOneWidget);
+    expect(find.text('memory · 1 year ago'), findsOneWidget);
   });
 }
