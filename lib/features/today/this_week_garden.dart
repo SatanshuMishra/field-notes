@@ -85,13 +85,11 @@ class ThisWeekGarden extends StatelessWidget {
     required this.cells,
     this.title = thisWeekGardenTitle,
     this.bloomSize = 27,
-    this.onOpenCalendar,
   });
 
   final List<TodayWeekCell> cells;
   final String title;
   final double bloomSize;
-  final ValueChanged<String>? onOpenCalendar;
 
   @override
   Widget build(BuildContext context) {
@@ -132,11 +130,7 @@ class ThisWeekGarden extends StatelessWidget {
       slots.add(
         Expanded(
           child: index < cells.length
-              ? _WeekCell(
-                  cell: cells[index],
-                  bloomSize: bloomSize,
-                  onOpenCalendar: onOpenCalendar,
-                )
+              ? _WeekCell(cell: cells[index], bloomSize: bloomSize)
               : const SizedBox.shrink(),
         ),
       );
@@ -146,37 +140,19 @@ class ThisWeekGarden extends StatelessWidget {
 }
 
 class _WeekCell extends StatelessWidget {
-  const _WeekCell({
-    required this.cell,
-    required this.bloomSize,
-    required this.onOpenCalendar,
-  });
+  const _WeekCell({required this.cell, required this.bloomSize});
 
   final TodayWeekCell cell;
   final double bloomSize;
-  final ValueChanged<String>? onOpenCalendar;
 
   @override
   Widget build(BuildContext context) {
     final Mood? mood = cell.mood;
-    final ValueChanged<String>? open = onOpenCalendar;
-    final VoidCallback? onTap = open == null ? null : () => open(cell.date);
-    final Widget tile = _tile(mood);
     return Semantics(
-      button: onTap != null,
-      onTap: onTap,
       label: mood == null
           ? '${cell.weekdayLabel}, no mood'
           : '${cell.weekdayLabel}, ${mood.label}',
-      child: ExcludeSemantics(
-        child: onTap == null
-            ? tile
-            : GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: tile,
-              ),
-      ),
+      child: ExcludeSemantics(child: _tile(mood)),
     );
   }
 

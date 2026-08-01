@@ -55,30 +55,4 @@ void main() {
     final Text otherLabel = tester.widget<Text>(find.text('Mon'));
     expect(todayLabel.style?.color, isNot(otherLabel.style?.color));
   });
-
-  testWidgets('opens the calendar on the tapped day when a handler is wired',
-      (WidgetTester tester) async {
-    final SemanticsHandle handle = tester.ensureSemantics();
-    final List<String> opened = <String>[];
-
-    await pumpToday(
-      tester,
-      ThisWeekGarden(cells: _cells(), onOpenCalendar: opened.add),
-    );
-
-    expect(
-      tester.getSemantics(find.bySemanticsLabel('Mon, no mood')),
-      isSemantics(
-        label: 'Mon, no mood',
-        isButton: true,
-        hasTapAction: true,
-      ),
-    );
-
-    await tester.tap(find.bySemanticsLabel('Mon, no mood'));
-    await tester.pump();
-
-    expect(opened, <String>['2026-07-20']);
-    handle.dispose();
-  });
 }
