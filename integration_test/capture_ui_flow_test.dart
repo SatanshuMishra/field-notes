@@ -50,18 +50,8 @@ Future<void> _settle(WidgetTester tester, {int times = 4}) async {
   }
 }
 
-Future<void> _openChooserAndPick(WidgetTester tester, String optionLabel) async {
-  await tester.tap(find.text('Capture'));
-  await tester.pump();
-  await _settle(tester);
-  expect(find.byType(CaptureChooserSheet), findsOneWidget);
-
-  await tester.tap(
-    find.descendant(
-      of: find.byType(CaptureChooserSheet),
-      matching: find.text(optionLabel),
-    ),
-  );
+Future<void> _pickCaptureRow(WidgetTester tester, String optionLabel) async {
+  await tester.tap(find.text(optionLabel));
   await tester.pump();
   await _settle(tester);
 }
@@ -84,7 +74,7 @@ void main() {
       ),
     );
 
-    await _openChooserAndPick(tester, 'Write a note');
+    await _pickCaptureRow(tester, 'Write a note');
     expect(find.byType(TextComposerSheet), findsOneWidget);
 
     final String noteText =
@@ -118,7 +108,7 @@ void main() {
       ),
     );
 
-    await _openChooserAndPick(tester, 'Record voice');
+    await _pickCaptureRow(tester, 'Record voice');
     expect(find.byType(VoiceRecorderSheet), findsOneWidget);
 
     await tester.tap(find.text('Record'));
@@ -151,7 +141,7 @@ void main() {
       ),
     );
 
-    await _openChooserAndPick(tester, 'Record video');
+    await _pickCaptureRow(tester, 'Record video');
     expect(find.byType(VideoRecorderSheet), findsOneWidget);
 
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
@@ -193,7 +183,7 @@ void main() {
       ),
     );
 
-    await _openChooserAndPick(tester, 'Record video');
+    await _pickCaptureRow(tester, 'Record video');
     expect(find.byType(VideoRecorderSheet), findsOneWidget);
 
     await tester.tap(find.text('Built-in Camera'));

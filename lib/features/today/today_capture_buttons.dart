@@ -1,5 +1,7 @@
+import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +12,31 @@ const String captureOpenErrorMessage =
 const String todayCaptureTitle = 'capture a moment';
 
 const double _titleGap = 10;
+const double _rowGap = 8;
+const double _iconSize = 17;
+
+CaptureGlyph _captureGlyphFor(EntryType type) {
+  switch (type) {
+    case EntryType.text:
+      return CaptureGlyph.pencil;
+    case EntryType.voice:
+      return CaptureGlyph.mic;
+    case EntryType.video:
+      return CaptureGlyph.video;
+  }
+}
+
+StickerButtonVariant _captureVariantFor(EntryType type) {
+  return type == EntryType.text
+      ? StickerButtonVariant.primary
+      : StickerButtonVariant.secondary;
+}
+
+Color _captureIconColor(StickerButtonVariant variant) {
+  return variant == StickerButtonVariant.primary
+      ? Palette.onAccent
+      : Palette.ink;
+}
 
 class TodayCaptureButtons extends ConsumerStatefulWidget {
   const TodayCaptureButtons({
@@ -43,15 +70,6 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
     setState(() => _error = captureOpenErrorMessage);
   }
 
-  Future<void> _openChooser() async {
-    try {
-      await openCapture(context, ref, date: widget.date);
-      _clearError();
-    } catch (_) {
-      _reportError();
-    }
-  }
-
   Future<void> _openRoute(CaptureRoute route) async {
     try {
       await route.open(context, widget.date);
@@ -59,6 +77,21 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
     } catch (_) {
       _reportError();
     }
+  }
+
+  Widget _captureRow(CaptureOption option, CaptureRoute route) {
+    final StickerButtonVariant variant = _captureVariantFor(option.type);
+    return StickerButton(
+      label: option.label,
+      variant: variant,
+      icon: CaptureIcon(
+        glyph: _captureGlyphFor(option.type),
+        color: _captureIconColor(variant),
+        size: _iconSize,
+      ),
+      labelStyle: TypographyTokens.captureLabelSans,
+      onPressed: () => _openRoute(route),
+    );
   }
 
   @override
@@ -78,15 +111,10 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
       children: <Widget>[
         Text(widget.title, style: TypographyTokens.sectionHeaderAccent),
         const SizedBox(height: _titleGap),
-        StickerButton(label: 'Capture', onPressed: _openChooser),
-        for (final (CaptureOption option, CaptureRoute route)
-            in orderedRoutes) ...<Widget>[
-          const SizedBox(height: 8),
-          StickerButton(
-            label: option.label,
-            variant: StickerButtonVariant.secondary,
-            onPressed: () => _openRoute(route),
-          ),
+        for (final (int index, (CaptureOption option, CaptureRoute route))
+            in orderedRoutes.indexed) ...<Widget>[
+          if (index > 0) const SizedBox(height: _rowGap),
+          _captureRow(option, route),
         ],
         if (error != null) ...<Widget>[
           const SizedBox(height: 10),

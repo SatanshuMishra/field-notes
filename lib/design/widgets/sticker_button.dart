@@ -22,12 +22,14 @@ class StickerButton extends StatelessWidget {
     required this.onPressed,
     this.variant = StickerButtonVariant.primary,
     this.icon,
+    this.labelStyle,
   });
 
   final String label;
   final VoidCallback? onPressed;
   final StickerButtonVariant variant;
   final Widget? icon;
+  final TextStyle? labelStyle;
 
   bool get isEnabled => onPressed != null;
 
@@ -61,7 +63,7 @@ class StickerButton extends StatelessWidget {
                   ],
                   Text(
                     label,
-                    style: TypographyTokens.buttonSans
+                    style: (labelStyle ?? TypographyTokens.buttonSans)
                         .copyWith(color: style.foreground),
                   ),
                 ],
