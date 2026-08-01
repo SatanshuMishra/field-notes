@@ -5,16 +5,23 @@ abstract final class FlowerColors {
   static const Color peonyShade = Color(0xFFD07E93);
   static const Color peonyCenter = Color(0xFFEFC7A0);
   static const Color peonyStroke = Color(0xFF8A4A4A);
+  static const Color peonyPetalLight = Color(0xFFF2A9B2);
+  static const Color peonyPetalMid = Color(0xFFED97A4);
+  static const Color peonyCore = Color(0xFFE4788A);
 
   static const Color rosePetal = Color(0xFFC76A54);
   static const Color roseShade = Color(0xFF9A4832);
   static const Color roseCenter = Color(0xFF7D3B2B);
   static const Color roseStroke = Color(0xFF7D2F3A);
+  static const Color roseDisc = Color(0xFFD76A76);
+  static const Color roseCore = Color(0xFFA83F4D);
 
   static const Color sunflowerPetal = Color(0xFFE6B34D);
   static const Color sunflowerShade = Color(0xFFCB9433);
   static const Color sunflowerCenter = Color(0xFF6E4A2A);
   static const Color sunflowerStroke = Color(0xFF9A6A2A);
+  static const Color sunflowerRay = Color(0xFFF2C14E);
+  static const Color sunflowerDisc = Color(0xFF7A4A24);
 
   static const Color chrysanthemumPetal = Color(0xFFE0894A);
   static const Color chrysanthemumShade = Color(0xFFC46E31);
@@ -42,6 +49,8 @@ abstract final class FlowerColors {
   static const Color poppyShade = Color(0xFFA5382A);
   static const Color poppyCenter = Color(0xFF3A2A22);
   static const Color poppyStroke = Color(0xFF7D2A24);
+  static const Color poppyLobe = Color(0xFFE0574A);
+  static const Color poppyCore = Color(0xFF3A2420);
 
   static const Color bleedingHeartPetal = Color(0xFFCE7A9A);
   static const Color bleedingHeartShade = Color(0xFFB25F82);
