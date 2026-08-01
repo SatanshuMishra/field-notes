@@ -86,4 +86,25 @@ abstract final class FlowerColors {
   static const Color thistleShade = Color(0xFF71608F);
   static const Color thistleCenter = Color(0xFF7D8450);
   static const Color thistleStroke = Color(0xFF5A3A6A);
+
+  static const Color gardenStemDeep = Color(0xFF5F7A3E);
+  static const Color gardenStemMid = Color(0xFF6F8A4E);
+  static const Color gardenScape = Color(0xFF6A7D46);
+  static const Color gardenLeafStroke = Color(0xFF4E6A34);
+  static const Color gardenLeafDeep = Color(0xFF82A05A);
+  static const Color gardenLeafBright = Color(0xFF8FAE5C);
+  static const Color gardenLeafPale = Color(0xFF7F9A4F);
+  static const Color gardenLeafSoft = Color(0xFF8AA06A);
+  static const Color gardenLeafMist = Color(0xFF96AC74);
+  static const Color gardenLeafDusk = Color(0xFF93A35E);
+
+  static const Color sunflowerSeed = Color(0xFF5C3618);
+  static const Color asterRayPale = Color(0xFFB6A2DA);
+  static const Color lavenderFloretDeep = Color(0xFF8A74B8);
+  static const Color spiderLilyStamenDeep = Color(0xFFC22A20);
+  static const Color peonyCrease = Color(0xFFC95F72);
+  static const Color chrysanthemumMid = Color(0xFFE6A04E);
+  static const Color chrysanthemumPale = Color(0xFFF6CD86);
+  static const Color poppyLobeShade = Color(0xFFD84A3D);
+  static const Color bleedingHeartTearStroke = Color(0xFFC98AA0);
 }

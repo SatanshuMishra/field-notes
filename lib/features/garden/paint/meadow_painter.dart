@@ -2,7 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 
-import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/flowers/garden_plant_painter.dart';
+import 'package:field_notes/design/flowers/garden_plant_spec.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 import '../model/garden_insect.dart';
@@ -95,12 +96,13 @@ class MeadowPainter extends CustomPainter {
   void _paintBloom(Canvas canvas, PlantedBloom bloom) {
     final double sway =
         bloom.swayAmplitude * math.sin(2 * math.pi * t + bloom.swayPhase);
+    final GardenPlantSpec spec = gardenPlantSpecFor(bloom.kind);
+    final double height = bloom.size * spec.ratio;
     canvas.save();
     canvas.translate(bloom.dx, bloom.baseY);
     canvas.rotate(sway);
-    canvas.translate(-bloom.size * 0.5, -bloom.size * 0.98);
-    FlowerPainter(flowerSpecFor(bloom.kind))
-        .paint(canvas, Size.square(bloom.size));
+    canvas.translate(-bloom.size * 0.5, -height);
+    GardenPlantPainter(spec).paint(canvas, Size(bloom.size, height));
     canvas.restore();
   }
 
