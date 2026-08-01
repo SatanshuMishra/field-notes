@@ -26,7 +26,7 @@ void main() {
       ),
     );
 
-    expect(find.text('On this day'), findsOneWidget);
+    expect(find.text('on this day'), findsOneWidget);
     expect(find.text('2 years ago'), findsOneWidget);
     expect(find.text('Friday, July 19, 2024'), findsOneWidget);
     expect(find.text('sun on the deck'), findsOneWidget);
@@ -37,7 +37,7 @@ void main() {
       (WidgetTester tester) async {
     await pumpToday(tester, const OnThisDayCard(memory: null));
 
-    expect(find.text('On this day'), findsOneWidget);
+    expect(find.text('on this day'), findsOneWidget);
     expect(
       find.text('No memory from this day in past years yet.'),
       findsOneWidget,

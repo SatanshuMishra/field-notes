@@ -11,10 +11,12 @@ import 'today_date.dart';
 import 'today_memory.dart';
 import 'today_providers.dart';
 
-const String onThisDayTitle = 'On this day';
+const String onThisDayTitle = 'on this day';
 const String onThisDayEmptyMessage =
     'No memory from this day in past years yet.';
 const String onThisDayErrorMessage = "Couldn't load your past-year memory.";
+
+const double _titleGap = 9;
 
 class OnThisDayCard extends StatelessWidget {
   const OnThisDayCard({
@@ -91,17 +93,14 @@ class OnThisDayCard extends StatelessWidget {
   }
 
   static Widget _shell({required String title, required Widget child}) {
-    return StickerCard(
-      surface: Palette.cardLight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(title, style: TypographyTokens.sectionHeaderAccent),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(title, style: TypographyTokens.sectionHeaderAccent),
+        const SizedBox(height: _titleGap),
+        StickerCard(surface: Palette.cardLight, child: child),
+      ],
     );
   }
 }

@@ -7,11 +7,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 const String captureOpenErrorMessage =
     "Couldn't open capture. Please try again.";
 
+const String todayCaptureTitle = 'capture a moment';
+
+const double _titleGap = 10;
+
 class TodayCaptureButtons extends ConsumerStatefulWidget {
   const TodayCaptureButtons({
     super.key,
     required this.date,
-    this.title = 'Quick capture',
+    this.title = todayCaptureTitle,
   });
 
   final String date;
@@ -68,34 +72,30 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
     ];
     final String? error = _error;
 
-    return StickerCard(
-      surface: Palette.cardLight,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(widget.title, style: TypographyTokens.sectionHeaderAccent),
-          const SizedBox(height: 10),
-          StickerButton(label: 'Capture', onPressed: _openChooser),
-          for (final (CaptureOption option, CaptureRoute route)
-              in orderedRoutes) ...<Widget>[
-            const SizedBox(height: 8),
-            StickerButton(
-              label: option.label,
-              variant: StickerButtonVariant.secondary,
-              onPressed: () => _openRoute(route),
-            ),
-          ],
-          if (error != null) ...<Widget>[
-            const SizedBox(height: 10),
-            Text(
-              error,
-              style:
-                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
-            ),
-          ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(widget.title, style: TypographyTokens.sectionHeaderAccent),
+        const SizedBox(height: _titleGap),
+        StickerButton(label: 'Capture', onPressed: _openChooser),
+        for (final (CaptureOption option, CaptureRoute route)
+            in orderedRoutes) ...<Widget>[
+          const SizedBox(height: 8),
+          StickerButton(
+            label: option.label,
+            variant: StickerButtonVariant.secondary,
+            onPressed: () => _openRoute(route),
+          ),
         ],
-      ),
+        if (error != null) ...<Widget>[
+          const SizedBox(height: 10),
+          Text(
+            error,
+            style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+          ),
+        ],
+      ],
     );
   }
 }

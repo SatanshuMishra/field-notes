@@ -34,7 +34,7 @@ void main() {
       (WidgetTester tester) async {
     await pumpToday(tester, ThisWeekGarden(cells: _cells()));
 
-    expect(find.text('This week'), findsOneWidget);
+    expect(find.text("this week's garden"), findsOneWidget);
     for (final String label in _labels) {
       expect(find.text(label), findsOneWidget);
     }
