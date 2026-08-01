@@ -27,23 +27,33 @@ abstract final class FlowerColors {
   static const Color chrysanthemumShade = Color(0xFFC46E31);
   static const Color chrysanthemumCenter = Color(0xFFB25E28);
   static const Color chrysanthemumStroke = Color(0xFFB9701F);
+  static const Color chrysanthemumOuter = Color(0xFFD98A3C);
+  static const Color chrysanthemumInner = Color(0xFFEFB663);
+  static const Color chrysanthemumCore = Color(0xFFA85F18);
 
   static const Color daffodilPetal = Color(0xFFF0C64B);
   static const Color daffodilShade = Color(0xFFD9AE38);
   static const Color daffodilCenter = Color(0xFFE0894A);
   static const Color daffodilStroke = Color(0xFFD8B84A);
   static const Color daffodilCoronaStroke = Color(0xFFC9821F);
+  static const Color daffodilRay = Color(0xFFF5DF84);
+  static const Color daffodilCorona1 = Color(0xFFF0A838);
+  static const Color daffodilCorona2 = Color(0xFFE88F22);
+  static const Color daffodilCorona3 = Color(0xFF8A5A12);
 
   static const Color lavenderPetal = Color(0xFF9A86C4);
   static const Color lavenderShade = Color(0xFF7E6BAC);
   static const Color lavenderCenter = Color(0xFF7E6BAC);
   static const Color lavenderStroke = Color(0xFF6A5A8A);
+  static const Color lavenderFloret = Color(0xFF9A86C4);
 
   static const Color asterPetal = Color(0xFF7E8FC9);
   static const Color asterShade = Color(0xFF6374B0);
   static const Color asterCenter = Color(0xFFE6B34D);
   static const Color asterStroke = Color(0xFF7A68A4);
   static const Color asterDiscStroke = Color(0xFFC98A2A);
+  static const Color asterRay = Color(0xFFA892CF);
+  static const Color asterDisc = Color(0xFFF2C14E);
 
   static const Color poppyPetal = Color(0xFFC64B3A);
   static const Color poppyShade = Color(0xFFA5382A);
@@ -57,12 +67,15 @@ abstract final class FlowerColors {
   static const Color bleedingHeartCenter = Color(0xFFFFF5EA);
   static const Color bleedingHeartStroke = Color(0xFFA8536C);
   static const Color bleedingHeartArch = Color(0xFF6F8A4E);
+  static const Color bleedingHeartLobe = Color(0xFFE07D98);
+  static const Color bleedingHeartTear = Color(0xFFFBEEF0);
 
   static const Color redSpiderLilyPetal = Color(0xFFC0392B);
   static const Color redSpiderLilyShade = Color(0xFF9A2C21);
   static const Color redSpiderLilyCenter = Color(0xFFC0392B);
   static const Color spiderLilyStroke = Color(0xFFD8342A);
   static const Color spiderLilyStamen = Color(0xFFA82218);
+  static const Color spiderLilyCore = Color(0xFF7D1A14);
 
   static const Color wiltingRosePetal = Color(0xFFB98A86);
   static const Color wiltingRoseShade = Color(0xFF9A6E6A);

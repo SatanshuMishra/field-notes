@@ -44,13 +44,14 @@ void main() {
       }
     });
 
-    test('bleeding heart uses the heart-pendant silhouette', () {
-      expect(flowerSpecFor(FlowerKind.bleedingHeart).style,
-          BloomStyle.heartPendants);
-      expect(flowerSpecFor(FlowerKind.lavender).style, BloomStyle.spike);
+    test('converted flowers use the part list while the thistle stays a puff',
+        () {
+      expect(
+          flowerSpecFor(FlowerKind.bleedingHeart).style, BloomStyle.partList);
+      expect(flowerSpecFor(FlowerKind.lavender).style, BloomStyle.partList);
       expect(flowerSpecFor(FlowerKind.thistle).style, BloomStyle.puff);
-      expect(flowerSpecFor(FlowerKind.redSpiderLily).style,
-          BloomStyle.spiderPetals);
+      expect(
+          flowerSpecFor(FlowerKind.redSpiderLily).style, BloomStyle.partList);
     });
 
     test('every selectable mood resolves to a spec for its flower', () {
