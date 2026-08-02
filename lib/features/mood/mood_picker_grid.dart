@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -10,22 +11,41 @@ const double _tileBorderWidth = 2;
 const double _tilePaddingHorizontal = 6;
 const double _tilePaddingVertical = 11;
 const double _tileLabelGap = 5;
+const double _panelFlowerSize = 44;
+const double _panelGap = 10;
+
+const double _sheetTilePaddingHorizontal = 4;
+const double _sheetTilePaddingVertical = 8;
+const double _sheetTileLabelGap = 4;
+const double _sheetFlowerSize = 34;
+const double _sheetGap = 8;
 
 class MoodPickerGrid extends StatelessWidget {
   const MoodPickerGrid({
     super.key,
     required this.selected,
     required this.onMoodSelected,
-    this.flowerSize = 44,
-    this.spacing = 10,
-    this.runSpacing = 10,
+    this.layout = ShellLayout.sidebar,
+    this.flowerSize,
+    this.spacing,
+    this.runSpacing,
   });
 
   final Mood? selected;
   final ValueChanged<Mood> onMoodSelected;
-  final double flowerSize;
-  final double spacing;
-  final double runSpacing;
+  final ShellLayout layout;
+  final double? flowerSize;
+  final double? spacing;
+  final double? runSpacing;
+
+  bool get _isSheet => layout == ShellLayout.bottomBar;
+
+  double get _flowerSize =>
+      flowerSize ?? (_isSheet ? _sheetFlowerSize : _panelFlowerSize);
+
+  double get _spacing => spacing ?? (_isSheet ? _sheetGap : _panelGap);
+
+  double get _runSpacing => runSpacing ?? (_isSheet ? _sheetGap : _panelGap);
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +54,7 @@ class MoodPickerGrid extends StatelessWidget {
       children: <Widget>[
         for (int start = 0; start < moodOrder.length; start += _columns)
           ...<Widget>[
-            if (start > 0) SizedBox(height: runSpacing),
+            if (start > 0) SizedBox(height: _runSpacing),
             _buildRow(start),
           ],
       ],
@@ -46,7 +66,7 @@ class MoodPickerGrid extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         for (int column = 0; column < _columns; column++) ...<Widget>[
-          if (column > 0) SizedBox(width: spacing),
+          if (column > 0) SizedBox(width: _spacing),
           Expanded(child: _buildCell(start + column)),
         ],
       ],
@@ -61,7 +81,8 @@ class MoodPickerGrid extends StatelessWidget {
     return _MoodTile(
       mood: mood,
       isSelected: mood == selected,
-      flowerSize: flowerSize,
+      flowerSize: _flowerSize,
+      layout: layout,
       onTap: () => onMoodSelected(mood),
     );
   }
@@ -72,16 +93,19 @@ class _MoodTile extends StatelessWidget {
     required this.mood,
     required this.isSelected,
     required this.flowerSize,
+    required this.layout,
     required this.onTap,
   });
 
   final Mood mood;
   final bool isSelected;
   final double flowerSize;
+  final ShellLayout layout;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final bool isSheet = layout == ShellLayout.bottomBar;
     return Semantics(
       button: true,
       selected: isSelected,
@@ -100,27 +124,38 @@ class _MoodTile extends StatelessWidget {
             boxShadow: isSelected ? Shadows.tileSelected : null,
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _tilePaddingHorizontal,
-              vertical: _tilePaddingVertical,
+            padding: EdgeInsets.symmetric(
+              horizontal: isSheet
+                  ? _sheetTilePaddingHorizontal
+                  : _tilePaddingHorizontal,
+              vertical:
+                  isSheet ? _sheetTilePaddingVertical : _tilePaddingVertical,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
                 FlowerBloom.forMood(mood, size: flowerSize),
-                const SizedBox(height: _tileLabelGap),
+                SizedBox(
+                  height: isSheet ? _sheetTileLabelGap : _tileLabelGap,
+                ),
                 Text(
                   mood.label,
-                  style: TypographyTokens.caption11Sans.copyWith(
-                    color: Palette.ink,
+                  style: isSheet
+                      ? TypographyTokens.caption9Sans.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Palette.ink,
+                        )
+                      : TypographyTokens.caption11Sans.copyWith(
+                          color: Palette.ink,
+                        ),
+                  textAlign: TextAlign.center,
+                ),
+                if (!isSheet)
+                  Text(
+                    mood.flower.label,
+                    style: TypographyTokens.caption9Sans,
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                Text(
-                  mood.flower.label,
-                  style: TypographyTokens.caption9Sans,
-                  textAlign: TextAlign.center,
-                ),
               ],
             ),
           ),
