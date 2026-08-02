@@ -63,6 +63,13 @@ abstract final class Palette {
   static const Color hatchDark = Color(0xFFD9C9AE);
   static const Color viewportDark = Color(0xFF3A352E);
   static const Color viewportDarkAlt = Color(0xFF443F37);
+  static const Color viewportScrim = Color(0x800F0D0B);
+  static const Color viewportAmber = Color(0xFFF0B34A);
+
+  static const Color onDark30 = Color(0x4DFFFFFF);
+  static const Color onDark40 = Color(0x66FFFFFF);
+  static const Color onDark72 = Color(0xB8FFFFFF);
+  static const Color onDark85 = Color(0xD9FFFFFF);
 
   static const Color gardenSky = Color(0xFFD6DBAC);
   static const Color gardenMint = Color(0xFFC4CE95);

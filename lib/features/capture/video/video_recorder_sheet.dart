@@ -3,14 +3,60 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 
 import 'camera_picker.dart';
 import 'video_recorder.dart';
 
 enum VideoRecorderPhase { preparing, idle, arming, recording, saving, denied }
 
-const double _sheetPadding = 20;
+const Key videoCloseKey = ValueKey<String>('video-close');
+const Key videoShutterKey = ValueKey<String>('video-shutter');
+
+const String videoFeedLabel = 'CAMERA FEED';
+
+const double _viewportHeight = 480;
+
+const List<Color> _vignetteColors = <Color>[
+  Palette.viewportScrim,
+  Color(0x000F0D0B),
+  Color(0x000F0D0B),
+  Color(0xB80F0D0B),
+];
+const List<double> _vignetteStops = <double>[0, 0.22, 0.68, 1];
+
+const double _chromeInset = 16;
+const double _closeGlyphSize = 22;
+
+const double _pillRadius = Shapes.radiusMd;
+const double _pillGap = 7;
+const double _pillDotSize = 8;
+const EdgeInsets _pillPadding =
+    EdgeInsets.symmetric(horizontal: 12, vertical: 5);
+const double _pillTimeSize = 13;
+const Duration _pillBlinkDuration = Duration(milliseconds: 1200);
+
+const double _pickerWidth = 280;
+
+const double _underPillTop = 54;
+const double _underPillGap = 8;
+
+const double _hintBottom = 70;
+const double _hintSize = 13;
+const double _errorGap = 10;
+const EdgeInsets _errorPadding =
+    EdgeInsets.symmetric(horizontal: 14, vertical: 8);
+
+const double _deniedMaxWidth = 420;
+const EdgeInsets _deniedPadding =
+    EdgeInsets.symmetric(horizontal: 22, vertical: 20);
+
+const double _controlRowBottom = 22;
+const double _shutterSize = 70;
+const double _shutterBorderWidth = 4;
+const double _shutterCoreSize = 24;
 
 class VideoRecorderSheet extends StatelessWidget {
   const VideoRecorderSheet({
@@ -23,22 +69,17 @@ class VideoRecorderSheet extends StatelessWidget {
     this.devices = const <VideoCaptureDevice>[],
     this.selectedDeviceId,
     this.onDeviceChanged,
+    this.elapsed = Duration.zero,
     this.nudgeMessage,
     this.errorMessage,
     this.cameraLabel = 'Camera',
-    this.title = 'Record video',
-    this.armedHint = 'Tap record when you are ready.',
+    this.armedHint = 'tap the button to start recording',
     this.armingHint = 'Getting the camera ready…',
-    this.recordingHint = 'Recording…',
+    this.recordingHint = 'recording… tap pause or stop',
+    this.pausedHint = 'paused · resume or save your clip',
     this.savingHint = 'Saving your video…',
     this.capHint = 'Auto-stops at 30:00.',
     this.deniedMessage = cameraPermissionMessage,
-    this.startLabel = 'Record',
-    this.stopLabel = 'Stop & save',
-    this.savingLabel = 'Saving…',
-    this.armingLabel = 'Preparing…',
-    this.tryAgainLabel = 'Try again',
-    this.cancelLabel = 'Cancel',
   });
 
   final VideoRecorderPhase phase;
@@ -49,26 +90,22 @@ class VideoRecorderSheet extends StatelessWidget {
   final List<VideoCaptureDevice> devices;
   final String? selectedDeviceId;
   final ValueChanged<String>? onDeviceChanged;
+  final Duration elapsed;
   final String? nudgeMessage;
   final String? errorMessage;
   final String cameraLabel;
-  final String title;
   final String armedHint;
   final String armingHint;
   final String recordingHint;
+  final String pausedHint;
   final String savingHint;
   final String capHint;
   final String deniedMessage;
-  final String startLabel;
-  final String stopLabel;
-  final String savingLabel;
-  final String armingLabel;
-  final String tryAgainLabel;
-  final String cancelLabel;
 
   bool get _isRecording => phase == VideoRecorderPhase.recording;
   bool get _isPreparing =>
-      phase == VideoRecorderPhase.preparing || phase == VideoRecorderPhase.arming;
+      phase == VideoRecorderPhase.preparing ||
+      phase == VideoRecorderPhase.arming;
   bool get _isSaving => phase == VideoRecorderPhase.saving;
   bool get _isDenied => phase == VideoRecorderPhase.denied;
   bool get _isIdle => phase == VideoRecorderPhase.idle;
@@ -77,217 +114,292 @@ class VideoRecorderSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? errorMessage = this.errorMessage;
-    final String? nudgeMessage = this.nudgeMessage;
-    return Padding(
-      padding: const EdgeInsets.all(_sheetPadding),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    final String? hint = _hint;
+    return SizedBox(
+      height: _viewportHeight,
+      width: double.infinity,
+      child: Stack(
+        fit: StackFit.expand,
         children: <Widget>[
-          Text(title, style: TypographyTokens.titleSerif),
-          const SizedBox(height: 16),
-          _VideoStage(
-            phase: phase,
-            preview: preview,
-            armedHint: armedHint,
-            armingHint: armingHint,
-            recordingHint: recordingHint,
-            savingHint: savingHint,
-            capHint: capHint,
-            deniedMessage: deniedMessage,
-          ),
-          if (_showsPicker) ...<Widget>[
-            const SizedBox(height: 16),
-            CameraPicker(
-              devices: devices,
-              selectedDeviceId: selectedDeviceId,
-              onChanged: _isIdle ? onDeviceChanged : null,
-              enabled: _isIdle,
-              label: cameraLabel,
-            ),
-          ],
-          if (_isRecording && nudgeMessage != null) ...<Widget>[
-            const SizedBox(height: 12),
-            Toast(message: nudgeMessage, surface: Palette.cardWarm),
-          ],
-          if (errorMessage != null) ...<Widget>[
-            const SizedBox(height: 12),
-            Text(
-              errorMessage,
-              style:
-                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
-            ),
-          ],
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              StickerButton(
-                label: cancelLabel,
-                variant: StickerButtonVariant.secondary,
-                onPressed: _isSaving ? null : onCancel,
-              ),
-              const SizedBox(width: 12),
-              _primaryButton(),
-            ],
-          ),
+          _feed(),
+          const IgnorePointer(child: _Vignette()),
+          if (_isDenied) _deniedPanel(),
+          _closeButton(),
+          _timerPill(),
+          if (_showsPicker) _picker(),
+          _underPill(),
+          if (errorMessage != null || hint != null)
+            _bottomText(errorMessage, hint),
+          _controlRow(),
         ],
       ),
     );
   }
 
-  Widget _primaryButton() {
+  String? get _hint {
+    if (_isDenied) {
+      return null;
+    }
     if (_isSaving) {
-      return StickerButton(label: savingLabel, onPressed: null);
+      return savingHint;
     }
     if (_isPreparing) {
-      return StickerButton(label: armingLabel, onPressed: null);
+      return armingHint;
     }
-    if (_isRecording) {
-      return StickerButton(label: stopLabel, onPressed: onStop);
-    }
-    if (_isDenied) {
-      return StickerButton(label: tryAgainLabel, onPressed: onStart);
-    }
-    return StickerButton(label: startLabel, onPressed: onStart);
+    return _isRecording ? recordingHint : armedHint;
   }
-}
 
-class _VideoStage extends StatelessWidget {
-  const _VideoStage({
-    required this.phase,
-    required this.preview,
-    required this.armedHint,
-    required this.armingHint,
-    required this.recordingHint,
-    required this.savingHint,
-    required this.capHint,
-    required this.deniedMessage,
-  });
+  Widget _feed() {
+    final Widget? preview = this.preview;
+    if (preview != null) {
+      return preview;
+    }
+    return const CrossHatchPlaceholder(
+      variant: CrossHatchVariant.viewport,
+      borderRadius: BorderRadius.zero,
+      child: Text(videoFeedLabel, style: TypographyTokens.viewportMonoLabel),
+    );
+  }
 
-  final VideoRecorderPhase phase;
-  final Widget? preview;
-  final String armedHint;
-  final String armingHint;
-  final String recordingHint;
-  final String savingHint;
-  final String capHint;
-  final String deniedMessage;
+  Widget _closeButton() {
+    return Positioned(
+      left: _chromeInset,
+      top: _chromeInset,
+      child: GestureDetector(
+        key: videoCloseKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: _isSaving ? null : onCancel,
+        child: const IconStickerGlyphIcon(
+          glyph: IconStickerGlyph.close,
+          color: Palette.onAccent,
+          size: _closeGlyphSize,
+        ),
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
-    return switch (phase) {
-      VideoRecorderPhase.recording => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            _previewFrame(preview),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+  Widget _timerPill() {
+    return Positioned(
+      top: _chromeInset,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Palette.viewportScrim,
+            borderRadius: BorderRadius.circular(_pillRadius),
+          ),
+          child: Padding(
+            padding: _pillPadding,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Blink(child: _dot(Palette.danger)),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(recordingHint, style: TypographyTokens.captionSans),
+                _stateDot(),
+                const SizedBox(width: _pillGap),
+                Text(
+                  formatMediaDuration(elapsed.inMilliseconds),
+                  style: TypographyTokens.captureLabelSans.copyWith(
+                    fontSize: _pillTimeSize,
+                    color: Palette.onAccent,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              capHint,
-              textAlign: TextAlign.center,
-              style: TypographyTokens.captionSans.copyWith(color: Palette.muted),
-            ),
-          ],
-        ),
-      VideoRecorderPhase.preparing ||
-      VideoRecorderPhase.arming =>
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            _previewFrame(preview),
-            const SizedBox(height: 12),
-            _stageMessage(armingHint, Palette.mutedDeep),
-          ],
-        ),
-      VideoRecorderPhase.saving => _stageMessage(savingHint, Palette.muted),
-      VideoRecorderPhase.denied => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            const CrossHatchPlaceholder(height: 160),
-            const SizedBox(height: 12),
-            _stageMessage(deniedMessage, Palette.danger),
-          ],
-        ),
-      VideoRecorderPhase.idle => Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            _previewFrame(preview),
-            const SizedBox(height: 12),
-            _stageMessage(armedHint, Palette.mutedDeep),
-          ],
-        ),
-    };
-  }
-
-  Widget _previewFrame(Widget? preview) {
-    if (preview == null) {
-      return const CrossHatchPlaceholder(height: 200);
-    }
-    return ClipRRect(
-      borderRadius: Shapes.cardBorderRadius,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: Shapes.outline,
-          borderRadius: Shapes.cardBorderRadius,
-        ),
-        child: SizedBox(
-          height: 200,
-          width: double.infinity,
-          child: preview,
+          ),
         ),
       ),
     );
   }
 
-  Widget _stageMessage(String message, Color color) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Palette.cardWarm,
-        border: Shapes.outline,
-        borderRadius: Shapes.buttonBorderRadius,
+  Widget _stateDot() {
+    if (_isRecording) {
+      return const Blink(
+        stepped: true,
+        minOpacity: 0,
+        duration: _pillBlinkDuration,
+        child: _PillDot(color: Palette.recordFill),
+      );
+    }
+    return const _PillDot(color: Palette.onDark30);
+  }
+
+  Widget _picker() {
+    return Positioned(
+      top: _chromeInset,
+      right: _chromeInset,
+      child: SizedBox(
+        width: _pickerWidth,
+        child: CameraPicker(
+          devices: devices,
+          selectedDeviceId: selectedDeviceId,
+          onChanged: _isIdle ? onDeviceChanged : null,
+          enabled: _isIdle,
+          label: cameraLabel,
+        ),
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            _dot(color),
-            const SizedBox(width: 12),
-            Flexible(
-              child: Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TypographyTokens.captionSans,
+    );
+  }
+
+  Widget _underPill() {
+    final String? nudgeMessage = this.nudgeMessage;
+    return Positioned(
+      top: _underPillTop,
+      left: 0,
+      right: 0,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (_isRecording) Text(capHint, style: _hintStyle),
+          if (_isRecording && nudgeMessage != null) ...<Widget>[
+            const SizedBox(height: _underPillGap),
+            Toast(message: nudgeMessage, variant: ToastVariant.dark),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _bottomText(String? errorMessage, String? hint) {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: _hintBottom,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (errorMessage != null) ...<Widget>[
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: Palette.viewportScrim,
+                borderRadius: BorderRadius.circular(_pillRadius),
+              ),
+              child: Padding(
+                padding: _errorPadding,
+                child: Text(
+                  errorMessage,
+                  textAlign: TextAlign.center,
+                  style: TypographyTokens.captionSans
+                      .copyWith(color: Palette.onDark85),
+                ),
               ),
             ),
+            const SizedBox(height: _errorGap),
           ],
+          if (hint != null)
+            Text(hint, textAlign: TextAlign.center, style: _hintStyle),
+        ],
+      ),
+    );
+  }
+
+  Widget _deniedPanel() {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _deniedMaxWidth),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Palette.viewportScrim,
+            borderRadius: BorderRadius.circular(Shapes.radiusXl),
+          ),
+          child: Padding(
+            padding: _deniedPadding,
+            child: Text(
+              deniedMessage,
+              textAlign: TextAlign.center,
+              style: TypographyTokens.bodySans.copyWith(
+                color: Palette.onDark85,
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _dot(Color color) {
-    return Container(
-      width: 12,
-      height: 12,
+  Widget _controlRow() {
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: _controlRowBottom,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[_shutter()],
+      ),
+    );
+  }
+
+  Widget _shutter() {
+    return GestureDetector(
+      key: videoShutterKey,
+      behavior: HitTestBehavior.opaque,
+      onTap: _shutterTap,
+      child: Container(
+        width: _shutterSize,
+        height: _shutterSize,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Palette.onAccent,
+            width: _shutterBorderWidth,
+          ),
+        ),
+        child: const SizedBox.square(
+          dimension: _shutterCoreSize,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Palette.recordFill,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  VoidCallback? get _shutterTap {
+    if (_isSaving || _isPreparing) {
+      return null;
+    }
+    return _isRecording ? onStop : onStart;
+  }
+
+  TextStyle get _hintStyle => TypographyTokens.hintAccent.copyWith(
+        fontSize: _hintSize,
+        color: Palette.onDark72,
+      );
+}
+
+class _Vignette extends StatelessWidget {
+  const _Vignette();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
       decoration: BoxDecoration(
-        color: color,
-        shape: BoxShape.circle,
-        border: Shapes.outline,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: _vignetteColors,
+          stops: _vignetteStops,
+        ),
+      ),
+      child: SizedBox.expand(),
+    );
+  }
+}
+
+class _PillDot extends StatelessWidget {
+  const _PillDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: _pillDotSize,
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }

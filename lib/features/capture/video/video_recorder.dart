@@ -62,6 +62,8 @@ class VideoRecorderException implements Exception {
 }
 
 abstract interface class VideoRecorder {
+  Duration get elapsed;
+
   Future<List<VideoCaptureDevice>> listDevices();
 
   Widget? openSession(String deviceId);

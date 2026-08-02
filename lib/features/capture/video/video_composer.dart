@@ -27,6 +27,8 @@ const Duration videoSaveTimeout = Duration(seconds: 20);
 
 const Duration cameraReleaseTimeout = Duration(seconds: 6);
 
+const Duration videoElapsedTick = Duration(milliseconds: 250);
+
 class VideoComposerConnector extends ConsumerStatefulWidget {
   const VideoComposerConnector({
     super.key,
@@ -55,8 +57,25 @@ class _VideoComposerConnectorState
   String? _deviceId;
   bool _released = false;
   bool _switching = false;
+  Duration _elapsed = Duration.zero;
+  Timer? _elapsedTicker;
   final List<Timer> _timers = <Timer>[];
   late final VideoRecorder _recorder;
+
+  void _startTicker() {
+    _elapsedTicker?.cancel();
+    _elapsedTicker = Timer.periodic(videoElapsedTick, (Timer _) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _elapsed = _recorder.elapsed);
+    });
+  }
+
+  void _stopTicker() {
+    _elapsedTicker?.cancel();
+    _elapsedTicker = null;
+  }
 
   @override
   void initState() {
@@ -179,8 +198,10 @@ class _VideoComposerConnectorState
       setState(() {
         _preview = _recorder.openSession(deviceId);
         _phase = VideoRecorderPhase.recording;
+        _elapsed = Duration.zero;
       });
       _scheduleTimeline();
+      _startTicker();
     } on VideoRecorderException catch (error) {
       _failBackToIdle(error.message);
     } catch (error, stackTrace) {
@@ -190,6 +211,7 @@ class _VideoComposerConnectorState
   }
 
   void _failBackToIdle(String message) {
+    _stopTicker();
     if (!mounted) {
       return;
     }
@@ -229,8 +251,10 @@ class _VideoComposerConnectorState
       return;
     }
     _cancelTimers();
+    _stopTicker();
     setState(() {
       _phase = VideoRecorderPhase.saving;
+      _elapsed = _recorder.elapsed;
       _errorMessage = null;
       _nudgeMessage = null;
     });
@@ -286,6 +310,7 @@ class _VideoComposerConnectorState
 
   Future<void> _cancel() async {
     _cancelTimers();
+    _stopTicker();
     if (_phase == VideoRecorderPhase.recording ||
         _phase == VideoRecorderPhase.arming) {
       try {
@@ -318,6 +343,7 @@ class _VideoComposerConnectorState
   @override
   void dispose() {
     _cancelTimers();
+    _stopTicker();
     unawaited(_release());
     super.dispose();
   }
@@ -330,6 +356,7 @@ class _VideoComposerConnectorState
       devices: _devices,
       selectedDeviceId: _deviceId,
       onDeviceChanged: _selectDevice,
+      elapsed: _elapsed,
       nudgeMessage: _nudgeMessage,
       errorMessage: _errorMessage,
       deniedMessage: _deniedMessage ?? cameraPermissionMessage,

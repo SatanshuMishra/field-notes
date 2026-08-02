@@ -19,12 +19,18 @@ class SettingsSelect<T> extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
+    this.surface,
+    this.foreground,
+    this.border,
   });
 
   final List<SettingsSelectOption<T>> options;
   final T value;
   final ValueChanged<T>? onChanged;
   final bool enabled;
+  final Color? surface;
+  final Color? foreground;
+  final Border? border;
 
   @override
   Widget build(BuildContext context) {
@@ -45,8 +51,8 @@ class SettingsSelect<T> extends StatelessWidget {
         ],
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Palette.cardBright,
-            border: Shapes.outline,
+            color: surface ?? Palette.cardBright,
+            border: border ?? Shapes.outline,
             borderRadius: Shapes.buttonBorderRadius,
           ),
           child: Padding(
@@ -54,9 +60,20 @@ class SettingsSelect<T> extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Text(current.label, style: TypographyTokens.bodySans),
+                Flexible(
+                  child: Text(
+                    current.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TypographyTokens.bodySans
+                        .copyWith(color: foreground),
+                  ),
+                ),
                 const SizedBox(width: 8),
-                const Icon(Icons.expand_more, size: 18, color: Palette.ink),
+                Icon(
+                  Icons.expand_more,
+                  size: 18,
+                  color: foreground ?? Palette.ink,
+                ),
               ],
             ),
           ),

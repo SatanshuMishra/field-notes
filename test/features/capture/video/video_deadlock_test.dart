@@ -3,6 +3,7 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
+import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -45,7 +46,7 @@ Future<void> _openComposer(WidgetTester tester) async {
 }
 
 Future<void> _settleStart(WidgetTester tester) async {
-  await tester.tap(find.text('Record'));
+  await tester.tap(find.byKey(videoShutterKey));
   for (int i = 0; i < 8; i++) {
     await tester.pump(const Duration(milliseconds: 50));
   }
@@ -71,7 +72,7 @@ void main() {
       find.byKey(const ValueKey('deferred-preview')),
       findsOneWidget,
     );
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('recording… tap pause or stop'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

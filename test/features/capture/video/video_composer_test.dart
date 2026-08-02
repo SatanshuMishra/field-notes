@@ -52,7 +52,7 @@ Future<void> _openComposer(WidgetTester tester) async {
 }
 
 Future<void> _startRecording(WidgetTester tester) async {
-  await tester.tap(find.text('Record'));
+  await tester.tap(find.byKey(videoShutterKey));
   for (int i = 0; i < 4; i++) {
     await tester.pump(const Duration(milliseconds: 50));
   }
@@ -126,7 +126,7 @@ void main() {
     await _openComposer(tester);
     await _startRecording(tester);
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -160,11 +160,11 @@ void main() {
 
     expect(recorder.startCalls, 1);
     expect(fakeVideoPreview(), findsOneWidget);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('recording… tap pause or stop'), findsOneWidget);
     expect(find.text(cameraPermissionMessage), findsNothing);
-    expect(find.text('Try again'), findsNothing);
+    expect(find.text('tap the button to start recording'), findsNothing);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
   });
@@ -188,18 +188,18 @@ void main() {
     await _openComposer(tester);
 
     expect(find.text(cameraPermissionMessage), findsOneWidget);
-    expect(find.text('Try again'), findsOneWidget);
-    expect(find.text('Record'), findsNothing);
+    expect(find.byKey(videoShutterKey), findsOneWidget);
+    expect(find.text('tap the button to start recording'), findsNothing);
     expect(recorder.startCalls, 0);
     expect(service.requests, isEmpty);
     expect(fakeVideoPreview(), findsNothing);
     expect(result, 'unset');
 
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text('Try again'), findsOneWidget);
+    expect(find.text(cameraPermissionMessage), findsOneWidget);
     expect(recorder.startCalls, 0);
   });
 
@@ -224,11 +224,11 @@ void main() {
 
     expect(recorder.startCalls, 1);
     expect(find.text(videoStartTimeoutMessage), findsOneWidget);
-    expect(find.text('Record'), findsOneWidget);
-    expect(find.text('Stop & save'), findsNothing);
+    expect(find.text('tap the button to start recording'), findsOneWidget);
+    expect(find.text('recording… tap pause or stop'), findsNothing);
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
   });
@@ -252,7 +252,7 @@ void main() {
     await _openComposer(tester);
     await _startRecording(tester);
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
@@ -281,7 +281,7 @@ void main() {
     await _openComposer(tester);
     await _startRecording(tester);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

@@ -35,6 +35,9 @@ class CameraVideoRecorder implements VideoRecorder {
   final Stopwatch _elapsed = Stopwatch();
 
   @override
+  Duration get elapsed => _elapsed.elapsed;
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async {
     final List<CameraDescription> cameras;
     try {
@@ -216,6 +219,9 @@ class CameraMacosVideoRecorder implements VideoRecorder {
   CameraMacOSController? _controller;
   bool _destroyRequested = false;
   bool _aborted = false;
+
+  @override
+  Duration get elapsed => _elapsed.elapsed;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
