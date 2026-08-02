@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 
 import 'camera_selection.dart';
 import 'video_recorder.dart';
+
+const double _pickerBorderWidth = 1.5;
 
 class CameraPicker extends StatelessWidget {
   const CameraPicker({
@@ -32,6 +35,7 @@ class CameraPicker extends StatelessWidget {
     }
     return SettingsFieldRow(
       label: label,
+      labelColor: Palette.onDark72,
       control: Material(
         type: MaterialType.transparency,
         child: SettingsSelect<String>(
@@ -45,6 +49,12 @@ class CameraPicker extends StatelessWidget {
           value: resolved,
           onChanged: onChanged,
           enabled: enabled,
+          surface: Palette.viewportScrim,
+          foreground: Palette.onAccent,
+          border: Border.all(
+            color: Palette.onDark40,
+            width: _pickerBorderWidth,
+          ),
         ),
       ),
     );

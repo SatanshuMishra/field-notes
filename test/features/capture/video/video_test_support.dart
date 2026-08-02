@@ -58,8 +58,13 @@ class FakeVideoRecorder implements VideoRecorder {
   bool _sessionLive = false;
   final List<String> previewDeviceIds = <String>[];
 
+  Duration elapsedValue = Duration.zero;
+
   String? get previewDeviceId =>
       previewDeviceIds.isEmpty ? null : previewDeviceIds.last;
+
+  @override
+  Duration get elapsed => elapsedValue;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
@@ -151,6 +156,9 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
   int cancelCalls = 0;
   int releaseCalls = 0;
   int disposeCalls = 0;
+
+  @override
+  Duration get elapsed => Duration.zero;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async =>

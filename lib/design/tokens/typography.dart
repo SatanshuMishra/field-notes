@@ -279,6 +279,14 @@ abstract final class TypographyTokens {
     color: Palette.coral,
   );
 
+  static const TextStyle viewportMonoLabel = TextStyle(
+    fontFamily: mono,
+    fontSize: 10,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 1.0,
+    color: Palette.onDark30,
+  );
+
   static const TextStyle monoMicroSans = TextStyle(
     fontFamily: mono,
     fontSize: 7,

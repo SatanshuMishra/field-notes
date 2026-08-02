@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'video_test_support.dart';
 
 void main() {
-  testWidgets('idle phase offers Record and shows no recording indicators',
+  testWidgets('idle phase offers the shutter and shows no recording indicators',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       videoHarness(
@@ -20,13 +20,14 @@ void main() {
       ),
     );
 
-    expect(find.text('Record'), findsOneWidget);
-    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.byKey(videoShutterKey), findsOneWidget);
+    expect(find.byKey(videoCloseKey), findsOneWidget);
+    expect(find.text('tap the button to start recording'), findsOneWidget);
     expect(find.byType(Blink), findsNothing);
     expect(find.byType(Toast), findsNothing);
   });
 
-  testWidgets('recording phase shows the preview, blinking dot, and Stop',
+  testWidgets('recording phase shows the preview, blinking dot, and its hint',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       videoHarness(
@@ -43,7 +44,7 @@ void main() {
 
     expect(find.byKey(const ValueKey('preview')), findsOneWidget);
     expect(find.byType(Blink), findsOneWidget);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('recording… tap pause or stop'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -65,7 +66,7 @@ void main() {
 
     expect(find.byType(Toast), findsOneWidget);
     expect(find.text('5 minutes in — looking good.'), findsOneWidget);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('recording… tap pause or stop'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -86,16 +87,16 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await tester.pump();
 
     expect(starts, 1);
     expect(cancels, 1);
   });
 
-  testWidgets('the recording phase Stop button invokes onStop',
+  testWidgets('the recording phase shutter invokes onStop',
       (WidgetTester tester) async {
     int stops = 0;
 
@@ -111,7 +112,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
 
     expect(stops, 1);
@@ -149,11 +150,11 @@ void main() {
       ),
     );
 
-    expect(find.text('Saving…'), findsOneWidget);
+    expect(find.text('Saving your video…'), findsOneWidget);
     expect(find.byType(Blink), findsNothing);
   });
 
-  testWidgets('the arming phase shows the live preview without a Stop action',
+  testWidgets('the arming phase shows the live preview and the arming hint',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       videoHarness(
@@ -168,15 +169,15 @@ void main() {
     );
 
     expect(find.byKey(const ValueKey('preview')), findsOneWidget);
-    expect(find.text('Preparing…'), findsOneWidget);
-    expect(find.text('Stop & save'), findsNothing);
+    expect(find.text('Getting the camera ready…'), findsOneWidget);
+    expect(find.text('recording… tap pause or stop'), findsNothing);
     expect(find.byType(Blink), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(
-      'the denied phase surfaces guidance and offers Try again over Record',
+      'the denied phase surfaces guidance and the shutter carries the retry',
       (WidgetTester tester) async {
     int retries = 0;
 
@@ -193,10 +194,10 @@ void main() {
     );
 
     expect(find.text('Enable Camera access in System Settings.'), findsOneWidget);
-    expect(find.text('Try again'), findsOneWidget);
-    expect(find.text('Record'), findsNothing);
+    expect(find.byKey(videoShutterKey), findsOneWidget);
+    expect(find.text('tap the button to start recording'), findsNothing);
 
-    await tester.tap(find.text('Try again'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
 
     expect(retries, 1);

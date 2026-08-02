@@ -28,6 +28,9 @@ class _ArmingRecorder implements VideoRecorder {
   bool _sessionLive = false;
 
   @override
+  Duration get elapsed => Duration.zero;
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async =>
       List<VideoCaptureDevice>.of(fakeVideoDevices);
 
@@ -83,6 +86,9 @@ class _ArmingRecorder implements VideoRecorder {
 class _HangingReleaseRecorder implements VideoRecorder {
   int releaseCalls = 0;
   bool _sessionLive = false;
+
+  @override
+  Duration get elapsed => Duration.zero;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async =>
@@ -245,7 +251,7 @@ void main() {
 
     expect(find.byType(CrossHatchPlaceholder), findsWidgets);
     expect(find.byType(CameraPicker), findsOneWidget);
-    expect(find.text('Record'), findsOneWidget);
+    expect(find.text('tap the button to start recording'), findsOneWidget);
     expect(fakeVideoPreview(), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -262,14 +268,14 @@ void main() {
     );
     await _open(tester);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));
 
     expect(recorder.startCalls, 1);
-    expect(find.text('Preparing…'), findsOneWidget);
+    expect(find.text('Getting the camera ready…'), findsOneWidget);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await _settle(tester);
 
     expect(recorder.cancelCalls, 1);
@@ -323,7 +329,7 @@ void main() {
     );
     await _open(tester);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await tester.pump();
     expect(recorder.releaseCalls, 1);
 

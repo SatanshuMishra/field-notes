@@ -69,7 +69,7 @@ void main() {
 
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
     expect(find.byType(CrossHatchPlaceholder), findsNothing);
-    expect(find.text('Record'), findsOneWidget);
+    expect(find.text('tap the button to start recording'), findsOneWidget);
     expect(recorder.startCalls, 0);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -85,7 +85,7 @@ void main() {
     );
     await _openComposer(tester);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await _settle(tester);
 
     expect(recorder.releaseCalls, 1);
@@ -106,10 +106,10 @@ void main() {
     );
     await _openComposer(tester);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(videoShutterKey));
     await _settle(tester);
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(videoShutterKey));
     await _settle(tester);
 
     expect(service.requests, hasLength(1));
@@ -186,7 +186,7 @@ void main() {
     await tester.pumpAndSettle();
     await _settle(tester);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await _settle(tester);
 
     await _openComposer(tester);
@@ -214,7 +214,7 @@ void main() {
     await tester.pumpAndSettle();
     await _settle(tester);
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await _settle(tester);
 
     recorder.devices = const <VideoCaptureDevice>[

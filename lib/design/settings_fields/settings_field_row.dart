@@ -8,11 +8,15 @@ class SettingsFieldRow extends StatelessWidget {
     required this.label,
     this.description,
     required this.control,
+    this.labelColor,
+    this.descriptionColor,
   });
 
   final String label;
   final String? description;
   final Widget control;
+  final Color? labelColor;
+  final Color? descriptionColor;
 
   @override
   Widget build(BuildContext context) {
@@ -24,13 +28,16 @@ class SettingsFieldRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text(label, style: TypographyTokens.labelSans),
+              Text(
+                label,
+                style: TypographyTokens.labelSans.copyWith(color: labelColor),
+              ),
               if (description != null) ...<Widget>[
                 const SizedBox(height: 2),
                 Text(
                   description!,
                   style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.muted),
+                      .copyWith(color: descriptionColor ?? Palette.muted),
                 ),
               ],
             ],

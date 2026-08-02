@@ -150,13 +150,13 @@ void main() {
     expect(find.text('Built-in Camera'), findsOneWidget);
     expect(videoRecorder.releaseCalls, 0);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(videoShutterKey));
     await _settle(tester);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('recording… tap pause or stop'), findsOneWidget);
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
-    expect(find.text('Saving…'), findsOneWidget);
+    expect(find.text('Saving your video…'), findsOneWidget);
 
     await _settle(tester, times: 6);
 
@@ -196,7 +196,7 @@ void main() {
     expect(fakeVideoPreview(deviceId: 'usb-id'), findsOneWidget);
 
     final int releasesBeforeCancel = videoRecorder.releaseCalls;
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(videoCloseKey));
     await _settle(tester, times: 6);
 
     expect(find.byType(VideoRecorderSheet), findsNothing);

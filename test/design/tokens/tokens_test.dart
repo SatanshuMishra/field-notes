@@ -40,6 +40,13 @@ void main() {
       expect(TypographyTokens.monoMicroSans.fontFamily, TypographyTokens.mono);
       expect(TypographyTokens.monoMicroSans.fontSize, 7);
       expect(TypographyTokens.monoMicroSans.color, Palette.muted);
+
+      expect(
+          TypographyTokens.viewportMonoLabel.fontFamily, TypographyTokens.mono);
+      expect(TypographyTokens.viewportMonoLabel.fontSize, 10);
+      expect(TypographyTokens.viewportMonoLabel.fontWeight, FontWeight.w500);
+      expect(TypographyTokens.viewportMonoLabel.letterSpacing, 1.0);
+      expect(TypographyTokens.viewportMonoLabel.color, Palette.onDark30);
       expect(TypographyTokens.monoThumbSans.fontFamily, TypographyTokens.mono);
       expect(TypographyTokens.monoThumbSans.fontSize, 6);
       expect(TypographyTokens.monoThumbSans.color, Palette.mutedDeep);
@@ -120,6 +127,24 @@ void main() {
       expect(Palette.composerPaper, const Color(0xFFFBF3E4));
       expect(Palette.waveMid, const Color(0xFFDCAE9A));
       expect(Palette.toastInk, const Color(0xFFF6EAD6));
+      expect(Palette.viewportAmber, const Color(0xFFF0B34A));
+      expect(Palette.viewportAmber, isNot(Palette.statusAmber));
+      expect(Palette.viewportScrim, const Color(0x800F0D0B));
+
+      final List<(String, Color, int)> onDark = <(String, Color, int)>[
+        ('onDark30', Palette.onDark30, 0x4D),
+        ('onDark40', Palette.onDark40, 0x66),
+        ('onDark72', Palette.onDark72, 0xB8),
+        ('onDark85', Palette.onDark85, 0xD9),
+      ];
+
+      for (final (name, color, alpha) in onDark) {
+        expect(color.toARGB32() >> 24, alpha,
+            reason: 'Palette.$name carries the wrong alpha');
+        expect(color.toARGB32() & 0x00FFFFFF,
+            Palette.onAccent.toARGB32() & 0x00FFFFFF,
+            reason: 'Palette.$name must be white at a reduced opacity');
+      }
     });
 
     test('pre-existing palette members keep their values', () {

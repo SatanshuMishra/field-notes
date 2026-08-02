@@ -19,6 +19,9 @@ class _HangingStopRecorder implements VideoRecorder {
   bool _sessionLive = false;
 
   @override
+  Duration get elapsed => Duration.zero;
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async =>
       List<VideoCaptureDevice>.of(fakeVideoDevices);
 
@@ -110,22 +113,22 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));
     await tester.pump(const Duration(milliseconds: 20));
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
-    expect(find.text('Saving…'), findsOneWidget);
+    expect(find.text('Saving your video…'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 150));
 
     expect(recorder.stopCalls, 1);
     expect(service.requests, isEmpty);
     expect(find.text(videoSaveTimeoutMessage), findsOneWidget);
-    expect(find.text('Saving…'), findsNothing);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('Saving your video…'), findsNothing);
+    expect(find.text('recording… tap pause or stop'), findsOneWidget);
     expect(find.byType(VideoRecorderSheet), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
