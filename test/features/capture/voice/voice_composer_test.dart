@@ -68,14 +68,14 @@ void main() {
 
     await _openComposer(tester);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
     expect(recorder.startCalls, 1);
     expect(find.byType(WaveformBars), findsOneWidget);
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -106,7 +106,7 @@ void main() {
 
     await _openComposer(tester);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
@@ -135,11 +135,11 @@ void main() {
 
     await _openComposer(tester);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
@@ -167,11 +167,11 @@ void main() {
 
     await _openComposer(tester);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(voiceCloseKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 

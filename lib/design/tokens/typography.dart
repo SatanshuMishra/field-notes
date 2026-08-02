@@ -8,6 +8,14 @@ abstract final class TypographyTokens {
   static const String accent = 'Caveat';
   static const String mono = 'monospace';
 
+  static const TextStyle timerSerif = TextStyle(
+    fontFamily: serif,
+    fontSize: 38,
+    fontWeight: FontWeight.w400,
+    height: 1.0,
+    color: Palette.ink,
+  );
+
   static const TextStyle displaySerifToday = TextStyle(
     fontFamily: serif,
     fontSize: 34,
@@ -144,6 +152,13 @@ abstract final class TypographyTokens {
     fontSize: 16,
     fontWeight: FontWeight.w600,
     color: Palette.coral,
+  );
+
+  static const TextStyle hintAccent = TextStyle(
+    fontFamily: accent,
+    fontSize: 15,
+    fontWeight: FontWeight.w600,
+    color: Palette.muted,
   );
 
   static const TextStyle subtitleAccent = TextStyle(

@@ -17,6 +17,9 @@ class _HangingStopRecorder implements VoiceRecorder {
   int stopCalls = 0;
 
   @override
+  Duration get elapsed => Duration.zero;
+
+  @override
   Future<bool> hasPermission() async => true;
 
   @override
@@ -88,21 +91,21 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
-    expect(find.text('Saving…'), findsOneWidget);
+    expect(find.text('Saving your recording…'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 150));
 
     expect(recorder.stopCalls, 1);
     expect(service.requests, isEmpty);
     expect(find.text(voiceSaveTimeoutMessage), findsOneWidget);
-    expect(find.text('Saving…'), findsNothing);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('Saving your recording…'), findsNothing);
+    expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
     expect(find.byType(VoiceRecorderSheet), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

@@ -23,6 +23,9 @@ class FakeVoiceRecorder implements VoiceRecorder {
   final VoiceRecorderException? startError;
   final VoiceRecorderException? stopError;
 
+  @override
+  Duration elapsed = Duration.zero;
+
   int startCalls = 0;
   int stopCalls = 0;
   int cancelCalls = 0;

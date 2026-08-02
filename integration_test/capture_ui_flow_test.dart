@@ -111,13 +111,13 @@ void main() {
     await _pickCaptureRow(tester, 'Record voice');
     expect(find.byType(VoiceRecorderSheet), findsOneWidget);
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await _settle(tester);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('RECORDING'), findsOneWidget);
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
-    expect(find.text('Saving…'), findsOneWidget);
+    expect(find.text('Saving your recording…'), findsOneWidget);
 
     await _settle(tester, times: 6);
 

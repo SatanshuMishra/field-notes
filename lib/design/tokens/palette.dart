@@ -35,6 +35,7 @@ abstract final class Palette {
   static const Color coralLink = Color(0xFFB45C44);
   static const Color coral12 = Color(0x1FC76A54);
   static const Color coral30 = Color(0x4DC76A54);
+  static const Color waveMid = Color(0xFFDCAE9A);
 
   static const Color sage = Color(0xFF7D8450);
 
