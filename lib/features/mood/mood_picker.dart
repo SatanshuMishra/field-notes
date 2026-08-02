@@ -1,12 +1,11 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 
 import 'mood_picker_sheet.dart';
 
-const Duration _kMoodPickerEntrance = Duration(milliseconds: 220);
+const Duration _kMoodPickerEntrance = Duration(milliseconds: 180);
 
 Future<Mood?> showMoodPicker(
   BuildContext context, {
@@ -16,7 +15,7 @@ Future<Mood?> showMoodPicker(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Dismiss mood picker',
-    barrierColor: Palette.ink.withValues(alpha: 0.32),
+    barrierColor: const Color(0x472A241D),
     transitionDuration: _kMoodPickerEntrance,
     pageBuilder: (
       BuildContext dialogContext,
@@ -38,12 +37,12 @@ Future<Mood?> showMoodPicker(
     ) {
       final Animation<double> curved = CurvedAnimation(
         parent: animation,
-        curve: Curves.easeOutCubic,
+        curve: Curves.easeOut,
       );
       return FadeTransition(
         opacity: curved,
         child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
+          scale: Tween<double>(begin: 0.96, end: 1.0).animate(curved),
           child: child,
         ),
       );
