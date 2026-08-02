@@ -23,9 +23,9 @@ Align the shipped Flutter app with the Claude Design prototype's aesthetic witho
 macOS visual pass on the flower art, then the meadow-stroke question, then cut the Cluster F slice. Full ordered list in sessions/2026-08-01-04-prototype-design-alignment.md's "Deferred + open".
 
 ## Open Risks
-- **UNRESOLVED DESIGN QUESTION: the meadow's stroke colour and width changed in E1.** There is exactly one shared `_stroke(d)` and E1's mandate was that it stop hardcoding `Palette.ink`. Composition IS preserved literally (every plant kept its stem, leaf, centre at `height*0.42`, byte-identical geometry); only outline hue and weight moved (at d=44: chrysanthemum 1.5 -> 0.8, spider lily 1.5 -> 1.8). Reverting the meadow to `Palette.ink` needs a spec amendment plus a second stroke path.
+- ~~UNRESOLVED: the meadow's stroke~~ **SETTLED 2026-08-01** by decisions/2026-08-01-meadow-keeps-the-shared-stroke.md — E1's shared `_stroke(d)` is accepted as shipped; no revert, no spec amendment, no second stroke path. Rules on the mechanism only; the §5.4 visual pass is still owed.
 - **Baseline is 905 on main, not 904** — measured directly, three implementers flagged it, one proved it by stashing its diff. The old 904 predates #95/#96. Cluster E's branch head was 907. Always predict the count from the diff BEFORE running `fullValidationCmd`, then compare.
-- **N21's `resolveGardenMotionProfile` DOES NOT EXIST.** Real symbol is `resolveGardenMotion` at `lib/features/garden/garden_motion.dart:5-13`; the preserve item fused the enum name onto the function name.
+- **N21's `resolveGardenMotionProfile` DOES NOT EXIST.** Real symbol is `resolveGardenMotion` at `lib/features/garden/model/garden_motion.dart:5` (verified 2026-08-01; the recon's corrected path also dropped the `model/` segment). The preserve item fused the enum name onto the function name. `meadow_painter.dart` likewise lives at `lib/features/garden/paint/meadow_painter.dart`.
 - **N24's eight untouchable files are under `test/features/entry_cards/`, NOT `test/cards/`** — the shorthand circulated for weeks named two directories that do not exist. Plus `test/playback/video_slots_test.dart`. Cluster E touched none.
 - **STACKED PRs ARE THE PROVEN PATTERN for F-H.** Open with `--base` the branch below, then link via `POST /repos/SatanshuMishra/field-notes/stacks` (ordered bottom-to-top). Base-chaining ALONE is not a stack. Verified empirically: the cascade retargets WITHOUT branch deletion. Merge bottom-up; a mid-stack merge takes everything below it in one operation.
 - **The ledger's branch/merge state has been wrong NINE times.** On resume, always re-check `gh pr view` and `git log origin/main` before acting. Compare branches against `origin/main`, NEVER the local `main` ref — it goes stale and gives false unmerged counts.
@@ -44,6 +44,7 @@ macOS visual pass on the flower art, then the meadow-stroke question, then cut t
 - OQ-3 and OQ-6 unanswered. **OQ-6 blocks a C5 target value.**
 
 ## Key Decisions
+- decisions/2026-08-01-meadow-keeps-the-shared-stroke.md — the meadow keeps E1's shared stroke; no amendment, no second path
 - decisions/2026-08-01-cluster-e-ships-as-a-native-github-stack.md — SUPERSEDES the base-always-main ban; Cluster E shipped as native stack 103; base-chaining alone is not a stack; REST linking, no `gh stack` extension
 - decisions/2026-08-01-d2-shell-destination-promoted-to-riverpod.md — D2's tap-to-Calendar is implemented, not dropped; one-file shell widening, provider in `lib/state/`, `keepAlive` mandatory
 - decisions/2026-08-01-macos-visual-pass-confirmed.md — section 5.4 passed on cfa04c7 for Clusters A-D; Cluster E re-opens the criterion
