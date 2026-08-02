@@ -16,7 +16,15 @@ const double _saveVerticalPadding = 7;
 const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
 const double _bodyHorizontalPadding = 18;
-const double _bodyVerticalPadding = 14;
+const double _bodyBottomPadding = 14;
+const double _surfaceHeight = 440;
+const double _surfaceRuleThickness = 1;
+const double _pageTopPadding = 44;
+const double _pageHorizontalPadding = 54;
+const double _pageBottomPadding = 120;
+const double _scrollbarThickness = 9;
+const double _errorGap = 8;
+const double _footerGap = 16;
 
 class TextComposerSheet extends StatefulWidget {
   const TextComposerSheet({
@@ -28,7 +36,7 @@ class TextComposerSheet extends StatefulWidget {
     this.isSaving = false,
     this.title = 'Write a note',
     this.metaText = '',
-    this.hintText = 'What happened today?',
+    this.hintText = 'Start writing…',
     this.saveLabel = 'Save note',
     this.savingLabel = 'Saving...',
     this.cancelLabel = 'Cancel',
@@ -53,18 +61,21 @@ class TextComposerSheet extends StatefulWidget {
 class _TextComposerSheetState extends State<TextComposerSheet> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
+  late final ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialText);
     _focusNode = FocusNode();
+    _scrollController = ScrollController();
   }
 
   @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -78,7 +89,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           thickness: _headerRuleThickness,
           color: Palette.ink25,
         ),
-        _body(),
+        Flexible(child: _body()),
       ],
     );
   }
@@ -174,50 +185,80 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   Widget _body() {
     final String? errorMessage = widget.errorMessage;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: _bodyHorizontalPadding,
-        vertical: _bodyVerticalPadding,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _editor(),
-          if (errorMessage != null) ...<Widget>[
-            const SizedBox(height: 8),
-            Text(
-              errorMessage,
-              style:
-                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Flexible(child: _writingSurface()),
+        Padding(
+          padding: const EdgeInsets.only(
+            left: _bodyHorizontalPadding,
+            right: _bodyHorizontalPadding,
+            bottom: _bodyBottomPadding,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              StickerButton(
-                label: widget.cancelLabel,
-                variant: StickerButtonVariant.secondary,
-                onPressed: widget.isSaving ? null : widget.onCancel,
+              if (errorMessage != null) ...<Widget>[
+                const SizedBox(height: _errorGap),
+                Text(
+                  errorMessage,
+                  style: TypographyTokens.captionSans
+                      .copyWith(color: Palette.danger),
+                ),
+              ],
+              const SizedBox(height: _footerGap),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: <Widget>[
+                  StickerButton(
+                    label: widget.cancelLabel,
+                    variant: StickerButtonVariant.secondary,
+                    onPressed: widget.isSaving ? null : widget.onCancel,
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _writingSurface() {
+    return SizedBox(
+      height: _surfaceHeight,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(color: Palette.composerPaper),
+        child: Column(
+          children: <Widget>[
+            const DashedDivider(
+              thickness: _surfaceRuleThickness,
+              color: Palette.ink20,
+            ),
+            Expanded(child: _editor()),
+          ],
+        ),
       ),
     );
   }
 
   Widget _editor() {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Palette.cardWarm,
-        border: Shapes.outline,
-        borderRadius: Shapes.buttonBorderRadius,
-      ),
+    return RawScrollbar(
+      controller: _scrollController,
+      thickness: _scrollbarThickness,
+      thumbColor: Palette.ink22,
+      radius: const Radius.circular(Shapes.radiusXs),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.only(
+          top: _pageTopPadding,
+          left: _pageHorizontalPadding,
+          right: _pageHorizontalPadding,
+          bottom: _pageBottomPadding,
+        ),
         child: Stack(
+          fit: StackFit.expand,
           children: <Widget>[
             IgnorePointer(
               child: ValueListenableBuilder<TextEditingValue>(
@@ -232,8 +273,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                   }
                   return Text(
                     widget.hintText,
-                    style: TypographyTokens.bodySans
-                        .copyWith(color: Palette.placeholder),
+                    style: TypographyTokens.composerPlaceholderSerif,
                   );
                 },
               ),
@@ -241,12 +281,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             EditableText(
               controller: _controller,
               focusNode: _focusNode,
-              style: TypographyTokens.bodySerif,
+              scrollController: _scrollController,
+              style: TypographyTokens.composerBodySerif,
               cursorColor: Palette.coral,
               backgroundCursorColor: Palette.muted,
               keyboardType: TextInputType.multiline,
-              minLines: 4,
-              maxLines: 8,
+              minLines: null,
+              maxLines: null,
+              expands: true,
             ),
           ],
         ),
