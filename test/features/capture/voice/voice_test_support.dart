@@ -27,6 +27,8 @@ class FakeVoiceRecorder implements VoiceRecorder {
   Duration elapsed = Duration.zero;
 
   int startCalls = 0;
+  int pauseCalls = 0;
+  int resumeCalls = 0;
   int stopCalls = 0;
   int cancelCalls = 0;
   int disposeCalls = 0;
@@ -41,6 +43,16 @@ class FakeVoiceRecorder implements VoiceRecorder {
     if (error != null) {
       throw error;
     }
+  }
+
+  @override
+  Future<void> pause() async {
+    pauseCalls++;
+  }
+
+  @override
+  Future<void> resume() async {
+    resumeCalls++;
   }
 
   @override

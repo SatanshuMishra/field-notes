@@ -103,7 +103,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 60));
     await tester.pump(const Duration(milliseconds: 200));

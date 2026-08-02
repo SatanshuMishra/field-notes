@@ -3,12 +3,15 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 
-enum VoiceRecorderPhase { idle, recording, saving }
+enum VoiceRecorderPhase { idle, recording, paused, saving }
 
 const Key voiceCloseKey = ValueKey<String>('voice-close');
 const Key voiceRecordButtonKey = ValueKey<String>('voice-record-button');
+const Key voiceDiscardPillKey = ValueKey<String>('voice-discard-pill');
+const Key voiceSavePillKey = ValueKey<String>('voice-save-pill');
 
 const List<double> voiceWaveHeights = <double>[
   0.30,
@@ -77,6 +80,21 @@ const double _hairlineRadius = 2;
 
 const double _errorGap = 12;
 
+const double _pillRowGapTop = 6;
+const double _pillRowSpacing = 10;
+const double _pillRadius = Shapes.radiusSheet;
+const double _pillIconSize = 15;
+const double _discardPillBorderWidth = 1.5;
+const double _discardPillGap = 8;
+const EdgeInsets _discardPillPadding =
+    EdgeInsets.symmetric(horizontal: 18, vertical: 10);
+const double _savePillBorderWidth = 2;
+const double _savePillGap = 9;
+const double _savePillGlyphRadius = 4;
+const EdgeInsets _savePillPadding =
+    EdgeInsets.symmetric(horizontal: 22, vertical: 11);
+const double _pillLabelSize = 13;
+
 class VoiceRecorderSheet extends StatelessWidget {
   const VoiceRecorderSheet({
     super.key,
@@ -84,29 +102,45 @@ class VoiceRecorderSheet extends StatelessWidget {
     required this.onStart,
     required this.onStop,
     required this.onCancel,
+    this.onPause,
+    this.onResume,
+    this.onDiscard,
     this.elapsed = Duration.zero,
     this.errorMessage,
     this.title = 'New voice memo',
     this.armedHint = 'tap the mic when you’re ready',
     this.recordingHint = 'listening… speak freely',
+    this.pausedHint = 'paused · resume when you’re ready',
     this.savingHint = 'Saving your recording…',
     this.recordingLabel = 'Recording',
+    this.pausedLabel = 'Paused',
+    this.discardLabel = 'Discard',
+    this.saveLabel = 'Save memo',
   });
 
   final VoiceRecorderPhase phase;
   final VoidCallback onStart;
   final VoidCallback onStop;
   final VoidCallback onCancel;
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
+  final VoidCallback? onDiscard;
   final Duration elapsed;
   final String? errorMessage;
   final String title;
   final String armedHint;
   final String recordingHint;
+  final String pausedHint;
   final String savingHint;
   final String recordingLabel;
+  final String pausedLabel;
+  final String discardLabel;
+  final String saveLabel;
 
   bool get _isRecording => phase == VoiceRecorderPhase.recording;
+  bool get _isPaused => phase == VoiceRecorderPhase.paused;
   bool get _isSaving => phase == VoiceRecorderPhase.saving;
+  bool get _isActive => _isRecording || _isPaused;
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +177,10 @@ class VoiceRecorderSheet extends StatelessWidget {
                 const SizedBox(height: _waveGapTop),
                 _wave(),
                 const SizedBox(height: _waveGapBottom),
+                if (_isActive) ...<Widget>[
+                  const SizedBox(height: _pillRowGapTop),
+                  _pillRow(),
+                ],
                 if (errorMessage != null) ...<Widget>[
                   const SizedBox(height: _errorGap),
                   Text(
@@ -177,36 +215,50 @@ class VoiceRecorderSheet extends StatelessWidget {
     if (_isSaving) {
       return savingHint;
     }
-    return _isRecording ? recordingHint : armedHint;
+    if (_isRecording) {
+      return recordingHint;
+    }
+    return _isPaused ? pausedHint : armedHint;
   }
 
   Widget _header() {
-    if (!_isRecording) {
-      return Text(title, style: TypographyTokens.composerTitleAccent);
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        const Blink(
+    if (_isRecording) {
+      return _statusRow(
+        label: recordingLabel,
+        color: Palette.danger,
+        dot: const Blink(
           stepped: true,
           minOpacity: 0,
           duration: _statusBlinkDuration,
-          child: SizedBox.square(
-            dimension: _statusDotSize,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Palette.danger,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
+          child: _StatusDot(color: Palette.danger),
         ),
+      );
+    }
+    if (_isPaused) {
+      return _statusRow(
+        label: pausedLabel,
+        color: Palette.statusAmber,
+        dot: const _StatusDot(color: Palette.statusAmber),
+      );
+    }
+    return Text(title, style: TypographyTokens.composerTitleAccent);
+  }
+
+  Widget _statusRow({
+    required String label,
+    required Color color,
+    required Widget dot,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        dot,
         const SizedBox(width: _statusGap),
         Text(
-          recordingLabel.toUpperCase(),
+          label.toUpperCase(),
           style: TypographyTokens.captureLabelSans.copyWith(
             letterSpacing: _statusTracking,
-            color: Palette.danger,
+            color: color,
           ),
         ),
       ],
@@ -230,11 +282,21 @@ class VoiceRecorderSheet extends StatelessWidget {
     );
   }
 
+  VoidCallback? get _recordTap {
+    if (_isSaving) {
+      return null;
+    }
+    if (_isRecording) {
+      return onPause;
+    }
+    return _isPaused ? onResume : onStart;
+  }
+
   Widget _recordButton() {
     return GestureDetector(
       key: voiceRecordButtonKey,
       behavior: HitTestBehavior.opaque,
-      onTap: _isSaving ? null : (_isRecording ? onStop : onStart),
+      onTap: _recordTap,
       child: Container(
         width: _recordButtonSize,
         height: _recordButtonSize,
@@ -252,14 +314,109 @@ class VoiceRecorderSheet extends StatelessWidget {
             ),
           ],
         ),
-        child: const CaptureIcon(
-          glyph: CaptureGlyph.mic,
-          color: Palette.onAccent,
-          size: _recordIconSize,
+        child: _isRecording
+            ? const IconStickerGlyphIcon(
+                glyph: IconStickerGlyph.pause,
+                color: Palette.onAccent,
+                size: _recordIconSize,
+              )
+            : const CaptureIcon(
+                glyph: CaptureGlyph.mic,
+                color: Palette.onAccent,
+                size: _recordIconSize,
+              ),
+      ),
+    );
+  }
+
+  Widget _pillRow() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        _discardPill(),
+        const SizedBox(width: _pillRowSpacing),
+        _savePill(),
+      ],
+    );
+  }
+
+  Widget _discardPill() {
+    return GestureDetector(
+      key: voiceDiscardPillKey,
+      behavior: HitTestBehavior.opaque,
+      onTap: onDiscard,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Palette.dangerSurface,
+          border: Border.all(
+            color: Palette.danger,
+            width: _discardPillBorderWidth,
+          ),
+          borderRadius: BorderRadius.circular(_pillRadius),
+        ),
+        child: Padding(
+          padding: _discardPillPadding,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const IconStickerGlyphIcon(
+                glyph: IconStickerGlyph.trash,
+                color: Palette.danger,
+                size: _pillIconSize,
+              ),
+              const SizedBox(width: _discardPillGap),
+              Text(discardLabel, style: _pillLabelStyle(Palette.danger)),
+            ],
+          ),
         ),
       ),
     );
   }
+
+  Widget _savePill() {
+    return GestureDetector(
+      key: voiceSavePillKey,
+      behavior: HitTestBehavior.opaque,
+      onTap: onStop,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Palette.danger,
+          border: Border.all(color: Palette.ink, width: _savePillBorderWidth),
+          borderRadius: BorderRadius.circular(_pillRadius),
+          boxShadow: Shadows.emphasis,
+        ),
+        child: Padding(
+          padding: _savePillPadding,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const SizedBox.square(
+                dimension: _pillIconSize,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Palette.onAccent,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(_savePillGlyphRadius),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: _savePillGap),
+              Text(saveLabel, style: _pillLabelStyle(Palette.onAccent)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  TextStyle _pillLabelStyle(Color color) =>
+      TypographyTokens.labelSans.copyWith(
+        fontSize: _pillLabelSize,
+        fontWeight: FontWeight.w600,
+        color: color,
+      );
 
   Widget _wave() {
     return SizedBox(
@@ -286,6 +443,22 @@ class VoiceRecorderSheet extends StatelessWidget {
                   ),
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class _StatusDot extends StatelessWidget {
+  const _StatusDot({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: _statusDotSize,
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }

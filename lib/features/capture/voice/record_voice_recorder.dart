@@ -56,6 +56,26 @@ class RecordVoiceRecorder implements VoiceRecorder {
   }
 
   @override
+  Future<void> pause() async {
+    try {
+      await _recorder.pause();
+      _elapsed.stop();
+    } catch (error) {
+      throw VoiceRecorderException(recordPauseMessage, cause: error);
+    }
+  }
+
+  @override
+  Future<void> resume() async {
+    try {
+      await _recorder.resume();
+      _elapsed.start();
+    } catch (error) {
+      throw VoiceRecorderException(recordPauseMessage, cause: error);
+    }
+  }
+
+  @override
   Future<VoiceRecording> stop() async {
     _elapsed.stop();
     final int durationMs = _elapsed.elapsedMilliseconds;

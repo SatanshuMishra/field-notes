@@ -5,7 +5,7 @@ abstract final class Motion {
   static const Duration pulse = Duration(milliseconds: 1500);
   static const Duration bob = Duration(milliseconds: 700);
   static const Duration fade = Duration(milliseconds: 260);
-  static const Duration toastRise = Duration(milliseconds: 280);
+  static const Duration toastRise = Duration(milliseconds: 220);
   static const Duration modalPop = Duration(milliseconds: 220);
   static const Duration sheetSlide = Duration(milliseconds: 300);
 

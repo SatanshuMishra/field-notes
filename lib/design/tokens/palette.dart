@@ -48,6 +48,7 @@ abstract final class Palette {
   static const Color dangerSurface = Color(0xFFFBECEA);
 
   static const Color onAccent = Color(0xFFFFFFFF);
+  static const Color toastInk = Color(0xFFF6EAD6);
 
   static const Color titleBar = Color(0xFFE4D6BF);
   static const Color windowTitle = Color(0xFFA3866A);

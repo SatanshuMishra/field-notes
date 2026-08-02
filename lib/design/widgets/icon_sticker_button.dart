@@ -2,7 +2,12 @@ import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
 
-enum IconStickerGlyph { gear, soundOn, soundOff, edit, trash }
+enum IconStickerGlyph { gear, soundOn, soundOff, edit, trash, close, check, pause }
+
+const double _pauseBarWidth = 4.5;
+const double _pauseBarHeight = 16;
+const double _pauseBarGap = 3.5;
+const Radius _pauseBarRadius = Radius.circular(1.2);
 
 const double _buttonExtent = 30;
 const double _glyphExtent = 15;
@@ -133,11 +138,13 @@ class IconStickerGlyphPainter extends CustomPainter {
   static const double viewBox = 24;
   static const double strokeWidth = 1.8;
 
+  bool get _isFilled => glyph == IconStickerGlyph.pause;
+
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.scale(size.shortestSide / viewBox);
-    canvas.drawPath(_path(), _stroke());
+    canvas.drawPath(_path(), _isFilled ? _fill() : _stroke());
     canvas.restore();
   }
 
@@ -147,6 +154,11 @@ class IconStickerGlyphPainter extends CustomPainter {
     ..strokeWidth = strokeWidth
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round
+    ..isAntiAlias = true;
+
+  Paint _fill() => Paint()
+    ..color = color
+    ..style = PaintingStyle.fill
     ..isAntiAlias = true;
 
   Path _path() {
@@ -161,7 +173,48 @@ class IconStickerGlyphPainter extends CustomPainter {
         return _edit();
       case IconStickerGlyph.trash:
         return _trash();
+      case IconStickerGlyph.close:
+        return _close();
+      case IconStickerGlyph.check:
+        return _check();
+      case IconStickerGlyph.pause:
+        return _pause();
     }
+  }
+
+  Path _close() => Path()
+    ..moveTo(6, 6)
+    ..lineTo(18, 18)
+    ..moveTo(18, 6)
+    ..lineTo(6, 18);
+
+  Path _check() => Path()
+    ..moveTo(5, 12.5)
+    ..lineTo(10, 17.5)
+    ..lineTo(19, 7);
+
+  Path _pause() {
+    final double centre = viewBox / 2;
+    final double top = centre - _pauseBarHeight / 2;
+    return Path()
+      ..addRRect(
+        RRect.fromLTRBR(
+          centre - _pauseBarGap / 2 - _pauseBarWidth,
+          top,
+          centre - _pauseBarGap / 2,
+          top + _pauseBarHeight,
+          _pauseBarRadius,
+        ),
+      )
+      ..addRRect(
+        RRect.fromLTRBR(
+          centre + _pauseBarGap / 2,
+          top,
+          centre + _pauseBarGap / 2 + _pauseBarWidth,
+          top + _pauseBarHeight,
+          _pauseBarRadius,
+        ),
+      );
   }
 
   Path _gear() => Path()
