@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/today/today_date.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 
 import 'text_composer_sheet.dart';
 
@@ -39,6 +41,23 @@ class TextComposerConnector extends ConsumerStatefulWidget {
 class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   bool _isSaving = false;
   String? _errorMessage;
+  late final String _metaText;
+
+  @override
+  void initState() {
+    super.initState();
+    _metaText = _composeMeta();
+  }
+
+  String _composeMeta() {
+    final DateTime? parsed = parseDateKey(widget.date);
+    final String longDate =
+        parsed == null ? widget.date : headerDateLabel(parsed);
+    final DateTime now = ref.read(todayClockProvider)();
+    final String hour = now.hour.toString().padLeft(2, '0');
+    final String minute = now.minute.toString().padLeft(2, '0');
+    return '$longDate · $hour:$minute';
+  }
 
   Future<void> _save(String text) async {
     setState(() {
@@ -90,6 +109,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
       onCancel: () => Navigator.of(context).pop(),
       errorMessage: _errorMessage,
       isSaving: _isSaving,
+      metaText: _metaText,
     );
   }
 }
@@ -99,14 +119,16 @@ Future<String?> showTextComposer(BuildContext context, String date) {
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Dismiss note composer',
-    barrierColor: Palette.ink.withValues(alpha: 0.32),
+    barrierColor: const Color(0x00000000),
     transitionDuration: Motion.modalPop,
     pageBuilder: (
       BuildContext dialogContext,
       Animation<double> animation,
       Animation<double> secondaryAnimation,
     ) {
-      return DialogHost(child: TextComposerConnector(date: date));
+      return DialogHost(
+        child: ComposerShell(child: TextComposerConnector(date: date)),
+      );
     },
     transitionBuilder: (
       BuildContext dialogContext,

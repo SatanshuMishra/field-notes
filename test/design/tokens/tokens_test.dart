@@ -116,6 +116,7 @@ void main() {
       expect(Palette.hatchDark, const Color(0xFFD9C9AE));
       expect(Palette.viewportDark, const Color(0xFF3A352E));
       expect(Palette.viewportDarkAlt, const Color(0xFF443F37));
+      expect(Palette.composerPaper, const Color(0xFFFBF3E4));
     });
 
     test('pre-existing palette members keep their values', () {

@@ -5,11 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart';
 
 import 'camera_selection.dart';
 import 'video_recorder.dart';
@@ -345,14 +345,16 @@ Future<String?> showVideoComposer(BuildContext context, String date) {
     context: context,
     barrierDismissible: false,
     barrierLabel: 'Dismiss video recorder',
-    barrierColor: Palette.ink.withValues(alpha: 0.32),
+    barrierColor: const Color(0x00000000),
     transitionDuration: Motion.modalPop,
     pageBuilder: (
       BuildContext dialogContext,
       Animation<double> animation,
       Animation<double> secondaryAnimation,
     ) {
-      return DialogHost(child: VideoComposerConnector(date: date));
+      return DialogHost(
+        child: ComposerShell(child: VideoComposerConnector(date: date)),
+      );
     },
     transitionBuilder: (
       BuildContext dialogContext,

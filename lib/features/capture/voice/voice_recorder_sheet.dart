@@ -6,6 +6,8 @@ import 'package:field_notes/design/widgets/widgets.dart';
 
 enum VoiceRecorderPhase { idle, recording, saving }
 
+const double _sheetPadding = 20;
+
 class VoiceRecorderSheet extends StatelessWidget {
   const VoiceRecorderSheet({
     super.key,
@@ -22,7 +24,6 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.stopLabel = 'Stop & save',
     this.savingLabel = 'Saving…',
     this.cancelLabel = 'Cancel',
-    this.maxWidth = 420,
   });
 
   final VoiceRecorderPhase phase;
@@ -38,7 +39,6 @@ class VoiceRecorderSheet extends StatelessWidget {
   final String stopLabel;
   final String savingLabel;
   final String cancelLabel;
-  final double maxWidth;
 
   bool get _isRecording => phase == VoiceRecorderPhase.recording;
   bool get _isSaving => phase == VoiceRecorderPhase.saving;
@@ -46,48 +46,41 @@ class VoiceRecorderSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? errorMessage = this.errorMessage;
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: StickerCard(
-          surface: Palette.cardBright,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Padding(
+      padding: const EdgeInsets.all(_sheetPadding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(title, style: TypographyTokens.titleSerif),
+          const SizedBox(height: 16),
+          _VoiceStage(
+            phase: phase,
+            armedHint: armedHint,
+            recordingHint: recordingHint,
+            savingHint: savingHint,
+          ),
+          if (errorMessage != null) ...<Widget>[
+            const SizedBox(height: 12),
+            Text(
+              errorMessage,
+              style:
+                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget>[
-              Text(title, style: TypographyTokens.titleSerif),
-              const SizedBox(height: 16),
-              _VoiceStage(
-                phase: phase,
-                armedHint: armedHint,
-                recordingHint: recordingHint,
-                savingHint: savingHint,
+              StickerButton(
+                label: cancelLabel,
+                variant: StickerButtonVariant.secondary,
+                onPressed: _isSaving ? null : onCancel,
               ),
-              if (errorMessage != null) ...<Widget>[
-                const SizedBox(height: 12),
-                Text(
-                  errorMessage,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.danger),
-                ),
-              ],
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  StickerButton(
-                    label: cancelLabel,
-                    variant: StickerButtonVariant.secondary,
-                    onPressed: _isSaving ? null : onCancel,
-                  ),
-                  const SizedBox(width: 12),
-                  _primaryButton(),
-                ],
-              ),
+              const SizedBox(width: 12),
+              _primaryButton(),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
