@@ -15,10 +15,12 @@ import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:field_notes/features/capture/voice/voice_composer.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/mood/mood_picker.dart';
 import 'package:field_notes/features/mood/mood_picker_sheet.dart';
 
 import '../../features/capture/core/capture_test_support.dart';
+import '../../features/day_detail/support/day_detail_harness.dart' show entryOf;
 import '../../features/capture/video/video_test_support.dart'
     show FakeVideoRecorder;
 import '../../features/capture/voice/voice_test_support.dart'
@@ -114,6 +116,26 @@ void main() {
             captureServiceProvider
                 .overrideWith((Ref ref) => FakeCaptureService()),
           ],
+        ),
+      );
+
+      await _openDialog(tester);
+
+      expect(find.byType(TextComposerSheet), findsOneWidget);
+      _expectNoDebugUnderline(tester, find.byType(TextComposerSheet));
+    });
+
+    testWidgets('the note editor renders without the debug underline',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _harness(
+          (BuildContext context) => () => showEditNote(
+                context,
+                entry: entryOf(
+                  type: EntryType.text,
+                  textContent: 'a good day',
+                ),
+              ),
         ),
       );
 

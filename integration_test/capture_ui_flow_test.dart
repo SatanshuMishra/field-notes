@@ -82,9 +82,9 @@ void main() {
     await tester.enterText(find.byType(EditableText), noteText);
     await tester.pump();
 
-    await tester.tap(find.text('Save note'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
-    expect(find.text('Saving...'), findsOneWidget);
+    expect(find.text('Saving…'), findsOneWidget);
 
     await _settle(tester, times: 6);
 

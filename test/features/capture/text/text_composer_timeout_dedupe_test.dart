@@ -100,7 +100,7 @@ void main() {
     await tester.enterText(find.byType(EditableText), 'a slow day');
     await tester.pump();
 
-    await tester.tap(find.text('Save note'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 60));
     await tester.pump(const Duration(milliseconds: 200));

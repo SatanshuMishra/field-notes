@@ -23,6 +23,8 @@ const String textSaveTimeoutMessage =
 
 const Duration textSaveTimeout = Duration(seconds: 20);
 
+const String newNoteTitle = 'New note';
+
 class TextComposerConnector extends ConsumerStatefulWidget {
   const TextComposerConnector({
     super.key,
@@ -42,11 +44,23 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   bool _isSaving = false;
   String? _errorMessage;
   late final String _metaText;
+  late final String _title;
 
   @override
   void initState() {
     super.initState();
     _metaText = _composeMeta();
+    _title = _composeTitle();
+  }
+
+  String _composeTitle() {
+    if (widget.date == ref.read(todayDateProvider)) {
+      return newNoteTitle;
+    }
+    final DateTime? parsed = parseDateKey(widget.date);
+    final String dayLabel =
+        parsed == null ? widget.date : headerDateLabel(parsed);
+    return '$newNoteTitle · $dayLabel';
   }
 
   String _composeMeta() {
@@ -109,6 +123,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
       onCancel: () => Navigator.of(context).pop(),
       errorMessage: _errorMessage,
       isSaving: _isSaving,
+      title: _title,
       metaText: _metaText,
     );
   }
