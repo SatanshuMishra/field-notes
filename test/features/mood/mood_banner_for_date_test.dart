@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/mood/mood.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
+import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/state/state.dart';
 
+import '../sound/support/fake_sound_player.dart';
 import 'support/mood_harness.dart';
 
 void main() {
@@ -17,6 +20,10 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           journalRepositoryProvider.overrideWithValue(fake),
+          appSettingsProvider.overrideWith(
+            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+          ),
+          soundPlayerProvider.overrideWithValue(FakeSoundPlayer()),
         ],
         child: moodHarness(const MoodBannerForDate(date: '2026-07-19')),
       ),
@@ -48,6 +55,10 @@ void main() {
       ProviderScope(
         overrides: <Override>[
           journalRepositoryProvider.overrideWithValue(fake),
+          appSettingsProvider.overrideWith(
+            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+          ),
+          soundPlayerProvider.overrideWithValue(FakeSoundPlayer()),
         ],
         child: moodHarness(const MoodBannerForDate(date: '2026-07-19')),
       ),
