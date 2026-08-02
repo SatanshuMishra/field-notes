@@ -1,10 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -28,6 +30,21 @@ const Duration videoSaveTimeout = Duration(seconds: 20);
 const Duration cameraReleaseTimeout = Duration(seconds: 6);
 
 const Duration videoElapsedTick = Duration(milliseconds: 250);
+
+const String videoDiscardConfirmTitle = 'Discard this recording?';
+const String videoDiscardConfirmMessage =
+    'This take will be thrown away and nothing will be saved.';
+const String videoDiscardConfirmLabel = 'Discard';
+const String videoDiscardConfirmCancelLabel = 'Cancel';
+const String videoDiscardedToastMessage = 'Recording discarded';
+const String videoSavedToastMessage = 'Video saved';
+
+const Key videoDiscardConfirmKey = ValueKey<String>('video-discard-confirm');
+
+const double _confirmMaxWidth = 420;
+const double _confirmTitleGap = 8;
+const double _confirmActionsGap = 20;
+const double _confirmActionSpacing = 12;
 
 class VideoComposerConnector extends ConsumerStatefulWidget {
   const VideoComposerConnector({
@@ -60,6 +77,7 @@ class _VideoComposerConnectorState
   Duration _elapsed = Duration.zero;
   Timer? _elapsedTicker;
   final List<Timer> _timers = <Timer>[];
+  List<VideoTimelineEvent> _pendingEvents = const <VideoTimelineEvent>[];
   late final VideoRecorder _recorder;
 
   void _startTicker() {
@@ -200,7 +218,8 @@ class _VideoComposerConnectorState
         _phase = VideoRecorderPhase.recording;
         _elapsed = Duration.zero;
       });
-      _scheduleTimeline();
+      _pendingEvents = videoTimelineEvents();
+      _armTimeline();
       _startTicker();
     } on VideoRecorderException catch (error) {
       _failBackToIdle(error.message);
@@ -221,9 +240,17 @@ class _VideoComposerConnectorState
     });
   }
 
-  void _scheduleTimeline() {
-    for (final VideoTimelineEvent event in videoTimelineEvents()) {
-      _timers.add(Timer(event.at, () => _onTimelineEvent(event)));
+  void _armTimeline() {
+    _cancelTimers();
+    final Duration elapsed = _recorder.elapsed;
+    for (final VideoTimelineEvent event in _pendingEvents) {
+      final Duration remaining = event.at - elapsed;
+      _timers.add(
+        Timer(
+          remaining.isNegative ? Duration.zero : remaining,
+          () => _onTimelineEvent(event),
+        ),
+      );
     }
   }
 
@@ -231,6 +258,10 @@ class _VideoComposerConnectorState
     if (!mounted || _phase != VideoRecorderPhase.recording) {
       return;
     }
+    _pendingEvents = <VideoTimelineEvent>[
+      for (final VideoTimelineEvent pending in _pendingEvents)
+        if (!identical(pending, event)) pending,
+    ];
     switch (event.kind) {
       case VideoTimelineEventKind.nudge:
         setState(() => _nudgeMessage = event.message);
@@ -246,10 +277,60 @@ class _VideoComposerConnectorState
     _timers.clear();
   }
 
-  Future<void> _stop() async {
+  Future<void> _pause() async {
     if (_phase != VideoRecorderPhase.recording) {
       return;
     }
+    try {
+      await _recorder.pause();
+    } on VideoRecorderException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errorMessage = error.message);
+      return;
+    }
+    _cancelTimers();
+    _stopTicker();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _phase = VideoRecorderPhase.paused;
+      _elapsed = _recorder.elapsed;
+    });
+  }
+
+  Future<void> _resume() async {
+    if (_phase != VideoRecorderPhase.paused) {
+      return;
+    }
+    try {
+      await _recorder.resume();
+    } on VideoRecorderException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errorMessage = error.message);
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _phase = VideoRecorderPhase.recording;
+      _errorMessage = null;
+    });
+    _armTimeline();
+    _startTicker();
+  }
+
+  Future<void> _stop() async {
+    if (_phase != VideoRecorderPhase.recording &&
+        _phase != VideoRecorderPhase.paused) {
+      return;
+    }
+    final VideoRecorderPhase previous = _phase;
     _cancelTimers();
     _stopTicker();
     setState(() {
@@ -264,14 +345,14 @@ class _VideoComposerConnectorState
       entryId = await pending.timeout(widget.saveTimeout);
     } on TimeoutException {
       unawaited(pending.then((_) {}, onError: (_) {}));
-      _failBackToRecording(videoSaveTimeoutMessage);
+      _failBackTo(previous, videoSaveTimeoutMessage);
     } on VideoRecorderException catch (error) {
-      _failBackToRecording(error.message);
+      _failBackTo(previous, error.message);
     } on CaptureException catch (error) {
-      _failBackToRecording(error.message);
+      _failBackTo(previous, error.message);
     } catch (error, stackTrace) {
       debugPrint('Video save failed: $error\n$stackTrace');
-      _failBackToRecording(unexpectedVideoSaveMessage);
+      _failBackTo(previous, unexpectedVideoSaveMessage);
     }
     if (entryId == null || !mounted) {
       return;
@@ -280,6 +361,7 @@ class _VideoComposerConnectorState
     if (!mounted) {
       return;
     }
+    showTransientToast(context, videoSavedToastMessage);
     Navigator.of(context).pop(entryId);
   }
 
@@ -298,12 +380,12 @@ class _VideoComposerConnectorState
     return result.entry.id;
   }
 
-  void _failBackToRecording(String message) {
+  void _failBackTo(VideoRecorderPhase phase, String message) {
     if (!mounted) {
       return;
     }
     setState(() {
-      _phase = VideoRecorderPhase.recording;
+      _phase = phase;
       _errorMessage = message;
     });
   }
@@ -312,6 +394,7 @@ class _VideoComposerConnectorState
     _cancelTimers();
     _stopTicker();
     if (_phase == VideoRecorderPhase.recording ||
+        _phase == VideoRecorderPhase.paused ||
         _phase == VideoRecorderPhase.arming) {
       try {
         await _recorder.cancel();
@@ -323,6 +406,35 @@ class _VideoComposerConnectorState
     if (!mounted) {
       return;
     }
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _discard() async {
+    if (_phase != VideoRecorderPhase.recording &&
+        _phase != VideoRecorderPhase.paused) {
+      await _cancel();
+      return;
+    }
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    _cancelTimers();
+    _stopTicker();
+    try {
+      await _recorder.cancel();
+    } catch (error, stackTrace) {
+      debugPrint('Video cancel failed: $error\n$stackTrace');
+    }
+    await _release();
+    if (!mounted) {
+      return;
+    }
+    showTransientToast(context, videoDiscardedToastMessage);
     Navigator.of(context).pop();
   }
 
@@ -363,6 +475,64 @@ class _VideoComposerConnectorState
       onStart: _start,
       onStop: _stop,
       onCancel: _cancel,
+      onPause: _pause,
+      onResume: _resume,
+      onDiscard: _discard,
+      supportsPause: _recorder.supportsPause,
+    );
+  }
+}
+
+class _DiscardConfirmDialog extends StatelessWidget {
+  const _DiscardConfirmDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Material(
+        type: MaterialType.transparency,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _confirmMaxWidth),
+          child: StickerCard(
+            surface: Palette.cardBright,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  videoDiscardConfirmTitle,
+                  style: TypographyTokens.titleSerif,
+                ),
+                const SizedBox(height: _confirmTitleGap),
+                Text(
+                  videoDiscardConfirmMessage,
+                  style: TypographyTokens.bodySans,
+                ),
+                const SizedBox(height: _confirmActionsGap),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: _confirmActionSpacing,
+                  runSpacing: _confirmActionSpacing,
+                  children: <Widget>[
+                    StickerButton(
+                      label: videoDiscardConfirmCancelLabel,
+                      variant: StickerButtonVariant.secondary,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
+                    StickerButton(
+                      key: videoDiscardConfirmKey,
+                      label: videoDiscardConfirmLabel,
+                      variant: StickerButtonVariant.danger,
+                      labelStyle: TypographyTokens.captureLabelSans,
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

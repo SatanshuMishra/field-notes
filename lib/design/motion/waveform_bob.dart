@@ -21,6 +21,8 @@ class WaveformBars extends StatefulWidget {
     this.heights,
     this.perBarDurations,
     this.twoToneThreshold,
+    this.colorFor,
+    this.barRadius,
   });
 
   final int barCount;
@@ -34,6 +36,8 @@ class WaveformBars extends StatefulWidget {
   final List<double>? heights;
   final List<Duration>? perBarDurations;
   final double? twoToneThreshold;
+  final Color Function(double height)? colorFor;
+  final double? barRadius;
 
   @override
   State<WaveformBars> createState() => _WaveformBarsState();
@@ -89,8 +93,15 @@ class _WaveformBarsState extends State<WaveformBars>
 
   Color _colorFor(int index) {
     final List<double>? heights = widget.heights;
+    if (heights == null) {
+      return widget.color;
+    }
+    final Color Function(double)? colorFor = widget.colorFor;
+    if (colorFor != null) {
+      return colorFor(heights[index]);
+    }
     final double? threshold = widget.twoToneThreshold;
-    if (heights == null || threshold == null) {
+    if (threshold == null) {
       return widget.color;
     }
     return heights[index] > threshold ? widget.color : Palette.waveMid;
@@ -115,7 +126,7 @@ class _WaveformBarsState extends State<WaveformBars>
                   decoration: BoxDecoration(
                     color: _colorFor(i),
                     borderRadius: BorderRadius.all(
-                      Radius.circular(widget.barWidth / 2),
+                      Radius.circular(widget.barRadius ?? widget.barWidth / 2),
                     ),
                   ),
                 ),
