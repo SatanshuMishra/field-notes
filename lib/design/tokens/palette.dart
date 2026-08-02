@@ -13,6 +13,7 @@ abstract final class Palette {
   static const Color cardLight = Color(0xFFFFF5EA);
   static const Color cardBright = Color(0xFFFFFAF1);
   static const Color cardAlt = Color(0xFFF6EFE0);
+  static const Color composerPaper = Color(0xFFFBF3E4);
 
   static const Color ink = Color(0xFF4A3B2E);
   static const Color inkSoft = Color(0xFF6A5C4A);

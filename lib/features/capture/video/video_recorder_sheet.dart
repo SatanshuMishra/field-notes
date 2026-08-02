@@ -10,6 +10,8 @@ import 'video_recorder.dart';
 
 enum VideoRecorderPhase { preparing, idle, arming, recording, saving, denied }
 
+const double _sheetPadding = 20;
+
 class VideoRecorderSheet extends StatelessWidget {
   const VideoRecorderSheet({
     super.key,
@@ -37,7 +39,6 @@ class VideoRecorderSheet extends StatelessWidget {
     this.armingLabel = 'Preparing…',
     this.tryAgainLabel = 'Try again',
     this.cancelLabel = 'Cancel',
-    this.maxWidth = 460,
   });
 
   final VideoRecorderPhase phase;
@@ -64,7 +65,6 @@ class VideoRecorderSheet extends StatelessWidget {
   final String armingLabel;
   final String tryAgainLabel;
   final String cancelLabel;
-  final double maxWidth;
 
   bool get _isRecording => phase == VideoRecorderPhase.recording;
   bool get _isPreparing =>
@@ -78,66 +78,59 @@ class VideoRecorderSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? errorMessage = this.errorMessage;
     final String? nudgeMessage = this.nudgeMessage;
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: StickerCard(
-          surface: Palette.cardBright,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Padding(
+      padding: const EdgeInsets.all(_sheetPadding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(title, style: TypographyTokens.titleSerif),
+          const SizedBox(height: 16),
+          _VideoStage(
+            phase: phase,
+            preview: preview,
+            armedHint: armedHint,
+            armingHint: armingHint,
+            recordingHint: recordingHint,
+            savingHint: savingHint,
+            capHint: capHint,
+            deniedMessage: deniedMessage,
+          ),
+          if (_showsPicker) ...<Widget>[
+            const SizedBox(height: 16),
+            CameraPicker(
+              devices: devices,
+              selectedDeviceId: selectedDeviceId,
+              onChanged: _isIdle ? onDeviceChanged : null,
+              enabled: _isIdle,
+              label: cameraLabel,
+            ),
+          ],
+          if (_isRecording && nudgeMessage != null) ...<Widget>[
+            const SizedBox(height: 12),
+            Toast(message: nudgeMessage, surface: Palette.cardWarm),
+          ],
+          if (errorMessage != null) ...<Widget>[
+            const SizedBox(height: 12),
+            Text(
+              errorMessage,
+              style:
+                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
+            ),
+          ],
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget>[
-              Text(title, style: TypographyTokens.titleSerif),
-              const SizedBox(height: 16),
-              _VideoStage(
-                phase: phase,
-                preview: preview,
-                armedHint: armedHint,
-                armingHint: armingHint,
-                recordingHint: recordingHint,
-                savingHint: savingHint,
-                capHint: capHint,
-                deniedMessage: deniedMessage,
+              StickerButton(
+                label: cancelLabel,
+                variant: StickerButtonVariant.secondary,
+                onPressed: _isSaving ? null : onCancel,
               ),
-              if (_showsPicker) ...<Widget>[
-                const SizedBox(height: 16),
-                CameraPicker(
-                  devices: devices,
-                  selectedDeviceId: selectedDeviceId,
-                  onChanged: _isIdle ? onDeviceChanged : null,
-                  enabled: _isIdle,
-                  label: cameraLabel,
-                ),
-              ],
-              if (_isRecording && nudgeMessage != null) ...<Widget>[
-                const SizedBox(height: 12),
-                Toast(message: nudgeMessage, surface: Palette.cardWarm),
-              ],
-              if (errorMessage != null) ...<Widget>[
-                const SizedBox(height: 12),
-                Text(
-                  errorMessage,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.danger),
-                ),
-              ],
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  StickerButton(
-                    label: cancelLabel,
-                    variant: StickerButtonVariant.secondary,
-                    onPressed: _isSaving ? null : onCancel,
-                  ),
-                  const SizedBox(width: 12),
-                  _primaryButton(),
-                ],
-              ),
+              const SizedBox(width: 12),
+              _primaryButton(),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
