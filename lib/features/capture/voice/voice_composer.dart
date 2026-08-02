@@ -1,10 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -24,6 +26,21 @@ const String voiceSaveTimeoutMessage =
 const Duration voiceSaveTimeout = Duration(seconds: 20);
 
 const Duration voiceElapsedTick = Duration(milliseconds: 250);
+
+const String voiceDiscardConfirmTitle = 'Discard this recording?';
+const String voiceDiscardConfirmMessage =
+    'This take will be thrown away and nothing will be saved.';
+const String voiceDiscardConfirmLabel = 'Discard';
+const String voiceDiscardConfirmCancelLabel = 'Cancel';
+const String voiceDiscardedToastMessage = 'Recording discarded';
+const String voiceSavedToastMessage = 'Voice memo saved';
+
+const Key voiceDiscardConfirmKey = ValueKey<String>('voice-discard-confirm');
+
+const double _confirmMaxWidth = 420;
+const double _confirmTitleGap = 8;
+const double _confirmActionsGap = 20;
+const double _confirmActionSpacing = 12;
 
 class VoiceComposerConnector extends ConsumerStatefulWidget {
   const VoiceComposerConnector({
@@ -99,7 +116,54 @@ class _VoiceComposerConnectorState
     }
   }
 
+  Future<void> _pause() async {
+    final VoiceRecorder recorder = _recorder;
+    try {
+      await recorder.pause();
+    } on VoiceRecorderException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errorMessage = error.message);
+      return;
+    }
+    _stopTicker();
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _phase = VoiceRecorderPhase.paused;
+      _elapsed = recorder.elapsed;
+    });
+  }
+
+  Future<void> _resume() async {
+    final VoiceRecorder recorder = _recorder;
+    try {
+      await recorder.resume();
+    } on VoiceRecorderException catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _errorMessage = error.message);
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _phase = VoiceRecorderPhase.recording;
+      _errorMessage = null;
+    });
+    _startTicker();
+  }
+
   Future<void> _stop() async {
+    if (_phase != VoiceRecorderPhase.recording &&
+        _phase != VoiceRecorderPhase.paused) {
+      return;
+    }
+    final VoiceRecorderPhase previous = _phase;
     _stopTicker();
     setState(() {
       _phase = VoiceRecorderPhase.saving;
@@ -111,18 +175,19 @@ class _VoiceComposerConnectorState
       entryId = await pending.timeout(widget.saveTimeout);
     } on TimeoutException {
       unawaited(pending.then((_) {}, onError: (_) {}));
-      _failBackToRecording(voiceSaveTimeoutMessage);
+      _failBackTo(previous, voiceSaveTimeoutMessage);
     } on VoiceRecorderException catch (error) {
-      _failBackToRecording(error.message);
+      _failBackTo(previous, error.message);
     } on CaptureException catch (error) {
-      _failBackToRecording(error.message);
+      _failBackTo(previous, error.message);
     } catch (error, stackTrace) {
       debugPrint('Voice save failed: $error\n$stackTrace');
-      _failBackToRecording(unexpectedVoiceSaveMessage);
+      _failBackTo(previous, unexpectedVoiceSaveMessage);
     }
     if (entryId == null || !mounted) {
       return;
     }
+    showTransientToast(context, voiceSavedToastMessage);
     Navigator.of(context).pop(entryId);
   }
 
@@ -140,24 +205,48 @@ class _VoiceComposerConnectorState
     return result.entry.id;
   }
 
-  void _failBackToRecording(String message) {
+  void _failBackTo(VoiceRecorderPhase phase, String message) {
     if (!mounted) {
       return;
     }
     setState(() {
-      _phase = VoiceRecorderPhase.recording;
+      _phase = phase;
       _errorMessage = message;
     });
   }
 
   Future<void> _cancel() async {
     _stopTicker();
-    if (_phase == VoiceRecorderPhase.recording) {
+    if (_phase == VoiceRecorderPhase.recording ||
+        _phase == VoiceRecorderPhase.paused) {
       await _recorder.cancel();
     }
     if (!mounted) {
       return;
     }
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _discard() async {
+    if (_phase != VoiceRecorderPhase.recording &&
+        _phase != VoiceRecorderPhase.paused) {
+      await _cancel();
+      return;
+    }
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
+    );
+    if (confirmed != true || !mounted) {
+      return;
+    }
+    _stopTicker();
+    await _recorder.cancel();
+    if (!mounted) {
+      return;
+    }
+    showTransientToast(context, voiceDiscardedToastMessage);
     Navigator.of(context).pop();
   }
 
@@ -168,8 +257,65 @@ class _VoiceComposerConnectorState
       onStart: _start,
       onStop: _stop,
       onCancel: _cancel,
+      onPause: _pause,
+      onResume: _resume,
+      onDiscard: _discard,
       elapsed: _elapsed,
       errorMessage: _errorMessage,
+    );
+  }
+}
+
+class _DiscardConfirmDialog extends StatelessWidget {
+  const _DiscardConfirmDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Material(
+        type: MaterialType.transparency,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: _confirmMaxWidth),
+          child: StickerCard(
+            surface: Palette.cardBright,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  voiceDiscardConfirmTitle,
+                  style: TypographyTokens.titleSerif,
+                ),
+                const SizedBox(height: _confirmTitleGap),
+                Text(
+                  voiceDiscardConfirmMessage,
+                  style: TypographyTokens.bodySans,
+                ),
+                const SizedBox(height: _confirmActionsGap),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: _confirmActionSpacing,
+                  runSpacing: _confirmActionSpacing,
+                  children: <Widget>[
+                    StickerButton(
+                      label: voiceDiscardConfirmCancelLabel,
+                      variant: StickerButtonVariant.secondary,
+                      onPressed: () => Navigator.of(context).pop(false),
+                    ),
+                    StickerButton(
+                      key: voiceDiscardConfirmKey,
+                      label: voiceDiscardConfirmLabel,
+                      variant: StickerButtonVariant.danger,
+                      labelStyle: TypographyTokens.captureLabelSans,
+                      onPressed: () => Navigator.of(context).pop(true),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

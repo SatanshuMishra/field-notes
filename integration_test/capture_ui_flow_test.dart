@@ -115,7 +115,7 @@ void main() {
     await _settle(tester);
     expect(find.text('RECORDING'), findsOneWidget);
 
-    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
     expect(find.text('Saving your recording…'), findsOneWidget);
 

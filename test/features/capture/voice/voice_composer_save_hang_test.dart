@@ -26,6 +26,12 @@ class _HangingStopRecorder implements VoiceRecorder {
   Future<void> start() async {}
 
   @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> resume() async {}
+
+  @override
   Future<VoiceRecording> stop() {
     stopCalls++;
     return _never.future;
@@ -95,7 +101,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));
 
-    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
     expect(find.text('Saving your recording…'), findsOneWidget);
 

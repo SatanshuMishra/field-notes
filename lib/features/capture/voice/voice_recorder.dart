@@ -5,6 +5,8 @@ const String micPermissionMessage =
     'settings and try again.';
 const String recordStartMessage =
     'Could not start recording. Check your microphone and try again.';
+const String recordPauseMessage =
+    'Could not pause that recording. Check your microphone and try again.';
 const String recordStopMessage =
     'Could not finish that recording. Nothing was saved — please try again.';
 
@@ -33,6 +35,10 @@ abstract interface class VoiceRecorder {
   Future<bool> hasPermission();
 
   Future<void> start();
+
+  Future<void> pause();
+
+  Future<void> resume();
 
   Future<VoiceRecording> stop();
 

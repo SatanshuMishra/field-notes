@@ -129,6 +129,15 @@ abstract final class Shadows {
     ),
   ];
 
+  static const List<BoxShadow> toastLift = <BoxShadow>[
+    BoxShadow(
+      color: Color(0x80000000),
+      offset: Offset(0, 10),
+      blurRadius: 24,
+      spreadRadius: -8,
+    ),
+  ];
+
   static const List<BoxShadow> card = hero;
 
   static const List<BoxShadow> button = control;

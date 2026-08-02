@@ -75,7 +75,7 @@ void main() {
     expect(recorder.startCalls, 1);
     expect(find.byType(WaveformBars), findsOneWidget);
 
-    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
     await tester.pumpAndSettle();
 
@@ -139,7 +139,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 

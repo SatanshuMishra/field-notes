@@ -119,6 +119,7 @@ void main() {
       expect(Palette.viewportDarkAlt, const Color(0xFF443F37));
       expect(Palette.composerPaper, const Color(0xFFFBF3E4));
       expect(Palette.waveMid, const Color(0xFFDCAE9A));
+      expect(Palette.toastInk, const Color(0xFFF6EAD6));
     });
 
     test('pre-existing palette members keep their values', () {
@@ -197,6 +198,11 @@ void main() {
       expect(Shadows.panelLift.single.offset, const Offset(0, 44));
       expect(Shadows.panelLift.single.blurRadius, 96);
       expect(Shadows.panelLift.single.spreadRadius, -30);
+
+      expect(Shadows.toastLift.single.color, const Color(0x80000000));
+      expect(Shadows.toastLift.single.offset, const Offset(0, 10));
+      expect(Shadows.toastLift.single.blurRadius, 24);
+      expect(Shadows.toastLift.single.spreadRadius, -8);
     });
 
     test('the picker and chooser sheet lifts are two distinct tokens', () {

@@ -71,8 +71,9 @@ void main() {
     expect(cancels, 1);
   });
 
-  testWidgets('the recording phase mic button invokes onStop',
+  testWidgets('the recording phase mic button pauses and the pill saves',
       (WidgetTester tester) async {
+    int pauses = 0;
     int stops = 0;
 
     await tester.pumpWidget(
@@ -82,6 +83,7 @@ void main() {
           onStart: () {},
           onStop: () => stops++,
           onCancel: () {},
+          onPause: () => pauses++,
         ),
       ),
     );
@@ -89,7 +91,10 @@ void main() {
 
     await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
+    await tester.tap(find.byKey(voiceSavePillKey));
+    await tester.pump();
 
+    expect(pauses, 1);
     expect(stops, 1);
 
     await tester.pumpWidget(const SizedBox.shrink());
