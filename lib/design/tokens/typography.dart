@@ -77,6 +77,23 @@ abstract final class TypographyTokens {
     color: Palette.ink,
   );
 
+  static const TextStyle composerBodySerif = TextStyle(
+    fontFamily: serif,
+    fontSize: 19,
+    fontWeight: FontWeight.w400,
+    height: 2.0,
+    color: Palette.ink,
+  );
+
+  static const TextStyle composerPlaceholderSerif = TextStyle(
+    fontFamily: serif,
+    fontSize: 19,
+    fontWeight: FontWeight.w400,
+    fontStyle: FontStyle.italic,
+    height: 2.0,
+    color: Palette.ink34,
+  );
+
   static const TextStyle bodySerifSecondary = TextStyle(
     fontFamily: serif,
     fontSize: 12,

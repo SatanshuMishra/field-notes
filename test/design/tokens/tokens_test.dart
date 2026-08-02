@@ -76,6 +76,7 @@ void main() {
         ('ink22', Palette.ink22, 0x38),
         ('ink25', Palette.ink25, 0x40),
         ('ink30', Palette.ink30, 0x4D),
+        ('ink34', Palette.ink34, 0x57),
         ('ink35', Palette.ink35, 0x59),
         ('ink40', Palette.ink40, 0x66),
       ];
@@ -270,6 +271,22 @@ void main() {
           TypographyTokens.bodySerif.fontSize,
           reason: 'the italic body face shares the roman body metric');
       expect(TypographyTokens.bodySerifItalic.fontStyle, FontStyle.italic);
+
+      expect(TypographyTokens.composerBodySerif.fontFamily,
+          TypographyTokens.serif);
+      expect(TypographyTokens.composerBodySerif.fontSize, 19);
+      expect(TypographyTokens.composerBodySerif.fontWeight, FontWeight.w400);
+      expect(TypographyTokens.composerBodySerif.height, 2.0);
+      expect(TypographyTokens.composerBodySerif.color, Palette.ink);
+
+      expect(TypographyTokens.composerPlaceholderSerif.fontSize,
+          TypographyTokens.composerBodySerif.fontSize);
+      expect(TypographyTokens.composerPlaceholderSerif.height,
+          TypographyTokens.composerBodySerif.height);
+      expect(
+          TypographyTokens.composerPlaceholderSerif.fontStyle,
+          FontStyle.italic);
+      expect(TypographyTokens.composerPlaceholderSerif.color, Palette.ink34);
     });
 
     test('the serif ladder descends through every prototype size', () {

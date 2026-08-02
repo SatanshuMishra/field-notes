@@ -26,6 +26,7 @@ abstract final class Palette {
   static const Color ink22 = Color(0x384A3B2E);
   static const Color ink25 = Color(0x404A3B2E);
   static const Color ink30 = Color(0x4D4A3B2E);
+  static const Color ink34 = Color(0x574A3B2E);
   static const Color ink35 = Color(0x594A3B2E);
   static const Color ink40 = Color(0x664A3B2E);
 
