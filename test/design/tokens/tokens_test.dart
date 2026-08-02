@@ -118,6 +118,7 @@ void main() {
       expect(Palette.viewportDark, const Color(0xFF3A352E));
       expect(Palette.viewportDarkAlt, const Color(0xFF443F37));
       expect(Palette.composerPaper, const Color(0xFFFBF3E4));
+      expect(Palette.waveMid, const Color(0xFFDCAE9A));
     });
 
     test('pre-existing palette members keep their values', () {
@@ -315,6 +316,11 @@ void main() {
 
       expect(TypographyTokens.displaySerifToday.height, 1.0);
       expect(TypographyTokens.bodySerifSecondary.color, Palette.mutedDeep);
+
+      expect(TypographyTokens.timerSerif.fontFamily, TypographyTokens.serif);
+      expect(TypographyTokens.timerSerif.fontSize, 38);
+      expect(TypographyTokens.timerSerif.fontWeight, FontWeight.w400);
+      expect(TypographyTokens.timerSerif.color, Palette.ink);
     });
 
     test('the caption ladder descends and stays on the sans family', () {
@@ -356,6 +362,10 @@ void main() {
       expect(TypographyTokens.subtitleAccent.color, Palette.muted);
       expect(TypographyTokens.composerTitleAccent.fontSize, 16);
       expect(TypographyTokens.composerTitleAccent.color, Palette.coral);
+      expect(TypographyTokens.hintAccent.fontFamily, TypographyTokens.accent);
+      expect(TypographyTokens.hintAccent.fontSize, 15);
+      expect(TypographyTokens.hintAccent.fontWeight, FontWeight.w600);
+      expect(TypographyTokens.hintAccent.color, Palette.muted);
       expect(TypographyTokens.windowTitleAccent.fontSize, 14);
       expect(TypographyTokens.windowTitleAccent.color, Palette.windowTitle);
 

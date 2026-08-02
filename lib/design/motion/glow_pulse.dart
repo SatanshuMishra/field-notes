@@ -6,23 +6,29 @@ import 'motion_tokens.dart';
 class GlowPulse extends StatefulWidget {
   const GlowPulse({
     super.key,
-    required this.child,
+    this.child,
     this.color = Palette.coral,
     this.duration = Motion.pulse,
-    this.maxBlur = 16,
-    this.maxSpread = 2,
-    this.maxAlpha = 0.55,
-    this.borderRadius = Shapes.cardBorderRadius,
+    this.diameter = 150,
+    this.gradientAlpha = 0.4,
+    this.gradientStop = 0.68,
+    this.minScale = 0.9,
+    this.maxScale = 1.25,
+    this.minOpacity = 0.18,
+    this.maxOpacity = 0.5,
     this.animate = true,
   });
 
-  final Widget child;
+  final Widget? child;
   final Color color;
   final Duration duration;
-  final double maxBlur;
-  final double maxSpread;
-  final double maxAlpha;
-  final BorderRadius borderRadius;
+  final double diameter;
+  final double gradientAlpha;
+  final double gradientStop;
+  final double minScale;
+  final double maxScale;
+  final double minOpacity;
+  final double maxOpacity;
   final bool animate;
 
   @override
@@ -32,15 +38,13 @@ class GlowPulse extends StatefulWidget {
 class _GlowPulseState extends State<GlowPulse>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _curved;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
-    _curved = CurvedAnimation(parent: _controller, curve: Motion.pulseCurve);
     if (widget.animate) {
-      _controller.repeat(reverse: true);
+      _controller.repeat();
     }
   }
 
@@ -50,27 +54,48 @@ class _GlowPulseState extends State<GlowPulse>
     super.dispose();
   }
 
+  double get _progress =>
+      Motion.pulseCurve.transform(1 - (_controller.value * 2 - 1).abs());
+
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _curved,
-      child: widget.child,
-      builder: (BuildContext context, Widget? child) {
-        final double t = _curved.value;
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: widget.borderRadius,
-            boxShadow: <BoxShadow>[
-              BoxShadow(
-                color: widget.color.withValues(alpha: t * widget.maxAlpha),
-                blurRadius: t * widget.maxBlur,
-                spreadRadius: t * widget.maxSpread,
+    return Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        AnimatedBuilder(
+          animation: _controller,
+          child: _disc(),
+          builder: (BuildContext context, Widget? disc) {
+            final double t = _progress;
+            return Opacity(
+              opacity: widget.maxOpacity +
+                  (widget.minOpacity - widget.maxOpacity) * t,
+              child: Transform.scale(
+                scale:
+                    widget.minScale + (widget.maxScale - widget.minScale) * t,
+                child: disc,
               ),
-            ],
-          ),
-          child: child,
-        );
-      },
+            );
+          },
+        ),
+        ?widget.child,
+      ],
+    );
+  }
+
+  Widget _disc() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: <Color>[
+            widget.color.withValues(alpha: widget.gradientAlpha),
+            widget.color.withValues(alpha: 0),
+          ],
+          stops: <double>[0, widget.gradientStop],
+        ),
+      ),
+      child: SizedBox.square(dimension: widget.diameter),
     );
   }
 }

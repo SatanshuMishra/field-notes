@@ -8,12 +8,14 @@ class Blink extends StatefulWidget {
     required this.child,
     this.duration = Motion.blink,
     this.minOpacity = 0.2,
+    this.stepped = false,
     this.animate = true,
   });
 
   final Widget child;
   final Duration duration;
   final double minOpacity;
+  final bool stepped;
   final bool animate;
 
   @override
@@ -29,10 +31,13 @@ class _BlinkState extends State<Blink> with SingleTickerProviderStateMixin {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
     _opacity = Tween<double>(begin: 1.0, end: widget.minOpacity).animate(
-      CurvedAnimation(parent: _controller, curve: Motion.blinkCurve),
+      CurvedAnimation(
+        parent: _controller,
+        curve: widget.stepped ? const Threshold(0.5) : Motion.blinkCurve,
+      ),
     );
     if (widget.animate) {
-      _controller.repeat(reverse: true);
+      _controller.repeat(reverse: !widget.stepped);
     }
   }
 

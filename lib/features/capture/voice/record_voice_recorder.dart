@@ -28,6 +28,9 @@ class RecordVoiceRecorder implements VoiceRecorder {
   String? _activePath;
 
   @override
+  Duration get elapsed => _elapsed.elapsed;
+
+  @override
   Future<bool> hasPermission() => _recorder.hasPermission();
 
   @override

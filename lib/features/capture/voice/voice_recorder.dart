@@ -28,6 +28,8 @@ class VoiceRecorderException implements Exception {
 }
 
 abstract interface class VoiceRecorder {
+  Duration get elapsed;
+
   Future<bool> hasPermission();
 
   Future<void> start();

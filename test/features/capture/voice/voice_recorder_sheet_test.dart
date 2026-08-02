@@ -6,7 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'voice_test_support.dart';
 
 void main() {
-  testWidgets('idle phase offers Record and shows no recording indicators',
+  testWidgets('idle phase offers the mic button and shows no recording indicators',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       voiceHarness(
@@ -19,13 +19,13 @@ void main() {
       ),
     );
 
-    expect(find.text('Record'), findsOneWidget);
-    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
+    expect(find.byKey(voiceCloseKey), findsOneWidget);
     expect(find.byType(Blink), findsNothing);
     expect(find.byType(WaveformBars), findsNothing);
   });
 
-  testWidgets('recording phase shows the blinking dot, waveform, and Stop',
+  testWidgets('recording phase shows the blinking dot and the live waveform',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       voiceHarness(
@@ -41,7 +41,7 @@ void main() {
 
     expect(find.byType(Blink), findsOneWidget);
     expect(find.byType(WaveformBars), findsOneWidget);
-    expect(find.text('Stop & save'), findsOneWidget);
+    expect(find.text('RECORDING'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -62,16 +62,16 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Record'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(voiceCloseKey));
     await tester.pump();
 
     expect(starts, 1);
     expect(cancels, 1);
   });
 
-  testWidgets('the recording phase Stop button invokes onStop',
+  testWidgets('the recording phase mic button invokes onStop',
       (WidgetTester tester) async {
     int stops = 0;
 
@@ -87,7 +87,7 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 50));
 
-    await tester.tap(find.text('Stop & save'));
+    await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
 
     expect(stops, 1);
@@ -112,7 +112,7 @@ void main() {
     expect(find.text('Microphone is off.'), findsOneWidget);
   });
 
-  testWidgets('the saving phase disables the primary action',
+  testWidgets('the saving phase shows the saving hint and no live indicators',
       (WidgetTester tester) async {
     await tester.pumpWidget(
       voiceHarness(
@@ -125,7 +125,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Saving…'), findsOneWidget);
+    expect(find.text('Saving your recording…'), findsOneWidget);
     expect(find.byType(Blink), findsNothing);
     expect(find.byType(WaveformBars), findsNothing);
   });

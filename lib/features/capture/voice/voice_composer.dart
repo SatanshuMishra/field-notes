@@ -23,6 +23,8 @@ const String voiceSaveTimeoutMessage =
 
 const Duration voiceSaveTimeout = Duration(seconds: 20);
 
+const Duration voiceElapsedTick = Duration(milliseconds: 250);
+
 class VoiceComposerConnector extends ConsumerStatefulWidget {
   const VoiceComposerConnector({
     super.key,
@@ -42,8 +44,31 @@ class _VoiceComposerConnectorState
     extends ConsumerState<VoiceComposerConnector> {
   VoiceRecorderPhase _phase = VoiceRecorderPhase.idle;
   String? _errorMessage;
+  Duration _elapsed = Duration.zero;
+  Timer? _elapsedTicker;
 
   VoiceRecorder get _recorder => ref.read(voiceRecorderProvider);
+
+  @override
+  void dispose() {
+    _stopTicker();
+    super.dispose();
+  }
+
+  void _startTicker() {
+    _elapsedTicker?.cancel();
+    _elapsedTicker = Timer.periodic(voiceElapsedTick, (Timer _) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _elapsed = _recorder.elapsed);
+    });
+  }
+
+  void _stopTicker() {
+    _elapsedTicker?.cancel();
+    _elapsedTicker = null;
+  }
 
   Future<void> _start() async {
     setState(() => _errorMessage = null);
@@ -61,7 +86,11 @@ class _VoiceComposerConnectorState
       if (!mounted) {
         return;
       }
-      setState(() => _phase = VoiceRecorderPhase.recording);
+      setState(() {
+        _phase = VoiceRecorderPhase.recording;
+        _elapsed = Duration.zero;
+      });
+      _startTicker();
     } on VoiceRecorderException catch (error) {
       if (!mounted) {
         return;
@@ -71,6 +100,7 @@ class _VoiceComposerConnectorState
   }
 
   Future<void> _stop() async {
+    _stopTicker();
     setState(() {
       _phase = VoiceRecorderPhase.saving;
       _errorMessage = null;
@@ -121,6 +151,7 @@ class _VoiceComposerConnectorState
   }
 
   Future<void> _cancel() async {
+    _stopTicker();
     if (_phase == VoiceRecorderPhase.recording) {
       await _recorder.cancel();
     }
@@ -137,6 +168,7 @@ class _VoiceComposerConnectorState
       onStart: _start,
       onStop: _stop,
       onCancel: _cancel,
+      elapsed: _elapsed,
       errorMessage: _errorMessage,
     );
   }
