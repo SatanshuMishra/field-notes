@@ -47,3 +47,5 @@ app.*.map.json
 /graphify-out/
 
 .mitosis/
+
+test/design/goldens/failures/
