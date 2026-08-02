@@ -22,17 +22,17 @@ const List<CaptureOption> captureOptions = <CaptureOption>[
   CaptureOption(
     type: EntryType.text,
     label: 'Write a note',
-    description: 'A few words for today',
+    description: 'put the day into words',
   ),
   CaptureOption(
     type: EntryType.voice,
     label: 'Record voice',
-    description: 'Say it out loud',
+    description: 'speak it, hands-free',
   ),
   CaptureOption(
     type: EntryType.video,
     label: 'Record video',
-    description: 'Up to 30 minutes',
+    description: 'a moving snapshot',
   ),
 ];
 
