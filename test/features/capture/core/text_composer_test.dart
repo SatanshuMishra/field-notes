@@ -40,7 +40,7 @@ Widget _composerApp({
 }
 
 void main() {
-  testWidgets('save is inert until the note has text',
+  testWidgets('saving an empty note announces the guard instead of writing',
       (WidgetTester tester) async {
     final List<String> saved = <String>[];
 
@@ -50,15 +50,18 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Save note'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
     expect(saved, isEmpty);
+    expect(find.text(emptySaveGuardMessage), findsOneWidget);
 
     await tester.enterText(find.byType(EditableText), 'a good day');
     await tester.pump();
-    await tester.tap(find.text('Save note'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
     expect(saved, <String>['a good day']);
+
+    await tester.pump(composerToastLifetime);
   });
 
   testWidgets('a successful save closes the composer with the new entry id',
@@ -74,7 +77,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'a good day');
     await tester.pump();
-    await tester.tap(find.text('Save note'));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(result, 'entry-1');
@@ -101,7 +104,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'do not lose me');
     await tester.pump();
-    await tester.tap(find.text('Save note'));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(find.text('Could not save your entry.'), findsOneWidget);
@@ -113,7 +116,7 @@ void main() {
     expect(result, 'unset');
   });
 
-  testWidgets('cancel closes the composer without capturing anything',
+  testWidgets('the close X shuts the composer without capturing anything',
       (WidgetTester tester) async {
     final FakeCaptureService service = FakeCaptureService();
     String? result = 'unset';
@@ -126,7 +129,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'never mind');
     await tester.pump();
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
 
     expect(result, isNull);

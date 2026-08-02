@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -68,7 +69,13 @@ void main() {
 
     await tester.enterText(find.byType(EditableText), 'a better day');
     await tester.pump();
-    await tester.tap(find.text('Save changes'));
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+
+    expect(find.text(editNoteConfirmTitle), findsOneWidget);
+    expect(repository.textUpdates, isEmpty);
+
+    await tester.tap(find.byKey(editNoteConfirmSaveKey));
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, <({String id, String textContent})>[
@@ -100,7 +107,9 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'a better day');
     await tester.pump();
-    await tester.tap(find.text('Save changes'));
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(editNoteConfirmSaveKey));
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, isEmpty);
@@ -108,7 +117,7 @@ void main() {
     expect(find.text('a better day'), findsOneWidget);
   });
 
-  testWidgets('cancelling closes the editor without writing',
+  testWidgets('the close X shuts the editor without writing',
       (WidgetTester tester) async {
     final Entry entry = entryOf(
       type: EntryType.text,
@@ -129,7 +138,7 @@ void main() {
 
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, isEmpty);

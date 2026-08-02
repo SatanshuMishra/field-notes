@@ -1,9 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
+
+const String emptySaveGuardMessage = 'Write something first';
+
+const Duration composerToastLifetime = Duration(milliseconds: 1900);
 
 const double _headerVerticalPadding = 14;
 const double _headerHorizontalPadding = 18;
@@ -24,7 +31,6 @@ const double _pageHorizontalPadding = 54;
 const double _pageBottomPadding = 120;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
-const double _footerGap = 16;
 
 class TextComposerSheet extends StatefulWidget {
   const TextComposerSheet({
@@ -37,9 +43,8 @@ class TextComposerSheet extends StatefulWidget {
     this.title = 'Write a note',
     this.metaText = '',
     this.hintText = 'Start writing…',
-    this.saveLabel = 'Save note',
-    this.savingLabel = 'Saving...',
-    this.cancelLabel = 'Cancel',
+    this.saveLabel = 'Save',
+    this.savingLabel = 'Saving…',
   });
 
   final ValueChanged<String> onSave;
@@ -52,7 +57,6 @@ class TextComposerSheet extends StatefulWidget {
   final String hintText;
   final String saveLabel;
   final String savingLabel;
-  final String cancelLabel;
 
   @override
   State<TextComposerSheet> createState() => _TextComposerSheetState();
@@ -62,6 +66,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   late final TextEditingController _controller;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
+  String? _guardMessage;
+  Timer? _guardTimer;
 
   @override
   void initState() {
@@ -73,6 +79,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   @override
   void dispose() {
+    _guardTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
@@ -145,46 +152,58 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _saveButton() {
-    return ValueListenableBuilder<TextEditingValue>(
-      valueListenable: _controller,
-      builder: (
-        BuildContext context,
-        TextEditingValue value,
-        Widget? child,
-      ) {
-        final bool canSave = value.text.trim().isNotEmpty && !widget.isSaving;
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: canSave ? () => widget.onSave(value.text) : null,
-          child: Opacity(
-            opacity: canSave ? 1 : _disabledOpacity,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Palette.coral,
-                border: Shapes.outline,
-                borderRadius: BorderRadius.circular(Shapes.radiusPill),
-                boxShadow: Shadows.control,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _saveHorizontalPadding,
-                  vertical: _saveVerticalPadding,
-                ),
-                child: Text(
-                  widget.isSaving ? widget.savingLabel : widget.saveLabel,
-                  style: TypographyTokens.captureLabelSans
-                      .copyWith(color: Palette.onAccent),
-                ),
-              ),
+    final bool enabled = !widget.isSaving;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled ? _handleSaveTap : null,
+      child: Opacity(
+        opacity: enabled ? 1 : _disabledOpacity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Palette.coral,
+            border: Shapes.outline,
+            borderRadius: BorderRadius.circular(Shapes.radiusPill),
+            boxShadow: Shadows.control,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _saveHorizontalPadding,
+              vertical: _saveVerticalPadding,
+            ),
+            child: Text(
+              widget.isSaving ? widget.savingLabel : widget.saveLabel,
+              style: TypographyTokens.captureLabelSans
+                  .copyWith(color: Palette.onAccent),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
+  }
+
+  void _handleSaveTap() {
+    final String text = _controller.text;
+    if (text.trim().isEmpty) {
+      _showGuard();
+      return;
+    }
+    widget.onSave(text);
+  }
+
+  void _showGuard() {
+    _guardTimer?.cancel();
+    setState(() => _guardMessage = emptySaveGuardMessage);
+    _guardTimer = Timer(composerToastLifetime, () {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _guardMessage = null);
+    });
   }
 
   Widget _body() {
     final String? errorMessage = widget.errorMessage;
+    final String? guardMessage = _guardMessage;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -208,17 +227,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                       .copyWith(color: Palette.danger),
                 ),
               ],
-              const SizedBox(height: _footerGap),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  StickerButton(
-                    label: widget.cancelLabel,
-                    variant: StickerButtonVariant.secondary,
-                    onPressed: widget.isSaving ? null : widget.onCancel,
-                  ),
-                ],
-              ),
+              if (guardMessage != null) ...<Widget>[
+                const SizedBox(height: _errorGap),
+                Toast(message: guardMessage),
+              ],
             ],
           ),
         ),

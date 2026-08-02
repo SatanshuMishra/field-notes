@@ -53,7 +53,7 @@ class _Trigger extends StatelessWidget {
 
 void main() {
   testWidgets(
-      'when capture() never completes, the save is bounded: the "Saving..." '
+      'when capture() never completes, the save is bounded: the "Saving…" '
       'state clears and a timeout error is surfaced instead of hanging',
       (WidgetTester tester) async {
     final _HangingCaptureService service = _HangingCaptureService();
@@ -76,16 +76,16 @@ void main() {
     await tester.enterText(find.byType(EditableText), 'a slow day');
     await tester.pump();
 
-    await tester.tap(find.text('Save note'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
-    expect(find.text('Saving...'), findsOneWidget);
+    expect(find.text('Saving…'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 150));
 
     expect(service.captureCalls, 1);
     expect(find.text(textSaveTimeoutMessage), findsOneWidget);
-    expect(find.text('Saving...'), findsNothing);
-    expect(find.text('Save note'), findsOneWidget);
+    expect(find.text('Saving…'), findsNothing);
+    expect(find.text('Save'), findsOneWidget);
     expect(find.byType(TextComposerSheet), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
