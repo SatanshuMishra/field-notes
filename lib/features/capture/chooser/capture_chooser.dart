@@ -1,6 +1,7 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -10,16 +11,26 @@ import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'capture_chooser_sheet.dart';
 import 'capture_routes_provider.dart';
 
+const Duration _kChooserSheetEntrance = Duration(milliseconds: 240);
+const Cubic _kChooserSheetCurve = Cubic(0.2, 0.8, 0.2, 1);
+const Color _kChooserSheetBarrier = Color(0x572A241D);
+
 Future<EntryType?> showCaptureChooser(
   BuildContext context, {
   required Set<EntryType> availableTypes,
+  ShellLayout? layout,
 }) {
+  final ShellLayout resolved =
+      layout ?? resolveShellLayout(Theme.of(context).platform);
+  final bool isSheet = resolved == ShellLayout.bottomBar;
   return showGeneralDialog<EntryType>(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Dismiss capture chooser',
-    barrierColor: Palette.ink.withValues(alpha: 0.32),
-    transitionDuration: Motion.modalPop,
+    barrierColor: isSheet
+        ? _kChooserSheetBarrier
+        : Palette.ink.withValues(alpha: 0.32),
+    transitionDuration: isSheet ? _kChooserSheetEntrance : Motion.modalPop,
     pageBuilder: (
       BuildContext dialogContext,
       Animation<double> animation,
@@ -30,6 +41,7 @@ Future<EntryType?> showCaptureChooser(
           availableTypes: availableTypes,
           onOptionSelected: (EntryType type) =>
               Navigator.of(dialogContext).pop(type),
+          layout: resolved,
         ),
       );
     },
@@ -39,6 +51,17 @@ Future<EntryType?> showCaptureChooser(
       Animation<double> secondaryAnimation,
       Widget child,
     ) {
+      if (isSheet) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 1),
+            end: Offset.zero,
+          ).animate(
+            CurvedAnimation(parent: animation, curve: _kChooserSheetCurve),
+          ),
+          child: child,
+        );
+      }
       final Animation<double> curved = CurvedAnimation(
         parent: animation,
         curve: Motion.entranceCurve,
