@@ -126,6 +126,7 @@ void main() {
       expect(Palette.viewportDarkAlt, const Color(0xFF443F37));
       expect(Palette.composerPaper, const Color(0xFFFBF3E4));
       expect(Palette.waveMid, const Color(0xFFDCAE9A));
+      expect(Palette.waveLight, const Color(0xFFE3C4B2));
       expect(Palette.toastInk, const Color(0xFFF6EAD6));
       expect(Palette.viewportAmber, const Color(0xFFF0B34A));
       expect(Palette.viewportAmber, isNot(Palette.statusAmber));

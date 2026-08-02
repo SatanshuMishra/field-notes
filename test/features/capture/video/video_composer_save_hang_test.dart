@@ -22,11 +22,20 @@ class _HangingStopRecorder implements VideoRecorder {
   Duration get elapsed => Duration.zero;
 
   @override
+  bool get supportsPause => false;
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async =>
       List<VideoCaptureDevice>.of(fakeVideoDevices);
 
   @override
   Future<void> start() async {}
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> resume() async {}
 
   @override
   Future<VideoRecording> stop() {

@@ -10,6 +10,8 @@ const String videoStartMessage =
 const String videoStartTimeoutMessage =
     'The camera did not respond. Make sure Field Notes has camera access in '
     'System Settings, then try again.';
+const String videoPauseMessage =
+    'Could not pause that recording. Check your camera and try again.';
 const String videoStopMessage =
     'Could not finish that recording. Nothing was saved — please try again.';
 const String videoDeviceListMessage =
@@ -64,11 +66,17 @@ class VideoRecorderException implements Exception {
 abstract interface class VideoRecorder {
   Duration get elapsed;
 
+  bool get supportsPause;
+
   Future<List<VideoCaptureDevice>> listDevices();
 
   Widget? openSession(String deviceId);
 
   Future<void> start();
+
+  Future<void> pause();
+
+  Future<void> resume();
 
   Future<VideoRecording> stop();
 

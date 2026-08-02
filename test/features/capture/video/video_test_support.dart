@@ -39,6 +39,7 @@ class FakeVideoRecorder implements VideoRecorder {
     this.listError,
     this.releaseError,
     this.livePreview = true,
+    this.supportsPause = false,
   }) : devices = List<VideoCaptureDevice>.of(devices);
 
   final VideoRecording? recording;
@@ -47,9 +48,15 @@ class FakeVideoRecorder implements VideoRecorder {
   final VideoRecorderException? listError;
   final VideoRecorderException? releaseError;
   final bool livePreview;
+
+  @override
+  final bool supportsPause;
+
   List<VideoCaptureDevice> devices;
 
   int startCalls = 0;
+  int pauseCalls = 0;
+  int resumeCalls = 0;
   int stopCalls = 0;
   int cancelCalls = 0;
   int releaseCalls = 0;
@@ -83,6 +90,16 @@ class FakeVideoRecorder implements VideoRecorder {
     if (error != null) {
       throw error;
     }
+  }
+
+  @override
+  Future<void> pause() async {
+    pauseCalls++;
+  }
+
+  @override
+  Future<void> resume() async {
+    resumeCalls++;
   }
 
   @override
@@ -161,6 +178,9 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
   Duration get elapsed => Duration.zero;
 
   @override
+  bool get supportsPause => false;
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async =>
       List<VideoCaptureDevice>.of(fakeVideoDevices);
 
@@ -170,6 +190,12 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
     await _ready.future;
     started = true;
   }
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> resume() async {}
 
   @override
   Future<VideoRecording> stop() async {

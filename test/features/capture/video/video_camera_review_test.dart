@@ -45,6 +45,9 @@ class _ArmingRecorder implements VideoRecorder {
   }
 
   @override
+  bool get supportsPause => false;
+
+  @override
   Future<void> start() async {
     startCalls++;
     await startGate.future;
@@ -53,6 +56,12 @@ class _ArmingRecorder implements VideoRecorder {
     }
     committed = true;
   }
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> resume() async {}
 
   @override
   Future<VideoRecording> stop() async {
@@ -105,7 +114,16 @@ class _HangingReleaseRecorder implements VideoRecorder {
   }
 
   @override
+  bool get supportsPause => false;
+
+  @override
   Future<void> start() async {}
+
+  @override
+  Future<void> pause() async {}
+
+  @override
+  Future<void> resume() async {}
 
   @override
   Future<VideoRecording> stop() async {

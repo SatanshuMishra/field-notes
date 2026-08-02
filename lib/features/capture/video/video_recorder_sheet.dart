@@ -10,10 +10,20 @@ import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 import 'camera_picker.dart';
 import 'video_recorder.dart';
 
-enum VideoRecorderPhase { preparing, idle, arming, recording, saving, denied }
+enum VideoRecorderPhase {
+  preparing,
+  idle,
+  arming,
+  recording,
+  paused,
+  saving,
+  denied
+}
 
 const Key videoCloseKey = ValueKey<String>('video-close');
 const Key videoShutterKey = ValueKey<String>('video-shutter');
+const Key videoDiscardCircleKey = ValueKey<String>('video-discard-circle');
+const Key videoSaveCircleKey = ValueKey<String>('video-save-circle');
 
 const String videoFeedLabel = 'CAMERA FEED';
 
@@ -54,9 +64,18 @@ const EdgeInsets _deniedPadding =
     EdgeInsets.symmetric(horizontal: 22, vertical: 20);
 
 const double _controlRowBottom = 22;
+const double _controlRowGap = 30;
 const double _shutterSize = 70;
 const double _shutterBorderWidth = 4;
 const double _shutterCoreSize = 24;
+const double _shutterPauseGlyphSize = 26;
+
+const double _sideCircleSize = 44;
+const double _sideCircleBorderWidth = 1.5;
+const double _sideGlyphSize = 18;
+const double _sideCaptionGap = 3;
+const double _sideCaptionSize = 10;
+const Color _discardCaptionColor = Color(0xBFFFFFFF);
 
 class VideoRecorderSheet extends StatelessWidget {
   const VideoRecorderSheet({
@@ -65,6 +84,10 @@ class VideoRecorderSheet extends StatelessWidget {
     required this.onStart,
     required this.onStop,
     required this.onCancel,
+    this.onPause,
+    this.onResume,
+    this.onDiscard,
+    this.supportsPause = false,
     this.preview,
     this.devices = const <VideoCaptureDevice>[],
     this.selectedDeviceId,
@@ -80,12 +103,18 @@ class VideoRecorderSheet extends StatelessWidget {
     this.savingHint = 'Saving your video…',
     this.capHint = 'Auto-stops at 30:00.',
     this.deniedMessage = cameraPermissionMessage,
+    this.discardLabel = 'Discard',
+    this.saveLabel = 'Save',
   });
 
   final VideoRecorderPhase phase;
   final VoidCallback onStart;
   final VoidCallback onStop;
   final VoidCallback onCancel;
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
+  final VoidCallback? onDiscard;
+  final bool supportsPause;
   final Widget? preview;
   final List<VideoCaptureDevice> devices;
   final String? selectedDeviceId;
@@ -101,15 +130,20 @@ class VideoRecorderSheet extends StatelessWidget {
   final String savingHint;
   final String capHint;
   final String deniedMessage;
+  final String discardLabel;
+  final String saveLabel;
 
   bool get _isRecording => phase == VideoRecorderPhase.recording;
+  bool get _isPaused => phase == VideoRecorderPhase.paused;
+  bool get _isActive => _isRecording || _isPaused;
   bool get _isPreparing =>
       phase == VideoRecorderPhase.preparing ||
       phase == VideoRecorderPhase.arming;
   bool get _isSaving => phase == VideoRecorderPhase.saving;
   bool get _isDenied => phase == VideoRecorderPhase.denied;
   bool get _isIdle => phase == VideoRecorderPhase.idle;
-  bool get _showsPicker => devices.isNotEmpty && !_isDenied && !_isSaving;
+  bool get _showsPicker =>
+      devices.isNotEmpty && !_isDenied && !_isSaving && !_isPaused;
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +180,10 @@ class VideoRecorderSheet extends StatelessWidget {
     if (_isPreparing) {
       return armingHint;
     }
-    return _isRecording ? recordingHint : armedHint;
+    if (_isRecording) {
+      return recordingHint;
+    }
+    return _isPaused ? pausedHint : armedHint;
   }
 
   Widget _feed() {
@@ -220,6 +257,9 @@ class VideoRecorderSheet extends StatelessWidget {
         child: _PillDot(color: Palette.recordFill),
       );
     }
+    if (_isPaused) {
+      return const _PillDot(color: Palette.viewportAmber);
+    }
     return const _PillDot(color: Palette.onDark30);
   }
 
@@ -249,8 +289,8 @@ class VideoRecorderSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (_isRecording) Text(capHint, style: _hintStyle),
-          if (_isRecording && nudgeMessage != null) ...<Widget>[
+          if (_isActive) Text(capHint, style: _hintStyle),
+          if (_isActive && nudgeMessage != null) ...<Widget>[
             const SizedBox(height: _underPillGap),
             Toast(message: nudgeMessage, variant: ToastVariant.dark),
           ],
@@ -323,8 +363,42 @@ class VideoRecorderSheet extends StatelessWidget {
       bottom: _controlRowBottom,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[_shutter()],
+        children: <Widget>[
+          if (_isActive) ...<Widget>[
+            _discardCircle(),
+            const SizedBox(width: _controlRowGap),
+          ],
+          _shutter(),
+          if (_isActive) ...<Widget>[
+            const SizedBox(width: _controlRowGap),
+            _saveCircle(),
+          ],
+        ],
       ),
+    );
+  }
+
+  Widget _discardCircle() {
+    return _SideControl(
+      controlKey: videoDiscardCircleKey,
+      onTap: onDiscard ?? onCancel,
+      background: Palette.viewportScrim,
+      borderColor: Palette.onDark40,
+      glyph: IconStickerGlyph.trash,
+      label: discardLabel,
+      captionColor: _discardCaptionColor,
+    );
+  }
+
+  Widget _saveCircle() {
+    return _SideControl(
+      controlKey: videoSaveCircleKey,
+      onTap: onStop,
+      background: Palette.coral,
+      borderColor: Palette.onAccent,
+      glyph: IconStickerGlyph.check,
+      label: saveLabel,
+      captionColor: Palette.onDark85,
     );
   }
 
@@ -344,24 +418,35 @@ class VideoRecorderSheet extends StatelessWidget {
             width: _shutterBorderWidth,
           ),
         ),
-        child: const SizedBox.square(
-          dimension: _shutterCoreSize,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Palette.recordFill,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
+        child: _showsPauseGlyph
+            ? const IconStickerGlyphIcon(
+                glyph: IconStickerGlyph.pause,
+                color: Palette.onAccent,
+                size: _shutterPauseGlyphSize,
+              )
+            : const SizedBox.square(
+                dimension: _shutterCoreSize,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Palette.recordFill,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
       ),
     );
   }
+
+  bool get _showsPauseGlyph => _isRecording && supportsPause && onPause != null;
 
   VoidCallback? get _shutterTap {
     if (_isSaving || _isPreparing) {
       return null;
     }
-    return _isRecording ? onStop : onStart;
+    if (_isRecording) {
+      return _showsPauseGlyph ? onPause : onStop;
+    }
+    return _isPaused ? (onResume ?? onStop) : onStart;
   }
 
   TextStyle get _hintStyle => TypographyTokens.hintAccent.copyWith(
@@ -385,6 +470,66 @@ class _Vignette extends StatelessWidget {
         ),
       ),
       child: SizedBox.expand(),
+    );
+  }
+}
+
+class _SideControl extends StatelessWidget {
+  const _SideControl({
+    required this.controlKey,
+    required this.onTap,
+    required this.background,
+    required this.borderColor,
+    required this.glyph,
+    required this.label,
+    required this.captionColor,
+  });
+
+  final Key controlKey;
+  final VoidCallback onTap;
+  final Color background;
+  final Color borderColor;
+  final IconStickerGlyph glyph;
+  final String label;
+  final Color captionColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      key: controlKey,
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: _sideCircleSize,
+            height: _sideCircleSize,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: background,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: borderColor,
+                width: _sideCircleBorderWidth,
+              ),
+            ),
+            child: IconStickerGlyphIcon(
+              glyph: glyph,
+              color: Palette.onAccent,
+              size: _sideGlyphSize,
+            ),
+          ),
+          const SizedBox(height: _sideCaptionGap),
+          Text(
+            label,
+            style: TypographyTokens.labelSans.copyWith(
+              fontSize: _sideCaptionSize,
+              color: captionColor,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

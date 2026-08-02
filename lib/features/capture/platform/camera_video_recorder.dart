@@ -38,6 +38,9 @@ class CameraVideoRecorder implements VideoRecorder {
   Duration get elapsed => _elapsed.elapsed;
 
   @override
+  bool get supportsPause => true;
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async {
     final List<CameraDescription> cameras;
     try {
@@ -73,6 +76,34 @@ class CameraVideoRecorder implements VideoRecorder {
       _elapsed.stop();
       throw VideoRecorderException(videoStartMessage, cause: error);
     }
+  }
+
+  @override
+  Future<void> pause() async {
+    final CameraController? controller = _controller;
+    if (controller == null) {
+      throw const VideoRecorderException(videoPauseMessage);
+    }
+    try {
+      await controller.pauseVideoRecording();
+    } catch (error) {
+      throw VideoRecorderException(videoPauseMessage, cause: error);
+    }
+    _elapsed.stop();
+  }
+
+  @override
+  Future<void> resume() async {
+    final CameraController? controller = _controller;
+    if (controller == null) {
+      throw const VideoRecorderException(videoPauseMessage);
+    }
+    try {
+      await controller.resumeVideoRecording();
+    } catch (error) {
+      throw VideoRecorderException(videoPauseMessage, cause: error);
+    }
+    _elapsed.start();
   }
 
   @override
@@ -222,6 +253,19 @@ class CameraMacosVideoRecorder implements VideoRecorder {
 
   @override
   Duration get elapsed => _elapsed.elapsed;
+
+  @override
+  bool get supportsPause => false;
+
+  @override
+  Future<void> pause() async {
+    throw UnsupportedError('CameraMacosVideoRecorder cannot pause a recording');
+  }
+
+  @override
+  Future<void> resume() async {
+    throw UnsupportedError('CameraMacosVideoRecorder cannot pause a recording');
+  }
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
