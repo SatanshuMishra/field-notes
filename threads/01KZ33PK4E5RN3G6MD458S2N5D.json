@@ -39,20 +39,23 @@
   "closure_statement": null,
   "spine": {
     "status": "paused",
-    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) on it -- one controller seam, editor first, no schema migration. Spec is WRITTEN, HARDENED, CITATION-PROVEN, ANCHOR-CORRECTED and DISPATCH-READY: docs/specs/2026-08-03-rich-editor-and-inline-photos.md (branch inline-photo/spec, 9cd0e1f). It AMENDS docs/specs/2026-08-02-inline-photo-notes.md by resolution number (A1-A12) and adds its own D1-D8; read BOTH.",
-    "next_step": "Dispatch mitosis. Order is fixed by the computed overlap matrix (spec 7.1/7.2): E0 -> {P0 parallel P1} -> E1 -> E2 -> E3 -> E4 -> E5 -> E6* -> E7* -> P2 -> P3 -> P4 -> P5. Start with E0: test-only gate, zero files under lib/, 6 cases proving the char-for-char invariant over the 12-feature grammar in spec 3.1. All prior blockers CLOSED.",
+    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) -- one controller seam, editor first, no schema migration. The combined spec (docs/specs/2026-08-03-rich-editor-and-inline-photos.md, branch inline-photo/spec, 62da2cb) is the standing AUTHORITY and citation source. It is NOT dispatchable as-is: the convergence pass returned NOT READY. Execution slices must be cut from it per decision 0006.",
+    "next_step": "DO NOT DISPATCH YET. Convergence pass (3 reviewers) returned NOT READY with 6 blockers. Fix in this order: (1) declare the TYPES -- MarkdownBlock, the inline node type, and all five function signatures; nothing in 840 lines declares one type and all 14 phases consume them; (2) reconcile local main (30 commits behind origin/main); (3) write acceptance criteria for E2/E3/E5/E7; (4) cut the first execution slice (E0+P0+P1) per decision 0006.",
     "open_risks": [
-      "The ~60 [inherited] citations in the sibling OUTSIDE the 28 proven anchors remain UNVERIFIED. Spec 0.1's duty -- re-open every one -- stands for them.",
-      "The OQ-6 decision record still cites app_database_test.dart:97-128 and app_database.dart:20-37. Deliberately NOT edited: decision records are write-once after acceptance. The correction lives in the specs; do not trust the record's anchors.",
-      "splitSpanAt (A1) is the one genuinely new algorithm in the spec and is UNSPIKED: asserted tractable, never proven. If P3 finds it harder, that is a finding against A1, not an implementer judgement call.",
-      "E1 MUST preserve P1's stripPhotoAnchors call (spec 7.1). Built against a pre-P1 NoteBody the stripper is silently dropped and every stored U+FFFC renders as tofu -- exactly what R7 exists to prevent.",
-      "The spec was hardened ONE round then patched four times; NOT re-reviewed since D1-D8, the matrix, the citation proof and the anchor corrections landed. A second pass to convergence is owed before P2.",
-      "D5 grows P2's traversal matrix from 6 to 10 cases (delta +15, not +11); D2 grows E7 to +6 if E6 is dropped. The sibling's absolute test totals are void (A7); its per-phase deltas stand.",
-      "R0 IS STILL LIVE (A12): inline-photo/spec has NOT merged, so anyone branching from main cannot read either decision record OR the spec. Every dispatch names the branch or quotes the records inline.",
-      "NO DATABASE MIGRATION, EVER. schemaVersion is 1 and onUpgrade unconditionally throws. The refusal is pinned by app_database_test.dart:98-128 ALONE. A wrong first migration makes every existing journal unopenable.",
-      "Baseline 944 passed / analyze clean was NOT re-measured this session. Measure it on your own branch; it has gone stale three times.",
-      "gh pr create and gh pr merge are BOTH denied globally. PRs go through the pr-create tool; every merge is human. CI IS NOT EVIDENCE -- no GitHub check runs a Dart test here.",
-      "Predicted first failure: type-to-transform x undo/redo x IME composing (E4). Gate every programmatic mutation on composing.isCollapsed."
+      "NO TYPES ANYWHERE. MarkdownBlock is named once, never defined; no function signature is declared. An implementer would invent the model all 14 phases consume. THE single biggest gap -- an E0 simulation could not ship from the spec alone.",
+      "E0's test count is self-contradictory: spec 3.1 says criteria 1-3 run once per row (12 rows = 36 cases), spec 6 and 8 say 6 cases. Section 8 forbids absorbing a mismatch, so this must be resolved before E0.",
+      "Criterion 2's '200 generated documents' has NO generator contract, seed, or determinism clause. Repo forbids flaky tests and M10 forbids a property-test package. Mandate a fixed seed.",
+      "E0's created files are never NAMED (spec 6 says 'all under test/features/entry_cards/markdown/'), yet E1 depends on them by name and 'six files' vs 'six plus the barrel' disagree.",
+      "toPlainText() defaults are load-bearing and unstated: includeSemanticsLabels defaults TRUE, so D4/E2's semantics suppression could make N1's whole char-for-char gate VACUOUS. Name the flags in E0's criteria.",
+      "E2, E3, E5, E7 have NO acceptance criteria -- only 'Tests it adds: N cases' plus prose. E4 and E6 have one clause each. Mitosis consumes criteria from the document at plan stage.",
+      "E1's fileScope is not exhaustive: it ends 'and the four test files those red', unnamed. fileScope completeness is what prevents cross-MSP collision.",
+      "Sub-file fences (E2 'controller swap only', E5 'contextMenuBuilder only') are PROSE -- fileScope is path-level and cannot express them. E2/E5/E6 plus P1/P2/P4 all claim text_composer_sheet.dart.",
+      "UNSTRUCK CONTRADICTIONS: spec 10.1 says never critic-hardened while 11 says the pass closed; A8 says R0 is spent while A12 says A8 is WRONG; 10.6 still says the substrate is 'proposed' though it was ratified. Mitosis precondition 2 (APPROVED spec) fails while these stand.",
+      "Human-gated merge parks every transitive dependent, and 7.2 is a near-linear 14-rung chain -- expect ~12 merge-and-relaunch cycles. Batch-scope it (E0+P0+P1 first), never one dispatch.",
+      "Local main is 30 commits BEHIND origin/main and origin/main is NOT its ancestor. Mitosis cuts worktrees from the bare LOCAL main ref. Reconcile first (decision 2026-07-16); gate on git merge-base --is-ancestor origin/main main.",
+      "The spec is not on any base branch -- it lives only on inline-photo/spec. Merge it or set baseBranch accordingly before dispatch.",
+      "The ~60 [inherited] citations in the sibling outside the 28 proven anchors remain UNVERIFIED.",
+      "splitSpanAt (A1) is UNSPIKED: asserted tractable, never proven. If P3 finds it harder, that is a finding against A1, not an implementer judgement call."
     ],
     "key_decisions": [
       "0001-markdown-source-of-truth-editor",
@@ -72,5 +75,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T19:44:13.986Z"
+  "updated_at": "2026-08-03T19:44:38.692Z"
 }
