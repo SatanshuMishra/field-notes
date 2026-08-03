@@ -3,7 +3,7 @@
   "id": "01KZ33PK4E5RN3G6MD458S2N5D",
   "slug": "inline-photo-notes",
   "title": "Inline photo notes and the rich markdown editor",
-  "status": "active",
+  "status": "paused",
   "parent_id": null,
   "predecessor_id": null,
   "completion_criteria": [
@@ -38,7 +38,7 @@
   "abandoned_reason": null,
   "closure_statement": null,
   "spine": {
-    "status": "active",
+    "status": "paused",
     "active_goal": "Ship a rich markdown note editor built on markdown source of truth, then OQ-6's inline anchored photos on top of it — one controller seam, editor strictly first, no schema migration at any point.",
     "next_step": "WRITE THE SPEC, fully, as the fresh session's first act: ONE detailed spec covering the rich markdown editor AND OQ-6, editor strictly first, decomposed into mitosis-ready MSPs. Read first, do NOT re-derive: docs/specs/research/2026-08-02-editor-*.md (four audits), .claude/ledger/decisions/2026-08-02-markdown-source-of-truth-editor.md, and docs/specs/2026-08-02-inline-photo-notes.md (1228 lines, NEVER critic-hardened, re-read it against the no-wrap-in-EditableText limit).",
     "open_risks": [
@@ -65,5 +65,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T06:08:38.545Z"
+  "updated_at": "2026-08-03T06:08:46.754Z"
 }
