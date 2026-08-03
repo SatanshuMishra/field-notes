@@ -78,8 +78,22 @@ constraint is scoped to editable text. The float and wrap in P3–P5 do **not** 
 | Surface | Widget | Wrap legal? |
 |---|---|---|
 | Write mode | `EditableText` | **No** — #82595. Already excluded by OQ-6's decision ("write mode is plain editable text") and by the sibling's R22/M3 `[inherited]` |
-| Read view | `NoteBody`, a `Text` | **Yes** — a `RenderParagraph`, never a `RenderEditable`. This is where R15/R18's float lives |
+| Read view | `NoteBody`, a `Text`/`Text.rich` | **Yes — but not by wrapping around a span at all.** See the sharpening below. This is where R15/R18's float lives |
 | Arrange mode | read-only float renderer + handles (R22) | **Yes** — R22 already forbids arrange mode from mounting an `EditableText` |
+
+**The sharpening, and it closes a hole a reviewer correctly found in the first draft.** #82595's actual
+title is *"Feature Request: Implement InlineSpan for TextFields"* and its text is scoped to a `WidgetSpan`
+inside a `TextField`. It does **not** state that a non-editable `Text`/`RichText` can wrap around an inline
+span, and the first draft's reasoning leaned on that inference. **The verdict does not need it.** R15's
+float never puts the card in a span tree at any layer: it is `LayoutBuilder` + `Stack` + **two separate
+`Text` widgets**, with the paragraph split manually at an offset `TextPainter` computes `[inherited]`. No
+widget is ever asked to flow text around an inline object. The exclusion is achieved by *laying out two
+paragraphs at two widths in two positions* — which is why R15 rejects a custom `RenderBox` and why the
+whole approach sidesteps #82595 rather than depending on how far it reaches.
+
+**Consequence for implementers:** do not "simplify" R15 by putting the photo in a `WidgetSpan` inside a
+single `Text.rich` and expecting the text to flow around it. That is the one thing #82595 guarantees will
+not work, and it is the obvious-looking shortcut. **Stop and report if the split appears unnecessary.**
 
 So #82595 **sharpens and does not contradict** the model, exactly as the substrate decision predicted.
 The one place it bites is a place the ladder already forbade itself from going.
@@ -145,7 +159,7 @@ Six more bind the editor specifically:
 
 | # | Constraint | Source |
 |---|---|---|
-| **N1** | **`buildTextSpan`'s plain text equals `controller.text`, char for char, always.** Markers are hidden by style; never deleted, never substituted, never reordered | maintainer statement on #159171 `[audit]` |
+| **N1** | **`buildTextSpan`'s plain text equals `controller.text`, char for char, always.** Markers are hidden by style; never deleted, never substituted, never reordered. **This contract is UNDOCUMENTED** — api.flutter.dev says only *"Builds TextSpan from current editing value."* It is enforced structurally, by `RenderEditable` indexing selection offsets straight into the laid-out text, and by a maintainer statement on #159171. Treat it as load-bearing but unguaranteed: E0's criterion 1 is the only thing that will catch a violation | maintainer statement + framework source `[audit]`; doc absence verified 2026-08-03 |
 | **N2** | **Every programmatic mutation of the buffer is gated on `value.composing.isCollapsed`.** No exceptions, including Enter-continues-list and auto-renumber | Flutter's own `TextInputFormatter` docs, quoted verbatim in the substrate audit `[audit]` |
 | **N3** | **No `TapGestureRecognizer` in the span tree.** flutter#187598, reproduced on 3.44.1, throws `'readOnly && !obscureText'` on iOS. Tappable anything is a hit-tested overlay | `[audit]` |
 | **N4** | **No editor package.** super_editor, flutter_quill, appflowy_editor, re_editor and flutter_markdown are all rejected on named constraints | substrate decision, Consequences |
@@ -304,9 +318,18 @@ here; the quote **bar** is E6.
 ### E4 — Type-to-transform, list continuation, backspace demotion, auto-renumber
 
 **Branch** `editor/e4-transform` — base `editor/e3-blocks`. **The highest-risk phase in the ladder** and
-the substrate research's predicted first failure: type-to-transform × undo/redo × IME composing, where
-every piece is separately documented as fragile and the built-in undo stack already desyncs from IME with
-no custom code (flutter#130881) `[audit]`.
+the substrate research's predicted first failure: type-to-transform × undo/redo × IME composing.
+
+**CORRECTION, verified 2026-08-03 against the tracker.** The substrate audit, the logbook thread's
+open-risk list, and this spec's own first draft all cite **flutter#130881** ("Undo/Redo history disappears
+on Japanese keyboard") as **OPEN** evidence that the built-in undo stack desyncs from IME with no custom
+code. **It is CLOSED** — fixed by PR #138674, shipped in **Flutter 3.19.0**, and this repo is on 3.44.8.
+That leg of the argument is gone. **Fix the logbook thread's open_risks entry, which still carries it.**
+
+E4 remains the highest-risk phase, on a narrower and better-sourced footing: N2's gate rests on Flutter's
+**own official `TextInputFormatter` documentation**, which warns verbatim that text modification must be
+applied only when `TextEditingValue.composing` is collapsed `[audit]`. That warning is independent of
+#130881 and is not weakened by its closure.
 
 Every mutation gated on `composing.isCollapsed` (N2). The `_applyingTransform` latch of A6 ships here even
 though the anchor bookkeeping it protects does not exist until P2 — **the latch is cheaper to ship early
