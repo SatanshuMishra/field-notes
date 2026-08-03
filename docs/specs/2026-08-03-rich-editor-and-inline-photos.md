@@ -464,7 +464,13 @@ ladder stops for a re-decision. That is what a gate is for.
 
 ### E1 — The read view renders markdown
 
-**Branch** `editor/e1-read` — base `main`. **Depends on** E0 green.
+**Branch** `editor/e1-read` — base `main`. **Depends on** E0 **merged** (A9) **and P1 merged** (§7.1).
+
+**E1 rewrites a `NoteBody` that P1 has already changed, and must PRESERVE that change.** P1 adds a
+`stripPhotoAnchors` call; E1 rewrites the widget wholesale around it, in A3's order — strip anchors, then
+parse, then test emptiness (D1). **If E1 is implemented against a pre-P1 `NoteBody` the stripper is
+silently dropped and every stored U+FFFC renders as tofu** — precisely the outcome the sibling's R7 exists
+to prevent. This obligation is why P1 ships first; state it in E1's dispatch.
 
 Promotes E0's six files into `lib/design/markdown/` (`git mv`, plus the barrel). `NoteBody` renders
 `Text.rich(readSpans(...))`; the block-assembly loop moves to `note_blocks.dart` (A5). `today_memory.dart`
@@ -592,25 +598,65 @@ TargetPlatform.iOS` — under `flutter test` the platform is forced to `android`
 
 ## 7. Ship order and dependency chain
 
+### 7.1 THE FILE-OVERLAP MATRIX — computed 2026-08-03, and it overturns the first draft
+
+Per `decisions/2026-07-27-shared-file-cluster-serializes.md` `[inherited]`, **a file shared by two MSPs is
+a HARD dependency edge, declared here, never left to the engine to infer** — the engine catches
+overlapping *hunks*, not two coherent-but-incompatible rewrites of one widget. The E-fences (§3.2) crossed
+with the sibling's fence table yield **exactly three contended files**:
+
+| Contended file | E phases | P phases | Verdict |
+|---|---|---|---|
+| `lib/features/entry_cards/cards/note_body.dart` | **E1** | **P1, P2, P3** | HARD EDGE |
+| `lib/features/capture/text/text_composer_sheet.dart` | **E2, E5, E6** | **P1, P2, P4** | HARD EDGE |
+| `markdown_note_controller.dart` (= the sibling's `photo_anchor_controller.dart`, per A4) | **E2, E3, E4, E7** | **P2, P4** | HARD EDGE |
+
+Everything else is disjoint by path: `lib/design/markdown/**` vs `lib/design/layout/**`,
+`test/features/entry_cards/markdown/**` vs `test/features/entry_cards/photo/**`, and E1's
+`today_memory.dart` / `search_day_view.dart` are touched by no P phase.
+
+**The first draft's claim "P1 may ship in parallel with E1–E5" is FALSE, and on two files rather than the
+one originally suspected** — `note_body.dart` (E1) *and* `text_composer_sheet.dart` (E2, E5). It is struck.
+
+**But the fix is not to bury P1 behind the editor. It is to put P1 FIRST.** P1 holds the *smaller* diff on
+both contended files — it adds a `stripPhotoAnchors` call to `NoteBody` and mounts `PhotoTray` behind a
+nullable callback — while E1 *rewrites* `NoteBody` wholesale and E2 swaps the controller. Landing the small
+change first and rebasing the large one onto it is strictly cheaper than the reverse, and **A3 already
+defines the composition** (strip anchors, then parse), so E1 knows exactly what it must preserve. P1 is
+also the lowest-risk product change in either ladder and the one that makes photos reachable at all.
+
+**New obligation on E1, created by this ordering:** E1 rewrites a `NoteBody` that already calls
+`stripPhotoAnchors`. **It must preserve that call, in A3's order.** If E1 is implemented against a
+pre-P1 `NoteBody`, the stripper is silently dropped and every stored U+FFFC renders as tofu — the exact
+outcome R7 exists to prevent. State it in E1's dispatch.
+
+### 7.2 The resulting order
+
 ```
-E0 (test-only gate)
- └── E1 ── E2 ── E3 ── E4 ── E5 ── E6* ── E7*          * droppable, user's call
-                                    │
-P0 (test-only gate, independent)    │
- │                                  ▼
- └──────────── P1 ── P2 ── P3 ── P4 ── P5
-                      ▲     ▲
-                      │     └── ALSO gated on P0 green
-                      └── requires E2 (one controller, §3/A4)
+E0  (test-only gate; no contended file)
+ ├── P0  (test-only; needs E0 MERGED per A9)   ─┐ genuinely parallel:
+ └── P1  (small, product; photos reachable)    ─┘ P0 and P1 share no file
+      └── E1 ── E2 ── E3 ── E4 ── E5 ── E6* ── E7*      * droppable, user's call
+                                                 └── P2 ── P3 ── P4 ── P5
+                                                          ▲
+                                                          └── ALSO gated on P0 green
 ```
 
-**Hard ordering law: P2 may not open until E2 has merged.** P2 grows the controller E2 creates (A4).
-P1 is genuinely independent of the whole editor ladder — it wires `photos:` and ships the stripper, and
-touches no rendering — so **P1 may ship in parallel with E1–E5**, and should, since it is the phase that
-makes photos reachable for the first time.
+**Three ordering laws, all derived from the matrix above, none negotiable:**
 
-**P0 may run at any time** and is best run early: it is test-only, it gates P3, and a red truncates the
-photo ladder at P2. Running it late means discovering late.
+1. **P0 and P1 are the only genuinely parallel pair in either ladder.** P0 touches
+   `test/features/entry_cards/photo/**` and nothing else; P1 touches no test file P0 owns.
+2. **P1 merges before E1 is cut.** Both edit `note_body.dart`; P1 is the smaller diff and E1 rebases onto it.
+3. **P2 may not open until the ENTIRE editor ladder has merged** — not merely E2. The first draft said
+   "P2 requires E2", which is necessary but **insufficient**: E3, E4 and E7 all edit
+   `markdown_note_controller.dart`, the same class A4 has P2 grow. P4 inherits the same constraint.
+
+*Rejected: running P2 after E2 and rebasing it through E3–E7.* That is four rebases of the ladder's
+second-largest phase through a class that is still being rewritten under it — the shape
+`decisions/2026-07-28-stacked-msps-ship-sequentially.md` was written to forbid `[inherited]`.
+
+**P0 is run as early as A9 permits** — it is test-only, it gates P3, and a red truncates the photo ladder
+at P2. Running it late means discovering late.
 
 Branch prefixes are per-run: `editor/` and `inline-photo/`, per
 `decisions/2026-07-25-msp-branch-prefix-not-per-type.md` `[inherited]`. Every branch is cut with
@@ -726,12 +772,13 @@ superseded by the mapping above; the resolutions live in §5.1.
 returned. **Every `[audit]` and `[inherited]` citation in this document remains unproven**, including the
 shared-file question in §7 — see the next paragraph, which is a live suspected defect, not a resolved one.
 
-**SUSPECTED DEFECT, unconfirmed — §7's parallelism claim.** §7 says "P1 may ship in parallel with E1–E5".
-E1 rewrites `note_body.dart`; P1 also edits `note_body.dart` to apply `stripPhotoAnchors` (A3). A shared
-file is a **HARD dependency edge** on this project, never left to the engine to infer
-(`decisions/2026-07-27-shared-file-cluster-serializes.md`) — the engine catches overlapping hunks, not two
-coherent-but-incompatible rewrites of one widget. **Compute the full E×P file-overlap matrix before
-dispatching anything in parallel, and assume P1 serializes behind E1 until proven otherwise.**
+**CLOSED 2026-08-03 — §7's parallelism claim was FALSE and is struck.** The E×P file-overlap matrix is
+computed in **§7.1**. The claim was wrong on **two** contended files, not the one suspected
+(`note_body.dart` via E1, and `text_composer_sheet.dart` via E2/E5), and a third contended file
+(`markdown_note_controller.dart`) proved the "P2 requires E2" law insufficient — E3, E4 and E7 edit the
+same class. §7.2 carries the corrected order and its three derived laws. The resolution is **not** to bury
+P1 behind the editor: P1 holds the smaller diff on both contended files and now ships **first**, with E1
+rebasing onto it under a newly declared obligation to preserve the stripper.
 
 ---
 
