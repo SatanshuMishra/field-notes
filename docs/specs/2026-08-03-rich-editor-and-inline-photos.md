@@ -40,10 +40,48 @@ Nothing in this document is `[verified]` unless it says so. Three things are:
   `'Empty note'` italic branch at `:12-17`. `[verified]`
 - `text_composer_sheet.dart:293-304` is a raw `EditableText` — not a `TextField` — bound to a plain
   `TextEditingController` constructed at `:75` and declared `late final` at `:66`, also consumed by a
-  `ValueListenableBuilder` at `:277`. `[verified]`
+  `ValueListenableBuilder` at **`:276`**. `[verified]`
 - `docs/specs/2026-08-02-inline-photo-notes.md` is 1228 lines and its own §7 states every citation in it
   was re-opened at `712c978` — a claim made by an unhardened document about itself. `[verified]` that the
   claim exists; the claim itself is `[inherited]`.
+
+### 0.2 CITATION PROOF — RUN 2026-08-03, 28 anchors, 25 clean, 3 drifts
+
+The pass this spec's own §11 flagged as never-returned has now run against the repo at `c573010`.
+**Every in-repo anchor in both specs' load-bearing set was re-opened.** Result: **25 OK, 3 DRIFT, 0 ABSENT.**
+**No drift changes a design decision.** All three are corrected below and in place.
+
+| # | Drift | Corrected to | Severity |
+|---|---|---|---|
+| 1 | `text_composer_sheet.dart:277` for the `ValueListenableBuilder` — **a claim this document marked `[verified]`** | **`:276`**; `:277` is its first named argument | off-by-one; **fixed above** |
+| 2 | `app_database_test.dart:27-31 and :98-127` cited as jointly pinning the migration refusal | **`:27-31` pins `schemaVersion == 1`, NOT the refusal.** Only **`:98-128`** pins the `onUpgrade` throw | **material** — see below |
+| 3 | `photo_tray_test.dart:123` cited as the cap assertion | **`:123` is the test's NAME string.** The cap assertions are **`:143-145`** (`findsNWidgets(2)`, `hasLength(2)`, Add button `isEnabled` false), with `maxPhotos: 2` passed at `:137` | **material** — see below |
+
+**Drift 2 is the one that matters, and it lives in the migration landmine — the most dangerous claim in
+either document.** The sibling's M1/R1 and the app audit both cite `:27-31` as refusal coverage. It is not:
+that case asserts a fresh database reports version 1. **The refusal is pinned by `:98-128` alone.** An
+implementer citing `:27-31` as evidence the refusal is tested would be citing the wrong test — and the
+whole no-migration doctrine rests on that coverage existing. **Amend the sibling's M1 and R1 to cite
+`:98-128` only.**
+
+**Drift 3 strands an implementer looking for the cap.** The sibling's M5 and R5 send them to a test name.
+**Amend both to `:143-145`.**
+
+**Two precision notes, non-material.** `search_day_view.dart:63-98` is really `_previewFor` at `:63-74`
+and `_searchTextFor` at `:76-89`; the cited range also spans an unmentioned `_firstLine` at `:91-98` —
+D6 concerns `_searchTextFor` specifically, so cite `:76-89`. And `media_gc.dart:139-144` overruns by one
+line; the statement ends at `:143`.
+
+**Everything else held**, including every negative claim the design depends on: **zero** markdown,
+`RichText`, `TextSpan(`, `WidgetSpan(` or `buildTextSpan` anywhere in `lib/` or `pubspec.yaml`; **zero**
+external importers of `PhotoTray`, its barrel, or `photoPickerProvider`; `lib/design/layout/` and
+`lib/design/markdown/` both absent; no golden renders note text or the composer (six families, none
+touching `NoteBody`, `TextComposerSheet` or `InlinePhotoStrip`); and `note_body_test.dart` (2 cases) and
+`entry_card_test.dart` both match with literal `find.text(...)`, confirming E1's declared retarget is real
+and bounded.
+
+**Consequence for §0.1's provenance table:** the `[audit]` tier is now **proven** for the 28 anchors above.
+Every `[inherited]` citation OUTSIDE that set remains unverified — the sibling has ~60 more.
 
 ---
 
@@ -768,9 +806,10 @@ A hardening pass ran 2026-08-03 and returned a BLOCK verdict. **Every finding it
 **Two items below remain genuinely open. They are the only ones.** The table originally in this section is
 superseded by the mapping above; the resolutions live in §5.1.
 
-**Also unverified at hand-off:** the citation-proof pass against the repo was dispatched and had not
-returned. **Every `[audit]` and `[inherited]` citation in this document remains unproven**, including the
-shared-file question in §7 — see the next paragraph, which is a live suspected defect, not a resolved one.
+**CLOSED 2026-08-03 — the citation proof RAN.** 28 anchors re-opened at `c573010`: **25 OK, 3 DRIFT,
+0 ABSENT**, all three corrected in **§0.2**, none design-changing. The `[audit]` tier is proven for that
+set. **Still open:** the ~60 `[inherited]` citations in the sibling that fall outside the 28 — they remain
+unverified and §0.1's duty ("re-open every one") stands for them.
 
 **CLOSED 2026-08-03 — §7's parallelism claim was FALSE and is struck.** The E×P file-overlap matrix is
 computed in **§7.1**. The claim was wrong on **two** contended files, not the one suspected
