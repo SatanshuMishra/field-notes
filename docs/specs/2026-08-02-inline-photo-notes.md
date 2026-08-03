@@ -49,7 +49,9 @@ It takes the **structure** of the Cluster G run spec — the document the ledger
 
 **R1 — NO DATABASE MIGRATION, IN ANY PHASE. If a phase appears to need one, STOP AND REPORT.**
 
-`schemaVersion` is `1` (`lib/data/database/app_database.dart:17`) and `onUpgrade` unconditionally throws a `StateError` (`:25-32`). There is no `drift_schemas/`, no migration harness, and no successful-upgrade test — only the refusal path is pinned, by `test/data/database/app_database_test.dart`. A wrong first migration makes every existing journal unopenable.
+`schemaVersion` is `1` (`lib/data/database/app_database.dart:17`) and `onUpgrade` unconditionally throws a `StateError` (`:25-32`). There is no `drift_schemas/`, no migration harness, and no successful-upgrade test — only the refusal path is pinned, and it is pinned by **`test/data/database/app_database_test.dart:98-128` ALONE** (a `_FutureSchemaDatabase` subclass forcing `schemaVersion => 2` to prove the refusal fires and data survives). A wrong first migration makes every existing journal unopenable.
+
+**PRECISION ADDED 2026-08-03 by the citation proof, and it is not pedantry.** This paragraph previously named the test FILE with no line anchor. That vagueness let a wrong anchor propagate: `docs/specs/research/2026-08-02-editor-audit-app.md` cites `:27-31 and :98-127`, and the OQ-6 decision record cites `:97-128`. **`:27-31` does NOT pin the refusal** — that case asserts a fresh database reports schema version 1. Only `:98-128` pins the `onUpgrade` throw. Since the entire no-migration doctrine rests on that one case existing, cite it exactly.
 
 `entry_photos` carries this model **unchanged**. The only persistence surfaces this ladder adds are (a) an UPDATE of the existing `sortOrder` column (R12) and (b) rows in the existing `Settings` key/value table (R21). Neither alters a schema.
 
@@ -103,7 +105,9 @@ export PATH="/opt/homebrew/bin:$PATH" && flutter pub get && dart run build_runne
 
 *Problem.* The note composer has no picking affordance of any kind. `TextComposerConnector._persist` builds `TextCaptureRequest(date: widget.date, text: text)` at `text_composer.dart:104` and omits `photos:` entirely, even though the parameter exists with a default (`capture_service.dart:59`).
 
-*Resolution.* P1 mounts the shipped `PhotoTray` (`lib/features/capture/photo/photo_tray.dart:11`) inside `TextComposerSheet`'s body, in the footer row the prototype puts the button in (`Field Notes.dc.html:470`). It is passed `libraryLabel: 'Add memory'` — the prototype's own label (`:471`, `:772`) — and its `cameraLabel` default is left alone. `maxPhotos` is left at its declared `defaultMaxPhotos = 8` (`photo_tray.dart:9`), which is the decision record's cap, already correct, already tested at `photo_tray_test.dart:123`.
+*Resolution.* P1 mounts the shipped `PhotoTray` (`lib/features/capture/photo/photo_tray.dart:11`) inside `TextComposerSheet`'s body, in the footer row the prototype puts the button in (`Field Notes.dc.html:470`). It is passed `libraryLabel: 'Add memory'` — the prototype's own label (`:471`, `:772`) — and its `cameraLabel` default is left alone. `maxPhotos` is left at its declared `defaultMaxPhotos = 8` (`photo_tray.dart:9`), which is the decision record's cap, already correct, already tested at **`photo_tray_test.dart:143-145`**.
+
+**CORRECTED 2026-08-03 by the citation proof.** This previously cited `photo_tray_test.dart:123`, which is the test's **NAME string** (`'stops adding once the maximum is reached'`), not an assertion. The cap-enforcement assertions are `:143-145` — `findsNWidgets(2)`, `hasLength(2)`, and the Add button `isEnabled` false — with `maxPhotos: 2` passed at `:137`. An implementer sent to `:123` looking for the cap check finds a string literal.
 
 On macOS, `ImagePickerPhotoPicker.supportsCamera` is `Platform.isAndroid || Platform.isIOS` (`image_picker_photo_picker.dart:44`), so the desktop composer renders exactly **one** button. That is what the prototype draws.
 
@@ -753,11 +757,11 @@ Constraints, not suggestions. Every phase that touches the named files inherits 
 
 | # | Constraint | Verified citation | Binds |
 |---|---|---|---|
-| **M1** | **No schema migration, ever.** `schemaVersion` is 1 and `onUpgrade` unconditionally throws | `lib/data/database/app_database.dart:17`, `:25-32`; pinned by `test/data/database/app_database_test.dart` | **every phase**; R1 |
+| **M1** | **No schema migration, ever.** `schemaVersion` is 1 and `onUpgrade` unconditionally throws | `lib/data/database/app_database.dart:17`, `:25-32`; the refusal is pinned by `test/data/database/app_database_test.dart:98-128` **alone** — NOT by `:27-31`, which pins `schemaVersion == 1` (citation proof, 2026-08-03) | **every phase**; R1 |
 | **M2** | **`EntryPhoto` gains no field.** No `label`, no `x`, no `y`, no `rotation` | `lib/domain/models/entry_photo.dart:1-20`; OQ-6 record, Consequences | **every phase**; R21 |
 | **M3** | **Write mode is plain editable text, always.** Editable text that wraps is structurally impossible and is out of scope | session finding 4; `RenderEditable` holds one `TextPainter` | **P2, P4**; R22 |
 | **M4** | **The anchor is a position in the text, never an (x, y).** Arbitrary pixel positioning is rejected | OQ-6 record, Decision | **every phase** |
-| **M5** | **Cap 8.** Already declared and already tested | `photo_tray.dart:9` `defaultMaxPhotos = 8`; `photo_tray_test.dart:123` | **P1**; R5 |
+| **M5** | **Cap 8.** Already declared and already tested | `photo_tray.dart:9` `defaultMaxPhotos = 8`; assertions at `photo_tray_test.dart:143-145` (`maxPhotos: 2` passed at `:137`) — NOT `:123`, which is the test's name string (citation proof, 2026-08-03) | **P1**; R5 |
 | **M6** | **`InlinePhotoStrip` is the permanent degrade target and is READ ONLY.** Every failure mode and every revert lands on it | `lib/features/entry_cards/cards/photo_strip.dart:14`, sorted by `sortOrder` at `:31` | **P1–P5**; R8, R19 |
 | **M7** | **The empty-save guard stays text-only for now.** The prototype's predicate is text-empty **and** no photos (`md-scrapbook.js` host at `:1386`); the app's is `text.trim().isEmpty` (`text_composer_sheet.dart:186`) | `decisions/2026-07-28-c5-ships-as-is.md`; Cluster G R18 | **P1** — see §6.1 |
 | **M8** | **`ValueKey`s and Semantics labels are a public contract.** `composerCloseKey` (`text_composer_sheet.dart:9`), `editNoteConfirmSaveKey` (`day_detail_edit_note.dart:20`) and every key in the protected playback suite may not be renamed | N24 | **every phase** |

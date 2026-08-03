@@ -58,14 +58,21 @@ The pass this spec's own §11 flagged as never-returned has now run against the 
 | 3 | `photo_tray_test.dart:123` cited as the cap assertion | **`:123` is the test's NAME string.** The cap assertions are **`:143-145`** (`findsNWidgets(2)`, `hasLength(2)`, Add button `isEnabled` false), with `maxPhotos: 2` passed at `:137` | **material** — see below |
 
 **Drift 2 is the one that matters, and it lives in the migration landmine — the most dangerous claim in
-either document.** The sibling's M1/R1 and the app audit both cite `:27-31` as refusal coverage. It is not:
-that case asserts a fresh database reports version 1. **The refusal is pinned by `:98-128` alone.** An
-implementer citing `:27-31` as evidence the refusal is tested would be citing the wrong test — and the
-whole no-migration doctrine rests on that coverage existing. **Amend the sibling's M1 and R1 to cite
-`:98-128` only.**
+either document.** `:27-31` asserts a fresh database reports version 1; it does **not** pin the refusal.
+**The refusal is pinned by `:98-128` alone**, and the whole no-migration doctrine rests on that one case.
 
-**Drift 3 strands an implementer looking for the cap.** The sibling's M5 and R5 send them to a test name.
-**Amend both to `:143-145`.**
+*Where it actually lived, corrected from the first reading.* The wrong anchor originated in
+`docs/specs/research/2026-08-02-editor-audit-app.md`, which cited `:27-31 and :98-127`. **The sibling's
+M1/R1 never carried the wrong number — they named the test file with NO line anchor at all**, and that
+vagueness is what let the bad anchor propagate unchallenged. Both are now fixed: the audit's joint
+citation is corrected, and M1/R1 gained the precise `:98-128` anchor they lacked. **The OQ-6 decision
+record still reads `:97-128` and is deliberately NOT edited** — decision records are write-once after
+acceptance (`continuity-ledger.md`), so the correction lives here and in the specs, not in the record.
+
+**Drift 3 strands an implementer looking for the cap.** The sibling's M5 and R5 sent them to a test name.
+**Both now cite `:143-145`**, with `maxPhotos: 2` at `:137`.
+
+**All four amendments are applied. This section is a record, not a worklist.**
 
 **Two precision notes, non-material.** `search_day_view.dart:63-98` is really `_previewFor` at `:63-74`
 and `_searchTextFor` at `:76-89`; the cited range also spans an unmentioned `_firstLine` at `:91-98` —

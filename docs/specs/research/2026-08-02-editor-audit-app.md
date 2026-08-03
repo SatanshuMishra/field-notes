@@ -87,8 +87,14 @@ returns zero). Platform branching exists only for camera/photo
 
 `lib/data/database/app_database.dart:17` — `int get schemaVersion => 1`.
 `onUpgrade` (`:25-32`) unconditionally throws `StateError`. Pinned by
-`test/data/database/app_database_test.dart:27-31` and `:98-127` (a `_FutureSchemaDatabase` subclass
+`test/data/database/app_database_test.dart:98-128` (a `_FutureSchemaDatabase` subclass
 forcing `schemaVersion => 2` to prove the refusal fires and data survives).
+
+**CORRECTED 2026-08-03 by the citation proof — this audit is where the wrong anchor originated.** It
+previously read "`:27-31` and `:98-127`". **`:27-31` does NOT pin the refusal**; that case asserts a fresh
+database reports schema version 1. Only `:98-128` pins the `onUpgrade` throw (test body ends `:127`,
+closing brace `:128`). The no-migration doctrine in both specs rests entirely on that one case, so the
+joint citation overstated the coverage.
 
 **Markdown source text requires zero schema change.** Independently corroborated by the sibling spec's
 own R1 constraint at `docs/specs/2026-08-02-inline-photo-notes.md:50-56`, citing the same lines.
