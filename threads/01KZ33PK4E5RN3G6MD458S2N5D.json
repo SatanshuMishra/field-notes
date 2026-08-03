@@ -59,7 +59,8 @@
       "0002-p0-p5-survives-flutter-82595",
       "0003-combined-spec-amends-never-merges",
       "0004-underline-dropped-from-the-editor",
-      "0005-p1-ships-first-p2-waits-for-the-whole-editor"
+      "0005-p1-ships-first-p2-waits-for-the-whole-editor",
+      "0006-execution-slices-required-mitosis-reads-one-document"
     ],
     "out_of_scope": [
       "OQ-3 (entry-card Edit/Delete placement) — deliberately set aside by the user; still the last open criterion of the separate prototype-design-alignment thread.",
@@ -71,5 +72,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T19:37:39.002Z"
+  "updated_at": "2026-08-03T19:44:13.986Z"
 }
