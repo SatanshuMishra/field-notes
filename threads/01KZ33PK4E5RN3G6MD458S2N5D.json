@@ -39,18 +39,17 @@
   "closure_statement": null,
   "spine": {
     "status": "paused",
-    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) on it -- one controller seam, editor first, no schema migration. Spec is WRITTEN, HARDENED, CITATION-PROVEN and DISPATCH-READY: docs/specs/2026-08-03-rich-editor-and-inline-photos.md (827 lines, branch inline-photo/spec, fbc45e0). It AMENDS docs/specs/2026-08-02-inline-photo-notes.md by resolution number (A1-A12) and adds its own D1-D8; read BOTH.",
-    "next_step": "Dispatch mitosis. Order is fixed by the computed overlap matrix (spec 7.1/7.2): E0 -> {P0 parallel P1} -> E1 -> E2 -> E3 -> E4 -> E5 -> E6* -> E7* -> P2 -> P3 -> P4 -> P5. Start with E0: test-only gate, zero files under lib/, 6 cases proving the char-for-char invariant over the 12-feature grammar in spec 3.1. Both prior blockers are CLOSED.",
+    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) on it -- one controller seam, editor first, no schema migration. Spec is WRITTEN, HARDENED, CITATION-PROVEN, ANCHOR-CORRECTED and DISPATCH-READY: docs/specs/2026-08-03-rich-editor-and-inline-photos.md (branch inline-photo/spec, 9cd0e1f). It AMENDS docs/specs/2026-08-02-inline-photo-notes.md by resolution number (A1-A12) and adds its own D1-D8; read BOTH.",
+    "next_step": "Dispatch mitosis. Order is fixed by the computed overlap matrix (spec 7.1/7.2): E0 -> {P0 parallel P1} -> E1 -> E2 -> E3 -> E4 -> E5 -> E6* -> E7* -> P2 -> P3 -> P4 -> P5. Start with E0: test-only gate, zero files under lib/, 6 cases proving the char-for-char invariant over the 12-feature grammar in spec 3.1. All prior blockers CLOSED.",
     "open_risks": [
-      "AMEND SIBLING M1/R1 before dispatch: app_database_test.dart:27-31 does NOT pin the migration refusal (it pins schemaVersion==1). Only :98-128 pins it, and the whole no-migration doctrine rests on that coverage.",
-      "AMEND SIBLING M5/R5: photo_tray_test.dart:123 is the test NAME, not the cap assertion. The real assertions are :143-145, with maxPhotos:2 passed at :137.",
       "The ~60 [inherited] citations in the sibling OUTSIDE the 28 proven anchors remain UNVERIFIED. Spec 0.1's duty -- re-open every one -- stands for them.",
+      "The OQ-6 decision record still cites app_database_test.dart:97-128 and app_database.dart:20-37. Deliberately NOT edited: decision records are write-once after acceptance. The correction lives in the specs; do not trust the record's anchors.",
       "splitSpanAt (A1) is the one genuinely new algorithm in the spec and is UNSPIKED: asserted tractable, never proven. If P3 finds it harder, that is a finding against A1, not an implementer judgement call.",
       "E1 MUST preserve P1's stripPhotoAnchors call (spec 7.1). Built against a pre-P1 NoteBody the stripper is silently dropped and every stored U+FFFC renders as tofu -- exactly what R7 exists to prevent.",
-      "The spec was hardened ONE round then patched three times; NOT re-reviewed since D1-D8, the matrix and the citation proof landed. A second pass to convergence is owed before P2.",
+      "The spec was hardened ONE round then patched four times; NOT re-reviewed since D1-D8, the matrix, the citation proof and the anchor corrections landed. A second pass to convergence is owed before P2.",
       "D5 grows P2's traversal matrix from 6 to 10 cases (delta +15, not +11); D2 grows E7 to +6 if E6 is dropped. The sibling's absolute test totals are void (A7); its per-phase deltas stand.",
       "R0 IS STILL LIVE (A12): inline-photo/spec has NOT merged, so anyone branching from main cannot read either decision record OR the spec. Every dispatch names the branch or quotes the records inline.",
-      "NO DATABASE MIGRATION, EVER. schemaVersion is 1 and onUpgrade unconditionally throws. A wrong first migration makes every existing journal unopenable.",
+      "NO DATABASE MIGRATION, EVER. schemaVersion is 1 and onUpgrade unconditionally throws. The refusal is pinned by app_database_test.dart:98-128 ALONE. A wrong first migration makes every existing journal unopenable.",
       "Baseline 944 passed / analyze clean was NOT re-measured this session. Measure it on your own branch; it has gone stale three times.",
       "gh pr create and gh pr merge are BOTH denied globally. PRs go through the pr-create tool; every merge is human. CI IS NOT EVIDENCE -- no GitHub check runs a Dart test here.",
       "Predicted first failure: type-to-transform x undo/redo x IME composing (E4). Gate every programmatic mutation on composing.isCollapsed."
@@ -72,5 +71,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T19:35:18.764Z"
+  "updated_at": "2026-08-03T19:37:39.002Z"
 }
