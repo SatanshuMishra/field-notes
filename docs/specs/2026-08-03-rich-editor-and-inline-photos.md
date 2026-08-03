@@ -161,23 +161,29 @@ the substrate unable to state its own acceptance criterion. **This table is the 
 | 11 | inline code | `` `text` `` | E1 read, E2 editor | inline |
 | 12 | highlight | `==text==` | E1 read, E2 editor | inline |
 
-**Twelve. Underline is deliberately absent, and that is an unresolved design hole, not an oversight.**
-The prototype's U button is `document.execCommand('underline')` producing a `<u>` tag `[audit]` — and
-**standard markdown has no underline syntax.** In a markdown-source-of-truth buffer the E5 toolbar's U
-button has nothing to write. Three options, none free, **and the user must pick before E5 is dispatched**:
+**Twelve. UNDERLINE IS DROPPED — resolved by the user 2026-08-03. It is not an oversight.**
+The prototype's U button is `document.execCommand('underline')` producing a `<u>` tag `[audit]`, and
+**standard markdown has no underline syntax.** In a markdown-source-of-truth buffer that button has
+nothing to write.
 
-1. **Drop underline.** Four toolbar buttons instead of five; diverges from the prototype by one control.
-2. **Invent a syntax** (`__text__`, which CommonMark assigns to strong). Divergent from every other
-   markdown reader, and the app's export becomes non-portable — it currently round-trips `textContent`
-   verbatim `[audit]`, which is the export's whole virtue.
-3. **Allow raw inline HTML `<u>`.** Widens the grammar to arbitrary HTML, which nothing else here needs.
+*Rejected: inventing `__text__`.* CommonMark assigns it to strong, so every other reader renders it bold —
+silent corruption, the worst of the three outcomes.
+*Rejected: raw inline HTML `<u>`.* Widens the grammar to arbitrary HTML for one control.
 
-**Recommendation: option 1.** It is the only one that keeps the stored file portable markdown, which is
-the entire reason this substrate was chosen over three editor packages. Row 12 (`==highlight==`) carries
-the same portability caveat and is flagged for the same call — it is a widely-adopted extension but is not
-CommonMark.
+Both break the portability that is the entire reason this substrate was chosen over three editor packages:
+the export round-trips `textContent` verbatim `[audit]`, and a note must stay readable markdown outside
+this app.
 
-**Until this is resolved, E5's scope is four buttons and the count in §6/§8 is twelve, not thirteen.**
+**Consequence: E5 ships FOUR toolbar buttons — B, I, `<>`, ◆ — not five, and diverges from the prototype
+by exactly one control. That divergence is intended.** *Adopt the prototype's form, never its promises* is
+this project's own standing rule (`decisions/2026-07-27-prototype-alignment-open-questions.md`
+`[inherited]`); a U button that cannot persist what it claims to do is a promise the storage cannot keep.
+
+**Row 12 (`==highlight==`) STAYS, and the asymmetry is deliberate.** It is not CommonMark either, but it
+has a real, widely-adopted syntax that **degrades gracefully** — another reader shows `==text==` as
+literal visible characters, so the content survives and only the emphasis is lost. Underline has no
+representation at all, so its choice was between silent corruption and dropping it. Different failure
+modes, different calls.
 
 ### 3.2 FILE FENCES — every E phase, because mitosis cannot dispatch without them
 
@@ -337,6 +343,92 @@ This is the same defect R0 was written to catch, recurring one branch later.
 
 ---
 
+## 5.1 EDITOR RESOLUTIONS D1–D8 — the hardening worklist, closed 2026-08-03
+
+Where §5's A-amendments amend the sibling's resolutions, these decide the editor ladder's own open
+questions. Each was found by the 2026-08-03 hardening pass, accepted as real, and is resolved here so no
+implementer meets it mid-flight. **§11 is now closed.**
+
+**D1 — The emptiness predicate is `plainText(parse(stripPhotoAnchors(text))).trim().isEmpty`, and it has
+TWO consumers.** *(closes H1 and H2 together — they are one defect seen from two ends.)*
+
+`note_body.dart:12` guards on `text.trim().isEmpty` `[verified]`. After E1, `'# '`, `'---'` and `'**'` are
+non-blank strings that parse to an **empty span tree** — a card rendering nothing, with no `'Empty note'`
+affordance. The same string saved through the composer produces an entry that renders as nothing, because
+`text_composer_sheet.dart:186`'s guard is also `text.trim().isEmpty` `[audit]`.
+
+*Resolution.* One predicate, exported from `lib/design/markdown/markdown_plain_text.dart` as
+`bool rendersEmpty(String rawText)`, applied at **both** sites:
+
+- **E1** applies it in `NoteBody`, replacing the raw `text.trim().isEmpty` guard. Order is A3's:
+  strip anchors, then parse, then test. **Receipt:** `NoteBody(text: '# ')` renders the `'Empty note'`
+  affordance; `NoteBody(text: '# ￼')` does too.
+- **E3** applies it in the composer's save guard, the phase that first makes marker-only text typeable.
+  **Receipt:** saving `'---'` does not write an entry.
+
+This supersedes H2's "assign to E3 **or** exclude in §9" — excluding it would ship a save path that
+creates invisible entries. **M7's deferred `&& photos.isEmpty` clause is untouched and stays deferred.**
+
+**D2 — `markdown_line_metrics_overlay.dart` owns the `computeLineMetrics` machinery, and E6's drift
+criteria MOVE to E7 if E6 is dropped.** *(closes H3.)*
+
+E6 and E7 are both droppable and E7 needs E6's machinery (§6). "Say so in its PR" was not an obligation an
+implementer could execute. *Resolution:* the file is named above and is created by whichever of E6/E7
+ships first. **If E6 is dropped, E7 inherits E6's three drift criteria verbatim — resize, accessibility
+text-scale, and mid-scroll — and E7's predicted delta becomes +6, not +3.** State the inheritance in E7's
+PR body. Dropping E6 does not drop its risk; it relocates it.
+
+**D3 — An anchor inside a transform's replaced range keeps its offset relative to the replacement's
+start.** *(closes H4.)*
+
+A6 removed R11's middle-bucket unanchoring while `_applyingTransform` is set, but never said what offset
+the anchor then takes — undefined for exactly A6's own receipt (typing `# ` at the head of a line whose
+anchor is at offset 0). *Resolution:* under the latch, for an anchor at old offset `o` in `[start, oldEnd)`,
+the new offset is `start + (o - start)` clamped to `[start, newEnd)` — the anchor rides the replacement
+rather than being consumed by it. Outside the latch, R11's original rule stands unchanged: an anchor in
+that range is **removed** and its photo unanchors. **Receipt:** A6's case, extended to assert the anchor's
+resulting offset, not merely that it is still bound.
+
+**D4 — Accessibility obligations, named per phase.** *(closes M1(a) — the lowest-detection-probability
+class in this spec.)*
+
+- **E1** — `Text` → `Text.rich` drops heading structure. Headings carry `Semantics(header: true)`.
+- **E2** — hidden markers are suppressed from the semantics tree (already named in §6; restated here as a
+  per-phase obligation rather than prose).
+- **E3** — the to-do glyph carries `Semantics(checked:)` reflecting `[ ]` vs `[x]`, even though E3's
+  checkbox is inert.
+- **E5** — all four toolbar buttons carry semantic labels.
+
+Each is one receipt in its own phase. **None will surface in visual QA**, which is why they are pinned
+here rather than left to review.
+
+**D5 — R10's traversal matrix gains marker-surrounded rows.** *(closes M2.)*
+
+R10's six cases use the plain buffer `'ab￼cd'` `[inherited]`. A2 newly permits a sentinel inside a marker
+run, and nothing measures it. *Resolution:* **P2's matrix grows from six cases to ten** — the existing six,
+plus `'**ab￼cd**'` (inline run) and `'# ab￼cd'` (block line), each under `TargetPlatform.macOS` and
+`TargetPlatform.iOS`. P2's predicted delta becomes **+15, not +11**. This is a genuine amendment to the
+sibling's R10 and A7 already voids its absolute totals.
+
+**D6 — Search MATCH semantics change deliberately, and are stated.** *(closes M3.)*
+
+`_searchTextFor` (`search_day_view.dart:76-89` `[audit]`) is the **match index**, not a preview. Routing it
+through `plainText` (§3) means a query spanning a marker starts matching, and a query containing a literal
+`#` or `*` stops matching the marker. *Resolution:* **that is the intended behaviour** — a user searching
+their own words should match the words, not the punctuation the editor inserted on their behalf. **Receipt
+in E1:** a note stored as `'a **bold** word'` matches the query `'bold word'`, and does **not** match
+`'**bold**'`.
+
+**D7 — §2's "no phase changes its outcome" is overstated; P3's scope grows.** *(closes M1(b).)*
+
+The verdict that P0–P5 survives #82595 stands. But A1 gives P3 a new algorithm (`splitSpanAt`) that is
+unspiked, and D5 grows P2's matrix. **Correct statement: no phase is abandoned and no phase's OUTCOME
+changes; P2 and P3 both gain scope.** §10.4's flag on `splitSpanAt` stands and is the one to watch.
+
+**D8 — E5 ships four buttons.** *(closes M4.)* Resolved in §3.1: underline is dropped.
+
+---
+
 ## 6. The editor ladder — E0 through E7
 
 Risk-ordered per `decisions/2026-08-02-h1-splits-by-font-risk.md` `[inherited]`: a test-only gate first,
@@ -448,7 +540,8 @@ user types markdown by hand, which is exactly what a markdown source-of-truth bu
 
 **Branch** `editor/e5-toolbar` — base `editor/e4-transform`. `EditableText.contextMenuBuilder` +
 `AdaptiveTextSelectionToolbar.buttonItems`; the deprecated `toolbarOptions`/`selectionControls` path is
-forbidden `[audit]`. Five controls, matching the prototype exactly: B, I, U, `<>` (inline code), and
+forbidden `[audit]`. **FOUR controls, not the prototype's five — underline is dropped (§3.1, D8).**
+B, I, `<>` (inline code), and
 ◆ U+25C6 (highlight) — **◆ is a real `<mark>` wrap, not a placeholder** `[audit]`. Toolbar appears only on
 a non-collapsed selection, as the prototype does.
 
@@ -604,24 +697,30 @@ is a confident document that was never checked.
 
 ---
 
-## 11. OPEN HARDENING DEFECTS — the worklist, not yet applied
+## 11. HARDENING DEFECTS — CLOSED 2026-08-03
 
-A hardening pass ran 2026-08-03. Its three CRITICAL findings are fixed above (§3.1 grammar, §3.2 fences,
-A9 signature) along with four HIGH/MEDIUM ones (A10, A11, A12, and the §2 sharpening). **The following
-were found, accepted as real, and NOT yet applied** — the session ran out of context, and losing them
-silently is exactly the failure this project keeps repeating. **Close these before dispatching E1.**
-Each is ranked, with the fix already determined.
+A hardening pass ran 2026-08-03 and returned a BLOCK verdict. **Every finding it raised is now resolved.**
 
-| # | Sev | Defect | Fix |
-|---|---|---|---|
-| H1 | HIGH | **Marker-only text has no defined render.** `note_body.dart:12` guards on `text.trim().isEmpty`. After E1, `'# '`, `'---'`, `'**'` are non-blank but parse to an empty span tree — a card rendering nothing, with no `'Empty note'` affordance | State the predicate: the blank check runs on `plainText(parse(stripPhotoAnchors(text)))`, not on raw `text`. Add the case to E1 |
-| H2 | HIGH | **The empty-save guard is unowned for markdown.** After E3 a user can save `'# '` and get an entry that renders as nothing. M7 defers only the `&& photos.isEmpty` clause | Assign to E3, or exclude in §9 with the predicate preserved verbatim |
-| H3 | HIGH | **The `computeLineMetrics` overlay has no owning phase if E6 drops.** E7 then inherits E6's named HIGH drift risk with none of its criteria; "say so in its PR" is not executable | Name `markdown_line_metrics_overlay.dart` as the owner; state that dropping E6 moves its three drift criteria (resize, text-scale, scroll) into E7 and E7's delta becomes +6 |
-| H4 | HIGH | **A6 says what not to do, not what to do.** It removes R11's middle-bucket unanchoring without assigning the anchor a new offset — undefined for a transform whose replaced range *contains* a sentinel, which is A6's own receipt | State it: an anchor inside a transform's replaced range keeps its offset relative to the replacement's start |
-| M1 | MED | **§10 misses two unproven claims.** (a) E1's `Text` → `Text.rich` drops heading semantics without `Semantics(header: true)`; E5's buttons need labels; E3's checkbox glyph has no semantic state. (b) §2's "no phase changes its outcome" is contradicted by A1 — P3 gains unspiked `splitSpanAt` | Add both to §10 |
-| M2 | MED | **markdown × `WidgetSpan` composition is never measured.** E0 criterion 4 tests the parser only. R10's six traversal cases use a plain buffer `'ab￼cd'`; nothing covers `'**ab￼cd**'` or an anchor on a `'# '` line — which A2 newly permits | New amendment adding marker-surrounded-sentinel rows to R10's matrix |
-| M3 | MED | **Search MATCHING semantics change silently.** `_searchTextFor` (`search_day_view.dart:76-89`) is the match index, not a preview. Routing it through `plainText` makes queries spanning a marker start matching and queries containing `#`/`*` stop | State the intended match semantics; give it a case in E1 |
-| M4 | MED | **Underline's three options are unresolved** (§3.1) | **User's call.** Recommendation is option 1, drop it. Blocks E5 only |
+| Finding | Closed by |
+|---|---|
+| CRITICAL — grammar never enumerated | §3.1, twelve-row table |
+| CRITICAL — `splitForFloat` signature vs P0 independence | A9 |
+| CRITICAL — E0–E7 had no file fences | §3.2, per-phase fences + named traps |
+| HIGH — reverting E2 after P2 is a build break | A10 |
+| HIGH — "E0 green" insufficient for E1 | A9 (E0 must be MERGED) |
+| HIGH — A5 silently broke R20's receipt and §5.6 | A11 |
+| HIGH — R0 declared spent while bases are `main` | A12 |
+| H1 marker-only render / H2 empty-save guard | **D1** (one predicate, two consumers) |
+| H3 metrics-overlay owner if E6 drops | **D2** |
+| H4 undefined anchor offset under the transform latch | **D3** |
+| M1(a) accessibility gaps | **D4** |
+| M1(b) §2 overstated | **D7** |
+| M2 markdown × `WidgetSpan` unmeasured | **D5** (P2 matrix 6 → 10 cases) |
+| M3 search MATCH semantics | **D6** |
+| M4 underline | **D8** / §3.1 — dropped |
+
+**Two items below remain genuinely open. They are the only ones.** The table originally in this section is
+superseded by the mapping above; the resolutions live in §5.1.
 
 **Also unverified at hand-off:** the citation-proof pass against the repo was dispatched and had not
 returned. **Every `[audit]` and `[inherited]` citation in this document remains unproven**, including the

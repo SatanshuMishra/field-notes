@@ -1,5 +1,6 @@
-Status: proposed
+Status: accepted
 Date: 2026-08-02
+Ratified: 2026-08-03 by the user, after the four audits and the combined spec's hardening pass
 Thread: inline-photo-notes
 
 ## Context
