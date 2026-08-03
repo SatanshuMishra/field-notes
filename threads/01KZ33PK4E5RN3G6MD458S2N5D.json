@@ -39,23 +39,24 @@
   "closure_statement": null,
   "spine": {
     "status": "paused",
-    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) -- one controller seam, editor first, no schema migration. The combined spec (docs/specs/2026-08-03-rich-editor-and-inline-photos.md, branch inline-photo/spec, 62da2cb) is the standing AUTHORITY and citation source. It is NOT dispatchable as-is: the convergence pass returned NOT READY. Execution slices must be cut from it per decision 0006.",
-    "next_step": "DO NOT DISPATCH YET. Convergence pass (3 reviewers) returned NOT READY with 6 blockers. Fix in this order: (1) declare the TYPES -- MarkdownBlock, the inline node type, and all five function signatures; nothing in 840 lines declares one type and all 14 phases consume them; (2) reconcile local main (30 commits behind origin/main); (3) write acceptance criteria for E2/E3/E5/E7; (4) cut the first execution slice (E0+P0+P1) per decision 0006.",
+    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) -- one controller seam, editor first, no schema migration. The combined spec (docs/specs/2026-08-03-rich-editor-and-inline-photos.md, branch inline-photo/spec, 62da2cb, 834 lines) is the standing AUTHORITY and citation source. NOT DISPATCHABLE: all three convergence reviewers returned BLOCK. Execution slices must be cut from it per decision 0006.",
+    "next_step": "DO NOT DISPATCH. Convergence pass returned BLOCK x3 (coherence, mitosis-readiness, E0 implementer simulation). Fix order: (1) the two D1 CRITICALs -- logic errors, not wording; (2) recompute the 7.1 overlap matrix, built on a fence D1 invalidated; (3) declare the TYPES; (4) reconcile local main; (5) acceptance criteria for E2/E3/E5/E7; (6) cut the E0+P0+P1 slice per decision 0006. Consider RE-CUTTING the spec rather than patching -- it has now been patched six times.",
     "open_risks": [
-      "NO TYPES ANYWHERE. MarkdownBlock is named once, never defined; no function signature is declared. An implementer would invent the model all 14 phases consume. THE single biggest gap -- an E0 simulation could not ship from the spec alone.",
-      "E0's test count is self-contradictory: spec 3.1 says criteria 1-3 run once per row (12 rows = 36 cases), spec 6 and 8 say 6 cases. Section 8 forbids absorbing a mismatch, so this must be resolved before E0.",
-      "Criterion 2's '200 generated documents' has NO generator contract, seed, or determinism clause. Repo forbids flaky tests and M10 forbids a property-test package. Mandate a fixed seed.",
-      "E0's created files are never NAMED (spec 6 says 'all under test/features/entry_cards/markdown/'), yet E1 depends on them by name and 'six files' vs 'six plus the barrel' disagree.",
-      "toPlainText() defaults are load-bearing and unstated: includeSemanticsLabels defaults TRUE, so D4/E2's semantics suppression could make N1's whole char-for-char gate VACUOUS. Name the flags in E0's criteria.",
-      "E2, E3, E5, E7 have NO acceptance criteria -- only 'Tests it adds: N cases' plus prose. E4 and E6 have one clause each. Mitosis consumes criteria from the document at plan stage.",
-      "E1's fileScope is not exhaustive: it ends 'and the four test files those red', unnamed. fileScope completeness is what prevents cross-MSP collision.",
-      "Sub-file fences (E2 'controller swap only', E5 'contextMenuBuilder only') are PROSE -- fileScope is path-level and cannot express them. E2/E5/E6 plus P1/P2/P4 all claim text_composer_sheet.dart.",
-      "UNSTRUCK CONTRADICTIONS: spec 10.1 says never critic-hardened while 11 says the pass closed; A8 says R0 is spent while A12 says A8 is WRONG; 10.6 still says the substrate is 'proposed' though it was ratified. Mitosis precondition 2 (APPROVED spec) fails while these stand.",
-      "Human-gated merge parks every transitive dependent, and 7.2 is a near-linear 14-rung chain -- expect ~12 merge-and-relaunch cycles. Batch-scope it (E0+P0+P1 first), never one dispatch.",
-      "Local main is 30 commits BEHIND origin/main and origin/main is NOT its ancestor. Mitosis cuts worktrees from the bare LOCAL main ref. Reconcile first (decision 2026-07-16); gate on git merge-base --is-ancestor origin/main main.",
-      "The spec is not on any base branch -- it lives only on inline-photo/spec. Merge it or set baseBranch accordingly before dispatch.",
-      "The ~60 [inherited] citations in the sibling outside the 28 proven anchors remain UNVERIFIED.",
-      "splitSpanAt (A1) is UNSPIKED: asserted tractable, never proven. If P3 finds it harder, that is a finding against A1, not an implementer judgement call."
+      "CRITICAL D1 LOGIC ERROR: rendersEmpty declares a divider-only note EMPTY -- '---' renders (grammar row 8) but has no plain text. Read view would show 'Empty note' over a rendered rule; composer would refuse to save it. Fix: blocks.isEmpty || (no renderable block && plainText empty).",
+      "CRITICAL D1 FENCE VIOLATION: D1 assigns the save-guard swap at text_composer_sheet.dart:186 to E3, but 3.2's E3 row forbids that file. Exactly the unfenced-file failure 3.2 exists to prevent.",
+      "THE 7.1 OVERLAP MATRIX IS WRONG: it lists text_composer_sheet.dart's E phases as E2/E5/E6, computed against a fence D1 had already invalidated by adding E3. Recompute before trusting any ship-order claim from it.",
+      "NO TYPES ANYWHERE. MarkdownBlock is named once in 834 lines, never defined; no function signature declared. All 14 phases consume the model. An E0 implementer simulation could not ship from the spec alone.",
+      "A9 gives P0 a compile-time import of E0 files that E1 git-mv's to lib/design/markdown/, and 7.2 orders P0 BEFORE E1. On E1's merge commit P0's imports break. A build break yields zero tests, not a reduced count.",
+      "UNDERLINE SURVIVES IN THREE PLACES after 3.1 dropped it: E2's style-family list, E5's heading, and 8's manual pass telling a human to verify Cmd+U. E2's '4 cases' arithmetic no longer adds up.",
+      "SECTION 10 IS FALSIFIED BASE TEXT, in the section headed 'read before dispatching': 10.1 says never critic-hardened while 11 says closed; 10.6 orders ratifying an already-accepted decision.",
+      "A4's deletion anchors are off by four (:616/:890 should be :620/:894); :616 is the note_body.dart row, so a literal reader deletes the WRONG entry. Falsifies 0.2's completeness claim -- in-spec cross-refs were never checked.",
+      "DUPLICATED AUTHORITY, unstruck: A8 asserts R0 is spent while A12 reverses it; section 2 asserts 'no phase changes its outcome' while D7 corrects it; A9 supersedes a section 7 sentence that no longer exists.",
+      "TEST ARITHMETIC DISAGREES: A7 and 8 say the sibling's deltas stand, but D5 changes P2 +11 to +15 and D2 makes E7 +3 to +6 if E6 drops. 8's '+32' and E7's '3 cases' carry neither.",
+      "E0's test count is self-contradictory: 3.1 implies 36 cases (12 rows x 3 criteria), 6 and 8 say 6.",
+      "toPlainText() defaults unstated and load-bearing: includeSemanticsLabels defaults TRUE, so D4/E2 semantics suppression could make N1's whole char-for-char gate VACUOUS.",
+      "E2, E3, E5, E7 have NO acceptance criteria. E0's created files are never NAMED though E1 depends on them by name. Criterion 2's '200 generated documents' has no seed or determinism clause.",
+      "Local main is 30 commits BEHIND origin/main, which is NOT its ancestor. Mitosis cuts worktrees from the bare LOCAL main ref. Gate on git merge-base --is-ancestor origin/main main.",
+      "Human-gated merge parks every transitive dependent and 7.2 is a near-linear 14-rung chain -- expect ~12 merge-and-relaunch cycles. Batch-scope it. The spec is also on no base branch."
     ],
     "key_decisions": [
       "0001-markdown-source-of-truth-editor",
@@ -75,5 +76,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T19:44:38.692Z"
+  "updated_at": "2026-08-03T19:47:26.175Z"
 }
