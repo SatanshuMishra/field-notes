@@ -703,6 +703,34 @@ second-largest phase through a class that is still being rewritten under it — 
 **P0 is run as early as A9 permits** — it is test-only, it gates P3, and a red truncates the photo ladder
 at P2. Running it late means discovering late.
 
+### 7.3 "BASE `main`" IS A LANDMINE TODAY — reconcile before any dispatch
+
+**Measured 2026-08-03 at `9cd0e1f`, and this blocks every phase in BOTH ladders:**
+
+```
+local main   cfa04c7
+origin/main  712c978
+local main is BEHIND origin/main by 30 commits; origin/main is NOT an ancestor of local main
+```
+
+Every phase table in this document and in the sibling says **base `main`**. That string is ambiguous, and
+today the two readings differ by 30 commits — including the four golden-test captures (#124–#126) that
+certainly move the test count.
+
+**Why this is a dispatch blocker and not a nit:** `decisions/2026-07-16-pre-relaunch-main-reconciliation.md`
+records that **the mitosis engine cuts worktrees from the bare LOCAL `main` ref** (`mitosis.js:946`,
+`:1114`) `[inherited]`, so local `main` must contain every merged dependency before a run. Dispatching now
+would build all fourteen MSPs on a base 30 commits stale, and the 944 baseline — measured at `712c978` on
+a different branch — would be unreachable from any of them.
+
+**Obligations, all three, before the first dispatch:**
+
+1. **Reconcile local `main` onto `origin/main`.** Per the decision above, every relaunch requires it.
+2. **Read "base `main`" as `origin/main` everywhere in both documents**, and re-measure the baseline on the
+   reconciled ref rather than inheriting 944 (§8 already says measure, never inherit — this is why).
+3. **Confirm `git merge-base --is-ancestor origin/main main` exits 0** before dispatching. It exits
+   non-zero today. That check is the gate.
+
 Branch prefixes are per-run: `editor/` and `inline-photo/`, per
 `decisions/2026-07-25-msp-branch-prefix-not-per-type.md` `[inherited]`. Every branch is cut with
 `git switch -c <branch> <base-ref>` — **never `git switch main`**, which has aborted twice on this repo
