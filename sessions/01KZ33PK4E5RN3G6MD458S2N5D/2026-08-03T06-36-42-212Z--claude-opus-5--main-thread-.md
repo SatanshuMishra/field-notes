@@ -1,0 +1,29 @@
+WROTE AND HARDENED THE COMBINED SPEC. docs/specs/2026-08-03-rich-editor-and-inline-photos.md, 642 lines, on branch inline-photo/spec. Three commits: 450551b (cut), 8e5aa1f (external-fact corrections), 6f40f25 (hardening pass).
+
+STRUCTURE, and the choice is deliberate: the spec does NOT merge the 1228-line P0-P5 sibling into itself. It AMENDS it by resolution number (A1-A12 in section 5). Copying 1228 verified lines would create two authorities for one subsystem and guarantee the drift this family has hit five times. An implementer reads the new spec first, then the amended resolutions in docs/specs/2026-08-02-inline-photo-notes.md.
+
+THE VERDICT ON flutter#82595: P0-P5 SURVIVES. No phase abandoned, no outcome changed. The no-wrap limit is scoped to WidgetSpan inside an EditableText; R15's float never puts the card in a span tree at all -- it is LayoutBuilder + Stack + TWO SEPARATE Text widgets with the paragraph split manually. Nothing is ever asked to flow around an inline object, so the issue's reach is irrelevant. A reviewer correctly caught that the first draft leaned on an unsupported inference (that non-editable Text CAN wrap); the verdict holds on better reasoning, and the spec now names the shortcut -- putting the photo in a WidgetSpan and expecting flow -- as an explicit implementer trap.
+
+THE ARCHITECTURAL SPINE (new, in no audit): the editor MAY NOT delete a markdown marker (buildTextSpan must match controller.text char-for-char) but the read view MUST (no caret, nothing constrains it). Therefore ONE parser, TWO renderers, ONE controller. That kills the sibling's PhotoAnchorTextEditingController outright (A4) -- P2 grows MarkdownNoteController instead of creating a second class.
+
+THE COLLISION THE EDITOR FORCES: after E1, NoteBody is a span tree, so R15/R18's splitForFloat(String, TextStyle) cannot express its paragraph. New signature takes InlineSpan; text.substring becomes splitSpanAt, a genuinely new algorithm that is UNSPIKED (A1, flagged in section 10.4).
+
+LADDER: E0 (test-only gate on the char-for-char invariant) -> E1 read view -> E2 controller -> E3 blocks -> E4 transforms -> E5 toolbar -> E6 quote bars* -> E7 tappable checkboxes*. Then P0-P5. (*droppable top rungs -- this is how the two reserved scope calls were resolved structurally: both IN the spec at the top, so the user decides with a working implementation in hand rather than blind.)
+
+HARDENING PASS RAN, three reviewers dispatched. External-fact verifier and adversarial critic returned; CITATION-PROOF AGENT WAS STOPPED UNRETURNED at context exhaustion -- its work is owed and unreplaced.
+
+WHAT THE HARDENING CAUGHT AND FIXED:
+- flutter#130881 is CLOSED (fixed PR #138674, shipped Flutter 3.19.0; repo is on 3.44.8). Carried as OPEN by the substrate audit, by this thread's open_risks, and by the first draft. That leg of E4's risk argument is GONE. N2's gate now rests only on Flutter's own TextInputFormatter docs, which is independent and unaffected. THIS THREAD'S open_risks IS NOW CORRECTED.
+- The grammar was never enumerated -- CRITICAL, E0 could not express its own gate. Section 3.1 now enumerates 12 features in a table.
+- UNDERLINE HAS NO MARKDOWN SYNTAX. Found while enumerating; no reviewer reached it. The prototype's U button is execCommand('underline') producing <u>. In a markdown-source-of-truth buffer the E5 U button has nothing to write. Three options priced in 3.1; recommendation is DROP IT (only option keeping the stored file portable markdown, which is the whole reason this substrate beat three editor packages). USER'S CALL, blocks E5 only. Same portability caveat flagged on ==highlight== (not CommonMark).
+- E0-E7 had NO FILE FENCES -- CRITICAL for mitosis, which cannot dispatch without them. Section 3.2 adds per-phase fences plus named traps. The critique found a real gap there: day_detail_edit_note.dart mounts the same TextComposerSheet E2 modifies, so E2 changes the controller for BOTH connectors -- intended, now declared rather than discovered.
+- A9: P0 must write the InlineSpan signature and therefore DEPENDS ON E0 MERGED. Was "P0 may run at any time"; that was incompatible with R4's byte-identical promotion and P3's regression clause.
+- A10: reverts run top-down across BOTH ladders. E2 may not be reverted while P2 is merged -- that pairing is a BUILD BREAK, not a degradation.
+- A11: A5 also voids R20's filename, R20's receipt, and two rows of the sibling's 5.6.
+- A12: A8 was WRONG. R0 is still LIVE -- inline-photo/spec has not merged, so anyone branching from main cannot read either decision record OR this spec.
+
+FAILURES AND WHAT WAS NOT DONE:
+- Ran out of context mid-hardening. Eight accepted findings are NOT applied; they are recorded verbatim with their determined fixes in the spec's new section 11 worklist (H1 marker-only render, H2 empty-save guard, H3 metrics-overlay owner if E6 drops, H4 A6's undefined offset, M1 semantics + section-10 gaps, M2 markdown x WidgetSpan never measured, M3 search MATCH semantics change silently, M4 underline).
+- SUSPECTED DEFECT, UNCONFIRMED: section 7 claims "P1 may ship in parallel with E1-E5". E1 rewrites note_body.dart; P1 also edits it (A3). A shared file is a HARD dependency edge here (decisions/2026-07-27-shared-file-cluster-serializes.md). The citation agent was asked to compute the full overlap matrix and was stopped before answering. ASSUME P1 SERIALIZES BEHIND E1 UNTIL PROVEN OTHERWISE.
+- The spec has NOT been re-hardened after the fixes; the pass was one round, not to convergence.
+- No code was written. No test was run. The 944 baseline was NOT re-measured this session.
