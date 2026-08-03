@@ -53,7 +53,8 @@
       "gh pr create and gh pr merge are BOTH denied globally. PRs go through the pr-create tool; every merge is human. CI IS NOT EVIDENCE — no GitHub check runs a Dart test here."
     ],
     "key_decisions": [
-      "0001-markdown-source-of-truth-editor"
+      "0001-markdown-source-of-truth-editor",
+      "0002-p0-p5-survives-flutter-82595"
     ],
     "out_of_scope": [
       "OQ-3 (entry-card Edit/Delete placement) — deliberately set aside by the user; still the last open criterion of the separate prototype-design-alignment thread.",
@@ -65,5 +66,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T06:08:46.754Z"
+  "updated_at": "2026-08-03T06:37:15.391Z"
 }
