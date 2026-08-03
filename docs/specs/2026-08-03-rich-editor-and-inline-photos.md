@@ -140,6 +140,71 @@ lib/design/markdown/
 (`search_day_view.dart:63-98`) `[audit]`. Without it, markdown punctuation leaks into the On This Day
 card and every search result.
 
+### 3.1 THE GRAMMAR — enumerated, because E0 cannot express its gate without it
+
+The first draft said "the 12 grammar features" and named no list, leaving the one phase that can falsify
+the substrate unable to state its own acceptance criterion. **This table is the definition. E0's criteria
+1–3 run once per row.**
+
+| # | Feature | Markdown source | Renders in | Block/inline |
+|---|---|---|---|---|
+| 1 | h1 | `# ` | E1 read, E3 editor | block |
+| 2 | h2 | `## ` | E1 read, E3 editor | block |
+| 3 | h3 | `### ` | E1 read, E3 editor | block |
+| 4 | bullet | `- ` / `* ` / `+ ` | E1 read, E3 editor | block |
+| 5 | ordered | `1. ` (any `\d+.`) | E1 read, E3 editor | block |
+| 6 | quote | `> ` | E1 read, E3 editor | block |
+| 7 | to-do | `[] ` / `[ ] ` / `[x] ` | E1 read, E3 editor | block |
+| 8 | divider | `---` / `***` | E1 read, E3 editor | block |
+| 9 | bold | `**text**` | E1 read, E2 editor | inline |
+| 10 | italic | `*text*` | E1 read, E2 editor | inline |
+| 11 | inline code | `` `text` `` | E1 read, E2 editor | inline |
+| 12 | highlight | `==text==` | E1 read, E2 editor | inline |
+
+**Twelve. Underline is deliberately absent, and that is an unresolved design hole, not an oversight.**
+The prototype's U button is `document.execCommand('underline')` producing a `<u>` tag `[audit]` — and
+**standard markdown has no underline syntax.** In a markdown-source-of-truth buffer the E5 toolbar's U
+button has nothing to write. Three options, none free, **and the user must pick before E5 is dispatched**:
+
+1. **Drop underline.** Four toolbar buttons instead of five; diverges from the prototype by one control.
+2. **Invent a syntax** (`__text__`, which CommonMark assigns to strong). Divergent from every other
+   markdown reader, and the app's export becomes non-portable — it currently round-trips `textContent`
+   verbatim `[audit]`, which is the export's whole virtue.
+3. **Allow raw inline HTML `<u>`.** Widens the grammar to arbitrary HTML, which nothing else here needs.
+
+**Recommendation: option 1.** It is the only one that keeps the stored file portable markdown, which is
+the entire reason this substrate was chosen over three editor packages. Row 12 (`==highlight==`) carries
+the same portability caveat and is flagged for the same call — it is a widely-adopted extension but is not
+CommonMark.
+
+**Until this is resolved, E5's scope is four buttons and the count in §6/§8 is twelve, not thirteen.**
+
+### 3.2 FILE FENCES — every E phase, because mitosis cannot dispatch without them
+
+The first draft fenced only E0. The sibling carries a hard scope fence for exactly the reason this project
+keeps relearning: an implementer meeting an unfenced file makes a judgement call and a feature is lost.
+
+| Phase | May edit | New? |
+|---|---|---|
+| E0 | `test/features/entry_cards/markdown/**` only | new |
+| E1 | `lib/design/markdown/**` (from E0), `lib/features/entry_cards/cards/note_body.dart`, `cards/note_blocks.dart`, `lib/features/today/today_memory.dart`, `lib/features/search/search_day_view.dart`, and the four test files those red | mixed |
+| E2 | `lib/features/capture/text/markdown_note_controller.dart`, `text_composer_sheet.dart` (controller swap only) | mixed |
+| E3 | `lib/design/markdown/markdown_editor_spans.dart`, `markdown_note_controller.dart` | no |
+| E4 | `markdown_note_controller.dart`, `lib/features/capture/text/markdown_transforms.dart` | mixed |
+| E5 | `text_composer_sheet.dart` (`contextMenuBuilder` only), `lib/features/capture/text/markdown_toolbar.dart` | mixed |
+| E6 | `lib/features/capture/text/markdown_line_metrics_overlay.dart`, `text_composer_sheet.dart` | mixed |
+| E7 | `markdown_line_metrics_overlay.dart`, `markdown_note_controller.dart` | no |
+
+**Named traps — out of bounds in EVERY E phase, each a file a reasonable implementer might otherwise open:**
+
+- `lib/data/database/**` — **NEVER.** M1. Markdown needs no schema change; `textContent` already holds it.
+- `lib/features/entry_cards/playback/**`, `cards/video_*`, `cards/voice_*` — N24's protected suite. Untouched by path disjointness; a diff reaching one **is** the signal the fence broke.
+- `lib/features/entry_cards/cards/photo_strip.dart` — M6, the permanent degrade target for the photo ladder.
+- `lib/features/capture/photo/**` — read-only in every phase of both ladders.
+- `lib/design/widgets/sticker_card.dart` — 16 call sites plus A4's contract; Cluster G's R1 precedent.
+- `lib/features/day_detail/day_detail_edit_note.dart` — **the gap the critique found.** `EditNoteConnector` mounts the same `TextComposerSheet` E2 modifies. E2 changes the controller for BOTH connectors, which is intended — the edit path should render markdown too — but it is **declared here**, not discovered. Its tests must pass unmodified.
+- `pubspec.yaml` — N4/M10. No phase adds a dependency.
+
 **The controller is ONE class**, `MarkdownNoteController extends TextEditingController`, living at
 `lib/features/capture/text/markdown_note_controller.dart`. E2 creates it. P2 **grows** it with the anchor
 bookkeeping the sibling's R9/R11 specify — it does **not** create a second
@@ -233,6 +298,42 @@ Re-measure the baseline on your own branch — the recorded figure has gone stal
 **A8 — R0 is spent.** It says the OQ-6 decision record is not on `main` and every dispatch must carry it
 inline. Both records and the thread now live on `inline-photo/spec` at `92dfb7c` `[verified]`, which is
 this ladder's base. R0's dispatch hazard evaporates once that branch merges; until then, name the branch.
+
+---
+
+**A9 — P0 writes the `InlineSpan` signature from the start, and therefore depends on E0.** *This
+supersedes §7's "P0 may run at any time" and is the second blocking defect the hardening pass found.*
+A1 retypes `splitForFloat` to take an `InlineSpan`. P0 authors that function in the test tree and R4 has
+P3 promote it **byte-identical**, with P3's must-not-regress clause reading "P0's seven cases pass
+unmodified". Those two facts are incompatible with A1 unless P0 writes the final signature. So:
+
+- **P0 writes `splitForFloat({required InlineSpan span, ...})`.** Never the `String` + `TextStyle` form.
+- **P0 gains one dependency: E0 must be MERGED** (not merely green), because P0's criteria 5 and 6 must
+  build a probe span, and the span model lives in E0's grammar files.
+- P0's criteria 5 and 6 are rewritten to construct their probe as a `TextSpan` tree rather than a `String`.
+- P0 stays independent of E1–E7 and of P1. It is no longer independent of E0.
+
+*Rejected: P0 writes the `String` form and P3 converts it.* That makes R4's byte-identical promotion and
+P3's regression clause false on the day A1 lands, and buries the conversion in the ladder's biggest phase.
+
+**A10 — Reverts run TOP-DOWN across BOTH ladders, and one pairing is a build break.** The sibling states a
+revert law scoped to P2/P4/P5 only. Combined, there is a cross-ladder edge: **A4 has P2 grow the class E2
+creates.** Reverting E2 while P2 is merged does not degrade — it **fails to compile**. Law: `E2 may not be
+reverted while P2 is merged.` More generally, revert order is the exact reverse of merge order across the
+union of both ladders, never per-ladder.
+
+**A11 — A5 also voids R20's filename, R20's receipt, and two rows of §5.6.** A5 moves the block loop into
+E1. Consequently: R20's `inline_photo_blocks.dart` becomes `note_blocks.dart`; **R20's receipt
+("`note_body_test.dart`'s two existing cases pass unmodified") is void** — E1 retargets that file by
+mandate; and §5.6's "Verified NOT red — do not touch" rows for `note_body_test.dart` and
+`entry_card_test.dart:55` are void for E1 and stand for every P phase. A P2 implementer reading R20 must
+not find a receipt that E1 already broke with no note.
+
+**A12 — A8 is WRONG: R0 is still live.** A8 claimed R0 spent because the decision records are on
+`inline-photo/spec`. But E0, E1 and P0/P1 all base on `main`, and `inline-photo/spec` has **not merged** —
+so an implementer branching from `main` still cannot read either decision record **or this spec**. **R0
+stands until `inline-photo/spec` merges.** Every dispatch names the branch or quotes the records inline.
+This is the same defect R0 was written to catch, recurring one branch later.
 
 ---
 
@@ -500,6 +601,40 @@ is a confident document that was never checked.
 5. **macOS system undo parity is `[unverified]`** and stays that way until E4's manual pass runs.
 6. **The markdown-source-of-truth decision is `Status: proposed`.** This document builds on it because the
    user directed the work to proceed. **Flip it to `accepted` before dispatching E0, or say why not.**
+
+---
+
+## 11. OPEN HARDENING DEFECTS — the worklist, not yet applied
+
+A hardening pass ran 2026-08-03. Its three CRITICAL findings are fixed above (§3.1 grammar, §3.2 fences,
+A9 signature) along with four HIGH/MEDIUM ones (A10, A11, A12, and the §2 sharpening). **The following
+were found, accepted as real, and NOT yet applied** — the session ran out of context, and losing them
+silently is exactly the failure this project keeps repeating. **Close these before dispatching E1.**
+Each is ranked, with the fix already determined.
+
+| # | Sev | Defect | Fix |
+|---|---|---|---|
+| H1 | HIGH | **Marker-only text has no defined render.** `note_body.dart:12` guards on `text.trim().isEmpty`. After E1, `'# '`, `'---'`, `'**'` are non-blank but parse to an empty span tree — a card rendering nothing, with no `'Empty note'` affordance | State the predicate: the blank check runs on `plainText(parse(stripPhotoAnchors(text)))`, not on raw `text`. Add the case to E1 |
+| H2 | HIGH | **The empty-save guard is unowned for markdown.** After E3 a user can save `'# '` and get an entry that renders as nothing. M7 defers only the `&& photos.isEmpty` clause | Assign to E3, or exclude in §9 with the predicate preserved verbatim |
+| H3 | HIGH | **The `computeLineMetrics` overlay has no owning phase if E6 drops.** E7 then inherits E6's named HIGH drift risk with none of its criteria; "say so in its PR" is not executable | Name `markdown_line_metrics_overlay.dart` as the owner; state that dropping E6 moves its three drift criteria (resize, text-scale, scroll) into E7 and E7's delta becomes +6 |
+| H4 | HIGH | **A6 says what not to do, not what to do.** It removes R11's middle-bucket unanchoring without assigning the anchor a new offset — undefined for a transform whose replaced range *contains* a sentinel, which is A6's own receipt | State it: an anchor inside a transform's replaced range keeps its offset relative to the replacement's start |
+| M1 | MED | **§10 misses two unproven claims.** (a) E1's `Text` → `Text.rich` drops heading semantics without `Semantics(header: true)`; E5's buttons need labels; E3's checkbox glyph has no semantic state. (b) §2's "no phase changes its outcome" is contradicted by A1 — P3 gains unspiked `splitSpanAt` | Add both to §10 |
+| M2 | MED | **markdown × `WidgetSpan` composition is never measured.** E0 criterion 4 tests the parser only. R10's six traversal cases use a plain buffer `'ab￼cd'`; nothing covers `'**ab￼cd**'` or an anchor on a `'# '` line — which A2 newly permits | New amendment adding marker-surrounded-sentinel rows to R10's matrix |
+| M3 | MED | **Search MATCHING semantics change silently.** `_searchTextFor` (`search_day_view.dart:76-89`) is the match index, not a preview. Routing it through `plainText` makes queries spanning a marker start matching and queries containing `#`/`*` stop | State the intended match semantics; give it a case in E1 |
+| M4 | MED | **Underline's three options are unresolved** (§3.1) | **User's call.** Recommendation is option 1, drop it. Blocks E5 only |
+
+**Also unverified at hand-off:** the citation-proof pass against the repo was dispatched and had not
+returned. **Every `[audit]` and `[inherited]` citation in this document remains unproven**, including the
+shared-file question in §7 — see the next paragraph, which is a live suspected defect, not a resolved one.
+
+**SUSPECTED DEFECT, unconfirmed — §7's parallelism claim.** §7 says "P1 may ship in parallel with E1–E5".
+E1 rewrites `note_body.dart`; P1 also edits `note_body.dart` to apply `stripPhotoAnchors` (A3). A shared
+file is a **HARD dependency edge** on this project, never left to the engine to infer
+(`decisions/2026-07-27-shared-file-cluster-serializes.md`) — the engine catches overlapping hunks, not two
+coherent-but-incompatible rewrites of one widget. **Compute the full E×P file-overlap matrix before
+dispatching anything in parallel, and assume P1 serializes behind E1 until proven otherwise.**
+
+---
 
 **Rule for implementers, inherited verbatim because it is the rule this project keeps learning:** re-open
 every cited line before adopting any value, and open the widget or the DAO the value has to pass through
