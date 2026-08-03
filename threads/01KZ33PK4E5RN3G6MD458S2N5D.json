@@ -39,25 +39,26 @@
   "closure_statement": null,
   "spine": {
     "status": "paused",
-    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) on it -- one controller seam, editor first, no schema migration. Spec WRITTEN and once-hardened: docs/specs/2026-08-03-rich-editor-and-inline-photos.md (642 lines, branch inline-photo/spec, 6f40f25). It AMENDS docs/specs/2026-08-02-inline-photo-notes.md by resolution number (A1-A12); read BOTH.",
-    "next_step": "Close the spec's section 11 worklist (eight accepted findings, fixes already determined), then dispatch mitosis on E0 (test-only gate, zero files under lib/). TWO BLOCKERS FIRST: (1) the citation-proof pass was stopped unreturned -- every [audit]/[inherited] citation in both specs is UNPROVEN, re-run it; (2) the E-by-P file-overlap matrix is uncomputed -- assume P1 SERIALIZES behind E1 (both edit note_body.dart) until proven otherwise.",
+    "active_goal": "Ship the rich markdown editor (E0-E7), then OQ-6's inline anchored photos (P0-P5) on it -- one controller seam, editor first, no schema migration. Spec WRITTEN, HARDENED and CLOSED: docs/specs/2026-08-03-rich-editor-and-inline-photos.md (741 lines, branch inline-photo/spec, c573010). It AMENDS docs/specs/2026-08-02-inline-photo-notes.md by resolution number (A1-A12) and adds its own D1-D8; read BOTH.",
+    "next_step": "Dispatch mitosis on E0 (test-only gate, zero files under lib/, 6 cases proving the char-for-char invariant over the 12-feature grammar in spec 3.1). TWO BLOCKERS FIRST: (1) the citation-proof pass was stopped unreturned -- every [audit]/[inherited] citation in both specs is UNPROVEN, re-run it; (2) the E-by-P file-overlap matrix is uncomputed -- assume P1 SERIALIZES behind E1 (both edit note_body.dart) until proven otherwise.",
     "open_risks": [
-      "USER'S CALL, BLOCKS E5: underline has NO markdown syntax -- the prototype's U button is execCommand producing <u>, so the buffer has nothing to write. Options in spec 3.1; recommendation DROP IT, the only one keeping the file portable markdown. Same caveat on ==highlight== (not CommonMark).",
-      "The markdown-source-of-truth decision is still Status: PROPOSED, never ratified. The spec builds on it because the user said Go. Flip it to accepted before dispatching E0, or record why not.",
-      "EIGHT hardening findings accepted and NOT applied -- see spec section 11 (H1 marker-only render, H2 empty-save guard, H3 metrics-overlay owner, H4 undefined anchor offset, M1 semantics, M2 markdown x WidgetSpan unmeasured, M3 search match semantics, M4 underline).",
+      "The citation-proof pass NEVER RETURNED -- stopped at context exhaustion. Every [audit] and [inherited] citation in both specs is UNPROVEN. This family has cited wrong line numbers five times. Re-run before dispatching.",
+      "SUSPECTED DEFECT, unconfirmed: spec 7 claims P1 ships parallel with E1-E5, but E1 rewrites note_body.dart and P1 also edits it. A shared file is a HARD dependency edge here. Compute the E-by-P overlap matrix; assume P1 serializes behind E1.",
       "splitSpanAt (A1) is the one genuinely new algorithm in the spec and is UNSPIKED -- asserted tractable, never proven. If P3 finds it harder, that is a finding against A1, not an implementer judgement call.",
-      "The spec was hardened ONE round, not to convergence, and has not been re-reviewed since the fixes landed.",
-      "CORRECTED: flutter#130881 (undo/redo IME desync) is CLOSED -- fixed by PR #138674, shipped Flutter 3.19.0; repo is on 3.44.8. Carried as OPEN by the substrate audit and this list. E4 stays highest-risk but on Flutter's own TextInputFormatter docs, which are independent.",
+      "The spec was hardened ONE round then patched; it has NOT been re-reviewed since D1-D8 landed. A second pass to convergence is owed.",
+      "D5 grows P2's traversal matrix from 6 to 10 cases (delta +15, not +11) and D2 grows E7 to +6 if E6 is dropped. The sibling's absolute test totals are void (A7); its per-phase deltas stand.",
+      "CORRECTED: flutter#130881 (undo/redo IME desync) is CLOSED -- fixed by PR #138674, shipped Flutter 3.19.0; repo is on 3.44.8. Carried as OPEN by the substrate audit. E4 stays highest-risk but on Flutter's own TextInputFormatter docs, which are independent.",
       "R0 IS STILL LIVE (A12): inline-photo/spec has NOT merged, so anyone branching from main cannot read either decision record OR the spec. Every dispatch names the branch or quotes the records inline.",
       "NO DATABASE MIGRATION, EVER. schemaVersion is 1 and onUpgrade unconditionally throws. A wrong first migration makes every existing journal unopenable.",
-      "Baseline 944 passed / analyze clean was NOT re-measured this session. Measure on your own branch; it has gone stale three times.",
+      "Baseline 944 passed / analyze clean was NOT re-measured. Measure on your own branch; it has gone stale three times.",
       "gh pr create and gh pr merge are BOTH denied globally. PRs go through the pr-create tool; every merge is human. CI IS NOT EVIDENCE -- no GitHub check runs a Dart test here.",
       "Predicted first failure: type-to-transform x undo/redo x IME composing (E4). Gate every programmatic mutation on composing.isCollapsed."
     ],
     "key_decisions": [
       "0001-markdown-source-of-truth-editor",
       "0002-p0-p5-survives-flutter-82595",
-      "0003-combined-spec-amends-never-merges"
+      "0003-combined-spec-amends-never-merges",
+      "0004-underline-dropped-from-the-editor"
     ],
     "out_of_scope": [
       "OQ-3 (entry-card Edit/Delete placement) — deliberately set aside by the user; still the last open criterion of the separate prototype-design-alignment thread.",
@@ -69,5 +70,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T06:38:45.575Z"
+  "updated_at": "2026-08-03T06:47:49.963Z"
 }
