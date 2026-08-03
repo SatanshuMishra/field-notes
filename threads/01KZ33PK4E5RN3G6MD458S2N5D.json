@@ -21,7 +21,7 @@
     },
     {
       "text": "The existing P0-P5 inline-photo ladder has been re-read against the no-wrap-in-EditableText limit and either amended or explicitly re-affirmed",
-      "done": false
+      "done": true
     },
     {
       "text": "The spec is implemented via mitosis, every MSP leaving note capture working on its own merge commit",
@@ -69,5 +69,5 @@
     ]
   },
   "created_at": "2026-08-03T06:06:42.829Z",
-  "updated_at": "2026-08-03T06:38:36.333Z"
+  "updated_at": "2026-08-03T06:38:45.575Z"
 }
