@@ -98,6 +98,34 @@ void main() {
       );
     });
 
+    test('projects Markdown to prose before collapsing and truncating', () {
+      final String longWord = 'x' * 100;
+      expect(
+        firstTextPreview(<Entry>[
+          _entry(
+            type: EntryType.text,
+            textContent: '# **Head**\n\n![alt](photo/0123456789ab)\n\n- *item*',
+          ),
+        ]),
+        'Head alt item',
+      );
+
+      final String? preview = firstTextPreview(<Entry>[
+        _entry(type: EntryType.text, textContent: '**$longWord**'),
+      ]);
+      expect(preview, '${'x' * memoryPreviewMaxLength}…');
+    });
+
+    test('truncates on projected length, not source length', () {
+      final String prose = 'w' * 85;
+      final String? preview = firstTextPreview(<Entry>[
+        _entry(type: EntryType.text, textContent: '## **$prose**'),
+      ]);
+
+      expect(preview, prose);
+      expect(preview!.endsWith('…'), isFalse);
+    });
+
     test('returns null when no usable text entry exists', () {
       expect(firstTextPreview(const <Entry>[]), isNull);
       expect(
