@@ -1,4 +1,5 @@
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/notes/notes.dart';
 
 class SearchDayView {
   const SearchDayView({
@@ -63,8 +64,12 @@ List<SearchDayView> buildSearchDayViews(List<Day> days, List<Entry> entries) {
 String _previewFor(List<Entry> entries) {
   for (final Entry entry in entries) {
     final String? text = entry.textContent;
-    if (text != null && text.trim().isNotEmpty) {
-      return _firstLine(text);
+    if (text == null) {
+      continue;
+    }
+    final String? line = _firstProjectedLine(text);
+    if (line != null) {
+      return line;
     }
   }
   if (entries.isEmpty) {
@@ -82,19 +87,20 @@ String _searchTextFor(Day day, List<Entry> entries) {
   for (final Entry entry in entries) {
     final String? text = entry.textContent;
     if (text != null && text.isNotEmpty) {
-      parts.add(text);
+      parts.add(plainTextOf(text));
     }
   }
   return parts.join('\n').toLowerCase();
 }
 
-String _firstLine(String text) {
-  final String trimmed = text.trim();
-  final int newline = trimmed.indexOf('\n');
-  if (newline == -1) {
-    return trimmed;
+String? _firstProjectedLine(String text) {
+  for (final String line in plainTextOf(text).split('\n')) {
+    final String trimmed = line.trim();
+    if (trimmed.isNotEmpty) {
+      return trimmed;
+    }
   }
-  return trimmed.substring(0, newline).trim();
+  return null;
 }
 
 String _typeLabel(EntryType type) {

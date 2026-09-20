@@ -86,6 +86,93 @@ void main() {
       expect(haystack.contains('second thing'), isTrue);
     });
 
+    test('preview of a heading-first note is the projected prose', () {
+      final List<SearchDayView> views = buildSearchDayViews(
+        <Day>[dayOf('2026-07-15', id: 'd1')],
+        <Entry>[
+          entryOf(
+            dayId: 'd1',
+            id: 'e1',
+            textContent: '# **Rainy** morning\n\nsecond paragraph',
+          ),
+        ],
+      );
+
+      expect(views.single.preview, 'Rainy morning');
+    });
+
+    test('preview of a photo-first note skips to the first projected text',
+        () {
+      final List<SearchDayView> views = buildSearchDayViews(
+        <Day>[dayOf('2026-07-15', id: 'd1')],
+        <Entry>[
+          entryOf(
+            dayId: 'd1',
+            id: 'e1',
+            textContent:
+                '![](photo/0123456789ab "right medium")\n\n- *first* item',
+          ),
+        ],
+      );
+
+      expect(views.single.preview, 'first item');
+    });
+
+    test('preview of a photo with a caption is the caption', () {
+      final List<SearchDayView> views = buildSearchDayViews(
+        <Day>[dayOf('2026-07-15', id: 'd1')],
+        <Entry>[
+          entryOf(
+            dayId: 'd1',
+            id: 'e1',
+            textContent: '![the harbour](photo/0123456789ab)\n\nlater',
+          ),
+        ],
+      );
+
+      expect(views.single.preview, 'the harbour');
+    });
+
+    test('a note that projects to nothing falls through to the next entry',
+        () {
+      final List<SearchDayView> views = buildSearchDayViews(
+        <Day>[dayOf('2026-07-15', id: 'd1')],
+        <Entry>[
+          entryOf(dayId: 'd1', id: 'e1', textContent: '---', createdAt: 100),
+          entryOf(dayId: 'd1', id: 'e2', textContent: 'walk', createdAt: 200),
+        ],
+      );
+
+      expect(views.single.preview, 'walk');
+    });
+
+    test('searchText matches Markdown prose but not its syntax', () {
+      final List<SearchDayView> views = buildSearchDayViews(
+        <Day>[dayOf('2026-07-15', id: 'd1')],
+        <Entry>[
+          entryOf(
+            dayId: 'd1',
+            id: 'e1',
+            textContent: '## Harbour\n\n**Salt** air and `gulls`\n\n'
+                '![boats](photo/0123456789ab "left small")\n\n[tide](https://t)',
+          ),
+        ],
+      );
+
+      final String haystack = views.single.searchText;
+      expect(haystack.contains('harbour'), isTrue);
+      expect(haystack.contains('salt air and gulls'), isTrue);
+      expect(haystack.contains('boats'), isTrue);
+      expect(haystack.contains('tide'), isTrue);
+      expect(haystack.contains('#'), isFalse);
+      expect(haystack.contains('**'), isFalse);
+      expect(haystack.contains('`'), isFalse);
+      expect(haystack.contains('photo/'), isFalse);
+      expect(haystack.contains('0123456789ab'), isFalse);
+      expect(haystack.contains('https://t'), isFalse);
+      expect(haystack.contains('['), isFalse);
+    });
+
     test('does not mutate the input entries list', () {
       final List<Entry> entries = <Entry>[
         entryOf(dayId: 'd1', id: 'b', textContent: 'b', createdAt: 200),
