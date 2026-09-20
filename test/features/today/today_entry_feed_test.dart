@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
@@ -110,6 +111,42 @@ void main() {
     expect(find.text('morning walk'), findsOneWidget);
     expect(find.text('coffee on the porch'), findsOneWidget);
     expect(find.byType(InlinePhotoStrip), findsNWidgets(2));
+  });
+
+  testWidgets('clamps and centres the feed card on a desktop pane',
+      (WidgetTester tester) async {
+    await pumpToday(
+      tester,
+      const TodayEntryFeed(date: '2026-07-19'),
+      surface: todayDesktopSurface,
+      overrides: _overrides(
+        entries: Stream<List<Entry>>.value(<Entry>[
+          todayTestEntry(id: 'entry-1', textContent: 'morning walk'),
+        ]),
+      ),
+    );
+
+    expect(find.byType(NoteColumn), findsNWidgets(2));
+    expect(tester.getSize(find.byType(EntryCard)).width, 590);
+    expect(tester.getCenter(find.byType(EntryCard)).dx, closeTo(500, 0.01));
+    expect(tester.getSize(find.text('morning walk')).width, 560);
+  });
+
+  testWidgets('lets the feed card fill a phone pane edge to edge',
+      (WidgetTester tester) async {
+    await pumpToday(
+      tester,
+      const TodayEntryFeed(date: '2026-07-19'),
+      surface: todayPhoneSurface,
+      overrides: _overrides(
+        entries: Stream<List<Entry>>.value(<Entry>[
+          todayTestEntry(id: 'entry-1', textContent: 'morning walk'),
+        ]),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(EntryCard)).width, 420);
+    expect(tester.getSize(find.text('morning walk')).width, 390);
   });
 
   testWidgets('renders an empty state when today has no entries',

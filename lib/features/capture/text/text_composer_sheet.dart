@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
@@ -24,11 +25,15 @@ const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
 const double _bodyHorizontalPadding = 18;
 const double _bodyBottomPadding = 14;
-const double _surfaceHeight = 440;
+const double _surfaceMaxHeight = 440;
 const double _surfaceRuleThickness = 1;
-const double _pageTopPadding = 44;
-const double _pageHorizontalPadding = 54;
-const double _pageBottomPadding = 120;
+const double _pageTopPaddingShare = 0.10;
+const double _pageTopPaddingMin = 8;
+const double _pageTopPaddingMax = 44;
+const double _pageHorizontalPadding = 38;
+const double _pageBottomPaddingShare = 0.12;
+const double _pageBottomPaddingMin = 12;
+const double _pageBottomPaddingMax = 120;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
 
@@ -239,8 +244,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _writingSurface() {
-    return SizedBox(
-      height: _surfaceHeight,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: _surfaceMaxHeight),
       child: DecoratedBox(
         decoration: const BoxDecoration(color: Palette.composerPaper),
         child: Column(
@@ -257,56 +262,76 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _editor() {
-    return RawScrollbar(
-      controller: _scrollController,
-      thickness: _scrollbarThickness,
-      thumbColor: Palette.ink22,
-      radius: const Radius.circular(Shapes.radiusXs),
-      child: Padding(
-        padding: const EdgeInsets.only(
-          top: _pageTopPadding,
-          left: _pageHorizontalPadding,
-          right: _pageHorizontalPadding,
-          bottom: _pageBottomPadding,
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            IgnorePointer(
-              child: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _controller,
-                builder: (
-                  BuildContext context,
-                  TextEditingValue value,
-                  Widget? child,
-                ) {
-                  if (value.text.isNotEmpty) {
-                    return const SizedBox.shrink();
-                  }
-                  return Text(
-                    widget.hintText,
-                    style: TypographyTokens.composerPlaceholderSerif,
-                  );
-                },
-              ),
-            ),
-            EditableText(
-              controller: _controller,
-              focusNode: _focusNode,
-              scrollController: _scrollController,
-              style: TypographyTokens.composerBodySerif,
-              cursorColor: Palette.coral,
-              backgroundCursorColor: Palette.muted,
-              keyboardType: TextInputType.multiline,
-              minLines: null,
-              maxLines: null,
-              expands: true,
-            ),
-          ],
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        return RawScrollbar(
+          controller: _scrollController,
+          thickness: _scrollbarThickness,
+          thumbColor: Palette.ink22,
+          radius: const Radius.circular(Shapes.radiusXs),
+          child: Padding(
+            padding: _pageMargins(constraints.maxHeight),
+            child: NoteColumn(child: _page()),
+          ),
+        );
+      },
     );
   }
+
+  Widget _page() {
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        IgnorePointer(
+          child: ValueListenableBuilder<TextEditingValue>(
+            valueListenable: _controller,
+            builder: (
+              BuildContext context,
+              TextEditingValue value,
+              Widget? child,
+            ) {
+              if (value.text.isNotEmpty) {
+                return const SizedBox.shrink();
+              }
+              return Text(
+                widget.hintText,
+                style: TypographyTokens.noteBodyPlaceholder,
+              );
+            },
+          ),
+        ),
+        EditableText(
+          controller: _controller,
+          focusNode: _focusNode,
+          scrollController: _scrollController,
+          style: TypographyTokens.noteBody,
+          cursorColor: Palette.coral,
+          backgroundCursorColor: Palette.muted,
+          keyboardType: TextInputType.multiline,
+          minLines: null,
+          maxLines: null,
+          expands: true,
+        ),
+      ],
+    );
+  }
+}
+
+EdgeInsets _pageMargins(double surfaceHeight) {
+  return EdgeInsets.only(
+    top: clampDouble(
+      surfaceHeight * _pageTopPaddingShare,
+      _pageTopPaddingMin,
+      _pageTopPaddingMax,
+    ),
+    left: _pageHorizontalPadding,
+    right: _pageHorizontalPadding,
+    bottom: clampDouble(
+      surfaceHeight * _pageBottomPaddingShare,
+      _pageBottomPaddingMin,
+      _pageBottomPaddingMax,
+    ),
+  );
 }
 
 class _CloseGlyphPainter extends CustomPainter {
