@@ -5,10 +5,14 @@ import 'package:field_notes/data/database/app_database.dart' show AppDatabase;
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/services/draft_store.dart';
 import 'package:field_notes/domain/services/media_store.dart';
+import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:flutter/material.dart';
 
 AppDatabase newTestDatabase() => AppDatabase(NativeDatabase.memory());
+
+const Duration draftIdleDebounceForTest = Duration(milliseconds: 450);
 
 Future<Directory> newTempMediaRoot() =>
     Directory.systemTemp.createTemp('fn_capture');
@@ -173,5 +177,87 @@ class FakeCaptureService implements CaptureService {
       updatedAt: 0,
     );
     return CaptureResult(day: day, entry: entry, photos: const <EntryPhoto>[]);
+  }
+}
+
+typedef NoteSaveCall = ({
+  String? entryId,
+  String date,
+  String source,
+  List<String> photoMediaIds,
+  String? draftKey,
+});
+
+class FakeNoteWriter implements NoteWriter {
+  FakeNoteWriter({this.failure, this.delay, this.entryId = 'entry-1'});
+
+  final NoteWriteException? failure;
+  final Duration? delay;
+  final String entryId;
+  final List<NoteSaveCall> saves = <NoteSaveCall>[];
+
+  @override
+  Future<NoteSaveResult> save({
+    String? entryId,
+    required String date,
+    required String source,
+    List<String> photoMediaIds = const <String>[],
+    String? draftKey,
+  }) async {
+    saves.add((
+      entryId: entryId,
+      date: date,
+      source: source,
+      photoMediaIds: photoMediaIds,
+      draftKey: draftKey,
+    ));
+    final Duration? wait = delay;
+    if (wait != null) {
+      await Future<void>.delayed(wait);
+    }
+    final NoteWriteException? error = failure;
+    if (error != null) {
+      throw error;
+    }
+    return NoteSaveResult(
+      entry: Entry(
+        id: entryId ?? this.entryId,
+        dayId: 'day-1',
+        type: EntryType.text,
+        textContent: source,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    );
+  }
+}
+
+class FakeDraftStore implements DraftStore {
+  FakeDraftStore({Map<String, String>? drafts})
+      : drafts = Map<String, String>.of(drafts ?? const <String, String>{});
+
+  final Map<String, String> drafts;
+  final List<({String key, String source})> writes =
+      <({String key, String source})>[];
+  final List<String> deletes = <String>[];
+  Object? writeError;
+
+  @override
+  Future<String?> read(String key) async => drafts[key];
+
+  @override
+  Future<void> write(String key, String source) async {
+    final Object? error = writeError;
+    if (error != null) {
+      throw error;
+    }
+    writes.add((key: key, source: source));
+    drafts[key] = source;
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    deletes.add(key);
+    drafts.remove(key);
   }
 }

@@ -48,7 +48,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   }
 
   Future<void> _edit(Entry entry) async {
-    await showEditNote(context, entry: entry);
+    await showEditNote(context, entry: entry, date: widget.date);
   }
 
   Future<void> _delete(Entry entry) async {

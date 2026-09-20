@@ -1,9 +1,10 @@
 import 'dart:async';
 
-import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/state/draft_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -11,13 +12,19 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../core/capture_test_support.dart';
 
-class _HangingCaptureService implements CaptureService {
-  final Completer<CaptureResult> _never = Completer<CaptureResult>();
-  int captureCalls = 0;
+class _HangingNoteWriter implements NoteWriter {
+  final Completer<NoteSaveResult> _never = Completer<NoteSaveResult>();
+  int saveCalls = 0;
 
   @override
-  Future<CaptureResult> capture(CaptureRequest request) {
-    captureCalls++;
+  Future<NoteSaveResult> save({
+    String? entryId,
+    required String date,
+    required String source,
+    List<String> photoMediaIds = const <String>[],
+    String? draftKey,
+  }) {
+    saveCalls++;
     return _never.future;
   }
 }
@@ -33,7 +40,7 @@ class _Trigger extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () async => showGeneralDialog<String>(
         context: context,
-        barrierDismissible: true,
+        barrierDismissible: false,
         barrierLabel: 'Dismiss note composer',
         pageBuilder: (
           BuildContext dialogContext,
@@ -53,15 +60,16 @@ class _Trigger extends StatelessWidget {
 
 void main() {
   testWidgets(
-      'when capture() never completes, the save is bounded: the "Saving…" '
+      'when save() never completes, the save is bounded: the "Saving…" '
       'state clears and a timeout error is surfaced instead of hanging',
       (WidgetTester tester) async {
-    final _HangingCaptureService service = _HangingCaptureService();
+    final _HangingNoteWriter writer = _HangingNoteWriter();
 
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          captureServiceProvider.overrideWith((Ref ref) => service),
+          noteWriterProvider.overrideWith((Ref ref) => writer),
+          draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
         ],
         child: captureHarness(
           const _Trigger(timeout: Duration(milliseconds: 100)),
@@ -82,7 +90,7 @@ void main() {
 
     await tester.pump(const Duration(milliseconds: 150));
 
-    expect(service.captureCalls, 1);
+    expect(writer.saveCalls, 1);
     expect(find.text(textSaveTimeoutMessage), findsOneWidget);
     expect(find.text('Saving…'), findsNothing);
     expect(find.text('Save'), findsOneWidget);

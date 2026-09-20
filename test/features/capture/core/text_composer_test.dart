@@ -1,7 +1,9 @@
-import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/state/draft_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -26,12 +28,14 @@ class _ComposerTrigger extends StatelessWidget {
 }
 
 Widget _composerApp({
-  required CaptureService service,
+  required NoteWriter writer,
   required ValueChanged<String?> onResult,
+  FakeDraftStore? drafts,
 }) {
   return ProviderScope(
     overrides: <Override>[
-      captureServiceProvider.overrideWith((Ref ref) => service),
+      noteWriterProvider.overrideWith((Ref ref) => writer),
+      draftStoreProvider.overrideWith((Ref ref) => drafts ?? FakeDraftStore()),
     ],
     child: captureHarness(
       _ComposerTrigger(date: '2026-07-19', onResult: onResult),
@@ -66,11 +70,11 @@ void main() {
 
   testWidgets('a successful save closes the composer with the new entry id',
       (WidgetTester tester) async {
-    final FakeCaptureService service = FakeCaptureService();
+    final FakeNoteWriter writer = FakeNoteWriter();
     String? result = 'unset';
 
     await tester.pumpWidget(
-      _composerApp(service: service, onResult: (String? id) => result = id),
+      _composerApp(writer: writer, onResult: (String? id) => result = id),
     );
 
     await tester.tap(find.text('open'));
@@ -81,23 +85,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(result, 'entry-1');
-    expect(service.requests, hasLength(1));
-    final TextCaptureRequest request =
-        service.requests.single as TextCaptureRequest;
-    expect(request.date, '2026-07-19');
-    expect(request.text, 'a good day');
+    expect(writer.saves, hasLength(1));
+    final NoteSaveCall call = writer.saves.single;
+    expect(call.entryId, isNull);
+    expect(call.date, '2026-07-19');
+    expect(call.source, 'a good day');
+    expect(call.draftKey, isNotNull);
     expect(find.byType(TextComposerSheet), findsNothing);
   });
 
   testWidgets('a failed save shows the reason and keeps the typed note',
       (WidgetTester tester) async {
-    final FakeCaptureService service = FakeCaptureService(
-      failure: const CaptureException('Could not save your entry.'),
+    final FakeNoteWriter writer = FakeNoteWriter(
+      failure: const NoteWriteException('Could not save your entry.'),
     );
     String? result = 'unset';
 
     await tester.pumpWidget(
-      _composerApp(service: service, onResult: (String? id) => result = id),
+      _composerApp(writer: writer, onResult: (String? id) => result = id),
     );
 
     await tester.tap(find.text('open'));
@@ -116,24 +121,86 @@ void main() {
     expect(result, 'unset');
   });
 
-  testWidgets('the close X shuts the composer without capturing anything',
+  testWidgets('the close X on a clean composer shuts it without capturing',
       (WidgetTester tester) async {
-    final FakeCaptureService service = FakeCaptureService();
+    final FakeNoteWriter writer = FakeNoteWriter();
     String? result = 'unset';
 
     await tester.pumpWidget(
-      _composerApp(service: service, onResult: (String? id) => result = id),
+      _composerApp(writer: writer, onResult: (String? id) => result = id),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+
+    expect(result, isNull);
+    expect(writer.saves, isEmpty);
+    expect(find.byType(TextComposerSheet), findsNothing);
+  });
+
+  testWidgets(
+      'the close X on a dirty composer asks first, and Discard drops the note '
+      'and its draft file', (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
     );
 
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'never mind');
-    await tester.pump();
+    await tester.pump(draftIdleDebounceForTest);
+    expect(drafts.drafts.values, <String>['never mind']);
+
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
 
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(find.byType(TextComposerSheet), findsOneWidget);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerDiscardKey));
+    await tester.pumpAndSettle();
+
     expect(result, isNull);
-    expect(service.requests, isEmpty);
+    expect(writer.saves, isEmpty);
+    expect(drafts.drafts, isEmpty);
     expect(find.byType(TextComposerSheet), findsNothing);
+  });
+
+  testWidgets('a barrier tap no longer dismisses the composer',
+      (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(writer: writer, onResult: (String? id) => result = id),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'still here');
+    await tester.pump(draftIdleDebounceForTest);
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextComposerSheet), findsOneWidget);
+    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(composerDiscardKey));
+    await tester.pumpAndSettle();
   });
 }

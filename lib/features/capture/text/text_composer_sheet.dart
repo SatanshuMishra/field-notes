@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
 
@@ -36,13 +37,17 @@ const double _pageBottomPaddingMin = 12;
 const double _pageBottomPaddingMax = 120;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
+const double _chipVerticalPadding = 10;
 
 class TextComposerSheet extends StatefulWidget {
   const TextComposerSheet({
     super.key,
     required this.onSave,
     required this.onCancel,
+    this.controller,
     this.initialText = '',
+    this.draftRestored = false,
+    this.onDiscardDraft,
     this.errorMessage,
     this.isSaving = false,
     this.title = 'Write a note',
@@ -54,7 +59,10 @@ class TextComposerSheet extends StatefulWidget {
 
   final ValueChanged<String> onSave;
   final VoidCallback onCancel;
+  final TextEditingController? controller;
   final String initialText;
+  final bool draftRestored;
+  final VoidCallback? onDiscardDraft;
   final String? errorMessage;
   final bool isSaving;
   final String title;
@@ -69,6 +77,7 @@ class TextComposerSheet extends StatefulWidget {
 
 class _TextComposerSheetState extends State<TextComposerSheet> {
   late final TextEditingController _controller;
+  late final bool _ownsController;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
   String? _guardMessage;
@@ -77,7 +86,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialText);
+    final TextEditingController? external = widget.controller;
+    _ownsController = external == null;
+    _controller =
+        external ?? TextEditingController(text: widget.initialText);
     _focusNode = FocusNode();
     _scrollController = ScrollController();
   }
@@ -85,7 +97,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   @override
   void dispose() {
     _guardTimer?.cancel();
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     _focusNode.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -213,6 +227,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        if (widget.draftRestored)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _bodyHorizontalPadding,
+              vertical: _chipVerticalPadding,
+            ),
+            child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
+          ),
         Flexible(child: _writingSurface()),
         Padding(
           padding: const EdgeInsets.only(

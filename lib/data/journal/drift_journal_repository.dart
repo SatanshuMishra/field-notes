@@ -1,5 +1,6 @@
 import '../../domain/models/models.dart';
 import '../../domain/repositories/journal_repository.dart';
+import '../database/app_database.dart' as db show Entry;
 import '../database/app_database.dart' show AppDatabase;
 import '../database/ids.dart';
 import 'days_dao.dart';
@@ -148,6 +149,73 @@ class DriftJournalRepository implements JournalRepository {
       textContent: textContent,
       updatedAt: _clock(),
     );
+  }
+
+  @override
+  Future<Entry> saveNote({
+    String? entryId,
+    required String date,
+    required String source,
+    required List<String> photoMediaIds,
+  }) {
+    return _db.transaction(() async {
+      final now = _clock();
+      final row = entryId == null
+          ? await _insertNote(date: date, source: source, now: now)
+          : await _updateNote(entryId: entryId, source: source, now: now);
+      await _photos.replacePhotos(
+        entryId: row.id,
+        mediaIds: photoMediaIds,
+        now: now,
+        newId: _newId,
+      );
+      return toDomainEntry(row);
+    });
+  }
+
+  Future<db.Entry> _insertNote({
+    required String date,
+    required String source,
+    required int now,
+  }) async {
+    final existingDay = await _days.activeDayForDate(date);
+    final dayId = existingDay?.id ??
+        (await _days.insertDay(
+          id: _newId(),
+          date: date,
+          moodId: null,
+          createdAt: now,
+          updatedAt: now,
+        ))
+            .id;
+    return _entries.insertEntry(
+      id: _newId(),
+      dayId: dayId,
+      type: EntryType.text.id,
+      textContent: source,
+      mediaId: null,
+      thumbnailMediaId: null,
+      durationMs: null,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  Future<db.Entry> _updateNote({
+    required String entryId,
+    required String source,
+    required int now,
+  }) async {
+    final updated = await _entries.updateText(
+      id: entryId,
+      textContent: source,
+      updatedAt: now,
+    );
+    final row = updated == 0 ? null : await _entries.entryById(entryId);
+    if (row == null) {
+      throw StateError('entry $entryId does not exist');
+    }
+    return row;
   }
 
   @override
