@@ -18,6 +18,7 @@ import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/mood/mood_picker.dart';
 import 'package:field_notes/features/mood/mood_picker_sheet.dart';
+import 'package:field_notes/state/draft_provider.dart';
 
 import '../../features/capture/core/capture_test_support.dart';
 import '../../features/day_detail/support/day_detail_harness.dart' show entryOf;
@@ -113,8 +114,8 @@ void main() {
           (BuildContext context) =>
               () => showTextComposer(context, '2026-07-27'),
           overrides: <Override>[
-            captureServiceProvider
-                .overrideWith((Ref ref) => FakeCaptureService()),
+            noteWriterProvider.overrideWith((Ref ref) => FakeNoteWriter()),
+            draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
           ],
         ),
       );
@@ -135,7 +136,11 @@ void main() {
                   type: EntryType.text,
                   textContent: 'a good day',
                 ),
+                date: '2026-07-27',
               ),
+          overrides: <Override>[
+            draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
+          ],
         ),
       );
 

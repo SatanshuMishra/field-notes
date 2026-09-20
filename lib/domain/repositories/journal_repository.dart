@@ -31,6 +31,13 @@ abstract interface class JournalRepository {
     required String textContent,
   });
 
+  Future<Entry> saveNote({
+    String? entryId,
+    required String date,
+    required String source,
+    required List<String> photoMediaIds,
+  });
+
   Future<void> softDeleteEntry(String id);
 
   Future<List<Entry>> entriesForDay(String dayId);

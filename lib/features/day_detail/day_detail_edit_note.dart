@@ -1,12 +1,17 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/note_writer.dart';
+import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/core/note_draft_controller.dart';
+import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -14,20 +19,18 @@ const String editNoteTitle = 'Edit note';
 const String editNoteSaveLabel = 'Save changes';
 const String editNoteFailedMessage =
     "Couldn't save your changes. Please try again.";
-const String editNoteConfirmTitle = 'Save changes?';
-const String editNoteConfirmMessage = 'Update this note with your edits?';
-const String editNoteConfirmCancelLabel = 'Cancel';
-const Key editNoteConfirmSaveKey = ValueKey<String>('edit-note-confirm-save');
-
-const double _confirmMaxWidth = 420;
-const double _confirmTitleGap = 8;
-const double _confirmActionsGap = 20;
-const double _confirmActionSpacing = 12;
 
 class EditNoteConnector extends ConsumerStatefulWidget {
-  const EditNoteConnector({super.key, required this.entry});
+  const EditNoteConnector({
+    super.key,
+    required this.entry,
+    required this.date,
+    this.saveTimeout = textSaveTimeout,
+  });
 
   final Entry entry;
+  final String date;
+  final Duration saveTimeout;
 
   @override
   ConsumerState<EditNoteConnector> createState() => _EditNoteConnectorState();
@@ -36,117 +39,99 @@ class EditNoteConnector extends ConsumerStatefulWidget {
 class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
   bool _isSaving = false;
   String? _errorMessage;
+  late final TextEditingController _controller;
+  late final NoteDraftController _draft;
 
-  Future<bool> _confirmSaveChanges() async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) => const _SaveChangesConfirmDialog(),
-    );
-    return confirmed ?? false;
+  @override
+  void initState() {
+    super.initState();
+    final String initialText = widget.entry.textContent ?? '';
+    _controller = TextEditingController(text: initialText);
+    _draft = NoteDraftController(
+      key: widget.entry.id,
+      store: ref.read(draftStoreProvider.future),
+      initialSource: initialText,
+    )..attach(_controller);
+    unawaited(_draft.restore());
+  }
+
+  @override
+  void dispose() {
+    _draft.dispose();
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _save(String text) async {
-    final bool confirmed = await _confirmSaveChanges();
-    if (!confirmed || !mounted) {
-      return;
-    }
     setState(() {
       _isSaving = true;
       _errorMessage = null;
     });
-    try {
-      await ref.read(journalRepositoryProvider).updateEntryText(
-            id: widget.entry.id,
-            textContent: text,
-          );
-      if (!mounted) {
-        return;
-      }
-      Navigator.of(context).pop(true);
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
+    final NoteSaveOutcome outcome = await awaitNoteSave(
+      _persist(text),
+      timeout: widget.saveTimeout,
+      unexpectedMessage: editNoteFailedMessage,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (outcome.entryId == null) {
       setState(() {
         _isSaving = false;
-        _errorMessage = editNoteFailedMessage;
+        _errorMessage = outcome.errorMessage ?? editNoteFailedMessage;
       });
+      return;
     }
+    Navigator.of(context).pop(true);
+  }
+
+  Future<NoteSaveResult> _persist(String text) async {
+    await _draft.settle();
+    final NoteWriter writer = await ref.read(noteWriterProvider.future);
+    return writer.save(
+      entryId: widget.entry.id,
+      date: widget.date,
+      source: text,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return TextComposerSheet(
-      initialText: widget.entry.textContent ?? '',
-      title: editNoteTitle,
-      saveLabel: editNoteSaveLabel,
-      onSave: _save,
-      onCancel: () => Navigator.of(context).pop(false),
-      errorMessage: _errorMessage,
-      isSaving: _isSaving,
+    return ListenableBuilder(
+      listenable: _draft,
+      builder: (BuildContext context, Widget? child) {
+        return ComposerGuard(
+          isDirty: () => _draft.isDirty,
+          locked: _isSaving,
+          onDiscard: _draft.discard,
+          popResult: false,
+          builder: (BuildContext context, VoidCallback requestClose) {
+            return TextComposerSheet(
+              controller: _controller,
+              title: editNoteTitle,
+              saveLabel: editNoteSaveLabel,
+              onSave: _save,
+              onCancel: requestClose,
+              draftRestored: _draft.restoredDraft,
+              onDiscardDraft: _draft.discardRestored,
+              errorMessage: _errorMessage,
+              isSaving: _isSaving,
+            );
+          },
+        );
+      },
     );
   }
 }
 
-class _SaveChangesConfirmDialog extends StatelessWidget {
-  const _SaveChangesConfirmDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _confirmMaxWidth),
-          child: StickerCard(
-            surface: Palette.cardBright,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  editNoteConfirmTitle,
-                  style: TypographyTokens.titleSerif,
-                ),
-                const SizedBox(height: _confirmTitleGap),
-                Text(
-                  editNoteConfirmMessage,
-                  style: TypographyTokens.bodySans,
-                ),
-                const SizedBox(height: _confirmActionsGap),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: _confirmActionSpacing,
-                  runSpacing: _confirmActionSpacing,
-                  children: <Widget>[
-                    StickerButton(
-                      label: editNoteConfirmCancelLabel,
-                      variant: StickerButtonVariant.secondary,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                    StickerButton(
-                      key: editNoteConfirmSaveKey,
-                      label: editNoteSaveLabel,
-                      variant: StickerButtonVariant.primary,
-                      labelStyle: TypographyTokens.captureLabelSans,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-Future<bool?> showEditNote(BuildContext context, {required Entry entry}) {
+Future<bool?> showEditNote(
+  BuildContext context, {
+  required Entry entry,
+  required String date,
+}) {
   return showGeneralDialog<bool>(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: false,
     barrierLabel: 'Dismiss note editor',
     barrierColor: const Color(0x00000000),
     transitionDuration: Motion.modalPop,
@@ -156,7 +141,9 @@ Future<bool?> showEditNote(BuildContext context, {required Entry entry}) {
       Animation<double> secondaryAnimation,
     ) {
       return DialogHost(
-        child: ComposerShell(child: EditNoteConnector(entry: entry)),
+        child: ComposerShell(
+          child: EditNoteConnector(entry: entry, date: date),
+        ),
       );
     },
     transitionBuilder: (

@@ -239,4 +239,123 @@ void main() {
 
     expect(matches.map((d) => d.date).toList(), ['2025-07-12', '2024-07-12']);
   });
+
+  group('saveNote', () {
+    test('creates the day and a text entry when no entry id is given',
+        () async {
+      await seedMediaBlob(db, 'blob-a');
+      await seedMediaBlob(db, 'blob-b');
+
+      final entry = await repo.saveNote(
+        date: '2026-07-12',
+        source: 'a good day',
+        photoMediaIds: ['blob-b', 'blob-a'],
+      );
+
+      final day = await repo.activeDayForDate('2026-07-12');
+      expect(day, isNotNull);
+      expect(entry.dayId, day!.id);
+      expect(entry.type, EntryType.text);
+      expect(entry.textContent, 'a good day');
+      expect(entry.createdAt, 1000);
+      expect(await repo.entriesForDay(day.id), [entry]);
+      final photos = await repo.photosForEntry(entry.id);
+      expect(photos.map((p) => p.mediaId).toList(), ['blob-b', 'blob-a']);
+      expect(photos.map((p) => p.sortOrder).toList(), [0, 1]);
+    });
+
+    test('reuses an existing active day for the date', () async {
+      final day = await repo.setMoodForDate(date: '2026-07-12', mood: Mood.calm);
+
+      final entry = await repo.saveNote(
+        date: '2026-07-12',
+        source: 'a good day',
+        photoMediaIds: const [],
+      );
+
+      expect(entry.dayId, day.id);
+      expect((await repo.activeDayForDate('2026-07-12'))!.mood, Mood.calm);
+    });
+
+    test('updates the text and rewrites the photo index for a supplied id',
+        () async {
+      await seedMediaBlob(db, 'blob-a');
+      await seedMediaBlob(db, 'blob-b');
+      final created = await repo.saveNote(
+        date: '2026-07-12',
+        source: 'a good day',
+        photoMediaIds: ['blob-a'],
+      );
+      nowValue = 2000;
+
+      final edited = await repo.saveNote(
+        entryId: created.id,
+        date: '2026-07-12',
+        source: 'a better day',
+        photoMediaIds: ['blob-b'],
+      );
+
+      expect(edited.id, created.id);
+      expect(edited.dayId, created.dayId);
+      expect(edited.textContent, 'a better day');
+      expect(edited.createdAt, 1000);
+      expect(edited.updatedAt, 2000);
+      final photos = await repo.photosForEntry(created.id);
+      expect(photos.map((p) => p.mediaId).toList(), ['blob-b']);
+      final rows = await db.select(db.entryPhotos).get();
+      expect(rows, hasLength(1));
+    });
+
+    test('rejects an unknown entry id without touching the tables', () async {
+      await expectLater(
+        repo.saveNote(
+          entryId: 'missing',
+          date: '2026-07-12',
+          source: 'a good day',
+          photoMediaIds: const [],
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(await db.select(db.entries).get(), isEmpty);
+    });
+
+    test('entry and entry_photos land or roll back together', () async {
+      await expectLater(
+        repo.saveNote(
+          date: '2026-07-12',
+          source: 'a good day',
+          photoMediaIds: ['blob-that-does-not-exist'],
+        ),
+        throwsA(anything),
+      );
+
+      expect(await repo.activeDayForDate('2026-07-12'), isNull);
+      expect(await db.select(db.entries).get(), isEmpty);
+      expect(await db.select(db.entryPhotos).get(), isEmpty);
+    });
+
+    test('a failed edit leaves the previous text and photos in place',
+        () async {
+      await seedMediaBlob(db, 'blob-a');
+      final created = await repo.saveNote(
+        date: '2026-07-12',
+        source: 'a good day',
+        photoMediaIds: ['blob-a'],
+      );
+
+      await expectLater(
+        repo.saveNote(
+          entryId: created.id,
+          date: '2026-07-12',
+          source: 'a worse day',
+          photoMediaIds: ['blob-that-does-not-exist'],
+        ),
+        throwsA(anything),
+      );
+
+      expect((await repo.entryById(created.id))!.textContent, 'a good day');
+      final photos = await repo.photosForEntry(created.id);
+      expect(photos.map((p) => p.mediaId).toList(), ['blob-a']);
+    });
+  });
 }

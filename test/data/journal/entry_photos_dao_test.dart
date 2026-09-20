@@ -98,4 +98,63 @@ void main() {
     expect(emissions.last, ['p1']);
     await sub.cancel();
   });
+
+  test('replacePhotos clears the existing rows and inserts the new set in '
+      'sort order', () async {
+    await seedMediaBlob(db, 'blob-c');
+    await dao.insertPhoto(
+      id: 'old-1',
+      entryId: 'e1',
+      mediaId: 'blob-a',
+      sortOrder: 0,
+      createdAt: 0,
+      updatedAt: 0,
+    );
+    await dao.insertPhoto(
+      id: 'old-2',
+      entryId: 'e1',
+      mediaId: 'blob-b',
+      sortOrder: 1,
+      createdAt: 0,
+      updatedAt: 0,
+    );
+    await dao.softDelete(id: 'old-2', deletedAt: 5);
+    var counter = 0;
+
+    final rows = await dao.replacePhotos(
+      entryId: 'e1',
+      mediaIds: ['blob-c', 'blob-a'],
+      now: 42,
+      newId: () => 'new-${counter++}',
+    );
+
+    expect(rows.map((r) => r.id).toList(), ['new-0', 'new-1']);
+    expect(rows.map((r) => r.sortOrder).toList(), [0, 1]);
+    expect(rows.map((r) => r.createdAt).toSet(), {42});
+    final active = await dao.activePhotosForEntry('e1');
+    expect(active.map((r) => r.mediaId).toList(), ['blob-c', 'blob-a']);
+    final all = await db.select(db.entryPhotos).get();
+    expect(all.map((r) => r.id).toSet(), {'new-0', 'new-1'});
+  });
+
+  test('replacePhotos with no media ids empties the entry index', () async {
+    await dao.insertPhoto(
+      id: 'old-1',
+      entryId: 'e1',
+      mediaId: 'blob-a',
+      sortOrder: 0,
+      createdAt: 0,
+      updatedAt: 0,
+    );
+
+    final rows = await dao.replacePhotos(
+      entryId: 'e1',
+      mediaIds: const [],
+      now: 42,
+      newId: () => 'unused',
+    );
+
+    expect(rows, isEmpty);
+    expect(await db.select(db.entryPhotos).get(), isEmpty);
+  });
 }

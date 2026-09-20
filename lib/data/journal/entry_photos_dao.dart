@@ -41,6 +41,30 @@ class EntryPhotosDao {
         .watch();
   }
 
+  Future<List<EntryPhoto>> replacePhotos({
+    required String entryId,
+    required List<String> mediaIds,
+    required int now,
+    required String Function() newId,
+  }) async {
+    await (_db.delete(_db.entryPhotos)..where((t) => t.entryId.equals(entryId)))
+        .go();
+    final rows = <EntryPhoto>[];
+    for (var index = 0; index < mediaIds.length; index++) {
+      rows.add(
+        await insertPhoto(
+          id: newId(),
+          entryId: entryId,
+          mediaId: mediaIds[index],
+          sortOrder: index,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+    }
+    return rows;
+  }
+
   Future<int> softDelete({required String id, required int deletedAt}) {
     return (_db.update(_db.entryPhotos)..where((t) => t.id.equals(id))).write(
       EntryPhotosCompanion(

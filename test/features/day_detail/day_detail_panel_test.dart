@@ -14,6 +14,7 @@ import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/state/state.dart';
 
+import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import 'support/day_detail_harness.dart';
 
 Finder _tileAction(String label) => find.byWidgetPredicate(
@@ -42,6 +43,7 @@ Widget _panelApp(
   return ProviderScope(
     overrides: <Override>[
       journalRepositoryProvider.overrideWithValue(repository),
+      draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
       mediaResolver ??
           dayDetailMediaResolverProvider.overrideWith(
             (Ref ref) => FakeMediaResolver(),

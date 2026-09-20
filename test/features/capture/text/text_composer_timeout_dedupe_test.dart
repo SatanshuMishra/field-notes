@@ -1,8 +1,9 @@
 import 'package:field_notes/domain/models/models.dart';
-import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/state/draft_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -10,31 +11,32 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../core/capture_test_support.dart';
 
-class _SlowCountingCaptureService implements CaptureService {
-  _SlowCountingCaptureService({required this.delay});
+class _SlowCountingNoteWriter implements NoteWriter {
+  _SlowCountingNoteWriter({required this.delay});
 
   final Duration delay;
-  int captureCalls = 0;
+  int saveCalls = 0;
 
   @override
-  Future<CaptureResult> capture(CaptureRequest request) async {
-    captureCalls++;
+  Future<NoteSaveResult> save({
+    String? entryId,
+    required String date,
+    required String source,
+    List<String> photoMediaIds = const <String>[],
+    String? draftKey,
+  }) async {
+    saveCalls++;
     await Future<void>.delayed(delay);
-    final Day day = Day(
-      id: 'day-1',
-      date: request.date,
-      createdAt: 0,
-      updatedAt: 0,
+    return NoteSaveResult(
+      entry: Entry(
+        id: 'entry-1',
+        dayId: 'day-1',
+        type: EntryType.text,
+        textContent: source,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
     );
-    final Entry entry = Entry(
-      id: 'entry-1',
-      dayId: day.id,
-      type: request.type,
-      textContent: request is TextCaptureRequest ? request.text : null,
-      createdAt: 0,
-      updatedAt: 0,
-    );
-    return CaptureResult(day: day, entry: entry, photos: const <EntryPhoto>[]);
   }
 }
 
@@ -51,7 +53,7 @@ class _Trigger extends StatelessWidget {
       onTap: () async => onResult(
         await showGeneralDialog<String>(
           context: context,
-          barrierDismissible: true,
+          barrierDismissible: false,
           barrierLabel: 'Dismiss note composer',
           pageBuilder: (
             BuildContext dialogContext,
@@ -72,9 +74,9 @@ class _Trigger extends StatelessWidget {
 
 void main() {
   testWidgets(
-      'a save that completes within the timeout invokes capture() exactly once '
+      'a save that completes within the timeout invokes save() exactly once '
       'and pops with the real entry id', (WidgetTester tester) async {
-    final _SlowCountingCaptureService service = _SlowCountingCaptureService(
+    final _SlowCountingNoteWriter writer = _SlowCountingNoteWriter(
       delay: const Duration(milliseconds: 200),
     );
     String? result = 'unset';
@@ -82,7 +84,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: <Override>[
-          captureServiceProvider.overrideWith((Ref ref) => service),
+          noteWriterProvider.overrideWith((Ref ref) => writer),
+          draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
         ],
         child: captureHarness(
           _Trigger(
@@ -106,7 +109,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(service.captureCalls, 1);
+    expect(writer.saveCalls, 1);
     expect(result, 'entry-1');
     expect(find.byType(TextComposerSheet), findsNothing);
 

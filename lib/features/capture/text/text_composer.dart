@@ -3,15 +3,19 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/data/database/ids.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/domain/models/models.dart';
-import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
+import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
+import 'package:field_notes/state/state.dart';
 
 import 'text_composer_sheet.dart';
 
@@ -24,6 +28,27 @@ const String textSaveTimeoutMessage =
 const Duration textSaveTimeout = Duration(seconds: 20);
 
 const String newNoteTitle = 'New note';
+
+typedef NoteSaveOutcome = ({String? entryId, String? errorMessage});
+
+Future<NoteSaveOutcome> awaitNoteSave(
+  Future<NoteSaveResult> pending, {
+  required Duration timeout,
+  required String unexpectedMessage,
+}) async {
+  try {
+    final NoteSaveResult result = await pending.timeout(timeout);
+    return (entryId: result.entry.id, errorMessage: null);
+  } on TimeoutException {
+    unawaited(pending.then((_) {}, onError: (_) {}));
+    return (entryId: null, errorMessage: textSaveTimeoutMessage);
+  } on NoteWriteException catch (error) {
+    return (entryId: null, errorMessage: error.message);
+  } catch (error, stackTrace) {
+    debugPrint('Note save failed: $error\n$stackTrace');
+    return (entryId: null, errorMessage: unexpectedMessage);
+  }
+}
 
 class TextComposerConnector extends ConsumerStatefulWidget {
   const TextComposerConnector({
@@ -45,12 +70,29 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   String? _errorMessage;
   late final String _metaText;
   late final String _title;
+  late final String _sessionId;
+  late final TextEditingController _controller;
+  late final NoteDraftController _draft;
 
   @override
   void initState() {
     super.initState();
     _metaText = _composeMeta();
     _title = _composeTitle();
+    _sessionId = newId();
+    _controller = TextEditingController();
+    _draft = NoteDraftController(
+      key: _sessionId,
+      store: ref.read(draftStoreProvider.future),
+    )..attach(_controller);
+    unawaited(_draft.restore());
+  }
+
+  @override
+  void dispose() {
+    _draft.dispose();
+    _controller.dispose();
+    super.dispose();
   }
 
   String _composeTitle() {
@@ -78,38 +120,33 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
       _isSaving = true;
       _errorMessage = null;
     });
-    String? entryId;
-    final Future<String> pending = _persist(text);
-    try {
-      entryId = await pending.timeout(widget.saveTimeout);
-    } on TimeoutException {
-      unawaited(pending.then((_) {}, onError: (_) {}));
-      _fail(textSaveTimeoutMessage);
-    } on CaptureException catch (error) {
-      _fail(error.message);
-    } catch (error, stackTrace) {
-      debugPrint('Note save failed: $error\n$stackTrace');
-      _fail(unexpectedSaveMessage);
+    final NoteSaveOutcome outcome = await awaitNoteSave(
+      _persist(text),
+      timeout: widget.saveTimeout,
+      unexpectedMessage: unexpectedSaveMessage,
+    );
+    if (!mounted) {
+      return;
     }
-    if (entryId == null || !mounted) {
+    final String? entryId = outcome.entryId;
+    if (entryId == null) {
+      _fail(outcome.errorMessage ?? unexpectedSaveMessage);
       return;
     }
     Navigator.of(context).pop(entryId);
   }
 
-  Future<String> _persist(String text) async {
-    final CaptureService service =
-        await ref.read(captureServiceProvider.future);
-    final CaptureResult result = await service.capture(
-      TextCaptureRequest(date: widget.date, text: text),
+  Future<NoteSaveResult> _persist(String text) async {
+    await _draft.settle();
+    final NoteWriter writer = await ref.read(noteWriterProvider.future);
+    return writer.save(
+      date: widget.date,
+      source: text,
+      draftKey: _sessionId,
     );
-    return result.entry.id;
   }
 
   void _fail(String message) {
-    if (!mounted) {
-      return;
-    }
     setState(() {
       _isSaving = false;
       _errorMessage = message;
@@ -118,13 +155,28 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
 
   @override
   Widget build(BuildContext context) {
-    return TextComposerSheet(
-      onSave: _save,
-      onCancel: () => Navigator.of(context).pop(),
-      errorMessage: _errorMessage,
-      isSaving: _isSaving,
-      title: _title,
-      metaText: _metaText,
+    return ListenableBuilder(
+      listenable: _draft,
+      builder: (BuildContext context, Widget? child) {
+        return ComposerGuard(
+          isDirty: () => _draft.isDirty,
+          locked: _isSaving,
+          onDiscard: _draft.discard,
+          builder: (BuildContext context, VoidCallback requestClose) {
+            return TextComposerSheet(
+              controller: _controller,
+              onSave: _save,
+              onCancel: requestClose,
+              draftRestored: _draft.restoredDraft,
+              onDiscardDraft: _draft.discardRestored,
+              errorMessage: _errorMessage,
+              isSaving: _isSaving,
+              title: _title,
+              metaText: _metaText,
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -132,7 +184,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
 Future<String?> showTextComposer(BuildContext context, String date) {
   return showGeneralDialog<String>(
     context: context,
-    barrierDismissible: true,
+    barrierDismissible: false,
     barrierLabel: 'Dismiss note composer',
     barrierColor: const Color(0x00000000),
     transitionDuration: Motion.modalPop,

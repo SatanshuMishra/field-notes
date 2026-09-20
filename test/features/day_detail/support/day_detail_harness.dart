@@ -156,9 +156,11 @@ class FakeJournalRepository implements JournalRepository {
   final List<String> deletedEntryIds = <String>[];
   final List<({String id, String textContent})> textUpdates =
       <({String id, String textContent})>[];
+  final List<NoteSaveRecord> noteSaves = <NoteSaveRecord>[];
 
   Object? deleteError;
   Object? updateError;
+  Object? saveError;
 
   @override
   Stream<List<Entry>> watchEntriesForDate(String date) async* {
@@ -208,6 +210,46 @@ class FakeJournalRepository implements JournalRepository {
   }
 
   @override
+  Future<Entry> saveNote({
+    String? entryId,
+    required String date,
+    required String source,
+    required List<String> photoMediaIds,
+  }) async {
+    final Object? error = saveError;
+    if (error != null) {
+      throw error;
+    }
+    noteSaves.add((
+      entryId: entryId,
+      date: date,
+      source: source,
+      photoMediaIds: photoMediaIds,
+    ));
+    final Entry? existing = entryId == null
+        ? null
+        : _entries.cast<Entry?>().firstWhere(
+              (Entry? entry) => entry?.id == entryId,
+              orElse: () => null,
+            );
+    return Entry(
+      id: entryId ?? 'entry-new',
+      dayId: existing?.dayId ?? 'day-1',
+      type: EntryType.text,
+      textContent: source,
+      createdAt: existing?.createdAt ?? 0,
+      updatedAt: 1,
+    );
+  }
+
+  @override
   dynamic noSuchMethod(Invocation invocation) =>
       super.noSuchMethod(invocation);
 }
+
+typedef NoteSaveRecord = ({
+  String? entryId,
+  String date,
+  String source,
+  List<String> photoMediaIds,
+});
