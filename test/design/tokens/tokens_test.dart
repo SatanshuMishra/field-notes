@@ -26,6 +26,11 @@ void main() {
 
     test('scale styles reference the declared families', () {
       expect(TypographyTokens.bodySerif.fontFamily, TypographyTokens.serif);
+      expect(TypographyTokens.noteBody.fontFamily, TypographyTokens.serif);
+      expect(TypographyTokens.noteBody.fontSize, 16);
+      expect(TypographyTokens.noteBody.height, 1.6);
+      expect(TypographyTokens.noteBody.fontWeight, FontWeight.w400);
+      expect(TypographyTokens.noteBody.color, Palette.ink);
       expect(TypographyTokens.labelSans.fontFamily, TypographyTokens.sans);
       expect(TypographyTokens.sectionHeaderAccent.fontFamily,
           TypographyTokens.accent);
@@ -305,13 +310,17 @@ void main() {
           reason: 'the italic body face shares the roman body metric');
       expect(TypographyTokens.bodySerifItalic.fontStyle, FontStyle.italic);
 
+      expect(TypographyTokens.composerBodySerif, TypographyTokens.noteBody,
+          reason: 'the composer writes in the exact style the reader reads');
       expect(TypographyTokens.composerBodySerif.fontFamily,
           TypographyTokens.serif);
-      expect(TypographyTokens.composerBodySerif.fontSize, 19);
+      expect(TypographyTokens.composerBodySerif.fontSize, 16);
       expect(TypographyTokens.composerBodySerif.fontWeight, FontWeight.w400);
-      expect(TypographyTokens.composerBodySerif.height, 2.0);
+      expect(TypographyTokens.composerBodySerif.height, 1.6);
       expect(TypographyTokens.composerBodySerif.color, Palette.ink);
 
+      expect(TypographyTokens.composerPlaceholderSerif,
+          TypographyTokens.noteBodyPlaceholder);
       expect(TypographyTokens.composerPlaceholderSerif.fontSize,
           TypographyTokens.composerBodySerif.fontSize);
       expect(TypographyTokens.composerPlaceholderSerif.height,
@@ -320,6 +329,23 @@ void main() {
           TypographyTokens.composerPlaceholderSerif.fontStyle,
           FontStyle.italic);
       expect(TypographyTokens.composerPlaceholderSerif.color, Palette.ink34);
+    });
+
+    test('the note body family shares one metric across its three faces', () {
+      for (final TextStyle style in <TextStyle>[
+        TypographyTokens.noteBody,
+        TypographyTokens.noteBodyItalic,
+        TypographyTokens.noteBodyPlaceholder,
+      ]) {
+        expect(style.fontFamily, TypographyTokens.serif);
+        expect(style.fontSize, TypographyTokens.noteBody.fontSize);
+        expect(style.height, TypographyTokens.noteBody.height);
+        expect(style.fontWeight, FontWeight.w400);
+      }
+      expect(TypographyTokens.noteBodyItalic.fontStyle, FontStyle.italic);
+      expect(TypographyTokens.noteBodyItalic.color, Palette.ink);
+      expect(TypographyTokens.noteBodyPlaceholder.fontStyle, FontStyle.italic);
+      expect(TypographyTokens.noteBodyPlaceholder.color, Palette.ink34);
     });
 
     test('the serif ladder descends through every prototype size', () {

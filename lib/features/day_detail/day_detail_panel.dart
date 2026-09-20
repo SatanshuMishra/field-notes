@@ -23,17 +23,18 @@ const String dayDetailMediaErrorMessage = "Couldn't load your media library.";
 const String dayDetailDeleteErrorMessage =
     "Couldn't delete that entry. Please try again.";
 
+const double dayDetailPanelMaxWidth = 640;
+const double dayDetailPanelVerticalMargin = 24;
+
 class DayDetailPanel extends ConsumerStatefulWidget {
   const DayDetailPanel({
     super.key,
     required this.date,
-    this.maxWidth = 520,
-    this.maxHeight = 520,
+    this.maxWidth = dayDetailPanelMaxWidth,
   });
 
   final String date;
   final double maxWidth;
-  final double maxHeight;
 
   @override
   ConsumerState<DayDetailPanel> createState() => _DayDetailPanelState();
@@ -75,45 +76,47 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     final String? deleteError = _deleteError;
 
     return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: widget.maxWidth,
-          maxHeight: widget.maxHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: dayDetailPanelVerticalMargin,
         ),
-        child: StickerCard(
-          surface: Palette.cardBright,
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              DayDetailHeader(
-                date: widget.date,
-                onClose: () => Navigator.of(context).pop(),
-              ),
-              const SizedBox(height: 16),
-              MoodBannerForDate(
-                date: widget.date,
-                promptText: dayDetailMoodPrompt,
-              ),
-              const SizedBox(height: 16),
-              DayDetailEntriesBar(
-                entryCount: entriesAsync.hasValue ? entries.length : null,
-                onAddNote: _addNote,
-              ),
-              if (entriesAsync.hasError) ...<Widget>[
-                const SizedBox(height: 8),
-                const _DayDetailMessage(text: dayDetailEntriesErrorMessage),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: widget.maxWidth),
+          child: StickerCard(
+            surface: Palette.cardBright,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                DayDetailHeader(
+                  date: widget.date,
+                  onClose: () => Navigator.of(context).pop(),
+                ),
+                const SizedBox(height: 16),
+                MoodBannerForDate(
+                  date: widget.date,
+                  promptText: dayDetailMoodPrompt,
+                ),
+                const SizedBox(height: 16),
+                DayDetailEntriesBar(
+                  entryCount: entriesAsync.hasValue ? entries.length : null,
+                  onAddNote: _addNote,
+                ),
+                if (entriesAsync.hasError) ...<Widget>[
+                  const SizedBox(height: 8),
+                  const _DayDetailMessage(text: dayDetailEntriesErrorMessage),
+                ],
+                if (deleteError != null) ...<Widget>[
+                  const SizedBox(height: 8),
+                  _DayDetailMessage(text: deleteError),
+                ],
+                const SizedBox(height: 16),
+                Flexible(
+                  child: _content(entriesAsync, entries, resolverAsync),
+                ),
               ],
-              if (deleteError != null) ...<Widget>[
-                const SizedBox(height: 8),
-                _DayDetailMessage(text: deleteError),
-              ],
-              const SizedBox(height: 16),
-              Flexible(
-                child: _content(entriesAsync, entries, resolverAsync),
-              ),
-            ],
+            ),
           ),
         ),
       ),

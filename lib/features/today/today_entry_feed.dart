@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/state/state.dart';
@@ -16,6 +17,8 @@ const String todayFeedEmptyMessage =
     'Capture a moment — write it, speak it, or film it.';
 const String todayFeedErrorMessage = "Couldn't load today's entries.";
 const String todayMediaErrorMessage = "Couldn't load your media library.";
+
+const double _feedCardHorizontalPadding = 30;
 
 class _PendingMediaResolver implements MediaResolver {
   const _PendingMediaResolver();
@@ -65,21 +68,24 @@ class TodayEntryFeed extends ConsumerWidget {
     final MediaResolver resolver =
         resolverAsync.value ?? const _PendingMediaResolver();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        for (int index = 0; index < entries.length; index++) ...<Widget>[
-          if (index > 0) const SizedBox(height: 12),
-          FadeIn(
-            child: TodayEntryTile(
-              key: ValueKey<String>(entries[index].id),
-              entry: entries[index],
-              resolver: resolver,
+    return NoteColumn(
+      horizontalInset: _feedCardHorizontalPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (int index = 0; index < entries.length; index++) ...<Widget>[
+            if (index > 0) const SizedBox(height: 12),
+            FadeIn(
+              child: TodayEntryTile(
+                key: ValueKey<String>(entries[index].id),
+                entry: entries[index],
+                resolver: resolver,
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/day_detail/day_detail_entry_tile.dart';
@@ -19,6 +20,20 @@ Finder _tileAction(String label) => find.byWidgetPredicate(
       (Widget widget) =>
           widget is IconStickerButton && widget.semanticLabel == label,
     );
+
+Finder _panelConstraints() => find
+    .descendant(
+      of: find.byType(DayDetailPanel),
+      matching: find.byType(ConstrainedBox),
+    )
+    .first;
+
+Finder _panelCard() => find
+    .descendant(
+      of: find.byType(DayDetailPanel),
+      matching: find.byType(StickerCard),
+    )
+    .first;
 
 Widget _panelApp(
   FakeJournalRepository repository, {
@@ -227,6 +242,59 @@ void main() {
     final int builtTiles = find.byType(DayDetailEntryTile).evaluate().length;
     expect(builtTiles, greaterThan(0));
     expect(builtTiles, lessThan(entryCount));
+  });
+
+  testWidgets('the panel is capped at 640 wide and only by the viewport tall',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(_panelApp(FakeJournalRepository()));
+    await tester.pumpAndSettle();
+
+    final ConstrainedBox box = tester.widget<ConstrainedBox>(
+      _panelConstraints(),
+    );
+    expect(box.constraints, const BoxConstraints(maxWidth: 640));
+    expect(box.constraints.maxWidth, dayDetailPanelMaxWidth);
+    expect(box.constraints.hasBoundedHeight, isFalse);
+    expect(tester.getSize(_panelCard()).width, 640);
+  });
+
+  testWidgets('a long day fills the viewport less a vertical margin',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        for (int i = 0; i < 40; i++)
+          entryOf(
+            id: 'entry-$i',
+            type: EntryType.text,
+            textContent: 'journal note number $i for the day',
+          ),
+      ],
+    );
+
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+
+    final Size panel = tester.getSize(_panelCard());
+    expect(panel.height, 900 - 2 * dayDetailPanelVerticalMargin);
+    expect(panel.height, greaterThan(520));
+  });
+
+  testWidgets('a day-detail note reads in a 560 column inside the panel',
+      (WidgetTester tester) async {
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        entryOf(type: EntryType.text, textContent: 'a good day'),
+      ],
+    );
+
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(find.byType(DayDetailEntryTile)).width, 600);
+    expect(tester.getSize(find.text('a good day')).width, 560);
   });
 
   testWidgets('a one-entry day keeps the list shrink-wrapped to its content',

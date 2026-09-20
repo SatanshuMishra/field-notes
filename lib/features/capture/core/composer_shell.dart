@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/art/art.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
-const double composerPanelWidth = 760;
+const double composerPanelWidth = 640;
 
 const double _panelBorderWidth = 2;
 const double _scrimBlurSigma = 3.5;
@@ -35,14 +35,23 @@ class ComposerShell extends StatelessWidget {
     return Stack(
       children: <Widget>[
         const Positioned.fill(child: _ComposerScrim()),
-        Center(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              return SizedBox(
-                width: math.min(maxWidth, constraints.maxWidth),
-                child: _panel(),
-              );
-            },
+        Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.viewInsetsOf(context).bottom,
+          ),
+          child: MediaQuery.removeViewInsets(
+            context: context,
+            removeBottom: true,
+            child: Center(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  return SizedBox(
+                    width: math.min(maxWidth, constraints.maxWidth),
+                    child: _panel(),
+                  );
+                },
+              ),
+            ),
           ),
         ),
       ],
