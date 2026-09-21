@@ -3,16 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/data/database/app_database.dart' as db;
+import 'package:field_notes/data/journal/drift_journal_repository.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/state/state.dart';
 
+import '../../data/journal/journal_test_db.dart'
+    show newTestDatabase, seedMediaBlob;
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
+import '../notes/support/notes_harness.dart'
+    show FakeNoteMediaStore, photoBlob, photoIdA, photoIdB, photoLine;
 import 'support/day_detail_harness.dart';
 
 class _EditTrigger extends StatelessWidget {
@@ -34,15 +42,18 @@ class _EditTrigger extends StatelessWidget {
 }
 
 Widget _editApp({
-  required FakeJournalRepository repository,
+  required JournalRepository repository,
   required Entry entry,
   required ValueChanged<bool?> onResult,
   FakeDraftStore? drafts,
+  List<Override> overrides = const <Override>[],
 }) {
   return ProviderScope(
+    key: UniqueKey(),
     overrides: <Override>[
       journalRepositoryProvider.overrideWithValue(repository),
       draftStoreProvider.overrideWith((Ref ref) => drafts ?? FakeDraftStore()),
+      ...overrides,
     ],
     child: dayDetailHarness(
       _EditTrigger(entry: entry, onResult: onResult),
@@ -311,5 +322,115 @@ void main() {
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
     expect(result, isFalse);
+  });
+
+  group('photos in the edit-note route', () {
+    testWidgets('the editor mounts the same photo rail',
+        (WidgetTester tester) async {
+      final Entry entry = _noteEntry();
+
+      await tester.pumpWidget(
+        _editApp(
+          repository: FakeJournalRepository(entries: <Entry>[entry]),
+          entry: entry,
+          onResult: (bool? _) {},
+          overrides: <Override>[
+            mediaStoreProvider
+                .overrideWith((Ref ref) async => FakeNoteMediaStore()),
+          ],
+        ),
+      );
+      await tester.tap(find.text('open editor'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(photoRailAddKey), findsOneWidget);
+      expect(find.byType(EditableText), findsOneWidget);
+    });
+
+    testWidgets('an existing photo line shows as a rail thumbnail',
+        (WidgetTester tester) async {
+      final Entry entry = entryOf(
+        type: EntryType.text,
+        textContent: 'a good day\n${photoLine(photoIdA)}',
+      );
+
+      await tester.pumpWidget(
+        _editApp(
+          repository: FakeJournalRepository(entries: <Entry>[entry]),
+          entry: entry,
+          onResult: (bool? _) {},
+          overrides: <Override>[
+            mediaStoreProvider.overrideWith(
+              (Ref ref) async =>
+                  FakeNoteMediaStore()..register(photoBlob(photoIdA)),
+            ),
+          ],
+        ),
+      );
+      await tester.tap(find.text('open editor'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(photoRailThumbKey(0)), findsOneWidget);
+      expect(find.byKey(photoRailThumbKey(1)), findsNothing);
+    });
+
+    testWidgets(
+        'receipt: saving a photo line indexes it in entry_photos, and removing '
+        'the line on a later save removes the row', (WidgetTester tester) async {
+      final db.AppDatabase database = newTestDatabase();
+      addTearDown(database.close);
+      final DriftJournalRepository journal = DriftJournalRepository(database);
+      await seedMediaBlob(database, photoIdA);
+      await seedMediaBlob(database, photoIdB);
+      final Entry created = await journal.saveNote(
+        date: '2026-07-19',
+        source: 'a good day',
+        photoMediaIds: const <String>[],
+      );
+      final FakeNoteMediaStore media = FakeNoteMediaStore()
+        ..register(photoBlob(photoIdA))
+        ..register(photoBlob(photoIdB));
+
+      Future<List<String>> indexed() async {
+        final List<db.EntryPhoto> rows = await (database.select(
+          database.entryPhotos,
+        )..where((db.$EntryPhotosTable t) => t.entryId.equals(created.id)))
+            .get();
+        return <String>[for (final db.EntryPhoto row in rows) row.mediaId];
+      }
+
+      Future<void> saveAs(String source) async {
+        await tester.pumpWidget(
+          _editApp(
+            repository: journal,
+            entry: created,
+            onResult: (bool? _) {},
+            overrides: <Override>[
+              mediaStoreProvider.overrideWith((Ref ref) async => media),
+            ],
+          ),
+        );
+        await tester.tap(find.text('open editor'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(EditableText), source);
+        await tester.pump();
+        await tester.tap(find.text(editNoteSaveLabel));
+        await tester.pumpAndSettle();
+        expect(find.text(editNoteTitle), findsNothing);
+      }
+
+      expect(await indexed(), isEmpty);
+
+      await saveAs(
+        'a good day\n${photoLine(photoIdA)}\nand later\n${photoLine(photoIdB)}',
+      );
+      expect(await indexed(), <String>[photoIdA, photoIdB]);
+
+      await saveAs('a good day\nand later\n${photoLine(photoIdB)}');
+      expect(await indexed(), <String>[photoIdB]);
+
+      await saveAs('a good day');
+      expect(await indexed(), isEmpty);
+    });
   });
 }

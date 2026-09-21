@@ -9,8 +9,11 @@ import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_entry_tile.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/state/state.dart';
 
+import '../notes/support/notes_harness.dart'
+    show availablePhoto, photoIdA, photoLine, prefixOf;
 import 'support/day_detail_harness.dart';
 
 Finder _tileAction(String label) => find.byWidgetPredicate(
@@ -124,6 +127,48 @@ void main() {
     await tester.pump();
 
     expect(find.byType(MediaImage), findsNothing);
+  });
+
+  testWidgets(
+      'a note photo line renders once, as a centred block image, in day '
+      'detail', (WidgetTester tester) async {
+    final String source =
+        'a good day\n${photoLine(photoIdA, size: PhotoSize.large)}\nthe end';
+    final Entry entry = entryOf(type: EntryType.text, textContent: source);
+
+    await tester.pumpWidget(
+      _tileApp(
+        repository: FakeJournalRepository(
+          entries: <Entry>[entry],
+          photos: <String, List<EntryPhoto>>{
+            'entry-1': <EntryPhoto>[
+              photoOf(id: 'photo-1', mediaId: photoIdA),
+            ],
+          },
+        ),
+        entry: entry,
+        resolver: FakeMediaResolver(<String, ResolvedMedia>{
+          prefixOf(photoIdA): availablePhoto(photoIdA),
+        }),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final Finder document = find.byType(NoteDocument);
+    final Finder frame = find.byKey(notePhotoFrameKey);
+    expect(tester.widget<EntryCard>(find.byType(EntryCard)).preview, isFalse);
+    expect(find.byType(StackedPhoto), findsOneWidget);
+    expect(find.byType(MediaImage), findsOneWidget);
+    expect(
+      tester.getSize(frame).width,
+      closeTo(0.92 * tester.getSize(document).width, 0.01),
+    );
+    expect(
+      tester.getCenter(frame).dx,
+      closeTo(tester.getCenter(document).dx, 0.01),
+    );
+    expect(find.text('the end'), findsOneWidget);
   });
 
   testWidgets('a video entry receives the shared decoder slot registry',

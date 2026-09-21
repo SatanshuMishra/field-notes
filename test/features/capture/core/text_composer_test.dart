@@ -1,14 +1,20 @@
+import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/state/draft_provider.dart';
+import 'package:field_notes/state/media_provider.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../notes/support/notes_harness.dart'
+    show FakeNoteMediaStore, photoBlob, photoIdA, photoIdB, photoLine;
+import '../photo/photo_test_support.dart' show FakePhotoPicker, tinyPngBytes;
 import 'capture_test_support.dart';
 
 class _ComposerTrigger extends StatelessWidget {
@@ -31,11 +37,13 @@ Widget _composerApp({
   required NoteWriter writer,
   required ValueChanged<String?> onResult,
   FakeDraftStore? drafts,
+  List<Override> overrides = const <Override>[],
 }) {
   return ProviderScope(
     overrides: <Override>[
       noteWriterProvider.overrideWith((Ref ref) => writer),
       draftStoreProvider.overrideWith((Ref ref) => drafts ?? FakeDraftStore()),
+      ...overrides,
     ],
     child: captureHarness(
       _ComposerTrigger(date: '2026-07-19', onResult: onResult),
@@ -202,5 +210,139 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(composerDiscardKey));
     await tester.pumpAndSettle();
+  });
+
+  group('photos in the new-note composer', () {
+    List<Override> mediaOverrides(
+      FakeNoteMediaStore store, {
+      FakePhotoPicker? picker,
+    }) {
+      return <Override>[
+        mediaStoreProvider.overrideWith((Ref ref) async => store),
+        notePhotoPickerProvider.overrideWithValue(
+          picker ?? FakePhotoPicker(),
+        ),
+      ];
+    }
+
+    testWidgets('mounts the photo rail under the writing surface, Add first',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        _composerApp(
+          writer: FakeNoteWriter(),
+          onResult: (String? _) {},
+          overrides: mediaOverrides(FakeNoteMediaStore()),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PhotoRail), findsOneWidget);
+      expect(find.byKey(photoRailAddKey), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(photoRailKey)).dy,
+        greaterThan(tester.getBottomLeft(find.byType(EditableText)).dy),
+      );
+      expect(find.byType(EditableText), findsOneWidget);
+    });
+
+    testWidgets(
+        'Add photo stores the pick, inserts its line, and the save hands the '
+        'full media id to the writer for the reachability index',
+        (WidgetTester tester) async {
+      final FakeNoteWriter writer = FakeNoteWriter();
+      final FakeNoteMediaStore store =
+          FakeNoteMediaStore(assignIds: <String>[photoIdA]);
+      final FakePhotoPicker picker = FakePhotoPicker(
+        libraryResult: <CaptureMedia>[
+          CaptureBytes(
+            bytes: tinyPngBytes,
+            mime: 'image/png',
+            width: 1,
+            height: 1,
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        _composerApp(
+          writer: writer,
+          onResult: (String? _) {},
+          overrides: mediaOverrides(store, picker: picker),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText), 'a good day');
+      await tester.pump();
+
+      await tester.tap(find.byKey(photoRailAddKey));
+      await tester.pumpAndSettle();
+
+      final String expected = 'a good day\n${photoLine(photoIdA)}\n';
+      expect(picker.libraryCalls, 1);
+      expect(store.blobs.single.id, photoIdA);
+      expect(store.blobs.single.width, 1);
+      expect(
+        tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+        expected,
+      );
+      expect(find.byKey(photoRailThumbKey(0)), findsOneWidget);
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(writer.saves.single.source, expected);
+      expect(writer.saves.single.photoMediaIds, <String>[photoIdA]);
+    });
+
+    testWidgets('every referenced photo is indexed once, in source order',
+        (WidgetTester tester) async {
+      final FakeNoteWriter writer = FakeNoteWriter();
+      final FakeNoteMediaStore store = FakeNoteMediaStore()
+        ..register(photoBlob(photoIdA))
+        ..register(photoBlob(photoIdB));
+      await tester.pumpWidget(
+        _composerApp(
+          writer: writer,
+          onResult: (String? _) {},
+          overrides: mediaOverrides(store),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byType(EditableText),
+        '${photoLine(photoIdB)}\nthen\n${photoLine(photoIdA)}\n'
+        '${photoLine(photoIdB, size: PhotoSize.full)}\n'
+        '![](photo/0123456789ab)',
+      );
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(writer.saves.single.photoMediaIds, <String>[photoIdB, photoIdA]);
+    });
+
+    testWidgets('a note without a photo line never looks a reference up',
+        (WidgetTester tester) async {
+      final FakeNoteWriter writer = FakeNoteWriter();
+      final FakeNoteMediaStore store = FakeNoteMediaStore();
+      await tester.pumpWidget(
+        _composerApp(
+          writer: writer,
+          onResult: (String? _) {},
+          overrides: mediaOverrides(store),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(EditableText), 'just words');
+      await tester.pump();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+
+      expect(writer.saves.single.photoMediaIds, isEmpty);
+      expect(store.prefixLookups, isEmpty);
+    });
   });
 }

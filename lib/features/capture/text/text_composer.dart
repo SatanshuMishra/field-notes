@@ -13,6 +13,7 @@ import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -30,6 +31,15 @@ const Duration textSaveTimeout = Duration(seconds: 20);
 const String newNoteTitle = 'New note';
 
 typedef NoteSaveOutcome = ({String? entryId, String? errorMessage});
+
+Widget composerPhotoRail(BuildContext context, ComposerRailSlot slot) {
+  return ComposerPhotoRail(
+    controller: slot.controller,
+    measure: slot.measure,
+    editorFocusNode: slot.focusNode,
+    maxHeight: slot.maxHeight,
+  );
+}
 
 Future<NoteSaveOutcome> awaitNoteSave(
   Future<NoteSaveResult> pending, {
@@ -139,9 +149,14 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   Future<NoteSaveResult> _persist(String text) async {
     await _draft.settle();
     final NoteWriter writer = await ref.read(noteWriterProvider.future);
+    final List<String> photoMediaIds = await notePhotoMediaIds(
+      text,
+      () => ref.read(notePhotoStoreProvider.future),
+    );
     return writer.save(
       date: widget.date,
       source: text,
+      photoMediaIds: photoMediaIds,
       draftKey: _sessionId,
     );
   }
@@ -173,6 +188,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
               isSaving: _isSaving,
               title: _title,
               metaText: _metaText,
+              photoRail: composerPhotoRail,
             );
           },
         );

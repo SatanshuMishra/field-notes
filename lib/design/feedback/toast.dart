@@ -15,6 +15,21 @@ const double _darkGap = 7;
 const double _darkIconSize = 13;
 const double _transientBottomInset = 84;
 const double _riseOffset = 10;
+const double toastActionMinTarget = 48;
+const double _actionGap = 8;
+const double _actionHorizontalPadding = 12;
+const EdgeInsets _lightPadding =
+    EdgeInsets.symmetric(horizontal: 16, vertical: 10);
+const EdgeInsets _lightPaddingWithAction =
+    EdgeInsets.only(left: 16, right: 4, top: 4, bottom: 4);
+
+@immutable
+class ToastAction {
+  const ToastAction({required this.label, required this.onPressed});
+
+  final String label;
+  final VoidCallback onPressed;
+}
 
 class Toast extends StatelessWidget {
   const Toast({
@@ -23,21 +38,24 @@ class Toast extends StatelessWidget {
     this.icon,
     this.surface = Palette.cardBright,
     this.variant = ToastVariant.light,
+    this.action,
   });
 
   final String message;
   final Widget? icon;
   final Color surface;
   final ToastVariant variant;
+  final ToastAction? action;
 
   @override
   Widget build(BuildContext context) {
     if (variant == ToastVariant.dark) {
       return _dark();
     }
+    final ToastAction? action = this.action;
     return StickerCard(
       surface: surface,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: action == null ? _lightPadding : _lightPaddingWithAction,
       borderRadius: Shapes.buttonBorderRadius,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -49,6 +67,10 @@ class Toast extends StatelessWidget {
           Flexible(
             child: Text(message, style: TypographyTokens.bodySans),
           ),
+          if (action != null) ...<Widget>[
+            const SizedBox(width: _actionGap),
+            _ToastActionButton(action: action),
+          ],
         ],
       ),
     );
@@ -83,6 +105,47 @@ class Toast extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ToastActionButton extends StatelessWidget {
+  const _ToastActionButton({required this.action});
+
+  final ToastAction action;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: action.label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: action.onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: toastActionMinTarget,
+            minHeight: toastActionMinTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _actionHorizontalPadding,
+            ),
+            child: Center(
+              widthFactor: 1,
+              child: ExcludeSemantics(
+                child: Text(
+                  action.label,
+                  style: TypographyTokens.bodySans.copyWith(
+                    color: Palette.coralLink,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

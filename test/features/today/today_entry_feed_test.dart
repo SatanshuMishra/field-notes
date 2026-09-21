@@ -6,6 +6,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -15,6 +16,8 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../entry_cards/support/fake_video_player.dart';
+import '../notes/support/notes_harness.dart'
+    show FakeNoteMediaResolver, availablePhoto, photoIdA, photoLine, prefixOf;
 import 'support/today_harness.dart';
 
 class _AvailableVideoResolver implements MediaResolver {
@@ -65,14 +68,14 @@ Widget _feed(String date) {
 List<Override> _overrides({
   required Stream<List<Entry>> entries,
   List<EntryPhoto> photos = const <EntryPhoto>[],
+  MediaResolver resolver = const StubMediaResolver(),
 }) {
   return <Override>[
     entriesForDateProvider.overrideWith((Ref ref, String date) => entries),
     photosForEntryProvider.overrideWith(
       (Ref ref, String entryId) => Stream<List<EntryPhoto>>.value(photos),
     ),
-    todayMediaResolverProvider
-        .overrideWith((Ref ref) async => const StubMediaResolver()),
+    todayMediaResolverProvider.overrideWith((Ref ref) async => resolver),
   ];
 }
 
@@ -122,6 +125,35 @@ void main() {
     expect(find.text('morning walk'), findsOneWidget);
     expect(find.text('coffee on the porch'), findsOneWidget);
     expect(find.byType(MediaImage), findsNothing);
+  });
+
+  testWidgets('a note photo line renders as a block image on the Today card',
+      (WidgetTester tester) async {
+    await pumpToday(
+      tester,
+      _feed('2026-07-19'),
+      overrides: _overrides(
+        entries: Stream<List<Entry>>.value(<Entry>[
+          todayTestEntry(
+            id: 'entry-1',
+            textContent:
+                'morning walk\n${photoLine(photoIdA, size: PhotoSize.small)}',
+          ),
+        ]),
+        resolver: FakeNoteMediaResolver(<String, ResolvedMedia>{
+          prefixOf(photoIdA): availablePhoto(photoIdA),
+        }),
+      ),
+    );
+
+    final Finder document = find.byType(NoteDocument);
+    expect(find.byType(StackedPhoto), findsOneWidget);
+    expect(find.byType(MediaImage), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(notePhotoFrameKey)).width,
+      closeTo(0.55 * tester.getSize(document).width, 0.01),
+    );
+    expect(find.text('morning walk'), findsOneWidget);
   });
 
   testWidgets('clamps and centres the feed card on a desktop pane',

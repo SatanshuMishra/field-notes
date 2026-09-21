@@ -3,6 +3,8 @@ import 'package:flutter/rendering.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../domain/notes/notes.dart';
+import '../../notes/render/note_photo_block.dart';
+import '../media/media_resolver.dart';
 import 'note_block_widgets.dart';
 
 class NoteDocument extends StatelessWidget {
@@ -19,6 +21,7 @@ class NoteDocument extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<NoteBlock> blocks = parseNote(source);
     final double em = noteEmOf(context, style);
+    final MediaResolver? resolver = NoteMediaScope.maybeResolverOf(context);
     final Widget column = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -26,7 +29,7 @@ class NoteDocument extends StatelessWidget {
         for (int i = 0; i < blocks.length; i++) ...<Widget>[
           if (i > 0)
             SizedBox(height: noteBlockGapEm(blocks[i - 1], blocks[i]) * em),
-          NoteBlockView(block: blocks[i], style: style),
+          _blockView(blocks[i], resolver),
         ],
       ],
     );
@@ -34,6 +37,13 @@ class NoteDocument extends StatelessWidget {
       return column;
     }
     return SelectionArea(child: NoteSelectionScope(child: column));
+  }
+
+  Widget _blockView(NoteBlock block, MediaResolver? resolver) {
+    if (block is PhotoBlock && resolver != null) {
+      return StackedPhoto(block: block, resolver: resolver, style: style);
+    }
+    return NoteBlockView(block: block, style: style);
   }
 }
 
