@@ -45,14 +45,17 @@ class FakeSettingsDataController implements SettingsDataController {
   FakeSettingsDataController({
     this.exportResult = const DataActionDismissed(),
     this.deleteResult = const DataActionDismissed(),
+    this.reclaimResult = const DataActionDismissed(),
     this.gate,
   });
 
   final DataActionResult exportResult;
   final DataActionResult deleteResult;
+  final DataActionResult reclaimResult;
   final Completer<void>? gate;
   int exportCalls = 0;
   int deleteCalls = 0;
+  int reclaimCalls = 0;
 
   @override
   Future<DataActionResult> export() async {
@@ -66,5 +69,12 @@ class FakeSettingsDataController implements SettingsDataController {
     deleteCalls++;
     await gate?.future;
     return deleteResult;
+  }
+
+  @override
+  Future<DataActionResult> reclaimSpace() async {
+    reclaimCalls++;
+    await gate?.future;
+    return reclaimResult;
   }
 }

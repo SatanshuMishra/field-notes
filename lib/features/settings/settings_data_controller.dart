@@ -22,4 +22,6 @@ abstract interface class SettingsDataController {
   Future<DataActionResult> export();
 
   Future<DataActionResult> deleteAll();
+
+  Future<DataActionResult> reclaimSpace();
 }

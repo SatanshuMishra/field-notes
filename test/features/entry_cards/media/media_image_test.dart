@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/features/entry_cards/media/decode_target.dart';
 import 'package:field_notes/features/entry_cards/media/media_image.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
@@ -89,6 +90,57 @@ void main() {
 
       expect(find.byType(Image), findsOneWidget);
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+    });
+
+    testWidgets('a memo hit renders the image with no placeholder frame', (
+      WidgetTester tester,
+    ) async {
+      final FakeMediaResolver resolver = resolverWithFile()..memoize('p1');
+
+      await tester.pumpWidget(cardHarness(imageOf(resolver)));
+
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.byType(NeutralMediaPlaceholder), findsNothing);
+    });
+
+    testWidgets('the decode target is quantised to a 64px bucket', (
+      WidgetTester tester,
+    ) async {
+      final FakeMediaResolver resolver = resolverWithFile()..memoize('p1');
+
+      await tester.pumpWidget(
+        cardHarness(
+          imageOf(resolver),
+          data: const MediaQueryData(devicePixelRatio: 2),
+        ),
+      );
+
+      final Image image = tester.widget<Image>(find.byType(Image));
+      final ResizeImage provider = image.image as ResizeImage;
+      expect(provider.width, 192);
+      expect(provider.width! % decodeBucketPixels, 0);
+      expect(provider.height, isNull);
+    });
+
+    testWidgets('an unsized box takes its decode target from its constraints', (
+      WidgetTester tester,
+    ) async {
+      final FakeMediaResolver resolver = resolverWithFile()..memoize('p1');
+
+      await tester.pumpWidget(
+        cardHarness(
+          MediaImage(
+            resolver: resolver,
+            mediaId: 'p1',
+            errorLabel: 'Photo',
+          ),
+          width: 300,
+          data: const MediaQueryData(devicePixelRatio: 1),
+        ),
+      );
+
+      final Image image = tester.widget<Image>(find.byType(Image));
+      expect((image.image as ResizeImage).width, 320);
     });
   });
 }

@@ -22,6 +22,9 @@ class _GatedMediaResolver implements MediaResolver {
   final Completer<void> gate = Completer<void>();
 
   @override
+  ResolvedMedia? resolved(String? mediaId) => null;
+
+  @override
   Future<ResolvedMedia> resolve(String? mediaId) async {
     await gate.future;
     return _inner.resolve(mediaId);

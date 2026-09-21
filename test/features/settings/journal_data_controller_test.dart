@@ -1,5 +1,6 @@
 import 'package:field_notes/domain/services/delete_all_service.dart';
 import 'package:field_notes/domain/services/export_service.dart';
+import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/data/data_exceptions.dart';
 import 'package:field_notes/features/data/export_delivery.dart';
 import 'package:field_notes/features/data/export_runner.dart';
@@ -68,10 +69,32 @@ class _StubDeleteAllService implements DeleteAllService {
   }
 }
 
+class _StubReclaimMediaStore implements MediaStore {
+  _StubReclaimMediaStore({this.reclaimed = 0, this.error});
+
+  final int reclaimed;
+  final Object? error;
+  int calls = 0;
+
+  @override
+  Future<int> collectGarbage() async {
+    calls++;
+    final Object? failure = error;
+    if (failure != null) {
+      throw failure;
+    }
+    return reclaimed;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 JournalDataController _controller({
   required ExportService exportService,
   required ExportOutcome outcome,
   DeleteAllService? deleteAllService,
+  MediaStore? mediaStore,
   void Function(Object error)? onError,
 }) {
   return JournalDataController(
@@ -80,6 +103,7 @@ JournalDataController _controller({
       delivery: _StubDelivery(outcome),
     ),
     deleteAllService: deleteAllService ?? _StubDeleteAllService(),
+    mediaStore: mediaStore ?? _StubReclaimMediaStore(),
     onError: (Object error, StackTrace _) => onError?.call(error),
   );
 }
@@ -176,6 +200,83 @@ void main() {
           (DataActionFailed f) => f.message,
           'message',
           'Delete all failed. Your journal was not changed.',
+        ),
+      );
+      expect(reported, hasLength(1));
+    });
+  });
+
+  group('JournalDataController.reclaimSpace', () {
+    test('reports how many unused files were reclaimed', () async {
+      final _StubReclaimMediaStore store = _StubReclaimMediaStore(reclaimed: 4);
+      final SettingsDataController controller = _controller(
+        exportService: _FakeExportService(),
+        outcome: const ExportDismissed(),
+        mediaStore: store,
+      );
+
+      final DataActionResult result = await controller.reclaimSpace();
+
+      expect(store.calls, 1);
+      expect(
+        result,
+        isA<DataActionSucceeded>().having(
+          (DataActionSucceeded s) => s.message,
+          'message',
+          'Reclaimed 4 unused files.',
+        ),
+      );
+    });
+
+    test('says so plainly when there was nothing to reclaim', () async {
+      final SettingsDataController controller = _controller(
+        exportService: _FakeExportService(),
+        outcome: const ExportDismissed(),
+        mediaStore: _StubReclaimMediaStore(),
+      );
+
+      expect(
+        await controller.reclaimSpace(),
+        isA<DataActionSucceeded>().having(
+          (DataActionSucceeded s) => s.message,
+          'message',
+          'Nothing to reclaim. Every photo is still in use.',
+        ),
+      );
+    });
+
+    test('counts a single reclaimed file in the singular', () async {
+      final SettingsDataController controller = _controller(
+        exportService: _FakeExportService(),
+        outcome: const ExportDismissed(),
+        mediaStore: _StubReclaimMediaStore(reclaimed: 1),
+      );
+
+      expect(
+        await controller.reclaimSpace(),
+        isA<DataActionSucceeded>().having(
+          (DataActionSucceeded s) => s.message,
+          'message',
+          'Reclaimed 1 unused file.',
+        ),
+      );
+    });
+
+    test('turns a sweep failure into a user-facing message', () async {
+      final List<Object> reported = <Object>[];
+      final SettingsDataController controller = _controller(
+        exportService: _FakeExportService(),
+        outcome: const ExportDismissed(),
+        mediaStore: _StubReclaimMediaStore(error: StateError('disk gone')),
+        onError: reported.add,
+      );
+
+      expect(
+        await controller.reclaimSpace(),
+        isA<DataActionFailed>().having(
+          (DataActionFailed f) => f.message,
+          'message',
+          'Reclaim space failed. Nothing was removed.',
         ),
       );
       expect(reported, hasLength(1));

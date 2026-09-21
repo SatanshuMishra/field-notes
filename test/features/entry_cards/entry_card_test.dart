@@ -32,12 +32,6 @@ String longNote() {
 Widget scrollingCardHarness(Widget child, {double width = 360}) =>
     cardHarness(SingleChildScrollView(child: child), width: width);
 
-List<EntryPhoto> threePhotos() => <EntryPhoto>[
-      photoOf(id: 'c', mediaId: 'm-c', sortOrder: 2),
-      photoOf(id: 'b', mediaId: 'm-b', sortOrder: 1),
-      photoOf(id: 'a', mediaId: 'm-a', sortOrder: 0),
-    ];
-
 void main() {
   group('EntryCard', () {
     testWidgets('renders a note entry as a NoteBody inside a StickerCard',
@@ -59,21 +53,20 @@ void main() {
       expect(find.text('NOTE'), findsOneWidget);
     });
 
-    testWidgets('renders the inline photo strip when photos are attached',
+    testWidgets('renders no photo surface for a note entry',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         cardHarness(
           EntryCard(
             entry: entryOf(type: EntryType.text, textContent: 'trip'),
             resolver: FakeMediaResolver(),
-            photos: <EntryPhoto>[photoOf(id: 'p', mediaId: 'm')],
             videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
       );
       await tester.pump();
 
-      expect(find.byType(InlinePhotoStrip), findsOneWidget);
+      expect(find.byType(MediaImage), findsNothing);
     });
 
     testWidgets('shows Edit and Delete only when callbacks are provided',
@@ -202,7 +195,6 @@ void main() {
           EntryCard(
             entry: entryOf(type: EntryType.text, textContent: note),
             resolver: FakeMediaResolver(),
-            photos: threePhotos(),
             videoSlots: const UnlimitedVideoSlots(),
             preview: true,
           ),
@@ -218,14 +210,10 @@ void main() {
       final NoteDocument document =
           tester.widget<NoteDocument>(find.byType(NoteDocument));
       expect(document.source.length, lessThanOrEqualTo(notePreviewCharLimit));
-
-      final Iterable<MediaImage> images =
-          tester.widgetList<MediaImage>(find.byType(MediaImage));
-      expect(images.length, 1);
-      expect(images.single.mediaId, 'm-a');
+      expect(find.byType(MediaImage), findsNothing);
     });
 
-    testWidgets('preview:false renders the whole note and every photo',
+    testWidgets('preview:false renders the whole note',
         (WidgetTester tester) async {
       final String note = longNote();
 
@@ -234,7 +222,6 @@ void main() {
           EntryCard(
             entry: entryOf(type: EntryType.text, textContent: note),
             resolver: FakeMediaResolver(),
-            photos: threePhotos(),
             videoSlots: const UnlimitedVideoSlots(),
           ),
         ),
@@ -248,11 +235,7 @@ void main() {
       final NoteDocument document =
           tester.widget<NoteDocument>(find.byType(NoteDocument));
       expect(document.source, note);
-
-      final Iterable<MediaImage> images =
-          tester.widgetList<MediaImage>(find.byType(MediaImage));
-      expect(images.map((MediaImage i) => i.mediaId).toList(),
-          <String>['m-a', 'm-b', 'm-c']);
+      expect(find.byType(MediaImage), findsNothing);
     });
 
     testWidgets('onTap fires when the card body is tapped',

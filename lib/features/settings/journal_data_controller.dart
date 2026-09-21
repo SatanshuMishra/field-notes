@@ -1,4 +1,5 @@
 import 'package:field_notes/domain/services/delete_all_service.dart';
+import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/data/export_delivery.dart';
 import 'package:field_notes/features/data/export_runner.dart';
 
@@ -9,11 +10,13 @@ class JournalDataController implements SettingsDataController {
   const JournalDataController({
     required this._exportRunner,
     required this._deleteAllService,
+    required this._mediaStore,
     this._onError,
   });
 
   final ExportRunner _exportRunner;
   final DeleteAllService _deleteAllService;
+  final MediaStore _mediaStore;
   final SettingsErrorHandler? _onError;
 
   @override
@@ -43,6 +46,23 @@ class JournalDataController implements SettingsDataController {
       _onError?.call(error, stackTrace);
       return const DataActionFailed(
         'Delete all failed. Your journal was not changed.',
+      );
+    }
+  }
+
+  @override
+  Future<DataActionResult> reclaimSpace() async {
+    try {
+      final int reclaimed = await _mediaStore.collectGarbage();
+      return DataActionSucceeded(
+        reclaimed == 0
+            ? 'Nothing to reclaim. Every photo is still in use.'
+            : 'Reclaimed $reclaimed unused ${reclaimed == 1 ? 'file' : 'files'}.',
+      );
+    } catch (error, stackTrace) {
+      _onError?.call(error, stackTrace);
+      return const DataActionFailed(
+        'Reclaim space failed. Nothing was removed.',
       );
     }
   }

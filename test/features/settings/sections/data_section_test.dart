@@ -202,4 +202,106 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(messages, isEmpty);
   });
+
+  testWidgets('offers a manual Reclaim space action', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSection(
+      tester,
+      controller: FakeSettingsDataController(),
+      messages: <String>[],
+    );
+
+    expect(find.text(reclaimSpaceLabel), findsWidgets);
+    expect(
+      tester
+          .widget<StickerButton>(
+            find.widgetWithText(StickerButton, reclaimSpaceLabel),
+          )
+          .variant,
+      StickerButtonVariant.secondary,
+    );
+  });
+
+  testWidgets('tapping Reclaim space sweeps once and reports the result', (
+    WidgetTester tester,
+  ) async {
+    final List<String> messages = <String>[];
+    final FakeSettingsDataController controller = FakeSettingsDataController(
+      reclaimResult: const DataActionSucceeded('Reclaimed 2 unused files.'),
+    );
+    await _pumpSection(tester, controller: controller, messages: messages);
+
+    await tester.tap(find.widgetWithText(StickerButton, reclaimSpaceLabel));
+    await tester.pumpAndSettle();
+
+    expect(controller.reclaimCalls, 1);
+    expect(messages, <String>['Reclaimed 2 unused files.']);
+  });
+
+  testWidgets('a failed sweep reports the failure', (
+    WidgetTester tester,
+  ) async {
+    final List<String> messages = <String>[];
+    await _pumpSection(
+      tester,
+      controller: FakeSettingsDataController(
+        reclaimResult: const DataActionFailed(reclaimSpaceFailedMessage),
+      ),
+      messages: messages,
+    );
+
+    await tester.tap(find.widgetWithText(StickerButton, reclaimSpaceLabel));
+    await tester.pumpAndSettle();
+
+    expect(messages, <String>[reclaimSpaceFailedMessage]);
+  });
+
+  testWidgets('a second tap while a sweep is in flight starts nothing new', (
+    WidgetTester tester,
+  ) async {
+    final Completer<void> gate = Completer<void>();
+    final List<String> messages = <String>[];
+    final FakeSettingsDataController controller = FakeSettingsDataController(
+      reclaimResult: const DataActionSucceeded('Reclaimed 2 unused files.'),
+      gate: gate,
+    );
+    await _pumpSection(tester, controller: controller, messages: messages);
+
+    await tester.tap(find.widgetWithText(StickerButton, reclaimSpaceLabel));
+    await tester.pump();
+    expect(
+      tester
+          .widget<StickerButton>(
+            find.widgetWithText(StickerButton, reclaimSpaceLabel),
+          )
+          .onPressed,
+      isNull,
+    );
+
+    await tester.tap(
+      find.widgetWithText(StickerButton, reclaimSpaceLabel),
+      warnIfMissed: false,
+    );
+    await tester.pump();
+
+    expect(controller.reclaimCalls, 1);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(controller.reclaimCalls, 1);
+    expect(messages, <String>['Reclaimed 2 unused files.']);
+  });
+
+  testWidgets('a sweep never runs without a tap', (WidgetTester tester) async {
+    final FakeSettingsDataController controller = FakeSettingsDataController();
+    await _pumpSection(
+      tester,
+      controller: controller,
+      messages: <String>[],
+    );
+
+    expect(controller.reclaimCalls, 0);
+  });
 }

@@ -101,7 +101,8 @@ void main() {
     expect(_tileAction(entryDeleteLabel), findsOneWidget);
   });
 
-  testWidgets('attached photos render inline', (WidgetTester tester) async {
+  testWidgets('an indexed photo renders no strip on the card',
+      (WidgetTester tester) async {
     final Entry entry = entryOf(
       type: EntryType.text,
       textContent: 'a good day',
@@ -122,25 +123,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(InlinePhotoStrip), findsOneWidget);
-  });
-
-  testWidgets('an entry without photos renders no photo strip',
-      (WidgetTester tester) async {
-    final Entry entry = entryOf(
-      type: EntryType.text,
-      textContent: 'a good day',
-    );
-
-    await tester.pumpWidget(
-      _tileApp(
-        repository: FakeJournalRepository(entries: <Entry>[entry]),
-        entry: entry,
-      ),
-    );
-    await tester.pump();
-
-    expect(find.byType(InlinePhotoStrip), findsNothing);
+    expect(find.byType(MediaImage), findsNothing);
   });
 
   testWidgets('a video entry receives the shared decoder slot registry',

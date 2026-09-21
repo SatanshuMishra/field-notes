@@ -4,16 +4,20 @@ import 'package:drift/drift.dart';
 import 'package:path/path.dart' as p;
 
 import '../database/app_database.dart';
+import '../drafts/draft_paths.dart';
 import 'blob_paths.dart';
+import 'blob_prefix.dart';
 
 class MediaGarbageCollector {
   MediaGarbageCollector({
     required AppDatabase database,
     required this._root,
+    this._drafts,
   }) : _db = database;
 
   final AppDatabase _db;
   final Directory _root;
+  final Directory? _drafts;
 
   Future<int> collectGarbage() {
     return _db.transaction(() async {
@@ -47,7 +51,47 @@ class MediaGarbageCollector {
       ids.add(photo.mediaId);
     }
 
+    ids.addAll(await _draftReferencedMediaIds());
+
     return ids;
+  }
+
+  Future<Set<String>> _draftReferencedMediaIds() async {
+    final drafts = _drafts;
+    if (drafts == null || !await drafts.exists()) {
+      return const <String>{};
+    }
+
+    final prefixes = <String>{};
+    await for (final entity in drafts.list(followLinks: false)) {
+      if (entity is! File || p.extension(entity.path) != draftExtension) {
+        continue;
+      }
+      try {
+        prefixes.addAll(blobPrefixesIn(await entity.readAsString()));
+      } on FileSystemException {
+        continue;
+      }
+    }
+
+    final ids = <String>{};
+    for (final prefix in prefixes) {
+      ids.addAll(await _idsWithPrefix(prefix));
+    }
+    return ids;
+  }
+
+  Future<List<String>> _idsWithPrefix(String prefix) async {
+    final upper = blobPrefixUpperBound(prefix);
+    final rows = await (_db.select(_db.mediaBlobs)
+          ..where(
+            (t) => upper == null
+                ? t.id.isBiggerOrEqualValue(prefix)
+                : t.id.isBiggerOrEqualValue(prefix) &
+                    t.id.isSmallerThanValue(upper),
+          ))
+        .get();
+    return rows.map((row) => row.id).toList(growable: false);
   }
 
   Future<void> _sweepFiles(Set<String> reachable) async {

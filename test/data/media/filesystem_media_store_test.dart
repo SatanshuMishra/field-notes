@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:field_notes/data/database/app_database.dart' hide MediaBlob;
 import 'package:field_notes/data/media/blob_paths.dart';
+import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/data/media/content_hash.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/media/media_exceptions.dart';
@@ -96,6 +97,105 @@ void main() {
     expect(loaded.durationMs, 3000);
 
     expect(await store.blobById('deadbeef'), isNull);
+  });
+
+  Future<void> insertBlobRow(String id) {
+    return db.into(db.mediaBlobs).insert(
+          MediaBlobsCompanion.insert(
+            id: id,
+            relPath: relPathForId(id),
+            mime: 'image/jpeg',
+            kind: 'photo',
+            bytes: 1,
+            createdAt: 0,
+          ),
+        );
+  }
+
+  group('blobByPrefix', () {
+    test('resolves a 12-hex prefix to the one blob that matches', () async {
+      final blob = await store.putBytes(
+        bytes: [4, 5, 6],
+        mime: 'image/jpeg',
+        kind: MediaKind.photo,
+      );
+
+      final found = await store.blobByPrefix(blobPrefixOf(blob.id));
+
+      expect(found, isNotNull);
+      expect(found!.id, blob.id);
+    });
+
+    test('returns nothing when no id starts with the prefix', () async {
+      await store.putBytes(
+        bytes: [4, 5, 6],
+        mime: 'image/jpeg',
+        kind: MediaKind.photo,
+      );
+
+      expect(await store.blobByPrefix('0' * 12), isNull);
+    });
+
+    test('returns nothing when the prefix is ambiguous', () async {
+      await insertBlobRow('abcdef0123450000${'0' * 48}');
+      await insertBlobRow('abcdef0123451111${'0' * 48}');
+
+      expect(await store.blobByPrefix('abcdef012345'), isNull);
+    });
+
+    test('rejects a malformed prefix without touching the table', () async {
+      expect(await store.blobByPrefix('abc'), isNull);
+      expect(await store.blobByPrefix('ABCDEF012345'), isNull);
+      expect(await store.blobByPrefix('abcdefghijkl'), isNull);
+    });
+
+    test('a prefix at the top of the hex range still matches', () async {
+      final id = 'f' * 64;
+      await insertBlobRow(id);
+
+      final found = await store.blobByPrefix('f' * 12);
+
+      expect(found?.id, id);
+    });
+
+    test('the range bound excludes a neighbour just outside it', () async {
+      await insertBlobRow('ab9${'0' * 61}');
+      await insertBlobRow('aba${'0' * 61}');
+
+      final found = await store.blobByPrefix('ab9${'0' * 9}');
+
+      expect(found?.id, 'ab9${'0' * 61}');
+    });
+  });
+
+  group('uniquePrefixFor', () {
+    test('hands back the 12-hex prefix when nothing collides', () async {
+      final id = 'abcdef012345${'0' * 52}';
+      await insertBlobRow(id);
+
+      expect(await store.uniquePrefixFor(id), 'abcdef012345');
+    });
+
+    test('extends in 4-character steps past a colliding neighbour', () async {
+      final id = 'abcdef0123450000${'0' * 48}';
+      await insertBlobRow(id);
+      await insertBlobRow('abcdef0123451111${'0' * 48}');
+
+      expect(await store.uniquePrefixFor(id), 'abcdef0123450000');
+    });
+
+    test('extends twice when the neighbour agrees for 16 characters',
+        () async {
+      final id = 'abcdef01234500001111${'0' * 44}';
+      await insertBlobRow(id);
+      await insertBlobRow('abcdef01234500002222${'0' * 44}');
+
+      expect(await store.uniquePrefixFor(id), 'abcdef01234500001111');
+    });
+
+    test('falls back to the full digest rather than a non-hex id', () async {
+      expect(await store.uniquePrefixFor('not-a-digest'), 'not-a-digest');
+    });
   });
 
   test('putFile streams the source through the hash and dedupes by content',

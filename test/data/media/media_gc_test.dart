@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
+import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/data/media/content_hash.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/media/media_gc.dart';
@@ -16,11 +17,18 @@ void main() {
   late AppDatabase db;
   late Directory root;
   late FilesystemMediaStore store;
+  late Directory drafts;
 
   setUp(() async {
     db = newTestDatabase();
     root = await newTempRoot();
-    store = FilesystemMediaStore(database: db, root: root, clock: () => 0);
+    drafts = await Directory.systemTemp.createTemp('fn_drafts');
+    store = FilesystemMediaStore(
+      database: db,
+      root: root,
+      drafts: drafts,
+      clock: () => 0,
+    );
     await db.into(db.days).insert(
           DaysCompanion.insert(
             id: 'd1',
@@ -36,7 +44,13 @@ void main() {
     if (await root.exists()) {
       await root.delete(recursive: true);
     }
+    if (await drafts.exists()) {
+      await drafts.delete(recursive: true);
+    }
   });
+
+  Future<void> writeDraft(String name, String source) =>
+      File(p.join(drafts.path, name)).writeAsString(source);
 
   Future<void> insertEntry({
     required String id,
@@ -132,6 +146,68 @@ void main() {
     expect(removed, 0);
     expect(File(store.absolutePath(shared)).existsSync(), isTrue);
     expect(await store.blobById(shared.id), isNotNull);
+  });
+
+  test('a blob referenced only from a draft file survives collection',
+      () async {
+    final drafted = await store.putBytes(
+        bytes: [11, 11, 11], mime: 'image/jpeg', kind: MediaKind.photo);
+    final orphan = await store.putBytes(
+        bytes: [12, 12, 12], mime: 'image/jpeg', kind: MediaKind.photo);
+
+    await writeDraft(
+      '01J0000000000000000000000A.md',
+      'a note\n\n![p](photo/${blobPrefixOf(drafted.id)} "right medium")\n',
+    );
+
+    final removed = await store.collectGarbage();
+
+    expect(removed, 1);
+    expect(await store.blobById(drafted.id), isNotNull);
+    expect(File(store.absolutePath(drafted)).existsSync(), isTrue);
+    expect(await store.blobById(orphan.id), isNull);
+  });
+
+  test('a draft reference written as a full digest also keeps the blob',
+      () async {
+    final drafted = await store.putBytes(
+        bytes: [13, 13, 13], mime: 'image/jpeg', kind: MediaKind.photo);
+
+    await writeDraft(
+      '01J0000000000000000000000B.md',
+      '![p](photo/${drafted.id})',
+    );
+
+    expect(await store.collectGarbage(), 0);
+    expect(await store.blobById(drafted.id), isNotNull);
+  });
+
+  test('a non-draft file in the drafts directory keeps nothing alive',
+      () async {
+    final orphan = await store.putBytes(
+        bytes: [14, 14, 14], mime: 'image/jpeg', kind: MediaKind.photo);
+
+    await writeDraft(
+      'scratch.txt',
+      '![p](photo/${blobPrefixOf(orphan.id)})',
+    );
+
+    expect(await store.collectGarbage(), 1);
+    expect(await store.blobById(orphan.id), isNull);
+  });
+
+  test('a store with no drafts root sweeps exactly as before', () async {
+    final bare = FilesystemMediaStore(database: db, root: root, clock: () => 0);
+    final orphan = await bare.putBytes(
+        bytes: [15, 15, 15], mime: 'image/jpeg', kind: MediaKind.photo);
+
+    await writeDraft(
+      '01J0000000000000000000000C.md',
+      '![p](photo/${blobPrefixOf(orphan.id)})',
+    );
+
+    expect(await bare.collectGarbage(), 1);
+    expect(await bare.blobById(orphan.id), isNull);
   });
 
   test('MediaGarbageCollector run directly reclaims an unreachable blob',

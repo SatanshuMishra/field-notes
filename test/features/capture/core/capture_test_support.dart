@@ -143,6 +143,13 @@ class FailingMediaStore implements MediaStore {
   Future<MediaBlob?> blobById(String id) => _inner.blobById(id);
 
   @override
+  Future<MediaBlob?> blobByPrefix(String prefix) => _inner.blobByPrefix(prefix);
+
+  @override
+  Future<String> uniquePrefixFor(String id) => _inner.uniquePrefixFor(id);
+
+
+  @override
   String absolutePath(MediaBlob blob) => _inner.absolutePath(blob);
 
   @override

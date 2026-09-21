@@ -27,6 +27,9 @@ class _PendingMediaResolver implements MediaResolver {
   @override
   Future<ResolvedMedia> resolve(String? mediaId) =>
       Completer<ResolvedMedia>().future;
+
+  @override
+  ResolvedMedia? resolved(String? mediaId) => null;
 }
 
 class TodayEntryFeed extends ConsumerWidget {
@@ -121,13 +124,9 @@ class TodayEntryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final List<EntryPhoto> photos =
-        ref.watch(photosForEntryProvider(entry.id)).value ??
-            const <EntryPhoto>[];
     return EntryCard(
       entry: entry,
       resolver: resolver,
-      photos: photos,
       audioPlayerFactory: ref.watch(todayAudioPlayerFactoryProvider),
       videoPlayerFactory: ref.watch(todayVideoPlayerFactoryProvider),
       videoSlots: ref.watch(videoSlotsProvider),

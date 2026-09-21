@@ -10,6 +10,10 @@ import '../widgets/delete_all_dialog.dart';
 
 typedef DeleteAllConfirmer = Future<bool> Function(BuildContext context);
 
+const String reclaimSpaceLabel = 'Reclaim space';
+const String reclaimSpaceFailedMessage =
+    'Reclaim space failed. Nothing was removed.';
+
 class DataSection extends ConsumerStatefulWidget {
   const DataSection({
     super.key,
@@ -27,6 +31,7 @@ class DataSection extends ConsumerStatefulWidget {
 class _DataSectionState extends ConsumerState<DataSection> {
   bool _exporting = false;
   bool _deleting = false;
+  bool _reclaiming = false;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +45,15 @@ class _DataSectionState extends ConsumerState<DataSection> {
             label: 'Export…',
             variant: StickerButtonVariant.secondary,
             onPressed: _exporting ? null : _runExport,
+          ),
+        ),
+        SettingsFieldRow(
+          label: reclaimSpaceLabel,
+          description: 'Remove photo files no entry or draft still refers to.',
+          control: StickerButton(
+            label: reclaimSpaceLabel,
+            variant: StickerButtonVariant.secondary,
+            onPressed: _reclaiming ? null : _runReclaimSpace,
           ),
         ),
         SettingsFieldRow(
@@ -76,6 +90,31 @@ class _DataSectionState extends ConsumerState<DataSection> {
     } finally {
       if (mounted) {
         setState(() => _exporting = false);
+      }
+    }
+  }
+
+  Future<void> _runReclaimSpace() async {
+    if (_reclaiming) {
+      return;
+    }
+    setState(() => _reclaiming = true);
+    try {
+      final SettingsDataController controller =
+          await ref.read(settingsDataControllerProvider.future);
+      final DataActionResult result = await controller.reclaimSpace();
+      if (!mounted) {
+        return;
+      }
+      _report(result);
+    } catch (error) {
+      debugPrint('Settings reclaim space failed: $error');
+      if (mounted) {
+        widget.onFeedback(reclaimSpaceFailedMessage);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _reclaiming = false);
       }
     }
   }

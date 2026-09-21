@@ -47,6 +47,44 @@ final class MediaRootProvider
 
 String _$mediaRootHash() => r'e52e7eea4a76102b3e05c4b7f5d54bd0629af225';
 
+@ProviderFor(mediaDraftsRoot)
+final mediaDraftsRootProvider = MediaDraftsRootProvider._();
+
+final class MediaDraftsRootProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Directory>,
+          Directory,
+          FutureOr<Directory>
+        >
+    with $FutureModifier<Directory>, $FutureProvider<Directory> {
+  MediaDraftsRootProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'mediaDraftsRootProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$mediaDraftsRootHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Directory> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Directory> create(Ref ref) {
+    return mediaDraftsRoot(ref);
+  }
+}
+
+String _$mediaDraftsRootHash() => r'bc34b9131d4f81f6925a7384fc3027908b46699d';
+
 @ProviderFor(mediaStore)
 final mediaStoreProvider = MediaStoreProvider._();
 
@@ -83,4 +121,4 @@ final class MediaStoreProvider
   }
 }
 
-String _$mediaStoreHash() => r'6290792949e6f4ccf0569bf76cb05b37fbf70008';
+String _$mediaStoreHash() => r'ce51d3c11b0a660b538a69d1338dfd1357be374c';

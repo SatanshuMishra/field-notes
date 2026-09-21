@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
-import 'package:field_notes/state/state.dart';
 
 bool isEditableEntry(Entry entry) => entry.type == EntryType.text;
 
@@ -23,13 +22,9 @@ class DayDetailEntryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final List<EntryPhoto> photos =
-        ref.watch(photosForEntryProvider(entry.id)).value ??
-            const <EntryPhoto>[];
     return EntryCard(
       entry: entry,
       resolver: resolver,
-      photos: photos,
       audioPlayerFactory: createJustAudioPlayer,
       videoPlayerFactory: createVideoPlayerEntryPlayer,
       videoSlots: ref.watch(videoSlotsProvider),
