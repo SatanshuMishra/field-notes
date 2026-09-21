@@ -13,6 +13,7 @@ import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/state/state.dart';
 
 const String editNoteTitle = 'Edit note';
@@ -88,10 +89,15 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
   Future<NoteSaveResult> _persist(String text) async {
     await _draft.settle();
     final NoteWriter writer = await ref.read(noteWriterProvider.future);
+    final List<String> photoMediaIds = await notePhotoMediaIds(
+      text,
+      () => ref.read(notePhotoStoreProvider.future),
+    );
     return writer.save(
       entryId: widget.entry.id,
       date: widget.date,
       source: text,
+      photoMediaIds: photoMediaIds,
     );
   }
 
@@ -116,6 +122,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
               onDiscardDraft: _draft.discardRestored,
               errorMessage: _errorMessage,
               isSaving: _isSaving,
+              photoRail: composerPhotoRail,
             );
           },
         );

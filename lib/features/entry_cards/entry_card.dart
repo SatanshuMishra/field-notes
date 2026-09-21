@@ -4,6 +4,7 @@ import '../../design/tokens/tokens.dart';
 import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/models/models.dart';
+import '../notes/render/note_photo_block.dart';
 import 'cards/note_body.dart';
 import 'cards/note_preview.dart';
 import 'cards/video_body.dart';
@@ -143,9 +144,12 @@ class EntryCard extends StatelessWidget {
     switch (entry.type) {
       case EntryType.text:
         final String text = entry.textContent ?? '';
-        return preview
-            ? NotePreview(text: text, onReadMore: onTap)
-            : NoteBody(text: text);
+        return NoteMediaScope(
+          resolver: resolver,
+          child: preview
+              ? NotePreview(text: text, onReadMore: onTap)
+              : NoteBody(text: text),
+        );
       case EntryType.voice:
         final EntryAudioPlayerFactory? factory = audioPlayerFactory;
         if (factory == null) {

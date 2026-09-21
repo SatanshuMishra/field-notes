@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +45,26 @@ const double _chipVerticalPadding = 10;
 const double _composerChromeHeight = 104;
 const int _minimumWritingLines = 4;
 
+typedef ComposerRailBuilder = Widget Function(
+  BuildContext context,
+  ComposerRailSlot slot,
+);
+
+@immutable
+class ComposerRailSlot {
+  const ComposerRailSlot({
+    required this.controller,
+    required this.focusNode,
+    required this.measure,
+    required this.maxHeight,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final double measure;
+  final double maxHeight;
+}
+
 class TextComposerSheet extends StatefulWidget {
   const TextComposerSheet({
     super.key,
@@ -60,6 +81,7 @@ class TextComposerSheet extends StatefulWidget {
     this.hintText = 'Start writing…',
     this.saveLabel = 'Save',
     this.savingLabel = 'Saving…',
+    this.photoRail,
   });
 
   final ValueChanged<String> onSave;
@@ -75,6 +97,7 @@ class TextComposerSheet extends StatefulWidget {
   final String hintText;
   final String saveLabel;
   final String savingLabel;
+  final ComposerRailBuilder? photoRail;
 
   @override
   State<TextComposerSheet> createState() => _TextComposerSheetState();
@@ -135,11 +158,58 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               thickness: _headerRuleThickness,
               color: Palette.ink25,
             ),
-            Flexible(child: _body(formatBar: showBar && !inHeader)),
+            Flexible(
+              child: _body(
+                formatBar: showBar && !inHeader,
+                rail: _railSlot(context, constraints, formatBar: showBar),
+              ),
+            ),
           ],
         );
       },
     );
+  }
+
+  ComposerRailSlot? _railSlot(
+    BuildContext context,
+    BoxConstraints constraints, {
+    required bool formatBar,
+  }) {
+    if (widget.photoRail == null) {
+      return null;
+    }
+    return ComposerRailSlot(
+      controller: _controller,
+      focusNode: _focusNode,
+      measure: math.max(
+        0.0,
+        math.min(
+          constraints.maxWidth - 2 * _pageHorizontalPadding,
+          NoteColumn.measureOf(context),
+        ),
+      ),
+      maxHeight: _railBudget(
+        context,
+        constraints.maxHeight,
+        formatBar: formatBar,
+      ),
+    );
+  }
+
+  double _railBudget(
+    BuildContext context,
+    double available, {
+    required bool formatBar,
+  }) {
+    if (!available.isFinite) {
+      return double.infinity;
+    }
+    final double line =
+        NoteColumn.emOf(context) * TypographyTokens.noteBody.height!;
+    return available -
+        _composerChromeHeight -
+        (formatBar ? formatBarHeight : 0) -
+        _minimumWritingLines * line;
   }
 
   bool _hasRoomForFormatBar(BuildContext context, double available) {
@@ -262,7 +332,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     });
   }
 
-  Widget _body({required bool formatBar}) {
+  Widget _body({required bool formatBar, ComposerRailSlot? rail}) {
+    final ComposerRailBuilder? railBuilder = widget.photoRail;
     final String? errorMessage = widget.errorMessage;
     final String? guardMessage = _guardMessage;
     return Column(
@@ -278,6 +349,15 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
           ),
         Flexible(child: _writingSurface()),
+        if (railBuilder != null && rail != null)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: _bodyHorizontalPadding,
+            ),
+            child: Builder(
+              builder: (BuildContext context) => railBuilder(context, rail),
+            ),
+          ),
         if (formatBar) _formatBar(),
         Padding(
           padding: const EdgeInsets.only(
