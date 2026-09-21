@@ -1,6 +1,6 @@
 # Note Editor and Scrapbook Photos — Implementation Spec
 
-Date: 2026-09-20. Base: `origin/main` @ `509df95`. Status: **ready to dispatch**.
+Date: 2026-09-20. Base: `origin/main` @ `509df95`. Status: **9 of 10 units merged; `u10` held.** See §0.
 
 Dispatch contract: `docs/specs/items/2026-09-20-note-feature.fanout.json`, batched by wave under
 `docs/specs/items/waves/`. This document is the human-readable authority; the JSON is what runs.
@@ -11,6 +11,67 @@ Derived from two verified research passes, both committed:
 
 - `docs/specs/research/2026-09-20-terrain-survey.md` — 15 agents, 7 areas, every load-bearing claim adversarially verified
 - `docs/specs/research/2026-09-20-design-panel.md` — 6 independent designs, 3 judge lenses, 1 synthesis, 3 stress tests
+
+---
+
+## 0. Implementation status — 2026-09-21
+
+**Nine of ten units are merged. `u10` is held by the owner** until the Android benchmark shipped in
+`u6` has been run on a real device. If typing in a long note is fast enough there, `u10` is never built
+and this feature is complete.
+
+| Unit | PR | Merge |
+|---|---|---|
+| spec + research | #129 | squash |
+| `u1` canonical measure | #130 | squash |
+| `u3` drafts, one write path | #131 | merge commit |
+| `u4` parser, read renderer | #132 | merge commit |
+| `u2` lazy feed, full-note reading | #133 | merge commit |
+| `u5` live Markdown editor | #134 | merge commit |
+| `u6` Android benchmark harness | #135 | merge commit |
+| `u7` photo substrate | #136 | merge commit |
+| `u8` photos in notes, photo rail | #137 | merge commit |
+| `u9` the float | #138 | merge commit |
+| `u10` segment editor | — | **held** |
+
+The repository stopped squash-merging between #130 and #131.
+
+### Where the code differs from §5's plan
+
+§5 is the dispatch plan as written, and it is left as written. Every unit's file list was mapped before
+any unit ran, so each list aged as earlier waves landed, and every wave was dispatched with a refreshed
+brief describing what had actually merged. **Where §5 and the code disagree, the code is authoritative.**
+
+| Unit | §5 planned | What actually shipped |
+|---|---|---|
+| `u4` | as planned | parser in `lib/domain/notes/`, renderer in `lib/features/entry_cards/notes/` |
+| `u7` | remove `InlinePhotoStrip`'s mount | deleted the widget file too; no references remained |
+| `u7` | reindex `entry_photos` on save | built both ends of the reindex without connecting them |
+| `u8` | `NoteDocument` under `lib/features/notes/render/` | `NoteDocument` stayed where `u4` put it; `u8` added `lib/features/notes/photos/` and `lib/features/notes/render/`, and connected `u7`'s reindex on both the create and edit routes |
+| `u9` | create `float_plan.dart`, a new `NoteDocument` and `stacked_photo.dart` | **extended** `u8`'s `planFloat` in `lib/features/notes/render/note_photo_plan.dart`; added `photo_wrap_block.dart`, `float_split_cache.dart` and `note_render_budget.dart` beside it |
+
+`u9`'s file list was rebuilt before dispatch rather than refreshed: the original would have produced a
+second `planFloat`, a second `NoteDocument` and a second stacked renderer — two implementations of the
+core layout rule, free to drift apart.
+
+### Current locations of the design's key pieces
+
+| Piece | File |
+|---|---|
+| Parser, block model, plain-text projection | `lib/domain/notes/` |
+| Read renderer, `sliceInlineSpan` | `lib/features/entry_cards/notes/` |
+| `planFloat`, the paragraph split, stacked fallback | `lib/features/notes/render/` |
+| Photo rail, options sheet, photo-line edits | `lib/features/notes/photos/` |
+| Editor seam, style controller, format bar | `lib/features/capture/text/editor/` |
+| Canonical measure | `lib/design/widgets/note_column.dart` |
+| Single write path | `lib/domain/services/note_writer.dart` |
+| Photo prefixes and source extraction | `lib/data/media/blob_prefix.dart` |
+
+### Not yet verified by anyone
+
+**No human or agent has seen this feature running.** Every PR carries visual confirmation on macOS and
+Android as not run. The Android benchmark in `u6` has not been run either. Both are owed before this is
+called done.
 
 ---
 
