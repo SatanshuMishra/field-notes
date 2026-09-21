@@ -80,6 +80,9 @@ class StubMediaResolver implements MediaResolver {
   const StubMediaResolver();
 
   @override
+  ResolvedMedia? resolved(String? mediaId) => null;
+
+  @override
   Future<ResolvedMedia> resolve(String? mediaId) async =>
       const ResolvedMedia.missing();
 }

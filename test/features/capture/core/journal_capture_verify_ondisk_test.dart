@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:field_notes/data/database/app_database.dart' show AppDatabase;
@@ -7,12 +8,21 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart';
+import 'package:field_notes/features/capture/photo/image_picker_photo_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import 'capture_test_support.dart';
 
 const String _date = '2026-07-19';
+
+Uint8List _wideFixturePng() => base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAEAAAAAwCAIAAAAuKetIAAAAQ0lEQVR42u'
+      '3PQQkAAAgEsOtkJ8OZ0gp+hcEKLNXzWgQEBAQEBAQEBAQEBAQEBAQEBAQE'
+      'BAQEBAQEBAQEBAQEBAQErhb+AyTiX+wqigAAAABJRU5ErkJggg==',
+    );
 
 class _CountingMediaStore implements MediaStore {
   _CountingMediaStore(this._inner);
@@ -63,6 +73,13 @@ class _CountingMediaStore implements MediaStore {
   Future<MediaBlob?> blobById(String id) => _inner.blobById(id);
 
   @override
+  Future<MediaBlob?> blobByPrefix(String prefix) => _inner.blobByPrefix(prefix);
+
+  @override
+  Future<String> uniquePrefixFor(String id) => _inner.uniquePrefixFor(id);
+
+
+  @override
   String absolutePath(MediaBlob blob) => _inner.absolutePath(blob);
 
   @override
@@ -96,6 +113,81 @@ void main() {
     if (await scratch.exists()) {
       await scratch.delete(recursive: true);
     }
+  });
+
+  test('a picked photo lands with non-null width and height on its blob row',
+      () async {
+    final File source = File(p.join(scratch.path, 'wide.png'));
+    await source.writeAsBytes(_wideFixturePng());
+
+    final CaptureMedia picked =
+        await photoCaptureFromXFile(XFile(source.path));
+
+    final CaptureResult result = await service.capture(
+      TextCaptureRequest(
+        date: _date,
+        text: 'a wide view',
+        photos: <CaptureMedia>[picked],
+      ),
+    );
+
+    final MediaBlob? blob =
+        await media.blobById(result.photos.single.mediaId);
+
+    expect(blob, isNotNull);
+    expect(blob!.width, 64);
+    expect(blob.height, 48);
+  });
+
+  test('re-picking the same source file dedupes onto the one blob', () async {
+    final File source = File(p.join(scratch.path, 'wide.png'));
+    await source.writeAsBytes(_wideFixturePng());
+
+    final CaptureResult first = await service.capture(
+      TextCaptureRequest(
+        date: _date,
+        text: 'first',
+        photos: <CaptureMedia>[
+          await photoCaptureFromXFile(XFile(source.path)),
+        ],
+      ),
+    );
+    final CaptureResult second = await service.capture(
+      TextCaptureRequest(
+        date: _date,
+        text: 'second',
+        photos: <CaptureMedia>[
+          await photoCaptureFromXFile(XFile(source.path)),
+        ],
+      ),
+    );
+
+    expect(
+      second.photos.single.mediaId,
+      first.photos.single.mediaId,
+    );
+    expect((await db.select(db.mediaBlobs).get()).length, 1);
+  });
+
+  test('a 12-hex prefix of that blob id resolves back to exactly one blob',
+      () async {
+    final File source = File(p.join(scratch.path, 'wide.png'));
+    await source.writeAsBytes(_wideFixturePng());
+
+    final CaptureResult result = await service.capture(
+      TextCaptureRequest(
+        date: _date,
+        text: 'a wide view',
+        photos: <CaptureMedia>[
+          await photoCaptureFromXFile(XFile(source.path)),
+        ],
+      ),
+    );
+    final String id = result.photos.single.mediaId;
+
+    final String prefix = await media.uniquePrefixFor(id);
+    expect(prefix.length, 12);
+    expect((await media.blobByPrefix(prefix))?.id, id);
   });
 
   test('a missing recorded file fails fast with the media-missing message',

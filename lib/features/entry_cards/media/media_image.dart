@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
+import 'decode_target.dart';
 import 'media_placeholders.dart';
 import 'media_resolver.dart';
 
@@ -50,6 +51,10 @@ class MediaImage extends StatelessWidget {
     if (id == null || id.isEmpty) {
       return _neutral();
     }
+    final ResolvedMedia? memo = resolver.resolved(id);
+    if (memo != null) {
+      return _resolved(memo);
+    }
     return FutureBuilder<ResolvedMedia>(
       future: resolver.resolve(id),
       builder: (BuildContext context, AsyncSnapshot<ResolvedMedia> snapshot) {
@@ -57,26 +62,48 @@ class MediaImage extends StatelessWidget {
           return _neutral();
         }
         final ResolvedMedia? media = snapshot.data;
-        final File? file = media?.file;
-        if (media == null || !media.isAvailable || file == null) {
-          return _corrupt();
-        }
-        return ClipRRect(
-          borderRadius: borderRadius,
-          child: Image.file(
-            file,
-            width: width,
-            height: height,
-            fit: fit,
-            errorBuilder: (
-              BuildContext context,
-              Object error,
-              StackTrace? stackTrace,
-            ) =>
-                _corrupt(),
-          ),
-        );
+        return media == null ? _corrupt() : _resolved(media);
       },
+    );
+  }
+
+  Widget _resolved(ResolvedMedia media) {
+    final File? file = media.file;
+    if (!media.isAvailable || file == null) {
+      return _corrupt();
+    }
+    return ClipRRect(borderRadius: borderRadius, child: _image(file));
+  }
+
+  Widget _image(File file) {
+    final double? fixed = width;
+    if (fixed != null) {
+      return Builder(
+        builder: (BuildContext context) => _fileImage(context, file, fixed),
+      );
+    }
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) =>
+          _fileImage(context, file, constraints.maxWidth),
+    );
+  }
+
+  Widget _fileImage(BuildContext context, File file, double boxWidth) {
+    return Image.file(
+      file,
+      width: width,
+      height: height,
+      fit: fit,
+      cacheWidth: decodeTargetWidth(
+        logicalWidth: boxWidth,
+        devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
+      ),
+      errorBuilder: (
+        BuildContext context,
+        Object error,
+        StackTrace? stackTrace,
+      ) =>
+          _corrupt(),
     );
   }
 

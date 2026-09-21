@@ -23,6 +23,9 @@ class _AvailableVideoResolver implements MediaResolver {
   final File file;
 
   @override
+  ResolvedMedia? resolved(String? mediaId) => null;
+
+  @override
   Future<ResolvedMedia> resolve(String? mediaId) async {
     if (mediaId != 'vid') {
       return const ResolvedMedia.missing();
@@ -101,7 +104,7 @@ List<Override> _videoEntryOverrides({
 }
 
 void main() {
-  testWidgets('renders one card per entry with its photos',
+  testWidgets('renders one card per entry and no photo strip',
       (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -118,7 +121,7 @@ void main() {
     expect(find.byType(EntryCard), findsNWidgets(2));
     expect(find.text('morning walk'), findsOneWidget);
     expect(find.text('coffee on the porch'), findsOneWidget);
-    expect(find.byType(InlinePhotoStrip), findsNWidgets(2));
+    expect(find.byType(MediaImage), findsNothing);
   });
 
   testWidgets('clamps and centres the feed card on a desktop pane',

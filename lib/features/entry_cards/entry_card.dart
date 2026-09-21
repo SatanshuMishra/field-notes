@@ -6,7 +6,6 @@ import '../../design/widgets/widgets.dart';
 import '../../domain/models/models.dart';
 import 'cards/note_body.dart';
 import 'cards/note_preview.dart';
-import 'cards/photo_strip.dart';
 import 'cards/video_body.dart';
 import 'cards/voice_body.dart';
 import 'media/media_placeholders.dart';
@@ -21,7 +20,6 @@ const String entryDeleteLabel = 'Delete';
 const double _headerGap = 4;
 const double _actionGap = 8;
 const int _maxEpochMs = 8640000000000000;
-const int _previewPhotoCount = 1;
 
 const double _tiltOddDegrees = -0.5;
 const double _tiltEvenDegrees = 0.4;
@@ -36,7 +34,6 @@ class EntryCard extends StatelessWidget {
     required this.entry,
     required this.resolver,
     required this.videoSlots,
-    this.photos = const <EntryPhoto>[],
     this.audioPlayerFactory,
     this.videoPlayerFactory,
     this.onEdit,
@@ -48,7 +45,6 @@ class EntryCard extends StatelessWidget {
 
   final Entry entry;
   final MediaResolver resolver;
-  final List<EntryPhoto> photos;
   final EntryAudioPlayerFactory? audioPlayerFactory;
   final EntryVideoPlayerFactory? videoPlayerFactory;
   final VideoSlots videoSlots;
@@ -73,12 +69,6 @@ class EntryCard extends StatelessWidget {
           _header(),
           const SizedBox(height: _headerGap),
           _body(),
-          if (photos.isNotEmpty)
-            InlinePhotoStrip(
-              photos: photos,
-              resolver: resolver,
-              maxVisible: preview ? _previewPhotoCount : null,
-            ),
         ],
       ),
     );

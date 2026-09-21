@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/media_store.dart';
@@ -87,6 +88,9 @@ class FakeMediaResolver implements MediaResolver {
   final Map<String, ResolvedMedia> _results;
 
   @override
+  ResolvedMedia? resolved(String? mediaId) => null;
+
+  @override
   Future<ResolvedMedia> resolve(String? mediaId) async {
     if (mediaId == null) {
       return const ResolvedMedia.missing();
@@ -106,6 +110,30 @@ class FakeMediaStore implements MediaStore {
 
   @override
   Future<MediaBlob?> blobById(String id) async => _blobs[id];
+
+  @override
+  Future<MediaBlob?> blobByPrefix(String prefix) async {
+    final matches = _blobs.values
+        .where((blob) => blob.id.startsWith(prefix))
+        .toList(growable: false);
+    return matches.length == 1 ? matches.first : null;
+  }
+
+  @override
+  Future<String> uniquePrefixFor(String id) async {
+    var length = photoRefPrefixLength;
+    while (length < id.length) {
+      final prefix = id.substring(0, length);
+      final collides = _blobs.keys
+          .any((other) => other != id && other.startsWith(prefix));
+      if (!collides) {
+        return prefix;
+      }
+      length = nextPrefixLength(length);
+    }
+    return id;
+  }
+
 
   @override
   String absolutePath(MediaBlob blob) => p.join(root.path, blob.relPath);

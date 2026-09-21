@@ -22,6 +22,9 @@ class _FakeResolver implements MediaResolver {
   const _FakeResolver();
 
   @override
+  ResolvedMedia? resolved(String? mediaId) => null;
+
+  @override
   Future<ResolvedMedia> resolve(String? mediaId) async =>
       const ResolvedMedia.missing();
 }

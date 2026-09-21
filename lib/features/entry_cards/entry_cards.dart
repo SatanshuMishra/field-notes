@@ -1,9 +1,9 @@
 export 'cards/note_body.dart';
 export 'cards/note_preview.dart';
-export 'cards/photo_strip.dart';
 export 'cards/video_body.dart';
 export 'cards/voice_body.dart';
 export 'entry_card.dart';
+export 'media/decode_target.dart';
 export 'media/media_image.dart';
 export 'media/media_placeholders.dart';
 export 'media/media_resolver.dart';

@@ -27,14 +27,16 @@ SettingsController settingsController(Ref ref) {
 Future<SettingsDataController> settingsDataController(Ref ref) async {
   final database = ref.watch(databaseProvider);
   final root = await ref.watch(mediaRootProvider.future);
+  final mediaStore = await ref.watch(mediaStoreProvider.future);
   return JournalDataController(
     exportRunner: ExportRunner(
       exportService: JournalExportService(
         database: database,
-        mediaStore: await ref.watch(mediaStoreProvider.future),
+        mediaStore: mediaStore,
       ),
       delivery: defaultExportDelivery(),
     ),
+    mediaStore: mediaStore,
     deleteAllService: JournalDeleteAllService(
       database: database,
       mediaRoot: root,

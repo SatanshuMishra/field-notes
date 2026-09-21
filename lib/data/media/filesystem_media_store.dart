@@ -9,6 +9,7 @@ import '../../domain/models/media_kind.dart';
 import '../../domain/services/media_store.dart';
 import '../database/app_database.dart' as db;
 import 'blob_paths.dart';
+import 'blob_prefix.dart';
 import 'content_hash.dart';
 import 'media_exceptions.dart';
 import 'media_gc.dart';
@@ -21,12 +22,14 @@ class FilesystemMediaStore implements MediaStore {
   FilesystemMediaStore({
     required db.AppDatabase database,
     required this._root,
+    this._drafts,
     int Function()? clock,
   })  : _db = database,
         _clock = clock ?? _systemMillis;
 
   final db.AppDatabase _db;
   final Directory _root;
+  final Directory? _drafts;
   final int Function() _clock;
   final Random _random = Random();
 
@@ -87,6 +90,48 @@ class FilesystemMediaStore implements MediaStore {
   }
 
   @override
+  Future<MediaBlob?> blobByPrefix(String prefix) async {
+    if (!isBlobPrefix(prefix)) {
+      return null;
+    }
+    final rows = await _rowsWithPrefix(prefix, limit: 2);
+    return rows.length == 1 ? _toDomain(rows.first) : null;
+  }
+
+  @override
+  Future<String> uniquePrefixFor(String id) async {
+    if (id.length != blobIdLength || !isLowerHex(id)) {
+      return id;
+    }
+    var length = photoRefPrefixLength;
+    while (length < blobIdLength) {
+      final prefix = blobPrefixOf(id, length: length);
+      final rows = await _rowsWithPrefix(prefix, limit: 2);
+      if (rows.every((row) => row.id == id)) {
+        return prefix;
+      }
+      length = nextPrefixLength(length);
+    }
+    return id;
+  }
+
+  Future<List<db.MediaBlob>> _rowsWithPrefix(
+    String prefix, {
+    required int limit,
+  }) {
+    final upper = blobPrefixUpperBound(prefix);
+    return (_db.select(_db.mediaBlobs)
+          ..where(
+            (t) => upper == null
+                ? t.id.isBiggerOrEqualValue(prefix)
+                : t.id.isBiggerOrEqualValue(prefix) &
+                    t.id.isSmallerThanValue(upper),
+          )
+          ..limit(limit))
+        .get();
+  }
+
+  @override
   String absolutePath(MediaBlob blob) {
     final stored = p.join(_root.path, blob.relPath);
     if (_existsSync(stored) || blob.id.length <= blobShardLength) {
@@ -117,7 +162,8 @@ class FilesystemMediaStore implements MediaStore {
 
   @override
   Future<int> collectGarbage() {
-    return MediaGarbageCollector(database: _db, root: _root).collectGarbage();
+    return MediaGarbageCollector(database: _db, root: _root, drafts: _drafts)
+        .collectGarbage();
   }
 
   Future<MediaBlob> _finalize({

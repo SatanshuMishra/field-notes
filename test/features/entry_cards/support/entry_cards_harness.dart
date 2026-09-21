@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as p;
 
+import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
@@ -30,8 +31,15 @@ class FakeMediaResolver implements MediaResolver {
       : _results = results ?? <String, ResolvedMedia>{};
 
   final Map<String, ResolvedMedia> _results;
+  final Set<String> _memoized = <String>{};
 
   void set(String mediaId, ResolvedMedia media) => _results[mediaId] = media;
+
+  void memoize(String mediaId) => _memoized.add(mediaId);
+
+  @override
+  ResolvedMedia? resolved(String? mediaId) =>
+      mediaId != null && _memoized.contains(mediaId) ? _results[mediaId] : null;
 
   @override
   Future<ResolvedMedia> resolve(String? mediaId) async {
@@ -52,6 +60,30 @@ class FakeMediaStore implements MediaStore {
 
   @override
   Future<MediaBlob?> blobById(String id) async => _blobs[id];
+
+  @override
+  Future<MediaBlob?> blobByPrefix(String prefix) async {
+    final matches = _blobs.values
+        .where((blob) => blob.id.startsWith(prefix))
+        .toList(growable: false);
+    return matches.length == 1 ? matches.first : null;
+  }
+
+  @override
+  Future<String> uniquePrefixFor(String id) async {
+    var length = photoRefPrefixLength;
+    while (length < id.length) {
+      final prefix = id.substring(0, length);
+      final collides = _blobs.keys
+          .any((other) => other != id && other.startsWith(prefix));
+      if (!collides) {
+        return prefix;
+      }
+      length = nextPrefixLength(length);
+    }
+    return id;
+  }
+
 
   @override
   String absolutePath(MediaBlob blob) => p.join(root.path, blob.relPath);
