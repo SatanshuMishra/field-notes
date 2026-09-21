@@ -1,12 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+
+import 'editor/editor.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
 
@@ -38,6 +41,8 @@ const double _pageBottomPaddingMax = 120;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
 const double _chipVerticalPadding = 10;
+const double _composerChromeHeight = 104;
+const int _minimumWritingLines = 4;
 
 class TextComposerSheet extends StatefulWidget {
   const TextComposerSheet({
@@ -76,10 +81,11 @@ class TextComposerSheet extends StatefulWidget {
 }
 
 class _TextComposerSheetState extends State<TextComposerSheet> {
-  late final TextEditingController _controller;
+  late final MarkdownStyleController _controller;
   late final bool _ownsController;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
+  late final UndoHistoryController _undoController;
   String? _guardMessage;
   Timer? _guardTimer;
 
@@ -87,11 +93,15 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   void initState() {
     super.initState();
     final TextEditingController? external = widget.controller;
-    _ownsController = external == null;
-    _controller =
-        external ?? TextEditingController(text: widget.initialText);
+    _ownsController = external is! MarkdownStyleController;
+    _controller = switch (external) {
+      null => MarkdownStyleController(text: widget.initialText),
+      MarkdownStyleController() => external,
+      _ => MarkdownStyleController.attachedTo(external),
+    };
     _focusNode = FocusNode();
     _scrollController = ScrollController();
+    _undoController = UndoHistoryController();
   }
 
   @override
@@ -102,35 +112,67 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     }
     _focusNode.dispose();
     _scrollController.dispose();
+    _undoController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        _header(),
-        const DashedDivider(
-          thickness: _headerRuleThickness,
-          color: Palette.ink25,
-        ),
-        Flexible(child: _body()),
-      ],
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool showBar = _hasRoomForFormatBar(
+          context,
+          constraints.maxHeight,
+        );
+        final bool inHeader = showBar &&
+            resolveShellLayout(Theme.of(context).platform) ==
+                ShellLayout.sidebar;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _header(formatBar: inHeader),
+            const DashedDivider(
+              thickness: _headerRuleThickness,
+              color: Palette.ink25,
+            ),
+            Flexible(child: _body(formatBar: showBar && !inHeader)),
+          ],
+        );
+      },
     );
   }
 
-  Widget _header() {
+  bool _hasRoomForFormatBar(BuildContext context, double available) {
+    if (!available.isFinite) {
+      return true;
+    }
+    final double line =
+        NoteColumn.emOf(context) * TypographyTokens.noteBody.height!;
+    return available >=
+        _composerChromeHeight + formatBarHeight + _minimumWritingLines * line;
+  }
+
+  Widget _formatBar() {
+    return FormatBar(controller: _controller, undoController: _undoController);
+  }
+
+  Widget _header({required bool formatBar}) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: _headerHorizontalPadding,
         vertical: _headerVerticalPadding,
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _closeButton(),
-          Expanded(child: _titleBlock()),
-          _saveButton(),
+          Row(
+            children: <Widget>[
+              _closeButton(),
+              Expanded(child: _titleBlock()),
+              _saveButton(),
+            ],
+          ),
+          if (formatBar) _formatBar(),
         ],
       ),
     );
@@ -220,7 +262,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     });
   }
 
-  Widget _body() {
+  Widget _body({required bool formatBar}) {
     final String? errorMessage = widget.errorMessage;
     final String? guardMessage = _guardMessage;
     return Column(
@@ -236,6 +278,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
           ),
         Flexible(child: _writingSurface()),
+        if (formatBar) _formatBar(),
         Padding(
           padding: const EdgeInsets.only(
             left: _bodyHorizontalPadding,
@@ -301,40 +344,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _page() {
-    return Stack(
-      fit: StackFit.expand,
-      children: <Widget>[
-        IgnorePointer(
-          child: ValueListenableBuilder<TextEditingValue>(
-            valueListenable: _controller,
-            builder: (
-              BuildContext context,
-              TextEditingValue value,
-              Widget? child,
-            ) {
-              if (value.text.isNotEmpty) {
-                return const SizedBox.shrink();
-              }
-              return Text(
-                widget.hintText,
-                style: TypographyTokens.noteBodyPlaceholder,
-              );
-            },
-          ),
-        ),
-        EditableText(
-          controller: _controller,
-          focusNode: _focusNode,
-          scrollController: _scrollController,
-          style: TypographyTokens.noteBody,
-          cursorColor: Palette.coral,
-          backgroundCursorColor: Palette.muted,
-          keyboardType: TextInputType.multiline,
-          minLines: null,
-          maxLines: null,
-          expands: true,
-        ),
-      ],
+    return noteEditorFor(
+      NoteEditorConfig(
+        controller: _controller,
+        focusNode: _focusNode,
+        undoController: _undoController,
+        scrollController: _scrollController,
+        hintText: widget.hintText,
+      ),
     );
   }
 }

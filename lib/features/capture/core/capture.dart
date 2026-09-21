@@ -5,6 +5,7 @@ export 'package:field_notes/domain/services/note_writer.dart';
 export '../chooser/capture_chooser.dart';
 export '../chooser/capture_chooser_sheet.dart';
 export '../chooser/capture_routes_provider.dart';
+export '../text/editor/editor.dart';
 export '../text/text_composer.dart';
 export '../text/text_composer_sheet.dart';
 export 'capture_date.dart';
