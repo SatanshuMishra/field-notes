@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
@@ -18,17 +20,22 @@ class InlinePhotoStrip extends StatelessWidget {
     required this.resolver,
     this.thumbnailSize = 56,
     this.spacing = 8,
+    this.maxVisible,
   });
 
   final List<EntryPhoto> photos;
   final MediaResolver resolver;
   final double thumbnailSize;
   final double spacing;
+  final int? maxVisible;
 
   @override
   Widget build(BuildContext context) {
-    final List<EntryPhoto> ordered = <EntryPhoto>[...photos]
+    final List<EntryPhoto> sorted = <EntryPhoto>[...photos]
       ..sort((EntryPhoto a, EntryPhoto b) => a.sortOrder.compareTo(b.sortOrder));
+    final int? cap = maxVisible;
+    final List<EntryPhoto> ordered =
+        cap == null ? sorted : sorted.take(math.max(cap, 0)).toList();
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,

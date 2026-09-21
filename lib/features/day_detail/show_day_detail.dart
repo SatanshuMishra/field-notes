@@ -6,7 +6,11 @@ import 'package:field_notes/features/capture/core/capture_date.dart';
 
 import 'day_detail_panel.dart';
 
-Future<void> showDayDetail(BuildContext context, {required String date}) {
+Future<void> showDayDetail(
+  BuildContext context, {
+  required String date,
+  String? focusEntryId,
+}) {
   if (!isCaptureDateKey(date)) {
     throw ArgumentError.value(
       date,
@@ -25,7 +29,7 @@ Future<void> showDayDetail(BuildContext context, {required String date}) {
       Animation<double> animation,
       Animation<double> secondaryAnimation,
     ) {
-      return DayDetailPanel(date: date);
+      return DayDetailPanel(date: date, focusEntryId: focusEntryId);
     },
     transitionBuilder: (
       BuildContext dialogContext,

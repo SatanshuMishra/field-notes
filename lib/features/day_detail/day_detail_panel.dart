@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,14 +29,19 @@ const String dayDetailDeleteErrorMessage =
 const double dayDetailPanelMaxWidth = 640;
 const double dayDetailPanelVerticalMargin = 24;
 
+const int _focusScanFrames = 32;
+const double _focusAlignment = 0.1;
+
 class DayDetailPanel extends ConsumerStatefulWidget {
   const DayDetailPanel({
     super.key,
     required this.date,
+    this.focusEntryId,
     this.maxWidth = dayDetailPanelMaxWidth,
   });
 
   final String date;
+  final String? focusEntryId;
   final double maxWidth;
 
   @override
@@ -41,7 +49,51 @@ class DayDetailPanel extends ConsumerStatefulWidget {
 }
 
 class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
+  final ScrollController _entryScroll = ScrollController();
+  final GlobalKey _focusedTile = GlobalKey();
+
   String? _deleteError;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusEntryId != null) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (Duration _) => _revealFocusedEntry(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _entryScroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _revealFocusedEntry() async {
+    for (int frame = 0; frame < _focusScanFrames; frame++) {
+      if (!mounted) {
+        return;
+      }
+      final BuildContext? target = _focusedTile.currentContext;
+      if (target != null && target.mounted) {
+        await Scrollable.ensureVisible(target, alignment: _focusAlignment);
+        return;
+      }
+      if (_entryScroll.hasClients) {
+        final ScrollPosition position = _entryScroll.position;
+        final double next = math.min(
+          position.pixels + position.viewportDimension,
+          position.maxScrollExtent,
+        );
+        if (next <= position.pixels) {
+          return;
+        }
+        _entryScroll.jumpTo(next);
+      }
+      await SchedulerBinding.instance.endOfFrame;
+    }
+  }
 
   Future<void> _addNote() async {
     await showTextComposer(context, widget.date);
@@ -142,6 +194,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     }
     final MediaResolver resolver = resolverAsync.requireValue;
     return ListView.separated(
+      controller: _entryScroll,
       shrinkWrap: true,
       padding: EdgeInsets.zero,
       itemCount: entries.length,
@@ -155,12 +208,15 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
           const SizedBox(height: 12),
       itemBuilder: (BuildContext context, int index) {
         final Entry entry = entries[index];
-        return DayDetailEntryTile(
+        return KeyedSubtree(
           key: ValueKey<String>(entry.id),
-          entry: entry,
-          resolver: resolver,
-          onEdit: () => _edit(entry),
-          onDelete: () => _delete(entry),
+          child: DayDetailEntryTile(
+            key: entry.id == widget.focusEntryId ? _focusedTile : null,
+            entry: entry,
+            resolver: resolver,
+            onEdit: () => _edit(entry),
+            onDelete: () => _delete(entry),
+          ),
         );
       },
     );

@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/day_detail/day_detail_panel.dart';
+import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -51,6 +53,12 @@ File _writtenVideoFile() {
   return file;
 }
 
+Widget _feed(String date) {
+  return CustomScrollView(
+    slivers: <Widget>[TodayEntryFeed(date: date)],
+  );
+}
+
 List<Override> _overrides({
   required Stream<List<Entry>> entries,
   List<EntryPhoto> photos = const <EntryPhoto>[],
@@ -97,7 +105,7 @@ void main() {
       (WidgetTester tester) async {
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       overrides: _overrides(
         entries: Stream<List<Entry>>.value(<Entry>[
           todayTestEntry(id: 'entry-1', textContent: 'morning walk'),
@@ -117,7 +125,7 @@ void main() {
       (WidgetTester tester) async {
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       surface: todayDesktopSurface,
       overrides: _overrides(
         entries: Stream<List<Entry>>.value(<Entry>[
@@ -136,7 +144,7 @@ void main() {
       (WidgetTester tester) async {
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       surface: todayPhoneSurface,
       overrides: _overrides(
         entries: Stream<List<Entry>>.value(<Entry>[
@@ -153,7 +161,7 @@ void main() {
       (WidgetTester tester) async {
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       overrides: _overrides(entries: Stream<List<Entry>>.value(const <Entry>[])),
     );
 
@@ -167,7 +175,7 @@ void main() {
     final Completer<MediaResolver> pending = Completer<MediaResolver>();
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       overrides: <Override>[
         entriesForDateProvider.overrideWith(
           (Ref ref, String date) => Stream<List<Entry>>.value(<Entry>[
@@ -195,7 +203,7 @@ void main() {
       (WidgetTester tester) async {
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       overrides: _overrides(
         entries: Stream<List<Entry>>.error(Exception('db unavailable')),
       ),
@@ -221,7 +229,7 @@ void main() {
     int playersBuilt = 0;
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       overrides: _videoEntryOverrides(
         resolver: pending.future,
         buildPlayer: () {
@@ -252,7 +260,7 @@ void main() {
 
     await pumpToday(
       tester,
-      const TodayEntryFeed(date: '2026-07-19'),
+      _feed('2026-07-19'),
       overrides: _videoEntryOverrides(
         resolver: pending.future,
         buildPlayer: () {
@@ -279,5 +287,56 @@ void main() {
       find.byKey(const ValueKey<String>('fake-video-surface')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('builds only the entries near the viewport for a long day',
+      (WidgetTester tester) async {
+    const int entryCount = 50;
+    await pumpToday(
+      tester,
+      _feed('2026-07-19'),
+      overrides: _overrides(
+        entries: Stream<List<Entry>>.value(<Entry>[
+          for (int i = 0; i < entryCount; i++)
+            todayTestEntry(id: 'entry-$i', textContent: 'log number $i'),
+        ]),
+      ),
+    );
+
+    final int built = find.byType(EntryCard).evaluate().length;
+    expect(built, greaterThan(0));
+    expect(built, lessThan(entryCount));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('a feed card opens day detail focused on the tapped entry',
+      (WidgetTester tester) async {
+    await pumpToday(
+      tester,
+      _feed('2026-07-19'),
+      overrides: <Override>[
+        ..._overrides(
+          entries: Stream<List<Entry>>.value(<Entry>[
+            todayTestEntry(id: 'entry-1', textContent: 'morning walk'),
+            todayTestEntry(id: 'entry-2', textContent: 'coffee on the porch'),
+          ]),
+        ),
+        dayDetailMediaResolverProvider
+            .overrideWith((Ref ref) async => const StubMediaResolver()),
+        dayForDateProvider.overrideWith(
+          (Ref ref, String date) => Stream<Day?>.value(
+            todayTestDay(date: date, mood: Mood.calm),
+          ),
+        ),
+      ],
+    );
+
+    await tester.tapAt(tester.getCenter(find.text('coffee on the porch')));
+    await tester.pumpAndSettle();
+
+    final DayDetailPanel panel =
+        tester.widget<DayDetailPanel>(find.byType(DayDetailPanel));
+    expect(panel.date, '2026-07-19');
+    expect(panel.focusEntryId, 'entry-2');
   });
 }

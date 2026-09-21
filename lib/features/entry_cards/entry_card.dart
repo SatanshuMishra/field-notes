@@ -5,6 +5,7 @@ import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/models/models.dart';
 import 'cards/note_body.dart';
+import 'cards/note_preview.dart';
 import 'cards/photo_strip.dart';
 import 'cards/video_body.dart';
 import 'cards/voice_body.dart';
@@ -20,6 +21,7 @@ const String entryDeleteLabel = 'Delete';
 const double _headerGap = 4;
 const double _actionGap = 8;
 const int _maxEpochMs = 8640000000000000;
+const int _previewPhotoCount = 1;
 
 const double _tiltOddDegrees = -0.5;
 const double _tiltEvenDegrees = 0.4;
@@ -39,6 +41,8 @@ class EntryCard extends StatelessWidget {
     this.videoPlayerFactory,
     this.onEdit,
     this.onDelete,
+    this.onTap,
+    this.preview = false,
     this.surface = Palette.cardWarm,
   });
 
@@ -50,11 +54,13 @@ class EntryCard extends StatelessWidget {
   final VideoSlots videoSlots;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final VoidCallback? onTap;
+  final bool preview;
   final Color surface;
 
   @override
   Widget build(BuildContext context) {
-    return StickerCard(
+    final Widget card = StickerCard(
       surface: surface,
       borderRadius: _cardBorderRadius,
       shadow: Shadows.cardDefault,
@@ -68,9 +74,22 @@ class EntryCard extends StatelessWidget {
           const SizedBox(height: _headerGap),
           _body(),
           if (photos.isNotEmpty)
-            InlinePhotoStrip(photos: photos, resolver: resolver),
+            InlinePhotoStrip(
+              photos: photos,
+              resolver: resolver,
+              maxVisible: preview ? _previewPhotoCount : null,
+            ),
         ],
       ),
+    );
+    final VoidCallback? tap = onTap;
+    if (tap == null) {
+      return card;
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: tap,
+      child: card,
     );
   }
 
@@ -133,7 +152,10 @@ class EntryCard extends StatelessWidget {
   Widget _body() {
     switch (entry.type) {
       case EntryType.text:
-        return NoteBody(text: entry.textContent ?? '');
+        final String text = entry.textContent ?? '';
+        return preview
+            ? NotePreview(text: text, onReadMore: onTap)
+            : NoteBody(text: text);
       case EntryType.voice:
         final EntryAudioPlayerFactory? factory = audioPlayerFactory;
         if (factory == null) {

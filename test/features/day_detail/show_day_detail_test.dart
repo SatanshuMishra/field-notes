@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/state/state.dart';
@@ -11,9 +12,10 @@ import 'package:field_notes/state/state.dart';
 import 'support/day_detail_harness.dart';
 
 class _DayTrigger extends StatelessWidget {
-  const _DayTrigger({required this.date, this.onError});
+  const _DayTrigger({required this.date, this.focusEntryId, this.onError});
 
   final String date;
+  final String? focusEntryId;
   final ValueChanged<Object>? onError;
 
   @override
@@ -22,7 +24,7 @@ class _DayTrigger extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () {
         try {
-          showDayDetail(context, date: date);
+          showDayDetail(context, date: date, focusEntryId: focusEntryId);
         } catch (error) {
           onError?.call(error);
         }
@@ -35,6 +37,7 @@ class _DayTrigger extends StatelessWidget {
 Widget _dayApp({
   required FakeJournalRepository repository,
   String date = '2026-07-19',
+  String? focusEntryId,
   ValueChanged<Object>? onError,
 }) {
   return ProviderScope(
@@ -44,7 +47,9 @@ Widget _dayApp({
         (Ref ref) => FakeMediaResolver(),
       ),
     ],
-    child: dayDetailHarness(_DayTrigger(date: date, onError: onError)),
+    child: dayDetailHarness(
+      _DayTrigger(date: date, focusEntryId: focusEntryId, onError: onError),
+    ),
   );
 }
 
@@ -125,5 +130,36 @@ void main() {
 
     expect(captured, isArgumentError);
     expect(find.text('Sunday, July 19'), findsNothing);
+  });
+
+  testWidgets('forwards focusEntryId to the panel',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      _dayApp(
+        repository: _repositoryWithOneNote(),
+        focusEntryId: 'entry-1',
+      ),
+    );
+
+    await tester.tap(find.text('open day'));
+    await tester.pumpAndSettle();
+
+    final DayDetailPanel panel =
+        tester.widget<DayDetailPanel>(find.byType(DayDetailPanel));
+    expect(panel.date, '2026-07-19');
+    expect(panel.focusEntryId, 'entry-1');
+  });
+
+  testWidgets('omitting focusEntryId leaves the panel unfocused',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(_dayApp(repository: _repositoryWithOneNote()));
+
+    await tester.tap(find.text('open day'));
+    await tester.pumpAndSettle();
+
+    final DayDetailPanel panel =
+        tester.widget<DayDetailPanel>(find.byType(DayDetailPanel));
+    expect(panel.focusEntryId, isNull);
+    expect(find.text('a good day'), findsOneWidget);
   });
 }

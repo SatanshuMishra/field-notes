@@ -44,5 +44,51 @@ void main() {
 
       expect(photos.first.id, 'b');
     });
+
+    testWidgets('maxVisible caps the strip at the lowest sortOrder photos',
+        (WidgetTester tester) async {
+      final List<EntryPhoto> photos = <EntryPhoto>[
+        photoOf(id: 'c', mediaId: 'm-c', sortOrder: 2),
+        photoOf(id: 'b', mediaId: 'm-b', sortOrder: 1),
+        photoOf(id: 'a', mediaId: 'm-a', sortOrder: 0),
+      ];
+
+      await tester.pumpWidget(
+        cardHarness(
+          InlinePhotoStrip(
+            photos: photos,
+            resolver: FakeMediaResolver(),
+            maxVisible: 1,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final Iterable<MediaImage> images =
+          tester.widgetList<MediaImage>(find.byType(MediaImage));
+      expect(images.length, 1);
+      expect(images.single.mediaId, 'm-a');
+    });
+
+    testWidgets('the default renders every photo in sortOrder',
+        (WidgetTester tester) async {
+      final List<EntryPhoto> photos = <EntryPhoto>[
+        photoOf(id: 'c', mediaId: 'm-c', sortOrder: 2),
+        photoOf(id: 'b', mediaId: 'm-b', sortOrder: 1),
+        photoOf(id: 'a', mediaId: 'm-a', sortOrder: 0),
+      ];
+
+      await tester.pumpWidget(
+        cardHarness(
+          InlinePhotoStrip(photos: photos, resolver: FakeMediaResolver()),
+        ),
+      );
+      await tester.pump();
+
+      final Iterable<MediaImage> images =
+          tester.widgetList<MediaImage>(find.byType(MediaImage));
+      expect(images.map((MediaImage i) => i.mediaId).toList(),
+          <String>['m-a', 'm-b', 'm-c']);
+    });
   });
 }
