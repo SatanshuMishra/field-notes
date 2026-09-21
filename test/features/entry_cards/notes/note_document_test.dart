@@ -6,9 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/notes.dart';
+import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/notes/note_block_widgets.dart';
 import 'package:field_notes/features/entry_cards/notes/note_document.dart';
 import 'package:field_notes/features/entry_cards/notes/note_inline_span.dart';
+import 'package:field_notes/features/notes/notes.dart';
+
+import '../../../domain/notes/note_fuzz_corpus.dart';
+import '../../notes/support/notes_harness.dart';
 
 const String _everyKind = '# Title\n\nbody **bold**\n\n- one\n- two\n\n'
     '> quote\n\n```\ncode\n```\n\n---\n\n![alt](photo/0123456789ab)';
@@ -98,7 +103,126 @@ String _copiedText(List<MethodCall> log) {
   return (call.arguments as Map<Object?, Object?>)['text']! as String;
 }
 
+List<String> _runShape(List<NoteBlockRun> runs) => <String>[
+      for (final NoteBlockRun run in runs)
+        run.wraps == null
+            ? run.block.runtimeType.toString()
+            : '${run.block.runtimeType}+${run.wraps.runtimeType}',
+    ];
+
 void main() {
+  group('noteBlockRuns', () {
+    final String a = photoLine(photoIdA);
+    final String b = photoLine(photoIdB);
+    final String c = photoLine(photoIdC);
+    final String source = 'intro\n\n$a\nbody\n\n# Head\n\n$b\n# Next\n\n'
+        '$c\n$a\ntail\n\n- item\n\n$b';
+
+    test('pairs a photo with the paragraph immediately after it, and only it',
+        () {
+      expect(_runShape(noteBlockRuns(parseNote(source), floats: true)), <String>[
+        'ParagraphBlock',
+        'PhotoBlock+ParagraphBlock',
+        'HeadingBlock',
+        'PhotoBlock',
+        'HeadingBlock',
+        'PhotoBlock',
+        'PhotoBlock+ParagraphBlock',
+        'BulletBlock',
+        'PhotoBlock',
+      ]);
+    });
+
+    test('pairs nothing when photos cannot float', () {
+      final List<NoteBlock> blocks = parseNote(source);
+      final List<NoteBlockRun> runs = noteBlockRuns(blocks, floats: false);
+
+      expect(runs.map((NoteBlockRun run) => run.wraps), everyElement(isNull));
+      expect(runs.map((NoteBlockRun run) => run.block), blocks);
+    });
+
+    test('keeps every block exactly once, in source order, over the corpus',
+        () {
+      for (final String note in noteFuzzCorpus) {
+        final List<NoteBlock> blocks = parseNote(note);
+        final List<NoteBlockRun> runs = noteBlockRuns(blocks, floats: true);
+        final List<NoteBlock> flattened = <NoteBlock>[
+          for (final NoteBlockRun run in runs) ...<NoteBlock>[
+            run.block,
+            ?run.wraps,
+          ],
+        ];
+        expect(flattened.length, blocks.length, reason: note);
+        for (int i = 0; i < blocks.length; i++) {
+          expect(identical(flattened[i], blocks[i]), isTrue, reason: note);
+        }
+        for (final NoteBlockRun run in runs) {
+          if (run.wraps != null) {
+            expect(run.block, isA<PhotoBlock>(), reason: note);
+            final int at = blocks.indexOf(run.block);
+            expect(identical(blocks[at + 1], run.wraps), isTrue, reason: note);
+          }
+        }
+        for (int i = 0; i + 1 < blocks.length; i++) {
+          if (blocks[i] is PhotoBlock && blocks[i + 1] is ParagraphBlock) {
+            expect(
+              runs.where((NoteBlockRun run) =>
+                  identical(run.block, blocks[i]) &&
+                  identical(run.wraps, blocks[i + 1])),
+              hasLength(1),
+              reason: note,
+            );
+          }
+        }
+      }
+    });
+
+    testWidgets('renders a paired photo as one PhotoWrapBlock under the one '
+        'SelectionArea', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1000, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final FakeNoteMediaResolver resolver = FakeNoteMediaResolver(
+        <String, ResolvedMedia>{
+          prefixOf(photoIdA): availablePhoto(photoIdA),
+          prefixOf(photoIdB): availablePhoto(photoIdB),
+        },
+      )..memoizeAll();
+
+      await tester.pumpWidget(
+        _harness(
+          NoteMediaScope(
+            resolver: resolver,
+            child: NoteDocument(
+              source: 'intro\n\n$a\nbody text\n\n# Head\n\n$b\n# Next',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final PhotoWrapBlock wrap =
+          tester.widget<PhotoWrapBlock>(find.byType(PhotoWrapBlock));
+      expect(wrap.photo.reference, prefixOf(photoIdA));
+      expect(wrap.paragraph.plainText, 'body text');
+      expect(find.byType(StackedPhoto), findsOneWidget);
+      expect(find.byType(SelectionArea), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SelectionArea),
+          matching: find.byType(PhotoWrapBlock),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('body text'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Head')).dy -
+            tester.getBottomLeft(find.byType(PhotoWrapBlock)).dy,
+        closeTo(noteHeadingGapEm * 16, 0.01),
+      );
+    });
+  });
+
   group('NoteDocument', () {
     testWidgets('renders one block view per block in source order', (
       WidgetTester tester,

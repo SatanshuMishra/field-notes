@@ -4,8 +4,52 @@ import 'package:flutter/rendering.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../domain/notes/notes.dart';
 import '../../notes/render/note_photo_block.dart';
+import '../../notes/render/photo_wrap_block.dart';
 import '../media/media_resolver.dart';
 import 'note_block_widgets.dart';
+
+@immutable
+final class NoteBlockRun {
+  const NoteBlockRun(this.block, {this.wraps});
+
+  final NoteBlock block;
+  final ParagraphBlock? wraps;
+
+  NoteBlock get last => wraps ?? block;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NoteBlockRun &&
+          identical(block, other.block) &&
+          identical(wraps, other.wraps);
+
+  @override
+  int get hashCode =>
+      Object.hash(identityHashCode(block), identityHashCode(wraps));
+
+  @override
+  String toString() => wraps == null
+      ? 'NoteBlockRun($block)'
+      : 'NoteBlockRun($block wrapping $wraps)';
+}
+
+List<NoteBlockRun> noteBlockRuns(
+  List<NoteBlock> blocks, {
+  required bool floats,
+}) {
+  ParagraphBlock? paragraphAfter(int index) => floats &&
+          blocks[index] is PhotoBlock &&
+          index + 1 < blocks.length &&
+          blocks[index + 1] is ParagraphBlock
+      ? blocks[index + 1] as ParagraphBlock
+      : null;
+  return <NoteBlockRun>[
+    for (int i = 0; i < blocks.length; i++)
+      if (i == 0 || paragraphAfter(i - 1) == null)
+        NoteBlockRun(blocks[i], wraps: paragraphAfter(i)),
+  ];
+}
 
 class NoteDocument extends StatelessWidget {
   const NoteDocument({
@@ -19,17 +63,22 @@ class NoteDocument extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<NoteBlock> blocks = parseNote(source);
     final double em = noteEmOf(context, style);
     final MediaResolver? resolver = NoteMediaScope.maybeResolverOf(context);
+    final List<NoteBlockRun> runs = noteBlockRuns(
+      parseNote(source),
+      floats: resolver != null,
+    );
     final Widget column = Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        for (int i = 0; i < blocks.length; i++) ...<Widget>[
+        for (int i = 0; i < runs.length; i++) ...<Widget>[
           if (i > 0)
-            SizedBox(height: noteBlockGapEm(blocks[i - 1], blocks[i]) * em),
-          _blockView(blocks[i], resolver),
+            SizedBox(
+              height: noteBlockGapEm(runs[i - 1].last, runs[i].block) * em,
+            ),
+          _runView(runs[i], resolver),
         ],
       ],
     );
@@ -39,8 +88,18 @@ class NoteDocument extends StatelessWidget {
     return SelectionArea(child: NoteSelectionScope(child: column));
   }
 
-  Widget _blockView(NoteBlock block, MediaResolver? resolver) {
+  Widget _runView(NoteBlockRun run, MediaResolver? resolver) {
+    final NoteBlock block = run.block;
+    final ParagraphBlock? wraps = run.wraps;
     if (block is PhotoBlock && resolver != null) {
+      if (wraps != null) {
+        return PhotoWrapBlock(
+          photo: block,
+          paragraph: wraps,
+          resolver: resolver,
+          style: style,
+        );
+      }
       return StackedPhoto(block: block, resolver: resolver, style: style);
     }
     return NoteBlockView(block: block, style: style);
