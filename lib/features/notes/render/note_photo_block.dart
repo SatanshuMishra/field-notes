@@ -22,6 +22,8 @@ const Key notePhotoUnavailableKey = ValueKey<String>('note-photo-unavailable');
 const double notePhotoFramePadding = 6;
 const double notePhotoCaptionGap = 8;
 const double notePhotoUnavailableHeight = 56;
+const TextStyle notePhotoCaptionStyle = TypographyTokens.captionSans;
+const TextAlign notePhotoCaptionAlign = TextAlign.center;
 const List<double> notePhotoTiltsDegrees = <double>[-1.2, -0.6, 0.5, 1.1];
 
 const double _shadowReach = 2;
@@ -119,16 +121,42 @@ class StackedPhoto extends StatelessWidget {
           aspect: photoAspectOf(blob?.width, blob?.height),
         );
         return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _photo(plan, media),
-              if (block.caption.isNotEmpty)
-                _caption(plan, labelsImage: media == null || media.isAvailable),
-            ],
+          child: NotePhotoFigure(
+            block: block,
+            resolver: resolver,
+            media: media,
+            plan: plan,
           ),
         );
       },
+    );
+  }
+}
+
+class NotePhotoFigure extends StatelessWidget {
+  const NotePhotoFigure({
+    super.key,
+    required this.block,
+    required this.resolver,
+    required this.media,
+    required this.plan,
+  });
+
+  final PhotoBlock block;
+  final MediaResolver resolver;
+  final ResolvedMedia? media;
+  final PhotoPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final ResolvedMedia? media = this.media;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        _photo(plan, media),
+        if (block.caption.isNotEmpty)
+          _caption(plan, labelsImage: media == null || media.isAvailable),
+      ],
     );
   }
 
@@ -201,8 +229,8 @@ class StackedPhoto extends StatelessWidget {
           excluding: labelsImage,
           child: Text(
             block.caption,
-            style: TypographyTokens.captionSans,
-            textAlign: TextAlign.center,
+            style: notePhotoCaptionStyle,
+            textAlign: notePhotoCaptionAlign,
           ),
         ),
       ),

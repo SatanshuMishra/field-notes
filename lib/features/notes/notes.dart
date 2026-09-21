@@ -5,5 +5,8 @@ export 'photos/photo_line_edits.dart';
 export 'photos/photo_options_sheet.dart';
 export 'photos/photo_placement_diagram.dart';
 export 'photos/photo_rail.dart';
+export 'render/float_split_cache.dart';
 export 'render/note_photo_block.dart';
 export 'render/note_photo_plan.dart';
+export 'render/note_render_budget.dart';
+export 'render/photo_wrap_block.dart';
