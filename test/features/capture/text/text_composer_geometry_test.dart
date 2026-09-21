@@ -5,6 +5,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 
 const Size _desktopSurface = Size(1280, 900);
@@ -73,7 +74,10 @@ void main() {
       final EditableText editor = tester.widget<EditableText>(
         find.byType(EditableText),
       );
-      expect(editor.style, TypographyTokens.noteBody);
+      expect(
+        editor.style,
+        unmergedFromTheMaterialTextTheme(TypographyTokens.noteBody),
+      );
       final Text hint = tester.widget<Text>(find.text('Start writing…'));
       expect(hint.style, TypographyTokens.noteBodyPlaceholder);
     });
