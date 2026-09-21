@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/widgets.dart';
@@ -19,6 +19,7 @@ const String todayFeedErrorMessage = "Couldn't load today's entries.";
 const String todayMediaErrorMessage = "Couldn't load your media library.";
 
 const double _feedCardHorizontalPadding = 30;
+const double _feedCardGap = 12;
 
 class _PendingMediaResolver implements MediaResolver {
   const _PendingMediaResolver();
@@ -43,51 +44,60 @@ class TodayEntryFeed extends ConsumerWidget {
     final AsyncValue<List<Entry>> entriesAsync =
         ref.watch(entriesForDateProvider(date));
     if (entriesAsync.hasError) {
-      return _message(todayFeedErrorMessage);
+      return _adapter(_message(todayFeedErrorMessage));
     }
     if (!entriesAsync.hasValue) {
-      return const SizedBox.shrink();
+      return _adapter(const SizedBox.shrink());
     }
     final List<Entry> entries = entriesAsync.requireValue;
     if (entries.isEmpty) {
-      return EmptyStatePlaceholder(
-        headline: todayFeedEmptyHeadline,
-        message: emptyMessage,
-        messageStyle: TypographyTokens.captionSans,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
-        borderColor: Palette.ink40,
-        borderRadius: Shapes.radiusLg,
+      return _adapter(
+        EmptyStatePlaceholder(
+          headline: todayFeedEmptyHeadline,
+          message: emptyMessage,
+          messageStyle: TypographyTokens.captionSans,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
+          borderColor: Palette.ink40,
+          borderRadius: Shapes.radiusLg,
+        ),
       );
     }
 
     final AsyncValue<MediaResolver> resolverAsync =
         ref.watch(todayMediaResolverProvider);
     if (resolverAsync.hasError) {
-      return _message(todayMediaErrorMessage);
+      return _adapter(_message(todayMediaErrorMessage));
     }
     final MediaResolver resolver =
         resolverAsync.value ?? const _PendingMediaResolver();
 
-    return NoteColumn(
-      horizontalInset: _feedCardHorizontalPadding,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          for (int index = 0; index < entries.length; index++) ...<Widget>[
-            if (index > 0) const SizedBox(height: 12),
-            FadeIn(
-              child: TodayEntryTile(
-                key: ValueKey<String>(entries[index].id),
-                entry: entries[index],
-                resolver: resolver,
-              ),
+    return SliverList.builder(
+      itemCount: entries.length,
+      findChildIndexCallback: (Key key) {
+        final int index = entries.indexWhere(
+          (Entry entry) => key == ValueKey<String>(entry.id),
+        );
+        return index < 0 ? null : index;
+      },
+      itemBuilder: (BuildContext context, int index) {
+        final Entry entry = entries[index];
+        return Padding(
+          key: ValueKey<String>(entry.id),
+          padding: EdgeInsets.only(top: index == 0 ? 0 : _feedCardGap),
+          child: NoteColumn(
+            horizontalInset: _feedCardHorizontalPadding,
+            child: TodayEntryTile(
+              entry: entry,
+              date: date,
+              resolver: resolver,
             ),
-          ],
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
+
+  static Widget _adapter(Widget child) => SliverToBoxAdapter(child: child);
 
   static Widget _message(String text) {
     return Text(
@@ -101,10 +111,12 @@ class TodayEntryTile extends ConsumerWidget {
   const TodayEntryTile({
     super.key,
     required this.entry,
+    required this.date,
     required this.resolver,
   });
 
   final Entry entry;
+  final String date;
   final MediaResolver resolver;
 
   @override
@@ -119,6 +131,8 @@ class TodayEntryTile extends ConsumerWidget {
       audioPlayerFactory: ref.watch(todayAudioPlayerFactoryProvider),
       videoPlayerFactory: ref.watch(todayVideoPlayerFactoryProvider),
       videoSlots: ref.watch(videoSlotsProvider),
+      preview: true,
+      onTap: () => showDayDetail(context, date: date, focusEntryId: entry.id),
     );
   }
 }

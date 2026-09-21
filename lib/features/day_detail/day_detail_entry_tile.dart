@@ -33,6 +33,7 @@ class DayDetailEntryTile extends ConsumerWidget {
       audioPlayerFactory: createJustAudioPlayer,
       videoPlayerFactory: createVideoPlayerEntryPlayer,
       videoSlots: ref.watch(videoSlotsProvider),
+      preview: false,
       onEdit: isEditableEntry(entry) ? onEdit : null,
       onDelete: onDelete,
     );

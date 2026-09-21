@@ -39,6 +39,7 @@ Finder _panelCard() => find
 Widget _panelApp(
   FakeJournalRepository repository, {
   Override? mediaResolver,
+  String? focusEntryId,
 }) {
   return ProviderScope(
     overrides: <Override>[
@@ -49,8 +50,19 @@ Widget _panelApp(
             (Ref ref) => FakeMediaResolver(),
           ),
     ],
-    child: dayDetailHarness(const DayDetailPanel(date: '2026-07-19')),
+    child: dayDetailHarness(
+      DayDetailPanel(date: '2026-07-19', focusEntryId: focusEntryId),
+    ),
   );
+}
+
+String _longNote(int index) {
+  final StringBuffer buffer = StringBuffer('journal note number $index');
+  int word = 0;
+  while (buffer.length < notePreviewCharLimit * 2) {
+    buffer.write(' word${word++}');
+  }
+  return buffer.toString();
 }
 
 void main() {
@@ -314,5 +326,79 @@ void main() {
     final double tileHeight =
         tester.getSize(find.byKey(const ValueKey<String>('entry-1'))).height;
     expect(listHeight, tileHeight);
+  });
+
+  testWidgets('a long note reads in full, never behind a preview fade',
+      (WidgetTester tester) async {
+    final String note = _longNote(0);
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        entryOf(type: EntryType.text, textContent: note),
+      ],
+    );
+
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(NoteBody), findsOneWidget);
+    expect(find.byType(NotePreview), findsNothing);
+    expect(find.text(noteReadMoreLabel), findsNothing);
+    expect(
+      tester.widget<NoteDocument>(find.byType(NoteDocument)).source,
+      note,
+    );
+  });
+
+  testWidgets('opening with focusEntryId scrolls that entry into view',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    const String focused = 'entry-30';
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        for (int i = 0; i < 40; i++)
+          entryOf(
+            id: 'entry-$i',
+            type: EntryType.text,
+            textContent: 'journal note number $i for the day',
+          ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      _panelApp(repository, focusEntryId: focused),
+    );
+    await tester.pumpAndSettle();
+
+    final Finder tile = find.byKey(const ValueKey<String>(focused));
+    expect(tile, findsOneWidget);
+    final Rect tileRect = tester.getRect(tile);
+    final Rect listRect = tester.getRect(find.byType(ListView));
+    expect(tileRect.top, greaterThanOrEqualTo(listRect.top - 1));
+    expect(tileRect.bottom, lessThanOrEqualTo(listRect.bottom + 1));
+  });
+
+  testWidgets('opening without focusEntryId stays at the top of the day',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        for (int i = 0; i < 40; i++)
+          entryOf(
+            id: 'entry-$i',
+            type: EntryType.text,
+            textContent: 'journal note number $i for the day',
+          ),
+      ],
+    );
+
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const ValueKey<String>('entry-0')), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('entry-30')), findsNothing);
   });
 }

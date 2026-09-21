@@ -34,11 +34,13 @@ Widget _tileApp({
     child: dayDetailHarness(
       SizedBox(
         width: 400,
-        child: DayDetailEntryTile(
-          entry: entry,
-          resolver: resolver ?? FakeMediaResolver(),
-          onEdit: onEdit,
-          onDelete: onDelete,
+        child: SingleChildScrollView(
+          child: DayDetailEntryTile(
+            entry: entry,
+            resolver: resolver ?? FakeMediaResolver(),
+            onEdit: onEdit,
+            onDelete: onDelete,
+          ),
         ),
       ),
     ),
@@ -184,5 +186,37 @@ void main() {
     expect(find.byType(VideoBody), findsOneWidget);
     expect(find.byType(CorruptMediaPlaceholder), findsNothing);
     expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+  });
+
+  testWidgets('hands EntryCard preview:false so the note renders in full',
+      (WidgetTester tester) async {
+    final StringBuffer buffer = StringBuffer();
+    int word = 0;
+    while (buffer.length < notePreviewCharLimit * 2) {
+      if (buffer.isNotEmpty) {
+        buffer.write(' ');
+      }
+      buffer.write('word${word++}');
+    }
+    final String note = buffer.toString();
+    final Entry entry = entryOf(type: EntryType.text, textContent: note);
+
+    await tester.pumpWidget(
+      _tileApp(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        entry: entry,
+      ),
+    );
+    await tester.pump();
+
+    final EntryCard card = tester.widget<EntryCard>(find.byType(EntryCard));
+    expect(card.preview, isFalse);
+    expect(find.byType(NoteBody), findsOneWidget);
+    expect(find.byType(NotePreview), findsNothing);
+    expect(find.text(noteReadMoreLabel), findsNothing);
+    expect(
+      tester.widget<NoteDocument>(find.byType(NoteDocument)).source,
+      note,
+    );
   });
 }

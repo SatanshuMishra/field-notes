@@ -1,4 +1,5 @@
 export 'cards/note_body.dart';
+export 'cards/note_preview.dart';
 export 'cards/photo_strip.dart';
 export 'cards/video_body.dart';
 export 'cards/voice_body.dart';

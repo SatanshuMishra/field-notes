@@ -4,6 +4,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/mood/mood.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,6 +18,11 @@ import 'today_right_rail.dart';
 const EdgeInsets _feedEyebrowMargin = EdgeInsets.only(top: 18, bottom: 12);
 
 const double _railSeamThickness = 1.0;
+
+const double todayFeedCacheExtent = 600;
+
+const EdgeInsets _stackedPagePadding = EdgeInsets.all(20);
+const EdgeInsets _railPagePadding = EdgeInsets.all(24);
 
 String todayFeedEyebrowLabel(int count) =>
     'today · $count log${count == 1 ? '' : 's'}';
@@ -55,32 +61,18 @@ class TodayScreen extends ConsumerWidget {
     final TodayLayout resolved =
         layout ?? resolveTodayLayout(defaultTargetPlatform);
 
-    final Widget main = Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        TodayHeader(greeting: greetingFor(now), longDate: headerDateLabel(now)),
-        const SizedBox(height: 16),
-        MoodBannerForDate(date: date),
-        TodayFeedEyebrow(date: date),
-        TodayEntryFeed(date: date),
-      ],
-    );
-
     switch (resolved) {
       case TodayLayout.stacked:
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: main,
-        );
+        return _scrollView(now: now, date: date, padding: _stackedPagePadding);
       case TodayLayout.withRail:
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: main,
+              child: _scrollView(
+                now: now,
+                date: date,
+                padding: _railPagePadding,
               ),
             ),
             const DashedDivider(
@@ -95,5 +87,34 @@ class TodayScreen extends ConsumerWidget {
           ],
         );
     }
+  }
+
+  Widget _scrollView({
+    required DateTime now,
+    required String date,
+    required EdgeInsets padding,
+  }) {
+    return CustomScrollView(
+      scrollCacheExtent: const ScrollCacheExtent.pixels(todayFeedCacheExtent),
+      slivers: <Widget>[
+        SliverPadding(
+          padding: padding,
+          sliver: SliverMainAxisGroup(
+            slivers: <Widget>[
+              SliverToBoxAdapter(
+                child: TodayHeader(
+                  greeting: greetingFor(now),
+                  longDate: headerDateLabel(now),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+              SliverToBoxAdapter(child: MoodBannerForDate(date: date)),
+              SliverToBoxAdapter(child: TodayFeedEyebrow(date: date)),
+              TodayEntryFeed(date: date),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

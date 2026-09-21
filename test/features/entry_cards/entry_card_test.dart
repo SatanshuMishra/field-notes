@@ -17,6 +17,27 @@ Finder cardAction(String label) => find.byWidgetPredicate(
           widget is IconStickerButton && widget.semanticLabel == label,
     );
 
+String longNote() {
+  final StringBuffer buffer = StringBuffer();
+  int word = 0;
+  while (buffer.length < notePreviewCharLimit * 2) {
+    if (buffer.isNotEmpty) {
+      buffer.write(' ');
+    }
+    buffer.write('word${word++}');
+  }
+  return buffer.toString();
+}
+
+Widget scrollingCardHarness(Widget child, {double width = 360}) =>
+    cardHarness(SingleChildScrollView(child: child), width: width);
+
+List<EntryPhoto> threePhotos() => <EntryPhoto>[
+      photoOf(id: 'c', mediaId: 'm-c', sortOrder: 2),
+      photoOf(id: 'b', mediaId: 'm-b', sortOrder: 1),
+      photoOf(id: 'a', mediaId: 'm-a', sortOrder: 0),
+    ];
+
 void main() {
   group('EntryCard', () {
     testWidgets('renders a note entry as a NoteBody inside a StickerCard',
@@ -170,6 +191,113 @@ void main() {
 
       expect(find.byType(VoiceBody), findsNothing);
       expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
+    });
+
+    testWidgets('preview:true bounds the note and offers Read more',
+        (WidgetTester tester) async {
+      final String note = longNote();
+
+      await tester.pumpWidget(
+        scrollingCardHarness(
+          EntryCard(
+            entry: entryOf(type: EntryType.text, textContent: note),
+            resolver: FakeMediaResolver(),
+            photos: threePhotos(),
+            videoSlots: const UnlimitedVideoSlots(),
+            preview: true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(NotePreview), findsOneWidget);
+      expect(find.byType(NoteBody), findsNothing);
+      expect(find.text(noteReadMoreLabel), findsOneWidget);
+      expect(find.byType(ShaderMask), findsOneWidget);
+
+      final NoteDocument document =
+          tester.widget<NoteDocument>(find.byType(NoteDocument));
+      expect(document.source.length, lessThanOrEqualTo(notePreviewCharLimit));
+
+      final Iterable<MediaImage> images =
+          tester.widgetList<MediaImage>(find.byType(MediaImage));
+      expect(images.length, 1);
+      expect(images.single.mediaId, 'm-a');
+    });
+
+    testWidgets('preview:false renders the whole note and every photo',
+        (WidgetTester tester) async {
+      final String note = longNote();
+
+      await tester.pumpWidget(
+        scrollingCardHarness(
+          EntryCard(
+            entry: entryOf(type: EntryType.text, textContent: note),
+            resolver: FakeMediaResolver(),
+            photos: threePhotos(),
+            videoSlots: const UnlimitedVideoSlots(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(NoteBody), findsOneWidget);
+      expect(find.byType(NotePreview), findsNothing);
+      expect(find.text(noteReadMoreLabel), findsNothing);
+
+      final NoteDocument document =
+          tester.widget<NoteDocument>(find.byType(NoteDocument));
+      expect(document.source, note);
+
+      final Iterable<MediaImage> images =
+          tester.widgetList<MediaImage>(find.byType(MediaImage));
+      expect(images.map((MediaImage i) => i.mediaId).toList(),
+          <String>['m-a', 'm-b', 'm-c']);
+    });
+
+    testWidgets('onTap fires when the card body is tapped',
+        (WidgetTester tester) async {
+      int taps = 0;
+
+      await tester.pumpWidget(
+        cardHarness(
+          EntryCard(
+            entry: entryOf(type: EntryType.text, textContent: 'a quiet day'),
+            resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
+            preview: true,
+            onTap: () => taps++,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tapAt(tester.getCenter(find.text('a quiet day')));
+      await tester.pump();
+
+      expect(taps, 1);
+    });
+
+    testWidgets('a card without onTap stays untappable',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(
+        cardHarness(
+          EntryCard(
+            entry: entryOf(type: EntryType.text, textContent: 'a quiet day'),
+            resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.ancestor(
+          of: find.byType(StickerCard),
+          matching: find.byType(GestureDetector),
+        ),
+        findsNothing,
+      );
     });
   });
 }
