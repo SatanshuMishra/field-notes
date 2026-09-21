@@ -1,4 +1,4 @@
-Status: accepted
+Status: superseded
 Date: 2026-07-25
 
 ## Context
