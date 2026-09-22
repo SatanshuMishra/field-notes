@@ -74,9 +74,12 @@ draft the feature exists to recover. The session key made that recovery impossib
   the edit route had the same hole before this wave.
 - `IntegrationSandbox` redirects the drafts folder into its temporary root, so an integration test can
   never read or delete the real journal's drafts.
-- A close waits, for at most two seconds, for the stored draft to finish loading before it decides
-  whether the composer is clean. Without this, closing in the instant before a crash-left draft loaded
-  counted as a clean close and deleted the draft unseen.
+- A close requested while the stored draft is still loading counts as dirty, so it asks "Discard
+  this note?" at once and the draft finishes loading behind the question. Without this, closing in the
+  instant before a crash-left draft loaded counted as a clean close and deleted the draft unseen. An
+  earlier version waited for the load before deciding; review showed a Save tapped during that wait
+  closed the confirm instead of the composer, so the close never waits.
+- A draft that finishes loading after the composer was discarded is not applied to the editor.
 
 ### W2 — A backdrop tap routes through the close request. Resolves `u3`'s internal inconsistency.
 

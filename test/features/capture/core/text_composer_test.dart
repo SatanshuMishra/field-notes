@@ -272,6 +272,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pump();
+
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+
     await tester.pumpAndSettle();
 
     expect(find.text(composerDiscardTitle), findsOneWidget);
@@ -286,6 +290,43 @@ void main() {
       'left by a crash',
     );
     expect(find.byType(DraftRestoredChip), findsOneWidget);
+  });
+
+  testWidgets(
+      'tapping Save while the discard confirm is up saves nothing and keeps '
+      'the note', (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+      readDelay: const Duration(milliseconds: 300),
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pump();
+    await tester.tap(find.text('Save'), warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(writer.saves, isEmpty);
+    expect(result, 'unset');
+    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'left by a crash',
+    );
+    expect(drafts.drafts, <String, String>{'new-2026-07-19': 'left by a crash'});
   });
 
   testWidgets(

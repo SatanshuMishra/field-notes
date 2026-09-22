@@ -178,10 +178,9 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
       listenable: _draft,
       builder: (BuildContext context, Widget? child) {
         return ComposerGuard(
-          isDirty: () => _draft.isDirty,
+          isDirty: () => _draft.isDirty || _draft.isRestoring,
           locked: _isSaving,
           onDiscard: _draft.discard,
-          beforeClose: _draft.restoreSettled,
           builder: (BuildContext context, VoidCallback requestClose) {
             return TextComposerSheet(
               controller: _controller,

@@ -5,7 +5,6 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/domain/services/draft_store.dart';
 
 const Duration draftIdleDebounce = Duration(milliseconds: 400);
-const Duration draftRestoreWait = Duration(seconds: 2);
 
 class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   NoteDraftController({
@@ -25,12 +24,12 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   TextEditingController? _text;
   Timer? _debounce;
   Future<void> _queue = Future<void>.value();
-  Future<String?>? _restoring;
   String? _lastPersisted;
   String? _restoredSource;
   bool _restoredDraft = false;
   bool _applying = false;
   bool _sealed = false;
+  bool _restorePending = false;
   bool _disposed = false;
 
   bool get restoredDraft => _restoredDraft;
@@ -41,6 +40,8 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
 
   bool get isDirty => currentSource != initialSource;
 
+  bool get isRestoring => _restorePending;
+
   void attach(TextEditingController controller) {
     _text?.removeListener(_onChanged);
     _text = controller;
@@ -48,10 +49,13 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  Future<String?> restore() => _restoring ??= _restore();
-
-  Future<void> restoreSettled() async {
-    await _restoring?.timeout(draftRestoreWait, onTimeout: () => null);
+  Future<String?> restore() async {
+    _restorePending = true;
+    try {
+      return await _restore();
+    } finally {
+      _restorePending = false;
+    }
   }
 
   Future<String?> _restore() async {

@@ -238,6 +238,27 @@ void main() {
     expect(store.writes, hasLength(1));
   });
 
+  testWidgets('a draft that finishes loading after a discard is not applied',
+      (WidgetTester tester) async {
+    store = FakeDraftStore(
+      drafts: <String, String>{_key: 'left by a crash'},
+      readDelay: const Duration(milliseconds: 150),
+    );
+    attach();
+
+    final Future<String?> restoring = controller.restore();
+    expect(controller.isRestoring, isTrue);
+    final Future<void> discarding = controller.discard();
+    await tester.pump(const Duration(milliseconds: 200));
+    await discarding;
+
+    expect(await restoring, isNull);
+    expect(controller.isRestoring, isFalse);
+    expect(text.text, isEmpty);
+    expect(controller.restoredDraft, isFalse);
+    expect(store.drafts, isEmpty);
+  });
+
   testWidgets('discarding a restored draft keeps drafting what comes next',
       (WidgetTester tester) async {
     store.drafts[_key] = 'half typed';

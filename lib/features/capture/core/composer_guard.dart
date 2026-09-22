@@ -29,7 +29,6 @@ class ComposerGuard extends StatefulWidget {
     required this.builder,
     this.popResult,
     this.locked = false,
-    this.beforeClose,
   });
 
   final ValueGetter<bool> isDirty;
@@ -37,7 +36,6 @@ class ComposerGuard extends StatefulWidget {
   final ComposerGuardBuilder builder;
   final Object? popResult;
   final bool locked;
-  final Future<void> Function()? beforeClose;
 
   @override
   State<ComposerGuard> createState() => _ComposerGuardState();
@@ -50,28 +48,21 @@ class _ComposerGuardState extends State<ComposerGuard> {
     if (widget.locked || _confirming) {
       return;
     }
-    _confirming = true;
-    try {
-      await widget.beforeClose?.call();
-      if (!mounted) {
-        return;
-      }
-      if (!widget.isDirty()) {
-        await _discardAndPop();
-        return;
-      }
-      final bool? discard = await showDialog<bool>(
-        context: context,
-        barrierDismissible: true,
-        builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
-      );
-      if (discard != true || !mounted) {
-        return;
-      }
+    if (!widget.isDirty()) {
       await _discardAndPop();
-    } finally {
-      _confirming = false;
+      return;
     }
+    _confirming = true;
+    final bool? discard = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
+    );
+    _confirming = false;
+    if (discard != true || !mounted) {
+      return;
+    }
+    await _discardAndPop();
   }
 
   Future<void> _discardAndPop() async {
