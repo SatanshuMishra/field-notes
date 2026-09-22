@@ -9,6 +9,8 @@ import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 import 'package:field_notes/features/notes/photos/photo_line_edits.dart';
 
+import 'editor/format_bar.dart';
+
 const Key composerAddPhotoKey = ValueKey<String>('composer-add-photo');
 
 const Key composerHintsKey = ValueKey<String>('composer-hints');
@@ -45,12 +47,14 @@ class ComposerFooter extends StatefulWidget {
     required this.onAddPhoto,
     this.editorFocusNode,
     this.showHints = true,
+    this.compact = false,
   });
 
   final TextEditingController controller;
   final PhotoImporter onAddPhoto;
   final FocusNode? editorFocusNode;
   final bool showHints;
+  final bool compact;
 
   @override
   State<ComposerFooter> createState() => _ComposerFooterState();
@@ -112,6 +116,11 @@ class _ComposerFooterState extends State<ComposerFooter> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.compact) {
+      return TextFieldTapRegion(
+        child: SizedBox(height: formatBarHeight, child: _addButton()),
+      );
+    }
     return TextFieldTapRegion(
       child: SizedBox(
         height: composerFooterHeight,
@@ -159,7 +168,8 @@ class _ComposerFooterState extends State<ComposerFooter> {
           onTap: enabled ? () => unawaited(_add()) : null,
           child: ExcludeSemantics(
             child: SizedBox(
-              height: composerFooterHeight,
+              height:
+                  widget.compact ? formatBarHeight : composerFooterHeight,
               child: Center(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
