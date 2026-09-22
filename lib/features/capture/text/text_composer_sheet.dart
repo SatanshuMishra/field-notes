@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
@@ -18,7 +17,6 @@ const double composerRailMinHeight = 72;
 
 const String emptySaveGuardMessage = 'Write something first';
 
-const Duration composerToastLifetime = Duration(milliseconds: 1900);
 
 const double _headerVerticalPadding = 14;
 const double _headerHorizontalPadding = 18;
@@ -112,8 +110,6 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   late final ScrollController _scrollController;
   late final UndoHistoryController _undoController;
   final GlobalKey _railKey = GlobalKey();
-  String? _guardMessage;
-  Timer? _guardTimer;
 
   @override
   void initState() {
@@ -132,7 +128,6 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   @override
   void dispose() {
-    _guardTimer?.cancel();
     if (_ownsController) {
       _controller.dispose();
     }
@@ -348,19 +343,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   void _showGuard() {
-    _guardTimer?.cancel();
-    setState(() => _guardMessage = emptySaveGuardMessage);
-    _guardTimer = Timer(composerToastLifetime, () {
-      if (!mounted) {
-        return;
-      }
-      setState(() => _guardMessage = null);
-    });
+    showTransientToast(context, emptySaveGuardMessage);
   }
 
   Widget _body({Widget? formatBar, Widget? rail}) {
     final String? errorMessage = widget.errorMessage;
-    final String? guardMessage = _guardMessage;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -399,10 +386,6 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                   style: TypographyTokens.captionSans
                       .copyWith(color: Palette.danger),
                 ),
-              ],
-              if (guardMessage != null) ...<Widget>[
-                const SizedBox(height: _errorGap),
-                Toast(message: guardMessage),
               ],
             ],
           ),

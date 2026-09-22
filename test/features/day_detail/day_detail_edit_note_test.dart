@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/data/database/app_database.dart' as db;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
@@ -296,7 +297,7 @@ void main() {
 
     expect(repository.noteSaves, isEmpty);
     expect(find.text(emptySaveGuardMessage), findsOneWidget);
-    await tester.pump(composerToastLifetime);
+    await tester.pump(kToastLifetime);
   });
 
   testWidgets('the close X on a clean editor shuts it without writing',

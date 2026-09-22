@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
@@ -93,6 +94,41 @@ void main() {
     ]);
     expect(player.played, <String>['sounds/pencil.wav']);
     expect(find.text('Mood planted · Peony'), findsOneWidget);
+  });
+
+  testWidgets('the planted toast floats over the app, not under the banner',
+      (WidgetTester tester) async {
+    final FakeJournalRepository fake =
+        FakeJournalRepository(initialDay: testDay(mood: null));
+    final FakeSoundPlayer player = FakeSoundPlayer();
+    await _pumpBanner(tester, repository: fake, player: player);
+
+    await tester.tap(find.text('How are you feeling today?'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Happy'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mood planted · Peony'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(MoodBannerForDate),
+        matching: find.text('Mood planted · Peony'),
+      ),
+      findsNothing,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(MoodBannerForDate),
+        matching: find.byType(Toast),
+      ),
+      findsNothing,
+    );
+    expect(tester.getRect(find.byType(Toast)).bottom, 600 - 84);
+
+    await tester.pump(kToastLifetime);
+    await tester.pump();
+
+    expect(find.text('Mood planted · Peony'), findsNothing);
   });
 
   testWidgets('a day with no bloom is planted without a confirm',

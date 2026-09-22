@@ -155,6 +155,103 @@ void main() {
       await tester.pump(kToastLifetime);
     });
 
+    Future<void> showOn(
+      WidgetTester tester, {
+      required Size surface,
+      TargetPlatform platform = TargetPlatform.android,
+    }) async {
+      tester.view.physicalSize = surface;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: ThemeData(platform: platform),
+          home: Builder(
+            builder: (BuildContext context) => GestureDetector(
+              onTap: () => showTransientToast(context, 'Mood planted · Rose'),
+              child: const Text('show'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('show'));
+      await tester.pumpAndSettle();
+    }
+
+    double messageSize(WidgetTester tester) => tester
+        .widget<Text>(find.text('Mood planted · Rose'))
+        .style!
+        .fontSize!;
+
+    double glyphSize(WidgetTester tester) => tester
+        .widget<IconStickerGlyphIcon>(find.byType(IconStickerGlyphIcon))
+        .size;
+
+    testWidgets('on macOS it floats 22 above the window bottom, desktop size',
+        (WidgetTester tester) async {
+      await showOn(
+        tester,
+        surface: const Size(1280, 800),
+        platform: TargetPlatform.macOS,
+      );
+
+      final Rect toast = tester.getRect(find.byType(Toast));
+      expect(toast.bottom, 800 - 22);
+      expect(toast.center.dx, 640);
+      expect(messageSize(tester), 13);
+      expect(glyphSize(tester), 15);
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('on a phone it floats 84 above the screen bottom, phone size',
+        (WidgetTester tester) async {
+      await showOn(tester, surface: const Size(390, 844));
+
+      final Rect toast = tester.getRect(find.byType(Toast));
+      expect(toast.bottom, 844 - 84);
+      expect(toast.center.dx, 195);
+      expect(messageSize(tester), 11);
+      expect(glyphSize(tester), 13);
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('its message carries no fallback text decoration',
+        (WidgetTester tester) async {
+      await showOn(
+        tester,
+        surface: const Size(1280, 800),
+        platform: TargetPlatform.macOS,
+      );
+
+      final TextStyle drawn = tester
+          .widget<RichText>(
+            find.descendant(
+              of: find.byType(Toast),
+              matching: find.byType(RichText),
+            ),
+          )
+          .text
+          .style!;
+      expect(drawn.decoration, anyOf(isNull, TextDecoration.none));
+      expect(drawn.fontFamily, TypographyTokens.toastSans.fontFamily);
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('once risen it stays up for its whole lifetime, then goes',
+        (WidgetTester tester) async {
+      await showOn(tester, surface: const Size(390, 844));
+
+      expect(find.text('Mood planted · Rose'), findsOneWidget);
+
+      await tester.pump(kToastLifetime);
+      await tester.pump();
+
+      expect(find.text('Mood planted · Rose'), findsNothing);
+    });
+
     testWidgets('an error toast carries a close glyph instead of a check',
         (WidgetTester tester) async {
       await showOnLandscapePhone(tester, glyph: IconStickerGlyph.close);

@@ -243,6 +243,12 @@ abstract final class TypographyTokens {
     fontWeight: FontWeight.w600,
   );
 
+  static const TextStyle toastSans = TextStyle(
+    fontFamily: sans,
+    fontSize: 13,
+    fontWeight: FontWeight.w600,
+  );
+
   static const TextStyle caption11Sans = TextStyle(
     fontFamily: sans,
     fontSize: 11,
