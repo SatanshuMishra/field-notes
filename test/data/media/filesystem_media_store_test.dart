@@ -230,6 +230,27 @@ void main() {
     await srcDir.delete(recursive: true);
   });
 
+  test('putFile stores the photo dimensions it is given', () async {
+    final srcDir = await Directory.systemTemp.createTemp('fn_src');
+    final source = File(p.join(srcDir.path, 'pick.jpg'));
+    await source.writeAsBytes(List<int>.generate(64, (i) => i));
+
+    final blob = await store.putFile(
+      source: source,
+      mime: 'image/jpeg',
+      kind: MediaKind.photo,
+      width: 1536,
+      height: 2048,
+    );
+
+    final stored = await store.blobById(blob.id);
+    expect(stored, isNotNull);
+    expect(stored!.width, 1536);
+    expect(stored.height, 2048);
+
+    await srcDir.delete(recursive: true);
+  });
+
   test('absolutePath falls back to a legacy file the row still points past',
       () async {
     final bytes = [7, 7, 7, 7];

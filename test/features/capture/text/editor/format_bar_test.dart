@@ -214,6 +214,64 @@ void main() {
     expect(find.byKey(const ValueKey<String>('trailing-slot')), findsOneWidget);
   });
 
+  testWidgets(
+      'a bar narrower than its toggles scrolls them while Undo and the '
+      'trailing slot stay put', (WidgetTester tester) async {
+    final _Harness harness = _Harness();
+    addTearDown(harness.dispose);
+    const Key trailingKey = ValueKey<String>('trailing-slot');
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 160,
+              child: FormatBar(
+                controller: harness.controller,
+                undoController: harness.undoController,
+                trailing: const SizedBox.square(
+                  dimension: 30,
+                  key: trailingKey,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(tester.takeException(), isNull);
+    final Rect bar = tester.getRect(find.byType(FormatBar));
+    final Rect undo = tester.getRect(find.byKey(formatUndoKey));
+    final Rect trailing = tester.getRect(find.byKey(trailingKey));
+    expect(bar.intersect(undo), undo);
+    expect(bar.intersect(trailing), trailing);
+    expect(
+      tester.getRect(find.byKey(formatLinkKey)).left,
+      greaterThan(trailing.left),
+    );
+
+    harness.controller.value = const TextEditingValue(
+      text: 'hello world',
+      selection: TextSelection(baseOffset: 0, extentOffset: 5),
+    );
+    await tester.drag(find.byKey(formatBoldKey), const Offset(-300, 0));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getRect(find.byKey(formatLinkKey)).right,
+      lessThanOrEqualTo(trailing.left),
+    );
+    expect(tester.getRect(find.byKey(formatUndoKey)), undo);
+    expect(tester.getRect(find.byKey(trailingKey)), trailing);
+
+    await tester.tap(find.byKey(formatLinkKey));
+    await tester.pump();
+    expect(harness.controller.text, '[hello]() world');
+  });
+
   group('where the composer mounts the bar', () {
     Future<void> pumpComposer(
       WidgetTester tester, {

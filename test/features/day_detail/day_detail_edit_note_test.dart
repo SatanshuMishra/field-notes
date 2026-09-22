@@ -178,6 +178,38 @@ void main() {
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day, half typed'});
   });
 
+  testWidgets('Save tapped while the stored draft is still loading saves nothing',
+      (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[entry],
+    );
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'entry-1': 'a better day, half typed'},
+      readDelay: const Duration(milliseconds: 600),
+    );
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: repository,
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? _) {},
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.enterText(find.byType(EditableText), 'a better day');
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    expect(repository.noteSaves, isEmpty);
+    expect(find.text(editNoteTitle), findsOneWidget);
+    expect(drafts.drafts, <String, String>{'entry-1': 'a better day, half typed'});
+  });
+
   testWidgets(
       'a saved edit leaves no draft when the app goes inactive during the '
       'close', (WidgetTester tester) async {

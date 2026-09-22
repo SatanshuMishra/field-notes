@@ -787,6 +787,24 @@ void main() {
       expect(media.blobs.single.height, 480);
     });
 
+    test('stores a file pick with its dimensions', () async {
+      final FakeNoteMediaStore media =
+          FakeNoteMediaStore(assignIds: <String>[photoIdA]);
+
+      final String reference = await NotePhotoStore(media).importPhoto(
+        CaptureFile(
+          file: File('unused.jpg'),
+          mime: 'image/jpeg',
+          width: 1536,
+          height: 2048,
+        ),
+      );
+
+      expect(reference, prefixOf(photoIdA));
+      expect(media.blobs.single.width, 1536);
+      expect(media.blobs.single.height, 2048);
+    });
+
     test('extends the reference when a stored neighbour shares its prefix',
         () async {
       final String twin = '${prefixOf(photoIdA)}${'f' * 52}';
