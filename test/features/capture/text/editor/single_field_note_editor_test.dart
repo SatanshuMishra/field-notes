@@ -70,7 +70,7 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.byType(EditableText), findsOneWidget);
-    expect(find.byType(SingleFieldNoteEditor), findsOneWidget);
+    expect(find.byType(InPlacePhotoEditor), findsOneWidget);
   });
 
   testWidgets('the selection overlay survives: handles and a context menu',
@@ -170,7 +170,10 @@ void main() {
 
     final TextField field = tester.widget<TextField>(find.byType(TextField));
     expect(field.maxLength, isNull);
-    expect(field.inputFormatters ?? const <TextInputFormatter>[], isEmpty);
+    expect(
+      field.inputFormatters ?? const <TextInputFormatter>[],
+      isNot(contains(isA<LengthLimitingTextInputFormatter>())),
+    );
 
     final String long = 'a long note line.\n' * 500;
     await tester.enterText(find.byType(EditableText), long);

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
 
+import 'in_place_photo_editor.dart';
 import 'markdown_style_controller.dart';
-import 'single_field_note_editor.dart';
 
 const SpellCheckConfiguration?
     spellCheckDisabledBecauseItShortCircuitsTheStyledSpan = null;
@@ -40,4 +40,4 @@ abstract class NoteEditor extends StatelessWidget {
 }
 
 NoteEditor noteEditorFor(NoteEditorConfig config) =>
-    SingleFieldNoteEditor(config: config);
+    InPlacePhotoEditor(config: config);

@@ -1,7 +1,10 @@
+import 'dart:ui' show BoxHeightStyle;
+
 import 'package:flutter/cupertino.dart'
     show cupertinoDesktopTextSelectionHandleControls,
          cupertinoTextSelectionHandleControls;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'note_editor.dart';
 
@@ -28,34 +31,47 @@ class SingleFieldNoteEditor extends NoteEditor {
             },
           ),
         ),
-        Material(
-          type: MaterialType.transparency,
-          child: TextField(
-            controller: config.controller,
-            focusNode: config.focusNode,
-            undoController: config.undoController,
-            scrollController: config.scrollController,
-            style: unmergedFromTheMaterialTextTheme(config.style),
-            cursorColor: config.cursorColor,
-            decoration: null,
-            keyboardType: TextInputType.multiline,
-            textCapitalization: TextCapitalization.sentences,
-            minLines: null,
-            maxLines: null,
-            expands: true,
-            selectionControls: _handlesFor(Theme.of(context).platform),
-            contextMenuBuilder: _contextMenu,
-            magnifierConfiguration:
-                TextMagnifier.adaptiveMagnifierConfiguration,
-            spellCheckConfiguration:
-                spellCheckDisabledBecauseItShortCircuitsTheStyledSpan,
-            stylusHandwritingEnabled:
-                stylusHandwritingDisabledBecauseItShortCircuitsTheStyledSpan,
-          ),
-        ),
+        noteTextField(context, config),
       ],
     );
   }
+}
+
+Widget noteTextField(
+  BuildContext context,
+  NoteEditorConfig config, {
+  Color? cursorColor,
+  List<TextInputFormatter>? inputFormatters,
+  StrutStyle? strutStyle,
+  BoxHeightStyle? selectionHeightStyle,
+}) {
+  return Material(
+    type: MaterialType.transparency,
+    child: TextField(
+      controller: config.controller,
+      focusNode: config.focusNode,
+      undoController: config.undoController,
+      scrollController: config.scrollController,
+      style: unmergedFromTheMaterialTextTheme(config.style),
+      strutStyle: strutStyle,
+      selectionHeightStyle: selectionHeightStyle,
+      cursorColor: cursorColor ?? config.cursorColor,
+      inputFormatters: inputFormatters,
+      decoration: null,
+      keyboardType: TextInputType.multiline,
+      textCapitalization: TextCapitalization.sentences,
+      minLines: null,
+      maxLines: null,
+      expands: true,
+      selectionControls: _handlesFor(Theme.of(context).platform),
+      contextMenuBuilder: _contextMenu,
+      magnifierConfiguration: TextMagnifier.adaptiveMagnifierConfiguration,
+      spellCheckConfiguration:
+          spellCheckDisabledBecauseItShortCircuitsTheStyledSpan,
+      stylusHandwritingEnabled:
+          stylusHandwritingDisabledBecauseItShortCircuitsTheStyledSpan,
+    ),
+  );
 }
 
 Widget _contextMenu(BuildContext context, EditableTextState editableTextState) {

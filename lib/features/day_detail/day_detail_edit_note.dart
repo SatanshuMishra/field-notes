@@ -11,6 +11,7 @@ import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
+import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/notes/notes.dart';
@@ -110,6 +111,13 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
 
   @override
   Widget build(BuildContext context) {
+    return ComposerMediaScope(
+      resolver: ref.watch(notesMediaResolverProvider).value,
+      child: _composer(),
+    );
+  }
+
+  Widget _composer() {
     return ListenableBuilder(
       listenable: _draft,
       builder: (BuildContext context, Widget? child) {
