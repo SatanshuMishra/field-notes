@@ -126,6 +126,9 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   }
 
   Future<void> _save(String text) async {
+    if (_draft.isRestoring) {
+      return;
+    }
     setState(() {
       _isSaving = true;
       _errorMessage = null;

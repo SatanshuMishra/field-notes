@@ -80,6 +80,10 @@ draft the feature exists to recover. The session key made that recovery impossib
   earlier version waited for the load before deciding; review showed a Save tapped during that wait
   closed the confirm instead of the composer, so the close never waits.
 - A draft that finishes loading after the composer was discarded is not applied to the editor.
+- Discard closes the composer at once, without waiting for a slow draft read; the draft's deletion is
+  queued and runs even after the composer is gone, so nothing is left to reappear.
+- Save is ignored while the stored draft is still loading, so a crash-left draft can never be deleted
+  by a save before it has been shown.
 
 ### W2 — A backdrop tap routes through the close request. Resolves `u3`'s internal inconsistency.
 

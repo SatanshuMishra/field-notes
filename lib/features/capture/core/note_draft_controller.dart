@@ -121,7 +121,7 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
     _debounce?.cancel();
     _debounce = null;
     _lastPersisted = null;
-    return _run<void>((store) => store.delete(key));
+    return _run<void>((store) => store.delete(key), afterDispose: true);
   }
 
   @override
@@ -154,9 +154,12 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
     _debounce = Timer(idleDebounce, () => unawaited(flush()));
   }
 
-  Future<T?> _run<T>(Future<T> Function(DraftStore store) action) {
+  Future<T?> _run<T>(
+    Future<T> Function(DraftStore store) action, {
+    bool afterDispose = false,
+  }) {
     final Future<T?> result = _queue.then((_) async {
-      if (_disposed) {
+      if (_disposed && !afterDispose) {
         return null;
       }
       try {
