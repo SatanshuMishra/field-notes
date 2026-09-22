@@ -151,6 +151,54 @@ void main() {
     }
   });
 
+  testWidgets('every control centres its mark and lets it keep its own size',
+      (WidgetTester tester) async {
+    await _pump(tester, 'one\n$a\ntwo\n$b\nthree');
+
+    await _selectPhoto(tester);
+
+    final Map<String, Key> controls = <String, Key>{
+      for (final PhotoSize size in PhotoSize.values)
+        photoToolbarSizeLabel(size): photoToolbarSizeKey(size),
+      for (final PhotoSide side in PhotoSide.values)
+        photoToolbarSideLabel(side): photoToolbarSideKey(side),
+      photoToolbarMoveUpLabel: photoToolbarMoveUpKey,
+      photoToolbarMoveDownLabel: photoToolbarMoveDownKey,
+      photoToolbarReplaceLabel: photoToolbarReplaceKey,
+      photoToolbarCaptionLabel: photoToolbarCaptionKey,
+      photoToolbarRemoveLabel: photoToolbarRemoveKey,
+    };
+
+    controls.forEach((String name, Key key) {
+      final Rect box = tester.getRect(find.byKey(key));
+      final Finder mark =
+          find.descendant(of: find.byKey(key), matching: find.byType(Opacity));
+      final Rect drawn = tester.getRect(mark);
+      final RenderBox render = tester.renderObject<RenderBox>(mark);
+
+      expect(
+        render.size.height,
+        closeTo(render.getMaxIntrinsicHeight(double.infinity), _tolerance),
+        reason: '$name is stretched to the height of its control',
+      );
+      expect(
+        render.size.width,
+        closeTo(render.getMaxIntrinsicWidth(double.infinity), _tolerance),
+        reason: '$name is stretched to the width of its control',
+      );
+      expect(
+        drawn.center.dy,
+        closeTo(box.center.dy, _tolerance),
+        reason: '$name rides off the centre of its control',
+      );
+      expect(
+        drawn.center.dx,
+        closeTo(box.center.dx, _tolerance),
+        reason: '$name sits off the centre of its control',
+      );
+    });
+  });
+
   testWidgets('it carries no placement preview of its own',
       (WidgetTester tester) async {
     await _pump(tester, 'one\n$a\ntwo');

@@ -479,9 +479,13 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: photoToolbarControlPadding,
                   ),
-                  child: Opacity(
-                    opacity: enabled ? 1 : _disabledOpacity,
-                    child: widget.child,
+                  child: Center(
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    child: Opacity(
+                      opacity: enabled ? 1 : _disabledOpacity,
+                      child: widget.child,
+                    ),
                   ),
                 ),
               ),
