@@ -40,6 +40,7 @@ Future<SettingsDataController> settingsDataController(Ref ref) async {
     deleteAllService: JournalDeleteAllService(
       database: database,
       mediaRoot: root,
+      draftsRoot: await ref.watch(mediaDraftsRootProvider.future),
     ),
     onError: (Object error, StackTrace _) =>
         debugPrint('Settings data action failed: $error'),

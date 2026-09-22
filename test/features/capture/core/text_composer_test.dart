@@ -2,6 +2,7 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
+import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/notes/notes.dart';
@@ -185,7 +186,73 @@ void main() {
     expect(find.byType(TextComposerSheet), findsNothing);
   });
 
-  testWidgets('a barrier tap no longer dismisses the composer',
+  testWidgets(
+      'a new-note draft left by a crash is restored when the composer reopens '
+      'for the same date', (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'left by a crash',
+    );
+    expect(find.byType(DraftRestoredChip), findsOneWidget);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(writer.saves.single.draftKey, 'new-2026-07-19');
+    expect(writer.saves.single.source, 'left by a crash');
+    expect(result, 'entry-1');
+  });
+
+  testWidgets('a new-note draft for another date stays out of this composer',
+      (WidgetTester tester) async {
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-20': 'another day'},
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      isEmpty,
+    );
+    expect(find.byType(DraftRestoredChip), findsNothing);
+    expect(drafts.drafts, <String, String>{'new-2026-07-20': 'another day'});
+
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+
+    expect(result, isNull);
+    expect(drafts.drafts, <String, String>{'new-2026-07-20': 'another day'});
+  });
+
+  testWidgets('a scrim tap on a dirty composer asks first and keeps the note',
       (WidgetTester tester) async {
     final FakeNoteWriter writer = FakeNoteWriter();
     String? result = 'unset';
@@ -203,13 +270,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TextComposerSheet), findsOneWidget);
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+
     expect(find.text(composerDiscardTitle), findsNothing);
+    expect(find.byType(TextComposerSheet), findsOneWidget);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'still here',
+    );
     expect(result, 'unset');
 
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(composerDiscardKey));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('a scrim tap on a clean composer closes it',
+      (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(writer: writer, onResult: (String? id) => result = id),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextComposerSheet), findsNothing);
+    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(result, isNull);
+    expect(writer.saves, isEmpty);
   });
 
   group('photos in the new-note composer', () {

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:field_notes/data/database/ids.dart';
+import 'package:field_notes/data/drafts/draft_paths.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -80,7 +80,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   String? _errorMessage;
   late final String _metaText;
   late final String _title;
-  late final String _sessionId;
+  late final String _draftKey;
   late final TextEditingController _controller;
   late final NoteDraftController _draft;
 
@@ -89,10 +89,10 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
     super.initState();
     _metaText = _composeMeta();
     _title = _composeTitle();
-    _sessionId = newId();
+    _draftKey = newNoteDraftKey(widget.date);
     _controller = TextEditingController();
     _draft = NoteDraftController(
-      key: _sessionId,
+      key: _draftKey,
       store: ref.read(draftStoreProvider.future),
     )..attach(_controller);
     unawaited(_draft.restore());
@@ -157,7 +157,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
       date: widget.date,
       source: text,
       photoMediaIds: photoMediaIds,
-      draftKey: _sessionId,
+      draftKey: _draftKey,
     );
   }
 
@@ -210,7 +210,10 @@ Future<String?> showTextComposer(BuildContext context, String date) {
       Animation<double> secondaryAnimation,
     ) {
       return DialogHost(
-        child: ComposerShell(child: TextComposerConnector(date: date)),
+        child: ComposerShell(
+          closeOnScrimTap: true,
+          child: TextComposerConnector(date: date),
+        ),
       );
     },
     transitionBuilder: (

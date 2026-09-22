@@ -245,6 +245,50 @@ void main() {
     expect(find.text('Edit note'), findsNothing);
   });
 
+  testWidgets('a scrim tap on a dirty editor asks first and keeps the edit',
+      (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[entry],
+    );
+    final FakeDraftStore drafts = FakeDraftStore();
+    Object? result = 'unset';
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: repository,
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? value) => result = value,
+      ),
+    );
+
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'a better day');
+    await tester.pump(draftIdleDebounceForTest);
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(find.text('Edit note'), findsOneWidget);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(find.text('Edit note'), findsOneWidget);
+    expect(_editorText(tester), 'a better day');
+    expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
+    expect(repository.noteSaves, isEmpty);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(composerDiscardKey));
+    await tester.pumpAndSettle();
+  });
+
   testWidgets(
       'the android system back button on a dirty editor routes through the '
       'same confirm instead of dropping the edit', (WidgetTester tester) async {
