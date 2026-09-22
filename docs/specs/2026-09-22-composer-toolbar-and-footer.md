@@ -53,7 +53,7 @@ photo, and when the selection leaves the photo line.
 | Placement | Two glyph buttons, a picture with text lines beside it, one per side, the current one marked. Hidden when `canFloatAt` says the measure cannot float, exactly as the rail hid it. Dimmed and inert at Full size. Centre joins this group in phase 3 |
 | Caption | One button. It opens the in-place caption editor (§3) |
 | Remove | A trash glyph. It removes the photo line and shows the Undo toast (§5) |
-| More | A `…` button opening a menu of Move up, Move down and Replace, each disabled when the edit cannot apply |
+| More | A `…` button opening a row of three glyphs, an arrow up, an arrow down and a swap, each disabled when the edit cannot apply |
 
 The toolbar carries no preview panel. The owner ruled on 2026-09-22, after seeing it on macOS, that a
 picture of the placement is unnecessary beside the placement buttons, whose own glyphs show a picture
@@ -63,6 +63,12 @@ reader's to 35 em, so a photo can float here and stack there, and nothing now sa
 
 A photo at Full size takes no side. Its placement buttons stay in the bar, dimmed and inert, as the
 design dims them.
+
+**How it looks.** The design's bar, to its own numbers: a `#2A241D` surface at 5pt padding with an 11pt
+radius, controls 28pt square with 7pt of side padding and 2pt between them, labels in 11pt semibold on
+`#E9DCC6`, the marked one on the accent, and a 1pt rule 17pt tall between the groups. The owner chose
+this over the taller bar with 48pt targets on 2026-09-22: a mouse does not need 48pt, and the phone pass
+gives touch its own size.
 
 **Where it sits.** Centred over the top edge of the photo, `photoToolbarGap` above it. When there is not
 enough room above, it flips below the photo. It never leaves the writing surface, horizontally or

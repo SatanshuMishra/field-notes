@@ -127,6 +127,31 @@ void main() {
     expect(harness.focusNode.hasFocus, isTrue);
   });
 
+  testWidgets('the More menu shows a glyph for each move it offers',
+      (WidgetTester tester) async {
+    await _pump(tester, 'one\n$a\ntwo\n$b\nthree');
+
+    await _selectPhoto(tester);
+    await tester.tap(find.byKey(photoToolbarMoreKey));
+    await tester.pump();
+
+    for (final Key key in <Key>[
+      photoToolbarMoveUpKey,
+      photoToolbarMoveDownKey,
+      photoToolbarReplaceKey,
+    ]) {
+      expect(
+        find.descendant(of: find.byKey(key), matching: find.byType(Text)),
+        findsNothing,
+        reason: '$key still carries a word',
+      );
+      expect(
+        find.descendant(of: find.byKey(key), matching: find.byType(CustomPaint)),
+        findsWidgets,
+      );
+    }
+  });
+
   testWidgets('it carries no placement preview of its own',
       (WidgetTester tester) async {
     await _pump(tester, 'one\n$a\ntwo');

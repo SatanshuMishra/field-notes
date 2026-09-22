@@ -468,7 +468,7 @@ void main() {
         PhotoSide.left);
   });
 
-  testWidgets('every photo toolbar control is 48dp or more',
+  testWidgets('every photo toolbar control carries the design target',
       (WidgetTester tester) async {
     await _pumpEditor(tester, 'one\n$a\ntwo\n$b\nthree');
 
@@ -489,7 +489,17 @@ void main() {
     ];
     for (final Finder control in controls) {
       expect(control, findsOneWidget);
-      expectTargetAtLeast48(tester, control);
+      final Size target = tester.getSize(control);
+      expect(
+        target.height,
+        greaterThanOrEqualTo(photoToolbarTarget),
+        reason: '$control is shorter than the toolbar target',
+      );
+      expect(
+        target.width,
+        greaterThanOrEqualTo(photoToolbarTarget),
+        reason: '$control is narrower than the toolbar target',
+      );
     }
   });
 
