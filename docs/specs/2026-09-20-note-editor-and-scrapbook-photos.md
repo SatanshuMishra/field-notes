@@ -86,6 +86,9 @@ regressing; PR #148 pins them.
   amends R4 and `u1`: the 35 em column no longer clamps the feed card, but it still sets the measure in
   day detail and the composer. The feed marks its cards with `NoteMeasureScope`, which `NoteColumn` and
   the float's measure honour.
+- **The composer is being rebuilt around inline photos** (2026-09-22). The owner chose the design's
+  Inline photo model and deferred its Scrapbook model. `docs/specs/2026-09-22-note-composer-inline-photos.md`
+  is binding for that work and amends `u1`, `u8` and R4 as its §3 lists; R1, R2 and R3 are unchanged.
 
 ### Where the code differs from §5's plan
 
