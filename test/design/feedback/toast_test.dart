@@ -252,6 +252,47 @@ void main() {
       expect(find.text('Mood planted · Rose'), findsNothing);
     });
 
+    testWidgets('a toast with an action keeps its action until it is pressed',
+        (WidgetTester tester) async {
+      int undos = 0;
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (BuildContext context) => GestureDetector(
+              onTap: () => showTransientToast(
+                context,
+                'Photo removed',
+                action: ToastAction(
+                  label: 'Undo',
+                  onPressed: () => undos++,
+                ),
+              ),
+              child: const Text('show'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('show'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Photo removed'), findsOneWidget);
+      expect(find.text('Undo'), findsOneWidget);
+
+      await tester.pump(kToastLifetime);
+      await tester.pump();
+
+      expect(find.text('Undo'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pump();
+
+      expect(undos, 1);
+      expect(find.text('Photo removed'), findsNothing);
+    });
+
     testWidgets('an error toast carries a close glyph instead of a check',
         (WidgetTester tester) async {
       await showOnLandscapePhone(tester, glyph: IconStickerGlyph.close);

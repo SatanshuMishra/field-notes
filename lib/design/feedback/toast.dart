@@ -13,6 +13,7 @@ enum ToastVariant { light, dark }
 enum ToastScale { phone, desktop }
 
 const Duration kToastLifetime = Duration(milliseconds: 1900);
+const Duration kToastActionLifetime = Duration(seconds: 6);
 
 typedef _DarkMetrics = ({
   double padHorizontal,
@@ -55,6 +56,7 @@ const double _riseOffset = 10;
 const double toastActionMinTarget = 48;
 const double _actionGap = 8;
 const double _actionHorizontalPadding = 12;
+const double _darkActionInset = 4;
 const EdgeInsets _lightPadding =
     EdgeInsets.symmetric(horizontal: 16, vertical: 10);
 const EdgeInsets _lightPaddingWithAction =
@@ -117,6 +119,7 @@ class Toast extends StatelessWidget {
 
   Widget _dark() {
     final Widget? icon = this.icon;
+    final ToastAction? action = this.action;
     final _DarkMetrics metrics = _metricsFor(scale);
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -125,10 +128,17 @@ class Toast extends StatelessWidget {
         boxShadow: Shadows.toastLift,
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: metrics.padHorizontal,
-          vertical: metrics.padVertical,
-        ),
+        padding: action == null
+            ? EdgeInsets.symmetric(
+                horizontal: metrics.padHorizontal,
+                vertical: metrics.padVertical,
+              )
+            : EdgeInsets.only(
+                left: metrics.padHorizontal,
+                right: _darkActionInset,
+                top: _darkActionInset,
+                bottom: _darkActionInset,
+              ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -142,6 +152,10 @@ class Toast extends StatelessWidget {
                 style: metrics.style.copyWith(color: Palette.toastInk),
               ),
             ),
+            if (action != null) ...<Widget>[
+              const SizedBox(width: _actionGap),
+              _ToastActionButton(action: action, color: Palette.waveLight),
+            ],
           ],
         ),
       ),
@@ -150,9 +164,13 @@ class Toast extends StatelessWidget {
 }
 
 class _ToastActionButton extends StatelessWidget {
-  const _ToastActionButton({required this.action});
+  const _ToastActionButton({
+    required this.action,
+    this.color = Palette.coralLink,
+  });
 
   final ToastAction action;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -177,7 +195,7 @@ class _ToastActionButton extends StatelessWidget {
                 child: Text(
                   action.label,
                   style: TypographyTokens.bodySans.copyWith(
-                    color: Palette.coralLink,
+                    color: color,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -204,21 +222,34 @@ void showTransientToast(
   BuildContext context,
   String message, {
   IconStickerGlyph glyph = IconStickerGlyph.check,
+  ToastAction? action,
 }) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   final ToastScale scale = toastScaleFor(Theme.of(context).platform);
   dismissTransientToast();
   late final OverlayEntry entry;
+  void finish() {
+    if (identical(_activeTransientToast, entry)) {
+      dismissTransientToast();
+    }
+  }
+
   entry = OverlayEntry(
     builder: (BuildContext overlayContext) => _TransientToastLayer(
       message: message,
       glyph: glyph,
       scale: scale,
-      onFinished: () {
-        if (identical(_activeTransientToast, entry)) {
-          dismissTransientToast();
-        }
-      },
+      lifetime: action == null ? kToastLifetime : kToastActionLifetime,
+      action: action == null
+          ? null
+          : ToastAction(
+              label: action.label,
+              onPressed: () {
+                finish();
+                action.onPressed();
+              },
+            ),
+      onFinished: finish,
     ),
   );
   _activeTransientToast = entry;
@@ -230,12 +261,16 @@ class _TransientToastLayer extends StatefulWidget {
     required this.message,
     required this.glyph,
     required this.scale,
+    required this.lifetime,
+    required this.action,
     required this.onFinished,
   });
 
   final String message;
   final IconStickerGlyph glyph;
   final ToastScale scale;
+  final Duration lifetime;
+  final ToastAction? action;
   final VoidCallback onFinished;
 
   @override
@@ -257,7 +292,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
   @override
   void initState() {
     super.initState();
-    _lifetime = Timer(kToastLifetime, widget.onFinished);
+    _lifetime = Timer(widget.lifetime, widget.onFinished);
     _controller.forward();
   }
 
@@ -279,6 +314,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
         MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
       ),
       child: IgnorePointer(
+        ignoring: widget.action == null,
         child: Material(
           type: MaterialType.transparency,
           child: Center(
@@ -295,6 +331,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
                   message: widget.message,
                   variant: ToastVariant.dark,
                   scale: widget.scale,
+                  action: widget.action,
                   icon: IconStickerGlyphIcon(
                     glyph: widget.glyph,
                     color: Palette.toastInk,
