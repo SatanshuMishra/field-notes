@@ -43,28 +43,52 @@ class FormatBar extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              _action(formatBoldKey, FormatGlyph.bold, 'Bold', toggleBold),
-              _action(
-                formatItalicKey,
-                FormatGlyph.italic,
-                'Italic',
-                toggleItalic,
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      _action(
+                        formatBoldKey,
+                        FormatGlyph.bold,
+                        'Bold',
+                        toggleBold,
+                      ),
+                      _action(
+                        formatItalicKey,
+                        FormatGlyph.italic,
+                        'Italic',
+                        toggleItalic,
+                      ),
+                      _action(
+                        formatHeadingKey,
+                        FormatGlyph.heading,
+                        'Heading',
+                        toggleHeading,
+                      ),
+                      _action(
+                        formatListKey,
+                        FormatGlyph.list,
+                        'Bullet list',
+                        toggleBullet,
+                      ),
+                      _action(
+                        formatQuoteKey,
+                        FormatGlyph.quote,
+                        'Quote',
+                        toggleQuote,
+                      ),
+                      _action(
+                        formatLinkKey,
+                        FormatGlyph.link,
+                        'Link',
+                        toggleLink,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              _action(
-                formatHeadingKey,
-                FormatGlyph.heading,
-                'Heading',
-                toggleHeading,
-              ),
-              _action(
-                formatListKey,
-                FormatGlyph.list,
-                'Bullet list',
-                toggleBullet,
-              ),
-              _action(formatQuoteKey, FormatGlyph.quote, 'Quote', toggleQuote),
-              _action(formatLinkKey, FormatGlyph.link, 'Link', toggleLink),
-              const Spacer(),
               ?trailing,
               _undo(),
             ],

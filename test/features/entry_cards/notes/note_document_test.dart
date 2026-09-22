@@ -133,6 +133,22 @@ void main() {
       ]);
     });
 
+    test('an invalid placement stacks even when a paragraph follows', () {
+      final String invalid = '![](photo/${prefixOf(photoIdA)} "right huge")';
+      final List<NoteBlock> blocks = parseNote('$invalid\nbody');
+      final List<NoteBlockRun> runs = noteBlockRuns(blocks, floats: true);
+
+      expect(blocks.map((NoteBlock block) => block.runtimeType), <Type>[
+        PhotoBlock,
+        ParagraphBlock,
+      ]);
+      expect(runs, hasLength(2));
+      expect(identical(runs[0].block, blocks[0]), isTrue);
+      expect(runs[0].wraps, isNull);
+      expect(identical(runs[1].block, blocks[1]), isTrue);
+      expect(runs[1].wraps, isNull);
+    });
+
     test('pairs nothing when photos cannot float', () {
       final List<NoteBlock> blocks = parseNote(source);
       final List<NoteBlockRun> runs = noteBlockRuns(blocks, floats: false);

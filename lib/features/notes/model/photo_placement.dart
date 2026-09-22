@@ -36,13 +36,13 @@ final class PhotoPlacement {
   const PhotoPlacement({
     this.side = defaultPhotoSide,
     this.size = defaultPhotoSize,
-    this.extras = const <String>[],
+    this.isValid = true,
   });
 
   factory PhotoPlacement.parse(String attributes) {
     PhotoSide? side;
     PhotoSize? size;
-    final List<String> extras = <String>[];
+    bool isValid = true;
     for (final String token in attributes.split(_attributeSeparator)) {
       if (token.isEmpty) {
         continue;
@@ -51,34 +51,31 @@ final class PhotoPlacement {
       final PhotoSide? asSide = _named(PhotoSide.values, name);
       final PhotoSize? asSize = _named(PhotoSize.values, name);
       if (asSide != null) {
+        isValid = isValid && side == null;
         side ??= asSide;
       } else if (asSize != null) {
+        isValid = isValid && size == null;
         size ??= asSize;
       } else {
-        extras.add(token);
+        isValid = false;
       }
     }
     return PhotoPlacement(
       side: side ?? defaultPhotoSide,
       size: size ?? defaultPhotoSize,
-      extras: List<String>.unmodifiable(extras),
+      isValid: isValid,
     );
   }
 
   final PhotoSide side;
   final PhotoSize size;
-  final List<String> extras;
+  final bool isValid;
 
   PhotoPlacement copyWith({PhotoSide? side, PhotoSize? size}) {
-    return PhotoPlacement(
-      side: side ?? this.side,
-      size: size ?? this.size,
-      extras: extras,
-    );
+    return PhotoPlacement(side: side ?? this.side, size: size ?? this.size);
   }
 
-  String format() =>
-      <String>[side.name, size.name, ...extras].join(' ');
+  String format() => '${side.name} ${size.name}';
 
   @override
   bool operator ==(Object other) =>
@@ -86,13 +83,14 @@ final class PhotoPlacement {
       other is PhotoPlacement &&
           side == other.side &&
           size == other.size &&
-          listEquals(extras, other.extras);
+          isValid == other.isValid;
 
   @override
-  int get hashCode => Object.hash(side, size, Object.hashAll(extras));
+  int get hashCode => Object.hash(side, size, isValid);
 
   @override
-  String toString() => 'PhotoPlacement(${format()})';
+  String toString() =>
+      'PhotoPlacement(${format()}${isValid ? '' : ', invalid'})';
 }
 
 T? _named<T extends Enum>(List<T> values, String name) {

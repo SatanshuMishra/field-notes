@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../domain/notes/notes.dart';
+import '../../notes/model/photo_placement.dart';
 import '../../notes/render/note_photo_block.dart';
 import '../../notes/render/photo_wrap_block.dart';
 import '../media/media_resolver.dart';
@@ -38,12 +39,18 @@ List<NoteBlockRun> noteBlockRuns(
   List<NoteBlock> blocks, {
   required bool floats,
 }) {
-  ParagraphBlock? paragraphAfter(int index) => floats &&
-          blocks[index] is PhotoBlock &&
-          index + 1 < blocks.length &&
-          blocks[index + 1] is ParagraphBlock
-      ? blocks[index + 1] as ParagraphBlock
-      : null;
+  ParagraphBlock? paragraphAfter(int index) {
+    final NoteBlock block = blocks[index];
+    final NoteBlock? next =
+        index + 1 < blocks.length ? blocks[index + 1] : null;
+    return floats &&
+            block is PhotoBlock &&
+            next is ParagraphBlock &&
+            block.placement.isValid
+        ? next
+        : null;
+  }
+
   return <NoteBlockRun>[
     for (int i = 0; i < blocks.length; i++)
       if (i == 0 || paragraphAfter(i - 1) == null)

@@ -55,6 +55,7 @@ const double photoRailFullHeight = photoRailCompactHeight +
     photoRailRowGap +
     photoDiagramHeight;
 const double photoRailFullMinWidth = photoInlineControlsWidth;
+const double photoRailSlimHeight = 36;
 
 const double _thumbGap = 8;
 const double _activeBorderWidth = 3;
@@ -242,20 +243,30 @@ class _PhotoRailState extends State<PhotoRail> {
     try {
       return await widget.onPickPhotos();
     } on PhotoPickException catch (error) {
-      _showNotice(_RailNotice(message: error.message), photoErrorNoticeLifetime);
+      _reportPickFailure(error.message);
       return null;
     } catch (error, stackTrace) {
       debugPrint('Adding a photo to a note failed: $error\n$stackTrace');
-      _showNotice(
-        const _RailNotice(message: photoAddFailedMessage),
-        photoErrorNoticeLifetime,
-      );
+      _reportPickFailure(photoAddFailedMessage);
       return null;
     } finally {
       if (mounted) {
         setState(() => _busy = false);
       }
     }
+  }
+
+  bool get _slim => widget.maxHeight < photoRailCompactHeight;
+
+  void _reportPickFailure(String message) {
+    if (!mounted) {
+      return;
+    }
+    if (_slim) {
+      showTransientToast(context, message);
+      return;
+    }
+    _showNotice(_RailNotice(message: message), photoErrorNoticeLifetime);
   }
 
   void _showNotice(_RailNotice notice, Duration lifetime) {
@@ -316,11 +327,19 @@ class _PhotoRailState extends State<PhotoRail> {
   }
 
   Widget _rail(BuildContext context, TextEditingValue value, double width) {
+    if (_slim) {
+      return Align(
+        alignment: AlignmentDirectional.centerStart,
+        widthFactor: 1,
+        heightFactor: 1,
+        child: _addTile(
+          width: photoRailSlimHeight,
+          height: photoRailSlimHeight,
+        ),
+      );
+    }
     final bool inline = width >= photoRailFullMinWidth &&
         widget.maxHeight >= photoRailFullHeight;
-    if (!inline && widget.maxHeight < photoRailCompactHeight) {
-      return const SizedBox.shrink();
-    }
     final List<NotePhotoLine> lines = notePhotoLines(value.text);
     final int? activeOrdinal = photoLineIndexIn(lines, value.selection);
     final NotePhotoLine? active =
@@ -346,7 +365,7 @@ class _PhotoRailState extends State<PhotoRail> {
                     height: photoRailThumbExtent,
                     child: _strip(lines, activeOrdinal, openOptions: !inline),
                   ),
-                  if (controls) ..._controls(context, value, active),
+                  if (controls) _controls(context, value, active),
                 ],
               ),
             ),
@@ -365,48 +384,68 @@ class _PhotoRailState extends State<PhotoRail> {
     );
   }
 
-  List<Widget> _controls(
+  Widget _controls(
     BuildContext context,
     TextEditingValue value,
     NotePhotoLine? active,
   ) {
     final double em = NoteColumn.emOf(context);
-    final PhotoPlan plan = active == null
-        ? planFloat(
-            measure: widget.measure,
-            em: em,
-            side: defaultPhotoSide,
-            size: defaultPhotoSize,
-          )
-        : photoPlanFor(
-            active,
-            measure: widget.measure,
-            em: em,
-            resolver: widget.resolver,
-          );
-    return <Widget>[
-      const SizedBox(height: photoRailRowGap),
-      Align(
-        alignment: Alignment.centerLeft,
-        child: PhotoControls(
-          key: photoRailControlsKey,
-          plan: plan,
-          actions: active == null ? null : _actions,
-          canMoveUp: active != null && canMovePhotoUp(value.text, active),
-          canMoveDown: active != null && canMovePhotoDown(value.text, active),
+    if (active == null) {
+      return _controlsFor(
+        value,
+        null,
+        planFloat(
+          measure: widget.measure,
+          em: em,
+          side: defaultPhotoSide,
+          size: defaultPhotoSize,
         ),
-      ),
-      const SizedBox(height: photoRailRowGap),
-      SizedBox(
-        height: photoDiagramHeight,
-        child: active == null
-            ? const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(photoRailHint, style: TypographyTokens.captionSans),
-              )
-            : PhotoPlacementDiagram(plan: plan),
-      ),
-    ];
+      );
+    }
+    return PhotoPlanBuilder(
+      line: active,
+      measure: widget.measure,
+      em: em,
+      resolver: widget.resolver,
+      builder: (BuildContext context, PhotoPlan plan) =>
+          _controlsFor(value, active, plan),
+    );
+  }
+
+  Widget _controlsFor(
+    TextEditingValue value,
+    NotePhotoLine? active,
+    PhotoPlan plan,
+  ) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const SizedBox(height: photoRailRowGap),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: PhotoControls(
+            key: photoRailControlsKey,
+            plan: plan,
+            actions: active == null ? null : _actions,
+            canMoveUp: active != null && canMovePhotoUp(value.text, active),
+            canMoveDown:
+                active != null && canMovePhotoDown(value.text, active),
+          ),
+        ),
+        const SizedBox(height: photoRailRowGap),
+        SizedBox(
+          height: photoDiagramHeight,
+          child: active == null
+              ? const Align(
+                  alignment: Alignment.centerLeft,
+                  child:
+                      Text(photoRailHint, style: TypographyTokens.captionSans),
+                )
+              : PhotoPlacementDiagram(plan: plan),
+        ),
+      ],
+    );
   }
 
   Widget _strip(
@@ -421,7 +460,10 @@ class _PhotoRailState extends State<PhotoRail> {
           const SizedBox(width: _thumbGap),
       itemBuilder: (BuildContext context, int index) {
         if (index == 0) {
-          return _addTile();
+          return _addTile(
+            width: photoRailAddWidth,
+            height: photoRailThumbExtent,
+          );
         }
         final NotePhotoLine line = lines[index - 1];
         return _thumb(
@@ -434,8 +476,9 @@ class _PhotoRailState extends State<PhotoRail> {
     );
   }
 
-  Widget _addTile() {
+  Widget _addTile({required double width, required double height}) {
     final bool enabled = !_busy;
+    final bool labelled = height >= photoRailThumbExtent;
     return FocusableActionDetector(
       focusNode: _addFocus,
       enabled: enabled,
@@ -458,8 +501,8 @@ class _PhotoRailState extends State<PhotoRail> {
           onTap: enabled ? () => unawaited(_add()) : null,
           child: ExcludeSemantics(
             child: SizedBox(
-              width: photoRailAddWidth,
-              height: photoRailThumbExtent,
+              width: width,
+              height: height,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: Palette.cardBright,
@@ -475,14 +518,16 @@ class _PhotoRailState extends State<PhotoRail> {
                         dimension: _plusExtent,
                         child: CustomPaint(painter: _PlusPainter()),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        enabled ? photoRailAddLabel : photoRailAddingLabel,
-                        style: TypographyTokens.caption10Sans.copyWith(
-                          color: Palette.ink,
-                          fontWeight: FontWeight.w600,
+                      if (labelled) ...<Widget>[
+                        const SizedBox(height: 4),
+                        Text(
+                          enabled ? photoRailAddLabel : photoRailAddingLabel,
+                          style: TypographyTokens.caption10Sans.copyWith(
+                            color: Palette.ink,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

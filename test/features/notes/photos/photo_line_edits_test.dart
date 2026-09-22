@@ -224,7 +224,7 @@ void main() {
       expect(next.selection, caretAt(_line(next.text).lineEnd));
     });
 
-    test('attribute words it does not know survive a rewrite', () {
+    test('attribute words it does not know are dropped by a rewrite', () {
       final String odd =
           '![](photo/${prefixOf(photoIdA)} "left small nofloat")';
       final TextEditingValue next = setPhotoSize(
@@ -233,7 +233,19 @@ void main() {
         PhotoSize.large,
       );
 
-      expect(next.text, '![](photo/${prefixOf(photoIdA)} "left large nofloat")');
+      expect(next.text, '![](photo/${prefixOf(photoIdA)} "left large")');
+    });
+
+    test('setting a side on an invalid placement writes a valid one', () {
+      final String invalid = '![](photo/${prefixOf(photoIdA)} "right huge")';
+      final TextEditingValue next = setPhotoSide(
+        _value(invalid, 0),
+        _line(invalid),
+        PhotoSide.left,
+      );
+
+      expect(_line(next.text).block.attributes, 'left medium');
+      expect(next.text, '![](photo/${prefixOf(photoIdA)} "left medium")');
     });
 
     test('setPhotoCaption writes the alt slot, sanitised and trimmed', () {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/notes/notes.dart';
 
 import '../support/notes_harness.dart';
@@ -27,6 +28,7 @@ Future<TextEditingController> _openSheet(
   int thumb = 0,
   double measure = 284,
   FakePhotoImporter? importer,
+  MediaResolver? resolver,
 }) async {
   final TextEditingController controller = await pumpPhotoRail(
     tester,
@@ -35,6 +37,7 @@ Future<TextEditingController> _openSheet(
     width: _phoneRail,
     measure: measure,
     importer: importer,
+    resolver: resolver,
     surface: const Size(360, 780),
   );
   await tester.tap(find.byKey(photoRailThumbKey(thumb)));
@@ -78,6 +81,22 @@ void main() {
       expectTargetAtLeast48(tester, _inSheet(find.byKey(photoSideKey(side))));
     }
     expect(_inSheet(find.byType(PhotoPlacementDiagram)), findsOneWidget);
+  });
+
+  testWidgets('the sheet diagram floats a photo followed by a paragraph',
+      (WidgetTester tester) async {
+    final FakeNoteMediaResolver resolver = FakeNoteMediaResolver(
+      <String, ResolvedMedia>{
+        prefixOf(photoIdA): availablePhoto(photoIdA, width: 1200, height: 900),
+      },
+    )..memoizeAll();
+    await _openSheet(tester, text: source, measure: 560, resolver: resolver);
+
+    expect(find.byKey(photoOptionsSheetKey), findsOneWidget);
+    final PhotoPlacementDiagram diagram = tester.widget<PhotoPlacementDiagram>(
+      _inSheet(find.byType(PhotoPlacementDiagram)),
+    );
+    expect(diagram.plan.isStacked, isFalse);
   });
 
   testWidgets('the Side control is absent when the measure cannot float',
