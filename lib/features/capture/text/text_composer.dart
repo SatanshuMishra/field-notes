@@ -13,6 +13,7 @@ import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
+import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -177,6 +178,13 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
 
   @override
   Widget build(BuildContext context) {
+    return ComposerMediaScope(
+      resolver: ref.watch(notesMediaResolverProvider).value,
+      child: _composer(),
+    );
+  }
+
+  Widget _composer() {
     return ListenableBuilder(
       listenable: _draft,
       builder: (BuildContext context, Widget? child) {

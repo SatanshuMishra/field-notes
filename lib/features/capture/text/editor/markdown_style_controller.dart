@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/notes.dart';
 
+import 'photo_bands.dart';
+
 const int _kindMask = 0xF;
 const int _kindBody = 0;
 const int _kindHeading1 = 1;
@@ -79,13 +81,23 @@ class MarkdownStyleController extends TextEditingController {
           current.isComposingRangeValid,
     );
     final String text = current.text;
-    final TextSpan span = text.isEmpty || text.length > styleLimit
-        ? super.buildTextSpan(
-            context: context,
-            style: style,
-            withComposing: withComposing,
-          )
-        : _styledSpan(current, style, withComposing);
+    final List<PhotoBand> bands = text.isEmpty
+        ? const <PhotoBand>[]
+        : photoBandsWithin(PhotoBandScope.of(context), text.length);
+    final TextScaler scaler =
+        MediaQuery.maybeTextScalerOf(context) ?? TextScaler.noScaling;
+    final TextSpan span;
+    if (text.isEmpty || (text.length > styleLimit && bands.isEmpty)) {
+      span = super.buildTextSpan(
+        context: context,
+        style: style,
+        withComposing: withComposing,
+      );
+    } else if (text.length > styleLimit) {
+      span = _plainSpan(current, style, withComposing, bands, scaler);
+    } else {
+      span = _styledSpan(current, style, withComposing, bands, scaler);
+    }
     assert(
       span.toPlainText(includeSemanticsLabels: false).length == text.length,
       'MarkdownStyleController must be length preserving: '
@@ -99,6 +111,8 @@ class MarkdownStyleController extends TextEditingController {
     TextEditingValue current,
     TextStyle? style,
     bool withComposing,
+    List<PhotoBand> bands,
+    TextScaler scaler,
   ) {
     final String text = current.text;
     final TextStyle base = style ?? TypographyTokens.noteBody;
@@ -110,21 +124,88 @@ class MarkdownStyleController extends TextEditingController {
     );
     final Map<int, TextStyle?> styles = <int, TextStyle?>{};
     final List<InlineSpan> children = <InlineSpan>[];
-    int runStart = 0;
-    for (int i = 1; i <= codes.length; i++) {
-      if (i < codes.length && codes[i] == codes[runStart]) {
-        continue;
+
+    void addRuns(int from, int to) {
+      int runStart = from;
+      for (int i = from + 1; i <= to; i++) {
+        if (i < to && codes[i] == codes[runStart]) {
+          continue;
+        }
+        final int code = codes[runStart];
+        children.add(
+          TextSpan(
+            text: text.substring(runStart, i),
+            style: styles.putIfAbsent(code, () => markdownRunStyle(code, base)),
+          ),
+        );
+        runStart = i;
       }
-      final int code = codes[runStart];
+    }
+
+    int cursor = 0;
+    for (final PhotoBand band in bands) {
+      addRuns(cursor, band.start);
+      children.add(_bandSpan(text, band, scaler));
+      cursor = band.end;
+    }
+    addRuns(cursor, text.length);
+    return TextSpan(style: style, children: children);
+  }
+
+  TextSpan _plainSpan(
+    TextEditingValue current,
+    TextStyle? style,
+    bool withComposing,
+    List<PhotoBand> bands,
+    TextScaler scaler,
+  ) {
+    final String text = current.text;
+    final TextRange? composing =
+        withComposing && current.isComposingRangeValid
+            ? current.composing
+            : null;
+    final List<InlineSpan> children = <InlineSpan>[];
+
+    void addPlain(int from, int to) {
+      if (from >= to) {
+        return;
+      }
+      final TextRange? range = composing;
+      if (range == null || range.end <= from || range.start >= to) {
+        children.add(TextSpan(text: text.substring(from, to)));
+        return;
+      }
+      final int start = math.max(from, range.start);
+      final int end = math.min(to, range.end);
+      if (from < start) {
+        children.add(TextSpan(text: text.substring(from, start)));
+      }
       children.add(
         TextSpan(
-          text: text.substring(runStart, i),
-          style: styles.putIfAbsent(code, () => markdownRunStyle(code, base)),
+          text: text.substring(start, end),
+          style: const TextStyle(decoration: TextDecoration.underline),
         ),
       );
-      runStart = i;
+      if (end < to) {
+        children.add(TextSpan(text: text.substring(end, to)));
+      }
     }
+
+    int cursor = 0;
+    for (final PhotoBand band in bands) {
+      addPlain(cursor, band.start);
+      children.add(_bandSpan(text, band, scaler));
+      cursor = band.end;
+    }
+    addPlain(cursor, text.length);
     return TextSpan(style: style, children: children);
+  }
+
+  TextSpan _bandSpan(String text, PhotoBand band, TextScaler scaler) {
+    return TextSpan(
+      text: text.substring(band.start, band.end),
+      style: photoBandStyle(band.height, scaler),
+    );
   }
 }
 
