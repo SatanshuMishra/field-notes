@@ -26,8 +26,6 @@ const String photoRailAddLabel = 'Add photo';
 const String photoRailAddingLabel = 'Adding…';
 const String photoRailMissingLabel = 'Missing';
 const String photoRailOptionsHint = 'Opens photo options';
-const String photoRailHint =
-    'Tap a photo, or put the caret on its line, to place it.';
 const String photoRemovedMessage = 'Photo removed';
 const String photoRemovedUndoLabel = 'Undo';
 const String photoAddFailedMessage =
@@ -345,7 +343,7 @@ class _PhotoRailState extends State<PhotoRail> {
     final int? activeOrdinal = photoLineIndexIn(lines, value.selection);
     final NotePhotoLine? active =
         activeOrdinal == null ? null : lines[activeOrdinal];
-    final bool controls = inline && lines.isNotEmpty;
+    final bool controls = inline && active != null;
     final _RailNotice? notice = _notice;
     return Semantics(
       container: true,
@@ -366,7 +364,8 @@ class _PhotoRailState extends State<PhotoRail> {
                     height: photoRailThumbExtent,
                     child: _strip(lines, activeOrdinal, openOptions: !inline),
                   ),
-                  if (controls) _controls(context, value, active),
+                  if (active case final NotePhotoLine selected when inline)
+                    _controls(context, value, selected),
                 ],
               ),
             ),
@@ -388,25 +387,12 @@ class _PhotoRailState extends State<PhotoRail> {
   Widget _controls(
     BuildContext context,
     TextEditingValue value,
-    NotePhotoLine? active,
+    NotePhotoLine active,
   ) {
-    final double em = NoteColumn.emOf(context);
-    if (active == null) {
-      return _controlsFor(
-        value,
-        null,
-        planFloat(
-          measure: widget.measure,
-          em: em,
-          side: defaultPhotoSide,
-          size: defaultPhotoSize,
-        ),
-      );
-    }
     return PhotoPlanBuilder(
       line: active,
       measure: widget.measure,
-      em: em,
+      em: NoteColumn.emOf(context),
       resolver: widget.resolver,
       builder: (BuildContext context, PhotoPlan plan) =>
           _controlsFor(value, active, plan),
@@ -415,7 +401,7 @@ class _PhotoRailState extends State<PhotoRail> {
 
   Widget _controlsFor(
     TextEditingValue value,
-    NotePhotoLine? active,
+    NotePhotoLine active,
     PhotoPlan plan,
   ) {
     return Column(
@@ -428,22 +414,15 @@ class _PhotoRailState extends State<PhotoRail> {
           child: PhotoControls(
             key: photoRailControlsKey,
             plan: plan,
-            actions: active == null ? null : _actions,
-            canMoveUp: active != null && canMovePhotoUp(value.text, active),
-            canMoveDown:
-                active != null && canMovePhotoDown(value.text, active),
+            actions: _actions,
+            canMoveUp: canMovePhotoUp(value.text, active),
+            canMoveDown: canMovePhotoDown(value.text, active),
           ),
         ),
         const SizedBox(height: photoRailRowGap),
         SizedBox(
           height: photoDiagramHeight,
-          child: active == null
-              ? const Align(
-                  alignment: Alignment.centerLeft,
-                  child:
-                      Text(photoRailHint, style: TypographyTokens.captionSans),
-                )
-              : PhotoPlacementDiagram(plan: plan),
+          child: PhotoPlacementDiagram(plan: plan),
         ),
       ],
     );

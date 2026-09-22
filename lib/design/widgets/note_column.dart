@@ -5,12 +5,18 @@ import 'package:flutter/widgets.dart';
 import '../tokens/tokens.dart';
 
 class NoteColumn extends StatelessWidget {
-  const NoteColumn({super.key, required this.child, this.horizontalInset = 0});
+  const NoteColumn({
+    super.key,
+    required this.child,
+    this.horizontalInset = 0,
+    this.maxEm = measureEm,
+  });
 
   static const double measureEm = 35;
 
   final Widget child;
   final double horizontalInset;
+  final double maxEm;
 
   static double emOf(BuildContext context) {
     return MediaQuery.textScalerOf(
@@ -29,7 +35,7 @@ class NoteColumn extends StatelessWidget {
                 ? constraints.maxWidth
                 : math.min(
                     constraints.maxWidth,
-                    measureOf(context) + horizontalInset,
+                    maxEm * emOf(context) + horizontalInset,
                   );
         return Align(
           alignment: Alignment.topCenter,

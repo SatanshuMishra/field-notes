@@ -26,6 +26,7 @@ Future<void> _pumpComposer(
   WidgetTester tester, {
   required Size surface,
   double keyboardInset = 0,
+  bool responsive = false,
 }) async {
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
@@ -36,6 +37,7 @@ Future<void> _pumpComposer(
       debugShowCheckedModeBanner: false,
       home: DialogHost(
         child: ComposerShell(
+          responsive: responsive,
           child: TextComposerSheet(onSave: (String _) {}, onCancel: () {}),
         ),
       ),
@@ -146,6 +148,51 @@ void main() {
       expect(editor.width, 360 - 4 - 2 * 38);
       expect(tester.getRect(_panel()).bottom, lessThanOrEqualTo(640 - 300));
     });
+
+    for (final ({double window, double column, double centre}) size
+        in <({double window, double column, double centre})>[
+      (window: 900, column: 560, centre: 450),
+      (window: 1280, column: 688, centre: 640),
+      (window: 1920, column: 720, centre: 960),
+    ]) {
+      testWidgets(
+          'a responsive composer writes in a ${size.column} column in a '
+          '${size.window} window', (WidgetTester tester) async {
+        await _pumpComposer(
+          tester,
+          surface: Size(size.window, 900),
+          responsive: true,
+        );
+
+        expect(tester.takeException(), isNull);
+        final Rect editor = tester.getRect(find.byType(EditableText));
+        expect(editor.width, size.column);
+        expect(editor.center.dx, size.centre);
+      });
+    }
+
+    for (final ({double panel, double surface}) size
+        in <({double panel, double surface})>[
+      (panel: 800, surface: 440),
+      (panel: 1200, surface: 660),
+      (panel: 1600, surface: 760),
+    ]) {
+      testWidgets(
+          'the writing surface is ${size.surface} tall with ${size.panel} of '
+          'height inside the panel', (WidgetTester tester) async {
+        await _pumpComposer(
+          tester,
+          surface: Size(1280, size.panel + 2 * composerPanelBorderWidth),
+          responsive: true,
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(
+          tester.getSize(find.byKey(composerWritingSurfaceKey)).height,
+          closeTo(size.surface, 0.01),
+        );
+      });
+    }
 
     testWidgets(
       'the page margins shrink with the surface instead of the editor',

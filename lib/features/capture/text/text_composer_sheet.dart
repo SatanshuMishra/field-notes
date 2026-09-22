@@ -15,6 +15,11 @@ const Key composerCloseKey = ValueKey<String>('composer-close');
 
 const double composerRailMinHeight = 72;
 
+const double composerMeasureEm = 45;
+
+const Key composerWritingSurfaceKey =
+    ValueKey<String>('composer-writing-surface');
+
 const String emptySaveGuardMessage = 'Write something first';
 
 
@@ -30,7 +35,9 @@ const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
 const double _bodyHorizontalPadding = 18;
 const double _bodyBottomPadding = 14;
-const double _surfaceMaxHeight = 440;
+const double _surfaceHeightShare = 0.55;
+const double _surfaceMinCap = 440;
+const double _surfaceMaxCap = 760;
 const double _surfaceRuleThickness = 1;
 const double _pageTopPaddingShare = 0.10;
 const double _pageTopPaddingMin = 8;
@@ -172,6 +179,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             Flexible(
               child: _body(
+                surfaceCap: _surfaceCap(constraints.maxHeight),
                 formatBar: roomy && !sidebar ? formatBar : null,
                 rail: railBelow
                     ? _rail(measure: measure, maxHeight: budget)
@@ -181,6 +189,17 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           ],
         );
       },
+    );
+  }
+
+  double _surfaceCap(double available) {
+    if (!available.isFinite) {
+      return _surfaceMinCap;
+    }
+    return clampDouble(
+      available * _surfaceHeightShare,
+      _surfaceMinCap,
+      _surfaceMaxCap,
     );
   }
 
@@ -346,7 +365,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     showTransientToast(context, emptySaveGuardMessage);
   }
 
-  Widget _body({Widget? formatBar, Widget? rail}) {
+  Widget _body({
+    required double surfaceCap,
+    Widget? formatBar,
+    Widget? rail,
+  }) {
     final String? errorMessage = widget.errorMessage;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -360,7 +383,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
           ),
-        Flexible(child: _writingSurface()),
+        Flexible(child: _writingSurface(surfaceCap)),
         if (rail != null)
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -394,9 +417,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget _writingSurface() {
+  Widget _writingSurface(double cap) {
     return ConstrainedBox(
-      constraints: const BoxConstraints(maxHeight: _surfaceMaxHeight),
+      key: composerWritingSurfaceKey,
+      constraints: BoxConstraints(maxHeight: cap),
       child: DecoratedBox(
         decoration: const BoxDecoration(color: Palette.composerPaper),
         child: Column(
@@ -422,7 +446,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           radius: const Radius.circular(Shapes.radiusXs),
           child: Padding(
             padding: _pageMargins(constraints.maxHeight),
-            child: NoteColumn(child: _page()),
+            child: NoteColumn(maxEm: composerMeasureEm, child: _page()),
           ),
         );
       },
