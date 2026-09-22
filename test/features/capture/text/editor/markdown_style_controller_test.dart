@@ -70,8 +70,10 @@ void main() {
     String text, {
     TextRange? composing,
     bool withComposing = false,
+    int styleLimit = MarkdownStyleController.liveStyleLimit,
   }) {
-    final MarkdownStyleController controller = MarkdownStyleController();
+    final MarkdownStyleController controller =
+        MarkdownStyleController(styleLimit: styleLimit);
     addTearDown(controller.dispose);
     controller.value = TextEditingValue(
       text: text,
@@ -173,6 +175,32 @@ void main() {
 
     expect(span.children, isNotNull);
     expect(span.toPlainText(includeSemanticsLabels: false), source);
+  });
+
+  testWidgets('a raised styleLimit live-styles a buffer past liveStyleLimit',
+      (WidgetTester tester) async {
+    await pumpContext(tester);
+
+    const String unit = '**bold** and *italic* ';
+    final String source =
+        unit * (MarkdownStyleController.liveStyleLimit ~/ unit.length + 1);
+    expect(source.length, greaterThan(MarkdownStyleController.liveStyleLimit));
+
+    final TextSpan fallback = buildFor(source);
+
+    expect(fallback.children, isNull);
+    expect(fallback.text, source);
+    expect(fallback.toPlainText(includeSemanticsLabels: false).length,
+        source.length);
+
+    final TextSpan styled = buildFor(
+      source,
+      styleLimit: MarkdownStyleController.liveStyleLimit * 4,
+    );
+
+    expect(styled.children, isNotNull);
+    expect(styled.children!.length, greaterThan(1));
+    expect(styled.toPlainText(includeSemanticsLabels: false), source);
   });
 
   testWidgets('nothing is ever truncated, however long the note',

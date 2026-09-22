@@ -10,6 +10,7 @@ import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_layout.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
@@ -30,51 +31,9 @@ const int _documentWords = 10000;
 const double _editorSurfaceHeight = 420;
 const double _pageInset = 18;
 const Offset _scrollStep = Offset(0, -60);
+const int _raisedStyleLimit = 1 << 30;
+const double _canonicalMeasure = 560;
 final DateTime _pinnedNow = DateTime(2026, 9, 20, 9, 30);
-
-class ForcedLiveStyleController extends MarkdownStyleController {
-  ForcedLiveStyleController({super.text});
-
-  @override
-  TextSpan buildTextSpan({
-    required BuildContext context,
-    TextStyle? style,
-    required bool withComposing,
-  }) {
-    final TextEditingValue current = value;
-    final String text = current.text;
-    if (text.isEmpty) {
-      return super.buildTextSpan(
-        context: context,
-        style: style,
-        withComposing: withComposing,
-      );
-    }
-    final TextStyle base = style ?? TypographyTokens.noteBody;
-    final bool composing = withComposing && current.isComposingRangeValid;
-    final List<int> codes = markdownStyleCodes(
-      text,
-      composing: composing ? current.composing : null,
-    );
-    final Map<int, TextStyle?> styles = <int, TextStyle?>{};
-    final List<InlineSpan> children = <InlineSpan>[];
-    int runStart = 0;
-    for (int i = 1; i <= codes.length; i++) {
-      if (i < codes.length && codes[i] == codes[runStart]) {
-        continue;
-      }
-      final int code = codes[runStart];
-      children.add(
-        TextSpan(
-          text: text.substring(runStart, i),
-          style: styles.putIfAbsent(code, () => markdownRunStyle(code, base)),
-        ),
-      );
-      runStart = i;
-    }
-    return TextSpan(style: style, children: children);
-  }
-}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -82,8 +41,10 @@ void main() {
   testWidgets('1 keystroke cost in a 20k-character live-styled buffer',
       (WidgetTester tester) async {
     _prepare(tester);
-    final ForcedLiveStyleController controller =
-        ForcedLiveStyleController(text: benchNoteOfChars(_liveStyledChars));
+    final MarkdownStyleController controller = MarkdownStyleController(
+      text: benchNoteOfChars(_liveStyledChars),
+      styleLimit: _raisedStyleLimit,
+    );
     final int startingChars = controller.text.length;
     await _mountEditor(tester, controller);
     controller.selection =
@@ -96,7 +57,9 @@ void main() {
           '20 000-character buffer with live Markdown styling forced on',
       extra: <String, Object?>{
         'startingChars': startingChars,
-        'liveStyling': 'forced on above MarkdownStyleController.liveStyleLimit',
+        'liveStyling': 'on, the shipping MarkdownStyleController with its '
+            'styleLimit raised above the buffer',
+        'styleLimit': _raisedStyleLimit,
         'liveStyleLimit': MarkdownStyleController.liveStyleLimit,
         'caret': 'mid-document, unfocused',
       },
@@ -133,23 +96,66 @@ void main() {
   testWidgets('3 first-layout cost for one wrapped paragraph',
       (WidgetTester tester) async {
     _prepare(tester);
-    final BenchStageState stage = await _mountStage(tester);
+    final IntegrationSandbox sandbox =
+        await IntegrationSandbox.create('note-perf-wrap');
+    addTearDown(sandbox.dispose);
+    final MediaStore store = FilesystemMediaStore(
+      database: sandbox.database,
+      root: sandbox.mediaRoot,
+    );
+
+    final List<MediaBlob> blobs = await _async(
+      tester,
+      () => seedBenchPhotos(store: store, count: 1),
+    );
+    final String reference = benchPhotoReferences(blobs).single;
+    final MediaResolver resolver =
+        await _warmResolver(tester, store, <String>[reference]);
+    final String photoLine = photoLineFor(reference: reference);
     final String paragraph = benchWrappedParagraphSource();
+    final BenchStageState stage = await _mountStage(tester);
     int variant = 0;
 
     await benchMeasure(
       id: 'firstLayoutWrappedParagraph',
-      what: 'build, layout and paint of a freshly mounted NoteBody holding '
-          'one paragraph that wraps at the note measure',
+      what: 'build, layout and paint of a freshly mounted NoteBody at the '
+          '560 pt canonical measure holding one photo line and one paragraph, '
+          'which PhotoWrapBlock splits around the floated photo',
       extra: <String, Object?>{
-        'chars': paragraph.length,
+        'chars': '$photoLine\n$paragraph'.length,
+        'paragraphChars': paragraph.length,
+        'measurePt': _canonicalMeasure,
+        'placement': const PhotoPlacement().format(),
+        'photoPixels': '${benchPhotoWidth}x$benchPhotoHeight',
+        'photoBlockRenderer': 'PhotoWrapBlock through a warm '
+            'MediaStoreResolver, the float asserted after the first sample; '
+            'image decode excluded because it completes after the frame',
         'parserMemo': 'missed, every sample uses a distinct source',
       },
-      sample: () => _mountAndTime(
-        tester,
-        stage,
-        NoteBody(text: benchVariant(paragraph, variant++)),
-      ),
+      sample: () async {
+        final int index = variant++;
+        final Duration elapsed = await _mountAndTime(
+          tester,
+          stage,
+          NoteMediaScope(
+            resolver: resolver,
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.topLeft,
+                minWidth: _canonicalMeasure,
+                maxWidth: _canonicalMeasure,
+                child: NoteBody(
+                  text: '$photoLine\n${benchVariant(paragraph, index)}',
+                ),
+              ),
+            ),
+          ),
+        );
+        if (index == 0) {
+          expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+        }
+        return elapsed;
+      },
     );
   });
 
@@ -169,6 +175,8 @@ void main() {
       () => seedBenchPhotos(store: store, count: benchPhotoCount),
     );
     final List<String> references = benchPhotoReferences(blobs);
+    final MediaResolver resolver =
+        await _warmResolver(tester, store, references);
     final List<File> files = <File>[
       for (final MediaBlob blob in blobs) File(store.absolutePath(blob)),
     ];
@@ -183,21 +191,26 @@ void main() {
     await benchMeasure(
       id: 'firstLayoutTenThousandWordDocument',
       what: 'build, layout and paint of a freshly mounted NoteBody holding a '
-          '10 000-word note carrying eight photo lines',
+          '10 000-word note carrying eight photo lines, rendered as photos '
+          'through a warm media resolver',
       samples: 12,
       warmup: 2,
       extra: <String, Object?>{
         'chars': document.length,
         'photoLines': references.length,
-        'photoBlockRenderer': 'NotePhotoStub, the shipping placeholder; no '
-            'photo bytes are decoded by this measurement',
+        'photoBlockRenderer': 'StackedPhoto or PhotoWrapBlock through a warm '
+            'MediaStoreResolver; image decode excluded because it completes '
+            'after the frame',
         'parserMemo': 'missed, every sample uses a distinct source',
       },
       sample: () => _mountAndTime(
         tester,
         stage,
         SingleChildScrollView(
-          child: NoteBody(text: benchVariant(document, variant++)),
+          child: NoteMediaScope(
+            resolver: resolver,
+            child: NoteBody(text: benchVariant(document, variant++)),
+          ),
         ),
       ),
     );
@@ -210,7 +223,8 @@ void main() {
     await benchMeasure(
       id: 'decodeEightPhotos',
       what: 'cold decode of the same eight photos at the quantised cacheWidth '
-          'a note image will request, the cost NotePhotoStub does not yet pay',
+          'a note image will request, the cost number 4 excludes because '
+          'decode completes after the frame',
       samples: 8,
       warmup: 1,
       extra: <String, Object?>{
@@ -329,6 +343,23 @@ Future<T> _async<T extends Object>(
     throw StateError('bench setup failed; the reported error is above');
   }
   return result;
+}
+
+Future<MediaResolver> _warmResolver(
+  WidgetTester tester,
+  MediaStore store,
+  List<String> references,
+) async {
+  final MediaStoreResolver resolver = MediaStoreResolver(store);
+  final List<ResolvedMedia> resolved = await _async(
+    tester,
+    () => Future.wait<ResolvedMedia>(references.map(resolver.resolve)),
+  );
+  expect(
+    resolved.where((ResolvedMedia media) => media.isAvailable),
+    hasLength(references.length),
+  );
+  return resolver;
 }
 
 Future<void> _mountLive(WidgetTester tester, Widget app) async {
