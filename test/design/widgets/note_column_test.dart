@@ -45,6 +45,21 @@ Widget _probe() => const SizedBox(key: _childKey, height: 40);
 
 void main() {
   group('NoteColumn', () {
+    testWidgets('fills a wide parent inside a full-width scope', (
+      WidgetTester tester,
+    ) async {
+      await _pump(
+        tester,
+        parentWidth: 1100,
+        child: NoteMeasureScope(
+          fillsWidth: true,
+          child: NoteColumn(child: _probe()),
+        ),
+      );
+
+      expect(tester.getSize(find.byKey(_childKey)).width, 1100);
+    });
+
     testWidgets('pins at 35 em when the parent is wider', (
       WidgetTester tester,
     ) async {

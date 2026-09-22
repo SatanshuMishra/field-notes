@@ -24,10 +24,13 @@ class NoteColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = math.min(
-          constraints.maxWidth,
-          measureOf(context) + horizontalInset,
-        );
+        final double width =
+            NoteMeasureScope.fillsWidthOf(context) && constraints.hasBoundedWidth
+                ? constraints.maxWidth
+                : math.min(
+                    constraints.maxWidth,
+                    measureOf(context) + horizontalInset,
+                  );
         return Align(
           alignment: Alignment.topCenter,
           heightFactor: 1,
@@ -36,4 +39,24 @@ class NoteColumn extends StatelessWidget {
       },
     );
   }
+}
+
+class NoteMeasureScope extends InheritedWidget {
+  const NoteMeasureScope({
+    super.key,
+    required this.fillsWidth,
+    required super.child,
+  });
+
+  final bool fillsWidth;
+
+  static bool fillsWidthOf(BuildContext context) =>
+      context
+          .dependOnInheritedWidgetOfExactType<NoteMeasureScope>()
+          ?.fillsWidth ??
+      false;
+
+  @override
+  bool updateShouldNotify(NoteMeasureScope oldWidget) =>
+      fillsWidth != oldWidget.fillsWidth;
 }

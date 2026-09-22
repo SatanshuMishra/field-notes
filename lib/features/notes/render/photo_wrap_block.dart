@@ -4,6 +4,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/media_blob.dart';
 import 'package:field_notes/domain/notes/notes.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
@@ -282,7 +283,11 @@ class _PhotoWrapBlockState extends State<PhotoWrapBlock> {
         final double em = noteEmOf(context, widget.style);
         final PhotoPlacement placement = widget.photo.placement;
         final PhotoPlan plan = planFloat(
-          measure: noteMeasureFor(maxWidth: constraints.maxWidth, em: em),
+          measure: noteMeasureFor(
+            maxWidth: constraints.maxWidth,
+            em: em,
+            fillsWidth: NoteMeasureScope.fillsWidthOf(context),
+          ),
           em: em,
           side: placement.side,
           size: placement.size,
