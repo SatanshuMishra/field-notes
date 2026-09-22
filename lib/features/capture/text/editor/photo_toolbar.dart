@@ -1,23 +1,25 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/notes/notes.dart';
 
-const double photoToolbarGap = 8;
-const double photoToolbarPadding = 8;
-const double photoToolbarTarget = 48;
-const double photoToolbarGroupGap = 8;
-const double photoToolbarRowGap = 8;
+const double photoToolbarGap = 10;
+const double photoToolbarPadding = 5;
+const double photoToolbarTarget = 28;
+const double photoToolbarControlPadding = 7;
+const double photoToolbarControlGap = 2;
+const double photoToolbarGroupGap = 5;
+const double _ruleWidth = 1 + 2 * photoToolbarGroupGap;
+const double photoToolbarRuleHeight = 17;
 
 const String photoToolbarCaptionLabel = 'Caption';
 const String photoToolbarRemoveLabel = 'Remove';
-const String photoToolbarMoreLabel = 'More';
 const String photoToolbarMoveUpLabel = 'Move up';
 const String photoToolbarMoveDownLabel = 'Move down';
 const String photoToolbarReplaceLabel = 'Replace';
@@ -27,11 +29,9 @@ const String photoRemovedUndoLabel = 'Undo';
 const Key photoToolbarKey = ValueKey<String>('photo-toolbar');
 const Key photoToolbarCaptionKey = ValueKey<String>('photo-toolbar-caption');
 const Key photoToolbarRemoveKey = ValueKey<String>('photo-toolbar-remove');
-const Key photoToolbarMoreKey = ValueKey<String>('photo-toolbar-more');
 const Key photoToolbarMoveUpKey = ValueKey<String>('photo-toolbar-move-up');
 const Key photoToolbarMoveDownKey = ValueKey<String>('photo-toolbar-move-down');
 const Key photoToolbarReplaceKey = ValueKey<String>('photo-toolbar-replace');
-const Key photoToolbarDiagramKey = ValueKey<String>('photo-toolbar-diagram');
 
 Key photoToolbarSizeKey(PhotoSize size) =>
     ValueKey<String>('photo-toolbar-size-${size.name}');
@@ -41,17 +41,52 @@ Key photoToolbarSideKey(PhotoSide side) =>
 
 String photoToolbarSizeLabel(PhotoSize size) => '${size.label} size';
 
+double photoToolbarWidthFor({
+  required TextScaler scaler,
+  required bool placement,
+  required bool moves,
+}) {
+  double width = 2 * photoToolbarPadding;
+  for (final PhotoSize size in PhotoSize.values) {
+    width += _controlWidth(size.shortLabel, scaler);
+  }
+  width += _ruleWidth;
+  width += _controlWidth(photoToolbarCaptionLabel, scaler);
+  width += photoToolbarTarget;
+  if (placement) {
+    width += _ruleWidth + 2 * photoToolbarTarget;
+  }
+  if (moves) {
+    width += _ruleWidth + 3 * photoToolbarTarget;
+  }
+  return width;
+}
+
+double _controlWidth(String label, TextScaler scaler) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: label, style: TypographyTokens.toolbarSans),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return math.max(
+    photoToolbarTarget,
+    width + 2 * photoToolbarControlPadding,
+  );
+}
+
 String photoToolbarSideLabel(PhotoSide side) => '${side.label} side';
 
-const double _glyphExtent = 20;
-const double _moreExtent = 18;
+const double _glyphExtent = 14;
+const double _sideGlyphExtent = 18;
+const int _sideGlyphLines = 3;
 const double _disabledOpacity = 0.4;
 const double _focusRingWidth = 2;
-const double _diagramInset = 6;
 const BorderRadius _controlRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusSm));
+    BorderRadius.all(Radius.circular(Shapes.radiusXs + 1));
 const BorderRadius _barRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusMd));
+    BorderRadius.all(Radius.circular(Shapes.radiusSm + 1));
 
 typedef PhotoToolbarImporter = Future<List<String>> Function();
 
@@ -79,20 +114,16 @@ class PhotoToolbar extends StatelessWidget {
 
   bool get placementApplies => canFloatAt(measure: measure, em: em);
 
-  PhotoPlan get readerPlan => planFloat(
-        measure: NoteColumn.measureEm * em,
-        em: em,
-        side: line.placement.side,
-        size: line.placement.size,
-        aspect: photoAspectOf(media?.blob?.width, media?.blob?.height),
-        nextIsParagraph: line.wrapsParagraph && line.placement.isValid,
-      );
+  bool get sideApplies => line.placement.size != PhotoSize.full;
 
   void setSize(PhotoSize size) {
     _apply(setPhotoSize(controller.value, line, size));
   }
 
   void setSide(PhotoSide side) {
+    if (!sideApplies) {
+      return;
+    }
     _apply(setPhotoSide(controller.value, line, side));
   }
 
@@ -152,60 +183,57 @@ class PhotoToolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      explicitChildNodes: true,
-      child: DecoratedBox(
-        key: photoToolbarKey,
-        decoration: const BoxDecoration(
-          color: Palette.ink,
-          borderRadius: _barRadius,
-          boxShadow: Shadows.toastLift,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(photoToolbarPadding),
-          child: IntrinsicWidth(child: _PhotoToolbarBody(toolbar: this)),
-        ),
-      ),
+    final TextScaler scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool moves = constraints.maxWidth >=
+            photoToolbarWidthFor(
+              scaler: scaler,
+              placement: placementApplies,
+              moves: true,
+            );
+        return Semantics(
+          container: true,
+          explicitChildNodes: true,
+          child: DecoratedBox(
+            key: photoToolbarKey,
+            decoration: const BoxDecoration(
+              color: Palette.toolbarInk,
+              borderRadius: _barRadius,
+              boxShadow: Shadows.toastLift,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(photoToolbarPadding),
+              child: _PhotoToolbarBody(toolbar: this, moves: moves),
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class _PhotoToolbarBody extends StatefulWidget {
-  const _PhotoToolbarBody({required this.toolbar});
+  const _PhotoToolbarBody({required this.toolbar, required this.moves});
 
   final PhotoToolbar toolbar;
+  final bool moves;
 
   @override
   State<_PhotoToolbarBody> createState() => _PhotoToolbarBodyState();
 }
 
 class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
-  bool _moreOpen = false;
-
   PhotoToolbar get _toolbar => widget.toolbar;
 
   NotePhotoLine get _line => _toolbar.line;
 
   @override
-  void didUpdateWidget(_PhotoToolbarBody oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_moreOpen && oldWidget.toolbar.line.ordinal != _line.ordinal) {
-      _moreOpen = false;
-    }
-  }
-
-  void _toggleMore() => setState(() => _moreOpen = !_moreOpen);
-
-  @override
   Widget build(BuildContext context) {
     final PhotoPlacement placement = _line.placement;
     final String text = _toolbar.controller.text;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
+    final bool moves = widget.moves;
+    return Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             for (final PhotoSize size in PhotoSize.values)
@@ -220,28 +248,52 @@ class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
                 ),
               ),
             if (_toolbar.placementApplies) ...<Widget>[
-              const SizedBox(width: photoToolbarGroupGap),
+              const _PhotoToolbarRule(),
               for (final PhotoSide side in PhotoSide.values)
                 _PhotoToolbarControl(
                   controlKey: photoToolbarSideKey(side),
                   label: photoToolbarSideLabel(side),
-                  selected: side == placement.side,
-                  onTap: () => _toolbar.setSide(side),
-                  child: _segmentLabel(
-                    side.label,
-                    selected: side == placement.side,
+                  selected: _toolbar.sideApplies && side == placement.side,
+                  onTap: _toolbar.sideApplies
+                      ? () => _toolbar.setSide(side)
+                      : null,
+                  child: PhotoSideGlyph(
+                    side: side,
+                    selected: _toolbar.sideApplies && side == placement.side,
                   ),
                 ),
             ],
-            const SizedBox(width: photoToolbarGroupGap),
+            if (moves) ...<Widget>[
+              const _PhotoToolbarRule(),
+              _PhotoToolbarControl(
+                controlKey: photoToolbarMoveUpKey,
+                label: photoToolbarMoveUpLabel,
+                onTap: canMovePhotoUp(text, _line) ? _toolbar.moveUp : null,
+                child: _glyph(_PhotoToolbarGlyph.up),
+              ),
+              _PhotoToolbarControl(
+                controlKey: photoToolbarMoveDownKey,
+                label: photoToolbarMoveDownLabel,
+                onTap: canMovePhotoDown(text, _line) ? _toolbar.moveDown : null,
+                child: _glyph(_PhotoToolbarGlyph.down),
+              ),
+              _PhotoToolbarControl(
+                controlKey: photoToolbarReplaceKey,
+                label: photoToolbarReplaceLabel,
+                onTap: _toolbar.importer == null
+                    ? null
+                    : () => unawaited(_toolbar.replace()),
+                child: _glyph(_PhotoToolbarGlyph.swap),
+              ),
+            ],
+            const _PhotoToolbarRule(),
             _PhotoToolbarControl(
               controlKey: photoToolbarCaptionKey,
               label: photoToolbarCaptionLabel,
               onTap: _toolbar.onCaption,
-              child: const IconStickerGlyphIcon(
-                glyph: IconStickerGlyph.edit,
-                color: Palette.toastInk,
-                size: _glyphExtent,
+              child: _segmentLabel(
+                photoToolbarCaptionLabel,
+                selected: false,
               ),
             ),
             _PhotoToolbarControl(
@@ -250,92 +302,103 @@ class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
               onTap: () => _toolbar.remove(context),
               child: const IconStickerGlyphIcon(
                 glyph: IconStickerGlyph.trash,
-                color: Palette.toastInk,
+                color: Palette.toolbarLabel,
                 size: _glyphExtent,
               ),
             ),
-            _PhotoToolbarControl(
-              controlKey: photoToolbarMoreKey,
-              label: photoToolbarMoreLabel,
-              expanded: _moreOpen,
-              onTap: _toggleMore,
-              child: Text(
-                '…',
-                style: TypographyTokens.labelSans.copyWith(
-                  color: Palette.toastInk,
-                  fontSize: _moreExtent,
-                  height: 1,
-                ),
-              ),
-            ),
-          ],
-        ),
-        if (_moreOpen) ...<Widget>[
-          const SizedBox(height: photoToolbarRowGap),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _PhotoToolbarControl(
-                controlKey: photoToolbarMoveUpKey,
-                label: photoToolbarMoveUpLabel,
-                onTap: canMovePhotoUp(text, _line) ? _toolbar.moveUp : null,
-                child: _menuLabel(photoToolbarMoveUpLabel),
-              ),
-              _PhotoToolbarControl(
-                controlKey: photoToolbarMoveDownKey,
-                label: photoToolbarMoveDownLabel,
-                onTap: canMovePhotoDown(text, _line) ? _toolbar.moveDown : null,
-                child: _menuLabel(photoToolbarMoveDownLabel),
-              ),
-              _PhotoToolbarControl(
-                controlKey: photoToolbarReplaceKey,
-                label: photoToolbarReplaceLabel,
-                onTap: _toolbar.importer == null
-                    ? null
-                    : () => unawaited(_toolbar.replace()),
-                child: _menuLabel(photoToolbarReplaceLabel),
-              ),
-            ],
-          ),
-        ],
-        const SizedBox(height: photoToolbarRowGap),
-        DecoratedBox(
-          key: photoToolbarDiagramKey,
-          decoration: const BoxDecoration(
-            color: Palette.panelTop,
-            borderRadius: _controlRadius,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(_diagramInset),
-            child: SizedBox(
-              height: photoDiagramHeight,
-              child: PhotoPlacementDiagram(plan: _toolbar.readerPlan),
-            ),
-          ),
-        ),
       ],
     );
   }
 
+  Widget _glyph(_PhotoToolbarGlyph glyph) => SizedBox.square(
+        dimension: _glyphExtent,
+        child: CustomPaint(
+          painter: _PhotoToolbarGlyphPainter(
+            glyph: glyph,
+            color: Palette.toolbarLabel,
+          ),
+        ),
+      );
+
   Widget _segmentLabel(String text, {required bool selected}) {
     return Text(
       text,
-      style: TypographyTokens.labelSans.copyWith(
-        color: selected ? Palette.onAccent : Palette.toastInk,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+      style: TypographyTokens.toolbarSans.copyWith(
+        color: selected ? Palette.onAccent : Palette.toolbarLabel,
       ),
     );
+  }
+}
+
+class _PhotoToolbarRule extends StatelessWidget {
+  const _PhotoToolbarRule();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: photoToolbarGroupGap),
+      child: SizedBox(
+        width: 1,
+        height: photoToolbarRuleHeight,
+        child: ColoredBox(color: Palette.toolbarRule),
+      ),
+    );
+  }
+}
+
+enum _PhotoToolbarGlyph { up, down, swap }
+
+class _PhotoToolbarGlyphPainter extends CustomPainter {
+  const _PhotoToolbarGlyphPainter({required this.glyph, required this.color});
+
+  final _PhotoToolbarGlyph glyph;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    canvas.save();
+    canvas.scale(size.shortestSide / 24);
+    canvas.drawPath(_path(), stroke);
+    canvas.restore();
   }
 
-  Widget _menuLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Text(
-        text,
-        style: TypographyTokens.labelSans.copyWith(color: Palette.toastInk),
-      ),
-    );
+  Path _path() {
+    return switch (glyph) {
+      _PhotoToolbarGlyph.up => Path()
+        ..moveTo(12, 19)
+        ..lineTo(12, 5)
+        ..moveTo(6, 11)
+        ..lineTo(12, 5)
+        ..lineTo(18, 11),
+      _PhotoToolbarGlyph.down => Path()
+        ..moveTo(12, 5)
+        ..lineTo(12, 19)
+        ..moveTo(6, 13)
+        ..lineTo(12, 19)
+        ..lineTo(18, 13),
+      _PhotoToolbarGlyph.swap => Path()
+        ..moveTo(4, 8)
+        ..lineTo(19, 8)
+        ..moveTo(15, 4)
+        ..lineTo(19, 8)
+        ..lineTo(15, 12)
+        ..moveTo(20, 16)
+        ..lineTo(5, 16)
+        ..moveTo(9, 12)
+        ..lineTo(5, 16)
+        ..lineTo(9, 20),
+    };
   }
+
+  @override
+  bool shouldRepaint(_PhotoToolbarGlyphPainter oldDelegate) =>
+      oldDelegate.glyph != glyph || oldDelegate.color != color;
 }
 
 class _PhotoToolbarControl extends StatefulWidget {
@@ -345,7 +408,6 @@ class _PhotoToolbarControl extends StatefulWidget {
     required this.child,
     required this.onTap,
     this.selected,
-    this.expanded,
   });
 
   final Key controlKey;
@@ -353,7 +415,6 @@ class _PhotoToolbarControl extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
   final bool? selected;
-  final bool? expanded;
 
   @override
   State<_PhotoToolbarControl> createState() => _PhotoToolbarControlState();
@@ -389,7 +450,6 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
         button: true,
         enabled: enabled,
         selected: widget.selected,
-        expanded: widget.expanded,
         inMutuallyExclusiveGroup: widget.selected != null,
         label: widget.label,
         child: GestureDetector(
@@ -408,17 +468,24 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
                   border: _focused
                       ? const Border.fromBorderSide(
                           BorderSide(
-                            color: Palette.toastInk,
+                            color: Palette.toolbarLabel,
                             width: _focusRingWidth,
                           ),
                         )
                       : null,
                   borderRadius: _controlRadius,
                 ),
-                child: Center(
-                  child: Opacity(
-                    opacity: enabled ? 1 : _disabledOpacity,
-                    child: widget.child,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: photoToolbarControlPadding,
+                  ),
+                  child: Center(
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    child: Opacity(
+                      opacity: enabled ? 1 : _disabledOpacity,
+                      child: widget.child,
+                    ),
                   ),
                 ),
               ),
@@ -428,4 +495,67 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
       ),
     );
   }
+}
+
+class PhotoSideGlyph extends StatelessWidget {
+  const PhotoSideGlyph({
+    super.key,
+    required this.side,
+    required this.selected,
+  });
+
+  final PhotoSide side;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: _sideGlyphExtent,
+      child: CustomPaint(
+        painter: _PhotoSideGlyphPainter(
+          side: side,
+          color: selected ? Palette.onAccent : Palette.toastInk,
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoSideGlyphPainter extends CustomPainter {
+  const _PhotoSideGlyphPainter({required this.side, required this.color});
+
+  final PhotoSide side;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double block = size.width * 0.5;
+    final double inset = size.height * 0.1;
+    final bool left = side == PhotoSide.left;
+    final Rect picture = Rect.fromLTWH(
+      left ? 0 : size.width - block,
+      inset,
+      block,
+      size.height - 2 * inset,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(picture, const Radius.circular(2)),
+      Paint()..color = color,
+    );
+    final Paint rule = Paint()
+      ..color = color.withValues(alpha: 0.6)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = size.height * 0.11;
+    final double gap = (size.height - rule.strokeWidth) / (_sideGlyphLines - 1);
+    final double from = left ? block + size.width * 0.14 : 0;
+    final double to = left ? size.width : size.width - block - size.width * 0.14;
+    for (int i = 0; i < _sideGlyphLines; i++) {
+      final double y = rule.strokeWidth / 2 + gap * i;
+      canvas.drawLine(Offset(from, y), Offset(to, y), rule);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PhotoSideGlyphPainter oldDelegate) =>
+      oldDelegate.side != side || oldDelegate.color != color;
 }

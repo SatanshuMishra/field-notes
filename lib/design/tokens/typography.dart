@@ -256,6 +256,14 @@ abstract final class TypographyTokens {
     color: Palette.coral,
   );
 
+  static const TextStyle toolbarSans = TextStyle(
+    fontFamily: sans,
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    height: 1,
+    color: Palette.toolbarLabel,
+  );
+
   static const TextStyle caption10Sans = TextStyle(
     fontFamily: sans,
     fontSize: 10,

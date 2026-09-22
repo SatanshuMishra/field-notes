@@ -26,6 +26,22 @@ Finder _panel() => find
 
 Future<List<String>> _noPhotos() async => const <String>[];
 
+Rect _viewport(WidgetTester tester) => tester.getRect(
+      find.descendant(
+        of: find.byType(RawScrollbar),
+        matching: find.byType(SingleChildScrollView),
+      ),
+    );
+
+ScrollableState _editorScroll(WidgetTester tester) => tester.state(
+      find
+          .descendant(
+            of: find.byType(RawScrollbar),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+
 Future<void> _pumpComposer(
   WidgetTester tester, {
   required Size surface,
@@ -33,6 +49,7 @@ Future<void> _pumpComposer(
   bool responsive = false,
   String initialText = '',
   PhotoImporter? onAddPhoto,
+  TargetPlatform? platform,
 }) async {
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
@@ -41,6 +58,7 @@ Future<void> _pumpComposer(
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: platform == null ? null : ThemeData(platform: platform),
       home: DialogHost(
         child: ComposerShell(
           responsive: responsive,
@@ -182,28 +200,61 @@ void main() {
       });
     }
 
-    testWidgets('the writing surface follows the window at 68 percent',
+    testWidgets('the writing surface takes the height the window gives it',
         (WidgetTester tester) async {
-      for (final ({double panel, double surface}) size
-          in <({double panel, double surface})>[
-        (panel: 800, surface: 544),
-        (panel: 1200, surface: 816),
-        (panel: 1600, surface: 860),
-      ]) {
+      for (final double window in <double>[800, 1200, 1600]) {
         await _pumpComposer(
           tester,
-          surface: Size(1280, size.panel + 2 * composerPanelBorderWidth),
+          surface: Size(1280, window),
           responsive: true,
           onAddPhoto: _noPhotos,
         );
 
         expect(tester.takeException(), isNull);
+        final Rect panel = tester.getRect(_panel());
+        final Rect surface =
+            tester.getRect(find.byKey(composerWritingSurfaceKey));
         expect(
-          tester.getSize(find.byKey(composerWritingSurfaceKey)).height,
-          closeTo(size.surface, 0.01),
-          reason: 'a panel ${size.panel} tall',
+          panel.height,
+          closeTo(window - 2 * composerPanelMarginFor(window), 0.01),
+          reason: 'a window ${window}pt tall',
+        );
+        expect(
+          panel.bottom - surface.bottom,
+          lessThanOrEqualTo(formatBarHeight + _lineHeight),
+          reason: 'a window ${window}pt tall',
         );
       }
+    });
+
+    testWidgets('the footer floats over the writing surface, blurred',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      final Rect surface =
+          tester.getRect(find.byKey(composerWritingSurfaceKey));
+      final Rect footer = tester.getRect(find.byType(ComposerFooter));
+      expect(footer.top, greaterThan(surface.top));
+      expect(footer.bottom, closeTo(surface.bottom, 0.5));
+      expect(
+        find.descendant(
+          of: find.byType(ComposerFooterVeil),
+          matching: find.byType(BackdropFilter),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSize(find.byType(EditableText)).height,
+        greaterThan(surface.height),
+        reason: 'the note keeps scrolling under the footer',
+      );
     });
 
     testWidgets('the composer leaves no dead band under its footer',
@@ -218,9 +269,85 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(
-        tester.getRect(_panel()).bottom -
+        tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom -
             tester.getRect(find.byType(ComposerFooter)).bottom,
         lessThanOrEqualTo(_lineHeight),
+      );
+    });
+
+    testWidgets('the note flows to the bottom of the writing surface',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        _viewport(tester).bottom,
+        closeTo(
+          tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
+          0.5,
+        ),
+        reason: 'the note stops short of the footer',
+      );
+    });
+
+    testWidgets('the footer reaches the bottom edge of the panel',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        platform: TargetPlatform.macOS,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.byType(ComposerFooterVeil)).bottom,
+        closeTo(
+          tester.getRect(_panel()).bottom - composerPanelBorderWidth,
+          0.5,
+        ),
+      );
+    });
+
+    testWidgets('an empty note does not scroll', (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(_editorScroll(tester).position.maxScrollExtent, 0);
+    });
+
+    testWidgets('the end of a long note clears the footer',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+      final ScrollableState scroll = _editorScroll(tester);
+      scroll.position.jumpTo(scroll.position.maxScrollExtent);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.byType(EditableText)).bottom,
+        lessThanOrEqualTo(
+          tester.getRect(find.byType(ComposerFooterVeil)).top + 0.5,
+        ),
       );
     });
 

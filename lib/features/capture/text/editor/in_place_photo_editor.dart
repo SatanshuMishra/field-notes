@@ -408,8 +408,10 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
                 fix != null || _caretOnPhoto(layout.photos, value.selection);
             final int? selected =
                 _selectedPhoto(layout.photos, value.selection);
-            final ToolbarSpot? toolbar =
-                selected == null ? null : _toolbarSpot(selected, viewport);
+            final double inset = _config.bottomInset;
+            final ToolbarSpot? toolbar = selected == null
+                ? null
+                : _toolbarSpot(selected, math.max(0, viewport - inset));
             return _PhotoKeys(
               controller: _controller,
               spacers: layout.patches.spacers,
@@ -423,6 +425,7 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
                     children: <Widget>[
                       _PhotoCanvas(
                         minHeight: viewport,
+                        bottomInset: inset,
                         placements: <PhotoSpot>[
                           for (final InPlacePhoto photo in layout.photos)
                             PhotoSpot(
@@ -895,6 +898,7 @@ class _PhotoCanvas extends MultiChildRenderObjectWidget {
   const _PhotoCanvas({
     required this.placements,
     required this.minHeight,
+    required this.bottomInset,
     required this.caret,
     required this.toolbar,
     required this.onFigures,
@@ -903,6 +907,7 @@ class _PhotoCanvas extends MultiChildRenderObjectWidget {
 
   final List<PhotoSpot> placements;
   final double minHeight;
+  final double bottomInset;
   final CaretSpot? caret;
   final ToolbarSpot? toolbar;
   final ValueChanged<List<Rect>> onFigures;
@@ -912,6 +917,7 @@ class _PhotoCanvas extends MultiChildRenderObjectWidget {
     return RenderPhotoCanvas(
       spots: placements,
       height: minHeight,
+      reserved: bottomInset,
       spot: caret,
       bar: toolbar,
       figures: onFigures,
@@ -926,6 +932,7 @@ class _PhotoCanvas extends MultiChildRenderObjectWidget {
     renderObject
       ..placements = placements
       ..minHeight = minHeight
+      ..bottomInset = bottomInset
       ..caret = caret
       ..toolbar = toolbar
       ..onFigures = onFigures;
@@ -955,11 +962,13 @@ class RenderPhotoCanvas extends RenderBox
   RenderPhotoCanvas({
     required List<PhotoSpot> spots,
     required double height,
+    required double reserved,
     required CaretSpot? spot,
     required ToolbarSpot? bar,
     required ValueChanged<List<Rect>> figures,
   })  : _placements = spots,
         _minHeight = height,
+        _inset = reserved,
         _caret = spot,
         _toolbar = bar,
         _onFigures = figures;
@@ -978,6 +987,7 @@ class RenderPhotoCanvas extends RenderBox
 
   List<PhotoSpot> _placements;
   double _minHeight;
+  double _inset;
   CaretSpot? _caret;
   ToolbarSpot? _toolbar;
   ValueChanged<List<Rect>> _onFigures;
@@ -1005,6 +1015,14 @@ class RenderPhotoCanvas extends RenderBox
       return;
     }
     _minHeight = value;
+    markNeedsLayout();
+  }
+
+  set bottomInset(double value) {
+    if (_inset == value) {
+      return;
+    }
+    _inset = value;
     markNeedsLayout();
   }
 
@@ -1036,7 +1054,7 @@ class RenderPhotoCanvas extends RenderBox
       BoxConstraints(
         minWidth: width,
         maxWidth: width,
-        minHeight: _minHeight,
+        minHeight: math.max(0, _minHeight - _inset),
       ),
       parentUsesSize: true,
     );
@@ -1084,14 +1102,17 @@ class RenderPhotoCanvas extends RenderBox
       );
       data.offset = rect?.topLeft ?? Offset.zero;
     }
-    _layOutToolbar(children, figures, width);
-    size = constraints.constrain(Size(width, math.max(_minHeight, bottom)));
+    final double content = math.max(_minHeight, bottom + _inset);
+    _layOutToolbar(children, figures, width, content);
+
+    size = constraints.constrain(Size(width, content));
   }
 
   void _layOutToolbar(
     List<RenderBox> children,
     List<Rect> figures,
     double width,
+    double content,
   ) {
     final int index = _placements.length + (_caret == null ? 1 : 2);
     if (index >= children.length) {
@@ -1109,16 +1130,38 @@ class RenderPhotoCanvas extends RenderBox
       data.offset = Offset.zero;
       return;
     }
-    final bool room =
-        figure.top - spot!.viewportTop >= bar.size.height + photoToolbarGap;
     data.offset = Offset(
       (figure.center.dx - bar.size.width / 2)
           .clamp(0.0, math.max(0.0, width - bar.size.width)),
-      room
-          ? figure.top - photoToolbarGap - bar.size.height
-          : figure.bottom + photoToolbarGap,
+      _besideFigure(
+        figure,
+        spot!.viewportTop.clamp(0.0, math.max(0.0, content - _minHeight)),
+        bar.size.height,
+      ),
     );
   }
+
+  double _besideFigure(Rect figure, double viewportTop, double height) {
+    final double above = figure.top - photoToolbarGap - height;
+    if (_minHeight <= 0) {
+      return above;
+    }
+    final double top = viewportTop + photoToolbarGap;
+    final double bottom =
+        viewportTop + _minHeight - _inset - photoToolbarGap - height;
+    if (bottom <= top) {
+      return top;
+    }
+    if (above >= top) {
+      return math.min(above, bottom);
+    }
+    final double below = figure.bottom + photoToolbarGap;
+    if (below <= bottom) {
+      return math.max(below, top);
+    }
+    return math.max(top, math.min(figure.top + photoToolbarGap, bottom));
+  }
+
 
   Rect? _caretRect(RenderEditable? editable) {
     final CaretSpot? spot = _caret;

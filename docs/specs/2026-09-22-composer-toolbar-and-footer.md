@@ -50,20 +50,35 @@ photo, and when the selection leaves the photo line.
 | Group | Controls |
 |---|---|
 | Size | `S` `M` `L` `Full`, the current one marked |
-| Placement | `Left` `Right`, the current one marked. Hidden when `canFloatAt` says the measure cannot float, exactly as the rail hid it. Centre joins this group in phase 3 |
+| Placement | Two glyph buttons, a picture with text lines beside it, one per side, the current one marked. Hidden when `canFloatAt` says the measure cannot float, exactly as the rail hid it. Dimmed and inert at Full size. Centre joins this group in phase 3 |
 | Caption | One button. It opens the in-place caption editor (§3) |
 | Remove | A trash glyph. It removes the photo line and shows the Undo toast (§5) |
-| More | A `…` button opening a menu of Move up, Move down and Replace, each disabled when the edit cannot apply |
+| Move | Three glyphs in the bar itself, an arrow up, an arrow down and a swap, each disabled when the edit cannot apply. They are the first thing dropped when the bar has no room for them, and nothing else is |
 
-The toolbar also carries the reader-prediction hint the rail used to carry: the existing
-`PhotoPlacementDiagram` and its sentence, which says whether the reader will wrap text beside this photo
-or stack it. The editor's column runs to 45 em and the reader's to 35 em, so the two can differ, and this
-is the only place that says so.
+The toolbar carries no preview panel. The owner ruled on 2026-09-22, after seeing it on macOS, that a
+picture of the placement is unnecessary beside the placement buttons, whose own glyphs show a picture
+with text beside it, as the design's do. `PhotoPlacementDiagram` stays in the codebase for the reader,
+and nothing in the composer draws it. What is lost with it: the editor's column runs to 45 em and the
+reader's to 35 em, so a photo can float here and stack there, and nothing now says so.
 
-**Where it sits.** Centred over the top edge of the photo, `photoToolbarGap` above it. When there is not
-enough room above, it flips below the photo. It never leaves the writing surface horizontally: it is
-clamped to the surface's left and right edges. It is not shown at all while the photo's band is scrolled
-out of the writing surface.
+A photo at Full size takes no side. Its placement buttons stay in the bar, dimmed and inert, as the
+design dims them.
+
+**How it looks.** The design's bar, to its own numbers: a `#2A241D` surface at 5pt padding with an 11pt
+radius, controls 28pt square with 7pt of side padding and 2pt between them, labels in 11pt semibold on
+`#E9DCC6`, the marked one on the accent, and a 1pt rule 17pt tall between the groups. The owner chose
+this over the taller bar with 48pt targets on 2026-09-22: a mouse does not need 48pt, and the phone pass
+gives touch its own size.
+
+**Where it sits.** Centred over the top edge of the photo, `photoToolbarGap` above it. When there is no
+room above it inside the view, it flips below the photo; when there is no room there either, which is a
+photo taller than the view, it rides on the photo's own top edge. It stays on the picture in every case
+and never leaves the writing surface, so it is neither cut off nor left floating over unrelated text. It
+is not shown at all while the photo's band is scrolled out of the writing surface.
+
+The owner reported the drift on 2026-09-22: an earlier rule clamped the bar into the view without
+keeping it on the photo, so a tall photo left the bar stranded over the text above it, and a scroll
+position whose offset the scroller had not yet clamped left it hanging past the foot of the view.
 
 **Keyboard and screen readers.** Every control is focusable and operable with Enter or Space. Tab from
 the selected photo enters the toolbar and walks it left to right; Esc anywhere in the toolbar deselects
@@ -89,15 +104,24 @@ runs every commit through it.
 
 ## 4. The footer
 
-One row under the writing surface, inside the panel's horizontal padding:
+One row floating over the foot of the writing surface, inside the panel's horizontal padding, on a
+translucent blurred veil so the note reads through it. The veil sits on the panel's bottom edge, and the
+writing surface runs all the way down to it, so the note passes under the blur instead of stopping above
+it. The page reserves the footer's height plus a 12pt gap as scroll slack **inside** its own scroll, never
+as an inset on the viewport: the last line can always be scrolled clear of the footer, and an empty note
+still does not scroll. The owner ruled this on 2026-09-22: the design's own footer is a plain row under a
+fixed-height surface, and that is what left the panel with a dead band. Reaffirmed the same day after the
+first build reserved that band outside the viewport and left 87pt of blank paper between the end of the
+note and the veil.
 
-- **Add memory.** A button carrying the design's word. It picks photos, stores them and inserts their
+- **Add memory.** The design's button: its word, a camera glyph, an accent fill and the sticker shadow
+  the Save button carries. It picks photos, stores them and inserts their
   lines at the caret, exactly as the rail's Add photo tile did, including its busy label and its two
   failure messages. It is focusable, operable with Enter, and returns focus to the writing surface when
   the pick finishes. It never disappears on a short screen (fix-wave W3 and C12).
-- **Markdown hints.** A dimmed line reading `**bold**  *italic*  # heading  - list  > quote`, right
-  aligned. On a short screen, or when the panel is too narrow to hold both, the hints drop and Add memory
-  stays.
+- **Markdown hints.** A dimmed line reading `# title  - list  1. steps  > quote`, the markers darker than
+  the words, right aligned, as the design writes them. On a short screen, or when the panel is too narrow
+  to hold both, the hints drop and Add memory stays.
 
 No mode switch. The design's Photos Inline / Scrapbook toggle is not built (C1).
 
@@ -152,12 +176,14 @@ the text, so both are answered by clicking the picture.
 
 ## 7. The writing surface takes the height
 
-C8's writing-surface rule becomes: **68% of the height available to the panel, never below 440pt and
-never above 860pt**, and never more than the space left once the rest of the composer is laid out. The
-panel width rule and the 45 em column are unchanged.
+C8's writing-surface rule becomes: **the writing surface takes every point the panel has left** once the
+header and the format bar are laid out. The panel fills the window less a margin, which is dropped
+entirely on a window too short to spare it. The panel width rule and the 45 em column are unchanged.
 
-Geometry tests pin the surface at panel heights of 800, 1200 and 1600, and pin that the panel's content
-ends within one line height of the panel's own bottom, so no dead band returns.
+Geometry tests pin the panel against the window at 800, 1200 and 1600, pin that the footer's bottom sits
+at the surface's bottom and at the panel's inner edge, pin that the editor's viewport reaches the surface's
+bottom, and pin both ends of the reserved band: an empty note does not scroll, and a long note scrolled to
+its end keeps its last line clear of the footer.
 
 ---
 
@@ -165,7 +191,8 @@ ends within one line height of the panel's own bottom, so no dead band returns.
 
 | Parent rule | Now |
 |---|---|
-| C8: the writing surface is 55% of the available height, clamped 440 to 760 | 68%, clamped 440 to 860 (§7) |
+| C8: the writing surface is 55% of the available height, clamped 440 to 760 | It takes the height the panel has left, and the panel fills the window less a margin (§7) |
+| C4: the toolbar carries the reader-prediction diagram | No preview panel; the placement glyphs carry it (§2) |
 | C4: the toolbar carries left, centre and right | Left and right until phase 3 lands centre (§2) |
 | `u8`: the photo rail, the options sheet, the caption sheet | Deleted (§6) |
 | Phase order: 3, then 4, then 5 | 5 first, by the owner's call on 2026-09-22 |

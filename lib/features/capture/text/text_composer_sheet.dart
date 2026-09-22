@@ -33,17 +33,12 @@ const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
 const double _bodyHorizontalPadding = 18;
 const double _bodyBottomPadding = 14;
-const double _surfaceHeightShare = 0.68;
-const double _surfaceMinCap = 440;
-const double _surfaceMaxCap = 860;
 const double _surfaceRuleThickness = 1;
 const double _pageTopPaddingShare = 0.10;
 const double _pageTopPaddingMin = 8;
 const double _pageTopPaddingMax = 44;
 const double _pageHorizontalPadding = 38;
-const double _pageBottomPaddingShare = 0.12;
-const double _pageBottomPaddingMin = 12;
-const double _pageBottomPaddingMax = 120;
+const double _pageEndGap = 12;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
 const double _chipVerticalPadding = 10;
@@ -136,7 +131,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           trailing: roomy ? null : _compactAdd(),
         );
         return Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           children: <Widget>[
             _header(
               middle: roomy ? _titleBlock() : formatBar,
@@ -146,9 +141,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               thickness: _headerRuleThickness,
               color: Palette.ink25,
             ),
-            Flexible(
+            Expanded(
               child: _body(
-                surfaceCap: _surfaceCap(constraints.maxHeight),
                 formatBar: roomy && !sidebar ? formatBar : null,
                 footer: roomy ? _footer(showHints: true) : null,
               ),
@@ -159,16 +153,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  double _surfaceCap(double available) {
-    if (!available.isFinite) {
-      return _surfaceMinCap;
-    }
-    return clampDouble(
-      available * _surfaceHeightShare,
-      _surfaceMinCap,
-      _surfaceMaxCap,
-    );
-  }
+  Widget? _compactAdd() => _footer(showHints: false, compact: true);
 
   Widget? _footer({required bool showHints, bool compact = false}) {
     final PhotoImporter? importer = widget.onAddPhoto;
@@ -193,15 +178,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         NoteColumn.emOf(context) * TypographyTokens.noteBody.height!;
     return available >=
         _composerChromeHeight +
-            _footerHeight +
+            composerFooterHeight +
             formatBarHeight +
             _minimumWritingLines * line;
   }
-
-  double get _footerHeight =>
-      widget.onAddPhoto == null ? 0 : composerFooterHeight;
-
-  Widget? _compactAdd() => _footer(showHints: false, compact: true);
 
   Widget _formatBar({Widget? trailing}) {
     return FormatBar(
@@ -310,14 +290,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     showTransientToast(context, emptySaveGuardMessage);
   }
 
-  Widget _body({
-    required double surfaceCap,
-    Widget? formatBar,
-    Widget? footer,
-  }) {
+  Widget _body({Widget? formatBar, Widget? footer}) {
     final String? errorMessage = widget.errorMessage;
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisSize: MainAxisSize.max,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         if (widget.draftRestored)
@@ -328,44 +304,50 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
           ),
-        Flexible(child: _writingSurface(surfaceCap)),
-        ?formatBar,
-        if (footer != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _bodyHorizontalPadding,
-            ),
-            child: footer,
-          ),
-        Padding(
-          padding: const EdgeInsets.only(
-            left: _bodyHorizontalPadding,
-            right: _bodyHorizontalPadding,
-            bottom: _bodyBottomPadding,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        Expanded(
+          child: Stack(
             children: <Widget>[
-              if (errorMessage != null) ...<Widget>[
-                const SizedBox(height: _errorGap),
-                Text(
-                  errorMessage,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.danger),
+              Positioned.fill(child: _writingSurface(footer: footer != null)),
+              if (footer != null)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: ComposerFooterVeil(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: _bodyHorizontalPadding,
+                      ),
+                      child: footer,
+                    ),
+                  ),
                 ),
-              ],
             ],
           ),
         ),
+        ?formatBar,
+        if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(
+              left: _bodyHorizontalPadding,
+              right: _bodyHorizontalPadding,
+              top: _errorGap,
+            ),
+            child: Text(
+              errorMessage,
+              style:
+                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
+            ),
+          ),
+        if (formatBar != null || errorMessage != null)
+          const SizedBox(height: _bodyBottomPadding),
       ],
     );
   }
 
-  Widget _writingSurface(double cap) {
-    return ConstrainedBox(
+  Widget _writingSurface({required bool footer}) {
+    return KeyedSubtree(
       key: composerWritingSurfaceKey,
-      constraints: BoxConstraints(maxHeight: cap),
       child: DecoratedBox(
         decoration: const BoxDecoration(color: Palette.composerPaper),
         child: Column(
@@ -374,14 +356,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               thickness: _surfaceRuleThickness,
               color: Palette.ink20,
             ),
-            Expanded(child: _editor()),
+            Expanded(child: _editor(footer: footer)),
           ],
         ),
       ),
     );
   }
 
-  Widget _editor() {
+  Widget _editor({required bool footer}) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return RawScrollbar(
@@ -391,14 +373,17 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           radius: const Radius.circular(Shapes.radiusXs),
           child: Padding(
             padding: _pageMargins(constraints.maxHeight),
-            child: NoteColumn(maxEm: composerMeasureEm, child: _page()),
+            child: NoteColumn(
+              maxEm: composerMeasureEm,
+              child: _page(bottomInset: _pageEndInset(footer: footer)),
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _page() {
+  Widget _page({required double bottomInset}) {
     return noteEditorFor(
       NoteEditorConfig(
         controller: _controller,
@@ -407,6 +392,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         scrollController: _scrollController,
         hintText: widget.hintText,
         photoImporter: widget.onAddPhoto,
+        bottomInset: bottomInset,
       ),
     );
   }
@@ -421,13 +407,11 @@ EdgeInsets _pageMargins(double surfaceHeight) {
     ),
     left: _pageHorizontalPadding,
     right: _pageHorizontalPadding,
-    bottom: clampDouble(
-      surfaceHeight * _pageBottomPaddingShare,
-      _pageBottomPaddingMin,
-      _pageBottomPaddingMax,
-    ),
   );
 }
+
+double _pageEndInset({required bool footer}) =>
+    (footer ? composerFooterHeight : 0) + _pageEndGap;
 
 class _CloseGlyphPainter extends CustomPainter {
   const _CloseGlyphPainter();

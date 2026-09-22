@@ -51,6 +51,10 @@ abstract final class Palette {
   static const Color onAccent = Color(0xFFFFFFFF);
   static const Color toastInk = Color(0xFFF6EAD6);
 
+  static const Color toolbarInk = Color(0xFF2A241D);
+  static const Color toolbarLabel = Color(0xFFE9DCC6);
+  static const Color toolbarRule = Color(0x33FFFFFF);
+
   static const Color titleBar = Color(0xFFE4D6BF);
   static const Color windowTitle = Color(0xFFA3866A);
   static const Color trafficRed = Color(0xFFFF5F57);
