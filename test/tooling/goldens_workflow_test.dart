@@ -21,6 +21,9 @@ void main() {
       'lib/features/entry_cards/notes/**',
       'lib/features/entry_cards/media/**',
       'test/features/notes/support/**',
+      'lib/data/media/blob_prefix.dart',
+      'test/design/widgets/widget_harness.dart',
+      'test/flutter_test_config.dart',
     ];
 
     for (final String glob in requiredGlobs) {

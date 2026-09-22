@@ -297,7 +297,11 @@ The items file carries each Step's full brief. This section is the reviewer's su
 
 ### `note-guards` — F13, F14, F15
 
-- `goldens.yml` adds the five directories the float goldens render from.
+- `goldens.yml` adds the five directories the float goldens render from, and, after review, the three
+  single files they also depend on: `lib/data/media/blob_prefix.dart` (the tilt hash),
+  `test/design/widgets/widget_harness.dart` and `test/flutter_test_config.dart` (font loading).
+- After review, the GC guard matches any mention of `collectGarbage` that is not its declaration, so a
+  tear-off or an unqualified call cannot slip past it.
 - A static test pins that workflow's paths. A static test pins that only the Reclaim space controller
   calls `collectGarbage` in `lib/`. Two fixture tests pin EXIF orientation through
   `readPhotoIntrinsics` and `downscalePhoto`.

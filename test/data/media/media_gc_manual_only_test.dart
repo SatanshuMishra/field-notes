@@ -6,7 +6,7 @@ import 'package:path/path.dart' as p;
 void main() {
   test('only the Reclaim space controller calls collectGarbage in lib', () {
     final Directory lib = Directory('lib');
-    final RegExp callSite = RegExp(r'\.collectGarbage\(');
+    final RegExp callSite = RegExp(r'(?<!Future<int>\s)\bcollectGarbage\b');
 
     final Set<String> callers = <String>{};
     for (final FileSystemEntity entity
