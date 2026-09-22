@@ -4,6 +4,8 @@ import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+import 'package:field_notes/features/capture/text/composer_footer.dart';
+import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/notes/notes.dart';
@@ -560,8 +562,9 @@ void main() {
       ];
     }
 
-    testWidgets('mounts the photo rail under the writing surface, Add first',
-        (WidgetTester tester) async {
+    testWidgets(
+        'mounts the composer footer under the writing surface, Add memory '
+        'first', (WidgetTester tester) async {
       await tester.pumpWidget(
         _composerApp(
           writer: FakeNoteWriter(),
@@ -572,17 +575,21 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      expect(find.byType(PhotoRail), findsOneWidget);
-      expect(find.byKey(photoRailAddKey), findsOneWidget);
+      expect(find.byType(ComposerFooter), findsOneWidget);
+      expect(find.byKey(composerAddPhotoKey), findsOneWidget);
       expect(
-        tester.getTopLeft(find.byKey(photoRailKey)).dy,
+        tester.getTopLeft(find.byType(ComposerFooter)).dy,
         greaterThan(tester.getBottomLeft(find.byType(EditableText)).dy),
+      );
+      expect(
+        tester.getTopLeft(find.byKey(composerAddPhotoKey)).dx,
+        lessThan(tester.getTopLeft(find.byKey(composerHintsKey)).dx),
       );
       expect(find.byType(EditableText), findsOneWidget);
     });
 
     testWidgets(
-        'Add photo stores the pick, inserts its line, and the save hands the '
+        'Add memory stores the pick, inserts its line, and the save hands the '
         'full media id to the writer for the reachability index',
         (WidgetTester tester) async {
       final FakeNoteWriter writer = FakeNoteWriter();
@@ -610,7 +617,7 @@ void main() {
       await tester.enterText(find.byType(EditableText), 'a good day');
       await tester.pump();
 
-      await tester.tap(find.byKey(photoRailAddKey));
+      await tester.tap(find.byKey(composerAddPhotoKey));
       await tester.pumpAndSettle();
 
       final String expected = 'a good day\n${photoLine(photoIdA)}\n';
@@ -621,7 +628,7 @@ void main() {
         tester.widget<EditableText>(find.byType(EditableText)).controller.text,
         expected,
       );
-      expect(find.byKey(photoRailThumbKey(0)), findsOneWidget);
+      expect(find.byKey(inPlacePhotoKey(0)), findsOneWidget);
 
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();

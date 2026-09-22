@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -8,12 +6,12 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+import 'package:field_notes/features/notes/photos/photo_import.dart';
 
+import 'composer_footer.dart';
 import 'editor/editor.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
-
-const double composerRailMinHeight = 72;
 
 const double composerMeasureEm = 45;
 
@@ -35,9 +33,9 @@ const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
 const double _bodyHorizontalPadding = 18;
 const double _bodyBottomPadding = 14;
-const double _surfaceHeightShare = 0.55;
+const double _surfaceHeightShare = 0.68;
 const double _surfaceMinCap = 440;
-const double _surfaceMaxCap = 760;
+const double _surfaceMaxCap = 860;
 const double _surfaceRuleThickness = 1;
 const double _pageTopPaddingShare = 0.10;
 const double _pageTopPaddingMin = 8;
@@ -51,26 +49,6 @@ const double _errorGap = 8;
 const double _chipVerticalPadding = 10;
 const double _composerChromeHeight = 104;
 const int _minimumWritingLines = 4;
-
-typedef ComposerRailBuilder = Widget Function(
-  BuildContext context,
-  ComposerRailSlot slot,
-);
-
-@immutable
-class ComposerRailSlot {
-  const ComposerRailSlot({
-    required this.controller,
-    required this.focusNode,
-    required this.measure,
-    required this.maxHeight,
-  });
-
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final double measure;
-  final double maxHeight;
-}
 
 class TextComposerSheet extends StatefulWidget {
   const TextComposerSheet({
@@ -88,7 +66,7 @@ class TextComposerSheet extends StatefulWidget {
     this.hintText = 'Start writing…',
     this.saveLabel = 'Save',
     this.savingLabel = 'Saving…',
-    this.photoRail,
+    this.onAddPhoto,
   });
 
   final ValueChanged<String> onSave;
@@ -104,7 +82,7 @@ class TextComposerSheet extends StatefulWidget {
   final String hintText;
   final String saveLabel;
   final String savingLabel;
-  final ComposerRailBuilder? photoRail;
+  final PhotoImporter? onAddPhoto;
 
   @override
   State<TextComposerSheet> createState() => _TextComposerSheetState();
@@ -116,7 +94,6 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
   late final UndoHistoryController _undoController;
-  final GlobalKey _railKey = GlobalKey();
 
   @override
   void initState() {
@@ -154,18 +131,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         );
         final bool sidebar = resolveShellLayout(Theme.of(context).platform) ==
             ShellLayout.sidebar;
-        final double budget = _railBudget(
-          context,
-          constraints.maxHeight,
-          formatBar: roomy,
-        );
-        final bool railBelow = budget >= composerRailMinHeight;
-        final double measure = _railMeasure(context, constraints);
-        final Widget formatBar = _formatBar(
-          trailing: railBelow
-              ? null
-              : _rail(measure: measure, maxHeight: formatBarHeight),
-        );
+        final Widget formatBar = _formatBar();
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -181,9 +147,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               child: _body(
                 surfaceCap: _surfaceCap(constraints.maxHeight),
                 formatBar: roomy && !sidebar ? formatBar : null,
-                rail: railBelow
-                    ? _rail(measure: measure, maxHeight: budget)
-                    : null,
+                footer: _footer(showHints: roomy),
               ),
             ),
           ],
@@ -203,49 +167,17 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  double _railMeasure(BuildContext context, BoxConstraints constraints) {
-    return math.max(
-      0.0,
-      math.min(
-        constraints.maxWidth - 2 * _pageHorizontalPadding,
-        NoteColumn.measureOf(context),
-      ),
-    );
-  }
-
-  Widget? _rail({required double measure, required double maxHeight}) {
-    final ComposerRailBuilder? railBuilder = widget.photoRail;
-    if (railBuilder == null) {
+  Widget? _footer({required bool showHints}) {
+    final PhotoImporter? importer = widget.onAddPhoto;
+    if (importer == null) {
       return null;
     }
-    final ComposerRailSlot slot = ComposerRailSlot(
+    return ComposerFooter(
       controller: _controller,
-      focusNode: _focusNode,
-      measure: measure,
-      maxHeight: maxHeight,
+      onAddPhoto: importer,
+      editorFocusNode: _focusNode,
+      showHints: showHints,
     );
-    return KeyedSubtree(
-      key: _railKey,
-      child: Builder(
-        builder: (BuildContext context) => railBuilder(context, slot),
-      ),
-    );
-  }
-
-  double _railBudget(
-    BuildContext context,
-    double available, {
-    required bool formatBar,
-  }) {
-    if (!available.isFinite) {
-      return double.infinity;
-    }
-    final double line =
-        NoteColumn.emOf(context) * TypographyTokens.noteBody.height!;
-    return available -
-        _composerChromeHeight -
-        (formatBar ? formatBarHeight : 0) -
-        _minimumWritingLines * line;
   }
 
   bool _hasRoomForFormatBar(BuildContext context, double available) {
@@ -255,15 +187,17 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     final double line =
         NoteColumn.emOf(context) * TypographyTokens.noteBody.height!;
     return available >=
-        _composerChromeHeight + formatBarHeight + _minimumWritingLines * line;
+        _composerChromeHeight +
+            _footerHeight +
+            formatBarHeight +
+            _minimumWritingLines * line;
   }
 
-  Widget _formatBar({Widget? trailing}) {
-    return FormatBar(
-      controller: _controller,
-      undoController: _undoController,
-      trailing: trailing,
-    );
+  double get _footerHeight =>
+      widget.onAddPhoto == null ? 0 : composerFooterHeight;
+
+  Widget _formatBar() {
+    return FormatBar(controller: _controller, undoController: _undoController);
   }
 
   Widget _header({required Widget middle, Widget? below}) {
@@ -368,7 +302,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   Widget _body({
     required double surfaceCap,
     Widget? formatBar,
-    Widget? rail,
+    Widget? footer,
   }) {
     final String? errorMessage = widget.errorMessage;
     return Column(
@@ -384,14 +318,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
           ),
         Flexible(child: _writingSurface(surfaceCap)),
-        if (rail != null)
+        ?formatBar,
+        if (footer != null)
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: _bodyHorizontalPadding,
             ),
-            child: rail,
+            child: footer,
           ),
-        ?formatBar,
         Padding(
           padding: const EdgeInsets.only(
             left: _bodyHorizontalPadding,

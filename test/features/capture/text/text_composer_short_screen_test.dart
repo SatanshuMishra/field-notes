@@ -4,6 +4,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/text/composer_footer.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -84,7 +85,7 @@ void _useLandscapePhone(WidgetTester tester) {
 
 void main() {
   testWidgets(
-      'the new-note composer keeps Add photo on a landscape phone with the keyboard up',
+      'the new-note composer keeps Add memory on a landscape phone with the keyboard up',
       (WidgetTester tester) async {
     _useLandscapePhone(tester);
     await tester.pumpWidget(
@@ -97,20 +98,32 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    expect(find.byKey(photoRailAddKey).hitTestable(), findsOneWidget);
+    expect(find.byKey(composerAddPhotoKey).hitTestable(), findsOneWidget);
     expect(find.byKey(formatUndoKey), findsOneWidget);
+    expect(find.byKey(composerHintsKey), findsNothing);
     _expectInside(
-      tester.getRect(find.byKey(photoRailAddKey)),
-      tester.getRect(find.byType(FormatBar)),
+      tester.getRect(find.byKey(composerAddPhotoKey)),
+      tester.getRect(find.byType(ComposerFooter)),
+    );
+    expect(
+      tester.getRect(find.byType(ComposerFooter)).top,
+      greaterThanOrEqualTo(
+        tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
+      ),
     );
     expect(
       tester.getSize(find.byType(EditableText)).height,
-      greaterThanOrEqualTo(3 * _lineHeight),
+      greaterThanOrEqualTo(_lineHeight),
+    );
+    expect(
+      tester.getRect(find.byKey(composerPanelKey)).bottom -
+          tester.getRect(find.byType(ComposerFooter)).bottom,
+      lessThanOrEqualTo(_lineHeight),
     );
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a pick started from the slim tile lands after the keyboard closes',
+  testWidgets('a pick started from the footer lands after the keyboard closes',
       (WidgetTester tester) async {
     _useLandscapePhone(tester);
     final Completer<List<String>> pick = Completer<List<String>>();
@@ -123,15 +136,7 @@ void main() {
             child: TextComposerSheet(
               onSave: (String _) {},
               onCancel: () {},
-              photoRail: (BuildContext context, ComposerRailSlot slot) {
-                return PhotoRail(
-                  controller: slot.controller,
-                  measure: slot.measure,
-                  maxHeight: slot.maxHeight,
-                  editorFocusNode: slot.focusNode,
-                  onPickPhotos: () => pick.future,
-                );
-              },
+              onAddPhoto: () => pick.future,
             ),
           ),
         ),
@@ -140,10 +145,10 @@ void main() {
     await tester.pump();
 
     _expectInside(
-      tester.getRect(find.byKey(photoRailAddKey)),
-      tester.getRect(find.byType(FormatBar)),
+      tester.getRect(find.byKey(composerAddPhotoKey)),
+      tester.getRect(find.byType(ComposerFooter)),
     );
-    await tester.tap(find.byKey(photoRailAddKey));
+    await tester.tap(find.byKey(composerAddPhotoKey));
     await tester.pump();
 
     tester.view.viewInsets = FakeViewPadding.zero;
@@ -156,7 +161,7 @@ void main() {
         tester.widget<EditableText>(find.byType(EditableText));
     expect(editor.controller.text, contains(photoLineFor(reference: reference)));
     expect(
-      tester.getRect(find.byType(PhotoRail)).top,
+      tester.getRect(find.byType(ComposerFooter)).top,
       greaterThanOrEqualTo(
         tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
       ),
@@ -164,8 +169,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  test('the rail and the bar agree on the shared heights', () {
-    expect(composerRailMinHeight, photoRailCompactHeight);
+  test('the footer and the bar agree on the shared heights', () {
+    expect(composerFooterHeight, greaterThanOrEqualTo(formatBarHeight));
     expect(photoRailSlimHeight, formatBarHeight);
   });
 }

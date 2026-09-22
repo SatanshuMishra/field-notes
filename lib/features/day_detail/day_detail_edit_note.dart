@@ -14,7 +14,8 @@ import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
-import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/features/notes/notes.dart' hide importNotePhotos;
+import 'package:field_notes/features/notes/photos/photo_import.dart';
 import 'package:field_notes/state/state.dart';
 
 const String editNoteTitle = 'Edit note';
@@ -137,7 +138,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
               onDiscardDraft: _draft.discardRestored,
               errorMessage: _errorMessage,
               isSaving: _isSaving,
-              photoRail: composerPhotoRail,
+              onAddPhoto: () => importNotePhotos(ref),
             );
           },
         );
