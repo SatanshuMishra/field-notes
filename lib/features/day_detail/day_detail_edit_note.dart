@@ -114,6 +114,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
           isDirty: () => _draft.isDirty,
           locked: _isSaving,
           onDiscard: _draft.discard,
+          beforeClose: _draft.restoreSettled,
           popResult: false,
           builder: (BuildContext context, VoidCallback requestClose) {
             return TextComposerSheet(

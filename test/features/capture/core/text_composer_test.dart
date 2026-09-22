@@ -253,6 +253,42 @@ void main() {
   });
 
   testWidgets(
+      'closing before a stored draft has loaded keeps it and asks first',
+      (WidgetTester tester) async {
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+      readDelay: const Duration(milliseconds: 150),
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(result, 'unset');
+    expect(drafts.drafts, <String, String>{'new-2026-07-19': 'left by a crash'});
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'left by a crash',
+    );
+    expect(find.byType(DraftRestoredChip), findsOneWidget);
+  });
+
+  testWidgets(
       'a discarded new-note draft stays deleted when the app goes inactive '
       'during the close', (WidgetTester tester) async {
     final FakeDraftStore drafts = FakeDraftStore();

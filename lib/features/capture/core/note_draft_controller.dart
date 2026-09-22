@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/domain/services/draft_store.dart';
 
 const Duration draftIdleDebounce = Duration(milliseconds: 400);
+const Duration draftRestoreWait = Duration(seconds: 2);
 
 class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   NoteDraftController({
@@ -24,6 +25,7 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   TextEditingController? _text;
   Timer? _debounce;
   Future<void> _queue = Future<void>.value();
+  Future<String?>? _restoring;
   String? _lastPersisted;
   String? _restoredSource;
   bool _restoredDraft = false;
@@ -46,9 +48,15 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  Future<String?> restore() async {
+  Future<String?> restore() => _restoring ??= _restore();
+
+  Future<void> restoreSettled() async {
+    await _restoring?.timeout(draftRestoreWait, onTimeout: () => null);
+  }
+
+  Future<String?> _restore() async {
     final String? stored = await _run<String?>((store) => store.read(key));
-    if (_disposed || stored == null) {
+    if (_disposed || _sealed || stored == null) {
       return null;
     }
     if (stored == initialSource) {

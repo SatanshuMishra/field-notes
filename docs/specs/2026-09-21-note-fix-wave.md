@@ -74,6 +74,9 @@ draft the feature exists to recover. The session key made that recovery impossib
   the edit route had the same hole before this wave.
 - `IntegrationSandbox` redirects the drafts folder into its temporary root, so an integration test can
   never read or delete the real journal's drafts.
+- A close waits, for at most two seconds, for the stored draft to finish loading before it decides
+  whether the composer is clean. Without this, closing in the instant before a crash-left draft loaded
+  counted as a clean close and deleted the draft unseen.
 
 ### W2 — A backdrop tap routes through the close request. Resolves `u3`'s internal inconsistency.
 

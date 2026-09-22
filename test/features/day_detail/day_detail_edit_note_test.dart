@@ -113,6 +113,38 @@ void main() {
   });
 
   testWidgets(
+      'closing the editor before its stored draft has loaded keeps the draft',
+      (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'entry-1': 'a better day, half typed'},
+      readDelay: const Duration(milliseconds: 150),
+    );
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? _) {},
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(drafts.drafts, <String, String>{'entry-1': 'a better day, half typed'});
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+
+    expect(_editorText(tester), 'a better day, half typed');
+  });
+
+  testWidgets(
       'a saved edit leaves no draft when the app goes inactive during the '
       'close', (WidgetTester tester) async {
     final Entry entry = _noteEntry();

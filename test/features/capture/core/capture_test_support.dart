@@ -240,17 +240,24 @@ class FakeNoteWriter implements NoteWriter {
 }
 
 class FakeDraftStore implements DraftStore {
-  FakeDraftStore({Map<String, String>? drafts})
+  FakeDraftStore({Map<String, String>? drafts, this.readDelay})
       : drafts = Map<String, String>.of(drafts ?? const <String, String>{});
 
   final Map<String, String> drafts;
+  final Duration? readDelay;
   final List<({String key, String source})> writes =
       <({String key, String source})>[];
   final List<String> deletes = <String>[];
   Object? writeError;
 
   @override
-  Future<String?> read(String key) async => drafts[key];
+  Future<String?> read(String key) async {
+    final Duration? delay = readDelay;
+    if (delay != null) {
+      await Future<void>.delayed(delay);
+    }
+    return drafts[key];
+  }
 
   @override
   Future<void> write(String key, String source) async {
