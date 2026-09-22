@@ -32,6 +32,7 @@ const double _editorSurfaceHeight = 420;
 const double _pageInset = 18;
 const Offset _scrollStep = Offset(0, -60);
 const int _raisedStyleLimit = 1 << 30;
+const Duration _imageWarmLimit = Duration(seconds: 30);
 const double _canonicalMeasure = 560;
 final DateTime _pinnedNow = DateTime(2026, 9, 20, 9, 30);
 
@@ -114,6 +115,18 @@ void main() {
     final String photoLine = photoLineFor(reference: reference);
     final String paragraph = benchWrappedParagraphSource();
     final BenchStageState stage = await _mountStage(tester);
+    Widget pinnedNote(String text) => NoteMediaScope(
+          resolver: resolver,
+          child: ClipRect(
+            child: OverflowBox(
+              alignment: Alignment.topLeft,
+              minWidth: _canonicalMeasure,
+              maxWidth: _canonicalMeasure,
+              child: NoteBody(text: text),
+            ),
+          ),
+        );
+    await _warmImages(tester, stage, pinnedNote('$photoLine\n$paragraph'), 1);
     int variant = 0;
 
     await benchMeasure(
@@ -129,7 +142,8 @@ void main() {
         'photoPixels': '${benchPhotoWidth}x$benchPhotoHeight',
         'photoBlockRenderer': 'PhotoWrapBlock through a warm '
             'MediaStoreResolver, the float asserted after the first sample; '
-            'image decode excluded because it completes after the frame',
+            'the decoded photo comes from an ImageCache warmed before timing, '
+            'so decode is not in the number',
         'parserMemo': 'missed, every sample uses a distinct source',
       },
       sample: () async {
@@ -137,22 +151,11 @@ void main() {
         final Duration elapsed = await _mountAndTime(
           tester,
           stage,
-          NoteMediaScope(
-            resolver: resolver,
-            child: ClipRect(
-              child: OverflowBox(
-                alignment: Alignment.topLeft,
-                minWidth: _canonicalMeasure,
-                maxWidth: _canonicalMeasure,
-                child: NoteBody(
-                  text: '$photoLine\n${benchVariant(paragraph, index)}',
-                ),
-              ),
-            ),
-          ),
+          pinnedNote('$photoLine\n${benchVariant(paragraph, index)}'),
         );
         if (index == 0) {
           expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+          expect(_decodedImages(tester), 1);
         }
         return elapsed;
       },
@@ -186,6 +189,18 @@ void main() {
       photoReferences: references,
     );
     final BenchStageState stage = await _mountStage(tester);
+    Widget scrollingNote(String text) => SingleChildScrollView(
+          child: NoteMediaScope(
+            resolver: resolver,
+            child: NoteBody(text: text),
+          ),
+        );
+    await _warmImages(
+      tester,
+      stage,
+      scrollingNote(document),
+      references.length,
+    );
     int variant = 0;
 
     await benchMeasure(
@@ -199,20 +214,22 @@ void main() {
         'chars': document.length,
         'photoLines': references.length,
         'photoBlockRenderer': 'StackedPhoto or PhotoWrapBlock through a warm '
-            'MediaStoreResolver; image decode excluded because it completes '
-            'after the frame',
+            'MediaStoreResolver; every decoded photo comes from an ImageCache '
+            'warmed before timing, so decode is not in the number',
         'parserMemo': 'missed, every sample uses a distinct source',
       },
-      sample: () => _mountAndTime(
-        tester,
-        stage,
-        SingleChildScrollView(
-          child: NoteMediaScope(
-            resolver: resolver,
-            child: NoteBody(text: benchVariant(document, variant++)),
-          ),
-        ),
-      ),
+      sample: () async {
+        final int index = variant++;
+        final Duration elapsed = await _mountAndTime(
+          tester,
+          stage,
+          scrollingNote(benchVariant(document, index)),
+        );
+        if (index == 0) {
+          expect(_decodedImages(tester), references.length);
+        }
+        return elapsed;
+      },
     );
 
     useLiveFrames(tester);
@@ -222,9 +239,9 @@ void main() {
     );
     await benchMeasure(
       id: 'decodeEightPhotos',
-      what: 'cold decode of the same eight photos at the quantised cacheWidth '
-          'a note image will request, the cost number 4 excludes because '
-          'decode completes after the frame',
+      what: 'cold decode of the same eight photos at one quantised cacheWidth '
+          'taken from the editor measure, an approximation of the per-photo '
+          'widths number 4 requests; number 4 paints from a warm ImageCache',
       samples: 8,
       warmup: 1,
       extra: <String, Object?>{
@@ -453,6 +470,33 @@ Future<Duration> _mountAndTime(
   stage.show(KeyedSubtree(key: UniqueKey(), child: content));
   return benchFrame(tester);
 }
+
+Future<void> _warmImages(
+  WidgetTester tester,
+  BenchStageState stage,
+  Widget content,
+  int images,
+) async {
+  stage.show(KeyedSubtree(key: UniqueKey(), child: content));
+  await benchFrame(tester);
+  final Stopwatch watch = Stopwatch()..start();
+  while (_decodedImages(tester) < images) {
+    if (watch.elapsed > _imageWarmLimit) {
+      throw StateError('bench photos did not decode within $_imageWarmLimit');
+    }
+    await tester.runAsync<void>(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
+    await benchFrame(tester);
+  }
+  stage.clear();
+  await benchFrame(tester);
+}
+
+int _decodedImages(WidgetTester tester) => tester
+    .widgetList<RawImage>(find.byType(RawImage))
+    .where((RawImage image) => image.image != null)
+    .length;
 
 Future<Duration> _decodeAll(
   WidgetTester tester,
