@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../design/flowers/flowers.dart';
@@ -7,6 +9,7 @@ import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/mood/flower_kind.dart';
 import 'shell_destination.dart';
+import 'window_chrome.dart';
 
 class SidebarShell extends StatelessWidget {
   const SidebarShell({
@@ -61,46 +64,37 @@ class SidebarShell extends StatelessWidget {
   }
 
   Widget _titleBar() {
-    return Container(
-      height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: Palette.titleBar,
-        border: Border(bottom: BorderSide(color: Palette.ink16, width: 1)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Row(
-            key: const ValueKey<String>('traffic-lights'),
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              _dot(Palette.trafficRed),
-              const SizedBox(width: 8),
-              _dot(Palette.trafficAmber),
-              const SizedBox(width: 8),
-              _dot(Palette.trafficGreen),
-            ],
-          ),
-          const Expanded(
-            child: Text(
-              'field notes — a journal of days',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TypographyTokens.windowTitleAccent,
+    return GestureDetector(
+      key: windowTitleBarKey,
+      behavior: HitTestBehavior.opaque,
+      onPanStart: (DragStartDetails _) => unawaited(startWindowDrag()),
+      onDoubleTap: () => unawaited(runTitlebarDoubleClick()),
+      child: Container(
+        height: shellTitleBarHeight,
+        padding: const EdgeInsets.symmetric(horizontal: shellTitleBarPadding),
+        decoration: const BoxDecoration(
+          color: Palette.titleBar,
+          border: Border(bottom: BorderSide(color: Palette.ink16, width: 1)),
+        ),
+        child: const Row(
+          children: <Widget>[
+            SizedBox(
+              key: ValueKey<String>('traffic-lights'),
+              width: windowButtonsSlotWidth,
             ),
-          ),
-          const SizedBox(width: 56),
-        ],
+            Expanded(
+              child: Text(
+                'field notes — a journal of days',
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TypographyTokens.windowTitleAccent,
+              ),
+            ),
+            SizedBox(width: windowButtonsSlotWidth),
+          ],
+        ),
       ),
-    );
-  }
-
-  Widget _dot(Color color) {
-    return Container(
-      width: 12,
-      height: 12,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
     );
   }
 
