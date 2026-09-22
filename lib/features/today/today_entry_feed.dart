@@ -18,7 +18,6 @@ const String todayFeedEmptyMessage =
 const String todayFeedErrorMessage = "Couldn't load today's entries.";
 const String todayMediaErrorMessage = "Couldn't load your media library.";
 
-const double _feedCardHorizontalPadding = 30;
 const double _feedCardGap = 12;
 
 class _PendingMediaResolver implements MediaResolver {
@@ -87,8 +86,8 @@ class TodayEntryFeed extends ConsumerWidget {
         return Padding(
           key: ValueKey<String>(entry.id),
           padding: EdgeInsets.only(top: index == 0 ? 0 : _feedCardGap),
-          child: NoteColumn(
-            horizontalInset: _feedCardHorizontalPadding,
+          child: NoteMeasureScope(
+            fillsWidth: true,
             child: TodayEntryTile(
               entry: entry,
               date: date,

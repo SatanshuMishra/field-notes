@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/notes/notes.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/notes/note_block_widgets.dart';
@@ -64,6 +65,7 @@ Future<void> _pumpNote(
   double scale = 1,
   MediaResolver? resolver,
   bool floatEnabled = true,
+  bool fillsWidth = false,
 }) async {
   tester.view.physicalSize = const Size(1000, 2000);
   tester.view.devicePixelRatio = 1;
@@ -76,9 +78,12 @@ Future<void> _pumpNote(
               .copyWith(textScaler: TextScaler.linear(scale)),
           child: NoteRenderBudget(
             floatEnabled: floatEnabled,
-            child: NoteMediaScope(
-              resolver: resolver ?? _resolver(),
-              child: NoteDocument(source: source),
+            child: NoteMeasureScope(
+              fillsWidth: fillsWidth,
+              child: NoteMediaScope(
+                resolver: resolver ?? _resolver(),
+                child: NoteDocument(source: source),
+              ),
             ),
           ),
         ),
@@ -411,6 +416,34 @@ void main() {
         _headSpan(tester).toPlainText(),
         before.toPlainText(),
       );
+    });
+
+    testWidgets('a full-width scope floats across the whole column',
+        (WidgetTester tester) async {
+      await _pumpNote(tester, _note(), width: 900, fillsWidth: true);
+
+      _expectFloated(tester);
+      final Rect frame = tester.getRect(find.byKey(notePhotoFrameKey));
+      final Rect head = tester.getRect(find.byKey(photoWrapHeadKey));
+      final Rect document = tester.getRect(find.byType(NoteDocument));
+      expect(document.width, 900);
+      expect(frame.width, 192);
+      expect(frame.right, closeTo(document.right, 0.01));
+      expect(head.left, closeTo(document.left, 0.01));
+      expect(
+        tester.getSize(find.byKey(photoWrapFloatKey)).width,
+        closeTo(900, 0.01),
+      );
+    });
+
+    testWidgets('outside a full-width scope the float keeps the 35 em measure',
+        (WidgetTester tester) async {
+      await _pumpNote(tester, _note(), width: 900);
+
+      _expectFloated(tester);
+      final Rect frame = tester.getRect(find.byKey(notePhotoFrameKey));
+      final Rect document = tester.getRect(find.byType(NoteDocument));
+      expect(frame.right, closeTo(document.left + 35 * _em, 0.01));
     });
 
     testWidgets('floats at 1.5x text on a 840 column just as it does at 1x',

@@ -84,9 +84,16 @@ final class PhotoPlan {
       '${isStacked ? 'stacked' : 'floated beside ${band.toStringAsFixed(1)}'})';
 }
 
-double noteMeasureFor({required double maxWidth, required double em}) {
+double noteMeasureFor({
+  required double maxWidth,
+  required double em,
+  bool fillsWidth = false,
+}) {
   final double pinned = NoteColumn.measureEm * em;
-  return maxWidth.isFinite ? math.min(maxWidth, pinned) : pinned;
+  if (!maxWidth.isFinite) {
+    return pinned;
+  }
+  return fillsWidth ? maxWidth : math.min(maxWidth, pinned);
 }
 
 double photoFloatCap({required double measure, required double em}) =>

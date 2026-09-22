@@ -79,6 +79,14 @@ regressing; PR #148 pins them.
   that end above the foot.
 - **`u10`**, once the Android benchmark has run.
 
+### Owner edits after the fix wave
+
+- **Today's cards fill the pane** (2026-09-22). The note, voice and video cards on Today grow to the full
+  width of the Today pane, and a note inside one uses that whole width, a floated photo included. This
+  amends R4 and `u1`: the 35 em column no longer clamps the feed card, but it still sets the measure in
+  day detail and the composer. The feed marks its cards with `NoteMeasureScope`, which `NoteColumn` and
+  the float's measure honour.
+
 ### Where the code differs from §5's plan
 
 §5 is the dispatch plan as written, and it is left as written. Every unit's file list was mapped before

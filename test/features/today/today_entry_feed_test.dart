@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
@@ -156,7 +155,7 @@ void main() {
     expect(find.text('morning walk'), findsOneWidget);
   });
 
-  testWidgets('clamps and centres the feed card on a desktop pane',
+  testWidgets('the feed card and its note fill a desktop pane',
       (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -169,10 +168,29 @@ void main() {
       ),
     );
 
-    expect(find.byType(NoteColumn), findsNWidgets(2));
-    expect(tester.getSize(find.byType(EntryCard)).width, 590);
-    expect(tester.getCenter(find.byType(EntryCard)).dx, closeTo(500, 0.01));
-    expect(tester.getSize(find.text('morning walk')).width, 560);
+    expect(tester.getSize(find.byType(EntryCard)).width, 1000);
+    expect(tester.getSize(find.text('morning walk')).width, 970);
+  });
+
+  testWidgets('a video card fills a desktop pane',
+      (WidgetTester tester) async {
+    final LruVideoSlots slots = LruVideoSlots(cap: 1);
+    addTearDown(slots.dispose);
+
+    await pumpToday(
+      tester,
+      _feed('2026-07-19'),
+      surface: todayDesktopSurface,
+      overrides: _videoEntryOverrides(
+        resolver: Future<MediaResolver>.value(const StubMediaResolver()),
+        buildPlayer: FakeEntryVideoPlayer.new,
+        slots: slots,
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(VideoBody), findsOneWidget);
+    expect(tester.getSize(find.byType(EntryCard)).width, 1000);
   });
 
   testWidgets('lets the feed card fill a phone pane edge to edge',
