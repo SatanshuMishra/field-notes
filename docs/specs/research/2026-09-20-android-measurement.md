@@ -104,13 +104,13 @@ excludes rasterisation, which is measured separately in number 5 on device.
 |---|---|---|
 | 1 | `keystrokeLiveStyled20k` | One character inserted mid-document into a 20 000-char buffer in the real `SingleFieldNoteEditor`, with live Markdown styling **forced on** by building the shipping `MarkdownStyleController` with its `styleLimit` raised to `1 << 30`. At the default `liveStyleLimit` the controller would refuse to style this long a buffer; raising the limit is the only way to learn whether `liveStyleLimit` could ever be raised. |
 | 2 | `keystrokePlain60k` | The same insertion into a 60 000-char buffer through the **unmodified** `MarkdownStyleController`, which short-circuits to one plain span past `liveStyleLimit`. This is the shipping path for a long note. |
-| 3 | `firstLayoutWrappedParagraph` | A freshly mounted `NoteBody` pinned to the canonical 560 pt measure on any screen, holding one right/medium photo line and the paragraph after it, with the photo resolved through a `MediaStoreResolver` whose memo is warmed before timing. `PhotoWrapBlock` floats the photo and splits the paragraph around it; the run asserts the float after the first sample, so the number is known to contain the split. Image decode is excluded because it completes after the timed frame. Every sample uses a distinct source so `parseNote`'s 16-entry memo misses and the parse is inside the number. |
-| 4 | `firstLayoutTenThousandWordDocument` | A freshly mounted `NoteBody` over a 10 000-word (73 063-char) source carrying eight `![alt](photo/<prefix> "...")` lines, inside a `SingleChildScrollView` so the whole `Column` lays out. The eight photos render through a `MediaStoreResolver` warmed before timing: the six followed by a paragraph go through `PhotoWrapBlock`, the other two are `StackedPhoto`. A float needs a measure of at least 462 pt at the 16 px body size, so at this 393 pt phone surface every `PhotoWrapBlock` plans its float and falls back to stacked, as it does on a phone; number 3 is where a split is measured. Image decode is excluded because it completes after the frame. Memo missed per sample, as above. |
+| 3 | `firstLayoutWrappedParagraph` | A freshly mounted `NoteBody` pinned to the canonical 560 pt measure on any screen, holding one right/medium photo line and the paragraph after it, with the photo resolved through a `MediaStoreResolver` whose memo is warmed before timing. `PhotoWrapBlock` floats the photo and splits the paragraph around it; the run asserts the float after the first sample, so the number is known to contain the split. The photo is decoded into `ImageCache` once, untimed, before sampling starts, and the run asserts it paints on the first timed sample, so every timed frame paints the same cached image and decode is not in the number. Every sample uses a distinct source so `parseNote`'s 16-entry memo misses and the parse is inside the number. |
+| 4 | `firstLayoutTenThousandWordDocument` | A freshly mounted `NoteBody` over a 10 000-word (73 063-char) source carrying eight `![alt](photo/<prefix> "...")` lines, inside a `SingleChildScrollView` so the whole `Column` lays out. The eight photos render through a `MediaStoreResolver` warmed before timing: the six followed by a paragraph go through `PhotoWrapBlock`, the other two are `StackedPhoto`. A float needs a measure of at least 462 pt at the 16 px body size, so at this 393 pt phone surface every `PhotoWrapBlock` plans its float and falls back to stacked, as it does on a phone; number 3 is where a split is measured. All eight photos are decoded into `ImageCache` once, untimed, before sampling starts, and the run asserts all eight paint on the first timed sample, so decode is not in the number. Memo missed per sample, as above. |
 | 5 | `feedScrollFrame` | One dragged 60 pt scroll step over the real `TodayScreen` sliver feed, seeded with 40 note entries long enough to truncate at `notePreviewCharLimit`. |
 
 Plus one companion, recorded under measurement 4 because it is the half that 4 cannot see:
 
-| — | `decodeEightPhotos` | Cold decode of eight real 2048×1536 PNGs at the 64 px-quantised `cacheWidth` a note image will request. Number 4 lays the photos out but its timed frame ends before their decode completes, so this figure is the decode cost number 4 excludes. |
+| — | `decodeEightPhotos` | Cold decode of eight real 2048×1536 PNGs at the 64 px-quantised `cacheWidth` a note image will request. Number 4 paints from a warm cache, so this approximates the decode cost it leaves out: it decodes all eight at one `cacheWidth` taken from the editor's 357 pt measure, while number 4 requests a width per photo from that photo's size at its own 393 pt measure. |
 
 Both keystroke measurements grow the buffer by one character per sample — 30 characters on 20 000
 and 60 000 — and are taken with the field unfocused, so the caret-blink repaint is excluded.
@@ -119,45 +119,46 @@ and 60 000 — and are taken with the field unfocused, so the caret-blink repain
 
 ## 4. Desktop baseline — measured
 
-Recorded 2026-09-21 (`2026-09-22T03:06:18Z`) at `fc851dd`. Numbers 3 and 4 changed meaning since the
-previous baseline (2026-09-20 at `4119297`), which measured a plain paragraph wrapping at the column
-edge and a document whose photos were `NotePhotoStub` placeholders, so neither figure compares with
-its predecessor. Other test processes shared the host during this run (1-minute load average 6 to 9
-on 14 cores), and an immediate re-run under heavier load came out 17–36 % higher at p50 across all
-six rows; read these as a loaded-host baseline, not a quiet one.
+Recorded 2026-09-21 (`2026-09-22T04:02:45Z`) at `791e6c6` on branch `mitosis/bench-photos`.
+Numbers 3 and 4 changed meaning since the previous baseline (2026-09-20 at `4119297`), which
+measured a plain paragraph wrapping at the column edge and a document whose photos were
+`NotePhotoStub` placeholders, so neither figure compares with its predecessor. Both now paint their
+photos from an `ImageCache` warmed before timing, and the run asserts that on the first timed
+sample. The host ran no other test process during this run; its 1-minute load average stayed
+between 2.6 and 3.4 on 14 cores.
 
 - Host: macOS 26.5.1, Apple Silicon, `flutter_tester`
 - Flutter 3.44.8 stable, Dart 3.12.2
 - **Build mode: debug** — `flutter test` has no profile mode
-- Surface: 393 × 851 logical at DPR 2.75, note measure 357 pt (number 3 pins its own 560 pt), `noteBody` 16 px, `liveStyleLimit` 6000
+- Surface: 393 × 851 logical at DPR 2.75, note measure 357 pt for numbers 1 and 2 and `decodeEightPhotos`, 393 pt for number 4, 560 pt pinned for number 3, `noteBody` 16 px, `liveStyleLimit` 6000
 
 | # | Measurement | p50 | p90 | p99 | max | n |
 |---|---|---|---|---|---|---|
-| 1 | keystroke, 20 000 chars, live-styled | 8.23 ms | 10.04 ms | 13.10 ms | 13.10 ms | 30 |
-| 2 | keystroke, 60 000 chars, styling off | 12.78 ms | 13.86 ms | 17.04 ms | 17.04 ms | 30 |
-| 3 | first layout, one wrapped paragraph | 3.33 ms | 4.60 ms | 9.69 ms | 9.69 ms | 30 |
-| 4 | first layout, 10 000-word doc, 8 photos | 139.40 ms | 148.00 ms | 167.48 ms | 167.48 ms | 12 |
-| — | decode 8 photos @ cacheWidth 1024 | 27.17 ms | 42.74 ms | 42.74 ms | 42.74 ms | 8 |
-| 5 | feed scroll frame, 40 entries | 1.02 ms | 2.07 ms | 10.32 ms | 10.32 ms | 34 |
+| 1 | keystroke, 20 000 chars, live-styled | 8.03 ms | 9.72 ms | 11.58 ms | 11.58 ms | 30 |
+| 2 | keystroke, 60 000 chars, styling off | 12.80 ms | 13.78 ms | 17.37 ms | 17.37 ms | 30 |
+| 3 | first layout, one wrapped paragraph | 3.38 ms | 5.18 ms | 8.55 ms | 8.55 ms | 30 |
+| 4 | first layout, 10 000-word doc, 8 photos | 123.05 ms | 136.58 ms | 144.69 ms | 144.69 ms | 12 |
+| — | decode 8 photos @ cacheWidth 1024 | 27.45 ms | 35.80 ms | 35.80 ms | 35.80 ms | 8 |
+| 5 | feed scroll frame, 40 entries | 0.68 ms | 5.57 ms | 7.58 ms | 7.58 ms | 34 |
 
 ### Three things this baseline already settles
 
 **Live styling is not the cost, and `liveStyleLimit = 6000` buys no typing headroom.** A 20 000-char
-buffer with full Markdown styling costs 8.23 ms per keystroke. A 60 000-char buffer with styling
-*switched off* costs 12.78 ms — three times the characters, 1.6× the cost, and the cheaper
+buffer with full Markdown styling costs 8.03 ms per keystroke. A 60 000-char buffer with styling
+*switched off* costs 12.80 ms — three times the characters, 1.6× the cost, and the cheaper
 configuration is the styled one. Cost tracks document length through `RenderEditable`'s
 whole-paragraph relayout, exactly as the terrain survey's source-confirmed mechanism says, and
 span construction is noise beside it. The 6000-character threshold changes what is painted, and
 mid-sentence at that, without moving the number it was introduced to protect.
 
-**The heaviest path measured here is not the editor.** Number 4 is 139 ms — roughly eleven times a
-keystroke in a document of the same size, and some forty times one paragraph wrapped around a photo.
+**The heaviest path measured here is not the editor.** Number 4 is 123 ms — roughly ten times a
+keystroke in a document of the same size, and some thirty-five times one paragraph wrapped around a photo.
 That is the read view, `NoteDocument` building some 450 block widgets and eight stacked photo figures,
 and registering them all with `SelectionArea`. `u10` does nothing for it: the segment
 editor changes how text is *typed*, not how a saved note is *opened*. If the Android figure for
 number 4 is bad, the fix is a windowed or lazy read view, which is not in the plan and is not U10.
 
-**The lazy feed from `u2` is doing its job.** A scroll frame is 1.02 ms at p50 with spikes to 10.3 ms
+**The lazy feed from `u2` is doing its job.** A scroll frame is 0.68 ms at p50 with spikes to 7.6 ms
 when a card enters the viewport — the shape you expect from `SliverList.builder` with a cache
 extent, not from a feed that builds everything.
 
@@ -195,12 +196,12 @@ Paste the environment block from `build/note_perf_bench.json` here and fill the 
 
 | # | Measurement | p50 | p90 | p99 | max | n | × desktop p90 |
 |---|---|---|---|---|---|---|---|
-| 1 | keystroke, 20 000 chars, live-styled | | | | | | |
-| 2 | keystroke, 60 000 chars, styling off | | | | | | |
-| 3 | first layout, one wrapped paragraph | | | | | | |
-| 4 | first layout, 10 000-word doc, 8 photos | | | | | | |
+| 1 | keystroke, 20 000 chars, live-styled | 8.03 ms | 9.72 ms | 11.58 ms | 11.58 ms | 30 |
+| 2 | keystroke, 60 000 chars, styling off | 12.80 ms | 13.78 ms | 17.37 ms | 17.37 ms | 30 |
+| 3 | first layout, one wrapped paragraph | 3.38 ms | 5.18 ms | 8.55 ms | 8.55 ms | 30 |
+| 4 | first layout, 10 000-word doc, 8 photos | 123.05 ms | 136.58 ms | 144.69 ms | 144.69 ms | 12 |
 | — | decode 8 photos @ cacheWidth | | | | | | |
-| 5 | feed scroll frame, 40 entries | | | | | | |
+| 5 | feed scroll frame, 40 entries | 0.68 ms | 5.57 ms | 7.58 ms | 7.58 ms | 34 |
 
 The device run also emits a `feedScrollFrames` key carrying `FrameTimingSummarizer`'s summary over
 a real fling — `build`, `raster` and `vsync overhead` percentiles plus GC counts. That is the only
@@ -250,7 +251,7 @@ implementation is chosen, so building `u10` and switching to it is a change ther
 
 Held provisionally because the desktop projection is honestly undetermined. Carrying the terrain
 survey's own 5–15× mid-tier Android band and allowing 2–4× back for profile-mode AOT puts the
-Android p90 for number 2 somewhere between 17 ms and 99 ms — straddling every threshold in section
+Android p90 for number 2 somewhere between 17 ms and 103 ms — straddling every threshold in section
 6. That band is too wide to decide anything, which is the point: this is exactly the risk the
 spec called the biggest unmeasured one in the design, and only the device retires it.
 
@@ -270,18 +271,18 @@ No value is changed. The device run overwrites this file; keep both.
   "noteBench": {
     "schema": "note-perf-bench/1",
     "environment": {
-      "runLabel": "desktop-flutter-tester-debug",
+      "runLabel": "desktop-flutter-test",
       "onDevice": false,
-      "deviceModel": "Apple Silicon host, flutter_tester",
+      "deviceModel": "unknown",
       "osRelease": "unknown",
       "osSdk": "unknown",
       "operatingSystem": "macos",
       "operatingSystemVersion": "Version 26.5.1 (Build 25F80)",
-      "flutterVersion": "3.44.8 (stable channel)",
+      "flutterVersion": "3.44.8",
       "dartVersion": "3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on \"macos_arm64\"",
       "buildMode": "debug",
-      "gitSha": "fc851dd",
-      "recordedAt": "2026-09-22T03:06:18.870922Z"
+      "gitSha": "791e6c6",
+      "recordedAt": "2026-09-22T04:02:45.730613Z"
     },
     "surface": {
       "logicalWidth": 393.0,
@@ -297,11 +298,11 @@ No value is changed. The device run overwrites this file; keep both.
         "what": "frame cost after one inserted character in a 20 000-character buffer with live Markdown styling forced on",
         "unit": "ms",
         "samples": 30,
-        "p50": 8.226,
-        "p90": 10.042,
-        "p99": 13.099,
-        "max": 13.099,
-        "mean": 8.647,
+        "p50": 8.03,
+        "p90": 9.725,
+        "p99": 11.577,
+        "max": 11.577,
+        "mean": 8.4,
         "context": {
           "startingChars": 20000,
           "liveStyling": "on, the shipping MarkdownStyleController with its styleLimit raised above the buffer",
@@ -309,99 +310,99 @@ No value is changed. The device run overwrites this file; keep both.
           "liveStyleLimit": 6000,
           "caret": "mid-document, unfocused"
         },
-        "samplesUs": [10042, 9248, 9480, 9019, 8527, 8047, 8228, 9344, 11688, 8573, 7943, 8226, 7925, 9517, 9142, 7927, 8282, 7943, 7580, 10997, 13099, 7883, 7919, 7947, 7918, 8269, 7343, 7127, 7060, 7186]
+        "samplesUs": [9725, 9261, 9819, 8815, 9465, 8581, 8566, 9363, 11577, 9147, 8082, 7682, 7886, 8030, 8131, 7177, 7626, 7265, 7406, 9522, 11503, 8057, 7698, 7787, 7320, 8028, 7106, 7075, 6991, 7311]
       },
       {
         "id": "keystrokePlain60k",
         "what": "frame cost after one inserted character in a 60 000-character buffer past liveStyleLimit, so the shipping controller returns one plain span",
         "unit": "ms",
         "samples": 30,
-        "p50": 12.783,
-        "p90": 13.855,
-        "p99": 17.043,
-        "max": 17.043,
-        "mean": 13.082,
+        "p50": 12.802,
+        "p90": 13.775,
+        "p99": 17.371,
+        "max": 17.371,
+        "mean": 12.916,
         "context": {
           "startingChars": 60000,
           "liveStyling": "off, by the shipping liveStyleLimit short circuit",
           "liveStyleLimit": 6000,
           "caret": "mid-document, unfocused"
         },
-        "samplesUs": [12815, 13284, 13046, 13112, 12783, 12700, 12931, 12573, 12881, 12693, 12722, 12547, 12810, 13855, 16954, 13543, 13264, 12994, 12385, 12634, 11991, 12132, 13274, 12345, 12571, 12462, 12184, 12049, 13890, 17043]
+        "samplesUs": [13039, 13118, 13158, 12802, 12684, 13236, 13700, 12988, 13209, 12804, 13203, 12521, 13187, 13775, 17371, 12274, 11836, 12438, 11716, 12277, 11675, 12987, 12178, 11647, 11543, 12293, 11493, 11816, 13803, 16728]
       },
       {
         "id": "firstLayoutWrappedParagraph",
         "what": "build, layout and paint of a freshly mounted NoteBody at the 560 pt canonical measure holding one photo line and one paragraph, which PhotoWrapBlock splits around the floated photo",
         "unit": "ms",
         "samples": 30,
-        "p50": 3.332,
-        "p90": 4.6,
-        "p99": 9.688,
-        "max": 9.688,
-        "mean": 3.719,
+        "p50": 3.379,
+        "p90": 5.176,
+        "p99": 8.555,
+        "max": 8.555,
+        "mean": 3.814,
         "context": {
           "chars": 534,
           "paragraphChars": 495,
           "measurePt": 560.0,
           "placement": "right medium",
           "photoPixels": "2048x1536",
-          "photoBlockRenderer": "PhotoWrapBlock through a warm MediaStoreResolver, the float asserted after the first sample; image decode excluded because it completes after the frame",
+          "photoBlockRenderer": "PhotoWrapBlock through a warm MediaStoreResolver, the float asserted after the first sample; the decoded photo comes from an ImageCache warmed before timing, so decode is not in the number",
           "parserMemo": "missed, every sample uses a distinct source"
         },
-        "samplesUs": [4600, 9688, 5384, 8067, 3441, 3766, 3186, 3356, 3457, 3472, 3709, 3939, 4160, 2956, 3305, 3332, 3432, 2766, 3326, 2684, 3182, 2736, 3809, 2852, 3075, 2524, 2726, 2738, 2420, 3484]
+        "samplesUs": [5755, 5058, 3807, 3851, 5176, 8555, 4392, 3388, 2957, 4056, 5749, 4378, 3804, 3718, 3168, 3112, 2816, 3232, 2473, 2829, 2843, 3165, 2890, 2475, 3084, 3940, 3705, 3330, 3379, 3349]
       },
       {
         "id": "firstLayoutTenThousandWordDocument",
         "what": "build, layout and paint of a freshly mounted NoteBody holding a 10 000-word note carrying eight photo lines, rendered as photos through a warm media resolver",
         "unit": "ms",
         "samples": 12,
-        "p50": 139.401,
-        "p90": 147.999,
-        "p99": 167.483,
-        "max": 167.483,
-        "mean": 141.487,
+        "p50": 123.046,
+        "p90": 136.576,
+        "p99": 144.687,
+        "max": 144.687,
+        "mean": 123.389,
         "context": {
           "chars": 73063,
           "photoLines": 8,
-          "photoBlockRenderer": "StackedPhoto or PhotoWrapBlock through a warm MediaStoreResolver; image decode excluded because it completes after the frame",
+          "photoBlockRenderer": "StackedPhoto or PhotoWrapBlock through a warm MediaStoreResolver; every decoded photo comes from an ImageCache warmed before timing, so decode is not in the number",
           "parserMemo": "missed, every sample uses a distinct source"
         },
-        "samplesUs": [167483, 144611, 144990, 147999, 133349, 133527, 132576, 139572, 136556, 143042, 139401, 134749]
+        "samplesUs": [144687, 136576, 121429, 118420, 128742, 108388, 123392, 133298, 123046, 120089, 97626, 124986]
       },
       {
         "id": "decodeEightPhotos",
-        "what": "cold decode of the same eight photos at the quantised cacheWidth a note image will request, the cost number 4 excludes because decode completes after the frame",
+        "what": "cold decode of the same eight photos at one quantised cacheWidth taken from the editor measure, an approximation of the per-photo widths number 4 requests; number 4 paints from a warm ImageCache",
         "unit": "ms",
         "samples": 8,
-        "p50": 27.172,
-        "p90": 42.739,
-        "p99": 42.739,
-        "max": 42.739,
-        "mean": 29.971,
+        "p50": 27.446,
+        "p90": 35.805,
+        "p99": 35.805,
+        "max": 35.805,
+        "mean": 29.255,
         "context": {
           "photos": 8,
           "sourcePixels": "2048x1536",
           "cacheWidth": 1024,
           "bytesEach": 1189185
         },
-        "samplesUs": [26809, 26999, 27792, 42739, 30294, 26637, 27172, 31329]
+        "samplesUs": [27446, 26969, 35805, 30196, 26768, 31146, 29211, 26506]
       },
       {
         "id": "feedScrollFrame",
         "what": "build, layout and paint of one dragged scroll frame over the seeded today feed of truncated preview cards",
         "unit": "ms",
         "samples": 34,
-        "p50": 1.015,
-        "p90": 2.073,
-        "p99": 10.321,
-        "max": 10.321,
-        "mean": 1.64,
+        "p50": 0.677,
+        "p90": 5.568,
+        "p99": 7.576,
+        "max": 7.576,
+        "mean": 1.5,
         "context": {
           "entries": 40,
           "stepPt": 60.0,
           "previewCharLimit": 1200
         },
-        "samplesUs": [1223, 1015, 741, 1071, 1093, 910, 733, 763, 716, 899, 10321, 1729, 1083, 1048, 1109, 790, 1028, 1015, 917, 908, 1696, 2466, 1538, 1009, 943, 842, 838, 9688, 2073, 1344, 1026, 947, 1007, 1248]
+        "samplesUs": [972, 942, 861, 1451, 1081, 917, 660, 5568, 1258, 1053, 7180, 7576, 1488, 890, 666, 585, 609, 557, 568, 652, 1063, 666, 677, 604, 603, 583, 615, 6558, 854, 663, 741, 642, 597, 618]
       }
     ]
   }
@@ -422,10 +423,10 @@ No value is changed. The device run overwrites this file; keep both.
 - **IME composing.** Both keystroke numbers insert a committed character. A CJK or predictive-text
   composing run rebuilds the span with a live composing range on every intermediate keystroke, and
   that is not measured here.
-- **Photo decode inside the read view's frame.** Number 4 lays out its eight photos, stacked at the
-  393 pt phone measure, but its timed frame ends before their decode completes.
-  `decodeEightPhotos` is that missing half, reported separately; the two must not be silently summed
-  as though one frame paid both.
+- **A cold photo decode inside the read view's first frame.** Numbers 3 and 4 paint from a warm
+  `ImageCache`. Opening a note whose photos are not cached yet also pays their decode, which
+  `decodeEightPhotos` approximates; the two must not be silently summed as though one frame paid
+  both.
 - **Thermal state and CPU governor.** One run on a warm phone is not the same as one on a cold
   phone, and the terrain survey already documented a 5× process-state swing on a desktop. Run the
   script twice with a gap and record both if the numbers land near a threshold.
