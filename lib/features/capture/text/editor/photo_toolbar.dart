@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/notes/notes.dart';
 
@@ -31,7 +30,6 @@ const Key photoToolbarMoreKey = ValueKey<String>('photo-toolbar-more');
 const Key photoToolbarMoveUpKey = ValueKey<String>('photo-toolbar-move-up');
 const Key photoToolbarMoveDownKey = ValueKey<String>('photo-toolbar-move-down');
 const Key photoToolbarReplaceKey = ValueKey<String>('photo-toolbar-replace');
-const Key photoToolbarDiagramKey = ValueKey<String>('photo-toolbar-diagram');
 
 Key photoToolbarSizeKey(PhotoSize size) =>
     ValueKey<String>('photo-toolbar-size-${size.name}');
@@ -45,9 +43,10 @@ String photoToolbarSideLabel(PhotoSide side) => '${side.label} side';
 
 const double _glyphExtent = 20;
 const double _moreExtent = 18;
+const double _sideGlyphExtent = 18;
+const int _sideGlyphLines = 3;
 const double _disabledOpacity = 0.4;
 const double _focusRingWidth = 2;
-const double _diagramInset = 6;
 const BorderRadius _controlRadius =
     BorderRadius.all(Radius.circular(Shapes.radiusSm));
 const BorderRadius _barRadius =
@@ -79,20 +78,16 @@ class PhotoToolbar extends StatelessWidget {
 
   bool get placementApplies => canFloatAt(measure: measure, em: em);
 
-  PhotoPlan get readerPlan => planFloat(
-        measure: NoteColumn.measureEm * em,
-        em: em,
-        side: line.placement.side,
-        size: line.placement.size,
-        aspect: photoAspectOf(media?.blob?.width, media?.blob?.height),
-        nextIsParagraph: line.wrapsParagraph && line.placement.isValid,
-      );
+  bool get sideApplies => line.placement.size != PhotoSize.full;
 
   void setSize(PhotoSize size) {
     _apply(setPhotoSize(controller.value, line, size));
   }
 
   void setSide(PhotoSide side) {
+    if (!sideApplies) {
+      return;
+    }
     _apply(setPhotoSide(controller.value, line, side));
   }
 
@@ -225,11 +220,13 @@ class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
                 _PhotoToolbarControl(
                   controlKey: photoToolbarSideKey(side),
                   label: photoToolbarSideLabel(side),
-                  selected: side == placement.side,
-                  onTap: () => _toolbar.setSide(side),
-                  child: _segmentLabel(
-                    side.label,
-                    selected: side == placement.side,
+                  selected: _toolbar.sideApplies && side == placement.side,
+                  onTap: _toolbar.sideApplies
+                      ? () => _toolbar.setSide(side)
+                      : null,
+                  child: PhotoSideGlyph(
+                    side: side,
+                    selected: _toolbar.sideApplies && side == placement.side,
                   ),
                 ),
             ],
@@ -238,10 +235,9 @@ class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
               controlKey: photoToolbarCaptionKey,
               label: photoToolbarCaptionLabel,
               onTap: _toolbar.onCaption,
-              child: const IconStickerGlyphIcon(
-                glyph: IconStickerGlyph.edit,
-                color: Palette.toastInk,
-                size: _glyphExtent,
+              child: _segmentLabel(
+                photoToolbarCaptionLabel,
+                selected: false,
               ),
             ),
             _PhotoToolbarControl(
@@ -298,21 +294,6 @@ class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
             ],
           ),
         ],
-        const SizedBox(height: photoToolbarRowGap),
-        DecoratedBox(
-          key: photoToolbarDiagramKey,
-          decoration: const BoxDecoration(
-            color: Palette.panelTop,
-            borderRadius: _controlRadius,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(_diagramInset),
-            child: SizedBox(
-              height: photoDiagramHeight,
-              child: PhotoPlacementDiagram(plan: _toolbar.readerPlan),
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -428,4 +409,67 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
       ),
     );
   }
+}
+
+class PhotoSideGlyph extends StatelessWidget {
+  const PhotoSideGlyph({
+    super.key,
+    required this.side,
+    required this.selected,
+  });
+
+  final PhotoSide side;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox.square(
+      dimension: _sideGlyphExtent,
+      child: CustomPaint(
+        painter: _PhotoSideGlyphPainter(
+          side: side,
+          color: selected ? Palette.onAccent : Palette.toastInk,
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoSideGlyphPainter extends CustomPainter {
+  const _PhotoSideGlyphPainter({required this.side, required this.color});
+
+  final PhotoSide side;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double block = size.width * 0.5;
+    final double inset = size.height * 0.1;
+    final bool left = side == PhotoSide.left;
+    final Rect picture = Rect.fromLTWH(
+      left ? 0 : size.width - block,
+      inset,
+      block,
+      size.height - 2 * inset,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(picture, const Radius.circular(2)),
+      Paint()..color = color,
+    );
+    final Paint rule = Paint()
+      ..color = color.withValues(alpha: 0.6)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = size.height * 0.11;
+    final double gap = (size.height - rule.strokeWidth) / (_sideGlyphLines - 1);
+    final double from = left ? block + size.width * 0.14 : 0;
+    final double to = left ? size.width : size.width - block - size.width * 0.14;
+    for (int i = 0; i < _sideGlyphLines; i++) {
+      final double y = rule.strokeWidth / 2 + gap * i;
+      canvas.drawLine(Offset(from, y), Offset(to, y), rule);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PhotoSideGlyphPainter oldDelegate) =>
+      oldDelegate.side != side || oldDelegate.color != color;
 }

@@ -85,21 +85,6 @@ class _EditorHarness {
   }
 }
 
-class _PendingMediaResolver implements MediaResolver {
-  final Completer<ResolvedMedia> _pending = Completer<ResolvedMedia>();
-  ResolvedMedia? _ready;
-
-  @override
-  ResolvedMedia? resolved(String? mediaId) => _ready;
-
-  @override
-  Future<ResolvedMedia> resolve(String? mediaId) => _pending.future;
-
-  void complete(ResolvedMedia media) {
-    _ready = media;
-    _pending.complete(media);
-  }
-}
 
 FakeNoteMediaResolver _resolvedPhotos() => FakeNoteMediaResolver(
       <String, ResolvedMedia>{
@@ -206,8 +191,6 @@ Iterable<File> _dartSourcesUnder(String root) => Directory(root)
     .whereType<File>()
     .where((File file) => file.path.endsWith('.dart'));
 
-String _prose(int words) =>
-    List<String>.generate(words, (int index) => 'word${index % 7}').join(' ');
 
 void main() {
   final String a = photoLine(photoIdA);
@@ -606,79 +589,6 @@ void main() {
     expect(notePhotoLines(harness.controller.text).single.placement.size,
         PhotoSize.small);
     expect(find.text(photoRemovedMessage), findsNothing);
-  });
-
-  testWidgets('the mini-diagram is driven by the same planFloat the reader '
-      'calls', (WidgetTester tester) async {
-    await _pumpEditor(tester, 'one\n$a\n${_prose(40)}');
-
-    await _selectPhoto(tester);
-
-    final PhotoPlan reader = planFloat(
-      measure: _readerMeasure,
-      em: 16,
-      side: PhotoSide.right,
-      size: PhotoSize.medium,
-      aspect: 1200 / 900,
-      nextIsParagraph: true,
-    );
-    expect(reader.isStacked, isFalse);
-
-    final PhotoPlacementDiagram diagram = tester.widget<PhotoPlacementDiagram>(
-      find.descendant(
-        of: find.byKey(photoToolbarDiagramKey),
-        matching: find.byType(PhotoPlacementDiagram),
-      ),
-    );
-    expect(diagram.plan, reader);
-    expect(
-      find.text('Right · Medium — on this screen, text wraps beside it'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('the mini-diagram re-plans when the photo resolves',
-      (WidgetTester tester) async {
-    final _PendingMediaResolver resolver = _PendingMediaResolver();
-    await _pumpEditor(
-      tester,
-      'one\n$a\n${_prose(40)}',
-      resolver: resolver,
-    );
-
-    await _selectPhoto(tester);
-
-    expect(
-      find.text('Right · Medium — on this screen, text sits above and below'),
-      findsOneWidget,
-    );
-
-    resolver.complete(availablePhoto(photoIdA, width: 1200, height: 900));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('Right · Medium — on this screen, text wraps beside it'),
-      findsOneWidget,
-    );
-  });
-
-  testWidgets('the mini-diagram stacks a photo whose next block is not a '
-      'paragraph', (WidgetTester tester) async {
-    await _pumpEditor(tester, 'one\n$a\n$b\ntwo');
-
-    await _selectPhoto(tester);
-
-    final PhotoPlacementDiagram diagram = tester.widget<PhotoPlacementDiagram>(
-      find.descendant(
-        of: find.byKey(photoToolbarDiagramKey),
-        matching: find.byType(PhotoPlacementDiagram),
-      ),
-    );
-    expect(diagram.plan.isStacked, isTrue);
-    expect(
-      find.text('Right · Medium — on this screen, text sits above and below'),
-      findsOneWidget,
-    );
   });
 
   test('no drag or reorder API exists anywhere in the photo controls', () {

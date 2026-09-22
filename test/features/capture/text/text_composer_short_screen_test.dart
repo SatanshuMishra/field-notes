@@ -154,9 +154,10 @@ void main() {
         tester.widget<EditableText>(find.byType(EditableText));
     expect(editor.controller.text, contains(photoLineFor(reference: reference)));
     expect(
-      tester.getRect(find.byType(ComposerFooter)).top,
-      greaterThanOrEqualTo(
+      tester.getRect(find.byType(ComposerFooter)).bottom,
+      closeTo(
         tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
+        0.5,
       ),
     );
     expect(tester.takeException(), isNull);

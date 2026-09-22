@@ -14,6 +14,15 @@ const double composerPanelWidthShare = 0.6;
 const Key composerPanelKey = ValueKey<String>('composer-panel');
 
 const double composerPanelBorderWidth = 2;
+
+const double composerPanelMargin = 28;
+
+const double composerPanelRoomyHeight = 560;
+
+double composerPanelMarginFor(double available) =>
+    available.isFinite && available < composerPanelRoomyHeight
+        ? 0
+        : composerPanelMargin;
 const double _scrimBlurSigma = 3.5;
 const double _sprigTop = -10;
 const double _sprigRight = -8;
@@ -63,9 +72,14 @@ class ComposerShell extends StatelessWidget {
                   final double width = responsive
                       ? composerPanelWidthFor(constraints.maxWidth)
                       : maxWidth;
-                  return SizedBox(
-                    width: math.min(width, constraints.maxWidth),
-                    child: _panel(),
+                  return Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: composerPanelMarginFor(constraints.maxHeight),
+                    ),
+                    child: SizedBox(
+                      width: math.min(width, constraints.maxWidth),
+                      child: _panel(),
+                    ),
                   );
                 },
               ),

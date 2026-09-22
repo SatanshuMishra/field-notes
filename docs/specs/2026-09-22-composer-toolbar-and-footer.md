@@ -55,15 +55,20 @@ photo, and when the selection leaves the photo line.
 | Remove | A trash glyph. It removes the photo line and shows the Undo toast (§5) |
 | More | A `…` button opening a menu of Move up, Move down and Replace, each disabled when the edit cannot apply |
 
-The toolbar also carries the reader-prediction hint the rail used to carry: the existing
-`PhotoPlacementDiagram` and its sentence, which says whether the reader will wrap text beside this photo
-or stack it. The editor's column runs to 45 em and the reader's to 35 em, so the two can differ, and this
-is the only place that says so.
+The toolbar carries no preview panel. The owner ruled on 2026-09-22, after seeing it on macOS, that a
+picture of the placement is unnecessary beside the placement buttons, whose own glyphs show a picture
+with text beside it, as the design's do. `PhotoPlacementDiagram` stays in the codebase for the reader,
+and nothing in the composer draws it. What is lost with it: the editor's column runs to 45 em and the
+reader's to 35 em, so a photo can float here and stack there, and nothing now says so.
+
+A photo at Full size takes no side. Its placement buttons stay in the bar, dimmed and inert, as the
+design dims them.
 
 **Where it sits.** Centred over the top edge of the photo, `photoToolbarGap` above it. When there is not
-enough room above, it flips below the photo. It never leaves the writing surface horizontally: it is
-clamped to the surface's left and right edges. It is not shown at all while the photo's band is scrolled
-out of the writing surface.
+enough room above, it flips below the photo. It never leaves the writing surface, horizontally or
+vertically: it is clamped to the surface's edges, so a photo at the bottom of the view keeps its whole
+toolbar on screen rather than having it cut off. It is not shown at all while the photo's band is
+scrolled out of the writing surface.
 
 **Keyboard and screen readers.** Every control is focusable and operable with Enter or Space. Tab from
 the selected photo enters the toolbar and walks it left to right; Esc anywhere in the toolbar deselects
@@ -89,7 +94,10 @@ runs every commit through it.
 
 ## 4. The footer
 
-One row under the writing surface, inside the panel's horizontal padding:
+One row floating over the foot of the writing surface, inside the panel's horizontal padding, on a
+translucent blurred veil so the note reads through it. The note's own page keeps a bottom padding the
+height of the footer, so the last line always clears it. The owner ruled this on 2026-09-22: the design's
+own footer is a plain row under a fixed-height surface, and that is what left the panel with a dead band.
 
 - **Add memory.** A button carrying the design's word. It picks photos, stores them and inserts their
   lines at the caret, exactly as the rail's Add photo tile did, including its busy label and its two
@@ -152,12 +160,12 @@ the text, so both are answered by clicking the picture.
 
 ## 7. The writing surface takes the height
 
-C8's writing-surface rule becomes: **68% of the height available to the panel, never below 440pt and
-never above 860pt**, and never more than the space left once the rest of the composer is laid out. The
-panel width rule and the 45 em column are unchanged.
+C8's writing-surface rule becomes: **the writing surface takes every point the panel has left** once the
+header and the format bar are laid out. The panel fills the window less a margin, which is dropped
+entirely on a window too short to spare it. The panel width rule and the 45 em column are unchanged.
 
-Geometry tests pin the surface at panel heights of 800, 1200 and 1600, and pin that the panel's content
-ends within one line height of the panel's own bottom, so no dead band returns.
+Geometry tests pin the panel against the window at 800, 1200 and 1600, pin that the footer's bottom sits
+at the surface's bottom, and pin that the note scrolls under the footer rather than stopping above it.
 
 ---
 
@@ -165,7 +173,8 @@ ends within one line height of the panel's own bottom, so no dead band returns.
 
 | Parent rule | Now |
 |---|---|
-| C8: the writing surface is 55% of the available height, clamped 440 to 760 | 68%, clamped 440 to 860 (§7) |
+| C8: the writing surface is 55% of the available height, clamped 440 to 760 | It takes the height the panel has left, and the panel fills the window less a margin (§7) |
+| C4: the toolbar carries the reader-prediction diagram | No preview panel; the placement glyphs carry it (§2) |
 | C4: the toolbar carries left, centre and right | Left and right until phase 3 lands centre (§2) |
 | `u8`: the photo rail, the options sheet, the caption sheet | Deleted (§6) |
 | Phase order: 3, then 4, then 5 | 5 first, by the owner's call on 2026-09-22 |

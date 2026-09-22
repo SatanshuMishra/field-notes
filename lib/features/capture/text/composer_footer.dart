@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/widgets.dart';
 
@@ -27,6 +28,35 @@ const String composerMarkdownHints =
 const double composerFooterHeight = 44;
 
 const double composerFooterHintsMinWidth = 360;
+
+const double composerFooterBlur = 18;
+
+const double composerFooterVeilOpacity = 0.72;
+
+class ComposerFooterVeil extends StatelessWidget {
+  const ComposerFooterVeil({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: composerFooterBlur,
+          sigmaY: composerFooterBlur,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Palette.composerPaper
+                .withValues(alpha: composerFooterVeilOpacity),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
 
 const double _addHorizontalPadding = 12;
 const double _addVerticalPadding = 8;

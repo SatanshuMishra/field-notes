@@ -1111,13 +1111,27 @@ class RenderPhotoCanvas extends RenderBox
     }
     final bool room =
         figure.top - spot!.viewportTop >= bar.size.height + photoToolbarGap;
+    final double wanted = room
+        ? figure.top - photoToolbarGap - bar.size.height
+        : figure.bottom + photoToolbarGap;
     data.offset = Offset(
       (figure.center.dx - bar.size.width / 2)
           .clamp(0.0, math.max(0.0, width - bar.size.width)),
-      room
-          ? figure.top - photoToolbarGap - bar.size.height
-          : figure.bottom + photoToolbarGap,
+      _withinViewport(wanted, spot.viewportTop, bar.size.height),
     );
+  }
+
+  double _withinViewport(double wanted, double viewportTop, double height) {
+    if (_minHeight <= 0) {
+      return wanted;
+    }
+    final double highest = viewportTop + photoToolbarGap;
+    final double lowest =
+        viewportTop + _minHeight - height - photoToolbarGap;
+    if (lowest <= highest) {
+      return highest;
+    }
+    return wanted.clamp(highest, lowest);
   }
 
   Rect? _caretRect(RenderEditable? editable) {
