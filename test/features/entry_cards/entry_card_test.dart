@@ -33,6 +33,16 @@ String longNote() {
   return buffer.toString();
 }
 
+String threePhotoNote() => <String>[
+      'We took the long road down to the lake this morning.',
+      photoLineFor(reference: '7f3ac91b2d4e'),
+      'The dock was still wet with dew when we got there.',
+      photoLineFor(reference: '2b8e04d9c1a7'),
+      'Lunch was sandwiches on the rocks, out of the wind.',
+      photoLineFor(reference: 'c05f3e6a9d12'),
+      'We drove home with the windows down and no radio.',
+    ].join('\n\n');
+
 Widget scrollingCardHarness(Widget child, {double width = 360}) =>
     cardHarness(SingleChildScrollView(child: child), width: width);
 
@@ -215,6 +225,39 @@ void main() {
           tester.widget<NoteDocument>(find.byType(NoteDocument));
       expect(document.source.length, lessThanOrEqualTo(notePreviewCharLimit));
       expect(find.byType(MediaImage), findsNothing);
+    });
+
+    testWidgets('preview:true renders only the first photo of a short note',
+        (WidgetTester tester) async {
+      final String note = threePhotoNote();
+
+      await tester.pumpWidget(
+        scrollingCardHarness(
+          EntryCard(
+            entry: entryOf(type: EntryType.text, textContent: note),
+            resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
+            preview: true,
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(NotePhotoFigure), findsOneWidget);
+      expect(find.text(noteReadMoreLabel), findsOneWidget);
+
+      await tester.pumpWidget(
+        scrollingCardHarness(
+          EntryCard(
+            entry: entryOf(type: EntryType.text, textContent: note),
+            resolver: FakeMediaResolver(),
+            videoSlots: const UnlimitedVideoSlots(),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(NotePhotoFigure), findsNWidgets(3));
     });
 
     testWidgets('preview:false renders the whole note',

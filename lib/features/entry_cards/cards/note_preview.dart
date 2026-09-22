@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
+import '../../../domain/notes/notes.dart';
 import '../notes/note_document.dart';
 import 'note_body.dart';
 
@@ -20,25 +21,135 @@ NotePreviewText notePreviewOf(
   if (limit <= 0) {
     return (text: '', wasTruncated: source.isNotEmpty);
   }
-  if (source.length <= limit) {
+  final _Prefix prefix = _blockPrefixOf(source, limit);
+  if (!prefix.wasTruncated) {
     return (text: source, wasTruncated: false);
   }
-  final int cut = _cutAtOrBefore(source, limit);
-  final String head = source.substring(0, cut).trimRight();
+  final String head = _withoutPhotoLookalike(
+    prefix.text.trimRight(),
+    prefix.photos,
+  );
   if (head.isEmpty) {
-    return (text: source.substring(0, _withoutLoneSurrogate(source, limit)),
-        wasTruncated: true);
+    return (text: _hardCutBeforePhotos(source, limit), wasTruncated: true);
   }
-  return (text: head, wasTruncated: true);
+  return (text: _withoutFalseFloat(head, source), wasTruncated: true);
 }
 
-int _cutAtOrBefore(String source, int limit) {
+typedef _Prefix = ({String text, bool wasTruncated, int photos});
+
+String _hardCutBeforePhotos(String source, int limit) {
+  int end = _withoutLoneSurrogate(source, limit);
+  for (final NoteBlock block in parseNote(source)) {
+    if (block is PhotoBlock && block.sourceRange.start < end) {
+      end = block.sourceRange.start;
+      break;
+    }
+  }
+  return _withoutPhotoLookalike(source.substring(0, end), 0);
+}
+
+String _withoutPhotoLookalike(String text, int photos) {
+  String kept = text;
+  while (kept.isNotEmpty && parseNote(kept).where(_isPhoto).length > photos) {
+    final int lineStart = kept.trimRight().lastIndexOf('\n');
+    kept = lineStart < 0 ? '' : kept.substring(0, lineStart).trimRight();
+  }
+  return kept;
+}
+
+bool _isPhoto(NoteBlock block) => block is PhotoBlock;
+
+String _withoutFalseFloat(String preview, String source) {
+  final List<NoteBlock> kept = parseNote(preview);
+  final int photo = kept.indexWhere(_isPhoto);
+  if (photo < 0 ||
+      photo + 1 >= kept.length ||
+      kept[photo + 1] is! ParagraphBlock) {
+    return preview;
+  }
+  final List<NoteBlock> full = parseNote(source);
+  final int original = full.indexWhere(_isPhoto);
+  if (original >= 0 &&
+      original + 1 < full.length &&
+      full[original + 1] is ParagraphBlock) {
+    return preview;
+  }
+  return preview.substring(0, kept[photo].sourceRange.end).trimRight();
+}
+
+_Prefix _blockPrefixOf(String source, int limit) {
+  final StringBuffer kept = StringBuffer();
+  bool keptPhoto = false;
+  bool lastKeptIsPhoto = false;
+  bool dropped = false;
+  for (final NoteBlock block in parseNote(source)) {
+    if (kept.length >= limit) {
+      return (
+        text: kept.toString(),
+        wasTruncated: true,
+        photos: keptPhoto ? 1 : 0,
+      );
+    }
+    final String slice = block.sourceRange.sliceOf(source);
+    final int budget = limit - kept.length;
+    if (block is PhotoBlock) {
+      if (keptPhoto) {
+        if (lastKeptIsPhoto) {
+          return (
+            text: kept.toString(),
+            wasTruncated: true,
+            photos: keptPhoto ? 1 : 0,
+          );
+        }
+        if (!kept.toString().endsWith('\n\n')) {
+          kept.write('\n');
+        }
+        dropped = true;
+        continue;
+      }
+      if (slice.trimRight().length > budget && kept.isNotEmpty) {
+        return (
+          text: kept.toString(),
+          wasTruncated: true,
+          photos: keptPhoto ? 1 : 0,
+        );
+      }
+      kept.write(slice);
+      keptPhoto = true;
+      lastKeptIsPhoto = true;
+      continue;
+    }
+    if (slice.length <= budget) {
+      kept.write(slice);
+      lastKeptIsPhoto = false;
+      continue;
+    }
+    final int? cut = _lastBreakAtOrBefore(slice, budget);
+    if (cut != null) {
+      kept.write(slice.substring(0, cut));
+    } else if (kept.isEmpty) {
+      kept.write(slice.substring(0, _withoutLoneSurrogate(slice, budget)));
+    }
+    return (
+      text: kept.toString(),
+      wasTruncated: true,
+      photos: keptPhoto ? 1 : 0,
+    );
+  }
+  return (
+    text: kept.toString(),
+    wasTruncated: dropped,
+    photos: keptPhoto ? 1 : 0,
+  );
+}
+
+int? _lastBreakAtOrBefore(String source, int limit) {
   for (int index = limit; index >= 0; index--) {
     if (_isBreak(source.codeUnitAt(index))) {
       return index;
     }
   }
-  return _withoutLoneSurrogate(source, limit);
+  return null;
 }
 
 int _withoutLoneSurrogate(String source, int end) {
