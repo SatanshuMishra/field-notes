@@ -217,6 +217,52 @@ void main() {
       expect(preview.wasTruncated, isTrue);
     });
 
+    test('a list item cut to its marker does not make the kept photo float',
+        () {
+      final String photo = _photoLineAt(0);
+      final String source = 'intro\n$photo\n- groceries and bread';
+
+      final NotePreviewText preview =
+          notePreviewOf(source, limit: 6 + photo.length + 1 + 5);
+      final List<NoteBlockRun> runs =
+          noteBlockRuns(parseNote(preview.text), floats: true);
+
+      expect(runs.where((NoteBlockRun run) => run.block is PhotoBlock),
+          hasLength(1));
+      expect(
+        runs.singleWhere((NoteBlockRun run) => run.block is PhotoBlock).wraps,
+        isNull,
+      );
+      expect(preview.wasTruncated, isTrue);
+    });
+
+    test('the hard-cut fallback never enters a photo line', () {
+      final String photo = photoLineFor(
+        reference: _photoReferences[0],
+        caption: 'x' * 30,
+      );
+      final String source = '\u00A0\n$photo\n\nprose';
+
+      final NotePreviewText preview = notePreviewOf(source, limit: 10);
+
+      expect(preview.text, isNot(contains('![')));
+      expect(preview.wasTruncated, isTrue);
+    });
+
+    test('a cut never turns a paragraph line into a photo', () {
+      final String source = '${_photoLineAt(0)}\nwe walked\n'
+          '![x](photo/${_photoReferences[1]}) afterwards';
+
+      final NotePreviewText preview = notePreviewOf(
+        source,
+        limit: source.indexOf(' afterwards') + 3,
+      );
+
+      expect(parseNote(preview.text).whereType<PhotoBlock>(), hasLength(1));
+      expect(preview.text, contains('we walked'));
+      expect(preview.wasTruncated, isTrue);
+    });
+
     test('a photo that fits keeps its place even when its blank lines do not',
         () {
       final String photo = _photoLineAt(0);

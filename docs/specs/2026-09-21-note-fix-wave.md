@@ -120,8 +120,19 @@ exist rather than adding one.
     instead of merging into one paragraph.
   - Whether a photo fits is judged by its line, not by the blank lines after it.
   - A prose block with no break before the limit is left out when something is already kept, which is
-    exactly today's result. For notes with no photo the preview is identical to today's, confirmed by
-    a differential check over 5,000 random notes.
+    exactly today's result.
+- Refined after the second review:
+  - The kept photo never floats in the preview unless it floats in the read view. When a cut turns
+    the block after it into a paragraph (a list item cut to its marker, for example), the preview ends
+    after the photo.
+  - The preview may stack a photo that floats in the read view, when the paragraph it would float
+    beside falls past the cut. A preview is a prefix; with nothing beside it, the photo stacks.
+  - A cut never leaves a line that parses as a photo, and the hard-cut fallback never enters a photo
+    line.
+  - For notes with no photo the preview is identical to today's, except where today's cut left a
+    line that parses as a photo. A differential check over 10,000 random photo-free notes found no
+    difference, and a property check over 10,000 random notes with photos found no second photo, no
+    partial photo token and no false float.
 
 ### W5 — Placement validity.
 

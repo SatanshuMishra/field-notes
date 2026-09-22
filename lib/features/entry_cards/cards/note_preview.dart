@@ -27,10 +27,49 @@ NotePreviewText notePreviewOf(
   }
   final String head = prefix.text.trimRight();
   if (head.isEmpty) {
-    return (text: source.substring(0, _withoutLoneSurrogate(source, limit)),
-        wasTruncated: true);
+    return (text: _hardCutBeforePhotos(source, limit), wasTruncated: true);
   }
-  return (text: head, wasTruncated: true);
+  return (text: _withoutFalseFloat(head, source), wasTruncated: true);
+}
+
+String _hardCutBeforePhotos(String source, int limit) {
+  int end = _withoutLoneSurrogate(source, limit);
+  for (final NoteBlock block in parseNote(source)) {
+    if (block is PhotoBlock && block.sourceRange.start < end) {
+      end = block.sourceRange.start;
+      break;
+    }
+  }
+  return _withoutPhotoLookalike(source.substring(0, end));
+}
+
+String _withoutPhotoLookalike(String piece) {
+  String kept = piece;
+  while (kept.isNotEmpty && parseNote(kept).any(_isPhoto)) {
+    final int lineStart = kept.trimRight().lastIndexOf('\n');
+    kept = lineStart < 0 ? '' : kept.substring(0, lineStart + 1);
+  }
+  return kept;
+}
+
+bool _isPhoto(NoteBlock block) => block is PhotoBlock;
+
+String _withoutFalseFloat(String preview, String source) {
+  final List<NoteBlock> kept = parseNote(preview);
+  final int photo = kept.indexWhere(_isPhoto);
+  if (photo < 0 ||
+      photo + 1 >= kept.length ||
+      kept[photo + 1] is! ParagraphBlock) {
+    return preview;
+  }
+  final List<NoteBlock> full = parseNote(source);
+  final int original = full.indexWhere(_isPhoto);
+  if (original >= 0 &&
+      original + 1 < full.length &&
+      full[original + 1] is ParagraphBlock) {
+    return preview;
+  }
+  return preview.substring(0, kept[photo].sourceRange.end).trimRight();
 }
 
 NotePreviewText _blockPrefixOf(String source, int limit) {
@@ -70,9 +109,13 @@ NotePreviewText _blockPrefixOf(String source, int limit) {
     }
     final int? cut = _lastBreakAtOrBefore(slice, budget);
     if (cut != null) {
-      kept.write(slice.substring(0, cut));
+      kept.write(_withoutPhotoLookalike(slice.substring(0, cut)));
     } else if (kept.isEmpty) {
-      kept.write(slice.substring(0, _withoutLoneSurrogate(slice, budget)));
+      kept.write(
+        _withoutPhotoLookalike(
+          slice.substring(0, _withoutLoneSurrogate(slice, budget)),
+        ),
+      );
     }
     return (text: kept.toString(), wasTruncated: true);
   }
