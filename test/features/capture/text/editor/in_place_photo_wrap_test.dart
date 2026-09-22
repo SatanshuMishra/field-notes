@@ -19,9 +19,14 @@ class _Harness {
   final UndoHistoryController undo = UndoHistoryController();
   final ScrollController scroll = ScrollController();
 
-  Widget app({double width = 560, double height = 700}) {
+  Widget app({
+    double width = 560,
+    double height = 700,
+    TargetPlatform? platform,
+  }) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: platform == null ? null : ThemeData(platform: platform),
       home: Scaffold(
         body: ComposerMediaScope(
           resolver: _resolver(),
@@ -64,13 +69,16 @@ Future<_Harness> _pump(
   String text, {
   double width = 560,
   double height = 700,
+  TargetPlatform? platform,
 }) async {
   tester.view.physicalSize = const Size(1200, 2000);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final _Harness harness = _Harness(text);
   addTearDown(harness.dispose);
-  await tester.pumpWidget(harness.app(width: width, height: height));
+  await tester.pumpWidget(
+    harness.app(width: width, height: height, platform: platform),
+  );
   await tester.pump();
   return harness;
 }
@@ -249,7 +257,49 @@ void main() {
     });
   });
 
+  group('a full-width photo', () {
+    testWidgets('stays inside the writing column, selected or not',
+        (WidgetTester tester) async {
+      final String photo = photoLine(photoIdA, size: PhotoSize.full);
+      final String text = 'one\n$photo\n${_prose(20)}';
+      final _Harness harness = await _pump(tester, text);
+      final Rect column = tester.getRect(find.byType(InPlacePhotoEditor));
+
+      expect(_figure(tester).left, greaterThanOrEqualTo(column.left));
+      expect(_figure(tester).right, lessThanOrEqualTo(column.right));
+
+      await tester.tap(find.byKey(inPlacePhotoKey(0)));
+      await tester.pump();
+
+      expect(harness.controller.selection.isValid, isTrue);
+      final Rect ring = tester.getRect(find.byKey(inPlacePhotoRingKey));
+      expect(ring.left, greaterThanOrEqualTo(column.left));
+      expect(ring.right, lessThanOrEqualTo(column.right));
+    });
+  });
+
   group('scrolling', () {
+    testWidgets('the editor adds no scrollbar of its own',
+        (WidgetTester tester) async {
+      final String photo = photoLine(photoIdA, size: PhotoSize.large);
+      final String text = 'one\n$photo\n${_prose(400)}';
+      await _pump(
+        tester,
+        text,
+        height: 300,
+        platform: TargetPlatform.macOS,
+      );
+
+      expect(find.byType(Scrollbar), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(TextField),
+          matching: find.byType(Scrollbar),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('the wheel scrolls with the pointer over a photo',
         (WidgetTester tester) async {
       final String photo = photoLine(photoIdA, size: PhotoSize.large);

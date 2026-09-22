@@ -19,7 +19,6 @@ const String notePhotoSemanticsLabel = 'Photo';
 const Key notePhotoFrameKey = ValueKey<String>('note-photo-frame');
 const Key notePhotoUnavailableKey = ValueKey<String>('note-photo-unavailable');
 
-const double notePhotoFramePadding = 6;
 const double notePhotoCaptionGap = 8;
 const double notePhotoUnavailableHeight = 56;
 const TextStyle notePhotoCaptionStyle = TypographyTokens.captionSans;
@@ -195,15 +194,8 @@ class NotePhotoFigure extends StatelessWidget {
       child: Transform.scale(
         scale: notePhotoFitScale(plan.width, plan.height, radians),
         child: DecoratedBox(
-          decoration: const BoxDecoration(
-            color: Palette.cardBright,
-            border: Shapes.outline,
-            boxShadow: Shadows.cardDefault,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(notePhotoFramePadding),
-            child: SizedBox.expand(child: content),
-          ),
+          decoration: const BoxDecoration(boxShadow: Shadows.cardDefault),
+          child: SizedBox.expand(child: content),
         ),
       ),
     );

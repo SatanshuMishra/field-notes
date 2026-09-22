@@ -106,11 +106,15 @@ These apply to the new-note and edit-note composers only. The voice and video co
 The decorative sprig is painted beneath the composer's content, so the Save button and the header sit
 on top of it.
 
-### C10 — One look for photos, the scrapbook look.
+### C10 — One look for photos: the picture itself.
 
-In the editor and the reader, a photo is a paper print: a white border, a slight tilt, and, from phase 3,
-tape strips and a handwritten caption. The reader's existing print (`NotePhotoFigure`) is the base; the
-editor reuses it rather than drawing a second one.
+In the editor and the reader, a photo shows as the picture, filling the space it is given, with its
+slight tilt and its shadow and nothing else. The white mount and its outline are gone: the owner ruled on
+2026-09-22 that they were not the scrapbook look and only took space from the picture.
+
+A real scrapbook treatment, with tape, randomised tilt and per-photo customisation, is a later
+exploration. It is not phase 3 and it is not scheduled. The reader's figure (`NotePhotoFigure`) stays the
+one place it is drawn, so the editor and the reader can never drift apart.
 
 ### C11 — Sizes keep today's rules.
 
@@ -135,7 +139,7 @@ Each phase ships as its own pull request, stacked on the one before.
 | 0 | This document | — |
 | 1 | Quick fixes: sprig, responsive panel, contextual rail controls | 0 |
 | 2 | Experiment: a photo drawn in place inside the single text field | 1 |
-| 3 | Reader: centre placement, then the tape and caption look | 0 |
+| 3 | Reader: centre placement | 0 |
 | 4 | Editor: photos in place, productised from phase 2 | 2 passes, 3 |
 | 5 | Toolbar, in-place caption, rail and options sheet removed, footer | 4 |
 | 6 | Phone pass, desktop text toolbar, benchmark, audit | 5 |
@@ -195,8 +199,7 @@ phase 4 builds the `u10` segment editor instead.
 Specified in outline here and in full when phase 2 reports.
 
 - **Phase 3.** Centre placement (C5) in the parser, validity rules, reader, feed preview and float
-  planner. Then the scrapbook look (C10) in `NotePhotoFigure`, with the owner approving the changed
-  reference images.
+  planner. The scrapbook look is out of this phase (C10).
 - **Phase 4.** Phase 2 productised: the pick placeholder and the add-photo toast (C7).
 - **Phase 5.** The toolbar (C4), the caption edited in place, the composer-owned Undo toast (C6), the
   rail and the options sheet removed, and the design's footer: Add memory and the Markdown hints, with no
@@ -242,5 +245,6 @@ pinned by a test:
 ## 4. Out of scope
 
 - Scrapbook free placement, and its drag, rotate and resize handles (C1).
+- The scrapbook treatment: tape, randomised tilt, per-photo customisation (C10).
 - New inline formats: underline, monospace, highlight (C12).
 - Android device checks and the `u10` decision, which the owner deferred.

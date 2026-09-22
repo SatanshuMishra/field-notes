@@ -26,7 +26,7 @@ const double noteCaretMargin = 3;
 const double inPlaceCaretWidth = 2;
 const Duration inPlaceCaretBlink = Duration(milliseconds: 500);
 const Color _hiddenCaret = Color(0x00000000);
-const double _ringInset = 4;
+const double _ringInset = 0;
 
 Key inPlacePhotoKey(int ordinal) => ValueKey<String>('in-place-photo-$ordinal');
 
@@ -371,81 +371,86 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
             return _PhotoKeys(
               controller: _controller,
               spacers: layout.patches.spacers,
-              child: SingleChildScrollView(
-                controller: _config.scrollController,
-                child: Stack(
-                  children: <Widget>[
-                    _PhotoCanvas(
-                      minHeight: viewport,
-                      placements: <PhotoSpot>[
-                        for (final InPlacePhoto photo in layout.photos)
-                          PhotoSpot(
-                            anchor: photo.anchor,
-                            size: photo.figureSize,
-                            alignX: photo.alignX,
-                            top: photo.topPad,
-                            bottom: photo.topPad,
-                          ),
-                      ],
-                      caret: fix == null
-                          ? null
-                          : CaretSpot(
-                              offset: value.selection.baseOffset,
-                              dx: fix.dx,
-                              upstream: fix.upstream,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  scrollbars: false,
+                ),
+                child: SingleChildScrollView(
+                  controller: _config.scrollController,
+                  child: Stack(
+                    children: <Widget>[
+                      _PhotoCanvas(
+                        minHeight: viewport,
+                        placements: <PhotoSpot>[
+                          for (final InPlacePhoto photo in layout.photos)
+                            PhotoSpot(
+                              anchor: photo.anchor,
+                              size: photo.figureSize,
+                              alignX: photo.alignX,
+                              top: photo.topPad,
+                              bottom: photo.topPad,
                             ),
-                      children: <Widget>[
-                        PhotoBandScope(
-                          patches: layout.patches,
-                          child: KeyedSubtree(
-                            key: _fieldKey,
-                            child: noteTextField(
-                              context,
-                              _config,
-                              cursorColor: hideCaret ? _hiddenCaret : null,
-                              inputFormatters: const <TextInputFormatter>[
-                                PhotoLineGuard(),
-                              ],
-                              strutStyle: strut,
-                              selectionHeightStyle: BoxHeightStyle.max,
-                              scrolls: false,
-                              onTap: _settleCaret,
-                            ),
-                          ),
-                        ),
-                        for (final InPlacePhoto photo in layout.photos)
-                          TextFieldTapRegion(
-                            child: _InPlaceFigure(
-                              key: inPlacePhotoKey(photo.line.ordinal),
-                              photo: photo,
-                              resolver: resolver,
-                              selected: selectionTouchesPhoto(
-                                photo.line,
-                                value.selection,
+                        ],
+                        caret: fix == null
+                            ? null
+                            : CaretSpot(
+                                offset: value.selection.baseOffset,
+                                dx: fix.dx,
+                                upstream: fix.upstream,
                               ),
-                              onTap: () => _select(photo.line.ordinal),
+                        children: <Widget>[
+                          PhotoBandScope(
+                            patches: layout.patches,
+                            child: KeyedSubtree(
+                              key: _fieldKey,
+                              child: noteTextField(
+                                context,
+                                _config,
+                                cursorColor: hideCaret ? _hiddenCaret : null,
+                                inputFormatters: const <TextInputFormatter>[
+                                  PhotoLineGuard(),
+                                ],
+                                strutStyle: strut,
+                                selectionHeightStyle: BoxHeightStyle.max,
+                                scrolls: false,
+                                onTap: _settleCaret,
+                              ),
                             ),
                           ),
-                        if (fix != null && _config.focusNode.hasFocus)
-                          _BlinkingCaret(
-                            key: ValueKey<int>(value.selection.baseOffset),
-                            color: _config.cursorColor,
-                          ),
-                      ],
-                    ),
-                    if (value.text.isEmpty)
-                      Positioned(
-                        left: 0,
-                        top: 0,
-                        right: 0,
-                        child: IgnorePointer(
-                          child: Text(
-                            _config.hintText,
-                            style: _config.hintStyle,
+                          for (final InPlacePhoto photo in layout.photos)
+                            TextFieldTapRegion(
+                              child: _InPlaceFigure(
+                                key: inPlacePhotoKey(photo.line.ordinal),
+                                photo: photo,
+                                resolver: resolver,
+                                selected: selectionTouchesPhoto(
+                                  photo.line,
+                                  value.selection,
+                                ),
+                                onTap: () => _select(photo.line.ordinal),
+                              ),
+                            ),
+                          if (fix != null && _config.focusNode.hasFocus)
+                            _BlinkingCaret(
+                              key: ValueKey<int>(value.selection.baseOffset),
+                              color: _config.cursorColor,
+                            ),
+                        ],
+                      ),
+                      if (value.text.isEmpty)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          right: 0,
+                          child: IgnorePointer(
+                            child: Text(
+                              _config.hintText,
+                              style: _config.hintStyle,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
