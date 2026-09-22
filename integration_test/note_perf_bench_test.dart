@@ -141,7 +141,7 @@ void main() {
         'placement': const PhotoPlacement().format(),
         'photoPixels': '${benchPhotoWidth}x$benchPhotoHeight',
         'photoBlockRenderer': 'PhotoWrapBlock through a warm '
-            'MediaStoreResolver, the float asserted after the first sample; '
+            'MediaStoreResolver, the float asserted on every sample; '
             'the decoded photo comes from an ImageCache warmed before timing, '
             'so decode is not in the number',
         'parserMemo': 'missed, every sample uses a distinct source',
@@ -153,10 +153,8 @@ void main() {
           stage,
           pinnedNote('$photoLine\n${benchVariant(paragraph, index)}'),
         );
-        if (index == 0) {
-          expect(find.byKey(photoWrapFloatKey), findsOneWidget);
-          expect(_decodedImages(tester), 1);
-        }
+        expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+        expect(_decodedImages(tester), 1);
         return elapsed;
       },
     );
@@ -225,9 +223,7 @@ void main() {
           stage,
           scrollingNote(benchVariant(document, index)),
         );
-        if (index == 0) {
-          expect(_decodedImages(tester), references.length);
-        }
+        expect(_decodedImages(tester), references.length);
         return elapsed;
       },
     );
