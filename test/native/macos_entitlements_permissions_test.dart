@@ -7,6 +7,7 @@ void main() {
     'com.apple.security.device.camera',
     'com.apple.security.device.audio-input',
     'com.apple.security.personal-information.photos-library',
+    'com.apple.security.files.user-selected.read-write',
   ];
 
   const entitlementFiles = <String>[
