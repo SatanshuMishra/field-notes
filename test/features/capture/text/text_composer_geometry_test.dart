@@ -26,6 +26,22 @@ Finder _panel() => find
 
 Future<List<String>> _noPhotos() async => const <String>[];
 
+Rect _viewport(WidgetTester tester) => tester.getRect(
+      find.descendant(
+        of: find.byType(RawScrollbar),
+        matching: find.byType(SingleChildScrollView),
+      ),
+    );
+
+ScrollableState _editorScroll(WidgetTester tester) => tester.state(
+      find
+          .descendant(
+            of: find.byType(RawScrollbar),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+
 Future<void> _pumpComposer(
   WidgetTester tester, {
   required Size surface,
@@ -33,6 +49,7 @@ Future<void> _pumpComposer(
   bool responsive = false,
   String initialText = '',
   PhotoImporter? onAddPhoto,
+  TargetPlatform? platform,
 }) async {
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
@@ -41,6 +58,7 @@ Future<void> _pumpComposer(
   await tester.pumpWidget(
     MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: platform == null ? null : ThemeData(platform: platform),
       home: DialogHost(
         child: ComposerShell(
           responsive: responsive,
@@ -254,6 +272,82 @@ void main() {
         tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom -
             tester.getRect(find.byType(ComposerFooter)).bottom,
         lessThanOrEqualTo(_lineHeight),
+      );
+    });
+
+    testWidgets('the note flows to the bottom of the writing surface',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        _viewport(tester).bottom,
+        closeTo(
+          tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
+          0.5,
+        ),
+        reason: 'the note stops short of the footer',
+      );
+    });
+
+    testWidgets('the footer reaches the bottom edge of the panel',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        platform: TargetPlatform.macOS,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.byType(ComposerFooterVeil)).bottom,
+        closeTo(
+          tester.getRect(_panel()).bottom - composerPanelBorderWidth,
+          0.5,
+        ),
+      );
+    });
+
+    testWidgets('an empty note does not scroll', (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(_editorScroll(tester).position.maxScrollExtent, 0);
+    });
+
+    testWidgets('the end of a long note clears the footer',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+      final ScrollableState scroll = _editorScroll(tester);
+      scroll.position.jumpTo(scroll.position.maxScrollExtent);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(find.byType(EditableText)).bottom,
+        lessThanOrEqualTo(
+          tester.getRect(find.byType(ComposerFooterVeil)).top + 0.5,
+        ),
       );
     });
 

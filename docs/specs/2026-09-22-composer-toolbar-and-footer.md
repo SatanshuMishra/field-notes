@@ -105,9 +105,14 @@ runs every commit through it.
 ## 4. The footer
 
 One row floating over the foot of the writing surface, inside the panel's horizontal padding, on a
-translucent blurred veil so the note reads through it. The note's own page keeps a bottom padding the
-height of the footer, so the last line always clears it. The owner ruled this on 2026-09-22: the design's
-own footer is a plain row under a fixed-height surface, and that is what left the panel with a dead band.
+translucent blurred veil so the note reads through it. The veil sits on the panel's bottom edge, and the
+writing surface runs all the way down to it, so the note passes under the blur instead of stopping above
+it. The page reserves the footer's height plus a 12pt gap as scroll slack **inside** its own scroll, never
+as an inset on the viewport: the last line can always be scrolled clear of the footer, and an empty note
+still does not scroll. The owner ruled this on 2026-09-22: the design's own footer is a plain row under a
+fixed-height surface, and that is what left the panel with a dead band. Reaffirmed the same day after the
+first build reserved that band outside the viewport and left 87pt of blank paper between the end of the
+note and the veil.
 
 - **Add memory.** The design's button: its word, a camera glyph, an accent fill and the sticker shadow
   the Save button carries. It picks photos, stores them and inserts their
@@ -176,7 +181,9 @@ header and the format bar are laid out. The panel fills the window less a margin
 entirely on a window too short to spare it. The panel width rule and the 45 em column are unchanged.
 
 Geometry tests pin the panel against the window at 800, 1200 and 1600, pin that the footer's bottom sits
-at the surface's bottom, and pin that the note scrolls under the footer rather than stopping above it.
+at the surface's bottom and at the panel's inner edge, pin that the editor's viewport reaches the surface's
+bottom, and pin both ends of the reserved band: an empty note does not scroll, and a long note scrolled to
+its end keeps its last line clear of the footer.
 
 ---
 

@@ -38,9 +38,7 @@ const double _pageTopPaddingShare = 0.10;
 const double _pageTopPaddingMin = 8;
 const double _pageTopPaddingMax = 44;
 const double _pageHorizontalPadding = 38;
-const double _pageBottomPaddingShare = 0.12;
-const double _pageBottomPaddingMin = 12;
-const double _pageBottomPaddingMax = 120;
+const double _pageEndGap = 12;
 const double _scrollbarThickness = 9;
 const double _errorGap = 8;
 const double _chipVerticalPadding = 10;
@@ -328,27 +326,21 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           ),
         ),
         ?formatBar,
-        Padding(
-          padding: const EdgeInsets.only(
-            left: _bodyHorizontalPadding,
-            right: _bodyHorizontalPadding,
-            bottom: _bodyBottomPadding,
+        if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(
+              left: _bodyHorizontalPadding,
+              right: _bodyHorizontalPadding,
+              top: _errorGap,
+            ),
+            child: Text(
+              errorMessage,
+              style:
+                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              if (errorMessage != null) ...<Widget>[
-                const SizedBox(height: _errorGap),
-                Text(
-                  errorMessage,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.danger),
-                ),
-              ],
-            ],
-          ),
-        ),
+        if (formatBar != null || errorMessage != null)
+          const SizedBox(height: _bodyBottomPadding),
       ],
     );
   }
@@ -380,15 +372,18 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           thumbColor: Palette.ink22,
           radius: const Radius.circular(Shapes.radiusXs),
           child: Padding(
-            padding: _pageMargins(constraints.maxHeight, footer: footer),
-            child: NoteColumn(maxEm: composerMeasureEm, child: _page()),
+            padding: _pageMargins(constraints.maxHeight),
+            child: NoteColumn(
+              maxEm: composerMeasureEm,
+              child: _page(bottomInset: _pageEndInset(footer: footer)),
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _page() {
+  Widget _page({required double bottomInset}) {
     return noteEditorFor(
       NoteEditorConfig(
         controller: _controller,
@@ -397,12 +392,13 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         scrollController: _scrollController,
         hintText: widget.hintText,
         photoImporter: widget.onAddPhoto,
+        bottomInset: bottomInset,
       ),
     );
   }
 }
 
-EdgeInsets _pageMargins(double surfaceHeight, {required bool footer}) {
+EdgeInsets _pageMargins(double surfaceHeight) {
   return EdgeInsets.only(
     top: clampDouble(
       surfaceHeight * _pageTopPaddingShare,
@@ -411,14 +407,11 @@ EdgeInsets _pageMargins(double surfaceHeight, {required bool footer}) {
     ),
     left: _pageHorizontalPadding,
     right: _pageHorizontalPadding,
-    bottom: clampDouble(
-          surfaceHeight * _pageBottomPaddingShare,
-          _pageBottomPaddingMin,
-          _pageBottomPaddingMax,
-        ) +
-        (footer ? composerFooterHeight : 0),
   );
 }
+
+double _pageEndInset({required bool footer}) =>
+    (footer ? composerFooterHeight : 0) + _pageEndGap;
 
 class _CloseGlyphPainter extends CustomPainter {
   const _CloseGlyphPainter();

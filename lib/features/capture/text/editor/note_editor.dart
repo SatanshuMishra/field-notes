@@ -22,6 +22,7 @@ class NoteEditorConfig {
     this.hintStyle = TypographyTokens.noteBodyPlaceholder,
     this.cursorColor = Palette.coral,
     this.photoImporter,
+    this.bottomInset = 0,
   });
 
   final MarkdownStyleController controller;
@@ -33,6 +34,7 @@ class NoteEditorConfig {
   final TextStyle hintStyle;
   final Color cursorColor;
   final Future<List<String>> Function()? photoImporter;
+  final double bottomInset;
 }
 
 abstract class NoteEditor extends StatelessWidget {
