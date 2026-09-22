@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../motion/motion_tokens.dart';
@@ -14,6 +16,7 @@ const double _darkPadVertical = 8;
 const double _darkGap = 7;
 const double _darkIconSize = 13;
 const double _transientBottomInset = 84;
+const double _transientKeyboardGap = 16;
 const double _riseOffset = 10;
 const double toastActionMinTarget = 48;
 const double _actionGap = 8;
@@ -240,9 +243,14 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
     return Positioned(
       left: 0,
       right: 0,
-      bottom: _transientBottomInset + MediaQuery.viewInsetsOf(context).bottom,
+      top: MediaQuery.paddingOf(context).top,
+      bottom: math.max(
+        _transientBottomInset,
+        MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
+      ),
       child: IgnorePointer(
-        child: Center(
+        child: Align(
+          alignment: Alignment.bottomCenter,
           child: FadeTransition(
             opacity: _rise,
             child: AnimatedBuilder(

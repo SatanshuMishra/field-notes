@@ -98,10 +98,14 @@ void main() {
     Future<void> showOnLandscapePhone(
       WidgetTester tester, {
       IconStickerGlyph? glyph,
+      Size surface = const Size(844, 390),
+      double keyboard = 200,
+      double statusBar = 0,
     }) async {
-      tester.view.physicalSize = const Size(844, 390);
+      tester.view.physicalSize = surface;
       tester.view.devicePixelRatio = 1;
-      tester.view.viewInsets = const FakeViewPadding(bottom: 200);
+      tester.view.viewInsets = FakeViewPadding(bottom: keyboard);
+      tester.view.padding = FakeViewPadding(top: statusBar);
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
@@ -131,6 +135,21 @@ void main() {
         tester.getRect(find.text('Could not add that photo')).bottom,
         lessThanOrEqualTo(390 - 200),
       );
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('stays below the status bar when the keyboard leaves little room',
+        (WidgetTester tester) async {
+      await showOnLandscapePhone(
+        tester,
+        surface: const Size(844, 320),
+        statusBar: 24,
+      );
+
+      final Rect toast = tester.getRect(find.text('Could not add that photo'));
+      expect(toast.top, greaterThanOrEqualTo(24));
+      expect(toast.bottom, lessThanOrEqualTo(320 - 200));
 
       await tester.pump(kToastLifetime);
     });
