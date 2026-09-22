@@ -38,10 +38,17 @@ A photo is anchored to its line of the note, exactly as today. R2 of the parent 
 placement at page coordinates, and the drag, rotate and resize handles that go with it, are out of scope.
 If they return, they return as a new placement type that keeps existing notes valid.
 
-### C2 — The editor shows the photo in place, as a block. It does not wrap.
+### C2 — The editor shows the photo in place, and the text wraps beside it.
 
-The photo is drawn at its own line, at its size and side, with the text continuing below it. Text wraps
-beside a photo only in the reader. R1 of the parent spec stands; the design's live wrap is not copied.
+The photo is drawn at its size and side, and the paragraph that follows it flows beside it exactly as the
+reader flows it: the lines that start above the photo's bottom are held to the narrower column, and the
+rest of the note runs the full width below the photo. A photo the reader would stack is stacked here too,
+with the text continuing below it.
+
+The owner reversed this ruling and the parent spec's R1 on 2026-09-22, after running the phase 2
+experiment: "The text does NOT wrap around the photo." The editor reaches the wrap the way the reader
+does, by splitting the paragraph at a line boundary, except that it cannot split the text into separate
+widgets and so forces the same break inside the one field. Section 3 records what that costs.
 
 ### C3 — The note stays one string, and the editor stays one text field.
 
@@ -99,11 +106,15 @@ These apply to the new-note and edit-note composers only. The voice and video co
 The decorative sprig is painted beneath the composer's content, so the Save button and the header sit
 on top of it.
 
-### C10 — One look for photos, the scrapbook look.
+### C10 — One look for photos: the picture itself.
 
-In the editor and the reader, a photo is a paper print: a white border, a slight tilt, and, from phase 3,
-tape strips and a handwritten caption. The reader's existing print (`NotePhotoFigure`) is the base; the
-editor reuses it rather than drawing a second one.
+In the editor and the reader, a photo shows as the picture, filling the space it is given, with its
+slight tilt and its shadow and nothing else. The white mount and its outline are gone: the owner ruled on
+2026-09-22 that they were not the scrapbook look and only took space from the picture.
+
+A real scrapbook treatment, with tape, randomised tilt and per-photo customisation, is a later
+exploration. It is not phase 3 and it is not scheduled. The reader's figure (`NotePhotoFigure`) stays the
+one place it is drawn, so the editor and the reader can never drift apart.
 
 ### C11 — Sizes keep today's rules.
 
@@ -128,7 +139,7 @@ Each phase ships as its own pull request, stacked on the one before.
 | 0 | This document | — |
 | 1 | Quick fixes: sprig, responsive panel, contextual rail controls | 0 |
 | 2 | Experiment: a photo drawn in place inside the single text field | 1 |
-| 3 | Reader: centre placement, then the tape and caption look | 0 |
+| 3 | Reader: centre placement | 0 |
 | 4 | Editor: photos in place, productised from phase 2 | 2 passes, 3 |
 | 5 | Toolbar, in-place caption, rail and options sheet removed, footer | 4 |
 | 6 | Phone pass, desktop text toolbar, benchmark, audit | 5 |
@@ -156,7 +167,9 @@ build on? It ships as a draft for the owner to try in the macOS app, not for mer
 2. draws the reader's `NotePhotoFigure` into that band, positioned while painting from the text field's
    own layout, so the photo moves in the same frame as the text through typing, scrolling and resizing;
 3. sizes and places the figure with `planFloat` at the writing column: a photo that would float in the
-   reader is drawn at its float width against its side; any other photo at its block width, centred.
+   reader is drawn at its float width against its side; any other photo at its block width, centred;
+4. holds each line that runs beside a floated photo to the reader's narrower column, and clears the
+   photo's height before the next block, so the paragraph wraps beside the picture (C2).
 
 **Behaviour it must show.**
 
@@ -178,7 +191,7 @@ build on? It ships as a draft for the owner to try in the macOS app, not for mer
 4. Select-all and copy produce the saved text exactly; undo and IME composition behave as today.
 5. Typing latency on a long note with several photos is no worse than today.
 
-Checks 1 to 4 are widget tests. Check 5 and the overall feel are the owner's, in the macOS app. On no-go,
+Checks 1 to 4 and 6 are widget tests. Check 5 and the overall feel are the owner's, in the macOS app. On no-go,
 phase 4 builds the `u10` segment editor instead.
 
 ### Phases 3 to 6
@@ -186,8 +199,7 @@ phase 4 builds the `u10` segment editor instead.
 Specified in outline here and in full when phase 2 reports.
 
 - **Phase 3.** Centre placement (C5) in the parser, validity rules, reader, feed preview and float
-  planner. Then the scrapbook look (C10) in `NotePhotoFigure`, with the owner approving the changed
-  reference images.
+  planner. The scrapbook look is out of this phase (C10).
 - **Phase 4.** Phase 2 productised: the pick placeholder and the add-photo toast (C7).
 - **Phase 5.** The toolbar (C4), the caption edited in place, the composer-owned Undo toast (C6), the
   rail and the options sheet removed, and the design's footer: Add memory and the Markdown hints, with no
@@ -208,15 +220,31 @@ Specified in outline here and in full when phase 2 reports.
 | `u8`: the editor shows a photo as a dim line with the image in the rail | C2, C3 | The photo drawn in place |
 | Placement is left or right | C5 | Left, centre or right |
 | Fix-wave W3: the rail's slim Add tile on short screens | Phase 5 | Add memory in the footer, kept on short screens |
+| R1: text wraps beside a photo only in the reader | C2 | The editor wraps too, by forcing the reader's line breaks inside the one field |
+| `u8`: the controller builds no placeholder span | C2 | Empty placeholder boxes are allowed as spacers, and nothing else may go inside one |
 
-R1, R2 and R3 of the parent spec are unchanged. R4 was already amended for the Today feed; this document
-amends it for the composer (C8).
+R2 and R3 of the parent spec are unchanged. R4 was already amended for the Today feed; this document
+amends it for the composer (C8). R1 is amended above.
+
+**What the wrap costs.** The editor holds a line to the narrow column by giving the line's own break
+character an invisible box that fills the rest of the line, and it indents a line beside a photo on the
+left by giving that break character a box as wide as the photo. Three consequences follow, and each is
+pinned by a test:
+
+- The drawn text is no longer character-for-character the saved text. It is the same length, and every
+  character it replaces is a space or a line break, so every caret offset still lands where it did. The
+  saved note, copy and select-all are untouched.
+- A placeholder may hold nothing but an empty box. A gesture recognizer on a span still fails the build:
+  `RenderEditable` asserts on one in an editable field off macOS. A field nested in a placeholder is the
+  reproduction of flutter/flutter#159171 and stays out.
+- Beside a photo on the left, the framework would draw the caret at the far left of the indented line,
+  behind the picture. The composer draws that caret itself, at the end of the line the typing goes to.
 
 ---
 
 ## 4. Out of scope
 
 - Scrapbook free placement, and its drag, rotate and resize handles (C1).
-- Text wrapping around a photo while typing (C2).
+- The scrapbook treatment: tape, randomised tilt, per-photo customisation (C10).
 - New inline formats: underline, monospace, highlight (C12).
 - Android device checks and the `u10` decision, which the owner deferred.

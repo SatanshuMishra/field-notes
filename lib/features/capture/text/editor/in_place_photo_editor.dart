@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui' show BoxHeightStyle;
 
 import 'package:flutter/material.dart';
@@ -14,17 +16,23 @@ import 'markdown_style_controller.dart';
 import 'note_editor.dart';
 import 'photo_bands.dart';
 import 'photo_line_keys.dart';
+import 'photo_wrap.dart';
 import 'single_field_note_editor.dart';
 
 const double photoBandPadding = 12;
 const double inPlacePhotoRingWidth = 2.5;
 const double inPlacePhotoFallbackAspect = 4 / 3;
+const double noteCaretMargin = 3;
+const double inPlaceCaretWidth = 2;
+const Duration inPlaceCaretBlink = Duration(milliseconds: 500);
 const Color _hiddenCaret = Color(0x00000000);
-const double _ringInset = 4;
+const double _ringInset = 0;
 
 Key inPlacePhotoKey(int ordinal) => ValueKey<String>('in-place-photo-$ordinal');
 
 const Key inPlacePhotoRingKey = ValueKey<String>('in-place-photo-ring');
+
+const Key inPlaceCaretKey = ValueKey<String>('in-place-caret');
 
 class ComposerMediaScope extends InheritedWidget {
   const ComposerMediaScope({
@@ -57,6 +65,7 @@ class InPlacePhoto {
     required this.photoHeight,
     required this.figureSize,
     required this.alignX,
+    this.wrap,
   });
 
   final NotePhotoLine line;
@@ -65,24 +74,137 @@ class InPlacePhoto {
   final double photoHeight;
   final Size figureSize;
   final double alignX;
+  final PhotoWrap? wrap;
+
+  bool get wraps => wrap != null;
 
   double get band => figureSize.height + 2 * photoBandPadding;
+
+  double get topPad => wraps ? 0 : photoBandPadding;
+
+  int get anchor => wrap?.anchor ?? line.lineEnd - 1;
 
   PhotoBand get photoBand =>
       PhotoBand(start: line.lineStart, end: line.lineEnd, height: band);
 }
 
-List<InPlacePhoto> inPlacePhotosFor(
+@immutable
+class InPlaceLayout {
+  const InPlaceLayout({
+    required this.photos,
+    required this.patches,
+    required this.caretFixes,
+  });
+
+  static const InPlaceLayout empty = InPlaceLayout(
+    photos: <InPlacePhoto>[],
+    patches: PhotoPatches.none,
+    caretFixes: <PhotoCaretFix>[],
+  );
+
+  final List<InPlacePhoto> photos;
+  final PhotoPatches patches;
+  final List<PhotoCaretFix> caretFixes;
+}
+
+InPlaceLayout inPlaceLayoutFor(
   String text, {
   required double measure,
   required double em,
   required TextScaler scaler,
+  required PhotoWrapEnv env,
   MediaResolver? resolver,
 }) {
-  return <InPlacePhoto>[
-    for (final NotePhotoLine line in notePhotoLines(text))
-      _inPlacePhoto(line, measure, em, scaler, resolver),
-  ];
+  final List<NotePhotoLine> lines = notePhotoLines(text);
+  if (lines.isEmpty) {
+    return InPlaceLayout.empty;
+  }
+  final Set<int> starts = <int>{
+    for (final NotePhotoLine line in lines) line.lineStart,
+  };
+  final List<InPlacePhoto> photos = <InPlacePhoto>[];
+  final List<PhotoBand> bands = <PhotoBand>[];
+  final List<PhotoSpacer> spacers = <PhotoSpacer>[];
+  final List<PhotoKern> kerns = <PhotoKern>[];
+  final List<PhotoCaretFix> fixes = <PhotoCaretFix>[];
+  final Set<int> carriers = <int>{};
+
+  for (final NotePhotoLine line in lines) {
+    InPlacePhoto photo = _inPlacePhoto(line, measure, em, scaler, resolver);
+    PhotoWrap? wrap;
+    if (!photo.plan.isStacked) {
+      wrap = planPhotoWrap(
+        text: text,
+        line: line,
+        plan: photo.plan,
+        figureHeight: photo.figureSize.height,
+        env: env,
+        photoLineStarts: starts,
+      );
+      if (wrap == null) {
+        photo = _inPlacePhoto(
+          line,
+          measure,
+          em,
+          scaler,
+          resolver,
+          stacked: true,
+        );
+      } else {
+        photo = InPlacePhoto(
+          line: photo.line,
+          plan: photo.plan,
+          media: photo.media,
+          photoHeight: photo.photoHeight,
+          figureSize: photo.figureSize,
+          alignX: photo.alignX,
+          wrap: wrap,
+        );
+      }
+    }
+    photos.add(photo);
+    final bool carried = carriers.contains(line.lineStart);
+    if (wrap == null) {
+      final PhotoBand band = photo.photoBand;
+      if (!carried) {
+        bands.add(band);
+      } else if (band.start + 1 < band.end) {
+        bands.add(
+          PhotoBand(
+            start: band.start + 1,
+            end: band.end,
+            height: band.height,
+          ),
+        );
+      }
+      continue;
+    }
+    for (final PhotoBand band in wrap.patches.bands) {
+      if (!carried || band.start != line.lineStart) {
+        bands.add(band);
+      } else if (band.start + 1 < band.end) {
+        bands.add(
+          PhotoBand(
+            start: band.start + 1,
+            end: band.end,
+            height: band.height,
+          ),
+        );
+      }
+    }
+    spacers.addAll(wrap.patches.spacers);
+    kerns.addAll(wrap.patches.kerns);
+    fixes.addAll(wrap.caretFixes);
+    if (wrap.carrier != null) {
+      carriers.add(wrap.carrier!);
+    }
+  }
+
+  return InPlaceLayout(
+    photos: photos,
+    patches: PhotoPatches(bands: bands, spacers: spacers, kerns: kerns),
+    caretFixes: fixes,
+  );
 }
 
 InPlacePhoto _inPlacePhoto(
@@ -90,11 +212,13 @@ InPlacePhoto _inPlacePhoto(
   double measure,
   double em,
   TextScaler scaler,
-  MediaResolver? resolver,
-) {
+  MediaResolver? resolver, {
+  bool stacked = false,
+}) {
   final PhotoPlacement placement = line.placement;
   final ResolvedMedia? media = resolver?.resolved(line.reference);
   final MediaBlob? blob = media?.blob;
+  final bool unavailable = media != null && !media.isAvailable;
   final PhotoPlan plan = planFloat(
     measure: measure,
     em: em,
@@ -102,11 +226,13 @@ InPlacePhoto _inPlacePhoto(
     size: placement.size,
     aspect: photoAspectOf(blob?.width, blob?.height) ??
         inPlacePhotoFallbackAspect,
-    nextIsParagraph: line.wrapsParagraph && placement.isValid,
+    nextIsParagraph: line.wrapsParagraph &&
+        placement.isValid &&
+        !stacked &&
+        !unavailable,
   );
-  final double photoHeight = media != null && !media.isAvailable
-      ? notePhotoUnavailableHeight
-      : plan.height;
+  final double photoHeight =
+      unavailable ? notePhotoUnavailableHeight : plan.height;
   final double caption = line.caption.isEmpty
       ? 0
       : notePhotoCaptionGap + _captionHeight(line.caption, plan.width, scaler);
@@ -136,6 +262,30 @@ double _captionHeight(String caption, double width, TextScaler scaler) {
   return height;
 }
 
+TextSelection? photoCaretSettled(
+  TextSelection selection,
+  List<PhotoSpacer> spacers,
+) {
+  if (!selection.isValid || !selection.isCollapsed) {
+    return null;
+  }
+  final int offset = selection.baseOffset;
+  for (final PhotoSpacer spacer in spacers) {
+    if (spacer.role == PhotoSpacerRole.trailing &&
+        offset == spacer.index + 1 &&
+        selection.affinity == TextAffinity.upstream) {
+      return TextSelection.collapsed(offset: spacer.index);
+    }
+    if (spacer.role == PhotoSpacerRole.indent &&
+        spacer.width > 0 &&
+        offset == spacer.index &&
+        selection.affinity == TextAffinity.downstream) {
+      return TextSelection.collapsed(offset: spacer.index + 1);
+    }
+  }
+  return null;
+}
+
 class InPlacePhotoEditor extends NoteEditor {
   const InPlacePhotoEditor({super.key, required super.config});
 
@@ -154,79 +304,122 @@ class _InPlacePhotoField extends StatefulWidget {
 
 class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
   final GlobalKey _fieldKey = GlobalKey();
-  final GlobalKey _flowKey = GlobalKey();
   final Set<String> _resolving = <String>{};
+  String? _layoutText;
+  PhotoWrapEnv? _layoutEnv;
+  InPlaceLayout _layout = InPlaceLayout.empty;
 
   NoteEditorConfig get _config => widget.config;
 
   MarkdownStyleController get _controller => _config.controller;
 
   @override
+  void initState() {
+    super.initState();
+    _config.focusNode.addListener(_focusChanged);
+  }
+
+  @override
+  void dispose() {
+    _config.focusNode.removeListener(_focusChanged);
+    super.dispose();
+  }
+
+  void _focusChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final MediaResolver? resolver = ComposerMediaScope.maybeResolverOf(context);
     final TextScaler scaler = MediaQuery.textScalerOf(context);
+    final TextStyle style = unmergedFromTheMaterialTextTheme(_config.style);
+    final StrutStyle strut =
+        StrutStyle.fromTextStyle(style, forceStrutHeight: false);
     final double em = scaler.scale(
-      _config.style.fontSize ?? TypographyTokens.noteBody.fontSize!,
+      style.fontSize ?? TypographyTokens.noteBody.fontSize!,
     );
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth;
+        final double viewport =
+            constraints.maxHeight.isFinite ? constraints.maxHeight : 0;
+        final PhotoWrapEnv env = PhotoWrapEnv(
+          textWidth: width - noteCaretMargin,
+          style: style,
+          strut: strut,
+          scaler: scaler,
+          styleLimit: _controller.styleLimit,
+        );
         return ValueListenableBuilder<TextEditingValue>(
           valueListenable: _controller,
           builder: (BuildContext context, TextEditingValue value, Widget? _) {
-            final List<InPlacePhoto> photos = inPlacePhotosFor(
+            final InPlaceLayout layout = _layoutFor(
               value.text,
-              measure: constraints.maxWidth,
+              width: width,
               em: em,
               scaler: scaler,
+              env: env,
               resolver: resolver,
             );
-            _resolveMissing(photos, resolver);
+            _resolveMissing(layout.photos, resolver);
+            final PhotoCaretFix? fix = _fixFor(layout, value.selection);
+            final bool hideCaret =
+                fix != null || _caretOnPhoto(layout.photos, value.selection);
             return _PhotoKeys(
               controller: _controller,
-              child: Stack(
-                fit: StackFit.expand,
-                children: <Widget>[
-                  _hint(value),
-                  PhotoBandScope(
-                    bands: <PhotoBand>[
-                      for (final InPlacePhoto photo in photos) photo.photoBand,
-                    ],
-                    child: KeyedSubtree(
-                      key: _fieldKey,
-                      child: noteTextField(
-                        context,
-                        _config,
-                        cursorColor: _caretOnPhoto(photos, value.selection)
-                            ? _hiddenCaret
-                            : null,
-                        inputFormatters: const <TextInputFormatter>[
-                          PhotoLineGuard(),
+              spacers: layout.patches.spacers,
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  scrollbars: false,
+                ),
+                child: SingleChildScrollView(
+                  controller: _config.scrollController,
+                  child: Stack(
+                    children: <Widget>[
+                      _PhotoCanvas(
+                        minHeight: viewport,
+                        placements: <PhotoSpot>[
+                          for (final InPlacePhoto photo in layout.photos)
+                            PhotoSpot(
+                              anchor: photo.anchor,
+                              size: photo.figureSize,
+                              alignX: photo.alignX,
+                              top: photo.topPad,
+                              bottom: photo.topPad,
+                            ),
                         ],
-                        strutStyle: StrutStyle.fromTextStyle(
-                          unmergedFromTheMaterialTextTheme(_config.style),
-                          forceStrutHeight: false,
-                        ),
-                        selectionHeightStyle: BoxHeightStyle.max,
-                      ),
-                    ),
-                  ),
-                  if (photos.isNotEmpty)
-                    Positioned.fill(
-                      child: TextFieldTapRegion(
-                        child: Flow(
-                          key: _flowKey,
-                          delegate: _PhotoFlowDelegate(
-                            photos: photos,
-                            fieldKey: _fieldKey,
-                            flowKey: _flowKey,
-                            repaint: Listenable.merge(<Listenable>[
-                              _controller,
-                              _config.scrollController,
-                            ]),
+                        caret: fix == null
+                            ? null
+                            : CaretSpot(
+                                offset: value.selection.baseOffset,
+                                dx: fix.dx,
+                                upstream: fix.upstream,
+                              ),
+                        children: <Widget>[
+                          PhotoBandScope(
+                            patches: layout.patches,
+                            child: KeyedSubtree(
+                              key: _fieldKey,
+                              child: noteTextField(
+                                context,
+                                _config,
+                                cursorColor: hideCaret ? _hiddenCaret : null,
+                                inputFormatters: const <TextInputFormatter>[
+                                  PhotoLineGuard(),
+                                ],
+                                strutStyle: strut,
+                                selectionHeightStyle: BoxHeightStyle.max,
+                                scrolls: false,
+                                onTap: _settleCaret,
+                              ),
+                            ),
                           ),
-                          children: <Widget>[
-                            for (final InPlacePhoto photo in photos)
-                              _InPlaceFigure(
+                          for (final InPlacePhoto photo in layout.photos)
+                            TextFieldTapRegion(
+                              child: _InPlaceFigure(
                                 key: inPlacePhotoKey(photo.line.ordinal),
                                 photo: photo,
                                 resolver: resolver,
@@ -236,11 +429,29 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
                                 ),
                                 onTap: () => _select(photo.line.ordinal),
                               ),
-                          ],
-                        ),
+                            ),
+                          if (fix != null && _config.focusNode.hasFocus)
+                            _BlinkingCaret(
+                              key: ValueKey<int>(value.selection.baseOffset),
+                              color: _config.cursorColor,
+                            ),
+                        ],
                       ),
-                    ),
-                ],
+                      if (value.text.isEmpty)
+                        Positioned(
+                          left: 0,
+                          top: 0,
+                          right: 0,
+                          child: IgnorePointer(
+                            child: Text(
+                              _config.hintText,
+                              style: _config.hintStyle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             );
           },
@@ -249,12 +460,40 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
     );
   }
 
-  Widget _hint(TextEditingValue value) {
-    return IgnorePointer(
-      child: value.text.isEmpty
-          ? Text(_config.hintText, style: _config.hintStyle)
-          : const SizedBox.shrink(),
+  InPlaceLayout _layoutFor(
+    String text, {
+    required double width,
+    required double em,
+    required TextScaler scaler,
+    required PhotoWrapEnv env,
+    MediaResolver? resolver,
+  }) {
+    if (_layoutText == text && _layoutEnv == env) {
+      return _layout;
+    }
+    _layout = inPlaceLayoutFor(
+      text,
+      measure: width,
+      em: em,
+      scaler: scaler,
+      env: env,
+      resolver: resolver,
     );
+    _layoutText = text;
+    _layoutEnv = env;
+    return _layout;
+  }
+
+  PhotoCaretFix? _fixFor(InPlaceLayout layout, TextSelection selection) {
+    if (!selection.isValid || !selection.isCollapsed) {
+      return null;
+    }
+    for (final PhotoCaretFix fix in layout.caretFixes) {
+      if (fix.covers(selection.baseOffset)) {
+        return fix;
+      }
+    }
+    return null;
   }
 
   bool _caretOnPhoto(List<InPlacePhoto> photos, TextSelection selection) {
@@ -264,6 +503,16 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
     return photos.any(
       (InPlacePhoto photo) => photo.line.containsOffset(selection.baseOffset),
     );
+  }
+
+  void _settleCaret() {
+    final TextSelection? next = photoCaretSettled(
+      _controller.selection,
+      _layout.patches.spacers,
+    );
+    if (next != null) {
+      _controller.selection = next;
+    }
   }
 
   void _select(int ordinal) {
@@ -287,7 +536,9 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
       }
       resolver.resolve(reference).whenComplete(() {
         if (mounted) {
-          setState(() {});
+          setState(() {
+            _layoutText = null;
+          });
         }
       });
     }
@@ -295,9 +546,14 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
 }
 
 class _PhotoKeys extends StatelessWidget {
-  const _PhotoKeys({required this.controller, required this.child});
+  const _PhotoKeys({
+    required this.controller,
+    required this.spacers,
+    required this.child,
+  });
 
   final TextEditingController controller;
+  final List<PhotoSpacer> spacers;
   final Widget child;
 
   @override
@@ -310,6 +566,16 @@ class _PhotoKeys extends StatelessWidget {
         actions: <Type, Action<Intent>>{
           DeleteCharacterIntent: _PhotoDeleteAction(controller),
           ExtendSelectionByCharacterIntent: _PhotoStepAction(controller),
+          ExtendSelectionVerticallyToAdjacentLineIntent: _PhotoSettleAction<
+              ExtendSelectionVerticallyToAdjacentLineIntent>(
+            controller,
+            spacers,
+          ),
+          ExtendSelectionToLineBreakIntent:
+              _PhotoSettleAction<ExtendSelectionToLineBreakIntent>(
+            controller,
+            spacers,
+          ),
         },
         child: child,
       ),
@@ -370,76 +636,357 @@ class _PhotoStepAction extends ContextAction<ExtendSelectionByCharacterIntent> {
   }
 }
 
-class _PhotoFlowDelegate extends FlowDelegate {
-  _PhotoFlowDelegate({
-    required this.photos,
-    required this.fieldKey,
-    required this.flowKey,
-    required Listenable repaint,
-  }) : super(repaint: repaint);
+class _PhotoSettleAction<T extends Intent> extends ContextAction<T> {
+  _PhotoSettleAction(this.controller, this.spacers);
 
-  final List<InPlacePhoto> photos;
-  final GlobalKey fieldKey;
-  final GlobalKey flowKey;
+  final TextEditingController controller;
+  final List<PhotoSpacer> spacers;
 
   @override
-  BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) {
-    return BoxConstraints.tight(photos[i].figureSize);
+  Object? invoke(T intent, [BuildContext? context]) {
+    final Object? result = callingAction?.invoke(intent);
+    final TextSelection? next = photoCaretSettled(
+      controller.selection,
+      spacers,
+    );
+    if (next != null) {
+      controller.selection = next;
+    }
+    return result;
+  }
+}
+
+@immutable
+class PhotoSpot {
+  const PhotoSpot({
+    required this.anchor,
+    required this.size,
+    required this.alignX,
+    required this.top,
+    required this.bottom,
+  });
+
+  final int anchor;
+  final Size size;
+  final double alignX;
+  final double top;
+  final double bottom;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PhotoSpot &&
+          anchor == other.anchor &&
+          size == other.size &&
+          alignX == other.alignX &&
+          top == other.top &&
+          bottom == other.bottom;
+
+  @override
+  int get hashCode => Object.hash(anchor, size, alignX, top, bottom);
+}
+
+@immutable
+class CaretSpot {
+  const CaretSpot({
+    required this.offset,
+    required this.dx,
+    required this.upstream,
+  });
+
+  final int offset;
+  final double dx;
+  final bool upstream;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CaretSpot &&
+          offset == other.offset &&
+          dx == other.dx &&
+          upstream == other.upstream;
+
+  @override
+  int get hashCode => Object.hash(offset, dx, upstream);
+}
+
+class _PhotoCanvas extends MultiChildRenderObjectWidget {
+  const _PhotoCanvas({
+    required this.placements,
+    required this.minHeight,
+    required this.caret,
+    required super.children,
+  });
+
+  final List<PhotoSpot> placements;
+  final double minHeight;
+  final CaretSpot? caret;
+
+  @override
+  RenderPhotoCanvas createRenderObject(BuildContext context) {
+    return RenderPhotoCanvas(
+      spots: placements,
+      height: minHeight,
+      spot: caret,
+    );
   }
 
   @override
-  void paintChildren(FlowPaintingContext context) {
-    final RenderEditable? editable =
-        _editableUnder(fieldKey.currentContext?.findRenderObject());
-    final RenderObject? flow = flowKey.currentContext?.findRenderObject();
-    if (editable == null || flow is! RenderBox || !editable.hasSize) {
+  void updateRenderObject(
+    BuildContext context,
+    RenderPhotoCanvas renderObject,
+  ) {
+    renderObject
+      ..placements = placements
+      ..minHeight = minHeight
+      ..caret = caret;
+  }
+}
+
+class _CanvasParentData extends ContainerBoxParentData<RenderBox> {
+  bool visible = true;
+}
+
+class RenderPhotoCanvas extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _CanvasParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _CanvasParentData> {
+  RenderPhotoCanvas({
+    required List<PhotoSpot> spots,
+    required double height,
+    required CaretSpot? spot,
+  })  : _placements = spots,
+        _minHeight = height,
+        _caret = spot;
+
+  static bool _sameSpots(List<PhotoSpot> a, List<PhotoSpot> b) {
+    if (a.length != b.length) {
+      return false;
+    }
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  List<PhotoSpot> _placements;
+  double _minHeight;
+  CaretSpot? _caret;
+
+  set placements(List<PhotoSpot> value) {
+    if (_sameSpots(_placements, value)) {
       return;
     }
-    final Offset origin = flow.globalToLocal(
-      editable.localToGlobal(Offset.zero),
-    );
-    final int length = editable.plainText.length;
-    for (int i = 0; i < photos.length; i++) {
-      final InPlacePhoto photo = photos[i];
-      final int start = photo.line.lineStart;
-      if (start >= length) {
-        continue;
-      }
-      final List<TextBox> boxes = editable.getBoxesForSelection(
-        TextSelection(baseOffset: start, extentOffset: start + 1),
-      );
-      if (boxes.isEmpty) {
-        continue;
-      }
-      final double top = boxes.first.top + photoBandPadding;
-      final double left =
-          (context.size.width - photo.figureSize.width) * photo.alignX;
-      context.paintChild(
-        i,
-        transform: Matrix4.translationValues(
-          origin.dx + left,
-          origin.dy + top,
-          0,
-        ),
-      );
+    _placements = value;
+    markNeedsLayout();
+  }
+
+  set minHeight(double value) {
+    if (_minHeight == value) {
+      return;
+    }
+    _minHeight = value;
+    markNeedsLayout();
+  }
+
+  set caret(CaretSpot? value) {
+    if (_caret == value) {
+      return;
+    }
+    _caret = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _CanvasParentData) {
+      child.parentData = _CanvasParentData();
     }
   }
 
   @override
-  bool shouldRelayout(_PhotoFlowDelegate oldDelegate) {
-    if (oldDelegate.photos.length != photos.length) {
-      return true;
+  void performLayout() {
+    final List<RenderBox> children = getChildrenAsList();
+    if (children.isEmpty) {
+      size = constraints.smallest;
+      return;
     }
-    for (int i = 0; i < photos.length; i++) {
-      if (oldDelegate.photos[i].figureSize != photos[i].figureSize) {
-        return true;
+    final double width = constraints.maxWidth;
+    final RenderBox field = children.first;
+    field.layout(
+      BoxConstraints(
+        minWidth: width,
+        maxWidth: width,
+        minHeight: _minHeight,
+      ),
+      parentUsesSize: true,
+    );
+    _data(field).offset = Offset.zero;
+    final RenderEditable? editable = _editableUnder(field);
+    double bottom = field.size.height;
+    for (int i = 0; i < _placements.length; i++) {
+      final int index = i + 1;
+      if (index >= children.length) {
+        break;
       }
+      final PhotoSpot placement = _placements[i];
+      final RenderBox child = children[index];
+      child.layout(BoxConstraints.tight(placement.size), parentUsesSize: true);
+      final _CanvasParentData data = _data(child);
+      final double? top = _anchorTop(editable, placement.anchor);
+      data.visible = top != null;
+      if (top == null) {
+        data.offset = Offset.zero;
+        continue;
+      }
+      data.offset = Offset(
+        (width - placement.size.width) * placement.alignX,
+        top + placement.top,
+      );
+      bottom = math.max(
+        bottom,
+        data.offset.dy + placement.size.height + placement.bottom,
+      );
+    }
+    final int caretIndex = _placements.length + 1;
+    if (caretIndex < children.length) {
+      final RenderBox caretBox = children[caretIndex];
+      final Rect? rect = _caretRect(editable);
+      final _CanvasParentData data = _data(caretBox);
+      data.visible = rect != null;
+      caretBox.layout(
+        BoxConstraints.tight(
+          Size(inPlaceCaretWidth, rect?.height ?? 0),
+        ),
+      );
+      data.offset = rect?.topLeft ?? Offset.zero;
+    }
+    size = constraints.constrain(Size(width, math.max(_minHeight, bottom)));
+  }
+
+  Rect? _caretRect(RenderEditable? editable) {
+    final CaretSpot? spot = _caret;
+    if (editable == null || spot == null || !editable.hasSize) {
+      return null;
+    }
+    final int offset = spot.offset;
+    if (offset < 0 || offset > editable.plainText.length) {
+      return null;
+    }
+    final Offset origin = _originOf(editable);
+    if (!spot.upstream && offset < editable.plainText.length) {
+      final TextBox? box = _boxAt(editable, offset, offset + 1, last: false);
+      if (box == null) {
+        return null;
+      }
+      return Rect.fromLTWH(
+        box.left + spot.dx + origin.dx,
+        box.top + origin.dy,
+        inPlaceCaretWidth,
+        box.bottom - box.top,
+      );
+    }
+    final TextBox? box = _boxAt(editable, offset - 1, offset, last: true);
+    if (box == null) {
+      return null;
+    }
+    final double height = box.bottom - box.top;
+    if (spot.upstream) {
+      return Rect.fromLTWH(
+        box.right + spot.dx + origin.dx,
+        box.top + origin.dy,
+        inPlaceCaretWidth,
+        height,
+      );
+    }
+    return Rect.fromLTWH(
+      spot.dx + origin.dx,
+      box.bottom + origin.dy,
+      inPlaceCaretWidth,
+      height,
+    );
+  }
+
+  TextBox? _boxAt(
+    RenderEditable editable,
+    int from,
+    int to, {
+    required bool last,
+  }) {
+    if (from < 0 || to > editable.plainText.length) {
+      return null;
+    }
+    final List<TextBox> boxes = editable.getBoxesForSelection(
+      TextSelection(baseOffset: from, extentOffset: to),
+    );
+    if (boxes.isEmpty) {
+      return null;
+    }
+    return last ? boxes.last : boxes.first;
+  }
+
+  double? _anchorTop(RenderEditable? editable, int anchor) {
+    if (editable == null || !editable.hasSize || anchor < 0) {
+      return null;
+    }
+    if (anchor + 1 > editable.plainText.length) {
+      return null;
+    }
+    final List<TextBox> boxes = editable.getBoxesForSelection(
+      TextSelection(baseOffset: anchor, extentOffset: anchor + 1),
+    );
+    if (boxes.isEmpty) {
+      return null;
+    }
+    return boxes.first.top + _originOf(editable).dy;
+  }
+
+  Offset _originOf(RenderEditable editable) =>
+      MatrixUtils.transformPoint(editable.getTransformTo(this), Offset.zero);
+
+  _CanvasParentData _data(RenderBox child) =>
+      child.parentData! as _CanvasParentData;
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    RenderBox? child = firstChild;
+    while (child != null) {
+      final _CanvasParentData data = _data(child);
+      if (data.visible) {
+        context.paintChild(child, data.offset + offset);
+      }
+      child = data.nextSibling;
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    RenderBox? child = lastChild;
+    while (child != null) {
+      final _CanvasParentData data = _data(child);
+      if (data.visible) {
+        final bool hit = result.addWithPaintOffset(
+          offset: data.offset,
+          position: position,
+          hitTest: (BoxHitTestResult result, Offset transformed) =>
+              child!.hitTest(result, position: transformed),
+        );
+        if (hit) {
+          return true;
+        }
+      }
+      child = data.previousSibling;
     }
     return false;
   }
 
   @override
-  bool shouldRepaint(_PhotoFlowDelegate oldDelegate) => true;
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    final Offset offset = _data(child).offset;
+    transform.translateByDouble(offset.dx, offset.dy, 0, 1);
+  }
 }
 
 RenderEditable? _editableUnder(RenderObject? root) {
@@ -454,6 +1001,54 @@ RenderEditable? _editableUnder(RenderObject? root) {
     found ??= _editableUnder(child);
   });
   return found;
+}
+
+class _BlinkingCaret extends StatefulWidget {
+  const _BlinkingCaret({super.key, required this.color});
+
+  final Color color;
+
+  @override
+  State<_BlinkingCaret> createState() => _BlinkingCaretState();
+}
+
+class _BlinkingCaretState extends State<_BlinkingCaret> {
+  Timer? _timer;
+  bool _on = true;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!EditableText.debugDeterministicCursor) {
+      _timer = Timer.periodic(inPlaceCaretBlink, (Timer _) {
+        if (mounted) {
+          setState(() => _on = !_on);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Opacity(
+        opacity: _on ? 1 : 0,
+        child: DecoratedBox(
+          key: inPlaceCaretKey,
+          decoration: BoxDecoration(
+            color: widget.color,
+            borderRadius: const BorderRadius.all(Radius.circular(1)),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _InPlaceFigure extends StatelessWidget {

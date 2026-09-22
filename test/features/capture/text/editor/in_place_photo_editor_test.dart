@@ -127,9 +127,19 @@ void _expectOnBand(WidgetTester tester, int lineStart, [int ordinal = 0]) {
   );
 }
 
+void _expectAtLineTop(WidgetTester tester, int lineStart, [int ordinal = 0]) {
+  expect(
+    _figure(tester, ordinal).top,
+    closeTo(_glyph(tester, lineStart).top, _tolerance),
+  );
+}
+
 void main() {
   final String a = photoLine(photoIdA);
   final String note = 'one\n$a\ntwo';
+  final String stacked = 'one\n$a\n# two';
+  final int stackedStart = stacked.indexOf(a);
+  final int stackedAfter = stacked.indexOf('# two');
   final int photoStart = note.indexOf(a);
   final int photoEnd = photoStart + a.length;
   final int twoStart = note.indexOf('two');
@@ -137,7 +147,7 @@ void main() {
   group('the band', () {
     testWidgets('lays out at the figure height, with the figure on it',
         (WidgetTester tester) async {
-      await _pump(tester, note);
+      await _pump(tester, stacked);
 
       final PhotoPlan plan = planFloat(
         measure: 560,
@@ -145,21 +155,20 @@ void main() {
         side: PhotoSide.right,
         size: PhotoSize.medium,
         aspect: 1200 / 900,
-        nextIsParagraph: true,
       );
       final Rect figure = _figure(tester);
       expect(figure.size, Size(plan.width, plan.height));
-      _expectOnBand(tester, photoStart);
+      _expectOnBand(tester, stackedStart);
       expect(
         _glyph(tester, 2).bottom,
         lessThanOrEqualTo(figure.top - photoBandPadding + _tolerance),
       );
       expect(
-        _glyph(tester, twoStart).top,
+        _glyph(tester, stackedAfter).top,
         greaterThanOrEqualTo(figure.bottom + photoBandPadding - _tolerance),
       );
       expect(
-        _glyph(tester, twoStart).top - (figure.bottom + photoBandPadding),
+        _glyph(tester, stackedAfter).top - (figure.bottom + photoBandPadding),
         lessThan(16),
       );
     });
@@ -211,7 +220,7 @@ void main() {
         harness.scroll.jumpTo(offset);
         await tester.pump();
 
-        _expectOnBand(tester, start);
+        _expectAtLineTop(tester, start);
       }
     });
 
@@ -222,18 +231,18 @@ void main() {
         await tester.pumpWidget(harness.app(width: width));
         await tester.pump();
 
-        _expectOnBand(tester, photoStart);
+        _expectAtLineTop(tester, photoStart);
         expect(_figure(tester).right, closeTo(width, _tolerance));
       }
     });
 
     for (final double scale in <double>[1.0, 1.5, 2.0]) {
       testWidgets('at ${scale}x text', (WidgetTester tester) async {
-        await _pump(tester, note, scale: scale, width: 900);
+        await _pump(tester, stacked, scale: scale, width: 900);
 
-        _expectOnBand(tester, photoStart);
+        _expectOnBand(tester, stackedStart);
         expect(
-          _glyph(tester, twoStart).top,
+          _glyph(tester, stackedAfter).top,
           greaterThanOrEqualTo(
             _figure(tester).bottom + photoBandPadding - _tolerance,
           ),
@@ -250,7 +259,7 @@ void main() {
       );
       await tester.pump();
 
-      _expectOnBand(tester, 'one\nand another line\n'.length);
+      _expectAtLineTop(tester, 'one\nand another line\n'.length);
     });
   });
 
@@ -262,7 +271,7 @@ void main() {
     await _pump(tester, long);
 
     expect(_spanOf(tester, a)?.style?.color, const Color(0x00000000));
-    _expectOnBand(tester, long.indexOf(a));
+    _expectAtLineTop(tester, long.indexOf(a));
   });
 
   testWidgets('select-all covers the exact source, photo lines included',
@@ -274,10 +283,16 @@ void main() {
     await tester.pump();
 
     expect(harness.controller.selection.textInside(note), note);
-    expect(
-      _editable(tester).text!.toPlainText(includeSemanticsLabels: false),
-      note,
-    );
+    final String drawn =
+        _editable(tester).text!.toPlainText(includeSemanticsLabels: false);
+    expect(drawn.length, note.length);
+    for (int i = 0; i < note.length; i++) {
+      if (drawn[i] == note[i]) {
+        continue;
+      }
+      expect(note[i], anyOf(' ', '\n'));
+      expect(drawn[i], '\uFFFC');
+    }
   });
 
   group('selecting and editing', () {

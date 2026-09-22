@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/notes/notes.dart';
+import 'package:field_notes/features/entry_cards/media/media_image.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/notes/note_block_widgets.dart';
 import 'package:field_notes/features/entry_cards/notes/note_document.dart';
@@ -181,6 +182,19 @@ Offset _caretPoint(RenderParagraph paragraph, int offset) {
 }
 
 void main() {
+  group('the picture', () {
+    testWidgets('fills its frame, with no mount taken off it',
+        (WidgetTester tester) async {
+      await _pumpNote(tester, _note());
+
+      final Size frame = tester.getSize(find.byKey(notePhotoFrameKey));
+      final Size picture = tester.getSize(find.byType(MediaImage));
+
+      expect(picture.width, frame.width);
+      expect(picture.height, frame.height);
+    });
+  });
+
   group('the float', () {
     testWidgets(
         'a right photo before a paragraph renders as a Row of head and photo '

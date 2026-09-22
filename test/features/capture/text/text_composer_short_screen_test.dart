@@ -157,7 +157,9 @@ void main() {
     expect(editor.controller.text, contains(photoLineFor(reference: reference)));
     expect(
       tester.getRect(find.byType(PhotoRail)).top,
-      greaterThan(tester.getRect(find.byType(EditableText)).bottom),
+      greaterThanOrEqualTo(
+        tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
+      ),
     );
     expect(tester.takeException(), isNull);
   });

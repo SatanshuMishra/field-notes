@@ -81,22 +81,22 @@ class MarkdownStyleController extends TextEditingController {
           current.isComposingRangeValid,
     );
     final String text = current.text;
-    final List<PhotoBand> bands = text.isEmpty
-        ? const <PhotoBand>[]
-        : photoBandsWithin(PhotoBandScope.of(context), text.length);
+    final PhotoPatches patches = text.isEmpty
+        ? PhotoPatches.none
+        : photoPatchesWithin(PhotoBandScope.of(context), text.length);
     final TextScaler scaler =
         MediaQuery.maybeTextScalerOf(context) ?? TextScaler.noScaling;
     final TextSpan span;
-    if (text.isEmpty || (text.length > styleLimit && bands.isEmpty)) {
+    if (text.isEmpty || (text.length > styleLimit && patches.isEmpty)) {
       span = super.buildTextSpan(
         context: context,
         style: style,
         withComposing: withComposing,
       );
     } else if (text.length > styleLimit) {
-      span = _plainSpan(current, style, withComposing, bands, scaler);
+      span = _plainSpan(current, style, withComposing, patches, scaler);
     } else {
-      span = _styledSpan(current, style, withComposing, bands, scaler);
+      span = _styledSpan(current, style, withComposing, patches, scaler);
     }
     assert(
       span.toPlainText(includeSemanticsLabels: false).length == text.length,
@@ -111,93 +111,131 @@ class MarkdownStyleController extends TextEditingController {
     TextEditingValue current,
     TextStyle? style,
     bool withComposing,
-    List<PhotoBand> bands,
+    PhotoPatches patches,
     TextScaler scaler,
   ) {
     final String text = current.text;
     final TextStyle base = style ?? TypographyTokens.noteBody;
-    final bool composing =
-        withComposing && current.isComposingRangeValid;
+    final bool composing = withComposing && current.isComposingRangeValid;
     final List<int> codes = markdownStyleCodes(
       text,
       composing: composing ? current.composing : null,
     );
     final Map<int, TextStyle?> styles = <int, TextStyle?>{};
-    final List<InlineSpan> children = <InlineSpan>[];
 
-    void addRuns(int from, int to) {
+    TextStyle? styleAt(int code) =>
+        styles.putIfAbsent(code, () => markdownRunStyle(code, base));
+
+    void addRuns(int from, int to, List<InlineSpan> out) {
       int runStart = from;
       for (int i = from + 1; i <= to; i++) {
         if (i < to && codes[i] == codes[runStart]) {
           continue;
         }
-        final int code = codes[runStart];
-        children.add(
+        out.add(
           TextSpan(
             text: text.substring(runStart, i),
-            style: styles.putIfAbsent(code, () => markdownRunStyle(code, base)),
+            style: styleAt(codes[runStart]),
           ),
         );
         runStart = i;
       }
     }
 
-    int cursor = 0;
-    for (final PhotoBand band in bands) {
-      addRuns(cursor, band.start);
-      children.add(_bandSpan(text, band, scaler));
-      cursor = band.end;
+    InlineSpan kernSpan(PhotoKern kern) {
+      final TextStyle run = styleAt(codes[kern.start]) ?? const TextStyle();
+      return TextSpan(
+        text: text.substring(kern.start, kern.end),
+        style: run.copyWith(
+          letterSpacing: (base.letterSpacing ?? 0) + kern.spacing,
+        ),
+      );
     }
-    addRuns(cursor, text.length);
-    return TextSpan(style: style, children: children);
+
+    return _patchedSpan(text, style, patches, scaler, addRuns, kernSpan);
   }
 
   TextSpan _plainSpan(
     TextEditingValue current,
     TextStyle? style,
     bool withComposing,
-    List<PhotoBand> bands,
+    PhotoPatches patches,
     TextScaler scaler,
   ) {
     final String text = current.text;
+    final TextStyle base = style ?? TypographyTokens.noteBody;
     final TextRange? composing =
         withComposing && current.isComposingRangeValid
             ? current.composing
             : null;
-    final List<InlineSpan> children = <InlineSpan>[];
 
-    void addPlain(int from, int to) {
+    bool composingAt(int index) =>
+        composing != null && composing.start <= index && composing.end > index;
+
+    void addPlain(int from, int to, List<InlineSpan> out) {
       if (from >= to) {
         return;
       }
       final TextRange? range = composing;
       if (range == null || range.end <= from || range.start >= to) {
-        children.add(TextSpan(text: text.substring(from, to)));
+        out.add(TextSpan(text: text.substring(from, to)));
         return;
       }
       final int start = math.max(from, range.start);
       final int end = math.min(to, range.end);
       if (from < start) {
-        children.add(TextSpan(text: text.substring(from, start)));
+        out.add(TextSpan(text: text.substring(from, start)));
       }
-      children.add(
+      out.add(
         TextSpan(
           text: text.substring(start, end),
           style: const TextStyle(decoration: TextDecoration.underline),
         ),
       );
       if (end < to) {
-        children.add(TextSpan(text: text.substring(end, to)));
+        out.add(TextSpan(text: text.substring(end, to)));
       }
     }
 
+    InlineSpan kernSpan(PhotoKern kern) => TextSpan(
+          text: text.substring(kern.start, kern.end),
+          style: TextStyle(
+            letterSpacing: (base.letterSpacing ?? 0) + kern.spacing,
+            decoration: composingAt(kern.start)
+                ? TextDecoration.underline
+                : null,
+          ),
+        );
+
+    return _patchedSpan(text, style, patches, scaler, addPlain, kernSpan);
+  }
+
+  TextSpan _patchedSpan(
+    String text,
+    TextStyle? style,
+    PhotoPatches patches,
+    TextScaler scaler,
+    void Function(int from, int to, List<InlineSpan> out) addRuns,
+    InlineSpan Function(PhotoKern kern) kernSpan,
+  ) {
+    final List<(int, int, InlineSpan)> events = <(int, int, InlineSpan)>[
+      for (final PhotoBand band in patches.bands)
+        (band.start, band.end, _bandSpan(text, band, scaler)),
+      for (final PhotoSpacer spacer in patches.spacers)
+        (spacer.start, spacer.end, _spacerSpan(spacer, style, scaler)),
+      for (final PhotoKern kern in patches.kerns)
+        (kern.start, kern.end, kernSpan(kern)),
+    ]..sort(((int, int, InlineSpan) a, (int, int, InlineSpan) b) =>
+        a.$1.compareTo(b.$1));
+
+    final List<InlineSpan> children = <InlineSpan>[];
     int cursor = 0;
-    for (final PhotoBand band in bands) {
-      addPlain(cursor, band.start);
-      children.add(_bandSpan(text, band, scaler));
-      cursor = band.end;
+    for (final (int start, int end, InlineSpan span) in events) {
+      addRuns(cursor, start, children);
+      children.add(span);
+      cursor = end;
     }
-    addPlain(cursor, text.length);
+    addRuns(cursor, text.length, children);
     return TextSpan(style: style, children: children);
   }
 
@@ -207,7 +245,29 @@ class MarkdownStyleController extends TextEditingController {
       style: photoBandStyle(band.height, scaler),
     );
   }
+
+  WidgetSpan _spacerSpan(
+    PhotoSpacer spacer,
+    TextStyle? style,
+    TextScaler scaler,
+  ) {
+    final double fontSize = style?.fontSize ?? _engineDefaultFontSize;
+    final double factor =
+        fontSize == 0 ? 1 : scaler.scale(fontSize) / fontSize;
+    final double scale = factor == 0 ? 1 : factor;
+    return WidgetSpan(
+      alignment: spacer.height > 0
+          ? PlaceholderAlignment.top
+          : PlaceholderAlignment.bottom,
+      child: SizedBox(
+        width: spacer.width / scale,
+        height: spacer.height / scale,
+      ),
+    );
+  }
 }
+
+const double _engineDefaultFontSize = 14;
 
 List<int> markdownStyleCodes(String source, {TextRange? composing}) {
   final List<int> codes = List<int>.filled(source.length, _kindBody);
