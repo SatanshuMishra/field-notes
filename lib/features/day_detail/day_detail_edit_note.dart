@@ -157,6 +157,7 @@ Future<bool?> showEditNote(
       return DialogHost(
         child: ComposerShell(
           closeOnScrimTap: true,
+          responsive: true,
           child: EditNoteConnector(entry: entry, date: date),
         ),
       );

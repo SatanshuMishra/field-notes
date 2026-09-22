@@ -290,7 +290,7 @@ void main() {
 
       expect(_thumbSelected(tester, 0), isFalse);
       expect(_thumbSelected(tester, 1), isFalse);
-      expect(find.text(photoRailHint), findsOneWidget);
+      expect(find.byKey(photoRailControlsKey), findsNothing);
     });
 
     testWidgets('at composer width a thumbnail tap moves the caret onto it',
@@ -434,28 +434,26 @@ void main() {
       await tester.pump(kToastLifetime);
     });
 
-    testWidgets('controls are disabled with nothing selected until a photo is',
+    testWidgets('controls are absent with nothing selected until a photo is',
         (WidgetTester tester) async {
-      await pumpPhotoRail(tester, text: twoPhotos, selection: caretAt(0));
+      final TextEditingController controller = await pumpPhotoRail(
+        tester,
+        text: twoPhotos,
+        selection: caretAt(0),
+      );
 
-      final Semantics remove = tester.widget<Semantics>(
-        find
-            .descendant(
-              of: find.byKey(photoRemoveKey),
-              matching: find.byType(Semantics),
-            )
-            .first,
-      );
-      expect(remove.properties.enabled, isFalse);
-      final Semantics medium = tester.widget<Semantics>(
-        find
-            .ancestor(
-              of: find.byKey(photoSizeKey(PhotoSize.medium)),
-              matching: find.byType(Semantics),
-            )
-            .first,
-      );
-      expect(medium.properties.selected, isFalse);
+      expect(find.byKey(photoRailThumbKey(0)), findsOneWidget);
+      expect(find.byKey(photoRailControlsKey), findsNothing);
+      expect(find.byKey(photoRemoveKey), findsNothing);
+      expect(find.byKey(photoSizeKey(PhotoSize.medium)), findsNothing);
+      expect(tester.getSize(_rail).height, photoRailCompactHeight);
+
+      controller.selection = caretAt(twoPhotos.indexOf(a));
+      await tester.pump();
+
+      expect(find.byKey(photoRailControlsKey), findsOneWidget);
+      expect(find.byKey(photoRemoveKey), findsOneWidget);
+      expect(tester.getSize(_rail).height, photoRailFullHeight);
     });
   });
 

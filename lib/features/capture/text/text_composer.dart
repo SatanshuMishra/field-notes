@@ -219,6 +219,7 @@ Future<String?> showTextComposer(BuildContext context, String date) {
       return DialogHost(
         child: ComposerShell(
           closeOnScrimTap: true,
+          responsive: true,
           child: TextComposerConnector(date: date),
         ),
       );
