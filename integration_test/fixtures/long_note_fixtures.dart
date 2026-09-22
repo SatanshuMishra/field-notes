@@ -32,7 +32,7 @@ const List<String> _words = <String>[
 const List<String> _photoAttributes = <String>[
   'right medium',
   'left small',
-  'center large',
+  'right large',
   'full',
 ];
 

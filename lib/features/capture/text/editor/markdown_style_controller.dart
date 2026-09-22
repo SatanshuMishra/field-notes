@@ -32,15 +32,19 @@ const double _codeScale = 0.92;
 const double _photoScale = 0.86;
 
 class MarkdownStyleController extends TextEditingController {
-  MarkdownStyleController({super.text}) : _source = null;
+  MarkdownStyleController({super.text, this.styleLimit = liveStyleLimit})
+      : _source = null;
 
-  MarkdownStyleController.attachedTo(TextEditingController source)
-      : _source = source {
+  MarkdownStyleController.attachedTo(
+    TextEditingController source, {
+    this.styleLimit = liveStyleLimit,
+  }) : _source = source {
     source.addListener(notifyListeners);
   }
 
   static const int liveStyleLimit = 6000;
 
+  final int styleLimit;
   final TextEditingController? _source;
 
   @override
@@ -75,13 +79,28 @@ class MarkdownStyleController extends TextEditingController {
           current.isComposingRangeValid,
     );
     final String text = current.text;
-    if (text.isEmpty || text.length > liveStyleLimit) {
-      return super.buildTextSpan(
-        context: context,
-        style: style,
-        withComposing: withComposing,
-      );
-    }
+    final TextSpan span = text.isEmpty || text.length > styleLimit
+        ? super.buildTextSpan(
+            context: context,
+            style: style,
+            withComposing: withComposing,
+          )
+        : _styledSpan(current, style, withComposing);
+    assert(
+      span.toPlainText(includeSemanticsLabels: false).length == text.length,
+      'MarkdownStyleController must be length preserving: '
+      'built ${span.toPlainText(includeSemanticsLabels: false).length} '
+      'characters for a value of ${text.length}',
+    );
+    return span;
+  }
+
+  TextSpan _styledSpan(
+    TextEditingValue current,
+    TextStyle? style,
+    bool withComposing,
+  ) {
+    final String text = current.text;
     final TextStyle base = style ?? TypographyTokens.noteBody;
     final bool composing =
         withComposing && current.isComposingRangeValid;
@@ -105,14 +124,7 @@ class MarkdownStyleController extends TextEditingController {
       );
       runStart = i;
     }
-    final TextSpan span = TextSpan(style: style, children: children);
-    assert(
-      span.toPlainText(includeSemanticsLabels: false).length == text.length,
-      'MarkdownStyleController must be length preserving: '
-      'built ${span.toPlainText(includeSemanticsLabels: false).length} '
-      'characters for a value of ${text.length}',
-    );
-    return span;
+    return TextSpan(style: style, children: children);
   }
 }
 
