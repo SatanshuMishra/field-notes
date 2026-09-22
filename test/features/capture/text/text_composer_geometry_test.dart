@@ -113,6 +113,24 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a landscape phone with the keyboard up keeps Undo and three lines',
+      (WidgetTester tester) async {
+        await _pumpComposer(
+          tester,
+          surface: _landscapePhoneSurface,
+          keyboardInset: 200,
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.byKey(formatUndoKey), findsOneWidget);
+        expect(
+          tester.getSize(find.byType(EditableText)).height,
+          greaterThanOrEqualTo(3 * _lineHeight),
+        );
+      },
+    );
+
     testWidgets('a portrait phone with the keyboard up is not a porthole', (
       WidgetTester tester,
     ) async {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/gestures.dart';
@@ -5,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
@@ -51,6 +54,16 @@ List<Finder> _everyControl() => <Finder>[
       find.byKey(photoRemoveKey),
       find.byKey(photoCaptionKey),
     ];
+
+class _PendingMediaResolver implements MediaResolver {
+  final Completer<ResolvedMedia> pending = Completer<ResolvedMedia>();
+
+  @override
+  ResolvedMedia? resolved(String? mediaId) => null;
+
+  @override
+  Future<ResolvedMedia> resolve(String? mediaId) => pending.future;
+}
 
 Iterable<File> _dartSourcesUnder(String root) => Directory(root)
     .listSync(recursive: true)
@@ -366,16 +379,59 @@ void main() {
       expect(find.byKey(photoRailThumbKey(0)), findsOneWidget);
     });
 
-    testWidgets('steps aside entirely when there is no room even for thumbnails',
+    testWidgets('keeps a slim Add photo tile when there is no room for thumbnails',
+        (WidgetTester tester) async {
+      final FakePhotoImporter importer = FakePhotoImporter(
+        results: <List<String>>[
+          <String>[prefixOf(photoIdC)],
+        ],
+      );
+      final TextEditingController controller = await pumpPhotoRail(
+        tester,
+        text: twoPhotos,
+        maxHeight: photoRailCompactHeight - 1,
+        importer: importer,
+      );
+
+      expect(find.byKey(photoRailAddKey), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(photoRailAddKey)),
+        const Size(photoRailSlimHeight, photoRailSlimHeight),
+      );
+      expect(find.byKey(photoRailThumbKey(0)), findsNothing);
+      expect(find.byKey(photoRailControlsKey), findsNothing);
+
+      await tester.tap(find.byKey(photoRailAddKey));
+      await tester.pump();
+
+      expect(importer.calls, 1);
+      expect(controller.text, contains(photoLine(photoIdC)));
+      expect(notePhotoLines(controller.text), hasLength(3));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a slim tile reports a failed pick in a toast with a close glyph',
         (WidgetTester tester) async {
       await pumpPhotoRail(
         tester,
         text: twoPhotos,
         maxHeight: photoRailCompactHeight - 1,
+        importer: FakePhotoImporter(error: denialError),
       );
 
-      expect(_rail, findsNothing);
-      expect(find.byKey(photoRailAddKey), findsNothing);
+      await tester.tap(find.byKey(photoRailAddKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text(denialError.message), findsOneWidget);
+      expect(
+        tester
+            .widget<IconStickerGlyphIcon>(find.byType(IconStickerGlyphIcon))
+            .glyph,
+        IconStickerGlyph.close,
+      );
+
+      await tester.pump(kToastLifetime);
     });
 
     testWidgets('controls are disabled with nothing selected until a photo is',
@@ -596,8 +652,57 @@ void main() {
         side: PhotoSide.right,
         size: PhotoSize.medium,
         aspect: 1200 / 900,
+        nextIsParagraph: true,
       );
+      expect(expected.isStacked, isFalse);
       expect(diagram.plan, expected);
+      expect(
+        find.text('Right · Medium — on this screen, text wraps beside it'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the diagram re-plans once the photo resolves',
+        (WidgetTester tester) async {
+      final _PendingMediaResolver resolver = _PendingMediaResolver();
+      await pumpPhotoRail(
+        tester,
+        text: twoPhotos,
+        selection: caretAt(twoPhotos.indexOf(a)),
+        resolver: resolver,
+      );
+
+      expect(
+        find.text('Right · Medium — on this screen, text sits above and below'),
+        findsOneWidget,
+      );
+
+      resolver.pending.complete(
+        availablePhoto(photoIdA, width: 1200, height: 900),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Right · Medium — on this screen, text wraps beside it'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the diagram stacks a photo whose next block is not a paragraph',
+        (WidgetTester tester) async {
+      final String adjacent = 'one\n$a\n$b\ntwo';
+      final FakeNoteMediaResolver resolver = FakeNoteMediaResolver(
+        <String, ResolvedMedia>{
+          prefixOf(photoIdA): availablePhoto(photoIdA, width: 1200, height: 900),
+        },
+      )..memoizeAll();
+      await pumpPhotoRail(
+        tester,
+        text: adjacent,
+        selection: caretAt(adjacent.indexOf(a)),
+        resolver: resolver,
+      );
+
       expect(
         find.text('Right · Medium — on this screen, text sits above and below'),
         findsOneWidget,

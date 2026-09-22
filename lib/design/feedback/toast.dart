@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import '../motion/motion_tokens.dart';
@@ -14,6 +16,7 @@ const double _darkPadVertical = 8;
 const double _darkGap = 7;
 const double _darkIconSize = 13;
 const double _transientBottomInset = 84;
+const double _transientKeyboardGap = 16;
 const double _riseOffset = 10;
 const double toastActionMinTarget = 48;
 const double _actionGap = 8;
@@ -162,13 +165,18 @@ void dismissTransientToast() {
   }
 }
 
-void showTransientToast(BuildContext context, String message) {
+void showTransientToast(
+  BuildContext context,
+  String message, {
+  IconStickerGlyph glyph = IconStickerGlyph.check,
+}) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   dismissTransientToast();
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder: (BuildContext overlayContext) => _TransientToastLayer(
       message: message,
+      glyph: glyph,
       onFinished: () {
         if (identical(_activeTransientToast, entry)) {
           dismissTransientToast();
@@ -181,9 +189,14 @@ void showTransientToast(BuildContext context, String message) {
 }
 
 class _TransientToastLayer extends StatefulWidget {
-  const _TransientToastLayer({required this.message, required this.onFinished});
+  const _TransientToastLayer({
+    required this.message,
+    required this.glyph,
+    required this.onFinished,
+  });
 
   final String message;
+  final IconStickerGlyph glyph;
   final VoidCallback onFinished;
 
   @override
@@ -230,7 +243,10 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
     return Positioned(
       left: 0,
       right: 0,
-      bottom: _transientBottomInset,
+      bottom: math.max(
+        _transientBottomInset,
+        MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
+      ),
       child: IgnorePointer(
         child: Center(
           child: FadeTransition(
@@ -244,8 +260,8 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
               child: Toast(
                 message: widget.message,
                 variant: ToastVariant.dark,
-                icon: const IconStickerGlyphIcon(
-                  glyph: IconStickerGlyph.check,
+                icon: IconStickerGlyphIcon(
+                  glyph: widget.glyph,
                   color: Palette.toastInk,
                   size: _darkIconSize,
                 ),

@@ -714,35 +714,35 @@ class PhotoOptionsSheet extends StatelessWidget {
           );
         }
         final int count = notePhotoLines(current.text).length;
-        final PhotoPlan plan = photoPlanFor(
-          line,
-          measure: measure,
-          em: NoteColumn.emOf(context),
-          resolver: resolver,
-        );
         return PhotoSheetFrame(
           key: photoOptionsSheetKey,
           title: '$photoOptionsTitle ${line.ordinal + 1} of $count',
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  _thumbnail(line),
-                  const SizedBox(width: 12),
-                  Expanded(child: PhotoPlacementDiagram(plan: plan)),
-                ],
-              ),
-              const SizedBox(height: _sheetGap),
-              PhotoControls(
-                plan: plan,
-                actions: actions,
-                canMoveUp: canMovePhotoUp(current.text, line),
-                canMoveDown: canMovePhotoDown(current.text, line),
-                layout: PhotoControlsLayout.sheet,
-              ),
-            ],
+          child: PhotoPlanBuilder(
+            line: line,
+            measure: measure,
+            em: NoteColumn.emOf(context),
+            resolver: resolver,
+            builder: (BuildContext context, PhotoPlan plan) => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    _thumbnail(line),
+                    const SizedBox(width: 12),
+                    Expanded(child: PhotoPlacementDiagram(plan: plan)),
+                  ],
+                ),
+                const SizedBox(height: _sheetGap),
+                PhotoControls(
+                  plan: plan,
+                  actions: actions,
+                  canMoveUp: canMovePhotoUp(current.text, line),
+                  canMoveDown: canMovePhotoDown(current.text, line),
+                  layout: PhotoControlsLayout.sheet,
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -784,5 +784,99 @@ PhotoPlan photoPlanFor(
     side: placement.side,
     size: placement.size,
     aspect: photoAspectOf(media?.blob?.width, media?.blob?.height),
+    nextIsParagraph: line.wrapsParagraph && placement.isValid,
   );
+}
+
+typedef PhotoPlanWidgetBuilder = Widget Function(
+  BuildContext context,
+  PhotoPlan plan,
+);
+
+class PhotoPlanBuilder extends StatefulWidget {
+  const PhotoPlanBuilder({
+    super.key,
+    required this.line,
+    required this.measure,
+    required this.em,
+    required this.builder,
+    this.resolver,
+  });
+
+  final NotePhotoLine line;
+  final double measure;
+  final double em;
+  final PhotoPlanWidgetBuilder builder;
+  final MediaResolver? resolver;
+
+  @override
+  State<PhotoPlanBuilder> createState() => _PhotoPlanBuilderState();
+}
+
+class _PhotoPlanBuilderState extends State<PhotoPlanBuilder> {
+  Future<ResolvedMedia>? _resolving;
+
+  @override
+  void didUpdateWidget(PhotoPlanBuilder oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.line.reference != widget.line.reference ||
+        !identical(oldWidget.resolver, widget.resolver)) {
+      _resolving = null;
+    }
+  }
+
+  PhotoPlan _plan(MediaResolver? resolver) => photoPlanFor(
+        widget.line,
+        measure: widget.measure,
+        em: widget.em,
+        resolver: resolver,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final MediaResolver? resolver = widget.resolver;
+    final String reference = widget.line.reference;
+    if (resolver == null || resolver.resolved(reference) != null) {
+      return widget.builder(context, _plan(resolver));
+    }
+    return FutureBuilder<ResolvedMedia>(
+      future: _resolving ??= resolver.resolve(reference),
+      builder: (BuildContext context, AsyncSnapshot<ResolvedMedia> snapshot) {
+        final ResolvedMedia? media = snapshot.data;
+        return widget.builder(
+          context,
+          _plan(
+            media == null
+                ? resolver
+                : _SettledMediaResolver(
+                    resolver,
+                    reference: reference,
+                    media: media,
+                  ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+final class _SettledMediaResolver implements MediaResolver {
+  const _SettledMediaResolver(
+    this._inner, {
+    required this.reference,
+    required this.media,
+  });
+
+  final MediaResolver _inner;
+  final String reference;
+  final ResolvedMedia media;
+
+  @override
+  ResolvedMedia? resolved(String? mediaId) =>
+      mediaId == reference ? media : _inner.resolved(mediaId);
+
+  @override
+  Future<ResolvedMedia> resolve(String? mediaId) => mediaId == reference
+      ? Future<ResolvedMedia>.value(media)
+      : _inner.resolve(mediaId);
 }

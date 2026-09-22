@@ -21,6 +21,7 @@ final class NotePhotoLine {
     required this.lineStart,
     required this.lineEnd,
     required this.breakEnd,
+    this.wrapsParagraph = false,
   });
 
   final int ordinal;
@@ -28,6 +29,7 @@ final class NotePhotoLine {
   final int lineStart;
   final int lineEnd;
   final int breakEnd;
+  final bool wrapsParagraph;
 
   String get reference => block.reference;
 
@@ -47,11 +49,18 @@ final class NotePhotoLine {
           lineStart == other.lineStart &&
           lineEnd == other.lineEnd &&
           breakEnd == other.breakEnd &&
+          wrapsParagraph == other.wrapsParagraph &&
           block.sourceRange == other.block.sourceRange;
 
   @override
-  int get hashCode =>
-      Object.hash(ordinal, lineStart, lineEnd, breakEnd, block.sourceRange);
+  int get hashCode => Object.hash(
+        ordinal,
+        lineStart,
+        lineEnd,
+        breakEnd,
+        wrapsParagraph,
+        block.sourceRange,
+      );
 
   @override
   String toString() => 'NotePhotoLine($ordinal, $reference, '
@@ -79,8 +88,10 @@ List<NotePhotoLine> notePhotoLines(String source) {
   if (!source.contains(_photoTokenMarker)) {
     return const <NotePhotoLine>[];
   }
+  final List<NoteBlock> blocks = parseNote(source);
   final List<NotePhotoLine> lines = <NotePhotoLine>[];
-  for (final NoteBlock block in parseNote(source)) {
+  for (int index = 0; index < blocks.length; index++) {
+    final NoteBlock block = blocks[index];
     if (block is! PhotoBlock) {
       continue;
     }
@@ -94,6 +105,8 @@ List<NotePhotoLine> notePhotoLines(String source) {
         lineStart: start,
         lineEnd: end,
         breakEnd: end < source.length ? end + 1 : end,
+        wrapsParagraph: index + 1 < blocks.length &&
+            blocks[index + 1] is ParagraphBlock,
       ),
     );
   }

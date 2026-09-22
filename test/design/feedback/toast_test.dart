@@ -1,8 +1,9 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
 import 'harness.dart';
@@ -90,6 +91,82 @@ void main() {
       );
 
       expect(find.byType(GestureDetector), findsNothing);
+    });
+  });
+
+  group('showTransientToast', () {
+    Future<void> showOnLandscapePhone(
+      WidgetTester tester, {
+      IconStickerGlyph? glyph,
+      Size surface = const Size(844, 390),
+      double keyboard = 200,
+      double statusBar = 0,
+    }) async {
+      tester.view.physicalSize = surface;
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = FakeViewPadding(bottom: keyboard);
+      tester.view.padding = FakeViewPadding(top: statusBar);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (BuildContext context) => GestureDetector(
+              onTap: () => glyph == null
+                  ? showTransientToast(context, 'Could not add that photo')
+                  : showTransientToast(
+                      context,
+                      'Could not add that photo',
+                      glyph: glyph,
+                    ),
+              child: const Text('show'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('show'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('rises above the keyboard', (WidgetTester tester) async {
+      await showOnLandscapePhone(tester);
+
+      expect(
+        tester.getRect(find.text('Could not add that photo')).bottom,
+        lessThanOrEqualTo(390 - 200),
+      );
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets(
+        'sits just above the keyboard without stacking the navigation inset '
+        'on it', (WidgetTester tester) async {
+      await showOnLandscapePhone(
+        tester,
+        surface: const Size(844, 320),
+        statusBar: 24,
+      );
+
+      final Rect toast = tester.getRect(find.text('Could not add that photo'));
+      expect(toast.bottom, lessThanOrEqualTo(320 - 200 - 16));
+      expect(toast.top, greaterThanOrEqualTo(24));
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('an error toast carries a close glyph instead of a check',
+        (WidgetTester tester) async {
+      await showOnLandscapePhone(tester, glyph: IconStickerGlyph.close);
+
+      expect(
+        tester
+            .widget<IconStickerGlyphIcon>(find.byType(IconStickerGlyphIcon))
+            .glyph,
+        IconStickerGlyph.close,
+      );
+
+      await tester.pump(kToastLifetime);
     });
   });
 }

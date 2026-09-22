@@ -14,6 +14,8 @@ import 'editor/editor.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
 
+const double composerRailMinHeight = 72;
+
 const String emptySaveGuardMessage = 'Write something first';
 
 const Duration composerToastLifetime = Duration(milliseconds: 1900);
@@ -109,6 +111,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
   late final UndoHistoryController _undoController;
+  final GlobalKey _railKey = GlobalKey();
   String? _guardMessage;
   Timer? _guardTimer;
 
@@ -143,25 +146,41 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final bool showBar = _hasRoomForFormatBar(
+        final bool roomy = _hasRoomForFormatBar(
           context,
           constraints.maxHeight,
         );
-        final bool inHeader = showBar &&
-            resolveShellLayout(Theme.of(context).platform) ==
-                ShellLayout.sidebar;
+        final bool sidebar = resolveShellLayout(Theme.of(context).platform) ==
+            ShellLayout.sidebar;
+        final double budget = _railBudget(
+          context,
+          constraints.maxHeight,
+          formatBar: roomy,
+        );
+        final bool railBelow = budget >= composerRailMinHeight;
+        final double measure = _railMeasure(context, constraints);
+        final Widget formatBar = _formatBar(
+          trailing: railBelow
+              ? null
+              : _rail(measure: measure, maxHeight: formatBarHeight),
+        );
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            _header(formatBar: inHeader),
+            _header(
+              middle: roomy ? _titleBlock() : formatBar,
+              below: roomy && sidebar ? formatBar : null,
+            ),
             const DashedDivider(
               thickness: _headerRuleThickness,
               color: Palette.ink25,
             ),
             Flexible(
               child: _body(
-                formatBar: showBar && !inHeader,
-                rail: _railSlot(context, constraints, formatBar: showBar),
+                formatBar: roomy && !sidebar ? formatBar : null,
+                rail: railBelow
+                    ? _rail(measure: measure, maxHeight: budget)
+                    : null,
               ),
             ),
           ],
@@ -170,28 +189,31 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  ComposerRailSlot? _railSlot(
-    BuildContext context,
-    BoxConstraints constraints, {
-    required bool formatBar,
-  }) {
-    if (widget.photoRail == null) {
+  double _railMeasure(BuildContext context, BoxConstraints constraints) {
+    return math.max(
+      0.0,
+      math.min(
+        constraints.maxWidth - 2 * _pageHorizontalPadding,
+        NoteColumn.measureOf(context),
+      ),
+    );
+  }
+
+  Widget? _rail({required double measure, required double maxHeight}) {
+    final ComposerRailBuilder? railBuilder = widget.photoRail;
+    if (railBuilder == null) {
       return null;
     }
-    return ComposerRailSlot(
+    final ComposerRailSlot slot = ComposerRailSlot(
       controller: _controller,
       focusNode: _focusNode,
-      measure: math.max(
-        0.0,
-        math.min(
-          constraints.maxWidth - 2 * _pageHorizontalPadding,
-          NoteColumn.measureOf(context),
-        ),
-      ),
-      maxHeight: _railBudget(
-        context,
-        constraints.maxHeight,
-        formatBar: formatBar,
+      measure: measure,
+      maxHeight: maxHeight,
+    );
+    return KeyedSubtree(
+      key: _railKey,
+      child: Builder(
+        builder: (BuildContext context) => railBuilder(context, slot),
       ),
     );
   }
@@ -222,11 +244,15 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         _composerChromeHeight + formatBarHeight + _minimumWritingLines * line;
   }
 
-  Widget _formatBar() {
-    return FormatBar(controller: _controller, undoController: _undoController);
+  Widget _formatBar({Widget? trailing}) {
+    return FormatBar(
+      controller: _controller,
+      undoController: _undoController,
+      trailing: trailing,
+    );
   }
 
-  Widget _header({required bool formatBar}) {
+  Widget _header({required Widget middle, Widget? below}) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: _headerHorizontalPadding,
@@ -238,11 +264,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           Row(
             children: <Widget>[
               _closeButton(),
-              Expanded(child: _titleBlock()),
+              Expanded(child: middle),
               _saveButton(),
             ],
           ),
-          if (formatBar) _formatBar(),
+          ?below,
         ],
       ),
     );
@@ -332,8 +358,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     });
   }
 
-  Widget _body({required bool formatBar, ComposerRailSlot? rail}) {
-    final ComposerRailBuilder? railBuilder = widget.photoRail;
+  Widget _body({Widget? formatBar, Widget? rail}) {
     final String? errorMessage = widget.errorMessage;
     final String? guardMessage = _guardMessage;
     return Column(
@@ -349,16 +374,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
           ),
         Flexible(child: _writingSurface()),
-        if (railBuilder != null && rail != null)
+        if (rail != null)
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: _bodyHorizontalPadding,
             ),
-            child: Builder(
-              builder: (BuildContext context) => railBuilder(context, rail),
-            ),
+            child: rail,
           ),
-        if (formatBar) _formatBar(),
+        ?formatBar,
         Padding(
           padding: const EdgeInsets.only(
             left: _bodyHorizontalPadding,

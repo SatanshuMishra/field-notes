@@ -262,7 +262,8 @@ void main() {
       variant: TargetPlatformVariant.only(TargetPlatform.macOS),
     );
 
-    testWidgets('a panel too short for both yields the bar to the text',
+    testWidgets(
+        'a panel too short for the bar row moves the bar into the header and keeps Undo',
         (WidgetTester tester) async {
       await pumpComposer(
         tester,
@@ -270,7 +271,16 @@ void main() {
         keyboardInset: 200,
       );
 
-      expect(find.byType(FormatBar), findsNothing);
+      expect(find.byType(FormatBar), findsOneWidget);
+      final Rect bar = tester.getRect(find.byType(FormatBar));
+      expect(
+        bar.bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(RawScrollbar)).top),
+      );
+      expect(find.byKey(formatUndoKey), findsOneWidget);
+      final Rect undo = tester.getRect(find.byKey(formatUndoKey));
+      expect(bar.intersect(undo), undo);
+      expect(find.text('Write a note'), findsNothing);
       expect(find.byType(EditableText), findsOneWidget);
     });
   });
