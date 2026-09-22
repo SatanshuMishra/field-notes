@@ -1,9 +1,51 @@
+import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:field_notes/features/capture/photo/photo_downscale.dart';
 import 'package:field_notes/features/capture/photo/photo_intrinsics.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+Uint8List orientedFixtureJpeg() => base64Decode(
+      '/9j/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAYAAAAAAAD/wAARCAAYADADASIAAhEBAxEB'
+      '/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQID'
+      'AAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RF'
+      'RkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKz'
+      'tLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEB'
+      'AQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdh'
+      'cRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldY'
+      'WVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPE'
+      'xcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwATExMTExMgExMgLSAgIC09LS0t'
+      'LT1NPT09PT1NXU1NTU1NTV1dXV1dXV1dcHBwcHBwg4ODg4OTk5OTk5OTk5OT/9sAQwEXGBglIyVA'
+      'IyNAmWhVaJmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZ'
+      '/90ABAAD/9oADAMBAAIRAxEAPwDOooorkPoQqhV+qFetln2/l+p5mYfZ+f6BRRRXrHmH/9DOooor'
+      'kPoQqhV+qFetln2/l+p5mYfZ+f6BRRRXrHmH/9k=',
+    );
+
+Uint8List orientedWideFixtureJpeg() => base64Decode(
+      '/9j/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAYAAAAAAAD/wAARCAAICJgDASIAAhEBAxEB'
+      '/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQID'
+      'AAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RF'
+      'RkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKz'
+      'tLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEB'
+      'AQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdh'
+      'cRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldY'
+      'WVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPE'
+      'xcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwATExMTExMgExMgLSAgIC09LS0t'
+      'LT1NPT09PT1NXU1NTU1NTV1dXV1dXV1dcHBwcHBwg4ODg4OTk5OTk5OTk5OT/9sAQwEXGBglIyVA'
+      'IyNAmWhVaJmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZ'
+      '/90ABACK/9oADAMBAAIRAxEAPwDOooorkPoQooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK'
+      'KACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAoooo'
+      'AKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigA'
+      'ooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACi'
+      'iigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKK'
+      'KACiiigAooooAKgn7VPUE/auvBfxo/10OXGfwpf11K9FFFfQnhhRRRQAUUUUAFFFFABRRRQAUUUU'
+      'AFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQA'
+      'UUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABR'
+      'RRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFF'
+      'FABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUU'
+      'AFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf/Z',
+    );
 
 Future<Uint8List> pngOfSize(int width, int height) async {
   final ui.PictureRecorder recorder = ui.PictureRecorder();
@@ -105,6 +147,39 @@ void main() {
         await readPhotoIntrinsics(first.bytes),
         const PhotoIntrinsics(width: photoLongEdgeTarget, height: 512),
       );
+    });
+
+    test('keeps an EXIF-rotated photo upright when it downscales', () async {
+      final Uint8List wideBytes = orientedWideFixtureJpeg();
+      final PhotoIntrinsics wideIntrinsics =
+          await readPhotoIntrinsics(wideBytes);
+
+      expect(wideIntrinsics.width, 8);
+      expect(wideIntrinsics.height, 2200);
+
+      final DownscaledPhoto wideResult = await downscalePhoto(
+        bytes: wideBytes,
+        mime: 'image/jpeg',
+        intrinsics: wideIntrinsics,
+      );
+
+      expect(wideResult.width, 7);
+      expect(wideResult.height, 2048);
+      expect(wideResult.mime, downscaledPhotoMime);
+
+      final Uint8List smallBytes = orientedFixtureJpeg();
+      final PhotoIntrinsics smallIntrinsics =
+          await readPhotoIntrinsics(smallBytes);
+
+      final DownscaledPhoto smallResult = await downscalePhoto(
+        bytes: smallBytes,
+        mime: 'image/jpeg',
+        intrinsics: smallIntrinsics,
+      );
+
+      expect(identical(smallResult.bytes, smallBytes), isTrue);
+      expect(smallResult.width, 24);
+      expect(smallResult.height, 48);
     });
   });
 }
