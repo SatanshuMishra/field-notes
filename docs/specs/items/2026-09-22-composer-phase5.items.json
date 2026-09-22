@@ -1,0 +1,191 @@
+[
+  {
+    "name": "photo-toolbar",
+    "task": "Build the photo toolbar of docs/specs/2026-09-22-composer-toolbar-and-footer.md section 2. Read that section and section 1 first, then read lib/features/capture/text/editor/in_place_photo_editor.dart end to end: it draws every photo into its own render object at layout time, and the toolbar goes into the same canvas.\n\nWHAT TO BUILD.\n1. NEW lib/features/capture/text/editor/photo_toolbar.dart holding `PhotoToolbar`, a stateless dark rounded bar, and these exported keys and constants: `photoToolbarKey`, `photoToolbarSizeKey(PhotoSize)`, `photoToolbarSideKey(PhotoSide)`, `photoToolbarCaptionKey`, `photoToolbarRemoveKey`, `photoToolbarMoreKey`, `photoToolbarMoveUpKey`, `photoToolbarMoveDownKey`, `photoToolbarReplaceKey`, `photoToolbarDiagramKey`, `const double photoToolbarGap = 8`, and the labels `photoToolbarCaptionLabel = 'Caption'`, `photoToolbarRemoveLabel = 'Remove'`, `photoToolbarMoreLabel = 'More'`. The size group is S, M, L and Full from PhotoSize; the placement group is Left and Right from PhotoSide and is built only when `canFloatAt(measure:, em:)` is true, exactly as the rail hid it today. Centre is NOT built: it arrives in phase 3. The bar also carries the existing `PhotoPlacementDiagram` and its sentence, under `photoToolbarDiagramKey`, planned with the same `planFloat` call the reader makes at the reader's measure, which is `NoteColumn.measureEm` em and not the editor's column.\n2. Every control is a `Focus`-able target operable with Enter and Space, carries a `Semantics` label naming what it does to this photo, and reports `selected: true` for the marked size and the marked side. Tab moves through them left to right. Esc anywhere inside the toolbar deselects the photo and returns focus to the editor's focus node.\n3. Each control writes through lib/features/notes/photos/photo_line_edits.dart only: `setPhotoSize`, `setPhotoSide`, `movePhotoUp`, `movePhotoDown`, `replacePhotoReference`, `removePhotoLine`. Move up, Move down and Replace live behind the `photoToolbarMoreKey` menu and are disabled when `canMovePhotoUp` / `canMovePhotoDown` say so. Replace picks through the new importer in point 5. Caption and Remove leave call-backs for Steps that follow: `PhotoToolbar` takes `onCaption` and `onRemove` callbacks, and in this Step the editor passes a Remove that calls `removePhotoLine` with no toast and a Caption that does nothing.\n4. `in_place_photo_editor.dart` draws the toolbar for the selected photo into its canvas: centred over the top edge of the figure, `photoToolbarGap` above it, flipped to `photoToolbarGap` below the figure when the space above the figure inside the viewport is smaller than the toolbar's height, clamped so it never crosses the editor's left or right edge, and not built at all when the figure's band lies wholly outside the visible viewport. The canvas already knows every figure's rect; position the toolbar from the same numbers.\n5. `NoteEditorConfig` in lib/features/capture/text/editor/note_editor.dart gains `final Future<List<String>> Function()? photoImporter;`, defaulting to null, which the toolbar's Replace calls and which is null in tests that do not exercise Replace. Write the type out; do not import a typedef from the notes feature, which another Step owns. Export photo_toolbar.dart from editor.dart.\n6. Do NOT edit or delete lib/features/notes/photos/photo_rail.dart, photo_options_sheet.dart or lib/features/notes/notes.dart. Other Steps own them.\n\nTESTS, written first and watched failing, in NEW test/features/capture/text/editor/photo_toolbar_test.dart. Use the harness style of test/features/capture/text/editor/in_place_photo_wrap_test.dart.\n- 'it shows only while a photo is selected': no toolbar with the caret in plain text; tap the picture and exactly one `photoToolbarKey` appears; Esc removes it and the editor's focus node holds focus.\n- 'Size and Side rewrite only the selected photo': a note with two photo lines, select the second, tap `photoToolbarSizeKey(PhotoSize.large)` then `photoToolbarSideKey(PhotoSide.left)`, and assert the controller text shows the first photo line unchanged and the second carrying 'left large'.\n- 'it flips below the photo when there is no room above': a photo near the top of the note draws the toolbar under the figure; one further down draws it above.\n- 'it stays inside the writing surface and hides when the photo scrolls away': with a Full photo the toolbar's rect is inside the editor's rect; scroll until the figure leaves the viewport and the toolbar is gone.\n- 'Tab walks its controls and Esc returns to the writing surface': from the selected photo, Tab focuses the first size control, Tab again the next control, and Esc deselects and hands focus back.\n- 'the mini-diagram predicts the reader, not the editor': at an editor column wide enough to float a photo the reader would stack, the diagram says the reader stacks it. Model this on the existing rail test 'is driven by the same planFloat the renderer calls'.\n\nOUT OF SCOPE. The caption editor, the Undo toast, the footer, and deleting the rail or the options sheet: each is a later Step. Do not change lib/features/notes/photos/photo_rail.dart or photo_options_sheet.dart.",
+    "files": [
+      "lib/features/capture/text/editor/photo_toolbar.dart",
+      "lib/features/capture/text/editor/in_place_photo_editor.dart",
+      "lib/features/capture/text/editor/note_editor.dart",
+      "lib/features/capture/text/editor/editor.dart",
+      "test/features/capture/text/editor/photo_toolbar_test.dart"
+    ],
+    "source": null,
+    "acceptance": [
+      {
+        "file": "test/features/capture/text/editor/photo_toolbar_test.dart",
+        "test": "it shows only while a photo is selected"
+      },
+      {
+        "file": "test/features/capture/text/editor/photo_toolbar_test.dart",
+        "test": "Size and Side rewrite only the selected photo"
+      },
+      {
+        "file": "test/features/capture/text/editor/photo_toolbar_test.dart",
+        "test": "it stays inside the writing surface and hides when the photo scrolls away"
+      },
+      {
+        "file": "test/features/capture/text/editor/photo_toolbar_test.dart",
+        "test": "Tab walks its controls and Esc returns to the writing surface"
+      }
+    ],
+    "type": "feature",
+    "complexity": "complex",
+    "msp": "photo-toolbar",
+    "spec_ref": "docs/specs/2026-09-22-composer-toolbar-and-footer.md section 2, S2"
+  },
+  {
+    "name": "photo-caption-in-place",
+    "task": "Build the in-place caption of docs/specs/2026-09-22-composer-toolbar-and-footer.md section 3. Read it, then read the toolbar built by the photo-toolbar Step in the same worktree and lib/features/notes/photos/photo_caption_sheet.dart, whose behaviour you are replacing.\n\nWHAT TO BUILD.\n1. NEW lib/features/capture/text/editor/photo_caption_field.dart holding `PhotoCaptionField` and `const Key photoCaptionFieldEditorKey = ValueKey<String>('photo-caption-editor');`. It is a single-line text field carrying `notePhotoCaptionStyle` and `notePhotoCaptionAlign`, sized to the figure's width, seeded with the photo's current caption and focused when it appears.\n2. The toolbar's Caption button opens it under the selected photo, in the place the caption text occupies. Enter, or a tap outside it, commits through `setPhotoCaption`, which already runs `sanitizePhotoCaption`. Esc cancels and leaves the note's text exactly as it was. Committing an empty field removes the caption.\n3. The editor keeps the caption field in its canvas so it moves with the photo, and the figure's height accounts for the field exactly as it accounts for a caption today.\n4. While the caption field holds focus, the note's own text field must not take the keystrokes: the field is its own focus scope, and Esc returns focus to the editor.\n\nTESTS, written first and watched failing, in NEW test/features/capture/text/editor/photo_caption_field_test.dart.\n- 'Caption opens a field under the photo and commits into the alt slot': select a photo, tap `photoToolbarCaptionKey`, type 'Low tide', press Enter, and assert the controller text carries '![Low tide](photo/' for that line and no other line changed.\n- 'Esc cancels a caption edit and leaves the note untouched': open the field on a photo that already has a caption, type into it, press Esc, and assert the controller text is byte for byte what it was before.\n\nOUT OF SCOPE. Deleting photo_caption_sheet.dart, which a later Step does. The Undo toast.",
+    "files": [
+      "lib/features/capture/text/editor/photo_caption_field.dart",
+      "lib/features/capture/text/editor/in_place_photo_editor.dart",
+      "lib/features/capture/text/editor/photo_toolbar.dart",
+      "lib/features/capture/text/editor/editor.dart",
+      "test/features/capture/text/editor/photo_caption_field_test.dart"
+    ],
+    "source": null,
+    "acceptance": [
+      {
+        "file": "test/features/capture/text/editor/photo_caption_field_test.dart",
+        "test": "Caption opens a field under the photo and commits into the alt slot"
+      },
+      {
+        "file": "test/features/capture/text/editor/photo_caption_field_test.dart",
+        "test": "Esc cancels a caption edit and leaves the note untouched"
+      }
+    ],
+    "after": [
+      "photo-toolbar"
+    ],
+    "type": "feature",
+    "complexity": "moderate",
+    "msp": "photo-toolbar",
+    "spec_ref": "docs/specs/2026-09-22-composer-toolbar-and-footer.md section 3, S3"
+  },
+  {
+    "name": "photo-remove-undo",
+    "task": "Build the removal toast of docs/specs/2026-09-22-composer-toolbar-and-footer.md section 5. Read it, then read lib/design/feedback/toast.dart, which already renders a `ToastAction` but cannot be asked for one, and the rail's removal notice in lib/features/notes/photos/photo_rail.dart, whose behaviour you are moving.\n\nWHAT TO BUILD.\n1. `showTransientToast` gains an optional `ToastAction? action`. When one is given the toast renders it through the existing `Toast` path and stays up for `kToastActionLifetime`, a new `const Duration kToastActionLifetime = Duration(seconds: 6)`. Pressing the action dismisses the toast and runs the callback. Nothing about the no-action toast changes, including `kToastLifetime`.\n2. The toolbar's Remove takes the whole photo line out through `removePhotoLine` and shows `Photo removed` with an `Undo` action. Keep the strings: `const String photoRemovedMessage = 'Photo removed'` and `const String photoRemovedUndoLabel = 'Undo'`, now exported from photo_toolbar.dart. Undo restores the value the removal replaced, byte for byte, caret included: `removePhotoLine` already returns what is needed.\n3. The toast belongs to the open composer: the in-place editor calls `dismissTransientToast()` in its dispose, so a composer that closes takes its Undo with it.\n4. Backspace and Delete on a selected photo keep C6's behaviour and show no toast.\n\nTESTS, written first and watched failing.\n- NEW test/features/capture/text/editor/photo_remove_undo_test.dart, 'the trash removes the photo and offers Undo': select a photo, tap `photoToolbarRemoveKey`, assert the photo line is gone from the controller text and a toast shows `photoRemovedMessage` and `photoRemovedUndoLabel`.\n- Same file, 'Undo restores the line byte for byte': tap Undo and assert the controller text equals the original note exactly.\n- Same file, 'the toast goes when the composer closes': remove a photo, then pump the editor out of the tree, and assert no toast remains.\n- test/design/feedback/toast_test.dart, new test 'a toast with an action keeps its action until it is pressed': show one with an action, assert the label is shown, press it, assert the callback ran once and the toast is gone.\n\nOUT OF SCOPE. The footer, the rail deletion, and the pick placeholder of phase 4.",
+    "files": [
+      "lib/design/feedback/toast.dart",
+      "lib/features/capture/text/editor/photo_toolbar.dart",
+      "lib/features/capture/text/editor/in_place_photo_editor.dart",
+      "test/design/feedback/toast_test.dart",
+      "test/features/capture/text/editor/photo_remove_undo_test.dart"
+    ],
+    "source": null,
+    "acceptance": [
+      {
+        "file": "test/features/capture/text/editor/photo_remove_undo_test.dart",
+        "test": "the trash removes the photo and offers Undo"
+      },
+      {
+        "file": "test/features/capture/text/editor/photo_remove_undo_test.dart",
+        "test": "Undo restores the line byte for byte"
+      },
+      {
+        "file": "test/design/feedback/toast_test.dart",
+        "test": "a toast with an action keeps its action until it is pressed"
+      }
+    ],
+    "after": [
+      "photo-toolbar"
+    ],
+    "type": "feature",
+    "complexity": "moderate",
+    "msp": "photo-toolbar",
+    "spec_ref": "docs/specs/2026-09-22-composer-toolbar-and-footer.md section 5, S4"
+  },
+  {
+    "name": "composer-footer",
+    "task": "Build the composer footer of docs/specs/2026-09-22-composer-toolbar-and-footer.md section 4. Read it, then read lib/features/capture/text/text_composer_sheet.dart and the Add photo tile in lib/features/notes/photos/photo_rail.dart, whose job the footer takes over.\n\nWHAT TO BUILD.\n1. NEW lib/features/capture/text/composer_footer.dart holding `ComposerFooter` and these exports: `const Key composerAddPhotoKey = ValueKey<String>('composer-add-photo')`, `const String composerAddPhotoLabel = 'Add memory'`, `const String composerAddingLabel = 'Adding…'`, `const String composerMarkdownHints = '**bold**  *italic*  # heading  - list  > quote'`, `const Key composerHintsKey = ValueKey<String>('composer-hints')`, and `const double composerFooterHeight = 44`. Add memory sits left, the hints right and dimmed.\n2. Add memory picks through the `PhotoImporter` it is given, then inserts at the caret with `insertPhotoLinesAtCaret`, exactly as the rail's tile did. While picking it shows `composerAddingLabel` and refuses a second press. A `PhotoPickException` shows its own message in a floating toast; any other failure shows `composerPhotoFailedMessage` and leaves the note alone. When the pick finishes, focus returns to the editor's focus node.\n3. It is focusable and operable with Enter, with a semantics label naming that it adds a photo.\n4. The hints are dropped, and Add memory kept, when the footer is given less than `composerFooterHintsMinWidth`, a new `const double composerFooterHintsMinWidth = 360`, or when the sheet is on a short screen where the format bar has already been folded into the header. Add memory never disappears (fix-wave W3).\n5. `TextComposerSheet` takes `final PhotoImporter? onAddPhoto` in place of `photoRail` and `ComposerRailBuilder`, builds the footer under the format bar, and passes the same importer into `NoteEditorConfig.photoImporter` so the toolbar's Replace works. Delete `ComposerRailSlot`, `_rail`, `_railKey`, `_railBudget`, `composerRailMinHeight` and the rail branch of the short-screen layout. The format bar keeps its own short-screen behaviour; its `trailing` slot is no longer used by the composer.\n6. NEW lib/features/notes/photos/photo_import.dart holding `typedef PhotoImporter = Future<List<String>> Function();`, `Future<List<String>> importNotePhotos(WidgetRef ref)` copied verbatim from photo_rail.dart, and `const String composerPhotoFailedMessage = 'Could not add that photo. Please try again.';`. Import it directly by path; do not add it to lib/features/notes/notes.dart, which another Step owns. Leave photo_rail.dart untouched and compiling with its own copies.\n7. lib/features/capture/text/text_composer.dart and lib/features/day_detail/day_detail_edit_note.dart pass `onAddPhoto: () => importNotePhotos(ref)` and the same importer into `NoteEditorConfig.photoImporter`.\n8. Retarget every existing test that references the rail through the composer: test/features/capture/core/text_composer_test.dart, test/features/capture/text/text_composer_short_screen_test.dart and test/features/day_detail/day_detail_edit_note_test.dart. Where one asserts the rail's presence or its position, rewrite it against the footer, keeping the assertion as strong as it was, and say so in your notes. The rail's own test file is another Step's.\n\nTESTS, written first and watched failing, in NEW test/features/capture/text/composer_footer_test.dart.\n- 'Add memory picks, stores and inserts the photo line at the caret': modelled on the rail test 'a tap picks, stores and inserts the photo line at the caret'.\n- 'a refused pick is reported and leaves the note alone': the importer throws a `PhotoPickException`; assert its message is shown and the controller text is unchanged.\n- 'Add memory keeps its place on a short screen': on the landscape-phone surface used by test/features/capture/text/text_composer_short_screen_test.dart, `composerAddPhotoKey` is hit-testable and `composerHintsKey` is absent.\n\nOUT OF SCOPE. Deleting the rail and the options sheet, and the surface height: later Steps in this same worktree. Leave photo_rail.dart compiling.",
+    "files": [
+      "lib/features/capture/text/composer_footer.dart",
+      "lib/features/capture/text/text_composer_sheet.dart",
+      "lib/features/capture/text/text_composer.dart",
+      "lib/features/day_detail/day_detail_edit_note.dart",
+      "lib/features/notes/photos/photo_import.dart",
+      "test/features/capture/text/composer_footer_test.dart",
+      "test/features/capture/core/text_composer_test.dart",
+      "test/features/capture/text/text_composer_short_screen_test.dart",
+      "test/features/day_detail/day_detail_edit_note_test.dart"
+    ],
+    "source": null,
+    "acceptance": [
+      {
+        "file": "test/features/capture/text/composer_footer_test.dart",
+        "test": "Add memory picks, stores and inserts the photo line at the caret"
+      },
+      {
+        "file": "test/features/capture/text/composer_footer_test.dart",
+        "test": "a refused pick is reported and leaves the note alone"
+      },
+      {
+        "file": "test/features/capture/text/composer_footer_test.dart",
+        "test": "Add memory keeps its place on a short screen"
+      }
+    ],
+    "type": "feature",
+    "complexity": "complex",
+    "msp": "composer-chrome",
+    "spec_ref": "docs/specs/2026-09-22-composer-toolbar-and-footer.md section 4, S1"
+  },
+  {
+    "name": "writing-surface-height",
+    "task": "Give the writing surface the height the rail used to take, as docs/specs/2026-09-22-composer-toolbar-and-footer.md section 7 sets out, and pin it. Read section 7 and the geometry tests in test/features/capture/text/text_composer_geometry_test.dart first.\n\nWHAT TO DO.\n1. In lib/features/capture/text/text_composer_sheet.dart the writing surface becomes 68 percent of the height available to the panel, clamped to no less than 440 and no more than 860: `_surfaceHeightShare` 0.68, `_surfaceMaxCap` 860, `_surfaceMinCap` unchanged. Nothing else about the panel changes; C8's panel width and the 45 em column stay.\n2. Update the existing surface expectations in text_composer_geometry_test.dart to the new rule rather than deleting them, and say so in your notes.\n\nTESTS, written first and watched failing, in test/features/capture/text/text_composer_geometry_test.dart.\n- 'the writing surface follows the window at 68 percent': at panel heights 800, 1200 and 1600 the surface measures 544, 816 and 860, each within 0.01, measured the way that file already measures it.\n- 'the composer leaves no dead band under its footer': with a note long enough to fill the surface, the bottom of the footer sits within one line height of the bottom of the composer panel.\n\nOUT OF SCOPE. Everything else in the sheet.",
+    "files": [
+      "lib/features/capture/text/text_composer_sheet.dart",
+      "test/features/capture/text/text_composer_geometry_test.dart"
+    ],
+    "source": null,
+    "acceptance": [
+      {
+        "file": "test/features/capture/text/text_composer_geometry_test.dart",
+        "test": "the writing surface follows the window at 68 percent"
+      },
+      {
+        "file": "test/features/capture/text/text_composer_geometry_test.dart",
+        "test": "the composer leaves no dead band under its footer"
+      }
+    ],
+    "after": [
+      "composer-footer"
+    ],
+    "type": "feature",
+    "complexity": "simple",
+    "msp": "composer-chrome",
+    "spec_ref": "docs/specs/2026-09-22-composer-toolbar-and-footer.md section 7, S6"
+  },
+  {
+    "name": "photo-controls-removed",
+    "task": "Delete the photo rail, the photo options sheet and the caption sheet, as docs/specs/2026-09-22-composer-toolbar-and-footer.md section 6 sets out, and land every behaviour they carried on its replacement. The toolbar, the caption field and the footer already exist in this worktree; read them and section 6 first.\n\nWHAT TO DO.\n1. Delete lib/features/notes/photos/photo_rail.dart, lib/features/notes/photos/photo_options_sheet.dart and lib/features/notes/photos/photo_caption_sheet.dart, and their exports from lib/features/notes/notes.dart. Everything still needed has already moved: `importNotePhotos` and `PhotoImporter` are in lib/features/notes/photos/photo_import.dart, the removal strings are in lib/features/capture/text/editor/photo_toolbar.dart, and the pick messages are in lib/features/capture/text/composer_footer.dart. `PhotoPlacementDiagram` and photo_line_edits.dart stay where they are. If a file outside your write-set still imports a deleted file, do not edit it: say so in your notes and stop.\n2. Delete test/features/notes/photos/photo_rail_test.dart and test/features/notes/photos/photo_options_sheet_test.dart, but first move every behaviour section 6 lists into NEW test/features/capture/text/composer_photo_controls_test.dart, keeping each assertion as strong as it was and naming each test after the behaviour it pins. That file is the one place this wave proves the moved behaviours; do not edit the toolbar, caption or footer test files, which other Steps own.\n3. A behaviour section 6 does not list, and that the composer no longer owes, goes with its test: the caret-following highlight, the thumbnail tap, the rail's presentation-by-width cases and its slim tile.\n4. Add to that new file a test named exactly 'the composer carries no photo rail', asserting that opening the composer builds `composerAddPhotoKey` and that no widget in the tree carries a key whose value starts with 'photo-rail'.\n5. In your return notes list every test you moved and every test you removed, one line each, as 'moved: <old name> -> <new name>' or 'removed: <old name> (<why the composer no longer owes it>)'.\n\nOUT OF SCOPE. The writing surface height, the composer sheet, and anything under lib/features/notes/render/.",
+    "files": [
+      "lib/features/notes/photos/photo_rail.dart",
+      "lib/features/notes/photos/photo_options_sheet.dart",
+      "lib/features/notes/photos/photo_caption_sheet.dart",
+      "lib/features/notes/notes.dart",
+      "test/features/notes/photos/photo_rail_test.dart",
+      "test/features/notes/photos/photo_options_sheet_test.dart",
+      "test/features/capture/text/composer_photo_controls_test.dart"
+    ],
+    "source": null,
+    "acceptance": [
+      {
+        "file": "test/features/capture/text/composer_photo_controls_test.dart",
+        "test": "the composer carries no photo rail"
+      },
+      {
+        "file": "test/features/capture/text/composer_photo_controls_test.dart",
+        "test": "Remove offers Undo and Undo restores the line byte for byte"
+      }
+    ],
+    "after": [
+      "photo-remove-undo",
+      "photo-caption-in-place",
+      "writing-surface-height"
+    ],
+    "type": "refactor",
+    "complexity": "complex",
+    "msp": "photo-controls-removed",
+    "spec_ref": "docs/specs/2026-09-22-composer-toolbar-and-footer.md section 6, S5"
+  }
+]
