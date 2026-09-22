@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/drafts/draft_paths.dart';
 import 'package:field_notes/state/database_provider.dart';
+import 'package:field_notes/state/draft_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -44,6 +46,9 @@ class IntegrationSandbox {
   List<Override> get overrides => <Override>[
         databaseProvider.overrideWithValue(database),
         mediaRootProvider.overrideWith((Ref ref) async => mediaRoot),
+        draftRootProvider.overrideWith(
+          (Ref ref) async => Directory(p.join(root.path, draftsSubdir)),
+        ),
       ];
 
   ProviderContainer createContainer({

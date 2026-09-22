@@ -28,6 +28,7 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   String? _restoredSource;
   bool _restoredDraft = false;
   bool _applying = false;
+  bool _sealed = false;
   bool _disposed = false;
 
   bool get restoredDraft => _restoredDraft;
@@ -63,6 +64,9 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> flush() {
+    if (_sealed) {
+      return _queue;
+    }
     _debounce?.cancel();
     _debounce = null;
     final String source = currentSource;
@@ -84,18 +88,28 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<void> discard() {
-    _debounce?.cancel();
-    _debounce = null;
-    _lastPersisted = null;
-    return _run<void>((store) => store.delete(key));
+    if (!_sealed) {
+      _sealed = true;
+      WidgetsBinding.instance.removeObserver(this);
+    }
+    return _deleteDraft();
   }
+
+  Future<void> seal() => discard();
 
   Future<void> discardRestored() async {
     _restoredDraft = false;
     _restoredSource = null;
     _apply(initialSource);
     notifyListeners();
-    await discard();
+    await _deleteDraft();
+  }
+
+  Future<void> _deleteDraft() {
+    _debounce?.cancel();
+    _debounce = null;
+    _lastPersisted = null;
+    return _run<void>((store) => store.delete(key));
   }
 
   @override
@@ -116,7 +130,7 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _onChanged() {
-    if (_applying) {
+    if (_applying || _sealed) {
       return;
     }
     if (_restoredDraft && currentSource != _restoredSource) {

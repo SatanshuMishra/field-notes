@@ -252,6 +252,75 @@ void main() {
     expect(drafts.drafts, <String, String>{'new-2026-07-20': 'another day'});
   });
 
+  testWidgets(
+      'a discarded new-note draft stays deleted when the app goes inactive '
+      'during the close', (WidgetTester tester) async {
+    final FakeDraftStore drafts = FakeDraftStore();
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        drafts: drafts,
+        onResult: (String? _) {},
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'throw this away');
+    await tester.pump(draftIdleDebounceForTest);
+    expect(drafts.drafts, <String, String>{'new-2026-07-19': 'throw this away'});
+
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(composerDiscardKey));
+    await tester.pump(const Duration(milliseconds: 50));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    expect(drafts.drafts, isEmpty);
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DraftRestoredChip), findsNothing);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      isEmpty,
+    );
+  });
+
+  testWidgets(
+      'a saved new note leaves no draft when the app goes inactive during the '
+      'close', (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'saved once');
+    await tester.pump(draftIdleDebounceForTest);
+    await tester.enterText(find.byType(EditableText), 'saved once more');
+
+    await tester.tap(find.text('Save'));
+    await tester.pump(const Duration(milliseconds: 50));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    expect(result, 'entry-1');
+    expect(writer.saves.single.source, 'saved once more');
+    expect(drafts.drafts, isEmpty);
+  });
+
   testWidgets('a scrim tap on a dirty composer asks first and keeps the note',
       (WidgetTester tester) async {
     final FakeNoteWriter writer = FakeNoteWriter();

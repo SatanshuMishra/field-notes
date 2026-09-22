@@ -143,6 +143,10 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
       _fail(outcome.errorMessage ?? unexpectedSaveMessage);
       return;
     }
+    await _draft.seal();
+    if (!mounted) {
+      return;
+    }
     Navigator.of(context).pop(entryId);
   }
 

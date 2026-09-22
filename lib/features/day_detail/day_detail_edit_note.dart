@@ -83,6 +83,10 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
       });
       return;
     }
+    await _draft.seal();
+    if (!mounted) {
+      return;
+    }
     Navigator.of(context).pop(true);
   }
 

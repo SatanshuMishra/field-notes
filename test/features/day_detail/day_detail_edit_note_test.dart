@@ -113,6 +113,37 @@ void main() {
   });
 
   testWidgets(
+      'a saved edit leaves no draft when the app goes inactive during the '
+      'close', (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeDraftStore drafts = FakeDraftStore();
+    Object? result = 'unset';
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? value) => result = value,
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'a better day');
+    await tester.pump(draftIdleDebounceForTest);
+    await tester.enterText(find.byType(EditableText), 'a better day still');
+
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pump(const Duration(milliseconds: 50));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    expect(result, isTrue);
+    expect(drafts.drafts, isEmpty);
+  });
+
+  testWidgets(
       'keeps the editor, the typed text and the draft when the write fails',
       (WidgetTester tester) async {
     final Entry entry = _noteEntry();
