@@ -99,6 +99,29 @@ void main() {
     expect(diagram.plan.isStacked, isFalse);
   });
 
+  testWidgets('the sheet diagram stacks a photo whose placement is invalid',
+      (WidgetTester tester) async {
+    final FakeNoteMediaResolver resolver = FakeNoteMediaResolver(
+      <String, ResolvedMedia>{
+        prefixOf(photoIdA): availablePhoto(photoIdA, width: 1200, height: 900),
+      },
+    )..memoizeAll();
+    final String invalid =
+        '![](photo/${prefixOf(photoIdA)} "right medium sideways")';
+    await _openSheet(
+      tester,
+      text: 'one\n$invalid\ntwo\n$b',
+      measure: 560,
+      resolver: resolver,
+    );
+
+    expect(find.byKey(photoOptionsSheetKey), findsOneWidget);
+    final PhotoPlacementDiagram diagram = tester.widget<PhotoPlacementDiagram>(
+      _inSheet(find.byType(PhotoPlacementDiagram)),
+    );
+    expect(diagram.plan.isStacked, isTrue);
+  });
+
   testWidgets('the Side control is absent when the measure cannot float',
       (WidgetTester tester) async {
     await _openSheet(tester, text: source);
