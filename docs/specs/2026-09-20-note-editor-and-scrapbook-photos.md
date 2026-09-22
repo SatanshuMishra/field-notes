@@ -1,6 +1,6 @@
 # Note Editor and Scrapbook Photos — Implementation Spec
 
-Date: 2026-09-20. Base: `origin/main` @ `509df95`. Status: **9 of 10 units merged; `u10` held.** See §0.
+Date: 2026-09-20. Base: `origin/main` @ `509df95`. Status: **9 of 10 units merged, fix wave landed; `u10` held.** See §0.
 
 Dispatch contract: `docs/specs/items/2026-09-20-note-feature.fanout.json`, batched by wave under
 `docs/specs/items/waves/`. This document is the human-readable authority; the JSON is what runs.
@@ -14,11 +14,11 @@ Derived from two verified research passes, both committed:
 
 ---
 
-## 0. Implementation status — 2026-09-21
+## 0. Implementation status — 2026-09-22
 
-**Nine of ten units are merged. `u10` is held by the owner** until the Android benchmark shipped in
-`u6` has been run on a real device. If typing in a long note is fast enough there, `u10` is never built
-and this feature is complete.
+**Nine of ten units are merged, and the fix wave that followed them has landed. `u10` is held by the
+owner** until the Android benchmark shipped in `u6` has been run on a real device. If typing in a long
+note is fast enough there, `u10` is never built and this feature is complete.
 
 | Unit | PR | Merge |
 |---|---|---|
@@ -35,6 +35,49 @@ and this feature is complete.
 | `u10` segment editor | — | **held** |
 
 The repository stopped squash-merging between #130 and #131.
+
+### The fix wave
+
+A conformance audit of the nine merged units found fifteen gaps between this document and the code. They
+were fixed as one wave, specified in `docs/specs/2026-09-21-note-fix-wave.md`. Its rulings W1 to W9 are
+binding, and six of them change what this document says. **Where the two disagree, the fix-wave spec
+wins.**
+
+| Ruling | Amends | In short |
+|---|---|---|
+| W1 | `u3` | a new-note draft is keyed by its date, not a session id; drafting stops on discard, a clean close and save; Delete all removes drafts |
+| W2 | `u3` | a backdrop tap closes a clean composer and asks first on a dirty one |
+| W3 | `u5`, `u8` | a short composer keeps Undo and Add photo by moving them into the header |
+| W4 | `u2` | the feed preview is cut by blocks, keeps the first photo only, and never cuts a photo line |
+| W5 | §3.4, `u8` | a placement with an unknown or repeated word is invalid and stacks |
+| W8 | several | six divergences are accepted as shipped |
+
+| PR | What it fixed |
+|---|---|
+| #140 | the fix-wave spec |
+| #141 | a photo that cannot be decoded stacks instead of floating a broken image (F7) |
+| #142 | the goldens CI filter, a guard that GC never runs by itself, EXIF orientation pinned by tests (F13 to F15) |
+| #143 | a new-note draft is restored, Delete all clears drafts, the backdrop closes the composer (F1, F9, F10) |
+| #144 | the feed preview shows the first photo only and never cuts inside a photo line (F2, F8) |
+| #145 | Undo and Add photo survive a short composer; the diagram and the renderer agree on floats (F3 to F6) |
+| #146 | the benchmark measures real photos through the shipping controller (F11, F12) |
+
+All seven merged with merge commits.
+
+**Re-audited at `91ca61e`.** Three independent conformance audits checked `main` against this document
+as amended, and found no behaviour defect. Locally, `flutter analyze` is clean and 1848 tests and 39
+goldens pass. The audits found six behaviours that were right but that no test would catch
+regressing; PR #148 pins them.
+
+### Open for the owner
+
+- **The paragraph split.** §3.4 says the head ends at "the last line fitting beside the photo". The code
+  keeps every line that *starts* above the photo's foot, so the last line beside the photo can reach
+  below it. No acceptance check depends on which reading holds, and `photo_wrap_block_test` pins the
+  code's. The code's rule is the one CSS floats follow: a line that overlaps the float at all is
+  shortened to sit beside it. Either accept it as a divergence, or change the split to keep only lines
+  that end above the foot.
+- **`u10`**, once the Android benchmark has run.
 
 ### Where the code differs from §5's plan
 
@@ -67,10 +110,17 @@ core layout rule, free to drift apart.
 | Single write path | `lib/domain/services/note_writer.dart` |
 | Photo prefixes and source extraction | `lib/data/media/blob_prefix.dart` |
 
-### Not yet verified by anyone
+### What a person has seen running
 
-**No human or agent has seen this feature running.** Every PR carries visual confirmation on macOS and
-Android as not run. The Android benchmark in `u6` has not been run either. Both are owed before this is
+The owner ran the macOS app from `91ca61e` on 2026-09-22. The window loads, a new note saves, and the
+live Markdown editor styles as it is typed. **Add photo hung**: the macOS build had no sandbox
+entitlement for user-selected files, so the system file panel never opened and the pick never
+returned. PR #147 adds it. The same gap blocked the older photo capture, and by reading the code it
+also blocks export's save panel.
+
+Not yet seen by anyone: photos, the float and the feed preview on macOS, and anything on Android. The
+Android benchmark in `u6` has not been run. The desktop benchmark was re-measured at `0fd7075`
+(`docs/specs/research/2026-09-20-android-measurement.md`). Both device checks are owed before this is
 called done.
 
 ---
