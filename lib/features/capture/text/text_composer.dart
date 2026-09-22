@@ -14,7 +14,7 @@ import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
-import 'package:field_notes/features/notes/notes.dart' hide importNotePhotos;
+import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';

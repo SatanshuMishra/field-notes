@@ -101,6 +101,10 @@ void main() {
     expect(find.byKey(composerAddPhotoKey).hitTestable(), findsOneWidget);
     expect(find.byKey(formatUndoKey), findsOneWidget);
     expect(find.byKey(composerHintsKey), findsNothing);
+    expect(
+      tester.getSize(find.byKey(composerAddPhotoKey)).height,
+      formatBarHeight,
+    );
     _expectInside(
       tester.getRect(find.byKey(composerAddPhotoKey)),
       tester.getRect(find.byType(FormatBar)),
@@ -160,6 +164,5 @@ void main() {
 
   test('the footer and the bar agree on the shared heights', () {
     expect(composerFooterHeight, greaterThanOrEqualTo(formatBarHeight));
-    expect(photoRailSlimHeight, formatBarHeight);
   });
 }
