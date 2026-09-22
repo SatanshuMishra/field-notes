@@ -15,6 +15,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/tokens/tokens.dart';
+
 import '../../notes/support/notes_harness.dart'
     show FakeNoteMediaStore, photoIdA, prefixOf;
 import '../core/capture_test_support.dart';
@@ -63,6 +65,16 @@ List<Override> _mediaOverrides(FakeNoteMediaStore store) {
   ];
 }
 
+double get _lineHeight =>
+    TypographyTokens.noteBody.fontSize! * TypographyTokens.noteBody.height!;
+
+void _expectInside(Rect inner, Rect outer) {
+  expect(inner.left, greaterThanOrEqualTo(outer.left));
+  expect(inner.top, greaterThanOrEqualTo(outer.top));
+  expect(inner.right, lessThanOrEqualTo(outer.right));
+  expect(inner.bottom, lessThanOrEqualTo(outer.bottom));
+}
+
 void _useLandscapePhone(WidgetTester tester) {
   tester.view.physicalSize = _landscapePhoneSurface;
   tester.view.devicePixelRatio = 1;
@@ -87,6 +99,14 @@ void main() {
 
     expect(find.byKey(photoRailAddKey).hitTestable(), findsOneWidget);
     expect(find.byKey(formatUndoKey), findsOneWidget);
+    _expectInside(
+      tester.getRect(find.byKey(photoRailAddKey)),
+      tester.getRect(find.byType(FormatBar)),
+    );
+    expect(
+      tester.getSize(find.byType(EditableText)).height,
+      greaterThanOrEqualTo(3 * _lineHeight),
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -119,6 +139,10 @@ void main() {
     );
     await tester.pump();
 
+    _expectInside(
+      tester.getRect(find.byKey(photoRailAddKey)),
+      tester.getRect(find.byType(FormatBar)),
+    );
     await tester.tap(find.byKey(photoRailAddKey));
     await tester.pump();
 

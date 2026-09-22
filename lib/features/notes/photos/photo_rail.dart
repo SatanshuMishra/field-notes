@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
@@ -263,7 +264,7 @@ class _PhotoRailState extends State<PhotoRail> {
       return;
     }
     if (_slim) {
-      showTransientToast(context, message);
+      showTransientToast(context, message, glyph: IconStickerGlyph.close);
       return;
     }
     _showNotice(_RailNotice(message: message), photoErrorNoticeLifetime);

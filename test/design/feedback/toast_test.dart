@@ -1,8 +1,9 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
 import 'harness.dart';
@@ -90,6 +91,62 @@ void main() {
       );
 
       expect(find.byType(GestureDetector), findsNothing);
+    });
+  });
+
+  group('showTransientToast', () {
+    Future<void> showOnLandscapePhone(
+      WidgetTester tester, {
+      IconStickerGlyph? glyph,
+    }) async {
+      tester.view.physicalSize = const Size(844, 390);
+      tester.view.devicePixelRatio = 1;
+      tester.view.viewInsets = const FakeViewPadding(bottom: 200);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (BuildContext context) => GestureDetector(
+              onTap: () => glyph == null
+                  ? showTransientToast(context, 'Could not add that photo')
+                  : showTransientToast(
+                      context,
+                      'Could not add that photo',
+                      glyph: glyph,
+                    ),
+              child: const Text('show'),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('show'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('rises above the keyboard', (WidgetTester tester) async {
+      await showOnLandscapePhone(tester);
+
+      expect(
+        tester.getRect(find.text('Could not add that photo')).bottom,
+        lessThanOrEqualTo(390 - 200),
+      );
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('an error toast carries a close glyph instead of a check',
+        (WidgetTester tester) async {
+      await showOnLandscapePhone(tester, glyph: IconStickerGlyph.close);
+
+      expect(
+        tester
+            .widget<IconStickerGlyphIcon>(find.byType(IconStickerGlyphIcon))
+            .glyph,
+        IconStickerGlyph.close,
+      );
+
+      await tester.pump(kToastLifetime);
     });
   });
 }

@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
@@ -406,6 +408,30 @@ void main() {
       expect(controller.text, contains(photoLine(photoIdC)));
       expect(notePhotoLines(controller.text), hasLength(3));
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a slim tile reports a failed pick in a toast with a close glyph',
+        (WidgetTester tester) async {
+      await pumpPhotoRail(
+        tester,
+        text: twoPhotos,
+        maxHeight: photoRailCompactHeight - 1,
+        importer: FakePhotoImporter(error: denialError),
+      );
+
+      await tester.tap(find.byKey(photoRailAddKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text(denialError.message), findsOneWidget);
+      expect(
+        tester
+            .widget<IconStickerGlyphIcon>(find.byType(IconStickerGlyphIcon))
+            .glyph,
+        IconStickerGlyph.close,
+      );
+
+      await tester.pump(kToastLifetime);
     });
 
     testWidgets('controls are disabled with nothing selected until a photo is',

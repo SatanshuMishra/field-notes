@@ -162,13 +162,18 @@ void dismissTransientToast() {
   }
 }
 
-void showTransientToast(BuildContext context, String message) {
+void showTransientToast(
+  BuildContext context,
+  String message, {
+  IconStickerGlyph glyph = IconStickerGlyph.check,
+}) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   dismissTransientToast();
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder: (BuildContext overlayContext) => _TransientToastLayer(
       message: message,
+      glyph: glyph,
       onFinished: () {
         if (identical(_activeTransientToast, entry)) {
           dismissTransientToast();
@@ -181,9 +186,14 @@ void showTransientToast(BuildContext context, String message) {
 }
 
 class _TransientToastLayer extends StatefulWidget {
-  const _TransientToastLayer({required this.message, required this.onFinished});
+  const _TransientToastLayer({
+    required this.message,
+    required this.glyph,
+    required this.onFinished,
+  });
 
   final String message;
+  final IconStickerGlyph glyph;
   final VoidCallback onFinished;
 
   @override
@@ -230,7 +240,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
     return Positioned(
       left: 0,
       right: 0,
-      bottom: _transientBottomInset,
+      bottom: _transientBottomInset + MediaQuery.viewInsetsOf(context).bottom,
       child: IgnorePointer(
         child: Center(
           child: FadeTransition(
@@ -244,8 +254,8 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
               child: Toast(
                 message: widget.message,
                 variant: ToastVariant.dark,
-                icon: const IconStickerGlyphIcon(
-                  glyph: IconStickerGlyph.check,
+                icon: IconStickerGlyphIcon(
+                  glyph: widget.glyph,
                   color: Palette.toastInk,
                   size: _darkIconSize,
                 ),
