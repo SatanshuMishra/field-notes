@@ -12,6 +12,22 @@ Uint8List wideFixturePng() => base64Decode(
       'BAQEBAQEBAQEBAQEBAQErhb+AyTiX+wqigAAAABJRU5ErkJggg==',
     );
 
+Uint8List orientedFixtureJpeg() => base64Decode(
+      '/9j/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAYAAAAAAAD/wAARCAAYADADASIAAhEBAxEB'
+      '/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQID'
+      'AAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RF'
+      'RkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKz'
+      'tLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEB'
+      'AQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdh'
+      'cRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldY'
+      'WVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPE'
+      'xcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwATExMTExMgExMgLSAgIC09LS0t'
+      'LT1NPT09PT1NXU1NTU1NTV1dXV1dXV1dcHBwcHBwg4ODg4OTk5OTk5OTk5OT/9sAQwEXGBglIyVA'
+      'IyNAmWhVaJmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZ'
+      '/90ABAAD/9oADAMBAAIRAxEAPwDOooorkPoQqhV+qFetln2/l+p5mYfZ+f6BRRRXrHmH/9DOooor'
+      'kPoQqhV+qFetln2/l+p5mYfZ+f6BRRRXrHmH/9k=',
+    );
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -57,6 +73,15 @@ void main() {
         readPhotoIntrinsics(Uint8List(0)),
         throwsA(isA<PhotoPickException>()),
       );
+    });
+
+    test('reports the displayed size of a photo with EXIF orientation',
+        () async {
+      final PhotoIntrinsics intrinsics =
+          await readPhotoIntrinsics(orientedFixtureJpeg());
+
+      expect(intrinsics.width, 24);
+      expect(intrinsics.height, 48);
     });
   });
 

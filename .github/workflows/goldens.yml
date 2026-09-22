@@ -7,6 +7,11 @@ on:
       - 'assets/fonts/**'
       - 'pubspec.yaml'
       - '.github/workflows/goldens.yml'
+      - 'lib/domain/notes/**'
+      - 'lib/features/notes/**'
+      - 'lib/features/entry_cards/notes/**'
+      - 'lib/features/entry_cards/media/**'
+      - 'test/features/notes/support/**'
 
 jobs:
   goldens:
