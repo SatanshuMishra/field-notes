@@ -184,44 +184,6 @@ Widget notesHarness(Widget child, {double width = 600}) {
   );
 }
 
-Future<TextEditingController> pumpPhotoRail(
-  WidgetTester tester, {
-  String text = '',
-  TextSelection? selection,
-  double width = 600,
-  double measure = 560,
-  double maxHeight = double.infinity,
-  MediaResolver? resolver,
-  FakePhotoImporter? importer,
-  FocusNode? editorFocusNode,
-  Size surface = const Size(1000, 900),
-}) async {
-  tester.view.physicalSize = surface;
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
-  final TextEditingController controller = TextEditingController(text: text);
-  if (selection != null) {
-    controller.selection = selection;
-  }
-  addTearDown(controller.dispose);
-  final FakePhotoImporter pick = importer ?? FakePhotoImporter();
-  await tester.pumpWidget(
-    notesHarness(
-      PhotoRail(
-        controller: controller,
-        onPickPhotos: pick.call,
-        measure: measure,
-        maxHeight: maxHeight,
-        resolver: resolver,
-        editorFocusNode: editorFocusNode,
-      ),
-      width: width,
-    ),
-  );
-  await tester.pump();
-  return controller;
-}
-
 TextSelection caretAt(int offset) => TextSelection.collapsed(offset: offset);
 
 void expectTargetAtLeast48(WidgetTester tester, Finder finder) {
