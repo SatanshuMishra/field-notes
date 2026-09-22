@@ -410,6 +410,7 @@ class _PhotoWrapBlockState extends State<PhotoWrapBlock> {
           key: photoWrapFigureKey,
           width: plan.width,
           child: NotePhotoFigure(
+            key: ValueKey<String>(widget.photo.reference),
             block: widget.photo,
             resolver: widget.resolver,
             media: media,
