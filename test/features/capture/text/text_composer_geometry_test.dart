@@ -5,8 +5,10 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/text/composer_footer.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/features/notes/photos/photo_import.dart';
 
 const Size _desktopSurface = Size(1280, 900);
 const Size _landscapePhoneSurface = Size(844, 390);
@@ -22,11 +24,15 @@ Finder _panel() => find
     )
     .first;
 
+Future<List<String>> _noPhotos() async => const <String>[];
+
 Future<void> _pumpComposer(
   WidgetTester tester, {
   required Size surface,
   double keyboardInset = 0,
   bool responsive = false,
+  String initialText = '',
+  PhotoImporter? onAddPhoto,
 }) async {
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
@@ -38,7 +44,12 @@ Future<void> _pumpComposer(
       home: DialogHost(
         child: ComposerShell(
           responsive: responsive,
-          child: TextComposerSheet(onSave: (String _) {}, onCancel: () {}),
+          child: TextComposerSheet(
+            onSave: (String _) {},
+            onCancel: () {},
+            initialText: initialText,
+            onAddPhoto: onAddPhoto,
+          ),
         ),
       ),
     ),
@@ -171,28 +182,47 @@ void main() {
       });
     }
 
-    for (final ({double panel, double surface}) size
-        in <({double panel, double surface})>[
-      (panel: 800, surface: 440),
-      (panel: 1200, surface: 660),
-      (panel: 1600, surface: 760),
-    ]) {
-      testWidgets(
-          'the writing surface is ${size.surface} tall with ${size.panel} of '
-          'height inside the panel', (WidgetTester tester) async {
+    testWidgets('the writing surface follows the window at 68 percent',
+        (WidgetTester tester) async {
+      for (final ({double panel, double surface}) size
+          in <({double panel, double surface})>[
+        (panel: 800, surface: 544),
+        (panel: 1200, surface: 816),
+        (panel: 1600, surface: 860),
+      ]) {
         await _pumpComposer(
           tester,
           surface: Size(1280, size.panel + 2 * composerPanelBorderWidth),
           responsive: true,
+          onAddPhoto: _noPhotos,
         );
 
         expect(tester.takeException(), isNull);
         expect(
           tester.getSize(find.byKey(composerWritingSurfaceKey)).height,
           closeTo(size.surface, 0.01),
+          reason: 'a panel ${size.panel} tall',
         );
-      });
-    }
+      }
+    });
+
+    testWidgets('the composer leaves no dead band under its footer',
+        (WidgetTester tester) async {
+      await _pumpComposer(
+        tester,
+        surface: _desktopSurface,
+        responsive: true,
+        initialText: List<String>.filled(80, 'a long line of note').join('\n'),
+        onAddPhoto: _noPhotos,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(_panel()).bottom -
+            tester.getRect(find.byType(ComposerFooter)).bottom,
+        lessThanOrEqualTo(_lineHeight),
+      );
+    });
 
     testWidgets(
       'the page margins shrink with the surface instead of the editor',
