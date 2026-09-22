@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/domain/notes/notes.dart';
 import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/cards/note_preview.dart';
 import 'package:field_notes/features/entry_cards/notes/note_document.dart';
@@ -162,6 +163,69 @@ void main() {
 
       expect(preview.text, isNot(contains('](photo/')));
       expect(preview.text, _paragraphs[0].trimRight());
+      expect(preview.wasTruncated, isTrue);
+    });
+
+    test('a note that opens with a photo past the limit previews it whole', () {
+      final String photo = photoLineFor(
+        reference: _photoReferences[0],
+        caption: 'the porch at dusk, ' * 4,
+      );
+      final String source = '$photo\n\nsome prose after it.';
+
+      final NotePreviewText preview = notePreviewOf(source, limit: 30);
+
+      expect(preview.text, photo);
+      expect(preview.wasTruncated, isTrue);
+    });
+
+    test('prose that cannot break before the limit ends on the block before',
+        () {
+      final NotePreviewText preview =
+          notePreviewOf('aaa\n\nbbbbbbbbbbbbbb', limit: 10);
+
+      expect(preview.text, 'aaa');
+      expect(preview.wasTruncated, isTrue);
+    });
+
+    test('dropping a later photo keeps the blocks around it apart', () {
+      final String source = <String>[
+        _paragraphs[0],
+        _photoLineAt(0),
+        _paragraphs[1],
+        _photoLineAt(1),
+        _paragraphs[2],
+      ].join('\n');
+
+      final NotePreviewText preview = notePreviewOf(source);
+
+      expect(preview.text, isNot(contains(_photoReferences[1])));
+      expect(parseNote(preview.text).whereType<ParagraphBlock>(), hasLength(3));
+      expect(preview.wasTruncated, isTrue);
+    });
+
+    test('a photo straight after the kept photo ends the preview', () {
+      final String source = <String>[
+        _photoLineAt(0),
+        _photoLineAt(1),
+        _paragraphs[0],
+      ].join('\n');
+
+      final NotePreviewText preview = notePreviewOf(source);
+
+      expect(preview.text, _photoLineAt(0));
+      expect(preview.wasTruncated, isTrue);
+    });
+
+    test('a photo that fits keeps its place even when its blank lines do not',
+        () {
+      final String photo = _photoLineAt(0);
+      final String source = 'ab\n\n$photo\n\nzz';
+
+      final NotePreviewText preview =
+          notePreviewOf(source, limit: 4 + photo.length);
+
+      expect(preview.text, 'ab\n\n$photo');
       expect(preview.wasTruncated, isTrue);
     });
   });

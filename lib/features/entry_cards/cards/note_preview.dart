@@ -36,34 +36,56 @@ NotePreviewText notePreviewOf(
 NotePreviewText _blockPrefixOf(String source, int limit) {
   final StringBuffer kept = StringBuffer();
   bool keptPhoto = false;
-  bool droppedPhoto = false;
+  bool lastKeptIsPhoto = false;
+  bool dropped = false;
   for (final NoteBlock block in parseNote(source)) {
-    final bool isPhoto = block is PhotoBlock;
-    if (isPhoto && keptPhoto) {
-      droppedPhoto = true;
-      continue;
+    if (kept.length >= limit) {
+      return (text: kept.toString(), wasTruncated: true);
     }
     final String slice = block.sourceRange.sliceOf(source);
     final int budget = limit - kept.length;
-    if (slice.length > budget) {
-      if (!isPhoto) {
-        kept.write(slice.substring(0, _cutAtOrBefore(slice, budget)));
+    if (block is PhotoBlock) {
+      if (keptPhoto) {
+        if (lastKeptIsPhoto) {
+          return (text: kept.toString(), wasTruncated: true);
+        }
+        if (!kept.toString().endsWith('\n\n')) {
+          kept.write('\n');
+        }
+        dropped = true;
+        continue;
       }
-      return (text: kept.toString(), wasTruncated: true);
+      if (slice.trimRight().length > budget && kept.isNotEmpty) {
+        return (text: kept.toString(), wasTruncated: true);
+      }
+      kept.write(slice);
+      keptPhoto = true;
+      lastKeptIsPhoto = true;
+      continue;
     }
-    kept.write(slice);
-    keptPhoto = keptPhoto || isPhoto;
+    if (slice.length <= budget) {
+      kept.write(slice);
+      lastKeptIsPhoto = false;
+      continue;
+    }
+    final int? cut = _lastBreakAtOrBefore(slice, budget);
+    if (cut != null) {
+      kept.write(slice.substring(0, cut));
+    } else if (kept.isEmpty) {
+      kept.write(slice.substring(0, _withoutLoneSurrogate(slice, budget)));
+    }
+    return (text: kept.toString(), wasTruncated: true);
   }
-  return (text: kept.toString(), wasTruncated: droppedPhoto);
+  return (text: kept.toString(), wasTruncated: dropped);
 }
 
-int _cutAtOrBefore(String source, int limit) {
+int? _lastBreakAtOrBefore(String source, int limit) {
   for (int index = limit; index >= 0; index--) {
     if (_isBreak(source.codeUnitAt(index))) {
       return index;
     }
   }
-  return _withoutLoneSurrogate(source, limit);
+  return null;
 }
 
 int _withoutLoneSurrogate(String source, int end) {

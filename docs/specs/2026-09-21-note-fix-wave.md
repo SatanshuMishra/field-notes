@@ -111,6 +111,17 @@ exist rather than adding one.
 - A photo that sits past the cut is not pulled forward. R2 anchors a photo to its place in the text, and
   a preview that relocates it would contradict the read view it previews. A long note whose first photo
   is deep in the text shows text only in the feed.
+- Refined after review of the first build:
+  - A note that opens with a photo keeps that photo whole even when its line passes the limit, rather
+    than cutting it or showing nothing.
+  - A photo straight after the kept photo ends the preview, so the kept photo stacks in the preview
+    exactly as it stacks in the read view.
+  - A dropped later photo leaves a line break in its place, so the blocks around it stay separate
+    instead of merging into one paragraph.
+  - Whether a photo fits is judged by its line, not by the blank lines after it.
+  - A prose block with no break before the limit is left out when something is already kept, which is
+    exactly today's result. For notes with no photo the preview is identical to today's, confirmed by
+    a differential check over 5,000 random notes.
 
 ### W5 — Placement validity.
 
