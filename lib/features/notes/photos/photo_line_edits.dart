@@ -21,7 +21,7 @@ final class NotePhotoLine {
     required this.lineStart,
     required this.lineEnd,
     required this.breakEnd,
-    this.wrapsParagraph = false,
+    this.paragraph,
   });
 
   final int ordinal;
@@ -29,7 +29,9 @@ final class NotePhotoLine {
   final int lineStart;
   final int lineEnd;
   final int breakEnd;
-  final bool wrapsParagraph;
+  final SourceRange? paragraph;
+
+  bool get wrapsParagraph => paragraph != null;
 
   String get reference => block.reference;
 
@@ -49,7 +51,7 @@ final class NotePhotoLine {
           lineStart == other.lineStart &&
           lineEnd == other.lineEnd &&
           breakEnd == other.breakEnd &&
-          wrapsParagraph == other.wrapsParagraph &&
+          paragraph == other.paragraph &&
           block.sourceRange == other.block.sourceRange;
 
   @override
@@ -58,7 +60,7 @@ final class NotePhotoLine {
         lineStart,
         lineEnd,
         breakEnd,
-        wrapsParagraph,
+        paragraph,
         block.sourceRange,
       );
 
@@ -105,8 +107,10 @@ List<NotePhotoLine> notePhotoLines(String source) {
         lineStart: start,
         lineEnd: end,
         breakEnd: end < source.length ? end + 1 : end,
-        wrapsParagraph: index + 1 < blocks.length &&
-            blocks[index + 1] is ParagraphBlock,
+        paragraph: index + 1 < blocks.length &&
+                blocks[index + 1] is ParagraphBlock
+            ? _paragraphContent(source, blocks[index + 1].sourceRange)
+            : null,
       ),
     );
   }
@@ -464,6 +468,14 @@ TextSelection _mapSelection(
     baseOffset: map(selection.baseOffset).clamp(0, length),
     extentOffset: map(selection.extentOffset).clamp(0, length),
   );
+}
+
+SourceRange? _paragraphContent(String source, SourceRange range) {
+  int end = math.min(range.end, source.length);
+  while (end > range.start && _isBlank(source, end - 1, end)) {
+    end--;
+  }
+  return end > range.start ? SourceRange(range.start, end) : null;
 }
 
 int _lineStartAt(String text, int offset) =>

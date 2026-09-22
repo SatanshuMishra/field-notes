@@ -5,4 +5,5 @@ export 'markdown_style_controller.dart';
 export 'note_editor.dart';
 export 'photo_bands.dart';
 export 'photo_line_keys.dart';
+export 'photo_wrap.dart';
 export 'single_field_note_editor.dart';

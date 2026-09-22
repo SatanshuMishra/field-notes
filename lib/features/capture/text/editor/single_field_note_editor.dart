@@ -44,6 +44,8 @@ Widget noteTextField(
   List<TextInputFormatter>? inputFormatters,
   StrutStyle? strutStyle,
   BoxHeightStyle? selectionHeightStyle,
+  bool scrolls = true,
+  VoidCallback? onTap,
 }) {
   return Material(
     type: MaterialType.transparency,
@@ -51,7 +53,10 @@ Widget noteTextField(
       controller: config.controller,
       focusNode: config.focusNode,
       undoController: config.undoController,
-      scrollController: config.scrollController,
+      scrollController: scrolls ? config.scrollController : null,
+      scrollPhysics:
+          scrolls ? null : const NeverScrollableScrollPhysics(),
+      onTap: onTap,
       style: unmergedFromTheMaterialTextTheme(config.style),
       strutStyle: strutStyle,
       selectionHeightStyle: selectionHeightStyle,
@@ -62,7 +67,7 @@ Widget noteTextField(
       textCapitalization: TextCapitalization.sentences,
       minLines: null,
       maxLines: null,
-      expands: true,
+      expands: scrolls,
       selectionControls: _handlesFor(Theme.of(context).platform),
       contextMenuBuilder: _contextMenu,
       magnifierConfiguration: TextMagnifier.adaptiveMagnifierConfiguration,
