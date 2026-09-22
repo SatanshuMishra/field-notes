@@ -140,12 +140,14 @@ class NotePhotoFigure extends StatelessWidget {
     required this.resolver,
     required this.media,
     required this.plan,
+    this.onDecodeError,
   });
 
   final PhotoBlock block;
   final MediaResolver resolver;
   final ResolvedMedia? media;
   final PhotoPlan plan;
+  final VoidCallback? onDecodeError;
 
   @override
   Widget build(BuildContext context) {
@@ -217,6 +219,7 @@ class NotePhotoFigure extends StatelessWidget {
       mediaId: block.reference,
       errorLabel: notePhotoUnavailableLabel,
       borderRadius: BorderRadius.zero,
+      onDecodeError: onDecodeError,
     );
   }
 

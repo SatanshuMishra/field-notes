@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -534,6 +535,94 @@ void main() {
 
       _expectStacked(tester);
       expect(find.byKey(notePhotoUnavailableKey), findsOneWidget);
+    });
+
+    testWidgets('a photo whose file cannot be decoded falls back to StackedPhoto',
+        (WidgetTester tester) async {
+      final Directory root =
+          Directory.systemTemp.createTempSync('fn_photo_wrap_corrupt');
+      addTearDown(() => root.deleteSync(recursive: true));
+      final File corrupt = File('${root.path}/corrupt.jpg')
+        ..writeAsBytesSync(<int>[1, 2, 3]);
+      final FakeNoteMediaResolver resolver = FakeNoteMediaResolver(
+        <String, ResolvedMedia>{
+          prefixOf(photoIdA): ResolvedMedia.available(
+            blob: photoBlob(photoIdA, width: 1200, height: 900),
+            file: corrupt,
+          ),
+        },
+      )..memoizeAll();
+
+      await tester.runAsync(
+        () => _pumpNote(tester, _note(), resolver: resolver),
+      );
+
+      expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(photoWrapFloatKey), findsNothing);
+      expect(find.byType(StackedPhoto), findsOneWidget);
+      expect(find.text(_prosePlain), findsOneWidget);
+    });
+
+    testWidgets(
+        'a decode failure left by the previous photo does not stack the next',
+        (WidgetTester tester) async {
+      final Directory root =
+          Directory.systemTemp.createTempSync('fn_photo_wrap_swap');
+      addTearDown(() => root.deleteSync(recursive: true));
+      final File corrupt = File('${root.path}/corrupt.jpg')
+        ..writeAsBytesSync(<int>[1, 2, 3]);
+      final File decodable = File('${root.path}/decodable.png')
+        ..writeAsBytesSync(<int>[
+          137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0,
+          0, 8, 0, 0, 0, 6, 8, 2, 0, 0, 0, 113, 103, 72, 172, 0, 0, 0, 17, 73,
+          68, 65, 84, 120, 156, 99, 56, 145, 98, 132, 21, 49, 12, 164, 4, 0,
+          87, 179, 65, 161, 177, 232, 96, 55, 0, 0, 0, 0, 73, 69, 78, 68, 174,
+          66, 96, 130,
+        ]);
+      final FakeNoteMediaResolver resolver = FakeNoteMediaResolver(
+        <String, ResolvedMedia>{
+          prefixOf(photoIdA): ResolvedMedia.available(
+            blob: photoBlob(photoIdA, width: 1200, height: 900),
+            file: corrupt,
+          ),
+          prefixOf(photoIdB): ResolvedMedia.available(
+            blob: photoBlob(photoIdB, width: 1200, height: 900),
+            file: decodable,
+          ),
+        },
+      )..memoizeAll();
+
+      await tester.runAsync(
+        () => _pumpNote(tester, _note(), resolver: resolver),
+      );
+      expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)),
+      );
+
+      await tester.runAsync(
+        () => _pumpNote(
+          tester,
+          '${photoLine(photoIdB)}\n$_prose',
+          resolver: resolver,
+        ),
+      );
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+      expect(find.byType(StackedPhoto), findsNothing);
     });
 
     testWidgets('the render budget turns every float into a stack',

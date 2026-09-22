@@ -142,5 +142,45 @@ void main() {
       final Image image = tester.widget<Image>(find.byType(Image));
       expect((image.image as ResizeImage).width, 320);
     });
+
+    testWidgets('a file that cannot be decoded reports through onDecodeError', (
+      WidgetTester tester,
+    ) async {
+      final File corrupt = File('${root.path}/corrupt.png')
+        ..writeAsBytesSync(<int>[1, 2, 3]);
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'p1',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'p1', relPath: 'corrupt.png'),
+            file: corrupt,
+          ),
+        )
+        ..memoize('p1');
+      int failures = 0;
+
+      await tester.runAsync(
+        () => tester.pumpWidget(
+          cardHarness(
+            MediaImage(
+              resolver: resolver,
+              mediaId: 'p1',
+              errorLabel: 'Photo',
+              width: 72,
+              height: 72,
+              onDecodeError: () => failures++,
+            ),
+          ),
+        ),
+      );
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(failures, greaterThanOrEqualTo(1));
+      expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
+    });
   });
 }

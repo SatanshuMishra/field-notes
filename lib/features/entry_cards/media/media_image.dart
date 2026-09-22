@@ -18,6 +18,7 @@ class MediaImage extends StatelessWidget {
     this.borderRadius = Shapes.cardBorderRadius,
     this.fit = BoxFit.cover,
     this.border,
+    this.onDecodeError,
   });
 
   final MediaResolver resolver;
@@ -28,6 +29,7 @@ class MediaImage extends StatelessWidget {
   final BorderRadius borderRadius;
   final BoxFit fit;
   final BoxBorder? border;
+  final VoidCallback? onDecodeError;
 
   @override
   Widget build(BuildContext context) {
@@ -102,9 +104,19 @@ class MediaImage extends StatelessWidget {
         BuildContext context,
         Object error,
         StackTrace? stackTrace,
-      ) =>
-          _corrupt(),
+      ) {
+        _reportDecodeError();
+        return _corrupt();
+      },
     );
+  }
+
+  void _reportDecodeError() {
+    final VoidCallback? callback = onDecodeError;
+    if (callback == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) => callback());
   }
 
   Widget _neutral() => NeutralMediaPlaceholder(
