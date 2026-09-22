@@ -16,8 +16,6 @@ import 'package:field_notes/state/state.dart';
 import 'mood_banner.dart';
 import 'mood_picker.dart';
 
-const Duration _kToastLifetime = Duration(milliseconds: 1900);
-
 const double _kConfirmMaxWidth = 420;
 
 class MoodBannerForDate extends ConsumerStatefulWidget {
@@ -36,14 +34,6 @@ class MoodBannerForDate extends ConsumerStatefulWidget {
 
 class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
   String? _writeError;
-  String? _toastMessage;
-  Timer? _toastTimer;
-
-  @override
-  void dispose() {
-    _toastTimer?.cancel();
-    super.dispose();
-  }
 
   bool get _isToday => widget.date == ref.read(todayDateProvider);
 
@@ -71,17 +61,8 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
   }
 
   void _showPlantedToast(Mood chosen) {
-    _toastTimer?.cancel();
-    setState(() {
-      _writeError = null;
-      _toastMessage = 'Mood planted · ${chosen.flower.label}';
-    });
-    _toastTimer = Timer(_kToastLifetime, () {
-      if (!mounted) {
-        return;
-      }
-      setState(() => _toastMessage = null);
-    });
+    setState(() => _writeError = null);
+    showTransientToast(context, 'Mood planted · ${chosen.flower.label}');
   }
 
   Future<void> _changeMood(Mood? current) async {
@@ -142,10 +123,6 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
             _writeError!,
             style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
           ),
-        ],
-        if (_toastMessage != null) ...<Widget>[
-          const SizedBox(height: 8),
-          Toast(message: _toastMessage!),
         ],
       ],
     );

@@ -1,3 +1,4 @@
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -74,7 +75,35 @@ void main() {
     await tester.pump();
     expect(saved, <String>['a good day']);
 
-    await tester.pump(composerToastLifetime);
+    await tester.pump(kToastLifetime);
+  });
+
+  testWidgets('the empty-save guard floats over the app, not under the editor',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(
+      captureHarness(
+        TextComposerSheet(onSave: (String _) {}, onCancel: () {}),
+      ),
+    );
+    final Size sheet = tester.getSize(find.byType(TextComposerSheet));
+
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+
+    expect(find.text(emptySaveGuardMessage), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(TextComposerSheet),
+        matching: find.text(emptySaveGuardMessage),
+      ),
+      findsNothing,
+    );
+    expect(tester.getSize(find.byType(TextComposerSheet)), sheet);
+
+    await tester.pump(kToastLifetime);
+    await tester.pump();
+
+    expect(find.text(emptySaveGuardMessage), findsNothing);
   });
 
   testWidgets('a successful save closes the composer with the new entry id',

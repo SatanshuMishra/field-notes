@@ -1,6 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import '../motion/motion_tokens.dart';
 import '../tokens/tokens.dart';
@@ -9,13 +10,46 @@ import '../widgets/widgets.dart';
 
 enum ToastVariant { light, dark }
 
+enum ToastScale { phone, desktop }
+
 const Duration kToastLifetime = Duration(milliseconds: 1900);
 
-const double _darkPadHorizontal = 16;
-const double _darkPadVertical = 8;
-const double _darkGap = 7;
-const double _darkIconSize = 13;
-const double _transientBottomInset = 84;
+typedef _DarkMetrics = ({
+  double padHorizontal,
+  double padVertical,
+  double radius,
+  double gap,
+  double iconSize,
+  TextStyle style,
+  double bottomInset,
+});
+
+const _DarkMetrics _phoneMetrics = (
+  padHorizontal: 16,
+  padVertical: 8,
+  radius: Shapes.radiusXl,
+  gap: 7,
+  iconSize: 13,
+  style: TypographyTokens.caption11Sans,
+  bottomInset: 84,
+);
+
+const _DarkMetrics _desktopMetrics = (
+  padHorizontal: 20,
+  padVertical: 10,
+  radius: 22,
+  gap: 8,
+  iconSize: 15,
+  style: TypographyTokens.toastSans,
+  bottomInset: 22,
+);
+
+_DarkMetrics _metricsFor(ToastScale scale) =>
+    scale == ToastScale.desktop ? _desktopMetrics : _phoneMetrics;
+
+ToastScale toastScaleFor(TargetPlatform platform) =>
+    platform == TargetPlatform.macOS ? ToastScale.desktop : ToastScale.phone;
+
 const double _transientKeyboardGap = 16;
 const double _riseOffset = 10;
 const double toastActionMinTarget = 48;
@@ -41,6 +75,7 @@ class Toast extends StatelessWidget {
     this.icon,
     this.surface = Palette.cardBright,
     this.variant = ToastVariant.light,
+    this.scale = ToastScale.phone,
     this.action,
   });
 
@@ -48,6 +83,7 @@ class Toast extends StatelessWidget {
   final Widget? icon;
   final Color surface;
   final ToastVariant variant;
+  final ToastScale scale;
   final ToastAction? action;
 
   @override
@@ -81,30 +117,29 @@ class Toast extends StatelessWidget {
 
   Widget _dark() {
     final Widget? icon = this.icon;
+    final _DarkMetrics metrics = _metricsFor(scale);
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Palette.ink,
-        borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusXl)),
+        borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
         boxShadow: Shadows.toastLift,
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: _darkPadHorizontal,
-          vertical: _darkPadVertical,
+        padding: EdgeInsets.symmetric(
+          horizontal: metrics.padHorizontal,
+          vertical: metrics.padVertical,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             if (icon != null) ...<Widget>[
               icon,
-              const SizedBox(width: _darkGap),
+              SizedBox(width: metrics.gap),
             ],
             Flexible(
               child: Text(
                 message,
-                style: TypographyTokens.caption11Sans.copyWith(
-                  color: Palette.toastInk,
-                ),
+                style: metrics.style.copyWith(color: Palette.toastInk),
               ),
             ),
           ],
@@ -171,12 +206,14 @@ void showTransientToast(
   IconStickerGlyph glyph = IconStickerGlyph.check,
 }) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
+  final ToastScale scale = toastScaleFor(Theme.of(context).platform);
   dismissTransientToast();
   late final OverlayEntry entry;
   entry = OverlayEntry(
     builder: (BuildContext overlayContext) => _TransientToastLayer(
       message: message,
       glyph: glyph,
+      scale: scale,
       onFinished: () {
         if (identical(_activeTransientToast, entry)) {
           dismissTransientToast();
@@ -192,11 +229,13 @@ class _TransientToastLayer extends StatefulWidget {
   const _TransientToastLayer({
     required this.message,
     required this.glyph,
+    required this.scale,
     required this.onFinished,
   });
 
   final String message;
   final IconStickerGlyph glyph;
+  final ToastScale scale;
   final VoidCallback onFinished;
 
   @override
@@ -207,44 +246,36 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
-    duration: kToastLifetime,
+    duration: Motion.toastRise,
   );
   late final Animation<double> _rise = CurvedAnimation(
     parent: _controller,
-    curve: Interval(
-      0,
-      Motion.toastRise.inMilliseconds / kToastLifetime.inMilliseconds,
-      curve: Motion.fadeCurve,
-    ),
+    curve: Motion.fadeCurve,
   );
+  late final Timer _lifetime;
 
   @override
   void initState() {
     super.initState();
-    _controller.addStatusListener(_onStatus);
+    _lifetime = Timer(kToastLifetime, widget.onFinished);
     _controller.forward();
-  }
-
-  void _onStatus(AnimationStatus status) {
-    if (status == AnimationStatus.completed) {
-      widget.onFinished();
-    }
   }
 
   @override
   void dispose() {
-    _controller.removeStatusListener(_onStatus);
+    _lifetime.cancel();
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final _DarkMetrics metrics = _metricsFor(widget.scale);
     return Positioned(
       left: 0,
       right: 0,
       bottom: math.max(
-        _transientBottomInset,
+        metrics.bottomInset,
         MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
       ),
       child: IgnorePointer(
@@ -260,10 +291,11 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
               child: Toast(
                 message: widget.message,
                 variant: ToastVariant.dark,
+                scale: widget.scale,
                 icon: IconStickerGlyphIcon(
                   glyph: widget.glyph,
                   color: Palette.toastInk,
-                  size: _darkIconSize,
+                  size: metrics.iconSize,
                 ),
               ),
             ),
