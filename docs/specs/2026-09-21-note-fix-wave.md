@@ -67,6 +67,23 @@ draft the feature exists to recover. The session key made that recovery impossib
 - At most one new-note draft exists per date, so orphans are bounded.
 - The edit route keeps keying by entry id, unchanged.
 - Delete all removes the drafts folder (F10), so deleting the journal cannot resurface a note.
+- The draft controller stops drafting the moment its composer commits to closing: on Discard, on a
+  clean close, and after a successful save, before the route pops. Without this, the app going to the
+  background during the 220 ms close animation flushed the text and wrote the draft back, so a
+  discarded or already-saved note reappeared in the next composer. Found in review of the first build;
+  the edit route had the same hole before this wave.
+- `IntegrationSandbox` redirects the drafts folder into its temporary root, so an integration test can
+  never read or delete the real journal's drafts.
+- A close requested while the stored draft is still loading counts as dirty, so it asks "Discard
+  this note?" at once and the draft finishes loading behind the question. Without this, closing in the
+  instant before a crash-left draft loaded counted as a clean close and deleted the draft unseen. An
+  earlier version waited for the load before deciding; review showed a Save tapped during that wait
+  closed the confirm instead of the composer, so the close never waits.
+- A draft that finishes loading after the composer was discarded is not applied to the editor.
+- Discard closes the composer at once, without waiting for a slow draft read; the draft's deletion is
+  queued and runs even after the composer is gone, so nothing is left to reappear.
+- Save is ignored while the stored draft is still loading, so a crash-left draft can never be deleted
+  by a save before it has been shown.
 
 ### W2 — A backdrop tap routes through the close request. Resolves `u3`'s internal inconsistency.
 
@@ -234,6 +251,10 @@ The items file carries each Step's full brief. This section is the reviewer's su
 - Acceptance: a seeded `new-2026-07-19` draft is restored behind the chip when the composer opens for
   `2026-07-19`, and not for `2026-07-20`; the save hands `draftKey: 'new-2026-07-19'` to the writer; a
   new-note key is a valid draft key; delete all removes every draft file.
+- Added after review: `NoteDraftController` seals on `discard()` and on `seal()`, which both connectors
+  await after a successful save; a sealed controller ignores edits and lifecycle flushes. Regression
+  tests cover Discard and save on the new-note route and save on the edit route, each followed by the
+  app going inactive mid-close.
 
 ### `composer-scrim-close` — F9
 

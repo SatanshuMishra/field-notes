@@ -13,10 +13,12 @@ class JournalDeleteAllService implements DeleteAllService {
   JournalDeleteAllService({
     required db.AppDatabase database,
     required this._mediaRoot,
+    this._draftsRoot,
   }) : _db = database;
 
   final db.AppDatabase _db;
   final Directory _mediaRoot;
+  final Directory? _draftsRoot;
 
   @override
   Future<DeleteAllResult> deleteAll() async {
@@ -30,6 +32,7 @@ class JournalDeleteAllService implements DeleteAllService {
       });
 
       final deletedFiles = await _wipeMediaFiles();
+      await _wipeDrafts();
 
       return DeleteAllResult(
         deletedDays: counts.days,
@@ -64,5 +67,12 @@ class JournalDeleteAllService implements DeleteAllService {
     }
 
     return deleted;
+  }
+
+  Future<void> _wipeDrafts() async {
+    final draftsRoot = _draftsRoot;
+    if (draftsRoot != null && await draftsRoot.exists()) {
+      await draftsRoot.delete(recursive: true);
+    }
   }
 }

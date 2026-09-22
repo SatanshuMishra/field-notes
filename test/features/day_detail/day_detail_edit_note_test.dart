@@ -113,6 +113,103 @@ void main() {
   });
 
   testWidgets(
+      'closing the editor before its stored draft has loaded keeps the draft',
+      (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'entry-1': 'a better day, half typed'},
+      readDelay: const Duration(milliseconds: 150),
+    );
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? _) {},
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pumpAndSettle();
+
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(drafts.drafts, <String, String>{'entry-1': 'a better day, half typed'});
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+
+    expect(_editorText(tester), 'a better day, half typed');
+  });
+
+  testWidgets(
+      'a close while a slow draft read is pending asks first and keeps the '
+      'draft', (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'entry-1': 'a better day, half typed'},
+      readDelay: const Duration(seconds: 3),
+    );
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? _) {},
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pump();
+
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+
+    expect(_editorText(tester), 'a better day, half typed');
+    expect(drafts.drafts, <String, String>{'entry-1': 'a better day, half typed'});
+  });
+
+  testWidgets(
+      'a saved edit leaves no draft when the app goes inactive during the '
+      'close', (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeDraftStore drafts = FakeDraftStore();
+    Object? result = 'unset';
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: FakeJournalRepository(entries: <Entry>[entry]),
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? value) => result = value,
+      ),
+    );
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'a better day');
+    await tester.pump(draftIdleDebounceForTest);
+    await tester.enterText(find.byType(EditableText), 'a better day still');
+
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pump(const Duration(milliseconds: 50));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    expect(result, isTrue);
+    expect(drafts.drafts, isEmpty);
+  });
+
+  testWidgets(
       'keeps the editor, the typed text and the draft when the write fails',
       (WidgetTester tester) async {
     final Entry entry = _noteEntry();
@@ -243,6 +340,50 @@ void main() {
     expect(repository.noteSaves, isEmpty);
     expect(result, isFalse);
     expect(find.text('Edit note'), findsNothing);
+  });
+
+  testWidgets('a scrim tap on a dirty editor asks first and keeps the edit',
+      (WidgetTester tester) async {
+    final Entry entry = _noteEntry();
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[entry],
+    );
+    final FakeDraftStore drafts = FakeDraftStore();
+    Object? result = 'unset';
+
+    await tester.pumpWidget(
+      _editApp(
+        repository: repository,
+        entry: entry,
+        drafts: drafts,
+        onResult: (bool? value) => result = value,
+      ),
+    );
+
+    await tester.tap(find.text('open editor'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'a better day');
+    await tester.pump(draftIdleDebounceForTest);
+
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(find.text('Edit note'), findsOneWidget);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(find.text('Edit note'), findsOneWidget);
+    expect(_editorText(tester), 'a better day');
+    expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
+    expect(repository.noteSaves, isEmpty);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(composerDiscardKey));
+    await tester.pumpAndSettle();
   });
 
   testWidgets(

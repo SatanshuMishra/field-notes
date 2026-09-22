@@ -2,6 +2,7 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
+import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/notes/notes.dart';
@@ -185,7 +186,281 @@ void main() {
     expect(find.byType(TextComposerSheet), findsNothing);
   });
 
-  testWidgets('a barrier tap no longer dismisses the composer',
+  testWidgets(
+      'a new-note draft left by a crash is restored when the composer reopens '
+      'for the same date', (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'left by a crash',
+    );
+    expect(find.byType(DraftRestoredChip), findsOneWidget);
+
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    expect(writer.saves.single.draftKey, 'new-2026-07-19');
+    expect(writer.saves.single.source, 'left by a crash');
+    expect(result, 'entry-1');
+  });
+
+  testWidgets('a new-note draft for another date stays out of this composer',
+      (WidgetTester tester) async {
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-20': 'another day'},
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      isEmpty,
+    );
+    expect(find.byType(DraftRestoredChip), findsNothing);
+    expect(drafts.drafts, <String, String>{'new-2026-07-20': 'another day'});
+
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+
+    expect(result, isNull);
+    expect(drafts.drafts, <String, String>{'new-2026-07-20': 'another day'});
+  });
+
+  testWidgets(
+      'closing before a stored draft has loaded keeps it and asks first',
+      (WidgetTester tester) async {
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+      readDelay: const Duration(milliseconds: 150),
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pump();
+
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+
+    await tester.pumpAndSettle();
+
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(result, 'unset');
+    expect(drafts.drafts, <String, String>{'new-2026-07-19': 'left by a crash'});
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'left by a crash',
+    );
+    expect(find.byType(DraftRestoredChip), findsOneWidget);
+  });
+
+  testWidgets(
+      'tapping Save while the discard confirm is up saves nothing and keeps '
+      'the note', (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+      readDelay: const Duration(milliseconds: 300),
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pump();
+    await tester.tap(find.text('Save'), warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(writer.saves, isEmpty);
+    expect(result, 'unset');
+    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'left by a crash',
+    );
+    expect(drafts.drafts, <String, String>{'new-2026-07-19': 'left by a crash'});
+  });
+
+  testWidgets('Discard during a slow draft read closes the composer at once',
+      (WidgetTester tester) async {
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+      readDelay: const Duration(milliseconds: 600),
+    );
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(composerCloseKey), warnIfMissed: false);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.tap(find.byKey(composerDiscardKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+
+    expect(find.byType(TextComposerSheet), findsNothing);
+    expect(result, isNull);
+
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    expect(drafts.drafts, isEmpty);
+  });
+
+  testWidgets('Save tapped while a draft is still loading saves nothing',
+      (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore(
+      drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+      readDelay: const Duration(milliseconds: 600),
+    );
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? _) {},
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.enterText(find.byType(EditableText), 'typed fast');
+    await tester.tap(find.text('Save'));
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+
+    expect(writer.saves, isEmpty);
+    expect(find.byType(TextComposerSheet), findsOneWidget);
+    expect(drafts.drafts, <String, String>{'new-2026-07-19': 'left by a crash'});
+  });
+
+  testWidgets(
+      'a discarded new-note draft stays deleted when the app goes inactive '
+      'during the close', (WidgetTester tester) async {
+    final FakeDraftStore drafts = FakeDraftStore();
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        drafts: drafts,
+        onResult: (String? _) {},
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'throw this away');
+    await tester.pump(draftIdleDebounceForTest);
+    expect(drafts.drafts, <String, String>{'new-2026-07-19': 'throw this away'});
+
+    await tester.tap(find.byKey(composerCloseKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(composerDiscardKey));
+    await tester.pump(const Duration(milliseconds: 50));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    expect(drafts.drafts, isEmpty);
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DraftRestoredChip), findsNothing);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      isEmpty,
+    );
+  });
+
+  testWidgets(
+      'a saved new note leaves no draft when the app goes inactive during the '
+      'close', (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    final FakeDraftStore drafts = FakeDraftStore();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(
+        writer: writer,
+        drafts: drafts,
+        onResult: (String? id) => result = id,
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(EditableText), 'saved once');
+    await tester.pump(draftIdleDebounceForTest);
+    await tester.enterText(find.byType(EditableText), 'saved once more');
+
+    await tester.tap(find.text('Save'));
+    await tester.pump(const Duration(milliseconds: 50));
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+    expect(result, 'entry-1');
+    expect(writer.saves.single.source, 'saved once more');
+    expect(drafts.drafts, isEmpty);
+  });
+
+  testWidgets('a scrim tap on a dirty composer asks first and keeps the note',
       (WidgetTester tester) async {
     final FakeNoteWriter writer = FakeNoteWriter();
     String? result = 'unset';
@@ -203,13 +478,44 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(TextComposerSheet), findsOneWidget);
+    expect(find.text(composerDiscardTitle), findsOneWidget);
+    expect(result, 'unset');
+
+    await tester.tap(find.byKey(composerKeepEditingKey));
+    await tester.pumpAndSettle();
+
     expect(find.text(composerDiscardTitle), findsNothing);
+    expect(find.byType(TextComposerSheet), findsOneWidget);
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).controller.text,
+      'still here',
+    );
     expect(result, 'unset');
 
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(composerDiscardKey));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('a scrim tap on a clean composer closes it',
+      (WidgetTester tester) async {
+    final FakeNoteWriter writer = FakeNoteWriter();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _composerApp(writer: writer, onResult: (String? id) => result = id),
+    );
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(4, 4));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextComposerSheet), findsNothing);
+    expect(find.text(composerDiscardTitle), findsNothing);
+    expect(result, isNull);
+    expect(writer.saves, isEmpty);
   });
 
   group('photos in the new-note composer', () {

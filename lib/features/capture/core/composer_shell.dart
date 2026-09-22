@@ -25,16 +25,18 @@ class ComposerShell extends StatelessWidget {
     super.key,
     required this.child,
     this.maxWidth = composerPanelWidth,
+    this.closeOnScrimTap = false,
   });
 
   final Widget child;
   final double maxWidth;
+  final bool closeOnScrimTap;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: <Widget>[
-        const Positioned.fill(child: _ComposerScrim()),
+        Positioned.fill(child: _scrim(context)),
         Padding(
           padding: EdgeInsets.only(
             bottom: MediaQuery.viewInsetsOf(context).bottom,
@@ -55,6 +57,18 @@ class ComposerShell extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _scrim(BuildContext context) {
+    if (!closeOnScrimTap) {
+      return const _ComposerScrim();
+    }
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () => Navigator.maybePop(context),
+      child: const _ComposerScrim(),
     );
   }
 

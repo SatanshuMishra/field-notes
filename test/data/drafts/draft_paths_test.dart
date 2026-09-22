@@ -19,6 +19,25 @@ void main() {
     expect(isDraftKey(minted.toUpperCase()), isTrue);
   });
 
+  test('a new-note key for a calendar date is a valid draft key', () {
+    expect(newNoteDraftKey('2026-09-21'), 'new-2026-09-21');
+    expect(isDraftKey('new-2026-09-21'), isTrue);
+    expect(relPathForDraft('new-2026-09-21'), 'drafts/new-2026-09-21.md');
+    const List<String> notDates = <String>[
+      '2026-9-21',
+      '../2026-09-21',
+      '2026-09-21/x',
+      '',
+    ];
+    for (final String candidate in notDates) {
+      expect(
+        () => newNoteDraftKey(candidate),
+        throwsArgumentError,
+        reason: candidate,
+      );
+    }
+  });
+
   test('keys with separators, traversal or the wrong length are rejected', () {
     const List<String> rejected = <String>[
       '',

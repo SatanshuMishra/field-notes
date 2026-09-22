@@ -64,6 +64,9 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
   }
 
   Future<void> _save(String text) async {
+    if (_draft.isRestoring) {
+      return;
+    }
     setState(() {
       _isSaving = true;
       _errorMessage = null;
@@ -81,6 +84,10 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
         _isSaving = false;
         _errorMessage = outcome.errorMessage ?? editNoteFailedMessage;
       });
+      return;
+    }
+    await _draft.seal();
+    if (!mounted) {
       return;
     }
     Navigator.of(context).pop(true);
@@ -107,7 +114,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
       listenable: _draft,
       builder: (BuildContext context, Widget? child) {
         return ComposerGuard(
-          isDirty: () => _draft.isDirty,
+          isDirty: () => _draft.isDirty || _draft.isRestoring,
           locked: _isSaving,
           onDiscard: _draft.discard,
           popResult: false,
@@ -149,6 +156,7 @@ Future<bool?> showEditNote(
     ) {
       return DialogHost(
         child: ComposerShell(
+          closeOnScrimTap: true,
           child: EditNoteConnector(entry: entry, date: date),
         ),
       );

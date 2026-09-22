@@ -66,11 +66,9 @@ class _ComposerGuardState extends State<ComposerGuard> {
   }
 
   Future<void> _discardAndPop() async {
-    await widget.onDiscard();
-    if (!mounted) {
-      return;
-    }
+    final Future<void> discarding = widget.onDiscard();
     Navigator.of(context).pop(widget.popResult);
+    await discarding;
   }
 
   void _onPopInvoked(bool didPop, Object? result) {

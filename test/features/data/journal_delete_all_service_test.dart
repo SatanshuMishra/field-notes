@@ -121,4 +121,22 @@ void main() {
     expect(result.deletedMediaBlobs, 0);
     expect(result.deletedFiles, 0);
   });
+
+  test('delete all removes every draft file', () async {
+    final draftsRoot = Directory(p.join(root.path, 'drafts'));
+    await draftsRoot.create(recursive: true);
+    await File(p.join(draftsRoot.path, 'new-2026-09-21.md'))
+        .writeAsString('a new note', flush: true);
+    await File(p.join(draftsRoot.path, '01arz3ndektsv4rrffq69g5fav.md'))
+        .writeAsString('an edit', flush: true);
+    final withDrafts = JournalDeleteAllService(
+      database: db,
+      mediaRoot: root,
+      draftsRoot: draftsRoot,
+    );
+
+    await withDrafts.deleteAll();
+
+    expect(await draftsRoot.exists(), isFalse);
+  });
 }

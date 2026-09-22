@@ -205,4 +205,70 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
     expect(store.drafts[_key], 'second');
   });
+
+  testWidgets('a discarded draft is not written back when the app goes inactive',
+      (WidgetTester tester) async {
+    attach();
+    text.text = 'throw this away';
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(store.drafts[_key], 'throw this away');
+
+    await controller.discard();
+    await _sendLifecycle(tester, AppLifecycleState.inactive);
+    await tester.pump();
+    text.text = 'throw this away too';
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(store.drafts, isEmpty);
+    expect(store.writes, hasLength(1));
+  });
+
+  testWidgets('a sealed draft leaves no file and is not written back',
+      (WidgetTester tester) async {
+    attach();
+    text.text = 'saved once';
+    await tester.pump(const Duration(milliseconds: 400));
+    text.text = 'saved once more';
+
+    await controller.seal();
+    await _sendLifecycle(tester, AppLifecycleState.inactive);
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(store.drafts, isEmpty);
+    expect(store.writes, hasLength(1));
+  });
+
+  testWidgets('a draft that finishes loading after a discard is not applied',
+      (WidgetTester tester) async {
+    store = FakeDraftStore(
+      drafts: <String, String>{_key: 'left by a crash'},
+      readDelay: const Duration(milliseconds: 150),
+    );
+    attach();
+
+    final Future<String?> restoring = controller.restore();
+    expect(controller.isRestoring, isTrue);
+    final Future<void> discarding = controller.discard();
+    await tester.pump(const Duration(milliseconds: 200));
+    await discarding;
+
+    expect(await restoring, isNull);
+    expect(controller.isRestoring, isFalse);
+    expect(text.text, isEmpty);
+    expect(controller.restoredDraft, isFalse);
+    expect(store.drafts, isEmpty);
+  });
+
+  testWidgets('discarding a restored draft keeps drafting what comes next',
+      (WidgetTester tester) async {
+    store.drafts[_key] = 'half typed';
+    attach(initialSource: 'saved');
+    await controller.restore();
+    await controller.discardRestored();
+
+    text.text = 'saved, then edited again';
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(store.drafts[_key], 'saved, then edited again');
+  });
 }
