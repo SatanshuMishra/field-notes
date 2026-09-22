@@ -1084,14 +1084,17 @@ class RenderPhotoCanvas extends RenderBox
       );
       data.offset = rect?.topLeft ?? Offset.zero;
     }
-    _layOutToolbar(children, figures, width);
-    size = constraints.constrain(Size(width, math.max(_minHeight, bottom)));
+    final double content = math.max(_minHeight, bottom);
+    _layOutToolbar(children, figures, width, content);
+
+    size = constraints.constrain(Size(width, content));
   }
 
   void _layOutToolbar(
     List<RenderBox> children,
     List<Rect> figures,
     double width,
+    double content,
   ) {
     final int index = _placements.length + (_caret == null ? 1 : 2);
     if (index >= children.length) {
@@ -1109,30 +1112,37 @@ class RenderPhotoCanvas extends RenderBox
       data.offset = Offset.zero;
       return;
     }
-    final bool room =
-        figure.top - spot!.viewportTop >= bar.size.height + photoToolbarGap;
-    final double wanted = room
-        ? figure.top - photoToolbarGap - bar.size.height
-        : figure.bottom + photoToolbarGap;
     data.offset = Offset(
       (figure.center.dx - bar.size.width / 2)
           .clamp(0.0, math.max(0.0, width - bar.size.width)),
-      _withinViewport(wanted, spot.viewportTop, bar.size.height),
+      _besideFigure(
+        figure,
+        spot!.viewportTop.clamp(0.0, math.max(0.0, content - _minHeight)),
+        bar.size.height,
+      ),
     );
   }
 
-  double _withinViewport(double wanted, double viewportTop, double height) {
+  double _besideFigure(Rect figure, double viewportTop, double height) {
+    final double above = figure.top - photoToolbarGap - height;
     if (_minHeight <= 0) {
-      return wanted;
+      return above;
     }
-    final double highest = viewportTop + photoToolbarGap;
-    final double lowest =
-        viewportTop + _minHeight - height - photoToolbarGap;
-    if (lowest <= highest) {
-      return highest;
+    final double top = viewportTop + photoToolbarGap;
+    final double bottom = viewportTop + _minHeight - photoToolbarGap - height;
+    if (bottom <= top) {
+      return top;
     }
-    return wanted.clamp(highest, lowest);
+    if (above >= top) {
+      return math.min(above, bottom);
+    }
+    final double below = figure.bottom + photoToolbarGap;
+    if (below <= bottom) {
+      return math.max(below, top);
+    }
+    return math.max(top, math.min(figure.top + photoToolbarGap, bottom));
   }
+
 
   Rect? _caretRect(RenderEditable? editable) {
     final CaretSpot? spot = _caret;

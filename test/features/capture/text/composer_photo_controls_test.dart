@@ -123,14 +123,6 @@ Future<void> _selectPhoto(WidgetTester tester, [int ordinal = 0]) async {
   await tester.pump();
 }
 
-Future<void> _openMore(WidgetTester tester) async {
-  if (find.byKey(photoToolbarMoveUpKey).evaluate().isNotEmpty) {
-    return;
-  }
-  await tester.tap(find.byKey(photoToolbarMoreKey));
-  await tester.pump();
-}
-
 Future<TextEditingController> _pumpFooter(
   WidgetTester tester, {
   String text = '',
@@ -431,7 +423,6 @@ void main() {
         await _pumpEditor(tester, note, importer: importer);
 
     await _selectPhoto(tester, 1);
-    await _openMore(tester);
     await tester.tap(find.byKey(photoToolbarMoveUpKey));
     await tester.pump();
 
@@ -444,14 +435,12 @@ void main() {
     expect(notePhotoLines(harness.controller.text)[1].placement.size,
         PhotoSize.large);
 
-    await _openMore(tester);
     await tester.tap(find.byKey(photoToolbarMoveDownKey));
     await tester.pump();
 
     expect(harness.controller.text, note);
     expect(notePhotoLines(harness.controller.text)[1].caption, 'harbour');
 
-    await _openMore(tester);
     await tester.tap(find.byKey(photoToolbarReplaceKey));
     await tester.pumpAndSettle();
 
@@ -473,7 +462,6 @@ void main() {
     await _pumpEditor(tester, 'one\n$a\ntwo\n$b\nthree');
 
     await _selectPhoto(tester);
-    await _openMore(tester);
 
     final List<Finder> controls = <Finder>[
       for (final PhotoSize size in PhotoSize.values)
@@ -482,7 +470,6 @@ void main() {
         find.byKey(photoToolbarSideKey(side)),
       find.byKey(photoToolbarCaptionKey),
       find.byKey(photoToolbarRemoveKey),
-      find.byKey(photoToolbarMoreKey),
       find.byKey(photoToolbarMoveUpKey),
       find.byKey(photoToolbarMoveDownKey),
       find.byKey(photoToolbarReplaceKey),

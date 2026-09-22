@@ -53,7 +53,7 @@ photo, and when the selection leaves the photo line.
 | Placement | Two glyph buttons, a picture with text lines beside it, one per side, the current one marked. Hidden when `canFloatAt` says the measure cannot float, exactly as the rail hid it. Dimmed and inert at Full size. Centre joins this group in phase 3 |
 | Caption | One button. It opens the in-place caption editor (§3) |
 | Remove | A trash glyph. It removes the photo line and shows the Undo toast (§5) |
-| More | A `…` button opening a row of three glyphs, an arrow up, an arrow down and a swap, each disabled when the edit cannot apply |
+| Move | Three glyphs in the bar itself, an arrow up, an arrow down and a swap, each disabled when the edit cannot apply. They are the first thing dropped when the bar has no room for them, and nothing else is |
 
 The toolbar carries no preview panel. The owner ruled on 2026-09-22, after seeing it on macOS, that a
 picture of the placement is unnecessary beside the placement buttons, whose own glyphs show a picture
@@ -70,11 +70,15 @@ radius, controls 28pt square with 7pt of side padding and 2pt between them, labe
 this over the taller bar with 48pt targets on 2026-09-22: a mouse does not need 48pt, and the phone pass
 gives touch its own size.
 
-**Where it sits.** Centred over the top edge of the photo, `photoToolbarGap` above it. When there is not
-enough room above, it flips below the photo. It never leaves the writing surface, horizontally or
-vertically: it is clamped to the surface's edges, so a photo at the bottom of the view keeps its whole
-toolbar on screen rather than having it cut off. It is not shown at all while the photo's band is
-scrolled out of the writing surface.
+**Where it sits.** Centred over the top edge of the photo, `photoToolbarGap` above it. When there is no
+room above it inside the view, it flips below the photo; when there is no room there either, which is a
+photo taller than the view, it rides on the photo's own top edge. It stays on the picture in every case
+and never leaves the writing surface, so it is neither cut off nor left floating over unrelated text. It
+is not shown at all while the photo's band is scrolled out of the writing surface.
+
+The owner reported the drift on 2026-09-22: an earlier rule clamped the bar into the view without
+keeping it on the photo, so a tall photo left the bar stranded over the text above it, and a scroll
+position whose offset the scroller had not yet clamped left it hanging past the foot of the view.
 
 **Keyboard and screen readers.** Every control is focusable and operable with Enter or Space. Tab from
 the selected photo enters the toolbar and walks it left to right; Esc anywhere in the toolbar deselects

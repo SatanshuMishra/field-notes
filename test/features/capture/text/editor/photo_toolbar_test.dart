@@ -9,6 +9,7 @@ import 'package:field_notes/features/notes/notes.dart';
 import '../../../notes/support/notes_harness.dart';
 
 const double _tolerance = 0.5;
+const double _barReach = 60;
 
 class _Harness {
   _Harness(String text) : controller = MarkdownStyleController(text: text);
@@ -127,13 +128,11 @@ void main() {
     expect(harness.focusNode.hasFocus, isTrue);
   });
 
-  testWidgets('the More menu shows a glyph for each move it offers',
+  testWidgets('the move controls carry a glyph each, not a word',
       (WidgetTester tester) async {
     await _pump(tester, 'one\n$a\ntwo\n$b\nthree');
 
     await _selectPhoto(tester);
-    await tester.tap(find.byKey(photoToolbarMoreKey));
-    await tester.pump();
 
     for (final Key key in <Key>[
       photoToolbarMoveUpKey,
@@ -233,16 +232,12 @@ void main() {
     expect(harness.controller.text, 'one\n$a\ntwo\n$rewritten\nthree');
   });
 
-  testWidgets('the More menu reaches Move up, Move down and Replace',
+  testWidgets('the move controls sit in the bar itself',
       (WidgetTester tester) async {
     final String note = 'one\n$a\ntwo\n$b\nthree';
     final _Harness harness = await _pump(tester, note);
 
     await _selectPhoto(tester, 1);
-    expect(find.byKey(photoToolbarMoveUpKey), findsNothing);
-
-    await tester.tap(find.byKey(photoToolbarMoreKey));
-    await tester.pump();
 
     expect(find.byKey(photoToolbarMoveUpKey), findsOneWidget);
     expect(find.byKey(photoToolbarMoveDownKey), findsOneWidget);
@@ -252,6 +247,24 @@ void main() {
     await tester.pump();
 
     expect(harness.controller.text, 'one\n$a\n$b\ntwo\nthree');
+  });
+
+  testWidgets('a narrow bar drops the move controls and keeps the rest',
+      (WidgetTester tester) async {
+    await _pump(tester, 'one\n$a\ntwo', width: 250);
+
+    await _selectPhoto(tester);
+
+    expect(find.byKey(photoToolbarKey), findsOneWidget);
+    expect(find.byKey(photoToolbarMoveUpKey), findsNothing);
+    expect(find.byKey(photoToolbarMoveDownKey), findsNothing);
+    expect(find.byKey(photoToolbarReplaceKey), findsNothing);
+    expect(find.byKey(photoToolbarCaptionKey), findsOneWidget);
+    expect(find.byKey(photoToolbarRemoveKey), findsOneWidget);
+    expect(
+      tester.getSize(find.byKey(photoToolbarKey)).width,
+      lessThanOrEqualTo(250),
+    );
   });
 
   testWidgets('it flips below the photo when there is no room above',
@@ -291,6 +304,44 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(photoToolbarKey), findsNothing);
+  });
+
+  testWidgets('a photo taller than the view keeps its bar on the picture',
+      (WidgetTester tester) async {
+    final String full = photoLine(photoIdA, size: PhotoSize.full);
+    final String note = '${_lines(12)}\n$full\n${_lines(12)}';
+    final _Harness harness = await _pump(tester, note, height: 400);
+    harness.focusNode.requestFocus();
+    harness.controller.selection =
+        TextSelection.collapsed(offset: note.indexOf(full) + 4);
+    await tester.pump();
+
+    final Rect editor = tester.getRect(find.byType(InPlacePhotoEditor));
+    for (final double offset in <double>[0, 120, 240, 360, 480, 600]) {
+      harness.scroll.jumpTo(
+        offset.clamp(0.0, harness.scroll.position.maxScrollExtent),
+      );
+      await tester.pump();
+      if (find.byKey(photoToolbarKey).evaluate().isEmpty) {
+        continue;
+      }
+      final Rect bar = _bar(tester);
+      final Rect figure = _figure(tester);
+      expect(bar.top, greaterThanOrEqualTo(editor.top - _tolerance),
+          reason: 'at $offset');
+      expect(bar.bottom, lessThanOrEqualTo(editor.bottom + _tolerance),
+          reason: 'at $offset');
+      expect(
+        bar.top,
+        greaterThanOrEqualTo(figure.top - _barReach),
+        reason: 'the bar drifted above the photo at $offset',
+      );
+      expect(
+        bar.bottom,
+        lessThanOrEqualTo(figure.bottom + _barReach),
+        reason: 'the bar drifted below the photo at $offset',
+      );
+    }
   });
 
   testWidgets('Tab walks its controls and Esc returns to the writing surface',
