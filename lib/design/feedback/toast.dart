@@ -243,14 +243,12 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
     return Positioned(
       left: 0,
       right: 0,
-      top: MediaQuery.paddingOf(context).top,
       bottom: math.max(
         _transientBottomInset,
         MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
       ),
       child: IgnorePointer(
-        child: Align(
-          alignment: Alignment.bottomCenter,
+        child: Center(
           child: FadeTransition(
             opacity: _rise,
             child: AnimatedBuilder(

@@ -139,8 +139,9 @@ void main() {
       await tester.pump(kToastLifetime);
     });
 
-    testWidgets('stays below the status bar when the keyboard leaves little room',
-        (WidgetTester tester) async {
+    testWidgets(
+        'sits just above the keyboard without stacking the navigation inset '
+        'on it', (WidgetTester tester) async {
       await showOnLandscapePhone(
         tester,
         surface: const Size(844, 320),
@@ -148,8 +149,8 @@ void main() {
       );
 
       final Rect toast = tester.getRect(find.text('Could not add that photo'));
+      expect(toast.bottom, lessThanOrEqualTo(320 - 200 - 16));
       expect(toast.top, greaterThanOrEqualTo(24));
-      expect(toast.bottom, lessThanOrEqualTo(320 - 200));
 
       await tester.pump(kToastLifetime);
     });
