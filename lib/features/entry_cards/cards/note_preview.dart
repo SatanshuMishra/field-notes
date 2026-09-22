@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
+import '../../../domain/notes/notes.dart';
 import '../notes/note_document.dart';
 import 'note_body.dart';
 
@@ -20,16 +21,40 @@ NotePreviewText notePreviewOf(
   if (limit <= 0) {
     return (text: '', wasTruncated: source.isNotEmpty);
   }
-  if (source.length <= limit) {
+  final NotePreviewText prefix = _blockPrefixOf(source, limit);
+  if (!prefix.wasTruncated) {
     return (text: source, wasTruncated: false);
   }
-  final int cut = _cutAtOrBefore(source, limit);
-  final String head = source.substring(0, cut).trimRight();
+  final String head = prefix.text.trimRight();
   if (head.isEmpty) {
     return (text: source.substring(0, _withoutLoneSurrogate(source, limit)),
         wasTruncated: true);
   }
   return (text: head, wasTruncated: true);
+}
+
+NotePreviewText _blockPrefixOf(String source, int limit) {
+  final StringBuffer kept = StringBuffer();
+  bool keptPhoto = false;
+  bool droppedPhoto = false;
+  for (final NoteBlock block in parseNote(source)) {
+    final bool isPhoto = block is PhotoBlock;
+    if (isPhoto && keptPhoto) {
+      droppedPhoto = true;
+      continue;
+    }
+    final String slice = block.sourceRange.sliceOf(source);
+    final int budget = limit - kept.length;
+    if (slice.length > budget) {
+      if (!isPhoto) {
+        kept.write(slice.substring(0, _cutAtOrBefore(slice, budget)));
+      }
+      return (text: kept.toString(), wasTruncated: true);
+    }
+    kept.write(slice);
+    keptPhoto = keptPhoto || isPhoto;
+  }
+  return (text: kept.toString(), wasTruncated: droppedPhoto);
 }
 
 int _cutAtOrBefore(String source, int limit) {
