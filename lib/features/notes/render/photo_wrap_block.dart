@@ -206,11 +206,18 @@ class _PhotoWrapBlockState extends State<PhotoWrapBlock> {
       StaticSelectionContainerDelegate();
   Future<ResolvedMedia>? _resolving;
   _ParagraphSpan? _paragraphSpan;
+  bool _decodeFailed = false;
 
   @override
   void initState() {
     super.initState();
     PaintingBinding.instance.systemFonts.addListener(_systemFontsChanged);
+  }
+
+  void _onFigureDecodeError() {
+    if (mounted && !_decodeFailed) {
+      setState(() => _decodeFailed = true);
+    }
   }
 
   void _systemFontsChanged() {
@@ -224,6 +231,9 @@ class _PhotoWrapBlockState extends State<PhotoWrapBlock> {
   @override
   void didUpdateWidget(PhotoWrapBlock oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.photo.reference != widget.photo.reference) {
+      _decodeFailed = false;
+    }
     if (oldWidget.photo.reference != widget.photo.reference ||
         !identical(oldWidget.resolver, widget.resolver)) {
       _resolving = null;
@@ -241,7 +251,7 @@ class _PhotoWrapBlockState extends State<PhotoWrapBlock> {
 
   @override
   Widget build(BuildContext context) {
-    if (!NoteRenderBudget.floatEnabledOf(context)) {
+    if (!NoteRenderBudget.floatEnabledOf(context) || _decodeFailed) {
       return _stacked(context);
     }
     final ResolvedMedia? memo = widget.resolver.resolved(
@@ -404,6 +414,7 @@ class _PhotoWrapBlockState extends State<PhotoWrapBlock> {
             resolver: widget.resolver,
             media: media,
             plan: plan,
+            onDecodeError: _onFigureDecodeError,
           ),
         ),
       ),

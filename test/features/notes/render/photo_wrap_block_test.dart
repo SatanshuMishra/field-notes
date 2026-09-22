@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -534,6 +535,39 @@ void main() {
 
       _expectStacked(tester);
       expect(find.byKey(notePhotoUnavailableKey), findsOneWidget);
+    });
+
+    testWidgets('a photo whose file cannot be decoded falls back to StackedPhoto',
+        (WidgetTester tester) async {
+      final Directory root =
+          Directory.systemTemp.createTempSync('fn_photo_wrap_corrupt');
+      addTearDown(() => root.deleteSync(recursive: true));
+      final File corrupt = File('${root.path}/corrupt.jpg')
+        ..writeAsBytesSync(<int>[1, 2, 3]);
+      final FakeNoteMediaResolver resolver = FakeNoteMediaResolver(
+        <String, ResolvedMedia>{
+          prefixOf(photoIdA): ResolvedMedia.available(
+            blob: photoBlob(photoIdA, width: 1200, height: 900),
+            file: corrupt,
+          ),
+        },
+      )..memoizeAll();
+
+      await tester.runAsync(
+        () => _pumpNote(tester, _note(), resolver: resolver),
+      );
+
+      expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 200)),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.byKey(photoWrapFloatKey), findsNothing);
+      expect(find.byType(StackedPhoto), findsOneWidget);
+      expect(find.text(_prosePlain), findsOneWidget);
     });
 
     testWidgets('the render budget turns every float into a stack',
