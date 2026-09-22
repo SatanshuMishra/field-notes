@@ -94,6 +94,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
   late final UndoHistoryController _undoController;
+  final GlobalKey _footerKey = GlobalKey();
 
   @override
   void initState() {
@@ -131,7 +132,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         );
         final bool sidebar = resolveShellLayout(Theme.of(context).platform) ==
             ShellLayout.sidebar;
-        final Widget formatBar = _formatBar();
+        final Widget formatBar = _formatBar(
+          trailing: roomy ? null : _compactAdd(),
+        );
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -147,7 +150,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               child: _body(
                 surfaceCap: _surfaceCap(constraints.maxHeight),
                 formatBar: roomy && !sidebar ? formatBar : null,
-                footer: _footer(showHints: roomy),
+                footer: roomy ? _footer(showHints: true) : null,
               ),
             ),
           ],
@@ -167,16 +170,18 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget? _footer({required bool showHints}) {
+  Widget? _footer({required bool showHints, bool compact = false}) {
     final PhotoImporter? importer = widget.onAddPhoto;
     if (importer == null) {
       return null;
     }
     return ComposerFooter(
+      key: _footerKey,
       controller: _controller,
       onAddPhoto: importer,
       editorFocusNode: _focusNode,
       showHints: showHints,
+      compact: compact,
     );
   }
 
@@ -196,8 +201,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   double get _footerHeight =>
       widget.onAddPhoto == null ? 0 : composerFooterHeight;
 
-  Widget _formatBar() {
-    return FormatBar(controller: _controller, undoController: _undoController);
+  Widget? _compactAdd() => _footer(showHints: false, compact: true);
+
+  Widget _formatBar({Widget? trailing}) {
+    return FormatBar(
+      controller: _controller,
+      undoController: _undoController,
+      trailing: trailing,
+    );
   }
 
   Widget _header({required Widget middle, Widget? below}) {
@@ -395,6 +406,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         undoController: _undoController,
         scrollController: _scrollController,
         hintText: widget.hintText,
+        photoImporter: widget.onAddPhoto,
       ),
     );
   }

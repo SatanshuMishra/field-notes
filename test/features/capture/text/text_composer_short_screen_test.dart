@@ -103,22 +103,11 @@ void main() {
     expect(find.byKey(composerHintsKey), findsNothing);
     _expectInside(
       tester.getRect(find.byKey(composerAddPhotoKey)),
-      tester.getRect(find.byType(ComposerFooter)),
-    );
-    expect(
-      tester.getRect(find.byType(ComposerFooter)).top,
-      greaterThanOrEqualTo(
-        tester.getRect(find.byKey(composerWritingSurfaceKey)).bottom,
-      ),
+      tester.getRect(find.byType(FormatBar)),
     );
     expect(
       tester.getSize(find.byType(EditableText)).height,
-      greaterThanOrEqualTo(_lineHeight),
-    );
-    expect(
-      tester.getRect(find.byKey(composerPanelKey)).bottom -
-          tester.getRect(find.byType(ComposerFooter)).bottom,
-      lessThanOrEqualTo(_lineHeight),
+      greaterThanOrEqualTo(3 * _lineHeight),
     );
     expect(tester.takeException(), isNull);
   });
