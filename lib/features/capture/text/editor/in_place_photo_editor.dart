@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/media_blob.dart';
+import 'package:field_notes/domain/notes/notes.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/notes/notes.dart';
@@ -15,7 +17,9 @@ import 'package:field_notes/features/notes/notes.dart';
 import 'markdown_style_controller.dart';
 import 'note_editor.dart';
 import 'photo_bands.dart';
+import 'photo_caption_field.dart';
 import 'photo_line_keys.dart';
+import 'photo_toolbar.dart';
 import 'photo_wrap.dart';
 import 'single_field_note_editor.dart';
 
@@ -114,6 +118,7 @@ InPlaceLayout inPlaceLayoutFor(
   required TextScaler scaler,
   required PhotoWrapEnv env,
   MediaResolver? resolver,
+  int? captionOrdinal,
 }) {
   final List<NotePhotoLine> lines = notePhotoLines(text);
   if (lines.isEmpty) {
@@ -130,7 +135,15 @@ InPlaceLayout inPlaceLayoutFor(
   final Set<int> carriers = <int>{};
 
   for (final NotePhotoLine line in lines) {
-    InPlacePhoto photo = _inPlacePhoto(line, measure, em, scaler, resolver);
+    final bool captioning = line.ordinal == captionOrdinal;
+    InPlacePhoto photo = _inPlacePhoto(
+      line,
+      measure,
+      em,
+      scaler,
+      resolver,
+      captioning: captioning,
+    );
     PhotoWrap? wrap;
     if (!photo.plan.isStacked) {
       wrap = planPhotoWrap(
@@ -149,6 +162,7 @@ InPlaceLayout inPlaceLayoutFor(
           scaler,
           resolver,
           stacked: true,
+          captioning: captioning,
         );
       } else {
         photo = InPlacePhoto(
@@ -214,6 +228,7 @@ InPlacePhoto _inPlacePhoto(
   TextScaler scaler,
   MediaResolver? resolver, {
   bool stacked = false,
+  bool captioning = false,
 }) {
   final PhotoPlacement placement = line.placement;
   final ResolvedMedia? media = resolver?.resolved(line.reference);
@@ -233,9 +248,12 @@ InPlacePhoto _inPlacePhoto(
   );
   final double photoHeight =
       unavailable ? notePhotoUnavailableHeight : plan.height;
-  final double caption = line.caption.isEmpty
-      ? 0
-      : notePhotoCaptionGap + _captionHeight(line.caption, plan.width, scaler);
+  final double caption = captioning
+      ? notePhotoCaptionGap + photoCaptionLineHeight(scaler)
+      : line.caption.isEmpty
+          ? 0
+          : notePhotoCaptionGap +
+              _captionHeight(line.caption, plan.width, scaler);
   return InPlacePhoto(
     line: line,
     plan: plan,
@@ -308,6 +326,9 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
   String? _layoutText;
   PhotoWrapEnv? _layoutEnv;
   InPlaceLayout _layout = InPlaceLayout.empty;
+  List<Rect> _figures = const <Rect>[];
+  int? _layoutCaption;
+  int? _captionFor;
 
   NoteEditorConfig get _config => widget.config;
 
@@ -316,19 +337,36 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
   @override
   void initState() {
     super.initState();
-    _config.focusNode.addListener(_focusChanged);
+    _config.focusNode.addListener(_rebuild);
+    _config.scrollController.addListener(_scrolled);
   }
 
   @override
   void dispose() {
-    _config.focusNode.removeListener(_focusChanged);
+    _config.focusNode.removeListener(_rebuild);
+    _config.scrollController.removeListener(_scrolled);
+    dismissTransientToast();
     super.dispose();
   }
 
-  void _focusChanged() {
+  void _rebuild() {
     if (mounted) {
       setState(() {});
     }
+  }
+
+  void _scrolled() {
+    if (_selectedPhoto(_layout.photos, _controller.selection) != null) {
+      _rebuild();
+    }
+  }
+
+  void _figuresLaidOut(List<Rect> rects) {
+    if (_sameRects(_figures, rects)) {
+      return;
+    }
+    _figures = rects;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) => _rebuild());
   }
 
   @override
@@ -368,6 +406,10 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
             final PhotoCaretFix? fix = _fixFor(layout, value.selection);
             final bool hideCaret =
                 fix != null || _caretOnPhoto(layout.photos, value.selection);
+            final int? selected =
+                _selectedPhoto(layout.photos, value.selection);
+            final ToolbarSpot? toolbar =
+                selected == null ? null : _toolbarSpot(selected, viewport);
             return _PhotoKeys(
               controller: _controller,
               spacers: layout.patches.spacers,
@@ -391,13 +433,15 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
                               bottom: photo.topPad,
                             ),
                         ],
-                        caret: fix == null
+                        caret: fix == null || !_config.focusNode.hasFocus
                             ? null
                             : CaretSpot(
                                 offset: value.selection.baseOffset,
                                 dx: fix.dx,
                                 upstream: fix.upstream,
                               ),
+                        toolbar: toolbar,
+                        onFigures: _figuresLaidOut,
                         children: <Widget>[
                           PhotoBandScope(
                             patches: layout.patches,
@@ -428,12 +472,19 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
                                   value.selection,
                                 ),
                                 onTap: () => _select(photo.line.ordinal),
+                                caption: _captionFieldFor(photo, scaler),
                               ),
                             ),
                           if (fix != null && _config.focusNode.hasFocus)
                             _BlinkingCaret(
                               key: ValueKey<int>(value.selection.baseOffset),
                               color: _config.cursorColor,
+                            ),
+                          if (toolbar != null)
+                            _toolbarFor(
+                              layout.photos[toolbar.index],
+                              width,
+                              em,
                             ),
                         ],
                       ),
@@ -468,7 +519,9 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
     required PhotoWrapEnv env,
     MediaResolver? resolver,
   }) {
-    if (_layoutText == text && _layoutEnv == env) {
+    if (_layoutText == text &&
+        _layoutEnv == env &&
+        _layoutCaption == _captionFor) {
       return _layout;
     }
     _layout = inPlaceLayoutFor(
@@ -478,9 +531,11 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
       scaler: scaler,
       env: env,
       resolver: resolver,
+      captionOrdinal: _captionFor,
     );
     _layoutText = text;
     _layoutEnv = env;
+    _layoutCaption = _captionFor;
     return _layout;
   }
 
@@ -494,6 +549,114 @@ class _InPlacePhotoFieldState extends State<_InPlacePhotoField> {
       }
     }
     return null;
+  }
+
+  int? _selectedPhoto(List<InPlacePhoto> photos, TextSelection selection) {
+    int? only;
+    for (int i = 0; i < photos.length; i++) {
+      if (!selectionTouchesPhoto(photos[i].line, selection)) {
+        continue;
+      }
+      if (only != null) {
+        return null;
+      }
+      only = i;
+    }
+    return only;
+  }
+
+  ToolbarSpot? _toolbarSpot(int index, double viewport) {
+    if (index >= _figures.length) {
+      return null;
+    }
+    final Rect figure = _figures[index];
+    if (figure.isEmpty) {
+      return null;
+    }
+    final double top = _config.scrollController.hasClients
+        ? _config.scrollController.offset
+        : 0;
+    if (viewport > 0 &&
+        (figure.bottom + photoBandPadding <= top ||
+            figure.top - photoBandPadding >= top + viewport)) {
+      return null;
+    }
+    return ToolbarSpot(index: index, viewportTop: top);
+  }
+
+  Widget _toolbarFor(InPlacePhoto photo, double measure, double em) {
+    return TextFieldTapRegion(
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _onToolbarKey,
+        child: FocusTraversalGroup(
+          policy: WidgetOrderTraversalPolicy(),
+          child: PhotoToolbar(
+            controller: _controller,
+            line: photo.line,
+            measure: measure,
+            em: em,
+            media: photo.media,
+            importer: _config.photoImporter,
+            onCaption: () => _openCaption(photo.line.ordinal),
+            onRemove: _config.focusNode.requestFocus,
+          ),
+        ),
+      ),
+    );
+  }
+
+  KeyEventResult _onToolbarKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.escape) {
+      return KeyEventResult.ignored;
+    }
+    final TextEditingValue? next = deselectPhoto(_controller.value);
+    _config.focusNode.requestFocus();
+    if (next != null) {
+      _controller.value = next;
+    }
+    return KeyEventResult.handled;
+  }
+
+  Widget? _captionFieldFor(InPlacePhoto photo, TextScaler scaler) {
+    final int ordinal = photo.line.ordinal;
+    if (_captionFor != ordinal) {
+      return null;
+    }
+    return PhotoCaptionField(
+      caption: photo.line.caption,
+      width: photo.plan.width,
+      height: photoCaptionLineHeight(scaler),
+      onCommit: (String caption) => _commitCaption(ordinal, caption),
+      onCancel: _closeCaption,
+    );
+  }
+
+  void _openCaption(int ordinal) {
+    if (_captionFor != ordinal) {
+      setState(() => _captionFor = ordinal);
+    }
+  }
+
+  void _closeCaption() {
+    if (_captionFor != null) {
+      setState(() => _captionFor = null);
+    }
+    _config.focusNode.requestFocus();
+  }
+
+  void _commitCaption(int ordinal, String caption) {
+    final List<NotePhotoLine> lines = notePhotoLines(_controller.text);
+    if (ordinal < lines.length) {
+      _controller.value = setPhotoCaption(
+        _controller.value,
+        lines[ordinal],
+        caption,
+      );
+    }
+    _closeCaption();
   }
 
   bool _caretOnPhoto(List<InPlacePhoto> photos, TextSelection selection) {
@@ -710,17 +873,39 @@ class CaretSpot {
   int get hashCode => Object.hash(offset, dx, upstream);
 }
 
+@immutable
+class ToolbarSpot {
+  const ToolbarSpot({required this.index, required this.viewportTop});
+
+  final int index;
+  final double viewportTop;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ToolbarSpot &&
+          index == other.index &&
+          viewportTop == other.viewportTop;
+
+  @override
+  int get hashCode => Object.hash(index, viewportTop);
+}
+
 class _PhotoCanvas extends MultiChildRenderObjectWidget {
   const _PhotoCanvas({
     required this.placements,
     required this.minHeight,
     required this.caret,
+    required this.toolbar,
+    required this.onFigures,
     required super.children,
   });
 
   final List<PhotoSpot> placements;
   final double minHeight;
   final CaretSpot? caret;
+  final ToolbarSpot? toolbar;
+  final ValueChanged<List<Rect>> onFigures;
 
   @override
   RenderPhotoCanvas createRenderObject(BuildContext context) {
@@ -728,6 +913,8 @@ class _PhotoCanvas extends MultiChildRenderObjectWidget {
       spots: placements,
       height: minHeight,
       spot: caret,
+      bar: toolbar,
+      figures: onFigures,
     );
   }
 
@@ -739,8 +926,22 @@ class _PhotoCanvas extends MultiChildRenderObjectWidget {
     renderObject
       ..placements = placements
       ..minHeight = minHeight
-      ..caret = caret;
+      ..caret = caret
+      ..toolbar = toolbar
+      ..onFigures = onFigures;
   }
+}
+
+bool _sameRects(List<Rect> a, List<Rect> b) {
+  if (a.length != b.length) {
+    return false;
+  }
+  for (int i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
 }
 
 class _CanvasParentData extends ContainerBoxParentData<RenderBox> {
@@ -755,9 +956,13 @@ class RenderPhotoCanvas extends RenderBox
     required List<PhotoSpot> spots,
     required double height,
     required CaretSpot? spot,
+    required ToolbarSpot? bar,
+    required ValueChanged<List<Rect>> figures,
   })  : _placements = spots,
         _minHeight = height,
-        _caret = spot;
+        _caret = spot,
+        _toolbar = bar,
+        _onFigures = figures;
 
   static bool _sameSpots(List<PhotoSpot> a, List<PhotoSpot> b) {
     if (a.length != b.length) {
@@ -774,6 +979,18 @@ class RenderPhotoCanvas extends RenderBox
   List<PhotoSpot> _placements;
   double _minHeight;
   CaretSpot? _caret;
+  ToolbarSpot? _toolbar;
+  ValueChanged<List<Rect>> _onFigures;
+
+  set toolbar(ToolbarSpot? value) {
+    if (_toolbar == value) {
+      return;
+    }
+    _toolbar = value;
+    markNeedsLayout();
+  }
+
+  set onFigures(ValueChanged<List<Rect>> value) => _onFigures = value;
 
   set placements(List<PhotoSpot> value) {
     if (_sameSpots(_placements, value)) {
@@ -826,6 +1043,7 @@ class RenderPhotoCanvas extends RenderBox
     _data(field).offset = Offset.zero;
     final RenderEditable? editable = _editableUnder(field);
     double bottom = field.size.height;
+    final List<Rect> figures = <Rect>[];
     for (int i = 0; i < _placements.length; i++) {
       final int index = i + 1;
       if (index >= children.length) {
@@ -839,17 +1057,20 @@ class RenderPhotoCanvas extends RenderBox
       data.visible = top != null;
       if (top == null) {
         data.offset = Offset.zero;
+        figures.add(Rect.zero);
         continue;
       }
       data.offset = Offset(
         (width - placement.size.width) * placement.alignX,
         top + placement.top,
       );
+      figures.add(data.offset & placement.size);
       bottom = math.max(
         bottom,
         data.offset.dy + placement.size.height + placement.bottom,
       );
     }
+    _onFigures(figures);
     final int caretIndex = _placements.length + 1;
     if (caretIndex < children.length) {
       final RenderBox caretBox = children[caretIndex];
@@ -863,7 +1084,40 @@ class RenderPhotoCanvas extends RenderBox
       );
       data.offset = rect?.topLeft ?? Offset.zero;
     }
+    _layOutToolbar(children, figures, width);
     size = constraints.constrain(Size(width, math.max(_minHeight, bottom)));
+  }
+
+  void _layOutToolbar(
+    List<RenderBox> children,
+    List<Rect> figures,
+    double width,
+  ) {
+    final int index = _placements.length + (_caret == null ? 1 : 2);
+    if (index >= children.length) {
+      return;
+    }
+    final RenderBox bar = children[index];
+    bar.layout(BoxConstraints(maxWidth: width), parentUsesSize: true);
+    final _CanvasParentData data = _data(bar);
+    final ToolbarSpot? spot = _toolbar;
+    final Rect? figure = spot != null && spot.index < figures.length
+        ? figures[spot.index]
+        : null;
+    data.visible = figure != null && !figure.isEmpty;
+    if (figure == null || figure.isEmpty) {
+      data.offset = Offset.zero;
+      return;
+    }
+    final bool room =
+        figure.top - spot!.viewportTop >= bar.size.height + photoToolbarGap;
+    data.offset = Offset(
+      (figure.center.dx - bar.size.width / 2)
+          .clamp(0.0, math.max(0.0, width - bar.size.width)),
+      room
+          ? figure.top - photoToolbarGap - bar.size.height
+          : figure.bottom + photoToolbarGap,
+    );
   }
 
   Rect? _caretRect(RenderEditable? editable) {
@@ -1058,12 +1312,14 @@ class _InPlaceFigure extends StatelessWidget {
     required this.resolver,
     required this.selected,
     required this.onTap,
+    required this.caption,
   });
 
   final InPlacePhoto photo;
   final MediaResolver? resolver;
   final bool selected;
   final VoidCallback onTap;
+  final Widget? caption;
 
   @override
   Widget build(BuildContext context) {
@@ -1077,7 +1333,7 @@ class _InPlaceFigure extends StatelessWidget {
           child: Stack(
             clipBehavior: Clip.none,
             children: <Widget>[
-              _figure(),
+              if (caption == null) _figure(photo.line.block) else _captioning(),
               if (selected)
                 Positioned(
                   left: -_ringInset,
@@ -1108,7 +1364,21 @@ class _InPlaceFigure extends StatelessWidget {
     );
   }
 
-  Widget _figure() {
+  Widget _captioning() {
+    return SizedBox(
+      width: photo.plan.width,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _figure(_uncaptioned(photo.line.block)),
+          const SizedBox(height: notePhotoCaptionGap),
+          caption!,
+        ],
+      ),
+    );
+  }
+
+  Widget _figure(PhotoBlock block) {
     final MediaResolver? resolver = this.resolver;
     if (resolver == null) {
       return SizedBox(
@@ -1120,10 +1390,21 @@ class _InPlaceFigure extends StatelessWidget {
       );
     }
     return NotePhotoFigure(
-      block: photo.line.block,
+      block: block,
       resolver: resolver,
       media: photo.media,
       plan: photo.plan,
     );
   }
 }
+
+PhotoBlock _uncaptioned(PhotoBlock block) => PhotoBlock(
+      alt: '',
+      reference: block.reference,
+      attributes: block.attributes,
+      altRange: block.altRange,
+      referenceRange: block.referenceRange,
+      attributesRange: block.attributesRange,
+      sourceRange: block.sourceRange,
+      markerRanges: block.markerRanges,
+    );
