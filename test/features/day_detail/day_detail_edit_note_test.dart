@@ -11,9 +11,10 @@ import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart';
+import 'package:field_notes/features/capture/text/composer_footer.dart';
+import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
-import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../../data/journal/journal_test_db.dart'
@@ -499,7 +500,7 @@ void main() {
   });
 
   group('photos in the edit-note route', () {
-    testWidgets('the editor mounts the same photo rail',
+    testWidgets('the editor mounts the same composer footer',
         (WidgetTester tester) async {
       final Entry entry = _noteEntry();
 
@@ -517,11 +518,11 @@ void main() {
       await tester.tap(find.text('open editor'));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(photoRailAddKey), findsOneWidget);
+      expect(find.byKey(composerAddPhotoKey), findsOneWidget);
       expect(find.byType(EditableText), findsOneWidget);
     });
 
-    testWidgets('an existing photo line shows as a rail thumbnail',
+    testWidgets('an existing photo line shows in place',
         (WidgetTester tester) async {
       final Entry entry = entryOf(
         type: EntryType.text,
@@ -544,8 +545,8 @@ void main() {
       await tester.tap(find.text('open editor'));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(photoRailThumbKey(0)), findsOneWidget);
-      expect(find.byKey(photoRailThumbKey(1)), findsNothing);
+      expect(find.byKey(inPlacePhotoKey(0)), findsOneWidget);
+      expect(find.byKey(inPlacePhotoKey(1)), findsNothing);
     });
 
     testWidgets(
