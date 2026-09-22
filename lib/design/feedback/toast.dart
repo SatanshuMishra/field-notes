@@ -279,23 +279,27 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
         MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
       ),
       child: IgnorePointer(
-        child: Center(
-          child: FadeTransition(
-            opacity: _rise,
-            child: AnimatedBuilder(
-              animation: _rise,
-              builder: (BuildContext context, Widget? child) => Transform.translate(
-                offset: Offset(0, _riseOffset * (1 - _rise.value)),
-                child: child,
-              ),
-              child: Toast(
-                message: widget.message,
-                variant: ToastVariant.dark,
-                scale: widget.scale,
-                icon: IconStickerGlyphIcon(
-                  glyph: widget.glyph,
-                  color: Palette.toastInk,
-                  size: metrics.iconSize,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Center(
+            child: FadeTransition(
+              opacity: _rise,
+              child: AnimatedBuilder(
+                animation: _rise,
+                builder: (BuildContext context, Widget? child) =>
+                    Transform.translate(
+                  offset: Offset(0, _riseOffset * (1 - _rise.value)),
+                  child: child,
+                ),
+                child: Toast(
+                  message: widget.message,
+                  variant: ToastVariant.dark,
+                  scale: widget.scale,
+                  icon: IconStickerGlyphIcon(
+                    glyph: widget.glyph,
+                    color: Palette.toastInk,
+                    size: metrics.iconSize,
+                  ),
                 ),
               ),
             ),

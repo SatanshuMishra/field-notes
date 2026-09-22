@@ -217,6 +217,29 @@ void main() {
       await tester.pump(kToastLifetime);
     });
 
+    testWidgets('its message carries no fallback text decoration',
+        (WidgetTester tester) async {
+      await showOn(
+        tester,
+        surface: const Size(1280, 800),
+        platform: TargetPlatform.macOS,
+      );
+
+      final TextStyle drawn = tester
+          .widget<RichText>(
+            find.descendant(
+              of: find.byType(Toast),
+              matching: find.byType(RichText),
+            ),
+          )
+          .text
+          .style!;
+      expect(drawn.decoration, anyOf(isNull, TextDecoration.none));
+      expect(drawn.fontFamily, TypographyTokens.toastSans.fontFamily);
+
+      await tester.pump(kToastLifetime);
+    });
+
     testWidgets('once risen it stays up for its whole lifetime, then goes',
         (WidgetTester tester) async {
       await showOn(tester, surface: const Size(390, 844));
