@@ -50,7 +50,7 @@ photo, and when the selection leaves the photo line.
 | Group | Controls |
 |---|---|
 | Size | `S` `M` `L` `Full`, the current one marked |
-| Placement | `Left` `Right`, the current one marked. Hidden when `canFloatAt` says the measure cannot float, exactly as the rail hid it. Centre joins this group in phase 3 |
+| Placement | Two glyph buttons, a picture with text lines beside it, one per side, the current one marked. Hidden when `canFloatAt` says the measure cannot float, exactly as the rail hid it. Dimmed and inert at Full size. Centre joins this group in phase 3 |
 | Caption | One button. It opens the in-place caption editor (§3) |
 | Remove | A trash glyph. It removes the photo line and shows the Undo toast (§5) |
 | More | A `…` button opening a menu of Move up, Move down and Replace, each disabled when the edit cannot apply |
@@ -99,13 +99,14 @@ translucent blurred veil so the note reads through it. The note's own page keeps
 height of the footer, so the last line always clears it. The owner ruled this on 2026-09-22: the design's
 own footer is a plain row under a fixed-height surface, and that is what left the panel with a dead band.
 
-- **Add memory.** A button carrying the design's word. It picks photos, stores them and inserts their
+- **Add memory.** The design's button: its word, a camera glyph, an accent fill and the sticker shadow
+  the Save button carries. It picks photos, stores them and inserts their
   lines at the caret, exactly as the rail's Add photo tile did, including its busy label and its two
   failure messages. It is focusable, operable with Enter, and returns focus to the writing surface when
   the pick finishes. It never disappears on a short screen (fix-wave W3 and C12).
-- **Markdown hints.** A dimmed line reading `**bold**  *italic*  # heading  - list  > quote`, right
-  aligned. On a short screen, or when the panel is too narrow to hold both, the hints drop and Add memory
-  stays.
+- **Markdown hints.** A dimmed line reading `# title  - list  1. steps  > quote`, the markers darker than
+  the words, right aligned, as the design writes them. On a short screen, or when the panel is too narrow
+  to hold both, the hints drop and Add memory stays.
 
 No mode switch. The design's Photos Inline / Scrapbook toggle is not built (C1).
 
