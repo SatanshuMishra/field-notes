@@ -21,16 +21,21 @@ NotePreviewText notePreviewOf(
   if (limit <= 0) {
     return (text: '', wasTruncated: source.isNotEmpty);
   }
-  final NotePreviewText prefix = _blockPrefixOf(source, limit);
+  final _Prefix prefix = _blockPrefixOf(source, limit);
   if (!prefix.wasTruncated) {
     return (text: source, wasTruncated: false);
   }
-  final String head = prefix.text.trimRight();
+  final String head = _withoutPhotoLookalike(
+    prefix.text.trimRight(),
+    prefix.photos,
+  );
   if (head.isEmpty) {
     return (text: _hardCutBeforePhotos(source, limit), wasTruncated: true);
   }
   return (text: _withoutFalseFloat(head, source), wasTruncated: true);
 }
+
+typedef _Prefix = ({String text, bool wasTruncated, int photos});
 
 String _hardCutBeforePhotos(String source, int limit) {
   int end = _withoutLoneSurrogate(source, limit);
@@ -40,14 +45,14 @@ String _hardCutBeforePhotos(String source, int limit) {
       break;
     }
   }
-  return _withoutPhotoLookalike(source.substring(0, end));
+  return _withoutPhotoLookalike(source.substring(0, end), 0);
 }
 
-String _withoutPhotoLookalike(String piece) {
-  String kept = piece;
-  while (kept.isNotEmpty && parseNote(kept).any(_isPhoto)) {
+String _withoutPhotoLookalike(String text, int photos) {
+  String kept = text;
+  while (kept.isNotEmpty && parseNote(kept).where(_isPhoto).length > photos) {
     final int lineStart = kept.trimRight().lastIndexOf('\n');
-    kept = lineStart < 0 ? '' : kept.substring(0, lineStart + 1);
+    kept = lineStart < 0 ? '' : kept.substring(0, lineStart).trimRight();
   }
   return kept;
 }
@@ -72,21 +77,29 @@ String _withoutFalseFloat(String preview, String source) {
   return preview.substring(0, kept[photo].sourceRange.end).trimRight();
 }
 
-NotePreviewText _blockPrefixOf(String source, int limit) {
+_Prefix _blockPrefixOf(String source, int limit) {
   final StringBuffer kept = StringBuffer();
   bool keptPhoto = false;
   bool lastKeptIsPhoto = false;
   bool dropped = false;
   for (final NoteBlock block in parseNote(source)) {
     if (kept.length >= limit) {
-      return (text: kept.toString(), wasTruncated: true);
+      return (
+        text: kept.toString(),
+        wasTruncated: true,
+        photos: keptPhoto ? 1 : 0,
+      );
     }
     final String slice = block.sourceRange.sliceOf(source);
     final int budget = limit - kept.length;
     if (block is PhotoBlock) {
       if (keptPhoto) {
         if (lastKeptIsPhoto) {
-          return (text: kept.toString(), wasTruncated: true);
+          return (
+            text: kept.toString(),
+            wasTruncated: true,
+            photos: keptPhoto ? 1 : 0,
+          );
         }
         if (!kept.toString().endsWith('\n\n')) {
           kept.write('\n');
@@ -95,7 +108,11 @@ NotePreviewText _blockPrefixOf(String source, int limit) {
         continue;
       }
       if (slice.trimRight().length > budget && kept.isNotEmpty) {
-        return (text: kept.toString(), wasTruncated: true);
+        return (
+          text: kept.toString(),
+          wasTruncated: true,
+          photos: keptPhoto ? 1 : 0,
+        );
       }
       kept.write(slice);
       keptPhoto = true;
@@ -109,17 +126,21 @@ NotePreviewText _blockPrefixOf(String source, int limit) {
     }
     final int? cut = _lastBreakAtOrBefore(slice, budget);
     if (cut != null) {
-      kept.write(_withoutPhotoLookalike(slice.substring(0, cut)));
+      kept.write(slice.substring(0, cut));
     } else if (kept.isEmpty) {
-      kept.write(
-        _withoutPhotoLookalike(
-          slice.substring(0, _withoutLoneSurrogate(slice, budget)),
-        ),
-      );
+      kept.write(slice.substring(0, _withoutLoneSurrogate(slice, budget)));
     }
-    return (text: kept.toString(), wasTruncated: true);
+    return (
+      text: kept.toString(),
+      wasTruncated: true,
+      photos: keptPhoto ? 1 : 0,
+    );
   }
-  return (text: kept.toString(), wasTruncated: dropped);
+  return (
+    text: kept.toString(),
+    wasTruncated: dropped,
+    photos: keptPhoto ? 1 : 0,
+  );
 }
 
 int? _lastBreakAtOrBefore(String source, int limit) {

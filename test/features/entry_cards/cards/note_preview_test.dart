@@ -263,6 +263,20 @@ void main() {
       expect(preview.wasTruncated, isTrue);
     });
 
+    test('a cut ending in a non-breaking space never leaves a photo line', () {
+      final String source = '${_photoLineAt(0)}\nwe walked\n'
+          '![x](photo/${_photoReferences[1]})\u00A0 afterwards';
+
+      final NotePreviewText preview = notePreviewOf(
+        source,
+        limit: source.indexOf(' afterwards') + 3,
+      );
+
+      expect(parseNote(preview.text).whereType<PhotoBlock>(), hasLength(1));
+      expect(preview.text, isNot(contains(_photoReferences[1])));
+      expect(preview.text, contains('we walked'));
+    });
+
     test('a photo that fits keeps its place even when its blank lines do not',
         () {
       final String photo = _photoLineAt(0);
