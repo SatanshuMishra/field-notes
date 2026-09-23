@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
@@ -20,14 +21,24 @@ const Key composerWritingSurfaceKey =
 
 const String emptySaveGuardMessage = 'Write something first';
 
+enum ComposerExit { cancel, back }
 
-const double _headerVerticalPadding = 14;
+
+const double _headerVerticalPadding = 16;
 const double _headerHorizontalPadding = 18;
+const double _headerGap = 14;
 const double _headerRuleThickness = 1.5;
-const double _headerLineHeight = 1.1;
-const double _closeGlyphSize = 22;
-const double _closeStrokeWidth = 2.2;
-const double _closeViewBox = 24;
+const double _titleLineHeight = 1.05;
+const double _exitPillHeight = 34;
+const double _exitPillStartPadding = 8;
+const double _exitPillEndPadding = 12;
+const double _exitPillRadius = 10;
+const double _exitGlyphSize = 15;
+const double _exitGlyphGap = 4;
+const double _exitStrokeWidth = 2.2;
+const double _exitViewBox = 24;
+const double _backChevronStrokeWidth = 2;
+const double _backChevronArm = 5;
 const double _saveVerticalPadding = 7;
 const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
@@ -57,7 +68,8 @@ class TextComposerSheet extends StatefulWidget {
     this.errorMessage,
     this.isSaving = false,
     this.title = 'Write a note',
-    this.metaText = '',
+    this.kicker = '',
+    this.exit = ComposerExit.cancel,
     this.hintText = 'Start writing…',
     this.saveLabel = 'Save',
     this.savingLabel = 'Saving…',
@@ -73,7 +85,8 @@ class TextComposerSheet extends StatefulWidget {
   final String? errorMessage;
   final bool isSaving;
   final String title;
-  final String metaText;
+  final String kicker;
+  final ComposerExit exit;
   final String hintText;
   final String saveLabel;
   final String savingLabel;
@@ -130,27 +143,68 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         final Widget formatBar = _formatBar(
           trailing: roomy ? null : _compactAdd(),
         );
-        return Column(
-          mainAxisSize: MainAxisSize.max,
-          children: <Widget>[
-            _header(
-              middle: roomy ? _titleBlock() : formatBar,
-              below: roomy && sidebar ? formatBar : null,
+        return CallbackShortcuts(
+          bindings: _shortcuts(context),
+          child: Focus(
+            autofocus: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              children: <Widget>[
+                _header(
+                  middle: roomy ? _titleBlock() : formatBar,
+                  below: roomy && sidebar ? formatBar : null,
+                ),
+                const DashedDivider(
+                  thickness: _headerRuleThickness,
+                  color: Palette.ink25,
+                ),
+                Expanded(
+                  child: _body(
+                    formatBar: roomy && !sidebar ? formatBar : null,
+                    footer: roomy ? _footer(showHints: true) : null,
+                  ),
+                ),
+              ],
             ),
-            const DashedDivider(
-              thickness: _headerRuleThickness,
-              color: Palette.ink25,
-            ),
-            Expanded(
-              child: _body(
-                formatBar: roomy && !sidebar ? formatBar : null,
-                footer: roomy ? _footer(showHints: true) : null,
-              ),
-            ),
-          ],
+          ),
         );
       },
     );
+  }
+
+  Map<ShortcutActivator, VoidCallback> _shortcuts(BuildContext context) {
+    final bool apple = switch (Theme.of(context).platform) {
+      TargetPlatform.macOS || TargetPlatform.iOS => true,
+      _ => false,
+    };
+    final VoidCallback save = _handleSaveShortcut;
+    return <ShortcutActivator, VoidCallback>{
+      SingleActivator(
+        LogicalKeyboardKey.enter,
+        meta: apple,
+        control: !apple,
+      ): save,
+      SingleActivator(
+        LogicalKeyboardKey.numpadEnter,
+        meta: apple,
+        control: !apple,
+      ): save,
+      const SingleActivator(LogicalKeyboardKey.escape): _handleEscape,
+    };
+  }
+
+  void _handleSaveShortcut() {
+    if (widget.isSaving) {
+      return;
+    }
+    _handleSaveTap();
+  }
+
+  void _handleEscape() {
+    if (widget.isSaving) {
+      return;
+    }
+    widget.onCancel();
   }
 
   Widget? _compactAdd() => _footer(showHints: false, compact: true);
@@ -202,7 +256,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         children: <Widget>[
           Row(
             children: <Widget>[
-              _closeButton(),
+              _exitPill(),
               Expanded(child: middle),
               _saveButton(),
             ],
@@ -213,37 +267,74 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget _closeButton() {
+  Widget _exitPill() {
+    final bool back = widget.exit == ComposerExit.back;
     return GestureDetector(
       key: composerCloseKey,
       behavior: HitTestBehavior.opaque,
       onTap: widget.isSaving ? null : widget.onCancel,
-      child: const SizedBox.square(
-        dimension: _closeGlyphSize,
-        child: CustomPaint(painter: _CloseGlyphPainter()),
+      child: Container(
+        height: _exitPillHeight,
+        padding: const EdgeInsets.only(
+          left: _exitPillStartPadding,
+          right: _exitPillEndPadding,
+        ),
+        decoration: BoxDecoration(
+          color: Palette.cardWarm,
+          border: Shapes.outline,
+          borderRadius: BorderRadius.circular(_exitPillRadius),
+          boxShadow: Shadows.chip,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            SizedBox.square(
+              dimension: _exitGlyphSize,
+              child: CustomPaint(
+                painter: back
+                    ? const _BackChevronPainter()
+                    : const _CloseGlyphPainter(),
+              ),
+            ),
+            const SizedBox(width: _exitGlyphGap),
+            Text(
+              back ? 'Back' : 'Cancel',
+              style: TypographyTokens.captureLabelSans
+                  .copyWith(color: Palette.ink),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _titleBlock() {
-    final String metaText = widget.metaText;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Text(
-          widget.title,
-          textAlign: TextAlign.center,
-          style: TypographyTokens.composerTitleAccent
-              .copyWith(height: _headerLineHeight),
-        ),
-        if (metaText.isNotEmpty)
+    final String kicker = widget.kicker;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _headerGap),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (kicker.isNotEmpty)
+            Text(
+              kicker,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TypographyTokens.stampAccent
+                  .copyWith(color: Palette.coral),
+            ),
           Text(
-            metaText,
-            textAlign: TextAlign.center,
-            style: TypographyTokens.caption9Sans
-                .copyWith(height: _headerLineHeight),
+            widget.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TypographyTokens.headlineSerif.copyWith(
+              fontSize: 22,
+              height: _titleLineHeight,
+            ),
           ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -421,11 +512,11 @@ class _CloseGlyphPainter extends CustomPainter {
     final Paint stroke = Paint()
       ..color = Palette.ink
       ..style = PaintingStyle.stroke
-      ..strokeWidth = _closeStrokeWidth
+      ..strokeWidth = _exitStrokeWidth
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.save();
-    canvas.scale(size.shortestSide / _closeViewBox);
+    canvas.scale(size.shortestSide / _exitViewBox);
     canvas.drawLine(const Offset(6, 6), const Offset(18, 18), stroke);
     canvas.drawLine(const Offset(18, 6), const Offset(6, 18), stroke);
     canvas.restore();
@@ -433,4 +524,28 @@ class _CloseGlyphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_CloseGlyphPainter oldDelegate) => false;
+}
+
+class _BackChevronPainter extends CustomPainter {
+  const _BackChevronPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint stroke = Paint()
+      ..color = Palette.ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _backChevronStrokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
+    final Path path = Path()
+      ..moveTo(cx + _backChevronArm / 2, cy - _backChevronArm)
+      ..lineTo(cx - _backChevronArm / 2, cy)
+      ..lineTo(cx + _backChevronArm / 2, cy + _backChevronArm);
+    canvas.drawPath(path, stroke);
+  }
+
+  @override
+  bool shouldRepaint(_BackChevronPainter oldDelegate) => false;
 }

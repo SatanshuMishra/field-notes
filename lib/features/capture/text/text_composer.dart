@@ -58,10 +58,12 @@ class TextComposerConnector extends ConsumerStatefulWidget {
     super.key,
     required this.date,
     this.saveTimeout = textSaveTimeout,
+    this.exit = ComposerExit.cancel,
   });
 
   final String date;
   final Duration saveTimeout;
+  final ComposerExit exit;
 
   @override
   ConsumerState<TextComposerConnector> createState() =>
@@ -71,8 +73,7 @@ class TextComposerConnector extends ConsumerStatefulWidget {
 class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   bool _isSaving = false;
   String? _errorMessage;
-  late final String _metaText;
-  late final String _title;
+  late final String _kicker;
   late final String _draftKey;
   late final TextEditingController _controller;
   late final NoteDraftController _draft;
@@ -80,8 +81,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   @override
   void initState() {
     super.initState();
-    _metaText = _composeMeta();
-    _title = _composeTitle();
+    _kicker = _composeKicker();
     _draftKey = newNoteDraftKey(widget.date);
     _controller = TextEditingController();
     _draft = NoteDraftController(
@@ -98,24 +98,23 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
     super.dispose();
   }
 
-  String _composeTitle() {
+  String _composeKicker() {
+    final DateTime now = ref.read(todayClockProvider)();
     if (widget.date == ref.read(todayDateProvider)) {
-      return newNoteTitle;
+      final String hour = now.hour.toString().padLeft(2, '0');
+      final String minute = now.minute.toString().padLeft(2, '0');
+      return 'Today · $hour:$minute';
     }
     final DateTime? parsed = parseDateKey(widget.date);
-    final String dayLabel =
-        parsed == null ? widget.date : headerDateLabel(parsed);
-    return '$newNoteTitle · $dayLabel';
+    return parsed == null ? widget.date : dayTitleFor(parsed, today: now);
   }
 
-  String _composeMeta() {
+  String _savedToMessage() {
     final DateTime? parsed = parseDateKey(widget.date);
-    final String longDate =
-        parsed == null ? widget.date : headerDateLabel(parsed);
     final DateTime now = ref.read(todayClockProvider)();
-    final String hour = now.hour.toString().padLeft(2, '0');
-    final String minute = now.minute.toString().padLeft(2, '0');
-    return '$longDate · $hour:$minute';
+    final String place =
+        parsed == null ? widget.date : dayShortLabelFor(parsed, today: now);
+    return 'Saved to $place';
   }
 
   Future<void> _save(String text) async {
@@ -143,6 +142,7 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
     if (!mounted) {
       return;
     }
+    showTransientToast(context, _savedToMessage());
     Navigator.of(context).pop(entryId);
   }
 
@@ -193,8 +193,9 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
               onDiscardDraft: _draft.discardRestored,
               errorMessage: _errorMessage,
               isSaving: _isSaving,
-              title: _title,
-              metaText: _metaText,
+              title: newNoteTitle,
+              kicker: _kicker,
+              exit: widget.exit,
               onAddPhoto: () => importNotePhotos(ref),
             );
           },
@@ -204,7 +205,11 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   }
 }
 
-Future<String?> showTextComposer(BuildContext context, String date) {
+Future<String?> showTextComposer(
+  BuildContext context,
+  String date, {
+  ComposerExit exit = ComposerExit.cancel,
+}) {
   return showGeneralDialog<String>(
     context: context,
     barrierDismissible: false,
@@ -220,7 +225,7 @@ Future<String?> showTextComposer(BuildContext context, String date) {
         child: ComposerShell(
           closeOnScrimTap: true,
           responsive: true,
-          child: TextComposerConnector(date: date),
+          child: TextComposerConnector(date: date, exit: exit),
         ),
       );
     },
