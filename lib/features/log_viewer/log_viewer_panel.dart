@@ -12,8 +12,6 @@ import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
-import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
-import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_date.dart';

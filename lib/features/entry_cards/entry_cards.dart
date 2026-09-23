@@ -1,8 +1,9 @@
 export 'cards/note_body.dart';
-export 'cards/note_preview.dart';
 export 'cards/video_body.dart';
 export 'cards/voice_body.dart';
-export 'entry_card.dart';
+export 'compact/compact_log_card.dart';
+export 'compact/log_actions_pill.dart';
+export 'compact/log_preview.dart';
 export 'media/decode_target.dart';
 export 'media/media_image.dart';
 export 'media/media_placeholders.dart';

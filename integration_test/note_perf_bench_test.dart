@@ -9,7 +9,6 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
-import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_layout.dart';
@@ -297,7 +296,6 @@ void main() {
       extra: <String, Object?>{
         'entries': benchFeedEntryCount,
         'stepPt': _scrollStep.dy.abs(),
-        'previewCharLimit': notePreviewCharLimit,
       },
       sample: () async {
         await gesture.moveBy(_scrollStep);
