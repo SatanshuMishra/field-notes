@@ -183,6 +183,7 @@ Future<_Session> _open(
   WidgetTester tester, {
   String entryId = 'entry-1',
   LogViewerExit exit = LogViewerExit.back,
+  List<Override> overrides = const <Override>[],
 }) async {
   final _Session session = _Session(_DayRepository(_dayEntries()));
   await tester.pumpWidget(
@@ -194,6 +195,7 @@ Future<_Session> _open(
           (Ref ref) async => FakeMediaStore(Directory.systemTemp),
         ),
         todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 23, 9)),
+        ...overrides,
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -371,5 +373,25 @@ void main() {
     expect(find.byType(VoiceBody), findsOneWidget);
     expect(find.byKey(logActionsDeleteKey), findsOneWidget);
     expect(find.byKey(logActionsEditKey), findsNothing);
+  });
+
+  testWidgets('view mode plays voice and video through the injected players',
+      (WidgetTester tester) async {
+    EntryAudioPlayer audio() => throw UnimplementedError();
+    EntryVideoPlayer video() => throw UnimplementedError();
+    await _open(
+      tester,
+      entryId: 'entry-3',
+      exit: LogViewerExit.close,
+      overrides: <Override>[
+        todayAudioPlayerFactoryProvider.overrideWithValue(audio),
+        todayVideoPlayerFactoryProvider.overrideWithValue(video),
+      ],
+    );
+
+    expect(
+      tester.widget<VoiceBody>(find.byType(VoiceBody)).playerFactory,
+      same(audio),
+    );
   });
 }

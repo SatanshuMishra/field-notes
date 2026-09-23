@@ -112,6 +112,7 @@ void main() {
 
     expect(find.text(newNoteTitle), findsOneWidget);
     expect(find.text('Back'), findsOneWidget);
+    expect(find.text('Sunday, July 19'), findsWidgets);
   });
 
   testWidgets('tapping edit opens the note editor prefilled',
