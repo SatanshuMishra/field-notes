@@ -41,6 +41,8 @@ const double _waveBarWidth = 3;
 const double _waveSpacing = 2.5;
 const double _waveBarRadius = 2;
 
+const double _unavailableMinHeight = 64;
+
 const double _toggleSize = 38;
 const double _toggleGlyphSize = 15;
 const double _toggleGlyphOffset = 2;
@@ -235,9 +237,11 @@ class _VoiceBodyState extends State<VoiceBody> {
   @override
   Widget build(BuildContext context) {
     if (_unavailable) {
-      return const CorruptMediaPlaceholder(
-        label: "Can't play this recording",
-        height: 64,
+      return ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _unavailableMinHeight),
+        child: const CorruptMediaPlaceholder(
+          label: "Can't play this recording",
+        ),
       );
     }
     return Row(
@@ -247,16 +251,23 @@ class _VoiceBodyState extends State<VoiceBody> {
         Expanded(
           child: SizedBox(
             height: _waveHeight,
-            child: WaveformBars(
-              key: ValueKey<bool>(_isPlaying),
-              animate: _isPlaying,
-              heights: _entryWaveHeights,
-              perBarDurations: _isPlaying ? _entryWaveDurations : null,
-              colorFor: _entryWaveTint,
-              barWidth: _waveBarWidth,
-              spacing: _waveSpacing,
-              maxHeight: _waveHeight,
-              barRadius: _waveBarRadius,
+            child: ClipRect(
+              child: OverflowBox(
+                alignment: Alignment.centerLeft,
+                minWidth: 0,
+                maxWidth: double.infinity,
+                child: WaveformBars(
+                  key: ValueKey<bool>(_isPlaying),
+                  animate: _isPlaying,
+                  heights: _entryWaveHeights,
+                  perBarDurations: _isPlaying ? _entryWaveDurations : null,
+                  colorFor: _entryWaveTint,
+                  barWidth: _waveBarWidth,
+                  spacing: _waveSpacing,
+                  maxHeight: _waveHeight,
+                  barRadius: _waveBarRadius,
+                ),
+              ),
             ),
           ),
         ),
