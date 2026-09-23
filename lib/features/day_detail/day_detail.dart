@@ -1,6 +1,5 @@
 export 'day_detail_edit_note.dart';
 export 'day_detail_entries_bar.dart';
-export 'day_detail_entry_tile.dart';
 export 'day_detail_header.dart';
 export 'day_detail_heading.dart';
 export 'day_detail_panel.dart';
