@@ -64,4 +64,32 @@ void main() {
       expect(parseDateKey(''), isNull);
     });
   });
+
+  group('day labels', () {
+    test('a day outside the current year carries its year', () {
+      expect(
+        dayTitleFor(DateTime(2025, 7, 2), today: DateTime(2026, 9, 23)),
+        'Wednesday, July 2, 2025',
+      );
+      expect(
+        dayTitleFor(DateTime(2025, 7, 2), today: DateTime(2025, 9, 23)),
+        'Wednesday, July 2',
+      );
+      expect(
+        dayShortLabelFor(DateTime(2025, 7, 2), today: DateTime(2026, 9, 23)),
+        'July 2, 2025',
+      );
+      expect(
+        dayShortLabelFor(DateTime(2025, 7, 2), today: DateTime(2025, 9, 23)),
+        'July 2',
+      );
+      expect(
+        dayShortLabelFor(
+          DateTime(2025, 7, 2),
+          today: DateTime(2025, 7, 2, 18, 5),
+        ),
+        'today',
+      );
+    });
+  });
 }
