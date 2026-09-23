@@ -5,11 +5,11 @@ import 'package:field_notes/features/day_detail/day_detail_entries_bar.dart';
 import 'support/day_detail_harness.dart';
 
 void main() {
-  test('pluralises the entry count', () {
-    expect(dayDetailEntryCountLabel(0), 'No entries yet');
-    expect(dayDetailEntryCountLabel(1), '1 entry');
-    expect(dayDetailEntryCountLabel(2), '2 entries');
-    expect(dayDetailEntryCountLabel(11), '11 entries');
+  test('pluralises the log count', () {
+    expect(dayDetailEntryCountLabel(0), '0 logs that day');
+    expect(dayDetailEntryCountLabel(1), '1 log that day');
+    expect(dayDetailEntryCountLabel(2), '2 logs that day');
+    expect(dayDetailEntryCountLabel(11), '11 logs that day');
   });
 
   testWidgets('renders the count and the add-a-note action',
@@ -20,7 +20,7 @@ void main() {
       ),
     );
 
-    expect(find.text('3 entries'), findsOneWidget);
+    expect(find.text('3 logs that day'), findsOneWidget);
     expect(find.text('Add a note'), findsOneWidget);
   });
 
@@ -37,7 +37,7 @@ void main() {
     await tester.pump();
 
     expect(taps, 1);
-    expect(find.text('No entries yet'), findsOneWidget);
+    expect(find.text('0 logs that day'), findsOneWidget);
   });
 
   testWidgets('renders no count text when the count is unknown',
@@ -48,8 +48,7 @@ void main() {
       ),
     );
 
-    expect(find.text('No entries yet'), findsNothing);
-    expect(find.text('0 entries'), findsNothing);
+    expect(find.text('0 logs that day'), findsNothing);
     expect(find.text('Add a note'), findsOneWidget);
   });
 }

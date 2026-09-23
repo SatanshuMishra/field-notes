@@ -5,48 +5,128 @@ import 'package:field_notes/design/widgets/widgets.dart';
 
 import 'day_detail_heading.dart';
 
+const Key dayDetailBackKey = ValueKey<String>('day-detail-back');
+
+const String dayDetailCloseLabel = 'Close';
+
+const double _headerVerticalPadding = 16;
+const double _headerHorizontalPadding = 18;
+const double _headerGap = 12;
+const double _ruleThickness = 1.5;
+const double _backExtent = 34;
+const double _backRadius = 10;
+const double _chevronExtent = 16;
+const double _chevronArm = 4.5;
+const double _chevronStrokeWidth = 2;
+const double _titleLineHeight = 1;
+
 class DayDetailHeader extends StatelessWidget {
   const DayDetailHeader({
     super.key,
     required this.date,
+    required this.today,
     required this.onClose,
-    this.closeLabel = 'Close',
+    this.closeLabel = dayDetailCloseLabel,
   });
 
   final String date;
+  final DateTime today;
   final VoidCallback onClose;
   final String closeLabel;
 
   @override
   Widget build(BuildContext context) {
-    final DayDetailHeading heading = dayDetailHeadingFor(date);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    final DayDetailHeading heading = dayDetailHeadingFor(date, today: today);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Expanded(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: _headerHorizontalPadding,
+            vertical: _headerVerticalPadding,
+          ),
+          child: Row(
             children: <Widget>[
-              Text(heading.title, style: TypographyTokens.titleSerif),
-              if (heading.subtitle.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 2),
-                Text(
-                  heading.subtitle,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.mutedDeep),
+              _backButton(),
+              const SizedBox(width: _headerGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      dayDetailKickerFor(date, today: today),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TypographyTokens.stampAccent
+                          .copyWith(color: Palette.coral),
+                    ),
+                    Text(
+                      heading.title,
+                      style: TypographyTokens.headlineSerif
+                          .copyWith(height: _titleLineHeight),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        StickerButton(
-          label: closeLabel,
-          variant: StickerButtonVariant.secondary,
-          onPressed: onClose,
-        ),
+        const DashedDivider(thickness: _ruleThickness, color: Palette.ink25),
       ],
     );
   }
+
+  Widget _backButton() {
+    return Semantics(
+      button: true,
+      label: closeLabel,
+      child: GestureDetector(
+        key: dayDetailBackKey,
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onClose,
+        child: Container(
+          width: _backExtent,
+          height: _backExtent,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Palette.cardWarm,
+            border: Shapes.outline,
+            borderRadius: BorderRadius.circular(_backRadius),
+          ),
+          child: const SizedBox.square(
+            dimension: _chevronExtent,
+            child: CustomPaint(painter: _BackChevronPainter()),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BackChevronPainter extends CustomPainter {
+  const _BackChevronPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint stroke = Paint()
+      ..color = Palette.ink
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _chevronStrokeWidth
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
+    const double reach = _chevronArm / 2;
+    final Path path = Path()
+      ..moveTo(cx + reach, cy - _chevronArm)
+      ..lineTo(cx - reach, cy)
+      ..lineTo(cx + reach, cy + _chevronArm);
+    canvas.drawPath(path, stroke);
+  }
+
+  @override
+  bool shouldRepaint(_BackChevronPainter oldDelegate) => false;
 }
