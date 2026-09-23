@@ -1,10 +1,12 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/log_viewer/log_viewer.dart';
+import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -18,45 +20,6 @@ import '../entry_cards/support/fake_video_player.dart';
 import '../notes/support/notes_harness.dart'
     show FakeNoteMediaResolver, availablePhoto, photoIdA, photoLine, prefixOf;
 import 'support/today_harness.dart';
-
-class _AvailableVideoResolver implements MediaResolver {
-  const _AvailableVideoResolver(this.file);
-
-  final File file;
-
-  @override
-  ResolvedMedia? resolved(String? mediaId) => null;
-
-  @override
-  Future<ResolvedMedia> resolve(String? mediaId) async {
-    if (mediaId != 'vid') {
-      return const ResolvedMedia.missing();
-    }
-    return ResolvedMedia.available(
-      blob: MediaBlob(
-        id: 'vid',
-        relPath: 'v.mp4',
-        mime: 'video/mp4',
-        kind: MediaKind.video,
-        bytes: 4,
-        createdAt: 0,
-      ),
-      file: file,
-    );
-  }
-}
-
-File _writtenVideoFile() {
-  final Directory dir = Directory.systemTemp.createTempSync('today_video');
-  addTearDown(() {
-    if (dir.existsSync()) {
-      dir.deleteSync(recursive: true);
-    }
-  });
-  final File file = File('${dir.path}/v.mp4');
-  file.writeAsBytesSync(<int>[0, 1, 2, 3]);
-  return file;
-}
 
 Widget _feed(String date) {
   return CustomScrollView(
@@ -120,13 +83,13 @@ void main() {
       ),
     );
 
-    expect(find.byType(EntryCard), findsNWidgets(2));
+    expect(find.byType(CompactLogCard), findsNWidgets(2));
     expect(find.text('morning walk'), findsOneWidget);
     expect(find.text('coffee on the porch'), findsOneWidget);
     expect(find.byType(MediaImage), findsNothing);
   });
 
-  testWidgets('a note photo line renders as a block image on the Today card',
+  testWidgets('a note photo line renders as a compact thumbnail on the Today card',
       (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -145,14 +108,18 @@ void main() {
       ),
     );
 
-    final Finder document = find.byType(NoteDocument);
-    expect(find.byType(StackedPhoto), findsOneWidget);
+    expect(find.byType(StackedPhoto), findsNothing);
     expect(find.byType(MediaImage), findsOneWidget);
     expect(
-      tester.getSize(find.byKey(notePhotoFrameKey)).width,
-      closeTo(0.55 * tester.getSize(document).width, 0.01),
+      find.descendant(
+        of: find.byKey(compactLogThumbnailKey),
+        matching: find.byType(MediaImage),
+      ),
+      findsOneWidget,
     );
+    expect(tester.getSize(find.byKey(compactLogThumbnailKey)), const Size(64, 64));
     expect(find.text('morning walk'), findsOneWidget);
+    expect(find.text('1 photo'), findsOneWidget);
   });
 
   testWidgets('the feed card and its note fill a desktop pane',
@@ -168,7 +135,7 @@ void main() {
       ),
     );
 
-    expect(tester.getSize(find.byType(EntryCard)).width, 1000);
+    expect(tester.getSize(find.byType(CompactLogCard)).width, 1000);
     expect(tester.getSize(find.text('morning walk')).width, 970);
   });
 
@@ -189,8 +156,13 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.byType(VideoBody), findsOneWidget);
-    expect(tester.getSize(find.byType(EntryCard)).width, 1000);
+    expect(find.byType(VideoBody), findsNothing);
+    expect(
+      tester.getSize(find.byKey(compactLogThumbnailKey)),
+      const Size(104, 64),
+    );
+    expect(find.text('Watch ›'), findsOneWidget);
+    expect(tester.getSize(find.byType(CompactLogCard)).width, 1000);
   });
 
   testWidgets('lets the feed card fill a phone pane edge to edge',
@@ -206,7 +178,7 @@ void main() {
       ),
     );
 
-    expect(tester.getSize(find.byType(EntryCard)).width, 420);
+    expect(tester.getSize(find.byType(CompactLogCard)).width, 420);
     expect(tester.getSize(find.text('morning walk')).width, 390);
   });
 
@@ -220,7 +192,7 @@ void main() {
 
     expect(find.text(todayFeedEmptyHeadline), findsOneWidget);
     expect(find.text(todayFeedEmptyMessage), findsOneWidget);
-    expect(find.byType(EntryCard), findsNothing);
+    expect(find.byType(CompactLogCard), findsNothing);
   });
 
   testWidgets('renders loaded entries before the media resolver settles',
@@ -243,13 +215,13 @@ void main() {
       ],
     );
 
-    expect(find.byType(EntryCard), findsOneWidget);
+    expect(find.byType(CompactLogCard), findsOneWidget);
     expect(find.text('morning walk'), findsOneWidget);
 
     pending.complete(const StubMediaResolver());
     await tester.pumpAndSettle();
 
-    expect(find.byType(EntryCard), findsOneWidget);
+    expect(find.byType(CompactLogCard), findsOneWidget);
   });
 
   testWidgets('surfaces a friendly error when the entry stream fails',
@@ -263,83 +235,7 @@ void main() {
     );
 
     expect(find.text("Couldn't load today's entries."), findsOneWidget);
-    expect(find.byType(EntryCard), findsNothing);
-  });
-
-  testWidgets('hands every video card the shared decoder slot registry',
-      (WidgetTester tester) async {
-    final LruVideoSlots slots = LruVideoSlots(cap: 1);
-    addTearDown(slots.dispose);
-    final VideoSlotToken? occupant = slots.acquire(
-      onEvicted: () {},
-      evictionRights: VideoSlotEvictionRights.evictUnpinned,
-    );
-    slots.pin(occupant);
-
-    final File file = _writtenVideoFile();
-    final Completer<MediaResolver> pending = Completer<MediaResolver>();
-
-    int playersBuilt = 0;
-    await pumpToday(
-      tester,
-      _feed('2026-07-19'),
-      overrides: _videoEntryOverrides(
-        resolver: pending.future,
-        buildPlayer: () {
-          playersBuilt++;
-          return FakeEntryVideoPlayer();
-        },
-        slots: slots,
-      ),
-    );
-
-    pending.complete(_AvailableVideoResolver(file));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(VideoBody), findsOneWidget);
-    expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-    expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
-    expect(playersBuilt, 0);
-  });
-
-  testWidgets('loads a video card mounted before the media resolver settles',
-      (WidgetTester tester) async {
-    final LruVideoSlots slots = LruVideoSlots(cap: 1);
-    addTearDown(slots.dispose);
-
-    final File file = _writtenVideoFile();
-    final Completer<MediaResolver> pending = Completer<MediaResolver>();
-    final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
-
-    await pumpToday(
-      tester,
-      _feed('2026-07-19'),
-      overrides: _videoEntryOverrides(
-        resolver: pending.future,
-        buildPlayer: () {
-          final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
-          built.add(player);
-          return player;
-        },
-        slots: slots,
-      ),
-    );
-
-    expect(find.byType(VideoBody), findsOneWidget);
-    expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-    expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
-    expect(built, isEmpty);
-
-    pending.complete(_AvailableVideoResolver(file));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-    expect(built, hasLength(1));
-    expect(built.single.loadCalls, <String>[file.path]);
-    expect(
-      find.byKey(const ValueKey<String>('fake-video-surface')),
-      findsOneWidget,
-    );
+    expect(find.byType(CompactLogCard), findsNothing);
   });
 
   testWidgets('builds only the entries near the viewport for a long day',
@@ -356,13 +252,13 @@ void main() {
       ),
     );
 
-    final int built = find.byType(EntryCard).evaluate().length;
+    final int built = find.byType(CompactLogCard).evaluate().length;
     expect(built, greaterThan(0));
     expect(built, lessThan(entryCount));
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('a feed card opens day detail focused on the tapped entry',
+  testWidgets('a feed card opens view mode on the tapped entry',
       (WidgetTester tester) async {
     await pumpToday(
       tester,
@@ -374,6 +270,8 @@ void main() {
             todayTestEntry(id: 'entry-2', textContent: 'coffee on the porch'),
           ]),
         ),
+        notesMediaResolverProvider
+            .overrideWith((Ref ref) async => const StubMediaResolver()),
         dayDetailMediaResolverProvider
             .overrideWith((Ref ref) async => const StubMediaResolver()),
         dayForDateProvider.overrideWith(
@@ -381,15 +279,19 @@ void main() {
             todayTestDay(date: date, mood: Mood.calm),
           ),
         ),
+        todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 20)),
       ],
     );
 
-    await tester.tapAt(tester.getCenter(find.text('coffee on the porch')));
+    final Finder secondCard = find.byType(CompactLogCard).at(1);
+    await tester.tapAt(tester.getTopLeft(secondCard) + const Offset(24, 18));
     await tester.pumpAndSettle();
 
-    final DayDetailPanel panel =
-        tester.widget<DayDetailPanel>(find.byType(DayDetailPanel));
+    final LogViewerPanel panel =
+        tester.widget<LogViewerPanel>(find.byType(LogViewerPanel));
     expect(panel.date, '2026-07-19');
-    expect(panel.focusEntryId, 'entry-2');
+    expect(panel.entryId, 'entry-2');
+    expect(panel.exit, LogViewerExit.close);
+    expect(find.byType(DayDetailPanel), findsNothing);
   });
 }

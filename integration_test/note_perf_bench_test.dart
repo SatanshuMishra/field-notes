@@ -9,6 +9,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_layout.dart';
@@ -281,7 +282,7 @@ void main() {
         ),
       ),
     );
-    expect(find.byType(EntryCard), findsWidgets);
+    expect(find.byType(CompactLogCard), findsWidgets);
 
     final Finder scrollable = find.byType(Scrollable).first;
     final Offset origin = tester.getCenter(scrollable);
@@ -291,7 +292,7 @@ void main() {
     await benchMeasure(
       id: 'feedScrollFrame',
       what: 'build, layout and paint of one dragged scroll frame over the '
-          'seeded today feed of truncated preview cards',
+          'seeded today feed of compact log cards',
       samples: 34,
       extra: <String, Object?>{
         'entries': benchFeedEntryCount,

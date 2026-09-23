@@ -6,16 +6,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show ComposerExit;
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/log_viewer/log_viewer.dart';
+import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
+    show
+        logViewerDeleteLabel,
+        logViewerDeleteMessageFor,
+        logViewerDeleteTitle,
+        logViewerDeletedMessage;
 import 'package:field_notes/features/mood/mood.dart';
+import 'package:field_notes/features/today/today_date.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import 'day_detail_edit_note.dart';
 import 'day_detail_entries_bar.dart';
-import 'day_detail_entry_tile.dart';
 import 'day_detail_header.dart';
 import 'day_detail_providers.dart';
 
@@ -26,8 +36,18 @@ const String dayDetailMediaErrorMessage = "Couldn't load your media library.";
 const String dayDetailDeleteErrorMessage =
     "Couldn't delete that entry. Please try again.";
 
-const double dayDetailPanelMaxWidth = 640;
-const double dayDetailPanelVerticalMargin = 24;
+const Key dayDetailPanelKey = ValueKey<String>('day-detail-panel');
+
+const double dayDetailPanelMaxWidth = 560;
+const double dayDetailPanelWindowGutter = 32;
+const double dayDetailPanelHeightShare = 0.86;
+
+const double _panelBorderWidth = 2;
+const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(18, 16, 18, 20);
+const double _summaryGap = 16;
+const double _messageGap = 8;
+const double _listLeadGap = 12;
+const double _cardGap = 9;
 
 const int _focusScanFrames = 32;
 const double _focusAlignment = 0.1;
@@ -38,11 +58,13 @@ class DayDetailPanel extends ConsumerStatefulWidget {
     required this.date,
     this.focusEntryId,
     this.maxWidth = dayDetailPanelMaxWidth,
+    this.onCoveredChanged,
   });
 
   final String date;
   final String? focusEntryId;
   final double maxWidth;
+  final ValueChanged<bool>? onCoveredChanged;
 
   @override
   ConsumerState<DayDetailPanel> createState() => _DayDetailPanelState();
@@ -70,7 +92,12 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     super.dispose();
   }
 
+  bool _entriesListed() =>
+      ref.read(entriesForDateProvider(widget.date)).hasValue &&
+      ref.read(dayDetailMediaResolverProvider).hasValue;
+
   Future<void> _revealFocusedEntry() async {
+    bool listedLastFrame = false;
     for (int frame = 0; frame < _focusScanFrames; frame++) {
       if (!mounted) {
         return;
@@ -80,7 +107,8 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
         await Scrollable.ensureVisible(target, alignment: _focusAlignment);
         return;
       }
-      if (_entryScroll.hasClients) {
+      final bool listed = _entriesListed();
+      if (listed && listedLastFrame && _entryScroll.hasClients) {
         final ScrollPosition position = _entryScroll.position;
         final double next = math.min(
           position.pixels + position.viewportDimension,
@@ -91,25 +119,79 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
         }
         _entryScroll.jumpTo(next);
       }
+      listedLastFrame = listed;
       await SchedulerBinding.instance.endOfFrame;
     }
   }
 
+  Future<T> _handOver<T>(Future<T> Function() open) async {
+    widget.onCoveredChanged?.call(true);
+    try {
+      return await open();
+    } finally {
+      if (mounted) {
+        widget.onCoveredChanged?.call(false);
+      }
+    }
+  }
+
+  Future<void> _open(Entry entry) async {
+    final LogViewerOutcome outcome = await _handOver(
+      () => showLogViewer(
+        context,
+        date: widget.date,
+        entryId: entry.id,
+        exit: LogViewerExit.back,
+      ),
+    );
+    if (!mounted || outcome != LogViewerOutcome.closedAll) {
+      return;
+    }
+    Navigator.of(context).pop();
+  }
+
   Future<void> _addNote() async {
-    await showTextComposer(context, widget.date);
+    await _handOver(
+      () => showTextComposer(context, widget.date, exit: ComposerExit.back),
+    );
   }
 
   Future<void> _edit(Entry entry) async {
-    await showEditNote(context, entry: entry, date: widget.date);
+    await _handOver(
+      () => showEditNote(
+        context,
+        entry: entry,
+        date: widget.date,
+        exit: ComposerExit.cancel,
+      ),
+    );
+  }
+
+  String _deletePlace() {
+    final DateTime? day = parseDateKey(widget.date);
+    return day == null
+        ? widget.date
+        : dayShortLabelFor(day, today: ref.read(todayClockProvider)());
   }
 
   Future<void> _delete(Entry entry) async {
+    final bool confirmed = await showConfirmDialog(
+      context,
+      title: logViewerDeleteTitle,
+      message: logViewerDeleteMessageFor(_deletePlace()),
+      confirmLabel: logViewerDeleteLabel,
+      danger: true,
+    );
+    if (!confirmed || !mounted) {
+      return;
+    }
     try {
       await ref.read(journalRepositoryProvider).softDeleteEntry(entry.id);
       if (!mounted) {
         return;
       }
       setState(() => _deleteError = null);
+      showTransientToast(context, logViewerDeletedMessage);
     } catch (_) {
       if (!mounted) {
         return;
@@ -125,100 +207,136 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     final List<Entry> entries = entriesAsync.value ?? const <Entry>[];
     final AsyncValue<MediaResolver> resolverAsync =
         ref.watch(dayDetailMediaResolverProvider);
-    final String? deleteError = _deleteError;
+    final DateTime today = ref.watch(todayClockProvider)();
+    final Size window = MediaQuery.sizeOf(context);
+    final double width = math.max(
+      0,
+      math.min(widget.maxWidth, window.width - dayDetailPanelWindowGutter),
+    );
+    final MediaResolver? resolver = resolverAsync.value;
+    final List<Entry> listed = resolver == null ? const <Entry>[] : entries;
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          vertical: dayDetailPanelVerticalMargin,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: window.height * dayDetailPanelHeightShare,
         ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: widget.maxWidth),
-          child: StickerCard(
-            surface: Palette.cardBright,
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                DayDetailHeader(
-                  date: widget.date,
-                  onClose: () => Navigator.of(context).pop(),
+        child: Container(
+          key: dayDetailPanelKey,
+          width: width,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: Palette.panelTop,
+            border: Border.all(color: Palette.ink, width: _panelBorderWidth),
+            borderRadius: BorderRadius.circular(Shapes.radiusXl),
+            boxShadow: Shadows.panelLift,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              DayDetailHeader(
+                date: widget.date,
+                today: today,
+                onClose: () => Navigator.of(context).pop(),
+              ),
+              Flexible(
+                child: _body(
+                  entriesAsync,
+                  entries,
+                  listed,
+                  resolver,
+                  resolverAsync,
                 ),
-                const SizedBox(height: 16),
-                MoodBannerForDate(
-                  date: widget.date,
-                  promptText: dayDetailMoodPrompt,
-                ),
-                const SizedBox(height: 16),
-                DayDetailEntriesBar(
-                  entryCount: entriesAsync.hasValue ? entries.length : null,
-                  onAddNote: _addNote,
-                ),
-                if (entriesAsync.hasError) ...<Widget>[
-                  const SizedBox(height: 8),
-                  const _DayDetailMessage(text: dayDetailEntriesErrorMessage),
-                ],
-                if (deleteError != null) ...<Widget>[
-                  const SizedBox(height: 8),
-                  _DayDetailMessage(text: deleteError),
-                ],
-                const SizedBox(height: 16),
-                Flexible(
-                  child: _content(entriesAsync, entries, resolverAsync),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _content(
+  Widget _body(
+    AsyncValue<List<Entry>> entriesAsync,
+    List<Entry> entries,
+    List<Entry> listed,
+    MediaResolver? resolver,
+    AsyncValue<MediaResolver> resolverAsync,
+  ) {
+    return ListView.builder(
+      controller: _entryScroll,
+      shrinkWrap: true,
+      padding: _bodyPadding,
+      itemCount: 1 + listed.length,
+      findChildIndexCallback: (Key key) {
+        final int index = listed.indexWhere(
+          (Entry entry) => key == ValueKey<String>(entry.id),
+        );
+        return index < 0 ? null : index + 1;
+      },
+      itemBuilder: (BuildContext context, int index) {
+        final MediaResolver? listResolver = resolver;
+        if (index == 0 || listResolver == null) {
+          return _summary(entriesAsync, entries, resolverAsync);
+        }
+        final Entry entry = listed[index - 1];
+        return KeyedSubtree(
+          key: ValueKey<String>(entry.id),
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: index == 1 ? _listLeadGap : _cardGap,
+            ),
+            child: CompactLogCard(
+              key: entry.id == widget.focusEntryId ? _focusedTile : null,
+              entry: entry,
+              resolver: listResolver,
+              density: CompactLogDensity.day,
+              audioPlayerFactory: createJustAudioPlayer,
+              onOpen: () => _open(entry),
+              onEdit: () => _edit(entry),
+              onDelete: () => _delete(entry),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _summary(
     AsyncValue<List<Entry>> entriesAsync,
     List<Entry> entries,
     AsyncValue<MediaResolver> resolverAsync,
   ) {
-    if (!entriesAsync.hasValue) {
-      return const SizedBox.shrink();
-    }
-    if (entries.isEmpty) {
-      return const EmptyStatePlaceholder(message: dayDetailEmptyMessage);
-    }
-    if (resolverAsync.hasError) {
-      return const _DayDetailMessage(text: dayDetailMediaErrorMessage);
-    }
-    if (!resolverAsync.hasValue) {
-      return const SizedBox.shrink();
-    }
-    final MediaResolver resolver = resolverAsync.requireValue;
-    return ListView.separated(
-      controller: _entryScroll,
-      shrinkWrap: true,
-      padding: EdgeInsets.zero,
-      itemCount: entries.length,
-      findItemIndexCallback: (Key key) {
-        final int index = entries.indexWhere(
-          (Entry entry) => key == ValueKey<String>(entry.id),
-        );
-        return index < 0 ? null : index;
-      },
-      separatorBuilder: (BuildContext context, int index) =>
-          const SizedBox(height: 12),
-      itemBuilder: (BuildContext context, int index) {
-        final Entry entry = entries[index];
-        return KeyedSubtree(
-          key: ValueKey<String>(entry.id),
-          child: DayDetailEntryTile(
-            key: entry.id == widget.focusEntryId ? _focusedTile : null,
-            entry: entry,
-            resolver: resolver,
-            onEdit: () => _edit(entry),
-            onDelete: () => _delete(entry),
-          ),
-        );
-      },
+    final String? deleteError = _deleteError;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        MoodBannerForDate(
+          date: widget.date,
+          promptText: dayDetailMoodPrompt,
+        ),
+        const SizedBox(height: _summaryGap),
+        DayDetailEntriesBar(
+          entryCount: entriesAsync.hasValue ? entries.length : null,
+          onAddNote: _addNote,
+        ),
+        if (entriesAsync.hasError) ...<Widget>[
+          const SizedBox(height: _messageGap),
+          const _DayDetailMessage(text: dayDetailEntriesErrorMessage),
+        ],
+        if (deleteError != null) ...<Widget>[
+          const SizedBox(height: _messageGap),
+          _DayDetailMessage(text: deleteError),
+        ],
+        if (entriesAsync.hasValue && entries.isEmpty) ...<Widget>[
+          const SizedBox(height: _listLeadGap),
+          const EmptyStatePlaceholder(message: dayDetailEmptyMessage),
+        ] else if (entriesAsync.hasValue && resolverAsync.hasError) ...<Widget>[
+          const SizedBox(height: _messageGap),
+          const _DayDetailMessage(text: dayDetailMediaErrorMessage),
+        ],
+      ],
     );
   }
 }

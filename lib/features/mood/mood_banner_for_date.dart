@@ -101,15 +101,20 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
         ref.watch(dayForDateProvider(widget.date));
     final Mood? mood = dayAsync.value?.mood;
     final bool interactive = dayAsync.hasValue;
+    final VoidCallback? onChangeMood =
+        interactive ? () => _changeMood(mood) : null;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        MoodBanner(
-          mood: mood,
-          promptText: widget.promptText,
-          onChangeMood: interactive ? () => _changeMood(mood) : null,
-        ),
+        if (!_isToday && mood != null)
+          DayMoodCard(mood: mood, onChangeMood: onChangeMood)
+        else
+          MoodBanner(
+            mood: mood,
+            promptText: widget.promptText,
+            onChangeMood: onChangeMood,
+          ),
         if (dayAsync.hasError) ...<Widget>[
           const SizedBox(height: 8),
           Text(

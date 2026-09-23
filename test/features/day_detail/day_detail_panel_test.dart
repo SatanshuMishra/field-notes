@@ -4,37 +4,40 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/widgets/icon_sticker_button.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
-import 'package:field_notes/features/day_detail/day_detail_entry_tile.dart';
+import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
+import 'package:field_notes/features/day_detail/day_detail_header.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
+import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import 'support/day_detail_harness.dart';
 
-Finder _tileAction(String label) => find.byWidgetPredicate(
-      (Widget widget) =>
-          widget is IconStickerButton && widget.semanticLabel == label,
-    );
+Finder _panelCard() => find.byKey(dayDetailPanelKey);
 
-Finder _panelConstraints() => find
-    .descendant(
-      of: find.byType(DayDetailPanel),
-      matching: find.byType(ConstrainedBox),
-    )
-    .first;
+Future<void> _revealPillOn(WidgetTester tester, Finder card) async {
+  await tester.longPress(card);
+  await tester.pumpAndSettle();
+}
 
-Finder _panelCard() => find
-    .descendant(
-      of: find.byType(DayDetailPanel),
-      matching: find.byType(StickerCard),
-    )
-    .first;
+Future<void> _confirmDelete(WidgetTester tester) async {
+  await tester.tap(find.byKey(logActionsDeleteKey).hitTestable());
+  await tester.pumpAndSettle();
+  expect(find.text('Delete this entry?'), findsOneWidget);
+  await tester.tap(find.byKey(confirmDialogConfirmKey));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _drainToast(WidgetTester tester) async {
+  await tester.pump(kToastLifetime);
+  await tester.pumpAndSettle();
+}
 
 Widget _panelApp(
   FakeJournalRepository repository, {
@@ -49,6 +52,7 @@ Widget _panelApp(
           dayDetailMediaResolverProvider.overrideWith(
             (Ref ref) => FakeMediaResolver(),
           ),
+      todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 23, 9)),
     ],
     child: dayDetailHarness(
       DayDetailPanel(date: '2026-07-19', focusEntryId: focusEntryId),
@@ -59,7 +63,7 @@ Widget _panelApp(
 String _longNote(int index) {
   final StringBuffer buffer = StringBuffer('journal note number $index');
   int word = 0;
-  while (buffer.length < notePreviewCharLimit * 2) {
+  while (buffer.length < 600) {
     buffer.write(' word${word++}');
   }
   return buffer.toString();
@@ -79,9 +83,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sunday, July 19'), findsOneWidget);
-    expect(find.text('2026'), findsOneWidget);
+    expect(find.text('a day in the garden'), findsOneWidget);
+    expect(find.text('2026'), findsNothing);
     expect(find.text(dayDetailMoodPrompt), findsOneWidget);
-    expect(find.text('2 entries'), findsOneWidget);
+    expect(find.text('2 logs that day'), findsOneWidget);
+    expect(find.byType(CompactLogCard), findsNWidgets(2));
     expect(find.text('a good day'), findsOneWidget);
     expect(find.text('and a walk'), findsOneWidget);
   });
@@ -91,7 +97,7 @@ void main() {
     await tester.pumpWidget(_panelApp(FakeJournalRepository()));
     await tester.pumpAndSettle();
 
-    expect(find.text('No entries yet'), findsOneWidget);
+    expect(find.text('0 logs that day'), findsOneWidget);
     expect(find.byType(EmptyStatePlaceholder), findsOneWidget);
     expect(find.text(dayDetailEmptyMessage), findsOneWidget);
   });
@@ -105,6 +111,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(newNoteTitle), findsOneWidget);
+    expect(find.text('Back'), findsOneWidget);
     expect(find.text('Sunday, July 19'), findsWidgets);
   });
 
@@ -119,12 +126,15 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(_tileAction(entryEditLabel));
+    await _revealPillOn(tester, find.byType(CompactLogCard));
+    await tester.tap(find.byKey(logActionsEditKey).hitTestable());
     await tester.pumpAndSettle();
 
     expect(
-      find.textContaining(
-        RegExp(r'^Editing (morning|afternoon|evening|night) note$'),
+      find.text(
+        editNoteTitleFor(
+          entryOf(type: EntryType.text, textContent: 'a good day'),
+        ),
       ),
       findsOneWidget,
     );
@@ -141,14 +151,15 @@ void main() {
 
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
-    expect(find.text('1 entry'), findsOneWidget);
+    expect(find.text('1 log that day'), findsOneWidget);
 
-    await tester.tap(_tileAction(entryDeleteLabel));
-    await tester.pumpAndSettle();
+    await _revealPillOn(tester, find.byType(CompactLogCard));
+    await _confirmDelete(tester);
 
     expect(repository.deletedEntryIds, <String>['entry-1']);
     expect(find.text('a good day'), findsNothing);
-    expect(find.text('No entries yet'), findsOneWidget);
+    expect(find.text('0 logs that day'), findsOneWidget);
+    await _drainToast(tester);
   });
 
   testWidgets('a delete rebuilds the surviving tiles by id, not by position',
@@ -172,14 +183,21 @@ void main() {
     expect(survivor, findsOneWidget);
     final Element survivorElement = tester.element(survivor);
 
-    await tester.tap(_tileAction(entryDeleteLabel).first);
-    await tester.pumpAndSettle();
+    await _revealPillOn(
+      tester,
+      find.descendant(
+        of: find.byKey(const ValueKey<String>('entry-1')),
+        matching: find.byType(CompactLogCard),
+      ),
+    );
+    await _confirmDelete(tester);
 
     expect(repository.deletedEntryIds, <String>['entry-1']);
     expect(find.byKey(const ValueKey<String>('entry-1')), findsNothing);
     expect(find.text('a good day'), findsNothing);
     expect(survivor, findsOneWidget);
     expect(identical(tester.element(survivor), survivorElement), isTrue);
+    await _drainToast(tester);
   });
 
   testWidgets('surfaces a non-destructive message when the delete fails',
@@ -193,8 +211,8 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    await tester.tap(_tileAction(entryDeleteLabel));
-    await tester.pumpAndSettle();
+    await _revealPillOn(tester, find.byType(CompactLogCard));
+    await _confirmDelete(tester);
 
     expect(repository.deletedEntryIds, isEmpty);
     expect(find.text(dayDetailDeleteErrorMessage), findsOneWidget);
@@ -214,7 +232,7 @@ void main() {
     expect(find.text('Sunday, July 19'), findsOneWidget);
     expect(find.byType(EmptyStatePlaceholder), findsNothing);
     expect(find.text(dayDetailEmptyMessage), findsNothing);
-    expect(find.text('No entries yet'), findsNothing);
+    expect(find.text('0 logs that day'), findsNothing);
   });
 
   testWidgets('surfaces a media error instead of mounting unplayable tiles',
@@ -238,7 +256,7 @@ void main() {
     expect(find.text(dayDetailMediaErrorMessage), findsOneWidget);
     expect(find.text('a good day'), findsNothing);
     expect(find.byKey(const ValueKey<String>('entry-1')), findsNothing);
-    expect(find.text('1 entry'), findsOneWidget);
+    expect(find.text('1 log that day'), findsOneWidget);
     expect(find.text('Sunday, July 19'), findsOneWidget);
   });
 
@@ -259,26 +277,37 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    final int builtTiles = find.byType(DayDetailEntryTile).evaluate().length;
+    final int builtTiles = find
+        .byType(CompactLogCard, skipOffstage: false)
+        .evaluate()
+        .length;
     expect(builtTiles, greaterThan(0));
     expect(builtTiles, lessThan(entryCount));
   });
 
-  testWidgets('the panel is capped at 640 wide and only by the viewport tall',
+  testWidgets('the panel is capped at 560 wide and 86 percent tall',
       (WidgetTester tester) async {
     await tester.pumpWidget(_panelApp(FakeJournalRepository()));
     await tester.pumpAndSettle();
 
-    final ConstrainedBox box = tester.widget<ConstrainedBox>(
-      _panelConstraints(),
-    );
-    expect(box.constraints, const BoxConstraints(maxWidth: 640));
-    expect(box.constraints.maxWidth, dayDetailPanelMaxWidth);
-    expect(box.constraints.hasBoundedHeight, isFalse);
-    expect(tester.getSize(_panelCard()).width, 640);
+    expect(dayDetailPanelMaxWidth, 560);
+    expect(tester.getSize(_panelCard()).width, 560);
+    expect(tester.getSize(_panelCard()).height, lessThanOrEqualTo(600 * 0.86));
   });
 
-  testWidgets('a long day fills the viewport less a vertical margin',
+  testWidgets('a narrow window leaves a 16 gutter either side of the panel',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(400, 700);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_panelApp(FakeJournalRepository()));
+    await tester.pumpAndSettle();
+
+    expect(tester.getSize(_panelCard()).width, 400 - 32);
+  });
+
+  testWidgets('a long day fills 86 percent of the window',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 900);
     tester.view.devicePixelRatio = 1.0;
@@ -298,11 +327,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final Size panel = tester.getSize(_panelCard());
-    expect(panel.height, 900 - 2 * dayDetailPanelVerticalMargin);
+    expect(panel.height, closeTo(900 * dayDetailPanelHeightShare, 0.01));
     expect(panel.height, greaterThan(520));
   });
 
-  testWidgets('a day-detail note reads in a 560 column inside the panel',
+  testWidgets('a day-detail card reads in the padded column of the panel',
       (WidgetTester tester) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
@@ -313,11 +342,17 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    expect(tester.getSize(find.byType(DayDetailEntryTile)).width, 600);
-    expect(tester.getSize(find.text('a good day')).width, 560);
+    final Rect panel = tester.getRect(_panelCard());
+    final Rect card = tester.getRect(find.byType(CompactLogCard));
+    expect(card.width, 560 - 2 * 2 - 2 * 18);
+    expect(card.left, panel.left + 2 + 18);
+    expect(
+      tester.widget<CompactLogCard>(find.byType(CompactLogCard)).density,
+      CompactLogDensity.day,
+    );
   });
 
-  testWidgets('a one-entry day keeps the list shrink-wrapped to its content',
+  testWidgets('a one-entry day keeps the body shrink-wrapped to its content',
       (WidgetTester tester) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
@@ -328,13 +363,18 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    final double listHeight = tester.getSize(find.byType(ListView)).height;
-    final double tileHeight =
-        tester.getSize(find.byKey(const ValueKey<String>('entry-1'))).height;
-    expect(listHeight, tileHeight);
+    final double bodyBottom = tester.getBottomLeft(find.byType(ListView)).dy;
+    final double cardBottom = tester
+        .getBottomLeft(find.byKey(const ValueKey<String>('entry-1')))
+        .dy;
+    expect(bodyBottom, cardBottom + 20);
+    expect(
+      tester.getSize(_panelCard()).height,
+      lessThan(600 * dayDetailPanelHeightShare),
+    );
   });
 
-  testWidgets('a long note reads in full, never behind a preview fade',
+  testWidgets('a long note reads as a compact lead with a Read link',
       (WidgetTester tester) async {
     final String note = _longNote(0);
     final FakeJournalRepository repository = FakeJournalRepository(
@@ -346,13 +386,39 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    expect(find.byType(NoteBody), findsOneWidget);
-    expect(find.byType(NotePreview), findsNothing);
-    expect(find.text(noteReadMoreLabel), findsNothing);
-    expect(
-      tester.widget<NoteDocument>(find.byType(NoteDocument)).source,
-      note,
+    expect(find.byType(CompactLogCard), findsOneWidget);
+    expect(find.byKey(compactLogOpenLabelKey), findsOneWidget);
+    expect(find.text('journal note number 0 word0 word1 word2 word3 word4…'),
+        findsNothing);
+    expect(find.byType(NoteDocument), findsNothing);
+    expect(find.textContaining('word60'), findsNothing);
+  });
+
+  testWidgets('the header stays fixed while the body scrolls',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        for (int i = 0; i < 40; i++)
+          entryOf(
+            id: 'entry-$i',
+            type: EntryType.text,
+            textContent: 'journal note number $i for the day',
+          ),
+      ],
     );
+
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+
+    final double headerTop = tester.getTopLeft(find.byType(DayDetailHeader)).dy;
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+
+    expect(tester.getTopLeft(find.byType(DayDetailHeader)).dy, headerTop);
+    expect(find.byKey(const ValueKey<String>('entry-0')), findsNothing);
   });
 
   testWidgets('opening with focusEntryId scrolls that entry into view',

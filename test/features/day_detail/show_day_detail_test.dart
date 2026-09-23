@@ -108,7 +108,8 @@ void main() {
     await tester.tap(find.text('open day'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Close'));
+    expect(find.text('Close'), findsNothing);
+    await tester.tap(find.bySemanticsLabel('Close'));
     await tester.pumpAndSettle();
 
     expect(find.text('Sunday, July 19'), findsNothing);
