@@ -13,6 +13,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../entry_cards/support/fake_video_player.dart';
+
 const String _date = '2026-07-19';
 
 class _AvailableVideoResolver implements MediaResolver {
@@ -90,6 +92,7 @@ Future<void> _openViewer(
   WidgetTester tester, {
   required Future<MediaResolver> resolver,
   required VideoSlots slots,
+  required EntryVideoPlayerFactory buildPlayer,
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -100,6 +103,7 @@ Future<void> _openViewer(
         ),
         notesMediaResolverProvider.overrideWith((Ref ref) => resolver),
         videoSlotsProvider.overrideWithValue(slots),
+        todayVideoPlayerFactoryProvider.overrideWithValue(buildPlayer),
         todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 22)),
       ],
       child: const MaterialApp(
@@ -126,7 +130,16 @@ void main() {
     final File file = _writtenVideoFile();
     final Completer<MediaResolver> pending = Completer<MediaResolver>();
 
-    await _openViewer(tester, resolver: pending.future, slots: slots);
+    int playersBuilt = 0;
+    await _openViewer(
+      tester,
+      resolver: pending.future,
+      slots: slots,
+      buildPlayer: () {
+        playersBuilt++;
+        return FakeEntryVideoPlayer();
+      },
+    );
 
     pending.complete(_AvailableVideoResolver(file));
     await tester.pumpAndSettle();
@@ -136,6 +149,7 @@ void main() {
     expect(tester.widget<VideoBody>(find.byType(VideoBody)).slots, same(slots));
     expect(find.byType(CorruptMediaPlaceholder), findsNothing);
     expect(find.byType(NeutralMediaPlaceholder), findsOneWidget);
+    expect(playersBuilt, 0);
   });
 
   testWidgets('loads a video card mounted before the media resolver settles',
@@ -145,13 +159,23 @@ void main() {
 
     final File file = _writtenVideoFile();
     final Completer<MediaResolver> pending = Completer<MediaResolver>();
+    final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
 
-    await _openViewer(tester, resolver: pending.future, slots: slots);
+    await _openViewer(
+      tester,
+      resolver: pending.future,
+      slots: slots,
+      buildPlayer: () {
+        final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+        built.add(player);
+        return player;
+      },
+    );
 
     expect(find.byKey(logViewerPanelKey), findsOneWidget);
     expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-
     expect(find.byType(VideoBody), findsNothing);
+    expect(built, isEmpty);
 
     final MediaResolver settled = _AvailableVideoResolver(file);
     pending.complete(settled);
@@ -161,5 +185,12 @@ void main() {
     expect(body.resolver, same(settled));
     expect(body.entry.mediaId, 'vid');
     expect(body.slots, same(slots));
+    expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+    expect(built, hasLength(1));
+    expect(built.single.loadCalls, <String>[file.path]);
+    expect(
+      find.byKey(const ValueKey<String>('fake-video-surface')),
+      findsOneWidget,
+    );
   });
 }

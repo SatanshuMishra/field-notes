@@ -171,6 +171,12 @@ void main() {
               'the new canes in before the rain came through the valley.',
         ),
         _entry(id: 'entry-3', hour: 18, textContent: _longNote(3)),
+        _entry(
+          id: 'entry-4',
+          hour: 20,
+          type: EntryType.voice,
+          mediaId: 'voice-that-is-gone',
+        ),
       ],
     );
 
@@ -181,6 +187,7 @@ void main() {
       ('08:12 · morning · note', true),
       ('12:12 · afternoon · note', true),
       ('18:12 · evening · note', false),
+      ('20:12 · evening · voice', true),
     ]) {
       await tester.scrollUntilVisible(
         find.text(stamp),
