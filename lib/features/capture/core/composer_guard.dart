@@ -29,6 +29,7 @@ class ComposerGuard extends StatefulWidget {
     required this.builder,
     this.popResult,
     this.locked = false,
+    this.onClose,
   });
 
   final ValueGetter<bool> isDirty;
@@ -36,6 +37,7 @@ class ComposerGuard extends StatefulWidget {
   final ComposerGuardBuilder builder;
   final Object? popResult;
   final bool locked;
+  final ValueChanged<Object?>? onClose;
 
   @override
   State<ComposerGuard> createState() => _ComposerGuardState();
@@ -67,7 +69,12 @@ class _ComposerGuardState extends State<ComposerGuard> {
 
   Future<void> _discardAndPop() async {
     final Future<void> discarding = widget.onDiscard();
-    Navigator.of(context).pop(widget.popResult);
+    final ValueChanged<Object?>? onClose = widget.onClose;
+    if (onClose == null) {
+      Navigator.of(context).pop(widget.popResult);
+    } else {
+      onClose(widget.popResult);
+    }
     await discarding;
   }
 

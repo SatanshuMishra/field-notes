@@ -63,7 +63,24 @@ Widget _editApp({
   );
 }
 
-Entry _noteEntry() => entryOf(type: EntryType.text, textContent: 'a good day');
+const String _afternoonTitle = 'Editing afternoon note';
+
+Entry _noteEntry() => Entry(
+      id: 'entry-1',
+      dayId: 'day-1',
+      type: EntryType.text,
+      textContent: 'a good day',
+      createdAt: DateTime(2026, 7, 19, 14, 30).millisecondsSinceEpoch,
+      updatedAt: 0,
+    );
+
+Future<void> _saveAndConfirm(WidgetTester tester) async {
+  await tester.tap(find.text(editNoteSaveLabel));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
+  expect(find.text(editNoteConfirmTitle), findsOneWidget);
+  await tester.tap(find.byKey(confirmDialogConfirmKey));
+}
 
 String _editorText(WidgetTester tester) =>
     tester.widget<EditableText>(find.byType(EditableText)).controller.text;
@@ -90,14 +107,14 @@ void main() {
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit note'), findsOneWidget);
+    expect(find.text(_afternoonTitle), findsOneWidget);
     expect(find.text('a good day'), findsOneWidget);
 
     await tester.enterText(find.byType(EditableText), '  a better day  ');
     await tester.pump(draftIdleDebounceForTest);
     expect(drafts.drafts, <String, String>{'entry-1': '  a better day  '});
 
-    await tester.tap(find.text(editNoteSaveLabel));
+    await _saveAndConfirm(tester);
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, isEmpty);
@@ -111,7 +128,7 @@ void main() {
     ]);
     expect(drafts.drafts, isEmpty);
     expect(result, isTrue);
-    expect(find.text('Edit note'), findsNothing);
+    expect(find.text(_afternoonTitle), findsNothing);
   });
 
   testWidgets(
@@ -208,7 +225,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.noteSaves, isEmpty);
-    expect(find.text(editNoteTitle), findsOneWidget);
+    expect(find.text(_afternoonTitle), findsOneWidget);
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day, half typed'});
   });
 
@@ -234,6 +251,10 @@ void main() {
     await tester.enterText(find.byType(EditableText), 'a better day still');
 
     await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text(editNoteConfirmTitle), findsOneWidget);
+    await tester.tap(find.byKey(confirmDialogConfirmKey));
     await tester.pump(const Duration(milliseconds: 50));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pumpAndSettle();
@@ -265,7 +286,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(EditableText), 'a better day');
     await tester.pump(draftIdleDebounceForTest);
-    await tester.tap(find.text(editNoteSaveLabel));
+    await _saveAndConfirm(tester);
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, isEmpty);
@@ -325,7 +346,7 @@ void main() {
     expect(repository.noteSaves, isEmpty);
     expect(repository.textUpdates, isEmpty);
     expect(result, isFalse);
-    expect(find.text('Edit note'), findsNothing);
+    expect(find.text(_afternoonTitle), findsNothing);
   });
 
   testWidgets(
@@ -360,7 +381,7 @@ void main() {
     await tester.tap(find.byKey(composerKeepEditingKey));
     await tester.pumpAndSettle();
     expect(find.text(composerDiscardTitle), findsNothing);
-    expect(find.text('Edit note'), findsOneWidget);
+    expect(find.text(_afternoonTitle), findsOneWidget);
     expect(_editorText(tester), 'a better day');
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
     expect(result, 'unset');
@@ -373,7 +394,7 @@ void main() {
     expect(drafts.drafts, isEmpty);
     expect(repository.noteSaves, isEmpty);
     expect(result, isFalse);
-    expect(find.text('Edit note'), findsNothing);
+    expect(find.text(_afternoonTitle), findsNothing);
   });
 
   testWidgets('a scrim tap on a dirty editor asks first and keeps the edit',
@@ -402,13 +423,13 @@ void main() {
     await tester.tapAt(const Offset(4, 4));
     await tester.pumpAndSettle();
     expect(find.text(composerDiscardTitle), findsOneWidget);
-    expect(find.text('Edit note'), findsOneWidget);
+    expect(find.text(_afternoonTitle), findsOneWidget);
     expect(result, 'unset');
 
     await tester.tap(find.byKey(composerKeepEditingKey));
     await tester.pumpAndSettle();
     expect(find.text(composerDiscardTitle), findsNothing);
-    expect(find.text('Edit note'), findsOneWidget);
+    expect(find.text(_afternoonTitle), findsOneWidget);
     expect(_editorText(tester), 'a better day');
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
     expect(repository.noteSaves, isEmpty);
@@ -446,7 +467,7 @@ void main() {
 
     await sendSystemBack(tester);
 
-    expect(find.text('Edit note'), findsOneWidget);
+    expect(find.text(_afternoonTitle), findsOneWidget);
     expect(find.text(composerDiscardTitle), findsOneWidget);
     expect(result, 'unset');
 
@@ -455,7 +476,7 @@ void main() {
 
     expect(drafts.drafts, isEmpty);
     expect(result, isFalse);
-    expect(find.text('Edit note'), findsNothing);
+    expect(find.text(_afternoonTitle), findsNothing);
   });
 
   testWidgets(
@@ -492,7 +513,7 @@ void main() {
     expect(_editorText(tester), 'a good day');
     expect(find.byType(DraftRestoredChip), findsNothing);
     expect(drafts.drafts, isEmpty);
-    expect(find.text('Edit note'), findsOneWidget);
+    expect(find.text(_afternoonTitle), findsOneWidget);
 
     await tester.tap(find.byKey(composerCloseKey));
     await tester.pumpAndSettle();
@@ -589,9 +610,11 @@ void main() {
         await tester.pumpAndSettle();
         await tester.enterText(find.byType(EditableText), source);
         await tester.pump();
-        await tester.tap(find.text(editNoteSaveLabel));
+        await _saveAndConfirm(tester);
         await tester.pumpAndSettle();
-        expect(find.text(editNoteTitle), findsNothing);
+        expect(find.text(editNoteTitleFor(created)), findsNothing);
+        await tester.pump(kToastLifetime);
+        await tester.pumpAndSettle();
       }
 
       expect(await indexed(), isEmpty);
