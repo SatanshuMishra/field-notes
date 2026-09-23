@@ -55,11 +55,7 @@ const List<Offset> _speakerOutline = <Offset>[
   Offset(8, 9),
 ];
 
-const List<Offset> _editNib = <Offset>[
-  Offset(4, 17),
-  Offset(12, 6),
-  Offset(20, 17),
-];
+const Radius _editEndCap = Radius.circular(2.1);
 
 const Radius _trashCorner = Radius.circular(1);
 
@@ -240,9 +236,15 @@ class IconStickerGlyphPainter extends CustomPainter {
   Path _speaker() => Path()..addPolygon(_speakerOutline, true);
 
   Path _edit() => Path()
-    ..addPolygon(_editNib, false)
-    ..moveTo(6, 20)
-    ..lineTo(18, 20);
+    ..moveTo(4, 20)
+    ..lineTo(8, 20)
+    ..lineTo(19, 9)
+    ..arcToPoint(const Offset(16, 6), radius: _editEndCap, clockwise: false)
+    ..lineTo(5, 17)
+    ..lineTo(5, 20)
+    ..close()
+    ..moveTo(14, 8)
+    ..lineTo(17, 11);
 
   Path _trash() => Path()
     ..moveTo(4, 7)
