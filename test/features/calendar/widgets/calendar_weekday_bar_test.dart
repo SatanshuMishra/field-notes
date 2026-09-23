@@ -12,13 +12,15 @@ void main() {
     await tester.pumpWidget(
       _host(
         const CalendarWeekdayBar(
-          labels: <String>['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+          labels: <String>['S', 'M', 'T', 'W', 'T', 'F', 'S'],
         ),
       ),
     );
 
-    for (final String label in <String>['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']) {
-      expect(find.text(label), findsOneWidget);
-    }
+    expect(find.text('S'), findsNWidgets(2));
+    expect(find.text('M'), findsOneWidget);
+    expect(find.text('T'), findsNWidgets(2));
+    expect(find.text('W'), findsOneWidget);
+    expect(find.text('F'), findsOneWidget);
   });
 }

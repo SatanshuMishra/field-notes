@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
 import 'package:field_notes/state/journal_providers.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -12,7 +14,10 @@ import 'package:flutter_test/flutter_test.dart';
 Widget _host(Widget child, {required List<Override> overrides}) {
   return ProviderScope(
     retry: (int retryCount, Object error) => null,
-    overrides: overrides,
+    overrides: <Override>[
+      weekStartProvider.overrideWithValue(WeekStart.sunday),
+      ...overrides,
+    ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(body: child),
@@ -95,8 +100,8 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(const ValueKey<String>('day-2026-07-15')));
-    expect(opened, <String>['2026-07-15']);
+    await tester.tap(find.byKey(const ValueKey<String>('day-2026-07-14')));
+    expect(opened, <String>['2026-07-14']);
   });
 
   testWidgets('next chevron advances to the following month',

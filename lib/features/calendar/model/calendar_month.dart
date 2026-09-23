@@ -13,14 +13,14 @@ const List<String> _monthNames = <String>[
   'December',
 ];
 
-const List<String> _weekdayShort = <String>[
-  'Mo',
-  'Tu',
-  'We',
-  'Th',
-  'Fr',
-  'Sa',
-  'Su',
+const List<String> _weekdayLetters = <String>[
+  'M',
+  'T',
+  'W',
+  'T',
+  'F',
+  'S',
+  'S',
 ];
 
 class MonthRef {
@@ -58,18 +58,14 @@ class MonthRef {
 
 class CalendarCell {
   const CalendarCell.day({
-    required int this.dayOfMonth,
-    required String this.dateKey,
-  }) : isPadding = false;
+    required this.dayOfMonth,
+    required this.dateKey,
+    this.isInMonth = true,
+  });
 
-  const CalendarCell.padding()
-      : dayOfMonth = null,
-        dateKey = null,
-        isPadding = true;
-
-  final int? dayOfMonth;
-  final String? dateKey;
-  final bool isPadding;
+  final int dayOfMonth;
+  final String dateKey;
+  final bool isInMonth;
 
   @override
   bool operator ==(Object other) =>
@@ -78,10 +74,10 @@ class CalendarCell {
           runtimeType == other.runtimeType &&
           dayOfMonth == other.dayOfMonth &&
           dateKey == other.dateKey &&
-          isPadding == other.isPadding;
+          isInMonth == other.isInMonth;
 
   @override
-  int get hashCode => Object.hash(dayOfMonth, dateKey, isPadding);
+  int get hashCode => Object.hash(dayOfMonth, dateKey, isInMonth);
 }
 
 List<CalendarCell> monthGridCells(
@@ -91,26 +87,28 @@ List<CalendarCell> monthGridCells(
   final int firstWeekdayOfMonth = DateTime(month.year, month.month, 1).weekday;
   final int daysInMonth = DateTime(month.year, month.month + 1, 0).day;
   final int leading = (firstWeekdayOfMonth - firstWeekday + 7) % 7;
+  final int weekCount = (leading + daysInMonth + 6) ~/ 7;
 
-  final List<CalendarCell> cells = <CalendarCell>[
-    for (int i = 0; i < leading; i++) const CalendarCell.padding(),
-    for (int day = 1; day <= daysInMonth; day++)
-      CalendarCell.day(dayOfMonth: day, dateKey: month.dateKey(day)),
-  ];
-
-  final int remainder = cells.length % 7;
-  if (remainder != 0) {
-    for (int i = 0; i < 7 - remainder; i++) {
-      cells.add(const CalendarCell.padding());
-    }
-  }
-
-  return List<CalendarCell>.unmodifiable(cells);
+  return List<CalendarCell>.unmodifiable(<CalendarCell>[
+    for (int index = 0; index < weekCount * 7; index++)
+      _cellFor(DateTime(month.year, month.month, 1 - leading + index), month),
+  ]);
 }
+
+CalendarCell _cellFor(DateTime date, MonthRef month) {
+  final MonthRef dateMonth = MonthRef.forDate(date);
+  return CalendarCell.day(
+    dayOfMonth: date.day,
+    dateKey: dateMonth.dateKey(date.day),
+    isInMonth: dateMonth == month,
+  );
+}
+
+String monthAbbreviation(int month) => _monthNames[month - 1].substring(0, 3);
 
 List<String> weekdayHeaders({int firstWeekday = DateTime.sunday}) {
   return <String>[
-    for (int i = 0; i < 7; i++) _weekdayShort[(firstWeekday - 1 + i) % 7],
+    for (int i = 0; i < 7; i++) _weekdayLetters[(firstWeekday - 1 + i) % 7],
   ];
 }
 

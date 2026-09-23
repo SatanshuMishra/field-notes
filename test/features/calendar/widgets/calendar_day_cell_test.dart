@@ -19,14 +19,31 @@ Day _day(String date, {Mood? mood}) => Day(
     );
 
 void main() {
-  testWidgets('padding cell renders nothing tappable',
+  testWidgets(
+      'neighbouring-month cell shows only its dimmed number and still taps',
       (WidgetTester tester) async {
+    int taps = 0;
     await tester.pumpWidget(
-      _host(const CalendarDayCell(cell: CalendarCell.padding())),
+      _host(
+        CalendarDayCell(
+          cell: const CalendarCell.day(
+            dayOfMonth: 29,
+            dateKey: '2026-06-29',
+            isInMonth: false,
+          ),
+          day: _day('2026-06-29', mood: Mood.happy),
+          onTap: () => taps++,
+        ),
+      ),
     );
 
     expect(find.byType(FlowerBloom), findsNothing);
-    expect(find.byType(GestureDetector), findsNothing);
+    expect(find.byKey(calendarActivityDotKey), findsNothing);
+    expect(find.text('29'), findsOneWidget);
+    expect(tester.widget<Opacity>(find.byType(Opacity)).opacity, 0.35);
+
+    await tester.tap(find.byType(CalendarDayCell));
+    expect(taps, 1);
   });
 
   testWidgets('mood day renders its flower and the day number, and taps',
