@@ -363,9 +363,11 @@ class _CompactLogCardState extends State<CompactLogCard> {
         (_shortNoteSize / bodySize);
     return MediaQuery(
       data: media.copyWith(textScaler: TextScaler.linear(scale)),
-      child: NoteMediaScope(
-        resolver: widget.resolver,
-        child: NoteBody(text: widget.entry.textContent ?? ''),
+      child: IgnorePointer(
+        child: NoteMediaScope(
+          resolver: widget.resolver,
+          child: NoteBody(text: widget.entry.textContent ?? ''),
+        ),
       ),
     );
   }

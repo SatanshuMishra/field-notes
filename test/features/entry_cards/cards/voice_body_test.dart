@@ -110,6 +110,29 @@ void main() {
       );
     });
 
+    testWidgets(
+        'the missing-audio placeholder grows with doubled text instead of '
+        'overflowing', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        cardHarness(
+          VoiceBody(
+            entry:
+                entryOf(type: EntryType.voice, mediaId: 'gone', durationMs: 1000),
+            resolver: FakeMediaResolver(),
+            playerFactory: () => FakeEntryAudioPlayer(),
+          ),
+          width: 200,
+          data: const MediaQueryData(textScaler: TextScaler.linear(2)),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      final Size placeholder =
+          tester.getSize(find.byType(CorruptMediaPlaceholder));
+      expect(placeholder.height, greaterThanOrEqualTo(64));
+    });
+
     testWidgets('a new resolver identity re-prepares an unavailable card',
         (WidgetTester tester) async {
       final List<FakeEntryAudioPlayer> built = <FakeEntryAudioPlayer>[];

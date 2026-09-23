@@ -148,6 +148,31 @@ void main() {
     expect(opens, 1);
   });
 
+  testWidgets("tapping a short note's text opens the log", (
+    WidgetTester tester,
+  ) async {
+    const String note = 'Made soup. Small and good and entirely enough.';
+    int opens = 0;
+    await tester.pumpWidget(
+      _host(
+        CompactLogCard(
+          entry: _entry(type: EntryType.text, textContent: note),
+          resolver: FakeMediaResolver(),
+          density: CompactLogDensity.feed,
+          onOpen: () => opens++,
+          onEdit: () {},
+          onDelete: () {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    await tester.tap(find.textContaining(note, findRichText: true));
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(opens, 1);
+  });
+
   testWidgets('the voice play control plays in place without opening the log', (
     WidgetTester tester,
   ) async {
