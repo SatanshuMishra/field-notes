@@ -1,7 +1,7 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
-import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/today/this_week_garden.dart';
 import 'package:field_notes/features/today/today_layout.dart';
 import 'package:field_notes/features/today/today_memory.dart';
@@ -170,7 +170,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      final int built = find.byType(EntryCard).evaluate().length;
+      final int built = find.byType(CompactLogCard).evaluate().length;
       expect(built, greaterThan(0), reason: '$layout built nothing');
       expect(built, lessThan(entryCount), reason: '$layout built every card');
     }

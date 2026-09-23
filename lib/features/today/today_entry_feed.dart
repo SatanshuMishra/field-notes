@@ -4,8 +4,12 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
-import 'package:field_notes/features/day_detail/day_detail.dart';
+import 'package:field_notes/domain/repositories/journal_repository.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +21,13 @@ const String todayFeedEmptyMessage =
     'Capture a moment — write it, speak it, or film it.';
 const String todayFeedErrorMessage = "Couldn't load today's entries.";
 const String todayMediaErrorMessage = "Couldn't load your media library.";
+const String todayDeleteTitle = 'Delete this entry?';
+const String todayDeleteMessage =
+    'This log will be removed from today. This can’t be undone.';
+const String todayDeleteLabel = 'Delete';
+const String todayDeletedMessage = 'Entry deleted';
+const String todayDeleteFailedMessage =
+    "Couldn't delete that entry. Please try again.";
 
 const double _feedCardGap = 12;
 
@@ -123,14 +134,60 @@ class TodayEntryTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return EntryCard(
+    return CompactLogCard(
       entry: entry,
       resolver: resolver,
+      density: CompactLogDensity.feed,
       audioPlayerFactory: ref.watch(todayAudioPlayerFactoryProvider),
-      videoPlayerFactory: ref.watch(todayVideoPlayerFactoryProvider),
-      videoSlots: ref.watch(videoSlotsProvider),
-      preview: true,
-      onTap: () => showDayDetail(context, date: date, focusEntryId: entry.id),
+      onOpen: () => _open(context),
+      onEdit: entry.type == EntryType.text ? () => _edit(context) : null,
+      onDelete: () => _delete(context, ref),
     );
+  }
+
+  Future<void> _open(BuildContext context) async {
+    await showLogViewer(
+      context,
+      date: date,
+      entryId: entry.id,
+      exit: LogViewerExit.close,
+    );
+  }
+
+  Future<void> _edit(BuildContext context) async {
+    await showEditNote(
+      context,
+      entry: entry,
+      date: date,
+      exit: ComposerExit.cancel,
+    );
+  }
+
+  Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final JournalRepository repository = ref.read(journalRepositoryProvider);
+    final BuildContext toastContext =
+        ModalRoute.of(context)?.subtreeContext ?? context;
+    final bool confirmed = await showConfirmDialog(
+      context,
+      title: todayDeleteTitle,
+      message: todayDeleteMessage,
+      confirmLabel: todayDeleteLabel,
+      danger: true,
+    );
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await repository.softDeleteEntry(entry.id);
+    } catch (error, stackTrace) {
+      debugPrint('Today delete failed: $error\n$stackTrace');
+      if (toastContext.mounted) {
+        showTransientToast(toastContext, todayDeleteFailedMessage);
+      }
+      return;
+    }
+    if (toastContext.mounted) {
+      showTransientToast(toastContext, todayDeletedMessage);
+    }
   }
 }
