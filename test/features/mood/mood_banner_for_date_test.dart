@@ -6,6 +6,7 @@ import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../sound/support/fake_sound_player.dart';
@@ -24,6 +25,7 @@ void main() {
             (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
           ),
           soundPlayerProvider.overrideWithValue(FakeSoundPlayer()),
+          todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 9)),
         ],
         child: moodHarness(const MoodBannerForDate(date: '2026-07-19')),
       ),
