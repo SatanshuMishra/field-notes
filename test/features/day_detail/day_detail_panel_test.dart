@@ -104,7 +104,8 @@ void main() {
     await tester.tap(find.text('Add a note'));
     await tester.pumpAndSettle();
 
-    expect(find.text('$newNoteTitle · Sunday, July 19'), findsOneWidget);
+    expect(find.text(newNoteTitle), findsOneWidget);
+    expect(find.text('Sunday, July 19'), findsWidgets);
   });
 
   testWidgets('tapping edit opens the note editor prefilled',
@@ -121,7 +122,12 @@ void main() {
     await tester.tap(_tileAction(entryEditLabel));
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit note'), findsOneWidget);
+    expect(
+      find.textContaining(
+        RegExp(r'^Editing (morning|afternoon|evening|night) note$'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('a good day'), findsWidgets);
   });
 

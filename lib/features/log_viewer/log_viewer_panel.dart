@@ -445,13 +445,13 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
         return VoiceBody(
           entry: entry,
           resolver: resolver,
-          playerFactory: createJustAudioPlayer,
+          playerFactory: ref.watch(todayAudioPlayerFactoryProvider),
         );
       case EntryType.video:
         return VideoBody(
           entry: entry,
           resolver: resolver,
-          playerFactory: createVideoPlayerEntryPlayer,
+          playerFactory: ref.watch(todayVideoPlayerFactoryProvider),
           slots: ref.watch(videoSlotsProvider),
         );
     }
