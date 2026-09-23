@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -181,6 +183,178 @@ void main() {
 
       expect(failures, greaterThanOrEqualTo(1));
       expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
+    });
+
+    testWidgets('a photo keeps its frame while its box is resized', (
+      WidgetTester tester,
+    ) async {
+      final File wide = File('${root.path}/wide.png')
+        ..writeAsBytesSync(widePngBytes());
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'p1',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'p1', relPath: 'wide.png'),
+            file: wide,
+          ),
+        )
+        ..memoize('p1');
+
+      Widget at(double width) => cardHarness(
+            MediaImage(
+              resolver: resolver,
+              mediaId: 'p1',
+              errorLabel: 'Photo',
+            ),
+            width: width,
+            data: const MediaQueryData(devicePixelRatio: 1),
+          );
+
+      await tester.runAsync(() async {
+        await tester.pumpWidget(at(100));
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+
+      final int first =
+          (tester.widget<Image>(find.byType(Image)).image as ResizeImage)
+              .width!;
+      expect(
+        tester.renderObject<RenderImage>(find.byType(RawImage)).image,
+        isNotNull,
+        reason: 'the first decode never landed, so this test proves nothing',
+      );
+
+      await tester.pumpWidget(at(200));
+      await tester.pump();
+
+      expect(
+        (tester.widget<Image>(find.byType(Image)).image as ResizeImage).width,
+        isNot(first),
+        reason: 'the resize did not cross a decode bucket',
+      );
+      expect(
+        tester.renderObject<RenderImage>(find.byType(RawImage)).image,
+        isNotNull,
+        reason: 'the photo blanks while the new decode is in flight',
+      );
+    });
+
+    testWidgets('a different photo does not inherit the last one\'s frame', (
+      WidgetTester tester,
+    ) async {
+      final File wide = File('${root.path}/wide.png')
+        ..writeAsBytesSync(widePngBytes());
+      final File short = File('${root.path}/short.png')
+        ..writeAsBytesSync(shortPngBytes());
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'p1',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'p1', relPath: 'wide.png'),
+            file: wide,
+          ),
+        )
+        ..set(
+          'p2',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'p2', relPath: 'short.png'),
+            file: short,
+          ),
+        )
+        ..memoize('p1')
+        ..memoize('p2');
+
+      Widget of(String id) => cardHarness(
+            MediaImage(
+              resolver: resolver,
+              mediaId: id,
+              errorLabel: 'Photo',
+            ),
+            width: 100,
+            data: const MediaQueryData(devicePixelRatio: 1),
+          );
+
+      await tester.runAsync(() async {
+        await tester.pumpWidget(of('p1'));
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+
+      final ui.Image? firstFrame =
+          tester.renderObject<RenderImage>(find.byType(RawImage)).image;
+      expect(firstFrame, isNotNull, reason: 'the first decode never landed');
+      final int firstHeight = firstFrame!.height;
+
+      await tester.pumpWidget(of('p2'));
+      await tester.pump();
+
+      final ui.Image? afterSwap =
+          tester.renderObject<RenderImage>(find.byType(RawImage)).image;
+      expect(
+        afterSwap?.height,
+        isNot(firstHeight),
+        reason: 'the new photo is wearing the old photo\'s frame',
+      );
+    });
+
+    testWidgets('a photo resolved while on screen keeps its frame', (
+      WidgetTester tester,
+    ) async {
+      final File wide = File('${root.path}/wide.png')
+        ..writeAsBytesSync(widePngBytes());
+      final FakeMediaResolver resolver = FakeMediaResolver()
+        ..set(
+          'p1',
+          ResolvedMedia.available(
+            blob: blobOf(id: 'p1', relPath: 'wide.png'),
+            file: wide,
+          ),
+        );
+
+      Widget at(double width) => cardHarness(
+            MediaImage(
+              resolver: resolver,
+              mediaId: 'p1',
+              errorLabel: 'Photo',
+            ),
+            width: width,
+            data: const MediaQueryData(devicePixelRatio: 1),
+          );
+
+      await tester.runAsync(() async {
+        await tester.pumpWidget(at(100));
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+        await tester.pump();
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+
+      expect(
+        tester.renderObject<RenderImage>(find.byType(RawImage)).image,
+        isNotNull,
+        reason: 'the first decode never landed, so this test proves nothing',
+      );
+      expect(
+        resolver.resolved('p1'),
+        isNotNull,
+        reason: 'the memo never filled, so this test proves nothing',
+      );
+      final State<StatefulWidget> drawn = tester.state(find.byType(Image));
+
+      await tester.pumpWidget(at(100));
+      await tester.pump();
+
+      expect(
+        tester.state(find.byType(Image)),
+        same(drawn),
+        reason: 'the photo was remounted when the resolver memo filled',
+      );
+      expect(
+        tester.renderObject<RenderImage>(find.byType(RawImage)).image,
+        isNotNull,
+        reason: 'the photo was remounted when the resolver memo filled',
+      );
     });
   });
 }
