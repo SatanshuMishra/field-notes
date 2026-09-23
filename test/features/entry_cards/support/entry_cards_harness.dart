@@ -46,8 +46,13 @@ class FakeMediaResolver implements MediaResolver {
     if (mediaId == null) {
       return const ResolvedMedia.missing();
     }
-    return _results[mediaId] ?? const ResolvedMedia.missing();
+    final ResolvedMedia media = await _lookup(mediaId);
+    _memoized.add(mediaId);
+    return media;
   }
+
+  Future<ResolvedMedia> _lookup(String mediaId) async =>
+      _results[mediaId] ?? const ResolvedMedia.missing();
 }
 
 class FakeMediaStore implements MediaStore {
@@ -170,4 +175,28 @@ MediaBlob blobOf({
 List<int> onePixelPngBytes() => base64Decode(
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAA'
       'C0lEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+    );
+
+List<int> widePngBytes() => base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAUAAAADwCAAAAABURuK3AAAB'
+      'OElEQVR42u3QQREAAAwCIKMb3RC7/SACKSdRIFCgQIEIFChQ'
+      'IAIFChSIQIECBSJQoECBCBQoUCACBQoUiECBAgUiUKBAgQgU'
+      'KFAgAgUKFCgQgQIFCkSgQIECEShQoEAEChQoEIECBQpEoECB'
+      'AhEoUKBABAoUKBCBAgUKRKBAgQIFKhAoUKBABAoUKBCBAgUK'
+      'RKBAgQIRKFCgQAQKFCgQgQIFCkSgQIECEShQoEAEChQoEIEC'
+      'BQoUiECBAgUiUKBAgQgUKFAgAgUKFIhAgQIFIlCgQIEIFChQ'
+      'IAIFChSIQIECBSJQoECBAhUIFChQIAIFChSIQIECBSJQoECB'
+      'CBQoUCACBQoUiECBAgUiUKBAgQgUKFAgAgUKFIhAgQIFCkSg'
+      'QIECEShQoEAEChQoEIECBQpEoECBAhH4afUlCMuLh4J+AAAA'
+      'AElFTkSuQmCC',
+    );
+
+List<int> shortPngBytes() => base64Decode(
+      'iVBORw0KGgoAAAANSUhEUgAAAUAAAAB4CAAAAACmpXQCAAAA'
+      'qklEQVR42u3QIQEAAAwCMKLQPyX6+naLsJSXKBAoUKBABAoU'
+      'KBCBAgUKRKBAgQIRKFCgQAQKFCgQgQIFCkSgQIECEShQoEAE'
+      'ChQoEIECBQoUiECBAgUiUKBAgQgUKFAgAgUKFIhAgQIFIlCg'
+      'QIEIFChQIAIFChSIQIECBSJQoECBAhUIFChQIAIFChSIQIEC'
+      'BSJQoECBCBQoUCACBQoUiECBAgUiUKBAgVwDQwDBDyCMjNUA'
+      'AAAASUVORK5CYII=',
     );

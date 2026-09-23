@@ -53,19 +53,11 @@ class MediaImage extends StatelessWidget {
     if (id == null || id.isEmpty) {
       return _neutral();
     }
-    final ResolvedMedia? memo = resolver.resolved(id);
-    if (memo != null) {
-      return _resolved(memo);
-    }
-    return FutureBuilder<ResolvedMedia>(
-      future: resolver.resolve(id),
-      builder: (BuildContext context, AsyncSnapshot<ResolvedMedia> snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return _neutral();
-        }
-        final ResolvedMedia? media = snapshot.data;
-        return media == null ? _corrupt() : _resolved(media);
-      },
+    return _MediaResolution(
+      resolver: resolver,
+      mediaId: id,
+      builder: (BuildContext context, ResolvedMedia? media) =>
+          media == null ? _neutral() : _resolved(media),
     );
   }
 
@@ -93,9 +85,11 @@ class MediaImage extends StatelessWidget {
   Widget _fileImage(BuildContext context, File file, double boxWidth) {
     return Image.file(
       file,
+      key: ValueKey<String>(file.path),
       width: width,
       height: height,
       fit: fit,
+      gaplessPlayback: true,
       cacheWidth: decodeTargetWidth(
         logicalWidth: boxWidth,
         devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
@@ -131,4 +125,68 @@ class MediaImage extends StatelessWidget {
         height: height,
         borderRadius: borderRadius,
       );
+}
+
+typedef _MediaResolutionBuilder = Widget Function(
+  BuildContext context,
+  ResolvedMedia? media,
+);
+
+class _MediaResolution extends StatefulWidget {
+  const _MediaResolution({
+    required this.resolver,
+    required this.mediaId,
+    required this.builder,
+  });
+
+  final MediaResolver resolver;
+  final String mediaId;
+  final _MediaResolutionBuilder builder;
+
+  @override
+  State<_MediaResolution> createState() => _MediaResolutionState();
+}
+
+class _MediaResolutionState extends State<_MediaResolution> {
+  ResolvedMedia? _media;
+
+  @override
+  void initState() {
+    super.initState();
+    _media = _start();
+  }
+
+  @override
+  void didUpdateWidget(_MediaResolution oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.mediaId == widget.mediaId &&
+        oldWidget.resolver == widget.resolver) {
+      return;
+    }
+    _media = _start();
+  }
+
+  ResolvedMedia? _start() {
+    final String id = widget.mediaId;
+    final ResolvedMedia? memo = widget.resolver.resolved(id);
+    if (memo != null) {
+      return memo;
+    }
+    widget.resolver.resolve(id).then(
+      (ResolvedMedia media) => _arrive(id, media),
+      onError: (Object error, StackTrace stackTrace) =>
+          _arrive(id, const ResolvedMedia.missing()),
+    );
+    return null;
+  }
+
+  void _arrive(String id, ResolvedMedia media) {
+    if (!mounted || widget.mediaId != id) {
+      return;
+    }
+    setState(() => _media = media);
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _media);
 }
