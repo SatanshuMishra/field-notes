@@ -14,14 +14,25 @@ import 'package:field_notes/features/capture/core/note_draft_controller.dart';
 import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/notes/photos/photo_import.dart';
+import 'package:field_notes/features/today/today_date.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
-const String editNoteTitle = 'Edit note';
 const String editNoteSaveLabel = 'Save changes';
 const String editNoteFailedMessage =
     "Couldn't save your changes. Please try again.";
+const String editNoteConfirmTitle = 'Save changes?';
+const String editNoteConfirmMessage = 'Update this note with your edits?';
+const String editNoteUpdatedMessage = 'Entry updated';
+
+String editNoteTitleFor(Entry entry) {
+  final DateTime createdAt =
+      DateTime.fromMillisecondsSinceEpoch(entry.createdAt).toLocal();
+  return 'Editing ${partOfDayFor(createdAt.hour)} note';
+}
 
 class EditNoteConnector extends ConsumerStatefulWidget {
   const EditNoteConnector({
@@ -29,11 +40,15 @@ class EditNoteConnector extends ConsumerStatefulWidget {
     required this.entry,
     required this.date,
     this.saveTimeout = textSaveTimeout,
+    this.exit = ComposerExit.cancel,
+    this.onDone,
   });
 
   final Entry entry;
   final String date;
   final Duration saveTimeout;
+  final ComposerExit exit;
+  final ValueChanged<bool>? onDone;
 
   @override
   ConsumerState<EditNoteConnector> createState() => _EditNoteConnectorState();
@@ -42,12 +57,14 @@ class EditNoteConnector extends ConsumerStatefulWidget {
 class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
   bool _isSaving = false;
   String? _errorMessage;
+  late final String _kicker;
   late final TextEditingController _controller;
   late final NoteDraftController _draft;
 
   @override
   void initState() {
     super.initState();
+    _kicker = _composeKicker();
     final String initialText = widget.entry.textContent ?? '';
     _controller = TextEditingController(text: initialText);
     _draft = NoteDraftController(
@@ -65,8 +82,25 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
     super.dispose();
   }
 
+  String _composeKicker() {
+    final DateTime? parsed = parseDateKey(widget.date);
+    if (parsed == null) {
+      return widget.date;
+    }
+    return dayTitleFor(parsed, today: ref.read(todayClockProvider)());
+  }
+
   Future<void> _save(String text) async {
     if (_draft.isRestoring) {
+      return;
+    }
+    final bool confirmed = await showConfirmDialog(
+      context,
+      title: editNoteConfirmTitle,
+      message: editNoteConfirmMessage,
+      confirmLabel: editNoteSaveLabel,
+    );
+    if (!confirmed || !mounted || _draft.isRestoring) {
       return;
     }
     setState(() {
@@ -92,7 +126,13 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
     if (!mounted) {
       return;
     }
-    Navigator.of(context).pop(true);
+    showTransientToast(context, editNoteUpdatedMessage);
+    final ValueChanged<bool>? onDone = widget.onDone;
+    if (onDone == null) {
+      Navigator.of(context).pop(true);
+    } else {
+      onDone(true);
+    }
   }
 
   Future<NoteSaveResult> _persist(String text) async {
@@ -119,6 +159,7 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
   }
 
   Widget _composer() {
+    final ValueChanged<bool>? onDone = widget.onDone;
     return ListenableBuilder(
       listenable: _draft,
       builder: (BuildContext context, Widget? child) {
@@ -127,10 +168,13 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
           locked: _isSaving,
           onDiscard: _draft.discard,
           popResult: false,
+          onClose: onDone == null ? null : (Object? result) => onDone(false),
           builder: (BuildContext context, VoidCallback requestClose) {
             return TextComposerSheet(
               controller: _controller,
-              title: editNoteTitle,
+              title: editNoteTitleFor(widget.entry),
+              kicker: _kicker,
+              exit: widget.exit,
               saveLabel: editNoteSaveLabel,
               onSave: _save,
               onCancel: requestClose,
@@ -151,6 +195,7 @@ Future<bool?> showEditNote(
   BuildContext context, {
   required Entry entry,
   required String date,
+  ComposerExit exit = ComposerExit.cancel,
 }) {
   return showGeneralDialog<bool>(
     context: context,
@@ -167,7 +212,7 @@ Future<bool?> showEditNote(
         child: ComposerShell(
           closeOnScrimTap: true,
           responsive: true,
-          child: EditNoteConnector(entry: entry, date: date),
+          child: EditNoteConnector(entry: entry, date: date, exit: exit),
         ),
       );
     },

@@ -67,6 +67,32 @@ String shortWeekdayLabel(DateTime moment) {
   return _weekdayNames[moment.toLocal().weekday - 1].substring(0, 3);
 }
 
+String dayTitleFor(DateTime day, {required DateTime today}) {
+  final String title = headerDateLabel(day);
+  return _withYearOutside(title, day: day, today: today);
+}
+
+String dayShortLabelFor(DateTime day, {required DateTime today}) {
+  final DateTime local = day.toLocal();
+  final DateTime localToday = today.toLocal();
+  if (local.year == localToday.year &&
+      local.month == localToday.month &&
+      local.day == localToday.day) {
+    return 'today';
+  }
+  final String label = '${_monthNames[local.month - 1]} ${local.day}';
+  return _withYearOutside(label, day: day, today: today);
+}
+
+String _withYearOutside(
+  String label, {
+  required DateTime day,
+  required DateTime today,
+}) {
+  final int year = day.toLocal().year;
+  return year == today.toLocal().year ? label : '$label, $year';
+}
+
 String yearsAgoLabel(int years) {
   return years == 1 ? '1 year ago' : '$years years ago';
 }
