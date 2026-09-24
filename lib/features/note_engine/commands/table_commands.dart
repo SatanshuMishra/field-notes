@@ -332,6 +332,14 @@ bool _isBlank(String source, int from, int to) {
   return true;
 }
 
+int _textEnd(String source, MdSourceLine line) {
+  int end = line.end;
+  while (end > line.start && _isBlank(source, end - 1, end)) {
+    end -= 1;
+  }
+  return end;
+}
+
 bool _isContainer(MdBlock block) =>
     block.kind == MdBlockKind.bulletList ||
     block.kind == MdBlockKind.orderedList ||
@@ -541,17 +549,26 @@ final class _Table {
       );
     }
     final MdSourceLine line = rows[row].line;
-    final List<String> texts = padded(row);
-    final _Written written = _canonical(texts);
+    final int textEnd = _textEnd(source, line);
+    final bool closed =
+        source.codeUnitAt(textEnd - 1) == _pipe &&
+        (textEnd - 2 < line.start ||
+            source.codeUnitAt(textEnd - 2) != _backslash);
+    final int at = closed ? textEnd : line.end;
+    final String opening = closed
+        ? ''
+        : source.codeUnitAt(line.end - 1) == _backslash
+        ? ' |'
+        : '|';
     return Transaction(
       changes: ChangeSet.single(
         source.length,
-        line.start,
-        line.end,
-        written.text,
+        at,
+        at,
+        '$opening${_emptyCell * (columns - cells.length)}',
       ),
       selection: NoteSelection.collapsed(
-        line.start + written.contentEnd(texts, column),
+        at + opening.length + _emptyCell.length * (column - cells.length) + 1,
       ),
       event: TransactionEvent.table,
     );
@@ -779,6 +796,7 @@ final class _Table {
   }
 }
 
+const String _emptyCell = '  |';
 const int _space = 0x20;
 const int _tab = 0x09;
 const int _lineFeed = 0x0A;

@@ -304,6 +304,33 @@ void main() {
     expect(padded.addToHistory, isTrue);
   });
 
+  test('a short row gains cells without repadding the cells it has', () {
+    const String padded = '| a | b |\n| - | - |\n|   c   |';
+    final Transaction tab = _sure(nextCell(_caret(padded, 25)));
+    expect(tab.changes, ChangeSet.single(padded.length, 29, 29, '  |'));
+    expect(tab.changes.apply(padded), '| a | b |\n| - | - |\n|   c   |  |');
+    expect(tab.selection, const NoteSelection.collapsed(30));
+    expect(tab.event, TransactionEvent.table);
+    expect(tab.addToHistory, isTrue);
+
+    const String wide = '| a | b | c |\n| - | - | - |\n| d |';
+    final Transaction below = _sure(cellBelow(_caret(wide, 11)));
+    expect(below.changes, ChangeSet.single(wide.length, 33, 33, '  |  |'));
+    expect(below.selection, const NoteSelection.collapsed(37));
+
+    const String open = '| a | b |\n| - | - |\n| c';
+    final Transaction closed = _sure(nextCell(_caret(open, 23)));
+    expect(closed.changes.apply(open), '| a | b |\n| - | - |\n| c|  |');
+    expect(closed.selection, const NoteSelection.collapsed(25));
+    expect(_rowWidths(closed.changes.apply(open)), <int>[2, 2]);
+
+    const String slash = '| a | b |\n| - | - |\n| c\\';
+    final Transaction guarded = _sure(nextCell(_caret(slash, 24)));
+    expect(guarded.changes.apply(slash), '| a | b |\n| - | - |\n| c\\ |  |');
+    expect(guarded.selection, const NoteSelection.collapsed(27));
+    expect(_rowWidths(guarded.changes.apply(slash)), <int>[2, 2]);
+  });
+
   test('a backslash left against a closing pipe gains a padding space', () {
     const String bare = '|a|b|\n|-|-|';
     final Transaction typed = _sure(replaceInCell(_caret(bare, 2), r'\'));
