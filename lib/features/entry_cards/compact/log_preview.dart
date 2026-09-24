@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../domain/models/models.dart';
-import '../../../domain/notes/notes.dart';
+import '../../../domain/notes/markdown/markdown.dart';
+import '../../../domain/notes/note_plain_text.dart';
+import '../../note_engine/capabilities.dart';
 import '../util/duration_format.dart';
 
 const int _maxEpochMs = 8640000000000000;
@@ -115,24 +117,27 @@ String _headingFor(Entry entry) {
 }
 
 LogPreview _textPreview(Entry entry, String heading) {
-  final List<NoteBlock> blocks = parseNote(entry.textContent ?? '');
-  int photoCount = 0;
-  PhotoBlock? firstPhoto;
-  for (final NoteBlock block in blocks) {
-    if (block is PhotoBlock) {
-      photoCount++;
-      firstPhoto ??= block;
-    }
-  }
-  final List<NoteBlock> significant = _significantBlocks(blocks);
-  final String fullText = _collapseWhitespace(_joinPlainText(significant));
+  final String source = entry.textContent ?? '';
+  final MdTree tree = parseNoteTree(source, tables: tablesEnabled);
+  final List<MdPhotoLineData> photos = <MdPhotoLineData>[
+    for (final MdBlock block in tree.blocks)
+      if (block.photoLine case final MdPhotoLineData photo) photo,
+  ];
+  final int photoCount = photos.length;
+  final MdPhotoLineData? firstPhoto = photos.isEmpty ? null : photos.first;
+  final List<NotePlainSegment> significant = <NotePlainSegment>[
+    for (final NotePlainSegment segment in notePlainSegments(tree, source))
+      if (segment.kind != NotePlainKind.photo && segment.text.isNotEmpty)
+        segment,
+  ];
+  final String fullText =
+      _collapseWhitespace(joinNotePlainSegments(significant));
   String lead;
   String snippet;
-  if (significant.isNotEmpty && significant.first is HeadingBlock) {
-    final HeadingBlock headingBlock = significant.first as HeadingBlock;
-    lead = _collapseWhitespace(headingBlock.plainText);
-    snippet =
-        _collapseWhitespace(_joinPlainText(significant.skip(1).toList()));
+  if (significant.isNotEmpty &&
+      significant.first.kind == NotePlainKind.heading) {
+    lead = _collapseWhitespace(significant.first.text);
+    snippet = _collapseWhitespace(joinNotePlainSegments(significant.skip(1)));
   } else {
     final int? sentenceEnd = _firstSentenceEnd(fullText);
     if (sentenceEnd == null) {
@@ -144,7 +149,7 @@ LogPreview _textPreview(Entry entry, String heading) {
     }
   }
   if (lead.isEmpty && firstPhoto != null) {
-    lead = firstPhoto.alt;
+    lead = firstPhoto.caption;
   }
   final bool isLong = fullText.length > 220 || photoCount > 0;
   final List<String> words =
@@ -167,30 +172,6 @@ LogPreview _textPreview(Entry entry, String heading) {
     openLabel: 'Read',
     heading: heading,
   );
-}
-
-List<NoteBlock> _significantBlocks(List<NoteBlock> blocks) {
-  final List<NoteBlock> result = <NoteBlock>[];
-  for (final NoteBlock block in blocks) {
-    if (block is PhotoBlock || block.plainText.isEmpty) {
-      continue;
-    }
-    result.add(block);
-  }
-  return result;
-}
-
-String _joinPlainText(List<NoteBlock> blocks) {
-  final StringBuffer buffer = StringBuffer();
-  NoteBlock? previous;
-  for (final NoteBlock block in blocks) {
-    if (previous != null) {
-      buffer.write(plainBreakBetween(previous, block));
-    }
-    buffer.write(block.plainText);
-    previous = block;
-  }
-  return buffer.toString();
 }
 
 String _collapseWhitespace(String text) =>
