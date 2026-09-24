@@ -334,6 +334,20 @@ final class RowDecoration {
 
 typedef StyleRun = ({TextRange visibleRange, String styleKind});
 
+final class _RowContent {
+  _RowContent({
+    required List<LineFragment> fragments,
+    required List<RowDecoration> decorations,
+    required List<StyleRun> styleRuns,
+  }) : fragments = List<LineFragment>.unmodifiable(fragments),
+       decorations = List<RowDecoration>.unmodifiable(decorations),
+       styleRuns = List<StyleRun>.unmodifiable(styleRuns);
+
+  final List<LineFragment> fragments;
+  final List<RowDecoration> decorations;
+  final List<StyleRun> styleRuns;
+}
+
 final class LaidOutRow {
   LaidOutRow({
     required this.row,
@@ -344,47 +358,72 @@ final class LaidOutRow {
     required this.contentWidth,
     List<({TextRange visibleRange, String styleKind})> styleRuns =
         const <({TextRange visibleRange, String styleKind})>[],
-  }) : fragments = List<LineFragment>.unmodifiable(fragments),
-       decorations = List<RowDecoration>.unmodifiable(decorations),
-       styleRuns =
-           List<({TextRange visibleRange, String styleKind})>.unmodifiable(
-             styleRuns,
-           );
+  }) : _content = _RowContent(
+         fragments: fragments,
+         decorations: decorations,
+         styleRuns: styleRuns,
+       ),
+       _offset = Offset.zero,
+       _visibleDelta = 0,
+       _rowIndex = null;
+
+  LaidOutRow._moved({
+    required this.row,
+    required this._content,
+    required this._offset,
+    required this._visibleDelta,
+    required this._rowIndex,
+    required this.top,
+    required this.bottom,
+    required this.contentWidth,
+  });
 
   final LayoutRow row;
-  final List<LineFragment> fragments;
-  final List<RowDecoration> decorations;
   final double top;
   final double bottom;
   final double contentWidth;
-  final List<({TextRange visibleRange, String styleKind})> styleRuns;
+  final _RowContent _content;
+  final Offset _offset;
+  final int _visibleDelta;
+  final int? _rowIndex;
 
-  LaidOutRow shifted(Offset delta, int visibleDelta, {LayoutRow? row}) {
-    final LayoutRow target = row ?? this.row;
-    final int? rowIndex = row?.index;
-    return LaidOutRow(
-      row: target,
-      fragments: <LineFragment>[
-        for (final LineFragment fragment in fragments)
-          fragment.shifted(delta, visibleDelta, rowIndex: rowIndex),
-      ],
-      decorations: <RowDecoration>[
-        for (final RowDecoration decoration in decorations)
-          decoration.shifted(delta),
-      ],
-      top: top + delta.dy,
-      bottom: bottom + delta.dy,
-      contentWidth: contentWidth,
-      styleRuns: <({TextRange visibleRange, String styleKind})>[
-        for (final ({TextRange visibleRange, String styleKind}) run
-            in styleRuns)
-          (
-            visibleRange: _shiftRange(run.visibleRange, visibleDelta),
-            styleKind: run.styleKind,
-          ),
-      ],
-    );
-  }
+  late final List<LineFragment> fragments =
+      _offset == Offset.zero && _visibleDelta == 0 && _rowIndex == null
+      ? _content.fragments
+      : List<LineFragment>.unmodifiable(<LineFragment>[
+          for (final LineFragment fragment in _content.fragments)
+            fragment.shifted(_offset, _visibleDelta, rowIndex: _rowIndex),
+        ]);
+
+  late final List<RowDecoration> decorations = _offset == Offset.zero
+      ? _content.decorations
+      : List<RowDecoration>.unmodifiable(<RowDecoration>[
+          for (final RowDecoration decoration in _content.decorations)
+            decoration.shifted(_offset),
+        ]);
+
+  late final List<({TextRange visibleRange, String styleKind})> styleRuns =
+      _visibleDelta == 0
+      ? _content.styleRuns
+      : List<StyleRun>.unmodifiable(<StyleRun>[
+          for (final StyleRun run in _content.styleRuns)
+            (
+              visibleRange: _shiftRange(run.visibleRange, _visibleDelta),
+              styleKind: run.styleKind,
+            ),
+        ]);
+
+  LaidOutRow shifted(Offset delta, int visibleDelta, {LayoutRow? row}) =>
+      LaidOutRow._moved(
+        row: row ?? this.row,
+        content: _content,
+        offset: _offset + delta,
+        visibleDelta: _visibleDelta + visibleDelta,
+        rowIndex: row?.index ?? _rowIndex,
+        top: top + delta.dy,
+        bottom: bottom + delta.dy,
+        contentWidth: contentWidth,
+      );
 
   @override
   bool operator ==(Object other) =>

@@ -3,6 +3,8 @@ import 'syntax_tree.dart';
 
 const int _lineFeed = 0x0A;
 const int _carriageReturn = 0x0D;
+const int _space = 0x20;
+const int _tab = 0x09;
 const int _composingMask = 0xE000;
 
 final class MdEdit {
@@ -90,8 +92,10 @@ final class MdIncrementalParser {
 
     final int startLine = _lineStartAt(oldSource, effectiveStart);
     final int holder = _lastStartingAtOrBefore(oldBlocks, startLine);
-    final int kept = holder >= 1 ? holder - 1 : 0;
-    final int start = holder >= 1 ? oldBlocks[holder - 1].sourceRange.start : 0;
+    final int kept = holder >= 1
+        ? _freshStartAtOrBefore(oldSource, oldBlocks, holder - 1)
+        : 0;
+    final int start = holder >= 1 ? oldBlocks[kept].sourceRange.start : 0;
 
     final int endLineBreak = oldSource.indexOf('\n', effectiveEnd);
     final int firstCandidate = endLineBreak < 0
@@ -106,10 +110,8 @@ final class MdIncrementalParser {
           )
         : newLength;
     while (true) {
-      final MdTree window = parseNoteTree(
-        _parseText(newSource, start, windowEnd, composing),
-        tables: tables,
-      );
+      final String text = _parseText(newSource, start, windowEnd, composing);
+      final MdTree window = parseNoteTree(text, tables: tables);
       final bool reachesEnd = windowEnd == newLength;
       for (int c = firstCandidate; c < oldBlocks.length; c++) {
         final int at = oldBlocks[c].sourceRange.start + delta;
@@ -117,7 +119,8 @@ final class MdIncrementalParser {
           break;
         }
         final int local = _indexStartingAt(window.blocks, at - start);
-        if (local < 0) {
+        if (local < 0 ||
+            !_resumesAt(window.blocks[local], oldBlocks[c], text, at - start)) {
           continue;
         }
         if (!reachesEnd && !_hasBreakBefore(newSource, at, windowEnd)) {
@@ -278,6 +281,38 @@ int _lookaheadEnd(String source, int lineStart) {
   return lineFeed < 0 ? source.length : _contentEndAt(source, lineFeed + 1);
 }
 
+bool _followsBlankLine(String source, int offset) {
+  final int lineStart = _lineStartAt(source, offset);
+  if (lineStart == 0) {
+    return true;
+  }
+  final int previousStart = _lineStartAt(source, lineStart - 1);
+  final int previousEnd = _contentEndAt(source, previousStart);
+  for (int at = previousStart; at < previousEnd; at++) {
+    final int unit = source.codeUnitAt(at);
+    if (unit != _space && unit != _tab) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool _mayJoinPreviousLine(String source, MdBlockKind kind, int at) =>
+    kind == MdBlockKind.table && !_followsBlankLine(source, at);
+
+int _freshStartAtOrBefore(String source, List<MdBlock> blocks, int index) =>
+    index >= 1 &&
+        _mayJoinPreviousLine(
+          source,
+          blocks[index].kind,
+          blocks[index].sourceRange.start,
+        )
+    ? _freshStartAtOrBefore(source, blocks, index - 1)
+    : index;
+
+bool _resumesAt(MdBlock fresh, MdBlock old, String source, int at) =>
+    fresh.kind == old.kind && !_mayJoinPreviousLine(source, fresh.kind, at);
+
 bool _hasBreakBefore(String source, int from, int limit) {
   final int lineFeed = source.indexOf('\n', from);
   return lineFeed >= 0 && lineFeed < limit;
@@ -348,7 +383,7 @@ String _quoted(String text) {
     buffer.write(switch (unit) {
       _lineFeed => r'\n',
       _carriageReturn => r'\r',
-      0x09 => r'\t',
+      _tab => r'\t',
       0x5C => r'\\',
       0x27 => r"\'",
       _ => String.fromCharCode(unit),
