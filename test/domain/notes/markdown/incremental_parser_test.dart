@@ -132,6 +132,10 @@ Iterable<MdNode> _nodes(List<MdNode> roots) sync* {
 String _paragraphs(int count) =>
     <String>[for (int i = 1; i <= count; i++) 'paragraph $i'].join('\n\n');
 
+List<MdBlockKind> _kinds(MdTree tree) => <MdBlockKind>[
+  for (final MdBlock block in tree.blocks) block.kind,
+];
+
 void main() {
   test(
     'incremental parsing equals a full parse over random edits',
@@ -341,6 +345,34 @@ void main() {
       expect(blocks[2].sourceRange.sliceOf(next), 'A');
       expect(blocks[3].kind, MdBlockKind.table);
       expect(blocks[3].blocks.first.blocks, hasLength(1));
+    },
+  );
+
+  test(
+    'typing after a table whose header row ended a paragraph re-parses from that paragraph',
+    () {
+      for (final (String source, MdEdit edit) in <(String, MdEdit)>[
+        (
+          'Scores\n2024. | Team |\n| --- | --- |\n| A | 3 |\n\nGreat day',
+          const MdEdit(start: 56, end: 56, inserted: '!'),
+        ),
+        ('a\n11. |\n|-\n\nr', const MdEdit(start: 13, end: 13, inserted: '')),
+      ]) {
+        expect(_kinds(parseNoteTree(source)), <MdBlockKind>[
+          MdBlockKind.paragraph,
+          MdBlockKind.table,
+          MdBlockKind.paragraph,
+        ], reason: _escaped(source));
+        final String next = _apply(source, edit);
+        final MdReparse result = _type(source, edit);
+        _expectFullParse(result.tree, next);
+        expect(result.reparsedFrom, 0, reason: _escaped(source));
+        expect(_kinds(result.tree), <MdBlockKind>[
+          MdBlockKind.paragraph,
+          MdBlockKind.table,
+          MdBlockKind.paragraph,
+        ], reason: _escaped(source));
+      }
     },
   );
 
