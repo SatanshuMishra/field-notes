@@ -151,22 +151,27 @@ class NoteEditorView extends StatefulWidget {
 
 @immutable
 final class _Projection {
-  const _Projection({
-    required this.source,
-    required this.tree,
-    required this.activeLine,
-    required this.visible,
-  });
+  _Projection(EditorState state, this.activeLine, this.visible)
+    : source = state.source,
+      tree = state.tree,
+      settled = state.composing == null;
 
   final String source;
   final MdTree tree;
   final ActiveLine? activeLine;
   final VisibleText visible;
+  final bool settled;
 
   bool matches(EditorState state, ActiveLine? line) =>
       identical(source, state.source) &&
       identical(tree, state.tree) &&
       activeLine == line;
+
+  bool sharesContent(EditorState state, ActiveLine? line) =>
+      settled &&
+      state.composing == null &&
+      activeLine == line &&
+      source == state.source;
 }
 
 final class _EditorCommands implements CommandRegistry {
@@ -244,6 +249,7 @@ class NoteEditorViewState extends State<NoteEditorView>
   String? _plainSource;
   MdTree? _plainTree;
   int _plainLength = 0;
+  int _projections = 0;
   LaidOutNote? _layout;
   LaidOutNote? _geometryLayout;
   bool _geometryCheckScheduled = false;
@@ -270,6 +276,9 @@ class NoteEditorViewState extends State<NoteEditorView>
 
   @visibleForTesting
   NoteLayout? get debugLayout => _layout;
+
+  @visibleForTesting
+  int get debugProjectionCount => _projections;
 
   NoteEditorController get _controller => widget.controller;
 
@@ -653,7 +662,11 @@ class NoteEditorViewState extends State<NoteEditorView>
     if (cached != null && cached.matches(state, line)) {
       return cached.visible;
     }
-    final _Projection projection = _project(state, line);
+    final _Projection? scratch = _scratch;
+    final _Projection projection =
+        scratch != null && scratch.sharesContent(state, line)
+        ? _Projection(state, line, scratch.visible)
+        : _Projection(state, line, _projectNote(state, line));
     _current = projection;
     return projection.visible;
   }
@@ -669,22 +682,24 @@ class NoteEditorViewState extends State<NoteEditorView>
     if (cached != null && cached.matches(state, line)) {
       return cached.visible;
     }
-    final _Projection projection = _project(state, line);
+    final _Projection projection = _Projection(
+      state,
+      line,
+      _projectNote(state, line),
+    );
     _scratch = projection;
     return projection.visible;
   }
 
-  _Projection _project(EditorState state, ActiveLine? line) => _Projection(
-    source: state.source,
-    tree: state.tree,
-    activeLine: line,
-    visible: const NoteVisibleProjector().project(
+  VisibleText _projectNote(EditorState state, ActiveLine? line) {
+    _projections += 1;
+    return const NoteVisibleProjector().project(
       state.source,
       state.tree,
       line?.line,
       activeCell: line?.cell,
-    ),
-  );
+    );
+  }
 
   int get _plainVisibleLength {
     final EditorState state = _state;
@@ -692,20 +707,36 @@ class NoteEditorViewState extends State<NoteEditorView>
         identical(_plainTree, state.tree)) {
       return _plainLength;
     }
-    final _Projection? cached = _current;
-    final int length =
-        cached != null &&
-            cached.activeLine == null &&
-            cached.matches(state, null)
-        ? cached.visible.text.length
-        : const NoteVisibleProjector()
-              .project(state.source, state.tree, null)
-              .text
-              .length;
+    final VisibleText visible = _visible;
+    final int? line = visible.activeLine;
+    final int length = line == null || !_showsMarkers(visible, line)
+        ? visible.text.length
+        : _projectNote(state, null).text.length;
     _plainSource = state.source;
     _plainTree = state.tree;
     _plainLength = length;
     return length;
+  }
+
+  static bool _showsMarkers(VisibleText visible, int sourceLine) {
+    final List<VisibleLine> lines = visible.lines;
+    int low = 0;
+    int high = lines.length - 1;
+    while (low <= high) {
+      final int middle = (low + high) >> 1;
+      final VisibleLine candidate = lines[middle];
+      if (candidate.sourceLine == sourceLine) {
+        return candidate.spans.any(
+          (VisibleSpan span) => span.kind == VisibleSpanKind.marker,
+        );
+      }
+      if (candidate.sourceLine < sourceLine) {
+        low = middle + 1;
+      } else {
+        high = middle - 1;
+      }
+    }
+    return false;
   }
 
   LaidOutNote _runLayout(LayoutInputs inputs) {
