@@ -341,7 +341,7 @@ void main() {
   });
 
   testWidgets(
-    'select all from the toolbar scrolls only on android',
+    'select all from the toolbar keeps the handles and scrolls on android',
     (WidgetTester tester) async {
       _pinSurface(tester);
       final _Host host = _Host(_state('The **fog** lifted', 3));
@@ -354,14 +354,15 @@ void main() {
           SelectionChangedCause.toolbar,
         ),
       ]);
-      expect(host.hidden, <bool>[true]);
-      expect(
-        host.revealed,
-        defaultTargetPlatform == TargetPlatform.android ? <int>[18] : <int>[],
-      );
+      final bool android = defaultTargetPlatform == TargetPlatform.android;
+      expect(host.hidden, <bool>[
+        defaultTargetPlatform == TargetPlatform.macOS,
+      ]);
+      expect(host.revealed, android ? <int>[18] : <int>[]);
     },
     variant: TargetPlatformVariant(<TargetPlatform>{
       TargetPlatform.android,
+      TargetPlatform.fuchsia,
       TargetPlatform.macOS,
     }),
   );

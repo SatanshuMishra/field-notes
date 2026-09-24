@@ -225,11 +225,15 @@ class NoteClipboardActions {
     if (cause != SelectionChangedCause.toolbar) {
       return;
     }
-    _hideToolbar();
+    _hideToolbar(!_keepsHandles());
     if (defaultTargetPlatform == TargetPlatform.android) {
       _bringIntoView(length);
     }
   }
+
+  bool _keepsHandles() =>
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.fuchsia;
 
   void _afterToolbarEdit(Transaction transaction, SelectionChangedCause cause) {
     if (cause != SelectionChangedCause.toolbar) {
