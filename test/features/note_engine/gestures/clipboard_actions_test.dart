@@ -95,10 +95,11 @@ void _expectPaste(
   int caret,
   String text,
   String expected,
-  int caretAfter,
-) {
+  int caretAfter, {
+  int? head,
+}) {
   final Transaction? transaction = notePasteTransaction(
-    _state(source, caret),
+    _state(source, caret, head),
     text,
   );
   expect(transaction, isNotNull);
@@ -158,6 +159,25 @@ void main() {
     _expectPaste('A\n\nB', 2, _p, 'A\n$_p\nB', 26);
     _expectPaste('```\ncode', 8, _p, '```\ncode$_p', 32);
     _expectPaste('X', 1, '\n\n$_p\n\nY', 'X\n\n$_p\n\nY', 30);
+  });
+
+  test('a pasted photo line lands at a boundary when the range ends '
+      'between blocks', () {
+    _expectPaste('Hello world\n\nNext', 5, _p, 'Hello\nNext\n$_p', 5, head: 12);
+    _expectPaste(
+      'Hello world\n![a](photo/aaaaaaaaaaaa)\n\nNext',
+      5,
+      _p,
+      'Hello\nNext\n$_p',
+      5,
+      head: 37,
+    );
+  });
+
+  test('a moved photo line follows the block that holds the paste point', () {
+    _expectPaste('XY', 1, 'a\n$_p\nb\n\nc', 'Xa\nb\n$_p\n\ncY', 32);
+    _expectPaste('A\n  \nB', 3, _p, 'A\n$_p\n  \nB', 28);
+    _expectPaste('  \n\nA', 1, _p, '$_p\n  \n\nA', 26);
   });
 
   testWidgets(

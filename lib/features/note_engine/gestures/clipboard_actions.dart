@@ -68,27 +68,69 @@ Transaction? notePasteTransaction(EditorState state, String text) {
   if (candidates.isEmpty) {
     return plain;
   }
-  final MdBlock? holder = state.tree.blockAt(end);
-  if (holder == null ||
-      holder.kind == MdBlockKind.photoLine ||
-      _isUnclosedFence(holder)) {
-    return plain;
-  }
   final String remaining = _withoutLines(text, candidates);
-  if (_photoLinesLand(state, start, end, text, remaining, candidates)) {
+  final MdTree bare = state.parse(source.replaceRange(start, end, remaining));
+  if (_photoLinesLand(state, start, end, text, bare, candidates)) {
     return plain;
   }
-  final StringBuffer insertion = StringBuffer();
-  for (final _Line line in candidates) {
-    insertion
-      ..write(lineBreak)
-      ..write(_trimmed(text, line));
+  final MdBlock? holder = _holderAt(bare, start);
+  if (holder != null && _isUnclosedFence(holder)) {
+    return plain;
   }
-  final int boundary = holder.sourceRange.end;
+  final String moved = _movedLines(
+    text,
+    candidates,
+    lineBreak,
+    atNoteStart: holder == null,
+  );
+  final int boundary = holder?.sourceRange.end ?? 0;
+  final int pasted = start + remaining.length;
+  if (holder != null && boundary >= pasted) {
+    final int at = end + boundary - pasted;
+    return _pasteTransaction(source.length, <TextReplacement>[
+      TextReplacement(start, end, remaining),
+      TextReplacement(at, at, moved),
+    ], pasted);
+  }
+  if (boundary >= start) {
+    final int split = boundary - start;
+    return _pasteTransaction(source.length, <TextReplacement>[
+      TextReplacement(
+        start,
+        end,
+        remaining.substring(0, split) + moved + remaining.substring(split),
+      ),
+    ], pasted + moved.length);
+  }
   return _pasteTransaction(source.length, <TextReplacement>[
+    TextReplacement(boundary, boundary, moved),
     TextReplacement(start, end, remaining),
-    TextReplacement(boundary, boundary, insertion.toString()),
-  ], start + remaining.length);
+  ], pasted + moved.length);
+}
+
+MdBlock? _holderAt(MdTree tree, int offset) => tree.blocks
+    .where((MdBlock block) => block.sourceRange.start <= offset)
+    .lastOrNull;
+
+String _movedLines(
+  String text,
+  List<_Line> lines,
+  String lineBreak, {
+  required bool atNoteStart,
+}) {
+  final StringBuffer buffer = StringBuffer();
+  for (final _Line line in lines) {
+    if (atNoteStart) {
+      buffer
+        ..write(_trimmed(text, line))
+        ..write(lineBreak);
+    } else {
+      buffer
+        ..write(lineBreak)
+        ..write(_trimmed(text, line));
+    }
+  }
+  return buffer.toString();
 }
 
 class NoteClipboardActions {
@@ -282,7 +324,7 @@ bool _photoLinesLand(
   int start,
   int end,
   String text,
-  String remaining,
+  MdTree bare,
   List<_Line> candidates,
 ) {
   final String source = state.source;
@@ -296,7 +338,6 @@ bool _photoLinesLand(
       return false;
     }
   }
-  final MdTree bare = state.parse(source.replaceRange(start, end, remaining));
   return _textBlockCount(plain) == _textBlockCount(bare);
 }
 
