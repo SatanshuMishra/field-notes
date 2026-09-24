@@ -2,6 +2,7 @@
 setopt err_exit no_unset pipe_fail
 
 zmodload zsh/datetime
+zmodload zsh/mathfunc
 
 typeset -g PROBE_MACOS_DIR=${${(%):-%x}:A:h}
 typeset -g PROBE_REPO=${PROBE_MACOS_DIR:h:h:h}
@@ -14,6 +15,12 @@ typeset -g PROBE_BUILD=${PROBE_BUILD:-profile}
 typeset -g PROBE_WORK=${PROBE_WORK:-}
 typeset -g ORIGIN_X=
 typeset -g ORIGIN_Y=
+typeset -g VIEW_W=
+typeset -g VIEW_H=
+typeset -g PROBE_PID=
+typeset -g PROBE_TTY=${PROBE_TTY:-/dev/tty}
+typeset -g OPENED_ENTRY=
+typeset -g OPENED_COUNT=
 typeset -g RESULT_FILE=
 typeset -gi RESULT_COUNT=0
 typeset -gi RESULT_DISCARD=0
@@ -70,6 +77,7 @@ typeset -ga PROBE_PRIMITIVES=(
   plat_paste_mixed
   plat_drop_files
   plat_owner_step
+  plat_front
   plat_speech_last
   plat_text_scales
   plat_set_text_scale
@@ -111,6 +119,7 @@ plat_launch() {
   probe_wait 90
   ORIGIN_X=
   ORIGIN_Y=
+  PROBE_PID=
 }
 
 plat_kill() {
@@ -127,12 +136,13 @@ plat_kill() {
   done
   ORIGIN_X=
   ORIGIN_Y=
+  PROBE_PID=
 }
 
 plat_origin() {
   local bounds view_height
   bounds=$(osascript -e "tell application \"System Events\" to tell process \"$PROBE_PROCESS\" to get {position, size} of window 1")
-  view_height=$(probe_get state?text=0 | json_get view.height) || return 1
+  view_height=$(probe_get 'state?text=0' | json_get view.height) || return 1
   local -a parts=(${(s:, :)bounds})
   local -F title=$(( parts[4] - view_height ))
   print -r -- "$parts[1] $(( parts[2] + title ))"
@@ -141,17 +151,21 @@ plat_origin() {
 plat_click() {
   local x=$1 y=$2 hold=${3:-20} count=${4:-1} mods=${5:-none}
   origin_load
+  point_inside $x $y || return $?
   "$PROBE_BIN/inp" click $(( ORIGIN_X + x )) $(( ORIGIN_Y + y )) $count ${mods:-none} $hold
 }
 
 plat_right_click() {
   origin_load
+  point_inside $1 $2 || return $?
   "$PROBE_BIN/inp" rightclick $(( ORIGIN_X + $1 )) $(( ORIGIN_Y + $2 ))
 }
 
 plat_drag() {
   local mods=${5:-none} hover=${6:-0}
   origin_load
+  point_inside $1 $2 || return $?
+  point_inside $3 $4 || return $?
   "$PROBE_BIN/inp" drag $(( ORIGIN_X + $1 )) $(( ORIGIN_Y + $2 )) $(( ORIGIN_X + $3 )) $(( ORIGIN_Y + $4 )) ${mods:-none} 60 $hover
 }
 
@@ -161,6 +175,7 @@ plat_scroll() {
 }
 
 plat_key() {
+  probe_require_front || return $?
   local combo=$1 name=${1##*+} using=
   local -a mods=()
   [[ $combo == *+* ]] && mods=(${(s:+:)${combo%+*}})
@@ -187,10 +202,12 @@ plat_key() {
 }
 
 plat_type() {
+  probe_require_front || return $?
   osascript -e 'on run argv' -e 'tell application "System Events" to keystroke (item 1 of argv)' -e 'end run' -- "$1" >/dev/null
 }
 
 plat_timed_type() {
+  probe_require_front || return $?
   "$PROBE_BIN/inp" type "$1"
 }
 
@@ -241,10 +258,49 @@ plat_drop_files() {
 }
 
 plat_owner_step() {
-  print -r -- "owner step: $1" >/dev/tty
-  print -rn -- "press Enter when done " >/dev/tty
+  print -r -- "owner step: $1" >>$PROBE_TTY
+  print -rn -- "press Enter when done " >>$PROBE_TTY
   local answer
-  read -r answer </dev/tty
+  read -r answer <$PROBE_TTY
+  plat_front
+}
+
+plat_front() {
+  probe_activate && return 0
+  print -u2 -r -- 'drive: the probe could not be brought to the front'
+  return 3
+}
+
+pid_load() {
+  [[ -n $PROBE_PID ]] && return 0
+  local pid
+  pid=$(probe_get pid | json_get pid) || return 1
+  PROBE_PID=$pid
+}
+
+probe_frontmost() {
+  pid_load || return 1
+  local front
+  front=$(lsappinfo info -only pid "$(lsappinfo front)" 2>/dev/null) || return 1
+  [[ ${front##*=} == $PROBE_PID ]]
+}
+
+probe_activate() {
+  pid_load || return 1
+  osascript -e "tell application \"System Events\" to set frontmost of (first process whose unix id is $PROBE_PID) to true" >/dev/null 2>&1 || true
+  local -i tries
+  for (( tries = 0; tries < 20; tries++ )); do
+    probe_frontmost && return 0
+    sleep 0.1
+  done
+  return 1
+}
+
+probe_require_front() {
+  probe_frontmost && return 0
+  probe_activate && return 0
+  print -u2 -r -- 'drive: the probe is not the frontmost app, so no key was sent'
+  return 3
 }
 
 plat_speech_last() {
@@ -297,6 +353,7 @@ plat_ime_cases() {
     ime_expect "dead key $name" "fog $accent"
   done
   ime_fixture
+  probe_require_front
   "$PROBE_BIN/inp" key ${MAC_KEYCODES[e]} none 900 >/dev/null
   sleep 0.3
   plat_key 2
@@ -310,21 +367,21 @@ plat_ime_cases() {
   plat_key space
   plat_key enter
   sleep 0.5
-  ime_committed_expect 'japanese multi-phrase conversion'
+  ime_committed_expect 'japanese multi-phrase conversion' non-ascii
   plat_owner_step 'switch the input source to Chinese (Pinyin - Simplified)'
   ime_fixture
   probe_get 'log?clear=1' >/dev/null
   plat_type 'womenzaihaibian'
   plat_key space
   sleep 0.5
-  ime_committed_expect 'pinyin multi-phrase conversion'
+  ime_committed_expect 'pinyin multi-phrase conversion' non-ascii
   plat_owner_step 'switch the input source back to ABC or U.S.'
   ime_fixture
   probe_get 'log?clear=1' >/dev/null
   plat_key ctrl+cmd+space
   plat_owner_step 'pick any emoji in the emoji picker'
   sleep 0.5
-  ime_committed_expect 'emoji picker'
+  ime_committed_expect 'emoji picker' non-ascii
   ime_fixture
   probe_get 'log?clear=1' >/dev/null
   plat_owner_step 'start dictation (press the dictation key twice), speak the five-sentence script, then stop dictation'
@@ -358,17 +415,19 @@ plat_image_insert_cases() {
   cp $png $PROBE_WORK/third.png
   gr7_prepare $caret_case
   gr7_begin
-  plat_drop_files $(gr7_drop_point) $png
-  gr7_finish "$caret_case finder drop of one image" 1 ''
+  gr7_drop_target
+  plat_drop_files $GR7_DROP_X $GR7_DROP_Y $png
+  gr7_finish "$caret_case finder drop of one image" 1 '' drop
   gr7_prepare $caret_case
   gr7_begin
-  plat_drop_files $(gr7_drop_point) $png $PROBE_WORK/second.png $PROBE_WORK/third.png $note
-  gr7_finish "$caret_case finder drop of three images and a text file" 3 '1 file skipped'
+  gr7_drop_target
+  plat_drop_files $GR7_DROP_X $GR7_DROP_Y $png $PROBE_WORK/second.png $PROBE_WORK/third.png $note
+  gr7_finish "$caret_case finder drop of three images and a text file" 3 '1 file skipped' drop
 }
 
 plat_a11y_cases() {
   plat_owner_step 'enable VoiceOver (Cmd+F5) and allow VoiceOver to be controlled with AppleScript'
-  a11y_open $'# Harbour day\nThe **fog** lifted at noon.\n\n- [ ] passport\n\n![Low tide](photo/'"$(fixture_ref 1)"$' "right medium")\n\nLast line.' 0
+  a11y_open $'# Harbour day\nThe **fog** lifted at noon.\n\n- [ ] passport\n\n![Low tide](photo/'"$(fixture_ref 1)"$' "right medium")\n\nLast line.' 0 '["Photo, Low tide"]' '["passport"]'
   plat_key ctrl+opt+a
   sleep 4
   a11y_expect 'read the note' 'Harbour day'
@@ -494,6 +553,26 @@ origin_load() {
     origin=$(plat_origin)
     ORIGIN_X=${origin%% *}
     ORIGIN_Y=${origin##* }
+    VIEW_W=
+    VIEW_H=
+  fi
+}
+
+view_load() {
+  [[ -n $VIEW_W && -n $VIEW_H ]] && return 0
+  local state width height
+  state=$(probe_get 'state?text=0') || return 1
+  width=$(jget "$state" view.width) && height=$(jget "$state" view.height) || return 1
+  VIEW_W=$width
+  VIEW_H=$height
+}
+
+point_inside() {
+  view_load || return 1
+  local -F x=$1 y=$2
+  if (( x < 0 || y < 0 || x >= VIEW_W || y >= VIEW_H )); then
+    print -u2 -r -- "drive: refusing to press at $x $y, outside the ${VIEW_W} x ${VIEW_H} probe window"
+    return 3
   fi
 }
 
@@ -592,9 +671,22 @@ write_text() {
 }
 
 open_text() {
-  local surface=$1 text=$2 file=$PROBE_WORK/open.md
+  local surface=$1 text=$2 file=$PROBE_WORK/open.md reply
   write_text $file "$text"
-  probe_post "open?surface=$surface&id=fixture&media=$(fixture_media)" $file >/dev/null
+  reply=$(probe_post "open?surface=$surface&id=fixture&media=$(fixture_media)" $file)
+  opened_from "$reply"
+}
+
+open_entry() {
+  local surface=$1 id=$2 reply
+  reply=$(probe_post "open?surface=$surface&entry=$(url_encode $id)&media=$(fixture_media)")
+  opened_from "$reply"
+}
+
+opened_from() {
+  local reply=$1
+  OPENED_ENTRY=$(jget "$reply" entryId) || OPENED_ENTRY=
+  OPENED_COUNT=$(jget "$reply" entryCount) || OPENED_COUNT=
   ORIGIN_X=
   ORIGIN_Y=
 }
@@ -719,9 +811,9 @@ reported_sample() {
 }
 
 errors_sample() {
-  local row=$1 name=$2 errors
-  errors=$(probe_get 'errors?clear=1')
-  sample "{\"row\":\"$row\",\"kind\":\"errors\",\"case\":$(json_str $name),\"errors\":$errors}"
+  local row=$1 name=$2 endpoint=${3:-errors?clear=1} extra=${4:-} errors
+  errors=$(probe_get $endpoint)
+  sample "{\"row\":\"$row\",\"kind\":\"errors\",\"case\":$(json_str $name),\"errors\":$errors$extra}"
 }
 
 settle() {
@@ -729,37 +821,90 @@ settle() {
 }
 
 scroll_to_top() {
-  local state width height
+  local state width height offset
   state=$(state_get text=0)
   width=$(jget "$state" view.width) && height=$(jget "$state" view.height) || return 1
+  offset=$(jget "$state" scroll.offset) || return 1
   local -i step
-  for (( step = 0; step < 400; step++ )); do
+  for (( step = 0; step < 400 && offset > 0.5; step++ )); do
     plat_scroll $(( width / 2.0 )) $(( height / 2.0 )) 2000
-    local first
-    first=$(jget "$(state_get text=0)" blocks.0.top) || break
-    (( first >= 0 )) && break
+    sleep 0.05
+    offset=$(jget "$(state_get text=0)" scroll.offset) || return 1
   done
 }
 
 scroll_through() {
   local -i step_px=${1:-120}
-  local state width height
+  local state width height offset max
   state=$(state_get text=0)
   width=$(jget "$state" view.width) && height=$(jget "$state" view.height) || return 1
-  local -i step count last
+  local -F previous=-1
+  local -i step stalls=0
   for (( step = 0; step < 20000; step++ )); do
     plat_scroll $(( width / 2.0 )) $(( height / 2.0 )) $(( -step_px ))
     sleep 0.016
     if (( step % 20 == 19 )); then
       state=$(state_get text=0)
-      count=$(jcount "$state" blocks)
-      (( count > 0 )) || break
-      last=$(( count - 1 ))
-      local top
-      top=$(jget "$state" blocks.$last.top) || break
-      (( top < height )) && break
+      offset=$(jget "$state" scroll.offset) && max=$(jget "$state" scroll.max) || return 1
+      (( offset >= max - 0.5 )) && return 0
+      if (( offset <= previous + 0.5 )); then
+        (( stalls += 1 ))
+        (( stalls >= 3 )) && return 0
+      else
+        stalls=0
+      fi
+      previous=$offset
     fi
   done
+}
+
+glyph_rect() {
+  local boxes=$1 index
+  index=$(jget "$boxes" firstSelected) || return 1
+  rect_json "$boxes" glyphs.$index.rect
+}
+
+surface_bounds() {
+  local state=$1 bounds
+  if bounds=$(rect_json "$state" writingSurface); then
+    print -r -- "$bounds"
+  else
+    print -r -- "[0,0,$(jget "$state" view.width),$(jget "$state" view.height)]"
+  fi
+}
+
+glyph_in_view() {
+  local -i offset=$1 attempt
+  local state bounds boxes rect
+  state=$(state_get text=0)
+  bounds=$(surface_bounds "$state") || return 1
+  local -F surface_top=$(jget "$bounds" 1) surface_height=$(jget "$bounds" 3)
+  local -F surface_left=$(jget "$bounds" 0) surface_width=$(jget "$bounds" 2)
+  local -F surface_bottom=$(( surface_top + surface_height ))
+  for (( attempt = 0; attempt < 30; attempt++ )); do
+    boxes=$(probe_get "boxes?from=$offset&to=$(( offset + 1 ))") || return 1
+    rect=$(glyph_rect "$boxes") || return 1
+    local -F top=$(jget "$rect" 1) height=$(jget "$rect" 3)
+    if (( top >= surface_top && top + height <= surface_bottom )); then
+      print -r -- "$rect"
+      return 0
+    fi
+    local -F delta=$(( top + height / 2.0 - (surface_top + surface_height / 2.0) ))
+    (( delta > 2000 )) && delta=2000
+    (( delta < -2000 )) && delta=-2000
+    plat_scroll $(( surface_left + surface_width / 2.0 )) $(( surface_top + surface_height / 2.0 )) $(( -delta ))
+    sleep 0.1
+  done
+  return 1
+}
+
+click_glyph() {
+  local -i offset=$1
+  local hold=${2:-60} rect
+  rect=$(glyph_in_view $offset) || return 1
+  local center
+  center=$(rect_center "{\"r\":$rect}" r) || return 1
+  plat_click ${center%% *} ${center##* } $hold
 }
 
 typing_offset() {
@@ -807,6 +952,7 @@ case_run() {
       key:*) plat_key "${step#key:}" ;;
       press:*) press_key "${step#press:}" ;;
       photo:*) select_photo "${step#photo:}" ;;
+      clickat:*) click_glyph "${step#clickat:}" ;;
       *) print -u2 -r -- "drive: unknown step $step"; return 2 ;;
     esac
     sleep 0.08
@@ -814,7 +960,12 @@ case_run() {
   sleep 0.2
   local state
   state=$(state_get)
-  local expected="{\"state\":{\"source\":$(json_str "$expected_source"),\"focused\":$expected_focus}"
+  local photo_expected=
+  if [[ $expected_selection == PHOTO_SELECTED ]]; then
+    photo_expected=',"photoSelected":0'
+    expected_selection=
+  fi
+  local expected="{\"state\":{\"source\":$(json_str "$expected_source"),\"focused\":$expected_focus$photo_expected}"
   [[ -n $expected_selection ]] && expected+=",\"selection\":$expected_selection"
   expected+="}"
   expect_sample $row "$name" "$expected" "{\"state\":$state,\"selection\":$(selection_json "$state")}"
@@ -999,20 +1150,41 @@ idle_measure() {
   local name=$1
   settle 2000
   probe_get 'timings?reset=1' >/dev/null
-  local pid format ticks= start_cpu end_cpu
+  local pid format ticks= start_cpu end_cpu window_start window_end
   pid=$(probe_get pid | json_get pid)
   read -r format ticks <<< "$(plat_cpu_format)"
-  local -F started=$EPOCHREALTIME
+  local -F cpu_started=$EPOCHREALTIME
   start_cpu=$(plat_cpu $pid)
+  window_start=$(probe_get clock | json_get now)
   sleep 10
+  window_end=$(probe_get clock | json_get now)
   end_cpu=$(plat_cpu $pid)
-  local -F ended=$EPOCHREALTIME
-  local timings state caret_visible=true
+  local -F cpu_ended=$EPOCHREALTIME
+  sleep 0.3
+  local timings state caret_visible=false
   timings=$(probe_get timings)
   state=$(state_get text=0)
-  jget "$state" caret.0 >/dev/null || caret_visible=false
-  local window_ms=$(( int((ended - started) * 1000 + 0.5) ))
-  sample "{\"row\":\"GP4\",\"kind\":\"idle\",\"case\":$(json_str $name),\"caretVisible\":$caret_visible,\"timings\":$timings,\"windowMs\":$window_ms,\"cpuStart\":$(json_str "$start_cpu"),\"cpuEnd\":$(json_str "$end_cpu"),\"cpuFormat\":$(json_str $format)${ticks:+,\"clockTicks\":$ticks}}"
+  if jget "$state" caret.0 >/dev/null || [[ $(jget "$state" textFieldFocused) == true ]]; then
+    caret_visible=true
+  fi
+  local -i window_ms=$(( (window_end - window_start) / 1000 ))
+  local -i cpu_window_ms=$(( int((cpu_ended - cpu_started) * 1000 + 0.5) ))
+  sample "{\"row\":\"GP4\",\"kind\":\"idle\",\"case\":$(json_str $name),\"caretVisible\":$caret_visible,\"timings\":$timings,\"windowMs\":$window_ms,\"windowStartMicros\":$window_start,\"windowEndMicros\":$window_end,\"cpuWindowMs\":$cpu_window_ms,\"cpuStart\":$(json_str "$start_cpu"),\"cpuEnd\":$(json_str "$end_cpu"),\"cpuFormat\":$(json_str $format)${ticks:+,\"clockTicks\":$ticks}}"
+}
+
+narrow_toolbar_column() {
+  local state column surface narrow
+  state=$(state_get text=0)
+  column=$(jget "$state" column) && surface=$(jget "$state" writingSurface.2) && narrow=$(jget "$state" photoToolbarNarrowWidth) || return 1
+  print -r -- $(( int(narrow - (surface - column) - 2) ))
+}
+
+narrow_toolbar_viewport() {
+  local column
+  column=$(narrow_toolbar_column) || return 1
+  probe_get "viewport?column=$column" >/dev/null
+  ORIGIN_X=
+  ORIGIN_Y=
 }
 
 idle_photo_fixture() {
@@ -1046,8 +1218,8 @@ scenario_perf_idle() {
   scroll_to_top
   select_photo 0
   idle_measure 'toolbar flipped below its photo'
-  probe_get 'viewport?column=350' >/dev/null
   open_text composer "$(idle_photo_fixture 'right medium' last)"
+  narrow_toolbar_viewport
   select_photo 0
   press_key photo-toolbar-more 60
   idle_measure 'the more menu open'
@@ -1120,22 +1292,23 @@ scenario_styling_ceiling() {
 random_op() {
   local -i pick=$(( RANDOM % 18 ))
   local -a words=(harbour fog tide gull pier lantern shell kelp)
+  local -a controls=("${(@f)$(photo_toolbar_keys)}")
   case $pick in
-    0|1|2|3) print -r -- "type:${words[RANDOM % ${#words} + 1]} " ;;
-    4) print -r -- key:backspace ;;
-    5) print -r -- key:opt+backspace ;;
-    6) print -r -- key:cmd+b ;;
-    7) print -r -- key:cmd+i ;;
-    8) print -r -- key:shift+cmd+x ;;
-    9) print -r -- key:shift+cmd+h ;;
-    10) print -r -- key:shift+cmd+8 ;;
-    11) print -r -- key:enter ;;
-    12) print -r -- key:tab ;;
-    13) print -r -- key:cmd+z ;;
-    14) print -r -- key:shift+cmd+z ;;
-    15) print -r -- key:shift+left ;;
-    16) print -r -- "photo:$(( RANDOM % 4 ))" ;;
-    *) print -r -- key:left ;;
+    0|1|2|3) REPLY="type:${words[RANDOM % ${#words} + 1]} " ;;
+    4) REPLY=key:backspace ;;
+    5) REPLY=key:opt+backspace ;;
+    6) REPLY=key:cmd+b ;;
+    7) REPLY=key:cmd+i ;;
+    8) REPLY=key:shift+cmd+x ;;
+    9) REPLY=key:shift+cmd+h ;;
+    10) REPLY=key:shift+cmd+8 ;;
+    11) REPLY=key:enter ;;
+    12) REPLY=key:tab ;;
+    13) REPLY=key:cmd+z ;;
+    14) REPLY=key:shift+cmd+z ;;
+    15) REPLY=key:shift+left ;;
+    16) REPLY="photo:$(( RANDOM % 4 )):${controls[RANDOM % ${#controls} + 1]}" ;;
+    *) REPLY=key:left ;;
   esac
 }
 
@@ -1148,13 +1321,25 @@ run_op() {
   case $op in
     type:*) plat_type "${op#type:}" ;;
     key:*) plat_key "${op#key:}" ;;
+    press:*) press_key "${op#press:}" 110 ;;
+    select:*) select_photo "${op#select:}" ;;
     photo:*)
+      local spec=${op#photo:} control=
+      if [[ $spec == *:* ]]; then
+        control=${spec#*:}
+        spec=${spec%%:*}
+      fi
       local state
       state=$(state_get text=0)
-      if (( $(photo_count "$state") > 0 )); then
-        select_photo $(( ${op#photo:} % $(photo_count "$state") ))
-        local -a keys=("${(@f)$(photo_toolbar_keys)}")
-        press_key ${keys[RANDOM % ${#keys} + 1]} 110 || true
+      local -i count
+      count=$(photo_count "$state")
+      if (( count > 0 )); then
+        select_photo $(( spec % count ))
+        if [[ -z $control ]]; then
+          local -a keys=("${(@f)$(photo_toolbar_keys)}")
+          control=${keys[RANDOM % ${#keys} + 1]}
+        fi
+        press_key $control 110 || true
       fi
       ;;
   esac
@@ -1178,17 +1363,16 @@ round_trip_session() {
     sleep 0.05
   done
   sleep 0.5
-  setopt local_options extended_glob
   local at_save saved reopened
   at_save=$(state_get)
   saved=$(probe_post save)
   local stored=$PROBE_WORK/stored.md
-  if jget_exact "$saved" stored; then
-    write_text $stored "$REPLY"
-  else
-    jget_exact "$at_save" source
-    write_text $stored "${${REPLY##[[:space:]]#}%%[[:space:]]#}"
+  if ! jget_exact "$saved" stored; then
+    probe_post close >/dev/null 2>&1 || true
+    sample "{\"row\":\"GR1\",\"kind\":\"roundTrip\",\"case\":$(json_str $name),\"storedMissing\":true,\"atSave\":$at_save,\"reopened\":{}}"
+    return 0
   fi
+  write_text $stored "$REPLY"
   probe_post close >/dev/null
   probe_post "open?surface=composer&id=roundtrip&media=$(fixture_media)" $stored >/dev/null
   sleep 0.3
@@ -1219,7 +1403,8 @@ scenario_round_trip() {
     length=$(( RANDOM % 50 + 1 ))
     local -a ops=()
     for (( step = 0; step < length; step++ )); do
-      ops+=("$(random_op)")
+      random_op
+      ops+=("$REPLY")
     done
     round_trip_session "random $seed/$sequence" "${ops[@]}"
   done
@@ -1250,7 +1435,7 @@ line_range_of() {
 }
 
 allowed_range() {
-  local op=$1 before=$2 after=$3
+  local op=$1 before=$2
   jget_exact "$before" source
   local source=$REPLY
   local -i base extent from to
@@ -1259,12 +1444,18 @@ allowed_range() {
   from=$(( base < extent ? base : extent ))
   to=$(( base < extent ? extent : base ))
   case $op in
-    type:*|key:backspace|key:opt+backspace|key:enter|key:cmd+x|key:cmd+v)
+    type:*|key:backspace|key:opt+backspace|key:delete|key:opt+delete|key:enter|key:cmd+x|key:cmd+v)
       local range=$(line_range_of "$source" $from $to)
-      print -r -- "[[${range% *},${range#* }]]"
-      ;;
-    photo:*)
-      print -r -- "[[0,${#source}]]"
+      local -i start=${range% *} end=${range#* }
+      if [[ $op == key:backspace || $op == key:opt+backspace ]] && (( from == to && from == start && start > 0 )); then
+        local previous=$(line_range_of "$source" $(( start - 1 )) $(( start - 1 )))
+        start=${previous% *}
+      fi
+      if [[ $op == key:delete || $op == key:opt+delete ]] && (( from == to && to == end && end < ${#source} )); then
+        local following=$(line_range_of "$source" $(( end + 1 )) $(( end + 1 )))
+        end=${following#* }
+      fi
+      print -r -- "[[$start,$end]]"
       ;;
     *)
       local range=$(line_range_of "$source" $from $to)
@@ -1274,6 +1465,40 @@ allowed_range() {
       print -r -- "[[$start,$end]]"
       ;;
   esac
+}
+
+photo_command_json() {
+  local op=$1 before=$2 control= photo
+  local -i count
+  count=$(photo_count "$before")
+  case $op in
+    photo:*:*)
+      (( count > 0 )) || return 1
+      local spec=${op#photo:}
+      control=${spec#*:}
+      photo=$(( ${spec%%:*} % count ))
+      ;;
+    key:backspace|key:opt+backspace|key:delete|key:opt+delete|key:cmd+x)
+      photo=$(jget "$before" photoSelected) || return 1
+      control=remove
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  jget_exact "$before" source || return 1
+  local blocks
+  blocks=$(print -r -- "$before" | plutil -extract blocks json -o - - 2>/dev/null) || return 1
+  print -rn -- "{\"control\":$(json_str $control),\"photo\":$photo,\"source\":$(json_str "$REPLY"),\"blocks\":$blocks}"
+}
+
+side_edit_sample() {
+  local name=$1 op=$2 before=$3 changes=$4 command
+  if command=$(photo_command_json "$op" "$before"); then
+    sample "{\"row\":\"GR2\",\"kind\":\"sideEdit\",\"case\":$(json_str "$name"),\"command\":$(json_str $op),\"photoCommand\":$command,\"changes\":$changes}"
+  else
+    sample "{\"row\":\"GR2\",\"kind\":\"sideEdit\",\"case\":$(json_str "$name"),\"command\":$(json_str $op),\"allowed\":$(allowed_range "$op" "$before"),\"changes\":$changes}"
+  fi
 }
 
 log_changes() {
@@ -1305,17 +1530,17 @@ scenario_side_edit_audit() {
     select_range $(( ${#fixture} / 2 )) $(( ${#fixture} / 2 ))
     probe_get 'log?clear=1' >/dev/null
     for (( step = 0; step < length; step++ )); do
-      local op before after log
-      op=$(random_op)
+      local op before log
+      random_op
+      op=$REPLY
       [[ $op == key:cmd+z || $op == key:shift+cmd+z ]] && continue
       before=$(state_get)
       run_op "$op"
       sleep 0.05
-      after=$(state_get)
       log=$(probe_get 'log?clear=1')
       local changes=$(log_changes "$log")
       [[ $changes == '[]' ]] && continue
-      sample "{\"row\":\"GR2\",\"kind\":\"sideEdit\",\"case\":$(json_str "$seed/$sequence/$step"),\"command\":$(json_str $op),\"allowed\":$(allowed_range "$op" "$before" "$after"),\"changes\":$changes}"
+      side_edit_sample "$seed/$sequence/$step" "$op" "$before" "$changes"
     done
   done
 }
@@ -1395,7 +1620,7 @@ scroll_photo_to() {
 }
 
 held_press() {
-  local name=$1 fixture=$2 key=$3 hold=$4 expected=$5 check=$6 top=$7
+  local case_name=$1 click=$2 fixture=$3 key=$4 hold=$5 expected=$6 check=$7 top=$8
   set_text "$fixture" 0 0
   sleep 0.1
   scroll_photo_to $top
@@ -1447,7 +1672,35 @@ held_press() {
       plat_key escape
       ;;
   esac
-  expect_sample GR3 "$name hold ${hold}ms" "$expected_json" "$observed"
+  expect_sample GR3 "$case_name click $click hold ${hold}ms" "$expected_json" "$observed" "$(held_fields "$case_name" $hold)"
+}
+
+held_fields() {
+  print -rn -- ",\"clickCase\":$(json_str "$1"),\"hold\":$2"
+}
+
+glyph_center() {
+  local rect
+  rect=$(glyph_rect "$1") || return 1
+  rect_center "{\"r\":$rect}" r
+}
+
+format_press() {
+  local key=$1 hold=$2
+  case $key in
+    format-strikethrough|format-highlight|format-code)
+      press_key format-more 110 || return 1
+      sleep 0.3
+      ;;
+  esac
+  press_key $key $hold
+}
+
+format_selection() {
+  set_text "$1" 4 9
+  focus_editor
+  select_range 4 9
+  probe_get 'errors?clear=1' >/dev/null
 }
 
 held_title_after() {
@@ -1483,12 +1736,9 @@ scenario_held_clicks() {
       for mode in $modes; do
         local top=240
         [[ $mode == below ]] && top=4
-        if [[ $mode == narrow ]]; then
-          probe_get 'viewport?column=350' >/dev/null
-        else
-          probe_get 'viewport?clear=1' >/dev/null
-        fi
+        probe_get 'viewport?clear=1' >/dev/null
         open_text composer "$fixture"
+        [[ $mode == narrow ]] && narrow_toolbar_viewport
         local state column
         state=$(state_get text=0)
         column=$(jget "$state" column)
@@ -1496,7 +1746,7 @@ scenario_held_clicks() {
         is_phone_column && phone=1
         for hold in $holds; do
           for (( click = 1; click <= 20; click++ )); do
-            local base="$title $position $mode click $click"
+            local base="$title $position $mode"
             local control value expected
             if (( ! phone )); then
               for value in small medium large full; do
@@ -1506,51 +1756,58 @@ scenario_held_clicks() {
                 case $value in small) fraction=0.3333333333 ;; medium) fraction=0.5 ;; large) fraction=0.6666666667 ;; full) fraction=1 ;; esac
                 EXPECTED_WIDTH=$(printf '%.0f' $(( column * fraction )))
                 if [[ $new_title == $title ]]; then
-                  held_press "$base size $value" "$fixture" photo-toolbar-size-$value $hold __none__ source $top
+                  held_press "$base size $value" $click "$fixture" photo-toolbar-size-$value $hold __none__ source $top
                 else
-                  held_press "$base size $value" "$fixture" photo-toolbar-size-$value $hold "$expected" source $top
+                  held_press "$base size $value" $click "$fixture" photo-toolbar-size-$value $hold "$expected" source $top
                 fi
               done
               EXPECTED_WIDTH=
               for value in left centre right; do
                 if [[ $title == 'centre full' && $value != centre ]]; then
-                  held_press "$base side $value" "$fixture" photo-toolbar-side-$value $hold '' disabled $top
+                  held_press "$base side $value" $click "$fixture" photo-toolbar-side-$value $hold '' disabled $top
                   continue
                 fi
                 local new_title=$(held_title_after "$title" side $value)
                 if [[ $new_title == $title ]]; then
-                  held_press "$base side $value" "$fixture" photo-toolbar-side-$value $hold __none__ source $top
+                  held_press "$base side $value" $click "$fixture" photo-toolbar-side-$value $hold __none__ source $top
                 else
-                  held_press "$base side $value" "$fixture" photo-toolbar-side-$value $hold "${fixture//\"$title\"/\"$new_title\"}" source $top
+                  held_press "$base side $value" $click "$fixture" photo-toolbar-side-$value $hold "${fixture//\"$title\"/\"$new_title\"}" source $top
                 fi
               done
             fi
             if [[ $mode == narrow ]]; then
-              held_press "$base more" "$fixture" photo-toolbar-more $hold '' menu $top
+              held_press "$base more" $click "$fixture" photo-toolbar-more $hold '' menu $top
             else
               local up down
               up=$(p3_uniform up $photo_index "${blocks[@]}")
               down=$(p3_uniform down $photo_index "${blocks[@]}")
               if [[ $up == __none__ ]]; then
-                held_press "$base move up" "$fixture" photo-toolbar-move-up $hold '' disabled $top
+                held_press "$base move up" $click "$fixture" photo-toolbar-move-up $hold '' disabled $top
               else
-                held_press "$base move up" "$fixture" photo-toolbar-move-up $hold "$up" source $top
+                held_press "$base move up" $click "$fixture" photo-toolbar-move-up $hold "$up" source $top
               fi
               if [[ $down == __none__ ]]; then
-                held_press "$base move down" "$fixture" photo-toolbar-move-down $hold '' disabled $top
+                held_press "$base move down" $click "$fixture" photo-toolbar-move-down $hold '' disabled $top
               else
-                held_press "$base move down" "$fixture" photo-toolbar-move-down $hold "$down" source $top
+                held_press "$base move down" $click "$fixture" photo-toolbar-move-down $hold "$down" source $top
               fi
-              held_press "$base replace" "$fixture" photo-toolbar-replace $hold '' replace $top
+              held_press "$base replace" $click "$fixture" photo-toolbar-replace $hold '' replace $top
             fi
-            held_press "$base caption" "$fixture" photo-toolbar-caption $hold '' caption $top
-            held_press "$base remove" "$fixture" photo-toolbar-remove $hold "$(p3_uniform remove $photo_index "${blocks[@]}")" source $top
+            held_press "$base caption" $click "$fixture" photo-toolbar-caption $hold '' caption $top
+            held_press "$base remove" $click "$fixture" photo-toolbar-remove $hold "$(p3_uniform remove $photo_index "${blocks[@]}")" source $top
           done
         done
       done
     done
   done
   probe_get 'viewport?clear=1' >/dev/null
+  held_format_clicks $holds
+}
+
+held_format_clicks() {
+  local -a holds=("$@")
+  local hold
+  local -i click
   local selection_text='the quick fox'
   local -a formats=(
     'format-bold|the **quick** fox'
@@ -1561,46 +1818,60 @@ scenario_held_clicks() {
     'format-task|- [ ] the quick fox'
     'format-quote|> the quick fox'
     'format-link|the [quick]() fox'
+    'format-strikethrough|the ~~quick~~ fox'
+    'format-highlight|the ==quick== fox'
+    'format-code|the `quick` fox'
   )
   open_text composer "$selection_text"
-  local entry key expected
+  local entry key expected before after center state
   for hold in $holds; do
     for (( click = 1; click <= 20; click++ )); do
       for entry in $formats; do
         key=${entry%%|*}
         expected=${entry#*|}
-        set_text "$selection_text" 4 9
-        focus_editor
-        select_range 4 9
-        probe_get 'errors?clear=1' >/dev/null
-        local before after
+        format_selection "$selection_text"
         before=$(state_get text=0)
-        press_key $key $hold || true
+        format_press $key $hold || true
         sleep 0.3
         after=$(state_get)
-        expect_sample GR3 "$key click $click hold ${hold}ms" "{\"state\":{\"source\":$(json_str "$expected")},\"transactionDelta\":1,\"errors\":0}" "{\"state\":$after,\"transactionDelta\":$(( $(transactions_of "$after") - $(transactions_of "$before") )),\"errors\":$(errors_total)}"
+        expect_sample GR3 "$key click $click hold ${hold}ms" "{\"state\":{\"source\":$(json_str "$expected")},\"transactionDelta\":1,\"errors\":0}" "{\"state\":$after,\"transactionDelta\":$(( $(transactions_of "$after") - $(transactions_of "$before") )),\"errors\":$(errors_total)}" "$(held_fields $key $hold)"
       done
+      format_selection "$selection_text"
+      before=$(state_get text=0)
+      press_key format-more $hold || true
+      sleep 0.3
+      after=$(state_get text=0)
+      expect_sample GR3 "format-more click $click hold ${hold}ms" '{"menuOpen":true,"transactionDelta":0,"errors":0}' "{\"menuOpen\":$(bool_json key_present format-strikethrough),\"transactionDelta\":$(( $(transactions_of "$after") - $(transactions_of "$before") )),\"errors\":$(errors_total)}" "$(held_fields format-more $hold)"
+      plat_key escape
+      format_selection "$selection_text"
+      plat_key cmd+b
+      sleep 0.2
+      probe_get 'errors?clear=1' >/dev/null
+      press_key format-undo $hold || true
+      sleep 0.3
+      after=$(state_get)
+      expect_sample GR3 "format-undo click $click hold ${hold}ms" "{\"state\":{\"source\":$(json_str "$selection_text")},\"errors\":0}" "{\"state\":$after,\"errors\":$(errors_total)}" "$(held_fields format-undo $hold)"
       set_text '- [ ] passport' 10 10
       focus_editor
       select_range 10 10
-      local boxes center
-      boxes=$(probe_get 'boxes?from=2&to=5')
-      if center=$(rect_center "$boxes" glyphs.0.rect); then
-        local before after
+      if center=$(glyph_center "$(probe_get 'boxes?from=2&to=5')"); then
         before=$(state_get text=0)
         plat_click ${center%% *} ${center##* } $hold
         sleep 0.3
         after=$(state_get)
-        expect_sample GR3 "checkbox click $click hold ${hold}ms" '{"state":{"source":"- [x] passport"},"selection":[10,10],"transactionDelta":1}' "{\"state\":$after,\"selection\":$(selection_json "$after"),\"transactionDelta\":$(( $(transactions_of "$after") - $(transactions_of "$before") ))}"
+        expect_sample GR3 "checkbox click $click hold ${hold}ms" '{"state":{"source":"- [x] passport"},"selection":[10,10],"transactionDelta":1}' "{\"state\":$after,\"selection\":$(selection_json "$after"),\"transactionDelta\":$(( $(transactions_of "$after") - $(transactions_of "$before") ))}" "$(held_fields checkbox $hold)"
+      else
+        expect_sample GR3 "checkbox click $click hold ${hold}ms" '{"checkboxFound":true}' '{"checkboxFound":false}' "$(held_fields checkbox $hold)"
       fi
       set_text "The figure follows."$'\n\n'"$(photo_line 1 'centre medium')" 0 0
-      local state
       state=$(state_get text=0)
       if center=$(rect_center "$state" photos.0.rect); then
         plat_click ${center%% *} ${center##* } $hold
         sleep 0.3
         state=$(state_get text=0)
-        expect_sample GR3 "photo figure click $click hold ${hold}ms" '{"photoSelected":0}' "{\"photoSelected\":$(jget "$state" photoSelected || print -rn null)}"
+        expect_sample GR3 "photo figure click $click hold ${hold}ms" '{"photoSelected":0}' "{\"photoSelected\":$(jget "$state" photoSelected || print -rn null)}" "$(held_fields 'photo figure' $hold)"
+      else
+        expect_sample GR3 "photo figure click $click hold ${hold}ms" '{"photoFound":true}' '{"photoFound":false}' "$(held_fields 'photo figure' $hold)"
       fi
     done
   done
@@ -1614,10 +1885,10 @@ scenario_monkey() {
   for scenario in $PROBE_SCENARIOS; do
     (( ${skipped[(Ie)$scenario]} )) && continue
     RESULT_DISCARD=1
-    probe_get 'errors?clear=1' >/dev/null
+    probe_get 'errors?scope=scenario&reset=1' >/dev/null
     scenario_${scenario//-/_} || print -u2 -r -- "drive: $scenario ended with status $? inside monkey"
     RESULT_DISCARD=0
-    errors_sample GR4 $scenario
+    errors_sample GR4 $scenario 'errors?scope=scenario&reset=1'
   done
   local seed=${PROBE_SEED:-$RANDOM}
   print -r -- "monkey seed $seed"
@@ -1630,6 +1901,7 @@ scenario_monkey() {
   height=$(jget "$state" view.height)
   local -a keys=(left right up down backspace delete enter tab shift+tab cmd+z shift+cmd+z cmd+b cmd+i opt+backspace shift+right shift+down cmd+a escape a e space)
   local -i step steps=${PROBE_MONKEY_STEPS:-10000}
+  probe_get 'errors?scope=scenario&reset=1' >/dev/null
   for (( step = 1; step <= steps; step++ )); do
     case $(( RANDOM % 3 )) in
       0) plat_key ${keys[RANDOM % ${#keys} + 1]} || true ;;
@@ -1637,16 +1909,18 @@ scenario_monkey() {
       2) plat_drag $(( RANDOM % int(width) )) $(( RANDOM % int(height) )) $(( RANDOM % int(width) )) $(( RANDOM % int(height) )) || true ;;
     esac
     if (( step % 500 == 0 )) && ! probe_get pid >/dev/null 2>&1; then
+      sample "{\"row\":\"GR4\",\"kind\":\"errors\",\"case\":$(json_str "random relaunch at step $step"),\"errors\":{\"errors\":[{\"error\":\"the probe stopped answering during the random run and was relaunched\"}],\"drops\":[]}}"
       plat_launch $PROBE_BUILD
       open_note c6000-p8 composer
+      focus_editor
     fi
   done
-  errors_sample GR4 random
+  errors_sample GR4 random 'errors?scope=scenario&reset=1' ",\"steps\":$steps"
 }
 
 undo_case() {
-  local name=$1 fixture=$2 base=$3 extent=$4
-  shift 4
+  local name=$1 fixture=$2 base=$3 extent=$4 selection=${5:-}
+  shift 5
   open_text composer "$fixture"
   focus_editor
   select_range $base $extent
@@ -1666,7 +1940,7 @@ undo_case() {
   sleep 0.2
   local undone
   undone=$(state_get)
-  expect_sample GR5 "$name undo" "{\"state\":{\"source\":$(json_str "$fixture")},\"selection\":[$base,$extent]}" "{\"state\":$undone,\"selection\":$(selection_json "$undone")}"
+  expect_sample GR5 "$name undo" "{\"state\":{\"source\":$(json_str "$fixture")},\"selection\":${selection:-[$base,$extent]}}" "{\"state\":$undone,\"selection\":$(selection_json "$undone")}"
   plat_key shift+cmd+z
   sleep 0.2
   local redone
@@ -1676,22 +1950,24 @@ undo_case() {
 
 scenario_undo_matrix() {
   local text='the quick fox jumps'
-  local photo_note="Before the photo."$'\n\n'"$(photo_line 1 'left medium')"$'\n\n'"After the photo."
-  undo_case 'typing a word' "$text" 19 19 'type: over'
-  undo_case 'deleting a word' "$text" 19 19 key:opt+backspace
-  undo_case 'bold' "$text" 4 9 key:cmd+b
-  undo_case 'italic' "$text" 4 9 key:cmd+i
-  undo_case 'strikethrough' "$text" 4 9 key:shift+cmd+x
-  undo_case 'highlight' "$text" 4 9 key:shift+cmd+h
-  undo_case 'inline code' "$text" 4 9 key:cmd+e
-  undo_case 'link' "$text" 4 9 key:cmd+k
-  undo_case 'bullet list' "$text" 4 4 key:shift+cmd+8
-  undo_case 'numbered list' "$text" 4 4 key:shift+cmd+7
-  undo_case 'task list' "$text" 4 4 key:shift+cmd+9
-  undo_case 'enter in a list' '- rope' 6 6 key:enter
-  undo_case 'tab in a list' $'- rope\n- lantern' 15 15 key:tab
-  undo_case 'cut' "$text" 4 9 key:cmd+x
-  undo_case 'photo move down' "$photo_note" 0 0 photo:0 key:escape
+  local photo=$(photo_line 1 'left medium')
+  local photo_note="Before the photo."$'\n\n'"$photo"$'\n\n'"After the photo."
+  local -i photo_start=${#${photo_note%%$photo*}}
+  undo_case 'typing a word' "$text " 20 20 '' type:over
+  undo_case 'deleting a word' "$text" 19 19 '' key:opt+backspace
+  undo_case 'bold' "$text" 4 9 '' key:cmd+b
+  undo_case 'italic' "$text" 4 9 '' key:cmd+i
+  undo_case 'strikethrough' "$text" 4 9 '' key:shift+cmd+x
+  undo_case 'highlight' "$text" 4 9 '' key:shift+cmd+h
+  undo_case 'inline code' "$text" 4 9 '' key:cmd+e
+  undo_case 'link' "$text" 4 9 '' key:cmd+k
+  undo_case 'bullet list' "$text" 4 4 '' key:shift+cmd+8
+  undo_case 'numbered list' "$text" 4 4 '' key:shift+cmd+7
+  undo_case 'task list' "$text" 4 4 '' key:shift+cmd+9
+  undo_case 'enter in a list' '- rope' 6 6 '' key:enter
+  undo_case 'tab in a list' $'- rope\n- lantern' 15 15 '' key:tab
+  undo_case 'cut' "$text" 4 9 '' key:cmd+x
+  undo_case 'photo move down' "$photo_note" 0 0 "[$photo_start,$(( photo_start + ${#photo} ))]" select:0 press:photo-toolbar-move-down key:escape
   local fixture=$text
   open_text composer "$fixture"
   focus_editor
@@ -1810,13 +2086,11 @@ gr6_boundary_y() {
   local -i after_block=$2 count
   count=$(jcount "$state" blocks)
   if (( after_block < 0 )); then
-    print -r -- $(( $(jget "$state" blocks.0.top) + 2 ))
+    print -r -- $(( $(jget "$state" blocks.0.globalTop) + 2 ))
   elif (( after_block + 1 < count )); then
-    print -r -- $(( $(jget "$state" blocks.$(( after_block + 1 )).top) - 3 ))
+    print -r -- $(( ($(jget "$state" blocks.$after_block.globalBottom) + $(jget "$state" blocks.$(( after_block + 1 )).globalTop)) / 2.0 ))
   else
-    local -i lines
-    lines=$(jcount "$state" lines)
-    print -r -- $(( $(jget "$state" lines.$(( lines - 1 )).top) + 34 ))
+    print -r -- $(( $(jget "$state" blocks.$(( count - 1 )).globalBottom) + 3 ))
   fi
 }
 
@@ -1868,7 +2142,7 @@ gr6_run() {
 
 scenario_photo_move_matrix() {
   local position kind separator
-  open_text composer ''
+  open_text new ''
   focus_editor
   for kind in paragraph heading list task quote fence divider photo unclosed; do
     for position in first middle last; do
@@ -1892,6 +2166,7 @@ scenario_photo_move_matrix() {
 }
 
 typeset -g GR7_FIXTURE= GR7_CARET= GR7_BEFORE= GR7_EXPECTED_PREFIX= GR7_EXPECTED_SUFFIX= GR7_NOTE_ID=
+typeset -g GR7_DROP_X= GR7_DROP_Y= GR7_DROP_BOUNDARY=
 
 gr7_prepare() {
   local caret_case=$1
@@ -1907,7 +2182,7 @@ gr7_prepare() {
   if [[ -n $GR7_NOTE_ID ]]; then
     open_note c50000-p24 composer
     GR7_FIXTURE=$(<$CORPUS_DIR/c50000-p24.md)
-    GR7_CARET=${#GR7_FIXTURE}
+    GR7_CARET=$(jget "$(state_get text=0)" length)
     GR7_EXPECTED_PREFIX=$GR7_FIXTURE
     GR7_EXPECTED_SUFFIX=$'\n'
   else
@@ -1930,18 +2205,45 @@ gr7_begin() {
   GR7_BEFORE=$(state_get text=0)
 }
 
-gr7_drop_point() {
+gr7_drop_target() {
   local state
   state=$(state_get text=0)
-  local -F y
-  y=$(jget "$state" caret.1) || y=$(( $(jget "$state" view.height) / 2.0 ))
-  print -r -- "$(( $(jget "$state" view.width) / 2.0 )) $(( y + 4 ))"
+  local -i count index target=0
+  count=$(jcount "$state" blocks)
+  for (( index = 0; index < count; index++ )); do
+    (( $(jget "$state" blocks.$index.start) <= GR7_CARET )) && target=$index
+  done
+  local -F bottom height
+  bottom=$(jget "$state" blocks.$target.globalBottom) || return 1
+  height=$(jget "$state" view.height) || return 1
+  if (( bottom + 3 > height )); then
+    scroll_through 600
+    state=$(state_get text=0)
+    bottom=$(jget "$state" blocks.$target.globalBottom) || return 1
+  fi
+  local -F y=$(( bottom + 3 ))
+  if (( target + 1 < count )); then
+    y=$(( (bottom + $(jget "$state" blocks.$(( target + 1 )).globalTop)) / 2.0 ))
+  fi
+  (( y > height - 2 )) && y=$(( height - 2 ))
+  GR7_DROP_BOUNDARY=$(jget "$state" blocks.$target.end)
+  GR7_DROP_X=$(( $(jget "$state" view.width) / 2.0 ))
+  GR7_DROP_Y=$y
+}
+
+gr7_drop_expected() {
+  local lines=$1
+  if (( GR7_DROP_BOUNDARY >= $(jget "$GR7_BEFORE" length) )); then
+    print -rn -- "$GR7_FIXTURE$lines"$'\n'
+  else
+    print -rn -- "${GR7_FIXTURE[1,GR7_DROP_BOUNDARY]}$lines${GR7_FIXTURE[GR7_DROP_BOUNDARY+1,-1]}"
+  fi
 }
 
 gr7_finish() {
   local name=$1
   local -i wanted=$2
-  local toast=${3:-}
+  local toast=${3:-} mode=${4:-caret}
   local -i before_count=$(photo_count "$GR7_BEFORE") waited=0
   local placeholder=false state
   while (( waited < 200 )); do
@@ -1970,7 +2272,9 @@ gr7_finish() {
     fi
   done
   local expected_source
-  if [[ -z $GR7_NOTE_ID && $GR7_EXPECTED_PREFIX == *$'\n\n' ]]; then
+  if [[ $mode == drop ]]; then
+    expected_source=$(gr7_drop_expected "$lines")
+  elif [[ -z $GR7_NOTE_ID && $GR7_EXPECTED_PREFIX == *$'\n\n' ]]; then
     expected_source=$GR7_EXPECTED_PREFIX${lines#$'\n'}$GR7_EXPECTED_SUFFIX
   else
     expected_source=$GR7_EXPECTED_PREFIX$lines$GR7_EXPECTED_SUFFIX
@@ -2014,12 +2318,13 @@ gr8_case() {
   local name=$1 surface=$2 kill_mode=$3
   local typed='fog lifting'
   local photo=$(photo_line 1 'right medium')
-  local original expected fixture
+  local original expected fixture entry=
   if [[ $surface == edit ]]; then
     original="Walk"$'\n\n'"$photo"
     expected="Walk $typed"$'\n\n'"$photo"
     fixture="{\"blocks\":[{\"source\":$(json_str "Walk $typed"),\"isPhoto\":false,\"unclosedFence\":false},{\"source\":$(json_str "$photo"),\"isPhoto\":true,\"unclosedFence\":false}],\"separators\":[\"\\n\\n\"]}"
     open_text composer "$original"
+    entry=$OPENED_ENTRY
     focus_editor
     select_range 4 4
     plat_type " $typed"
@@ -2038,7 +2343,11 @@ gr8_case() {
   fi
   plat_launch $PROBE_BUILD
   if [[ $surface == edit ]]; then
-    open_text composer "$original"
+    if [[ -z $entry ]]; then
+      expect_sample GR8 "$name" '{"entryId":true}' '{"entryId":false}'
+      return 0
+    fi
+    open_entry composer "$entry"
   else
     open_text new ''
   fi
@@ -2053,6 +2362,49 @@ gr8_case() {
   probe_post close >/dev/null 2>&1 || true
 }
 
+gr8_save_during_restore() {
+  local typed='fog lifting'
+  open_text new ''
+  focus_editor
+  plat_type "$typed"
+  sleep 0.5
+  plat_kill
+  plat_launch $PROBE_BUILD
+  probe_post 'flags?draftReadDelayMs=6000' >/dev/null
+  open_text new ''
+  local -i before_count=${OPENED_COUNT:--1}
+  local saved ignored=false
+  saved=$(probe_post save 2>/dev/null) || saved='{}'
+  [[ $(jget "$saved" saved) == false ]] && ignored=true
+  probe_post 'flags?draftReadDelayMs=0' >/dev/null
+  sleep 6
+  local state after_count chip
+  state=$(state_get 'entries=1')
+  after_count=$(jget "$state" entryCount) || after_count=-1
+  chip=$(bool_json text_present 'Draft restored')
+  expect_sample GR8 'save is ignored while the draft loads' "{\"saveIgnored\":true,\"entriesAdded\":0,\"state\":{\"source\":$(json_str "$typed")},\"chip\":true}" "{\"saveIgnored\":$ignored,\"entriesAdded\":$(( after_count - before_count )),\"state\":$state,\"chip\":$chip}"
+  probe_post 'close?discard=1' >/dev/null 2>&1 || true
+}
+
+gr8_discard() {
+  open_text new ''
+  focus_editor
+  plat_type 'discard me'
+  sleep 0.8
+  local closed discarded=false
+  closed=$(probe_post 'close?discard=1' 2>/dev/null) || closed='{}'
+  [[ $(jget "$closed" discarded) == true ]] && discarded=true
+  sleep 0.5
+  plat_kill
+  plat_launch $PROBE_BUILD
+  open_text new ''
+  sleep 0.8
+  local state
+  state=$(state_get)
+  expect_sample GR8 'a discarded note leaves no draft' '{"discarded":true,"state":{"source":""},"chip":false}' "{\"discarded\":$discarded,\"state\":$state,\"chip\":$(bool_json text_present 'Draft restored')}"
+  probe_post 'close?discard=1' >/dev/null 2>&1 || true
+}
+
 scenario_draft_recovery() {
   local -i run
   for (( run = 1; run <= 20; run++ )); do
@@ -2060,6 +2412,8 @@ scenario_draft_recovery() {
     gr8_case 'edit note, wait 500 ms, kill' edit wait
     gr8_case 'new note, hide and kill at once' new hide
     gr8_case 'edit note, hide and kill at once' edit hide
+    gr8_save_during_restore
+    gr8_discard
     open_text new ''
     focus_editor
     plat_type 'saved note'
@@ -2130,24 +2484,22 @@ scenario_selection_audit() {
 
 gb3_note() {
   local row=$1 id=$2
-  local -i samples=$3 index length done_count=0
+  local -i samples=$3 index length done_count=0 offset
+  local rect left top width height landed
   length=$(jget "$(state_get text=0)" length)
-  for (( index = 0; index < samples * 3 && done_count < samples; index++ )); do
-    local -i offset=$(( (RANDOM * 32768 + RANDOM) % (length > 1 ? length - 1 : 1) ))
+  for (( index = 0; index < samples * 10 && done_count < samples; index++ )); do
+    offset=$(( (RANDOM * 32768 + RANDOM) % (length > 1 ? length - 1 : 1) ))
     select_range $offset $offset
     sleep 0.05
-    local boxes
-    boxes=$(probe_get "boxes?from=$offset&to=$(( offset + 1 ))")
-    local left top width height
-    left=$(jget "$boxes" glyphs.0.rect.0) && top=$(jget "$boxes" glyphs.0.rect.1) && width=$(jget "$boxes" glyphs.0.rect.2) && height=$(jget "$boxes" glyphs.0.rect.3) || continue
+    rect=$(glyph_in_view $offset) || continue
+    left=$(jget "$rect" 0) && top=$(jget "$rect" 1) && width=$(jget "$rect" 2) && height=$(jget "$rect" 3) || continue
     (( width >= 3 )) || continue
     local -F share=$(( (RANDOM % 2 ? 0.2 : 0.6) + (RANDOM % 20) / 100.0 ))
     local -F x=$(( left + width * share )) y=$(( top + height / 2.0 ))
-    plat_click $x $y 20
+    plat_click $x $y 20 || continue
     sleep 0.1
-    local landed
     landed=$(jget "$(state_get text=0)" selection.1) || continue
-    sample "{\"row\":\"$row\",\"kind\":\"click\",\"case\":$(json_str "$id $offset"),\"clickX\":$x,\"glyphLeft\":$left,\"glyphRight\":$(( left + width )),\"offsetBefore\":$offset,\"offsetAfter\":$(( offset + 1 )),\"landed\":$landed}"
+    sample "{\"row\":\"$row\",\"kind\":\"click\",\"case\":$(json_str "$id $offset"),\"note\":$(json_str "$id"),\"clickX\":$x,\"glyphLeft\":$left,\"glyphRight\":$(( left + width )),\"offsetBefore\":$offset,\"offsetAfter\":$(( offset + 1 )),\"landed\":$landed}"
     (( done_count += 1 ))
   done
 }
@@ -2273,7 +2625,7 @@ scenario_placement_matrix() {
   local column size side
   for column in 720 350; do
     probe_get "viewport?column=$column" >/dev/null
-    open_text composer ''
+    open_text new ''
     for size in small medium large full; do
       for side in left centre right; do
         gb5_case GB5 $column $size $side $media
@@ -2341,15 +2693,49 @@ keyboard_cases() {
     'P1 escape returns from the toolbar|before\n\nPHOTO|0|0|before\n\nPHOTO|PHOTO_SELECTED|photo:0|key:tab|key:escape' \
     'C7 escape deselects a photo and puts the caret after it|before\n\nPHOTO\n\nafter|0|0|before\n\nPHOTO\n\nafter|CARET_AFTER_PHOTO|photo:0|key:escape' \
     'P8 caption commits with enter|before\n\nPHOTO|0|0|before\n\nCAPTIONED||photo:0|press:photo-toolbar-caption|type:Low tide|key:enter' \
-    'P8 caption cancels with escape|before\n\nPHOTO|0|0|before\n\nPHOTO||photo:0|press:photo-toolbar-caption|type:Low tide|key:escape'
+    'P8 caption cancels with escape|before\n\nPHOTO|0|0|before\n\nPHOTO||photo:0|press:photo-toolbar-caption|type:Low tide|key:escape' \
+    'P8 caption commits with a click outside|before\n\nPHOTO|0|0|before\n\nCAPTIONED||photo:0|press:photo-toolbar-caption|type:Low tide|clickat:2' \
+    'P2 left from the line after selects the photo|before\nPHOTO\nafter|PHOTO_END_PLUS_1|PHOTO_END_PLUS_1|before\nPHOTO\nafter|PHOTO_SELECTED|key:left' \
+    'P2 right twice crosses the photo|before\nPHOTO\nafter|6|6|before\nPHOTO\nafter|CARET_AFTER_PHOTO|key:right|key:right' \
+    'P2 up crosses a photo as one line|before\nPHOTO\nafter|PHOTO_END_PLUS_1|PHOTO_END_PLUS_1|before\nPHOTO\nafter|[0,0]|key:up|key:up' \
+    'P2 down crosses a photo as one line|before\nPHOTO\nafter|0|0|before\nPHOTO\nafter|CARET_AFTER_PHOTO|key:down|key:down' \
+    'P2 delete at the end of the line before selects the photo|before\nPHOTO\nafter|6|6|before\nPHOTO\nafter|PHOTO_SELECTED|key:delete' \
+    'P2 delete twice removes the photo under P3|before\nPHOTO\nafter|6|6|before\n\nafter||key:delete|key:delete' \
+    'P2 cmd x cuts a selected photo under P3|before\n\nPHOTO\n\nafter|0|0|before\n\nafter||photo:0|key:cmd+x' \
+    'P2 cmd c copies a selected photo line|PHOTO\n\nafter\n\n|0|0|PHOTO\n\nafter\n\nPHOTO||photo:0|key:cmd+c|key:cmd+down|key:cmd+v' \
+    'C9 a typed heading marker stays as typed||0|0|# title|[7,7]|type:# title' \
+    'C9 a typed star pair is not auto-closed||0|0|**fog|[5,5]|type:**fog' \
+    'C9 a typed bracket is not auto-closed||0|0|[link|[5,5]|type:[link'
+}
+
+macos_selector_cases() {
+  print -rl -- \
+    'I8 ctrl e moves to the line end (moveToEndOfLine)|the quick fox|0|0|the quick fox|[13,13]|key:ctrl+e' \
+    'I8 ctrl b moves back a character (moveBackward)|the quick fox|5|5|the quick fox|[4,4]|key:ctrl+b' \
+    'I8 ctrl f moves forward a character (moveForward)|the quick fox|5|5|the quick fox|[6,6]|key:ctrl+f' \
+    'I8 ctrl p moves up a line (moveUp)|abc\nabc|5|5|abc\nabc|[1,1]|key:ctrl+p' \
+    'I8 ctrl n moves down a line (moveDown)|abc\nabc|1|1|abc\nabc|[5,5]|key:ctrl+n' \
+    'I8 ctrl d deletes forward (deleteForward)|abc|1|1|ac|[1,1]|key:ctrl+d' \
+    'I8 ctrl h deletes backward (deleteBackward)|abc|1|1|bc|[0,0]|key:ctrl+h' \
+    'I8 option up moves to the paragraph start (moveToBeginningOfParagraph)|first line\nsecond line|15|15|first line\nsecond line|[11,11]|key:opt+up' \
+    'I8 option down moves to the paragraph end (moveToEndOfParagraph)|first line\nsecond line|2|2|first line\nsecond line|[10,10]|key:opt+down' \
+    'I8 shift option up extends to the paragraph start (moveParagraphBackwardAndModifySelection)|first line\nsecond line|15|15|first line\nsecond line|[15,11]|key:shift+opt+up' \
+    'I8 option delete deletes a word forward (deleteWordForward)|the quick fox|4|4|the  fox|[4,4]|key:opt+delete' \
+    'I8 cmd up moves to the document start (moveToBeginningOfDocument)|a\nb\nc|5|5|a\nb\nc|[0,0]|key:cmd+up' \
+    'I8 shift cmd left extends to the line start (moveToLeftEndOfLineAndModifySelection)|the quick fox|9|9|the quick fox|[9,0]|key:shift+cmd+left' \
+    'I8 shift down extends by a line (moveDownAndModifySelection)|abc\nabc|1|1|abc\nabc|[1,5]|key:shift+down' \
+    'I8 page down scrolls without moving the caret (scrollPageDown)|the quick fox|4|4|the quick fox|[4,4]|key:pagedown' \
+    'I8 home scrolls without moving the caret (scrollToBeginningOfDocument)|the quick fox|4|4|the quick fox|[4,4]|key:home'
 }
 
 scenario_keyboard_matrix() {
   local photo=$(photo_line 1 'left medium')
   local captioned=$(photo_line 1 'left medium' 'Low tide')
-  open_text composer ''
+  open_text new ''
+  local -a cases=("${(@f)$(keyboard_cases)}")
+  [[ $(plat_name) == macos ]] && cases+=("${(@f)$(macos_selector_cases)}")
   local entry
-  for entry in "${(@f)$(keyboard_cases)}"; do
+  for entry in $cases; do
     local -a fields=("${(@s:|:)entry}")
     local name=${fields[1]}
     local fixture=${(g::)fields[2]} expected=${(g::)fields[5]} selection=${fields[6]}
@@ -2363,7 +2749,6 @@ scenario_keyboard_matrix() {
     fi
     local focus=true
     case $selection in
-      PHOTO_SELECTED) selection= ;;
       TOOLBAR_FOCUS) selection= focus=false ;;
       CARET_AFTER_PHOTO)
         local -i after=$(( ${#${fixture%%$photo*}} + ${#photo} + 1 ))
@@ -2386,21 +2771,36 @@ scenario_keyboard_matrix() {
   sleep 0.3
   state=$(state_get)
   expect_sample GB6 'C8 a note ending with a photo puts the caret above it' '{"state":{"focused":true,"photoSelected":null},"selection":[4,4]}' "{\"state\":$state,\"selection\":$(selection_json "$state")}"
-  open_text composer ''
+  open_text new ''
   set_text "$walk"
-  sleep 0.3
+  sleep 0.8
+  plat_kill
+  plat_launch $PROBE_BUILD
+  open_text new ''
+  sleep 0.8
   state=$(state_get)
-  expect_sample GB6 'C8 a restored draft follows C8 and clears history' '{"state":{"canUndo":false},"selection":[4,4]}' "{\"state\":$state,\"selection\":$(selection_json "$state")}"
+  expect_sample GB6 'C8 a restored draft follows C8 and clears history' '{"state":{"source":'"$(json_str "$walk")"',"canUndo":false,"focused":true},"selection":[4,4]}' "{\"state\":$state,\"selection\":$(selection_json "$state")}"
+  probe_post 'close?discard=1' >/dev/null 2>&1 || true
+  open_text new ''
+  set_text 'the quick fox' 3 3
+  focus_editor
+  select_range 3 3
+  plat_key escape
+  sleep 0.4
+  state=$(state_get)
+  expect_sample GB6 'C7 escape with nothing to dismiss reaches the discard prompt' '{"discardPrompt":true,"state":{"source":"the quick fox"}}' "{\"discardPrompt\":$(bool_json key_present composer-discard),\"state\":$state}"
+  press_key composer-keep-editing 60 || true
   open_text composer '- [ ] passport'
   focus_editor
   select_range 14 14
-  local boxes center
-  boxes=$(probe_get 'boxes?from=2&to=5')
-  if center=$(rect_center "$boxes" glyphs.0.rect); then
+  local center
+  if center=$(glyph_center "$(probe_get 'boxes?from=2&to=5')"); then
     plat_click ${center%% *} ${center##* } 60
     sleep 0.3
     state=$(state_get)
     expect_sample GB6 'K2 a click toggles the box and keeps the caret' '{"state":{"source":"- [x] passport","focused":true},"selection":[14,14]}' "{\"state\":$state,\"selection\":$(selection_json "$state")}"
+  else
+    expect_sample GB6 'K2 a click toggles the box and keeps the caret' '{"checkboxFound":true}' '{"checkboxFound":false}'
   fi
   local dragged="before"$'\n\n'"$photo"$'\n\n'"after"
   open_text composer "$dragged"
@@ -2435,7 +2835,7 @@ ime_expect() {
 }
 
 ime_committed_expect() {
-  local name=$1
+  local name=$1 script=${2:-any}
   local log committed=
   log=$(probe_get log)
   local -i count index
@@ -2443,10 +2843,24 @@ ime_committed_expect() {
   for (( index = 0; index < count; index++ )); do
     jget_exact "$log" committed.$index && committed+=$REPLY
   done
-  ime_expect "$name" "fog $committed"
+  local state errors source=
+  state=$(state_get)
+  errors=$(errors_total 'errors?clear=1')
+  jget_exact "$state" source && source=$REPLY
+  local nonempty=false non_ascii=false changed=false
+  [[ -n $committed ]] && nonempty=true
+  [[ $committed == *[^\ -~]* ]] && non_ascii=true
+  [[ $source != 'fog ' ]] && changed=true
+  local wanted="\"nonEmpty\":true"
+  [[ $script == non-ascii ]] && wanted+=",\"nonAscii\":true"
+  expect_sample GB7 "$name" "{\"state\":{\"source\":$(json_str "fog $committed")},\"errors\":0,\"committed\":{$wanted},\"changed\":true}" "{\"state\":$state,\"errors\":$errors,\"committed\":{\"text\":$(json_str "$committed"),\"nonEmpty\":$nonempty,\"nonAscii\":$non_ascii},\"changed\":$changed}"
 }
 
+typeset -g A11Y_PHOTOS='[]' A11Y_CHECKBOXES='[]'
+
 a11y_open() {
+  A11Y_PHOTOS=${3:-'[]'}
+  A11Y_CHECKBOXES=${4:-'[]'}
   open_text composer "$1"
   focus_editor
   select_range $2 $2
@@ -2464,13 +2878,9 @@ a11y_expect() {
   local spoken semantics
   spoken=$(plat_speech_last) || spoken=
   semantics=$(probe_get semantics)
-  local symbol_free=true
-  [[ $spoken == *'**'* || $spoken == *'# '* || $spoken == *'](photo/'* ]] && symbol_free=false
   local extra=
   [[ -n $reported ]] && extra=',"reportedOnly":true'
-  local contains=false
-  [[ ${spoken:l} == *${phrase:l}* ]] && contains=true
-  expect_sample GB8 "$name" '{"spokenContainsPhrase":true,"symbolFree":true}' "{\"spoken\":$(json_str "$spoken"),\"phrase\":$(json_str "$phrase"),\"spokenContainsPhrase\":$contains,\"symbolFree\":$symbol_free,\"semantics\":$semantics}" "$extra"
+  sample "{\"row\":\"GB8\",\"kind\":\"a11y\",\"case\":$(json_str "$name"),\"spoken\":$(json_str "$spoken"),\"phrase\":$(json_str "$phrase"),\"photos\":$A11Y_PHOTOS,\"checkboxes\":$A11Y_CHECKBOXES,\"semantics\":$semantics$extra}"
 }
 
 scenario_ime_matrix() {
@@ -2511,7 +2921,7 @@ gb9_photos() {
     done
     local rect
     rect=$(rect_json "$state" photos.$index.rect) || continue
-    sample "{\"row\":\"GB9\",\"kind\":\"photo\",\"case\":$(json_str "$label photo $index"),\"column\":$column,\"em\":$em,\"size\":\"$size\",\"side\":\"$side\",\"validPlacement\":true,\"pixelWidth\":${dims%%:*},\"pixelHeight\":${dims#*:},\"rects\":[$rect]}"
+    sample "{\"row\":\"GB9\",\"kind\":\"photo\",\"case\":$(json_str "$label photo $index"),\"column\":$column,\"columnLeft\":$(jget "$state" columnLeft),\"em\":$em,\"size\":\"$size\",\"side\":\"$side\",\"validPlacement\":true,\"pixelWidth\":${dims%%:*},\"pixelHeight\":${dims#*:},\"rects\":[$rect]}"
     if [[ $side != centre && $size != full ]] && ! is_phone_column; then
       local top height
       top=$(jget "$state" photos.$index.rect.1)
@@ -2637,14 +3047,13 @@ toolbar_case() {
   scroll_photo_to $want
   select_photo 0
   sleep 0.3
-  local keys state toolbar photo width height
+  local keys state toolbar photo surface
   keys=$(probe_get 'keys?prefix=photo-toolbar')
   state=$(state_get text=0)
   toolbar=$(rect_json "$keys" photo-toolbar) || { expect_sample GB11 "$name" '{"toolbarShown":true}' '{"toolbarShown":false}'; return 0; }
   photo=$(rect_json "$state" photos.0.rect) || return 0
-  width=$(jget "$state" view.width)
-  height=$(jget "$state" view.height)
-  sample "{\"row\":\"GB11\",\"kind\":\"toolbar\",\"case\":$(json_str $name),\"toolbar\":$toolbar,\"surface\":[0,0,$width,$height],\"photo\":$photo}"
+  surface=$(rect_json "$state" writingSurface) || { expect_sample GB11 "$name" '{"writingSurface":true}' '{"writingSurface":false}'; return 0; }
+  sample "{\"row\":\"GB11\",\"kind\":\"toolbar\",\"case\":$(json_str $name),\"toolbar\":$toolbar,\"surface\":$surface,\"photo\":$photo}"
 }
 
 scenario_toolbar_placement() {

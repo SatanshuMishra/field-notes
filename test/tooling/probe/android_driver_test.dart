@@ -147,4 +147,65 @@ void main() {
     expect('${result.stderr}', contains('unknown scenario nope'));
     expect('${result.stderr}', isNot(contains('adb')));
   }, skip: _zshSkip);
+
+  test('android pixels and scrolls use the math functions they call', () async {
+    final ProcessResult result = await _library(r'''
+ORIGIN_X=0
+ORIGIN_Y=0
+ANDROID_DPR=2.625
+android_px 10 20
+android_load() { :; }
+adb_shell() { print -r -- "adb $*"; }
+ANDROID_DPR=2
+plat_scroll 100 200 -120
+''');
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+    expect(_lines(result.stdout), <String>[
+      '26 53',
+      'adb input swipe 200 400 200 160 120',
+    ]);
+  }, skip: _zshSkip);
+
+  test(
+    'android cases remove the pushed image and restore the keyboard',
+    () async {
+      final Directory work = Directory.systemTemp.createTempSync(
+        'probe_android',
+      );
+      addTearDown(() => work.deleteSync(recursive: true));
+      final ProcessResult result = await Process.run(
+        'zsh',
+        <String>[
+          '-c',
+          'source $_driver/drive.sh --library\n'
+              r'''
+sleep() { :; }
+adb_run() { print -r -- "run $*" >> $WORK/adb; }
+adb_shell() {
+  print -r -- "shell $*" >> $WORK/adb
+  case "$*" in
+    'settings get secure default_input_method') print -r -- 'com.example.keyboard/.Service' ;;
+    'settings get system font_scale') print -r -- '1.0' ;;
+  esac
+}
+plat_owner_step() { :; }
+state_get() { print -r -- '{}'; }
+probe_get() { print -r -- '{}'; }
+plat_paste_image $WORK/insert.png png
+drive_main() { :; }
+android_main perf-idle profile $WORK/result.json
+''',
+        ],
+        environment: <String, String>{..._withoutAdb, 'WORK': work.path},
+      );
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      final List<String> adb = File('${work.path}/adb').readAsLinesSync();
+      expect(
+        adb,
+        contains('shell rm -f /sdcard/Download/field_notes_probe_paste.png'),
+      );
+      expect(adb, contains('shell ime set com.example.keyboard/.Service'));
+    },
+    skip: _zshSkip,
+  );
 }

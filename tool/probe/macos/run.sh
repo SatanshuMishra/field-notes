@@ -11,6 +11,32 @@ typeset -g PROBE_BUNDLE_ID=dev.satanshumishra.fieldNotes.probe
 typeset -g PROBE_BASE=http://127.0.0.1:47111
 typeset -g ENTRY=integration_test/probe/composer_probe_main.dart
 
+probe_binary_pattern() {
+  print -r -- "/$PROBE_NAME\\.app/Contents/MacOS/$PROBE_NAME( |$)"
+}
+
+probe_pids() {
+  pgrep -u $UID -f -- "$(probe_binary_pattern)" 2>/dev/null || true
+}
+
+reap_probes() {
+  local -a pids=(${(f)"$(probe_pids)"})
+  (( ${#pids} > 0 )) || return 0
+  kill $pids 2>/dev/null || true
+  local -i waited=0
+  while (( waited < 50 )) && [[ -n $(probe_pids) ]]; do
+    sleep 0.1
+    (( waited += 1 ))
+  done
+  pids=(${(f)"$(probe_pids)"})
+  (( ${#pids} > 0 )) && kill -9 $pids 2>/dev/null
+  return 0
+}
+
+if [[ ${1:-} == --library ]]; then
+  return 0
+fi
+
 usage() {
   print -u2 -r -- "usage: run.sh <scenario>|all [--build profile|debug] [--no-build] [--out <dir>]"
   print -u2 -r -- "       run.sh --list"
@@ -191,12 +217,24 @@ run_scenario() {
   local result=$OUT/$sha/$scenario-$build.json
   mkdir -p ${result:h}
   print -r -- "run: $scenario ($build)"
+  reap_probes
   $app/Contents/MacOS/$PROBE_NAME >/dev/null 2>&1 &
   local pid=$!
   if ! probe_ready; then
     print -u2 -r -- "run: the probe did not answer within 90 s"
     quit_probe $pid
+    reap_probes
     SUMMARY+=("$scenario $build ERROR probe did not start")
+    FAILED=1
+    return 0
+  fi
+  local served
+  served=$(curl -sS -f --max-time 2 $PROBE_BASE/pid | plutil -extract pid raw -o - - 2>/dev/null) || served=
+  if [[ $served != $pid ]]; then
+    print -u2 -r -- "run: port 47111 answers for pid ${served:-unknown}, not the probe run.sh started ($pid)"
+    quit_probe $pid
+    reap_probes
+    SUMMARY+=("$scenario $build ERROR another probe held the port")
     FAILED=1
     return 0
   fi
@@ -206,6 +244,7 @@ run_scenario() {
   local -i drive_status=0
   PROBE_BUILD=$build zsh $DRIVE $scenario $build $result || drive_status=$?
   quit_probe $pid
+  reap_probes
   local -i evaluate_status=0
   (cd $REPO && dart run tool/probe/lib/gates.dart evaluate $result) || evaluate_status=$?
   if (( drive_status != 0 )); then

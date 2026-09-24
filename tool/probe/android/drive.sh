@@ -13,6 +13,7 @@ typeset -g KEYMAP_NAME=
 typeset -gA KEYMAP=()
 typeset -g ANDROID_DPR=
 typeset -g FONT_SCALE_SAVED=
+typeset -g IME_SAVED=
 
 PROBE_PRIMITIVES+=(plat_swipe_type plat_ime plat_ime_insert_image)
 
@@ -47,7 +48,7 @@ adb_quote() {
 android_load() {
   origin_load
   if [[ -z $ANDROID_DPR ]]; then
-    ANDROID_DPR=$(jget "$(probe_get state?text=0)" view.devicePixelRatio) || ANDROID_DPR=1
+    ANDROID_DPR=$(jget "$(probe_get 'state?text=0')" view.devicePixelRatio) || ANDROID_DPR=1
   fi
 }
 
@@ -100,6 +101,7 @@ plat_origin() {
 plat_click() {
   local hold=${3:-20}
   android_load
+  point_inside $1 $2 || return $?
   local point
   point=$(android_px $1 $2)
   if (( hold <= 40 )); then
@@ -111,6 +113,7 @@ plat_click() {
 
 plat_right_click() {
   android_load
+  point_inside $1 $2 || return $?
   local point
   point=$(android_px $1 $2)
   adb_shell input tap ${=point}
@@ -123,6 +126,8 @@ plat_right_click() {
 plat_drag() {
   local hover=${6:-0}
   android_load
+  point_inside $1 $2 || return $?
+  point_inside $3 $4 || return $?
   local start end
   start=$(android_px $1 $2)
   end=$(android_px $3 $4)
@@ -298,6 +303,16 @@ plat_set_text_scale() {
   ANDROID_DPR=
 }
 
+plat_front() {
+  return 0
+}
+
+ime_restore() {
+  if [[ -n $IME_SAVED && $IME_SAVED != null ]]; then
+    adb_shell ime set $IME_SAVED >/dev/null 2>&1 || true
+  fi
+}
+
 font_scale_restore() {
   if [[ -n $FONT_SCALE_SAVED && $FONT_SCALE_SAVED != null ]]; then
     adb_shell settings put system font_scale $FONT_SCALE_SAVED >/dev/null 2>&1 || true
@@ -309,7 +324,7 @@ font_scale_restore() {
 plat_columns() {
   probe_post "settings?textSize=$1" >/dev/null
   sleep 0.3
-  jget "$(probe_get state?text=0)" column
+  jget "$(probe_get 'state?text=0')" column
 }
 
 plat_reveal_budget_ms() {
@@ -332,6 +347,7 @@ plat_paste_image() {
   if center=$(rect_center "$found" rects.0); then
     plat_click ${center%% *} ${center##* } 20
   fi
+  adb_shell rm -f $target >/dev/null 2>&1 || true
 }
 
 plat_paste_files() {
@@ -414,7 +430,7 @@ plat_ime_cases() {
     adb_shell input swipe ${=point} ${=point} 900
     plat_owner_step "choose any accented e in the $keyboard long-press popup"
     sleep 0.4
-    ime_committed_expect "$keyboard long-press accents"
+    ime_committed_expect "$keyboard long-press accents" non-ascii
     ime_fixture
     probe_get 'log?clear=1' >/dev/null
     plat_swipe_type harbour
@@ -426,14 +442,14 @@ plat_ime_cases() {
     plat_type nihongo
     plat_owner_step 'convert and commit the composition'
     sleep 0.4
-    ime_committed_expect "$keyboard japanese composition"
+    ime_committed_expect "$keyboard japanese composition" non-ascii
     plat_owner_step "switch the $keyboard keyboard to Chinese (Pinyin)"
     ime_fixture
     probe_get 'log?clear=1' >/dev/null
     plat_type womenzaihaibian
     plat_owner_step 'choose the conversion and commit it'
     sleep 0.4
-    ime_committed_expect "$keyboard chinese composition"
+    ime_committed_expect "$keyboard chinese composition" non-ascii
     plat_owner_step "switch the $keyboard keyboard back to English"
     ime_fixture
     probe_get 'log?clear=1' >/dev/null
@@ -465,7 +481,7 @@ plat_image_insert_cases() {
 
 plat_a11y_cases() {
   plat_owner_step 'enable TalkBack and its speech output logging (TalkBack settings, Advanced, Developer settings, Log speech output)'
-  a11y_open $'# Harbour day\nThe **fog** lifted at noon.\n\n- [ ] passport\n\n![Low tide](photo/'"$(fixture_ref 1)"$' "right medium")\n\nLast line.' 0
+  a11y_open $'# Harbour day\nThe **fog** lifted at noon.\n\n- [ ] passport\n\n![Low tide](photo/'"$(fixture_ref 1)"$' "right medium")\n\nLast line.' 0 '["Photo, Low tide"]' '["passport"]'
   plat_owner_step 'use TalkBack read from top (swipe down then right) and wait until it finishes'
   a11y_expect 'read the note' 'Harbour day'
   a11y_select 14
@@ -558,12 +574,14 @@ android_main() {
   esac
   if (( $# == 3 )) && (( ${PROBE_SCENARIOS[(Ie)$1]} )); then
     FONT_SCALE_SAVED=$(adb_shell settings get system font_scale | tr -d '\r') || FONT_SCALE_SAVED=
+    IME_SAVED=$(adb_shell settings get secure default_input_method | tr -d '\r') || IME_SAVED=
     local -i android_status=0
     {
       drive_main "$@" &
       wait $! || android_status=$?
     } always {
       font_scale_restore
+      ime_restore
     }
     return $android_status
   fi
