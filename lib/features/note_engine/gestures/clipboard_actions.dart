@@ -184,7 +184,14 @@ class NoteClipboardActions {
         noteSelectedPhotoRange(state.tree, state.source, state.selection) !=
         null;
     await Clipboard.setData(ClipboardData(text: text));
+    if (!_isActive()) {
+      return;
+    }
     final EditorState current = _state();
+    if (current.selection != state.selection ||
+        current.source != state.source) {
+      return;
+    }
     final Transaction? transaction = photoSelected
         ? _cutPhoto?.call(current)
         : noteCutTransaction(current);
