@@ -223,6 +223,7 @@ void showTransientToast(
   String message, {
   IconStickerGlyph glyph = IconStickerGlyph.check,
   ToastAction? action,
+  Duration? lifetime,
 }) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   final ToastScale scale = toastScaleFor(Theme.of(context).platform);
@@ -239,7 +240,8 @@ void showTransientToast(
       message: message,
       glyph: glyph,
       scale: scale,
-      lifetime: action == null ? kToastLifetime : kToastActionLifetime,
+      lifetime:
+          lifetime ?? (action == null ? kToastLifetime : kToastActionLifetime),
       action: action == null
           ? null
           : ToastAction(
