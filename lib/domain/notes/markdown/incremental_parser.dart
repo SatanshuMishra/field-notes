@@ -110,10 +110,8 @@ final class MdIncrementalParser {
           )
         : newLength;
     while (true) {
-      final MdTree window = parseNoteTree(
-        _parseText(newSource, start, windowEnd, composing),
-        tables: tables,
-      );
+      final String text = _parseText(newSource, start, windowEnd, composing);
+      final MdTree window = parseNoteTree(text, tables: tables);
       final bool reachesEnd = windowEnd == newLength;
       for (int c = firstCandidate; c < oldBlocks.length; c++) {
         final int at = oldBlocks[c].sourceRange.start + delta;
@@ -121,7 +119,8 @@ final class MdIncrementalParser {
           break;
         }
         final int local = _indexStartingAt(window.blocks, at - start);
-        if (local < 0) {
+        if (local < 0 ||
+            !_resumesAt(window.blocks[local], oldBlocks[c], text, at - start)) {
           continue;
         }
         if (!reachesEnd && !_hasBreakBefore(newSource, at, windowEnd)) {
@@ -310,6 +309,9 @@ int _freshStartAtOrBefore(String source, List<MdBlock> blocks, int index) =>
         )
     ? _freshStartAtOrBefore(source, blocks, index - 1)
     : index;
+
+bool _resumesAt(MdBlock fresh, MdBlock old, String source, int at) =>
+    fresh.kind == old.kind && !_mayJoinPreviousLine(source, fresh.kind, at);
 
 bool _hasBreakBefore(String source, int from, int limit) {
   final int lineFeed = source.indexOf('\n', from);

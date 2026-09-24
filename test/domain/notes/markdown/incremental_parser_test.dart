@@ -376,6 +376,40 @@ void main() {
     },
   );
 
+  test(
+    'a row that changes between list and table header is not reused from the old tree',
+    () {
+      const String blankRemoved =
+          'Scores\n\n2024. | Team |\n| --- | --- |\n\nx';
+      expect(_kinds(parseNoteTree(blankRemoved)), <MdBlockKind>[
+        MdBlockKind.paragraph,
+        MdBlockKind.orderedList,
+        MdBlockKind.paragraph,
+      ]);
+      const MdEdit join = MdEdit(start: 6, end: 7, inserted: '');
+      final String joined = _apply(blankRemoved, join);
+      final MdReparse table = _type(blankRemoved, join);
+      _expectFullParse(table.tree, joined);
+      expect(_kinds(table.tree), <MdBlockKind>[
+        MdBlockKind.paragraph,
+        MdBlockKind.table,
+        MdBlockKind.paragraph,
+      ]);
+      expect(table.reparsedTo, joined.indexOf('x'));
+
+      const String headerCut = '| |\n0. |:\n-|-';
+      expect(_kinds(parseNoteTree(headerCut)), <MdBlockKind>[
+        MdBlockKind.paragraph,
+        MdBlockKind.table,
+      ]);
+      const MdEdit cut = MdEdit(start: 0, end: 3, inserted: '');
+      final String split = _apply(headerCut, cut);
+      final MdReparse list = _type(headerCut, cut);
+      _expectFullParse(list.tree, split);
+      expect(_kinds(list.tree), <MdBlockKind>[MdBlockKind.orderedList]);
+    },
+  );
+
   test('an edit in the first block starts at offset zero', () {
     const String source = 'one\n\ntwo\n\nthree';
     const MdEdit edit = MdEdit(start: 1, end: 2, inserted: 'N');
