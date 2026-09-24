@@ -48,7 +48,17 @@ String _tableSource() => <String>[
   _tableRow(),
 ].join('\n');
 
-enum _Kind { drag, select, toggle, cut, copy, paste, selectAll, reveal }
+enum _Kind {
+  drag,
+  select,
+  toggle,
+  keyboard,
+  cut,
+  copy,
+  paste,
+  selectAll,
+  reveal,
+}
 
 final class _Event {
   const _Event(this.kind, {this.drag, this.selection, this.cause, this.value});
@@ -206,6 +216,7 @@ class _HostState extends State<_Host> {
               onSelectionChanged: _handleSelection,
               onDragActiveChanged: _handleDrag,
               onToggleCheckbox: _handleToggle,
+              onRequestKeyboard: () => _add(const _Event(_Kind.keyboard)),
               child: NoteView(
                 renderKey: widget.renderKey,
                 source: source,
@@ -556,6 +567,29 @@ void main() {
       expect(harness.host.selection, caret);
     }, variant: _android);
 
+    testWidgets('every tap asks for the keyboard, even on the caret', (
+      WidgetTester tester,
+    ) async {
+      final _Harness harness = _Harness();
+      await harness.pump(tester, _harbour);
+      final Offset point = harness.centreOf(12, 15);
+      await _touch(tester, point);
+      await tester.pump();
+      final NoteSelection caret = harness.host.selection;
+      expect(harness.of(_Kind.keyboard), hasLength(1));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await _touch(tester, point);
+      expect(harness.host.selection, caret);
+      expect(harness.overlay.toolbarShown, isTrue);
+      expect(harness.of(_Kind.keyboard), hasLength(2));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await _touch(tester, point);
+      expect(harness.overlay.toolbarShown, isFalse);
+      expect(harness.of(_Kind.keyboard), hasLength(3));
+    }, variant: _android);
+
     testWidgets('a tap near a checkbox only toggles it', (
       WidgetTester tester,
     ) async {
@@ -577,6 +611,7 @@ void main() {
       );
       expect(harness.of(_Kind.toggle), hasLength(1));
       expect(harness.of(_Kind.select), isEmpty);
+      expect(harness.of(_Kind.keyboard), isEmpty);
       expect(harness.host.source, '- [x] passport\nsecond line');
       expect(
         harness.host.selection,
