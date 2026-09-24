@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:field_notes/features/note_engine/document/history.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/document/transaction.dart';
 import 'package:field_notes/features/note_engine/layout/block_layout.dart';
+import 'package:field_notes/features/note_engine/layout/line_fragments.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout_engine.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart';
@@ -580,6 +582,182 @@ void _expectPartWidths(
       reason: '$reason $part',
     );
   }
+}
+
+typedef _Raster = ({ByteData pixels, int width, int height});
+
+typedef _Pixel = ({int x, int y, int alpha, int rgb});
+
+typedef _Change = ({_Pixel before, _Pixel after});
+
+const int _colourAlphaFloor = 32;
+const int _colourTolerance = 8;
+
+double _lineHeightOf(TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: 'x', style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: TextScaler.noScaling,
+  )..layout();
+  final double height = painter.preferredLineHeight;
+  painter.dispose();
+  return height;
+}
+
+Rect _boxOf(LaidOutNote note, MdRange range) => note
+    .selectionBoxes(NoteSelection(anchor: range.start, head: range.end))
+    .single;
+
+Future<_Raster> _rasterOf(LaidOutNote note) async {
+  final ui.PictureRecorder recorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(recorder);
+  for (final LineFragment fragment in note.flow.fragments) {
+    fragment.paint(canvas, Offset.zero);
+  }
+  final ui.Picture picture = recorder.endRecording();
+  final int width = note.size.width.ceil();
+  final int height = note.size.height.ceil();
+  final ui.Image image = picture.toImageSync(width, height);
+  final ByteData? pixels = await image.toByteData(
+    format: ui.ImageByteFormat.rawStraightRgba,
+  );
+  image.dispose();
+  picture.dispose();
+  return (pixels: pixels!, width: width, height: height);
+}
+
+_Pixel _pixelAt(_Raster raster, int x, int y) {
+  final int rgba = raster.pixels.getUint32((y * raster.width + x) * 4);
+  return (x: x, y: y, alpha: rgba & 0xFF, rgb: rgba >> 8);
+}
+
+List<_Pixel> _inkIn(_Raster raster, Rect region) => <_Pixel>[
+  for (
+    int y = math.max(0, region.top.floor());
+    y < math.min(raster.height, region.bottom.ceil());
+    y++
+  )
+    for (
+      int x = math.max(0, region.left.floor());
+      x < math.min(raster.width, region.right.ceil());
+      x++
+    )
+      if (_pixelAt(raster, x, y) case final _Pixel pixel when pixel.alpha > 0)
+        pixel,
+];
+
+List<_Change> _changes(_Raster plain, _Raster styled) => <_Change>[
+  for (int y = 0; y < plain.height; y++)
+    for (int x = 0; x < plain.width; x++)
+      if ((before: _pixelAt(plain, x, y), after: _pixelAt(styled, x, y))
+          case final _Change change when change.before != change.after)
+        change,
+];
+
+int _rgbOf(Color colour) => colour.toARGB32() & 0xFFFFFF;
+
+int _alphaOf(Color colour) => colour.toARGB32() >> 24;
+
+bool _nearColour(_Pixel pixel, Color colour) => <int>[0, 8, 16].every(
+  (int shift) =>
+      ((pixel.rgb >> shift & 0xFF) - (_rgbOf(colour) >> shift & 0xFF)).abs() <=
+      _colourTolerance,
+);
+
+int _firstColumn(Rect box) => (box.left - 0.5).ceil();
+
+int _lastColumn(Rect box) => (box.right - 0.5).ceil() - 1;
+
+void _expectSpansColumns(Iterable<int> columns, Rect box, String reason) {
+  expect(
+    columns.reduce(math.min),
+    lessThanOrEqualTo(_firstColumn(box)),
+    reason: reason,
+  );
+  expect(
+    columns.reduce(math.max),
+    greaterThanOrEqualTo(_lastColumn(box)),
+    reason: reason,
+  );
+}
+
+void _expectOpaqueInk(
+  _Raster raster,
+  Rect region,
+  Color colour,
+  String reason,
+) {
+  final Set<int> opaque = <int>{
+    for (final _Pixel pixel in _inkIn(raster, region))
+      if (pixel.alpha == 0xFF) pixel.rgb,
+  };
+  expect(opaque, <int>{_rgbOf(colour)}, reason: reason);
+}
+
+void _expectLineThrough(
+  _Raster plain,
+  _Raster struck,
+  Rect box,
+  double baseline,
+) {
+  final int glyphTop = _inkIn(
+    plain,
+    box,
+  ).map((_Pixel pixel) => pixel.y).reduce(math.min);
+  final List<_Change> changes = _changes(plain, struck);
+  expect(changes, isNotEmpty, reason: 'the strike paints no line');
+  for (final _Change change in changes) {
+    final _Pixel after = change.after;
+    expect(
+      after.x,
+      inInclusiveRange(box.left.floor(), box.right.ceil() - 1),
+      reason: 'outside the struck run: $change',
+    );
+    expect(
+      after.y,
+      inInclusiveRange(glyphTop, baseline.ceil() - 1),
+      reason: 'not through the glyph: $change',
+    );
+    expect(after.alpha, greaterThan(change.before.alpha), reason: '$change');
+    if (after.alpha >= _colourAlphaFloor) {
+      expect(_nearColour(after, Palette.ink), isTrue, reason: '$change');
+    }
+  }
+  _expectSpansColumns(
+    changes.map((_Change change) => change.after.x),
+    box,
+    'the strike does not cross the whole run',
+  );
+}
+
+void _expectLink(_Raster plain, _Raster linked, Rect box, double baseline) {
+  final Rect glyph = Rect.fromLTRB(box.left, box.top, box.right, baseline);
+  final Rect below = Rect.fromLTRB(
+    box.left,
+    baseline.ceilToDouble(),
+    box.right,
+    box.bottom,
+  );
+  _expectOpaqueInk(plain, glyph, Palette.ink, 'plain glyph');
+  _expectOpaqueInk(linked, glyph, Palette.coralLink, 'link glyph');
+  expect(_inkIn(plain, below), isEmpty, reason: 'plain underline');
+  final List<_Pixel> underline = _inkIn(linked, below);
+  expect(underline, isNotEmpty, reason: 'the link has no underline');
+  for (final _Pixel pixel in underline) {
+    expect(
+      pixel.alpha,
+      lessThanOrEqualTo(_alphaOf(Palette.coral30)),
+      reason: '$pixel',
+    );
+    if (pixel.alpha >= _colourAlphaFloor) {
+      expect(_nearColour(pixel, Palette.coral30), isTrue, reason: '$pixel');
+    }
+  }
+  _expectSpansColumns(
+    underline.map((_Pixel pixel) => pixel.x),
+    box,
+    'the underline does not cross the whole link',
+  );
 }
 
 MdInline _firstInline(MdTree tree, MdInlineKind kind) =>
@@ -1185,7 +1363,7 @@ void main() {
       );
     });
 
-    test('inline styles reach the span tree', () {
+    test('inline styles reach the span tree', () async {
       expect(NoteTypography.strong.fontWeight, FontWeight.w700);
       expect(NoteTypography.emphasis.fontStyle, FontStyle.italic);
       expect(
@@ -1201,7 +1379,12 @@ void main() {
       expect(code.backgroundColor, Palette.ink08);
       expect(NoteTypography.highlight.backgroundColor, Palette.highlight);
 
-      final LaidOutNote note = _layout('a **b** *c* `d` ~~e~~ [f](g)');
+      const String source = 'a **b** *c* `d` ~~e~~ [f](g)';
+      const String unstruckSource = 'a **b** *c* `d` e [f](g)';
+      const String unlinkedSource = 'a **b** *c* `d` ~~e~~ f';
+      final LaidOutNote note = _layout(source);
+      final LaidOutNote unstruckNote = _layout(unstruckSource);
+      final LaidOutNote unlinkedNote = _layout(unlinkedSource);
       _expectPartWidths(
         note,
         const MdRange(4, 5),
@@ -1210,10 +1393,35 @@ void main() {
       );
       _expectPartWidths(
         note,
+        const MdRange(9, 10),
+        NoteTypography.body.merge(NoteTypography.emphasis),
+        'c',
+      );
+      _expectPartWidths(
+        note,
         const MdRange(13, 14),
         NoteTypography.inlineCode(NoteTypography.body),
         'd',
       );
+
+      final _Raster styled = await _rasterOf(note);
+      final _Raster unstruck = await _rasterOf(unstruckNote);
+      final _Raster unlinked = await _rasterOf(unlinkedNote);
+      for (final String run in <String>['a', 'b', 'c', 'd', 'e']) {
+        _expectOpaqueInk(
+          styled,
+          _boxOf(note, _rangeOf(source, run)),
+          Palette.ink,
+          run,
+        );
+      }
+      final Rect struck = _boxOf(note, _rangeOf(source, 'e'));
+      final Rect linked = _boxOf(note, _rangeOf(source, 'f'));
+      expect(_boxOf(unstruckNote, _rangeOf(unstruckSource, 'e')), struck);
+      expect(_boxOf(unlinkedNote, _rangeOf(unlinkedSource, 'f')), linked);
+      final double baseline = note.fragments.single.lineBox.baseline;
+      _expectLineThrough(unstruck, styled, struck, baseline);
+      _expectLink(unlinked, styled, linked, baseline);
     });
 
     test('headings take the heading tokens', () {
@@ -1233,11 +1441,22 @@ void main() {
         TypographyTokens.bannerSerif.copyWith(fontSize: 16),
       );
       const String source = '# one\n\n## two\n\n### three';
-      final FragmentInfo one = _fragmentAt(
-        _layout(source),
-        source.indexOf('one'),
-      );
+      final LaidOutNote note = _layout(source);
+      final FragmentInfo one = _fragmentAt(note, source.indexOf('one'));
       expect(one.lineBox.rect.height, closeTo(28.8, 0.5));
+      for (final (String text, int level) in const <(String, int)>[
+        ('one', 1),
+        ('two', 2),
+        ('three', 3),
+      ]) {
+        final TextStyle style = NoteTypography.heading(level);
+        _expectPartWidths(note, _rangeOf(source, text), style, text);
+        expect(
+          _fragmentAt(note, source.indexOf(text)).lineBox.rect.height,
+          closeTo(_lineHeightOf(style), 0.5),
+          reason: text,
+        );
+      }
     });
 
     testWidgets('renders without a selection region when no overlay exists', (
