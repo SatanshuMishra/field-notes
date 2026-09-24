@@ -1029,7 +1029,10 @@ void main() {
       final double shift = _figure(tester).top - _editor(tester).top - y;
       harness.scroll.jumpTo(harness.scroll.offset + shift);
       await tester.pump();
-      expect(_figure(tester).top - _editor(tester).top, closeTo(y, _tolerance));
+      expect(
+        _figure(tester).top - _editor(tester).top,
+        closeTo(y, _tolerance),
+      );
     }
 
     final double bandTop = _editor(tester).bottom - inset;
@@ -1103,5 +1106,32 @@ void main() {
 
     expect(find.byKey(photoToolbarKey), findsNothing);
     expect(harness.focusNode.hasPrimaryFocus, isTrue);
+  });
+
+  testWidgets('Tab lands on the overflow control when it leads a narrow bar', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = await _pump(
+      tester,
+      '${_lines(10)}\n$a',
+      width: 200,
+      importer: _pickB,
+    );
+
+    await _selectPhoto(tester);
+    expect(harness.focusNode.hasPrimaryFocus, isTrue);
+    expect(find.byKey(photoToolbarMoreKey), findsOneWidget);
+    expect(find.byKey(photoToolbarSizeKey(MdPhotoSize.small)), findsNothing);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+
+    expect(_hasPrimaryFocus(tester, photoToolbarMoreKey), isTrue);
+    expect(_hasPrimaryFocus(tester, photoToolbarCaptionKey), isFalse);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+
+    expect(_hasPrimaryFocus(tester, photoToolbarCaptionKey), isTrue);
   });
 }

@@ -495,12 +495,12 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
 
   List<Widget> _withFirstFocus(List<Widget> row) {
     final int first = row.indexWhere(
-      (Widget w) => w is _PhotoToolbarControl,
+      (Widget w) => w is _PhotoToolbarFocusable,
     );
     if (first < 0) {
       return row;
     }
-    final _PhotoToolbarControl control = row[first] as _PhotoToolbarControl;
+    final _PhotoToolbarFocusable control = row[first] as _PhotoToolbarFocusable;
     return <Widget>[
       ...row.sublist(0, first),
       control.withFocusNode(_request.firstControlFocusNode),
@@ -635,20 +635,18 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
   }
 
   Widget _moreControl(EditorState state, MdBlock photo, double target) {
-    return TapRegion(
+    return _PhotoToolbarMenuAnchor(
       groupId: _menuGroup,
-      child: OverlayPortal(
-        key: _moreKey,
-        controller: _menu,
-        overlayChildBuilder: (BuildContext overlayContext) =>
-            _menuPanel(state, photo, target),
-        child: _PhotoToolbarControl(
-          controlKey: photoToolbarMoreKey,
-          label: photoToolbarMoreLabel,
-          target: target,
-          onTap: _toggleMenu,
-          child: _glyph(_PhotoToolbarGlyph.more),
-        ),
+      portalKey: _moreKey,
+      controller: _menu,
+      overlayChildBuilder: (BuildContext overlayContext) =>
+          _menuPanel(state, photo, target),
+      control: _PhotoToolbarControl(
+        controlKey: photoToolbarMoreKey,
+        label: photoToolbarMoreLabel,
+        target: target,
+        onTap: _toggleMenu,
+        child: _glyph(_PhotoToolbarGlyph.more),
       ),
     );
   }
@@ -831,7 +829,52 @@ class _PhotoToolbarGlyphPainter extends CustomPainter {
       oldDelegate.glyph != glyph || oldDelegate.color != color;
 }
 
-class _PhotoToolbarControl extends StatefulWidget {
+abstract interface class _PhotoToolbarFocusable {
+  Widget withFocusNode(FocusNode node);
+}
+
+class _PhotoToolbarMenuAnchor extends StatelessWidget
+    implements _PhotoToolbarFocusable {
+  const _PhotoToolbarMenuAnchor({
+    required this.groupId,
+    required this.portalKey,
+    required this.controller,
+    required this.overlayChildBuilder,
+    required this.control,
+  });
+
+  final Object groupId;
+  final GlobalKey portalKey;
+  final OverlayPortalController controller;
+  final WidgetBuilder overlayChildBuilder;
+  final _PhotoToolbarControl control;
+
+  @override
+  _PhotoToolbarMenuAnchor withFocusNode(FocusNode node) =>
+      _PhotoToolbarMenuAnchor(
+        groupId: groupId,
+        portalKey: portalKey,
+        controller: controller,
+        overlayChildBuilder: overlayChildBuilder,
+        control: control.withFocusNode(node),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return TapRegion(
+      groupId: groupId,
+      child: OverlayPortal(
+        key: portalKey,
+        controller: controller,
+        overlayChildBuilder: overlayChildBuilder,
+        child: control,
+      ),
+    );
+  }
+}
+
+class _PhotoToolbarControl extends StatefulWidget
+    implements _PhotoToolbarFocusable {
   const _PhotoToolbarControl({
     required this.controlKey,
     required this.label,
@@ -852,6 +895,7 @@ class _PhotoToolbarControl extends StatefulWidget {
   final String? hint;
   final FocusNode? focusNode;
 
+  @override
   _PhotoToolbarControl withFocusNode(FocusNode node) => _PhotoToolbarControl(
     controlKey: controlKey,
     label: label,
