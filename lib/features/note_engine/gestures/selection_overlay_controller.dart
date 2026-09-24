@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
@@ -84,6 +85,9 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
   SelectionOverlay? _overlay;
   bool _handlesShown = false;
   bool _disposed = false;
+  bool _watching = false;
+  NoteSelection? _syncedSelection;
+  NoteLayout? _syncedLayout;
   _HandleDrag? _drag;
 
   RenderNoteView? get _view {
@@ -189,8 +193,10 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     if (overlay == null) {
       return;
     }
+    update();
     overlay.showHandles();
     _handlesShown = true;
+    _watch();
   }
 
   void hideHandles() {
@@ -237,6 +243,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     if (geometry == null) {
       return;
     }
+    _apply(overlay, view, geometry);
     final TextSelectionToolbarAnchors anchors = anchor != null
         ? TextSelectionToolbarAnchors(primaryAnchor: anchor)
         : TextSelectionToolbarAnchors.fromSelection(
@@ -257,6 +264,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
             buttonItems: items,
           ),
     );
+    _watch();
   }
 
   void toggleToolbar({Offset? anchor}) {
@@ -345,12 +353,49 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     if (geometry == null) {
       return;
     }
+    _apply(overlay, view, geometry);
+  }
+
+  void _apply(
+    SelectionOverlay overlay,
+    RenderNoteView view,
+    _Geometry geometry,
+  ) {
+    _syncedSelection = view.selection;
+    _syncedLayout = view.noteLayout;
     overlay
       ..startHandleType = geometry.startType
       ..endHandleType = geometry.endType
       ..lineHeightAtStart = geometry.startLineHeight
       ..lineHeightAtEnd = geometry.endLineHeight
       ..selectionEndpoints = geometry.endpoints;
+  }
+
+  bool _isSynced(RenderNoteView view) =>
+      view.selection == _syncedSelection &&
+      identical(view.noteLayout, _syncedLayout);
+
+  void _watch() {
+    if (_watching || _disposed) {
+      return;
+    }
+    _watching = true;
+    SchedulerBinding.instance.addPostFrameCallback(
+      _handleFrame,
+      debugLabel: 'NoteSelectionOverlayController.sync',
+    );
+  }
+
+  void _handleFrame(Duration _) {
+    _watching = false;
+    if (_disposed || !(_handlesShown || toolbarShown)) {
+      return;
+    }
+    final RenderNoteView? view = _view;
+    if (view != null && !_isSynced(view)) {
+      update();
+    }
+    _watch();
   }
 
   void _handleDragStart(DragStartDetails details, {required bool start}) {

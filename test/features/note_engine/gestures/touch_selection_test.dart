@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -333,6 +335,43 @@ Future<void> _dragBy(
   await tester.pump();
 }
 
+TextSelectionHandleType _handleTypeOf(WidgetTester tester, Finder follower) {
+  final List<Transform> turns = tester
+      .widgetList<Transform>(
+        find.descendant(of: follower, matching: find.byType(Transform)),
+      )
+      .toList();
+  if (turns.isEmpty) {
+    return TextSelectionHandleType.right;
+  }
+  final Float64List storage = turns.first.transform.storage;
+  final double angle = math.atan2(storage[1], storage[0]);
+  return (angle - math.pi / 4).abs() < 0.01
+      ? TextSelectionHandleType.collapsed
+      : TextSelectionHandleType.left;
+}
+
+List<TextSelectionHandleType> _handleTypes(
+  WidgetTester tester,
+  NoteSelectionOverlayController overlay,
+) => <TextSelectionHandleType>[
+  for (final LayerLink link in <LayerLink>[
+    overlay.startHandleLayerLink,
+    overlay.endHandleLayerLink,
+  ])
+    for (final Element follower
+        in find
+            .byWidgetPredicate(
+              (Widget widget) =>
+                  widget is CompositedTransformFollower && widget.link == link,
+            )
+            .evaluate())
+      _handleTypeOf(
+        tester,
+        find.byElementPredicate((Element e) => e == follower),
+      ),
+];
+
 List<String> _toolbarLabels(WidgetTester tester) => <String>[
   for (final Text text in tester.widgetList<Text>(
     find.descendant(
@@ -646,11 +685,7 @@ void main() {
       final Offset handle = view.contentToGlobal(
         view.noteLayout.selectionEndpoints(caret).start.point,
       );
-      await _dragBy(
-        tester,
-        handle + const Offset(0, 14),
-        const Offset(120, 0),
-      );
+      await _dragBy(tester, handle + const Offset(0, 14), const Offset(120, 0));
 
       final List<NoteSelection> dragged = <NoteSelection>[
         for (final _Event event in harness.of(_Kind.select))
@@ -678,10 +713,7 @@ void main() {
 
       final RenderNoteView view = harness.view;
       final Offset end = view.contentToGlobal(
-        view.noteLayout
-            .selectionEndpoints(harness.host.selection)
-            .end
-            .point,
+        view.noteLayout.selectionEndpoints(harness.host.selection).end.point,
       );
       await _dragBy(tester, end + const Offset(10, 10), const Offset(-160, 0));
 
@@ -699,6 +731,37 @@ void main() {
       );
       expect(harness.host.selection.start, 4);
       expect(harness.host.selection.end, greaterThan(4));
+    }, variant: _android);
+
+    testWidgets('the handles follow a selection changed elsewhere', (
+      WidgetTester tester,
+    ) async {
+      final _Harness harness = _Harness();
+      await harness.pump(tester, _harbour);
+      await _longPress(tester, harness.centreOf(4, 11));
+      expect(harness.host.selection, const NoteSelection(anchor: 4, head: 11));
+      expect(_handleTypes(tester, harness.overlay), <TextSelectionHandleType>[
+        TextSelectionHandleType.left,
+        TextSelectionHandleType.right,
+      ]);
+
+      harness.host.setSelection(const NoteSelection.collapsed(11));
+      await tester.pump();
+      await tester.pump();
+
+      expect(harness.overlay.handlesShown, isTrue);
+      expect(_handleTypes(tester, harness.overlay), <TextSelectionHandleType>[
+        TextSelectionHandleType.collapsed,
+      ]);
+
+      harness.host.setSelection(const NoteSelection(anchor: 0, head: 22));
+      await tester.pump();
+      await tester.pump();
+
+      expect(_handleTypes(tester, harness.overlay), <TextSelectionHandleType>[
+        TextSelectionHandleType.left,
+        TextSelectionHandleType.right,
+      ]);
     }, variant: _android);
 
     testWidgets('the menu for a caret shows paste and select all only', (
