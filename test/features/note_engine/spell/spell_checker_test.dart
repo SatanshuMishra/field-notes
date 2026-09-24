@@ -666,6 +666,25 @@ void main() {
     expect(first.sourceOffsets.sublist(2, 5), <int>[10, 11, 12]);
   });
 
+  test('nested inlines in a quote and a table drop markers and blank code', () {
+    const String quote = '> **[teh](x) `c`** _a_ <https://y.z>';
+    final SpellUnit quoted = spellUnitsOf(quote, parseNoteTree(quote)).single;
+    expect(quoted.text, 'teh   a${' ' * 12}');
+    expect(
+      <int>[...quoted.sourceOffsets.take(8)],
+      <int>[5, 6, 7, 12, 14, 18, 20, 22],
+    );
+    expect(
+      <int>[...quoted.sourceOffsets.skip(8)],
+      <int>[for (int offset = 24; offset < 35; offset++) offset, 36],
+    );
+
+    const String table = '| **teh** `c` | [a](b) |\n| - | - |\n| *x* | y |';
+    final SpellUnit cells = spellUnitsOf(table, parseNoteTree(table)).single;
+    expect(cells.text, 'teh  \ta\nx\ty');
+    expect(cells.sourceOffsets.join(' '), '4 5 6 9 11 13 17 22 38 40 43 44');
+  });
+
   testWidgets('replacement returns null for a mark no longer in marks', (
     WidgetTester tester,
   ) async {

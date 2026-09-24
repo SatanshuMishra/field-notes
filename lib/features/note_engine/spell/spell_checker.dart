@@ -74,26 +74,23 @@ List<SpellUnit> spellUnitsOf(String source, MdTree tree) {
       'must equal the source length ${source.length}',
     );
   }
-  final List<SpellUnit> units = <SpellUnit>[];
-  for (final MdBlock block in tree.blocks) {
-    if (block.kind == MdBlockKind.table) {
-      units.add(_tableUnit(source, block));
-    } else {
-      _collectUnits(source, block, const <MdRange>[], units);
-    }
-  }
-  return List<SpellUnit>.unmodifiable(units);
+  return List<SpellUnit>.unmodifiable(<SpellUnit>[
+    for (final MdBlock block in tree.blocks)
+      if (block.kind == MdBlockKind.table)
+        _tableUnit(source, block)
+      else
+        ..._unitsOf(source, block, const <MdRange>[]),
+  ]);
 }
 
-void _collectUnits(
+List<SpellUnit> _unitsOf(
   String source,
   MdBlock block,
   List<MdRange> ancestorMarkers,
-  List<SpellUnit> units,
 ) {
   switch (block.kind) {
     case MdBlockKind.heading || MdBlockKind.paragraph:
-      units.add(_textUnit(source, block, ancestorMarkers));
+      return <SpellUnit>[_textUnit(source, block, ancestorMarkers)];
     case MdBlockKind.blockQuote ||
         MdBlockKind.bulletList ||
         MdBlockKind.orderedList ||
@@ -102,9 +99,10 @@ void _collectUnits(
         ...ancestorMarkers,
         ...block.markerRanges,
       ];
-      for (final MdBlock child in block.blocks) {
-        _collectUnits(source, child, markers, units);
-      }
+      return <SpellUnit>[
+        for (final MdBlock child in block.blocks)
+          ..._unitsOf(source, child, markers),
+      ];
     case MdBlockKind.thematicBreak ||
         MdBlockKind.fencedCode ||
         MdBlockKind.blankLine ||
@@ -112,7 +110,7 @@ void _collectUnits(
         MdBlockKind.tableRow ||
         MdBlockKind.tableCell ||
         MdBlockKind.photoLine:
-      break;
+      return const <SpellUnit>[];
   }
 }
 
@@ -164,15 +162,15 @@ final class _UnitWriter {
 
 SpellUnit _textUnit(String source, MdBlock block, List<MdRange> ancestors) {
   final MdRange range = block.sourceRange;
+  final _InlineRanges inline = _inlineRanges(block.inlines);
   final List<MdRange> markers = <MdRange>[
     for (final MdRange marker in ancestors)
       if (marker.start < range.end && range.start < marker.end) marker,
     ...block.markerRanges,
+    ...inline.markers,
   ];
-  final List<MdRange> blanks = <MdRange>[];
-  _collectInlineRanges(block.inlines, markers, blanks);
   final _UnitWriter writer = _UnitWriter(source)
-    ..write(range.start, range.end, _merged(markers), _merged(blanks));
+    ..write(range.start, range.end, _merged(markers), _merged(inline.blanks));
   return writer.finish(range.end);
 }
 
@@ -191,14 +189,12 @@ SpellUnit _tableUnit(String source, MdBlock table) {
         writer.separate('\t', lastEnd);
       }
       isFirstCell = false;
-      final List<MdRange> markers = <MdRange>[];
-      final List<MdRange> blanks = <MdRange>[];
-      _collectInlineRanges(cell.inlines, markers, blanks);
+      final _InlineRanges inline = _inlineRanges(cell.inlines);
       writer.write(
         cell.contentRange.start,
         cell.contentRange.end,
-        _merged(markers),
-        _merged(blanks),
+        _merged(inline.markers),
+        _merged(inline.blanks),
       );
       lastEnd = cell.contentRange.end;
     }
@@ -206,19 +202,25 @@ SpellUnit _tableUnit(String source, MdBlock table) {
   return writer.finish(lastEnd);
 }
 
-void _collectInlineRanges(
-  List<MdInline> inlines,
-  List<MdRange> markers,
-  List<MdRange> blanks,
-) {
-  for (final MdInline inline in inlines) {
-    markers.addAll(inline.markerRanges);
-    if (inline.kind == MdInlineKind.codeSpan ||
-        inline.kind == MdInlineKind.autolink) {
-      blanks.add(inline.contentRange);
-    }
-    _collectInlineRanges(inline.children, markers, blanks);
-  }
+typedef _InlineRanges = ({List<MdRange> markers, List<MdRange> blanks});
+
+_InlineRanges _inlineRanges(List<MdInline> inlines) {
+  final List<_InlineRanges> nested = <_InlineRanges>[
+    for (final MdInline inline in inlines) _inlineRanges(inline.children),
+  ];
+  return (
+    markers: <MdRange>[
+      for (final MdInline inline in inlines) ...inline.markerRanges,
+      for (final _InlineRanges child in nested) ...child.markers,
+    ],
+    blanks: <MdRange>[
+      for (final MdInline inline in inlines)
+        if (inline.kind == MdInlineKind.codeSpan ||
+            inline.kind == MdInlineKind.autolink)
+          inline.contentRange,
+      for (final _InlineRanges child in nested) ...child.blanks,
+    ],
+  );
 }
 
 List<MdRange> _merged(List<MdRange> ranges) {
@@ -226,16 +228,25 @@ List<MdRange> _merged(List<MdRange> ranges) {
     for (final MdRange range in ranges)
       if (!range.isEmpty) range,
   ]..sort((MdRange a, MdRange b) => a.start.compareTo(b.start));
-  final List<MdRange> merged = <MdRange>[];
-  for (final MdRange range in sorted) {
-    if (merged.isNotEmpty && range.start <= merged.last.end) {
-      final MdRange last = merged.removeLast();
-      merged.add(MdRange(last.start, math.max(last.end, range.end)));
+  return List<MdRange>.unmodifiable(_runs(sorted));
+}
+
+Iterable<MdRange> _runs(List<MdRange> sorted) sync* {
+  if (sorted.isEmpty) {
+    return;
+  }
+  int start = sorted.first.start;
+  int end = sorted.first.end;
+  for (final MdRange range in sorted.skip(1)) {
+    if (range.start <= end) {
+      end = math.max(end, range.end);
     } else {
-      merged.add(range);
+      yield MdRange(start, end);
+      start = range.start;
+      end = range.end;
     }
   }
-  return merged;
+  yield MdRange(start, end);
 }
 
 typedef _CacheKey = (String, String);
