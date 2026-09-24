@@ -142,6 +142,8 @@ void main() {
     test('code drops its fences, fence indentation and trailing blanks', () {
       expect(plainTextOf('```\ncode\n\n'), 'code');
       expect(plainTextOf(' ```\n code\n ```'), 'code');
+      expect(plainTextOf('```\n   '), '');
+      expect(plainTextOf('a\n\n```\n   '), 'a');
     });
 
     test('items join by one break and other blocks by a paragraph break', () {

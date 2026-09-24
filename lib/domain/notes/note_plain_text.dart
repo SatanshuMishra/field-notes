@@ -150,10 +150,10 @@ final class _Extractor {
     int end = text.length;
     while (end > 0) {
       final int lineStart = text.lastIndexOf('\n', end - 1) + 1;
-      if (lineStart == 0 || !_isBlank(text, lineStart, end)) {
+      if (!_isBlank(text, lineStart, end)) {
         return text.substring(0, end);
       }
-      end = lineStart - 1;
+      end = lineStart == 0 ? 0 : lineStart - 1;
     }
     return '';
   }
