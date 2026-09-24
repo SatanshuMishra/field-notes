@@ -353,6 +353,13 @@ class NoteInputClient with DeltaTextInputClient {
       host.applyInput(transaction);
     }
 
+    void flushIfDiverged(ChangeSet pendingChanges) {
+      if (_sendableText(working, pendingChanges) != _mirror.value.text) {
+        flush();
+        working = host.state;
+      }
+    }
+
     try {
       for (final TextEditingDelta delta in deltas) {
         if (delta.oldText != _mirror.value.text) {
@@ -381,18 +388,15 @@ class NoteInputClient with DeltaTextInputClient {
                         .withEdit(transaction);
                 pending = joined;
                 working = working.apply(transaction);
-                if (_sendableText(working, joined.changes) !=
-                    _mirror.value.text) {
-                  flush();
-                  working = host.state;
-                }
+                flushIfDiverged(joined.changes);
               case SelectionEdit(
                 :final NoteSelection selection,
                 :final MdRange? composing,
               ):
-                pending =
+                final _PendingInput joined =
                     (pending ?? _PendingInput.start(working.source.length))
                         .withSelection(selection, composing);
+                pending = joined;
                 working = working.apply(
                   Transaction(
                     changes: ChangeSet.empty(working.source.length),
@@ -404,6 +408,7 @@ class NoteInputClient with DeltaTextInputClient {
                     composing: composing,
                   ),
                 );
+                flushIfDiverged(joined.changes);
               case final ClassifiedEdit edit:
                 flush();
                 host.runClassified(edit);

@@ -1,9 +1,10 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdBlock, MdBlockKind, MdPhotoLine, MdTree, parseNoteTree;
-import 'package:field_notes/features/note_engine/layout/note_typography.dart'
-    show NoteTypography;
+import 'package:field_notes/features/note_engine/layout/line_fragments.dart'
+    show FragmentKind, LaidOutRow, LineFragment, VisualLine;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorController, NoteEditorView, noteEditorKey, tablesEnabled;
 import 'package:field_notes/features/note_engine/render/note_view.dart'
@@ -20,6 +21,51 @@ import 'text_input_messages.dart';
 const CommonFinders _finders = find;
 
 const int _focusPumps = 10;
+
+Size firstNoteLineSize(RenderNoteView render) {
+  for (final LaidOutRow row in render.noteLayout.flow.rows) {
+    for (final LineFragment fragment in row.fragments) {
+      if (fragment.kind == FragmentKind.text &&
+          fragment.paragraph != null &&
+          fragment.lines.isNotEmpty) {
+        final VisualLine line = fragment.lines.first;
+        return Size(line.width, line.height);
+      }
+    }
+  }
+  throw StateError('The note laid out no line of text');
+}
+
+final class _OwnPaintingContext extends TestRecordingPaintingContext {
+  _OwnPaintingContext(super.canvas);
+
+  @override
+  void paintChild(RenderObject child, Offset offset) {}
+}
+
+ui.Paragraph? _paintedHint(RenderNoteView render) {
+  final List<ui.Paragraph> laidOut = <ui.Paragraph>[
+    for (final LaidOutRow row in render.noteLayout.flow.rows)
+      for (final LineFragment fragment in row.fragments)
+        if (fragment.paragraph case final ui.Paragraph paragraph) paragraph,
+  ];
+  final TestRecordingCanvas canvas = TestRecordingCanvas();
+  final _OwnPaintingContext context = _OwnPaintingContext(canvas);
+  render.paint(context, Offset.zero);
+  context.dispose();
+  final List<ui.Paragraph> drawn = <ui.Paragraph>[
+    for (final RecordedInvocation call in canvas.invocations)
+      if (call.invocation.memberName == #drawParagraph)
+        call.invocation.positionalArguments.first as ui.Paragraph,
+  ];
+  return drawn
+      .where(
+        (ui.Paragraph paragraph) => !laidOut.any(
+          (ui.Paragraph text) => identical(text, paragraph),
+        ),
+      )
+      .firstOrNull;
+}
 
 class NoteEditorDriver {
   const NoteEditorDriver(this.tester);
@@ -46,14 +92,13 @@ class NoteEditorDriver {
 
   TextSelection get selection => _controller.selection;
 
-  TextStyle get style => NoteTypography.body;
+  Size get firstLineSize => firstNoteLineSize(_render);
+
+  ui.Paragraph? get paintedHint => _paintedHint(_render);
 
   TextStyle? get visibleHintStyle {
-    final NoteEditorView view = _view;
-    if (view.controller.text.isNotEmpty || view.hintText.isEmpty) {
-      return null;
-    }
-    return view.hintStyle;
+    final RenderNoteView render = _render;
+    return _paintedHint(render) == null ? null : render.hintStyle;
   }
 
   Rect get caretRect {

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
@@ -21,6 +22,20 @@ final class _Geometry {
   final double startLineHeight;
   final double endLineHeight;
   final List<TextSelectionPoint> endpoints;
+}
+
+final class _HandleDrag {
+  const _HandleDrag({
+    required this.fixed,
+    required this.start,
+    required this.collapsed,
+    required this.target,
+  });
+
+  final int fixed;
+  final bool start;
+  final bool collapsed;
+  final double target;
 }
 
 TextSelectionControls _platformHandleControls() {
@@ -70,8 +85,10 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
   SelectionOverlay? _overlay;
   bool _handlesShown = false;
   bool _disposed = false;
-  int? _dragFixed;
-  double _dragTarget = 0;
+  bool _watching = false;
+  NoteSelection? _syncedSelection;
+  NoteLayout? _syncedLayout;
+  _HandleDrag? _drag;
 
   RenderNoteView? get _view {
     final RenderObject? object = _renderKey.currentContext?.findRenderObject();
@@ -176,8 +193,10 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     if (overlay == null) {
       return;
     }
+    update();
     overlay.showHandles();
     _handlesShown = true;
+    _watch();
   }
 
   void hideHandles() {
@@ -224,6 +243,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     if (geometry == null) {
       return;
     }
+    _apply(overlay, view, geometry);
     final TextSelectionToolbarAnchors anchors = anchor != null
         ? TextSelectionToolbarAnchors(primaryAnchor: anchor)
         : TextSelectionToolbarAnchors.fromSelection(
@@ -244,6 +264,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
             buttonItems: items,
           ),
     );
+    _watch();
   }
 
   void toggleToolbar({Offset? anchor}) {
@@ -332,12 +353,49 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     if (geometry == null) {
       return;
     }
+    _apply(overlay, view, geometry);
+  }
+
+  void _apply(
+    SelectionOverlay overlay,
+    RenderNoteView view,
+    _Geometry geometry,
+  ) {
+    _syncedSelection = view.selection;
+    _syncedLayout = view.noteLayout;
     overlay
       ..startHandleType = geometry.startType
       ..endHandleType = geometry.endType
       ..lineHeightAtStart = geometry.startLineHeight
       ..lineHeightAtEnd = geometry.endLineHeight
       ..selectionEndpoints = geometry.endpoints;
+  }
+
+  bool _isSynced(RenderNoteView view) =>
+      view.selection == _syncedSelection &&
+      identical(view.noteLayout, _syncedLayout);
+
+  void _watch() {
+    if (_watching || _disposed) {
+      return;
+    }
+    _watching = true;
+    SchedulerBinding.instance.addPostFrameCallback(
+      _handleFrame,
+      debugLabel: 'NoteSelectionOverlayController.sync',
+    );
+  }
+
+  void _handleFrame(Duration _) {
+    _watching = false;
+    if (_disposed || !(_handlesShown || toolbarShown)) {
+      return;
+    }
+    final RenderNoteView? view = _view;
+    if (view != null && !_isSynced(view)) {
+      update();
+    }
+    _watch();
   }
 
   void _handleDragStart(DragStartDetails details, {required bool start}) {
@@ -357,8 +415,12 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     final double centre = view
         .localToGlobal(Offset(local.dx, local.dy - lineHeight / 2))
         .dy;
-    _dragFixed = start ? selection.end : selection.start;
-    _dragTarget = centre - details.globalPosition.dy;
+    _drag = _HandleDrag(
+      fixed: start ? selection.end : selection.start,
+      start: start,
+      collapsed: selection.isCollapsed,
+      target: centre - details.globalPosition.dy,
+    );
     _onDragActiveChanged(true);
     _showMagnifierAt(
       details.globalPosition,
@@ -366,37 +428,48 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     );
   }
 
+  NoteSelection? _draggedSelection(_HandleDrag drag, TextPosition hit) {
+    if (drag.collapsed) {
+      return NoteSelection.collapsed(hit.offset, affinity: hit.affinity);
+    }
+    final bool crosses = drag.start
+        ? hit.offset >= drag.fixed
+        : hit.offset <= drag.fixed;
+    if (crosses) {
+      return null;
+    }
+    return NoteSelection(
+      anchor: drag.fixed,
+      head: hit.offset,
+      affinity: hit.affinity,
+    );
+  }
+
   void _handleDragUpdate(DragUpdateDetails details) {
     final RenderNoteView? view = _view;
-    final int? fixed = _dragFixed;
-    if (view == null || fixed == null) {
+    final _HandleDrag? drag = _drag;
+    if (view == null || drag == null) {
       return;
     }
     final Offset target = Offset(
       details.globalPosition.dx,
-      details.globalPosition.dy + _dragTarget,
+      details.globalPosition.dy + drag.target,
     );
     final TextPosition hit = view.noteLayout.positionAt(
       view.globalToContent(target),
     );
-    final NoteSelection next = NoteSelection(
-      anchor: fixed,
-      head: hit.offset,
-      affinity: hit.affinity,
-    );
-    if (next.isCollapsed || next == view.selection) {
-      _updateMagnifierAt(details.globalPosition, target);
-      return;
+    final NoteSelection? next = _draggedSelection(drag, hit);
+    if (next != null && next != view.selection) {
+      _onSelectionChanged(next, SelectionChangedCause.drag);
     }
-    _onSelectionChanged(next, SelectionChangedCause.drag);
     _updateMagnifierAt(details.globalPosition, target);
   }
 
   void _handleDragEnd(DragEndDetails details) {
-    if (_dragFixed == null) {
+    if (_drag == null) {
       return;
     }
-    _dragFixed = null;
+    _drag = null;
     hideMagnifier();
     _onDragActiveChanged(false);
   }
@@ -516,7 +589,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     _overlay?.dispose();
     _overlay = null;
     _handlesShown = false;
-    _dragFixed = null;
+    _drag = null;
     _hidden.dispose();
   }
 }

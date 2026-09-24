@@ -190,6 +190,42 @@ void main() {
     expect(indentListItem(_caret('plain', 2)), isNull);
   });
 
+  test('a tab indented item outdents on enter, backspace and shift tab', () {
+    _press(
+      _caret('- a\n\t- b\n\t- ', 12),
+      continueOnEnter,
+      '- a\n\t- b\n- ',
+      11,
+    );
+    _press(_caret('- a\n\t- b', 7), backspaceAtItemStart, '- a\n- b', 6);
+    _press(_caret('- a\n\t- b', 8), outdentListItem, '- a\n- b', 7);
+    _press(_caret('- a\n\t- b\n\t  c', 8), outdentListItem, '- a\n- b\n  c', 7);
+    _press(_caret(' - a\n\t- b', 9), outdentListItem, ' - a\n - b', 9);
+  });
+
+  test('an item nested past its parent content column outdents fully', () {
+    _press(
+      _caret('- a\n    - b\n    - ', 18),
+      continueOnEnter,
+      '- a\n    - b\n- ',
+      14,
+    );
+    _press(_caret('- a\n    - b', 10), backspaceAtItemStart, '- a\n- b', 6);
+    _press(_caret('- a\n    - b', 11), outdentListItem, '- a\n- b', 7);
+    _press(
+      _caret('- a\n    - b\n      - c', 11),
+      outdentListItem,
+      '- a\n- b\n  - c',
+      7,
+    );
+  });
+
+  test('an outdent with nothing to remove falls back instead of an empty '
+      'change', () {
+    _press(_caret('> - a\n>\t- b', 10), backspaceAtItemStart, '> - a\n>\tb', 8);
+    _expectNoOp(_caret('> - a\n>\t- b', 11), outdentListItem);
+  });
+
   test('a marker only line at the top level ends like an empty item', () {
     _press(_caret('para\n- ', 7), continueOnEnter, 'para\n', 5);
     _press(_caret('para\n- ', 7), backspaceAtItemStart, 'para\n', 5);

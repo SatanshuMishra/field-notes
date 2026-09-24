@@ -32,17 +32,18 @@ Transaction? continueOnEnter(EditorState state) {
   if (selection.isCollapsed) {
     final _Item? empty = lines.emptyItemOn(line);
     if (empty != null && caret >= empty.markerStart) {
-      if (empty.parent != null) {
-        return _outdent(state, lines, empty);
-      }
-      return _replace(
-        state,
-        empty.markerStart,
-        line.line.end,
-        '',
-        empty.markerStart,
-        TransactionEvent.list,
-      );
+      final Transaction? outdented = empty.parent == null
+          ? null
+          : _outdent(state, lines, empty);
+      return outdented ??
+          _replace(
+            state,
+            empty.markerStart,
+            line.line.end,
+            '',
+            empty.markerStart,
+            TransactionEvent.list,
+          );
     }
   }
 
@@ -189,7 +190,7 @@ Transaction? outdentListItem(EditorState state) {
   if (item.parent == null) {
     return _noOp(state);
   }
-  return _outdent(state, lines, item);
+  return _outdent(state, lines, item) ?? _noOp(state);
 }
 
 Transaction? backspaceAtItemStart(EditorState state) {
@@ -210,17 +211,18 @@ Transaction? backspaceAtItemStart(EditorState state) {
   ];
   for (final _Item item in candidates) {
     if (item.contentStart == caret) {
-      if (item.parent != null) {
-        return _outdent(state, lines, item);
-      }
-      return _replace(
-        state,
-        item.markerStart,
-        item.contentStart,
-        '',
-        item.markerStart,
-        TransactionEvent.list,
-      );
+      final Transaction? outdented = item.parent == null
+          ? null
+          : _outdent(state, lines, item);
+      return outdented ??
+          _replace(
+            state,
+            item.markerStart,
+            item.contentStart,
+            '',
+            item.markerStart,
+            TransactionEvent.list,
+          );
     }
   }
   final MdBlock? container = line.innermostContainer;
@@ -243,32 +245,77 @@ Transaction? backspaceAtItemStart(EditorState state) {
   return null;
 }
 
-Transaction _outdent(EditorState state, _Lines lines, _Item item) {
+Transaction? _outdent(EditorState state, _Lines lines, _Item item) {
   final MdBlock parent = item.parent!;
-  final int width = _contentWidth(parent);
+  final MdSourceLines split = lines.split;
+  final MdRange? consumed = _consumedOn(parent, split.lines[item.firstLine]);
+  if (consumed == null) {
+    return null;
+  }
+  final MdRange first = parent.markerRanges.first;
+  final int parentLine = split.lineIndexAt(first.start);
+  final int parentStart = _columnAt(split, parentLine, first.start);
+  final int parentWidth = _columnAt(split, parentLine, first.end) - parentStart;
+  final int parentIndent =
+      _columnAt(split, parentLine, _skipSpaceOrTab(lines.source, first)) -
+      parentStart;
+  final int itemIndent =
+      _columnAt(split, item.firstLine, item.markerStart) -
+      _columnAt(split, item.firstLine, consumed.start);
+  final int aligned = itemIndent - parentIndent;
+  final int wanted = aligned > parentWidth ? aligned : parentWidth;
+  final int shift = wanted < itemIndent ? wanted : itemIndent;
+  final List<TextReplacement> replacements = <TextReplacement>[
+    for (int i = item.firstLine; i <= item.lastLine; i++)
+      ?_removedColumns(split, i, _consumedOn(parent, split.lines[i]), shift),
+  ];
+  return replacements.isEmpty ? null : _mapped(state, replacements);
+}
+
+MdRange? _consumedOn(MdBlock parent, MdSourceLine line) {
   final MdRange? box = _taskBox(parent);
-  final List<TextReplacement> replacements = <TextReplacement>[];
-  for (int i = item.firstLine; i <= item.lastLine; i++) {
-    final MdSourceLine line = lines.split.lines[i];
-    for (final MdRange consumed in parent.markerRanges.skip(1)) {
-      if (consumed == box ||
-          consumed.start < line.start ||
-          consumed.end > line.end) {
-        continue;
-      }
-      int end = consumed.start;
-      while (end < consumed.end &&
-          end - consumed.start < width &&
-          lines.source.codeUnitAt(end) == _space) {
-        end += 1;
-      }
-      if (end > consumed.start) {
-        replacements.add(TextReplacement(consumed.start, end, ''));
-      }
-      break;
+  for (final MdRange consumed in parent.markerRanges.skip(1)) {
+    if (consumed != box &&
+        consumed.start >= line.start &&
+        consumed.end <= line.end) {
+      return consumed;
     }
   }
-  return _mapped(state, replacements);
+  return null;
+}
+
+TextReplacement? _removedColumns(
+  MdSourceLines split,
+  int lineIndex,
+  MdRange? consumed,
+  int columns,
+) {
+  if (consumed == null || columns <= 0) {
+    return null;
+  }
+  final MdLineCursor from = MdLineCursor.atLine(
+    split,
+    lineIndex,
+  ).advance(consumed.start - split.lines[lineIndex].start);
+  final MdLineCursor to = from.consumeColumns(columns);
+  if (to.offset == from.offset) {
+    return null;
+  }
+  return TextReplacement(from.offset, to.offset, ' ' * to.virtualColumns);
+}
+
+int _columnAt(MdSourceLines split, int lineIndex, int offset) =>
+    MdLineCursor.atLine(
+      split,
+      lineIndex,
+    ).advance(offset - split.lines[lineIndex].start).column;
+
+int _skipSpaceOrTab(String source, MdRange range) {
+  int at = range.start;
+  while (at < range.end && _isSpaceOrTab(source.codeUnitAt(at))) {
+    at += 1;
+  }
+  return at;
 }
 
 Transaction _mapped(EditorState state, List<TextReplacement> replacements) {
