@@ -306,38 +306,55 @@ class NoteActions {
   }
 
   void _deleteTo(bool forward, _Boundary boundary) {
-    final NoteSelection selection = host.state.selection;
+    final EditorState state = host.state;
+    final NoteSelection selection = state.selection;
     if (!selection.isCollapsed) {
       _deleteSource(MdRange(selection.start, selection.end));
       return;
     }
-    final int caret = selection.head;
     final int target = boundary(
-      TextPosition(offset: caret, affinity: selection.affinity),
+      TextPosition(offset: selection.head, affinity: selection.affinity),
       forward,
     ).offset;
-    if (target == caret) {
+    final int caret = _toVisible(selection.head);
+    final int reached = _toVisible(target);
+    if (reached == caret) {
       return;
     }
-    _deleteSource(
-      target < caret ? MdRange(target, caret) : MdRange(caret, target),
+    final MdRange range = sourceRangeForVisible(
+      state: state,
+      visible: host.visible,
+      visibleRange: TextRange(start: caret, end: reached),
+    );
+    final MdRange? cell = _cellContentAt(state.tree, selection.head);
+    _deleteSources(
+      cell == null
+          ? splitAtTables(state.tree, range)
+          : <MdRange>[_clampTo(range, cell)],
     );
   }
 
-  void _deleteSource(MdRange range) {
-    if (range.isEmpty) {
+  void _deleteSource(MdRange range) => _deleteSources(<MdRange>[range]);
+
+  void _deleteSources(List<MdRange> ranges) {
+    final List<MdRange> pieces = <MdRange>[
+      for (final MdRange range in ranges)
+        if (!range.isEmpty) range,
+    ];
+    if (pieces.isEmpty) {
       return;
     }
     final EditorState state = host.state;
     host.apply(
       Transaction(
-        changes: ChangeSet.single(
-          state.source.length,
-          range.start,
-          range.end,
-          '',
+        changes: ChangeSet(
+          length: state.source.length,
+          replacements: <TextReplacement>[
+            for (final MdRange piece in pieces)
+              TextReplacement(piece.start, piece.end, ''),
+          ],
         ),
-        selection: NoteSelection.collapsed(range.start),
+        selection: NoteSelection.collapsed(pieces.first.start),
         event: TransactionEvent.inputDelete,
       ),
     );
@@ -860,6 +877,28 @@ int _previousLineEnd(String source, int offset) {
   return lineEnd > 0 && source.codeUnitAt(lineEnd - 1) == _carriageReturn
       ? lineEnd - 1
       : lineEnd;
+}
+
+MdRange? _cellContentAt(MdTree tree, int offset) {
+  final MdBlock? table = tree.blockAt(offset);
+  if (table == null || table.kind != MdBlockKind.table) {
+    return null;
+  }
+  for (final MdBlock row in table.blocks) {
+    for (final MdBlock cell in row.blocks) {
+      final MdRange content = cell.contentRange;
+      if (content.start <= offset && offset <= content.end) {
+        return content;
+      }
+    }
+  }
+  return null;
+}
+
+MdRange _clampTo(MdRange range, MdRange bounds) {
+  final int start = range.start < bounds.start ? bounds.start : range.start;
+  final int end = range.end > bounds.end ? bounds.end : range.end;
+  return MdRange(start, end > start ? end : start);
 }
 
 class NoteKeyboardScope extends StatefulWidget {

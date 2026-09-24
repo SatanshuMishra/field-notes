@@ -65,7 +65,12 @@ Transaction? deleteInCell(EditorState state, {required bool forward}) {
   }
   final MdRange widened = _widened(source, content, from, to);
   return Transaction(
-    changes: ChangeSet.single(source.length, widened.start, widened.end, ''),
+    changes: ChangeSet.single(
+      source.length,
+      widened.start,
+      widened.end,
+      _guarded(source, content, widened, ''),
+    ),
     selection: NoteSelection.collapsed(widened.start),
     event: TransactionEvent.inputDelete,
   );
@@ -238,7 +243,12 @@ Transaction? _replaceSelection(
     final int to = content.end < selection.end ? content.end : selection.end;
     final MdRange part = _widened(source, content, from, to);
     final bool isFirst = identical(cell, first);
-    final String inserted = isFirst ? text : '';
+    final String inserted = _guarded(
+      source,
+      content,
+      part,
+      isFirst ? text : '',
+    );
     if (isFirst) {
       caret = part.start;
     }
@@ -282,6 +292,22 @@ MdRange _widened(String source, MdRange content, int from, int to) {
 String _escaped(String text) =>
     text.replaceAll('\r\n', ' ').replaceAll('\n', ' ').replaceAll('|', r'\|');
 
+String _guarded(String source, MdRange content, MdRange part, String text) {
+  final bool closesOnPipe =
+      part.end == content.end &&
+      content.end < source.length &&
+      source.codeUnitAt(content.end) == _pipe;
+  if (!closesOnPipe) {
+    return text;
+  }
+  final int? last = text.isNotEmpty
+      ? text.codeUnitAt(text.length - 1)
+      : part.start > content.start
+      ? source.codeUnitAt(part.start - 1)
+      : null;
+  return last == _backslash ? '$text ' : text;
+}
+
 Transaction _noOp(EditorState state) => Transaction(
   changes: ChangeSet.empty(state.source.length),
   selection: state.selection,
@@ -304,6 +330,14 @@ bool _isBlank(String source, int from, int to) {
     }
   }
   return true;
+}
+
+int _textEnd(String source, MdSourceLine line) {
+  int end = line.end;
+  while (end > line.start && _isBlank(source, end - 1, end)) {
+    end -= 1;
+  }
+  return end;
 }
 
 bool _isContainer(MdBlock block) =>
@@ -515,17 +549,26 @@ final class _Table {
       );
     }
     final MdSourceLine line = rows[row].line;
-    final List<String> texts = padded(row);
-    final _Written written = _canonical(texts);
+    final int textEnd = _textEnd(source, line);
+    final bool closed =
+        source.codeUnitAt(textEnd - 1) == _pipe &&
+        (textEnd - 2 < line.start ||
+            source.codeUnitAt(textEnd - 2) != _backslash);
+    final int at = closed ? textEnd : line.end;
+    final String opening = closed
+        ? ''
+        : source.codeUnitAt(line.end - 1) == _backslash
+        ? ' |'
+        : '|';
     return Transaction(
       changes: ChangeSet.single(
         source.length,
-        line.start,
-        line.end,
-        written.text,
+        at,
+        at,
+        '$opening${_emptyCell * (columns - cells.length)}',
       ),
       selection: NoteSelection.collapsed(
-        line.start + written.contentEnd(texts, column),
+        at + opening.length + _emptyCell.length * (column - cells.length) + 1,
       ),
       event: TransactionEvent.table,
     );
@@ -753,7 +796,10 @@ final class _Table {
   }
 }
 
+const String _emptyCell = '  |';
 const int _space = 0x20;
 const int _tab = 0x09;
 const int _lineFeed = 0x0A;
 const int _carriageReturn = 0x0D;
+const int _pipe = 0x7C;
+const int _backslash = 0x5C;

@@ -11,9 +11,8 @@ Transaction? toggleInlineFormat(EditorState state, InlineFormat format) {
   final String source = state.source;
   final NoteSelection selection = state.selection;
   final MdTree tree = state.tree;
-  final MdInlineKind kind = _kindOf(format);
 
-  final MdInline? node = _innermostNode(tree, kind, selection);
+  final MdInline? node = _innermostNode(tree, format, selection);
   if (node != null) {
     return _removeMarkers(state, node);
   }
@@ -31,12 +30,20 @@ Transaction? toggleInlineFormat(EditorState state, InlineFormat format) {
       selection.start,
       selection.end,
     );
+    if (parts.any(
+      (MdRange part) =>
+          _isInsideLinkTarget(tree, part.start) ||
+          _isInsideLinkTarget(tree, part.end),
+    )) {
+      return null;
+    }
     if (parts.isNotEmpty) {
       return _wrapParts(state, format, parts);
     }
   }
   final int point = _movedPoint(lines, tree, selection.end);
-  if (_isOpaqueLine(tree, lines.lines[lines.lineIndexAt(point)])) {
+  if (_isOpaqueLine(tree, lines.lines[lines.lineIndexAt(point)]) ||
+      _isInsideLinkTarget(tree, point)) {
     return null;
   }
   return _emptyPairAt(state, format, point) ??
@@ -119,17 +126,21 @@ List<MdBlock> _blocksAround(MdTree tree, int start, int end) => <MdBlock>[
 
 MdInline? _innermostNode(
   MdTree tree,
-  MdInlineKind kind,
+  InlineFormat format,
   NoteSelection selection,
 ) {
+  final MdInlineKind kind = _kindOf(format);
   MdInline? found;
   for (final MdInline inline in _inlinesAround(
     tree,
     selection.start,
     selection.end,
   )) {
+    final bool isKind =
+        inline.kind == kind ||
+        (format == InlineFormat.link && inline.kind == MdInlineKind.autolink);
     final bool holds =
-        inline.kind == kind &&
+        isKind &&
         inline.sourceRange.start <= selection.start &&
         selection.end <= inline.sourceRange.end;
     if (holds &&
@@ -150,6 +161,20 @@ bool _isStrictlyInsideCodeSpan(MdTree tree, NoteSelection selection) {
     if (inline.kind == MdInlineKind.codeSpan &&
         inline.sourceRange.start < selection.start &&
         selection.end < inline.sourceRange.end) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _isInsideLinkTarget(MdTree tree, int offset) {
+  for (final MdInline inline in _inlinesAround(tree, offset, offset)) {
+    final MdRange? target = switch (inline.kind) {
+      MdInlineKind.link => inline.markerRanges.last,
+      MdInlineKind.autolink => inline.sourceRange,
+      _ => null,
+    };
+    if (target != null && target.start < offset && offset < target.end) {
       return true;
     }
   }
