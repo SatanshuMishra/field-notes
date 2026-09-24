@@ -139,91 +139,789 @@ typedef RowLayouter =
 double touchingGap(LayoutRow previous, LayoutRow next, double em) =>
     _gapBetween(previous.kind, previous.gapRole, next.kind, next.gapRole, em);
 
-List<LayoutRow> layoutRowsOf(LayoutInputs inputs) {
+final class LayoutRowPlan {
+  LayoutRowPlan._({
+    required this.inputs,
+    required List<LayoutRow> rows,
+    required List<int> firstLines,
+    required List<int?> reusedFrom,
+    required this.lineCount,
+  }) : rows = List<LayoutRow>.unmodifiable(rows),
+       firstLines = List<int>.unmodifiable(firstLines),
+       reusedFrom = List<int?>.unmodifiable(reusedFrom);
+
+  final LayoutInputs inputs;
+  final List<LayoutRow> rows;
+  final List<int> firstLines;
+  final List<int?> reusedFrom;
+  final int lineCount;
+}
+
+List<LayoutRow> layoutRowsOf(LayoutInputs inputs) =>
+    planLayoutRows(inputs).rows;
+
+LayoutRowPlan planLayoutRows(LayoutInputs inputs, {LayoutRowPlan? previous}) {
+  if (previous == null ||
+      previous.inputs.columnWidth != inputs.columnWidth ||
+      previous.inputs.textScaler != inputs.textScaler ||
+      previous.inputs.tree.blocks.isEmpty ||
+      inputs.tree.blocks.isEmpty) {
+    final _LineTable lines = _LineTable.scan(
+      inputs.source,
+      from: 0,
+      until: inputs.source.length + 1,
+      first: 0,
+    );
+    final _BuiltRows built = _buildRows(
+      inputs,
+      lines,
+      firstBlock: 0,
+      endBlock: inputs.tree.blocks.length,
+      previous: null,
+      firstIndex: 0,
+    );
+    return LayoutRowPlan._(
+      inputs: inputs,
+      rows: built.rows,
+      firstLines: built.firstLines,
+      reusedFrom: List<int?>.filled(built.rows.length, null),
+      lineCount: lines.count,
+    );
+  }
+  return _RowPlanner(previous, inputs).plan();
+}
+
+typedef _BuiltRows = ({List<LayoutRow> rows, List<int> firstLines});
+
+_BuiltRows _buildRows(
+  LayoutInputs inputs,
+  _LineTable lines, {
+  required int firstBlock,
+  required int endBlock,
+  required LayoutRow? previous,
+  required int firstIndex,
+}) {
   final MdTree tree = inputs.tree;
-  final MdSourceLines split = MdSourceLines.split(inputs.source);
-  final List<MdSourceLine> lines = split.lines;
   final double em = NoteTypography.emOf(inputs.textScaler);
-  final _SeedCollector collector = _SeedCollector(split);
-  for (int i = 0; i < tree.blocks.length; i++) {
+  final _SeedCollector collector = _SeedCollector(lines);
+  for (int i = firstBlock; i < endBlock; i++) {
     collector.visit(tree.blocks[i], i, const <MdBlock>[]);
   }
   final List<_Seed> seeds = collector.seeds();
-  final List<VisibleLine> visibleLines = inputs.visibleText.lines;
   final List<LayoutRow> rows = <LayoutRow>[];
-  List<MdBlock> previousChain = const <MdBlock>[];
+  final List<int> firstLines = <int>[];
+  LayoutRow? before = previous;
+  List<MdBlock> beforeChain = previous == null
+      ? const <MdBlock>[]
+      : _chainOf(tree, previous);
   int seedIndex = 0;
-  int visibleIndex = 0;
-  int line = 0;
-  while (line < lines.length) {
+  int line = lines.first;
+  while (line <= lines.last) {
     final _Seed seed =
         seedIndex < seeds.length && seeds[seedIndex].firstLine == line
         ? seeds[seedIndex++]
-        : _blankSeed(tree, lines[line]);
-    final int lastLine = math.max(line, seed.lastLine);
-    while (visibleIndex < visibleLines.length &&
-        visibleLines[visibleIndex].sourceLine < line) {
-      visibleIndex++;
-    }
-    final int firstVisible = visibleIndex;
-    while (visibleIndex < visibleLines.length &&
-        visibleLines[visibleIndex].sourceLine <= lastLine) {
-      visibleIndex++;
-    }
-    final TextRange visibleRange = _visibleRangeOf(
-      inputs.visibleText,
-      visibleLines.sublist(firstVisible, visibleIndex),
-      seed.sourceRange.start,
+        : _blankSeed(tree, lines.line(line));
+    final LayoutRow row = _rowOf(
+      inputs,
+      em,
+      lines,
+      seed,
+      index: firstIndex + rows.length,
+      previous: before,
+      previousChain: beforeChain,
     );
-    final int? activeLine = inputs.activeLine;
-    final int? activeLineInRow =
-        activeLine != null && activeLine >= line && activeLine <= lastLine
-        ? activeLine - line
-        : null;
-    final List<_Frame> frames = _framesOf(seed.chain, em, inputs.columnWidth);
-    final GapRole gapRole = seed.chain.any(_isListItem)
-        ? GapRole.listItem
-        : seed.block?.kind == MdBlockKind.heading
-        ? GapRole.heading
-        : GapRole.other;
-    final LayoutRow? previous = rows.isEmpty ? null : rows.last;
-    final double gapBefore = previous == null
-        ? 0
-        : _gapBetween(previous.kind, previous.gapRole, seed.kind, gapRole, em);
-    final int continuedQuoteLevels = previous == null
-        ? 0
-        : _sharedQuoteLevels(_quotesOf(previousChain), _quotesOf(seed.chain));
-    final int rowLineStart = lines[line].start;
-    final int rowLineEnd = lines[lastLine].end;
-    rows.add(
-      LayoutRow(
-        index: rows.length,
-        blockIndex: seed.blockIndex,
-        kind: seed.kind,
-        gapRole: gapRole,
-        block: seed.block,
-        sourceRange: seed.sourceRange,
-        visibleRange: visibleRange,
-        activeLineInRow: activeLineInRow,
-        gapBefore: gapBefore,
-        continuedQuoteLevels: continuedQuoteLevels,
-        layoutContext: _contextOf(
-          tree: tree,
-          seed: seed,
-          frames: frames,
-          em: em,
-          gapBefore: gapBefore,
-          continuedQuoteLevels: continuedQuoteLevels,
-          activeLineInRow: activeLineInRow,
-          rowLineStart: rowLineStart,
-          rowLineEnd: rowLineEnd,
-        ),
-      ),
-    );
-    previousChain = seed.chain;
-    line = lastLine + 1;
+    rows.add(row);
+    firstLines.add(line);
+    before = row;
+    beforeChain = seed.chain;
+    line = math.max(line, seed.lastLine) + 1;
   }
-  return List<LayoutRow>.unmodifiable(rows);
+  return (rows: rows, firstLines: firstLines);
+}
+
+LayoutRow _rowOf(
+  LayoutInputs inputs,
+  double em,
+  _LineTable lines,
+  _Seed seed, {
+  required int index,
+  required LayoutRow? previous,
+  required List<MdBlock> previousChain,
+}) {
+  final MdTree tree = inputs.tree;
+  final int line = seed.firstLine;
+  final int lastLine = math.max(line, seed.lastLine);
+  final TextRange visibleRange = _visibleRangeOf(
+    inputs.visibleText,
+    _visibleLinesOn(inputs.visibleText.lines, line, lastLine),
+    seed.sourceRange.start,
+  );
+  final int? activeLine = inputs.activeLine;
+  final int? activeLineInRow =
+      activeLine != null && activeLine >= line && activeLine <= lastLine
+      ? activeLine - line
+      : null;
+  final List<_Frame> frames = _framesOf(seed.chain, em, inputs.columnWidth);
+  final GapRole gapRole = _gapRoleOf(seed.chain, seed.block);
+  final double gapBefore = previous == null
+      ? 0
+      : _gapBetween(previous.kind, previous.gapRole, seed.kind, gapRole, em);
+  final int continuedQuoteLevels = previous == null
+      ? 0
+      : _sharedQuoteLevels(_quotesOf(previousChain), _quotesOf(seed.chain));
+  return LayoutRow(
+    index: index,
+    blockIndex: seed.blockIndex,
+    kind: seed.kind,
+    gapRole: gapRole,
+    block: seed.block,
+    sourceRange: seed.sourceRange,
+    visibleRange: visibleRange,
+    activeLineInRow: activeLineInRow,
+    gapBefore: gapBefore,
+    continuedQuoteLevels: continuedQuoteLevels,
+    layoutContext: _contextOf(
+      tree: tree,
+      seed: seed,
+      frames: frames,
+      em: em,
+      gapBefore: gapBefore,
+      continuedQuoteLevels: continuedQuoteLevels,
+      activeLineInRow: activeLineInRow,
+      rowLineStart: lines.line(line).start,
+      rowLineEnd: lines.line(lastLine).end,
+    ),
+  );
+}
+
+GapRole _gapRoleOf(List<MdBlock> chain, MdBlock? block) =>
+    chain.any(_isListItem)
+    ? GapRole.listItem
+    : block?.kind == MdBlockKind.heading
+    ? GapRole.heading
+    : GapRole.other;
+
+List<VisibleLine> _visibleLinesOn(
+  List<VisibleLine> lines,
+  int firstLine,
+  int lastLine,
+) {
+  int low = 0;
+  int high = lines.length;
+  while (low < high) {
+    final int mid = (low + high) >> 1;
+    if (lines[mid].sourceLine < firstLine) {
+      low = mid + 1;
+    } else {
+      high = mid;
+    }
+  }
+  int end = low;
+  while (end < lines.length && lines[end].sourceLine <= lastLine) {
+    end++;
+  }
+  return lines.sublist(low, end);
+}
+
+final class _LineTable {
+  _LineTable._(this.first, this._starts, this._ends, this._breakEnds);
+
+  factory _LineTable.scan(
+    String source, {
+    required int from,
+    required int until,
+    required int first,
+  }) {
+    final int length = source.length;
+    final List<int> starts = <int>[];
+    final List<int> ends = <int>[];
+    final List<int> breakEnds = <int>[];
+    int start = from;
+    while (start < until && start <= length) {
+      int end = start;
+      while (end < length && !_breaksAt(source, end)) {
+        end++;
+      }
+      starts.add(start);
+      ends.add(end);
+      if (end >= length) {
+        breakEnds.add(length);
+        break;
+      }
+      final int breakEnd =
+          end + (source.codeUnitAt(end) == _carriageReturn ? 2 : 1);
+      breakEnds.add(breakEnd);
+      start = breakEnd;
+    }
+    return _LineTable._(first, starts, ends, breakEnds);
+  }
+
+  final int first;
+  final List<int> _starts;
+  final List<int> _ends;
+  final List<int> _breakEnds;
+
+  int get count => _starts.length;
+
+  int get last => first + _starts.length - 1;
+
+  int indexAt(int offset) {
+    int low = 0;
+    int high = _starts.length - 1;
+    while (low < high) {
+      final int mid = (low + high + 1) >> 1;
+      if (_starts[mid] <= offset) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return first + low;
+  }
+
+  MdSourceLine line(int index) => MdSourceLine(
+    index: index,
+    start: _starts[index - first],
+    end: _ends[index - first],
+    breakEnd: _breakEnds[index - first],
+  );
+}
+
+bool _breaksAt(String source, int offset) {
+  final int unit = source.codeUnitAt(offset);
+  return unit == _lineFeed ||
+      unit == _carriageReturn &&
+          offset + 1 < source.length &&
+          source.codeUnitAt(offset + 1) == _lineFeed;
+}
+
+typedef _Run = ({
+  int firstGroup,
+  int endGroup,
+  int firstOldRow,
+  int endOldRow,
+  bool reusable,
+  int sourceDelta,
+  int lineDelta,
+  int blockDelta,
+});
+
+final class _RowPlanner {
+  _RowPlanner(this.previous, this.inputs)
+    : old = previous.inputs,
+      em = NoteTypography.emOf(inputs.textScaler);
+
+  final LayoutRowPlan previous;
+  final LayoutInputs inputs;
+  final LayoutInputs old;
+  final double em;
+  final List<LayoutRow> _rows = <LayoutRow>[];
+  final List<int> _firstLines = <int>[];
+  final List<int?> _reusedFrom = <int?>[];
+  int _nextLine = 0;
+
+  LayoutRowPlan plan() {
+    final String oldSource = old.source;
+    final String source = inputs.source;
+    final bool sameSource = oldSource == source;
+    final int prefix = sameSource
+        ? source.length
+        : _commonPrefix(oldSource, source);
+    final int suffix = sameSource
+        ? 0
+        : _commonSuffix(
+            oldSource,
+            source,
+            math.min(oldSource.length, source.length) - prefix,
+          );
+    final int delta = source.length - oldSource.length;
+    final int oldCount = old.tree.blocks.length;
+    final int count = inputs.tree.blocks.length;
+    final int shared = math.min(oldCount, count);
+    int kept = 0;
+    while (kept < shared && _keepsLeadingGroup(kept, prefix, sameSource)) {
+      kept++;
+    }
+    int tail = 0;
+    while (tail < shared - kept && _keepsTrailingGroup(tail, suffix, delta)) {
+      tail++;
+    }
+    final int windowEnd = count - tail;
+    final int oldWindowEnd = oldCount - tail;
+    final int firstOldRow = _firstOldRowOf(kept);
+    final int endOldRow = _firstOldRowOf(oldWindowEnd);
+    final int windowFirstLine = _oldFirstLine(firstOldRow);
+    final int windowLines = _LineTable.scan(
+      source,
+      from: _groupStart(inputs, kept),
+      until: _groupEnd(inputs, windowEnd - 1),
+      first: windowFirstLine,
+    ).count;
+    final int lineDelta =
+        windowFirstLine + windowLines - _oldFirstLine(endOldRow);
+    final int blockDelta = count - oldCount;
+    final Set<int> activeGroups = <int>{
+      ..._activeGroupOld(kept, oldWindowEnd, blockDelta),
+      ..._activeGroupNew(windowFirstLine, windowLines, lineDelta, blockDelta),
+    };
+    final List<_Run> runs = <_Run>[
+      ..._splitRuns(0, kept, activeGroups, 0, 0, 0),
+      (
+        firstGroup: kept,
+        endGroup: windowEnd,
+        firstOldRow: firstOldRow,
+        endOldRow: endOldRow,
+        reusable: false,
+        sourceDelta: delta,
+        lineDelta: lineDelta,
+        blockDelta: blockDelta,
+      ),
+      ..._splitRuns(
+        windowEnd,
+        count,
+        activeGroups,
+        delta,
+        lineDelta,
+        blockDelta,
+      ),
+    ];
+    for (final _Run run in runs) {
+      _place(run);
+    }
+    return LayoutRowPlan._(
+      inputs: inputs,
+      rows: _rows,
+      firstLines: _firstLines,
+      reusedFrom: _reusedFrom,
+      lineCount: _nextLine,
+    );
+  }
+
+  bool _keepsLeadingGroup(int group, int prefix, bool sameSource) {
+    final MdBlock before = old.tree.blocks[group];
+    final MdBlock after = inputs.tree.blocks[group];
+    if (before.kind != after.kind || before.sourceRange != after.sourceRange) {
+      return false;
+    }
+    final int end = _groupEnd(old, group);
+    return (sameSource || end <= prefix) && _groupEnd(inputs, group) == end;
+  }
+
+  bool _keepsTrailingGroup(int fromEnd, int suffix, int delta) {
+    final int oldGroup = old.tree.blocks.length - 1 - fromEnd;
+    final int group = inputs.tree.blocks.length - 1 - fromEnd;
+    final MdBlock before = old.tree.blocks[oldGroup];
+    final MdBlock after = inputs.tree.blocks[group];
+    if (before.kind != after.kind ||
+        after.sourceRange.start != before.sourceRange.start + delta ||
+        after.sourceRange.end != before.sourceRange.end + delta) {
+      return false;
+    }
+    final int start = _groupStart(old, oldGroup);
+    return start >= old.source.length - suffix &&
+        _groupStart(inputs, group) == start + delta;
+  }
+
+  Iterable<int> _activeGroupOld(int kept, int oldWindowEnd, int blockDelta) {
+    final int? line = old.activeLine;
+    if (line == null || previous.rows.isEmpty) {
+      return const <int>[];
+    }
+    final int group = previous.rows[_oldRowAtLine(line)].blockIndex;
+    return group < kept
+        ? <int>[group]
+        : group >= oldWindowEnd
+        ? <int>[group + blockDelta]
+        : const <int>[];
+  }
+
+  Iterable<int> _activeGroupNew(
+    int windowFirstLine,
+    int windowLines,
+    int lineDelta,
+    int blockDelta,
+  ) {
+    final int? line = inputs.activeLine;
+    if (line == null || previous.rows.isEmpty) {
+      return const <int>[];
+    }
+    if (line < windowFirstLine) {
+      return <int>[previous.rows[_oldRowAtLine(line)].blockIndex];
+    }
+    if (line >= windowFirstLine + windowLines) {
+      return <int>[
+        previous.rows[_oldRowAtLine(line - lineDelta)].blockIndex + blockDelta,
+      ];
+    }
+    return const <int>[];
+  }
+
+  List<_Run> _splitRuns(
+    int from,
+    int to,
+    Set<int> activeGroups,
+    int sourceDelta,
+    int lineDelta,
+    int blockDelta,
+  ) {
+    final List<int> cuts = <int>[
+      from,
+      for (final int group in activeGroups.toList()..sort())
+        if (group >= from && group < to) ...<int>[group, group + 1],
+      to,
+    ];
+    return <_Run>[
+      for (int i = 0; i + 1 < cuts.length; i++)
+        if (cuts[i + 1] > cuts[i])
+          (
+            firstGroup: cuts[i],
+            endGroup: cuts[i + 1],
+            firstOldRow: _firstOldRowOf(cuts[i] - blockDelta),
+            endOldRow: _firstOldRowOf(cuts[i + 1] - blockDelta),
+            reusable: !activeGroups.contains(cuts[i]),
+            sourceDelta: sourceDelta,
+            lineDelta: lineDelta,
+            blockDelta: blockDelta,
+          ),
+    ];
+  }
+
+  void _place(_Run run) {
+    if (!run.reusable || run.endGroup - run.firstGroup < 1) {
+      _rebuild(run);
+      return;
+    }
+    if (_reuse(run)) {
+      return;
+    }
+    if (run.endGroup - run.firstGroup == 1) {
+      _rebuild(run);
+      return;
+    }
+    for (int group = run.firstGroup; group < run.endGroup; group++) {
+      _place((
+        firstGroup: group,
+        endGroup: group + 1,
+        firstOldRow: _firstOldRowOf(group - run.blockDelta),
+        endOldRow: _firstOldRowOf(group + 1 - run.blockDelta),
+        reusable: true,
+        sourceDelta: run.sourceDelta,
+        lineDelta: run.lineDelta,
+        blockDelta: run.blockDelta,
+      ));
+    }
+  }
+
+  bool _reuse(_Run run) {
+    final int oldFirstGroup = run.firstGroup - run.blockDelta;
+    final int oldEndGroup = run.endGroup - run.blockDelta;
+    final int oldStart = _groupStart(old, oldFirstGroup);
+    final int oldVisibleStart = old.visibleText.map.sourceToVisible(oldStart);
+    final int oldVisibleEnd = oldEndGroup < old.tree.blocks.length
+        ? old.visibleText.map.sourceToVisible(_groupStart(old, oldEndGroup))
+        : old.visibleText.text.length;
+    final int visibleStart = inputs.visibleText.map.sourceToVisible(
+      _groupStart(inputs, run.firstGroup),
+    );
+    final int visibleEnd = run.endGroup < inputs.tree.blocks.length
+        ? inputs.visibleText.map.sourceToVisible(
+            _groupStart(inputs, run.endGroup),
+          )
+        : inputs.visibleText.text.length;
+    final int length = oldVisibleEnd - oldVisibleStart;
+    if (visibleEnd - visibleStart != length ||
+        !_sameText(
+          old.visibleText.text,
+          oldVisibleStart,
+          inputs.visibleText.text,
+          visibleStart,
+          length,
+        )) {
+      return false;
+    }
+    final int visibleDelta = visibleStart - oldVisibleStart;
+    final List<LayoutRow> moved = <LayoutRow>[];
+    for (int i = run.firstOldRow; i < run.endOldRow; i++) {
+      final LayoutRow? row = _moved(
+        previous.rows[i],
+        index: _rows.length + moved.length,
+        sourceDelta: run.sourceDelta,
+        visibleDelta: visibleDelta,
+        blockDelta: run.blockDelta,
+      );
+      if (row == null) {
+        return false;
+      }
+      moved.add(row);
+    }
+    if (moved.isNotEmpty && !_continuesFrom(moved.first)) {
+      return false;
+    }
+    for (int i = 0; i < moved.length; i++) {
+      _rows.add(moved[i]);
+      _firstLines.add(previous.firstLines[run.firstOldRow + i] + run.lineDelta);
+      _reusedFrom.add(run.firstOldRow + i);
+    }
+    _nextLine = _oldFirstLine(run.endOldRow) + run.lineDelta;
+    return true;
+  }
+
+  void _rebuild(_Run run) {
+    final _LineTable lines = _LineTable.scan(
+      inputs.source,
+      from: _groupStart(inputs, run.firstGroup),
+      until: _groupEnd(inputs, run.endGroup - 1),
+      first: _nextLine,
+    );
+    final _BuiltRows built = _buildRows(
+      inputs,
+      lines,
+      firstBlock: run.firstGroup,
+      endBlock: run.endGroup,
+      previous: _rows.isEmpty ? null : _rows.last,
+      firstIndex: _rows.length,
+    );
+    final List<LayoutRow> rows = built.rows;
+    final int oldLength = run.endOldRow - run.firstOldRow;
+    final int limit = math.min(oldLength, rows.length);
+    int front = 0;
+    while (front < limit &&
+        _sameContent(previous.rows[run.firstOldRow + front], rows[front])) {
+      front++;
+    }
+    int back = 0;
+    while (back < limit - front &&
+        _sameContent(
+          previous.rows[run.endOldRow - 1 - back],
+          rows[rows.length - 1 - back],
+        )) {
+      back++;
+    }
+    for (int i = 0; i < rows.length; i++) {
+      _rows.add(rows[i]);
+      _firstLines.add(built.firstLines[i]);
+      _reusedFrom.add(
+        i < front
+            ? run.firstOldRow + i
+            : i >= rows.length - back
+            ? run.endOldRow - (rows.length - i)
+            : null,
+      );
+    }
+    if (lines.count > 0) {
+      _nextLine = lines.last + 1;
+    }
+  }
+
+  LayoutRow? _moved(
+    LayoutRow row, {
+    required int index,
+    required int sourceDelta,
+    required int visibleDelta,
+    required int blockDelta,
+  }) {
+    final int blockIndex = row.blockIndex + blockDelta;
+    final MdBlock? block = row.block;
+    final List<MdBlock> blocks = inputs.tree.blocks;
+    final MdBlock? target = block == null || sourceDelta == 0
+        ? block
+        : blockIndex < 0 || blockIndex >= blocks.length
+        ? null
+        : _blockAt(
+            blocks[blockIndex],
+            block.kind,
+            block.sourceRange.start + sourceDelta,
+            block.sourceRange.end + sourceDelta,
+          );
+    if (block != null && target == null) {
+      return null;
+    }
+    if (index == row.index &&
+        blockIndex == row.blockIndex &&
+        sourceDelta == 0 &&
+        visibleDelta == 0) {
+      return row;
+    }
+    return LayoutRow(
+      index: index,
+      blockIndex: blockIndex,
+      kind: row.kind,
+      gapRole: row.gapRole,
+      block: target,
+      sourceRange: TextRange(
+        start: row.sourceRange.start + sourceDelta,
+        end: row.sourceRange.end + sourceDelta,
+      ),
+      visibleRange: TextRange(
+        start: row.visibleRange.start + visibleDelta,
+        end: row.visibleRange.end + visibleDelta,
+      ),
+      layoutContext: row.layoutContext,
+      activeLineInRow: row.activeLineInRow,
+      gapBefore: row.gapBefore,
+      continuedQuoteLevels: row.continuedQuoteLevels,
+    );
+  }
+
+  bool _continuesFrom(LayoutRow row) {
+    if (_rows.isEmpty) {
+      return row.gapBefore == 0 && row.continuedQuoteLevels == 0;
+    }
+    final LayoutRow before = _rows.last;
+    final MdTree tree = inputs.tree;
+    return row.gapBefore ==
+            _gapBetween(
+              before.kind,
+              before.gapRole,
+              row.kind,
+              row.gapRole,
+              em,
+            ) &&
+        row.continuedQuoteLevels ==
+            _sharedQuoteLevels(
+              _quotesOf(_chainOf(tree, before)),
+              _quotesOf(_chainOf(tree, row)),
+            );
+  }
+
+  bool _sameContent(LayoutRow before, LayoutRow after) {
+    final int sourceLength = before.sourceRange.end - before.sourceRange.start;
+    final int visibleLength =
+        before.visibleRange.end - before.visibleRange.start;
+    return before.kind == after.kind &&
+        sourceLength == after.sourceRange.end - after.sourceRange.start &&
+        visibleLength == after.visibleRange.end - after.visibleRange.start &&
+        before.layoutContext == after.layoutContext &&
+        _sameText(
+          old.source,
+          before.sourceRange.start,
+          inputs.source,
+          after.sourceRange.start,
+          sourceLength,
+        ) &&
+        _sameText(
+          old.visibleText.text,
+          before.visibleRange.start,
+          inputs.visibleText.text,
+          after.visibleRange.start,
+          visibleLength,
+        );
+  }
+
+  int _firstOldRowOf(int group) {
+    final List<LayoutRow> rows = previous.rows;
+    int low = 0;
+    int high = rows.length;
+    while (low < high) {
+      final int mid = (low + high) >> 1;
+      if (rows[mid].blockIndex < group) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    return low;
+  }
+
+  int _oldRowAtLine(int line) {
+    final List<int> lines = previous.firstLines;
+    int low = 0;
+    int high = lines.length - 1;
+    while (low < high) {
+      final int mid = (low + high + 1) >> 1;
+      if (lines[mid] <= line) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return low;
+  }
+
+  int _oldFirstLine(int row) => row < previous.firstLines.length
+      ? previous.firstLines[row]
+      : previous.lineCount;
+}
+
+int _groupStart(LayoutInputs inputs, int group) {
+  final List<MdBlock> blocks = inputs.tree.blocks;
+  if (group <= 0) {
+    return 0;
+  }
+  if (group >= blocks.length) {
+    return inputs.source.length + 1;
+  }
+  return _lineStartAt(inputs.source, blocks[group].sourceRange.start);
+}
+
+int _groupEnd(LayoutInputs inputs, int group) =>
+    _groupStart(inputs, math.max(0, group + 1));
+
+MdBlock? _blockAt(MdBlock top, MdBlockKind kind, int start, int end) {
+  MdBlock? node = top;
+  while (node != null) {
+    final MdBlock current = node;
+    if (current.kind == kind &&
+        current.sourceRange.start == start &&
+        current.sourceRange.end == end) {
+      return current;
+    }
+    node = _childCovering(current.blocks, start, end);
+  }
+  return null;
+}
+
+MdBlock? _childCovering(List<MdBlock> blocks, int start, int end) {
+  int low = 0;
+  int high = blocks.length - 1;
+  int found = -1;
+  while (low <= high) {
+    final int mid = (low + high) >> 1;
+    if (blocks[mid].sourceRange.start <= start) {
+      found = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  if (found < 0) {
+    return null;
+  }
+  final MdBlock child = blocks[found];
+  return child.sourceRange.end >= end ? child : null;
+}
+
+int _commonPrefix(String a, String b) {
+  final int limit = math.min(a.length, b.length);
+  int at = 0;
+  while (at < limit && a.codeUnitAt(at) == b.codeUnitAt(at)) {
+    at++;
+  }
+  return at;
+}
+
+int _commonSuffix(String a, String b, int limit) {
+  int at = 0;
+  while (at < limit &&
+      a.codeUnitAt(a.length - 1 - at) == b.codeUnitAt(b.length - 1 - at)) {
+    at++;
+  }
+  return at;
+}
+
+bool _sameText(String a, int aStart, String b, int bStart, int length) {
+  if (aStart < 0 ||
+      bStart < 0 ||
+      aStart + length > a.length ||
+      bStart + length > b.length) {
+    return false;
+  }
+  for (int i = 0; i < length; i++) {
+    if (a.codeUnitAt(aStart + i) != b.codeUnitAt(bStart + i)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 List<LaidOutRow> stackRows(LayoutInputs inputs, List<LayoutRow> rows) {
@@ -792,10 +1490,9 @@ _Seed _blankSeed(MdTree tree, MdSourceLine line) {
 }
 
 final class _SeedCollector {
-  _SeedCollector(this.split)
-    : covered = List<bool>.filled(split.lines.length, false);
+  _SeedCollector(this.lines) : covered = List<bool>.filled(lines.count, false);
 
-  final MdSourceLines split;
+  final _LineTable lines;
   final List<bool> covered;
   final List<_Seed> _leaves = <_Seed>[];
   final Map<int, _Seed> _markers = <int, _Seed>{};
@@ -831,8 +1528,9 @@ final class _SeedCollector {
           ...chain,
           block,
         ]);
-        final MdSourceLine line =
-            split.lines[split.lineIndexAt(block.sourceRange.start)];
+        final MdSourceLine line = lines.line(
+          lines.indexAt(block.sourceRange.start),
+        );
         _markers[line.index] = _Seed(
           firstLine: line.index,
           lastLine: line.index,
@@ -858,10 +1556,10 @@ final class _SeedCollector {
     List<MdBlock> chain,
     LayoutRowKind kind,
   ) {
-    final int first = split.lineIndexAt(block.sourceRange.start);
-    final int last = math.max(first, split.lineIndexAt(block.sourceRange.end));
+    final int first = lines.indexAt(block.sourceRange.start);
+    final int last = math.max(first, lines.indexAt(block.sourceRange.end));
     for (int line = first; line <= last; line++) {
-      covered[line] = true;
+      covered[line - lines.first] = true;
     }
     _leaves.add(
       _Seed(
@@ -883,7 +1581,7 @@ final class _SeedCollector {
     final List<_Seed> all = <_Seed>[
       ..._leaves,
       for (final _Seed marker in _markers.values)
-        if (!covered[marker.firstLine]) marker,
+        if (!covered[marker.firstLine - lines.first]) marker,
     ]..sort((_Seed a, _Seed b) => a.firstLine.compareTo(b.firstLine));
     final List<_Seed> ordered = <_Seed>[];
     int next = 0;

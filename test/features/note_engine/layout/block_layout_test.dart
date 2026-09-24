@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -31,6 +32,27 @@ LayoutInputs _inputs(
     mediaDimensions: const <String, Size>{},
   );
 }
+
+LayoutInputs _treeInputs(String source, MdTree tree, int? activeLine) =>
+    LayoutInputs(
+      source: source,
+      tree: tree,
+      visibleText: const NoteVisibleProjector().project(
+        source,
+        tree,
+        activeLine,
+      ),
+      activeLine: activeLine,
+      columnWidth: 688,
+      textScaler: TextScaler.noScaling,
+      boldText: false,
+      locale: const ui.Locale('en', 'US'),
+      readerMode: false,
+      mediaDimensions: const <String, Size>{},
+    );
+
+String _textIn(String text, TextRange range) =>
+    text.substring(range.start, range.end);
 
 List<LaidOutRow> _stack(LayoutInputs inputs) =>
     stackRows(inputs, layoutRowsOf(inputs));
@@ -758,6 +780,147 @@ void main() {
         ),
         throwsArgumentError,
       );
+    }
+  });
+
+  test('a planned relayout equals a fresh plan across random edits', () {
+    final math.Random random = math.Random(20260924);
+    const List<String> snippets = <String>[
+      'x',
+      ' word',
+      '\n',
+      '\n\n',
+      '# ',
+      '## ',
+      '- ',
+      '  - ',
+      '1. ',
+      '> ',
+      '```',
+      '---',
+      '**',
+      '==',
+      '[link](https://x.y)',
+      '| a | b |\n| - | - |\n| c | d |',
+      '![](photo/a1b2c3d4e5f6 "left medium")',
+      '- [ ] ',
+      '\r\n',
+      '    ',
+    ];
+    String source = <String>[
+      '# Harbour day',
+      '',
+      'The **fog** lifted at noon.',
+      '- one',
+      '- two',
+      '  - nested',
+      '',
+      '> quoted',
+      '> more',
+      '',
+      '```',
+      'let x',
+      '```',
+      '---',
+      '| a | b |',
+      '| - | - |',
+      '| c | d |',
+      '',
+      '![](photo/a1b2c3d4e5f6 "right medium")',
+      'After the photo',
+      '',
+      '1. first',
+      '2. second',
+    ].join('\n');
+    MdTree tree = parseNoteTree(source);
+    LayoutRowPlan plan = planLayoutRows(_treeInputs(source, tree, 2));
+    int reused = 0;
+    for (int step = 0; step < 400; step++) {
+      final int action = random.nextInt(10);
+      final int at = random.nextInt(source.length + 1);
+      final MdEdit edit = action < 6
+          ? MdEdit(
+              start: at,
+              end: at,
+              inserted: snippets[random.nextInt(snippets.length)],
+            )
+          : action < 8
+          ? MdEdit(
+              start: math.min(at, source.length),
+              end: math.min(source.length, at + 1 + random.nextInt(6)),
+              inserted: '',
+            )
+          : MdEdit(start: at, end: at, inserted: '');
+      final String next =
+          source.substring(0, edit.start) +
+          edit.inserted +
+          source.substring(edit.end);
+      final MdTree nextTree = next == source
+          ? tree
+          : step.isEven
+          ? const MdIncrementalParser().reparse(tree, source, next, edit).tree
+          : parseNoteTree(next);
+      final int lines = '\n'.allMatches(next).length + 1;
+      final int? activeLine = random.nextInt(5) == 0
+          ? null
+          : random.nextInt(lines);
+      final LayoutInputs inputs = _treeInputs(next, nextTree, activeLine);
+      final LayoutRowPlan planned = planLayoutRows(inputs, previous: plan);
+      final LayoutRowPlan fresh = planLayoutRows(inputs);
+      expect(planned.rows, fresh.rows, reason: 'step $step');
+      expect(planned.firstLines, fresh.firstLines, reason: 'step $step');
+      expect(planned.lineCount, fresh.lineCount, reason: 'step $step');
+      for (int i = 0; i < planned.rows.length; i++) {
+        final int? from = planned.reusedFrom[i];
+        if (from == null) {
+          continue;
+        }
+        reused++;
+        final LayoutRow before = plan.rows[from];
+        final LayoutRow after = planned.rows[i];
+        expect(after.kind, before.kind, reason: 'step $step row $i');
+        expect(after.layoutContext, before.layoutContext);
+        expect(
+          _textIn(next, after.sourceRange),
+          _textIn(source, before.sourceRange),
+          reason: 'step $step row $i',
+        );
+        expect(
+          _textIn(inputs.visibleText.text, after.visibleRange),
+          _textIn(plan.inputs.visibleText.text, before.visibleRange),
+          reason: 'step $step row $i',
+        );
+      }
+      source = next;
+      tree = nextTree;
+      plan = planned;
+    }
+    expect(reused, greaterThan(2000));
+
+    for (final (String before, String after) in <(String, String)>[
+      ('a\n\nb', 'a\n\n```'),
+      ('a\n\n```', 'a\n\nb'),
+    ]) {
+      final LayoutInputs first = _treeInputs(
+        before,
+        parseNoteTree(before),
+        null,
+      );
+      final LayoutInputs second = _treeInputs(
+        after,
+        parseNoteTree(after),
+        null,
+      );
+      expect(
+        first.visibleText.text.startsWith('a\n\n'),
+        isNot(second.visibleText.text.startsWith('a\n\n')),
+      );
+      final LayoutRowPlan planned = planLayoutRows(
+        second,
+        previous: planLayoutRows(first),
+      );
+      expect(planned.rows, planLayoutRows(second).rows, reason: after);
+      expect(planned.reusedFrom.first, 0, reason: after);
     }
   });
 
