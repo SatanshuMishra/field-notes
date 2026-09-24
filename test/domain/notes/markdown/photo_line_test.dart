@@ -57,10 +57,16 @@ void main() {
         'photoLine 2-26',
         'paragraph 27-28',
       ]);
-      final List<MdBlock> table = _parser.parse('| a |\n| - |\n| b |\n$_p');
-      expect(table.last.kind, MdBlockKind.photoLine);
-      expect(table.last.sourceRange, const MdRange(18, 42));
-      expect(table[table.length - 2].sourceRange.end, 17);
+      expect(_topLevel('| a |\n| - |\n| b |\n$_p'), <String>[
+        'table 0-17',
+        'photoLine 18-42',
+      ]);
+      final MdBlock table = _parser.parse('| a |\n| - |\n| b |\n$_p').first;
+      expect(table.blocks.map((MdBlock row) => row.kind), <MdBlockKind>[
+        MdBlockKind.tableRow,
+        MdBlockKind.tableRow,
+      ]);
+      expect(table.blocks.last.sourceRange, const MdRange(12, 17));
     },
   );
 

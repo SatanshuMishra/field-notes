@@ -22,6 +22,7 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<bool> soundEnabledWrites = <bool>[];
   final List<TextSize> textSizeWrites = <TextSize>[];
   final List<WeekStart> weekStartWrites = <WeekStart>[];
+  final List<bool> spellCheckEnabledWrites = <bool>[];
 
   void emit(AppSettings settings) => _settings.add(settings);
 
@@ -62,6 +63,12 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<void> setWeekStart(WeekStart value) async {
     _failIfConfigured();
     weekStartWrites.add(value);
+  }
+
+  @override
+  Future<void> setSpellCheckEnabled(bool value) async {
+    _failIfConfigured();
+    spellCheckEnabledWrites.add(value);
   }
 
   void _failIfConfigured() {
