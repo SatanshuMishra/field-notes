@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
@@ -9,6 +10,8 @@ import 'package:field_notes/features/note_engine/layout/float_flow.dart';
 import 'package:field_notes/features/note_engine/layout/line_fragments.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout_engine.dart';
+import 'package:field_notes/features/note_engine/layout/table_layout.dart';
+import 'package:field_notes/features/note_engine/layout/vertical_motion.dart';
 import 'package:field_notes/features/note_engine/projection/atomic_objects.dart';
 import 'package:field_notes/features/note_engine/projection/visible_text.dart';
 import 'package:flutter/painting.dart';
@@ -90,6 +93,140 @@ void _expectRectClose(Rect actual, Rect expected, double tolerance) {
   expect(actual.top, closeTo(expected.top, tolerance), reason: '$actual');
   expect(actual.right, closeTo(expected.right, tolerance), reason: '$actual');
   expect(actual.bottom, closeTo(expected.bottom, tolerance), reason: '$actual');
+}
+
+LayoutInputs _treeInputs(
+  String source,
+  MdTree tree, {
+  int? activeLine,
+  int? activeCell,
+}) => LayoutInputs(
+  source: source,
+  tree: tree,
+  visibleText: const NoteVisibleProjector().project(
+    source,
+    tree,
+    activeLine,
+    activeCell: activeCell,
+  ),
+  activeLine: activeLine,
+  columnWidth: 688,
+  textScaler: TextScaler.noScaling,
+  boldText: false,
+  locale: const ui.Locale('en', 'US'),
+  readerMode: false,
+  mediaDimensions: _threeTwo,
+);
+
+LaidOutRow _routeRow(
+  LayoutInputs inputs,
+  LayoutRow row,
+  RowRegion region, {
+  int? visibleFrom,
+  int? visibleTo,
+}) => row.kind == LayoutRowKind.table
+    ? layoutTableRow(
+        inputs,
+        row,
+        region,
+        visibleFrom: visibleFrom,
+        visibleTo: visibleTo,
+      )
+    : layoutRow(
+        inputs,
+        row,
+        region,
+        visibleFrom: visibleFrom,
+        visibleTo: visibleTo,
+      );
+
+void _expectSameGeometry(NoteFlow actual, NoteFlow expected, String reason) {
+  expect(actual.rows.length, expected.rows.length, reason: reason);
+  expect(actual.height, closeTo(expected.height, 0.01), reason: reason);
+  for (int i = 0; i < expected.rows.length; i++) {
+    final LaidOutRow a = actual.rows[i];
+    final LaidOutRow e = expected.rows[i];
+    final String at = '$reason, row $i';
+    expect(a.row, e.row, reason: at);
+    expect(a.top, closeTo(e.top, 0.01), reason: at);
+    expect(a.bottom, closeTo(e.bottom, 0.01), reason: at);
+    expect(a.contentWidth, closeTo(e.contentWidth, 0.01), reason: at);
+    expect(a.styleRuns, e.styleRuns, reason: at);
+    expect(a.decorations.length, e.decorations.length, reason: at);
+    for (int d = 0; d < e.decorations.length; d++) {
+      expect(a.decorations[d].kind, e.decorations[d].kind, reason: at);
+      _expectRectClose(a.decorations[d].rect, e.decorations[d].rect, 0.01);
+    }
+    expect(a.fragments.length, e.fragments.length, reason: at);
+    for (int f = 0; f < e.fragments.length; f++) {
+      final LineFragment x = a.fragments[f];
+      final LineFragment y = e.fragments[f];
+      expect(x.kind, y.kind, reason: at);
+      expect(x.rowIndex, y.rowIndex, reason: at);
+      expect(x.visibleRange, y.visibleRange, reason: at);
+      expect(x.besideFloat, y.besideFloat, reason: at);
+      expect(x.tableColumn, y.tableColumn, reason: at);
+      _expectRectClose(x.rect, y.rect, 0.01);
+      expect(x.lines.length, y.lines.length, reason: at);
+      for (int l = 0; l < y.lines.length; l++) {
+        expect(x.lines[l].visibleRange, y.lines[l].visibleRange, reason: at);
+        _expectRectClose(x.lines[l].box, y.lines[l].box, 0.01);
+      }
+    }
+  }
+  expect(actual.photos.length, expected.photos.length, reason: reason);
+  for (int i = 0; i < expected.photos.length; i++) {
+    expect(actual.photos[i].reference, expected.photos[i].reference);
+    expect(actual.photos[i].occurrence, expected.photos[i].occurrence);
+    expect(actual.photos[i].sourceRange, expected.photos[i].sourceRange);
+    _expectRectClose(
+      actual.photos[i].figureRect,
+      expected.photos[i].figureRect,
+      0.01,
+    );
+  }
+}
+
+String _longNote() {
+  const List<String> sides = <String>['left', 'right', 'centre'];
+  const List<String> sizes = <String>['small', 'medium', 'large'];
+  final List<String> blocks = <String>[];
+  int photos = 0;
+  for (int n = 0; blocks.join('\n\n').length < 50000; n++) {
+    blocks.add(switch (n % 12) {
+      0 => '# Heading $n',
+      1 =>
+        'The **fog** lifted at noon and the ==peaches== were cheap near '
+            'harbour $n with a [link](https://x.y/$n) and more words.',
+      2 => '- item $n one\n- item $n two\n  - nested $n',
+      3 => '> quoted words $n about the harbour and the sea',
+      4 => '```\nlet x$n = 1;\nprint(x$n);\n```',
+      5 => '---',
+      6 when photos < 24 =>
+        '![](photo/a1b2c3d4e5f6 "${sides[photos % 3]} '
+            '${sizes[photos++ % 3]}")',
+      7 => '1. first $n\n2. second $n',
+      8 => '- [ ] task $n\n- [x] done $n',
+      9 => '## Sub heading $n',
+      _ =>
+        'Plain paragraph $n with several words in it that wrap around the '
+            'column when long enough to need it.',
+    });
+  }
+  return blocks.join('\n\n');
+}
+
+double _fastestMillis(List<void Function()> runs) {
+  final List<int> micros = <int>[
+    for (final void Function() run in runs) _timed(run),
+  ]..sort();
+  return micros.first / 1000;
+}
+
+int _timed(void Function() run) {
+  final Stopwatch watch = Stopwatch()..start();
+  run();
+  return watch.elapsedMicroseconds;
 }
 
 final class _CountingResolver implements MediaResolver {
@@ -389,6 +526,73 @@ void main() {
     expect(layout.size, Size(688, note.flow.height));
   });
 
+  test('an empty or unclosed fence off the active line answers queries', () {
+    for (final String source in <String>[
+      '```',
+      '```\n```',
+      'a\n```',
+      '```\n```\nb',
+      'a\n```\n```\nb',
+    ]) {
+      for (final bool readerMode in <bool>[true, false]) {
+        final LaidOutNote note = NoteLayoutEngine().layout(
+          _inputs(source, readerMode: readerMode),
+        );
+        for (int position = 0; position <= source.length; position++) {
+          for (final TextAffinity affinity in TextAffinity.values) {
+            expect(note.caretRect(position, affinity).height, greaterThan(0));
+            expect(
+              note.lineBoxAt(position, affinity).rect.height,
+              greaterThan(0),
+            );
+          }
+          final MdRange word = note.wordBoundary(position);
+          expect(word.start, inInclusiveRange(0, word.end));
+          expect(word.end, inInclusiveRange(word.start, source.length));
+          expect(
+            note
+                .selectionEndpoints(NoteSelection(anchor: 0, head: position))
+                .endLineHeight,
+            greaterThan(0),
+          );
+        }
+        final TextPosition hit = note.positionAt(const Offset(20, 10));
+        final MdRange word = note.wordBoundary(hit.offset);
+        expect(word.end, inInclusiveRange(word.start, source.length));
+      }
+    }
+
+    final LaidOutNote fence = NoteLayoutEngine().layout(
+      _inputs('```', readerMode: true),
+    );
+    final Rect caret = fence.caretRect(0, TextAffinity.downstream);
+    expect(caret.left, closeTo(12, 0.01));
+    expect(caret.top, greaterThanOrEqualTo(12 - 0.01));
+    expect(caret.bottom, lessThanOrEqualTo(fence.size.height - 12 + 0.01));
+
+    for (final (String source, int position) in <(String, int)>[
+      ('a\n```', 1),
+      ('```\n```\nb', 8),
+      ('a\n```\n```\nb', 10),
+    ]) {
+      final LaidOutNote note = NoteLayoutEngine().layout(
+        _inputs(source, readerMode: true),
+      );
+      final LineFragment text = note.flow.fragments.lastWhere(
+        (LineFragment fragment) =>
+            fragment.kind == FragmentKind.text &&
+            note.flow.rows[fragment.rowIndex].row.kind == LayoutRowKind.text,
+      );
+      for (final TextAffinity affinity in TextAffinity.values) {
+        expect(
+          note.caretRect(position, affinity).top,
+          closeTo(text.lines.single.top, 0.01),
+          reason: '$source at $position, ${affinity.name}',
+        );
+      }
+    }
+  });
+
   test('vertical targets leave the relaid blocks alone', () {
     final String source = 'Top line\n${_harbours(60)}';
     final NoteLayoutEngine engine = NoteLayoutEngine();
@@ -483,6 +687,145 @@ void main() {
         0.01,
       );
     }
+  });
+
+  test('an incremental layout equals a fresh one across random edits', () {
+    final math.Random random = math.Random(20260925);
+    const List<String> snippets = <String>[
+      'x',
+      ' harbour words',
+      '\n',
+      '\n\n',
+      '# ',
+      '- ',
+      '  - ',
+      '> ',
+      '```',
+      '---',
+      '**',
+      '| a | b |\n| - | - |\n| c | d |',
+      '![](photo/a1b2c3d4e5f6 "left medium")',
+      '![](photo/a1b2c3d4e5f6 "right small")',
+    ];
+    String source = <String>[
+      '# Harbour day',
+      _harbours(30),
+      '![](photo/a1b2c3d4e5f6 "right medium")',
+      '## Route',
+      '- one ${_harbours(8)}',
+      '- two',
+      _harbours(40),
+      '> quoted',
+      '```\nlet x\n```',
+      '| a | b |\n| - | - |\n| c | d |',
+      '![](photo/a1b2c3d4e5f6 "left small")',
+      _harbours(50),
+    ].join('\n\n');
+    MdTree tree = parseNoteTree(source);
+    final NoteLayoutEngine engine = NoteLayoutEngine();
+    engine.layout(_treeInputs(source, tree, activeLine: 1));
+    for (int step = 0; step < 120; step++) {
+      final int action = random.nextInt(10);
+      final int at = random.nextInt(source.length + 1);
+      final MdEdit edit = action < 6
+          ? MdEdit(
+              start: at,
+              end: at,
+              inserted: snippets[random.nextInt(snippets.length)],
+            )
+          : action < 8
+          ? MdEdit(
+              start: math.min(at, source.length),
+              end: math.min(source.length, at + 1 + random.nextInt(8)),
+              inserted: '',
+            )
+          : MdEdit(start: at, end: at, inserted: '');
+      final String next =
+          source.substring(0, edit.start) +
+          edit.inserted +
+          source.substring(edit.end);
+      final MdTree nextTree = next == source
+          ? tree
+          : const MdIncrementalParser().reparse(tree, source, next, edit).tree;
+      final int lines = '\n'.allMatches(next).length + 1;
+      final int? activeLine = random.nextInt(5) == 0
+          ? null
+          : random.nextInt(lines);
+      final LayoutInputs inputs = _treeInputs(
+        next,
+        nextTree,
+        activeLine: activeLine,
+      );
+      final LaidOutNote note = engine.layout(inputs);
+      final NoteFlow fresh = flowNote(inputs, rowLayouter: _routeRow);
+      _expectSameGeometry(note.flow, fresh, 'step $step');
+      final int position = random.nextInt(next.length + 1);
+      final double goalX = random.nextDouble() * 688;
+      for (final VerticalMove direction in VerticalMove.values) {
+        final TextPosition moved = note.verticalTarget(
+          position,
+          TextAffinity.downstream,
+          goalX,
+          direction,
+        );
+        final TextPosition expected = findVerticalTarget(
+          flow: fresh,
+          position: position,
+          affinity: TextAffinity.downstream,
+          goalX: goalX,
+          direction: direction,
+          layoutWithActive: (int line, {int? activeCell}) => flowNote(
+            _treeInputs(
+              next,
+              nextTree,
+              activeLine: line,
+              activeCell: activeCell,
+            ),
+            rowLayouter: _routeRow,
+          ),
+        );
+        expect(moved, expected, reason: 'step $step, ${direction.name}');
+      }
+      source = next;
+      tree = nextTree;
+    }
+  });
+
+  test('relaying out fifty thousand units fits inside half the keystroke '
+      'budget', () {
+    final String source = _longNote();
+    expect(source.length, greaterThanOrEqualTo(50000));
+    final int line = '\n'.allMatches(source.substring(0, 25000)).length;
+    final int at = source.indexOf('Plain paragraph', 25000) + 6;
+    final NoteLayoutEngine engine = NoteLayoutEngine();
+    final MdTree tree = parseNoteTree(source);
+    engine.layout(_treeInputs(source, tree, activeLine: line));
+    final List<LayoutInputs> repeats = <LayoutInputs>[
+      for (int i = 0; i < 15; i++) _treeInputs(source, tree, activeLine: line),
+    ];
+    final double allHit = _fastestMillis(<void Function()>[
+      for (final LayoutInputs inputs in repeats) () => engine.layout(inputs),
+    ]);
+    expect(engine.lastRelaidBlocks, isEmpty);
+    final List<LayoutInputs> typed = <LayoutInputs>[];
+    String current = source;
+    MdTree currentTree = tree;
+    for (int i = 0; i < 15; i++) {
+      final MdEdit edit = MdEdit(start: at + i, end: at + i, inserted: 'x');
+      final String next =
+          '${current.substring(0, at + i)}x${current.substring(at + i)}';
+      currentTree = const MdIncrementalParser()
+          .reparse(currentTree, current, next, edit)
+          .tree;
+      current = next;
+      typed.add(_treeInputs(current, currentTree, activeLine: line));
+    }
+    final double typing = _fastestMillis(<void Function()>[
+      for (final LayoutInputs inputs in typed) () => engine.layout(inputs),
+    ]);
+    expect(engine.lastRelaidBlocks, hasLength(1));
+    expect(allHit, lessThan(2), reason: 'fastest all-hit $allHit ms');
+    expect(typing, lessThan(2), reason: 'fastest keystroke $typing ms');
   });
 
   test('a table is routed to the table layout', () {
