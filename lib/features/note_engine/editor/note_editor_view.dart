@@ -607,16 +607,35 @@ class NoteEditorViewState extends State<NoteEditorView>
   }
 
   void _refreshActiveLine() {
-    final EditorState state = _state;
-    _activeLine = nextActiveLine(
+    _activeLine = _activeLineFor(_state);
+  }
+
+  ActiveLine? _activeLineFor(EditorState state) {
+    final bool composing = _composition.isActive || state.composing != null;
+    final bool frozen = composing || _dragging;
+    final ActiveLine? line = nextActiveLine(
       previous: _activeLine,
       source: state.source,
       tree: state.tree,
       selection: state.selection,
       focused: widget.focusNode.hasFocus,
-      composing: _composition.isActive || state.composing != null,
+      composing: composing,
       dragging: _dragging,
     );
+    if (line == null || !frozen || _hasLine(state.source, line.line)) {
+      return line;
+    }
+    return activeLineAt(state.source, state.tree, state.selection);
+  }
+
+  static bool _hasLine(String source, int line) {
+    int breaks = 0;
+    for (int at = 0; at < source.length && breaks < line; at++) {
+      if (source.codeUnitAt(at) == _lineFeed) {
+        breaks += 1;
+      }
+    }
+    return breaks >= line;
   }
 
   void _refreshActiveLineAndSend() {
@@ -645,7 +664,7 @@ class NoteEditorViewState extends State<NoteEditorView>
         identical(state.tree, current.tree)) {
       return _visible;
     }
-    final ActiveLine? line = _activeLine;
+    final ActiveLine? line = _activeLineFor(state);
     final _Projection? cached = _scratch;
     if (cached != null && cached.matches(state, line)) {
       return cached.visible;

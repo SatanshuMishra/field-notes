@@ -175,6 +175,92 @@ void main() {
     expect(editor.controller.selection, const TextSelection.collapsed(offset: 11));
   });
 
+  testWidgets('typing over a selection that spans lines replaces it', (
+    WidgetTester tester,
+  ) async {
+    final _Editor editor = await _pump(tester, 'one\ntwo\nthree');
+    await _focus(tester, editor);
+    await _select(
+      tester,
+      editor,
+      const TextSelection(baseOffset: 1, extentOffset: 13),
+    );
+
+    await sendDeltas(tester, <Map<String, Object?>>[
+      replacementDelta(
+        oldText: _lastSentText(tester),
+        range: const TextRange(start: 1, end: 13),
+        text: 'x',
+      ),
+    ]);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(editor.controller.text, 'ox');
+    expect(
+      editor.controller.selection,
+      const TextSelection.collapsed(offset: 2),
+    );
+    expect(_viewState(tester).debugInputDrops, isEmpty);
+  });
+
+  testWidgets('a composition over a selection that spans lines replaces it', (
+    WidgetTester tester,
+  ) async {
+    final _Editor editor = await _pump(tester, 'one\ntwo\nthree');
+    await _focus(tester, editor);
+    await _select(
+      tester,
+      editor,
+      const TextSelection(baseOffset: 1, extentOffset: 13),
+    );
+
+    await sendDeltas(tester, <Map<String, Object?>>[
+      replacementDelta(
+        oldText: _lastSentText(tester),
+        range: const TextRange(start: 1, end: 13),
+        text: 'k',
+        composing: const TextRange(start: 1, end: 2),
+      ),
+    ]);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(editor.controller.text, 'ok');
+    expect(
+      editor.controller.value.composing,
+      const TextRange(start: 1, end: 2),
+    );
+    expect(_viewState(tester).debugInputDrops, isEmpty);
+  });
+
+  testWidgets('a structure change mid-batch rebases the next delta', (
+    WidgetTester tester,
+  ) async {
+    final _Editor editor = await _pump(tester, '# a\nb');
+    await _focus(tester, editor);
+    await _select(tester, editor, const TextSelection.collapsed(offset: 5));
+    expect(_lastSentText(tester), 'a\nb');
+
+    await sendDeltas(tester, <Map<String, Object?>>[
+      deletionDelta(
+        oldText: 'a\nb',
+        range: const TextRange(start: 1, end: 2),
+        selection: const TextSelection.collapsed(offset: 2),
+      ),
+      insertionDelta(oldText: 'ab', at: 2, text: 'c'),
+    ]);
+    await tester.pump();
+
+    expect(tester.takeException(), isNull);
+    expect(editor.controller.text, '# abc');
+    expect(
+      editor.controller.selection,
+      const TextSelection.collapsed(offset: 5),
+    );
+    expect(_viewState(tester).debugInputDrops, isEmpty);
+  });
+
   testWidgets('clicking a photo selects its line', (WidgetTester tester) async {
     final _Editor editor = await _pump(tester, _lowTideNote);
     final Offset centre = tester.getCenter(
