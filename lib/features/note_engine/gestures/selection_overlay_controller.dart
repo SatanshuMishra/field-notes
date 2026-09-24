@@ -23,6 +23,18 @@ final class _Geometry {
   final List<TextSelectionPoint> endpoints;
 }
 
+final class _HandleDrag {
+  const _HandleDrag({
+    required this.fixed,
+    required this.collapsed,
+    required this.target,
+  });
+
+  final int fixed;
+  final bool collapsed;
+  final double target;
+}
+
 TextSelectionControls _platformHandleControls() {
   switch (defaultTargetPlatform) {
     case TargetPlatform.android:
@@ -70,8 +82,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
   SelectionOverlay? _overlay;
   bool _handlesShown = false;
   bool _disposed = false;
-  int? _dragFixed;
-  double _dragTarget = 0;
+  _HandleDrag? _drag;
 
   RenderNoteView? get _view {
     final RenderObject? object = _renderKey.currentContext?.findRenderObject();
@@ -357,8 +368,11 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     final double centre = view
         .localToGlobal(Offset(local.dx, local.dy - lineHeight / 2))
         .dy;
-    _dragFixed = start ? selection.end : selection.start;
-    _dragTarget = centre - details.globalPosition.dy;
+    _drag = _HandleDrag(
+      fixed: start ? selection.end : selection.start,
+      collapsed: selection.isCollapsed,
+      target: centre - details.globalPosition.dy,
+    );
     _onDragActiveChanged(true);
     _showMagnifierAt(
       details.globalPosition,
@@ -366,37 +380,43 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     );
   }
 
+  NoteSelection? _draggedSelection(_HandleDrag drag, TextPosition hit) {
+    if (drag.collapsed) {
+      return NoteSelection.collapsed(hit.offset, affinity: hit.affinity);
+    }
+    final NoteSelection next = NoteSelection(
+      anchor: drag.fixed,
+      head: hit.offset,
+      affinity: hit.affinity,
+    );
+    return next.isCollapsed ? null : next;
+  }
+
   void _handleDragUpdate(DragUpdateDetails details) {
     final RenderNoteView? view = _view;
-    final int? fixed = _dragFixed;
-    if (view == null || fixed == null) {
+    final _HandleDrag? drag = _drag;
+    if (view == null || drag == null) {
       return;
     }
     final Offset target = Offset(
       details.globalPosition.dx,
-      details.globalPosition.dy + _dragTarget,
+      details.globalPosition.dy + drag.target,
     );
     final TextPosition hit = view.noteLayout.positionAt(
       view.globalToContent(target),
     );
-    final NoteSelection next = NoteSelection(
-      anchor: fixed,
-      head: hit.offset,
-      affinity: hit.affinity,
-    );
-    if (next.isCollapsed || next == view.selection) {
-      _updateMagnifierAt(details.globalPosition, target);
-      return;
+    final NoteSelection? next = _draggedSelection(drag, hit);
+    if (next != null && next != view.selection) {
+      _onSelectionChanged(next, SelectionChangedCause.drag);
     }
-    _onSelectionChanged(next, SelectionChangedCause.drag);
     _updateMagnifierAt(details.globalPosition, target);
   }
 
   void _handleDragEnd(DragEndDetails details) {
-    if (_dragFixed == null) {
+    if (_drag == null) {
       return;
     }
-    _dragFixed = null;
+    _drag = null;
     hideMagnifier();
     _onDragActiveChanged(false);
   }
@@ -516,7 +536,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     _overlay?.dispose();
     _overlay = null;
     _handlesShown = false;
-    _dragFixed = null;
+    _drag = null;
     _hidden.dispose();
   }
 }

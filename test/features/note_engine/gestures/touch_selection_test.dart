@@ -307,6 +307,32 @@ Future<void> _longPress(WidgetTester tester, Offset point) async {
   await tester.pump();
 }
 
+Future<void> _dragBy(
+  WidgetTester tester,
+  Offset from,
+  Offset by, {
+  int steps = 8,
+}) async {
+  final TestGesture gesture = await tester.startGesture(
+    from,
+    kind: PointerDeviceKind.touch,
+  );
+  await tester.pump();
+  final Offset slop = Offset(
+    by.dx == 0 ? 0 : (kTouchSlop + 2) * by.dx.sign,
+    by.dy == 0 ? 0 : (kTouchSlop + 2) * by.dy.sign,
+  );
+  await gesture.moveBy(slop);
+  await tester.pump();
+  final Offset step = (by - slop) / steps.toDouble();
+  for (int i = 0; i < steps; i++) {
+    await gesture.moveBy(step);
+    await tester.pump();
+  }
+  await gesture.up();
+  await tester.pump();
+}
+
 List<String> _toolbarLabels(WidgetTester tester) => <String>[
   for (final Text text in tester.widgetList<Text>(
     find.descendant(
@@ -603,6 +629,41 @@ void main() {
       );
       expect(harness.of(_Kind.select).last.cause, SelectionChangedCause.drag);
       expect(find.byType(TextMagnifier), findsNothing);
+    }, variant: _android);
+
+    testWidgets('dragging the caret handle moves the caret', (
+      WidgetTester tester,
+    ) async {
+      final _Harness harness = _Harness();
+      await harness.pump(tester, _harbour);
+      await _touch(tester, harness.centreOf(4, 11));
+      await tester.pump();
+      final NoteSelection caret = harness.host.selection;
+      expect(caret.isCollapsed, isTrue);
+      expect(harness.overlay.handlesShown, isTrue);
+
+      final RenderNoteView view = harness.view;
+      final Offset handle = view.contentToGlobal(
+        view.noteLayout.selectionEndpoints(caret).start.point,
+      );
+      await _dragBy(
+        tester,
+        handle + const Offset(0, 14),
+        const Offset(120, 0),
+      );
+
+      final List<NoteSelection> dragged = <NoteSelection>[
+        for (final _Event event in harness.of(_Kind.select))
+          if (event.cause == SelectionChangedCause.drag) event.selection!,
+      ];
+      expect(dragged, isNotEmpty);
+      expect(
+        dragged.where((NoteSelection selection) => !selection.isCollapsed),
+        isEmpty,
+      );
+      final NoteSelection moved = harness.host.selection;
+      expect(moved.isCollapsed, isTrue);
+      expect(moved.head, greaterThan(caret.head));
     }, variant: _android);
 
     testWidgets('the menu for a caret shows paste and select all only', (
