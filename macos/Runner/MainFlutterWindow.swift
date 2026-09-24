@@ -22,6 +22,10 @@ private let windowButtonsLeading: CGFloat = 16
 private let windowChannelName = "field_notes/window"
 
 class MainFlutterWindow: NSWindow {
+  private var spellCheckBridge: SpellCheckBridge?
+  private var imagePasteboardBridge: ImagePasteboardBridge?
+  private var fileDropBridge: FileDropBridge?
+
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
     let windowFrame = self.frame
@@ -37,6 +41,9 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     self.registerWindowChannel(flutterViewController.engine.binaryMessenger)
+    self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
+    self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
+    self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
     self.observeWindowButtonLayout()
 
     super.awakeFromNib()
