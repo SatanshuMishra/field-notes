@@ -163,6 +163,26 @@ void main() {
       expect(bridge, contains('Looper.getMainLooper()'));
     });
 
+    test('the background image read answers every failure', () {
+      final int read = bridge.indexOf('openInputStream');
+      expect(read, isNot(-1));
+      final int nextFunction = bridge.indexOf('private fun ', read);
+      final String readTail = bridge.substring(
+        read,
+        nextFunction == -1 ? bridge.length : nextFunction,
+      );
+      final List<String> caught = RegExp(r'catch \(\w+: (\w+)\)')
+          .allMatches(readTail)
+          .map((RegExpMatch match) => match.group(1)!)
+          .toList();
+      final Iterable<Match> answers = 'result.error("unreadable", '.allMatches(
+        readTail,
+      );
+
+      expect(caught, containsAll(<String>['Exception', 'OutOfMemoryError']));
+      expect(answers.length, greaterThan(caught.length));
+    });
+
     test('the dart channel name equals the kotlin channel', () {
       final RegExpMatch? match = RegExp(
         r'const val CHANNEL = "([^"]+)"',

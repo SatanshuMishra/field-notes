@@ -8,7 +8,6 @@ import android.os.Looper
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
-import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -51,20 +50,24 @@ class ClipboardImageBridge(private val context: Context) {
             return
         }
         val (uri, mime) = image
-        reader.execute {
-            try {
-                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
-                mainHandler.post {
-                    if (bytes == null) {
-                        result.error("unreadable", "The clipboard image could not be opened.", null)
-                    } else {
-                        result.success(mapOf("bytes" to bytes, "mime" to mime))
-                    }
-                }
-            } catch (error: IOException) {
-                mainHandler.post { result.error("unreadable", error.message, null) }
-            } catch (error: SecurityException) {
-                mainHandler.post { result.error("unreadable", error.message, null) }
+        reader.execute { readImage(uri, mime, result) }
+    }
+
+    private fun readImage(uri: Uri, mime: String, result: MethodChannel.Result) {
+        val bytes: ByteArray? = try {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        } catch (error: Exception) {
+            mainHandler.post { result.error("unreadable", error.message, null) }
+            return
+        } catch (error: OutOfMemoryError) {
+            mainHandler.post { result.error("unreadable", error.message, null) }
+            return
+        }
+        mainHandler.post {
+            if (bytes == null) {
+                result.error("unreadable", "The clipboard image could not be opened.", null)
+            } else {
+                result.success(mapOf("bytes" to bytes, "mime" to mime))
             }
         }
     }
