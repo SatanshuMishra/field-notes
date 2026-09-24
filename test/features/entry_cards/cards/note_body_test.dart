@@ -71,13 +71,13 @@ double _runWidth(String text, TextStyle style) {
   return width;
 }
 
+Finder _readerColumn() => find.descendant(
+  of: find.byType(NoteReaderView),
+  matching: find.byType(NoteViewBody),
+);
+
 RenderNoteView _reader(WidgetTester tester) =>
-    tester.renderObject<RenderNoteView>(
-      find.descendant(
-        of: find.byType(NoteReaderView),
-        matching: find.byType(NoteViewBody),
-      ),
-    );
+    tester.renderObject<RenderNoteView>(_readerColumn());
 
 void main() {
   group('NoteBody', () {
@@ -169,7 +169,7 @@ void main() {
     ) async {
       await _pumpReader(tester, 'a quiet morning');
 
-      expect(tester.getSize(find.byType(NoteReaderView)).width, 360);
+      expect(tester.getSize(_readerColumn()).width, 360);
     });
 
     testWidgets('clamps the text column to 720 inside a wide parent', (
@@ -178,7 +178,7 @@ void main() {
       await _pumpReader(tester, 'a quiet morning', width: 900);
 
       expect(find.byType(NoteColumn), findsOneWidget);
-      final Rect reader = tester.getRect(find.byType(NoteReaderView));
+      final Rect reader = tester.getRect(_readerColumn());
       expect(reader.width, 720);
       expect(reader.left, 90);
     });

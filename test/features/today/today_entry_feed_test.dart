@@ -12,6 +12,8 @@ import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteReaderView;
 import 'package:field_notes/features/note_engine/render/photo_figure.dart'
     show PhotoFigure;
+import 'package:field_notes/features/note_engine/render/render_note_view.dart'
+    show NoteViewBody;
 import 'package:field_notes/features/notes/notes_providers.dart'
     show notesMediaResolverProvider;
 import 'package:field_notes/features/today/today_entry_feed.dart';
@@ -146,7 +148,15 @@ void main() {
     );
 
     expect(tester.getSize(find.byType(CompactLogCard)).width, 1000);
-    expect(tester.getSize(find.byType(NoteReaderView)).width, 970);
+    expect(
+      tester.getSize(
+        find.descendant(
+          of: find.byType(NoteReaderView),
+          matching: find.byType(NoteViewBody),
+        ),
+      ).width,
+      970,
+    );
   });
 
   testWidgets('a video card fills a desktop pane',
