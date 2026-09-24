@@ -45,6 +45,10 @@ class DriftSettingsRepository implements SettingsRepository {
   Future<void> setWeekStart(WeekStart value) =>
       _put(SettingsKeys.weekStart, value.value.toString());
 
+  @override
+  Future<void> setSpellCheckEnabled(bool value) =>
+      _put(SettingsKeys.spellCheck, value ? _trueValue : _falseValue);
+
   Future<void> _put(String key, String value) async {
     await _db.into(_db.settings).insertOnConflictUpdate(
           SettingsCompanion.insert(key: key, value: value),
@@ -74,6 +78,10 @@ class DriftSettingsRepository implements SettingsRepository {
             int.tryParse(values[SettingsKeys.weekStart] ?? ''),
           ) ??
           defaults.weekStart,
+      spellCheckEnabled: _decodeBool(
+        values[SettingsKeys.spellCheck],
+        defaults.spellCheckEnabled,
+      ),
     );
   }
 
