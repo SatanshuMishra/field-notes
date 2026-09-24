@@ -26,7 +26,7 @@ class NoteTouchSelection extends StatefulWidget {
     required this.onSelectionChanged,
     required this.onDragActiveChanged,
     required this.onToggleCheckbox,
-    required this.onRequestKeyboard,
+    this.onRequestKeyboard,
     required this.child,
   });
 
@@ -37,7 +37,7 @@ class NoteTouchSelection extends StatefulWidget {
   onSelectionChanged;
   final ValueChanged<bool> onDragActiveChanged;
   final ValueChanged<int> onToggleCheckbox;
-  final VoidCallback onRequestKeyboard;
+  final VoidCallback? onRequestKeyboard;
   final Widget child;
 
   @override
@@ -129,7 +129,7 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
       return;
     }
     _placeTap(view, point);
-    widget.onRequestKeyboard();
+    widget.onRequestKeyboard?.call();
   }
 
   void _placeTap(RenderNoteView view, Offset point) {
