@@ -408,6 +408,48 @@ void main() {
       },
       variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
+
+    testWidgets(
+      'a second long press on the selected word opens the menu at once',
+      (WidgetTester tester) async {
+        _pinSurface(tester);
+        _captureClipboard(tester);
+        const String source = 'Tidepools everywhere';
+        await _pumpReader(tester, const NoteReaderView(source: source));
+        final Offset word = _globalAt(tester, 3);
+        await _heldPress(
+          tester,
+          word,
+          kind: PointerDeviceKind.touch,
+          hold: const Duration(milliseconds: 600),
+        );
+        await tester.pumpAndSettle();
+        await _heldPress(
+          tester,
+          tester.getCenter(find.text('Copy')),
+          kind: PointerDeviceKind.touch,
+          hold: const Duration(milliseconds: 60),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(AdaptiveTextSelectionToolbar), findsNothing);
+
+        final TestGesture press = await tester.startGesture(
+          word,
+          kind: PointerDeviceKind.touch,
+        );
+        await tester.binding.delayed(const Duration(milliseconds: 600));
+        await press.up();
+
+        expect(tester.binding.hasScheduledFrame, isTrue);
+        await tester.pump();
+        expect(tester.binding.hasScheduledFrame, isTrue);
+        await tester.pump();
+        expect(find.byType(AdaptiveTextSelectionToolbar), findsOneWidget);
+        expect(find.text('Copy'), findsOneWidget);
+        await tester.pumpAndSettle();
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.android),
+    );
   });
 
   group('column', () {

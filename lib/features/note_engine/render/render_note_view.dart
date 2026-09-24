@@ -53,7 +53,58 @@ const double _tableOverflowSlack = 0.01;
 const double _viewportSlack = 0.5;
 const double _androidTarget = 48;
 const double _desktopTarget = 24;
+const int _lineFeed = 0x0A;
 final RegExp _wordGap = RegExp(r'[\s\p{P}\p{S}]', unicode: true);
+
+bool _spansBand(double top, double bottom, Rect window) =>
+    top < window.bottom && bottom > window.top;
+
+TextRange? _sourceSpanWithin(
+  LaidOutNote layout,
+  List<LaidOutRow> rows,
+  Rect window,
+) {
+  final List<TextRange> lines = <TextRange>[
+    for (final LaidOutRow row in rows)
+      for (final LineFragment fragment in row.fragments)
+        if (_spansBand(fragment.rect.top, fragment.rect.bottom, window))
+          for (final VisualLine line in fragment.lines)
+            if (_spansBand(line.top, line.top + line.height, window))
+              line.visibleRange,
+  ];
+  if (lines.isEmpty) {
+    return null;
+  }
+  final VisibleText visible = layout.inputs.visibleText;
+  final OffsetMap map = visible.map;
+  final String text = visible.text;
+  final int low = math.min(
+    lines.map((TextRange line) => line.start).reduce(math.min),
+    map.visibleLength,
+  );
+  final int high = math.min(
+    lines.map((TextRange line) => line.end).reduce(math.max),
+    map.visibleLength,
+  );
+  final int end = high < text.length && text.codeUnitAt(high) == _lineFeed
+      ? high + 1
+      : high;
+  return TextRange(
+    start: map.visibleToSource(low).upstream,
+    end: map.visibleToSource(end).downstream,
+  );
+}
+
+NoteSelection? _selectionWithin(NoteSelection selection, TextRange? span) {
+  if (span == null) {
+    return null;
+  }
+  final int start = math.max(selection.start, span.start);
+  final int end = math.min(selection.end, span.end);
+  return end > start
+      ? NoteSelection(anchor: start, head: end, affinity: selection.affinity)
+      : null;
+}
 
 TextRange? noteSelectedPhotoRange(
   MdTree tree,
@@ -1279,13 +1330,14 @@ class RenderNoteView extends RenderBox
       window.top,
       window.bottom,
     );
+    late final TextRange? span = _sourceSpanWithin(_noteLayout, rows, window);
     _paintBackgrounds(context, origin, rows);
     _paintFragments(context, origin, rows, window);
     _paintRules(context, origin, rows);
     _paintHint(context, origin);
-    _paintSelection(context, origin);
+    _paintSelection(context, origin, () => span);
     _paintPhotos(context, origin, window);
-    _paintComposing(context, origin);
+    _paintComposing(context, origin, () => span);
     _paintDecorations(context, origin);
     _paintCaret(context, origin);
   }
@@ -1398,12 +1450,20 @@ class RenderNoteView extends RenderBox
     );
   }
 
-  void _paintSelection(PaintingContext context, Offset origin) {
+  void _paintSelection(
+    PaintingContext context,
+    Offset origin,
+    TextRange? Function() span,
+  ) {
     final NoteSelection? selection = _selection;
     if (selection == null || selection.isCollapsed) {
       return;
     }
-    final List<Rect> boxes = _placed(_noteLayout.selectionBoxes(selection));
+    final NoteSelection? shown = _selectionWithin(selection, span());
+    if (shown == null) {
+      return;
+    }
+    final List<Rect> boxes = _placed(_noteLayout.selectionBoxes(shown));
     _inContentSpace(
       context,
       origin,
@@ -1425,19 +1485,26 @@ class RenderNoteView extends RenderBox
     }
   }
 
-  void _paintComposing(PaintingContext context, Offset origin) {
+  void _paintComposing(
+    PaintingContext context,
+    Offset origin,
+    TextRange? Function() span,
+  ) {
     final TextRange composing = _composing;
     if (!composing.isValid ||
         composing.isCollapsed ||
         composing.end > _source.length) {
       return;
     }
+    final NoteSelection? shown = _selectionWithin(
+      NoteSelection(anchor: composing.start, head: composing.end),
+      span(),
+    );
+    if (shown == null) {
+      return;
+    }
     final List<Rect> underlines = _placed(
-      noteComposingUnderlines(
-        _noteLayout.selectionBoxes(
-          NoteSelection(anchor: composing.start, head: composing.end),
-        ),
-      ),
+      noteComposingUnderlines(_noteLayout.selectionBoxes(shown)),
     );
     _inContentSpace(
       context,

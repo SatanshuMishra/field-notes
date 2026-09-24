@@ -132,6 +132,21 @@ List<Symbol> _paintCalls(RenderNoteView view) {
   return List<Symbol>.unmodifiable(calls);
 }
 
+List<Rect> _paintedRects(RenderNoteView view, Color color) {
+  final List<Rect> rects = <Rect>[];
+  expect(
+    view,
+    paints..everything((Symbol method, List<dynamic> arguments) {
+      if (method == #drawRect &&
+          (arguments[1] as Paint).color.toARGB32() == color.toARGB32()) {
+        rects.add(arguments[0] as Rect);
+      }
+      return true;
+    }),
+  );
+  return List<Rect>.unmodifiable(rects);
+}
+
 final class _RecordingDelegate implements NoteViewDelegate {
   final List<String> calls = <String>[];
 
@@ -406,6 +421,57 @@ void main() {
       lessThan(view.noteLayout.flow.fragments.length / 10),
     );
     expect(painted.any((Rect rect) => rect.top == 0), isFalse);
+  });
+
+  testWidgets('a whole-note selection is painted only near the viewport', (
+    WidgetTester tester,
+  ) async {
+    _pinSurface(tester);
+    final _Harness harness = _Harness();
+    final ScrollController controller = ScrollController();
+    addTearDown(controller.dispose);
+    const Color highlight = Color(0x663366CC);
+    final String source = <String>[
+      for (int i = 0; i < 200; i++)
+        'Paragraph $i of the harbour log, where the fog lifted over the '
+            'moorings and the gulls came back to the pier at noon.',
+    ].join('\n\n');
+    final NoteSelection all = NoteSelection(anchor: 0, head: source.length);
+    await tester.pumpWidget(
+      _app(
+        _noteView(
+          harness,
+          source,
+          selection: all,
+          selectionColor: highlight,
+          scrollController: controller,
+        ),
+        width: 600,
+        height: 400,
+      ),
+    );
+    final RenderNoteView view = harness.view;
+    controller.jumpTo(view.noteLayout.size.height / 2 + 7);
+    await tester.pump();
+    final Rect window = view.paintWindow;
+    final List<Rect> painted = _paintedRects(view, highlight);
+    expect(painted, isNotEmpty);
+    for (final Rect rect in painted) {
+      expect(rect.overlaps(window), isTrue, reason: '$rect outside $window');
+    }
+    final List<Rect> whole = view.noteLayout.selectionBoxes(all);
+    expect(painted.length, lessThan(whole.length / 10));
+    final Rect visible = view.visibleContentRect;
+    expect(
+      <Rect>[
+        for (final Rect rect in painted)
+          if (rect.overlaps(visible)) rect,
+      ],
+      <Rect>[
+        for (final Rect rect in whole)
+          if (rect.overlaps(visible)) rect,
+      ],
+    );
   });
 
   testWidgets(

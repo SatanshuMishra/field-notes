@@ -26,6 +26,7 @@ class NoteTouchSelection extends StatefulWidget {
     required this.onSelectionChanged,
     required this.onDragActiveChanged,
     required this.onToggleCheckbox,
+    this.onRequestKeyboard,
     required this.child,
   });
 
@@ -36,6 +37,7 @@ class NoteTouchSelection extends StatefulWidget {
   onSelectionChanged;
   final ValueChanged<bool> onDragActiveChanged;
   final ValueChanged<int> onToggleCheckbox;
+  final VoidCallback? onRequestKeyboard;
   final Widget child;
 
   @override
@@ -126,6 +128,11 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
     if (details.consecutiveTapCount > 1) {
       return;
     }
+    _placeTap(view, point);
+    widget.onRequestKeyboard?.call();
+  }
+
+  void _placeTap(RenderNoteView view, Offset point) {
     final TextRange? photo = view.photoLineAt(point);
     if (photo != null) {
       _tapOffset = null;

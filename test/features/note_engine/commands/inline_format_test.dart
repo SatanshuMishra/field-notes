@@ -329,6 +329,57 @@ void main() {
     );
   });
 
+  test('a link destination and an autolink are never written into', () {
+    const String linked = 'see [map](https://example.com/harbour) now';
+    const String auto = 'go <https://example.com/harbour> now';
+    final int inLink = linked.indexOf('harbour') + 3;
+    final int inAuto = auto.indexOf('harbour') + 3;
+    for (final InlineFormat format in InlineFormat.values) {
+      if (format == InlineFormat.link) {
+        continue;
+      }
+      expect(
+        toggleInlineFormat(_caret(linked, inLink), format),
+        isNull,
+        reason: format.name,
+      );
+      expect(
+        toggleInlineFormat(_caret(auto, inAuto), format),
+        isNull,
+        reason: format.name,
+      );
+      expect(
+        toggleInlineFormat(_caret(auto, 4), format),
+        isNull,
+        reason: format.name,
+      );
+      expect(
+        toggleInlineFormat(_range(linked, 6, inLink), format),
+        isNull,
+        reason: format.name,
+      );
+      expect(
+        toggleInlineFormat(_range(auto, 0, inAuto), format),
+        isNull,
+        reason: format.name,
+      );
+    }
+    final EditorState link = _caret(linked, inLink);
+    expect(_result(link, _toggle(link, InlineFormat.link)), 'see map now');
+    _expectToggle(
+      _caret(auto, inAuto),
+      InlineFormat.link,
+      'go https://example.com/harbour now',
+      NoteSelection.collapsed(inAuto - 1),
+    );
+    _expectToggle(
+      _caret(linked, 6),
+      InlineFormat.bold,
+      'see [**map**](https://example.com/harbour) now',
+      const NoteSelection.collapsed(8),
+    );
+  });
+
   test('a caret right after a code span is outside it', () {
     _expectToggle(
       _caret('`a` b', 3),

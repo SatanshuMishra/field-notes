@@ -138,7 +138,7 @@ Offset photoToolbarOffset({
       .clamp(surface.left, math.max(surface.left, surface.right - bar.width))
       .toDouble();
   final double above = figure.top - photoToolbarGap - bar.height;
-  if (above >= surface.top) {
+  if (above >= surface.top && above + bar.height <= surface.bottom) {
     return Offset(x, above);
   }
   final double below = figure.bottom + photoToolbarGap;
@@ -220,78 +220,80 @@ class PhotoToolbarLayer extends StatelessWidget {
     final EditorState state = request.controller.state;
     final MdBlock? photo = _photoAt(state, request.photoLineStart);
     return SizedBox.expand(
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Positioned.fill(
-            child: CustomSingleChildLayout(
-              delegate: _PhotoToolbarLayout(
-                figure: figure,
-                surface: request.surface,
-                bottomInset: request.bottomInset,
-              ),
-              child: PhotoToolbar(request: request),
-            ),
-          ),
-          if (request.captionOpen && photo != null)
-            Positioned.fromRect(
-              rect: captionField,
-              child: PhotoCaptionField(
-                caption: MdPhotoLine.ofBlock(photo, state.source).caption,
-                width: captionField.width,
-                height: captionField.height,
-                onCommit: (String caption) {
-                  _runOnPhoto(
-                    request,
-                    (EditorState s, MdBlock p) => setPhotoCaption(s, p, caption),
-                  );
-                  request.onCloseCaption();
-                  request.onReturnToEditor();
-                },
-                onCancel: () {
-                  request.onCloseCaption();
-                  request.onReturnToEditor();
-                },
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final Rect surface = Rect.fromLTRB(
+            request.surface.left,
+            request.surface.top,
+            request.surface.right,
+            math.max(
+              request.surface.top,
+              math.min(
+                request.surface.bottom,
+                constraints.maxHeight - request.bottomInset,
               ),
             ),
-        ],
+          );
+          return Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              if (figure.overlaps(surface))
+                Positioned.fill(
+                  child: CustomSingleChildLayout(
+                    delegate: _PhotoToolbarLayout(
+                      figure: figure,
+                      surface: surface,
+                    ),
+                    child: PhotoToolbar(request: request),
+                  ),
+                ),
+              if (request.captionOpen && photo != null)
+                Positioned.fromRect(
+                  rect: captionField,
+                  child: PhotoCaptionField(
+                    caption: MdPhotoLine.ofBlock(photo, state.source).caption,
+                    width: captionField.width,
+                    height: captionField.height,
+                    onCommit: (String caption) {
+                      _runOnPhoto(
+                        request,
+                        (EditorState s, MdBlock p) =>
+                            setPhotoCaption(s, p, caption),
+                      );
+                      request.onCloseCaption();
+                      request.onReturnToEditor();
+                    },
+                    onCancel: () {
+                      request.onCloseCaption();
+                      request.onReturnToEditor();
+                    },
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 }
 
 class _PhotoToolbarLayout extends SingleChildLayoutDelegate {
-  const _PhotoToolbarLayout({
-    required this.figure,
-    required this.surface,
-    required this.bottomInset,
-  });
+  const _PhotoToolbarLayout({required this.figure, required this.surface});
 
   final Rect figure;
   final Rect surface;
-  final double bottomInset;
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
       BoxConstraints.loose(surface.size);
 
   @override
-  Offset getPositionForChild(Size size, Size childSize) => photoToolbarOffset(
-    figure: figure,
-    surface: Rect.fromLTRB(
-      surface.left,
-      surface.top,
-      surface.right,
-      math.min(surface.bottom, size.height - bottomInset),
-    ),
-    bar: childSize,
-  );
+  Offset getPositionForChild(Size size, Size childSize) =>
+      photoToolbarOffset(figure: figure, surface: surface, bar: childSize);
 
   @override
   bool shouldRelayout(_PhotoToolbarLayout oldDelegate) =>
-      oldDelegate.figure != figure ||
-      oldDelegate.surface != surface ||
-      oldDelegate.bottomInset != bottomInset;
+      oldDelegate.figure != figure || oldDelegate.surface != surface;
 }
 
 class PhotoToolbar extends StatefulWidget {
@@ -493,12 +495,12 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
 
   List<Widget> _withFirstFocus(List<Widget> row) {
     final int first = row.indexWhere(
-      (Widget w) => w is _PhotoToolbarControl,
+      (Widget w) => w is _PhotoToolbarFocusable,
     );
     if (first < 0) {
       return row;
     }
-    final _PhotoToolbarControl control = row[first] as _PhotoToolbarControl;
+    final _PhotoToolbarFocusable control = row[first] as _PhotoToolbarFocusable;
     return <Widget>[
       ...row.sublist(0, first),
       control.withFocusNode(_request.firstControlFocusNode),
@@ -633,20 +635,18 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
   }
 
   Widget _moreControl(EditorState state, MdBlock photo, double target) {
-    return TapRegion(
+    return _PhotoToolbarMenuAnchor(
       groupId: _menuGroup,
-      child: OverlayPortal(
-        key: _moreKey,
-        controller: _menu,
-        overlayChildBuilder: (BuildContext overlayContext) =>
-            _menuPanel(state, photo, target),
-        child: _PhotoToolbarControl(
-          controlKey: photoToolbarMoreKey,
-          label: photoToolbarMoreLabel,
-          target: target,
-          onTap: _toggleMenu,
-          child: _glyph(_PhotoToolbarGlyph.more),
-        ),
+      portalKey: _moreKey,
+      controller: _menu,
+      overlayChildBuilder: (BuildContext overlayContext) =>
+          _menuPanel(state, photo, target),
+      control: _PhotoToolbarControl(
+        controlKey: photoToolbarMoreKey,
+        label: photoToolbarMoreLabel,
+        target: target,
+        onTap: _toggleMenu,
+        child: _glyph(_PhotoToolbarGlyph.more),
       ),
     );
   }
@@ -829,7 +829,52 @@ class _PhotoToolbarGlyphPainter extends CustomPainter {
       oldDelegate.glyph != glyph || oldDelegate.color != color;
 }
 
-class _PhotoToolbarControl extends StatefulWidget {
+abstract interface class _PhotoToolbarFocusable {
+  Widget withFocusNode(FocusNode node);
+}
+
+class _PhotoToolbarMenuAnchor extends StatelessWidget
+    implements _PhotoToolbarFocusable {
+  const _PhotoToolbarMenuAnchor({
+    required this.groupId,
+    required this.portalKey,
+    required this.controller,
+    required this.overlayChildBuilder,
+    required this.control,
+  });
+
+  final Object groupId;
+  final GlobalKey portalKey;
+  final OverlayPortalController controller;
+  final WidgetBuilder overlayChildBuilder;
+  final _PhotoToolbarControl control;
+
+  @override
+  _PhotoToolbarMenuAnchor withFocusNode(FocusNode node) =>
+      _PhotoToolbarMenuAnchor(
+        groupId: groupId,
+        portalKey: portalKey,
+        controller: controller,
+        overlayChildBuilder: overlayChildBuilder,
+        control: control.withFocusNode(node),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return TapRegion(
+      groupId: groupId,
+      child: OverlayPortal(
+        key: portalKey,
+        controller: controller,
+        overlayChildBuilder: overlayChildBuilder,
+        child: control,
+      ),
+    );
+  }
+}
+
+class _PhotoToolbarControl extends StatefulWidget
+    implements _PhotoToolbarFocusable {
   const _PhotoToolbarControl({
     required this.controlKey,
     required this.label,
@@ -850,6 +895,7 @@ class _PhotoToolbarControl extends StatefulWidget {
   final String? hint;
   final FocusNode? focusNode;
 
+  @override
   _PhotoToolbarControl withFocusNode(FocusNode node) => _PhotoToolbarControl(
     controlKey: controlKey,
     label: label,
