@@ -65,7 +65,18 @@ final class NoteCommandRegistry implements CommandRegistry {
     if (!tablesEnabled) {
       return otherwise;
     }
-    return (EditorState state) => table(state) ?? otherwise(state);
+    return (EditorState state) =>
+        _headInTable(state) ? table(state) : otherwise(state);
+  }
+
+  bool _headInTable(EditorState state) {
+    final int head = state.selection.head;
+    return state.tree.blocks.any(
+      (MdBlock block) =>
+          block.kind == MdBlockKind.table &&
+          block.sourceRange.start <= head &&
+          head <= block.sourceRange.end,
+    );
   }
 
   Transaction? _lineBreak(EditorState state) {

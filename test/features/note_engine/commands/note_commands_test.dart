@@ -228,4 +228,30 @@ void main() {
       editTable(state, TableEdit.columnRight)!.changes.apply(state.source),
     );
   });
+
+  test(
+    'table keys never fall back to list commands while the head is in a table',
+    () {
+      const NoteCommandRegistry registry = NoteCommandRegistry(
+        tablesEnabled: true,
+      );
+      final EditorState enterState = EditorState.create(
+        '- a\n\n|b|\n|-|',
+        parse: (String s) => parseNoteTree(s, tables: true),
+        selection: const NoteSelection(anchor: 3, head: 10),
+      );
+      expect(registry.commandFor(NoteCommandId.enter)!(enterState), isNull);
+      final EditorState outdentState = EditorState.create(
+        '- a\n  - b\n\n|c|\n|-|',
+        parse: (String s) => parseNoteTree(s, tables: true),
+        selection: const NoteSelection(anchor: 9, head: 16),
+      );
+      expect(registry.commandFor(NoteCommandId.outdent)!(outdentState), isNull);
+      expect(registry.commandFor(NoteCommandId.indent)!(outdentState), isNull);
+      expect(
+        _apply(registry, NoteCommandId.enter, _tablesOn('- a', 3)),
+        '- a\n- ',
+      );
+    },
+  );
 }
