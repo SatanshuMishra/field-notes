@@ -48,6 +48,7 @@ const List<String> _fixtures = <String>[
   '- a\n  ![c](photo/0123456789ab)\n- b',
   '1. a\n\n   more\n2. b',
   '> ```\n> code\n> ```\n> - x',
+  '|a|b|\n|-|-|\n|\\x|y|\n||z|',
 ];
 
 const List<String> _cellPieces = <String>[
@@ -58,6 +59,7 @@ const List<String> _cellPieces = <String>[
   '|',
   '\n',
   '\r\n',
+  r'\',
 ];
 
 final RegExp _bareLineFeed = RegExp(r'(?<!\r)\n');
@@ -691,6 +693,51 @@ String? _violation(_Case at, _Command command) {
       range,
       'bytes after it changed: ${jsonEncode(after)}',
     );
+  }
+  final MdBlock? edited = command.guardsPipes ? _tableAtHead(at) : null;
+  if (edited != null) {
+    final String? broken = _brokenTable(at.note, edited, after);
+    if (broken != null) {
+      return _describe(
+        at,
+        command.name,
+        range,
+        '$broken: ${jsonEncode(after)}',
+      );
+    }
+  }
+  return null;
+}
+
+String? _brokenTable(_Note note, MdBlock table, String after) {
+  final MdSourceLines lines = MdSourceLines.split(after);
+  if (lines.lines.length != note.lines.lines.length) {
+    return 'the line count changed';
+  }
+  final int header = note.lines.lineIndexAt(table.sourceRange.start);
+  final bool parses = parseNoteTree(after).blocks.any(
+    (MdBlock block) =>
+        block.kind == MdBlockKind.table &&
+        lines.lineIndexAt(block.sourceRange.start) == header,
+  );
+  if (!parses) {
+    return 'the table no longer parses';
+  }
+  for (final MdBlock row in table.blocks) {
+    final int index = note.lines.lineIndexAt(row.sourceRange.start);
+    final MdSourceLine was = note.lines.lines[index];
+    final MdSourceLine now = lines.lines[index];
+    final int before = MdTables.splitRow(
+      note.source,
+      MdRange(was.start, was.end),
+    ).length;
+    final int cells = MdTables.splitRow(
+      after,
+      MdRange(now.start, now.end),
+    ).length;
+    if (cells != 0 && cells != before) {
+      return 'a row of $before cells now splits into $cells';
+    }
   }
   return null;
 }

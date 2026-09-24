@@ -168,11 +168,13 @@ class _NoteReaderViewState extends State<NoteReaderView> {
     }
     _pressOffset = offset;
     _select(_wordAt(offset));
-    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
-      if (mounted) {
-        _showMenu();
-      }
-    });
+    WidgetsBinding.instance
+      ..addPostFrameCallback((Duration _) {
+        if (mounted) {
+          _showMenu();
+        }
+      })
+      ..ensureVisualUpdate();
   }
 
   void _handleTapOutside(PointerDownEvent event) {

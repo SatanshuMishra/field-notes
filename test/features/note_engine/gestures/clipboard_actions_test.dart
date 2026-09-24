@@ -25,7 +25,7 @@ void _pinSurface(WidgetTester tester) {
 }
 
 final class _Clipboard {
-  _Clipboard(WidgetTester tester, {this.contents}) {
+  _Clipboard(WidgetTester tester, {this.contents, this.onWrite}) {
     tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
       SystemChannels.platform,
       _handle,
@@ -39,6 +39,7 @@ final class _Clipboard {
   }
 
   final String? contents;
+  final VoidCallback? onWrite;
   final List<String> written = <String>[];
   int reads = 0;
 
@@ -48,6 +49,7 @@ final class _Clipboard {
         final Map<Object?, Object?> arguments =
             call.arguments as Map<Object?, Object?>;
         written.add(arguments['text']! as String);
+        onWrite?.call();
         return null;
       case 'Clipboard.getData':
         reads += 1;
@@ -61,7 +63,7 @@ final class _Clipboard {
 final class _Host {
   _Host(
     EditorState initial, {
-    bool active = true,
+    this.active = true,
     Transaction? Function(EditorState state)? cutPhoto,
   }) : _current = initial {
     actions = NoteClipboardActions(
@@ -80,6 +82,7 @@ final class _Host {
   }
 
   EditorState _current;
+  bool active;
   late final NoteClipboardActions actions;
   final List<Transaction> dispatched = <Transaction>[];
   final List<(NoteSelection, SelectionChangedCause)> selected =
@@ -88,6 +91,8 @@ final class _Host {
   final List<int> revealed = <int>[];
 
   EditorState get current => _current;
+
+  void replace(EditorState next) => _current = next;
 }
 
 void _expectPaste(
@@ -95,10 +100,11 @@ void _expectPaste(
   int caret,
   String text,
   String expected,
-  int caretAfter,
-) {
+  int caretAfter, {
+  int? head,
+}) {
   final Transaction? transaction = notePasteTransaction(
-    _state(source, caret),
+    _state(source, caret, head),
     text,
   );
   expect(transaction, isNotNull);
@@ -160,6 +166,25 @@ void main() {
     _expectPaste('X', 1, '\n\n$_p\n\nY', 'X\n\n$_p\n\nY', 30);
   });
 
+  test('a pasted photo line lands at a boundary when the range ends '
+      'between blocks', () {
+    _expectPaste('Hello world\n\nNext', 5, _p, 'Hello\nNext\n$_p', 5, head: 12);
+    _expectPaste(
+      'Hello world\n![a](photo/aaaaaaaaaaaa)\n\nNext',
+      5,
+      _p,
+      'Hello\nNext\n$_p',
+      5,
+      head: 37,
+    );
+  });
+
+  test('a moved photo line follows the block that holds the paste point', () {
+    _expectPaste('XY', 1, 'a\n$_p\nb\n\nc', 'Xa\nb\n$_p\n\ncY', 32);
+    _expectPaste('A\n  \nB', 3, _p, 'A\n$_p\n  \nB', 28);
+    _expectPaste('  \n\nA', 1, _p, '$_p\n  \n\nA', 26);
+  });
+
   testWidgets(
     'copy from the android toolbar collapses the selection',
     (WidgetTester tester) async {
@@ -203,6 +228,43 @@ void main() {
     expect(host.current.selection, const NoteSelection.collapsed(4));
     expect(host.hidden, <bool>[true]);
     expect(host.revealed, <int>[4]);
+  });
+
+  testWidgets('cut deletes nothing when the editor changes during the write', (
+    WidgetTester tester,
+  ) async {
+    _pinSurface(tester);
+    const String source = 'The **fog** lifted';
+
+    final _Host extended = _Host(_state(source, 4, 11));
+    final _Clipboard clipboard = _Clipboard(
+      tester,
+      onWrite: () => extended.replace(
+        extended.current.withSelection(
+          const NoteSelection(anchor: 4, head: 12),
+        ),
+      ),
+    );
+    await extended.actions.cutSelection(SelectionChangedCause.keyboard);
+    expect(clipboard.written, <String>['**fog**']);
+    expect(extended.dispatched, isEmpty);
+    expect(extended.current.source, source);
+
+    final _Host edited = _Host(_state(source, 4, 11));
+    _Clipboard(
+      tester,
+      onWrite: () => edited.replace(_state('$source today', 4, 11)),
+    );
+    await edited.actions.cutSelection(SelectionChangedCause.keyboard);
+    expect(edited.dispatched, isEmpty);
+    expect(edited.current.source, '$source today');
+
+    final _Host closed = _Host(_state(source, 4, 11));
+    _Clipboard(tester, onWrite: () => closed.active = false);
+    await closed.actions.cutSelection(SelectionChangedCause.toolbar);
+    expect(closed.dispatched, isEmpty);
+    expect(closed.hidden, isEmpty);
+    expect(closed.revealed, isEmpty);
   });
 
   testWidgets('cut with a selected photo goes through cutPhoto', (
@@ -279,7 +341,7 @@ void main() {
   });
 
   testWidgets(
-    'select all from the toolbar scrolls only on android',
+    'select all from the toolbar keeps the handles and scrolls on android',
     (WidgetTester tester) async {
       _pinSurface(tester);
       final _Host host = _Host(_state('The **fog** lifted', 3));
@@ -292,14 +354,15 @@ void main() {
           SelectionChangedCause.toolbar,
         ),
       ]);
-      expect(host.hidden, <bool>[true]);
-      expect(
-        host.revealed,
-        defaultTargetPlatform == TargetPlatform.android ? <int>[18] : <int>[],
-      );
+      final bool android = defaultTargetPlatform == TargetPlatform.android;
+      expect(host.hidden, <bool>[
+        defaultTargetPlatform == TargetPlatform.macOS,
+      ]);
+      expect(host.revealed, android ? <int>[18] : <int>[]);
     },
     variant: TargetPlatformVariant(<TargetPlatform>{
       TargetPlatform.android,
+      TargetPlatform.fuchsia,
       TargetPlatform.macOS,
     }),
   );

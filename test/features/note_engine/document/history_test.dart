@@ -232,7 +232,219 @@ EditorState _randomStep(Random random, EditorState state, int ms) {
   }
 }
 
+EditorState _formattedAbd() =>
+    _start('abd', selection: const NoteSelection.collapsed(2)).apply(
+      Transaction(
+        changes: ChangeSet.single(3, 2, 2, 'cQ'),
+        selection: const NoteSelection.collapsed(3),
+        event: TransactionEvent.format,
+      ),
+    );
+
+EditorState _typedOverC() => _formattedAbd()
+    .withSelection(const NoteSelection(anchor: 2, head: 3))
+    .apply(
+      Transaction(
+        changes: ChangeSet.single(5, 2, 3, 'k'),
+        selection: const NoteSelection.collapsed(3),
+        event: TransactionEvent.inputType,
+        time: const Duration(milliseconds: 100),
+      ),
+    );
+
+String _fresh(int base, int length) =>
+    String.fromCharCodes(<int>[for (int k = 0; k < length; k++) base + k]);
+
+Set<int> _units(String source) => source.codeUnits.toSet();
+
+String _ordered(String source, Set<int> units) =>
+    String.fromCharCodes(source.codeUnits.where(units.contains));
+
+ChangeSet _uniqueOutside(Random random, String source, int caret, int base) {
+  final int n = source.length;
+  final int count = 1 + random.nextInt(2);
+  final List<int> picks = <int>[
+    for (int i = 0; i < count * 2; i++)
+      random.nextBool() ? caret : random.nextInt(n + 1),
+  ]..sort();
+  final ChangeSet changes = ChangeSet(
+    length: n,
+    replacements: <TextReplacement>[
+      for (int i = 0; i < count; i++)
+        TextReplacement(
+          picks[i * 2],
+          picks[i * 2 + 1],
+          _fresh(base + i * 4, random.nextInt(4)),
+        ),
+    ],
+  );
+  return changes.isEmpty
+      ? ChangeSet.single(n, caret, caret, _fresh(base, 1))
+      : changes;
+}
+
+(EditorState, bool) _uniqueStep(
+  Random random,
+  EditorState state,
+  int step,
+  int ms,
+) {
+  final int n = state.source.length;
+  final int caret = state.selection.end;
+  final int base = 0x4E00 + step * 8;
+  final Duration time = Duration(milliseconds: ms);
+  final int pick = random.nextInt(6);
+  if (pick == 1 && caret > 0) {
+    return (_backspace(state, ms), false);
+  }
+  if (pick == 2 && n > 0) {
+    final int from = random.nextInt(n);
+    final int to = from + 1 + random.nextInt(n - from);
+    final String inserted = _fresh(base, 1 + random.nextInt(3));
+    return (
+      state
+          .withSelection(NoteSelection(anchor: from, head: to))
+          .apply(
+            Transaction(
+              changes: ChangeSet.single(n, from, to, inserted),
+              selection: NoteSelection.collapsed(from + inserted.length),
+              event: TransactionEvent.format,
+              time: time,
+            ),
+          ),
+      false,
+    );
+  }
+  if (pick == 3 && state.history.canUndo) {
+    return (state.undo(), false);
+  }
+  if (pick == 4 && state.history.canRedo) {
+    return (state.redo(), false);
+  }
+  if (pick == 5) {
+    final ChangeSet changes = _uniqueOutside(random, state.source, caret, base);
+    return (
+      state.apply(
+        Transaction(
+          changes: changes,
+          selection: NoteSelection.collapsed(
+            random.nextInt(changes.newLength + 1),
+          ),
+          event: TransactionEvent.format,
+          addToHistory: false,
+          time: time,
+        ),
+      ),
+      true,
+    );
+  }
+  return (_type(state, _fresh(base, 1), ms), false);
+}
+
 void main() {
+  test(
+    'an outside insertion at an entry insertion point keeps older entries on their bytes',
+    () {
+      final EditorState deleted = _backspace(_formattedAbd(), 100);
+      expect(deleted.source, 'abQd');
+      final EditorState outside = _outside(
+        deleted,
+        ChangeSet.single(4, 2, 2, 'y'),
+        3,
+      );
+      expect(outside.source, 'abyQd');
+      final EditorState once = outside.undo();
+      expect(once.source, 'abcyQd');
+      final EditorState twice = once.undo();
+      expect(twice.source, 'abyd');
+      expect(twice.history.canUndo, isFalse);
+      expect(twice.redo().redo().source, 'abyQd');
+    },
+  );
+
+  test(
+    'an outside edit starting where an entry replacement starts keeps older entries on their bytes',
+    () {
+      final EditorState typed = _typedOverC();
+      expect(typed.source, 'abkQd');
+
+      final EditorState replaced = _outside(
+        typed,
+        ChangeSet.single(5, 2, 3, 'y'),
+        3,
+      );
+      expect(replaced.source, 'abyQd');
+      final EditorState replacedOnce = replaced.undo();
+      expect(replacedOnce.source, 'abcyQd');
+      expect(replacedOnce.undo().source, 'abyd');
+
+      final EditorState inserted = _outside(
+        typed,
+        ChangeSet.single(5, 2, 2, 'y'),
+        3,
+      );
+      expect(inserted.source, 'abykQd');
+      final EditorState insertedOnce = inserted.undo();
+      expect(insertedOnce.source, 'abcyQd');
+      expect(insertedOnce.undo().source, 'abyd');
+    },
+  );
+
+  test(
+    'undo after random changes outside history restores exactly the bytes history owns',
+    () {
+      for (int i = 0; i < 3000; i++) {
+        final int seed = 20260924 + i;
+        final Random random = Random(seed);
+        final String note = _fresh(0x3400, random.nextInt(12));
+        EditorState state = _start(
+          note,
+          selection: NoteSelection.collapsed(random.nextInt(note.length + 1)),
+        );
+        List<String> seen = <String>[note];
+        Set<int> owned = _units(note);
+        int ms = 0;
+        final int steps = 1 + random.nextInt(30);
+        for (int s = 0; s < steps; s++) {
+          ms += random.nextInt(800);
+          final (EditorState next, bool outside) = _uniqueStep(
+            random,
+            state,
+            s,
+            ms,
+          );
+          if (outside) {
+            final Set<int> before = _units(state.source);
+            final Set<int> after = _units(next.source);
+            owned = owned
+                .difference(before.difference(after))
+                .union(after.difference(before));
+          }
+          state = next;
+          seen = <String>[...seen, state.source];
+        }
+        int guard = 0;
+        while (state.history.canUndo) {
+          state = state.undo();
+          guard += 1;
+          expect(guard, lessThanOrEqualTo(steps), reason: 'seed $seed');
+        }
+        final String result = state.source;
+        final Set<int> units = _units(result);
+        expect(result.length, units.length, reason: 'seed $seed');
+        expect(units, owned, reason: 'seed $seed');
+        for (final String earlier in seen) {
+          final Set<int> both = _units(earlier).intersection(units);
+          expect(
+            _ordered(result, both),
+            _ordered(earlier, both),
+            reason: 'seed $seed',
+          );
+        }
+      }
+    },
+  );
+
   test(
     'typing groups break on pause, caret move, line break, direction switch and space after a word',
     () {

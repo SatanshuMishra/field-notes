@@ -1043,6 +1043,84 @@ void main() {
   );
 
   testWidgets(
+    'option backspace across a line break removes a hidden node whole',
+    (WidgetTester tester) async {
+      const String source = 'The **fog**\nnext';
+      final _FakeHost host = _FakeHost(
+        source,
+        selection: NoteSelection.collapsed(source.indexOf('next')),
+      );
+      expect(host.visible.text, 'The fog\nnext');
+      Actions.invoke(
+        await _mount(tester, NoteActions(host: host)),
+        const DeleteToNextWordBoundaryIntent(forward: false),
+      );
+      expect(host.state.source, 'The next');
+      expect(host.state.selection, const NoteSelection.collapsed(4));
+      expect(host.applied.single.event, TransactionEvent.inputDelete);
+    },
+  );
+
+  testWidgets('option delete across a line break removes a hidden link whole', (
+    WidgetTester tester,
+  ) async {
+    final _FakeHost host = _FakeHost(
+      'a\n[site](https://x.y) b',
+      selection: const NoteSelection.collapsed(1),
+    );
+    expect(host.visible.text, 'a\nsite b');
+    Actions.invoke(
+      await _mount(tester, NoteActions(host: host)),
+      const DeleteToNextWordBoundaryIntent(forward: true),
+    );
+    expect(host.state.source, 'a b');
+    expect(host.state.selection, const NoteSelection.collapsed(1));
+    expect(host.applied.single.event, TransactionEvent.inputDelete);
+  });
+
+  testWidgets('word and line deletes in a table cell stay inside that cell', (
+    WidgetTester tester,
+  ) async {
+    const String table = '| ab | cd |\n| - | - |';
+    final int cell = table.indexOf('cd');
+    final _FakeHost host = _FakeHost(
+      table,
+      selection: NoteSelection.collapsed(cell),
+    );
+    final BuildContext context = await _mount(tester, NoteActions(host: host));
+    expect(host.visible.text, 'ab\tcd');
+    Actions.invoke(
+      context,
+      const DeleteToNextWordBoundaryIntent(forward: false),
+    );
+    expect(host.applied, isEmpty);
+    expect(host.state.source, table);
+
+    host.reset(table, NoteSelection.collapsed(cell + 2));
+    Actions.invoke(context, const DeleteToLineBreakIntent(forward: false));
+    expect(host.state.source, '| ab |  |\n| - | - |');
+    expect(host.state.selection, NoteSelection.collapsed(cell));
+  });
+
+  testWidgets('option backspace below a table keeps its hidden markup', (
+    WidgetTester tester,
+  ) async {
+    const String source = '| a | b |\n| - | - |\n\nnext';
+    final _FakeHost host = _FakeHost(
+      source,
+      selection: NoteSelection.collapsed(source.indexOf('next')),
+    );
+    expect(host.visible.text, 'a\tb\n\nnext');
+    Actions.invoke(
+      await _mount(tester, NoteActions(host: host)),
+      const DeleteToNextWordBoundaryIntent(forward: false),
+    );
+    expect(host.state.source, '| a |  |\n| - | - |next');
+    expect(host.state.selection, const NoteSelection.collapsed(6));
+    expect(host.applied.single.event, TransactionEvent.inputDelete);
+  });
+
+  testWidgets(
     'every default text editing intent has an enabled action',
     (WidgetTester tester) async {
       final _Harness harness = await _pump(
