@@ -9,6 +9,7 @@ class AppSettings {
     required this.soundEnabled,
     required this.textSize,
     required this.weekStart,
+    required this.spellCheckEnabled,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -17,6 +18,7 @@ class AppSettings {
     soundEnabled: true,
     textSize: TextSize.medium,
     weekStart: WeekStart.sunday,
+    spellCheckEnabled: false,
   );
 
   final bool reminderEnabled;
@@ -24,6 +26,7 @@ class AppSettings {
   final bool soundEnabled;
   final TextSize textSize;
   final WeekStart weekStart;
+  final bool spellCheckEnabled;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -31,6 +34,7 @@ class AppSettings {
     bool? soundEnabled,
     TextSize? textSize,
     WeekStart? weekStart,
+    bool? spellCheckEnabled,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -38,6 +42,7 @@ class AppSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       textSize: textSize ?? this.textSize,
       weekStart: weekStart ?? this.weekStart,
+      spellCheckEnabled: spellCheckEnabled ?? this.spellCheckEnabled,
     );
   }
 
@@ -50,7 +55,8 @@ class AppSettings {
           reminderTime == other.reminderTime &&
           soundEnabled == other.soundEnabled &&
           textSize == other.textSize &&
-          weekStart == other.weekStart;
+          weekStart == other.weekStart &&
+          spellCheckEnabled == other.spellCheckEnabled;
 
   @override
   int get hashCode => Object.hash(
@@ -59,11 +65,13 @@ class AppSettings {
         soundEnabled,
         textSize,
         weekStart,
+        spellCheckEnabled,
       );
 
   @override
   String toString() =>
       'AppSettings(reminderEnabled: $reminderEnabled, '
       'reminderTime: $reminderTime, soundEnabled: $soundEnabled, '
-      'textSize: $textSize, weekStart: $weekStart)';
+      'textSize: $textSize, weekStart: $weekStart, '
+      'spellCheckEnabled: $spellCheckEnabled)';
 }

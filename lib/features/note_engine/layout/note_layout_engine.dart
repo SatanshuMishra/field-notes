@@ -26,15 +26,24 @@ final class NoteLayoutEngine {
 
   final NoteVisibleProjector _projector;
   final LayoutCache _cache;
+  _PassRecord? _last;
   List<int> _lastRelaidBlocks = const <int>[];
 
   List<int> get lastRelaidBlocks => _lastRelaidBlocks;
 
   LaidOutNote layout(LayoutInputs inputs) {
     _cache.beginPass();
-    final _Pass pass = _Pass(_cache, mark: true);
-    final NoteFlow flow = pass.flow(inputs);
+    final _PassRecord? last = _last;
+    final _Pass pass = _Pass(
+      _cache,
+      last != null && last.servesInputs(inputs) ? last : null,
+      inputs,
+      mark: true,
+    );
+    final NoteFlow flow = pass.flow();
     _cache.evictUnused();
+    final _PassRecord record = pass.record();
+    _last = record;
     final Set<int> relaid = <int>{
       ...pass.rowMisses,
       for (final int call in pass.planMisses)
@@ -47,13 +56,16 @@ final class NoteLayoutEngine {
       flow: flow,
       activeLayout: inputs.readerMode
           ? (int activeLine, {int? activeCell}) => flow
-          : _activeLayoutFor(inputs),
+          : _activeLayoutFor(inputs, record),
     );
   }
 
-  void clearCache() => _cache.clear();
+  void clearCache() {
+    _cache.clear();
+    _last = null;
+  }
 
-  ActiveLayout _activeLayoutFor(LayoutInputs inputs) =>
+  ActiveLayout _activeLayoutFor(LayoutInputs inputs, _PassRecord record) =>
       (int activeLine, {int? activeCell}) {
         final LayoutInputs active = LayoutInputs(
           source: inputs.source,
@@ -73,21 +85,82 @@ final class NoteLayoutEngine {
           mediaDimensions: inputs.mediaDimensions,
           unavailableMedia: inputs.unavailableMedia,
         );
-        return _Pass(_cache, mark: false).flow(active);
+        return _Pass(_cache, record, active, mark: false).flow();
       };
 }
 
+typedef _Slot = ({double width, bool besideFloat, int? from, int? to});
+
+typedef _Entry = ({_Slot slot, LaidOutRow layout});
+
+final class _PassRecord {
+  _PassRecord(this.plan, List<List<_Entry>?> entries)
+    : _entries = List<List<_Entry>?>.unmodifiable(entries);
+
+  final LayoutRowPlan plan;
+  final List<List<_Entry>?> _entries;
+
+  bool servesInputs(LayoutInputs inputs) {
+    final LayoutInputs laid = plan.inputs;
+    return laid.columnWidth == inputs.columnWidth &&
+        laid.textScaler == inputs.textScaler &&
+        laid.boldText == inputs.boldText &&
+        laid.locale == inputs.locale;
+  }
+
+  LaidOutRow? layoutAt(int row, _Slot slot) {
+    final List<_Entry>? entries = row < 0 || row >= _entries.length
+        ? null
+        : _entries[row];
+    if (entries == null) {
+      return null;
+    }
+    for (final _Entry entry in entries) {
+      final _Slot kept = entry.slot;
+      if (kept.width == slot.width &&
+          kept.besideFloat == slot.besideFloat &&
+          kept.from == slot.from &&
+          kept.to == slot.to) {
+        return entry.layout;
+      }
+    }
+    return null;
+  }
+}
+
 final class _Pass {
-  _Pass(this.cache, {required this.mark});
+  factory _Pass(
+    LayoutCache cache,
+    _PassRecord? previous,
+    LayoutInputs inputs, {
+    required bool mark,
+  }) => _Pass._(
+    cache,
+    previous,
+    planLayoutRows(inputs, previous: previous?.plan),
+    mark: mark,
+  );
+
+  _Pass._(this.cache, this.previous, this.plan, {required this.mark})
+    : _laid = List<List<_Entry>?>.filled(plan.rows.length, null);
 
   final LayoutCache cache;
+  final _PassRecord? previous;
+  final LayoutRowPlan plan;
   final bool mark;
   final List<int> rowMisses = <int>[];
   final List<int> planMisses = <int>[];
+  final List<List<_Entry>?> _laid;
   int _planCalls = 0;
 
-  NoteFlow flow(LayoutInputs inputs) =>
-      flowNote(inputs, rowLayouter: _layoutRow, photoPlanner: _planPhoto);
+  NoteFlow flow() => flowLayoutRows(
+    plan.inputs,
+    plan.rows,
+    rowLayouter: _layoutRow,
+    photoPlanner: _planPhoto,
+  );
+
+  _PassRecord record() => _PassRecord(plan, _laid);
 
   LaidOutRow _layoutRow(
     LayoutInputs inputs,
@@ -96,20 +169,22 @@ final class _Pass {
     int? visibleFrom,
     int? visibleTo,
   }) {
-    final RowCacheKey key = RowCacheKey.of(
-      inputs,
-      row,
-      region,
-      visibleFrom: visibleFrom,
-      visibleTo: visibleTo,
+    final int base = row.visibleRange.start;
+    final _Slot slot = (
+      width: region.width,
+      besideFloat: region.besideFloat,
+      from: visibleFrom == null ? null : visibleFrom - base,
+      to: visibleTo == null ? null : visibleTo - base,
     );
-    final LaidOutRow? hit = cache.lookup(key, mark: mark);
-    if (hit != null) {
-      return hit.shifted(
-        Offset(region.left, region.top),
-        row.visibleRange.start,
-        row: row,
-      );
+    final int? reused = row.index < plan.reusedFrom.length
+        ? plan.reusedFrom[row.index]
+        : null;
+    final LaidOutRow? kept = reused == null
+        ? null
+        : previous?.layoutAt(reused, slot);
+    if (kept != null) {
+      _remember(row.index, slot, kept);
+      return kept.shifted(Offset(region.left, region.top), base, row: row);
     }
     final LaidOutRow fresh = row.kind == LayoutRowKind.table
         ? layoutTableRow(
@@ -126,17 +201,17 @@ final class _Pass {
             visibleFrom: visibleFrom,
             visibleTo: visibleTo,
           );
-    cache.store(
-      key,
-      fresh.shifted(
-        Offset(-region.left, -region.top),
-        -row.visibleRange.start,
-        row: row,
-      ),
-      mark: mark,
+    _remember(
+      row.index,
+      slot,
+      fresh.shifted(Offset(-region.left, -region.top), -base, row: row),
     );
     rowMisses.add(row.blockIndex);
     return fresh;
+  }
+
+  void _remember(int row, _Slot slot, LaidOutRow layout) {
+    (_laid[row] ??= <_Entry>[]).add((slot: slot, layout: layout));
   }
 
   PhotoLayoutPlan _planPhoto({

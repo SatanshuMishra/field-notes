@@ -94,11 +94,12 @@ void main() {
       'blockQuote 0-15 c2-15 m[0-2 6-8 10-12]',
       '  fencedCode 2-15 c8-9 m[2-5 12-15] closed',
     ]);
-    final MdBlock quote = _parser.parse('> - x').single;
-    expect(quote.kind, MdBlockKind.blockQuote);
-    expect(quote.sourceRange, const MdRange(0, 5));
-    expect(quote.markerRanges, <MdRange>[const MdRange(0, 2)]);
-    expect(quote.blocks.single.sourceRange, const MdRange(2, 5));
+    expect(_parse('> - x'), <String>[
+      'blockQuote 0-5 c2-5 m[0-2]',
+      '  bulletList 2-5 c2-5 m[]',
+      '    listItem 2-5 c4-5 m[2-4]',
+      '      paragraph 4-5 c4-5 m[]',
+    ]);
   });
 
   test('a blank quote line ends the paragraph and makes no node', () {

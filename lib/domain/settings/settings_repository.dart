@@ -19,5 +19,7 @@ abstract interface class SettingsRepository {
 
   Future<void> setWeekStart(WeekStart value);
 
+  Future<void> setSpellCheckEnabled(bool value);
+
   StorageMode get storageMode;
 }
