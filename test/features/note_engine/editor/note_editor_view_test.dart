@@ -1218,4 +1218,34 @@ void main() {
     expect(editor.controller.text, contains('![Low tide]'));
     await _settle(tester);
   });
+
+  testWidgets(
+    'a tap on the caret asks for the keyboard again',
+    (WidgetTester tester) async {
+      final _Editor editor = await _pump(tester, 'hello');
+      await _focus(tester, editor);
+      await _select(tester, editor, const TextSelection.collapsed(offset: 3));
+      await tester.pump();
+      final RenderNoteView render = _renderView(tester);
+      final Rect caret = render.caretRect!;
+      tester.testTextInput.log.clear();
+
+      final TestGesture gesture = await tester.startGesture(
+        render.localToGlobal(caret.center),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      await gesture.up();
+      await tester.pump(const Duration(milliseconds: 350));
+
+      expect(textInputCalls(tester, 'TextInput.show'), isNotEmpty);
+      expect(
+        editor.controller.selection,
+        const TextSelection.collapsed(offset: 3),
+      );
+      await _settle(tester);
+    },
+    variant: const TargetPlatformVariant(<TargetPlatform>{
+      TargetPlatform.android,
+    }),
+  );
 }

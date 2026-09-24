@@ -1540,6 +1540,8 @@ class NoteEditorViewState extends State<NoteEditorView>
                 onSelectionChanged: _handleGestureSelection,
                 onDragActiveChanged: _handleGestureDrag,
                 onToggleCheckbox: _toggleCheckbox,
+                onRequestKeyboard: () =>
+                    _client.showKeyboard(widget.focusNode),
                 child: NoteInputCompositionCallback(
                   client: _client,
                   child: NoteView(
