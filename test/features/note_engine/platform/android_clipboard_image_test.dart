@@ -183,6 +183,17 @@ void main() {
       expect(answers.length, greaterThan(caught.length));
     });
 
+    test('every bridge shares one reader thread', () {
+      final int companion = bridge.indexOf('companion object');
+      final Iterable<RegExpMatch> executors = RegExp(
+        r'Executors\.new\w+\(',
+      ).allMatches(bridge);
+
+      expect(companion, isNot(-1));
+      expect(executors, hasLength(1));
+      expect(executors.single.start, greaterThan(companion));
+    });
+
     test('the dart channel name equals the kotlin channel', () {
       final RegExpMatch? match = RegExp(
         r'const val CHANNEL = "([^"]+)"',

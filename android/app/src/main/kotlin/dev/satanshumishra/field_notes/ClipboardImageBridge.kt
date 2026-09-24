@@ -12,7 +12,6 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 class ClipboardImageBridge(private val context: Context) {
-    private val reader: ExecutorService = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun register(messenger: BinaryMessenger) {
@@ -88,5 +87,6 @@ class ClipboardImageBridge(private val context: Context) {
 
     companion object {
         const val CHANNEL = "field_notes/clipboard_image"
+        private val reader: ExecutorService = Executors.newSingleThreadExecutor()
     }
 }
