@@ -135,11 +135,22 @@ NoteFlow flowNote(
   LayoutInputs inputs, {
   RowLayouter rowLayouter = layoutRow,
   PhotoPlanner photoPlanner = planPhoto,
+}) => flowLayoutRows(
+  inputs,
+  layoutRowsOf(inputs),
+  rowLayouter: rowLayouter,
+  photoPlanner: photoPlanner,
+);
+
+NoteFlow flowLayoutRows(
+  LayoutInputs inputs,
+  List<LayoutRow> layoutRows, {
+  RowLayouter rowLayouter = layoutRow,
+  PhotoPlanner photoPlanner = planPhoto,
 }) {
   final double column = inputs.columnWidth;
   final double em = NoteTypography.emOf(inputs.textScaler);
   final double belowFloatGap = NoteTypography.paragraphGapEm * em;
-  final List<LayoutRow> layoutRows = layoutRowsOf(inputs);
   final List<LaidOutRow> laidOut = <LaidOutRow>[];
   final List<PlacedPhoto> photos = <PlacedPhoto>[];
   final Map<String, int> seen = <String, int>{};

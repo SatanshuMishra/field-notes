@@ -553,7 +553,7 @@ Transaction _transaction(
     delta,
     replaced,
   );
-  final List<MdRange> pieces = _splitAtTables(state.tree, range);
+  final List<MdRange> pieces = splitAtTables(state.tree, range);
   final ChangeSet changes = ChangeSet(
     length: state.source.length,
     replacements: <TextReplacement>[
@@ -654,7 +654,7 @@ MdRange _replacedSourceRange(
   );
 }
 
-List<MdRange> _splitAtTables(MdTree tree, MdRange range) {
+List<MdRange> splitAtTables(MdTree tree, MdRange range) {
   final List<MdRange> pieces = <MdRange>[];
   int at = range.start;
   for (final MdBlock table in tree.blocks) {

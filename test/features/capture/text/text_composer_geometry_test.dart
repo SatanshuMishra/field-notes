@@ -28,6 +28,16 @@ Finder _panel() => find
 
 Future<List<String>> _noPhotos() async => const <String>[];
 
+double _runWidth(String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return width;
+}
+
 Rect _viewport(WidgetTester tester) => tester.getRect(
       find.descendant(
         of: find.byType(RawScrollbar),
@@ -88,7 +98,7 @@ void main() {
       expect(composerPanelWidth, 640);
       expect(tester.getSize(_panel()).width, 640);
       expect(driver.contentRect.size.width, 560);
-      expect(driver.visibleHintStyle, isNotNull);
+      expect(driver.paintedHint?.width, 560);
       expect(driver.contentRect.left, 360);
       expect(
         find.descendant(
@@ -103,15 +113,26 @@ void main() {
     testWidgets('the editor writes in the note body style the reader reads', (
       WidgetTester tester,
     ) async {
+      const String sample = 'a quiet morning';
       final NoteEditorDriver driver = NoteEditorDriver(tester);
       await _pumpComposer(tester, surface: _desktopSurface);
 
-      final TextStyle style = driver.style;
-      expect(style.fontFamily, TypographyTokens.noteBody.fontFamily);
-      expect(style.fontSize, TypographyTokens.noteBody.fontSize);
-      expect(style.fontWeight, TypographyTokens.noteBody.fontWeight);
-      expect(style.height, TypographyTokens.noteBody.height);
       expect(driver.visibleHintStyle, TypographyTokens.noteBodyPlaceholder);
+      expect(
+        driver.paintedHint?.longestLine,
+        closeTo(
+          _runWidth('Start writing…', TypographyTokens.noteBodyPlaceholder),
+          0.01,
+        ),
+      );
+
+      await driver.enterText(sample);
+      final Size line = driver.firstLineSize;
+      expect(
+        line.width,
+        closeTo(_runWidth(sample, TypographyTokens.noteBody), 0.01),
+      );
+      expect(line.height, closeTo(_lineHeight, 0.01));
     });
 
     testWidgets(

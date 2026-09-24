@@ -87,13 +87,13 @@ Future<void> _openViewer(
   await tester.pumpAndSettle();
 }
 
+Finder _readerColumn() => find.descendant(
+  of: find.byType(NoteReaderView),
+  matching: find.byType(NoteViewBody),
+);
+
 RenderNoteView _reader(WidgetTester tester) =>
-    tester.renderObject<RenderNoteView>(
-      find.descendant(
-        of: find.byType(NoteReaderView),
-        matching: find.byType(NoteViewBody),
-      ),
-    );
+    tester.renderObject<RenderNoteView>(_readerColumn());
 
 void main() {
   testWidgets('the note viewer lays out a six hundred eighty eight pixel '
@@ -109,7 +109,7 @@ void main() {
     );
 
     expect(tester.getSize(find.byKey(composerPanelKey)).width, 768);
-    expect(tester.getSize(find.byType(NoteReaderView)).width, 688);
+    expect(tester.getSize(_readerColumn()).width, 688);
   });
 
   testWidgets('the note viewer caps its column at 45 em in a 1920 window', (
@@ -125,7 +125,7 @@ void main() {
       entryId: 'entry-1',
     );
 
-    expect(tester.getSize(find.byType(NoteReaderView)).width, 720);
+    expect(tester.getSize(_readerColumn()).width, 720);
   });
 
   testWidgets('the composer writes in the same 688 column in a 1280 window', (
