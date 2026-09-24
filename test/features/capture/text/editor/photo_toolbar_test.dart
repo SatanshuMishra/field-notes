@@ -991,6 +991,63 @@ void main() {
     expect(_bar(tester).bottom, greaterThan(_editor(tester).bottom - 400));
   });
 
+  test('the bar never takes the slot above a photo that starts in the band '
+      'under the surface', () {
+    const Rect surface = Rect.fromLTWH(0, 0, 720, 600);
+    const Size bar = Size(300, 58);
+
+    final Offset clear = photoToolbarOffset(
+      figure: const Rect.fromLTWH(210, 590, 300, 225),
+      surface: surface,
+      bar: bar,
+    );
+    expect(clear, const Offset(210, 522));
+
+    final Offset banded = photoToolbarOffset(
+      figure: const Rect.fromLTWH(210, 630, 300, 225),
+      surface: surface,
+      bar: bar,
+    );
+    expect(banded.dy + bar.height, lessThanOrEqualTo(surface.bottom));
+    expect(banded.dy, greaterThanOrEqualTo(surface.top));
+  });
+
+  testWidgets('it hides while the photo starts inside the bottom inset band', (
+    WidgetTester tester,
+  ) async {
+    const double inset = 100;
+    final String note = '${_lines(40)}\n$a\n${_lines(40)}';
+    final _Harness harness = await _pump(tester, note, bottomInset: inset);
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+    harness.focusNode.requestFocus();
+    await tester.pump();
+    await driver.setSelection(
+      TextSelection.collapsed(offset: note.indexOf(a) + 4),
+    );
+
+    Future<void> placePhotoTop(double y) async {
+      final double shift = _figure(tester).top - _editor(tester).top - y;
+      harness.scroll.jumpTo(harness.scroll.offset + shift);
+      await tester.pump();
+      expect(_figure(tester).top - _editor(tester).top, closeTo(y, _tolerance));
+    }
+
+    final double bandTop = _editor(tester).bottom - inset;
+
+    await placePhotoTop(590);
+
+    expect(find.byKey(photoToolbarKey), findsOneWidget);
+    expect(_bar(tester).bottom, lessThanOrEqualTo(bandTop + _tolerance));
+    expect(
+      _figure(tester).top - _bar(tester).bottom,
+      lessThanOrEqualTo(photoToolbarGap + _tolerance),
+    );
+
+    await placePhotoTop(650);
+
+    expect(find.byKey(photoToolbarKey), findsNothing);
+  });
+
   testWidgets('it stays inside the writing surface and hides when the photo '
       'scrolls away', (WidgetTester tester) async {
     final String photo = mdPhotoLine(photoIdA, size: MdPhotoSize.full);
