@@ -18,6 +18,7 @@ import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
+import '../../support/note_editor_driver.dart';
 import '../day_detail/support/day_detail_harness.dart';
 
 const String _date = '2026-07-19';
@@ -216,8 +217,9 @@ Future<void> _drainToast(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-Finder _noteText(String text) =>
-    find.textContaining(text, findRichText: true);
+Finder _noteText(String text) => find.byWidgetPredicate(
+      (Widget w) => w is NoteBody && w.text.contains(text),
+    );
 
 void main() {
   testWidgets('view mode text carries no fallback underline',
@@ -267,6 +269,7 @@ void main() {
 
   testWidgets('Edit switches to edit mode without moving the panel',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     await _open(tester, entryId: 'entry-2');
     final Rect before = tester.getRect(find.byKey(logViewerPanelKey));
 
@@ -274,7 +277,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final Rect after = tester.getRect(find.byKey(logViewerPanelKey));
-    expect(find.byType(EditableText), findsOneWidget);
+    expect(driver.find, findsOneWidget);
     expect(find.text('Editing afternoon note'), findsOneWidget);
     expect(after.left, before.left);
     expect(after.right, before.right);
@@ -284,11 +287,12 @@ void main() {
   testWidgets(
       'Back from edit mode returns to view mode showing the saved text',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final _Session session = await _open(tester, entryId: 'entry-2');
 
     await tester.tap(find.byKey(logActionsEditKey));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pumpAndSettle();
@@ -296,7 +300,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(session.repository.noteSaves, hasLength(1));
-    expect(find.byType(EditableText), findsNothing);
+    expect(driver.find, findsNothing);
     expect(find.text('Afternoon note'), findsOneWidget);
     expect(_noteText('a better day'), findsOneWidget);
     expect(find.byKey(logViewerPanelKey), findsOneWidget);

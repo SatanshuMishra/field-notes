@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../support/note_editor_driver.dart';
 import '../core/capture_test_support.dart';
 
 class _ComposerTrigger extends StatelessWidget {
@@ -156,6 +157,7 @@ void main() {
   testWidgets('saving a new note toasts where it was saved', (
     WidgetTester tester,
   ) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final FakeNoteWriter writer = FakeNoteWriter();
     await tester.pumpWidget(
       _composerApp(
@@ -166,7 +168,7 @@ void main() {
     );
     await _open(tester);
 
-    await tester.enterText(find.byType(EditableText), 'a good day');
+    await driver.enterText('a good day');
     await tester.pump();
     await tester.tap(find.text('Save'));
     await tester.pump();
@@ -184,6 +186,7 @@ void main() {
   testWidgets(
     'command or control Enter saves the note',
     (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       final FakeNoteWriter writer = FakeNoteWriter();
       await tester.pumpWidget(
         _composerApp(
@@ -194,7 +197,7 @@ void main() {
       );
       await _open(tester);
 
-      await tester.enterText(find.byType(EditableText), 'a good day');
+      await driver.enterText('a good day');
       await tester.pump();
       final bool mac = defaultTargetPlatform == TargetPlatform.macOS;
       final LogicalKeyboardKey modifier = mac

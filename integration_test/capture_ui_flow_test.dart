@@ -16,6 +16,7 @@ import 'package:integration_test/integration_test.dart';
 
 import '../test/features/capture/video/video_test_support.dart';
 import '../test/features/capture/voice/voice_test_support.dart';
+import '../test/support/note_editor_driver.dart';
 import 'support/integration_sandbox.dart';
 
 const Duration _step = Duration(milliseconds: 100);
@@ -79,7 +80,7 @@ void main() {
 
     final String noteText =
         'ui-flow-note-${DateTime.now().microsecondsSinceEpoch}';
-    await tester.enterText(find.byType(EditableText), noteText);
+    await NoteEditorDriver(tester).enterText(noteText);
     await tester.pump();
 
     await tester.tap(find.text('Save'));
@@ -90,7 +91,12 @@ void main() {
 
     expect(find.byType(TextComposerSheet), findsNothing);
     expect(find.byType(NoteBody), findsOneWidget);
-    expect(find.text(noteText), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == noteText,
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets(

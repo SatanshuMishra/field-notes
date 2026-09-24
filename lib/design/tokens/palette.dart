@@ -44,6 +44,7 @@ abstract final class Palette {
   static const Color mutedDeep = Color(0xFF8A7358);
   static const Color placeholder = Color(0xFFB3A58C);
   static const Color dashMuted = Color(0xFFC3B39A);
+  static const Color highlight = Color(0x8CF2D77E);
 
   static const Color danger = Color(0xFFC0392B);
   static const Color dangerSurface = Color(0xFFFBECEA);

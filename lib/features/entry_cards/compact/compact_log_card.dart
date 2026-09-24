@@ -6,7 +6,7 @@ import 'package:flutter/widgets.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
 import '../../../domain/models/models.dart';
-import '../../notes/render/note_photo_block.dart';
+import '../../notes/render/note_photo_block.dart' show NoteMediaScope;
 import '../cards/note_body.dart';
 import '../cards/voice_body.dart';
 import '../media/media_image.dart';

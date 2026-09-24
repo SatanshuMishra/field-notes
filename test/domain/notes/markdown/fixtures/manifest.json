@@ -1,0 +1,532 @@
+{
+  "commonmark": {
+    "version": "0.31.2",
+    "sections": [
+      "Tabs",
+      "Backslash escapes",
+      "Precedence",
+      "Thematic breaks",
+      "ATX headings",
+      "Fenced code blocks",
+      "Paragraphs",
+      "Blank lines",
+      "Block quotes",
+      "List items",
+      "Lists",
+      "Inlines",
+      "Code spans",
+      "Emphasis and strong emphasis",
+      "Links",
+      "Autolinks",
+      "Hard line breaks",
+      "Soft line breaks",
+      "Textual content"
+    ],
+    "excluded": [
+      {
+        "example": 1,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 2,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 3,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 5,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 6,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 7,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 8,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 18,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 21,
+        "reason": "unsupported",
+        "detail": "HTML block: literal text under G1"
+      },
+      {
+        "example": 23,
+        "reason": "unsupported",
+        "detail": "link reference definition: literal text under G1"
+      },
+      {
+        "example": 48,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 59,
+        "reason": "unsupported",
+        "detail": "setext heading: the underline has no heading meaning under G1"
+      },
+      {
+        "example": 69,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 121,
+        "reason": "deviation",
+        "rule": "V1",
+        "detail": "a code span keeps its line breaks, drawn as source lines, and strips only U+0020, so a line break beside the backticks stays in its content"
+      },
+      {
+        "example": 134,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 141,
+        "reason": "unsupported",
+        "detail": "setext heading: the underline has no heading meaning under G1"
+      },
+      {
+        "example": 225,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 231,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 236,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 252,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 253,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 254,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 257,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 264,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 270,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 271,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 272,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 273,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 274,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 278,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 286,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 287,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 288,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 289,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 290,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 300,
+        "reason": "unsupported",
+        "detail": "setext heading: the underline has no heading meaning under G1"
+      },
+      {
+        "example": 308,
+        "reason": "unsupported",
+        "detail": "HTML block: literal text under G1"
+      },
+      {
+        "example": 309,
+        "reason": "unsupported",
+        "detail": "HTML block: literal text under G1"
+      },
+      {
+        "example": 313,
+        "reason": "unsupported",
+        "detail": "indented code block: a line indented four or more columns that no container consumes is paragraph text under G1"
+      },
+      {
+        "example": 317,
+        "reason": "unsupported",
+        "detail": "link reference definition: literal text under G1"
+      },
+      {
+        "example": 335,
+        "reason": "deviation",
+        "rule": "V1",
+        "detail": "a code span keeps its line breaks, drawn as source lines, and strips only U+0020, so a line break beside the backticks stays in its content"
+      },
+      {
+        "example": 336,
+        "reason": "deviation",
+        "rule": "V1",
+        "detail": "a code span keeps its line breaks, drawn as source lines, and strips only U+0020, so a line break beside the backticks stays in its content"
+      },
+      {
+        "example": 344,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 475,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 476,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 477,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 491,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 494,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 503,
+        "reason": "unsupported",
+        "detail": "entity or numeric character reference: literal under G1"
+      },
+      {
+        "example": 506,
+        "reason": "unsupported",
+        "detail": "entity or numeric character reference: literal under G1"
+      },
+      {
+        "example": 517,
+        "reason": "unsupported",
+        "detail": "image other than a photo line: ! is literal under G1"
+      },
+      {
+        "example": 520,
+        "reason": "unsupported",
+        "detail": "image other than a photo line: ! is literal under G1"
+      },
+      {
+        "example": 524,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 527,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 528,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 529,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 530,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 531,
+        "reason": "unsupported",
+        "detail": "image other than a photo line: ! is literal under G1"
+      },
+      {
+        "example": 532,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 533,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 534,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 535,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 536,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 537,
+        "reason": "unsupported",
+        "detail": "link reference definition: literal text under G1"
+      },
+      {
+        "example": 538,
+        "reason": "unsupported",
+        "detail": "link reference definition: literal text under G1"
+      },
+      {
+        "example": 539,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 540,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 541,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 542,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 543,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 544,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 545,
+        "reason": "unsupported",
+        "detail": "link reference definition: literal text under G1"
+      },
+      {
+        "example": 549,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 550,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 553,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 554,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 555,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 556,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 557,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 558,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 559,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 560,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 561,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 562,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 563,
+        "reason": "unsupported",
+        "detail": "link reference definition: literal text under G1"
+      },
+      {
+        "example": 564,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 565,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 566,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 567,
+        "reason": "unsupported",
+        "detail": "link reference definition: literal text under G1"
+      },
+      {
+        "example": 568,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 569,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 570,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 571,
+        "reason": "unsupported",
+        "detail": "reference link and link reference definition: literal text under G1"
+      },
+      {
+        "example": 642,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      },
+      {
+        "example": 643,
+        "reason": "unsupported",
+        "detail": "inline HTML: literal text under G1"
+      }
+    ]
+  },
+  "gfm": {
+    "version": "0.29-gfm",
+    "examples": [
+      198,
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      279,
+      280,
+      491,
+      492,
+      493
+    ],
+    "excluded": [
+      {
+        "example": 491,
+        "reason": "deviation",
+        "rule": "G1",
+        "detail": "strikethrough needs exactly two tildes; a single ~ is literal"
+      }
+    ]
+  }
+}

@@ -7,6 +7,8 @@ import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/capture/text/composer_footer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 
+import '../../../support/note_editor_driver.dart';
+import '../../../support/photo_line_fixture.dart';
 import '../../notes/support/notes_harness.dart';
 
 const Size _landscapePhoneSurface = Size(844, 390);
@@ -30,11 +32,14 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(composerAddPhotoKey));
+    await NoteEditorDriver(tester).press(
+      find.byKey(composerAddPhotoKey),
+      const Duration(milliseconds: 110),
+    );
     await tester.pump();
 
     expect(importer.calls, 1);
-    expect(controller.text, 'one\n${photoLine(photoIdA)}\ntwo');
+    expect(controller.text, 'one\ntwo\n${mdPhotoLine(photoIdA)}\n');
   });
 
   testWidgets('a refused pick is reported and leaves the note alone',
@@ -52,7 +57,10 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(composerAddPhotoKey));
+    await NoteEditorDriver(tester).press(
+      find.byKey(composerAddPhotoKey),
+      const Duration(milliseconds: 110),
+    );
     await tester.pump();
 
     expect(find.text(photoLibraryErrorMessage), findsOneWidget);

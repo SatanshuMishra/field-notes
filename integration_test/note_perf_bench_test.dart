@@ -8,9 +8,16 @@ import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
-import 'package:field_notes/features/capture/text/editor/editor.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart'
+    show MdPhotoPlacement;
+import 'package:field_notes/features/capture/text/editor/note_editor.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
-import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteEditorController;
+import 'package:field_notes/features/note_engine/render/photo_figure.dart'
+    show PhotoFigure;
+import 'package:field_notes/features/notes/render/note_photo_block.dart'
+    show NoteMediaScope;
 import 'package:field_notes/features/today/today_layout.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
@@ -21,6 +28,8 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import '../test/support/photo_line_fixture.dart';
+import '../test/support/text_input_messages.dart';
 import 'fixtures/long_note_fixtures.dart';
 import 'support/bench_recorder.dart';
 import 'support/integration_sandbox.dart';
@@ -31,7 +40,7 @@ const int _documentWords = 10000;
 const double _editorSurfaceHeight = 420;
 const double _pageInset = 18;
 const Offset _scrollStep = Offset(0, -60);
-const int _raisedStyleLimit = 1 << 30;
+const int _focusPumps = 10;
 const Duration _imageWarmLimit = Duration(seconds: 30);
 const double _canonicalMeasure = 560;
 final DateTime _pinnedNow = DateTime(2026, 9, 20, 9, 30);
@@ -39,58 +48,52 @@ final DateTime _pinnedNow = DateTime(2026, 9, 20, 9, 30);
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('1 keystroke cost in a 20k-character live-styled buffer',
+  testWidgets('1 keystroke cost in a 20k-character note through delta input',
       (WidgetTester tester) async {
     _prepare(tester);
-    final MarkdownStyleController controller = MarkdownStyleController(
-      text: benchNoteOfChars(_liveStyledChars),
-      styleLimit: _raisedStyleLimit,
-    );
+    final NoteEditorController controller =
+        NoteEditorController(text: benchNoteOfChars(_liveStyledChars));
     final int startingChars = controller.text.length;
-    await _mountEditor(tester, controller);
-    controller.selection =
-        TextSelection.collapsed(offset: startingChars ~/ 2);
+    await _mountFocusedEditor(tester, controller);
     await benchFrames(tester);
 
     await benchMeasure(
       id: 'keystrokeLiveStyled20k',
-      what: 'frame cost after one inserted character in a '
-          '20 000-character buffer with live Markdown styling forced on',
+      what: 'frame cost after one character typed through the editor delta '
+          'input path into a 20 000-character note, the engine styling it '
+          'in full',
       extra: <String, Object?>{
         'startingChars': startingChars,
-        'liveStyling': 'on, the shipping MarkdownStyleController with its '
-            'styleLimit raised above the buffer',
-        'styleLimit': _raisedStyleLimit,
-        'liveStyleLimit': MarkdownStyleController.liveStyleLimit,
-        'caret': 'mid-document, unfocused',
+        'input': 'one TextInputClient.updateEditingStateWithDeltas insertion '
+            'per sample; the platform holds the whole visible text',
+        'caret': 'mid-document, focused',
       },
-      sample: () => _typeOneCharacter(tester, controller),
+      sample: () => _typeOneCharacter(tester),
     );
   });
 
-  testWidgets('2 keystroke cost in a 60k-character buffer, live styling off',
+  testWidgets('2 keystroke cost in a 60k-character note through delta input',
       (WidgetTester tester) async {
     _prepare(tester);
-    final MarkdownStyleController controller =
-        MarkdownStyleController(text: benchNoteOfChars(_plainChars));
+    final NoteEditorController controller =
+        NoteEditorController(text: benchNoteOfChars(_plainChars));
     final int startingChars = controller.text.length;
-    await _mountEditor(tester, controller);
-    controller.selection =
-        TextSelection.collapsed(offset: startingChars ~/ 2);
+    await _mountFocusedEditor(tester, controller);
     await benchFrames(tester);
 
     await benchMeasure(
       id: 'keystrokePlain60k',
-      what: 'frame cost after one inserted character in a '
-          '60 000-character buffer past liveStyleLimit, so the shipping '
-          'controller returns one plain span',
+      what: 'frame cost after one character typed through the editor delta '
+          'input path into a 60 000-character note, past the 20 000-unit '
+          'whole-text limit',
       extra: <String, Object?>{
         'startingChars': startingChars,
-        'liveStyling': 'off, by the shipping liveStyleLimit short circuit',
-        'liveStyleLimit': MarkdownStyleController.liveStyleLimit,
-        'caret': 'mid-document, unfocused',
+        'input': 'one TextInputClient.updateEditingStateWithDeltas insertion '
+            'per sample; the platform holds an input window of at most '
+            '16 000 units around the caret',
+        'caret': 'mid-document, focused',
       },
-      sample: () => _typeOneCharacter(tester, controller),
+      sample: () => _typeOneCharacter(tester),
     );
   });
 
@@ -112,7 +115,7 @@ void main() {
     final String reference = benchPhotoReferences(blobs).single;
     final MediaResolver resolver =
         await _warmResolver(tester, store, <String>[reference]);
-    final String photoLine = photoLineFor(reference: reference);
+    final String photoLine = mdPhotoLine(reference);
     final String paragraph = benchWrappedParagraphSource();
     final BenchStageState stage = await _mountStage(tester);
     Widget pinnedNote(String text) => NoteMediaScope(
@@ -133,18 +136,18 @@ void main() {
       id: 'firstLayoutWrappedParagraph',
       what: 'build, layout and paint of a freshly mounted NoteBody at the '
           '560 pt canonical measure holding one photo line and one paragraph, '
-          'which PhotoWrapBlock splits around the floated photo',
+          'which the engine flows beside the floated PhotoFigure',
       extra: <String, Object?>{
         'chars': '$photoLine\n$paragraph'.length,
         'paragraphChars': paragraph.length,
         'measurePt': _canonicalMeasure,
-        'placement': const PhotoPlacement().format(),
+        'placement': const MdPhotoPlacement().format(),
         'photoPixels': '${benchPhotoWidth}x$benchPhotoHeight',
-        'photoBlockRenderer': 'PhotoWrapBlock through a warm '
-            'MediaStoreResolver, the float asserted on every sample; '
-            'the decoded photo comes from an ImageCache warmed before timing, '
-            'so decode is not in the number',
-        'parserMemo': 'missed, every sample uses a distinct source',
+        'photoBlockRenderer': 'PhotoFigure floated right by the engine '
+            'through a warm MediaStoreResolver, the float asserted on every '
+            'sample; the decoded photo comes from an ImageCache warmed before '
+            'timing, so decode is not in the number',
+        'parserMemo': 'every sample parses a distinct source in full',
       },
       sample: () async {
         final int index = variant++;
@@ -153,7 +156,13 @@ void main() {
           stage,
           pinnedNote('$photoLine\n${benchVariant(paragraph, index)}'),
         );
-        expect(find.byKey(photoWrapFloatKey), findsOneWidget);
+        expect(find.byType(PhotoFigure), findsOneWidget);
+        final Rect figure = tester.getRect(find.byType(PhotoFigure));
+        expect(figure.width, closeTo(280, 0.5));
+        expect(
+          figure.right,
+          closeTo(tester.getRect(find.byType(NoteBody)).right, 0.5),
+        );
         expect(_decodedImages(tester), 1);
         return elapsed;
       },
@@ -211,10 +220,10 @@ void main() {
       extra: <String, Object?>{
         'chars': document.length,
         'photoLines': references.length,
-        'photoBlockRenderer': 'StackedPhoto or PhotoWrapBlock through a warm '
+        'photoBlockRenderer': 'PhotoFigure through the engine and a warm '
             'MediaStoreResolver; every decoded photo comes from an ImageCache '
             'warmed before timing, so decode is not in the number',
-        'parserMemo': 'missed, every sample uses a distinct source',
+        'parserMemo': 'every sample parses a distinct source in full',
       },
       sample: () async {
         final int index = variant++;
@@ -333,7 +342,6 @@ void _prepare(WidgetTester tester) {
     'devicePixelRatio': dpr,
     'noteMeasurePt': _noteMeasureOf(tester),
     'noteBodyFontSize': TypographyTokens.noteBody.fontSize,
-    'liveStyleLimit': MarkdownStyleController.liveStyleLimit,
   });
 }
 
@@ -382,9 +390,9 @@ Future<void> _mountLive(WidgetTester tester, Widget app) async {
   }
 }
 
-Future<void> _mountEditor(
+Future<FocusNode> _mountEditor(
   WidgetTester tester,
-  MarkdownStyleController controller,
+  NoteEditorController controller,
 ) async {
   final FocusNode focusNode = FocusNode();
   final ScrollController scrollController = ScrollController();
@@ -421,6 +429,28 @@ Future<void> _mountEditor(
     ),
   );
   useBenchmarkFrames(tester);
+  return focusNode;
+}
+
+Future<void> _mountFocusedEditor(
+  WidgetTester tester,
+  NoteEditorController controller,
+) async {
+  tester.testTextInput.register();
+  addTearDown(tester.testTextInput.unregister);
+  final FocusNode focusNode = await _mountEditor(tester, controller);
+  focusNode.requestFocus();
+  int pumps = 0;
+  while (!tester.testTextInput.hasAnyClients) {
+    if (pumps++ >= _focusPumps) {
+      throw StateError('the bench editor opened no input connection');
+    }
+    await tester.pump();
+  }
+  controller.selection = TextSelection.collapsed(
+    offset: controller.text.length ~/ 2,
+  );
+  await tester.pump();
 }
 
 Future<BenchStageState> _mountStage(WidgetTester tester) async {
@@ -442,16 +472,21 @@ Future<BenchStageState> _mountStage(WidgetTester tester) async {
   return stage;
 }
 
-Future<Duration> _typeOneCharacter(
-  WidgetTester tester,
-  TextEditingController controller,
-) {
-  final int offset = controller.selection.baseOffset;
-  final String text = controller.text;
-  controller.value = TextEditingValue(
-    text: text.replaceRange(offset, offset, 'e'),
-    selection: TextSelection.collapsed(offset: offset + 1),
-  );
+Future<Duration> _typeOneCharacter(WidgetTester tester) async {
+  await sendRequestExistingInputState(tester);
+  await tester.pump();
+  final Map<String, dynamic>? state = tester.testTextInput.editingState;
+  if (state == null) {
+    throw StateError('the bench editor sent no editing state');
+  }
+  final TextEditingValue platform = TextEditingValue.fromJSON(state);
+  await sendDeltas(tester, <Map<String, Object?>>[
+    insertionDelta(
+      oldText: platform.text,
+      at: platform.selection.baseOffset,
+      text: 'e',
+    ),
+  ]);
   return benchFrame(tester);
 }
 

@@ -1,24 +1,49 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
-import 'package:field_notes/features/capture/text/editor/editor.dart';
+import 'package:field_notes/features/capture/text/editor/format_bar.dart';
+import 'package:field_notes/features/capture/text/editor/note_editor.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteEditorController;
+
+import '../../../../support/note_editor_driver.dart';
 
 const Duration _pastUndoThrottle = Duration(milliseconds: 600);
 
+const Duration _hold = Duration(milliseconds: 110);
+
+const TextEditingValue _helloSelected = TextEditingValue(
+  text: 'hello world',
+  selection: TextSelection(baseOffset: 0, extentOffset: 5),
+);
+
+Future<void> _pumpApp(WidgetTester tester, Widget app) {
+  tester.view.physicalSize = const Size(1200, 2000);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  return tester.pumpWidget(app);
+}
+
+Future<void> _press(WidgetTester tester, Key key) =>
+    NoteEditorDriver(tester).press(find.byKey(key), _hold);
+
+
 class _Harness {
-  _Harness()
-      : controller = MarkdownStyleController(),
+  _Harness({this.tablesAvailable = true})
+      : controller = NoteEditorController(),
         undoController = UndoHistoryController(),
         focusNode = FocusNode(),
         scrollController = ScrollController();
 
-  final MarkdownStyleController controller;
+  final NoteEditorController controller;
   final UndoHistoryController undoController;
   final FocusNode focusNode;
   final ScrollController scrollController;
+  final bool tablesAvailable;
 
   Widget get app => MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -41,6 +66,7 @@ class _Harness {
               FormatBar(
                 controller: controller,
                 undoController: undoController,
+                tablesAvailable: tablesAvailable,
               ),
             ],
           ),
@@ -59,8 +85,8 @@ typedef BarCase = ({Key key, String expected});
 
 const List<BarCase> _barCases = <BarCase>[
   (key: formatBoldKey, expected: '**hello** world'),
-  (key: formatItalicKey, expected: '_hello_ world'),
-  (key: formatHeadingKey, expected: '## hello world'),
+  (key: formatItalicKey, expected: '*hello* world'),
+  (key: formatHeadingKey, expected: '# hello world'),
   (key: formatListKey, expected: '- hello world'),
   (key: formatQuoteKey, expected: '> hello world'),
   (key: formatLinkKey, expected: '[hello]() world'),
@@ -72,7 +98,7 @@ void main() {
         (WidgetTester tester) async {
       final _Harness harness = _Harness();
       addTearDown(harness.dispose);
-      await tester.pumpWidget(harness.app);
+      await _pumpApp(tester, harness.app);
 
       harness.controller.value = const TextEditingValue(
         text: 'hello world',
@@ -80,7 +106,7 @@ void main() {
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(barCase.key));
+      await _press(tester, barCase.key);
       await tester.pump();
 
       expect(harness.controller.text, barCase.expected);
@@ -91,7 +117,7 @@ void main() {
       (WidgetTester tester) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
-    await tester.pumpWidget(harness.app);
+    await _pumpApp(tester, harness.app);
 
     harness.controller.value = const TextEditingValue(
       text: 'hello world',
@@ -99,11 +125,11 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.byKey(formatBoldKey));
+    await _press(tester, formatBoldKey);
     await tester.pump();
     expect(harness.controller.text, '**hello** world');
 
-    await tester.tap(find.byKey(formatBoldKey));
+    await _press(tester, formatBoldKey);
     await tester.pump();
     expect(harness.controller.text, 'hello world');
   });
@@ -112,9 +138,9 @@ void main() {
       (WidgetTester tester) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
-    await tester.pumpWidget(harness.app);
+    await _pumpApp(tester, harness.app);
 
-    await tester.enterText(find.byType(EditableText), 'hello world');
+    await NoteEditorDriver(tester).enterText('hello world');
     await tester.pump(_pastUndoThrottle);
 
     harness.controller.value = const TextEditingValue(
@@ -122,11 +148,11 @@ void main() {
       selection: TextSelection(baseOffset: 0, extentOffset: 5),
     );
     await tester.pump();
-    await tester.tap(find.byKey(formatBoldKey));
+    await _press(tester, formatBoldKey);
     await tester.pump(_pastUndoThrottle);
     expect(harness.controller.text, '**hello** world');
 
-    await tester.tap(find.byKey(formatUndoKey));
+    await _press(tester, formatUndoKey);
     await tester.pump();
 
     expect(harness.controller.text, 'hello world');
@@ -136,7 +162,7 @@ void main() {
       (WidgetTester tester) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
-    await tester.pumpWidget(harness.app);
+    await _pumpApp(tester, harness.app);
     await tester.pump(_pastUndoThrottle);
 
     expect(harness.undoController.value.canUndo, isFalse);
@@ -150,9 +176,9 @@ void main() {
     );
     expect(disabled.properties.enabled, isFalse);
 
-    await tester.enterText(find.byType(EditableText), 'something');
+    await NoteEditorDriver(tester).enterText('something');
     await tester.pump(_pastUndoThrottle);
-    await tester.enterText(find.byType(EditableText), 'something more');
+    await NoteEditorDriver(tester).enterText('something more');
     await tester.pump(_pastUndoThrottle);
 
     expect(harness.undoController.value.canUndo, isTrue);
@@ -171,7 +197,7 @@ void main() {
       (WidgetTester tester) async {
     final _Harness harness = _Harness();
     addTearDown(harness.dispose);
-    await tester.pumpWidget(harness.app);
+    await _pumpApp(tester, harness.app);
 
     harness.focusNode.requestFocus();
     await tester.pump();
@@ -182,7 +208,11 @@ void main() {
     await tester.pump();
     expect(harness.focusNode.hasFocus, isTrue);
 
-    await tester.tap(find.byKey(formatBoldKey));
+    await NoteEditorDriver(tester).press(
+      find.byKey(formatBoldKey),
+      _hold,
+      kind: PointerDeviceKind.mouse,
+    );
     await tester.pump();
 
     expect(harness.focusNode.hasFocus, isTrue);
@@ -202,6 +232,7 @@ void main() {
           body: FormatBar(
             controller: harness.controller,
             undoController: harness.undoController,
+            tablesAvailable: true,
             trailing: const SizedBox.square(
               dimension: 30,
               key: ValueKey<String>('trailing-slot'),
@@ -231,6 +262,7 @@ void main() {
               child: FormatBar(
                 controller: harness.controller,
                 undoController: harness.undoController,
+                tablesAvailable: true,
                 trailing: const SizedBox.square(
                   dimension: 30,
                   key: trailingKey,
@@ -257,7 +289,7 @@ void main() {
       text: 'hello world',
       selection: TextSelection(baseOffset: 0, extentOffset: 5),
     );
-    await tester.drag(find.byKey(formatBoldKey), const Offset(-300, 0));
+    await tester.drag(find.byKey(formatBoldKey), const Offset(-200, 0));
     await tester.pumpAndSettle();
 
     expect(
@@ -267,9 +299,232 @@ void main() {
     expect(tester.getRect(find.byKey(formatUndoKey)), undo);
     expect(tester.getRect(find.byKey(trailingKey)), trailing);
 
-    await tester.tap(find.byKey(formatLinkKey));
+    await _press(tester, formatLinkKey);
     await tester.pump();
     expect(harness.controller.text, '[hello]() world');
+  });
+
+  testWidgets('italic wraps with single stars', (WidgetTester tester) async {
+    final _Harness harness = _Harness();
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
+    harness.controller.value = _helloSelected;
+    await tester.pump();
+
+    await _press(tester, formatItalicKey);
+
+    expect(harness.controller.text, '*hello* world');
+    expect(
+      harness.controller.selection,
+      const TextSelection(baseOffset: 1, extentOffset: 6),
+    );
+  });
+
+  testWidgets('the bar offers numbered list, task list and table buttons', (
+    WidgetTester tester,
+  ) async {
+    const TextEditingValue caretAtStart = TextEditingValue(
+      text: 'hello world',
+      selection: TextSelection.collapsed(offset: 0),
+    );
+    final _Harness numbered = _Harness();
+    addTearDown(numbered.dispose);
+    await _pumpApp(tester, numbered.app);
+
+    expect(find.byKey(formatNumberedKey), findsOneWidget);
+    expect(find.byKey(formatTaskKey), findsOneWidget);
+    expect(find.byKey(formatTableKey), findsOneWidget);
+    expect(find.bySemanticsLabel('Numbered list'), findsOneWidget);
+    expect(find.bySemanticsLabel('Task list'), findsOneWidget);
+    expect(find.bySemanticsLabel('Table'), findsOneWidget);
+
+    numbered.controller.value = caretAtStart;
+    await tester.pump();
+    await _press(tester, formatNumberedKey);
+    expect(numbered.controller.text, '1. hello world');
+
+    final _Harness task = _Harness();
+    addTearDown(task.dispose);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pumpApp(tester, task.app);
+    task.controller.value = caretAtStart;
+    await tester.pump();
+    await _press(tester, formatTaskKey);
+    expect(task.controller.text, '- [ ] hello world');
+
+    final _Harness table = _Harness();
+    addTearDown(table.dispose);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await _pumpApp(tester, table.app);
+    await _press(tester, formatTableKey);
+    expect(
+      table.controller.text,
+      '|  |  |  |\n| --- | --- | --- |\n|  |  |  |',
+    );
+    expect(table.controller.selection, const TextSelection.collapsed(offset: 2));
+  });
+
+  testWidgets('more formats holds strikethrough, highlight and inline code', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = _Harness();
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
+    harness.focusNode.requestFocus();
+    await tester.pump();
+
+    const List<({Key key, String expected})> items =
+        <({Key key, String expected})>[
+          (key: formatStrikethroughKey, expected: '~~hello~~ world'),
+          (key: formatHighlightKey, expected: '==hello== world'),
+          (key: formatCodeKey, expected: '`hello` world'),
+        ];
+    for (final ({Key key, String expected}) item in items) {
+      harness.controller.value = _helloSelected;
+      await tester.pump();
+      await _press(tester, formatMoreKey);
+      expect(find.byKey(formatStrikethroughKey), findsOneWidget);
+      expect(find.byKey(formatHighlightKey), findsOneWidget);
+      expect(find.byKey(formatCodeKey), findsOneWidget);
+      expect(harness.focusNode.hasFocus, isTrue);
+
+      await _press(tester, item.key);
+
+      expect(harness.controller.text, item.expected);
+      expect(find.byKey(formatStrikethroughKey), findsNothing);
+      expect(find.byKey(formatHighlightKey), findsNothing);
+      expect(find.byKey(formatCodeKey), findsNothing);
+      expect(harness.focusNode.hasFocus, isTrue);
+    }
+  });
+
+  testWidgets('the table button is absent when tables are unavailable', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = _Harness(tablesAvailable: false);
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
+
+    expect(find.byKey(formatTableKey), findsNothing);
+    for (final Key key in <Key>[
+      formatBoldKey,
+      formatItalicKey,
+      formatHeadingKey,
+      formatListKey,
+      formatNumberedKey,
+      formatTaskKey,
+      formatQuoteKey,
+      formatLinkKey,
+      formatMoreKey,
+      formatUndoKey,
+    ]) {
+      expect(find.byKey(key), findsOneWidget);
+    }
+  });
+
+  testWidgets('the heading control cycles one to three and back to plain', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = _Harness();
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
+    harness.controller.value = const TextEditingValue(
+      text: 'hello',
+      selection: TextSelection.collapsed(offset: 0),
+    );
+    await tester.pump();
+
+    for (final String expected in <String>[
+      '# hello',
+      '## hello',
+      '### hello',
+      'hello',
+    ]) {
+      await _press(tester, formatHeadingKey);
+      expect(harness.controller.text, expected);
+    }
+
+    harness.controller.value = const TextEditingValue(
+      text: '#### x',
+      selection: TextSelection.collapsed(offset: 5),
+    );
+    await tester.pump();
+    await _press(tester, formatHeadingKey);
+    expect(harness.controller.text, 'x');
+  });
+
+  testWidgets('a bar on a plain controller disables every format control', (
+    WidgetTester tester,
+  ) async {
+    final TextEditingController plain = TextEditingController(text: 'hello');
+    final UndoHistoryController undo = UndoHistoryController();
+    addTearDown(plain.dispose);
+    addTearDown(undo.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: FormatBar(
+            controller: plain,
+            undoController: undo,
+            tablesAvailable: true,
+          ),
+        ),
+      ),
+    );
+
+    for (final Key key in <Key>[
+      formatBoldKey,
+      formatItalicKey,
+      formatHeadingKey,
+      formatListKey,
+      formatNumberedKey,
+      formatTaskKey,
+      formatQuoteKey,
+      formatLinkKey,
+      formatTableKey,
+      formatMoreKey,
+    ]) {
+      expect(
+        tester.getSemantics(find.byKey(key)),
+        isSemantics(isEnabled: false),
+        reason: '$key',
+      );
+    }
+
+    await _press(tester, formatBoldKey);
+
+    expect(plain.text, 'hello');
+  });
+
+  testWidgets('a press outside the open menu closes it and changes nothing', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = _Harness();
+    addTearDown(harness.dispose);
+    await _pumpApp(tester, harness.app);
+    harness.controller.value = _helloSelected;
+    await tester.pump();
+
+    await _press(tester, formatMoreKey);
+    await tester.pumpAndSettle();
+    expect(find.byKey(formatHighlightKey), findsOneWidget);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+
+    final TestGesture outside = await tester.startGesture(
+      const Offset(600, 1500),
+    );
+    await tester.pump(_hold);
+    await outside.up();
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(formatHighlightKey), findsNothing);
+    expect(harness.controller.text, 'hello world');
+
+    await _press(tester, formatMoreKey);
+    expect(find.byKey(formatHighlightKey), findsOneWidget);
+    await _press(tester, formatMoreKey);
+    expect(find.byKey(formatHighlightKey), findsNothing);
+    expect(harness.controller.text, 'hello world');
   });
 
   group('where the composer mounts the bar', () {
@@ -339,7 +594,7 @@ void main() {
       final Rect undo = tester.getRect(find.byKey(formatUndoKey));
       expect(bar.intersect(undo), undo);
       expect(find.text('Write a note'), findsNothing);
-      expect(find.byType(EditableText), findsOneWidget);
+      expect(NoteEditorDriver(tester).find, findsOneWidget);
     });
   });
 }

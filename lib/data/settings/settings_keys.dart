@@ -4,4 +4,5 @@ abstract final class SettingsKeys {
   static const String soundEnabled = 'sound_enabled';
   static const String textSize = 'text_size';
   static const String weekStart = 'week_start';
+  static const String spellCheck = 'spell_check';
 }

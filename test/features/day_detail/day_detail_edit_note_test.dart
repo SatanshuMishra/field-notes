@@ -12,7 +12,6 @@ import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart';
 import 'package:field_notes/features/capture/text/composer_footer.dart';
-import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/state/state.dart';
@@ -23,6 +22,7 @@ import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
 import '../notes/support/notes_harness.dart'
     show FakeNoteMediaStore, photoBlob, photoIdA, photoIdB, photoLine;
+import '../../support/note_editor_driver.dart';
 import 'support/day_detail_harness.dart';
 
 class _EditTrigger extends StatelessWidget {
@@ -82,12 +82,12 @@ Future<void> _saveAndConfirm(WidgetTester tester) async {
   await tester.tap(find.byKey(confirmDialogConfirmKey));
 }
 
-String _editorText(WidgetTester tester) =>
-    tester.widget<EditableText>(find.byType(EditableText)).controller.text;
+String _editorText(WidgetTester tester) => NoteEditorDriver(tester).source;
 
 void main() {
   testWidgets('prefills the note and saves the edit through NoteWriter',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -108,9 +108,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(_afternoonTitle), findsOneWidget);
-    expect(find.text('a good day'), findsOneWidget);
+    expect(NoteEditorDriver(tester).source, 'a good day');
 
-    await tester.enterText(find.byType(EditableText), '  a better day  ');
+    await driver.enterText('  a better day  ');
     await tester.pump(draftIdleDebounceForTest);
     expect(drafts.drafts, <String, String>{'entry-1': '  a better day  '});
 
@@ -199,6 +199,7 @@ void main() {
 
   testWidgets('Save tapped while the stored draft is still loading saves nothing',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -219,7 +220,7 @@ void main() {
     await tester.tap(find.text('open editor'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pump(const Duration(milliseconds: 600));
     await tester.pumpAndSettle();
@@ -232,6 +233,7 @@ void main() {
   testWidgets(
       'a saved edit leaves no draft when the app goes inactive during the '
       'close', (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeDraftStore drafts = FakeDraftStore();
     Object? result = 'unset';
@@ -246,9 +248,9 @@ void main() {
     );
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
-    await tester.enterText(find.byType(EditableText), 'a better day still');
+    await driver.enterText('a better day still');
 
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pump();
@@ -267,6 +269,7 @@ void main() {
   testWidgets(
       'keeps the editor, the typed text and the draft when the write fails',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -284,19 +287,20 @@ void main() {
 
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
     await _saveAndConfirm(tester);
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, isEmpty);
     expect(find.text(entryWriteMessage), findsOneWidget);
-    expect(find.text('a better day'), findsOneWidget);
+    expect(NoteEditorDriver(tester).source, 'a better day');
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
   });
 
   testWidgets('a blank edit is rejected before it reaches the repository',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -312,7 +316,7 @@ void main() {
 
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), '   ');
+    await driver.enterText('   ');
     await tester.pump(draftIdleDebounceForTest);
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pumpAndSettle();
@@ -352,6 +356,7 @@ void main() {
   testWidgets(
       'the close X on a dirty editor asks first: Keep editing stays, '
       'Discard deletes the draft and closes', (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -370,7 +375,7 @@ void main() {
 
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
     expect(drafts.drafts, <String, String>{'entry-1': 'a better day'});
 
@@ -399,6 +404,7 @@ void main() {
 
   testWidgets('a scrim tap on a dirty editor asks first and keeps the edit',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -417,7 +423,7 @@ void main() {
 
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
 
     await tester.tapAt(const Offset(4, 4));
@@ -444,6 +450,7 @@ void main() {
   testWidgets(
       'the android system back button on a dirty editor routes through the '
       'same confirm instead of dropping the edit', (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -462,7 +469,7 @@ void main() {
 
     await tester.tap(find.text('open editor'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
 
     await sendSystemBack(tester);
@@ -523,6 +530,7 @@ void main() {
   group('photos in the edit-note route', () {
     testWidgets('the editor mounts the same composer footer',
         (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       final Entry entry = _noteEntry();
 
       await tester.pumpWidget(
@@ -540,11 +548,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(composerAddPhotoKey), findsOneWidget);
-      expect(find.byType(EditableText), findsOneWidget);
+      expect(driver.find, findsOneWidget);
     });
 
     testWidgets('an existing photo line shows in place',
         (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       final Entry entry = entryOf(
         type: EntryType.text,
         textContent: 'a good day\n${photoLine(photoIdA)}',
@@ -566,13 +575,14 @@ void main() {
       await tester.tap(find.text('open editor'));
       await tester.pumpAndSettle();
 
-      expect(find.byKey(inPlacePhotoKey(0)), findsOneWidget);
-      expect(find.byKey(inPlacePhotoKey(1)), findsNothing);
+      expect(driver.photoFinder(0), findsOneWidget);
+      expect(driver.photoFinder(1), findsNothing);
     });
 
     testWidgets(
         'receipt: saving a photo line indexes it in entry_photos, and removing '
         'the line on a later save removes the row', (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       final db.AppDatabase database = newTestDatabase();
       addTearDown(database.close);
       final DriftJournalRepository journal = DriftJournalRepository(database);
@@ -608,7 +618,7 @@ void main() {
         );
         await tester.tap(find.text('open editor'));
         await tester.pumpAndSettle();
-        await tester.enterText(find.byType(EditableText), source);
+        await driver.enterText(source);
         await tester.pump();
         await _saveAndConfirm(tester);
         await tester.pumpAndSettle();

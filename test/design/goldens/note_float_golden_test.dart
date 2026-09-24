@@ -1,15 +1,25 @@
 @Tags(<String>['golden'])
 library;
 
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart'
+    show MdPhotoSide, MdPhotoSize;
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
-import 'package:field_notes/features/entry_cards/notes/note_document.dart';
-import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteReaderView;
+import 'package:field_notes/features/note_engine/render/photo_figure.dart'
+    show PhotoFigure, photoFigureTiltDegrees, photoFigureTiltsDegrees;
+import 'package:field_notes/features/notes/render/note_photo_block.dart'
+    show NoteMediaScope;
 
-import '../../features/notes/support/notes_harness.dart';
+import '../../features/notes/support/notes_harness.dart'
+    show FakeNoteMediaResolver, availablePhoto, prefixOf, photoIdA;
+import '../../support/photo_line_fixture.dart';
 import 'golden_harness.dart';
 
 const EdgeInsets _boundaryPadding = EdgeInsets.all(8);
@@ -24,12 +34,12 @@ const String _paragraph = 'The tide came in slowly over the flats, and the '
 final String _tiltedId = _mostTiltedId();
 
 String _mostTiltedId() {
-  final double steepest = notePhotoTiltsDegrees
+  final double steepest = photoFigureTiltsDegrees
       .map((double degrees) => degrees.abs())
       .reduce((double a, double b) => a > b ? a : b);
   for (int seed = 0;; seed++) {
     final String id = '${seed.toRadixString(16).padLeft(12, '0')}${'0' * 52}';
-    if (notePhotoTiltDegrees(prefixOf(id)).abs() == steepest) {
+    if (photoFigureTiltDegrees(prefixOf(id)).abs() == steepest) {
       return id;
     }
   }
@@ -40,63 +50,127 @@ final class _Case {
     this.name, {
     required this.width,
     this.scale = 1,
-    this.side = PhotoSide.right,
-    this.size = PhotoSize.medium,
+    this.side = MdPhotoSide.right,
+    this.size = MdPhotoSize.medium,
     this.pixels = const Size(1200, 800),
     this.caption = '',
     this.tilted = false,
-    required this.floats,
+    required this.left,
+    required this.figureWidth,
+    required this.photoHeight,
   });
 
   final String name;
   final double width;
   final double scale;
-  final PhotoSide side;
-  final PhotoSize size;
+  final MdPhotoSide side;
+  final MdPhotoSize size;
   final Size pixels;
   final String caption;
   final bool tilted;
-  final bool floats;
+  final double left;
+  final double figureWidth;
+  final double photoHeight;
 
   String get id => tilted ? _tiltedId : photoIdA;
 }
 
 const List<_Case> _cases = <_Case>[
-  _Case('note_float_right_1x', width: 560, floats: true),
-  _Case('note_float_left_1x', width: 560, side: PhotoSide.left, floats: true),
+  _Case(
+    'note_float_right_1x',
+    width: 560,
+    left: 280,
+    figureWidth: 280,
+    photoHeight: 186.67,
+  ),
+  _Case(
+    'note_float_left_1x',
+    width: 560,
+    side: MdPhotoSide.left,
+    left: 0,
+    figureWidth: 280,
+    photoHeight: 186.67,
+  ),
   _Case(
     'note_float_small_0_9x',
     width: 504,
     scale: 0.9,
-    size: PhotoSize.small,
-    floats: true,
+    size: MdPhotoSize.small,
+    left: 336,
+    figureWidth: 168,
+    photoHeight: 112,
   ),
   _Case(
     'note_float_large_1_15x',
     width: 644,
     scale: 1.15,
-    size: PhotoSize.large,
-    side: PhotoSide.left,
-    floats: true,
+    size: MdPhotoSize.large,
+    side: MdPhotoSide.left,
+    left: 107.33,
+    figureWidth: 429.33,
+    photoHeight: 286.22,
   ),
-  _Case('note_float_medium_1_5x', width: 780, scale: 1.5, floats: true),
-  _Case('note_float_shrink_band', width: 490, floats: true),
-  _Case('note_float_demote_above', width: 463, floats: true),
-  _Case('note_float_demote_below', width: 462, floats: false),
-  _Case('note_float_phone', width: 320, floats: false),
+  _Case(
+    'note_float_medium_1_5x',
+    width: 780,
+    scale: 1.5,
+    left: 390,
+    figureWidth: 390,
+    photoHeight: 260,
+  ),
+  _Case(
+    'note_float_shrink_band',
+    width: 630,
+    size: MdPhotoSize.large,
+    left: 210,
+    figureWidth: 420,
+    photoHeight: 280,
+  ),
+  _Case(
+    'note_float_demote_above',
+    width: 480,
+    left: 240,
+    figureWidth: 240,
+    photoHeight: 160,
+  ),
+  _Case(
+    'note_float_demote_below',
+    width: 479,
+    left: 0,
+    figureWidth: 479,
+    photoHeight: 319.33,
+  ),
+  _Case(
+    'note_float_phone',
+    width: 320,
+    left: 0,
+    figureWidth: 320,
+    photoHeight: 213.33,
+  ),
   _Case(
     'note_float_portrait_clamp',
     width: 560,
     pixels: Size(900, 1600),
-    floats: true,
+    left: 280,
+    figureWidth: 280,
+    photoHeight: 448,
   ),
-  _Case('note_float_tilt_reserved', width: 560, tilted: true, floats: true),
+  _Case(
+    'note_float_tilt_reserved',
+    width: 560,
+    tilted: true,
+    left: 280,
+    figureWidth: 280,
+    photoHeight: 186.67,
+  ),
   _Case(
     'note_float_caption',
     width: 560,
-    side: PhotoSide.left,
+    side: MdPhotoSide.left,
     caption: 'Low tide from the pilings',
-    floats: true,
+    left: 0,
+    figureWidth: 280,
+    photoHeight: 186.67,
   ),
 ];
 
@@ -110,12 +184,14 @@ Future<void> _pumpCase(WidgetTester tester, _Case entry) async {
       ),
     },
   )..memoizeAll();
-  final String source = '${photoLine(
+  final String line = mdPhotoLine(
     entry.id,
+    caption: entry.caption,
     side: entry.side,
     size: entry.size,
-    caption: entry.caption,
-  )}\n$_paragraph';
+  );
+  final String source = '$line\n$_paragraph';
+  await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpWidget(
     goldenHarness(
       MediaQuery(
@@ -126,7 +202,7 @@ Future<void> _pumpCase(WidgetTester tester, _Case entry) async {
             resolver: resolver,
             child: SizedBox(
               width: entry.width,
-              child: NoteDocument(source: source),
+              child: NoteReaderView(source: source, selectable: false),
             ),
           ),
         ),
@@ -143,27 +219,59 @@ void main() {
     expect(_cases.map((_Case entry) => entry.name).toSet(), hasLength(12));
   });
 
-  for (final _Case entry in _cases) {
-    testWidgets('${entry.name} matches its golden', (
-      WidgetTester tester,
-    ) async {
-      pinGoldenSurface(tester);
+  testWidgets('twelve float cases render through the note engine', (
+    WidgetTester tester,
+  ) async {
+    pinGoldenSurface(tester);
 
+    for (final _Case entry in _cases) {
       await _pumpCase(tester, entry);
 
-      expect(tester.takeException(), isNull);
-      expect(
-        find.byKey(photoWrapHeadKey),
-        entry.floats ? findsOneWidget : findsNothing,
-      );
-      expect(
-        find.byType(StackedPhoto),
-        entry.floats ? findsNothing : findsOneWidget,
-      );
+      expect(tester.takeException(), isNull, reason: entry.name);
+      expect(find.byType(NoteReaderView), findsOneWidget, reason: entry.name);
+      expect(find.byType(PhotoFigure), findsOneWidget, reason: entry.name);
+      final Rect reader = tester.getRect(find.byType(NoteReaderView));
+      final Rect figure = tester
+          .getRect(find.byType(PhotoFigure))
+          .shift(-reader.topLeft);
+      expect(figure.left, closeTo(entry.left, 0.5), reason: entry.name);
+      expect(figure.top, closeTo(0, 0.5), reason: entry.name);
+      expect(figure.width, closeTo(entry.figureWidth, 0.5), reason: entry.name);
+      if (entry.caption.isEmpty) {
+        expect(
+          figure.height,
+          closeTo(entry.photoHeight, 0.5),
+          reason: entry.name,
+        );
+      } else {
+        expect(figure.height, greaterThan(194.67), reason: entry.name);
+      }
+      if (entry.tilted) {
+        final Iterable<Transform> transforms = tester.widgetList<Transform>(
+          find.descendant(
+            of: find.byType(PhotoFigure),
+            matching: find.byType(Transform),
+          ),
+        );
+        expect(
+          transforms.any(
+            (Transform transform) =>
+                (math.atan2(
+                          transform.transform.storage[1],
+                          transform.transform.storage[0],
+                        ) -
+                        -1.2 * math.pi / 180)
+                    .abs() <
+                1e-9,
+          ),
+          isTrue,
+          reason: entry.name,
+        );
+      }
       await expectLater(
         find.byType(RepaintBoundary).first,
         matchesGoldenFile('images/${entry.name}.png'),
       );
-    });
-  }
+    }
+  });
 }
