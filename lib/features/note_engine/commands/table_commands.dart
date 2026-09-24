@@ -65,7 +65,12 @@ Transaction? deleteInCell(EditorState state, {required bool forward}) {
   }
   final MdRange widened = _widened(source, content, from, to);
   return Transaction(
-    changes: ChangeSet.single(source.length, widened.start, widened.end, ''),
+    changes: ChangeSet.single(
+      source.length,
+      widened.start,
+      widened.end,
+      _guarded(source, content, widened, ''),
+    ),
     selection: NoteSelection.collapsed(widened.start),
     event: TransactionEvent.inputDelete,
   );
@@ -238,7 +243,12 @@ Transaction? _replaceSelection(
     final int to = content.end < selection.end ? content.end : selection.end;
     final MdRange part = _widened(source, content, from, to);
     final bool isFirst = identical(cell, first);
-    final String inserted = isFirst ? text : '';
+    final String inserted = _guarded(
+      source,
+      content,
+      part,
+      isFirst ? text : '',
+    );
     if (isFirst) {
       caret = part.start;
     }
@@ -281,6 +291,22 @@ MdRange _widened(String source, MdRange content, int from, int to) {
 
 String _escaped(String text) =>
     text.replaceAll('\r\n', ' ').replaceAll('\n', ' ').replaceAll('|', r'\|');
+
+String _guarded(String source, MdRange content, MdRange part, String text) {
+  final bool closesOnPipe =
+      part.end == content.end &&
+      content.end < source.length &&
+      source.codeUnitAt(content.end) == _pipe;
+  if (!closesOnPipe) {
+    return text;
+  }
+  final int? last = text.isNotEmpty
+      ? text.codeUnitAt(text.length - 1)
+      : part.start > content.start
+      ? source.codeUnitAt(part.start - 1)
+      : null;
+  return last == _backslash ? '$text ' : text;
+}
 
 Transaction _noOp(EditorState state) => Transaction(
   changes: ChangeSet.empty(state.source.length),
@@ -757,3 +783,5 @@ const int _space = 0x20;
 const int _tab = 0x09;
 const int _lineFeed = 0x0A;
 const int _carriageReturn = 0x0D;
+const int _pipe = 0x7C;
+const int _backslash = 0x5C;

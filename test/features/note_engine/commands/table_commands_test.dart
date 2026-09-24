@@ -48,6 +48,12 @@ void _expectEdit(EditorState state, TableEdit edit, String source, int caret) {
   expect(transaction.addToHistory, isTrue);
 }
 
+List<int> _rowWidths(String source) {
+  final MdBlock table = parseNoteTree(source).blocks.single;
+  expect(table.kind, MdBlockKind.table);
+  return <int>[for (final MdBlock row in table.blocks) row.blocks.length];
+}
+
 const String _t = '| a | b |\n| --- | --- |\n| c | d |';
 const String _empty = '|  |  |  |\n| --- | --- | --- |\n|  |  |  |';
 
@@ -296,6 +302,44 @@ void main() {
     expect(padded.selection, const NoteSelection.collapsed(26));
     expect(padded.event, TransactionEvent.table);
     expect(padded.addToHistory, isTrue);
+  });
+
+  test('a backslash left against a closing pipe gains a padding space', () {
+    const String bare = '|a|b|\n|-|-|';
+    final Transaction typed = _sure(replaceInCell(_caret(bare, 2), r'\'));
+    expect(typed.changes, ChangeSet.single(bare.length, 2, 2, r'\ '));
+    expect(typed.changes.apply(bare), '|a\\ |b|\n|-|-|');
+    expect(typed.selection, const NoteSelection.collapsed(3));
+    expect(_rowWidths(typed.changes.apply(bare)), <int>[2]);
+
+    const String escaping = '|\\x|y|\n|-|-|';
+    final Transaction backward = _sure(
+      deleteInCell(_caret(escaping, 3), forward: false),
+    );
+    expect(backward.changes.apply(escaping), '|\\ |y|\n|-|-|');
+    expect(backward.selection, const NoteSelection.collapsed(2));
+    expect(_rowWidths(backward.changes.apply(escaping)), <int>[2]);
+
+    final Transaction forward = _sure(
+      deleteInCell(_caret(escaping, 2), forward: true),
+    );
+    expect(forward.changes.apply(escaping), '|\\ |y|\n|-|-|');
+    expect(forward.selection, const NoteSelection.collapsed(2));
+
+    const String spanning = '|a\\b|c|\n|-|-|';
+    final Transaction across = _sure(
+      deleteInCell(_range(spanning, 3, 6), forward: false),
+    );
+    expect(across.changes.apply(spanning), '|a\\ ||\n|-|-|');
+    expect(across.selection, const NoteSelection.collapsed(3));
+    expect(_rowWidths(across.changes.apply(spanning)), <int>[2]);
+
+    const String emptyCell = '||b|\n|-|-|';
+    final Transaction intoEmpty = _sure(
+      replaceInCell(_caret(emptyCell, 1), r'x\'),
+    );
+    expect(intoEmpty.changes.apply(emptyCell), '|x\\ |b|\n|-|-|');
+    expect(intoEmpty.selection, const NoteSelection.collapsed(3));
   });
 
   test('user story three fills a new table', () {
