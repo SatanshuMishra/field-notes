@@ -57,6 +57,50 @@ final class FakeSpellCheckService implements SpellCheckService {
   }
 }
 
+final class _OneAtATimeService extends FakeSpellCheckService {
+  _OneAtATimeService({super.words});
+
+  final List<String> rejected = <String>[];
+  bool _busy = false;
+
+  @override
+  Future<List<SuggestionSpan>?> fetchSpellCheckSuggestions(
+    Locale locale,
+    String text,
+  ) async {
+    if (_busy) {
+      rejected.add(text);
+      return null;
+    }
+    _busy = true;
+    final List<SuggestionSpan>? spans = await super.fetchSpellCheckSuggestions(
+      locale,
+      text,
+    );
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+    _busy = false;
+    return spans;
+  }
+}
+
+final class _FailingService extends FakeSpellCheckService {
+  _FailingService({required this.failures, super.words});
+
+  final int failures;
+
+  @override
+  Future<List<SuggestionSpan>?> fetchSpellCheckSuggestions(
+    Locale locale,
+    String text,
+  ) async {
+    final List<SuggestionSpan>? spans = await super.fetchSpellCheckSuggestions(
+      locale,
+      text,
+    );
+    return calls.length <= failures ? null : spans;
+  }
+}
+
 const Locale _english = Locale('en', 'GB');
 
 const String _paragraphP =
@@ -371,16 +415,19 @@ void main() {
     expect(service.calls, isEmpty);
 
     tester.binding.handleEventLoopCallback();
+    await tester.pump();
     expect(service.texts, <String>[
       for (int i = 20; i < 30; i++) 'paragraph $i',
       for (int i = 0; i < 10; i++) 'paragraph $i',
     ]);
     tester.binding.handleEventLoopCallback();
+    await tester.pump();
     expect(service.texts.skip(20), <String>[
       for (int i = 10; i < 20; i++) 'paragraph $i',
       for (int i = 30; i < 40; i++) 'paragraph $i',
     ]);
     tester.binding.handleEventLoopCallback();
+    await tester.pump();
     expect(service.texts.skip(40), <String>[
       for (int i = 40; i < 50; i++) 'paragraph $i',
     ]);
@@ -389,6 +436,102 @@ void main() {
     expect(service.calls, hasLength(50));
     checker.dispose();
   });
+
+  testWidgets(
+    'a service that rejects overlapping calls still checks every paragraph',
+    (WidgetTester tester) async {
+      final _OneAtATimeService service = _OneAtATimeService(
+        words: const <String, List<String>>{
+          'teh': <String>['the'],
+          'liftd': <String>['lifted'],
+        },
+      );
+      final SpellChecker checker = _checker(
+        service,
+        _stateOf('teh harbour\n\nfog liftd\n\nthe end'),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(service.rejected, isEmpty);
+      expect(service.texts, <String>['teh harbour', 'fog liftd', 'the end']);
+      expect(checker.marks, <SpellMark>[
+        const SpellMark(range: MdRange(0, 3), suggestions: <String>['the']),
+        const SpellMark(
+          range: MdRange(17, 22),
+          suggestions: <String>['lifted'],
+        ),
+      ]);
+      checker.dispose();
+    },
+  );
+
+  testWidgets('a new pass waits for the call still in flight', (
+    WidgetTester tester,
+  ) async {
+    final _OneAtATimeService service = _OneAtATimeService(
+      words: const <String, List<String>>{
+        'teh': <String>['the'],
+      },
+    );
+    final SpellChecker checker = _checker(
+      service,
+      _stateOf('teh harbour\n\nfog'),
+    );
+    await tester.pump(Duration.zero);
+    expect(service.calls, const <(Locale, String)>[(_english, 'teh harbour')]);
+
+    checker.locale = const Locale('fr');
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(service.rejected, isEmpty);
+    expect(service.calls, const <(Locale, String)>[
+      (_english, 'teh harbour'),
+      (Locale('fr'), 'teh harbour'),
+      (Locale('fr'), 'fog'),
+    ]);
+    expect(checker.marks, <SpellMark>[
+      const SpellMark(range: MdRange(0, 3), suggestions: <String>['the']),
+    ]);
+    checker.dispose();
+  });
+
+  testWidgets('a unit the service could not check is queued again', (
+    WidgetTester tester,
+  ) async {
+    final _FailingService service = _FailingService(
+      failures: 1,
+      words: const <String, List<String>>{
+        'teh': <String>['the'],
+      },
+    );
+    final SpellChecker checker = _checker(service, _stateOf('teh harbour'));
+    await tester.pump(Duration.zero);
+    expect(service.texts, <String>['teh harbour']);
+    expect(checker.marks, isEmpty);
+
+    await tester.pump(spellCheckDelay);
+    expect(service.texts, <String>['teh harbour', 'teh harbour']);
+    expect(checker.marks, <SpellMark>[
+      const SpellMark(range: MdRange(0, 3), suggestions: <String>['the']),
+    ]);
+    checker.dispose();
+  });
+
+  testWidgets(
+    'a service that keeps failing is asked a bounded number of times',
+    (WidgetTester tester) async {
+      final _FailingService service = _FailingService(failures: 100);
+      final EditorState initial = _stateOf('one\n\ntwo');
+      final SpellChecker checker = _checker(service, initial);
+      await tester.pump(const Duration(seconds: 5));
+      expect(service.calls, hasLength(spellCheckAttempts));
+      expect(checker.marks, isEmpty);
+
+      final ChangeSet edit = ChangeSet.single(8, 8, 8, 's');
+      checker.didChange(_edited(initial, edit), edit);
+      await tester.pump(const Duration(seconds: 5));
+      expect(service.calls, hasLength(spellCheckAttempts * 2));
+      checker.dispose();
+    },
+  );
 
   testWidgets('identical units share one call and a locale change re-checks', (
     WidgetTester tester,
@@ -404,9 +547,10 @@ void main() {
     );
     await tester.pump(Duration.zero);
     expect(service.texts, <String>['teh words']);
-    expect(<MdRange>[
-      for (final SpellMark mark in checker.marks) mark.range,
-    ], const <MdRange>[MdRange(0, 3), MdRange(11, 14)]);
+    expect(
+      <MdRange>[for (final SpellMark mark in checker.marks) mark.range],
+      const <MdRange>[MdRange(0, 3), MdRange(11, 14)],
+    );
 
     checker.locale = const Locale('fr');
     await tester.pump(Duration.zero);
@@ -513,15 +657,11 @@ void main() {
 
   test('units drop markers and map every offset back to the source', () {
     const String source = '- [ ] a **teh**\n  > q\n\n## Head #';
-    final List<SpellUnit> units = spellUnitsOf(
-      source,
-      parseNoteTree(source),
+    final List<SpellUnit> units = spellUnitsOf(source, parseNoteTree(source));
+    expect(
+      <String>[for (final SpellUnit unit in units) unit.text],
+      <String>['a teh', 'q', 'Head'],
     );
-    expect(<String>[for (final SpellUnit unit in units) unit.text], <String>[
-      'a teh',
-      'q',
-      'Head',
-    ]);
     final SpellUnit first = units.first;
     expect(first.sourceOffsets.sublist(2, 5), <int>[10, 11, 12]);
   });

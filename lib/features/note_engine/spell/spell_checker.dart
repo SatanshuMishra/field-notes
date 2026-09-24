@@ -20,6 +20,7 @@ import 'package:field_notes/features/note_engine/render/render_note_view.dart';
 const Duration spellCheckDelay = Duration(milliseconds: 300);
 const int spellCheckBatch = 20;
 const int spellSuggestionLimit = 5;
+const int spellCheckAttempts = 3;
 
 @immutable
 final class SpellMark {
@@ -261,7 +262,7 @@ class SpellChecker extends ChangeNotifier {
   List<SpellMark> _marks = const <SpellMark>[];
   Map<_CacheKey, List<SuggestionSpan>> _cache =
       const <_CacheKey, List<SuggestionSpan>>{};
-  Set<_CacheKey> _inFlight = const <_CacheKey>{};
+  Future<void>? _pending;
   List<SpellUnit> _units = const <SpellUnit>[];
   List<_CacheKey> _unitKeys = const <_CacheKey>[];
   List<int> _queue = const <int>[];
@@ -270,6 +271,7 @@ class SpellChecker extends ChangeNotifier {
   int _unitsRevision = -1;
   int _passToken = 0;
   int _session = 0;
+  int _failures = 0;
   bool _disposed = false;
 
   bool get _isActive =>
@@ -399,7 +401,6 @@ class SpellChecker extends ChangeNotifier {
     _timer = null;
     _session += 1;
     _passToken += 1;
-    _inFlight = const <_CacheKey>{};
     _units = const <SpellUnit>[];
     _unitKeys = const <_CacheKey>[];
     _queue = const <int>[];
@@ -435,6 +436,7 @@ class SpellChecker extends ChangeNotifier {
       return;
     }
     _passToken += 1;
+    _failures = 0;
     final EditorState state = _state;
     final String language = _locale.toLanguageTag();
     final List<SpellUnit> units = spellUnitsOf(state.source, state.tree);
@@ -475,7 +477,10 @@ class SpellChecker extends ChangeNotifier {
     );
   }
 
-  void _runBatch(int token) {
+  Future<void> _runBatch(int token) async {
+    if (_pending != null) {
+      await _settled();
+    }
     if (token != _passToken || !_isActive) {
       return;
     }
@@ -483,66 +488,88 @@ class SpellChecker extends ChangeNotifier {
     final List<int> ordered = _ordered(_queue);
     final Locale locale = _locale;
     final int session = _session;
-    List<SpellMark> marks = _marks;
     int calls = 0;
     int taken = 0;
-    for (final int index in ordered) {
-      if (calls == spellCheckBatch) {
-        break;
-      }
+    while (taken < ordered.length && calls < spellCheckBatch) {
+      final int index = ordered[taken];
       taken += 1;
       final _CacheKey key = _unitKeys[index];
       final SpellUnit unit = _units[index];
       final List<SuggestionSpan>? cached = _cache[key];
       if (cached != null) {
-        marks = _replacedIn(marks, unit, cached);
+        _setMarks(_replacedIn(_marks, unit, cached));
       } else if (unit.text.isEmpty) {
         _cache = <_CacheKey, List<SuggestionSpan>>{
           ..._cache,
           key: const <SuggestionSpan>[],
         };
-      } else if (!_inFlight.contains(key)) {
-        _inFlight = <_CacheKey>{..._inFlight, key};
+      } else {
         calls += 1;
-        unawaited(_request(service, locale, key, session));
+        final bool answered = await _request(service, locale, key, session);
+        if (token != _passToken || !_isActive) {
+          return;
+        }
+        if (!answered) {
+          _retryLater(token, <int>[...ordered.skip(taken), index]);
+          return;
+        }
+        _failures = 0;
       }
     }
     _queue = List<int>.unmodifiable(ordered.skip(taken));
-    _setMarks(marks);
     if (_queue.isNotEmpty) {
       _scheduleBatch(token);
     }
   }
 
-  Future<void> _request(
+  Future<void> _settled() async {
+    for (
+      Future<void>? pending = _pending;
+      pending != null;
+      pending = _pending
+    ) {
+      await pending;
+    }
+  }
+
+  void _retryLater(int token, List<int> queue) {
+    _failures += 1;
+    if (_failures >= spellCheckAttempts) {
+      _queue = const <int>[];
+      return;
+    }
+    _queue = List<int>.unmodifiable(queue);
+    _timer?.cancel();
+    _timer = Timer(spellCheckDelay, () => _onRetry(token));
+  }
+
+  void _onRetry(int token) {
+    _timer = null;
+    if (token == _passToken && _isActive) {
+      _scheduleBatch(token);
+    }
+  }
+
+  Future<bool> _request(
     SpellCheckService service,
     Locale locale,
     _CacheKey key,
     int session,
   ) async {
-    List<SuggestionSpan>? spans;
-    try {
-      spans = await service.fetchSpellCheckSuggestions(locale, key.$1);
-    } on Object {
-      spans = null;
-    }
-    if (_disposed || session != _session) {
-      return;
-    }
-    _inFlight = <_CacheKey>{
-      for (final _CacheKey k in _inFlight)
-        if (k != key) k,
-    };
-    final List<SuggestionSpan>? found = spans;
-    if (found == null) {
-      return;
+    final Completer<void> settled = Completer<void>();
+    _pending = settled.future;
+    final List<SuggestionSpan>? spans = await _fetched(service, locale, key.$1);
+    _pending = null;
+    settled.complete();
+    if (_disposed || session != _session || spans == null) {
+      return false;
     }
     final List<SuggestionSpan> stored = List<SuggestionSpan>.unmodifiable(
-      found,
+      spans,
     );
     _cache = <_CacheKey, List<SuggestionSpan>>{..._cache, key: stored};
     if (_unitsRevision != _revision || !_isActive) {
-      return;
+      return true;
     }
     List<SpellMark> marks = _marks;
     for (int i = 0; i < _units.length; i++) {
@@ -551,6 +578,7 @@ class SpellChecker extends ChangeNotifier {
       }
     }
     _setMarks(marks);
+    return true;
   }
 
   List<int> _ordered(List<int> queue) {
@@ -568,6 +596,18 @@ class SpellChecker extends ChangeNotifier {
       }
     }
     return <int>[...inView, ...rest];
+  }
+}
+
+Future<List<SuggestionSpan>?> _fetched(
+  SpellCheckService service,
+  Locale locale,
+  String text,
+) async {
+  try {
+    return await service.fetchSpellCheckSuggestions(locale, text);
+  } on Object {
+    return null;
   }
 }
 
