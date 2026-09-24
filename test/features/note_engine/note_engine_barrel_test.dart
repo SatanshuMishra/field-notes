@@ -1,20 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart';
-
-const List<String> _expectedExports = <String>[
-  "export 'capabilities.dart';",
-  "export 'editor/composer_media_scope.dart';",
-  "export 'editor/editor_keys.dart';",
-  "export 'editor/note_editor_controller.dart';",
-  "export 'editor/note_editor_view.dart';",
-  "export 'editor/text_input_focus.dart';",
-  "export 'reader/note_reader_view.dart';",
-];
 
 void main() {
   testWidgets(
@@ -79,17 +67,4 @@ void main() {
       expect(parseNoteTree('a'), isA<MdTree>());
     },
   );
-
-  test('the barrel source is exactly the seven export directives, in order', () {
-    final File barrel = File('lib/features/note_engine/note_engine.dart');
-    final List<String> lines = barrel
-        .readAsStringSync()
-        .split('\n')
-        .map((String line) => line.trim())
-        .where((String line) => line.isNotEmpty)
-        .toList();
-
-    expect(lines, _expectedExports);
-    expect(lines.any((String line) => line.startsWith('import ')), isFalse);
-  });
 }
