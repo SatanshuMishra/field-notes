@@ -290,8 +290,12 @@ List<_Entry> _mapStack(
   final List<_Entry> newestFirst = <_Entry>[];
   ChangeSet current = outside;
   for (final _Entry entry in stack.reversed) {
-    final ChangeSet next = _rebase(current, entry.changes);
-    final ChangeSet changes = _rebase(entry.changes, current);
+    final ChangeSet next = _rebase(current, entry.changes, tie: MapSide.after);
+    final ChangeSet changes = _rebase(
+      entry.changes,
+      current,
+      tie: MapSide.before,
+    );
     if (!changes.isEmpty) {
       newestFirst.add(
         _Entry(
@@ -315,7 +319,21 @@ List<_Entry> _mapStack(
   return newestFirst.reversed.toList();
 }
 
-ChangeSet _rebase(ChangeSet changes, ChangeSet over) {
+int _insertionPoint(ChangeSet over, int position, MapSide tie) {
+  int shift = 0;
+  for (final TextReplacement r in over.replacements) {
+    if (position < r.from || (position == r.from && tie == MapSide.before)) {
+      return position + shift;
+    }
+    if (position <= r.to) {
+      return r.from + shift + r.inserted.length;
+    }
+    shift += r.inserted.length - (r.to - r.from);
+  }
+  return position + shift;
+}
+
+ChangeSet _rebase(ChangeSet changes, ChangeSet over, {required MapSide tie}) {
   final List<(int, int)> kept = <(int, int)>[];
   int shift = 0;
   for (final TextReplacement r in over.replacements) {
@@ -327,7 +345,7 @@ ChangeSet _rebase(ChangeSet changes, ChangeSet over) {
   }
   final List<TextReplacement> rebased = <TextReplacement>[];
   for (final TextReplacement r in changes.replacements) {
-    final int start = over.mapPosition(r.from, side: MapSide.after);
+    final int start = _insertionPoint(over, r.from, tie);
     final int mappedEnd = over.mapPosition(r.to, side: MapSide.before);
     final int end = mappedEnd > start ? mappedEnd : start;
     rebased.add(TextReplacement(start, start, r.inserted));
