@@ -5,6 +5,7 @@ import 'package:field_notes/features/note_engine/layout/block_layout.dart';
 import 'package:field_notes/features/note_engine/layout/float_flow.dart';
 import 'package:field_notes/features/note_engine/layout/line_fragments.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
+import 'package:field_notes/features/note_engine/layout/note_layout_engine.dart';
 import 'package:field_notes/features/note_engine/layout/photo_planner.dart';
 import 'package:field_notes/features/note_engine/projection/atomic_objects.dart';
 import 'package:flutter/painting.dart';
@@ -323,15 +324,22 @@ void main() {
       final String source =
           '![](photo/a1b2c3d4e5f6 "right large")\n'
           '${<String>[paragraph, paragraph, paragraph].join('\n\n')}';
-      final NoteFlow first = _flow(source, columnWidth: 700);
-      expect(first.photos.single.plan.floats, isTrue);
-      expect(first.photos.single.plan.bandWidth, closeTo(217.33, _eps));
+      final NoteFlow fresh = _flow(source, columnWidth: 700);
+      expect(fresh.photos.single.plan.floats, isTrue);
+      expect(fresh.photos.single.plan.bandWidth, closeTo(217.33, _eps));
+      final NoteLayoutEngine engine = NoteLayoutEngine();
+      engine.layout(_inputs(source, columnWidth: 700));
       for (double width = 600; width <= 900; width += 10) {
-        final NoteFlow swept = _flow(source, columnWidth: width);
+        final NoteFlow swept = engine
+            .layout(_inputs(source, columnWidth: width))
+            .flow;
         expect(swept.photos.single.plan.floats, width >= 624);
+        _expectSameFlow(swept, _flow(source, columnWidth: width));
       }
-      final NoteFlow again = _flow(source, columnWidth: 700);
-      _expectSameFlow(again, first);
+      final NoteFlow again = engine
+          .layout(_inputs(source, columnWidth: 700))
+          .flow;
+      _expectSameFlow(again, fresh);
     },
   );
 
