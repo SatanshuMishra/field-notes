@@ -8,6 +8,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/day_detail/day_detail.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show isTextInputFocused;
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -144,9 +146,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     if (ModalRoute.of(context)?.isCurrent == false) {
       return false;
     }
-    final BuildContext? focused = FocusManager.instance.primaryFocus?.context;
-    return focused == null ||
-        focused.findAncestorStateOfType<EditableTextState>() == null;
+    return !isTextInputFocused();
   }
 
   void _selectDay(String date, {required String todayKey}) {

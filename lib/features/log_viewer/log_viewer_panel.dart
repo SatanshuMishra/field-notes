@@ -13,6 +13,8 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show isTextInputFocused;
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -48,7 +50,7 @@ const double _exitPillRadius = 10;
 const double _exitGlyphSize = 15;
 const double _exitGlyphGap = 4;
 const double _actionButtonExtent = 30;
-const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(34, 22, 34, 28);
+const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(38, 22, 38, 28);
 const double _metaSize = 11;
 const double _metaLetterSpacing = 0.44;
 const double _metaGap = 14;
@@ -153,21 +155,12 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     setState(() => _entryId = entries[target].id);
   }
 
-  bool _textFieldFocused() {
-    final BuildContext? focused = FocusManager.instance.primaryFocus?.context;
-    if (focused == null) {
-      return false;
-    }
-    return focused.widget is EditableText ||
-        focused.findAncestorWidgetOfExactType<EditableText>() != null;
-  }
-
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
     final bool topmost = ModalRoute.of(context)?.isCurrent ?? true;
-    if (_editing || !topmost || _textFieldFocused()) {
+    if (_editing || !topmost || isTextInputFocused()) {
       return KeyEventResult.ignored;
     }
     final LogicalKeyboardKey key = event.logicalKey;

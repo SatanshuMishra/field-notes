@@ -27,6 +27,7 @@ const double _scrimBlurSigma = 3.5;
 const double _sprigTop = -10;
 const double _sprigRight = -8;
 const double _sprigOpacity = 0.4;
+const double _sprigEdgeOverhang = 8;
 
 const RadialGradient _scrimGradient = RadialGradient(
   center: Alignment(0, -0.36),
@@ -40,6 +41,8 @@ double composerPanelWidthFor(double window) => clampDouble(
       composerPanelMaxWidth,
     );
 
+enum ComposerSprigPlacement { headerCorner, rightEdge }
+
 class ComposerShell extends StatelessWidget {
   const ComposerShell({
     super.key,
@@ -47,12 +50,14 @@ class ComposerShell extends StatelessWidget {
     this.maxWidth = composerPanelWidth,
     this.closeOnScrimTap = false,
     this.responsive = false,
+    this.sprig = ComposerSprigPlacement.headerCorner,
   });
 
   final Widget child;
   final double maxWidth;
   final bool closeOnScrimTap;
   final bool responsive;
+  final ComposerSprigPlacement sprig;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +107,8 @@ class ComposerShell extends StatelessWidget {
     );
   }
 
+  Widget _sprig() => _sprigLayerFor(sprig);
+
   Widget _panel() {
     return Container(
       key: composerPanelKey,
@@ -113,18 +120,46 @@ class ComposerShell extends StatelessWidget {
         boxShadow: Shadows.panelLift,
       ),
       child: Stack(
-        children: <Widget>[
-          const Positioned(
-            top: _sprigTop,
-            right: _sprigRight,
-            child: IgnorePointer(
-              child: Opacity(opacity: _sprigOpacity, child: SprigArt()),
-            ),
-          ),
-          child,
-        ],
+        children: <Widget>[_sprig(), child],
       ),
     );
+  }
+}
+
+Widget _sprigLayerFor(ComposerSprigPlacement placement) {
+  switch (placement) {
+    case ComposerSprigPlacement.headerCorner:
+      return const Positioned(
+        top: _sprigTop,
+        right: _sprigRight,
+        child: IgnorePointer(
+          child: Opacity(opacity: _sprigOpacity, child: SprigArt()),
+        ),
+      );
+    case ComposerSprigPlacement.rightEdge:
+      return Positioned.fill(
+        child: IgnorePointer(
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final double panelHeight =
+                  constraints.maxHeight + 2 * composerPanelBorderWidth;
+              if (panelHeight < composerPanelRoomyHeight) {
+                return const SizedBox.shrink();
+              }
+              return Align(
+                alignment: Alignment.centerRight,
+                child: Transform.translate(
+                  offset: const Offset(_sprigEdgeOverhang, 0),
+                  child: const Opacity(
+                    opacity: _sprigOpacity,
+                    child: SprigArt(),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
   }
 }
 

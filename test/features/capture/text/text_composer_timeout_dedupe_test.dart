@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../support/note_editor_driver.dart';
 import '../core/capture_test_support.dart';
 
 class _SlowCountingNoteWriter implements NoteWriter {
@@ -76,6 +77,7 @@ void main() {
   testWidgets(
       'a save that completes within the timeout invokes save() exactly once '
       'and pops with the real entry id', (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final _SlowCountingNoteWriter writer = _SlowCountingNoteWriter(
       delay: const Duration(milliseconds: 200),
     );
@@ -100,7 +102,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    await tester.enterText(find.byType(EditableText), 'a slow day');
+    await driver.enterText('a slow day');
     await tester.pump();
 
     await tester.tap(find.text('Save'));

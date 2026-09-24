@@ -14,6 +14,7 @@ import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
+import '../../support/note_editor_driver.dart';
 import 'support/day_detail_harness.dart';
 
 const String _date = '2026-07-02';
@@ -100,10 +101,10 @@ Widget _app({
   );
 }
 
-String _editorText(WidgetTester tester) =>
-    tester.widget<EditableText>(find.byType(EditableText)).controller.text;
+String _editorText(WidgetTester tester) => NoteEditorDriver(tester).source;
 
 Future<FakeJournalRepository> _openAndEdit(WidgetTester tester) async {
+  final NoteEditorDriver driver = NoteEditorDriver(tester);
   final Entry entry = _afternoonNote();
   final FakeJournalRepository repository = FakeJournalRepository(
     entries: <Entry>[entry],
@@ -116,7 +117,7 @@ Future<FakeJournalRepository> _openAndEdit(WidgetTester tester) async {
   );
   await tester.tap(find.text('open editor'));
   await tester.pumpAndSettle();
-  await tester.enterText(find.byType(EditableText), 'a better day');
+  await driver.enterText('a better day');
   await tester.pump(draftIdleDebounceForTest);
   return repository;
 }
@@ -193,6 +194,7 @@ void main() {
   testWidgets(
       'with a done callback the editor reports instead of closing its route',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _afternoonNote();
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[entry],
@@ -207,7 +209,7 @@ void main() {
     );
     await tester.tap(find.text('open route'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pumpAndSettle();

@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../support/note_editor_driver.dart';
 import '../core/capture_test_support.dart';
 
 class _HangingNoteWriter implements NoteWriter {
@@ -63,6 +64,7 @@ void main() {
       'when save() never completes, the save is bounded: the "Saving…" '
       'state clears and a timeout error is surfaced instead of hanging',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final _HangingNoteWriter writer = _HangingNoteWriter();
 
     await tester.pumpWidget(
@@ -81,7 +83,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    await tester.enterText(find.byType(EditableText), 'a slow day');
+    await driver.enterText('a slow day');
     await tester.pump();
 
     await tester.tap(find.text('Save'));

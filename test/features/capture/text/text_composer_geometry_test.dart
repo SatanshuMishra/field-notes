@@ -6,9 +6,11 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/text/composer_footer.dart';
-import 'package:field_notes/features/capture/text/editor/editor.dart';
+import 'package:field_notes/features/capture/text/editor/format_bar.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/notes/photos/photo_import.dart';
+
+import '../../../support/note_editor_driver.dart';
 
 const Size _desktopSurface = Size(1280, 900);
 const Size _landscapePhoneSurface = Size(844, 390);
@@ -29,8 +31,8 @@ Future<List<String>> _noPhotos() async => const <String>[];
 Rect _viewport(WidgetTester tester) => tester.getRect(
       find.descendant(
         of: find.byType(RawScrollbar),
-        matching: find.byType(SingleChildScrollView),
-      ),
+        matching: find.byType(Scrollable),
+      ).first,
     );
 
 ScrollableState _editorScroll(WidgetTester tester) => tester.state(
@@ -80,13 +82,14 @@ void main() {
     testWidgets('the editor column measures exactly 560 inside the 640 panel', (
       WidgetTester tester,
     ) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       await _pumpComposer(tester, surface: _desktopSurface);
 
       expect(composerPanelWidth, 640);
       expect(tester.getSize(_panel()).width, 640);
-      expect(tester.getSize(find.byType(EditableText)).width, 560);
-      expect(tester.getSize(find.text('Start writing…')).width, 560);
-      expect(tester.getRect(find.byType(EditableText)).left, 360);
+      expect(driver.contentRect.size.width, 560);
+      expect(driver.visibleHintStyle, isNotNull);
+      expect(driver.contentRect.left, 360);
       expect(
         find.descendant(
           of: find.byType(TextComposerSheet),
@@ -100,22 +103,21 @@ void main() {
     testWidgets('the editor writes in the note body style the reader reads', (
       WidgetTester tester,
     ) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       await _pumpComposer(tester, surface: _desktopSurface);
 
-      final EditableText editor = tester.widget<EditableText>(
-        find.byType(EditableText),
-      );
-      expect(
-        editor.style,
-        unmergedFromTheMaterialTextTheme(TypographyTokens.noteBody),
-      );
-      final Text hint = tester.widget<Text>(find.text('Start writing…'));
-      expect(hint.style, TypographyTokens.noteBodyPlaceholder);
+      final TextStyle style = driver.style;
+      expect(style.fontFamily, TypographyTokens.noteBody.fontFamily);
+      expect(style.fontSize, TypographyTokens.noteBody.fontSize);
+      expect(style.fontWeight, TypographyTokens.noteBody.fontWeight);
+      expect(style.height, TypographyTokens.noteBody.height);
+      expect(driver.visibleHintStyle, TypographyTokens.noteBodyPlaceholder);
     });
 
     testWidgets(
       'a landscape phone with the keyboard up keeps a usable editor',
       (WidgetTester tester) async {
+        final NoteEditorDriver driver = NoteEditorDriver(tester);
         await _pumpComposer(
           tester,
           surface: _landscapePhoneSurface,
@@ -123,7 +125,7 @@ void main() {
         );
 
         expect(tester.takeException(), isNull);
-        final Size editor = tester.getSize(find.byType(EditableText));
+        final Size editor = driver.contentRect.size;
         expect(editor.height, greaterThan(0));
         expect(editor.height, greaterThanOrEqualTo(3 * _lineHeight));
         expect(editor.width, 560);
@@ -147,6 +149,7 @@ void main() {
     testWidgets(
       'a landscape phone with the keyboard up keeps Undo and three lines',
       (WidgetTester tester) async {
+        final NoteEditorDriver driver = NoteEditorDriver(tester);
         await _pumpComposer(
           tester,
           surface: _landscapePhoneSurface,
@@ -156,7 +159,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byKey(formatUndoKey), findsOneWidget);
         expect(
-          tester.getSize(find.byType(EditableText)).height,
+          driver.contentRect.size.height,
           greaterThanOrEqualTo(3 * _lineHeight),
         );
       },
@@ -165,6 +168,7 @@ void main() {
     testWidgets('a portrait phone with the keyboard up is not a porthole', (
       WidgetTester tester,
     ) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       await _pumpComposer(
         tester,
         surface: _portraitPhoneSurface,
@@ -172,7 +176,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      final Size editor = tester.getSize(find.byType(EditableText));
+      final Size editor = driver.contentRect.size;
       expect(editor.height, greaterThanOrEqualTo(6 * _lineHeight));
       expect(editor.width, 360 - 4 - 2 * 38);
       expect(tester.getRect(_panel()).bottom, lessThanOrEqualTo(640 - 300));
@@ -187,6 +191,7 @@ void main() {
       testWidgets(
           'a responsive composer writes in a ${size.column} column in a '
           '${size.window} window', (WidgetTester tester) async {
+        final NoteEditorDriver driver = NoteEditorDriver(tester);
         await _pumpComposer(
           tester,
           surface: Size(size.window, 900),
@@ -194,7 +199,7 @@ void main() {
         );
 
         expect(tester.takeException(), isNull);
-        final Rect editor = tester.getRect(find.byType(EditableText));
+        final Rect editor = driver.contentRect;
         expect(editor.width, size.column);
         expect(editor.center.dx, size.centre);
       });
@@ -229,6 +234,7 @@ void main() {
 
     testWidgets('the footer floats over the writing surface, blurred',
         (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       await _pumpComposer(
         tester,
         surface: _desktopSurface,
@@ -251,7 +257,7 @@ void main() {
         findsOneWidget,
       );
       expect(
-        tester.getSize(find.byType(EditableText)).height,
+        driver.contentRect.size.height,
         greaterThan(surface.height),
         reason: 'the note keeps scrolling under the footer',
       );
@@ -331,6 +337,7 @@ void main() {
 
     testWidgets('the end of a long note clears the footer',
         (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
       await _pumpComposer(
         tester,
         surface: _desktopSurface,
@@ -344,7 +351,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(
-        tester.getRect(find.byType(EditableText)).bottom,
+        driver.contentRect.bottom,
         lessThanOrEqualTo(
           tester.getRect(find.byType(ComposerFooterVeil)).top + 0.5,
         ),
@@ -354,8 +361,9 @@ void main() {
     testWidgets(
       'the page margins shrink with the surface instead of the editor',
       (WidgetTester tester) async {
+        final NoteEditorDriver driver = NoteEditorDriver(tester);
         await _pumpComposer(tester, surface: _desktopSurface);
-        final Size desktopEditor = tester.getSize(find.byType(EditableText));
+        final Size desktopEditor = driver.contentRect.size;
         final Size desktopSurface = tester.getSize(find.byType(RawScrollbar));
         final double desktopChrome =
             desktopSurface.height - desktopEditor.height;
@@ -365,7 +373,7 @@ void main() {
           surface: _landscapePhoneSurface,
           keyboardInset: 200,
         );
-        final Size phoneEditor = tester.getSize(find.byType(EditableText));
+        final Size phoneEditor = driver.contentRect.size;
         final Size phoneSurface = tester.getSize(find.byType(RawScrollbar));
         final double phoneChrome = phoneSurface.height - phoneEditor.height;
 

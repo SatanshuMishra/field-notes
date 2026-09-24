@@ -3,6 +3,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
+import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/notes/notes.dart';
@@ -15,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/note_editor_driver.dart';
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import '../day_detail/support/day_detail_harness.dart'
     show FakeJournalRepository;
@@ -74,7 +76,9 @@ List<Override> _overrides(FakeJournalRepository repository) {
 }
 
 Finder _cardFor(String text) => find.ancestor(
-      of: find.text(text, findRichText: true),
+      of: find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == text,
+      ),
       matching: find.byType(CompactLogCard),
     );
 
@@ -173,9 +177,7 @@ void main() {
     await tester.tap(find.byKey(logActionsEditKey).hitTestable());
     await tester.pumpAndSettle();
 
-    final EditableText editor =
-        tester.widget<EditableText>(find.byType(EditableText));
-    expect(editor.controller.text, contains('coffee on the porch'));
+    expect(NoteEditorDriver(tester).source, contains('coffee on the porch'));
     expect(find.text('Cancel'), findsOneWidget);
     expect(find.text('Afternoon note'), findsNothing);
     expect(find.text('Editing afternoon note'), findsOneWidget);
