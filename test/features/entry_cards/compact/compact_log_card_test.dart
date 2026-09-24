@@ -5,9 +5,14 @@ import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/cards/voice_body.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteReaderView;
+import 'package:field_notes/features/note_engine/render/render_note_view.dart'
+    show NoteViewBody, RenderNoteView;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../support/note_editor_driver.dart';
 import '../support/entry_cards_harness.dart';
 import '../support/fake_audio_player.dart';
 
@@ -73,7 +78,82 @@ Widget _host(Widget card) {
   );
 }
 
+String _visibleText(WidgetTester tester) => tester
+    .renderObject<RenderNoteView>(
+      find.descendant(
+        of: find.byType(NoteReaderView),
+        matching: find.byType(NoteViewBody),
+      ),
+    )
+    .visibleText
+    .text;
+
 void main() {
+  testWidgets('a short note card draws through the engine and stays tap to '
+      'open', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 2000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    int opens = 0;
+    await tester.pumpWidget(
+      _host(
+        CompactLogCard(
+          entry: _entry(
+            type: EntryType.text,
+            textContent: 'the harbour at dawn',
+          ),
+          resolver: FakeMediaResolver(),
+          density: CompactLogDensity.feed,
+          onOpen: () => opens++,
+          onEdit: () {},
+          onDelete: () {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final Finder reader = find.descendant(
+      of: find.byType(CompactLogCard),
+      matching: find.byType(NoteReaderView),
+    );
+    expect(reader, findsOneWidget);
+    final Finder ignoring = find.ancestor(
+      of: reader,
+      matching: find.byWidgetPredicate(
+        (Widget w) => w is IgnorePointer && w.ignoring,
+      ),
+    );
+    expect(
+      find.descendant(of: find.byType(CompactLogCard), matching: ignoring),
+      findsWidgets,
+    );
+
+    await NoteEditorDriver(tester).press(
+      reader,
+      const Duration(milliseconds: 110),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(opens, 1);
+
+    await tester.pumpWidget(
+      _host(
+        CompactLogCard(
+          entry: _entry(type: EntryType.text, textContent: _longNoteText()),
+          resolver: FakeMediaResolver(),
+          density: CompactLogDensity.feed,
+          onOpen: () {},
+          onEdit: () {},
+          onDelete: () {},
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(NoteReaderView), findsNothing);
+    expect(find.text(_longLead), findsOneWidget);
+  });
+
   testWidgets('a long note card shows its lead, snippet, thumbnail and Read', (
     WidgetTester tester,
   ) async {
@@ -119,7 +199,12 @@ void main() {
     await tester.pump();
 
     expect(find.byType(NoteBody), findsOneWidget);
-    expect(find.textContaining(note, findRichText: true), findsOneWidget);
+    expect(find.byType(NoteReaderView), findsOneWidget);
+    expect(
+      tester.widget<NoteReaderView>(find.byType(NoteReaderView)).source,
+      note,
+    );
+    expect(_visibleText(tester), note);
     expect(find.byKey(compactLogOpenLabelKey), findsNothing);
     expect(find.byKey(compactLogThumbnailKey), findsNothing);
   });
@@ -167,7 +252,10 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.textContaining(note, findRichText: true));
+    await NoteEditorDriver(tester).press(
+      find.byType(NoteReaderView),
+      const Duration(milliseconds: 110),
+    );
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(opens, 1);

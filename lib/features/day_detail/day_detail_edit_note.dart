@@ -6,15 +6,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/capture_service.dart'
+    show CaptureMedia;
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
-import 'package:field_notes/features/capture/text/editor/editor.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show ComposerMediaScope, spellCheckAvailable;
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 import 'package:field_notes/features/today/today_date.dart';
@@ -152,13 +155,16 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
 
   @override
   Widget build(BuildContext context) {
+    final bool spellCheck = spellCheckAvailable &&
+        ref.exists(appSettingsProvider) &&
+        ref.watch(spellCheckEnabledProvider);
     return ComposerMediaScope(
       resolver: ref.watch(notesMediaResolverProvider).value,
-      child: _composer(),
+      child: _composer(spellCheck: spellCheck),
     );
   }
 
-  Widget _composer() {
+  Widget _composer({required bool spellCheck}) {
     final ValueChanged<bool>? onDone = widget.onDone;
     return ListenableBuilder(
       listenable: _draft,
@@ -183,6 +189,10 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
               errorMessage: _errorMessage,
               isSaving: _isSaving,
               onAddPhoto: () => importNotePhotos(ref),
+              spellCheckEnabled: spellCheck,
+              photoMediaImporter: (CaptureMedia photo) async =>
+                  (await ref.read(notePhotoStoreProvider.future))
+                      .importPhoto(photo),
             );
           },
         );
@@ -212,6 +222,7 @@ Future<bool?> showEditNote(
         child: ComposerShell(
           closeOnScrimTap: true,
           responsive: true,
+          sprig: ComposerSprigPlacement.rightEdge,
           child: EditNoteConnector(entry: entry, date: date, exit: exit),
         ),
       );

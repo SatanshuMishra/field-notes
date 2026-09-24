@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/features/note_engine/layout/note_typography.dart'
+    show NoteTypography;
 
 const Key photoCaptionFieldEditorKey =
     ValueKey<String>('photo-caption-editor');
@@ -13,8 +14,8 @@ final RegExp _forbidden = RegExp(r'[\]\r\n]');
 
 double photoCaptionLineHeight(TextScaler scaler) {
   final TextPainter painter = TextPainter(
-    text: const TextSpan(text: 'Ag', style: notePhotoCaptionStyle),
-    textAlign: notePhotoCaptionAlign,
+    text: const TextSpan(text: 'Ag', style: NoteTypography.caption),
+    textAlign: TextAlign.center,
     textDirection: TextDirection.ltr,
     textScaler: scaler,
   )..layout();
@@ -112,8 +113,8 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
                 focusNode: _focus,
                 autofocus: true,
                 maxLines: 1,
-                style: notePhotoCaptionStyle,
-                textAlign: notePhotoCaptionAlign,
+                style: NoteTypography.caption,
+                textAlign: TextAlign.center,
                 cursorColor: Palette.coral,
                 keyboardType: TextInputType.text,
                 textInputAction: TextInputAction.done,
@@ -124,7 +125,7 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
                 onSubmitted: (String _) => _commit(),
                 decoration: InputDecoration.collapsed(
                   hintText: photoCaptionFieldHint,
-                  hintStyle: notePhotoCaptionStyle.copyWith(
+                  hintStyle: NoteTypography.caption.copyWith(
                     color: Palette.placeholder,
                   ),
                 ),

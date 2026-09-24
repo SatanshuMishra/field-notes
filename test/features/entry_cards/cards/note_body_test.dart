@@ -4,8 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/entry_cards/cards/note_body.dart';
-import 'package:field_notes/features/entry_cards/notes/note_block_widgets.dart';
-import 'package:field_notes/features/entry_cards/notes/note_document.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteReaderView;
+import 'package:field_notes/features/note_engine/render/render_note_view.dart'
+    show NoteViewBody, RenderNoteView;
+import 'package:field_notes/features/notes/render/note_photo_block.dart'
+    show NoteMediaScope;
+
+import '../../../support/note_editor_driver.dart' show firstNoteLineSize;
+import '../../notes/support/notes_harness.dart' show FakeNoteMediaResolver;
 
 const Size _surface = Size(1200, 800);
 
@@ -28,61 +35,119 @@ Widget noteBodyAppHarness(Widget child, {double width = 360}) {
     home: Scaffold(
       body: Align(
         alignment: Alignment.topLeft,
-        child: SizedBox(width: width, child: child),
+        child: SizedBox(
+          width: width,
+          child: NoteMediaScope(
+            resolver: FakeNoteMediaResolver()..memoizeAll(),
+            child: child,
+          ),
+        ),
       ),
     ),
   );
 }
+
+Future<void> _pumpReader(
+  WidgetTester tester,
+  String text, {
+  double width = 360,
+}) async {
+  tester.view.physicalSize = _surface;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    noteBodyAppHarness(NoteBody(text: text), width: width),
+  );
+  await tester.pump();
+}
+
+double _runWidth(String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+Finder _readerColumn() => find.descendant(
+  of: find.byType(NoteReaderView),
+  matching: find.byType(NoteViewBody),
+);
+
+RenderNoteView _reader(WidgetTester tester) =>
+    tester.renderObject<RenderNoteView>(_readerColumn());
 
 void main() {
   group('NoteBody', () {
     testWidgets('renders the note prose in the note body style', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        noteBodyHarness(const NoteBody(text: 'a quiet morning')),
-      );
+      await _pumpReader(tester, 'a quiet morning');
 
-      expect(find.byType(NoteDocument), findsOneWidget);
-      final Text text = tester.widget<Text>(find.text('a quiet morning'));
-      final TextStyle style = text.textSpan!.style!;
-      expect(style, TypographyTokens.noteBody);
-      expect(style.fontFamily, TypographyTokens.serif);
-      expect(style.fontSize, 16);
-      expect(style.height, 1.6);
-    });
-
-    testWidgets('renders Markdown as per-block widgets', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        noteBodyHarness(const NoteBody(text: '# Morning\n\nquiet **rain**')),
-      );
-
-      expect(find.byType(NoteBlockView), findsNWidgets(2));
-      expect(find.byType(NoteHeadingView), findsOneWidget);
-      expect(find.byType(NoteParagraphView), findsOneWidget);
-      expect(find.text('Morning'), findsOneWidget);
-      expect(find.text('quiet rain'), findsOneWidget);
-      expect(find.textContaining('#'), findsNothing);
-      expect(find.textContaining('**'), findsNothing);
-    });
-
-    testWidgets('mounts the document under exactly one SelectionArea', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        noteBodyAppHarness(const NoteBody(text: 'one\n\ntwo')),
-      );
-
-      expect(find.byType(SelectionArea), findsOneWidget);
+      expect(find.byType(NoteReaderView), findsOneWidget);
       expect(
-        find.descendant(
-          of: find.byType(SelectionArea),
-          matching: find.byType(NoteBlockView),
-        ),
-        findsNWidgets(2),
+        tester.widget<NoteReaderView>(find.byType(NoteReaderView)).source,
+        'a quiet morning',
       );
+      final RenderNoteView reader = _reader(tester);
+      expect(reader.visibleText.text, 'a quiet morning');
+      expect(
+        reader.noteLayout.fragments.first.lineBox.rect.height,
+        closeTo(16 * 1.6, 0.01),
+      );
+      const TextStyle body = TypographyTokens.noteBody;
+      final double width = firstNoteLineSize(reader).width;
+      expect(width, closeTo(_runWidth('a quiet morning', body), 0.01));
+      expect(
+        width,
+        isNot(
+          closeTo(
+            _runWidth(
+              'a quiet morning',
+              body.copyWith(fontFamily: TypographyTokens.sans),
+            ),
+            0.5,
+          ),
+        ),
+      );
+      expect(
+        width,
+        isNot(
+          closeTo(
+            _runWidth(
+              'a quiet morning',
+              body.copyWith(fontWeight: FontWeight.w500),
+            ),
+            0.5,
+          ),
+        ),
+      );
+    });
+
+    testWidgets('renders Markdown as formatting-free visible text', (
+      WidgetTester tester,
+    ) async {
+      await _pumpReader(tester, '# Morning\n\nquiet **rain**');
+
+      final String visible = _reader(tester).visibleText.text;
+      expect(visible, 'Morning\n\nquiet rain');
+      expect(visible, isNot(contains('#')));
+      expect(visible, isNot(contains('**')));
+    });
+
+    testWidgets('mounts the document as exactly one selectable reader', (
+      WidgetTester tester,
+    ) async {
+      await _pumpReader(tester, 'one\n\ntwo');
+
+      expect(find.byType(NoteReaderView), findsOneWidget);
+      expect(
+        tester.widget<NoteReaderView>(find.byType(NoteReaderView)).selectable,
+        isTrue,
+      );
+      expect(find.byType(SelectionArea), findsNothing);
     });
 
     testWidgets('shows an empty-note affordance for blank text', (
@@ -90,7 +155,7 @@ void main() {
     ) async {
       await tester.pumpWidget(noteBodyHarness(const NoteBody(text: '   ')));
 
-      expect(find.byType(NoteDocument), findsNothing);
+      expect(find.byType(NoteReaderView), findsNothing);
       expect(find.text('Empty note'), findsOneWidget);
       final Text text = tester.widget<Text>(find.text('Empty note'));
       expect(text.style!.fontFamily, TypographyTokens.serif);
@@ -102,27 +167,20 @@ void main() {
     testWidgets('fills a narrow parent edge to edge', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        noteBodyHarness(const NoteBody(text: 'a quiet morning')),
-      );
+      await _pumpReader(tester, 'a quiet morning');
 
-      expect(tester.getSize(find.text('a quiet morning')).width, 360);
+      expect(tester.getSize(_readerColumn()).width, 360);
     });
 
-    testWidgets('clamps the text column to 560 inside a wide parent', (
+    testWidgets('clamps the text column to 720 inside a wide parent', (
       WidgetTester tester,
     ) async {
-      tester.view.physicalSize = _surface;
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      await tester.pumpWidget(
-        noteBodyHarness(const NoteBody(text: 'a quiet morning'), width: 900),
-      );
+      await _pumpReader(tester, 'a quiet morning', width: 900);
 
       expect(find.byType(NoteColumn), findsOneWidget);
-      final Rect text = tester.getRect(find.text('a quiet morning'));
-      expect(text.width, 560);
-      expect(text.left, 170);
+      final Rect reader = tester.getRect(_readerColumn());
+      expect(reader.width, 720);
+      expect(reader.left, 90);
     });
 
     testWidgets('the empty-note affordance shares the same column', (
@@ -135,7 +193,7 @@ void main() {
         noteBodyHarness(const NoteBody(text: ''), width: 900),
       );
 
-      expect(tester.getSize(find.text('Empty note')).width, 560);
+      expect(tester.getSize(find.text('Empty note')).width, 720);
     });
   });
 }

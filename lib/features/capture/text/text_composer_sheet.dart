@@ -6,11 +6,16 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/domain/services/capture_service.dart'
+    show CaptureMedia;
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteEditorController;
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 
 import 'composer_footer.dart';
-import 'editor/editor.dart';
+import 'editor/format_bar.dart';
+import 'editor/note_editor.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
 
@@ -74,6 +79,8 @@ class TextComposerSheet extends StatefulWidget {
     this.saveLabel = 'Save',
     this.savingLabel = 'Saving…',
     this.onAddPhoto,
+    this.spellCheckEnabled = false,
+    this.photoMediaImporter,
   });
 
   final ValueChanged<String> onSave;
@@ -91,13 +98,15 @@ class TextComposerSheet extends StatefulWidget {
   final String saveLabel;
   final String savingLabel;
   final PhotoImporter? onAddPhoto;
+  final bool spellCheckEnabled;
+  final Future<String> Function(CaptureMedia photo)? photoMediaImporter;
 
   @override
   State<TextComposerSheet> createState() => _TextComposerSheetState();
 }
 
 class _TextComposerSheetState extends State<TextComposerSheet> {
-  late final MarkdownStyleController _controller;
+  late final NoteEditorController _controller;
   late final bool _ownsController;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
@@ -108,15 +117,20 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   void initState() {
     super.initState();
     final TextEditingController? external = widget.controller;
-    _ownsController = external is! MarkdownStyleController;
+    _ownsController = external is! NoteEditorController;
     _controller = switch (external) {
-      null => MarkdownStyleController(text: widget.initialText),
-      MarkdownStyleController() => external,
-      _ => MarkdownStyleController.attachedTo(external),
+      null => NoteEditorController(text: widget.initialText),
+      NoteEditorController() => external,
+      _ => NoteEditorController.attachedTo(external),
     };
     _focusNode = FocusNode();
     _scrollController = ScrollController();
     _undoController = UndoHistoryController();
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   @override
@@ -484,6 +498,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         hintText: widget.hintText,
         photoImporter: widget.onAddPhoto,
         bottomInset: bottomInset,
+        spellCheckEnabled: widget.spellCheckEnabled,
+        photoMediaImporter: widget.photoMediaImporter,
       ),
     );
   }

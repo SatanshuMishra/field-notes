@@ -3,33 +3,49 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/features/capture/text/editor/editor.dart';
+import 'package:field_notes/features/capture/text/editor/note_editor.dart';
+import 'package:field_notes/features/capture/text/editor/photo_toolbar.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show ComposerMediaScope, NoteEditorController;
 
-import '../../../notes/support/notes_harness.dart';
+import '../../../../support/note_editor_driver.dart';
+import '../../../../support/photo_line_fixture.dart';
+import '../../../notes/support/notes_harness.dart'
+    show FakeNoteMediaResolver, availablePhoto, photoIdA, prefixOf;
+
+const Duration _hold = Duration(milliseconds: 110);
 
 class _Harness {
-  _Harness(String text) : controller = MarkdownStyleController(text: text);
+  _Harness(String text) : controller = NoteEditorController(text: text);
 
-  final MarkdownStyleController controller;
+  final Key key = UniqueKey();
+  final NoteEditorController controller;
   final FocusNode focusNode = FocusNode();
   final UndoHistoryController undo = UndoHistoryController();
   final ScrollController scroll = ScrollController();
 
   Widget app({bool composing = true}) {
     return MaterialApp(
+      key: key,
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         body: ComposerMediaScope(
-          resolver: _resolver(),
+          resolver: FakeNoteMediaResolver(<String, ResolvedMedia>{
+            prefixOf(photoIdA): availablePhoto(
+              photoIdA,
+              width: 1200,
+              height: 900,
+            ),
+          })..memoizeAll(),
           child: Align(
             alignment: Alignment.topLeft,
             child: SizedBox(
-              width: 560,
+              width: 720,
               height: 700,
               child: composing
-                  ? InPlacePhotoEditor(
-                      config: NoteEditorConfig(
+                  ? noteEditorFor(
+                      NoteEditorConfig(
                         controller: controller,
                         focusNode: focusNode,
                         undoController: undo,
@@ -52,12 +68,6 @@ class _Harness {
   }
 }
 
-FakeNoteMediaResolver _resolver() => FakeNoteMediaResolver(
-      <String, ResolvedMedia>{
-        prefixOf(photoIdA): availablePhoto(photoIdA, width: 1200, height: 900),
-      },
-    )..memoizeAll();
-
 Future<_Harness> _pump(WidgetTester tester, String text) async {
   tester.view.physicalSize = const Size(1200, 2000);
   tester.view.devicePixelRatio = 1;
@@ -69,24 +79,32 @@ Future<_Harness> _pump(WidgetTester tester, String text) async {
   return harness;
 }
 
-Future<void> _removeSelectedPhoto(WidgetTester tester) async {
-  await tester.tap(find.byKey(inPlacePhotoKey(0)));
+Future<void> _selectPhoto(WidgetTester tester) async {
+  final NoteEditorDriver driver = NoteEditorDriver(tester);
+  await driver.press(driver.photoFinder(0), _hold);
   await tester.pump();
-  await tester.tap(find.byKey(photoToolbarRemoveKey));
+}
+
+Future<void> _removeSelectedPhoto(WidgetTester tester) async {
+  await _selectPhoto(tester);
+  await NoteEditorDriver(
+    tester,
+  ).press(find.byKey(photoToolbarRemoveKey), _hold);
   await tester.pumpAndSettle();
 }
 
 void main() {
-  final String a = photoLine(photoIdA, caption: 'Low tide');
+  final String a = mdPhotoLine(photoIdA, caption: 'Low tide');
 
-  testWidgets('the trash removes the photo and offers Undo',
-      (WidgetTester tester) async {
+  testWidgets('the trash removes the photo and offers Undo', (
+    WidgetTester tester,
+  ) async {
     final _Harness harness = await _pump(tester, 'one\n$a\ntwo');
 
     await _removeSelectedPhoto(tester);
 
-    expect(harness.controller.text, 'one\ntwo');
-    expect(find.byKey(inPlacePhotoKey(0)), findsNothing);
+    expect(harness.controller.text, 'one\n\ntwo');
+    expect(NoteEditorDriver(tester).photoFinder(0), findsNothing);
     expect(find.text(photoRemovedMessage), findsOneWidget);
     expect(find.text(photoRemovedUndoLabel), findsOneWidget);
 
@@ -94,21 +112,27 @@ void main() {
     await tester.pump();
   });
 
-  testWidgets('Undo restores the line byte for byte',
-      (WidgetTester tester) async {
+  testWidgets('Undo restores the line byte for byte', (
+    WidgetTester tester,
+  ) async {
     final String note = 'one\n$a\ntwo';
     final _Harness harness = await _pump(tester, note);
 
     await _removeSelectedPhoto(tester);
-    await tester.tap(find.text(photoRemovedUndoLabel));
+    await NoteEditorDriver(
+      tester,
+    ).press(find.text(photoRemovedUndoLabel), _hold);
     await tester.pump();
 
     expect(harness.controller.text, note);
+    expect(harness.controller.selection.start, 4);
+    expect(find.byKey(photoToolbarKey), findsOneWidget);
     expect(find.text(photoRemovedMessage), findsNothing);
   });
 
-  testWidgets('the toast goes when the composer closes',
-      (WidgetTester tester) async {
+  testWidgets('the toast goes when the composer closes', (
+    WidgetTester tester,
+  ) async {
     final _Harness harness = await _pump(tester, 'one\n$a\ntwo');
 
     await _removeSelectedPhoto(tester);
@@ -120,17 +144,39 @@ void main() {
     expect(find.text(photoRemovedMessage), findsNothing);
   });
 
-  testWidgets('Backspace on a selected photo removes it with no toast',
-      (WidgetTester tester) async {
+  testWidgets('Backspace on a selected photo removes it with no toast', (
+    WidgetTester tester,
+  ) async {
     final _Harness harness = await _pump(tester, 'one\n$a\ntwo');
     harness.focusNode.requestFocus();
-    await tester.tap(find.byKey(inPlacePhotoKey(0)));
-    await tester.pump();
+    await _selectPhoto(tester);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.backspace);
+    await NoteEditorDriver(tester).pressKey(LogicalKeyboardKey.backspace);
     await tester.pumpAndSettle();
 
-    expect(harness.controller.text, 'one\ntwo');
+    expect(harness.controller.text, 'one\n\ntwo');
     expect(find.text(photoRemovedMessage), findsNothing);
   });
+
+  testWidgets(
+    'typing after a removal dismisses the toast and undo takes the letter first',
+    (WidgetTester tester) async {
+      final _Harness harness = await _pump(tester, 'one\n$a\ntwo');
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+      await _removeSelectedPhoto(tester);
+      expect(find.text(photoRemovedMessage), findsOneWidget);
+
+      await driver.typeText('x');
+      await tester.pumpAndSettle();
+
+      expect(find.text(photoRemovedMessage), findsNothing);
+      expect(harness.controller.text, isNot('one\n\ntwo'));
+
+      await driver.pressKey(LogicalKeyboardKey.keyZ, meta: true);
+
+      expect(harness.controller.text, 'one\n\ntwo');
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 }

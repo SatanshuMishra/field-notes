@@ -1,17 +1,49 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
-import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
-import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart'
+    show
+        MdBlock,
+        MdBlockKind,
+        MdPhotoLine,
+        MdPhotoPlacement,
+        MdPhotoSide,
+        MdPhotoSize;
+import 'package:field_notes/features/note_engine/document/editor_state.dart'
+    show EditorState;
+import 'package:field_notes/features/note_engine/document/transaction.dart'
+    show Transaction;
+import 'package:field_notes/features/note_engine/layout/photo_planner.dart'
+    show photoCanFloat;
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NotePhotoToolbarRequest;
+import 'package:field_notes/features/note_engine/photos/photo_commands.dart'
+    show
+        canMovePhotoDown,
+        canMovePhotoUp,
+        movePhotoDown,
+        movePhotoUp,
+        removePhoto,
+        replacePhotoReference,
+        setPhotoCaption,
+        setPhotoSide,
+        setPhotoSize;
+import 'package:field_notes/features/note_engine/render/photo_figure.dart'
+    show photoFigureCaptionGap;
+
+import 'photo_caption_field.dart';
 
 const double photoToolbarGap = 10;
 const double photoToolbarPadding = 5;
 const double photoToolbarTarget = 28;
+const double photoToolbarTouchTarget = 48;
 const double photoToolbarControlPadding = 7;
 const double photoToolbarControlGap = 2;
 const double photoToolbarGroupGap = 5;
@@ -23,6 +55,8 @@ const String photoToolbarRemoveLabel = 'Remove';
 const String photoToolbarMoveUpLabel = 'Move up';
 const String photoToolbarMoveDownLabel = 'Move down';
 const String photoToolbarReplaceLabel = 'Replace';
+const String photoToolbarMoreLabel = 'More photo actions';
+const String photoToolbarNoFloatHint = 'Not enough room to float at this width';
 const String photoRemovedMessage = 'Photo removed';
 const String photoRemovedUndoLabel = 'Undo';
 
@@ -32,37 +66,59 @@ const Key photoToolbarRemoveKey = ValueKey<String>('photo-toolbar-remove');
 const Key photoToolbarMoveUpKey = ValueKey<String>('photo-toolbar-move-up');
 const Key photoToolbarMoveDownKey = ValueKey<String>('photo-toolbar-move-down');
 const Key photoToolbarReplaceKey = ValueKey<String>('photo-toolbar-replace');
+const Key photoToolbarMoreKey = ValueKey<String>('photo-toolbar-more');
 
-Key photoToolbarSizeKey(PhotoSize size) =>
+Key photoToolbarSizeKey(MdPhotoSize size) =>
     ValueKey<String>('photo-toolbar-size-${size.name}');
 
-Key photoToolbarSideKey(PhotoSide side) =>
+Key photoToolbarSideKey(MdPhotoSide side) =>
     ValueKey<String>('photo-toolbar-side-${side.name}');
 
-String photoToolbarSizeLabel(PhotoSize size) => '${size.label} size';
+String photoToolbarSizeLabel(MdPhotoSize size) => '${size.label} size';
+
+String photoToolbarSideLabel(MdPhotoSide side) => '${side.label} side';
+
+double photoToolbarTargetFor(TargetPlatform platform) =>
+    platform == TargetPlatform.android
+    ? photoToolbarTouchTarget
+    : photoToolbarTarget;
 
 double photoToolbarWidthFor({
   required TextScaler scaler,
   required bool placement,
   required bool moves,
+  double target = photoToolbarTarget,
 }) {
-  double width = 2 * photoToolbarPadding;
-  for (final PhotoSize size in PhotoSize.values) {
-    width += _controlWidth(size.shortLabel, scaler);
-  }
-  width += _ruleWidth;
-  width += _controlWidth(photoToolbarCaptionLabel, scaler);
-  width += photoToolbarTarget;
-  if (placement) {
-    width += _ruleWidth + 2 * photoToolbarTarget;
-  }
-  if (moves) {
-    width += _ruleWidth + 3 * photoToolbarTarget;
-  }
-  return width;
+  final double glyph = _controlExtent(_glyphExtent, target);
+  final List<List<double>> groups = <List<double>>[
+    if (placement) ...<List<double>>[
+      <double>[
+        for (final MdPhotoSize size in MdPhotoSize.values)
+          _labelControlWidth(size.shortLabel, scaler, target),
+      ],
+      <double>[
+        for (final MdPhotoSide _ in MdPhotoSide.values)
+          _controlExtent(_sideGlyphExtent, target),
+      ],
+    ],
+    if (moves) <double>[glyph, glyph, glyph] else <double>[glyph],
+    <double>[_labelControlWidth(photoToolbarCaptionLabel, scaler, target)],
+    <double>[glyph],
+  ];
+  final double controls = groups.fold<double>(
+    0,
+    (double total, List<double> group) =>
+        total +
+        group.fold<double>(0, (double sum, double width) => sum + width) +
+        (group.length - 1) * photoToolbarControlGap,
+  );
+  return 2 * photoToolbarPadding + controls + (groups.length - 1) * _ruleWidth;
 }
 
-double _controlWidth(String label, TextScaler scaler) {
+double _controlExtent(double content, double target) =>
+    math.max(target, content + 2 * photoToolbarControlPadding);
+
+double _labelControlWidth(String label, TextScaler scaler, double target) {
   final TextPainter painter = TextPainter(
     text: TextSpan(text: label, style: TypographyTokens.toolbarSans),
     textDirection: TextDirection.ltr,
@@ -70,85 +126,239 @@ double _controlWidth(String label, TextScaler scaler) {
   )..layout();
   final double width = painter.width;
   painter.dispose();
-  return math.max(
-    photoToolbarTarget,
-    width + 2 * photoToolbarControlPadding,
-  );
+  return _controlExtent(width, target);
 }
 
-String photoToolbarSideLabel(PhotoSide side) => '${side.label} side';
+Offset photoToolbarOffset({
+  required Rect figure,
+  required Rect surface,
+  required Size bar,
+}) {
+  final double x = (figure.center.dx - bar.width / 2)
+      .clamp(surface.left, math.max(surface.left, surface.right - bar.width))
+      .toDouble();
+  final double above = figure.top - photoToolbarGap - bar.height;
+  if (above >= surface.top && above + bar.height <= surface.bottom) {
+    return Offset(x, above);
+  }
+  final double below = figure.bottom + photoToolbarGap;
+  if (below + bar.height <= surface.bottom) {
+    return Offset(x, below);
+  }
+  return Offset(
+    x,
+    math.min(
+      math.max(figure.top + photoToolbarGap, surface.top),
+      math.max(surface.top, surface.bottom - bar.height),
+    ),
+  );
+}
 
 const double _glyphExtent = 14;
 const double _sideGlyphExtent = 18;
 const int _sideGlyphLines = 3;
 const double _disabledOpacity = 0.4;
 const double _focusRingWidth = 2;
-const BorderRadius _controlRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusXs + 1));
-const BorderRadius _barRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusSm + 1));
+const double _menuGap = 4;
+const BorderRadius _controlRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusXs + 1),
+);
+const BorderRadius _barRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusSm),
+);
 
 typedef PhotoToolbarImporter = Future<List<String>> Function();
 
-class PhotoToolbar extends StatelessWidget {
-  const PhotoToolbar({
-    super.key,
-    required this.controller,
-    required this.line,
-    required this.measure,
-    required this.em,
-    required this.onCaption,
-    required this.onRemove,
-    this.media,
-    this.importer,
+typedef _PhotoCommand =
+    Transaction? Function(EditorState state, MdBlock photo);
+
+MdBlock? _photoAt(EditorState state, int lineStart) {
+  for (final MdBlock block in state.tree.blocks) {
+    if (block.kind == MdBlockKind.photoLine &&
+        block.sourceRange.start == lineStart) {
+      return block;
+    }
+  }
+  return null;
+}
+
+MdBlock? _photoByOrdinal(EditorState state, int ordinal) {
+  final List<MdBlock> photos = <MdBlock>[
+    for (final MdBlock block in state.tree.blocks)
+      if (block.kind == MdBlockKind.photoLine) block,
+  ];
+  return ordinal >= 0 && ordinal < photos.length ? photos[ordinal] : null;
+}
+
+void _runOnPhoto(NotePhotoToolbarRequest request, _PhotoCommand command) {
+  request.controller.applyCommand((EditorState state) {
+    final MdBlock? photo = _photoAt(state, request.photoLineStart);
+    return photo == null ? null : command(state, photo);
   });
+}
 
-  final TextEditingController controller;
-  final NotePhotoLine line;
-  final double measure;
-  final double em;
-  final VoidCallback onCaption;
-  final VoidCallback onRemove;
-  final ResolvedMedia? media;
-  final PhotoToolbarImporter? importer;
+class PhotoToolbarLayer extends StatelessWidget {
+  const PhotoToolbarLayer({super.key, required this.request});
 
-  bool get placementApplies => canFloatAt(measure: measure, em: em);
+  final NotePhotoToolbarRequest request;
 
-  bool get sideApplies => line.placement.size != PhotoSize.full;
+  @override
+  Widget build(BuildContext context) {
+    final Rect photoRect = request.photoRect;
+    final Rect captionField = Rect.fromLTWH(
+      photoRect.left,
+      photoRect.bottom + photoFigureCaptionGap,
+      photoRect.width,
+      photoCaptionLineHeight(MediaQuery.textScalerOf(context)),
+    );
+    final Rect withCaption = request.captionRect.isEmpty
+        ? photoRect
+        : photoRect.expandToInclude(request.captionRect);
+    final Rect figure = request.captionOpen
+        ? withCaption.expandToInclude(captionField)
+        : withCaption;
+    final EditorState state = request.controller.state;
+    final MdBlock? photo = _photoAt(state, request.photoLineStart);
+    return SizedBox.expand(
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final Rect surface = Rect.fromLTRB(
+            request.surface.left,
+            request.surface.top,
+            request.surface.right,
+            math.max(
+              request.surface.top,
+              math.min(
+                request.surface.bottom,
+                constraints.maxHeight - request.bottomInset,
+              ),
+            ),
+          );
+          return Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              if (figure.overlaps(surface))
+                Positioned.fill(
+                  child: CustomSingleChildLayout(
+                    delegate: _PhotoToolbarLayout(
+                      figure: figure,
+                      surface: surface,
+                    ),
+                    child: PhotoToolbar(request: request),
+                  ),
+                ),
+              if (request.captionOpen && photo != null)
+                Positioned.fromRect(
+                  rect: captionField,
+                  child: PhotoCaptionField(
+                    caption: MdPhotoLine.ofBlock(photo, state.source).caption,
+                    width: captionField.width,
+                    height: captionField.height,
+                    onCommit: (String caption) {
+                      _runOnPhoto(
+                        request,
+                        (EditorState s, MdBlock p) =>
+                            setPhotoCaption(s, p, caption),
+                      );
+                      request.onCloseCaption();
+                      request.onReturnToEditor();
+                    },
+                    onCancel: () {
+                      request.onCloseCaption();
+                      request.onReturnToEditor();
+                    },
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
 
-  void setSize(PhotoSize size) {
-    _apply(setPhotoSize(controller.value, line, size));
+class _PhotoToolbarLayout extends SingleChildLayoutDelegate {
+  const _PhotoToolbarLayout({required this.figure, required this.surface});
+
+  final Rect figure;
+  final Rect surface;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints.loose(surface.size);
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      photoToolbarOffset(figure: figure, surface: surface, bar: childSize);
+
+  @override
+  bool shouldRelayout(_PhotoToolbarLayout oldDelegate) =>
+      oldDelegate.figure != figure || oldDelegate.surface != surface;
+}
+
+class PhotoToolbar extends StatefulWidget {
+  const PhotoToolbar({super.key, required this.request});
+
+  final NotePhotoToolbarRequest request;
+
+  @override
+  State<PhotoToolbar> createState() => _PhotoToolbarState();
+}
+
+class _PhotoToolbarState extends State<PhotoToolbar> {
+  final OverlayPortalController _menu = OverlayPortalController();
+  final Object _menuGroup = Object();
+  final GlobalKey _moreKey = GlobalKey();
+
+  NotePhotoToolbarRequest get _request => widget.request;
+
+  void _toggleMenu() {
+    setState(() {
+      if (_menu.isShowing) {
+        _menu.hide();
+      } else {
+        _menu.show();
+      }
+    });
   }
 
-  void setSide(PhotoSide side) {
-    if (!sideApplies) {
+  void _closeMenu() {
+    if (!_menu.isShowing || !mounted) {
       return;
     }
-    _apply(setPhotoSide(controller.value, line, side));
+    setState(_menu.hide);
   }
 
-  void remove(BuildContext context) {
-    final PhotoLineRemoval removal = removePhotoLine(controller.value, line);
-    final RemovedPhotoLine removed = removal.removed;
-    controller.value = removal.value;
-    onRemove();
+  void _remove() {
+    final NotePhotoToolbarRequest request = _request;
+    final EditorState before = request.controller.state;
+    _runOnPhoto(
+      request,
+      (EditorState s, MdBlock p) => removePhoto(s, p).transaction,
+    );
+    final EditorState removedState = request.controller.state;
+    if (identical(before, removedState) || !mounted) {
+      return;
+    }
     showTransientToast(
       context,
       photoRemovedMessage,
       glyph: IconStickerGlyph.trash,
       action: ToastAction(
         label: photoRemovedUndoLabel,
-        onPressed: () => _apply(restorePhotoLine(controller.value, removed)),
+        onPressed: () {
+          if (identical(request.controller.state, removedState)) {
+            request.controller.undo();
+          }
+        },
       ),
     );
+    request.onRemovalToastShown();
   }
 
-  void moveUp() => _apply(movePhotoUp(controller.value, line));
-
-  void moveDown() => _apply(movePhotoDown(controller.value, line));
-
-  Future<void> replace() async {
-    final PhotoToolbarImporter? pick = importer;
+  Future<void> _replace() async {
+    final NotePhotoToolbarRequest request = _request;
+    final PhotoToolbarImporter? pick = request.importer;
     if (pick == null) {
       return;
     }
@@ -162,163 +372,346 @@ class PhotoToolbar extends StatelessWidget {
     if (picked.isEmpty) {
       return;
     }
-    final List<NotePhotoLine> lines = notePhotoLines(controller.text);
-    if (line.ordinal >= lines.length) {
-      return;
-    }
-    _apply(
-      replacePhotoReference(
-        controller.value,
-        lines[line.ordinal],
-        picked.first,
-      ),
-    );
+    request.controller.applyCommand((EditorState state) {
+      final MdBlock? photo = _photoByOrdinal(state, request.ordinal);
+      return photo == null
+          ? null
+          : replacePhotoReference(state, photo, picked.first);
+    });
   }
 
-  void _apply(TextEditingValue next) {
-    if (next != controller.value) {
-      controller.value = next;
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is KeyDownEvent &&
+        event.logicalKey == LogicalKeyboardKey.escape) {
+      _closeMenu();
+      _request.onReturnToEditor();
+      return KeyEventResult.handled;
     }
+    return KeyEventResult.ignored;
   }
 
   @override
   Widget build(BuildContext context) {
+    final NotePhotoToolbarRequest request = _request;
+    final EditorState state = request.controller.state;
+    final MdBlock? photo = _photoAt(state, request.photoLineStart);
+    if (photo == null) {
+      return const SizedBox.shrink();
+    }
     final TextScaler scaler = MediaQuery.textScalerOf(context);
+    final double target = photoToolbarTargetFor(defaultTargetPlatform);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final bool moves = constraints.maxWidth >=
+        final bool placement = !request.phoneColumn;
+        final bool moves =
             photoToolbarWidthFor(
               scaler: scaler,
-              placement: placementApplies,
+              placement: placement,
               moves: true,
-            );
-        return Semantics(
-          container: true,
-          explicitChildNodes: true,
-          child: DecoratedBox(
-            key: photoToolbarKey,
-            decoration: const BoxDecoration(
-              color: Palette.toolbarInk,
-              borderRadius: _barRadius,
-              boxShadow: Shadows.toastLift,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(photoToolbarPadding),
-              child: _PhotoToolbarBody(toolbar: this, moves: moves),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _PhotoToolbarBody extends StatefulWidget {
-  const _PhotoToolbarBody({required this.toolbar, required this.moves});
-
-  final PhotoToolbar toolbar;
-  final bool moves;
-
-  @override
-  State<_PhotoToolbarBody> createState() => _PhotoToolbarBodyState();
-}
-
-class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
-  PhotoToolbar get _toolbar => widget.toolbar;
-
-  NotePhotoLine get _line => _toolbar.line;
-
-  @override
-  Widget build(BuildContext context) {
-    final PhotoPlacement placement = _line.placement;
-    final String text = _toolbar.controller.text;
-    final bool moves = widget.moves;
-    return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            for (final PhotoSize size in PhotoSize.values)
-              _PhotoToolbarControl(
-                controlKey: photoToolbarSizeKey(size),
-                label: photoToolbarSizeLabel(size),
-                selected: size == placement.size,
-                onTap: () => _toolbar.setSize(size),
-                child: _segmentLabel(
-                  size.shortLabel,
-                  selected: size == placement.size,
-                ),
-              ),
-            if (_toolbar.placementApplies) ...<Widget>[
-              const _PhotoToolbarRule(),
-              for (final PhotoSide side in PhotoSide.values)
-                _PhotoToolbarControl(
-                  controlKey: photoToolbarSideKey(side),
-                  label: photoToolbarSideLabel(side),
-                  selected: _toolbar.sideApplies && side == placement.side,
-                  onTap: _toolbar.sideApplies
-                      ? () => _toolbar.setSide(side)
-                      : null,
-                  child: PhotoSideGlyph(
-                    side: side,
-                    selected: _toolbar.sideApplies && side == placement.side,
-                  ),
-                ),
-            ],
-            if (moves) ...<Widget>[
-              const _PhotoToolbarRule(),
-              _PhotoToolbarControl(
-                controlKey: photoToolbarMoveUpKey,
-                label: photoToolbarMoveUpLabel,
-                onTap: canMovePhotoUp(text, _line) ? _toolbar.moveUp : null,
-                child: _glyph(_PhotoToolbarGlyph.up),
-              ),
-              _PhotoToolbarControl(
-                controlKey: photoToolbarMoveDownKey,
-                label: photoToolbarMoveDownLabel,
-                onTap: canMovePhotoDown(text, _line) ? _toolbar.moveDown : null,
-                child: _glyph(_PhotoToolbarGlyph.down),
-              ),
-              _PhotoToolbarControl(
-                controlKey: photoToolbarReplaceKey,
-                label: photoToolbarReplaceLabel,
-                onTap: _toolbar.importer == null
-                    ? null
-                    : () => unawaited(_toolbar.replace()),
-                child: _glyph(_PhotoToolbarGlyph.swap),
-              ),
-            ],
-            const _PhotoToolbarRule(),
+              target: target,
+            ) <=
+            constraints.maxWidth;
+        final List<List<Widget>> groups = <List<Widget>>[
+          if (placement) ...<List<Widget>>[
+            _sizeControls(state, photo, target),
+            _sideControls(state, photo, target),
+          ],
+          if (moves)
+            _moveControls(state, photo, target)
+          else
+            <Widget>[_moreControl(state, photo, target)],
+          <Widget>[
             _PhotoToolbarControl(
               controlKey: photoToolbarCaptionKey,
               label: photoToolbarCaptionLabel,
-              onTap: _toolbar.onCaption,
-              child: _segmentLabel(
-                photoToolbarCaptionLabel,
-                selected: false,
-              ),
+              target: target,
+              onTap: request.onOpenCaption,
+              child: _segmentLabel(photoToolbarCaptionLabel, selected: false),
             ),
+          ],
+          <Widget>[
             _PhotoToolbarControl(
               controlKey: photoToolbarRemoveKey,
               label: photoToolbarRemoveLabel,
-              onTap: () => _toolbar.remove(context),
+              target: target,
+              onTap: _remove,
               child: const IconStickerGlyphIcon(
                 glyph: IconStickerGlyph.trash,
                 color: Palette.toolbarLabel,
                 size: _glyphExtent,
               ),
             ),
-      ],
+          ],
+        ];
+        final List<Widget> row = _withFirstFocus(<Widget>[
+          for (int g = 0; g < groups.length; g++) ...<Widget>[
+            if (g > 0) const _PhotoToolbarRule(),
+            for (int c = 0; c < groups[g].length; c++) ...<Widget>[
+              if (c > 0) const SizedBox(width: photoToolbarControlGap),
+              groups[g][c],
+            ],
+          ],
+        ]);
+        return TextFieldTapRegion(
+          child: Focus(
+            canRequestFocus: false,
+            skipTraversal: true,
+            onKeyEvent: _onKey,
+            child: Semantics(
+              container: true,
+              explicitChildNodes: true,
+              child: DecoratedBox(
+                key: photoToolbarKey,
+                decoration: const BoxDecoration(
+                  color: Palette.toolbarInk,
+                  borderRadius: _barRadius,
+                  boxShadow: Shadows.toastLift,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(photoToolbarPadding),
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(
+                      context,
+                    ).copyWith(scrollbars: false),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: FocusTraversalGroup(
+                        policy: WidgetOrderTraversalPolicy(),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: row,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _withFirstFocus(List<Widget> row) {
+    final int first = row.indexWhere(
+      (Widget w) => w is _PhotoToolbarFocusable,
+    );
+    if (first < 0) {
+      return row;
+    }
+    final _PhotoToolbarFocusable control = row[first] as _PhotoToolbarFocusable;
+    return <Widget>[
+      ...row.sublist(0, first),
+      control.withFocusNode(_request.firstControlFocusNode),
+      ...row.sublist(first + 1),
+    ];
+  }
+
+  List<Widget> _sizeControls(EditorState state, MdBlock photo, double target) {
+    final MdPhotoPlacement placement = MdPhotoLine.ofBlock(
+      photo,
+      state.source,
+    ).placement;
+    return <Widget>[
+      for (final MdPhotoSize size in MdPhotoSize.values)
+        _placementControl(
+          key: photoToolbarSizeKey(size),
+          label: photoToolbarSizeLabel(size),
+          target: target,
+          marked: placement.isValid && placement.size == size,
+          pressable: setPhotoSize(state, photo, size) != null,
+          command: (EditorState s, MdBlock p) => setPhotoSize(s, p, size),
+          child: _segmentLabel(
+            size.shortLabel,
+            selected: placement.isValid && placement.size == size,
+          ),
+        ),
+    ];
+  }
+
+  List<Widget> _sideControls(EditorState state, MdBlock photo, double target) {
+    final MdPhotoPlacement placement = MdPhotoLine.ofBlock(
+      photo,
+      state.source,
+    ).placement;
+    final MdPhotoSize size = placement.isValid
+        ? placement.size
+        : MdPhotoSize.medium;
+    final bool floats = photoCanFloat(
+      size: size,
+      columnWidth: _request.columnWidth,
+      em: _request.em,
+    );
+    final bool full = size == MdPhotoSize.full;
+    return <Widget>[
+      for (final MdPhotoSide side in MdPhotoSide.values)
+        _placementControl(
+          key: photoToolbarSideKey(side),
+          label: photoToolbarSideLabel(side),
+          hint: side != MdPhotoSide.centre && !floats
+              ? photoToolbarNoFloatHint
+              : null,
+          target: target,
+          marked: placement.isValid && !full && placement.side == side,
+          pressable:
+              !full &&
+              (side == MdPhotoSide.centre || floats) &&
+              setPhotoSide(state, photo, side) != null,
+          command: (EditorState s, MdBlock p) => setPhotoSide(s, p, side),
+          child: PhotoSideGlyph(
+            side: side,
+            selected: placement.isValid && !full && placement.side == side,
+          ),
+        ),
+    ];
+  }
+
+  Widget _placementControl({
+    required Key key,
+    required String label,
+    required double target,
+    required bool marked,
+    required bool pressable,
+    required _PhotoCommand command,
+    required Widget child,
+    String? hint,
+  }) {
+    return _PhotoToolbarControl(
+      controlKey: key,
+      label: label,
+      hint: hint,
+      target: target,
+      selected: marked,
+      onTap: pressable ? () => _runOnPhoto(_request, command) : null,
+      child: child,
+    );
+  }
+
+  List<Widget> _moveControls(
+    EditorState state,
+    MdBlock photo,
+    double target, {
+    VoidCallback? after,
+  }) {
+    VoidCallback? run(VoidCallback? action) =>
+        action == null ? null : () {
+          after?.call();
+          action();
+        };
+    return <Widget>[
+      _PhotoToolbarControl(
+        controlKey: photoToolbarMoveUpKey,
+        label: photoToolbarMoveUpLabel,
+        target: target,
+        onTap: run(
+          canMovePhotoUp(state, photo)
+              ? () => _runOnPhoto(_request, movePhotoUp)
+              : null,
+        ),
+        child: _glyph(_PhotoToolbarGlyph.up),
+      ),
+      _PhotoToolbarControl(
+        controlKey: photoToolbarMoveDownKey,
+        label: photoToolbarMoveDownLabel,
+        target: target,
+        onTap: run(
+          canMovePhotoDown(state, photo)
+              ? () => _runOnPhoto(_request, movePhotoDown)
+              : null,
+        ),
+        child: _glyph(_PhotoToolbarGlyph.down),
+      ),
+      _PhotoToolbarControl(
+        controlKey: photoToolbarReplaceKey,
+        label: photoToolbarReplaceLabel,
+        target: target,
+        onTap: run(
+          _request.importer == null ? null : () => unawaited(_replace()),
+        ),
+        child: _glyph(_PhotoToolbarGlyph.swap),
+      ),
+    ];
+  }
+
+  Widget _moreControl(EditorState state, MdBlock photo, double target) {
+    return _PhotoToolbarMenuAnchor(
+      groupId: _menuGroup,
+      portalKey: _moreKey,
+      controller: _menu,
+      overlayChildBuilder: (BuildContext overlayContext) =>
+          _menuPanel(state, photo, target),
+      control: _PhotoToolbarControl(
+        controlKey: photoToolbarMoreKey,
+        label: photoToolbarMoreLabel,
+        target: target,
+        onTap: _toggleMenu,
+        child: _glyph(_PhotoToolbarGlyph.more),
+      ),
+    );
+  }
+
+  Widget _menuPanel(EditorState state, MdBlock photo, double target) {
+    final RenderBox? button =
+        _moreKey.currentContext?.findRenderObject() as RenderBox?;
+    final RenderBox? overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (button == null || overlay == null || !button.hasSize) {
+      return const SizedBox.shrink();
+    }
+    final Rect anchor = MatrixUtils.transformRect(
+      button.getTransformTo(overlay),
+      Offset.zero & button.size,
+    );
+    final List<Widget> items = _moveControls(
+      state,
+      photo,
+      target,
+      after: _closeMenu,
+    );
+    return CustomSingleChildLayout(
+      delegate: _MenuLayout(anchor: anchor),
+      child: TextFieldTapRegion(
+        child: TapRegion(
+          groupId: _menuGroup,
+          onTapOutside: (PointerDownEvent _) => _closeMenu(),
+          child: Semantics(
+            container: true,
+            explicitChildNodes: true,
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Palette.toolbarInk,
+                borderRadius: _barRadius,
+                boxShadow: Shadows.toastLift,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(photoToolbarPadding),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    for (int i = 0; i < items.length; i++) ...<Widget>[
+                      if (i > 0) const SizedBox(width: photoToolbarControlGap),
+                      items[i],
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _glyph(_PhotoToolbarGlyph glyph) => SizedBox.square(
-        dimension: _glyphExtent,
-        child: CustomPaint(
-          painter: _PhotoToolbarGlyphPainter(
-            glyph: glyph,
-            color: Palette.toolbarLabel,
-          ),
-        ),
-      );
+    dimension: _glyphExtent,
+    child: CustomPaint(
+      painter: _PhotoToolbarGlyphPainter(
+        glyph: glyph,
+        color: Palette.toolbarLabel,
+      ),
+    ),
+  );
 
   Widget _segmentLabel(String text, {required bool selected}) {
     return Text(
@@ -328,6 +721,33 @@ class _PhotoToolbarBodyState extends State<_PhotoToolbarBody> {
       ),
     );
   }
+}
+
+class _MenuLayout extends SingleChildLayoutDelegate {
+  const _MenuLayout({required this.anchor});
+
+  final Rect anchor;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      constraints.loosen();
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final double below = anchor.bottom + _menuGap;
+    final double above = anchor.top - _menuGap - childSize.height;
+    final double top = below + childSize.height <= size.height || above < 0
+        ? below
+        : above;
+    final double left = anchor.center.dx - childSize.width / 2;
+    return Offset(
+      left.clamp(0, math.max(0, size.width - childSize.width)).toDouble(),
+      top,
+    );
+  }
+
+  @override
+  bool shouldRelayout(_MenuLayout oldDelegate) => oldDelegate.anchor != anchor;
 }
 
 class _PhotoToolbarRule extends StatelessWidget {
@@ -346,7 +766,7 @@ class _PhotoToolbarRule extends StatelessWidget {
   }
 }
 
-enum _PhotoToolbarGlyph { up, down, swap }
+enum _PhotoToolbarGlyph { up, down, swap, more }
 
 class _PhotoToolbarGlyphPainter extends CustomPainter {
   const _PhotoToolbarGlyphPainter({required this.glyph, required this.color});
@@ -356,15 +776,22 @@ class _PhotoToolbarGlyphPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
     canvas.save();
     canvas.scale(size.shortestSide / 24);
-    canvas.drawPath(_path(), stroke);
+    if (glyph == _PhotoToolbarGlyph.more) {
+      final Paint fill = Paint()..color = color;
+      for (final double x in <double>[5, 12, 19]) {
+        canvas.drawCircle(Offset(x, 12), 2, fill);
+      }
+    } else {
+      final Paint stroke = Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(_path(), stroke);
+    }
     canvas.restore();
   }
 
@@ -393,6 +820,7 @@ class _PhotoToolbarGlyphPainter extends CustomPainter {
         ..moveTo(9, 12)
         ..lineTo(5, 16)
         ..lineTo(9, 20),
+      _PhotoToolbarGlyph.more => Path(),
     };
   }
 
@@ -401,20 +829,83 @@ class _PhotoToolbarGlyphPainter extends CustomPainter {
       oldDelegate.glyph != glyph || oldDelegate.color != color;
 }
 
-class _PhotoToolbarControl extends StatefulWidget {
+abstract interface class _PhotoToolbarFocusable {
+  Widget withFocusNode(FocusNode node);
+}
+
+class _PhotoToolbarMenuAnchor extends StatelessWidget
+    implements _PhotoToolbarFocusable {
+  const _PhotoToolbarMenuAnchor({
+    required this.groupId,
+    required this.portalKey,
+    required this.controller,
+    required this.overlayChildBuilder,
+    required this.control,
+  });
+
+  final Object groupId;
+  final GlobalKey portalKey;
+  final OverlayPortalController controller;
+  final WidgetBuilder overlayChildBuilder;
+  final _PhotoToolbarControl control;
+
+  @override
+  _PhotoToolbarMenuAnchor withFocusNode(FocusNode node) =>
+      _PhotoToolbarMenuAnchor(
+        groupId: groupId,
+        portalKey: portalKey,
+        controller: controller,
+        overlayChildBuilder: overlayChildBuilder,
+        control: control.withFocusNode(node),
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    return TapRegion(
+      groupId: groupId,
+      child: OverlayPortal(
+        key: portalKey,
+        controller: controller,
+        overlayChildBuilder: overlayChildBuilder,
+        child: control,
+      ),
+    );
+  }
+}
+
+class _PhotoToolbarControl extends StatefulWidget
+    implements _PhotoToolbarFocusable {
   const _PhotoToolbarControl({
     required this.controlKey,
     required this.label,
+    required this.target,
     required this.child,
     required this.onTap,
     this.selected,
+    this.hint,
+    this.focusNode,
   });
 
   final Key controlKey;
   final String label;
+  final double target;
   final Widget child;
   final VoidCallback? onTap;
   final bool? selected;
+  final String? hint;
+  final FocusNode? focusNode;
+
+  @override
+  _PhotoToolbarControl withFocusNode(FocusNode node) => _PhotoToolbarControl(
+    controlKey: controlKey,
+    label: label,
+    target: target,
+    onTap: onTap,
+    selected: selected,
+    hint: hint,
+    focusNode: node,
+    child: child,
+  );
 
   @override
   State<_PhotoToolbarControl> createState() => _PhotoToolbarControlState();
@@ -435,7 +926,8 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
     final bool enabled = onTap != null;
     final bool marked = widget.selected ?? false;
     return FocusableActionDetector(
-      enabled: enabled,
+      enabled: enabled || marked,
+      focusNode: widget.focusNode,
       mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
       onShowFocusHighlight: _onFocusHighlight,
       actions: <Type, Action<Intent>>{
@@ -452,15 +944,16 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
         selected: widget.selected,
         inMutuallyExclusiveGroup: widget.selected != null,
         label: widget.label,
+        hint: widget.hint,
         child: GestureDetector(
           key: widget.controlKey,
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
           child: ExcludeSemantics(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: photoToolbarTarget,
-                minHeight: photoToolbarTarget,
+              constraints: BoxConstraints(
+                minWidth: widget.target,
+                minHeight: widget.target,
               ),
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -483,7 +976,7 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
                     widthFactor: 1,
                     heightFactor: 1,
                     child: Opacity(
-                      opacity: enabled ? 1 : _disabledOpacity,
+                      opacity: enabled || marked ? 1 : _disabledOpacity,
                       child: widget.child,
                     ),
                   ),
@@ -498,13 +991,9 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
 }
 
 class PhotoSideGlyph extends StatelessWidget {
-  const PhotoSideGlyph({
-    super.key,
-    required this.side,
-    required this.selected,
-  });
+  const PhotoSideGlyph({super.key, required this.side, required this.selected});
 
-  final PhotoSide side;
+  final MdPhotoSide side;
   final bool selected;
 
   @override
@@ -524,14 +1013,39 @@ class PhotoSideGlyph extends StatelessWidget {
 class _PhotoSideGlyphPainter extends CustomPainter {
   const _PhotoSideGlyphPainter({required this.side, required this.color});
 
-  final PhotoSide side;
+  final MdPhotoSide side;
   final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final double block = size.width * 0.5;
     final double inset = size.height * 0.1;
-    final bool left = side == PhotoSide.left;
+    final Paint rule = Paint()
+      ..color = color.withValues(alpha: 0.6)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = size.height * 0.11;
+    final double gap = (size.height - rule.strokeWidth) / (_sideGlyphLines - 1);
+    if (side == MdPhotoSide.centre) {
+      final double centreBlock = size.width * 0.44;
+      final double left = (size.width - centreBlock) / 2;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, inset, centreBlock, size.height - 2 * inset),
+          const Radius.circular(2),
+        ),
+        Paint()..color = color,
+      );
+      final double reach = left - size.width * 0.1;
+      final double y = size.height / 2;
+      canvas.drawLine(Offset(0, y), Offset(reach, y), rule);
+      canvas.drawLine(
+        Offset(size.width - reach, y),
+        Offset(size.width, y),
+        rule,
+      );
+      return;
+    }
+    final bool left = side == MdPhotoSide.left;
     final Rect picture = Rect.fromLTWH(
       left ? 0 : size.width - block,
       inset,
@@ -542,13 +1056,10 @@ class _PhotoSideGlyphPainter extends CustomPainter {
       RRect.fromRectAndRadius(picture, const Radius.circular(2)),
       Paint()..color = color,
     );
-    final Paint rule = Paint()
-      ..color = color.withValues(alpha: 0.6)
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = size.height * 0.11;
-    final double gap = (size.height - rule.strokeWidth) / (_sideGlyphLines - 1);
     final double from = left ? block + size.width * 0.14 : 0;
-    final double to = left ? size.width : size.width - block - size.width * 0.14;
+    final double to = left
+        ? size.width
+        : size.width - block - size.width * 0.14;
     for (int i = 0; i < _sideGlyphLines; i++) {
       final double y = rule.strokeWidth / 2 + gap * i;
       canvas.drawLine(Offset(from, y), Offset(to, y), rule);
