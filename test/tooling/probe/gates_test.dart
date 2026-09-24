@@ -920,8 +920,7 @@ void main() {
     expect(
       _row(
         _document('draft-recovery', <Map<String, Object?>>[
-          ...runs('new note', 20),
-          ...runs('edit note', 20),
+          for (final String name in draftRecoveryCases) ...runs(name, 20),
         ]),
         'GR8',
       ).verdict,
@@ -930,8 +929,9 @@ void main() {
     expect(
       _row(
         _document('draft-recovery', <Map<String, Object?>>[
-          ...runs('new note', 20),
-          ...runs('edit note', 19),
+          for (final String name in draftRecoveryCases.skip(1))
+            ...runs(name, 20),
+          ...runs(draftRecoveryCases.first, 19),
         ]),
         'GR8',
       ).verdict,
@@ -1241,6 +1241,465 @@ void main() {
         _document('perf-keystroke', <Map<String, Object?>>[]),
       ).map((RowOutcome outcome) => outcome.row),
       <String>['GP1', 'GP2', 'GP3'],
+    );
+  });
+
+  test('rows fail with too few samples for the counts 6.14 requires', () {
+    Map<String, Object?> roundTrip(int index) => <String, Object?>{
+      'row': 'GR1',
+      'kind': 'roundTrip',
+      'case': 'random $index',
+      'atSave': <String, Object?>{'source': 'fog '},
+      'reopened': <String, Object?>{'source': 'fog'},
+    };
+    final RowOutcome fewRoundTrips = _row(
+      _document('round-trip', <Map<String, Object?>>[
+        for (int index = 0; index < 51; index++) roundTrip(index),
+      ]),
+      'GR1',
+    );
+    expect(fewRoundTrips.verdict, GateVerdict.fail);
+    expect(fewRoundTrips.measured, startsWith('too few samples'));
+    expect(
+      _row(
+        _document('round-trip', <Map<String, Object?>>[
+          for (int index = 0; index < roundTripSampleMinimum; index++)
+            roundTrip(index),
+        ]),
+        'GR1',
+      ).verdict,
+      GateVerdict.pass,
+    );
+
+    Map<String, Object?> held(String clickCase, int hold, int click) =>
+        <String, Object?>{
+          ..._expectSample(
+            'GR3',
+            '$clickCase click $click hold ${hold}ms',
+            <String, Object?>{'errors': 0},
+            <String, Object?>{'errors': 0},
+          ),
+          'clickCase': clickCase,
+          'hold': hold,
+        };
+    List<Map<String, Object?>> heldRuns(int clicksAt300) =>
+        <Map<String, Object?>>[
+          for (final int hold in heldClickHolds)
+            for (
+              int click = 1;
+              click <= (hold == 300 ? clicksAt300 : heldClickMinimum);
+              click++
+            )
+              held('format-bold', hold, click),
+        ];
+    expect(
+      _row(_document('held-clicks', heldRuns(20)), 'GR3').verdict,
+      GateVerdict.pass,
+    );
+    final RowOutcome shortHeld = _row(
+      _document('held-clicks', heldRuns(19)),
+      'GR3',
+    );
+    expect(shortHeld.verdict, GateVerdict.fail);
+    expect(shortHeld.measured, contains('format-bold at 300 ms has 19'));
+
+    Map<String, Object?> errors(String name, {int? steps}) => <String, Object?>{
+      'row': 'GR4',
+      'kind': 'errors',
+      'case': name,
+      'errors': <String, Object?>{
+        'errors': const <Object?>[],
+        'drops': const <Object?>[],
+      },
+      'steps': ?steps,
+    };
+    expect(
+      _row(
+        _document('monkey', <Map<String, Object?>>[
+          errors('undo-matrix'),
+          errors('random', steps: 500),
+        ], build: 'debug'),
+        'GR4',
+      ).verdict,
+      GateVerdict.fail,
+    );
+    expect(
+      _row(
+        _document('monkey', <Map<String, Object?>>[
+          errors('undo-matrix'),
+          errors('random', steps: monkeyStepMinimum),
+        ], build: 'debug'),
+        'GR4',
+      ).verdict,
+      GateVerdict.pass,
+    );
+
+    Map<String, Object?> click(String note, int index) => <String, Object?>{
+      'row': 'GB3',
+      'kind': 'click',
+      'case': '$note $index',
+      'note': note,
+      'clickX': 10.0,
+      'glyphLeft': 8.0,
+      'glyphRight': 16.0,
+      'offsetBefore': index,
+      'offsetAfter': index + 1,
+      'landed': index,
+    };
+    List<Map<String, Object?>> sweep(int lastNote) => <Map<String, Object?>>[
+      for (final String note in <String>[
+        'c500-p0',
+        'c500-p4',
+        'c500-p8',
+        'c6000-p0',
+        'c6000-p4',
+        'c6000-p8',
+        'c6000-p24',
+        'c20000-p0',
+        'c20000-p4',
+        'c20000-p8',
+        'c20000-p24',
+        'c50000-p0',
+        'c50000-p4',
+        'c50000-p8',
+      ])
+        for (int index = 0; index < clickSweepMinimum; index++)
+          click(note, index),
+      for (int index = 0; index < lastNote; index++) click('c50000-p24', index),
+    ];
+    expect(
+      _row(_document('click-sweep', sweep(500)), 'GB3').verdict,
+      GateVerdict.pass,
+    );
+    final RowOutcome shortSweep = _row(
+      _document('click-sweep', sweep(499)),
+      'GB3',
+    );
+    expect(shortSweep.verdict, GateVerdict.fail);
+    expect(shortSweep.measured, contains('c50000-p24 has 499'));
+
+    Map<String, Object?> vertical(int index) => <String, Object?>{
+      'row': 'GB4',
+      'kind': 'vertical',
+      'case': 'move $index',
+      'caretX': 100.0,
+      'goalX': 100.0,
+      'glyphAdvance': 8.0,
+      'lineShorterThanGoal': false,
+      'lineEndX': 300.0,
+    };
+    expect(
+      _row(
+        _document('vertical-sweep', <Map<String, Object?>>[
+          for (int index = 0; index < verticalSweepMinimum - 1; index++)
+            vertical(index),
+        ]),
+        'GB4',
+      ).verdict,
+      GateVerdict.fail,
+    );
+    expect(
+      _row(
+        _document('vertical-sweep', <Map<String, Object?>>[
+          for (int index = 0; index < verticalSweepMinimum; index++)
+            vertical(index),
+        ]),
+        'GB4',
+      ).verdict,
+      GateVerdict.pass,
+    );
+
+    final RowOutcome missingCases = _row(
+      _document('draft-recovery', <Map<String, Object?>>[
+        for (final String name in draftRecoveryCases.take(4))
+          for (int run = 0; run < 20; run++)
+            _expectSample(
+              'GR8',
+              name,
+              <String, Object?>{'chip': true},
+              <String, Object?>{'chip': true},
+            ),
+      ]),
+      'GR8',
+    );
+    expect(missingCases.verdict, GateVerdict.fail);
+    expect(missingCases.measured, contains('a discarded note leaves no draft'));
+  });
+
+  test('a round trip whose save reported no stored text fails', () {
+    List<Map<String, Object?>> trips({required bool missing}) =>
+        <Map<String, Object?>>[
+          for (int index = 0; index < roundTripSampleMinimum; index++)
+            <String, Object?>{
+              'row': 'GR1',
+              'kind': 'roundTrip',
+              'case': 'scripted $index',
+              'storedMissing': ?(missing && index == 7 ? true : null),
+              'atSave': <String, Object?>{'source': 'Walk '},
+              'reopened': missing && index == 7
+                  ? const <String, Object?>{}
+                  : <String, Object?>{'source': 'Walk'},
+            },
+        ];
+    expect(
+      _row(_document('round-trip', trips(missing: false)), 'GR1').verdict,
+      GateVerdict.pass,
+    );
+    final RowOutcome missing = _row(
+      _document('round-trip', trips(missing: true)),
+      'GR1',
+    );
+    expect(missing.verdict, GateVerdict.fail);
+    expect(missing.measured, contains('no stored text'));
+  });
+
+  test('photo commands in the side-edit audit allow only P3 ranges', () {
+    const String photo = '![p](photo/abc123abc123 "right medium")';
+    const String source =
+        'Head paragraph.\n\nA plain paragraph.\n\n$photo\n\nTail paragraph.';
+    final int photoStart = source.indexOf(photo);
+    final int photoEnd = photoStart + photo.length;
+    final int tailStart = source.indexOf('Tail');
+    Map<String, Object?> sideEdit(String control, List<List<int>> changes) =>
+        <String, Object?>{
+          'row': 'GR2',
+          'kind': 'sideEdit',
+          'case': control,
+          'command': 'photo:0:$control',
+          'photoCommand': <String, Object?>{
+            'control': control,
+            'photo': 0,
+            'source': source,
+            'blocks': <Object?>[
+              <String, Object?>{'kind': 'paragraph', 'start': 0, 'end': 15},
+              <String, Object?>{'kind': 'paragraph', 'start': 17, 'end': 35},
+              <String, Object?>{
+                'kind': 'photoLine',
+                'start': photoStart,
+                'end': photoEnd,
+              },
+              <String, Object?>{
+                'kind': 'paragraph',
+                'start': tailStart,
+                'end': source.length,
+              },
+            ],
+          },
+          'changes': changes,
+        };
+    GateVerdict verdict(Map<String, Object?> sample) => _row(
+      _document('side-edit-audit', <Map<String, Object?>>[sample]),
+      'GR2',
+    ).verdict;
+    final List<List<int>> moveUp = <List<int>>[
+      <int>[15, 15, photo.length + 1],
+      <int>[photoStart, photoEnd + 2, 0],
+    ];
+    expect(
+      verdict(sideEdit('photo-toolbar-move-up', moveUp)),
+      GateVerdict.pass,
+    );
+    expect(
+      verdict(
+        sideEdit('photo-toolbar-move-up', <List<int>>[
+          ...moveUp,
+          <int>[tailStart, tailStart + 1, 1],
+        ]),
+      ),
+      GateVerdict.fail,
+    );
+    expect(
+      verdict(
+        sideEdit('photo-toolbar-size-small', <List<int>>[
+          <int>[photoEnd - 13, photoEnd - 1, 11],
+        ]),
+      ),
+      GateVerdict.pass,
+    );
+    expect(
+      verdict(
+        sideEdit('photo-toolbar-size-small', <List<int>>[
+          <int>[photoEnd - 13, photoEnd - 1, 11],
+          <int>[16, 17, 0],
+        ]),
+      ),
+      GateVerdict.fail,
+    );
+    expect(
+      verdict(
+        sideEdit('remove', <List<int>>[
+          <int>[photoStart, photoEnd + 2, 0],
+        ]),
+      ),
+      GateVerdict.pass,
+    );
+    expect(
+      photoCommandRanges(
+        _note(<Object>['A', _p, 'B'], <String>['\n\n', '\n\n']),
+        photo: 1,
+        command: PhotoCommand.moveDown,
+      ),
+      <(int, int)>[
+        (3, 3 + _p.length + 2),
+        (3 + _p.length + 3, 3 + _p.length + 3),
+      ],
+    );
+  });
+
+  test('idle frames count only inside the probe-clock window', () {
+    Map<String, Object?> idle({required bool clocked}) => <String, Object?>{
+      'row': 'GP4',
+      'kind': 'idle',
+      'case': 'nothing selected',
+      'caretVisible': true,
+      'timings': <String, Object?>{
+        'frames': <Object?>[
+          <String, Object?>{
+            'buildStartMicros': 999000,
+            'rasterFinishMicros': 1001000,
+          },
+          for (int index = 0; index < 20; index++)
+            <String, Object?>{
+              'buildStartMicros': 1000000 + index * 500000,
+              'rasterFinishMicros': 1002000 + index * 500000,
+            },
+        ],
+      },
+      'windowMs': 10040,
+      'windowStartMicros': ?(clocked ? 1000000 : null),
+      'windowEndMicros': ?(clocked ? 11000000 : null),
+      'cpuWindowMs': 10040,
+      'cpuStart': '0:01.00',
+      'cpuEnd': '0:01.05',
+      'cpuFormat': 'ps',
+    };
+    final RowOutcome windowed = _row(
+      _document('perf-idle', <Map<String, Object?>>[idle(clocked: true)]),
+      'GP4',
+    );
+    expect(windowed.values['framesPerSecond'], 2.0);
+    expect(windowed.verdict, GateVerdict.pass);
+    expect(
+      _row(
+        _document('perf-idle', <Map<String, Object?>>[idle(clocked: false)]),
+        'GP4',
+      ).verdict,
+      GateVerdict.fail,
+    );
+  });
+
+  test('a float must sit on its column edge, not only have its width', () {
+    Map<String, Object?> float(double left) => <String, Object?>{
+      'row': 'GB9',
+      'kind': 'photo',
+      'case': 'medium 648 photo 0',
+      'column': 648.0,
+      'columnLeft': 316.0,
+      'em': 16.0,
+      'size': 'medium',
+      'side': 'right',
+      'validPlacement': true,
+      'pixelWidth': null,
+      'pixelHeight': null,
+      'rects': <Object?>[
+        <Object?>[left, 100.0, 324.0, 216.0],
+      ],
+    };
+    GateVerdict verdict(double left) => _row(
+      _document('window-scale-matrix', <Map<String, Object?>>[float(left)]),
+      'GB9',
+    ).verdict;
+    expect(verdict(640), GateVerdict.pass);
+    expect(verdict(620), GateVerdict.fail);
+  });
+
+  test('screen-reader samples check the semantics tree of A1 to A3', () {
+    Map<String, Object?> node(
+      String label, {
+      List<String> flags = const <String>[],
+      String value = '',
+      List<int>? selection,
+      List<Map<String, Object?>> children = const <Map<String, Object?>>[],
+    }) => <String, Object?>{
+      'label': label,
+      'value': value,
+      'flags': flags,
+      'textSelection': selection,
+      'children': children,
+    };
+    const String value =
+        'Harbour day\nThe fog lifted at noon.\n\n☐ passport\n\n￼\n\nLast line.';
+    Map<String, Object?> field({
+      String text = value,
+      List<Map<String, Object?>> children = const <Map<String, Object?>>[],
+    }) => node(
+      '',
+      flags: const <String>['isTextField', 'isMultiline'],
+      value: text,
+      selection: const <int>[0, 0],
+      children: children,
+    );
+    final Map<String, Object?> photo = node(
+      'Photo, Low tide',
+      flags: const <String>['isButton'],
+    );
+    final Map<String, Object?> checkbox = node(
+      'passport',
+      flags: const <String>['hasCheckedState'],
+    );
+    Map<String, Object?> sample(Map<String, Object?> container) =>
+        <String, Object?>{
+          'row': 'GB8',
+          'kind': 'a11y',
+          'case': 'read the note',
+          'spoken': 'Harbour day. The fog lifted at noon.',
+          'phrase': 'Harbour day',
+          'photos': const <String>['Photo, Low tide'],
+          'checkboxes': const <String>['passport'],
+          'semantics': <String, Object?>{
+            'root': node('', children: <Map<String, Object?>>[container]),
+          },
+        };
+    RowOutcome judge(Map<String, Object?> container) => _row(
+      _document('a11y-matrix', <Map<String, Object?>>[sample(container)]),
+      'GB8',
+    );
+    expect(
+      judge(
+        node('', children: <Map<String, Object?>>[field(), photo, checkbox]),
+      ).verdict,
+      GateVerdict.pass,
+    );
+    expect(
+      judge(
+        node(
+          '',
+          children: <Map<String, Object?>>[
+            field(children: <Map<String, Object?>>[photo]),
+            checkbox,
+          ],
+        ),
+      ).verdict,
+      GateVerdict.fail,
+    );
+    expect(
+      judge(
+        node(
+          '',
+          children: <Map<String, Object?>>[
+            field(text: value.replaceFirst('The fog', 'The **fog**')),
+            photo,
+            checkbox,
+          ],
+        ),
+      ).verdict,
+      GateVerdict.fail,
+    );
+    expect(
+      judge(
+        node('', children: <Map<String, Object?>>[photo, field(), checkbox]),
+      ).verdict,
+      GateVerdict.fail,
     );
   });
 

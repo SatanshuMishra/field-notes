@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'corpus_generator.dart' show CorpusNoteSpec, corpusNoteSpecs;
 import 'oracles.dart';
 import 'stats.dart';
 
@@ -124,6 +125,28 @@ final class GateRow {
 }
 
 const GateLimit _full = GateLimit.rate('100%');
+
+const int roundTripSampleMinimum = 10050;
+
+const int heldClickMinimum = 20;
+
+const List<int> heldClickHolds = <int>[30, 110, 300];
+
+const int monkeyStepMinimum = 10000;
+
+const int clickSweepMinimum = 500;
+
+const int verticalSweepMinimum = 200;
+
+const List<String> draftRecoveryCases = <String>[
+  'new note, wait 500 ms, kill',
+  'edit note, wait 500 ms, kill',
+  'new note, hide and kill at once',
+  'edit note, hide and kill at once',
+  'save is ignored while the draft loads',
+  'a discarded note leaves no draft',
+  'a saved note leaves no draft',
+];
 
 const List<GateRow> gateRows = <GateRow>[
   GateRow(
@@ -466,6 +489,14 @@ _Judgement _judgeSafely(
     return ('no samples', const <String, Object?>{}, GateVerdict.fail);
   }
   try {
+    final String? shortfall = _sampleShortfall(row.id, counted);
+    if (shortfall != null) {
+      return (
+        'too few samples: $shortfall',
+        const <String, Object?>{},
+        GateVerdict.fail,
+      );
+    }
     return switch (row.id) {
       'GP1' => _judgeKeystrokes(limit, counted),
       'GP2' => _judgeKeyToRaster(limit, counted),
@@ -484,6 +515,110 @@ _Judgement _judgeSafely(
   }
 }
 
+String? _sampleShortfall(String row, List<Map<String, Object?>> samples) =>
+    switch (row) {
+      'GR1' => _atLeast(
+        samples.where((Map<String, Object?> s) => s['kind'] == 'roundTrip'),
+        roundTripSampleMinimum,
+        'round trips',
+      ),
+      'GR3' => _heldClickShortfall(samples),
+      'GR4' => _monkeyShortfall(samples),
+      'GB3' => _clickSweepShortfall(samples),
+      'GB4' => _atLeast(
+        samples.where((Map<String, Object?> s) => s['kind'] == 'vertical'),
+        verticalSweepMinimum,
+        'vertical moves',
+      ),
+      'GR8' => _draftCaseShortfall(samples),
+      _ => null,
+    };
+
+String? _atLeast(
+  Iterable<Map<String, Object?>> samples,
+  int minimum,
+  String what,
+) {
+  final int count = samples.length;
+  return count >= minimum ? null : '$count $what, $minimum required';
+}
+
+Map<String, int> _tally(Iterable<String> keys) {
+  final List<String> sorted = List<String>.of(keys)..sort();
+  final List<int> starts = <int>[
+    for (int index = 0; index < sorted.length; index++)
+      if (index == 0 || sorted[index] != sorted[index - 1]) index,
+  ];
+  return <String, int>{
+    for (int run = 0; run < starts.length; run++)
+      sorted[starts[run]]:
+          (run + 1 < starts.length ? starts[run + 1] : sorted.length) -
+          starts[run],
+  };
+}
+
+String? _heldClickShortfall(List<Map<String, Object?>> samples) {
+  final List<(String, int)> keys = <(String, int)>[
+    for (final Map<String, Object?> sample in samples)
+      (_string(sample['clickCase'], 'clickCase'), _int(sample['hold'], 'hold')),
+  ];
+  final Map<String, int> counts = _tally(<String>[
+    for (final (String, int) key in keys) '${key.$2} ${key.$1}',
+  ]);
+  final List<String> short = <String>[
+    for (final String clickCase in <String>{
+      for (final (String, int) key in keys) key.$1,
+    })
+      for (final int hold in heldClickHolds)
+        if ((counts['$hold $clickCase'] ?? 0) < heldClickMinimum)
+          '$clickCase at $hold ms has ${counts['$hold $clickCase'] ?? 0}',
+  ];
+  return short.isEmpty
+      ? null
+      : '${short.length} held-click cases under $heldClickMinimum clicks, '
+            'first ${short.first}';
+}
+
+String? _monkeyShortfall(List<Map<String, Object?>> samples) {
+  final int steps = samples
+      .where((Map<String, Object?> sample) => sample['case'] == 'random')
+      .map(
+        (Map<String, Object?> sample) =>
+            sample['steps'] == null ? 0 : _int(sample['steps'], 'steps'),
+      )
+      .fold<int>(0, (int most, int value) => value > most ? value : most);
+  return steps >= monkeyStepMinimum
+      ? null
+      : 'the random run recorded $steps steps, $monkeyStepMinimum required';
+}
+
+String? _clickSweepShortfall(List<Map<String, Object?>> samples) {
+  final Map<String, int> counts = _tally(<String>[
+    for (final Map<String, Object?> sample in samples)
+      if (sample['kind'] == 'click') '${sample['note']}',
+  ]);
+  final List<String> short = <String>[
+    for (final CorpusNoteSpec spec in corpusNoteSpecs)
+      if ((counts[spec.id] ?? 0) < clickSweepMinimum)
+        '${spec.id} has ${counts[spec.id] ?? 0}',
+  ];
+  return short.isEmpty
+      ? null
+      : '${short.length} notes under $clickSweepMinimum clicks, '
+            'first ${short.first}';
+}
+
+String? _draftCaseShortfall(List<Map<String, Object?>> samples) {
+  final Set<Object?> names = <Object?>{
+    for (final Map<String, Object?> sample in samples) sample['case'],
+  };
+  final List<String> missing = <String>[
+    for (final String name in draftRecoveryCases)
+      if (!names.contains(name)) name,
+  ];
+  return missing.isEmpty ? null : 'missing cases ${missing.join('; ')}';
+}
+
 void _requireKind(List<Map<String, Object?>> samples, String kind) {
   for (final Map<String, Object?> sample in samples) {
     if (sample['kind'] != kind) {
@@ -499,19 +634,17 @@ _Judgement _judgeKeystrokes(
   List<Map<String, Object?>> samples,
 ) {
   _requireKind(samples, 'keystroke');
-  final Map<String, List<double>> byNote = <String, List<double>>{};
-  for (final Map<String, Object?> sample in samples) {
-    final String note = _string(sample['note'], 'note');
-    final List<double> values = <double>[
-      for (final Object? keystroke in _list(
-        _map(sample['timings'], 'timings')['keystrokes'],
-        'keystrokes',
-      ))
-        _num(_map(keystroke, 'keystroke')['handlerMs'], 'handlerMs') +
-            _num(_map(keystroke, 'keystroke')['buildMs'], 'buildMs'),
-    ];
-    byNote[note] = <double>[...?byNote[note], ...values];
-  }
+  final Set<String> notes = <String>{
+    for (final Map<String, Object?> sample in samples)
+      _string(sample['note'], 'note'),
+  };
+  final Map<String, List<double>> byNote = <String, List<double>>{
+    for (final String note in notes)
+      note: <double>[
+        for (final Map<String, Object?> sample in samples)
+          if (sample['note'] == note) ..._keystrokeTimes(sample),
+      ],
+  };
   final Map<String, List<double>> nonEmpty = <String, List<double>>{
     for (final MapEntry<String, List<double>> entry in byNote.entries)
       if (entry.value.isNotEmpty) entry.key: entry.value,
@@ -550,57 +683,43 @@ _Judgement _judgeKeystrokes(
   );
 }
 
+List<double> _keystrokeTimes(Map<String, Object?> sample) => <double>[
+  for (final Object? keystroke in _list(
+    _map(sample['timings'], 'timings')['keystrokes'],
+    'keystrokes',
+  ))
+    _num(_map(keystroke, 'keystroke')['handlerMs'], 'handlerMs') +
+        _num(_map(keystroke, 'keystroke')['buildMs'], 'buildMs'),
+];
+
 _Judgement _judgeKeyToRaster(
   GateLimit limit,
   List<Map<String, Object?>> samples,
 ) {
   _requireKind(samples, 'keyToRaster');
-  final List<double> intervals = <double>[];
-  for (final Map<String, Object?> sample in samples) {
-    final List<Object?> keystrokes = _list(
-      _map(sample['timings'], 'timings')['keystrokes'],
-      'keystrokes',
+  final Map<String, Object?>? mismatch = samples
+      .where(
+        (Map<String, Object?> sample) =>
+            sample['keyDownNanos'] != null &&
+            _list(sample['keyDownNanos'], 'keyDownNanos').length !=
+                _sampleKeystrokes(sample).length,
+      )
+      .firstOrNull;
+  if (mismatch != null) {
+    return (
+      'keystroke count mismatch',
+      <String, Object?>{
+        'note': mismatch['note'],
+        'keyDownNanos': _list(mismatch['keyDownNanos'], 'keyDownNanos').length,
+        'keystrokes': _sampleKeystrokes(mismatch).length,
+      },
+      GateVerdict.fail,
     );
-    final Object? rawNanos = sample['keyDownNanos'];
-    if (rawNanos != null) {
-      final List<Object?> nanos = _list(rawNanos, 'keyDownNanos');
-      if (nanos.length != keystrokes.length) {
-        return (
-          'keystroke count mismatch',
-          <String, Object?>{
-            'note': sample['note'],
-            'keyDownNanos': nanos.length,
-            'keystrokes': keystrokes.length,
-          },
-          GateVerdict.fail,
-        );
-      }
-      final ClockMap clock = ClockMap.fromPairs(<(int, int)>[
-        for (final Object? pair in _list(sample['clockPairs'], 'clockPairs'))
-          _pair(pair),
-      ]);
-      for (int index = 0; index < keystrokes.length; index++) {
-        final int keyDown = clock.toProbeMicros(
-          _int(nanos[index], 'keyDownNanos'),
-        );
-        final int finish = _int(
-          _map(keystrokes[index], 'keystroke')['rasterFinishMicros'],
-          'rasterFinishMicros',
-        );
-        intervals.add((finish - keyDown) / 1000);
-      }
-    } else {
-      for (final Object? keystroke in keystrokes) {
-        final Map<String, Object?> entry = _map(keystroke, 'keystroke');
-        final int keyDown = _int(entry['keyDownMicros'], 'keyDownMicros');
-        final int finish = _int(
-          entry['rasterFinishMicros'],
-          'rasterFinishMicros',
-        );
-        intervals.add((finish - keyDown) / 1000);
-      }
-    }
   }
+  final List<double> intervals = <double>[
+    for (final Map<String, Object?> sample in samples)
+      ..._keyToRasterIntervals(sample),
+  ];
   if (intervals.isEmpty) {
     return ('no keystrokes', const <String, Object?>{}, GateVerdict.fail);
   }
@@ -621,6 +740,42 @@ _Judgement _judgeKeyToRaster(
   );
 }
 
+List<Object?> _sampleKeystrokes(Map<String, Object?> sample) =>
+    _list(_map(sample['timings'], 'timings')['keystrokes'], 'keystrokes');
+
+List<double> _keyToRasterIntervals(Map<String, Object?> sample) {
+  final List<Object?> keystrokes = _sampleKeystrokes(sample);
+  final Object? rawNanos = sample['keyDownNanos'];
+  if (rawNanos == null) {
+    return <double>[
+      for (final Object? keystroke in keystrokes)
+        (_int(
+                  _map(keystroke, 'keystroke')['rasterFinishMicros'],
+                  'rasterFinishMicros',
+                ) -
+                _int(
+                  _map(keystroke, 'keystroke')['keyDownMicros'],
+                  'keyDownMicros',
+                )) /
+            1000,
+    ];
+  }
+  final List<Object?> nanos = _list(rawNanos, 'keyDownNanos');
+  final ClockMap clock = ClockMap.fromPairs(<(int, int)>[
+    for (final Object? pair in _list(sample['clockPairs'], 'clockPairs'))
+      _pair(pair),
+  ]);
+  return <double>[
+    for (int index = 0; index < keystrokes.length; index++)
+      (_int(
+                _map(keystrokes[index], 'keystroke')['rasterFinishMicros'],
+                'rasterFinishMicros',
+              ) -
+              clock.toProbeMicros(_int(nanos[index], 'keyDownNanos'))) /
+          1000,
+  ];
+}
+
 (int, int) _pair(Object? value) {
   final List<Object?> pair = _list(value, 'clockPair');
   if (pair.length != 2) {
@@ -635,28 +790,26 @@ _Judgement _judgeFrames(
   List<Map<String, Object?>> samples,
 ) {
   _requireKind(samples, 'frames');
-  int janky = 0;
-  int frames = 0;
-  final Map<String, int> jankyByPhase = <String, int>{};
-  for (final Map<String, Object?> sample in samples) {
-    final Map<String, Object?> timings = _map(sample['timings'], 'timings');
-    final double interval = jankIntervalMs(
-      platform,
-      _num(timings['refreshHz'], 'refreshHz'),
-    );
-    final List<FrameSample> frameSamples = <FrameSample>[
-      for (final Object? frame in _list(timings['frames'], 'frames'))
-        FrameSample(
-          buildMs: _num(_map(frame, 'frame')['buildMs'], 'buildMs'),
-          rasterMs: _num(_map(frame, 'frame')['rasterMs'], 'rasterMs'),
-        ),
-    ];
-    final int count = countJankyFrames(frameSamples, interval);
-    final String phase = '${sample['phase'] ?? 'unknown'}';
-    janky += count;
-    frames += frameSamples.length;
-    jankyByPhase[phase] = (jankyByPhase[phase] ?? 0) + count;
-  }
+  final List<(String, int, int)> perSample = <(String, int, int)>[
+    for (final Map<String, Object?> sample in samples)
+      _frameCounts(platform, sample),
+  ];
+  final int janky = perSample.fold<int>(
+    0,
+    (int sum, (String, int, int) entry) => sum + entry.$2,
+  );
+  final int frames = perSample.fold<int>(
+    0,
+    (int sum, (String, int, int) entry) => sum + entry.$3,
+  );
+  final Map<String, int> jankyByPhase = <String, int>{
+    for (final String phase in <String>{
+      for (final (String, int, int) entry in perSample) entry.$1,
+    })
+      phase: perSample
+          .where(((String, int, int) entry) => entry.$1 == phase)
+          .fold<int>(0, (int sum, (String, int, int) entry) => sum + entry.$2),
+  };
   final bool pass = janky <= (limit.maxCount ?? 0);
   return (
     '$janky janky of $frames frames',
@@ -666,6 +819,29 @@ _Judgement _judgeFrames(
       'jankyByPhase': jankyByPhase,
     },
     pass ? GateVerdict.pass : GateVerdict.fail,
+  );
+}
+
+(String, int, int) _frameCounts(
+  ProbePlatform platform,
+  Map<String, Object?> sample,
+) {
+  final Map<String, Object?> timings = _map(sample['timings'], 'timings');
+  final double interval = jankIntervalMs(
+    platform,
+    _num(timings['refreshHz'], 'refreshHz'),
+  );
+  final List<FrameSample> frameSamples = <FrameSample>[
+    for (final Object? frame in _list(timings['frames'], 'frames'))
+      FrameSample(
+        buildMs: _num(_map(frame, 'frame')['buildMs'], 'buildMs'),
+        rasterMs: _num(_map(frame, 'frame')['rasterMs'], 'rasterMs'),
+      ),
+  ];
+  return (
+    '${sample['phase'] ?? 'unknown'}',
+    countJankyFrames(frameSamples, interval),
+    frameSamples.length,
   );
 }
 
@@ -719,19 +895,33 @@ Map<String, Object?> _idleCase(
   double fpsLimit,
   double cpuLimit,
 ) {
-  final Duration window = Duration(
-    milliseconds: _int(sample['windowMs'], 'windowMs'),
-  );
-  final int frames = _list(
+  final List<Object?> recorded = _list(
     _map(sample['timings'], 'timings')['frames'],
     'frames',
-  ).length;
+  );
+  final Object? windowStart = sample['windowStartMicros'];
+  final Object? windowEnd = sample['windowEndMicros'];
+  final bool clocked = windowStart != null && windowEnd != null;
+  final int start = clocked ? _int(windowStart, 'windowStartMicros') : 0;
+  final int end = clocked ? _int(windowEnd, 'windowEndMicros') : 0;
+  final Duration window = clocked
+      ? Duration(microseconds: end - start)
+      : Duration(milliseconds: _int(sample['windowMs'], 'windowMs'));
+  final int frames = clocked
+      ? recorded.where((Object? frame) {
+          final int at = _frameStart(_map(frame, 'frame'));
+          return at >= start && at <= end;
+        }).length
+      : recorded.length;
+  final Duration cpuWall = sample['cpuWindowMs'] == null
+      ? window
+      : Duration(milliseconds: _int(sample['cpuWindowMs'], 'cpuWindowMs'));
   final bool caretVisible = _bool(sample['caretVisible'], 'caretVisible');
   final double fps = framesPerSecond(frames, window);
   final double cpu = cpuPercentOfOneCore(
     cpuStart: _cpuTime(sample, 'cpuStart'),
     cpuEnd: _cpuTime(sample, 'cpuEnd'),
-    wall: window,
+    wall: cpuWall,
   );
   final bool framesPass = caretVisible ? fps <= fpsLimit : frames == 0;
   return <String, Object?>{
@@ -743,6 +933,10 @@ Map<String, Object?> _idleCase(
     'pass': framesPass && cpu <= cpuLimit,
   };
 }
+
+int _frameStart(Map<String, Object?> frame) => frame['buildStartMicros'] != null
+    ? _int(frame['buildStartMicros'], 'buildStartMicros')
+    : _int(frame['rasterFinishMicros'], 'rasterFinishMicros');
 
 _Judgement _judgeOpen(GateLimit limit, List<Map<String, Object?>> samples) {
   _requireKind(samples, 'open');
@@ -803,11 +997,15 @@ _Judgement _judgeMemory(List<Map<String, Object?>> samples) {
 _Judgement _judgePerCase(GateLimit limit, List<Map<String, Object?>> samples) {
   _requireKind(samples, 'expect');
   final int runs = limit.runs ?? 1;
-  final Map<String, List<bool>> byCase = <String, List<bool>>{};
-  for (final Map<String, Object?> sample in samples) {
-    final String name = '${sample['case']}';
-    byCase[name] = <bool>[...?byCase[name], _checkExpect(sample).$1];
-  }
+  final Map<String, List<bool>> byCase = <String, List<bool>>{
+    for (final String name in <String>{
+      for (final Map<String, Object?> sample in samples) '${sample['case']}',
+    })
+      name: <bool>[
+        for (final Map<String, Object?> sample in samples)
+          if ('${sample['case']}' == name) _checkExpect(sample).$1,
+      ],
+  };
   final Map<String, Object?> perCase = <String, Object?>{
     for (final MapEntry<String, List<bool>> entry in byCase.entries)
       entry.key: <String, Object?>{
@@ -927,6 +1125,7 @@ _Check _checkSample(Map<String, Object?> sample) => switch (sample['kind']) {
   'float' => _checkFloat(sample),
   'parity' => _checkParity(sample),
   'toolbar' => _checkToolbar(sample),
+  'a11y' => _checkA11y(sample),
   'expect' => _checkExpect(sample),
   final Object? kind => (false, 'unknown sample kind $kind'),
 };
@@ -954,6 +1153,9 @@ _Check _checkStyling(Map<String, Object?> sample) {
 }
 
 _Check _checkRoundTrip(Map<String, Object?> sample) {
+  if (sample['storedMissing'] == true) {
+    return (false, 'the save reply held no stored text');
+  }
   final String atSave = _string(
     _map(sample['atSave'], 'atSave')['source'],
     'atSave.source',
@@ -968,10 +1170,13 @@ _Check _checkRoundTrip(Map<String, Object?> sample) {
 }
 
 _Check _checkSideEdit(Map<String, Object?> sample) {
-  final List<(int, int)> allowed = <(int, int)>[
-    for (final Object? range in _list(sample['allowed'], 'allowed'))
-      _intPair(range, 'allowed'),
-  ];
+  final Object? command = sample['photoCommand'];
+  final List<(int, int)> allowed = command == null
+      ? <(int, int)>[
+          for (final Object? range in _list(sample['allowed'], 'allowed'))
+            _intPair(range, 'allowed'),
+        ]
+      : _photoCommandAllowed(_map(command, 'photoCommand'));
   final List<(int, int, int)> changes = <(int, int, int)>[
     for (final Object? change in _list(sample['changes'], 'changes'))
       _intTriple(change),
@@ -979,6 +1184,72 @@ _Check _checkSideEdit(Map<String, Object?> sample) {
   return changesWithin(allowed, changes)
       ? (true, 'changes inside the command range')
       : (false, '${sample['command']} changed bytes outside its range');
+}
+
+List<(int, int)> _photoCommandAllowed(Map<String, Object?> command) {
+  final String source = _string(command['source'], 'photoCommand.source');
+  final List<Map<String, Object?>> blocks = <Map<String, Object?>>[
+    for (final Object? block in _list(command['blocks'], 'photoCommand.blocks'))
+      _map(block, 'photoCommand.block'),
+  ];
+  if (blocks.isEmpty) {
+    throw const FormatException('photoCommand.blocks is empty');
+  }
+  final List<int> photoBlocks = <int>[
+    for (int index = 0; index < blocks.length; index++)
+      if (blocks[index]['kind'] == 'photoLine') index,
+  ];
+  final int ordinal = _int(command['photo'], 'photoCommand.photo');
+  if (ordinal < 0 || ordinal >= photoBlocks.length) {
+    throw FormatException('photoCommand.photo $ordinal names no photo block');
+  }
+  final int prefix = _int(blocks.first['start'], 'photoCommand.block.start');
+  return <(int, int)>[
+    for (final (int, int) range in photoCommandRanges(
+      oracleNoteFromBlocks(source, blocks),
+      photo: photoBlocks[ordinal],
+      command: _photoCommandOf(
+        _string(command['control'], 'photoCommand.control'),
+      ),
+    ))
+      (range.$1 + prefix, range.$2 + prefix),
+  ];
+}
+
+PhotoCommand _photoCommandOf(String control) => switch (control) {
+  'photo-toolbar-move-up' => PhotoCommand.moveUp,
+  'photo-toolbar-move-down' => PhotoCommand.moveDown,
+  'photo-toolbar-remove' || 'remove' => PhotoCommand.remove,
+  _ => PhotoCommand.restyle,
+};
+
+OracleNote oracleNoteFromBlocks(
+  String source,
+  List<Map<String, Object?>> blocks,
+) {
+  final List<(int, int)> ranges = <(int, int)>[
+    for (final Map<String, Object?> block in blocks)
+      (_int(block['start'], 'block.start'), _int(block['end'], 'block.end')),
+  ];
+  for (final (int, int) range in ranges) {
+    if (range.$1 < 0 || range.$2 < range.$1 || range.$2 > source.length) {
+      throw FormatException('block range $range lies outside the source');
+    }
+  }
+  return OracleNote(
+    blocks: <OracleBlock>[
+      for (int index = 0; index < blocks.length; index++)
+        OracleBlock(
+          source.substring(ranges[index].$1, ranges[index].$2),
+          isPhoto: blocks[index]['kind'] == 'photoLine',
+          unclosedFence: blocks[index]['unclosedFence'] == true,
+        ),
+    ],
+    separators: <String>[
+      for (int index = 1; index < ranges.length; index++)
+        source.substring(ranges[index - 1].$2, ranges[index].$1),
+    ],
+  );
 }
 
 _Check _checkErrors(Map<String, Object?> sample) {
@@ -1167,6 +1438,21 @@ _Check _checkPhoto(Map<String, Object?> sample) {
   if ((first.width - plan.width).abs() > 0.5) {
     return (false, 'width ${first.width} for ${plan.width}');
   }
+  final Object? columnLeft = sample['columnLeft'];
+  if (columnLeft != null && plan.floats) {
+    final double left = _num(columnLeft, 'columnLeft');
+    final bool rightSide = rawSide == 'right';
+    final double edge = rightSide ? first.right : first.left;
+    final double want = rightSide
+        ? left + _num(sample['column'], 'column')
+        : left;
+    if ((edge - want).abs() > 0.5) {
+      return (
+        false,
+        '${rightSide ? 'right' : 'left'} edge $edge, not the column edge $want',
+      );
+    }
+  }
   if (pixelWidth != null &&
       pixelHeight != null &&
       (first.height - plan.height).abs() > 0.5) {
@@ -1250,6 +1536,140 @@ _Check _checkToolbar(Map<String, Object?> sample) {
     return (false, 'toolbar $toolbar is apart from the photo $photo');
   }
   return (true, 'toolbar placed');
+}
+
+const List<String> _markdownMarkers = <String>[
+  '**',
+  '__',
+  '~~',
+  '==',
+  '](',
+  '[ ]',
+  '[x]',
+];
+
+const List<String> _markdownLineStarts = <String>['#', '> ', '- ', '* '];
+
+bool _markerFree(String text) =>
+    !_markdownMarkers.any(text.contains) &&
+    !_markdownLineStarts.any(text.trimLeft().startsWith);
+
+_Check _checkA11y(Map<String, Object?> sample) {
+  final String spoken = _string(sample['spoken'], 'spoken');
+  final String phrase = _string(sample['phrase'], 'phrase');
+  if (!spoken.toLowerCase().contains(phrase.toLowerCase())) {
+    return (false, 'spoke "$spoken", not "$phrase"');
+  }
+  if (spoken.contains('**') ||
+      spoken.contains('# ') ||
+      spoken.contains('](photo/')) {
+    return (false, 'spoke Markdown symbols: "$spoken"');
+  }
+  return _semanticsHold(
+    _map(_map(sample['semantics'], 'semantics')['root'], 'semantics.root'),
+    photos: <String>[
+      for (final Object? label in _list(sample['photos'], 'photos'))
+        _string(label, 'photo label'),
+    ],
+    checkboxes: <String>[
+      for (final Object? label in _list(sample['checkboxes'], 'checkboxes'))
+        _string(label, 'checkbox label'),
+    ],
+  );
+}
+
+List<Map<String, Object?>> _children(Map<String, Object?> node) =>
+    <Map<String, Object?>>[
+      for (final Object? child in _list(
+        node['children'] ?? const <Object?>[],
+        'children',
+      ))
+        _map(child, 'semantics node'),
+    ];
+
+bool _hasFlag(Map<String, Object?> node, String flag) =>
+    _list(node['flags'] ?? const <Object?>[], 'flags').contains(flag);
+
+List<Map<String, Object?>>? _pathToTextField(Map<String, Object?> node) {
+  if (_hasFlag(node, 'isTextField')) {
+    return <Map<String, Object?>>[node];
+  }
+  for (final Map<String, Object?> child in _children(node)) {
+    final List<Map<String, Object?>>? below = _pathToTextField(child);
+    if (below != null) {
+      return <Map<String, Object?>>[node, ...below];
+    }
+  }
+  return null;
+}
+
+bool _subtreeHas(
+  Map<String, Object?> node,
+  bool Function(Map<String, Object?> node) test,
+) =>
+    test(node) ||
+    _children(
+      node,
+    ).any((Map<String, Object?> child) => _subtreeHas(child, test));
+
+bool Function(Map<String, Object?> node) _labelled(String label) =>
+    (Map<String, Object?> node) => node['label'] == label;
+
+_Check _semanticsHold(
+  Map<String, Object?> root, {
+  required List<String> photos,
+  required List<String> checkboxes,
+}) {
+  final List<Map<String, Object?>>? path = _pathToTextField(root);
+  if (path == null || path.length < 2) {
+    return (false, 'no text-field node inside a container');
+  }
+  final Map<String, Object?> field = path.last;
+  final Map<String, Object?> container = path[path.length - 2];
+  final List<Map<String, Object?>> siblings = _children(container);
+  if (!identical(siblings.first, field)) {
+    return (false, 'the text-field node is not the container\'s first child');
+  }
+  for (final String label in photos) {
+    if (_children(field).any(
+      (Map<String, Object?> child) => _subtreeHas(child, _labelled(label)),
+    )) {
+      return (false, '$label sits inside the text-field node');
+    }
+    if (!siblings.skip(1).any(_labelled(label))) {
+      return (false, 'no sibling node labelled $label');
+    }
+  }
+  for (final String label in checkboxes) {
+    if (!siblings
+        .skip(1)
+        .any(
+          (Map<String, Object?> node) =>
+              node['label'] == label && _hasFlag(node, 'hasCheckedState'),
+        )) {
+      return (false, 'no checkbox node labelled $label');
+    }
+  }
+  final String value = '${field['value'] ?? ''}';
+  final Object? selection = field['textSelection'];
+  final int caret = selection is List<Object?> && selection.length == 2
+      ? _int(selection[1], 'textSelection')
+      : -1;
+  final List<String> lines = value.split('\n');
+  final List<int> starts = <int>[
+    0,
+    for (int index = 0; index < value.length; index++)
+      if (value[index] == '\n') index + 1,
+  ];
+  for (int index = 0; index < lines.length; index++) {
+    final int start = starts[index];
+    final int end = start + lines[index].length;
+    final bool active = caret >= start && caret <= end;
+    if (!active && !_markerFree(lines[index])) {
+      return (false, 'value line "${lines[index]}" shows Markdown markers');
+    }
+  }
+  return (true, 'semantics follow A1 to A3');
 }
 
 _Check _checkExpect(Map<String, Object?> sample) {

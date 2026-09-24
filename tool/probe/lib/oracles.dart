@@ -223,6 +223,39 @@ bool isValidBoundary(OracleNote note, int offset) {
   return false;
 }
 
+enum PhotoCommand { remove, moveUp, moveDown, restyle }
+
+List<(int, int)> photoCommandRanges(
+  OracleNote note, {
+  required int photo,
+  required PhotoCommand command,
+}) {
+  final int count = note.blocks.length;
+  if (photo < 0 || photo >= count) {
+    throw RangeError.range(photo, 0, count - 1, 'photo');
+  }
+  final (int, int) removal = _removalRange(note, photo);
+  final int? target = switch (command) {
+    PhotoCommand.remove || PhotoCommand.restyle => null,
+    PhotoCommand.moveUp =>
+      photo == 0 ? null : boundaryOffset(note, afterBlock: photo - 2),
+    PhotoCommand.moveDown =>
+      photo == count - 1 || note.blocks[photo + 1].unclosedFence
+          ? null
+          : boundaryOffset(note, afterBlock: photo + 1),
+  };
+  return switch (command) {
+    PhotoCommand.restyle => <(int, int)>[
+      (note.blockStart(photo), note.blockEnd(photo)),
+    ],
+    PhotoCommand.remove => <(int, int)>[removal],
+    PhotoCommand.moveUp || PhotoCommand.moveDown => <(int, int)>[
+      removal,
+      if (target != null) (target, target),
+    ],
+  };
+}
+
 bool changesWithin(List<(int, int)> allowed, List<(int, int, int)> changes) =>
     changes.every(
       ((int, int, int) change) => allowed.any(
