@@ -53,7 +53,26 @@ final class CaretGeometry {
     ) {
       found.insertAll(0, _linesInRow(rows[i], visibleOffset));
     }
-    return List<LocatedLine>.unmodifiable(found);
+    if (found.length < 2) {
+      return List<LocatedLine>.unmodifiable(found);
+    }
+    final List<LocatedLine> owned = <LocatedLine>[
+      for (final LocatedLine located in found)
+        if (_holdsVisibleLine(rows[located.fragment.rowIndex].row)) located,
+    ];
+    return List<LocatedLine>.unmodifiable(owned.isEmpty ? found : owned);
+  }
+
+  bool _holdsVisibleLine(LayoutRow row) {
+    final List<VisibleLine> lines = _visible.lines;
+    final int start = row.sourceRange.start;
+    final int index = _upperBound(
+      lines.length,
+      (int i) => lines[i].sourceRange.start < start,
+    );
+    return index < lines.length &&
+        lines[index].sourceRange.start <=
+            math.max(start, row.sourceRange.end - 1);
   }
 
   Rect caretRect(int position, TextAffinity affinity, {double caretWidth = 2}) {
@@ -483,7 +502,34 @@ final class CaretGeometry {
         return (fragment: fragment, line: fragment.lines.first);
       }
     }
-    throw StateError('the flow has no line fragments');
+    return _emptyLineAtTop(visibleOffset);
+  }
+
+  LocatedLine _emptyLineAtTop(int visibleOffset) {
+    final List<LaidOutRow> rows = flow.rows;
+    final double top = rows.isEmpty ? 0 : rows.first.top;
+    final double height =
+        NoteTypography.emOf(flow.inputs.textScaler) *
+        NoteTypography.blankLineEm;
+    final TextRange range = TextRange.collapsed(visibleOffset);
+    return (
+      fragment: LineFragment(
+        rowIndex: 0,
+        kind: FragmentKind.text,
+        visibleRange: range,
+        origin: Offset(0, top),
+        layoutWidth: 0,
+        height: height,
+      ),
+      line: VisualLine(
+        visibleRange: range,
+        top: top,
+        height: height,
+        baseline: top + height,
+        left: 0,
+        width: 0,
+      ),
+    );
   }
 
   static Rect? _clip(Rect box, LineFragment fragment) {

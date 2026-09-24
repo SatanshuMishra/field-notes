@@ -258,11 +258,14 @@ LaidOutRow layoutRow(
   _requireTextRow(row);
   final _RowScope scope = _RowScope(inputs, row, region);
   final (List<_Part>, int) split = scope.parts(visibleFrom, visibleTo);
-  final List<_Part> parts = split.$1;
+  final List<_Part> parts =
+      split.$1.isEmpty && visibleFrom == null && visibleTo == null
+      ? <_Part>[scope.collapsedPart]
+      : split.$1;
   final _Assembly assembly = switch (row.kind) {
     LayoutRowKind.code => scope.layoutCode(parts),
     LayoutRowKind.divider when row.activeLineInRow == null =>
-      scope.layoutDivider(parts),
+      scope.layoutDivider(split.$1),
     LayoutRowKind.blankLine => scope.layoutText(
       parts,
       contentKind: FragmentKind.blankLine,
@@ -1168,6 +1171,13 @@ final class _RowScope {
         ? quoted.merge(NoteTypography.checkedItem)
         : quoted;
   }
+
+  _Part get collapsedPart => _Part(
+    prefix: const <_Piece>[],
+    content: TextRange.collapsed(row.visibleRange.start),
+    contentStart: row.visibleRange.start,
+    keepsPrefix: true,
+  );
 
   (List<_Part>, int) parts(int? visibleFrom, int? visibleTo) {
     final int? activeLine = row.activeLineInRow == null

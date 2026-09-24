@@ -593,6 +593,31 @@ void main() {
     );
   });
 
+  test('an empty fence off the active line never traps the caret', () {
+    const String source = 'a\n```\n```\nb';
+    final TextPosition up = _move(
+      _inputs(source, activeLine: 3),
+      const TextPosition(offset: 10),
+      0,
+      VerticalMove.up,
+    );
+    expect(up.offset, inInclusiveRange(2, 5));
+    final TextPosition down = _move(
+      _inputs(source, activeLine: 0),
+      const TextPosition(offset: 1),
+      0,
+      VerticalMove.down,
+    );
+    expect(down.offset, 10);
+    final TextPosition tail = _move(
+      _inputs('a\n```', activeLine: 0),
+      const TextPosition(offset: 1),
+      0,
+      VerticalMove.down,
+    );
+    expect(tail.offset, inInclusiveRange(2, 5));
+  });
+
   test('up is symmetric with down', () {
     final LayoutInputs inputs = _inputs(_floatFixture, activeLine: 1);
     final NoteFlow flow = _flowOf(inputs);

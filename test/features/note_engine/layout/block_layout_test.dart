@@ -364,9 +364,16 @@ void main() {
     expect(code.lines.single.top, closeTo(12, 0.01));
     expect(code.lines.single.height, closeTo(21, 0.01));
     expect(code.layoutWidth, closeTo(688 - 24, 0.01));
-    final LaidOutRow empty = _stack(_inputs('```\n```')).single;
-    expect(empty.fragments, isEmpty);
-    expect(empty.decorations.single.rect.height, closeTo(45, 0.01));
+    for (final String fence in <String>['```', '```\n```']) {
+      final LaidOutRow empty = _stack(_inputs(fence)).single;
+      final LineFragment caretLine = empty.fragments.single;
+      expect(caretLine.kind, FragmentKind.text);
+      expect(caretLine.visibleRange, const TextRange.collapsed(0));
+      expect(caretLine.origin.dx, closeTo(12, 0.01));
+      expect(caretLine.lines.single.top, closeTo(12, 0.01));
+      expect(caretLine.lines.single.height, closeTo(21, 0.01));
+      expect(empty.decorations.single.rect.height, closeTo(45, 0.01));
+    }
     final LayoutInputs trailing = _inputs('```\na\n\n```');
     final LineFragment twoLines = _stack(trailing).single.fragments.single;
     expect(twoLines.lines, hasLength(2));

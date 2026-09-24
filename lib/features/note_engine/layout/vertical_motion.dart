@@ -45,7 +45,7 @@ TextPosition findVerticalTarget({
   final int sourceOffset = up
       ? visible.map.visibleToSource(range.end).upstream
       : visible.map.visibleToSource(range.start).downstream;
-  final int sourceLine = _sourceLineOf(visible, sourceOffset);
+  final int sourceLine = _sourceLineOf(inputs.source, visible, sourceOffset);
   final int? column = line.fragment.tableColumn;
   if (sourceLine == inputs.activeLine && column == null) {
     return NoteHitTester(flow: flow).positionInLine(line.line, goalX);
@@ -181,7 +181,7 @@ VerticalStep moveVertically({
   );
 }
 
-int _sourceLineOf(VisibleText visible, int sourceOffset) {
+int _sourceLineOf(String source, VisibleText visible, int sourceOffset) {
   final List<VisibleLine> lines = visible.lines;
   int low = 0;
   int high = lines.length;
@@ -193,7 +193,15 @@ int _sourceLineOf(VisibleText visible, int sourceOffset) {
       high = mid;
     }
   }
-  return low == 0 ? 0 : lines[low - 1].sourceLine;
+  final VisibleLine? before = low == 0 ? null : lines[low - 1];
+  final int from = before?.sourceRange.start ?? 0;
+  int breaks = 0;
+  for (int at = from; at < sourceOffset; at++) {
+    if (source.codeUnitAt(at) == _lineFeed) {
+      breaks++;
+    }
+  }
+  return (before?.sourceLine ?? 0) + breaks;
 }
 
 final class _Stop {

@@ -389,6 +389,73 @@ void main() {
     expect(layout.size, Size(688, note.flow.height));
   });
 
+  test('an empty or unclosed fence off the active line answers queries', () {
+    for (final String source in <String>[
+      '```',
+      '```\n```',
+      'a\n```',
+      '```\n```\nb',
+      'a\n```\n```\nb',
+    ]) {
+      for (final bool readerMode in <bool>[true, false]) {
+        final LaidOutNote note = NoteLayoutEngine().layout(
+          _inputs(source, readerMode: readerMode),
+        );
+        for (int position = 0; position <= source.length; position++) {
+          for (final TextAffinity affinity in TextAffinity.values) {
+            expect(note.caretRect(position, affinity).height, greaterThan(0));
+            expect(
+              note.lineBoxAt(position, affinity).rect.height,
+              greaterThan(0),
+            );
+          }
+          final MdRange word = note.wordBoundary(position);
+          expect(word.start, inInclusiveRange(0, word.end));
+          expect(word.end, inInclusiveRange(word.start, source.length));
+          expect(
+            note
+                .selectionEndpoints(NoteSelection(anchor: 0, head: position))
+                .endLineHeight,
+            greaterThan(0),
+          );
+        }
+        final TextPosition hit = note.positionAt(const Offset(20, 10));
+        final MdRange word = note.wordBoundary(hit.offset);
+        expect(word.end, inInclusiveRange(word.start, source.length));
+      }
+    }
+
+    final LaidOutNote fence = NoteLayoutEngine().layout(
+      _inputs('```', readerMode: true),
+    );
+    final Rect caret = fence.caretRect(0, TextAffinity.downstream);
+    expect(caret.left, closeTo(12, 0.01));
+    expect(caret.top, greaterThanOrEqualTo(12 - 0.01));
+    expect(caret.bottom, lessThanOrEqualTo(fence.size.height - 12 + 0.01));
+
+    for (final (String source, int position) in <(String, int)>[
+      ('a\n```', 1),
+      ('```\n```\nb', 8),
+      ('a\n```\n```\nb', 10),
+    ]) {
+      final LaidOutNote note = NoteLayoutEngine().layout(
+        _inputs(source, readerMode: true),
+      );
+      final LineFragment text = note.flow.fragments.lastWhere(
+        (LineFragment fragment) =>
+            fragment.kind == FragmentKind.text &&
+            note.flow.rows[fragment.rowIndex].row.kind == LayoutRowKind.text,
+      );
+      for (final TextAffinity affinity in TextAffinity.values) {
+        expect(
+          note.caretRect(position, affinity).top,
+          closeTo(text.lines.single.top, 0.01),
+          reason: '$source at $position, ${affinity.name}',
+        );
+      }
+    }
+  });
+
   test('vertical targets leave the relaid blocks alone', () {
     final String source = 'Top line\n${_harbours(60)}';
     final NoteLayoutEngine engine = NoteLayoutEngine();
