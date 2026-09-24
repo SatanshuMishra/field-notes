@@ -161,11 +161,20 @@ final class NoteHitTester {
     if (range.isCollapsed || x < line.left) {
       return _toSource(range.start, TextAffinity.downstream);
     }
-    if (x > line.left + line.width) {
+    if (x > _rightEdge(fragment, line)) {
       return _toSource(range.end, TextAffinity.upstream);
     }
     final (int, TextAffinity) hit = _hitInLine(chosen, x);
     return _toSource(_nearerAtomicEdge(fragment, hit.$1, x) ?? hit.$1, hit.$2);
+  }
+
+  double _rightEdge(LineFragment fragment, VisualLine line) {
+    final double measured = line.left + line.width;
+    final TextBox? last = _geometry.glyphBoxAt(
+      fragment,
+      line.visibleRange.end - 1 - fragment.visibleRange.start,
+    );
+    return last == null ? measured : math.max(measured, last.right);
   }
 
   (int, TextAffinity) _hitInLine(LocatedLine located, double x) {
