@@ -261,6 +261,52 @@ void main() {
     expect(_viewState(tester).debugInputDrops, isEmpty);
   });
 
+  testWidgets(
+    'a line move sent before the next frame uses the typed text',
+    (WidgetTester tester) async {
+      final _Editor editor = await _pump(tester, 'fog');
+      await _focus(tester, editor);
+      await _select(tester, editor, const TextSelection.collapsed(offset: 3));
+
+      await sendDeltas(tester, <Map<String, Object?>>[
+        insertionDelta(oldText: 'fog', at: 3, text: 'a'),
+      ]);
+      await sendSelectors(tester, <String>['moveDown:']);
+
+      expect(tester.takeException(), isNull);
+      expect(editor.controller.text, 'foga');
+      expect(
+        editor.controller.selection,
+        const TextSelection.collapsed(offset: 4),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
+  testWidgets(
+    'the document end sent before the next frame is the typed end',
+    (WidgetTester tester) async {
+      final _Editor editor = await _pump(tester, 'fog\nharbour');
+      await _focus(tester, editor);
+      await _select(tester, editor, const TextSelection.collapsed(offset: 0));
+
+      await sendDeltas(tester, <Map<String, Object?>>[
+        insertionDelta(oldText: 'fog\nharbour', at: 0, text: 'The '),
+      ]);
+      await sendSelectors(tester, <String>['moveToEndOfDocument:']);
+
+      expect(tester.takeException(), isNull);
+      expect(editor.controller.text, 'The fog\nharbour');
+      expect(editor.controller.selection.isCollapsed, isTrue);
+      expect(editor.controller.selection.extentOffset, 15);
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
   testWidgets('clicking a photo selects its line', (WidgetTester tester) async {
     final _Editor editor = await _pump(tester, _lowTideNote);
     final Offset centre = tester.getCenter(

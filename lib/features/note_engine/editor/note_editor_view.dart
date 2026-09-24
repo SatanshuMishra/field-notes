@@ -727,6 +727,36 @@ class NoteEditorViewState extends State<NoteEditorView>
     return laidOut;
   }
 
+  LaidOutNote get _freshLayout {
+    final LaidOutNote? layout = _layout;
+    if (layout == null) {
+      throw StateError('NoteEditorView has not laid out its note yet');
+    }
+    final EditorState state = _state;
+    final VisibleText visible = _visible;
+    final LayoutInputs inputs = layout.inputs;
+    if (identical(inputs.source, state.source) &&
+        identical(inputs.tree, state.tree) &&
+        identical(inputs.visibleText, visible)) {
+      return layout;
+    }
+    return _runLayout(
+      LayoutInputs(
+        source: state.source,
+        tree: state.tree,
+        visibleText: visible,
+        activeLine: visible.activeLine,
+        columnWidth: inputs.columnWidth,
+        textScaler: inputs.textScaler,
+        boldText: inputs.boldText,
+        locale: inputs.locale,
+        readerMode: inputs.readerMode,
+        mediaDimensions: inputs.mediaDimensions,
+        unavailableMedia: inputs.unavailableMedia,
+      ),
+    );
+  }
+
   void _scheduleGeometryCheck() {
     if (_geometryCheckScheduled) {
       return;
@@ -1937,9 +1967,7 @@ final class _EditorActionHost implements NoteActionHost {
   VisibleText get visible => _view._visible;
 
   @override
-  NoteLayout get layout =>
-      _view._layout ??
-      (throw StateError('NoteEditorView has not laid out its note yet'));
+  NoteLayout get layout => _view._freshLayout;
 
   @override
   CommandRegistry get commands => _view._commands;
