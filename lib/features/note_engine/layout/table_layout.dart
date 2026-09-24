@@ -137,10 +137,9 @@ TableColumnPlan tableColumnsOf(
           base: _baseOf(entry.$1),
           width: double.infinity,
         );
-        return math.max(
-          widest,
-          paragraph.maxIntrinsicWidth.ceilToDouble() + padding,
-        );
+        final double natural = paragraph.maxIntrinsicWidth.ceilToDouble();
+        paragraph.dispose();
+        return math.max(widest, natural + padding);
       }),
   ];
   return planTableColumns(measured, regionWidth: regionWidth, em: em);

@@ -621,6 +621,29 @@ void main() {
     expect(harness.client.drops, isEmpty);
   });
 
+  testWidgets(
+    'a selection onto another line mid-batch rebases the next delta',
+    (WidgetTester tester) async {
+      final _HarnessState harness = await _pumpFocused(
+        tester,
+        source: '# A\nb',
+        selection: const NoteSelection.collapsed(5),
+      );
+      expect(_lastEditingState(tester)['text'], 'A\nb');
+      await sendDeltas(tester, <Map<String, Object?>>[
+        selectionDelta(
+          oldText: 'A\nb',
+          selection: const TextSelection.collapsed(offset: 1),
+        ),
+        insertionDelta(oldText: 'A\nb', at: 1, text: 'x'),
+      ]);
+      expect(harness.host.state.source, '# Ax\nb');
+      expect(harness.host.state.selection, const NoteSelection.collapsed(4));
+      expect(harness.client.drops, isEmpty);
+      expect(_lastEditingState(tester)['text'], '# Ax\nb');
+    },
+  );
+
   testWidgets('a selection delta carrying a composing range applies it', (
     WidgetTester tester,
   ) async {

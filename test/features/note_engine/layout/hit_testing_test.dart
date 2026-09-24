@@ -178,6 +178,74 @@ void main() {
     _expectNearerEdges(tester, middle, middle + 1);
   });
 
+  test('a point in a line-final space gives the nearer edge of the space', () {
+    final String source = 'Para ${_harbours(30)}';
+    final NoteHitTester tester = _tester(source);
+    final List<_Line> lines = _lines(tester, FragmentKind.text);
+    expect(lines.length, greaterThan(1));
+    final String visible = _visibleText(tester);
+    final int wrapSpace = lines.first.line.visibleRange.end - 1;
+    expect(visible[wrapSpace], ' ');
+    _expectNearerEdges(tester, wrapSpace, wrapSpace + 1);
+
+    final NoteHitTester beside = _tester(
+      '$_leftMedium\n${_harbours(60)}',
+      activeLine: 1,
+    );
+    final OffsetMap map = _map(beside);
+    for (final _Line located in _lines(beside, FragmentKind.text)) {
+      final VisualLine line = located.line;
+      final double y = line.top + line.height / 2;
+      for (
+        int glyph = line.visibleRange.start;
+        glyph < line.visibleRange.end;
+        glyph++
+      ) {
+        final Rect box = _glyphBox(located.fragment, glyph, glyph + 1);
+        expect(
+          beside.positionAt(Offset(box.left + 0.25 * box.width, y)).offset,
+          map.visibleToSource(glyph).downstream,
+          reason: 'left quarter of $glyph',
+        );
+        expect(
+          beside.positionAt(Offset(box.left + 0.75 * box.width, y)).offset,
+          map.visibleToSource(glyph + 1).upstream,
+          reason: 'right quarter of $glyph',
+        );
+      }
+    }
+
+    for (final String marked in <String>[
+      '- a\n- b',
+      '> a\n> b',
+      '1. a\n2. b',
+    ]) {
+      final NoteHitTester active = _tester(marked, activeLine: 0);
+      final LineFragment marker = active.flow.fragments.firstWhere(
+        (LineFragment fragment) =>
+            fragment.kind == FragmentKind.marker &&
+            fragment.visibleRange.start == 0,
+      );
+      final int space = marker.visibleRange.end - 1;
+      expect(_visibleText(active)[space], ' ', reason: marked);
+      final Rect box = _glyphBox(marker, space, space + 1);
+      expect(
+        active
+            .positionAt(Offset(box.left + 0.25 * box.width, box.center.dy))
+            .offset,
+        space,
+        reason: marked,
+      );
+      expect(
+        active
+            .positionAt(Offset(box.left + 0.75 * box.width, box.center.dy))
+            .offset,
+        space + 1,
+        reason: marked,
+      );
+    }
+  });
+
   test('a point beside a float resolves to the band line', () {
     final NoteHitTester tester = _tester(_floatFixture, activeLine: 1);
     final List<_Line> band = _bandLines(tester);
