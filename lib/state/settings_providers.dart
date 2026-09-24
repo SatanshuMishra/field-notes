@@ -28,3 +28,10 @@ WeekStart weekStart(Ref ref) {
       ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
   return settings.weekStart;
 }
+
+@riverpod
+bool spellCheckEnabled(Ref ref) {
+  final AppSettings settings =
+      ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+  return settings.spellCheckEnabled;
+}

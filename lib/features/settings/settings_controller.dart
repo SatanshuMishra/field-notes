@@ -69,6 +69,13 @@ class SettingsController {
     );
   }
 
+  Future<SettingsWriteResult> setSpellCheckEnabled(bool value) {
+    return _write(
+      () => _repository.setSpellCheckEnabled(value),
+      'Could not save your spell check setting.',
+    );
+  }
+
   Future<SettingsWriteResult> _write(
     Future<void> Function() action,
     String failureMessage,
