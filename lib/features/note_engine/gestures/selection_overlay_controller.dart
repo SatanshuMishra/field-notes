@@ -26,11 +26,13 @@ final class _Geometry {
 final class _HandleDrag {
   const _HandleDrag({
     required this.fixed,
+    required this.start,
     required this.collapsed,
     required this.target,
   });
 
   final int fixed;
+  final bool start;
   final bool collapsed;
   final double target;
 }
@@ -370,6 +372,7 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
         .dy;
     _drag = _HandleDrag(
       fixed: start ? selection.end : selection.start,
+      start: start,
       collapsed: selection.isCollapsed,
       target: centre - details.globalPosition.dy,
     );
@@ -384,12 +387,17 @@ class NoteSelectionOverlayController with TextSelectionDelegate {
     if (drag.collapsed) {
       return NoteSelection.collapsed(hit.offset, affinity: hit.affinity);
     }
-    final NoteSelection next = NoteSelection(
+    final bool crosses = drag.start
+        ? hit.offset >= drag.fixed
+        : hit.offset <= drag.fixed;
+    if (crosses) {
+      return null;
+    }
+    return NoteSelection(
       anchor: drag.fixed,
       head: hit.offset,
       affinity: hit.affinity,
     );
-    return next.isCollapsed ? null : next;
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {

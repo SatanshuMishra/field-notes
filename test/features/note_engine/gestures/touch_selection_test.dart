@@ -666,6 +666,41 @@ void main() {
       expect(moved.head, greaterThan(caret.head));
     }, variant: _android);
 
+    testWidgets('a handle drag never carries its end past the other end', (
+      WidgetTester tester,
+    ) async {
+      final _Harness harness = _Harness();
+      await harness.pump(tester, _harbour, focused: false);
+      harness.host.setSelection(const NoteSelection(anchor: 4, head: 15));
+      await tester.pump();
+      harness.overlay.showHandles();
+      await tester.pump();
+
+      final RenderNoteView view = harness.view;
+      final Offset end = view.contentToGlobal(
+        view.noteLayout
+            .selectionEndpoints(harness.host.selection)
+            .end
+            .point,
+      );
+      await _dragBy(tester, end + const Offset(10, 10), const Offset(-160, 0));
+
+      final List<NoteSelection> dragged = <NoteSelection>[
+        for (final _Event event in harness.of(_Kind.select))
+          if (event.cause == SelectionChangedCause.drag) event.selection!,
+      ];
+      expect(dragged, isNotEmpty);
+      expect(
+        dragged.where(
+          (NoteSelection selection) =>
+              selection.anchor != 4 || selection.head <= 4,
+        ),
+        isEmpty,
+      );
+      expect(harness.host.selection.start, 4);
+      expect(harness.host.selection.end, greaterThan(4));
+    }, variant: _android);
+
     testWidgets('the menu for a caret shows paste and select all only', (
       WidgetTester tester,
     ) async {
