@@ -162,6 +162,22 @@ String _lastSentText(WidgetTester tester) {
 Future<void> _settle(WidgetTester tester) =>
     tester.pump(const Duration(seconds: 1));
 
+const Duration _idleWindow = Duration(seconds: 3);
+
+Future<int> _framesOver(WidgetTester tester, Duration window) async {
+  const Duration step = Duration(milliseconds: 50);
+  final int steps = window.inMicroseconds ~/ step.inMicroseconds;
+  int frames = 0;
+  for (int at = 0; at < steps; at++) {
+    await tester.binding.delayed(step);
+    if (tester.binding.hasScheduledFrame) {
+      frames += 1;
+      await tester.pump();
+    }
+  }
+  return frames;
+}
+
 void main() {
   testWidgets('typing through the input client edits the source', (
     WidgetTester tester,
@@ -945,13 +961,70 @@ void main() {
       editor,
       const TextSelection(baseOffset: 3, extentOffset: 48),
     );
-    await tester.pump(const Duration(seconds: 1));
+    await _settle(tester);
 
-    for (int second = 0; second < 3; second++) {
-      expect(tester.binding.hasScheduledFrame, isFalse);
-      await tester.pump(const Duration(seconds: 1));
-    }
+    await tester.binding.delayed(_idleWindow);
+
     expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('an unfocused editor schedules no frames', (
+    WidgetTester tester,
+  ) async {
+    final _Editor editor = await _pump(tester, _lowTideNote);
+    await _settle(tester);
+
+    await tester.binding.delayed(_idleWindow);
+
+    expect(editor.focusNode.hasFocus, isFalse);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('a selected range schedules no frames', (
+    WidgetTester tester,
+  ) async {
+    final _Editor editor = await _pump(tester, 'fog lifted');
+    await _focus(tester, editor);
+    await _select(
+      tester,
+      editor,
+      const TextSelection(baseOffset: 0, extentOffset: 3),
+    );
+    await _settle(tester);
+
+    await tester.binding.delayed(_idleWindow);
+
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('an open composition schedules only caret blinks', (
+    WidgetTester tester,
+  ) async {
+    final _Editor editor = await _pump(tester, 'fog');
+    await _focus(tester, editor);
+    await _select(tester, editor, const TextSelection.collapsed(offset: 3));
+    await sendDeltas(tester, <Map<String, Object?>>[
+      insertionDelta(
+        oldText: 'fog',
+        at: 3,
+        text: 'k',
+        composing: const TextRange(start: 3, end: 4),
+      ),
+    ]);
+    await _settle(tester);
+    await tester.pump();
+    expect(
+      editor.controller.value.composing,
+      const TextRange(start: 3, end: 4),
+    );
+
+    final int frames = await _framesOver(tester, _idleWindow);
+
+    expect(frames, lessThanOrEqualTo(6));
+    expect(
+      editor.controller.value.composing,
+      const TextRange(start: 3, end: 4),
+    );
   });
 
   testWidgets('the removal toast goes with the next edit and on unmount', (
