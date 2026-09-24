@@ -88,6 +88,7 @@ final class NoteHitTester {
     final TextRange local = paragraph.getWordBoundary(
       TextPosition(offset: visible - scope.start),
     );
+    paragraph.dispose();
     final int start = (scope.start + local.start).clamp(scope.start, scope.end);
     final int end = (scope.start + local.end).clamp(start, scope.end);
     return TextRange(

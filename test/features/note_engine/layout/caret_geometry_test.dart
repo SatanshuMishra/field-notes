@@ -451,6 +451,25 @@ void main() {
     },
   );
 
+  test('selecting two thousand line breaks stays inside two frames', () {
+    final String source = List<String>.generate(
+      2000,
+      (int i) => i % 5 == 0 ? '# Heading $i' : 'Line $i with words',
+    ).join('\n');
+    final CaretGeometry geometry = _geometry(source);
+    final TextRange all = TextRange(start: 0, end: source.length);
+    expect(geometry.selectionBoxes(all).length, greaterThanOrEqualTo(3999));
+    int timed() {
+      final Stopwatch watch = Stopwatch()..start();
+      geometry.selectionBoxes(all);
+      return watch.elapsedMicroseconds;
+    }
+
+    final List<int> micros = <int>[for (int run = 0; run < 5; run++) timed()]
+      ..sort();
+    expect(micros.first, lessThan(16000), reason: '$micros');
+  });
+
   test('a divider object gives carets at its edges and a selection rect', () {
     const String source = 'Above\n\n---\n\nBelow';
     final CaretGeometry geometry = _geometry(source);
