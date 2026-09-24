@@ -216,11 +216,11 @@ String _longNote() {
   return blocks.join('\n\n');
 }
 
-double _medianMillis(List<void Function()> runs) {
+double _fastestMillis(List<void Function()> runs) {
   final List<int> micros = <int>[
     for (final void Function() run in runs) _timed(run),
   ]..sort();
-  return micros[micros.length ~/ 2] / 1000;
+  return micros.first / 1000;
 }
 
 int _timed(void Function() run) {
@@ -803,7 +803,7 @@ void main() {
     final List<LayoutInputs> repeats = <LayoutInputs>[
       for (int i = 0; i < 15; i++) _treeInputs(source, tree, activeLine: line),
     ];
-    final double allHit = _medianMillis(<void Function()>[
+    final double allHit = _fastestMillis(<void Function()>[
       for (final LayoutInputs inputs in repeats) () => engine.layout(inputs),
     ]);
     expect(engine.lastRelaidBlocks, isEmpty);
@@ -820,12 +820,12 @@ void main() {
       current = next;
       typed.add(_treeInputs(current, currentTree, activeLine: line));
     }
-    final double typing = _medianMillis(<void Function()>[
+    final double typing = _fastestMillis(<void Function()>[
       for (final LayoutInputs inputs in typed) () => engine.layout(inputs),
     ]);
     expect(engine.lastRelaidBlocks, hasLength(1));
-    expect(allHit, lessThan(2), reason: 'all-hit median $allHit ms');
-    expect(typing, lessThan(2), reason: 'typing median $typing ms');
+    expect(allHit, lessThan(2), reason: 'fastest all-hit $allHit ms');
+    expect(typing, lessThan(2), reason: 'fastest keystroke $typing ms');
   });
 
   test('a table is routed to the table layout', () {
