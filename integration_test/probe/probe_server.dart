@@ -61,6 +61,104 @@ final class ProbeReply {
 
 typedef ProbeHandler = Future<ProbeReply> Function(ProbeRequest request);
 
+Map<String, Object?> probeKeystrokeJson({
+  required int handlerMicros,
+  required int? buildMicros,
+  required int? rasterFinishMicros,
+  required int? keyDownMicros,
+}) => <String, Object?>{
+  'handlerMs': handlerMicros / 1000,
+  'buildMs': buildMicros == null ? null : buildMicros / 1000,
+  'rasterFinishMicros': rasterFinishMicros,
+  'keyDownMicros': keyDownMicros,
+};
+
+final class ProbeErrorLog {
+  const ProbeErrorLog()
+    : windowErrors = const <Map<String, Object?>>[],
+      scenarioErrors = const <Map<String, Object?>>[],
+      windowDrops = const <String>[],
+      scenarioDrops = const <String>[],
+      owner = null,
+      seen = 0;
+
+  const ProbeErrorLog._({
+    required this.windowErrors,
+    required this.scenarioErrors,
+    required this.windowDrops,
+    required this.scenarioDrops,
+    required this.owner,
+    required this.seen,
+  });
+
+  final List<Map<String, Object?>> windowErrors;
+  final List<Map<String, Object?>> scenarioErrors;
+  final List<String> windowDrops;
+  final List<String> scenarioDrops;
+  final Object? owner;
+  final int seen;
+
+  ProbeErrorLog recordError(Map<String, Object?> error) => ProbeErrorLog._(
+    windowErrors: List<Map<String, Object?>>.unmodifiable(
+      <Map<String, Object?>>[...windowErrors, error],
+    ),
+    scenarioErrors: List<Map<String, Object?>>.unmodifiable(
+      <Map<String, Object?>>[...scenarioErrors, error],
+    ),
+    windowDrops: windowDrops,
+    scenarioDrops: scenarioDrops,
+    owner: owner,
+    seen: seen,
+  );
+
+  ProbeErrorLog observe(Object dropOwner, List<String> drops) {
+    final int from = identical(dropOwner, owner)
+        ? (seen < drops.length ? seen : drops.length)
+        : 0;
+    final List<String> fresh = drops.sublist(from);
+    return ProbeErrorLog._(
+      windowErrors: windowErrors,
+      scenarioErrors: scenarioErrors,
+      windowDrops: List<String>.unmodifiable(<String>[
+        ...windowDrops,
+        ...fresh,
+      ]),
+      scenarioDrops: List<String>.unmodifiable(<String>[
+        ...scenarioDrops,
+        ...fresh,
+      ]),
+      owner: dropOwner,
+      seen: drops.length,
+    );
+  }
+
+  ProbeErrorLog clearWindow() => ProbeErrorLog._(
+    windowErrors: const <Map<String, Object?>>[],
+    scenarioErrors: scenarioErrors,
+    windowDrops: const <String>[],
+    scenarioDrops: scenarioDrops,
+    owner: owner,
+    seen: seen,
+  );
+
+  ProbeErrorLog resetScenario() => ProbeErrorLog._(
+    windowErrors: const <Map<String, Object?>>[],
+    scenarioErrors: const <Map<String, Object?>>[],
+    windowDrops: const <String>[],
+    scenarioDrops: const <String>[],
+    owner: owner,
+    seen: seen,
+  );
+
+  Map<String, Object?> json({required bool scenario}) => <String, Object?>{
+    'errors': scenario ? scenarioErrors : windowErrors,
+    'drops': <Object?>[
+      for (final String reason in scenario ? scenarioDrops : windowDrops)
+        <String, Object?>{'reason': reason},
+    ],
+  };
+}
+
 final class ProbeServer {
   ProbeServer(Map<String, ProbeHandler> handlers)
     : _handlers = Map<String, ProbeHandler>.unmodifiable(handlers) {

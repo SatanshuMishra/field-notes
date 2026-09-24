@@ -9,18 +9,22 @@ import 'package:drift/native.dart';
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/data/database/app_database.dart'
     show AppDatabase, MediaBlobsCompanion;
+import 'package:field_notes/data/drafts/filesystem_draft_store.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/design/feedback/confirm_dialog.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/note_tree.dart';
 import 'package:field_notes/domain/notes/markdown/syntax_tree.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/services/draft_store.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
+import 'package:field_notes/features/capture/text/editor/photo_toolbar.dart'
+    show photoToolbarTargetFor, photoToolbarWidthFor;
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
@@ -92,6 +96,48 @@ const Set<MdInlineKind> _plainInlineKinds = <MdInlineKind>{
   MdInlineKind.softBreak,
   MdInlineKind.hardBreak,
 };
+
+final Set<String> _plainRunKinds = <String>{
+  for (final MdInlineKind kind in _plainInlineKinds) kind.name,
+};
+
+int probeStyledRunCount(Iterable<String> runKinds) => runKinds
+    .where(
+      (String kind) =>
+          !_blockKindNames.contains(kind) && !_plainRunKinds.contains(kind),
+    )
+    .length;
+
+Iterable<int> probeCaretAuditOffsets({
+  required int from,
+  required int to,
+  required int length,
+}) => Iterable<int>.generate(
+  (to == length ? to + 1 : to) - from,
+  (int index) => from + index,
+);
+
+final class _DelayedDraftStore implements DraftStore {
+  const _DelayedDraftStore(this._inner, this._delay);
+
+  final DraftStore _inner;
+  final Duration Function() _delay;
+
+  @override
+  Future<String?> read(String key) async {
+    final Duration delay = _delay();
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
+    return _inner.read(key);
+  }
+
+  @override
+  Future<void> write(String key, String source) => _inner.write(key, source);
+
+  @override
+  Future<void> delete(String key) => _inner.delete(key);
+}
 
 Future<void> main() async {
   final ProbeBinding binding = ProbeBinding.ensureInitialized();
@@ -566,15 +612,15 @@ final class _Probe {
   AppDatabase _database;
   SemanticsHandle? _semantics;
   List<_PhotoRequest> _photoQueue = const <_PhotoRequest>[];
-  List<Map<String, Object?>> _errors = const <Map<String, Object?>>[];
+  ProbeErrorLog _errorLog = const ProbeErrorLog();
   List<Map<String, Object?>> _log = const <Map<String, Object?>>[];
   String? _surfaceName;
   String? _openedSource;
   String? _openedEntryId;
+  String? _openedDate;
   NoteEditorController? _listening;
   int _transactions = 0;
-  Object? _dropOwner;
-  int _dropBaseline = 0;
+  Duration _draftReadDelay = Duration.zero;
   int? _openDispatched;
   int? _openMark;
   int _pointer = 7000;
@@ -587,6 +633,12 @@ final class _Probe {
         databaseProvider.overrideWithValue(database),
         mediaRootProvider.overrideWith((Ref ref) async => storage.media),
         draftRootProvider.overrideWith((Ref ref) async => storage.drafts),
+        draftStoreProvider.overrideWith(
+          (Ref ref) async => _DelayedDraftStore(
+            FilesystemDraftStore(root: storage.drafts),
+            () => _draftReadDelay,
+          ),
+        ),
         notePhotoPickerProvider.overrideWithValue(
           _ProbePhotoPicker(_takePhotoRequest),
         ),
@@ -631,15 +683,27 @@ final class _Probe {
   }
 
   void _recordError(String error, String? library, StackTrace? stack) {
-    _errors = List<Map<String, Object?>>.unmodifiable(<Map<String, Object?>>[
-      ..._errors,
-      <String, Object?>{
-        'error': error,
-        'library': library,
-        'stack': stack?.toString(),
-      },
-    ]);
+    _errorLog = _errorLog.recordError(<String, Object?>{
+      'error': error,
+      'library': library,
+      'stack': stack?.toString(),
+    });
   }
+
+  void _harvestDrops() {
+    final Object? previous = _errorLog.owner;
+    if (previous is NoteEditorViewState) {
+      _errorLog = _errorLog.observe(previous, _dropReasons(previous));
+    }
+    final NoteEditorViewState? editor = _findSurface()?.editor;
+    if (editor != null) {
+      _errorLog = _errorLog.observe(editor, _dropReasons(editor));
+    }
+  }
+
+  static List<String> _dropReasons(NoteEditorViewState editor) => <String>[
+    for (final DeltaDrop drop in editor.debugInputDrops) drop.reason.name,
+  ];
 
   Map<String, ProbeHandler> get handlers => <String, ProbeHandler>{
     'state': _state,
@@ -692,7 +756,8 @@ final class _Probe {
     _database = database;
     _resetSurface();
     _photoQueue = const <_PhotoRequest>[];
-    _errors = const <Map<String, Object?>>[];
+    _errorLog = const ProbeErrorLog();
+    _draftReadDelay = Duration.zero;
     _log = const <Map<String, Object?>>[];
     binding._recorder.resetTimings();
     binding._recorder.clearCommitted();
@@ -713,6 +778,7 @@ final class _Probe {
     _surfaceName = null;
     _openedSource = null;
     _openedEntryId = null;
+    _openedDate = null;
     _transactions = 0;
     _openDispatched = null;
     _openMark = null;
@@ -730,28 +796,29 @@ final class _Probe {
     if (!surfaces.contains(surface)) {
       throw ArgumentError.value(surface, 'surface', 'unknown surface');
     }
+    _harvestDrops();
     final ProviderContainer container = ProviderScope.containerOf(
       _rootNavigator().context,
       listen: false,
     );
     final List<String> mediaIds = await _seedMedia(request.query['media']);
-    final String today = captureDateKey(DateTime.now());
     final String body = request.body;
-    Entry? entry;
-    if (surface != 'new') {
-      final NoteWriter writer = await container.read(noteWriterProvider.future);
-      final NoteSaveResult result = await writer.save(
-        date: today,
-        source: body,
-        photoMediaIds: mediaIds,
-      );
-      entry = result.entry;
-    }
+    final String? reopen = request.query['entry'];
+    final Entry? entry = reopen != null && reopen.isNotEmpty
+        ? await _existingEntry(container, reopen)
+        : surface == 'new'
+        ? null
+        : await _savedEntry(container, body, mediaIds);
+    final String date = entry == null
+        ? captureDateKey(DateTime.now())
+        : await _dateOf(container, entry);
     _resetSurface();
     _surfaceName = surface;
-    _openedSource = surface == 'new' ? '' : body;
+    _openedSource = surface == 'new' ? '' : entry?.textContent ?? body;
     _openedEntryId = entry?.id;
-    _dispatch(surface, entry, today);
+    _openedDate = date;
+    final int entryCount = (await _entriesOn(container, date)).length;
+    _dispatch(surface, entry, date);
     bool opened = false;
     for (int frame = 0; frame < 600 && !opened; frame++) {
       await _frames(1);
@@ -769,8 +836,53 @@ final class _Probe {
     return ProbeReply.json(<String, Object?>{
       'opened': opened,
       'surface': surface,
+      'entryId': entry?.id,
+      'entryCount': entryCount,
     });
   }
+
+  static Future<Entry> _savedEntry(
+    ProviderContainer container,
+    String body,
+    List<String> mediaIds,
+  ) async {
+    final NoteWriter writer = await container.read(noteWriterProvider.future);
+    final NoteSaveResult result = await writer.save(
+      date: captureDateKey(DateTime.now()),
+      source: body,
+      photoMediaIds: mediaIds,
+    );
+    return result.entry;
+  }
+
+  static Future<Entry> _existingEntry(
+    ProviderContainer container,
+    String id,
+  ) async {
+    final Entry? entry = await container
+        .read(journalRepositoryProvider)
+        .entryById(id);
+    if (entry == null) {
+      throw ArgumentError.value(id, 'entry', 'no entry with this id');
+    }
+    return entry;
+  }
+
+  static Future<String> _dateOf(
+    ProviderContainer container,
+    Entry entry,
+  ) async {
+    final Day? day = await container
+        .read(journalRepositoryProvider)
+        .dayById(entry.dayId);
+    return day?.date ?? captureDateKey(DateTime.now());
+  }
+
+  static Future<List<Entry>> _entriesOn(
+    ProviderContainer container,
+    String date,
+  ) =>
+      container.read(journalRepositoryProvider).watchEntriesForDate(date).first;
 
   void _dispatch(String surface, Entry? entry, String today) {
     final NavigatorState navigator = _rootNavigator();
@@ -846,6 +958,13 @@ final class _Probe {
   }
 
   Future<ProbeReply> _save(ProbeRequest request) async {
+    _harvestDrops();
+    final String date = _openedDate ?? captureDateKey(DateTime.now());
+    final String? entryId = _openedEntryId;
+    final ProviderContainer container = ProviderScope.containerOf(
+      _rootNavigator().context,
+      listen: false,
+    );
     final Element? edit = _textElement(editNoteSaveLabel);
     final Element? target = edit ?? _textElement('Save');
     if (target == null) {
@@ -867,37 +986,39 @@ final class _Probe {
       await _frames(1);
       saved = _keyedElement(noteEditorKey) == null;
     }
-    final String? stored = await _storedText();
+    final List<Entry> entries = await _entriesOn(container, date);
+    final String? stored = await _storedText(container, entries, entryId);
     if (saved) {
       _resetSurface();
     }
-    return ProbeReply.json(<String, Object?>{'saved': saved, 'stored': stored});
+    return ProbeReply.json(<String, Object?>{
+      'saved': saved,
+      'stored': stored,
+      'entryCount': entries.length,
+    });
   }
 
-  Future<String?> _storedText() async {
-    final NavigatorState navigator = _rootNavigator();
-    final ProviderContainer container = ProviderScope.containerOf(
-      navigator.context,
-      listen: false,
-    );
-    final List<Entry> entries = await container
-        .read(journalRepositoryProvider)
-        .watchEntriesForDate(captureDateKey(DateTime.now()))
-        .first;
+  static Future<String?> _storedText(
+    ProviderContainer container,
+    List<Entry> entries,
+    String? entryId,
+  ) async {
+    if (entryId != null) {
+      return (await container
+              .read(journalRepositoryProvider)
+              .entryById(entryId))
+          ?.textContent;
+    }
     if (entries.isEmpty) {
       return null;
     }
-    final String? id = _openedEntryId;
-    final Entry? byId = id == null
-        ? null
-        : entries.where((Entry entry) => entry.id == id).firstOrNull;
-    final Entry newest = entries.reduce(
-      (Entry a, Entry b) => b.updatedAt > a.updatedAt ? b : a,
-    );
-    return (byId ?? newest).textContent;
+    return entries
+        .reduce((Entry a, Entry b) => b.updatedAt > a.updatedAt ? b : a)
+        .textContent;
   }
 
   Future<ProbeReply> _close(ProbeRequest request) async {
+    _harvestDrops();
     final Element? close = _keyedElement(composerCloseKey);
     if (close != null) {
       await _pressElement(close);
@@ -912,13 +1033,27 @@ final class _Probe {
       prompt = _keyedElement(composerDiscardKey) != null;
       closed = _keyedElement(noteEditorKey) == null && close != null;
     }
-    closed = !prompt && (close == null || _keyedElement(noteEditorKey) == null);
+    final Element? discard = prompt && request.query['discard'] == '1'
+        ? _keyedElement(composerDiscardKey)
+        : null;
+    if (discard != null) {
+      await _pressElement(discard);
+    }
+    bool discarded = false;
+    for (int frame = 0; frame < 60 && discard != null && !discarded; frame++) {
+      await _frames(1);
+      discarded = _keyedElement(noteEditorKey) == null;
+    }
+    closed =
+        discarded ||
+        !prompt && (close == null || _keyedElement(noteEditorKey) == null);
     if (closed) {
       _resetSurface();
     }
     return ProbeReply.json(<String, Object?>{
       'closed': closed,
       'discardPrompt': prompt,
+      'discarded': discarded,
     });
   }
 
@@ -973,6 +1108,10 @@ final class _Probe {
   Future<ProbeReply> _state(ProbeRequest request) async {
     final _Surface? surface = _findSurface();
     _attach();
+    _harvestDrops();
+    final ProviderContainer? container = request.query['entries'] == '1'
+        ? ProviderScope.containerOf(_rootNavigator().context, listen: false)
+        : null;
     final ui.FlutterView view = _view();
     final double dpr = view.devicePixelRatio;
     final Map<String, Object?> result = <String, Object?>{
@@ -986,6 +1125,7 @@ final class _Probe {
       'oversizeDecodes': _oversizeDecodes(surface, dpr),
       'transactions': _transactions,
       'keyed': _keyedRects(''),
+      'textFieldFocused': _textFieldFocused(),
     };
     if (surface == null) {
       return ProbeReply.json(<String, Object?>{
@@ -1001,7 +1141,11 @@ final class _Probe {
         'canUndo': false,
         'canRedo': false,
         'column': null,
+        'columnLeft': null,
         'em': null,
+        'scroll': null,
+        'writingSurface': null,
+        'photoToolbarNarrowWidth': null,
         'blocks': const <Object?>[],
         'lines': const <Object?>[],
         'photos': const <Object?>[],
@@ -1048,8 +1192,17 @@ final class _Probe {
       'canUndo': controller?.canUndo ?? false,
       'canRedo': controller?.canRedo ?? false,
       'column': layout.inputs.columnWidth,
+      'columnLeft': surface.pointToGlobal(Offset.zero).dx,
       'em': NoteTypography.emOf(layout.inputs.textScaler),
-      'blocks': _blocksJson(layout),
+      'scroll': _scrollJson(render),
+      'writingSurface': _nullableRect(_writingSurface(editor)),
+      'photoToolbarNarrowWidth': photoToolbarWidthFor(
+        scaler: layout.inputs.textScaler,
+        placement: false,
+        moves: true,
+        target: photoToolbarTargetFor(defaultTargetPlatform),
+      ),
+      'blocks': _blocksJson(surface),
       'lines': _linesJson(layout),
       'photos': <Object?>[
         for (int i = 0; i < photos.length; i++)
@@ -1081,7 +1234,42 @@ final class _Probe {
         'verticalGoal': _verticalGoal(surface, selection, double.parse(goal)),
       if (request.query['reference'] == '1')
         'referenceLines': _linesJson(_referenceLayout(layout)),
+      if (container != null)
+        'entryCount': (await _entriesOn(
+          container,
+          _openedDate ?? captureDateKey(DateTime.now()),
+        )).length,
     });
+  }
+
+  static Map<String, Object?> _scrollJson(RenderNoteView render) {
+    final ViewportOffset? offset = render.offset;
+    return <String, Object?>{
+      'offset': render.scrollOffset,
+      'max': offset is ScrollPosition && offset.hasContentDimensions
+          ? offset.maxScrollExtent
+          : 0.0,
+    };
+  }
+
+  static Rect? _writingSurface(NoteEditorViewState? editor) {
+    final Element? layer = _keyedElement(notePhotoToolbarLayerKey);
+    final Rect? rect = layer == null ? null : _elementRect(layer);
+    if (editor == null || rect == null) {
+      return null;
+    }
+    return Rect.fromLTWH(
+      rect.left,
+      rect.top,
+      rect.width,
+      math.max(0, rect.height - editor.widget.bottomInset),
+    );
+  }
+
+  static bool _textFieldFocused() {
+    final BuildContext? context = FocusManager.instance.primaryFocus?.context;
+    return context != null &&
+        context.findAncestorStateOfType<EditableTextState>() != null;
   }
 
   int _oversizeDecodes(_Surface? surface, double dpr) {
@@ -1099,55 +1287,71 @@ final class _Probe {
         .length;
   }
 
-  List<Object?> _blocksJson(LaidOutNote layout) {
+  static List<Object?> _blocksJson(_Surface surface) {
+    final LaidOutNote layout = surface.layout;
     final MdTree tree = parseNoteTree(
       layout.inputs.source,
       tables: tablesEnabled,
     );
     final List<LaidOutRow> rows = layout.flow.rows;
     final List<FragmentInfo> fragments = layout.fragments;
-    final List<Object?> blocks = <Object?>[];
-    for (final MdBlock block in tree.blocks) {
-      if (block.kind == MdBlockKind.blankLine) {
-        continue;
-      }
-      final MdRange range = block.sourceRange;
-      final Iterable<LaidOutRow> inside = rows.where(
-        (LaidOutRow row) => _startsInside(row.row.sourceRange.start, range),
-      );
-      String? styleKind;
-      int styledRuns = 0;
-      for (final LaidOutRow row in inside) {
-        for (final ({TextRange visibleRange, String styleKind}) run
-            in row.styleRuns) {
-          if (_blockKindNames.contains(run.styleKind)) {
-            styleKind ??= run.styleKind;
-          } else {
-            styledRuns += 1;
-          }
-        }
-      }
-      final Iterable<double> tops = fragments
-          .where(
-            (FragmentInfo fragment) =>
-                _startsInside(fragment.sourceRange.start, range),
-          )
-          .map((FragmentInfo fragment) => fragment.lineBox.rect.top);
-      final Iterable<double> photoTops = layout.photoRects
-          .where(
-            (PhotoRect photo) => _startsInside(photo.sourceRange.start, range),
-          )
-          .map((PhotoRect photo) => photo.rect.top);
-      final List<double> allTops = <double>[...tops, ...photoTops];
-      blocks.add(<String, Object?>{
-        'kind': block.kind.name,
-        'styleKind': styleKind,
-        'inlineNodes': _styledInlineCount(block),
-        'styledRuns': styledRuns,
-        'top': allTops.isEmpty ? null : allTops.reduce(math.min),
-      });
-    }
-    return blocks;
+    return <Object?>[
+      for (final MdBlock block in tree.blocks)
+        if (block.kind != MdBlockKind.blankLine)
+          _blockJson(surface, block, rows, fragments),
+    ];
+  }
+
+  static Map<String, Object?> _blockJson(
+    _Surface surface,
+    MdBlock block,
+    List<LaidOutRow> rows,
+    List<FragmentInfo> fragments,
+  ) {
+    final LaidOutNote layout = surface.layout;
+    final MdRange range = block.sourceRange;
+    final List<String> runKinds = <String>[
+      for (final LaidOutRow row in rows)
+        if (_startsInside(row.row.sourceRange.start, range))
+          for (final ({TextRange visibleRange, String styleKind}) run
+              in row.styleRuns)
+            run.styleKind,
+    ];
+    final List<Rect> boxes = <Rect>[
+      for (final FragmentInfo fragment in fragments)
+        if (_startsInside(fragment.sourceRange.start, range))
+          fragment.lineBox.rect,
+      for (final PhotoRect photo in layout.photoRects)
+        if (_startsInside(photo.sourceRange.start, range)) photo.rect,
+    ];
+    final double? top = boxes.isEmpty
+        ? null
+        : boxes.map((Rect box) => box.top).reduce(math.min);
+    final double? bottom = boxes.isEmpty
+        ? null
+        : boxes.map((Rect box) => box.bottom).reduce(math.max);
+    final MdBlockData? data = block.data;
+    return <String, Object?>{
+      'kind': block.kind.name,
+      'start': range.start,
+      'end': range.end,
+      'unclosedFence':
+          block.kind == MdBlockKind.fencedCode &&
+          data is MdFenceData &&
+          !data.isClosed,
+      'styleKind': runKinds
+          .where((String kind) => _blockKindNames.contains(kind))
+          .firstOrNull,
+      'inlineNodes': _styledInlineCount(block),
+      'styledRuns': probeStyledRunCount(runKinds),
+      'top': top,
+      'globalTop': top == null
+          ? null
+          : surface.pointToGlobal(Offset(0, top)).dy,
+      'globalBottom': bottom == null
+          ? null
+          : surface.pointToGlobal(Offset(0, bottom)).dy,
+    };
   }
 
   static bool _startsInside(int offset, MdRange range) =>
@@ -1328,24 +1532,13 @@ final class _Probe {
   }
 
   Future<ProbeReply> _errorsEndpoint(ProbeRequest request) async {
-    final NoteEditorViewState? editor = _findSurface()?.editor;
-    final List<DeltaDrop> drops =
-        editor?.debugInputDrops ?? const <DeltaDrop>[];
-    if (!identical(editor, _dropOwner)) {
-      _dropOwner = editor;
-      _dropBaseline = 0;
-    }
-    final int baseline = math.min(_dropBaseline, drops.length);
-    final Map<String, Object?> reply = <String, Object?>{
-      'errors': _errors,
-      'drops': <Object?>[
-        for (final DeltaDrop drop in drops.skip(baseline))
-          <String, Object?>{'reason': drop.reason.name},
-      ],
-    };
-    if (request.query['clear'] == '1') {
-      _errors = const <Map<String, Object?>>[];
-      _dropBaseline = drops.length;
+    _harvestDrops();
+    final bool scenario = request.query['scope'] == 'scenario';
+    final Map<String, Object?> reply = _errorLog.json(scenario: scenario);
+    if (request.query['reset'] == '1') {
+      _errorLog = _errorLog.resetScenario();
+    } else if (request.query['clear'] == '1') {
+      _errorLog = _errorLog.clearWindow();
     }
     return ProbeReply.json(reply);
   }
@@ -1373,6 +1566,7 @@ final class _Probe {
         PlatformDispatcher.instance.displays.firstOrNull;
     final Map<String, Object?> reply = <String, Object?>{
       'refreshHz': display?.refreshRate ?? 60,
+      'nowMicros': developer.Timeline.now,
       'keystrokes': <Object?>[
         for (final _TimedMessage keystroke in recorder.keystrokes)
           _keystrokeJson(
@@ -1389,6 +1583,7 @@ final class _Probe {
           <String, Object?>{
             'buildMs': frame.buildMicros / 1000,
             'rasterMs': frame.rasterMicros / 1000,
+            'buildStartMicros': frame.buildStart,
             'rasterFinishMicros': frame.rasterFinish,
           },
       ],
@@ -1410,12 +1605,12 @@ final class _Probe {
   static Map<String, Object?> _keystrokeJson(
     _TimedMessage keystroke,
     _Frame? frame,
-  ) => <String, Object?>{
-    'handlerMs': (keystroke.handlerMicros + (frame?.buildMicros ?? 0)) / 1000,
-    'buildMs': frame == null ? null : frame.buildMicros / 1000,
-    'rasterFinishMicros': frame?.rasterFinish,
-    'keyDownMicros': keystroke.keyDownMicros,
-  };
+  ) => probeKeystrokeJson(
+    handlerMicros: keystroke.handlerMicros,
+    buildMicros: frame?.buildMicros,
+    rasterFinishMicros: frame?.rasterFinish,
+    keyDownMicros: keystroke.keyDownMicros,
+  );
 
   Future<ProbeReply> _caretAudit(ProbeRequest request) async {
     final _Surface surface = _requireSurface();
@@ -1429,7 +1624,11 @@ final class _Probe {
     final MdTree tree = layout.inputs.tree;
     final double dpr = _view().devicePixelRatio;
     final List<Object?> samples = <Object?>[];
-    for (int offset = from; offset < to; offset++) {
+    for (final int offset in probeCaretAuditOffsets(
+      from: from,
+      to: to,
+      length: source.length,
+    )) {
       final Rect downstream = layout.caretRect(offset, TextAffinity.downstream);
       final Rect upstream = layout.caretRect(offset, TextAffinity.upstream);
       final List<TextAffinity> affinities = upstream == downstream
@@ -1536,12 +1735,17 @@ final class _Probe {
       }
     }
     final double em = NoteTypography.emOf(layout.inputs.textScaler);
+    final int firstSelected = glyphs.indexWhere(
+      (Object? glyph) =>
+          glyph is Map<String, Object?> && glyph['selected'] == true,
+    );
     return ProbeReply.json(<String, Object?>{
       'selection': <Object?>[
         for (final Rect box in layout.selectionBoxes(selection))
           ?_nullableRect(surface.toGlobal(box)),
       ],
       'glyphs': glyphs,
+      'firstSelected': firstSelected < 0 ? null : firstSelected,
       'photos': <Object?>[
         for (final PhotoRect photo in layout.photoRects)
           ?_nullableRect(surface.toGlobal(photo.rect)),
@@ -1809,7 +2013,14 @@ final class _Probe {
           : root.value.copyWith(scaler: double.parse(scaler));
       await _frames(2);
     }
-    return ProbeReply.json(<String, Object?>{'scaler': root.value.scaler});
+    final int? draftDelay = _int(request.query['draftReadDelayMs']);
+    if (draftDelay != null) {
+      _draftReadDelay = Duration(milliseconds: draftDelay);
+    }
+    return ProbeReply.json(<String, Object?>{
+      'scaler': root.value.scaler,
+      'draftReadDelayMs': _draftReadDelay.inMilliseconds,
+    });
   }
 
   void _attach() {

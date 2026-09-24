@@ -4,8 +4,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../integration_test/probe/composer_probe_main.dart'
+    show probeCaretAuditOffsets, probeStyledRunCount;
 import '../../../integration_test/probe/probe_server.dart';
 import '../../../integration_test/probe/probe_storage.dart';
+// ignore: avoid_relative_lib_imports
+import '../../../tool/probe/lib/gates.dart';
 
 const List<String> _h1Endpoints = <String>[
   'state',
@@ -135,6 +139,113 @@ void main() {
     );
   });
 
+  test('a keystroke reports its handler time apart from its build', () {
+    final Map<String, Object?> keystroke = probeKeystrokeJson(
+      handlerMicros: 500,
+      buildMicros: 2000,
+      rasterFinishMicros: 9000,
+      keyDownMicros: 100,
+    );
+    expect(keystroke['handlerMs'], 0.5);
+    expect(keystroke['buildMs'], 2.0);
+    final RowOutcome gp1 = evaluateResult(<String, Object?>{
+      'scenario': 'perf-keystroke',
+      'platform': 'macos',
+      'build': 'profile',
+      'commit': 'abc',
+      'samples': <Object?>[
+        <String, Object?>{
+          'row': 'GP1',
+          'kind': 'keystroke',
+          'note': 'c500-p0',
+          'timings': <String, Object?>{
+            'keystrokes': <Object?>[keystroke],
+          },
+        },
+      ],
+    }).singleWhere((RowOutcome outcome) => outcome.row == 'GP1');
+    expect(gp1.values['worstP95'], 2.5);
+    expect(gp1.verdict, GateVerdict.pass);
+    expect(
+      probeKeystrokeJson(
+        handlerMicros: 700,
+        buildMicros: null,
+        rasterFinishMicros: null,
+        keyDownMicros: null,
+      )['handlerMs'],
+      0.7,
+    );
+  });
+
+  test('the error log keeps a scenario scope that clearing does not wipe', () {
+    final Object first = Object();
+    final Object second = Object();
+    final ProbeErrorLog cleared = const ProbeErrorLog()
+        .recordError(<String, Object?>{'error': 'assertion'})
+        .observe(first, <String>['stale'])
+        .clearWindow();
+    expect(cleared.json(scenario: false), <String, Object?>{
+      'errors': const <Object?>[],
+      'drops': const <Object?>[],
+    });
+    expect(cleared.json(scenario: true)['errors'], hasLength(1));
+    expect(cleared.json(scenario: true)['drops'], <Object?>[
+      <String, Object?>{'reason': 'stale'},
+    ]);
+    final ProbeErrorLog later = cleared
+        .observe(first, <String>['stale', 'window'])
+        .observe(second, <String>['other']);
+    expect(later.json(scenario: true)['drops'], <Object?>[
+      <String, Object?>{'reason': 'stale'},
+      <String, Object?>{'reason': 'window'},
+      <String, Object?>{'reason': 'other'},
+    ]);
+    expect(later.json(scenario: false)['drops'], <Object?>[
+      <String, Object?>{'reason': 'window'},
+      <String, Object?>{'reason': 'other'},
+    ]);
+    expect(
+      later.observe(second, <String>['other']).json(scenario: true)['drops'],
+      hasLength(3),
+    );
+    final ProbeErrorLog reset = later.resetScenario();
+    expect(reset.json(scenario: true), <String, Object?>{
+      'errors': const <Object?>[],
+      'drops': const <Object?>[],
+    });
+    expect(
+      reset.observe(second, <String>['other']).json(scenario: true)['drops'],
+      isEmpty,
+    );
+  });
+
+  test('styled runs skip plain text runs and the audit reaches the end', () {
+    expect(
+      probeStyledRunCount(<String>[
+        'paragraph',
+        'text',
+        'text',
+        'softBreak',
+        'hardBreak',
+        'text',
+      ]),
+      0,
+    );
+    expect(
+      probeStyledRunCount(<String>['paragraph', 'text', 'strong', 'text']),
+      1,
+    );
+    expect(
+      probeCaretAuditOffsets(from: 4000, to: 4003, length: 4003).toList(),
+      <int>[4000, 4001, 4002, 4003],
+    );
+    expect(probeCaretAuditOffsets(from: 0, to: 3, length: 4003).toList(), <int>[
+      0,
+      1,
+      2,
+    ]);
+  });
+
   test('a throwing handler gives 500 with its message', () async {
     final ProbeServer probe = ProbeServer(
       _handlers(
@@ -168,7 +279,7 @@ void main() {
     );
     final HttpServer server = await _serve(probe);
     final HttpClient client = _client();
-    const String source = '# Café 日本 🌊\n\nA ==line==.';
+    const String source = '# Café 日本 \u{20BB7}\n\nA ==line==.';
     final HttpClientRequest post = await client.postUrl(
       Uri.parse('http://127.0.0.1:${server.port}/set?base=2&extent=4'),
     );
