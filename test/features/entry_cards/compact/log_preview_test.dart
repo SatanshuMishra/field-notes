@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
-import 'package:field_notes/features/notes/model/photo_placement.dart';
 
 String _words(int characters) {
   final StringBuffer buffer = StringBuffer();
@@ -65,7 +65,8 @@ void main() {
       const String reference = '7f3ac91b2d4e';
       final Entry entry = _textEntry(
         id: 'e3',
-        textContent: 'Hi.\n\n${photoLineFor(reference: reference)}',
+        textContent:
+            'Hi.\n\n${canonicalPhotoLine(reference, '', const MdPhotoPlacement())}',
       );
 
       final LogPreview preview = logPreviewOf(entry);
@@ -97,7 +98,7 @@ void main() {
       final Entry entry = _textEntry(
         id: 'e5',
         textContent:
-            'Hi.\n\n${photoLineFor(reference: reference, caption: caption)}',
+            'Hi.\n\n${canonicalPhotoLine(reference, caption, const MdPhotoPlacement())}',
       );
 
       final LogPreview preview = logPreviewOf(entry);
@@ -114,8 +115,9 @@ void main() {
       const String ref2 = '2b8e04d9c1a7';
       final Entry note = _textEntry(
         id: 'e6',
-        textContent: '$words\n\n${photoLineFor(reference: ref1)}\n\n'
-            '${photoLineFor(reference: ref2)}',
+        textContent:
+            '$words\n\n${canonicalPhotoLine(ref1, '', const MdPhotoPlacement())}'
+            '\n\n${canonicalPhotoLine(ref2, '', const MdPhotoPlacement())}',
       );
       final int at = _createdAt(hour: 9, minute: 0);
       final Entry video = Entry(

@@ -1,6 +1,7 @@
 import 'package:field_notes/domain/models/models.dart';
-import 'package:field_notes/domain/notes/notes.dart';
+import 'package:field_notes/domain/notes/note_plain_text.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
+import 'package:field_notes/features/note_engine/capabilities.dart';
 
 import 'today_date.dart';
 
@@ -60,9 +61,10 @@ String? firstTextPreview(List<Entry> entries) {
     if (entry.isDeleted || entry.type != EntryType.text) {
       continue;
     }
-    final String collapsed = plainTextOf(entry.textContent ?? '')
-        .replaceAll(_whitespaceRun, ' ')
-        .trim();
+    final String collapsed =
+        plainTextOf(entry.textContent ?? '', tables: tablesEnabled)
+            .replaceAll(_whitespaceRun, ' ')
+            .trim();
     if (collapsed.isEmpty) {
       continue;
     }

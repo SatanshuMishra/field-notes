@@ -1,5 +1,6 @@
 import 'package:field_notes/domain/models/models.dart';
-import 'package:field_notes/domain/notes/notes.dart';
+import 'package:field_notes/domain/notes/note_plain_text.dart';
+import 'package:field_notes/features/note_engine/capabilities.dart';
 
 class SearchDayView {
   const SearchDayView({
@@ -87,14 +88,15 @@ String _searchTextFor(Day day, List<Entry> entries) {
   for (final Entry entry in entries) {
     final String? text = entry.textContent;
     if (text != null && text.isNotEmpty) {
-      parts.add(plainTextOf(text));
+      parts.add(plainTextOf(text, tables: tablesEnabled));
     }
   }
   return parts.join('\n').toLowerCase();
 }
 
 String? _firstProjectedLine(String text) {
-  for (final String line in plainTextOf(text).split('\n')) {
+  for (final String line
+      in plainTextOf(text, tables: tablesEnabled).split('\n')) {
     final String trimmed = line.trim();
     if (trimmed.isNotEmpty) {
       return trimmed;
