@@ -10,6 +10,9 @@ import 'package:flutter/painting.dart';
 
 typedef ActiveLayout = NoteFlow Function(int activeLine, {int? activeCell});
 
+const int _lineFeed = 0x0A;
+const int _carriageReturn = 0x0D;
+
 TextPosition findVerticalTarget({
   required NoteFlow flow,
   required int position,
@@ -35,20 +38,42 @@ TextPosition findVerticalTarget({
     return TextPosition(offset: photo.sourceRange.start);
   }
   final LocatedLine line = target.line!;
-  final VisibleText visible = flow.inputs.visibleText;
-  final int sourceOffset = visible.map
-      .visibleToSource(line.line.visibleRange.start)
-      .downstream;
+  final LayoutInputs inputs = flow.inputs;
+  final VisibleText visible = inputs.visibleText;
+  final bool up = direction == VerticalMove.up;
+  final TextRange range = line.line.visibleRange;
+  final int sourceOffset = up
+      ? visible.map.visibleToSource(range.end).upstream
+      : visible.map.visibleToSource(range.start).downstream;
   final int sourceLine = _sourceLineOf(visible, sourceOffset);
   final int? column = line.fragment.tableColumn;
-  if (sourceLine == flow.inputs.activeLine && column == null) {
+  if (sourceLine == inputs.activeLine && column == null) {
     return NoteHitTester(flow: flow).positionInLine(line.line, goalX);
   }
   final NoteFlow active = layoutWithActive(sourceLine, activeCell: column);
+  final int anchor =
+      up && column == null && _endsSourceLine(visible.text, range.end)
+      ? _sourceLineEnd(inputs.source, sourceOffset)
+      : sourceOffset;
   final LocatedLine placed = CaretGeometry(
     flow: active,
-  ).locate(sourceOffset, TextAffinity.downstream);
+  ).locate(anchor, up ? TextAffinity.upstream : TextAffinity.downstream);
   return NoteHitTester(flow: active).positionInLine(placed.line, goalX);
+}
+
+bool _endsSourceLine(String visibleText, int visibleEnd) =>
+    visibleEnd >= visibleText.length ||
+    visibleText.codeUnitAt(visibleEnd) == _lineFeed;
+
+int _sourceLineEnd(String source, int sourceOffset) {
+  final int lineFeed = source.indexOf('\n', sourceOffset);
+  if (lineFeed < 0) {
+    return source.length;
+  }
+  return lineFeed > sourceOffset &&
+          source.codeUnitAt(lineFeed - 1) == _carriageReturn
+      ? lineFeed - 1
+      : lineFeed;
 }
 
 final class VerticalGoal {

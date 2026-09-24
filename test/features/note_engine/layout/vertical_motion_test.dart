@@ -537,6 +537,62 @@ void main() {
     expect(VerticalGoal.start(inputs, x: 251, position: 90), isNot(goal));
   });
 
+  test('up enters a line that wraps once active on its last visual line', () {
+    for (final int count in <int>[12, 13, 14]) {
+      final String words = <String>[
+        for (int i = 0; i < count; i++) i.isEven ? '**fog$i**' : 'word$i',
+      ].join(' ');
+      final String source = '$words\nBelow line here';
+      final LayoutInputs inputs = _inputs(source, activeLine: 1);
+      final List<VisualLine> quiet = _flowOf(
+        inputs,
+      ).rows.first.fragments.first.lines;
+      expect(quiet, hasLength(1), reason: '$count words');
+      final NoteFlow active = _activeFor(inputs)(0);
+      final List<VisualLine> shown = active.rows.first.fragments.first.lines;
+      expect(shown, hasLength(2), reason: '$count words');
+      final TextPosition result = _move(
+        inputs,
+        TextPosition(offset: source.indexOf('Below') + 2),
+        20,
+        VerticalMove.up,
+      );
+      expect(result.offset, lessThan(words.length + 1));
+      final VisualLine reached = CaretGeometry(
+        flow: active,
+      ).locate(result.offset, result.affinity).line;
+      expect(reached.top, closeTo(shown.last.top, 0.01), reason: '$count');
+    }
+
+    final String linked =
+        '${_harbours(6)} [a link](https://example.com/${'a' * 90})\nBelow';
+    final LayoutInputs inputs = _inputs(linked, activeLine: 1);
+    expect(_flowOf(inputs).rows.first.fragments.first.lines, hasLength(1));
+    final NoteFlow active = _activeFor(inputs)(0);
+    final List<VisualLine> shown = active.rows.first.fragments.first.lines;
+    expect(shown.length, greaterThan(1));
+    final String activeText = active.inputs.visibleText.text;
+    expect(
+      activeText.substring(
+        shown.last.visibleRange.start,
+        shown.last.visibleRange.end,
+      ),
+      isNot(contains('link')),
+    );
+    final TextPosition result = _move(
+      inputs,
+      TextPosition(offset: linked.indexOf('Below') + 2),
+      20,
+      VerticalMove.up,
+    );
+    expect(
+      CaretGeometry(
+        flow: active,
+      ).locate(result.offset, result.affinity).line.top,
+      closeTo(shown.last.top, 0.01),
+    );
+  });
+
   test('up is symmetric with down', () {
     final LayoutInputs inputs = _inputs(_floatFixture, activeLine: 1);
     final NoteFlow flow = _flowOf(inputs);
