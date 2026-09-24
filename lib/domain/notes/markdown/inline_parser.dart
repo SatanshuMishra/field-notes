@@ -498,7 +498,10 @@ final class _Scanner {
       }
       final MdDelimiterRun run = item.run;
       final List<_UsedDelimiter> parts = <_UsedDelimiter>[...?used[run.start]]
-        ..sort((a, b) => a.range.start.compareTo(b.range.start));
+        ..sort(
+          (_UsedDelimiter a, _UsedDelimiter b) =>
+              a.range.start.compareTo(b.range.start),
+        );
       int cursor = run.start;
       for (final _UsedDelimiter part in parts) {
         if (part.range.start > cursor) {
