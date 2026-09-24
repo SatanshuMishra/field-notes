@@ -151,6 +151,16 @@ LaidOutNote _layout(String source, {double width = 560, double scale = 1}) =>
       ),
     );
 
+double _runWidth(String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return width;
+}
+
 int _lineOf(String source, int offset) =>
     '\n'.allMatches(source.substring(0, offset)).length;
 
@@ -2058,10 +2068,24 @@ void main() {
       expect(body.color, TypographyTokens.noteBody.color, reason: why);
       expect(body.letterSpacing, isNull, reason: why);
       await _pumpComposer(tester);
-      final TextStyle style = NoteEditorDriver(tester).style;
-      expect(style.fontFamily, body.fontFamily, reason: why);
-      expect(style.fontSize, body.fontSize, reason: why);
-      expect(style.height, body.height, reason: why);
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      const String sample = 'a quiet morning';
+      await driver.enterText(sample);
+      final Size line = driver.firstLineSize;
+      final TextStyle theme = Theme.of(
+        tester.element(driver.find),
+      ).textTheme.bodyLarge!;
+      expect(line.width, closeTo(_runWidth(sample, body), 0.01), reason: why);
+      expect(
+        line.height,
+        closeTo(body.fontSize! * body.height!, 0.01),
+        reason: why,
+      );
+      expect(
+        line.width,
+        isNot(closeTo(_runWidth(sample, theme), 0.5)),
+        reason: why,
+      );
     });
 
     testWidgets('the mounted editor paints the styled span from the controller', (

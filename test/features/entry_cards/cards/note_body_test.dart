@@ -11,6 +11,7 @@ import 'package:field_notes/features/note_engine/render/render_note_view.dart'
 import 'package:field_notes/features/notes/render/note_photo_block.dart'
     show NoteMediaScope;
 
+import '../../../support/note_editor_driver.dart' show firstNoteLineSize;
 import '../../notes/support/notes_harness.dart' show FakeNoteMediaResolver;
 
 const Size _surface = Size(1200, 800);
@@ -60,6 +61,16 @@ Future<void> _pumpReader(
   await tester.pump();
 }
 
+double _runWidth(String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return width;
+}
+
 RenderNoteView _reader(WidgetTester tester) =>
     tester.renderObject<RenderNoteView>(
       find.descendant(
@@ -85,6 +96,33 @@ void main() {
       expect(
         reader.noteLayout.fragments.first.lineBox.rect.height,
         closeTo(16 * 1.6, 0.01),
+      );
+      const TextStyle body = TypographyTokens.noteBody;
+      final double width = firstNoteLineSize(reader).width;
+      expect(width, closeTo(_runWidth('a quiet morning', body), 0.01));
+      expect(
+        width,
+        isNot(
+          closeTo(
+            _runWidth(
+              'a quiet morning',
+              body.copyWith(fontFamily: TypographyTokens.sans),
+            ),
+            0.5,
+          ),
+        ),
+      );
+      expect(
+        width,
+        isNot(
+          closeTo(
+            _runWidth(
+              'a quiet morning',
+              body.copyWith(fontWeight: FontWeight.w500),
+            ),
+            0.5,
+          ),
+        ),
       );
     });
 

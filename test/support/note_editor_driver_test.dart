@@ -57,6 +57,16 @@ Future<void> _pumpPhotoNote(WidgetTester tester, String source) async {
   await tester.pump();
 }
 
+double _runWidth(String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return width;
+}
+
 void main() {
   testWidgets('the driver types into the composer and reads the source', (
     WidgetTester tester,
@@ -206,13 +216,34 @@ void main() {
   testWidgets('the body style is the note body type', (
     WidgetTester tester,
   ) async {
+    const String sample = 'a quiet morning';
+    const TextStyle body = TypographyTokens.noteBody;
     await _pumpComposer(tester);
-    final TextStyle style = NoteEditorDriver(tester).style;
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
 
-    expect(style.fontFamily, TypographyTokens.noteBody.fontFamily);
-    expect(style.fontSize, TypographyTokens.noteBody.fontSize);
-    expect(style.fontWeight, TypographyTokens.noteBody.fontWeight);
-    expect(style.height, TypographyTokens.noteBody.height);
+    await driver.enterText(sample);
+    final Size line = driver.firstLineSize;
+
+    expect(line.width, closeTo(_runWidth(sample, body), 0.01));
+    expect(line.height, closeTo(body.fontSize! * body.height!, 0.01));
+    expect(
+      line.width,
+      isNot(
+        closeTo(
+          _runWidth(sample, body.copyWith(fontFamily: TypographyTokens.sans)),
+          0.5,
+        ),
+      ),
+    );
+    expect(
+      line.width,
+      isNot(
+        closeTo(
+          _runWidth(sample, body.copyWith(fontWeight: FontWeight.w500)),
+          0.5,
+        ),
+      ),
+    );
   });
 
   testWidgets('the hint style shows only while the note is empty', (
@@ -222,10 +253,12 @@ void main() {
     final NoteEditorDriver driver = NoteEditorDriver(tester);
 
     expect(driver.visibleHintStyle, TypographyTokens.noteBodyPlaceholder);
+    expect(driver.paintedHint?.width, tester.getSize(driver.find).width);
 
     await driver.enterText('x');
 
     expect(driver.visibleHintStyle, isNull);
+    expect(driver.paintedHint, isNull);
   });
 
   testWidgets('typing without an input connection throws', (
