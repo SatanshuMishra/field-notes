@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/icons/format_icons.dart';
@@ -26,6 +27,7 @@ const Key formatListKey = ValueKey<String>('format-list');
 const Key formatQuoteKey = ValueKey<String>('format-quote');
 const Key formatLinkKey = ValueKey<String>('format-link');
 const Key formatUndoKey = ValueKey<String>('format-undo');
+const Key formatRedoKey = ValueKey<String>('format-redo');
 const Key formatNumberedKey = ValueKey<String>('format-numbered');
 const Key formatTaskKey = ValueKey<String>('format-task');
 const Key formatTableKey = ValueKey<String>('format-table');
@@ -48,7 +50,7 @@ const double _menuMinWidth = 160;
 
 typedef _Command = Transaction? Function(EditorState state);
 
-enum _BarGlyph { numbered, task, table, more }
+enum _BarGlyph { numbered, task, table, more, redo }
 
 class FormatBar extends StatelessWidget {
   const FormatBar({
@@ -78,6 +80,7 @@ class FormatBar extends StatelessWidget {
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  dragStartBehavior: DragStartBehavior.down,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
@@ -173,7 +176,24 @@ class FormatBar extends StatelessWidget {
                 ),
               ),
               ?trailing,
-              _undo(),
+              _historyButton(
+                formatUndoKey,
+                const FormatIcon(
+                  glyph: FormatGlyph.undo,
+                  color: Palette.ink,
+                  size: _glyphExtent,
+                ),
+                'Undo',
+                (UndoHistoryValue history) => history.canUndo,
+                undoController.undo,
+              ),
+              _historyButton(
+                formatRedoKey,
+                const _BarIcon(glyph: _BarGlyph.redo),
+                'Redo',
+                (UndoHistoryValue history) => history.canRedo,
+                undoController.redo,
+              ),
             ],
           ),
         ),
@@ -199,7 +219,13 @@ class FormatBar extends StatelessWidget {
     );
   }
 
-  Widget _undo() {
+  Widget _historyButton(
+    Key key,
+    Widget icon,
+    String label,
+    bool Function(UndoHistoryValue history) available,
+    VoidCallback onTap,
+  ) {
     return ValueListenableBuilder<UndoHistoryValue>(
       valueListenable: undoController,
       builder: (
@@ -208,14 +234,10 @@ class FormatBar extends StatelessWidget {
         Widget? child,
       ) {
         return _FormatButton(
-          key: formatUndoKey,
-          icon: const FormatIcon(
-            glyph: FormatGlyph.undo,
-            color: Palette.ink,
-            size: _glyphExtent,
-          ),
-          label: 'Undo',
-          onTap: history.canUndo ? undoController.undo : null,
+          key: key,
+          icon: icon,
+          label: label,
+          onTap: available(history) ? onTap : null,
         );
       },
     );
@@ -346,7 +368,10 @@ class _MoreFormatsState extends State<_MoreFormats> {
       Offset.zero & button.size,
     );
     return CustomSingleChildLayout(
-      delegate: _MenuLayout(anchor: anchor),
+      delegate: _MenuLayout(
+        anchor: anchor,
+        keyboardInset: MediaQuery.viewInsetsOf(overlayContext).bottom,
+      ),
       child: TextFieldTapRegion(
         child: TapRegion(
           groupId: _group,
@@ -405,9 +430,10 @@ class _MoreFormatsState extends State<_MoreFormats> {
 }
 
 class _MenuLayout extends SingleChildLayoutDelegate {
-  const _MenuLayout({required this.anchor});
+  const _MenuLayout({required this.anchor, required this.keyboardInset});
 
   final Rect anchor;
+  final double keyboardInset;
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
@@ -417,7 +443,8 @@ class _MenuLayout extends SingleChildLayoutDelegate {
   Offset getPositionForChild(Size size, Size childSize) {
     final double below = anchor.bottom + _menuGap;
     final double above = anchor.top - _menuGap - childSize.height;
-    final double top = below + childSize.height <= size.height || above < 0
+    final double room = size.height - keyboardInset;
+    final double top = below + childSize.height <= room || above < 0
         ? below
         : above;
     final double left = anchor.right - childSize.width;
@@ -428,7 +455,9 @@ class _MenuLayout extends SingleChildLayoutDelegate {
   }
 
   @override
-  bool shouldRelayout(_MenuLayout oldDelegate) => oldDelegate.anchor != anchor;
+  bool shouldRelayout(_MenuLayout oldDelegate) =>
+      oldDelegate.anchor != anchor ||
+      oldDelegate.keyboardInset != keyboardInset;
 }
 
 class _BarIcon extends StatelessWidget {
@@ -539,6 +568,18 @@ class _BarGlyphPainter extends CustomPainter {
       ..lineTo(9, 19)
       ..moveTo(15, 5)
       ..lineTo(15, 19),
+    _BarGlyph.redo => Path()
+      ..moveTo(16, 6.5)
+      ..lineTo(20.2, 10.8)
+      ..lineTo(16, 15)
+      ..moveTo(20.2, 10.8)
+      ..lineTo(9.5, 10.8)
+      ..arcToPoint(
+        const Offset(9.5, 19),
+        radius: const Radius.circular(4.1),
+        clockwise: false,
+      )
+      ..lineTo(14.5, 19),
     _BarGlyph.more => Path(),
   };
 
