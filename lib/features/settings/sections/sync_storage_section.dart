@@ -7,6 +7,10 @@ import 'package:flutter/widgets.dart';
 import '../sync/pairing_qr_placeholder.dart';
 import '../sync/sync_shell_options.dart';
 
+const String _serverUrlTitle = 'Server URL';
+const String _accessTokenTitle = 'Access token';
+const String _recoveryPassphraseTitle = 'Recovery passphrase';
+
 class SyncStorageSection extends StatefulWidget {
   const SyncStorageSection({super.key, required this.storageMode});
 
@@ -62,21 +66,23 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
           ),
         ),
         SettingsFieldRow(
-          label: 'Server URL',
+          label: _serverUrlTitle,
           description: 'Where your entries would sync.',
           control: SettingsTextField(
             controller: _serverUrl,
             hintText: 'https://journal.example.com',
             enabled: false,
+            semanticLabel: _serverUrlTitle,
           ),
         ),
         SettingsFieldRow(
-          label: 'Access token',
+          label: _accessTokenTitle,
           description: 'Authorises this device with your server.',
           control: SettingsSecretField(
             controller: _accessToken,
             hintText: 'Paste your access token',
             enabled: false,
+            semanticLabel: _accessTokenTitle,
           ),
         ),
         SettingsFieldRow(
@@ -96,12 +102,13 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
           ),
         ),
         SettingsFieldRow(
-          label: 'Recovery passphrase',
+          label: _recoveryPassphraseTitle,
           description: 'Would unlock your encrypted journal elsewhere.',
           control: SettingsSecretField(
             controller: _recoveryPassphrase,
             hintText: 'Enter a recovery passphrase',
             enabled: false,
+            semanticLabel: _recoveryPassphraseTitle,
           ),
         ),
         const SettingsFieldRow(
