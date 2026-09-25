@@ -12,6 +12,7 @@ const String _doubledTarget = 'doubled-target';
 const String _repeatedText = 'repeated-text';
 const String _missingState = 'missing-state';
 const String _smallTarget = 'small-target';
+const String _inertButton = 'inert-button';
 
 const Map<String, String> a11yRuleDescriptions = <String, String>{
   _unlabelledTap:
@@ -27,14 +28,18 @@ const Map<String, String> a11yRuleDescriptions = <String, String>{
   _missingState:
       'A control listed as stateful has no state of its listed kind.',
   _smallTarget:
-      'A tappable node is narrower or shorter than 48 logical pixels.',
+      'A tappable node shown whole, not clipped, is narrower or shorter than '
+      '48 logical pixels.',
+  _inertButton:
+      'A node with the button flag that is not disabled has no tap and no '
+      'long-press action.',
 };
 
 const double _minimumTarget = 48;
 
 const double _doubledTolerance = 2;
 
-const double _minimumGapToBoundary = 0.001;
+const double _clipTolerance = 0.001;
 
 final RegExp _lineBreak = RegExp(r'\r\n|\r|\n');
 
@@ -92,6 +97,7 @@ class _Visited {
     required this.data,
     required this.view,
     required this.rect,
+    required this.whole,
     required this.anchor,
   });
 
@@ -100,6 +106,7 @@ class _Visited {
   final SemanticsData data;
   final RenderView view;
   final Rect rect;
+  final Rect? whole;
   final String anchor;
 
   String get label => data.label;
@@ -109,6 +116,13 @@ class _Visited {
   bool get tappable =>
       data.hasAction(ui.SemanticsAction.tap) ||
       data.hasAction(ui.SemanticsAction.longPress);
+
+  bool get clipped => switch (whole) {
+    final Rect whole =>
+      rect.width < whole.width - _clipTolerance ||
+          rect.height < whole.height - _clipTolerance,
+    null => false,
+  };
 
   bool get hasRole {
     final ui.SemanticsFlags flags = data.flagsCollection;
@@ -175,20 +189,54 @@ bool _judged(SemanticsNode node) =>
     !node.isInvisible &&
     !node.flagsCollection.isHidden;
 
-Rect _logicalRect(SemanticsNode node, double devicePixelRatio) {
-  final Rect physical = _selfAndAncestors(node).fold(
+Iterable<RenderObject> _renderDepthFirst(RenderObject object) sync* {
+  yield object;
+  final List<RenderObject> children = <RenderObject>[];
+  object.visitChildren(children.add);
+  for (final RenderObject child in children) {
+    yield* _renderDepthFirst(child);
+  }
+}
+
+Rect _logical(Rect physical, double devicePixelRatio) => Rect.fromLTRB(
+  physical.left / devicePixelRatio,
+  physical.top / devicePixelRatio,
+  physical.right / devicePixelRatio,
+  physical.bottom / devicePixelRatio,
+);
+
+Rect _logicalRect(SemanticsNode node, double devicePixelRatio) => _logical(
+  _selfAndAncestors(node).fold(
     node.rect,
     (Rect rect, SemanticsNode current) => switch (current.transform) {
       final Matrix4 transform => MatrixUtils.transformRect(transform, rect),
       null => rect,
     },
-  );
-  return Rect.fromLTRB(
-    physical.left / devicePixelRatio,
-    physical.top / devicePixelRatio,
-    physical.right / devicePixelRatio,
-    physical.bottom / devicePixelRatio,
-  );
+  ),
+  devicePixelRatio,
+);
+
+Map<SemanticsNode, Rect> _wholeRects(Iterable<RenderView> views) {
+  final Map<SemanticsNode, Rect> whole = <SemanticsNode, Rect>{};
+  for (final RenderView view in views) {
+    for (final RenderObject owner in _renderDepthFirst(view)) {
+      if (owner.debugSemantics case final SemanticsNode node) {
+        final Rect bounds = _logical(
+          MatrixUtils.transformRect(
+            owner.getTransformTo(view),
+            owner.semanticBounds,
+          ),
+          view.flutterView.devicePixelRatio,
+        );
+        whole.update(
+          node,
+          (Rect other) => other.expandToInclude(bounds),
+          ifAbsent: () => bounds,
+        );
+      }
+    }
+  }
+  return Map<SemanticsNode, Rect>.unmodifiable(whole);
 }
 
 String _anchorOf(SemanticsNode node) =>
@@ -200,6 +248,9 @@ String _anchorOf(SemanticsNode node) =>
     '';
 
 List<_Visited> _judgedInWalkOrder(WidgetTester tester) {
+  final Map<SemanticsNode, Rect> whole = _wholeRects(
+    tester.binding.renderViews,
+  );
   final List<(RenderView, SemanticsNode)> walk = <(RenderView, SemanticsNode)>[
     for (final RenderView view in tester.binding.renderViews)
       for (final SemanticsNode node in _depthFirst(_rootOf(view))) (view, node),
@@ -214,33 +265,10 @@ List<_Visited> _judgedInWalkOrder(WidgetTester tester) {
           data: node.getSemanticsData(),
           view: view,
           rect: _logicalRect(node, view.flutterView.devicePixelRatio),
+          whole: whole[node],
           anchor: _anchorOf(node),
         ),
   ];
-}
-
-bool _isAtBoundary(Rect child, Rect parent) =>
-    !(child.left - parent.left > _minimumGapToBoundary &&
-        parent.right - child.right > _minimumGapToBoundary &&
-        child.top - parent.top > _minimumGapToBoundary &&
-        parent.bottom - child.bottom > _minimumGapToBoundary);
-
-bool _partlyOutside(_Visited visited) {
-  Rect paintBounds = visited.node.rect;
-  for (final SemanticsNode current in _selfAndAncestors(visited.node)) {
-    final Matrix4? transform = current.transform;
-    if (transform != null) {
-      paintBounds = MatrixUtils.transformRect(transform, paintBounds);
-    }
-    if (current.flagsCollection.hasImplicitScrolling &&
-        _isAtBoundary(paintBounds, current.rect)) {
-      return true;
-    }
-  }
-  return _isAtBoundary(
-    paintBounds,
-    Offset.zero & visited.view.flutterView.physicalSize,
-  );
 }
 
 bool _unlabelled(_Visited visited) =>
@@ -251,6 +279,11 @@ bool _unlabelled(_Visited visited) =>
 
 bool _roleless(_Visited visited) => visited.tappable && !visited.hasRole;
 
+bool _inert(_Visited visited) =>
+    visited.data.flagsCollection.isButton &&
+    visited.data.flagsCollection.isEnabled != ui.Tristate.isFalse &&
+    !visited.tappable;
+
 bool _repeats(_Visited visited) {
   final List<String> segments = _segments(visited.label);
   return segments.toSet().length < segments.length;
@@ -260,7 +293,7 @@ bool _small(_Visited visited) =>
     visited.tappable &&
     !visited.data.flagsCollection.isHidden &&
     !visited.data.flagsCollection.isLink &&
-    !_partlyOutside(visited) &&
+    !visited.clipped &&
     (visited.rect.width < _minimumTarget - precisionErrorTolerance ||
         visited.rect.height < _minimumTarget - precisionErrorTolerance);
 
@@ -316,16 +349,20 @@ Iterable<(int, A11yStateKind)> _missingByFinder(
       (visited.index, kind),
 ];
 
+List<_Visited> _labelledAs(List<_Visited> judged, String label) {
+  final String wanted = _oneLine(label);
+  return <_Visited>[
+    for (final _Visited visited in judged)
+      if (wanted.isNotEmpty && _oneLine(visited.label) == wanted) visited,
+  ];
+}
+
 Iterable<(int, A11yStateKind)> _missingByLabel(
   List<_Visited> judged,
   String label,
   A11yStateKind kind,
 ) {
-  final String wanted = _oneLine(label);
-  final List<_Visited> candidates = <_Visited>[
-    for (final _Visited visited in judged)
-      if (wanted.isNotEmpty && _oneLine(visited.label) == wanted) visited,
-  ];
+  final List<_Visited> candidates = _labelledAs(judged, label);
   return candidates.isEmpty ||
           candidates.any((_Visited visited) => visited.hasState(kind))
       ? const <(int, A11yStateKind)>[]
@@ -357,6 +394,33 @@ Set<(int, A11yStateKind)> _missingStates(
         _ => const <(int, A11yStateKind)>[],
       },
   };
+}
+
+String? _statefulGap(List<_Visited> judged, A11yStatefulControl control) =>
+    switch (control) {
+      A11yStatefulControl(:final Finder finder?)
+          when finder.evaluate().isEmpty =>
+        'stateful ${control.kind.name} control matched no '
+            '${finder.describeMatch(Plurality.many)}',
+      A11yStatefulControl(:final String label?)
+          when _labelledAs(judged, label).isEmpty =>
+        'stateful ${control.kind.name} control matched no node labelled '
+            '"${_oneLine(label)}"',
+      _ => null,
+    };
+
+List<String> a11yStatefulGaps(
+  WidgetTester tester,
+  List<A11yStatefulControl> stateful,
+) {
+  if (stateful.isEmpty) {
+    return const <String>[];
+  }
+  final List<_Visited> judged = _judgedInWalkOrder(tester);
+  return <String>[
+    for (final A11yStatefulControl control in stateful)
+      if (_statefulGap(judged, control) case final String gap) gap,
+  ];
 }
 
 List<A11yFinding> _numbered(List<A11yFinding> findings) {
@@ -394,6 +458,7 @@ List<A11yFinding> a11yFindings(
         if (missingStates.contains((visited.index, kind)))
           visited.finding(_missingState, state),
       if (_small(visited)) visited.finding(_smallTarget, state),
+      if (_inert(visited)) visited.finding(_inertButton, state),
     ],
   ]);
 }

@@ -72,12 +72,15 @@ Future<A11yStateResult> runA11yState(
     } catch (error) {
       return A11yNotLoaded('${state.id} did not load: pumping threw $error');
     }
-    final List<String> gaps = state.proof.isEmpty
-        ? const <String>['it names no key widget']
-        : <String>[
-            for (final A11yProof proof in state.proof)
-              if (_proofGap(proof) case final String gap) gap,
-          ];
+    if (tester.takeException() case final Object error) {
+      return A11yNotLoaded('${state.id} did not load: pumping threw $error');
+    }
+    final List<String> gaps = <String>[
+      if (state.proof.isEmpty) 'it names no key widget',
+      for (final A11yProof proof in state.proof)
+        if (_proofGap(proof) case final String gap) gap,
+      ...a11yStatefulGaps(tester, state.stateful),
+    ];
     if (gaps.isNotEmpty) {
       return A11yNotLoaded('${state.id} did not load: ${gaps.join('; ')}');
     }
