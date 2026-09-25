@@ -195,16 +195,17 @@ final class _EditorCommands implements CommandRegistry {
   static NoteCommand _photoFirst(
     PhotoKeyResult? Function(EditorState state) photoKey,
     NoteCommand? inner,
-  ) => (EditorState state) => switch (photoKey(state)) {
-    PhotoKeySelect(:final NoteSelection selection) => Transaction(
-      changes: ChangeSet.empty(state.source.length),
-      selection: selection,
-      event: TransactionEvent.inputDelete,
-      addToHistory: false,
-    ),
-    PhotoKeyEdit(:final Transaction transaction) => transaction,
-    null => inner?.call(state),
-  };
+  ) =>
+      (EditorState state) => switch (photoKey(state)) {
+        PhotoKeySelect(:final NoteSelection selection) => Transaction(
+          changes: ChangeSet.empty(state.source.length),
+          selection: selection,
+          event: TransactionEvent.inputDelete,
+          addToHistory: false,
+        ),
+        PhotoKeyEdit(:final Transaction transaction) => transaction,
+        null => inner?.call(state),
+      };
 }
 
 class NoteEditorViewState extends State<NoteEditorView>
@@ -214,9 +215,7 @@ class NoteEditorViewState extends State<NoteEditorView>
   final GlobalKey _stackKey = GlobalKey();
   final GlobalKey _keyScopeKey = GlobalKey();
   final NoteLayoutEngine _engine = NoteLayoutEngine();
-  final FocusNode _toolbarFocusNode = FocusNode(
-    debugLabel: 'NotePhotoToolbar',
-  );
+  final FocusNode _toolbarFocusNode = FocusNode(debugLabel: 'NotePhotoToolbar');
   final ValueNotifier<int> _geometryRevision = ValueNotifier<int>(0);
   final CommandRegistry _commands = const _EditorCommands(
     NoteCommandRegistry(tablesEnabled: tablesEnabled),
@@ -285,8 +284,7 @@ class NoteEditorViewState extends State<NoteEditorView>
   EditorState get _state => widget.controller.state;
 
   RenderNoteView? get _renderView {
-    final RenderObject? object = _renderKey.currentContext
-        ?.findRenderObject();
+    final RenderObject? object = _renderKey.currentContext?.findRenderObject();
     return object is RenderNoteView && object.attached ? object : null;
   }
 
@@ -343,8 +341,7 @@ class NoteEditorViewState extends State<NoteEditorView>
       onCopy: (SelectionChangedCause cause) =>
           unawaited(_clipboard.copySelection(cause)),
       onPaste: _paste,
-      onSelectAll: (SelectionChangedCause cause) =>
-          _clipboard.selectAll(cause),
+      onSelectAll: (SelectionChangedCause cause) => _clipboard.selectAll(cause),
       onBringIntoView: (int _) => _scheduleReveal(),
     );
     _clipboard = NoteClipboardActions(
@@ -744,10 +741,7 @@ class NoteEditorViewState extends State<NoteEditorView>
     final LaidOutNote laidOut = _engine.layout(inputs);
     _layout = laidOut;
     if (previous != null &&
-        (!mapEquals(
-              previous.inputs.mediaDimensions,
-              inputs.mediaDimensions,
-            ) ||
+        (!mapEquals(previous.inputs.mediaDimensions, inputs.mediaDimensions) ||
             !setEquals(
               previous.inputs.unavailableMedia,
               inputs.unavailableMedia,
@@ -811,6 +805,11 @@ class NoteEditorViewState extends State<NoteEditorView>
     if (_removalToastArmed) {
       _removalToastArmed = false;
       dismissTransientToast();
+    }
+    if (_overlay.toolbarShown &&
+        (!transaction.changes.isEmpty ||
+            (state.selection.isCollapsed && !_lastSelection.isCollapsed))) {
+      _overlay.hideToolbar();
     }
     if (state.selection != _lastSelection) {
       _lastSelection = state.selection;
@@ -894,15 +893,14 @@ class NoteEditorViewState extends State<NoteEditorView>
     }
   }
 
-  static bool _recallsKeyboard(SelectionChangedCause? cause) =>
-      switch (cause) {
-        SelectionChangedCause.tap ||
-        SelectionChangedCause.doubleTap ||
-        SelectionChangedCause.longPress ||
-        SelectionChangedCause.forcePress ||
-        SelectionChangedCause.drag => true,
-        _ => false,
-      };
+  static bool _recallsKeyboard(SelectionChangedCause? cause) => switch (cause) {
+    SelectionChangedCause.tap ||
+    SelectionChangedCause.doubleTap ||
+    SelectionChangedCause.longPress ||
+    SelectionChangedCause.forcePress ||
+    SelectionChangedCause.drag => true,
+    _ => false,
+  };
 
   void _handleGestureSelection(
     NoteSelection selection,
@@ -1000,9 +998,7 @@ class NoteEditorViewState extends State<NoteEditorView>
       return;
     }
     if (tableAtCaret(_controller.state) != null) {
-      final ClipboardData? data = await Clipboard.getData(
-        Clipboard.kTextPlain,
-      );
+      final ClipboardData? data = await Clipboard.getData(Clipboard.kTextPlain);
       final String? text = data?.text;
       if (!mounted || text == null || text.isEmpty) {
         return;
@@ -1024,10 +1020,18 @@ class NoteEditorViewState extends State<NoteEditorView>
         commitComposition();
         _controller.dispatch(result.transaction);
         _scheduleReveal();
-        _showToast(photoAddedToastMessage, lifetime: photoAddedToastLifetime);
+        _showToast(_photoAddedToast(), lifetime: photoAddedToastLifetime);
       case PhotoImportFailed(:final String message):
         _showToast(message, glyph: IconStickerGlyph.close);
     }
+  }
+
+  String _photoAddedToast() {
+    final double? column = _lastColumn;
+    final TextScaler? scaler = _lastScaler;
+    return column == null || scaler == null
+        ? photoAddedToastMessage
+        : photoAddedToastFor(columnWidth: column, em: scaler.scale(_emBase));
   }
 
   void _showToast(
@@ -1342,7 +1346,9 @@ class NoteEditorViewState extends State<NoteEditorView>
   Transaction? _deletion(EditorState state, {required bool forward}) =>
       _commands
           .commandFor(
-            forward ? NoteCommandId.deleteForward : NoteCommandId.deleteBackward,
+            forward
+                ? NoteCommandId.deleteForward
+                : NoteCommandId.deleteBackward,
           )
           ?.call(state) ??
       _graphemeDeletion(state, forward: forward);
@@ -1406,8 +1412,7 @@ class NoteEditorViewState extends State<NoteEditorView>
     if (offset >= text.length) {
       return text.length;
     }
-    final CharacterRange range = CharacterRange.at(text, offset)
-      ..expandNext();
+    final CharacterRange range = CharacterRange.at(text, offset)..expandNext();
     return range.stringBeforeLength + range.current.length;
   }
 
@@ -1415,8 +1420,7 @@ class NoteEditorViewState extends State<NoteEditorView>
     if (offset <= 0) {
       return 0;
     }
-    final CharacterRange range = CharacterRange.at(text, offset)
-      ..expandBack();
+    final CharacterRange range = CharacterRange.at(text, offset)..expandBack();
     return range.stringBeforeLength;
   }
 
@@ -1432,16 +1436,12 @@ class NoteEditorViewState extends State<NoteEditorView>
   }
 
   List<NoteViewDecoration> _decorations() {
-    final List<SpellMark> marks =
-        _spellChecker?.marks ?? const <SpellMark>[];
+    final List<SpellMark> marks = _spellChecker?.marks ?? const <SpellMark>[];
     final PhotoDropTarget? dragTarget = _drag.session?.target;
     final PhotoDropTarget? hoverTarget = _pasteDrop?.hoverTarget;
     return List<NoteViewDecoration>.unmodifiable(<NoteViewDecoration>[
       if (marks.isNotEmpty)
-        SpellUnderlineDecoration(
-          marks: marks,
-          platform: defaultTargetPlatform,
-        ),
+        SpellUnderlineDecoration(marks: marks, platform: defaultTargetPlatform),
       if (dragTarget != null)
         PhotoInsertionLineDecoration(dragTarget.y)
       else if (hoverTarget != null)
@@ -1540,8 +1540,7 @@ class NoteEditorViewState extends State<NoteEditorView>
                 onSelectionChanged: _handleGestureSelection,
                 onDragActiveChanged: _handleGestureDrag,
                 onToggleCheckbox: _toggleCheckbox,
-                onRequestKeyboard: () =>
-                    _client.showKeyboard(widget.focusNode),
+                onRequestKeyboard: () => _client.showKeyboard(widget.focusNode),
                 child: NoteInputCompositionCallback(
                   client: _client,
                   child: NoteView(
@@ -1788,10 +1787,7 @@ class NoteEditorViewState extends State<NoteEditorView>
     final LaidOutNote? layout = _currentLayout;
     final RenderNoteView? view = _renderView;
     final TextRange? selected = _selectedPhoto;
-    if (builder == null ||
-        layout == null ||
-        view == null ||
-        selected == null) {
+    if (builder == null || layout == null || view == null || selected == null) {
       return null;
     }
     final PhotoRect? rect = _photoRectFor(layout, selected.start, selected.end);
@@ -2100,9 +2096,8 @@ final class _EditorViewDelegate implements NoteViewDelegate {
   );
 
   @override
-  void copySelection() => unawaited(
-    _view._clipboard.copySelection(SelectionChangedCause.keyboard),
-  );
+  void copySelection() =>
+      unawaited(_view._clipboard.copySelection(SelectionChangedCause.keyboard));
 
   @override
   void cutSelection() =>

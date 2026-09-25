@@ -12,6 +12,13 @@ Transaction? toggleInlineFormat(EditorState state, InlineFormat format) {
   final NoteSelection selection = state.selection;
   final MdTree tree = state.tree;
 
+  final int? stepped = _stepOverClosingMarker(tree, format, selection);
+  if (stepped != null) {
+    return _transaction(
+      ChangeSet.empty(source.length),
+      NoteSelection.collapsed(stepped),
+    );
+  }
   final MdInline? node = _innermostNode(tree, format, selection);
   if (node != null) {
     return _removeMarkers(state, node);
@@ -150,6 +157,42 @@ MdInline? _innermostNode(
     }
   }
   return found;
+}
+
+int? _stepOverClosingMarker(
+  MdTree tree,
+  InlineFormat format,
+  NoteSelection selection,
+) {
+  if (format == InlineFormat.link || !selection.isCollapsed) {
+    return null;
+  }
+  final MdInlineKind kind = _kindOf(format);
+  final int caret = selection.start;
+  MdInline? exiting;
+  MdInline? entering;
+  for (final MdInline inline in _inlinesAround(tree, caret, caret)) {
+    if (inline.kind != kind ||
+        inline.markerRanges.length < 2 ||
+        inline.contentRange.length == 0) {
+      continue;
+    }
+    final MdRange closing = inline.markerRanges.last;
+    if (closing.start == caret &&
+        (exiting == null ||
+            inline.sourceRange.length < exiting.sourceRange.length)) {
+      exiting = inline;
+    }
+    if (closing.end == caret &&
+        (entering == null ||
+            inline.sourceRange.length < entering.sourceRange.length)) {
+      entering = inline;
+    }
+  }
+  if (exiting != null) {
+    return exiting.markerRanges.last.end;
+  }
+  return entering?.markerRanges.last.start;
 }
 
 bool _isStrictlyInsideCodeSpan(MdTree tree, NoteSelection selection) {
