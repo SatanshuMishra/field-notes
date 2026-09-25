@@ -13,6 +13,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/task_toggle.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show isTextInputFocused;
 import 'package:field_notes/features/notes/notes.dart';
@@ -430,7 +431,15 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       case EntryType.text:
         return NoteMediaScope(
           resolver: resolver,
-          child: NoteBody(text: entry.textContent ?? ''),
+          child: NoteBody(
+            text: entry.textContent ?? '',
+            onToggleTask: (int boxOffset) => toggleTaskWithUndo(
+              context,
+              entry: entry,
+              date: widget.date,
+              boxOffset: boxOffset,
+            ),
+          ),
         );
       case EntryType.voice:
         return VoiceBody(

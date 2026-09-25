@@ -8,6 +8,7 @@ import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/task_toggle.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/widgets.dart';
@@ -141,6 +142,14 @@ class TodayEntryTile extends ConsumerWidget {
       onOpen: () => _open(context),
       onEdit: entry.type == EntryType.text ? () => _edit(context) : null,
       onDelete: () => _delete(context, ref),
+      onToggleTask: entry.type == EntryType.text
+          ? (int boxOffset) => toggleTaskWithUndo(
+              context,
+              entry: entry,
+              date: date,
+              boxOffset: boxOffset,
+            )
+          : null,
     );
   }
 
