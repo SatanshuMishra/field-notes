@@ -44,12 +44,15 @@ class ExportManifest {
       };
 }
 
+DateTime _exportedAtToLocal(int ms) => DateTime.fromMillisecondsSinceEpoch(ms);
+
 class ExportBundle {
   const ExportBundle({
     required this.manifest,
     required this.journalJson,
     required this.mediaFiles,
     this.skippedMediaIds = const <String>[],
+    this.toLocal = _exportedAtToLocal,
   });
 
   static const String manifestFileName = 'manifest.json';
@@ -59,12 +62,10 @@ class ExportBundle {
   final String journalJson;
   final Map<String, List<int>> mediaFiles;
   final List<String> skippedMediaIds;
+  final DateTime Function(int ms) toLocal;
 
   String get suggestedFileName {
-    final at = DateTime.fromMillisecondsSinceEpoch(
-      manifest.exportedAt,
-      isUtc: true,
-    );
+    final at = toLocal(manifest.exportedAt);
     String two(int v) => v.toString().padLeft(2, '0');
     final stamp = '${at.year}${two(at.month)}${two(at.day)}'
         '-${two(at.hour)}${two(at.minute)}${two(at.second)}';
