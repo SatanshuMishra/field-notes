@@ -67,7 +67,11 @@ class _SearchResultsList extends ConsumerWidget {
         final SearchDayView view = results[index];
         return SearchDayTile(
           view: view,
-          onTap: () => showDayDetail(context, date: view.date),
+          onTap: () => showDayDetail(
+            context,
+            date: view.date,
+            focusEntryId: view.matchedEntryId,
+          ),
         );
       },
     );

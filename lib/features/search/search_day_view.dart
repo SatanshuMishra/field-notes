@@ -1,6 +1,25 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/note_plain_text.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
+import 'package:flutter/foundation.dart';
+
+class SearchEntryText {
+  const SearchEntryText({required this.entryId, required this.plainText});
+
+  final String entryId;
+  final String plainText;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SearchEntryText &&
+          runtimeType == other.runtimeType &&
+          entryId == other.entryId &&
+          plainText == other.plainText;
+
+  @override
+  int get hashCode => Object.hash(entryId, plainText);
+}
 
 class SearchDayView {
   const SearchDayView({
@@ -9,6 +28,8 @@ class SearchDayView {
     required this.entryCount,
     required this.preview,
     required this.searchText,
+    this.entryTexts = const <SearchEntryText>[],
+    this.matchedEntryId,
   });
 
   final String date;
@@ -16,6 +37,23 @@ class SearchDayView {
   final int entryCount;
   final String preview;
   final String searchText;
+  final List<SearchEntryText> entryTexts;
+  final String? matchedEntryId;
+
+  SearchDayView matching({
+    required String entryId,
+    required String preview,
+  }) {
+    return SearchDayView(
+      date: date,
+      mood: mood,
+      entryCount: entryCount,
+      preview: preview,
+      searchText: searchText,
+      entryTexts: entryTexts,
+      matchedEntryId: entryId,
+    );
+  }
 
   @override
   bool operator ==(Object other) =>
@@ -26,16 +64,25 @@ class SearchDayView {
           mood == other.mood &&
           entryCount == other.entryCount &&
           preview == other.preview &&
-          searchText == other.searchText;
+          searchText == other.searchText &&
+          listEquals(entryTexts, other.entryTexts) &&
+          matchedEntryId == other.matchedEntryId;
 
   @override
-  int get hashCode =>
-      Object.hash(date, mood, entryCount, preview, searchText);
+  int get hashCode => Object.hash(
+        date,
+        mood,
+        entryCount,
+        preview,
+        searchText,
+        Object.hashAll(entryTexts),
+        matchedEntryId,
+      );
 
   @override
   String toString() =>
       'SearchDayView(date: $date, mood: $mood, entryCount: $entryCount, '
-      'preview: $preview)';
+      'preview: $preview, matchedEntryId: $matchedEntryId)';
 }
 
 List<SearchDayView> buildSearchDayViews(List<Day> days, List<Entry> entries) {
@@ -49,13 +96,15 @@ List<SearchDayView> buildSearchDayViews(List<Day> days, List<Entry> entries) {
     final List<Entry> dayEntries =
         List<Entry>.of(byDayId[day.id] ?? const <Entry>[])
           ..sort((Entry a, Entry b) => a.createdAt.compareTo(b.createdAt));
+    final List<SearchEntryText> entryTexts = _entryTextsFor(dayEntries);
     views.add(
       SearchDayView(
         date: day.date,
         mood: day.mood,
         entryCount: dayEntries.length,
         preview: _previewFor(dayEntries),
-        searchText: _searchTextFor(day, dayEntries),
+        searchText: _searchTextFor(day, entryTexts),
+        entryTexts: entryTexts,
       ),
     );
   }
@@ -79,19 +128,24 @@ String _previewFor(List<Entry> entries) {
   return _typeLabel(entries.first.type);
 }
 
-String _searchTextFor(Day day, List<Entry> entries) {
-  final List<String> parts = <String>[day.date];
+String _searchTextFor(Day day, List<SearchEntryText> entryTexts) {
   final Mood? mood = day.mood;
-  if (mood != null) {
-    parts.add(mood.label);
-  }
-  for (final Entry entry in entries) {
-    final String? text = entry.textContent;
-    if (text != null && text.isNotEmpty) {
-      parts.add(plainTextOf(text, tables: tablesEnabled));
-    }
-  }
-  return parts.join('\n').toLowerCase();
+  return <String>[
+    day.date,
+    if (mood != null) mood.label,
+    for (final SearchEntryText entry in entryTexts) entry.plainText,
+  ].join('\n').toLowerCase();
+}
+
+List<SearchEntryText> _entryTextsFor(List<Entry> entries) {
+  return List<SearchEntryText>.unmodifiable(<SearchEntryText>[
+    for (final Entry entry in entries)
+      if (entry.textContent case final String text when text.isNotEmpty)
+        SearchEntryText(
+          entryId: entry.id,
+          plainText: plainTextOf(text, tables: tablesEnabled),
+        ),
+  ]);
 }
 
 String? _firstProjectedLine(String text) {
