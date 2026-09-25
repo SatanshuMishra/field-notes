@@ -141,7 +141,7 @@ LogPreview _textPreview(Entry entry, String heading) {
   } else {
     final int segmentBoundary = significant.isEmpty
         ? fullText.length
-        : _collapseWhitespace(significant.first.text).length;
+        : _collapseWhitespace(_leadSpanOf(significant.first)).length;
     final int? sentenceEnd = _firstSentenceEnd(fullText);
     final int leadEnd = sentenceEnd == null
         ? segmentBoundary
@@ -173,6 +173,15 @@ LogPreview _textPreview(Entry entry, String heading) {
     openLabel: 'Read',
     heading: heading,
   );
+}
+
+String _leadSpanOf(NotePlainSegment segment) {
+  if (segment.kind != NotePlainKind.paragraph) {
+    return segment.text;
+  }
+  final String text = segment.text.trimLeft();
+  final int lineBreak = text.indexOf('\n');
+  return lineBreak == -1 ? text : text.substring(0, lineBreak);
 }
 
 String _collapseWhitespace(String text) =>
