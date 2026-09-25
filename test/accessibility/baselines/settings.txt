@@ -1,0 +1,31 @@
+missing-role | b1-settings | 20:30 | Reminders & sound
+missing-role | b1-settings | Sunday | Journal
+missing-role | b2-settings-spell-unavailable | 20:30 | Reminders & sound
+missing-role | b2-settings-spell-unavailable | Sunday | Journal
+missing-role | b3-settings-notice | 20:30 | Reminders & sound
+missing-role | b3-settings-notice | Sunday | Journal
+missing-role | b4-select-open | Dismiss menu | <root>
+missing-role | b5-delete-all-dialog | Dismiss | <root>
+missing-state | b1-settings | On this device / Sync to server | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+missing-state | b2-settings-spell-unavailable | On this device / Sync to server | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+missing-state | b3-settings-notice | On this device / Sync to server | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b1-settings | Daily reminder | Reminders & sound
+small-target | b1-settings | Enter a recovery passphrase | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b1-settings | Paste your access token | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b1-settings | Sound effects | Reminders & sound
+small-target | b1-settings | Spell check | Journal
+small-target | b1-settings | https://journal.example.com | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b2-settings-spell-unavailable | Daily reminder | Reminders & sound
+small-target | b2-settings-spell-unavailable | Enter a recovery passphrase | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b2-settings-spell-unavailable | Paste your access token | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b2-settings-spell-unavailable | Sound effects | Reminders & sound
+small-target | b2-settings-spell-unavailable | https://journal.example.com | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b3-settings-notice | Daily reminder | Reminders & sound
+small-target | b3-settings-notice | Deleted 3 days and 5 entries. / Dismiss | <root>
+small-target | b3-settings-notice | Enter a recovery passphrase | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b3-settings-notice | Paste your access token | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b3-settings-notice | Sound effects | Reminders & sound
+small-target | b3-settings-notice | Spell check | Journal
+small-target | b3-settings-notice | https://journal.example.com | Sync & storage / Syncing arrives in a future update / Entries are stored only on this device. Nothing is uploaded and there is no syncing across devices.
+small-target | b5-delete-all-dialog | Delete everything | <root>
+small-target | b5-delete-all-dialog | Keep my journal | <root>
