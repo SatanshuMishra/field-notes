@@ -194,6 +194,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
     required this.bottomInset,
     required this.hintText,
     required this.hintStyle,
+    required this.semanticsLabel,
     required this.textScaler,
     required this.textDirection,
     required this.devicePixelRatio,
@@ -222,6 +223,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
   final double bottomInset;
   final String hintText;
   final TextStyle hintStyle;
+  final String semanticsLabel;
   final TextScaler textScaler;
   final TextDirection textDirection;
   final double devicePixelRatio;
@@ -250,6 +252,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
     bottomInset: bottomInset,
     hintText: hintText,
     hintStyle: hintStyle,
+    semanticsLabel: semanticsLabel,
     textScaler: textScaler,
     textDirection: textDirection,
     devicePixelRatio: devicePixelRatio,
@@ -280,6 +283,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
       ..bottomInset = bottomInset
       ..hintText = hintText
       ..hintStyle = hintStyle
+      ..semanticsLabel = semanticsLabel
       ..textScaler = textScaler
       ..textDirection = textDirection
       ..devicePixelRatio = devicePixelRatio
@@ -352,6 +356,7 @@ class RenderNoteView extends RenderBox
     this._bottomInset = 0,
     this._hintText = '',
     this._hintStyle = const TextStyle(),
+    this._semanticsLabel = '',
     this._textScaler = TextScaler.noScaling,
     this._textDirection = TextDirection.ltr,
     this._devicePixelRatio = 1,
@@ -382,6 +387,7 @@ class RenderNoteView extends RenderBox
   double _bottomInset;
   String _hintText;
   TextStyle _hintStyle;
+  String _semanticsLabel;
   TextScaler _textScaler;
   TextDirection _textDirection;
   double _devicePixelRatio;
@@ -537,6 +543,15 @@ class RenderNoteView extends RenderBox
     _hintText = value;
     _disposeHint();
     markNeedsPaint();
+  }
+
+  String get semanticsLabel => _semanticsLabel;
+  set semanticsLabel(String value) {
+    if (value == _semanticsLabel) {
+      return;
+    }
+    _semanticsLabel = value;
+    markNeedsSemanticsUpdate();
   }
 
   TextStyle get hintStyle => _hintStyle;
@@ -934,6 +949,7 @@ class RenderNoteView extends RenderBox
     final SemanticsConfiguration config = SemanticsConfiguration()
       ..sortKey = const OrdinalSortKey(-1)
       ..isTextField = true
+      ..label = _semanticsLabel
       ..isMultiline = true
       ..isFocused = _focused
       ..isReadOnly = false

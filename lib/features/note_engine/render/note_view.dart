@@ -56,6 +56,7 @@ class NoteView extends StatefulWidget {
     this.bottomInset = 0,
     this.hintText = '',
     this.hintStyle = TypographyTokens.noteBodyPlaceholder,
+    this.semanticsLabel = 'Note',
     this.cursorColor = Palette.coral,
     this.selectionColor,
     this.platformValue,
@@ -85,6 +86,7 @@ class NoteView extends StatefulWidget {
   final double bottomInset;
   final String hintText;
   final TextStyle hintStyle;
+  final String semanticsLabel;
   final Color cursorColor;
   final Color? selectionColor;
   final TextEditingValue? platformValue;
@@ -422,6 +424,7 @@ class _NoteViewState extends State<NoteView> {
             bottomInset: widget.bottomInset,
             hintText: widget.hintText,
             hintStyle: widget.hintStyle,
+            semanticsLabel: widget.semanticsLabel,
             textScaler: textScaler,
             textDirection: textDirection,
             devicePixelRatio: devicePixelRatio,

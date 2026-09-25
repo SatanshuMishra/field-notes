@@ -354,6 +354,7 @@ class _NoteReaderViewState extends State<NoteReaderView> {
             focusNode: focusNode,
             includeSemantics: false,
             child: RawGestureDetector(
+              excludeFromSemantics: true,
               gestures: <Type, GestureRecognizerFactory>{
                 TapAndPanGestureRecognizer:
                     GestureRecognizerFactoryWithHandlers<
