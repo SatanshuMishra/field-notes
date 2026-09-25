@@ -8,8 +8,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../settings_controller.dart';
 import '../settings_feedback.dart';
 import '../settings_providers.dart';
+import '../spell_check_availability.dart';
 
 const Key spellCheckToggleKey = ValueKey<String>('settings-spell-check');
+const String spellCheckUnavailableDescription =
+    "Your keyboard's spell checker isn't available to Field Notes.";
 
 class JournalSection extends ConsumerWidget {
   const JournalSection({
@@ -17,20 +20,24 @@ class JournalSection extends ConsumerWidget {
     required this.settings,
     required this.onFeedback,
     this.spellCheckAvailable = capabilities.spellCheckAvailable,
+    this.spellCheckAvailability = SpellCheckAvailability.available,
   });
 
   final AppSettings settings;
   final SettingsFeedbackSink onFeedback;
   final bool spellCheckAvailable;
+  final SpellCheckAvailability spellCheckAvailability;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final bool spellCheckWorks =
+        spellCheckAvailability == SpellCheckAvailability.available;
     return SettingsSection(
       title: 'Journal',
       children: <Widget>[
         SettingsFieldRow(
           label: 'Text size',
-          description: 'Applies to every entry you read and write.',
+          description: 'Applies across the app.',
           control: SettingsSlider(
             value: settings.textSize.value,
             onChanged: (int value) => _apply(
@@ -60,11 +67,14 @@ class JournalSection extends ConsumerWidget {
         if (spellCheckAvailable)
           SettingsFieldRow(
             label: 'Spell check',
-            description:
-                'Underlines misspelled words as you write. Checked on this device only.',
+            description: spellCheckWorks
+                ? 'Underlines misspelled words as you write. Checked on this device only.'
+                : spellCheckUnavailableDescription,
             control: SettingsToggle(
               key: spellCheckToggleKey,
-              value: settings.spellCheckEnabled,
+              semanticLabel: 'Spell check',
+              enabled: spellCheckWorks,
+              value: spellCheckWorks && settings.spellCheckEnabled,
               onChanged: (bool value) => _apply(
                 ref,
                 () => ref

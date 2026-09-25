@@ -20,38 +20,43 @@ class SettingsFieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: <Widget>[
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                label,
-                style: TypographyTokens.labelSans.copyWith(color: labelColor),
+    return Semantics(
+      container: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          Expanded(
+            child: MergeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    label,
+                    style: TypographyTokens.labelSans.copyWith(
+                      color: labelColor,
+                    ),
+                  ),
+                  if (description != null) ...<Widget>[
+                    const SizedBox(height: 2),
+                    Text(
+                      description!,
+                      style: TypographyTokens.captionSans.copyWith(
+                        color: descriptionColor ?? Palette.muted,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              if (description != null) ...<Widget>[
-                const SizedBox(height: 2),
-                Text(
-                  description!,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: descriptionColor ?? Palette.muted),
-                ),
-              ],
-            ],
+            ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Flexible(
-          flex: 2,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: control,
+          const SizedBox(width: 16),
+          Flexible(
+            flex: 2,
+            child: Align(alignment: Alignment.centerRight, child: control),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

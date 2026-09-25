@@ -42,6 +42,7 @@ class RemindersSoundSection extends ConsumerWidget {
           label: 'Daily reminder',
           description: 'One nudge a day, skipped once you have written.',
           control: SettingsToggle(
+            semanticLabel: 'Daily reminder',
             value: settings.reminderEnabled,
             onChanged: (bool value) => _apply(
               ref,
@@ -64,8 +65,9 @@ class RemindersSoundSection extends ConsumerWidget {
         ),
         SettingsFieldRow(
           label: 'Sound effects',
-          description: 'Page turns, pencils, and chimes.',
+          description: 'A soft pencil sound when you plant a mood.',
           control: SettingsToggle(
+            semanticLabel: 'Sound effects',
             value: settings.soundEnabled,
             onChanged: (bool value) => _apply(
               ref,
