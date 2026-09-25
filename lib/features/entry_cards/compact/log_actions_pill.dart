@@ -137,6 +137,7 @@ class _LogActionButtonState extends State<_LogActionButton> {
         onTap: widget.onPressed,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
           onTap: widget.onPressed,
           child: ExcludeSemantics(
             child: SizedBox.square(
