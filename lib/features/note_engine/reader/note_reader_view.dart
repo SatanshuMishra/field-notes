@@ -322,6 +322,7 @@ class _NoteReaderViewState extends State<NoteReaderView> {
     mediaResolver: NoteMediaScope.maybeResolverOf(context),
     readOnly: true,
     selection: widget.selectable ? _selection : null,
+    onToggleTask: widget.onToggleTask,
   );
 
   Widget _selectableView(BuildContext context) {
