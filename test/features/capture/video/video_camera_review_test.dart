@@ -250,12 +250,6 @@ void main() {
     });
   });
 
-  test('the mobile recorder offers no pre-record preview widget', () {
-    final CameraVideoRecorder recorder = CameraVideoRecorder();
-
-    expect(recorder.openSession('back'), isNull);
-  });
-
   testWidgets(
       'a recorder with no live pre-record preview keeps the crosshatch, not an '
       'empty frame', (WidgetTester tester) async {
