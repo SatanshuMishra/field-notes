@@ -1,0 +1,37 @@
+Field Notes
+Copyright 2026 Satanshu Mishra
+
+Licensed under the Apache License, Version 2.0. The full text is in the
+LICENSE file at the root of this repository and at
+https://www.apache.org/licenses/LICENSE-2.0
+
+Scope
+
+This license applies retroactively to the whole history of this repository.
+It covers every commit on every branch, tag and other ref, including every
+commit made before the LICENSE file was added. The history begins at these
+root commits:
+
+  a77a24445a8e2c1f570664d7e3d07cb0f8b15bad  2026-07-10  first commit of the app
+  2977eb960796d6bfa5f4649d708d319a9c0125e2  first commit of the _ledger branch
+  dbde1db5179ecb1eb1295ddd232bbe56b3fd159c  first commit of refs/logbook/ledger
+
+Third-party material
+
+The following files are the work of others. They keep their own licenses and
+are not relicensed under the Apache License.
+
+- third_party/camera_macos/: a copy of camera_macos 0.0.9 by Riccardo Lomazzi
+  (https://github.com/riccardo-lomazzi/camera_macos), under the MIT License in
+  third_party/camera_macos/LICENSE. The Field Notes modifications to it,
+  described in third_party/camera_macos/LOCAL_MODIFICATIONS.md, are licensed
+  under the Apache License, Version 2.0.
+
+- assets/fonts/: the Caveat, Instrument Sans and Newsreader typefaces, each
+  under the SIL Open Font License, Version 1.1, in the matching *-OFL.txt file.
+
+- test/domain/notes/markdown/fixtures/commonmark-0.31.2.json and
+  test/domain/notes/markdown/fixtures/gfm-0.29-gfm.json: examples from the
+  CommonMark Spec by John MacFarlane and the GitHub Flavored Markdown Spec,
+  under the Creative Commons Attribution-ShareAlike 4.0 International License,
+  as described in test/domain/notes/markdown/fixtures/LICENSE.md.
