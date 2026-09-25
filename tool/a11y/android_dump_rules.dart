@@ -60,27 +60,11 @@ final class _Bounds {
 
   int get height => bottom - top;
 
-  bool encloses(_Bounds other) =>
-      other.left >= left &&
-      other.top >= top &&
-      other.right <= right &&
-      other.bottom <= bottom;
-
   bool matches(_Bounds other) =>
       (left - other.left).abs() <= 2 &&
       (top - other.top).abs() <= 2 &&
       (right - other.right).abs() <= 2 &&
       (bottom - other.bottom).abs() <= 2;
-
-  bool sharesEdgeWith(_Bounds other) =>
-      left == other.left ||
-      top == other.top ||
-      right == other.right ||
-      bottom == other.bottom;
-
-  bool touchesOneOfOppositeEdges(_Bounds other) =>
-      (top == other.top) != (bottom == other.bottom) ||
-      (left == other.left) != (right == other.right);
 }
 
 final class _Node {
@@ -116,7 +100,8 @@ final class _Node {
 
   bool get tappable => clickable || longClickable;
 
-  bool get repeatsText => _repeats(description) || _repeats(text);
+  bool get repeatsText =>
+      _repeats(description) || (className != _editText && _repeats(text));
 }
 
 List<String> androidDumpFindings(
@@ -217,18 +202,31 @@ List<String> _findings(List<_Node> nodes, String state, int density) {
         id('inert-button', node),
       if (node.repeatsText) id('repeated-text', node),
       if (node.tappable &&
-          !_clipped(node, screen) &&
-          (node.bounds.width < minimum || node.bounds.height < minimum))
+          ((!_clippedAcross(node, screen) && node.bounds.width < minimum) ||
+              (!_clippedAlong(node, screen) && node.bounds.height < minimum)))
         id('small-target', node),
     ],
     for (final _Node node in _doubledTargets(nodes)) id('doubled-target', node),
   ];
 }
 
-bool _clipped(_Node node, _Bounds screen) =>
-    !screen.encloses(node.bounds) ||
-    node.bounds.sharesEdgeWith(screen) ||
-    node.scrollers.any(node.bounds.touchesOneOfOppositeEdges);
+bool _clippedAcross(_Node node, _Bounds screen) =>
+    node.bounds.left <= screen.left ||
+    node.bounds.right >= screen.right ||
+    node.scrollers.any(
+      (_Bounds scroller) =>
+          (node.bounds.left == scroller.left) !=
+          (node.bounds.right == scroller.right),
+    );
+
+bool _clippedAlong(_Node node, _Bounds screen) =>
+    node.bounds.top <= screen.top ||
+    node.bounds.bottom >= screen.bottom ||
+    node.scrollers.any(
+      (_Bounds scroller) =>
+          (node.bounds.top == scroller.top) !=
+          (node.bounds.bottom == scroller.bottom),
+    );
 
 bool _repeats(List<String> lines) => lines.toSet().length < lines.length;
 

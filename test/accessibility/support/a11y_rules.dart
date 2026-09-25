@@ -289,13 +289,29 @@ bool _repeats(_Visited visited) {
   return segments.toSet().length < segments.length;
 }
 
-bool _small(_Visited visited) =>
-    visited.tappable &&
-    !visited.data.flagsCollection.isHidden &&
-    !visited.data.flagsCollection.isLink &&
-    !visited.clipped &&
-    (visited.rect.width < _minimumTarget - precisionErrorTolerance ||
-        visited.rect.height < _minimumTarget - precisionErrorTolerance);
+bool _small(_Visited visited) {
+  if (!visited.tappable ||
+      visited.data.flagsCollection.isHidden ||
+      visited.data.flagsCollection.isLink) {
+    return false;
+  }
+  final Size? size = _judgedSize(visited);
+  return size != null &&
+      (size.width < _minimumTarget - precisionErrorTolerance ||
+          size.height < _minimumTarget - precisionErrorTolerance);
+}
+
+Size? _judgedSize(_Visited visited) => switch (visited.whole) {
+  final Rect whole when visited.clipped =>
+    _mostlyShown(visited.rect.width, whole.width) &&
+            _mostlyShown(visited.rect.height, whole.height)
+        ? whole.size
+        : null,
+  _ => visited.rect.size,
+};
+
+bool _mostlyShown(double shown, double whole) =>
+    shown >= whole - _clipTolerance || shown > whole / 2 + _clipTolerance;
 
 bool _sameTarget(_Visited a, _Visited b) =>
     identical(a.view, b.view) &&
@@ -398,10 +414,11 @@ Set<(int, A11yStateKind)> _missingStates(
 
 String? _statefulGap(List<_Visited> judged, A11yStatefulControl control) =>
     switch (control) {
-      A11yStatefulControl(:final Finder finder?)
-          when finder.evaluate().isEmpty =>
-        'stateful ${control.kind.name} control matched no '
-            '${finder.describeMatch(Plurality.many)}',
+      A11yStatefulControl(:final Finder finder?, :final int count)
+          when finder.evaluate().length < count =>
+        'stateful ${control.kind.name} control expected at least $count '
+            '${finder.describeMatch(Plurality.many)}, '
+            'found ${finder.evaluate().length}',
       A11yStatefulControl(:final String label?)
           when _labelledAs(judged, label).isEmpty =>
         'stateful ${control.kind.name} control matched no node labelled '

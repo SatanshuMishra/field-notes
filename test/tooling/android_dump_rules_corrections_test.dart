@@ -50,10 +50,16 @@ void main() {
         ),
       ),
     );
-    expect(_hasPrefix(ids, 'missing-role | s | <unlabelled> | '), isTrue,
-        reason: '$ids');
-    expect(_hasPrefix(ids, 'doubled-target | s | Morning note | '), isTrue,
-        reason: '$ids');
+    expect(
+      _hasPrefix(ids, 'missing-role | s | <unlabelled> | '),
+      isTrue,
+      reason: '$ids',
+    );
+    expect(
+      _hasPrefix(ids, 'doubled-target | s | Morning note | '),
+      isTrue,
+      reason: '$ids',
+    );
   });
 
   test('an enabled button with no click action is caught as inert', () {
@@ -70,14 +76,19 @@ void main() {
             enabled: false,
           ),
     );
-    expect(_hasPrefix(ids, 'inert-button | s | Earlier log | '), isTrue,
-        reason: '$ids');
-    expect(_hasPrefix(ids, 'inert-button | s | Later log | '), isFalse,
-        reason: '$ids');
+    expect(
+      _hasPrefix(ids, 'inert-button | s | Earlier log | '),
+      isTrue,
+      reason: '$ids',
+    );
+    expect(
+      _hasPrefix(ids, 'inert-button | s | Later log | '),
+      isFalse,
+      reason: '$ids',
+    );
   });
 
-  test('a node cut off by the window or a scroller is not judged as small',
-      () {
+  test('a node cut off by the window or a scroller is not judged as small', () {
     final List<String> ids = _findings(
       _node(
             bounds: '[0,232][1080,2109]',
@@ -96,29 +107,58 @@ void main() {
             clickable: true,
           ) +
           _node(
+            bounds: '[245,2125][403,2195]',
+            className: 'android.widget.Button',
+            desc: 'Calendar',
+            clickable: true,
+          ) +
+          _node(
             bounds: '[954,106][1059,211]',
             className: 'android.widget.Button',
             desc: 'Settings',
             clickable: true,
           ),
     );
-    expect(_hasPrefix(ids, 'small-target | s | Voice card | '), isFalse,
-        reason: '$ids');
-    expect(_hasPrefix(ids, 'small-target | s | Today | '), isFalse,
-        reason: '$ids');
-    expect(_hasPrefix(ids, 'small-target | s | Settings | '), isTrue,
-        reason: '$ids');
+    expect(
+      _hasPrefix(ids, 'small-target | s | Voice card | '),
+      isFalse,
+      reason: '$ids',
+    );
+    expect(
+      _hasPrefix(ids, 'small-target | s | Calendar | '),
+      isFalse,
+      reason: '$ids',
+    );
+    expect(
+      _hasPrefix(ids, 'small-target | s | Today | '),
+      isTrue,
+      reason: '$ids',
+    );
+    expect(
+      _hasPrefix(ids, 'small-target | s | Settings | '),
+      isTrue,
+      reason: '$ids',
+    );
   });
 
   test('text and content description are each checked for repeats', () {
     final List<String> ids = _findings(
-      _node(
-        bounds: '[42,300][1038,500]',
-        desc: 'Tide',
-        text: 'Low&#10;Low',
-      ),
+      _node(bounds: '[42,300][1038,500]', desc: 'Tide', text: 'Low&#10;Low') +
+          _node(
+            bounds: '[42,600][1038,1200]',
+            className: 'android.widget.EditText',
+            text: 'Beach day&#10;&#65532;&#10;The tide was out.&#10;&#65532;',
+          ),
     );
-    expect(_hasPrefix(ids, 'repeated-text | s | Tide | '), isTrue,
-        reason: '$ids');
+    expect(
+      _hasPrefix(ids, 'repeated-text | s | Tide | '),
+      isTrue,
+      reason: '$ids',
+    );
+    expect(
+      ids.where((String id) => id.startsWith('repeated-text | s | Beach day')),
+      isEmpty,
+      reason: '$ids',
+    );
   });
 }

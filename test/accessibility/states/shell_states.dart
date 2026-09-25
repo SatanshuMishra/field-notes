@@ -7,6 +7,7 @@ import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdPhotoSize;
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
+import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_day_cell.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_month_picker.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
@@ -58,6 +59,7 @@ final List<A11yStatefulControl> _tabs = <A11yStatefulControl>[
   A11yStatefulControl.finder(
     find.byWidgetPredicate(_isTab),
     A11yStateKind.selected,
+    count: 4,
   ),
 ];
 
@@ -396,9 +398,18 @@ final List<A11yState> shellStates = <A11yState>[
     id: 'a11-calendar-next-month',
     pump: (WidgetTester tester) async {
       await _pumpCalendar(tester);
-      await tester.tap(find.bySemanticsLabel('Next month'));
+      await tester.tap(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is CalendarChevronButton &&
+              widget.semanticLabel == 'Next month',
+        ),
+      );
       await tester.pumpAndSettle();
     },
-    proof: <A11yProof>[A11yProof(find.byType(CalendarScreen))],
+    proof: <A11yProof>[
+      A11yProof(find.byType(CalendarScreen)),
+      A11yProof(find.byKey(calendarThisWeekKey)),
+    ],
   ),
 ];

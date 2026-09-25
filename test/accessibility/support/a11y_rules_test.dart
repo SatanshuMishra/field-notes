@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -591,5 +592,63 @@ void main() {
       },
       <String>['small-target | flush | Today | <root>'],
     );
+  });
+
+  testWidgets(
+    'a node several render objects share is judged by their combined bounds',
+    (WidgetTester tester) async {
+      final List<String> ids = <String>[
+        for (final A11yFinding finding in await _findingsOf(
+          tester,
+          KeyedSubtree(
+            key: _plantedKey,
+            child: SizedBox(
+              width: 200,
+              child: ClipRect(
+                child: SizedBox(
+                  height: 30,
+                  child: OverflowBox(
+                    alignment: Alignment.topLeft,
+                    maxHeight: 80,
+                    child: const TextField(
+                      decoration: InputDecoration(labelText: 'Name'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const <A11yStatefulControl>[],
+        ))
+          finding.id,
+      ];
+      expect(ids, isEmpty);
+    },
+  );
+
+  testWidgets('a node no render object owns is judged by its visible rect', (
+    WidgetTester tester,
+  ) async {
+    final LongPressGestureRecognizer hold = LongPressGestureRecognizer()
+      ..onLongPress = _noop;
+    addTearDown(hold.dispose);
+    final List<String> ids = <String>[
+      for (final A11yFinding finding in await _findingsOf(
+        tester,
+        KeyedSubtree(
+          key: _plantedKey,
+          child: SizedBox(
+            width: 200,
+            height: 10,
+            child: SingleChildScrollView(
+              child: Text.rich(TextSpan(text: 'Hold me', recognizer: hold)),
+            ),
+          ),
+        ),
+        const <A11yStatefulControl>[],
+      ))
+        finding.id,
+    ];
+    expect(ids, contains('small-target | planted | Hold me | <root>'));
   });
 }
