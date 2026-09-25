@@ -15,6 +15,8 @@ const EdgeInsets _confirmPadding =
 
 const double _iconGap = 10;
 
+const double _minTapTarget = 48;
+
 class StickerButton extends StatelessWidget {
   const StickerButton({
     super.key,
@@ -23,6 +25,7 @@ class StickerButton extends StatelessWidget {
     this.variant = StickerButtonVariant.primary,
     this.icon,
     this.labelStyle,
+    this.padTapTarget = false,
   });
 
   final String label;
@@ -30,12 +33,40 @@ class StickerButton extends StatelessWidget {
   final StickerButtonVariant variant;
   final Widget? icon;
   final TextStyle? labelStyle;
+  final bool padTapTarget;
 
   bool get isEnabled => onPressed != null;
 
   @override
   Widget build(BuildContext context) {
     final _StickerButtonStyle style = _StickerButtonStyle.of(variant);
+    final Widget face = DecoratedBox(
+      decoration: BoxDecoration(
+        color: style.background,
+        border: Shapes.outline,
+        borderRadius: style.borderRadius,
+        boxShadow: style.shadow,
+      ),
+      child: Padding(
+        padding: style.padding,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (icon != null) ...<Widget>[
+              icon!,
+              const SizedBox(width: _iconGap),
+            ],
+            ExcludeSemantics(
+              child: Text(
+                label,
+                style: (labelStyle ?? TypographyTokens.buttonSans)
+                    .copyWith(color: style.foreground),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
     return Semantics(
       button: true,
       enabled: isEnabled,
@@ -45,35 +76,19 @@ class StickerButton extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: style.background,
-              border: Shapes.outline,
-              borderRadius: style.borderRadius,
-              boxShadow: style.shadow,
-            ),
-            child: Padding(
-              padding: style.padding,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (icon != null) ...<Widget>[
-                    icon!,
-                    const SizedBox(width: _iconGap),
-                  ],
-                  ExcludeSemantics(
-                    child: Text(
-                      label,
-                      style: (labelStyle ?? TypographyTokens.buttonSans)
-                          .copyWith(color: style.foreground),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          child: padTapTarget ? _paddedTapTarget(face) : face,
         ),
       ),
+    );
+  }
+
+  Widget _paddedTapTarget(Widget face) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: _minTapTarget,
+        minHeight: _minTapTarget,
+      ),
+      child: Center(widthFactor: 1, heightFactor: 1, child: face),
     );
   }
 }

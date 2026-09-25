@@ -43,11 +43,13 @@ class DeleteAllConfirmDialog extends StatelessWidget {
                     StickerButton(
                       label: 'Keep my journal',
                       variant: StickerButtonVariant.secondary,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
                       label: 'Delete everything',
                       variant: StickerButtonVariant.danger,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ],

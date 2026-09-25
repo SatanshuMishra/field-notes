@@ -15,6 +15,7 @@ const double _actionsGap = 20;
 const double _buttonGap = 9;
 const double _buttonRadius = 11;
 const double _buttonBorderWidth = 1.5;
+const double _buttonMinTarget = 48;
 
 const List<BoxShadow> _panelShadow = <BoxShadow>[
   BoxShadow(
@@ -173,23 +174,39 @@ class _ConfirmDialogButton extends StatelessWidget {
         key: buttonKey,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: background,
-            border: Border.all(color: Palette.ink, width: _buttonBorderWidth),
-            borderRadius: BorderRadius.circular(_buttonRadius),
-            boxShadow: boxShadow,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _buttonMinTarget,
+            minHeight: _buttonMinTarget,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 16),
-            child: ExcludeSemantics(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.sans,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: foreground,
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: background,
+                border: Border.all(
+                  color: Palette.ink,
+                  width: _buttonBorderWidth,
+                ),
+                borderRadius: BorderRadius.circular(_buttonRadius),
+                boxShadow: boxShadow,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 9,
+                  horizontal: 16,
+                ),
+                child: ExcludeSemantics(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontFamily: TypographyTokens.sans,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: foreground,
+                    ),
+                  ),
                 ),
               ),
             ),
