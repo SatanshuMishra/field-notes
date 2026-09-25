@@ -15,6 +15,8 @@ import 'package:flutter/widgets.dart';
 typedef PhotoReferenceLoader = Future<List<String>> Function();
 
 const String photoAddedToastMessage = 'Photo added — tap it to size & place it';
+const String photoAddedPhoneToastMessage =
+    'Photo added — tap it to move or caption it';
 const Duration photoAddedToastLifetime = Duration(seconds: 4);
 
 const double _desktopColumnEms = 30;
@@ -47,6 +49,11 @@ PhotoTarget resolvePhotoTarget(String source, MdTree tree, PhotoTarget target) {
   };
   return kept ? target : photoTargetAt(source, tree, clamped);
 }
+
+String photoAddedToastFor({required double columnWidth, required double em}) =>
+    columnWidth >= _desktopColumnEms * em
+    ? photoAddedToastMessage
+    : photoAddedPhoneToastMessage;
 
 Size photoImportPlaceholderSize({
   required double columnWidth,
