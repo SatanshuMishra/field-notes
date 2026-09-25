@@ -6,14 +6,21 @@ import 'a11y_rules.dart';
 enum A11yStateKind { toggled, checked, selected }
 
 class A11yStatefulControl {
-  const A11yStatefulControl.finder(Finder this.finder, this.kind)
-    : label = null;
+  const A11yStatefulControl.finder(
+    Finder this.finder,
+    this.kind, {
+    this.count = 1,
+  }) : assert(count > 0),
+       label = null;
 
-  const A11yStatefulControl.label(String this.label, this.kind) : finder = null;
+  const A11yStatefulControl.label(String this.label, this.kind)
+    : finder = null,
+      count = 1;
 
   final Finder? finder;
   final String? label;
   final A11yStateKind kind;
+  final int count;
 }
 
 class A11yProof {

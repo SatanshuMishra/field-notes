@@ -187,6 +187,36 @@ void main() {
     },
   );
 
+  testWidgets(
+    'a small button clipped by less than half is judged at full size',
+    (WidgetTester tester) async {
+      final List<String> ids = await _idsOf(
+        tester,
+        ClipRect(
+          child: SizedBox(
+            width: 200,
+            height: 29.5,
+            child: OverflowBox(
+              alignment: Alignment.topLeft,
+              maxHeight: 30,
+              child: Semantics(
+                button: true,
+                label: 'Nearly whole',
+                onTap: _noop,
+                child: _box(30, 30),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(
+        _hasPrefix(ids, 'small-target | planted | Nearly whole | '),
+        isTrue,
+        reason: '$ids',
+      );
+    },
+  );
+
   testWidgets('a stateful control that matches nothing fails as not loaded', (
     WidgetTester tester,
   ) async {

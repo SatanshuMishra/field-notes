@@ -452,6 +452,9 @@ final List<A11yState> viewerStates = <A11yState>[
       ],
       entryId: 'n2',
     ),
-    proof: <A11yProof>[A11yProof(find.byType(LogViewerPanel))],
+    proof: <A11yProof>[
+      A11yProof(find.byType(LogViewerPanel)),
+      A11yProof(find.text('2 of 3')),
+    ],
   ),
 ];
