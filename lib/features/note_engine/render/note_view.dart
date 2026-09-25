@@ -61,6 +61,7 @@ class NoteView extends StatefulWidget {
     this.platformValue,
     this.platformValueStart = 0,
     this.delegate,
+    this.onToggleTask,
     this.startHandleLayerLink,
     this.endHandleLayerLink,
     this.toolbarLayerLink,
@@ -89,6 +90,7 @@ class NoteView extends StatefulWidget {
   final TextEditingValue? platformValue;
   final int platformValueStart;
   final NoteViewDelegate? delegate;
+  final ValueChanged<int>? onToggleTask;
   final LayerLink? startHandleLayerLink;
   final LayerLink? endHandleLayerLink;
   final LayerLink? toolbarLayerLink;
@@ -428,6 +430,7 @@ class _NoteViewState extends State<NoteView> {
             platformValue: widget.platformValue,
             platformValueStart: widget.platformValueStart,
             delegate: widget.delegate,
+            onToggleTask: widget.onToggleTask,
             startHandleLayerLink: widget.startHandleLayerLink,
             endHandleLayerLink: widget.endHandleLayerLink,
             decorations: widget.decorations,

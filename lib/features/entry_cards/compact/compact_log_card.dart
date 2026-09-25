@@ -285,6 +285,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
             onExit: (PointerExitEvent event) => _onHover(false),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
+              excludeFromSemantics: true,
               onTap: widget.onOpen,
               child: lifted,
             ),

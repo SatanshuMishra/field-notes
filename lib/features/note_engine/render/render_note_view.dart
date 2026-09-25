@@ -202,6 +202,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
     required this.platformValue,
     required this.platformValueStart,
     required this.delegate,
+    required this.onToggleTask,
     required this.startHandleLayerLink,
     required this.endHandleLayerLink,
     required this.decorations,
@@ -229,6 +230,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
   final TextEditingValue? platformValue;
   final int platformValueStart;
   final NoteViewDelegate? delegate;
+  final ValueChanged<int>? onToggleTask;
   final LayerLink? startHandleLayerLink;
   final LayerLink? endHandleLayerLink;
   final List<NoteViewDecoration> decorations;
@@ -256,6 +258,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
     platformValue: platformValue,
     platformValueStart: platformValueStart,
     delegate: delegate,
+    onToggleTask: onToggleTask,
     startHandleLayerLink: startHandleLayerLink,
     endHandleLayerLink: endHandleLayerLink,
     decorations: decorations,
@@ -285,6 +288,7 @@ class NoteViewBody extends MultiChildRenderObjectWidget {
       ..platformValue = platformValue
       ..platformValueStart = platformValueStart
       ..delegate = delegate
+      ..onToggleTask = onToggleTask
       ..startHandleLayerLink = startHandleLayerLink
       ..endHandleLayerLink = endHandleLayerLink
       ..decorations = decorations;
@@ -356,6 +360,7 @@ class RenderNoteView extends RenderBox
     this._platformValue,
     this._platformValueStart = 0,
     this._delegate,
+    this._onToggleTask,
     this._startHandleLayerLink,
     this._endHandleLayerLink,
     this._decorations = const <NoteViewDecoration>[],
@@ -385,6 +390,7 @@ class RenderNoteView extends RenderBox
   TextEditingValue? _platformValue;
   int _platformValueStart;
   NoteViewDelegate? _delegate;
+  ValueChanged<int>? _onToggleTask;
   LayerLink? _startHandleLayerLink;
   LayerLink? _endHandleLayerLink;
   List<NoteViewDecoration> _decorations;
@@ -614,6 +620,15 @@ class RenderNoteView extends RenderBox
       return;
     }
     _delegate = value;
+    markNeedsSemanticsUpdate();
+  }
+
+  ValueChanged<int>? get onToggleTask => _onToggleTask;
+  set onToggleTask(ValueChanged<int>? value) {
+    if (value == _onToggleTask) {
+      return;
+    }
+    _onToggleTask = value;
     markNeedsSemanticsUpdate();
   }
 
@@ -1060,6 +1075,9 @@ class RenderNoteView extends RenderBox
       for (final (NoteCheckboxSemantics box, Rect _) in placed) box.boxStart,
     ]);
     final NoteViewDelegate? delegate = _readOnly ? null : _delegate;
+    final ValueChanged<int>? toggle = delegate == null
+        ? _onToggleTask
+        : delegate.toggleCheckbox;
     for (int i = 0; i < placed.length; i++) {
       final (NoteCheckboxSemantics box, Rect rect) = placed[i];
       final int boxStart = box.boxStart;
@@ -1068,8 +1086,8 @@ class RenderNoteView extends RenderBox
         ..isChecked = box.checked
         ..label = box.label
         ..textDirection = _textDirection;
-      if (delegate != null) {
-        config.onTap = () => delegate.toggleCheckbox(boxStart);
+      if (toggle != null) {
+        config.onTap = () => toggle(boxStart);
       }
       nodes[i]
         ..updateWith(config: config)

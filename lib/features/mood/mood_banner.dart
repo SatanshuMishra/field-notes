@@ -255,44 +255,48 @@ class _MoodPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String hint = isToday
+        ? "tap to plant today's bloom"
+        : "tap to plant this day's bloom";
     return Semantics(
       button: onTap != null,
-      label: text,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: CustomPaint(
-          painter: const MoodPromptBorderPainter(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            child: Row(
-              children: <Widget>[
-                const Opacity(
-                  opacity: _promptBloomOpacity,
-                  child: FlowerBloom(
-                    kind: FlowerKind.peony,
-                    size: _promptBloomSize,
+      label: '$text\n$hint',
+      onTap: onTap,
+      child: ExcludeSemantics(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: CustomPaint(
+            painter: const MoodPromptBorderPainter(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 16,
+              ),
+              child: Row(
+                children: <Widget>[
+                  const Opacity(
+                    opacity: _promptBloomOpacity,
+                    child: FlowerBloom(
+                      kind: FlowerKind.peony,
+                      size: _promptBloomSize,
+                    ),
                   ),
-                ),
-                const SizedBox(width: _moodBannerGap),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(text, style: TypographyTokens.bannerSerif),
-                      Text(
-                        isToday
-                            ? "tap to plant today's bloom"
-                            : "tap to plant this day's bloom",
-                        style: TypographyTokens.promptAccent,
-                      ),
-                    ],
+                  const SizedBox(width: _moodBannerGap),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(text, style: TypographyTokens.bannerSerif),
+                        Text(hint, style: TypographyTokens.promptAccent),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: _moodBannerGap),
-                const _MoodChoosePill(label: 'choose'),
-              ],
+                  const SizedBox(width: _moodBannerGap),
+                  const _MoodChoosePill(label: 'choose'),
+                ],
+              ),
             ),
           ),
         ),
