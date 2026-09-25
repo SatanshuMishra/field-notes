@@ -187,7 +187,7 @@ class _CaptureOptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color foreground = _isPrimary ? Palette.onAccent : Palette.ink;
-    return GestureDetector(
+    final Widget detector = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: isAvailable ? () => onSelected(option.type) : null,
       child: Container(
@@ -238,5 +238,9 @@ class _CaptureOptionRow extends StatelessWidget {
         ),
       ),
     );
+    if (!isAvailable) {
+      return detector;
+    }
+    return Semantics(container: true, button: true, child: detector);
   }
 }
