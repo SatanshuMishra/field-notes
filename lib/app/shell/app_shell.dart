@@ -30,6 +30,12 @@ class _AppShellState extends ConsumerState<AppShell> {
     ref.read(shellNavigationProvider.notifier).select(destination);
   }
 
+  void _onBottomBarPop(bool didPop, Object? result) {
+    if (!didPop) {
+      ref.read(shellNavigationProvider.notifier).back();
+    }
+  }
+
   Future<void> _openCapture() async {
     await openCapture(context, ref, date: ref.read(todayDateProvider));
   }
@@ -63,12 +69,16 @@ class _AppShellState extends ConsumerState<AppShell> {
           body: body,
         );
       case ShellLayout.bottomBar:
-        return BottomBarShell(
-          destinations: ShellDestination.primary,
-          selected: selected,
-          onSelect: _select,
-          onCapture: onCapture,
-          body: body,
+        return PopScope<Object?>(
+          canPop: selected == ShellDestination.today,
+          onPopInvokedWithResult: _onBottomBarPop,
+          child: BottomBarShell(
+            destinations: ShellDestination.primary,
+            selected: selected,
+            onSelect: _select,
+            onCapture: onCapture,
+            body: body,
+          ),
         );
     }
   }
