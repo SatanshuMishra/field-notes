@@ -114,6 +114,7 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
             mood: mood,
             promptText: widget.promptText,
             onChangeMood: onChangeMood,
+            isToday: _isToday,
           ),
         if (dayAsync.hasError) ...<Widget>[
           const SizedBox(height: 8),

@@ -43,13 +43,19 @@ class BottomBarShell extends StatelessWidget {
         children: <Widget>[
           const Text('field notes', style: TypographyTokens.wordmarkAccent),
           const Spacer(),
-          GestureDetector(
-            key: const ValueKey<String>('gear-button'),
-            behavior: HitTestBehavior.opaque,
-            onTap: () => onSelect(ShellDestination.settings),
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.settings_outlined, color: Palette.ink),
+          Semantics(
+            button: true,
+            label: 'Settings',
+            child: GestureDetector(
+              key: const ValueKey<String>('gear-button'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onSelect(ShellDestination.settings),
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: ExcludeSemantics(
+                  child: Icon(Icons.settings_outlined, color: Palette.ink),
+                ),
+              ),
             ),
           ),
         ],
@@ -88,42 +94,55 @@ class BottomBarShell extends StatelessWidget {
   Widget _tab(ShellDestination d) {
     final bool isSelected = d == selected;
     final Color color = isSelected ? Palette.coral : Palette.mutedDeep;
-    return GestureDetector(
-      key: ValueKey<String>('tab-${d.name}'),
-      behavior: HitTestBehavior.opaque,
-      onTap: () => onSelect(d),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(d.icon, size: 22, color: color),
-            const SizedBox(height: 2),
-            Text(
-              d.label,
-              style: TypographyTokens.captionSans.copyWith(color: color),
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: d.label,
+      child: GestureDetector(
+        key: ValueKey<String>('tab-${d.name}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onSelect(d),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: ExcludeSemantics(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(d.icon, size: 22, color: color),
+                const SizedBox(height: 2),
+                Text(
+                  d.label,
+                  style: TypographyTokens.captionSans.copyWith(color: color),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Widget _captureButton() {
-    return GestureDetector(
-      key: const ValueKey<String>('capture-button'),
-      behavior: HitTestBehavior.opaque,
-      onTap: onCapture,
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: Palette.coral,
-          shape: BoxShape.circle,
-          border: Border.all(color: Palette.ink, width: Shapes.outlineWidth),
-          boxShadow: Shadows.button,
+    return Semantics(
+      button: true,
+      label: 'New entry',
+      child: GestureDetector(
+        key: const ValueKey<String>('capture-button'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onCapture,
+        child: Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: Palette.coral,
+            shape: BoxShape.circle,
+            border: Border.all(color: Palette.ink, width: Shapes.outlineWidth),
+            boxShadow: Shadows.button,
+          ),
+          child: const ExcludeSemantics(
+            child: Icon(Icons.add, color: Palette.cardBright, size: 28),
+          ),
         ),
-        child: const Icon(Icons.add, color: Palette.cardBright, size: 28),
       ),
     );
   }

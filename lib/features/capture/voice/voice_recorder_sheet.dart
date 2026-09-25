@@ -197,13 +197,18 @@ class VoiceRecorderSheet extends StatelessWidget {
         Positioned(
           left: _closeInset,
           top: _closeInset,
-          child: GestureDetector(
-            key: voiceCloseKey,
-            behavior: HitTestBehavior.opaque,
-            onTap: _isSaving ? null : onCancel,
-            child: const SizedBox.square(
-              dimension: _closeGlyphSize,
-              child: CustomPaint(painter: _VoiceCloseGlyphPainter()),
+          child: Semantics(
+            button: true,
+            enabled: !_isSaving,
+            label: 'Close',
+            child: GestureDetector(
+              key: voiceCloseKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: _isSaving ? null : onCancel,
+              child: const SizedBox.square(
+                dimension: _closeGlyphSize,
+                child: CustomPaint(painter: _VoiceCloseGlyphPainter()),
+              ),
             ),
           ),
         ),
@@ -292,39 +297,54 @@ class VoiceRecorderSheet extends StatelessWidget {
     return _isPaused ? onResume : onStart;
   }
 
+  String get _recordSemanticsLabel {
+    if (_isRecording) {
+      return onPause != null ? 'Pause recording' : 'Stop recording';
+    }
+    if (_isPaused) {
+      return onResume != null ? 'Resume recording' : 'Stop recording';
+    }
+    return 'Start recording';
+  }
+
   Widget _recordButton() {
-    return GestureDetector(
-      key: voiceRecordButtonKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: _recordTap,
-      child: Container(
-        width: _recordButtonSize,
-        height: _recordButtonSize,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Palette.coral,
-          shape: BoxShape.circle,
-          border: Border.all(color: Palette.ink, width: _recordBorderWidth),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Palette.coral.withValues(alpha: _recordShadowAlpha),
-              offset: _recordShadowOffset,
-              blurRadius: _recordShadowBlur,
-              spreadRadius: _recordShadowSpread,
-            ),
-          ],
-        ),
-        child: _isRecording
-            ? const IconStickerGlyphIcon(
-                glyph: IconStickerGlyph.pause,
-                color: Palette.onAccent,
-                size: _recordIconSize,
-              )
-            : const CaptureIcon(
-                glyph: CaptureGlyph.mic,
-                color: Palette.onAccent,
-                size: _recordIconSize,
+    return Semantics(
+      button: true,
+      enabled: _recordTap != null,
+      label: _recordSemanticsLabel,
+      child: GestureDetector(
+        key: voiceRecordButtonKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: _recordTap,
+        child: Container(
+          width: _recordButtonSize,
+          height: _recordButtonSize,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Palette.coral,
+            shape: BoxShape.circle,
+            border: Border.all(color: Palette.ink, width: _recordBorderWidth),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Palette.coral.withValues(alpha: _recordShadowAlpha),
+                offset: _recordShadowOffset,
+                blurRadius: _recordShadowBlur,
+                spreadRadius: _recordShadowSpread,
               ),
+            ],
+          ),
+          child: _isRecording
+              ? const IconStickerGlyphIcon(
+                  glyph: IconStickerGlyph.pause,
+                  color: Palette.onAccent,
+                  size: _recordIconSize,
+                )
+              : const CaptureIcon(
+                  glyph: CaptureGlyph.mic,
+                  color: Palette.onAccent,
+                  size: _recordIconSize,
+                ),
+        ),
       ),
     );
   }
