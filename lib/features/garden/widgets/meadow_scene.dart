@@ -15,12 +15,14 @@ class MeadowScene extends StatefulWidget {
     required this.motion,
     this.seed = 0,
     this.insects = defaultGardenInsects,
+    this.sprouts = const <String>[],
   });
 
   final List<GardenBloomData> blooms;
   final GardenMotionProfile motion;
   final int seed;
   final List<GardenInsect> insects;
+  final List<String> sprouts;
 
   @override
   State<MeadowScene> createState() => _MeadowSceneState();
@@ -71,6 +73,7 @@ class _MeadowSceneState extends State<MeadowScene>
           blooms: widget.blooms,
           size: size,
           seed: widget.seed,
+          sprouts: widget.sprouts,
         );
         return RepaintBoundary(
           child: AnimatedBuilder(

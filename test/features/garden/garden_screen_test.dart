@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/garden.dart';
+import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -21,6 +22,9 @@ void main() {
       gardenHarness(
         const GardenScreen(year: 2026),
         overrides: <Override>[
+          journaledDatesProvider.overrideWith(
+            (_) => Stream<List<String>>.value(const <String>[]),
+          ),
           allDaysProvider.overrideWith((_) => controller.stream),
         ],
       ),
@@ -35,6 +39,9 @@ void main() {
       gardenHarness(
         const GardenScreen(year: 2026),
         overrides: <Override>[
+          journaledDatesProvider.overrideWith(
+            (_) => Stream<List<String>>.value(const <String>[]),
+          ),
           allDaysProvider.overrideWith(
             (_) => Stream<List<Day>>.value(<Day>[
               dayOf('2026-03-01', mood: Mood.happy),
@@ -62,6 +69,9 @@ void main() {
       gardenHarness(
         const GardenScreen(year: 2026),
         overrides: <Override>[
+          journaledDatesProvider.overrideWith(
+            (_) => Stream<List<String>>.value(const <String>[]),
+          ),
           allDaysProvider.overrideWith(
             (_) => Stream<List<Day>>.value(<Day>[dayOf('2026-04-01')]),
           ),
@@ -79,6 +89,9 @@ void main() {
       gardenHarness(
         const GardenScreen(year: 2026),
         overrides: <Override>[
+          journaledDatesProvider.overrideWith(
+            (_) => Stream<List<String>>.value(const <String>[]),
+          ),
           allDaysProvider.overrideWith(
             (_) => Stream<List<Day>>.error(Exception('boom')),
           ),
@@ -101,6 +114,9 @@ void main() {
       gardenHarness(
         const GardenScreen(year: 2026),
         overrides: <Override>[
+          journaledDatesProvider.overrideWith(
+            (_) => Stream<List<String>>.value(const <String>[]),
+          ),
           allDaysProvider.overrideWith((_) => controller.stream),
         ],
       ),
