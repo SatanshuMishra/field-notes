@@ -38,7 +38,7 @@ class BottomBarShell extends StatelessWidget {
 
   Widget _topBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
       child: Row(
         children: <Widget>[
           const Text('field notes', style: TypographyTokens.wordmarkAccent),

@@ -8,9 +8,6 @@ import 'calendar_chevron_button.dart';
 const String calendarBrowseHint = '← → to browse · T for this week';
 
 const double _hintGap = 16;
-const double _actionGap = 8;
-const double _chevronOverhang =
-    (calendarMinTapTarget - calendarChevronButtonSize) / 2;
 const double _titleCaretSize = 16;
 const double _titleCaretGap = 4;
 const EdgeInsets _titlePadding = EdgeInsets.symmetric(
@@ -68,20 +65,21 @@ class CalendarHeader extends StatelessWidget {
     final VoidCallback? showCurrent = onShowCurrentMonth;
     final bool showThisWeek =
         current != null && showCurrent != null && current != month;
-    final bool thisWeekPointsBack = current != null &&
+    final bool thisWeekPointsBack =
+        current != null &&
         (month.year * 12 + month.month) > (current.year * 12 + current.month);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final TextScaler scaler = MediaQuery.textScalerOf(context);
         final TextDirection direction = Directionality.of(context);
-        final double actionsWidth = calendarMinTapTarget * 2 -
-            _chevronOverhang +
-            (showThisWeek ? _actionGap + _thisWeekWidth(scaler, direction) : 0);
+        final double actionsWidth =
+            calendarMinTapTarget * 2 +
+            (showThisWeek ? _thisWeekWidth(scaler, direction) : 0);
         final double titleWidth =
             _textWidth(month.title, _titleStyle, scaler, direction) +
-                _titlePadding.horizontal +
-                _titleCaretGap +
-                _titleCaretSize;
+            _titlePadding.horizontal +
+            _titleCaretGap +
+            _titleCaretSize;
         final double hintWidth = _textWidth(
           calendarBrowseHint,
           _hintStyle,
@@ -90,7 +88,7 @@ class CalendarHeader extends StatelessWidget {
         );
         final bool showHint =
             constraints.maxWidth - titleWidth - actionsWidth - _hintGap * 2 >=
-                hintWidth;
+            hintWidth;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
@@ -131,9 +129,7 @@ class CalendarHeader extends StatelessWidget {
                   style: _hintStyle,
                 ),
               ),
-              SizedBox(
-                width: showThisWeek ? _hintGap : _hintGap - _chevronOverhang,
-              ),
+              SizedBox(width: showThisWeek ? _hintGap : 0),
             ],
             if (showThisWeek) ...<Widget>[
               _ThisWeekButton(
@@ -141,19 +137,18 @@ class CalendarHeader extends StatelessWidget {
                 pointsBack: thisWeekPointsBack,
                 onPressed: showCurrent,
               ),
-              const SizedBox(width: _actionGap - _chevronOverhang),
             ],
             CalendarChevronButton(
               direction: ChevronDirection.previous,
               semanticLabel: 'Previous month',
               onPressed: onPreviousMonth,
-              alignment: Alignment.bottomCenter,
+              alignment: Alignment.bottomRight,
             ),
             CalendarChevronButton(
               direction: ChevronDirection.next,
               semanticLabel: 'Next month',
               onPressed: onNextMonth,
-              alignment: Alignment.bottomCenter,
+              alignment: Alignment.bottomRight,
             ),
           ],
         );

@@ -16,6 +16,8 @@ const double _ruleThickness = 1.5;
 const double _backExtent = 34;
 const double _backRadius = 10;
 const double _minTapTarget = 48;
+const double _backReach = (_minTapTarget - _backExtent) / 2;
+const double _backVerticalReach = 4;
 const double _chevronExtent = 16;
 const double _chevronArm = 4.5;
 const double _chevronStrokeWidth = 2;
@@ -43,14 +45,16 @@ class DayDetailHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: _headerHorizontalPadding,
-            vertical: _headerVerticalPadding,
+          padding: const EdgeInsets.fromLTRB(
+            _headerHorizontalPadding - _backReach,
+            _headerVerticalPadding - _backVerticalReach,
+            _headerHorizontalPadding,
+            _headerVerticalPadding - _backVerticalReach,
           ),
           child: Row(
             children: <Widget>[
               _backButton(),
-              const SizedBox(width: _headerGap),
+              const SizedBox(width: _headerGap - _backReach),
               Expanded(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -60,13 +64,15 @@ class DayDetailHeader extends StatelessWidget {
                       dayDetailKickerFor(date, today: today),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TypographyTokens.stampAccent
-                          .copyWith(color: Palette.coral),
+                      style: TypographyTokens.stampAccent.copyWith(
+                        color: Palette.coral,
+                      ),
                     ),
                     Text(
                       heading.title,
-                      style: TypographyTokens.headlineSerif
-                          .copyWith(height: _titleLineHeight),
+                      style: TypographyTokens.headlineSerif.copyWith(
+                        height: _titleLineHeight,
+                      ),
                     ),
                   ],
                 ),

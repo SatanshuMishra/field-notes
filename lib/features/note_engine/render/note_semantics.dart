@@ -92,6 +92,9 @@ String _lineAfter(String text, int from) {
   return text.substring(start, _lineEnd(text, start)).trim();
 }
 
+int _lineStart(String text, int at) =>
+    at <= 0 ? 0 : text.lastIndexOf('\n', at - 1) + 1;
+
 int _lineEnd(String text, int from) {
   final int end = text.indexOf('\n', from);
   return end < 0 ? text.length : end;
@@ -103,7 +106,7 @@ List<(int, int)> _checkboxLines(VisibleText visibleText) {
     for (final AtomicObject atomic in visibleText.atomics)
       if (atomic.kind == AtomicKind.checkbox)
         (
-          atomic.visibleOffset,
+          _lineStart(text, atomic.visibleOffset),
           _lineEnd(
             text,
             (atomic.visibleOffset + atomic.visibleLength).clamp(0, text.length),

@@ -31,7 +31,12 @@ const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(7));
 EdgeInsets logActionsPillTapInset({
   double buttonExtent = _defaultButtonExtent,
   required bool withEdit,
-}) => _PillGeometry(buttonExtent: buttonExtent, paired: withEdit).pillInset;
+  bool growDown = false,
+}) => _PillGeometry(
+  buttonExtent: buttonExtent,
+  paired: withEdit,
+  growDown: growDown,
+).pillInset;
 
 const CustomSemanticsAction _editAction = CustomSemanticsAction(
   label: logActionsEditLabel,
@@ -46,11 +51,13 @@ class LogActionsPill extends StatelessWidget {
     this.onEdit,
     required this.onDelete,
     this.buttonExtent = _defaultButtonExtent,
+    this.growDown = false,
   });
 
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
   final double buttonExtent;
+  final bool growDown;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +65,7 @@ class LogActionsPill extends StatelessWidget {
     final _PillGeometry geometry = _PillGeometry(
       buttonExtent: buttonExtent,
       paired: edit != null,
+      growDown: growDown,
     );
     return Stack(
       children: <Widget>[
@@ -106,40 +114,48 @@ class LogActionsPill extends StatelessWidget {
 }
 
 final class _PillGeometry {
-  const _PillGeometry({required this.buttonExtent, required this.paired});
+  const _PillGeometry({
+    required this.buttonExtent,
+    required this.paired,
+    required this.growDown,
+  });
 
   final double buttonExtent;
   final bool paired;
+  final bool growDown;
 
   double get _slack => math.max<double>(0, _tapTarget - buttonExtent);
 
   double get _outer =>
       paired ? math.max<double>(0, _slack - _pillGap / 2) : _slack / 2;
 
-  double get _vertical => _slack / 2;
+  double get _top =>
+      growDown ? math.min<double>(_pillPadding, _slack) : _slack / 2;
 
-  EdgeInsets get pillInset => EdgeInsets.symmetric(
-    horizontal: math.max<double>(0, _outer - _pillPadding),
-    vertical: math.max<double>(0, _vertical - _pillPadding),
+  double get _bottom => _slack - _top;
+
+  EdgeInsets get pillInset => EdgeInsets.fromLTRB(
+    math.max<double>(0, _outer - _pillPadding),
+    math.max<double>(0, _top - _pillPadding),
+    math.max<double>(0, _outer - _pillPadding),
+    math.max<double>(0, _bottom - _pillPadding),
   );
 
-  EdgeInsets get rowPadding => EdgeInsets.symmetric(
-    horizontal: math.max<double>(0, _pillPadding - _outer),
-    vertical: math.max<double>(0, _pillPadding - _vertical),
+  EdgeInsets get rowPadding => EdgeInsets.fromLTRB(
+    math.max<double>(0, _pillPadding - _outer),
+    math.max<double>(0, _pillPadding - _top),
+    math.max<double>(0, _pillPadding - _outer),
+    math.max<double>(0, _pillPadding - _bottom),
   );
 
-  EdgeInsetsDirectional get leadingMargin => EdgeInsetsDirectional.fromSTEB(
-    _outer,
-    _vertical,
-    _pillGap / 2,
-    _vertical,
-  );
+  EdgeInsetsDirectional get leadingMargin =>
+      EdgeInsetsDirectional.fromSTEB(_outer, _top, _pillGap / 2, _bottom);
 
   EdgeInsetsDirectional get trailingMargin => EdgeInsetsDirectional.fromSTEB(
     paired ? _pillGap / 2 : _outer,
-    _vertical,
+    _top,
     _outer,
-    _vertical,
+    _bottom,
   );
 }
 
@@ -394,7 +410,10 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   Widget _buildPill(BuildContext context) {
     final VoidCallback? edit = widget.onEdit;
     final bool visible = _visible;
-    final EdgeInsets inset = logActionsPillTapInset(withEdit: edit != null);
+    final EdgeInsets inset = logActionsPillTapInset(
+      withEdit: edit != null,
+      growDown: true,
+    );
     return Align(
       alignment: AlignmentDirectional.topStart,
       child: CompositedTransformFollower(
@@ -403,13 +422,13 @@ class _LogActionsRevealState extends State<LogActionsReveal>
         targetAnchor: Alignment.topRight,
         followerAnchor: Alignment.topRight,
         offset: Offset(inset.right - _pillInset, -inset.top - _pillRise),
-        child: TapRegion(
-          groupId: this,
-          child: MouseRegion(
-            onEnter: (PointerEnterEvent event) => _onPillHover(true),
-            onExit: (PointerExitEvent event) => _onPillHover(false),
-            child: IgnorePointer(
-              ignoring: !visible,
+        child: IgnorePointer(
+          ignoring: !visible,
+          child: TapRegion(
+            groupId: this,
+            child: MouseRegion(
+              onEnter: (PointerEnterEvent event) => _onPillHover(true),
+              onExit: (PointerExitEvent event) => _onPillHover(false),
               child: ExcludeFocus(
                 excluding: !visible,
                 child: ExcludeSemantics(
@@ -432,6 +451,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
                       key: logActionsPillKey,
                       onEdit: edit == null ? null : () => _choose(edit),
                       onDelete: () => _choose(widget.onDelete),
+                      growDown: true,
                     ),
                   ),
                 ),
