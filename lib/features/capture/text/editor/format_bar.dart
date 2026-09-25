@@ -36,15 +36,15 @@ const Key formatStrikethroughKey = ValueKey<String>('format-strikethrough');
 const Key formatHighlightKey = ValueKey<String>('format-highlight');
 const Key formatCodeKey = ValueKey<String>('format-code');
 
-const double formatBarHeight = 36;
+const double formatBarHeight = 48;
 
-const double _buttonExtent = 30;
+const double _buttonExtent = 48;
 const double _glyphExtent = 17;
 const double _horizontalPadding = 12;
 const double _disabledOpacity = 0.35;
 const double _menuGap = 4;
 const double _menuPadding = 5;
-const double _menuItemHeight = 36;
+const double _menuItemHeight = 48;
 const double _menuItemPadding = 14;
 const double _menuMinWidth = 160;
 
@@ -383,7 +383,7 @@ class _MoreFormatsState extends State<_MoreFormats> {
               boxShadow: Shadows.toastLift,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(_menuPadding),
+              padding: const EdgeInsets.symmetric(horizontal: _menuPadding),
               child: ConstrainedBox(
                 constraints: const BoxConstraints(minWidth: _menuMinWidth),
                 child: IntrinsicWidth(
@@ -393,9 +393,9 @@ class _MoreFormatsState extends State<_MoreFormats> {
                     children: <Widget>[
                       for (final _MoreItem item in _moreItems)
                         Semantics(
+                          container: true,
                           button: true,
                           label: item.label,
-                          excludeSemantics: true,
                           child: GestureDetector(
                             key: item.key,
                             behavior: HitTestBehavior.opaque,
@@ -408,9 +408,11 @@ class _MoreFormatsState extends State<_MoreFormats> {
                                 ),
                                 child: Align(
                                   alignment: AlignmentDirectional.centerStart,
-                                  child: Text(
-                                    item.label,
-                                    style: TypographyTokens.toolbarSans,
+                                  child: ExcludeSemantics(
+                                    child: Text(
+                                      item.label,
+                                      style: TypographyTokens.toolbarSans,
+                                    ),
                                   ),
                                 ),
                               ),
