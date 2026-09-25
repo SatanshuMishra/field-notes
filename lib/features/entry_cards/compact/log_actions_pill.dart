@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
@@ -19,22 +21,31 @@ const double _pillInset = 12;
 const double _hiddenDrop = 4;
 const double _glyphExtent = 14;
 const double _focusRingWidth = 2;
+const double _defaultButtonExtent = 28;
+const double _tapTarget = 48;
 const Duration _revealDuration = Duration(milliseconds: 140);
 
 const BorderRadius _pillRadius = BorderRadius.all(Radius.circular(10));
 const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(7));
 
-const CustomSemanticsAction _editAction =
-    CustomSemanticsAction(label: logActionsEditLabel);
-const CustomSemanticsAction _deleteAction =
-    CustomSemanticsAction(label: logActionsDeleteLabel);
+EdgeInsets logActionsPillTapInset({
+  double buttonExtent = _defaultButtonExtent,
+  required bool withEdit,
+}) => _PillGeometry(buttonExtent: buttonExtent, paired: withEdit).pillInset;
+
+const CustomSemanticsAction _editAction = CustomSemanticsAction(
+  label: logActionsEditLabel,
+);
+const CustomSemanticsAction _deleteAction = CustomSemanticsAction(
+  label: logActionsDeleteLabel,
+);
 
 class LogActionsPill extends StatelessWidget {
   const LogActionsPill({
     super.key,
     this.onEdit,
     required this.onDelete,
-    this.buttonExtent = 28,
+    this.buttonExtent = _defaultButtonExtent,
   });
 
   final VoidCallback? onEdit;
@@ -44,41 +55,92 @@ class LogActionsPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? edit = onEdit;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.toolbarInk,
-        borderRadius: _pillRadius,
-        boxShadow: Shadows.toastLift,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(_pillPadding),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (edit != null) ...<Widget>[
-              _LogActionButton(
-                key: logActionsEditKey,
-                glyph: IconStickerGlyph.edit,
-                label: logActionsEditLabel,
-                hoverColor: Palette.onAccent.withValues(alpha: 0.14),
-                extent: buttonExtent,
-                onPressed: edit,
+    final _PillGeometry geometry = _PillGeometry(
+      buttonExtent: buttonExtent,
+      paired: edit != null,
+    );
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: Padding(
+            padding: geometry.pillInset,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                color: Palette.toolbarInk,
+                borderRadius: _pillRadius,
+                boxShadow: Shadows.toastLift,
               ),
-              const SizedBox(width: _pillGap),
-            ],
-            _LogActionButton(
-              key: logActionsDeleteKey,
-              glyph: IconStickerGlyph.trash,
-              label: logActionsDeleteLabel,
-              hoverColor: Palette.danger.withValues(alpha: 0.6),
-              extent: buttonExtent,
-              onPressed: onDelete,
             ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: geometry.rowPadding,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (edit != null)
+                _LogActionButton(
+                  key: logActionsEditKey,
+                  glyph: IconStickerGlyph.edit,
+                  label: logActionsEditLabel,
+                  hoverColor: Palette.onAccent.withValues(alpha: 0.14),
+                  extent: buttonExtent,
+                  margin: geometry.leadingMargin,
+                  onPressed: edit,
+                ),
+              _LogActionButton(
+                key: logActionsDeleteKey,
+                glyph: IconStickerGlyph.trash,
+                label: logActionsDeleteLabel,
+                hoverColor: Palette.danger.withValues(alpha: 0.6),
+                extent: buttonExtent,
+                margin: geometry.trailingMargin,
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
+
+final class _PillGeometry {
+  const _PillGeometry({required this.buttonExtent, required this.paired});
+
+  final double buttonExtent;
+  final bool paired;
+
+  double get _slack => math.max<double>(0, _tapTarget - buttonExtent);
+
+  double get _outer =>
+      paired ? math.max<double>(0, _slack - _pillGap / 2) : _slack / 2;
+
+  double get _vertical => _slack / 2;
+
+  EdgeInsets get pillInset => EdgeInsets.symmetric(
+    horizontal: math.max<double>(0, _outer - _pillPadding),
+    vertical: math.max<double>(0, _vertical - _pillPadding),
+  );
+
+  EdgeInsets get rowPadding => EdgeInsets.symmetric(
+    horizontal: math.max<double>(0, _pillPadding - _outer),
+    vertical: math.max<double>(0, _pillPadding - _vertical),
+  );
+
+  EdgeInsetsDirectional get leadingMargin => EdgeInsetsDirectional.fromSTEB(
+    _outer,
+    _vertical,
+    _pillGap / 2,
+    _vertical,
+  );
+
+  EdgeInsetsDirectional get trailingMargin => EdgeInsetsDirectional.fromSTEB(
+    paired ? _pillGap / 2 : _outer,
+    _vertical,
+    _outer,
+    _vertical,
+  );
 }
 
 class _LogActionButton extends StatefulWidget {
@@ -88,6 +150,7 @@ class _LogActionButton extends StatefulWidget {
     required this.label,
     required this.hoverColor,
     required this.extent,
+    required this.margin,
     required this.onPressed,
   });
 
@@ -95,6 +158,7 @@ class _LogActionButton extends StatefulWidget {
   final String label;
   final Color hoverColor;
   final double extent;
+  final EdgeInsetsGeometry margin;
   final VoidCallback onPressed;
 
   @override
@@ -140,26 +204,29 @@ class _LogActionButtonState extends State<_LogActionButton> {
           excludeFromSemantics: true,
           onTap: widget.onPressed,
           child: ExcludeSemantics(
-            child: SizedBox.square(
-              dimension: widget.extent,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: _hovered || _focused ? widget.hoverColor : null,
-                  border: _focused
-                      ? const Border.fromBorderSide(
-                          BorderSide(
-                            color: Palette.toolbarLabel,
-                            width: _focusRingWidth,
-                          ),
-                        )
-                      : null,
-                  borderRadius: _buttonRadius,
-                ),
-                child: Center(
-                  child: IconStickerGlyphIcon(
-                    glyph: widget.glyph,
-                    color: Palette.onAccent,
-                    size: _glyphExtent,
+            child: Padding(
+              padding: widget.margin,
+              child: SizedBox.square(
+                dimension: widget.extent,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _hovered || _focused ? widget.hoverColor : null,
+                    border: _focused
+                        ? const Border.fromBorderSide(
+                            BorderSide(
+                              color: Palette.toolbarLabel,
+                              width: _focusRingWidth,
+                            ),
+                          )
+                        : null,
+                    borderRadius: _buttonRadius,
+                  ),
+                  child: Center(
+                    child: IconStickerGlyphIcon(
+                      glyph: widget.glyph,
+                      color: Palette.onAccent,
+                      size: _glyphExtent,
+                    ),
                   ),
                 ),
               ),
@@ -327,6 +394,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   Widget _buildPill(BuildContext context) {
     final VoidCallback? edit = widget.onEdit;
     final bool visible = _visible;
+    final EdgeInsets inset = logActionsPillTapInset(withEdit: edit != null);
     return Align(
       alignment: AlignmentDirectional.topStart,
       child: CompositedTransformFollower(
@@ -334,7 +402,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
         showWhenUnlinked: false,
         targetAnchor: Alignment.topRight,
         followerAnchor: Alignment.topRight,
-        offset: const Offset(-_pillInset, -_pillRise),
+        offset: Offset(inset.right - _pillInset, -inset.top - _pillRise),
         child: TapRegion(
           groupId: this,
           child: MouseRegion(
@@ -352,8 +420,10 @@ class _LogActionsRevealState extends State<LogActionsReveal>
                       return Opacity(
                         opacity: _progress.value,
                         child: Transform.translate(
-                          offset:
-                              Offset(0, _hiddenDrop * (1 - _progress.value)),
+                          offset: Offset(
+                            0,
+                            _hiddenDrop * (1 - _progress.value),
+                          ),
                           child: child,
                         ),
                       );
@@ -390,9 +460,11 @@ class _LogActionsRevealState extends State<LogActionsReveal>
               canRequestFocus: true,
               onFocusChange: _onFocusChange,
               child: Semantics(
+                onLongPress: _onLongPress,
                 customSemanticsActions: _semanticActions(),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
+                  excludeFromSemantics: true,
                   onLongPress: _onLongPress,
                   child: widget.child,
                 ),

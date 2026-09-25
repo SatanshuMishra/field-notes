@@ -44,6 +44,8 @@ const double _waveBarRadius = 2;
 const double _unavailableMinHeight = 64;
 
 const double _toggleSize = 38;
+const double _toggleTarget = 48;
+const double _toggleGap = 12;
 const double _toggleGlyphSize = 15;
 const double _toggleGlyphOffset = 2;
 
@@ -247,7 +249,7 @@ class _VoiceBodyState extends State<VoiceBody> {
     return Row(
       children: <Widget>[
         _PlayToggle(isPlaying: _isPlaying, onTap: _ready ? _toggle : null),
-        const SizedBox(width: 12),
+        const SizedBox(width: _toggleSize + _toggleGap - _toggleTarget),
         Expanded(
           child: SizedBox(
             height: _waveHeight,
@@ -291,6 +293,7 @@ class _PlayToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       enabled: onTap != null,
       label: isPlaying ? 'Pause' : 'Play',
@@ -298,22 +301,28 @@ class _PlayToggle extends StatelessWidget {
         key: const ValueKey<String>('voice-play-toggle'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: Opacity(
-          opacity: onTap == null ? 0.5 : 1.0,
-          child: Container(
-            width: _toggleSize,
-            height: _toggleSize,
-            decoration: const BoxDecoration(
-              color: Palette.coral,
-              shape: BoxShape.circle,
-              border: Shapes.outline,
-            ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.only(left: _toggleGlyphOffset),
-                child: CustomPaint(
-                  size: const Size(_toggleGlyphSize, _toggleGlyphSize),
-                  painter: _TransportGlyph(isPlaying: isPlaying),
+        child: SizedBox.square(
+          dimension: _toggleTarget,
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: Opacity(
+              opacity: onTap == null ? 0.5 : 1.0,
+              child: Container(
+                width: _toggleSize,
+                height: _toggleSize,
+                decoration: const BoxDecoration(
+                  color: Palette.coral,
+                  shape: BoxShape.circle,
+                  border: Shapes.outline,
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: _toggleGlyphOffset),
+                    child: CustomPaint(
+                      size: const Size(_toggleGlyphSize, _toggleGlyphSize),
+                      painter: _TransportGlyph(isPlaying: isPlaying),
+                    ),
+                  ),
                 ),
               ),
             ),
