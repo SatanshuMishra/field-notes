@@ -38,7 +38,7 @@ class MoodBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
       child: Row(
         children: <Widget>[
-          FlowerBloom.forMood(current, size: 54),
+          ExcludeSemantics(child: FlowerBloom.forMood(current, size: 54)),
           const SizedBox(width: _moodBannerGap),
           Expanded(
             child: Column(
@@ -91,6 +91,8 @@ const double _promptBloomOpacity = 0.5;
 
 const double _promptBloomSize = 46;
 
+const double _minTapTarget = 48;
+
 class _MoodChangePill extends StatelessWidget {
   const _MoodChangePill({required this.label, required this.onTap});
 
@@ -109,12 +111,22 @@ class _MoodChangePill extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: DecoratedBox(
-            decoration: _changePillDecoration,
-            child: Padding(
-              padding: _moodPillPadding,
-              child: ExcludeSemantics(
-                child: Text(label, style: TypographyTokens.caption11Sans),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: _minTapTarget,
+              minHeight: _minTapTarget,
+            ),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: DecoratedBox(
+                decoration: _changePillDecoration,
+                child: Padding(
+                  padding: _moodPillPadding,
+                  child: ExcludeSemantics(
+                    child: Text(label, style: TypographyTokens.caption11Sans),
+                  ),
+                ),
               ),
             ),
           ),

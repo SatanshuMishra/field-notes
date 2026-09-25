@@ -15,6 +15,7 @@ const double _headerGap = 12;
 const double _ruleThickness = 1.5;
 const double _backExtent = 34;
 const double _backRadius = 10;
+const double _minTapTarget = 48;
 const double _chevronExtent = 16;
 const double _chevronArm = 4.5;
 const double _chevronStrokeWidth = 2;
@@ -82,23 +83,34 @@ class DayDetailHeader extends StatelessWidget {
     return Semantics(
       button: true,
       label: closeLabel,
+      onTap: onClose,
       child: GestureDetector(
-        key: dayDetailBackKey,
         behavior: HitTestBehavior.opaque,
         excludeFromSemantics: true,
         onTap: onClose,
-        child: Container(
-          width: _backExtent,
-          height: _backExtent,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Palette.cardWarm,
-            border: Shapes.outline,
-            borderRadius: BorderRadius.circular(_backRadius),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
           ),
-          child: const SizedBox.square(
-            dimension: _chevronExtent,
-            child: CustomPaint(painter: _BackChevronPainter()),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Container(
+              key: dayDetailBackKey,
+              width: _backExtent,
+              height: _backExtent,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Palette.cardWarm,
+                border: Shapes.outline,
+                borderRadius: BorderRadius.circular(_backRadius),
+              ),
+              child: const SizedBox.square(
+                dimension: _chevronExtent,
+                child: CustomPaint(painter: _BackChevronPainter()),
+              ),
+            ),
           ),
         ),
       ),
