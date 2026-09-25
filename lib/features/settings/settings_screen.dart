@@ -10,6 +10,7 @@ import 'sections/data_section.dart';
 import 'sections/journal_section.dart';
 import 'sections/reminders_sound_section.dart';
 import 'sections/sync_storage_section.dart';
+import 'spell_check_availability.dart';
 import 'widgets/settings_notice.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -20,13 +21,23 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  final ScrollController _scrollController = ScrollController();
   String? _notice;
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   void _showNotice(String message) {
     if (!mounted) {
       return;
     }
     setState(() => _notice = message);
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
   }
 
   void _dismissNotice() {
@@ -80,7 +91,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildSections(AppSettings settings) {
     final String? notice = _notice;
+    final SpellCheckAvailability spellCheckAvailability =
+        ref.watch(spellCheckAvailabilityProvider).value ??
+        SpellCheckAvailability.available;
     return ListView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(20),
       children: <Widget>[
         Text('Settings', style: TypographyTokens.titleSerif),
@@ -98,7 +113,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onFeedback: _showNotice,
         ),
         const SizedBox(height: 16),
-        JournalSection(settings: settings, onFeedback: _showNotice),
+        JournalSection(
+          settings: settings,
+          onFeedback: _showNotice,
+          spellCheckAvailability: spellCheckAvailability,
+        ),
         const SizedBox(height: 16),
         DataSection(onFeedback: _showNotice),
       ],
