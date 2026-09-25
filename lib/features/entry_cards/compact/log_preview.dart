@@ -139,14 +139,15 @@ LogPreview _textPreview(Entry entry, String heading) {
     lead = _collapseWhitespace(significant.first.text);
     snippet = _collapseWhitespace(joinNotePlainSegments(significant.skip(1)));
   } else {
+    final int segmentBoundary = significant.isEmpty
+        ? fullText.length
+        : _collapseWhitespace(significant.first.text).length;
     final int? sentenceEnd = _firstSentenceEnd(fullText);
-    if (sentenceEnd == null) {
-      lead = fullText;
-      snippet = '';
-    } else {
-      lead = fullText.substring(0, sentenceEnd);
-      snippet = fullText.substring(sentenceEnd).trim();
-    }
+    final int leadEnd = sentenceEnd == null
+        ? segmentBoundary
+        : (sentenceEnd <= segmentBoundary ? sentenceEnd : segmentBoundary);
+    lead = fullText.substring(0, leadEnd);
+    snippet = fullText.substring(leadEnd).trim();
   }
   if (lead.isEmpty && firstPhoto != null) {
     lead = firstPhoto.caption;

@@ -63,11 +63,11 @@ class CaptureIconPainter extends CustomPainter {
     ..isAntiAlias = true;
 
   Path _pencil() => Path()
-    ..moveTo(4, 17)
-    ..relativeLineTo(8, -11)
-    ..relativeLineTo(8, 11)
-    ..moveTo(6, 20)
-    ..relativeLineTo(12, 0);
+    ..moveTo(18, 5)
+    ..lineTo(5, 20)
+    ..lineTo(20, 9)
+    ..moveTo(18, 5)
+    ..lineTo(20, 9);
 
   Path _mic() => Path()
     ..addRRect(

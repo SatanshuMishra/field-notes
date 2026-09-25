@@ -170,7 +170,13 @@ void main() {
     for (final key in bundle.mediaFiles.keys) {
       expect(p.extension(key), isNotEmpty, reason: 'archive entry $key');
     }
-    expect(bundle.suggestedFileName, 'field-notes-export-20250627-045320.zip');
+    final expectedLocal = DateTime.fromMillisecondsSinceEpoch(1751000000000);
+    String two(int v) => v.toString().padLeft(2, '0');
+    final expectedStamp = 'field-notes-export-${expectedLocal.year}'
+        '${two(expectedLocal.month)}${two(expectedLocal.day)}'
+        '-${two(expectedLocal.hour)}${two(expectedLocal.minute)}'
+        '${two(expectedLocal.second)}.zip';
+    expect(bundle.suggestedFileName, expectedStamp);
   });
 
   test('buildBundle skips a media row whose file is missing on disk',
