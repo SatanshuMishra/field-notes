@@ -49,6 +49,7 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
   double? _tableDragY;
   _LongPress _longPress = _LongPress.none;
   MdRange? _pressWord;
+  Offset? _pressPoint;
   NoteSelection? _lastSent;
 
   RenderNoteView? get _view {
@@ -205,6 +206,7 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
       view.noteLayout.positionAt(point).offset,
     );
     _pressWord = word;
+    _pressPoint = point;
     widget.onDragActiveChanged(true);
     _select(
       NoteSelection(anchor: word.start, head: word.end),
@@ -216,10 +218,14 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
   void _handleLongPressMoveUpdate(LongPressMoveUpdateDetails details) {
     final RenderNoteView? view = _view;
     final MdRange? first = _pressWord;
-    if (_longPress != _LongPress.text || view == null || first == null) {
+    final Offset? origin = _pressPoint;
+    if (_longPress != _LongPress.text ||
+        view == null ||
+        first == null ||
+        origin == null) {
       return;
     }
-    final Offset point = view.globalToContent(details.globalPosition);
+    final Offset point = origin + details.offsetFromOrigin;
     final MdRange under = view.noteLayout.wordBoundary(
       view.noteLayout.positionAt(point).offset,
     );
@@ -236,6 +242,7 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
     final _LongPress press = _longPress;
     _longPress = _LongPress.none;
     _pressWord = null;
+    _pressPoint = null;
     if (press != _LongPress.text) {
       return;
     }
@@ -252,6 +259,7 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
     final _LongPress press = _longPress;
     _longPress = _LongPress.none;
     _pressWord = null;
+    _pressPoint = null;
     if (press != _LongPress.text) {
       return;
     }

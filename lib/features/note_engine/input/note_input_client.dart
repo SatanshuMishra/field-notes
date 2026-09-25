@@ -331,6 +331,47 @@ class NoteInputClient with DeltaTextInputClient {
     _mirror = _mirror.recordSent(_known(sent));
   }
 
+  static List<TextEditingDelta> _mergeKeyReplacements(
+    List<TextEditingDelta> deltas,
+  ) {
+    final List<TextEditingDelta> merged = <TextEditingDelta>[];
+    int index = 0;
+    while (index < deltas.length) {
+      final TextEditingDelta delta = deltas[index];
+      final TextEditingDelta? next = index + 1 < deltas.length
+          ? deltas[index + 1]
+          : null;
+      if (delta is TextEditingDeltaDeletion &&
+          next is TextEditingDeltaInsertion &&
+          _isKeyReplacement(delta, next)) {
+        merged.add(
+          TextEditingDeltaReplacement(
+            oldText: delta.oldText,
+            replacedRange: delta.deletedRange,
+            replacementText: next.textInserted,
+            selection: next.selection,
+            composing: next.composing,
+          ),
+        );
+        index += 2;
+      } else {
+        merged.add(delta);
+        index += 1;
+      }
+    }
+    return List<TextEditingDelta>.unmodifiable(merged);
+  }
+
+  static bool _isKeyReplacement(
+    TextEditingDeltaDeletion deletion,
+    TextEditingDeltaInsertion insertion,
+  ) {
+    final TextRange deleted = deletion.deletedRange;
+    return insertion.insertionOffset == deleted.start &&
+        insertion.oldText ==
+            deletion.oldText.replaceRange(deleted.start, deleted.end, '');
+  }
+
   void _processBatch(List<TextEditingDelta> deltas) {
     _inBatch = true;
     EditorState working = host.state;
@@ -361,7 +402,7 @@ class NoteInputClient with DeltaTextInputClient {
     }
 
     try {
-      for (final TextEditingDelta delta in deltas) {
+      for (final TextEditingDelta delta in _mergeKeyReplacements(deltas)) {
         if (delta.oldText != _mirror.value.text) {
           flush();
           working = host.state;

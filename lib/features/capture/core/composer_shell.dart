@@ -66,11 +66,13 @@ class ComposerShell extends StatelessWidget {
         Positioned.fill(child: _scrim(context)),
         Padding(
           padding: EdgeInsets.only(
+            top: MediaQuery.paddingOf(context).top,
             bottom: MediaQuery.viewInsetsOf(context).bottom,
           ),
-          child: MediaQuery.removeViewInsets(
-            context: context,
-            removeBottom: true,
+          child: MediaQuery(
+            data: MediaQuery.of(context)
+                .removeViewInsets(removeBottom: true)
+                .removePadding(removeTop: true),
             child: Center(
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
