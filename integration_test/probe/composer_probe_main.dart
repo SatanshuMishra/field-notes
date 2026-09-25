@@ -11,7 +11,6 @@ import 'package:field_notes/data/database/app_database.dart'
     show AppDatabase, MediaBlobsCompanion;
 import 'package:field_notes/data/drafts/filesystem_draft_store.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
-import 'package:field_notes/design/feedback/confirm_dialog.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/note_tree.dart';
 import 'package:field_notes/domain/notes/markdown/syntax_tree.dart';
@@ -971,16 +970,6 @@ final class _Probe {
       throw StateError('no Save control on screen');
     }
     await _pressElement(target);
-    if (edit != null) {
-      Element? confirm;
-      for (int frame = 0; frame < 60 && confirm == null; frame++) {
-        await _frames(1);
-        confirm = _keyedElement(confirmDialogConfirmKey);
-      }
-      if (confirm != null) {
-        await _pressElement(confirm);
-      }
-    }
     bool saved = false;
     for (int frame = 0; frame < 240 && !saved; frame++) {
       await _frames(1);

@@ -296,8 +296,6 @@ void main() {
     await tester.pump(draftIdleDebounceForTest);
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(confirmDialogConfirmKey));
-    await tester.pumpAndSettle();
 
     expect(session.repository.noteSaves, hasLength(1));
     expect(driver.find, findsNothing);

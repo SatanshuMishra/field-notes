@@ -101,8 +101,6 @@ Widget _app({
   );
 }
 
-String _editorText(WidgetTester tester) => NoteEditorDriver(tester).source;
-
 Future<FakeJournalRepository> _openAndEdit(WidgetTester tester) async {
   final NoteEditorDriver driver = NoteEditorDriver(tester);
   final Entry entry = _afternoonNote();
@@ -140,40 +138,12 @@ void main() {
     expect(find.text('Save changes'), findsOneWidget);
   });
 
-  testWidgets('Save changes asks before writing', (WidgetTester tester) async {
-    final FakeJournalRepository repository = await _openAndEdit(tester);
-
-    await tester.tap(find.text(editNoteSaveLabel));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Save changes?'), findsOneWidget);
-    expect(find.text('Update this note with your edits?'), findsOneWidget);
-    expect(repository.noteSaves, isEmpty);
-  });
-
-  testWidgets('cancelling the save question writes nothing and keeps the edit',
-      (WidgetTester tester) async {
-    final FakeJournalRepository repository = await _openAndEdit(tester);
-
-    await tester.tap(find.text(editNoteSaveLabel));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(confirmDialogCancelKey));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Save changes?'), findsNothing);
-    expect(repository.noteSaves, isEmpty);
-    expect(_editorText(tester), 'a better day');
-    expect(find.text('Editing afternoon note'), findsOneWidget);
-  });
-
   testWidgets(
-      'confirming the save question writes the edit and toasts Entry updated',
+      'Save changes writes the edit and toasts Entry updated',
       (WidgetTester tester) async {
     final FakeJournalRepository repository = await _openAndEdit(tester);
 
     await tester.tap(find.text(editNoteSaveLabel));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(confirmDialogConfirmKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 
@@ -212,8 +182,6 @@ void main() {
     await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
     await tester.tap(find.text(editNoteSaveLabel));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byKey(confirmDialogConfirmKey));
     await tester.pumpAndSettle();
 
     expect(repository.noteSaves, hasLength(1));

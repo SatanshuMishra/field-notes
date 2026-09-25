@@ -74,12 +74,10 @@ Entry _noteEntry() => Entry(
       updatedAt: 0,
     );
 
-Future<void> _saveAndConfirm(WidgetTester tester) async {
+Future<void> _saveNote(WidgetTester tester) async {
   await tester.tap(find.text(editNoteSaveLabel));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
-  expect(find.text(editNoteConfirmTitle), findsOneWidget);
-  await tester.tap(find.byKey(confirmDialogConfirmKey));
 }
 
 String _editorText(WidgetTester tester) => NoteEditorDriver(tester).source;
@@ -114,7 +112,7 @@ void main() {
     await tester.pump(draftIdleDebounceForTest);
     expect(drafts.drafts, <String, String>{'entry-1': '  a better day  '});
 
-    await _saveAndConfirm(tester);
+    await _saveNote(tester);
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, isEmpty);
@@ -254,9 +252,6 @@ void main() {
 
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 150));
-    expect(find.text(editNoteConfirmTitle), findsOneWidget);
-    await tester.tap(find.byKey(confirmDialogConfirmKey));
     await tester.pump(const Duration(milliseconds: 50));
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     await tester.pumpAndSettle();
@@ -289,7 +284,7 @@ void main() {
     await tester.pumpAndSettle();
     await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
-    await _saveAndConfirm(tester);
+    await _saveNote(tester);
     await tester.pumpAndSettle();
 
     expect(repository.textUpdates, isEmpty);
@@ -620,7 +615,7 @@ void main() {
         await tester.pumpAndSettle();
         await driver.enterText(source);
         await tester.pump();
-        await _saveAndConfirm(tester);
+        await _saveNote(tester);
         await tester.pumpAndSettle();
         expect(find.text(editNoteTitleFor(created)), findsNothing);
         await tester.pump(kToastLifetime);

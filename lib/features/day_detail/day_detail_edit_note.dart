@@ -27,8 +27,6 @@ import 'package:field_notes/state/state.dart';
 const String editNoteSaveLabel = 'Save changes';
 const String editNoteFailedMessage =
     "Couldn't save your changes. Please try again.";
-const String editNoteConfirmTitle = 'Save changes?';
-const String editNoteConfirmMessage = 'Update this note with your edits?';
 const String editNoteUpdatedMessage = 'Entry updated';
 
 String editNoteTitleFor(Entry entry) {
@@ -95,15 +93,6 @@ class _EditNoteConnectorState extends ConsumerState<EditNoteConnector> {
 
   Future<void> _save(String text) async {
     if (_draft.isRestoring) {
-      return;
-    }
-    final bool confirmed = await showConfirmDialog(
-      context,
-      title: editNoteConfirmTitle,
-      message: editNoteConfirmMessage,
-      confirmLabel: editNoteSaveLabel,
-    );
-    if (!confirmed || !mounted || _draft.isRestoring) {
       return;
     }
     setState(() {
