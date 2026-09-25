@@ -55,26 +55,32 @@ class _TallyChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.cardBright,
-        borderRadius: Shapes.buttonBorderRadius,
-        border: Border.fromBorderSide(
-          BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
+    return Semantics(
+      container: true,
+      label: '$count $label',
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Palette.cardBright,
+          borderRadius: Shapes.buttonBorderRadius,
+          border: Border.fromBorderSide(
+            BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
+          ),
+          boxShadow: Shadows.button,
         ),
-        boxShadow: Shadows.button,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            icon,
-            const SizedBox(width: 6),
-            Text('$count', style: TypographyTokens.labelSans),
-            const SizedBox(width: 4),
-            Text(label, style: TypographyTokens.captionSans),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: ExcludeSemantics(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                icon,
+                const SizedBox(width: 6),
+                Text('$count', style: TypographyTokens.labelSans),
+                const SizedBox(width: 4),
+                Text(label, style: TypographyTokens.captionSans),
+              ],
+            ),
+          ),
         ),
       ),
     );
