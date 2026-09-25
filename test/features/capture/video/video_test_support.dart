@@ -64,6 +64,7 @@ class FakeVideoRecorder implements VideoRecorder {
   int listCalls = 0;
   bool _sessionLive = false;
   final List<String> previewDeviceIds = <String>[];
+  Completer<void>? stopGate;
 
   Duration elapsedValue = Duration.zero;
 
@@ -105,6 +106,10 @@ class FakeVideoRecorder implements VideoRecorder {
   @override
   Future<VideoRecording> stop() async {
     stopCalls++;
+    final Completer<void>? gate = stopGate;
+    if (gate != null) {
+      await gate.future;
+    }
     final VideoRecorderException? error = stopError;
     if (error != null) {
       throw error;

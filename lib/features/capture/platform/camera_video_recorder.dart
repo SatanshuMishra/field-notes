@@ -31,7 +31,7 @@ VideoRecorder createPlatformVideoRecorder() =>
 
 class CameraVideoRecorder implements VideoRecorder {
   CameraController? _controller;
-  String? _deviceId;
+  _CameraSession? _session;
   final Stopwatch _elapsed = Stopwatch();
 
   @override
@@ -53,19 +53,16 @@ class CameraVideoRecorder implements VideoRecorder {
 
   @override
   Future<void> start() async {
+    final _CameraSession? session = _session;
+    if (session == null) {
+      throw const VideoRecorderException(videoStartMessage);
+    }
     try {
-      final List<CameraDescription> cameras = await availableCameras();
-      if (cameras.isEmpty) {
+      final CameraController controller = await session.ready;
+      if (!identical(_session, session)) {
         throw const VideoRecorderException(videoStartMessage);
       }
-      final CameraController controller = CameraController(
-        _selected(cameras),
-        ResolutionPreset.high,
-        enableAudio: true,
-      );
-      await controller.initialize();
       await controller.startVideoRecording();
-      _controller = controller;
       _elapsed
         ..reset()
         ..start();
@@ -131,8 +128,9 @@ class CameraVideoRecorder implements VideoRecorder {
     } catch (error) {
       throw VideoRecorderException(videoStopMessage, cause: error);
     } finally {
-      await controller.dispose();
+      _session = null;
       _controller = null;
+      await controller.dispose();
     }
   }
 
@@ -150,6 +148,7 @@ class CameraVideoRecorder implements VideoRecorder {
     _elapsed.stop();
     final CameraController? controller = _controller;
     _controller = null;
+    _session = null;
     if (controller == null) {
       return;
     }
@@ -169,6 +168,7 @@ class CameraVideoRecorder implements VideoRecorder {
     _elapsed.stop();
     final CameraController? controller = _controller;
     _controller = null;
+    _session = null;
     if (controller == null) {
       return;
     }
@@ -186,22 +186,96 @@ class CameraVideoRecorder implements VideoRecorder {
 
   @override
   Widget? openSession(String deviceId) {
-    _deviceId = deviceId;
-    final CameraController? controller = _controller;
-    if (controller == null || !controller.value.isInitialized) {
-      return null;
+    final _CameraSession? existing = _session;
+    if (existing != null && existing.deviceId == deviceId) {
+      return existing.preview;
     }
-    return CameraPreview(controller);
+    final Completer<CameraController> ready = Completer<CameraController>();
+    ready.future.ignore();
+    final _CameraSession session = _CameraSession(
+      deviceId: deviceId,
+      ready: ready.future,
+      preview: _CameraSessionPreview(
+        key: ValueKey<String>('camera-preview-$deviceId'),
+        ready: ready.future,
+      ),
+    );
+    _session = session;
+    unawaited(_initialise(session, ready));
+    return session.preview;
   }
 
-  CameraDescription _selected(List<CameraDescription> cameras) {
-    final String? deviceId = _deviceId;
+  Future<void> _initialise(
+    _CameraSession session,
+    Completer<CameraController> ready,
+  ) async {
+    try {
+      final List<CameraDescription> cameras = await availableCameras();
+      if (cameras.isEmpty || !identical(_session, session)) {
+        throw const VideoRecorderException(videoStartMessage);
+      }
+      final CameraController controller = CameraController(
+        _selected(cameras, session.deviceId),
+        ResolutionPreset.high,
+        enableAudio: true,
+      );
+      _controller = controller;
+      await controller.initialize();
+      if (!identical(_session, session)) {
+        throw const VideoRecorderException(videoStartMessage);
+      }
+      ready.complete(controller);
+    } on VideoRecorderException catch (error) {
+      ready.completeError(error);
+    } catch (error) {
+      ready.completeError(
+        VideoRecorderException(videoStartMessage, cause: error),
+      );
+    }
+  }
+
+  CameraDescription _selected(
+    List<CameraDescription> cameras,
+    String deviceId,
+  ) {
     for (final CameraDescription camera in cameras) {
       if (camera.name == deviceId) {
         return camera;
       }
     }
     return cameras.first;
+  }
+}
+
+class _CameraSession {
+  const _CameraSession({
+    required this.deviceId,
+    required this.ready,
+    required this.preview,
+  });
+
+  final String deviceId;
+  final Future<CameraController> ready;
+  final Widget preview;
+}
+
+class _CameraSessionPreview extends StatelessWidget {
+  const _CameraSessionPreview({super.key, required this.ready});
+
+  final Future<CameraController> ready;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<CameraController>(
+      future: ready,
+      builder: (BuildContext context, AsyncSnapshot<CameraController> snapshot) {
+        final CameraController? controller = snapshot.data;
+        if (controller == null) {
+          return const SizedBox.shrink();
+        }
+        return CameraPreview(controller);
+      },
+    );
   }
 }
 

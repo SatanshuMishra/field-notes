@@ -335,6 +335,7 @@ class _VideoComposerConnectorState
     _stopTicker();
     setState(() {
       _phase = VideoRecorderPhase.saving;
+      _preview = null;
       _elapsed = _recorder.elapsed;
       _errorMessage = null;
       _nudgeMessage = null;
@@ -384,9 +385,11 @@ class _VideoComposerConnectorState
     if (!mounted) {
       return;
     }
+    final String? deviceId = _deviceId;
     setState(() {
       _phase = phase;
       _errorMessage = message;
+      _preview = deviceId == null ? null : _recorder.openSession(deviceId);
     });
   }
 

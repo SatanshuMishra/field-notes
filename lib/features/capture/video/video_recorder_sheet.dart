@@ -53,7 +53,7 @@ const double _pickerWidth = 280;
 const double _underPillTop = 54;
 const double _underPillGap = 8;
 
-const double _hintBottom = 70;
+const double _hintBottom = 100;
 const double _hintSize = 13;
 const double _errorGap = 10;
 const EdgeInsets _errorPadding =
@@ -202,14 +202,18 @@ class VideoRecorderSheet extends StatelessWidget {
     return Positioned(
       left: _chromeInset,
       top: _chromeInset,
-      child: GestureDetector(
-        key: videoCloseKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: _isSaving ? null : onCancel,
-        child: const IconStickerGlyphIcon(
-          glyph: IconStickerGlyph.close,
-          color: Palette.onAccent,
-          size: _closeGlyphSize,
+      child: Semantics(
+        button: true,
+        label: 'Close',
+        child: GestureDetector(
+          key: videoCloseKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: _isSaving ? null : onCancel,
+          child: const IconStickerGlyphIcon(
+            glyph: IconStickerGlyph.close,
+            color: Palette.onAccent,
+            size: _closeGlyphSize,
+          ),
         ),
       ),
     );
@@ -403,41 +407,55 @@ class VideoRecorderSheet extends StatelessWidget {
   }
 
   Widget _shutter() {
-    return GestureDetector(
-      key: videoShutterKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: _shutterTap,
-      child: Container(
-        width: _shutterSize,
-        height: _shutterSize,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Palette.onAccent,
-            width: _shutterBorderWidth,
+    return Semantics(
+      button: true,
+      label: _shutterLabel,
+      child: GestureDetector(
+        key: videoShutterKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: _shutterTap,
+        child: Container(
+          width: _shutterSize,
+          height: _shutterSize,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Palette.onAccent,
+              width: _shutterBorderWidth,
+            ),
           ),
-        ),
-        child: _showsPauseGlyph
-            ? const IconStickerGlyphIcon(
-                glyph: IconStickerGlyph.pause,
-                color: Palette.onAccent,
-                size: _shutterPauseGlyphSize,
-              )
-            : const SizedBox.square(
-                dimension: _shutterCoreSize,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Palette.recordFill,
-                    shape: BoxShape.circle,
+          child: _showsPauseGlyph
+              ? const IconStickerGlyphIcon(
+                  glyph: IconStickerGlyph.pause,
+                  color: Palette.onAccent,
+                  size: _shutterPauseGlyphSize,
+                )
+              : const SizedBox.square(
+                  dimension: _shutterCoreSize,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Palette.recordFill,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
-              ),
+        ),
       ),
     );
   }
 
   bool get _showsPauseGlyph => _isRecording && supportsPause && onPause != null;
+
+  String get _shutterLabel {
+    if (_isRecording) {
+      return _showsPauseGlyph ? 'Pause recording' : 'Stop recording';
+    }
+    if (_isPaused) {
+      return onResume != null ? 'Resume recording' : 'Stop recording';
+    }
+    return 'Start recording';
+  }
 
   VoidCallback? get _shutterTap {
     if (_isSaving || _isPreparing) {
