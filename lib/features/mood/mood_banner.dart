@@ -14,18 +14,24 @@ class MoodBanner extends StatelessWidget {
     required this.onChangeMood,
     this.promptText = 'How are you feeling today?',
     this.changeLabel = 'change',
+    this.isToday = true,
   });
 
   final Mood? mood;
   final VoidCallback? onChangeMood;
   final String promptText;
   final String changeLabel;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
     final Mood? current = mood;
     if (current == null) {
-      return _MoodPrompt(text: promptText, onTap: onChangeMood);
+      return _MoodPrompt(
+        text: promptText,
+        isToday: isToday,
+        onTap: onChangeMood,
+      );
     }
     return StickerCard(
       surface: Palette.cardWarm,
@@ -107,7 +113,9 @@ class _MoodChangePill extends StatelessWidget {
             decoration: _changePillDecoration,
             child: Padding(
               padding: _moodPillPadding,
-              child: Text(label, style: TypographyTokens.caption11Sans),
+              child: ExcludeSemantics(
+                child: Text(label, style: TypographyTokens.caption11Sans),
+              ),
             ),
           ),
         ),
@@ -223,7 +231,9 @@ class _ChangeMoodButton extends StatelessWidget {
             decoration: _changeMoodButtonDecoration,
             child: Padding(
               padding: _changeMoodButtonPadding,
-              child: Text(label, style: _changeMoodButtonLabelStyle),
+              child: ExcludeSemantics(
+                child: Text(label, style: _changeMoodButtonLabelStyle),
+              ),
             ),
           ),
         ),
@@ -233,10 +243,15 @@ class _ChangeMoodButton extends StatelessWidget {
 }
 
 class _MoodPrompt extends StatelessWidget {
-  const _MoodPrompt({required this.text, required this.onTap});
+  const _MoodPrompt({
+    required this.text,
+    required this.onTap,
+    this.isToday = true,
+  });
 
   final String text;
   final VoidCallback? onTap;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
@@ -267,7 +282,9 @@ class _MoodPrompt extends StatelessWidget {
                     children: <Widget>[
                       Text(text, style: TypographyTokens.bannerSerif),
                       Text(
-                        "tap to plant today's bloom",
+                        isToday
+                            ? "tap to plant today's bloom"
+                            : "tap to plant this day's bloom",
                         style: TypographyTokens.promptAccent,
                       ),
                     ],
