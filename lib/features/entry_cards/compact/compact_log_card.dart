@@ -212,6 +212,7 @@ class CompactLogCard extends StatefulWidget {
     this.onEdit,
     required this.onDelete,
     this.audioPlayerFactory,
+    this.onToggleTask,
   });
 
   final Entry entry;
@@ -221,6 +222,7 @@ class CompactLogCard extends StatefulWidget {
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
   final EntryAudioPlayerFactory? audioPlayerFactory;
+  final ValueChanged<int>? onToggleTask;
 
   @override
   State<CompactLogCard> createState() => _CompactLogCardState();
@@ -361,14 +363,25 @@ class _CompactLogCardState extends State<CompactLogCard> {
         media.textScaler.scale(bodySize) /
         bodySize *
         (_shortNoteSize / bodySize);
+    final ValueChanged<int>? onToggleTask = widget.onToggleTask;
+    final String text = widget.entry.textContent ?? '';
     return MediaQuery(
       data: media.copyWith(textScaler: TextScaler.linear(scale)),
-      child: IgnorePointer(
-        child: NoteMediaScope(
-          resolver: widget.resolver,
-          child: NoteBody(text: widget.entry.textContent ?? ''),
-        ),
-      ),
+      child: onToggleTask == null
+          ? IgnorePointer(
+              child: NoteMediaScope(
+                resolver: widget.resolver,
+                child: NoteBody(text: text),
+              ),
+            )
+          : NoteMediaScope(
+              resolver: widget.resolver,
+              child: NoteBody(
+                text: text,
+                selectable: false,
+                onToggleTask: onToggleTask,
+              ),
+            ),
     );
   }
 

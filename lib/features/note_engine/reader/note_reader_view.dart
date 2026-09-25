@@ -9,6 +9,8 @@ import 'package:field_notes/design/widgets/note_column.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
+import 'package:field_notes/features/note_engine/gestures/mouse_selection.dart'
+    show noteCheckboxAt;
 import 'package:field_notes/features/note_engine/layout/note_layout_engine.dart';
 import 'package:field_notes/features/note_engine/projection/atomic_objects.dart';
 import 'package:field_notes/features/note_engine/projection/visible_text.dart';
@@ -19,16 +21,20 @@ import 'package:field_notes/features/notes/render/note_photo_block.dart'
 
 const double _columnEms = 45;
 const String _objectReplacement = '\uFFFC';
+const double _touchCheckboxTarget = 48;
+const double _mouseCheckboxTarget = 24;
 
 class NoteReaderView extends StatefulWidget {
   const NoteReaderView({
     super.key,
     required this.source,
     this.selectable = true,
+    this.onToggleTask,
   });
 
   final String source;
   final bool selectable;
+  final ValueChanged<int>? onToggleTask;
 
   @override
   State<NoteReaderView> createState() => _NoteReaderViewState();
@@ -106,6 +112,20 @@ class _NoteReaderViewState extends State<NoteReaderView> {
     });
   }
 
+  int? _checkboxAt(Offset global, PointerDeviceKind kind) {
+    final RenderNoteView? render = _render;
+    if (render == null) {
+      return null;
+    }
+    return noteCheckboxAt(
+      render,
+      render.globalToContent(global),
+      minTarget: kind == PointerDeviceKind.touch
+          ? _touchCheckboxTarget
+          : _mouseCheckboxTarget,
+    );
+  }
+
   NoteSelection _wordAt(int offset) {
     final RenderNoteView? render = _render;
     if (render == null) {
@@ -129,6 +149,10 @@ class _NoteReaderViewState extends State<NoteReaderView> {
   }
 
   void _handleTapDown(TapDragDownDetails details) {
+    if (widget.onToggleTask != null &&
+        _checkboxAt(details.globalPosition, PointerDeviceKind.mouse) != null) {
+      return;
+    }
     final int? offset = _offsetAt(details.globalPosition);
     _focusNode?.requestFocus();
     _menu.remove();
@@ -263,7 +287,32 @@ class _NoteReaderViewState extends State<NoteReaderView> {
     };
   }
 
-  Widget _view(BuildContext context) => NoteView(
+  Widget _view(BuildContext context) {
+    final ValueChanged<int>? onToggleTask = widget.onToggleTask;
+    final Widget view = _noteView(context);
+    if (onToggleTask == null) {
+      return view;
+    }
+    return RawGestureDetector(
+      gestures: <Type, GestureRecognizerFactory>{
+        _CheckboxTapRecognizer:
+            GestureRecognizerFactoryWithHandlers<_CheckboxTapRecognizer>(
+              () => _CheckboxTapRecognizer(
+                checkboxAt: _checkboxAt,
+                debugOwner: this,
+              ),
+              (_CheckboxTapRecognizer recognizer) {
+                recognizer
+                  ..checkboxAt = _checkboxAt
+                  ..onToggle = onToggleTask;
+              },
+            ),
+      },
+      child: view,
+    );
+  }
+
+  Widget _noteView(BuildContext context) => NoteView(
     renderKey: _renderKey,
     source: widget.source,
     tree: _tree,
@@ -366,5 +415,41 @@ class _NoteReaderViewState extends State<NoteReaderView> {
         );
       },
     );
+  }
+}
+
+class _CheckboxTapRecognizer extends TapGestureRecognizer {
+  _CheckboxTapRecognizer({required this.checkboxAt, super.debugOwner}) {
+    onTapDown = _handleDown;
+    onTapCancel = _handleCancel;
+    onTap = _handleTap;
+  }
+
+  int? Function(Offset global, PointerDeviceKind kind) checkboxAt;
+  ValueChanged<int>? onToggle;
+  int? _pressed;
+
+  @override
+  bool isPointerAllowed(PointerDownEvent event) =>
+      super.isPointerAllowed(event) &&
+      checkboxAt(event.position, event.kind) != null;
+
+  void _handleDown(TapDownDetails details) {
+    _pressed = checkboxAt(
+      details.globalPosition,
+      details.kind ?? PointerDeviceKind.touch,
+    );
+  }
+
+  void _handleCancel() {
+    _pressed = null;
+  }
+
+  void _handleTap() {
+    final int? box = _pressed;
+    _pressed = null;
+    if (box != null) {
+      onToggle?.call(box);
+    }
   }
 }
