@@ -10,6 +10,7 @@ import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show isTextInputFocused;
+import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -181,6 +182,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final AsyncValue<List<Day>> daysAsync = ref.watch(
       daysInMonthProvider(year: _month.year, month: _month.month),
     );
+    final Set<String> journaledDates =
+        ref.watch(journaledDatesProvider).value?.toSet() ?? const <String>{};
     final DateTime today = _today;
     final String todayKey = MonthRef.forDate(today).dateKey(today.day);
     final int firstWeekday = _firstWeekday();
@@ -216,6 +219,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     },
                     firstWeekday: firstWeekday,
                     todayKey: todayKey,
+                    journaledDates: journaledDates,
                     onSelectDay: (String date) =>
                         _selectDay(date, todayKey: todayKey),
                   ),

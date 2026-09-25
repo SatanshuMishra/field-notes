@@ -21,6 +21,7 @@ class CalendarDayCell extends StatelessWidget {
     this.day,
     this.isToday = false,
     this.isFuture = false,
+    this.hasEntries = false,
     this.onTap,
   });
 
@@ -28,7 +29,18 @@ class CalendarDayCell extends StatelessWidget {
   final Day? day;
   final bool isToday;
   final bool isFuture;
+  final bool hasEntries;
   final VoidCallback? onTap;
+
+  String get semanticLabel {
+    final Mood? mood = cell.isInMonth ? day?.mood : null;
+    return <String>[
+      'Day ${cell.dayOfMonth}',
+      if (isToday) 'today',
+      if (mood != null) mood.label,
+      if (hasEntries) 'has entries',
+    ].join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +66,9 @@ class CalendarDayCell extends StatelessWidget {
         : (isFuture ? _futureOpacity : null);
     return Semantics(
       button: onTap != null,
-      label: 'Day ${cell.dayOfMonth}',
+      label: semanticLabel,
+      onTap: onTap,
+      excludeSemantics: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,

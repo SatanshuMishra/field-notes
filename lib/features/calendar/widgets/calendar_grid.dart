@@ -18,6 +18,7 @@ class CalendarGrid extends StatelessWidget {
     required this.daysByDate,
     this.firstWeekday = DateTime.sunday,
     this.todayKey,
+    this.journaledDates = const <String>{},
     required this.onSelectDay,
   });
 
@@ -25,6 +26,7 @@ class CalendarGrid extends StatelessWidget {
   final Map<String, Day> daysByDate;
   final int firstWeekday;
   final String? todayKey;
+  final Set<String> journaledDates;
   final void Function(String dateKey) onSelectDay;
 
   @override
@@ -72,6 +74,7 @@ class CalendarGrid extends StatelessWidget {
       day: cell.isInMonth ? daysByDate[dateKey] : null,
       isToday: dateKey == today,
       isFuture: isFuture,
+      hasEntries: cell.isInMonth && journaledDates.contains(dateKey),
       onTap: isFuture ? null : () => onSelectDay(dateKey),
     );
   }

@@ -4,6 +4,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
+import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,9 @@ Widget _host(Widget child, {required List<Override> overrides}) {
     retry: (int retryCount, Object error) => null,
     overrides: <Override>[
       weekStartProvider.overrideWithValue(WeekStart.sunday),
+      journaledDatesProvider.overrideWith(
+        (Ref ref) => Stream<List<String>>.value(const <String>[]),
+      ),
       ...overrides,
     ],
     child: MaterialApp(
