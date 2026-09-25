@@ -123,40 +123,42 @@ class _MoodTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(Shapes.radiusMd),
             boxShadow: isSelected ? Shadows.tileSelected : null,
           ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isSheet
-                  ? _sheetTilePaddingHorizontal
-                  : _tilePaddingHorizontal,
-              vertical:
-                  isSheet ? _sheetTilePaddingVertical : _tilePaddingVertical,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                FlowerBloom.forMood(mood, size: flowerSize),
-                SizedBox(
-                  height: isSheet ? _sheetTileLabelGap : _tileLabelGap,
-                ),
-                Text(
-                  mood.label,
-                  style: isSheet
-                      ? TypographyTokens.caption9Sans.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Palette.ink,
-                        )
-                      : TypographyTokens.caption11Sans.copyWith(
-                          color: Palette.ink,
-                        ),
-                  textAlign: TextAlign.center,
-                ),
-                if (!isSheet)
+          child: ExcludeSemantics(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isSheet
+                    ? _sheetTilePaddingHorizontal
+                    : _tilePaddingHorizontal,
+                vertical:
+                    isSheet ? _sheetTilePaddingVertical : _tilePaddingVertical,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  FlowerBloom.forMood(mood, size: flowerSize),
+                  SizedBox(
+                    height: isSheet ? _sheetTileLabelGap : _tileLabelGap,
+                  ),
                   Text(
-                    mood.flower.label,
-                    style: TypographyTokens.caption9Sans,
+                    mood.label,
+                    style: isSheet
+                        ? TypographyTokens.caption9Sans.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Palette.ink,
+                          )
+                        : TypographyTokens.caption11Sans.copyWith(
+                            color: Palette.ink,
+                          ),
                     textAlign: TextAlign.center,
                   ),
-              ],
+                  if (!isSheet)
+                    Text(
+                      mood.flower.label,
+                      style: TypographyTokens.caption9Sans,
+                      textAlign: TextAlign.center,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
