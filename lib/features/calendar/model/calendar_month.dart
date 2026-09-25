@@ -23,6 +23,16 @@ const List<String> _weekdayLetters = <String>[
   'S',
 ];
 
+const List<String> _weekdayNames = <String>[
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
 class MonthRef {
   const MonthRef(this.year, this.month);
 
@@ -106,11 +116,15 @@ CalendarCell _cellFor(DateTime date, MonthRef month) {
 
 String monthAbbreviation(int month) => _monthNames[month - 1].substring(0, 3);
 
-List<String> weekdayHeaders({int firstWeekday = DateTime.sunday}) {
-  return <String>[
-    for (int i = 0; i < 7; i++) _weekdayLetters[(firstWeekday - 1 + i) % 7],
-  ];
-}
+List<String> weekdayHeaders({int firstWeekday = DateTime.sunday}) =>
+    _fromWeekday(_weekdayLetters, firstWeekday);
+
+List<String> weekdayNames({int firstWeekday = DateTime.sunday}) =>
+    _fromWeekday(_weekdayNames, firstWeekday);
+
+List<String> _fromWeekday(List<String> week, int firstWeekday) => <String>[
+  for (int i = 0; i < 7; i++) week[(firstWeekday - 1 + i) % 7],
+];
 
 String _pad2(int value) => value.toString().padLeft(2, '0');
 

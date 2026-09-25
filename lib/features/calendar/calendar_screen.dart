@@ -33,6 +33,8 @@ const Key calendarTitleKey = Key('calendar-title');
 const Key calendarThisWeekKey = Key('calendar-this-week');
 const Key calendarPickerKey = Key('calendar-month-picker');
 
+const String _dismissPickerLabel = 'Dismiss month picker';
+
 const double _compactPickerBelowWidth = 520;
 const Offset _pickerOffset = Offset(0, 8);
 
@@ -241,36 +243,42 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         MediaQuery.sizeOf(context).width < _compactPickerBelowWidth
             ? calendarMonthPickerCompactWidth
             : calendarMonthPickerWidth;
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _closePicker,
-          ),
-        ),
-        Positioned(
-          left: 0,
-          top: 0,
-          child: CompositedTransformFollower(
-            link: _pickerLink,
-            showWhenUnlinked: false,
-            targetAnchor: Alignment.bottomLeft,
-            offset: _pickerOffset,
-            child: CalendarMonthPicker(
-              key: calendarPickerKey,
-              year: _pickerYear,
-              displayedMonth: _month,
-              currentMonth: _currentMonth,
-              width: width,
-              onPreviousYear: () => _stepPickerYear(-1),
-              onNextYear: () => _stepPickerYear(1),
-              onPickMonth: _showMonth,
-              onBackToThisWeek: _showCurrentMonth,
+    return BlockSemantics(
+      child: Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: Semantics(
+              button: true,
+              label: _dismissPickerLabel,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _closePicker,
+              ),
             ),
           ),
-        ),
-      ],
+          Positioned(
+            left: 0,
+            top: 0,
+            child: CompositedTransformFollower(
+              link: _pickerLink,
+              showWhenUnlinked: false,
+              targetAnchor: Alignment.bottomLeft,
+              offset: _pickerOffset,
+              child: CalendarMonthPicker(
+                key: calendarPickerKey,
+                year: _pickerYear,
+                displayedMonth: _month,
+                currentMonth: _currentMonth,
+                width: width,
+                onPreviousYear: () => _stepPickerYear(-1),
+                onNextYear: () => _stepPickerYear(1),
+                onPickMonth: _showMonth,
+                onBackToThisWeek: _showCurrentMonth,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

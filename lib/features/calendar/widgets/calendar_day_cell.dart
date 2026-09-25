@@ -6,6 +6,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 
 import '../model/calendar_month.dart';
+import 'calendar_chevron_button.dart';
 
 const Key calendarActivityDotKey = Key('calendar-activity-dot');
 
@@ -23,6 +24,7 @@ class CalendarDayCell extends StatelessWidget {
     this.isFuture = false,
     this.hasEntries = false,
     this.onTap,
+    this.tapReach = EdgeInsets.zero,
   });
 
   final CalendarCell cell;
@@ -31,6 +33,7 @@ class CalendarDayCell extends StatelessWidget {
   final bool isFuture;
   final bool hasEntries;
   final VoidCallback? onTap;
+  final EdgeInsets tapReach;
 
   String get semanticLabel {
     final Mood? mood = cell.isInMonth ? day?.mood : null;
@@ -64,15 +67,20 @@ class CalendarDayCell extends StatelessWidget {
     final double? dimming = !cell.isInMonth
         ? _neighbourOpacity
         : (isFuture ? _futureOpacity : null);
-    return Semantics(
-      button: onTap != null,
-      label: semanticLabel,
-      onTap: onTap,
-      excludeSemantics: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+    return CalendarTapArea(
+      reach: onTap == null ? EdgeInsets.zero : tapReach,
+      child: Semantics(
+        button: onTap != null,
+        label: semanticLabel,
         onTap: onTap,
-        child: dimming == null ? face : Opacity(opacity: dimming, child: face),
+        excludeSemantics: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: dimming == null
+              ? face
+              : Opacity(opacity: dimming, child: face),
+        ),
       ),
     );
   }

@@ -10,6 +10,9 @@ import 'calendar_weekday_bar.dart';
 
 const double _weekRowGap = 4;
 const double _weekRowRadius = 15;
+const EdgeInsets _dayTapReach = EdgeInsets.symmetric(
+  horizontal: calendarColumnGap / 2,
+);
 
 class CalendarGrid extends StatelessWidget {
   const CalendarGrid({
@@ -40,7 +43,10 @@ class CalendarGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        CalendarWeekdayBar(labels: headers),
+        CalendarWeekdayBar(
+          labels: headers,
+          names: weekdayNames(firstWeekday: firstWeekday),
+        ),
         const SizedBox(height: 8),
         Expanded(
           child: Column(
@@ -76,6 +82,7 @@ class CalendarGrid extends StatelessWidget {
       isFuture: isFuture,
       hasEntries: cell.isInMonth && journaledDates.contains(dateKey),
       onTap: isFuture ? null : () => onSelectDay(dateKey),
+      tapReach: _dayTapReach,
     );
   }
 }
@@ -89,14 +96,16 @@ class _CalendarWeekRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget row = Padding(
-      padding: const EdgeInsets.all(calendarRowPadding),
+      padding: const EdgeInsets.symmetric(vertical: calendarRowPadding),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          const SizedBox(width: calendarRowPadding),
           for (int index = 0; index < children.length; index++) ...<Widget>[
             if (index > 0) const SizedBox(width: calendarColumnGap),
             Expanded(child: children[index]),
           ],
+          const SizedBox(width: calendarRowPadding),
         ],
       ),
     );
