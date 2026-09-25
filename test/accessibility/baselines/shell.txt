@@ -1,0 +1,111 @@
+doubled-target | a2-today-feed | 09:30 · morning / NOTE / morning walk / 1 photo / Read › | <root>
+doubled-target | a3-card-actions | 09:30 · morning / NOTE / morning walk / 1 photo / Read › | <root>
+missing-role | a2-today-feed | <unlabelled> | <root>
+missing-role | a2-today-feed | <unlabelled> | <root> #2
+missing-role | a2-today-feed | <unlabelled> | <root> #3
+missing-role | a2-today-feed | <unlabelled> | <root> #4
+missing-role | a2-today-feed | <unlabelled> | <root> #5
+missing-role | a3-card-actions | <unlabelled> | <root>
+missing-role | a3-card-actions | <unlabelled> | <root> #2
+missing-role | a3-card-actions | <unlabelled> | <root> #3
+missing-role | a3-card-actions | <unlabelled> | <root> #4
+missing-role | a3-card-actions | <unlabelled> | <root> #5
+missing-role | a5-calendar-picker | <unlabelled> | <root>
+repeated-text | a4-calendar-month | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3 | <root>
+repeated-text | a5-calendar-picker | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3 | <root>
+small-target | a1-today-empty | Search | <root>
+small-target | a1-today-empty | Settings | <root>
+small-target | a1-today-empty | Today | <root>
+small-target | a2-today-feed | Play | 09:30 · morning / VOICE / 0:00 / 0:42
+small-target | a3-card-actions | Delete entry | <root>
+small-target | a3-card-actions | Edit note | <root>
+small-target | a3-card-actions | Play | 09:30 · morning / VOICE / 0:00 / 0:42
+small-target | a4-calendar-month | Day 1 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 10 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 11 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 12 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 13 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 14, Happy, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 15 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 16 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 17 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 18 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 19 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 2 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 20 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 21, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 22 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 23 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 24, Grateful, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 25, today | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 3 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 30 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 31 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 4 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 5 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 6 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 7, Calm, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 8 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Day 9 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Jump to a month / September 2026 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Next month | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a4-calendar-month | Previous month | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Apr | <root>
+small-target | a5-calendar-picker | Aug | <root>
+small-target | a5-calendar-picker | Back to this week | <root>
+small-target | a5-calendar-picker | Day 1 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 10 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 11 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 12 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 13 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 14, Happy, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 15 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 16 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 17 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 18 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 19 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 2 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 20 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 21, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 22 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 23 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 24, Grateful, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 25, today | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 3 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 30 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 31 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 4 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 5 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 6 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 7, Calm, has entries | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 8 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Day 9 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Dec | <root>
+small-target | a5-calendar-picker | Feb | <root>
+small-target | a5-calendar-picker | Jan | <root>
+small-target | a5-calendar-picker | Jul | <root>
+small-target | a5-calendar-picker | Jump to a month / September 2026 | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Jun | <root>
+small-target | a5-calendar-picker | Mar | <root>
+small-target | a5-calendar-picker | May | <root>
+small-target | a5-calendar-picker | Next month | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Next year | <root>
+small-target | a5-calendar-picker | Nov | <root>
+small-target | a5-calendar-picker | Oct | <root>
+small-target | a5-calendar-picker | Previous month | explore / S / M / T / W / T / F / S / Day 26 / Day 27 / Day 28 / Day 29 / Day 30 / Day 1 / Day 2 / Day 3
+small-target | a5-calendar-picker | Previous year | <root>
+small-target | a5-calendar-picker | Sep | <root>
+small-target | a8-garden-phone | Search | <root>
+small-target | a8-garden-phone | Settings | <root>
+small-target | a8-garden-phone | Today | <root>
+unlabelled-tap | a2-today-feed | <unlabelled> | <root>
+unlabelled-tap | a2-today-feed | <unlabelled> | <root> #2
+unlabelled-tap | a2-today-feed | <unlabelled> | <root> #3
+unlabelled-tap | a2-today-feed | <unlabelled> | <root> #4
+unlabelled-tap | a2-today-feed | <unlabelled> | <root> #5
+unlabelled-tap | a3-card-actions | <unlabelled> | <root>
+unlabelled-tap | a3-card-actions | <unlabelled> | <root> #2
+unlabelled-tap | a3-card-actions | <unlabelled> | <root> #3
+unlabelled-tap | a3-card-actions | <unlabelled> | <root> #4
+unlabelled-tap | a3-card-actions | <unlabelled> | <root> #5
+unlabelled-tap | a5-calendar-picker | <unlabelled> | <root>
