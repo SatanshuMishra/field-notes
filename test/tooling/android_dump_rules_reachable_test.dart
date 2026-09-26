@@ -27,22 +27,19 @@ String _dump(String children) =>
     '${_node(bounds: '[0,0][1080,2195]', className: 'android.widget.FrameLayout', children: children)}'
     '</hierarchy>\n';
 
-List<String> _findingsInside(String parentBounds) => androidDumpFindings(
-  _dump(
-    _node(
-      bounds: parentBounds,
-      children: _node(
-        bounds: '[71,1206][197,1332]',
-        className: 'android.widget.CheckBox',
-        desc: 'call the ferry office',
-        checkable: true,
-        clickable: true,
-      ),
-    ),
-  ),
-  state: 's',
-  density: 420,
+String _todo() => _node(
+  bounds: '[71,1206][197,1332]',
+  className: 'android.widget.CheckBox',
+  desc: 'call the ferry office',
+  checkable: true,
+  clickable: true,
 );
+
+List<String> _findingsOf(String children) =>
+    androidDumpFindings(_dump(children), state: 's', density: 420);
+
+List<String> _findingsInside(String parentBounds) =>
+    _findingsOf(_node(bounds: parentBounds, children: _todo()));
 
 Iterable<String> _smallTargets(List<String> ids) =>
     ids.where((String id) => id.startsWith('small-target | '));
@@ -60,4 +57,17 @@ void main() {
       expect(_smallTargets(wide), isEmpty, reason: '$wide');
     },
   );
+
+  test('a node is judged by the part inside every ancestor, not only its '
+      'parent', () {
+    final List<String> ids = _findingsOf(
+      _node(
+        bounds: '[95,1133][174,1387]',
+        children: _node(bounds: '[42,1133][1038,1387]', children: _todo()),
+      ),
+    );
+    expect(_smallTargets(ids), <String>[
+      'small-target | s | call the ferry office | <root>',
+    ], reason: '$ids');
+  });
 }
