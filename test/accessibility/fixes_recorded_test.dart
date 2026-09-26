@@ -9,13 +9,21 @@ const Set<String> _frameworkMenuItems = <String>{
   'Select all',
 };
 
+const Set<String> _sweepTodos = <String>{
+  'water the peonies',
+  'buy seed packets',
+  'call the ferry office',
+  'pack the tide tables',
+};
+
 bool _accepted(String line) {
   final List<String> parts = line.split(' | ');
   final String rule = parts[0];
   final String label = parts[2];
   return switch (rule) {
     'missing-role' => label.startsWith('Dismiss'),
-    'small-target' => _frameworkMenuItems.contains(label),
+    'small-target' =>
+      _frameworkMenuItems.contains(label) || _sweepTodos.contains(label),
     _ => false,
   };
 }

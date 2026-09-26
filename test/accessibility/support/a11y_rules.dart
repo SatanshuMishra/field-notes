@@ -28,8 +28,9 @@ const Map<String, String> a11yRuleDescriptions = <String, String>{
   _missingState:
       'A control listed as stateful has no state of its listed kind.',
   _smallTarget:
-      'A tappable node shown whole, not clipped, is narrower or shorter than '
-      '48 logical pixels.',
+      'A tappable node is narrower or shorter than 48 logical pixels in the '
+      'part a tap can reach, or in its whole size when a clip shows more than '
+      'half of it on each axis.',
   _inertButton:
       'A node with the button flag that is not disabled has no tap and no '
       'long-press action.',
@@ -97,6 +98,7 @@ class _Visited {
     required this.data,
     required this.view,
     required this.rect,
+    required this.reachable,
     required this.whole,
     required this.anchor,
   });
@@ -106,6 +108,7 @@ class _Visited {
   final SemanticsData data;
   final RenderView view;
   final Rect rect;
+  final Rect reachable;
   final Rect? whole;
   final String anchor;
 
@@ -216,6 +219,18 @@ Rect _logicalRect(SemanticsNode node, double devicePixelRatio) => _logical(
   devicePixelRatio,
 );
 
+Rect _within(Rect rect, Rect bounds) =>
+    rect.overlaps(bounds) ? rect.intersect(bounds) : Rect.zero;
+
+Rect _reachableRect(SemanticsNode node, double devicePixelRatio) =>
+    _selfAndAncestors(node)
+        .skip(1)
+        .fold(
+          _logicalRect(node, devicePixelRatio),
+          (Rect reachable, SemanticsNode ancestor) =>
+              _within(reachable, _logicalRect(ancestor, devicePixelRatio)),
+        );
+
 Map<SemanticsNode, Rect> _wholeRects(Iterable<RenderView> views) {
   final Map<SemanticsNode, Rect> whole = <SemanticsNode, Rect>{};
   for (final RenderView view in views) {
@@ -265,6 +280,7 @@ List<_Visited> _judgedInWalkOrder(WidgetTester tester) {
           data: node.getSemanticsData(),
           view: view,
           rect: _logicalRect(node, view.flutterView.devicePixelRatio),
+          reachable: _reachableRect(node, view.flutterView.devicePixelRatio),
           whole: whole[node],
           anchor: _anchorOf(node),
         ),
@@ -307,7 +323,7 @@ Size? _judgedSize(_Visited visited) => switch (visited.whole) {
             _mostlyShown(visited.rect.height, whole.height)
         ? whole.size
         : null,
-  _ => visited.rect.size,
+  _ => visited.reachable.size,
 };
 
 bool _mostlyShown(double shown, double whole) =>
