@@ -591,7 +591,6 @@ class RenderNoteView extends RenderBox
     }
     _devicePixelRatio = value;
     markNeedsPaint();
-    markNeedsSemanticsUpdate();
   }
 
   Color get cursorColor => _cursorColor;
@@ -1093,7 +1092,7 @@ class RenderNoteView extends RenderBox
         if (!otherTarget.overlaps(target)) {
           return area;
         }
-        final double halfway = _onPixelGrid((centre + otherCentre) / 2);
+        final double halfway = (centre + otherCentre) / 2;
         if (otherCentre > centre) {
           return Rect.fromLTRB(
             area.left,
@@ -1112,9 +1111,6 @@ class RenderNoteView extends RenderBox
         }
         return area;
       });
-
-  double _onPixelGrid(double value) =>
-      (value * _devicePixelRatio).roundToDouble() / _devicePixelRatio;
 
   Rect _onView(Rect area) {
     final Rect bounds = Offset.zero & size;

@@ -1,5 +1,6 @@
 import 'dart:ui' show CheckedState;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +30,14 @@ final String _mixedList = <String>[
   '- ${_todos[1]}',
   '- [ ] ${_todos[2]}',
 ].join('\n');
+
+final String _richNote = <String>[
+  'Intro',
+  '![Low tide](photo/a1b2c3d4e5f6 "left medium")',
+  '- [ ] ${_todos[0]}',
+  '| a | b |\n| --- | --- |\n| 1 | 2 |',
+  '- [ ] ${_todos[2]}',
+].join('\n\n');
 
 Future<RenderNoteView> _pumpReader(
   WidgetTester tester,
@@ -183,6 +192,39 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets(
+    'a screen reader tries a note\'s to-dos before its photos, tables and '
+    'text',
+    (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await _pumpReader(tester, _richNote, (int _) {});
+      final List<String> tried = <String>[
+        for (final SemanticsNode node
+            in find.semantics
+                .byLabel(_todos[0])
+                .evaluate()
+                .single
+                .parent!
+                .debugListChildrenInOrder(
+                  DebugSemanticsDumpOrder.inverseHitTest,
+                )
+                .reversed)
+          node.getSemanticsData().label,
+      ];
+
+      expect(tried.take(2).toSet(), <String>{_todos[0], _todos[2]});
+      expect(
+        tried.skip(2),
+        containsAll(<String>[
+          'Intro',
+          'Photo, Low tide',
+          'Table, 2 rows, 2 columns',
+        ]),
+      );
+      handle.dispose();
+    },
+  );
+
   testWidgets('the reachable areas of neighbouring to-dos do not overlap', (
     WidgetTester tester,
   ) async {
@@ -192,7 +234,9 @@ void main() {
     final List<String> overlaps = <String>[
       for (int i = 0; i + 1 < nodes.length; i++)
         if (_reachable(nodes[i]).intersect(_reachable(nodes[i + 1]))
-            case final Rect shared when shared.width > 0 && shared.height > 0)
+            case final Rect shared
+            when shared.width > precisionErrorTolerance &&
+                shared.height > precisionErrorTolerance)
           '"${_todos[i]}" and "${_todos[i + 1]}" share '
               '${shared.height.toStringAsFixed(1)} dp',
     ];
