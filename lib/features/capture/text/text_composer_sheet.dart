@@ -35,6 +35,8 @@ const double _headerGap = 14;
 const double _headerRuleThickness = 1.5;
 const double _titleLineHeight = 1.05;
 const double _exitPillHeight = 34;
+const double _headerTargetInset =
+    (kMinInteractiveDimension - _exitPillHeight) / 2;
 const double _exitPillStartPadding = 8;
 const double _exitPillEndPadding = 12;
 const double _exitPillRadius = 10;
@@ -263,7 +265,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: _headerHorizontalPadding,
-        vertical: _headerVerticalPadding,
+        vertical: _headerVerticalPadding - _headerTargetInset,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -271,7 +273,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           Row(
             children: <Widget>[
               _exitPill(),
-              Expanded(child: middle),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: _headerTargetInset,
+                  ),
+                  child: middle,
+                ),
+              ),
               _saveButton(),
             ],
           ),
@@ -281,13 +290,31 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
+  Widget _headerAction({required VoidCallback? onTap, required Widget child}) {
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: onTap != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: kMinInteractiveDimension,
+            minHeight: kMinInteractiveDimension,
+          ),
+          child: Center(widthFactor: 1, heightFactor: 1, child: child),
+        ),
+      ),
+    );
+  }
+
   Widget _exitPill() {
     final bool back = widget.exit == ComposerExit.back;
-    return GestureDetector(
-      key: composerCloseKey,
-      behavior: HitTestBehavior.opaque,
+    return _headerAction(
       onTap: widget.isSaving ? null : widget.onCancel,
       child: Container(
+        key: composerCloseKey,
         height: _exitPillHeight,
         padding: const EdgeInsets.only(
           left: _exitPillStartPadding,
@@ -354,8 +381,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   Widget _saveButton() {
     final bool enabled = !widget.isSaving;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
+    return _headerAction(
       onTap: enabled ? _handleSaveTap : null,
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
@@ -405,9 +431,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: _bodyHorizontalPadding,
-              vertical: _chipVerticalPadding,
             ),
-            child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
+            child: DraftRestoredChip(
+              onDiscard: widget.onDiscardDraft,
+              verticalMargin: _chipVerticalPadding,
+            ),
           ),
         Expanded(
           child: Stack(

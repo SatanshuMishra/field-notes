@@ -37,8 +37,11 @@ const List<Color> _vignetteColors = <Color>[
 ];
 const List<double> _vignetteStops = <double>[0, 0.22, 0.68, 1];
 
+const double _minTapTarget = 48;
+
 const double _chromeInset = 16;
 const double _closeGlyphSize = 22;
+const double _closeTargetInset = (_minTapTarget - _closeGlyphSize) / 2;
 
 const double _pillRadius = Shapes.radiusMd;
 const double _pillGap = 7;
@@ -200,19 +203,28 @@ class VideoRecorderSheet extends StatelessWidget {
 
   Widget _closeButton() {
     return Positioned(
-      left: _chromeInset,
-      top: _chromeInset,
+      left: _chromeInset - _closeTargetInset,
+      top: _chromeInset - _closeTargetInset,
       child: Semantics(
         button: true,
+        enabled: !_isSaving,
         label: 'Close',
         child: GestureDetector(
           key: videoCloseKey,
           behavior: HitTestBehavior.opaque,
           onTap: _isSaving ? null : onCancel,
-          child: const IconStickerGlyphIcon(
-            glyph: IconStickerGlyph.close,
-            color: Palette.onAccent,
-            size: _closeGlyphSize,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: _minTapTarget,
+              minHeight: _minTapTarget,
+            ),
+            child: const Center(
+              child: IconStickerGlyphIcon(
+                glyph: IconStickerGlyph.close,
+                color: Palette.onAccent,
+                size: _closeGlyphSize,
+              ),
+            ),
           ),
         ),
       ),
@@ -513,40 +525,52 @@ class _SideControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: controlKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Container(
-            width: _sideCircleSize,
-            height: _sideCircleSize,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: background,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: borderColor,
-                width: _sideCircleBorderWidth,
-              ),
-            ),
-            child: IconStickerGlyphIcon(
-              glyph: glyph,
-              color: Palette.onAccent,
-              size: _sideGlyphSize,
+    return Semantics(
+      container: true,
+      button: true,
+      child: GestureDetector(
+        key: controlKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: _sideCircleSize,
+                  height: _sideCircleSize,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: background,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: borderColor,
+                      width: _sideCircleBorderWidth,
+                    ),
+                  ),
+                  child: IconStickerGlyphIcon(
+                    glyph: glyph,
+                    color: Palette.onAccent,
+                    size: _sideGlyphSize,
+                  ),
+                ),
+                const SizedBox(height: _sideCaptionGap),
+                Text(
+                  label,
+                  style: TypographyTokens.labelSans.copyWith(
+                    fontSize: _sideCaptionSize,
+                    color: captionColor,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: _sideCaptionGap),
-          Text(
-            label,
-            style: TypographyTokens.labelSans.copyWith(
-              fontSize: _sideCaptionSize,
-              color: captionColor,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

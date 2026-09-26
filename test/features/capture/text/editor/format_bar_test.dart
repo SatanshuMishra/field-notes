@@ -258,7 +258,7 @@ void main() {
           body: Align(
             alignment: Alignment.topLeft,
             child: SizedBox(
-              width: 160,
+              width: 340,
               child: FormatBar(
                 controller: harness.controller,
                 undoController: harness.undoController,

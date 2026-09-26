@@ -8,8 +8,6 @@ import 'calendar_chevron_button.dart';
 const String calendarBrowseHint = '← → to browse · T for this week';
 
 const double _hintGap = 16;
-const double _actionGap = 8;
-const double _chevronGap = 6;
 const double _titleCaretSize = 16;
 const double _titleCaretGap = 4;
 const EdgeInsets _titlePadding = EdgeInsets.symmetric(
@@ -67,20 +65,21 @@ class CalendarHeader extends StatelessWidget {
     final VoidCallback? showCurrent = onShowCurrentMonth;
     final bool showThisWeek =
         current != null && showCurrent != null && current != month;
-    final bool thisWeekPointsBack = current != null &&
+    final bool thisWeekPointsBack =
+        current != null &&
         (month.year * 12 + month.month) > (current.year * 12 + current.month);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final TextScaler scaler = MediaQuery.textScalerOf(context);
         final TextDirection direction = Directionality.of(context);
-        final double actionsWidth = calendarChevronButtonSize * 2 +
-            _chevronGap +
-            (showThisWeek ? _actionGap + _thisWeekWidth(scaler, direction) : 0);
+        final double actionsWidth =
+            calendarMinTapTarget * 2 +
+            (showThisWeek ? _thisWeekWidth(scaler, direction) : 0);
         final double titleWidth =
             _textWidth(month.title, _titleStyle, scaler, direction) +
-                _titlePadding.horizontal +
-                _titleCaretGap +
-                _titleCaretSize;
+            _titlePadding.horizontal +
+            _titleCaretGap +
+            _titleCaretSize;
         final double hintWidth = _textWidth(
           calendarBrowseHint,
           _hintStyle,
@@ -89,7 +88,7 @@ class CalendarHeader extends StatelessWidget {
         );
         final bool showHint =
             constraints.maxWidth - titleWidth - actionsWidth - _hintGap * 2 >=
-                hintWidth;
+            hintWidth;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: <Widget>[
@@ -106,11 +105,14 @@ class CalendarHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  _anchored(
-                    _TitleButton(
-                      key: titleKey,
-                      title: month.title,
-                      onPressed: onOpenPicker,
+                  CalendarTapArea(
+                    reach: const EdgeInsets.only(top: calendarMinTapTarget),
+                    child: _anchored(
+                      _TitleButton(
+                        key: titleKey,
+                        title: month.title,
+                        onPressed: onOpenPicker,
+                      ),
                     ),
                   ),
                 ],
@@ -127,7 +129,7 @@ class CalendarHeader extends StatelessWidget {
                   style: _hintStyle,
                 ),
               ),
-              const SizedBox(width: _hintGap),
+              SizedBox(width: showThisWeek ? _hintGap : 0),
             ],
             if (showThisWeek) ...<Widget>[
               _ThisWeekButton(
@@ -135,18 +137,18 @@ class CalendarHeader extends StatelessWidget {
                 pointsBack: thisWeekPointsBack,
                 onPressed: showCurrent,
               ),
-              const SizedBox(width: _actionGap),
             ],
             CalendarChevronButton(
               direction: ChevronDirection.previous,
               semanticLabel: 'Previous month',
               onPressed: onPreviousMonth,
+              alignment: Alignment.bottomRight,
             ),
-            const SizedBox(width: _chevronGap),
             CalendarChevronButton(
               direction: ChevronDirection.next,
               semanticLabel: 'Next month',
               onPressed: onNextMonth,
+              alignment: Alignment.bottomRight,
             ),
           ],
         );
@@ -267,34 +269,37 @@ class _ThisWeekButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'This week',
-      excludeSemantics: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Palette.coral,
-              border: Shapes.outline,
-              borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusSm)),
-              boxShadow: Shadows.control,
-            ),
-            child: Padding(
-              padding: _thisWeekPadding,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  SizedBox.square(
-                    dimension: _thisWeekArrowSize,
-                    child: CustomPaint(
-                      painter: _ArrowPainter(pointsBack: pointsBack),
+          child: CalendarTapSlot(
+            alignment: Alignment.bottomCenter,
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                color: Palette.coral,
+                border: Shapes.outline,
+                borderRadius: BorderRadius.all(
+                  Radius.circular(Shapes.radiusSm),
+                ),
+                boxShadow: Shadows.control,
+              ),
+              child: Padding(
+                padding: _thisWeekPadding,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    SizedBox.square(
+                      dimension: _thisWeekArrowSize,
+                      child: CustomPaint(
+                        painter: _ArrowPainter(pointsBack: pointsBack),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: _thisWeekArrowGap),
-                  const Text('This week', style: _thisWeekStyle),
-                ],
+                    const SizedBox(width: _thisWeekArrowGap),
+                    const Text('This week', style: _thisWeekStyle),
+                  ],
+                ),
               ),
             ),
           ),

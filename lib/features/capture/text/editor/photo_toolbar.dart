@@ -59,6 +59,7 @@ const String photoToolbarMoreLabel = 'More photo actions';
 const String photoToolbarNoFloatHint = 'Not enough room to float at this width';
 const String photoRemovedMessage = 'Photo removed';
 const String photoRemovedUndoLabel = 'Undo';
+const String photoRemovedUndoSemanticLabel = 'Undo photo removal';
 
 const Key photoToolbarKey = ValueKey<String>('photo-toolbar');
 const Key photoToolbarCaptionKey = ValueKey<String>('photo-toolbar-caption');
@@ -211,11 +212,26 @@ class PhotoToolbarLayer extends StatelessWidget {
       photoRect.width,
       photoCaptionLineHeight(MediaQuery.textScalerOf(context)),
     );
+    final EdgeInsets captionReach = photoCaptionFieldReach(
+      lineHeight: captionField.height,
+      roomAbove: photoFigureCaptionGap,
+    );
+    final Rect captionTarget = captionReach.inflateRect(captionField);
     final Rect withCaption = request.captionRect.isEmpty
         ? photoRect
         : photoRect.expandToInclude(request.captionRect);
     final Rect figure = request.captionOpen
-        ? withCaption.expandToInclude(captionField)
+        ? withCaption.expandToInclude(
+            Rect.fromLTRB(
+              captionField.left,
+              captionField.top,
+              captionField.right,
+              math.max(
+                captionField.bottom,
+                captionTarget.bottom - photoToolbarGap - photoToolbarPadding,
+              ),
+            ),
+          )
         : withCaption;
     final EditorState state = request.controller.state;
     final MdBlock? photo = _photoAt(state, request.photoLineStart);
@@ -249,11 +265,12 @@ class PhotoToolbarLayer extends StatelessWidget {
                 ),
               if (request.captionOpen && photo != null)
                 Positioned.fromRect(
-                  rect: captionField,
+                  rect: captionTarget,
                   child: PhotoCaptionField(
                     caption: MdPhotoLine.ofBlock(photo, state.source).caption,
                     width: captionField.width,
                     height: captionField.height,
+                    reach: captionReach,
                     onCommit: (String caption) {
                       _runOnPhoto(
                         request,
@@ -346,6 +363,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
       glyph: IconStickerGlyph.trash,
       action: ToastAction(
         label: photoRemovedUndoLabel,
+        semanticLabel: photoRemovedUndoSemanticLabel,
         onPressed: () {
           if (identical(request.controller.state, removedState)) {
             request.controller.undo();

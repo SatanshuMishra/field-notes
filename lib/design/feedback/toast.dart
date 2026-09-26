@@ -64,10 +64,15 @@ const EdgeInsets _lightPaddingWithAction =
 
 @immutable
 class ToastAction {
-  const ToastAction({required this.label, required this.onPressed});
+  const ToastAction({
+    required this.label,
+    required this.onPressed,
+    this.semanticLabel,
+  });
 
   final String label;
   final VoidCallback onPressed;
+  final String? semanticLabel;
 }
 
 class Toast extends StatelessWidget {
@@ -176,7 +181,7 @@ class _ToastActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: action.label,
+      label: action.semanticLabel ?? action.label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: action.onPressed,
@@ -246,6 +251,7 @@ void showTransientToast(
           ? null
           : ToastAction(
               label: action.label,
+              semanticLabel: action.semanticLabel,
               onPressed: () {
                 finish();
                 action.onPressed();

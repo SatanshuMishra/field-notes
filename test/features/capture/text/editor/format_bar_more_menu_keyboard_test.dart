@@ -28,6 +28,8 @@ void main() {
     );
     await tester.pump();
 
+    await tester.ensureVisible(find.byKey(formatMoreKey));
+    await tester.pump();
     await tester.tap(find.byKey(formatMoreKey));
     await tester.pump();
 

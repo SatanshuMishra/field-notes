@@ -300,6 +300,7 @@ class _DiscardConfirmDialog extends StatelessWidget {
                     StickerButton(
                       label: voiceDiscardConfirmCancelLabel,
                       variant: StickerButtonVariant.secondary,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
@@ -307,6 +308,7 @@ class _DiscardConfirmDialog extends StatelessWidget {
                       label: voiceDiscardConfirmLabel,
                       variant: StickerButtonVariant.danger,
                       labelStyle: TypographyTokens.captureLabelSans,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ],

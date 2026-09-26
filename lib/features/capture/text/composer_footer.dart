@@ -36,7 +36,7 @@ const List<(String, String)> composerMarkdownHints = <(String, String)>[
   ('> ', 'quote'),
 ];
 
-const double composerFooterHeight = 44;
+const double composerFooterHeight = 48;
 
 const double composerFooterHintsMinWidth = 360;
 

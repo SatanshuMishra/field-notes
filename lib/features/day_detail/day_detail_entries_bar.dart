@@ -11,6 +11,7 @@ const double _plusArm = 4.5;
 const double _plusStrokeWidth = 2;
 const double _plusGap = 5;
 const double _rowGap = 12;
+const double _minTapTarget = 48;
 
 String dayDetailEntryCountLabel(int count) {
   if (count == 1) {
@@ -58,31 +59,41 @@ class DayDetailEntriesBar extends StatelessWidget {
         key: dayDetailAddNoteKey,
         behavior: HitTestBehavior.opaque,
         onTap: onAddNote,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: _buttonHorizontalPadding,
-            vertical: _buttonVerticalPadding,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
           ),
-          decoration: const BoxDecoration(
-            color: Palette.coral,
-            border: Shapes.outline,
-            borderRadius: Shapes.buttonBorderRadius,
-            boxShadow: Shadows.control,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const SizedBox.square(
-                dimension: _plusExtent,
-                child: CustomPaint(painter: _PlusPainter()),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _buttonHorizontalPadding,
+                vertical: _buttonVerticalPadding,
               ),
-              const SizedBox(width: _plusGap),
-              Text(
-                addNoteLabel,
-                style: TypographyTokens.captureLabelSans
-                    .copyWith(color: Palette.onAccent),
+              decoration: const BoxDecoration(
+                color: Palette.coral,
+                border: Shapes.outline,
+                borderRadius: Shapes.buttonBorderRadius,
+                boxShadow: Shadows.control,
               ),
-            ],
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox.square(
+                    dimension: _plusExtent,
+                    child: CustomPaint(painter: _PlusPainter()),
+                  ),
+                  const SizedBox(width: _plusGap),
+                  Text(
+                    addNoteLabel,
+                    style: TypographyTokens.captureLabelSans
+                        .copyWith(color: Palette.onAccent),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

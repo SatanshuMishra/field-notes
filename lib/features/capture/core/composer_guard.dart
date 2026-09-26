@@ -130,6 +130,7 @@ class _DiscardConfirmDialog extends StatelessWidget {
                       key: composerKeepEditingKey,
                       label: composerKeepEditingLabel,
                       variant: StickerButtonVariant.secondary,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
@@ -137,6 +138,7 @@ class _DiscardConfirmDialog extends StatelessWidget {
                       label: composerDiscardLabel,
                       variant: StickerButtonVariant.danger,
                       labelStyle: TypographyTokens.captureLabelSans,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ],

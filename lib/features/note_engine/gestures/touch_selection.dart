@@ -271,6 +271,7 @@ class _NoteTouchSelectionState extends State<NoteTouchSelection> {
   Widget build(BuildContext context) {
     return RawGestureDetector(
       behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
       gestures: <Type, GestureRecognizerFactory>{
         TapAndHorizontalDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<

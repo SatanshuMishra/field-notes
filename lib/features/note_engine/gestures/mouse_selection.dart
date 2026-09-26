@@ -327,6 +327,7 @@ class _NoteMouseSelectionState extends State<NoteMouseSelection> {
         cursor: SystemMouseCursors.text,
         child: RawGestureDetector(
           behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
           gestures: <Type, GestureRecognizerFactory>{
             TapAndPanGestureRecognizer:
                 GestureRecognizerFactoryWithHandlers<

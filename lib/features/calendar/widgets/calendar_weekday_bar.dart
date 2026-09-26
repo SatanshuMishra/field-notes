@@ -6,9 +6,10 @@ const double calendarRowPadding = 5;
 const double calendarColumnGap = 8;
 
 class CalendarWeekdayBar extends StatelessWidget {
-  const CalendarWeekdayBar({super.key, required this.labels});
+  const CalendarWeekdayBar({super.key, required this.labels, this.names});
 
   final List<String> labels;
+  final List<String>? names;
 
   static const TextStyle _labelStyle = TextStyle(
     fontFamily: TypographyTokens.sans,
@@ -27,7 +28,13 @@ class CalendarWeekdayBar extends StatelessWidget {
           for (int index = 0; index < labels.length; index++) ...<Widget>[
             if (index > 0) const SizedBox(width: calendarColumnGap),
             Expanded(
-              child: Center(child: Text(labels[index], style: _labelStyle)),
+              child: Center(
+                child: Text(
+                  labels[index],
+                  semanticsLabel: names?[index],
+                  style: _labelStyle,
+                ),
+              ),
             ),
           ],
         ],

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 
@@ -87,8 +89,67 @@ List<NoteCheckboxSemantics> noteCheckboxSemanticsOf(
 
 String _lineAfter(String text, int from) {
   final int start = from.clamp(0, text.length);
-  final int end = text.indexOf('\n', start);
-  return text.substring(start, end < 0 ? text.length : end).trim();
+  return text.substring(start, _lineEnd(text, start)).trim();
+}
+
+int _lineStart(String text, int at) =>
+    at <= 0 ? 0 : text.lastIndexOf('\n', at - 1) + 1;
+
+int _lineEnd(String text, int from) {
+  final int end = text.indexOf('\n', from);
+  return end < 0 ? text.length : end;
+}
+
+List<(int, int)> _checkboxLines(VisibleText visibleText) {
+  final String text = visibleText.text;
+  final List<(int, int)> lines = <(int, int)>[
+    for (final AtomicObject atomic in visibleText.atomics)
+      if (atomic.kind == AtomicKind.checkbox)
+        (
+          _lineStart(text, atomic.visibleOffset),
+          _lineEnd(
+            text,
+            (atomic.visibleOffset + atomic.visibleLength).clamp(0, text.length),
+          ),
+        ),
+  ]..sort(((int, int) a, (int, int) b) => a.$1.compareTo(b.$1));
+  return List<(int, int)>.unmodifiable(lines);
+}
+
+String _readerSlice(
+  VisibleText visibleText,
+  MdRange range,
+  List<(int, int)> checkboxLines,
+) {
+  final OffsetMap map = visibleText.map;
+  final int start = map.sourceToVisible(range.start);
+  final int end = map.sourceToVisible(range.end);
+  if (end <= start) {
+    return '';
+  }
+  final String text = visibleText.text;
+  final List<(int, int)> cuts = <(int, int)>[
+    for (final (int from, int to) in checkboxLines)
+      if (from < end && to > start) (math.max(from, start), math.min(to, end)),
+  ];
+  if (cuts.isEmpty) {
+    return text.substring(start, end);
+  }
+  final List<String> kept = <String>[];
+  int at = start;
+  for (final (int from, int to) in cuts) {
+    kept.add(text.substring(at, math.max(at, from)));
+    at = math.max(at, to);
+  }
+  kept.add(text.substring(at, end));
+  return kept
+      .join()
+      .split('\n')
+      .where(
+        (String line) =>
+            line.replaceAll(_objectReplacement, '').trim().isNotEmpty,
+      )
+      .join('\n');
 }
 
 List<NoteTableSemantics> noteTableSemanticsOf(
@@ -120,23 +181,28 @@ NoteTableSemantics _tableOf(MdBlock table, VisibleText visibleText) {
 List<NoteBlockSemantics> noteReaderSemanticsOf(
   MdTree tree,
   VisibleText visibleText,
-) => List<NoteBlockSemantics>.unmodifiable(<NoteBlockSemantics>[
-  for (final MdBlock block in tree.blocks)
-    if (block.kind != MdBlockKind.photoLine && block.kind != MdBlockKind.table)
-      if (_visibleSlice(
-            visibleText,
-            block.sourceRange,
-          ).replaceAll(_objectReplacement, '')
-          case final String text when text.trim().isNotEmpty)
-        NoteBlockSemantics(
-          range: block.sourceRange,
-          text: text,
-          headingLevel: switch (block.data) {
-            MdHeadingData(:final int level) => level,
-            _ => null,
-          },
-        ),
-]);
+) {
+  final List<(int, int)> checkboxLines = _checkboxLines(visibleText);
+  return List<NoteBlockSemantics>.unmodifiable(<NoteBlockSemantics>[
+    for (final MdBlock block in tree.blocks)
+      if (block.kind != MdBlockKind.photoLine &&
+          block.kind != MdBlockKind.table)
+        if (_readerSlice(
+              visibleText,
+              block.sourceRange,
+              checkboxLines,
+            ).replaceAll(_objectReplacement, '')
+            case final String text when text.trim().isNotEmpty)
+          NoteBlockSemantics(
+            range: block.sourceRange,
+            text: text,
+            headingLevel: switch (block.data) {
+              MdHeadingData(:final int level) => level,
+              _ => null,
+            },
+          ),
+  ]);
+}
 
 int noteNextCharacterOffset(String value, int offset) {
   if (offset >= value.length) {

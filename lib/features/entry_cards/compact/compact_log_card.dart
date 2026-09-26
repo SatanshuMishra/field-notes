@@ -272,13 +272,13 @@ class _CompactLogCardState extends State<CompactLogCard> {
           },
         ),
       },
-      child: LogActionsReveal(
-        onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
-        onDelete: widget.onDelete,
-        child: Semantics(
-          container: true,
-          button: true,
-          onTap: widget.onOpen,
+      child: Semantics(
+        container: true,
+        button: true,
+        onTap: widget.onOpen,
+        child: LogActionsReveal(
+          onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
+          onDelete: widget.onDelete,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             onEnter: (PointerEnterEvent event) => _onHover(true),
@@ -661,16 +661,18 @@ class _CompactMediaState extends State<_CompactMedia> {
         variant: widget.variant,
       );
     }
-    return MediaImage(
-      resolver: widget.resolver,
-      mediaId: widget.mediaId,
-      errorLabel: widget.errorLabel,
-      width: widget.width,
-      height: widget.height,
-      borderRadius: widget.borderRadius,
-      fit: BoxFit.cover,
-      border: Shapes.outline,
-      onDecodeError: _onDecodeError,
+    return ExcludeSemantics(
+      child: MediaImage(
+        resolver: widget.resolver,
+        mediaId: widget.mediaId,
+        errorLabel: widget.errorLabel,
+        width: widget.width,
+        height: widget.height,
+        borderRadius: widget.borderRadius,
+        fit: BoxFit.cover,
+        border: Shapes.outline,
+        onDecodeError: _onDecodeError,
+      ),
     );
   }
 }

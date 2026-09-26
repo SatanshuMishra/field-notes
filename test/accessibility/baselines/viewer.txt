@@ -1,55 +1,7 @@
-inert-button | d15-viewer-middle-entry | Earlier log | Friday, September 18 / Morning note / 2 of 3
-inert-button | d15-viewer-middle-entry | Later log | Friday, September 18 / Morning note / 2 of 3
-inert-button | d7-day-with-entries | Close | <root>
-inert-button | d8-day-empty | Close | <root>
-missing-role | d1-viewer-todos | <unlabelled> | Friday, September 18 / Morning note
 missing-role | d11-mood-picker | Dismiss mood picker | <root>
 missing-role | d13-change-mood-dialog | Dismiss | <root>
 missing-role | d14-delete-entry-dialog | Dismiss | <root>
-missing-role | d15-viewer-middle-entry | <unlabelled> | Friday, September 18 / Morning note / 2 of 3
-missing-role | d2-viewer-photo | <unlabelled> | Friday, September 18 / Morning note
-missing-role | d4-viewer-video | 0:00 / 0:04 | Friday, September 18 / Morning video
-missing-role | d5-reader-menu | <unlabelled> | Friday, September 18 / Morning note
-missing-role | d6-task-toast | <unlabelled> | Friday, September 18 / Morning note
-missing-role | d7-day-with-entries | <unlabelled> | <root>
-missing-role | d7-day-with-entries | <unlabelled> | <root> #2
 missing-role | d7-day-with-entries | Dismiss day detail | <root>
 missing-role | d8-day-empty | Dismiss day detail | <root>
-small-target | d1-viewer-todos | Close | Friday, September 18 / Morning note
-small-target | d1-viewer-todos | Delete entry | Friday, September 18 / Morning note
-small-target | d1-viewer-todos | Edit note | Friday, September 18 / Morning note
-small-target | d12-mood-set | change | <root>
-small-target | d13-change-mood-dialog | Cancel | <root>
-small-target | d13-change-mood-dialog | Change mood | <root>
-small-target | d14-delete-entry-dialog | Cancel | <root>
-small-target | d14-delete-entry-dialog | Delete | <root>
-small-target | d15-viewer-middle-entry | <unlabelled> | Friday, September 18 / Morning note / 2 of 3
-small-target | d15-viewer-middle-entry | Close | Friday, September 18 / Morning note / 2 of 3
-small-target | d15-viewer-middle-entry | Delete entry | Friday, September 18 / Morning note / 2 of 3
-small-target | d15-viewer-middle-entry | Edit note | Friday, September 18 / Morning note / 2 of 3
-small-target | d2-viewer-photo | Close | Friday, September 18 / Morning note
-small-target | d2-viewer-photo | Delete entry | Friday, September 18 / Morning note
-small-target | d2-viewer-photo | Edit note | Friday, September 18 / Morning note
-small-target | d3-viewer-voice | Close | Friday, September 18 / Morning voice log
-small-target | d3-viewer-voice | Delete entry | Friday, September 18 / Morning voice log
-small-target | d3-viewer-voice | Play | Friday, September 18 / Morning voice log
-small-target | d4-viewer-video | Close | Friday, September 18 / Morning video
-small-target | d4-viewer-video | Delete entry | Friday, September 18 / Morning video
-small-target | d5-reader-menu | <unlabelled> | Friday, September 18 / Morning note
-small-target | d5-reader-menu | Close | Friday, September 18 / Morning note
 small-target | d5-reader-menu | Copy | <root>
-small-target | d5-reader-menu | Delete entry | Friday, September 18 / Morning note
-small-target | d5-reader-menu | Edit note | Friday, September 18 / Morning note
 small-target | d5-reader-menu | Select all | <root>
-small-target | d6-task-toast | Close | Friday, September 18 / Morning note
-small-target | d6-task-toast | Delete entry | Friday, September 18 / Morning note
-small-target | d6-task-toast | Edit note | Friday, September 18 / Morning note
-small-target | d7-day-with-entries | Add a note | 2 logs that day
-small-target | d8-day-empty | Add a note | 0 logs that day / No entries for this day yet.
-unlabelled-tap | d1-viewer-todos | <unlabelled> | Friday, September 18 / Morning note
-unlabelled-tap | d15-viewer-middle-entry | <unlabelled> | Friday, September 18 / Morning note / 2 of 3
-unlabelled-tap | d2-viewer-photo | <unlabelled> | Friday, September 18 / Morning note
-unlabelled-tap | d5-reader-menu | <unlabelled> | Friday, September 18 / Morning note
-unlabelled-tap | d6-task-toast | <unlabelled> | Friday, September 18 / Morning note
-unlabelled-tap | d7-day-with-entries | <unlabelled> | <root>
-unlabelled-tap | d7-day-with-entries | <unlabelled> | <root> #2

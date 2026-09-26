@@ -20,46 +20,55 @@ class SearchDayTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String title = dayDetailHeadingFor(view.date).title;
+    final Mood? mood = view.mood;
     final String previewText =
         view.preview.isEmpty ? 'No entries yet' : view.preview;
     final String countLabel =
         view.entryCount == 1 ? '1 entry' : '${view.entryCount} entries';
+    final String label = <String>[
+      title,
+      if (mood != null) mood.label,
+      previewText,
+      countLabel,
+    ].join(', ');
 
     return Semantics(
       button: true,
-      label: '$title, $countLabel',
+      label: label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: StickerCard(
-          child: Row(
-            children: <Widget>[
-              _SearchDayFlower(mood: view.mood),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: TypographyTokens.dateSerif,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      previewText,
-                      style: TypographyTokens.bodySans,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+        child: ExcludeSemantics(
+          child: StickerCard(
+            child: Row(
+              children: <Widget>[
+                _SearchDayFlower(mood: view.mood),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        title,
+                        style: TypographyTokens.dateSerif,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        previewText,
+                        style: TypographyTokens.bodySans,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Text(countLabel, style: TypographyTokens.captionSans),
-            ],
+                const SizedBox(width: 12),
+                Text(countLabel, style: TypographyTokens.captionSans),
+              ],
+            ),
           ),
         ),
       ),

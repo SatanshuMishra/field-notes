@@ -38,7 +38,7 @@ class BottomBarShell extends StatelessWidget {
 
   Widget _topBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
       child: Row(
         children: <Widget>[
           const Text('field notes', style: TypographyTokens.wordmarkAccent),
@@ -50,10 +50,20 @@ class BottomBarShell extends StatelessWidget {
               key: const ValueKey<String>('gear-button'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onSelect(ShellDestination.settings),
-              child: const Padding(
-                padding: EdgeInsets.all(8),
-                child: ExcludeSemantics(
-                  child: Icon(Icons.settings_outlined, color: Palette.ink),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: kMinInteractiveDimension,
+                  minHeight: kMinInteractiveDimension,
+                ),
+                child: const Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: Padding(
+                    padding: EdgeInsets.all(8),
+                    child: ExcludeSemantics(
+                      child: Icon(Icons.settings_outlined, color: Palette.ink),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -102,19 +112,31 @@ class BottomBarShell extends StatelessWidget {
         key: ValueKey<String>('tab-${d.name}'),
         behavior: HitTestBehavior.opaque,
         onTap: () => onSelect(d),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-          child: ExcludeSemantics(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(d.icon, size: 22, color: color),
-                const SizedBox(height: 2),
-                Text(
-                  d.label,
-                  style: TypographyTokens.captionSans.copyWith(color: color),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: kMinInteractiveDimension,
+            minHeight: kMinInteractiveDimension,
+          ),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: ExcludeSemantics(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(d.icon, size: 22, color: color),
+                    const SizedBox(height: 2),
+                    Text(
+                      d.label,
+                      style: TypographyTokens.captionSans.copyWith(
+                        color: color,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

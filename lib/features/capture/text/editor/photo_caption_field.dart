@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,6 +11,8 @@ const Key photoCaptionFieldEditorKey =
     ValueKey<String>('photo-caption-editor');
 
 const String photoCaptionFieldHint = 'Caption';
+
+const double photoCaptionFieldTarget = 48;
 
 final RegExp _forbidden = RegExp(r'[\]\r\n]');
 
@@ -24,6 +28,15 @@ double photoCaptionLineHeight(TextScaler scaler) {
   return height;
 }
 
+EdgeInsets photoCaptionFieldReach({
+  required double lineHeight,
+  required double roomAbove,
+}) {
+  final double spare = math.max(0, photoCaptionFieldTarget - lineHeight);
+  final double above = math.min(roomAbove, spare / 2);
+  return EdgeInsets.only(top: above, bottom: spare - above);
+}
+
 class PhotoCaptionField extends StatefulWidget {
   const PhotoCaptionField({
     super.key,
@@ -32,6 +45,7 @@ class PhotoCaptionField extends StatefulWidget {
     required this.height,
     required this.onCommit,
     required this.onCancel,
+    this.reach = EdgeInsets.zero,
   });
 
   final String caption;
@@ -39,6 +53,7 @@ class PhotoCaptionField extends StatefulWidget {
   final double height;
   final ValueChanged<String> onCommit;
   final VoidCallback onCancel;
+  final EdgeInsets reach;
 
   @override
   State<PhotoCaptionField> createState() => _PhotoCaptionFieldState();
@@ -102,35 +117,60 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
           canRequestFocus: false,
           skipTraversal: true,
           onKeyEvent: _onKey,
-          child: SizedBox(
-            width: widget.width,
-            height: widget.height,
-            child: Material(
-              type: MaterialType.transparency,
-              child: TextField(
-                key: photoCaptionFieldEditorKey,
-                controller: _controller,
-                focusNode: _focus,
-                autofocus: true,
-                maxLines: 1,
-                style: NoteTypography.caption,
-                textAlign: TextAlign.center,
-                cursorColor: Palette.coral,
-                keyboardType: TextInputType.text,
-                textInputAction: TextInputAction.done,
-                textCapitalization: TextCapitalization.sentences,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.deny(_forbidden),
-                ],
-                onSubmitted: (String _) => _commit(),
-                decoration: InputDecoration.collapsed(
-                  hintText: photoCaptionFieldHint,
-                  hintStyle: NoteTypography.caption.copyWith(
-                    color: Palette.placeholder,
+          child: Semantics(
+            container: true,
+            child: SizedBox(
+              width: widget.width,
+              height: widget.height + widget.reach.vertical,
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      excludeFromSemantics: true,
+                      onTap: _focus.requestFocus,
+                    ),
                   ),
-                ),
+                  Padding(
+                    padding: widget.reach,
+                    child: SizedBox(
+                      width: widget.width,
+                      height: widget.height,
+                      child: _field(),
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _field() {
+    return Material(
+      type: MaterialType.transparency,
+      child: TextField(
+        key: photoCaptionFieldEditorKey,
+        controller: _controller,
+        focusNode: _focus,
+        autofocus: true,
+        maxLines: 1,
+        style: NoteTypography.caption,
+        textAlign: TextAlign.center,
+        cursorColor: Palette.coral,
+        keyboardType: TextInputType.text,
+        textInputAction: TextInputAction.done,
+        textCapitalization: TextCapitalization.sentences,
+        inputFormatters: <TextInputFormatter>[
+          FilteringTextInputFormatter.deny(_forbidden),
+        ],
+        onSubmitted: (String _) => _commit(),
+        decoration: InputDecoration.collapsed(
+          hintText: photoCaptionFieldHint,
+          hintStyle: NoteTypography.caption.copyWith(
+            color: Palette.placeholder,
           ),
         ),
       ),

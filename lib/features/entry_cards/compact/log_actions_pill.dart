@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
@@ -19,66 +21,142 @@ const double _pillInset = 12;
 const double _hiddenDrop = 4;
 const double _glyphExtent = 14;
 const double _focusRingWidth = 2;
+const double _defaultButtonExtent = 28;
+const double _tapTarget = 48;
 const Duration _revealDuration = Duration(milliseconds: 140);
 
 const BorderRadius _pillRadius = BorderRadius.all(Radius.circular(10));
 const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(7));
 
-const CustomSemanticsAction _editAction =
-    CustomSemanticsAction(label: logActionsEditLabel);
-const CustomSemanticsAction _deleteAction =
-    CustomSemanticsAction(label: logActionsDeleteLabel);
+EdgeInsets logActionsPillTapInset({
+  double buttonExtent = _defaultButtonExtent,
+  required bool withEdit,
+  bool growDown = false,
+}) => _PillGeometry(
+  buttonExtent: buttonExtent,
+  paired: withEdit,
+  growDown: growDown,
+).pillInset;
+
+const CustomSemanticsAction _editAction = CustomSemanticsAction(
+  label: logActionsEditLabel,
+);
+const CustomSemanticsAction _deleteAction = CustomSemanticsAction(
+  label: logActionsDeleteLabel,
+);
 
 class LogActionsPill extends StatelessWidget {
   const LogActionsPill({
     super.key,
     this.onEdit,
     required this.onDelete,
-    this.buttonExtent = 28,
+    this.buttonExtent = _defaultButtonExtent,
+    this.growDown = false,
   });
 
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
   final double buttonExtent;
+  final bool growDown;
 
   @override
   Widget build(BuildContext context) {
     final VoidCallback? edit = onEdit;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.toolbarInk,
-        borderRadius: _pillRadius,
-        boxShadow: Shadows.toastLift,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(_pillPadding),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (edit != null) ...<Widget>[
-              _LogActionButton(
-                key: logActionsEditKey,
-                glyph: IconStickerGlyph.edit,
-                label: logActionsEditLabel,
-                hoverColor: Palette.onAccent.withValues(alpha: 0.14),
-                extent: buttonExtent,
-                onPressed: edit,
+    final _PillGeometry geometry = _PillGeometry(
+      buttonExtent: buttonExtent,
+      paired: edit != null,
+      growDown: growDown,
+    );
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: Padding(
+            padding: geometry.pillInset,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                color: Palette.toolbarInk,
+                borderRadius: _pillRadius,
+                boxShadow: Shadows.toastLift,
               ),
-              const SizedBox(width: _pillGap),
-            ],
-            _LogActionButton(
-              key: logActionsDeleteKey,
-              glyph: IconStickerGlyph.trash,
-              label: logActionsDeleteLabel,
-              hoverColor: Palette.danger.withValues(alpha: 0.6),
-              extent: buttonExtent,
-              onPressed: onDelete,
             ),
-          ],
+          ),
         ),
-      ),
+        Padding(
+          padding: geometry.rowPadding,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (edit != null)
+                _LogActionButton(
+                  key: logActionsEditKey,
+                  glyph: IconStickerGlyph.edit,
+                  label: logActionsEditLabel,
+                  hoverColor: Palette.onAccent.withValues(alpha: 0.14),
+                  extent: buttonExtent,
+                  margin: geometry.leadingMargin,
+                  onPressed: edit,
+                ),
+              _LogActionButton(
+                key: logActionsDeleteKey,
+                glyph: IconStickerGlyph.trash,
+                label: logActionsDeleteLabel,
+                hoverColor: Palette.danger.withValues(alpha: 0.6),
+                extent: buttonExtent,
+                margin: geometry.trailingMargin,
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
+
+final class _PillGeometry {
+  const _PillGeometry({
+    required this.buttonExtent,
+    required this.paired,
+    required this.growDown,
+  });
+
+  final double buttonExtent;
+  final bool paired;
+  final bool growDown;
+
+  double get _slack => math.max<double>(0, _tapTarget - buttonExtent);
+
+  double get _outer =>
+      paired ? math.max<double>(0, _slack - _pillGap / 2) : _slack / 2;
+
+  double get _top =>
+      growDown ? math.min<double>(_pillPadding, _slack) : _slack / 2;
+
+  double get _bottom => _slack - _top;
+
+  EdgeInsets get pillInset => EdgeInsets.fromLTRB(
+    math.max<double>(0, _outer - _pillPadding),
+    math.max<double>(0, _top - _pillPadding),
+    math.max<double>(0, _outer - _pillPadding),
+    math.max<double>(0, _bottom - _pillPadding),
+  );
+
+  EdgeInsets get rowPadding => EdgeInsets.fromLTRB(
+    math.max<double>(0, _pillPadding - _outer),
+    math.max<double>(0, _pillPadding - _top),
+    math.max<double>(0, _pillPadding - _outer),
+    math.max<double>(0, _pillPadding - _bottom),
+  );
+
+  EdgeInsetsDirectional get leadingMargin =>
+      EdgeInsetsDirectional.fromSTEB(_outer, _top, _pillGap / 2, _bottom);
+
+  EdgeInsetsDirectional get trailingMargin => EdgeInsetsDirectional.fromSTEB(
+    paired ? _pillGap / 2 : _outer,
+    _top,
+    _outer,
+    _bottom,
+  );
 }
 
 class _LogActionButton extends StatefulWidget {
@@ -88,6 +166,7 @@ class _LogActionButton extends StatefulWidget {
     required this.label,
     required this.hoverColor,
     required this.extent,
+    required this.margin,
     required this.onPressed,
   });
 
@@ -95,6 +174,7 @@ class _LogActionButton extends StatefulWidget {
   final String label;
   final Color hoverColor;
   final double extent;
+  final EdgeInsetsGeometry margin;
   final VoidCallback onPressed;
 
   @override
@@ -140,26 +220,29 @@ class _LogActionButtonState extends State<_LogActionButton> {
           excludeFromSemantics: true,
           onTap: widget.onPressed,
           child: ExcludeSemantics(
-            child: SizedBox.square(
-              dimension: widget.extent,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: _hovered || _focused ? widget.hoverColor : null,
-                  border: _focused
-                      ? const Border.fromBorderSide(
-                          BorderSide(
-                            color: Palette.toolbarLabel,
-                            width: _focusRingWidth,
-                          ),
-                        )
-                      : null,
-                  borderRadius: _buttonRadius,
-                ),
-                child: Center(
-                  child: IconStickerGlyphIcon(
-                    glyph: widget.glyph,
-                    color: Palette.onAccent,
-                    size: _glyphExtent,
+            child: Padding(
+              padding: widget.margin,
+              child: SizedBox.square(
+                dimension: widget.extent,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _hovered || _focused ? widget.hoverColor : null,
+                    border: _focused
+                        ? const Border.fromBorderSide(
+                            BorderSide(
+                              color: Palette.toolbarLabel,
+                              width: _focusRingWidth,
+                            ),
+                          )
+                        : null,
+                    borderRadius: _buttonRadius,
+                  ),
+                  child: Center(
+                    child: IconStickerGlyphIcon(
+                      glyph: widget.glyph,
+                      color: Palette.onAccent,
+                      size: _glyphExtent,
+                    ),
                   ),
                 ),
               ),
@@ -327,6 +410,10 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   Widget _buildPill(BuildContext context) {
     final VoidCallback? edit = widget.onEdit;
     final bool visible = _visible;
+    final EdgeInsets inset = logActionsPillTapInset(
+      withEdit: edit != null,
+      growDown: true,
+    );
     return Align(
       alignment: AlignmentDirectional.topStart,
       child: CompositedTransformFollower(
@@ -334,14 +421,14 @@ class _LogActionsRevealState extends State<LogActionsReveal>
         showWhenUnlinked: false,
         targetAnchor: Alignment.topRight,
         followerAnchor: Alignment.topRight,
-        offset: const Offset(-_pillInset, -_pillRise),
-        child: TapRegion(
-          groupId: this,
-          child: MouseRegion(
-            onEnter: (PointerEnterEvent event) => _onPillHover(true),
-            onExit: (PointerExitEvent event) => _onPillHover(false),
-            child: IgnorePointer(
-              ignoring: !visible,
+        offset: Offset(inset.right - _pillInset, -inset.top - _pillRise),
+        child: IgnorePointer(
+          ignoring: !visible,
+          child: TapRegion(
+            groupId: this,
+            child: MouseRegion(
+              onEnter: (PointerEnterEvent event) => _onPillHover(true),
+              onExit: (PointerExitEvent event) => _onPillHover(false),
               child: ExcludeFocus(
                 excluding: !visible,
                 child: ExcludeSemantics(
@@ -352,8 +439,10 @@ class _LogActionsRevealState extends State<LogActionsReveal>
                       return Opacity(
                         opacity: _progress.value,
                         child: Transform.translate(
-                          offset:
-                              Offset(0, _hiddenDrop * (1 - _progress.value)),
+                          offset: Offset(
+                            0,
+                            _hiddenDrop * (1 - _progress.value),
+                          ),
                           child: child,
                         ),
                       );
@@ -362,6 +451,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
                       key: logActionsPillKey,
                       onEdit: edit == null ? null : () => _choose(edit),
                       onDelete: () => _choose(widget.onDelete),
+                      growDown: true,
                     ),
                   ),
                 ),
@@ -390,9 +480,11 @@ class _LogActionsRevealState extends State<LogActionsReveal>
               canRequestFocus: true,
               onFocusChange: _onFocusChange,
               child: Semantics(
+                onLongPress: _onLongPress,
                 customSemanticsActions: _semanticActions(),
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
+                  excludeFromSemantics: true,
                   onLongPress: _onLongPress,
                   child: widget.child,
                 ),
