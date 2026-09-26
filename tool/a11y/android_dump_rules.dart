@@ -6,8 +6,10 @@ const String _usage =
 
 const String _editText = 'android.widget.EditText';
 
+const String _button = 'android.widget.Button';
+
 const Set<String> _roleClasses = <String>{
-  'android.widget.Button',
+  _button,
   'android.widget.CheckBox',
   'android.widget.Switch',
   'android.widget.ToggleButton',
@@ -58,12 +60,6 @@ final class _Bounds {
 
   int get height => bottom - top;
 
-  bool encloses(_Bounds other) =>
-      other.left >= left &&
-      other.top >= top &&
-      other.right <= right &&
-      other.bottom <= bottom;
-
   bool matches(_Bounds other) =>
       (left - other.left).abs() <= 2 &&
       (top - other.top).abs() <= 2 &&
@@ -74,23 +70,38 @@ final class _Bounds {
 final class _Node {
   const _Node({
     required this.className,
-    required this.lines,
+    required this.description,
+    required this.text,
     required this.anchor,
     required this.clickable,
     required this.longClickable,
+    required this.enabled,
+    required this.scrollable,
     required this.bounds,
+    required this.scrollers,
   });
 
   final String className;
-  final List<String> lines;
+  final List<String> description;
+  final List<String> text;
   final String anchor;
   final bool clickable;
   final bool longClickable;
+  final bool enabled;
+  final bool scrollable;
   final _Bounds bounds;
+  final List<_Bounds> scrollers;
+
+  List<String> get lines => description.isNotEmpty ? description : text;
 
   bool get labelled => lines.isNotEmpty;
 
   String get label => labelled ? lines.join(' / ') : '<unlabelled>';
+
+  bool get tappable => clickable || longClickable;
+
+  bool get repeatsText =>
+      _repeats(description) || (className != _editText && _repeats(text));
 }
 
 List<String> androidDumpFindings(
@@ -183,35 +194,54 @@ List<String> _findings(List<_Node> nodes, String state, int density) {
       '$rule | $state | ${node.label} | ${node.anchor}';
   return <String>[
     for (final _Node node in nodes) ...<String>[
-      if ((node.clickable || node.longClickable) &&
-          !node.labelled &&
-          node.className != _editText)
+      if (node.tappable && !node.labelled && node.className != _editText)
         id('unlabelled-tap', node),
-      if (node.clickable && !_roleClasses.contains(node.className))
+      if (node.tappable && !_roleClasses.contains(node.className))
         id('missing-role', node),
-      if (node.lines.toSet().length < node.lines.length)
-        id('repeated-text', node),
-      if (node.clickable &&
-          screen.encloses(node.bounds) &&
-          (node.bounds.width < minimum || node.bounds.height < minimum))
+      if (node.className == _button && node.enabled && !node.tappable)
+        id('inert-button', node),
+      if (node.repeatsText) id('repeated-text', node),
+      if (node.tappable &&
+          ((!_clippedAcross(node, screen) && node.bounds.width < minimum) ||
+              (!_clippedAlong(node, screen) && node.bounds.height < minimum)))
         id('small-target', node),
     ],
     for (final _Node node in _doubledTargets(nodes)) id('doubled-target', node),
   ];
 }
 
+bool _clippedAcross(_Node node, _Bounds screen) =>
+    node.bounds.left <= screen.left ||
+    node.bounds.right >= screen.right ||
+    node.scrollers.any(
+      (_Bounds scroller) =>
+          (node.bounds.left == scroller.left) !=
+          (node.bounds.right == scroller.right),
+    );
+
+bool _clippedAlong(_Node node, _Bounds screen) =>
+    node.bounds.top <= screen.top ||
+    node.bounds.bottom >= screen.bottom ||
+    node.scrollers.any(
+      (_Bounds scroller) =>
+          (node.bounds.top == scroller.top) !=
+          (node.bounds.bottom == scroller.bottom),
+    );
+
+bool _repeats(List<String> lines) => lines.toSet().length < lines.length;
+
 List<_Node> _doubledTargets(List<_Node> nodes) {
-  final List<_Node> clickable = <_Node>[
+  final List<_Node> tappable = <_Node>[
     for (final _Node node in nodes)
-      if (node.clickable) node,
+      if (node.tappable) node,
   ];
   return <_Node>[
-    for (int first = 0; first < clickable.length; first++)
-      for (int second = first + 1; second < clickable.length; second++)
-        if (clickable[first].bounds.matches(clickable[second].bounds))
-          clickable[first].labelled && !clickable[second].labelled
-              ? clickable[first]
-              : clickable[second],
+    for (int first = 0; first < tappable.length; first++)
+      for (int second = first + 1; second < tappable.length; second++)
+        if (tappable[first].bounds.matches(tappable[second].bounds))
+          tappable[first].labelled && !tappable[second].labelled
+              ? tappable[first]
+              : tappable[second],
   ];
 }
 
@@ -292,23 +322,31 @@ Map<String, String> _attributes(String source) => <String, String>{
     match[1]!: _decoded(match[2] ?? match[3]!),
 };
 
-_Node _node(Map<String, String> attributes, _Node? parent) {
-  final List<String> description = _lines(attributes['content-desc'] ?? '');
-  return _Node(
-    className: attributes['class'] ?? '',
-    lines: description.isNotEmpty
-        ? description
-        : _lines(attributes['text'] ?? ''),
-    anchor: switch (parent) {
-      null => '<root>',
-      _Node(labelled: true, :final String label) => label,
-      _Node(:final String anchor) => anchor,
-    },
-    clickable: attributes['clickable'] == 'true',
-    longClickable: attributes['long-clickable'] == 'true',
-    bounds: _bounds(attributes['bounds']),
-  );
-}
+_Node _node(Map<String, String> attributes, _Node? parent) => _Node(
+  className: attributes['class'] ?? '',
+  description: _lines(attributes['content-desc'] ?? ''),
+  text: _lines(attributes['text'] ?? ''),
+  anchor: switch (parent) {
+    null => '<root>',
+    _Node(labelled: true, :final String label) => label,
+    _Node(:final String anchor) => anchor,
+  },
+  clickable: attributes['clickable'] == 'true',
+  longClickable: attributes['long-clickable'] == 'true',
+  enabled: attributes['enabled'] == 'true',
+  scrollable: attributes['scrollable'] == 'true',
+  bounds: _bounds(attributes['bounds']),
+  scrollers: switch (parent) {
+    null => const <_Bounds>[],
+    _Node(
+      scrollable: true,
+      :final List<_Bounds> scrollers,
+      :final _Bounds bounds,
+    ) =>
+      List<_Bounds>.unmodifiable(<_Bounds>[...scrollers, bounds]),
+    _Node(:final List<_Bounds> scrollers) => scrollers,
+  },
+);
 
 List<String> _lines(String text) => List<String>.unmodifiable(<String>[
   for (final String line in text.split(_lineBreak).map(_trimmed))

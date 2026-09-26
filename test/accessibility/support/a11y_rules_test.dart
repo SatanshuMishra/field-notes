@@ -1,6 +1,8 @@
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'a11y_baseline.dart';
@@ -199,6 +201,71 @@ Future<List<A11yFinding>> _findingsOf(
   };
 }
 
+Future<List<String>> _idsOf(WidgetTester tester, Widget widget) async =>
+    <String>[
+      for (final A11yFinding finding in await _findingsOf(
+        tester,
+        KeyedSubtree(key: _plantedKey, child: widget),
+        const <A11yStatefulControl>[],
+      ))
+        finding.id,
+    ];
+
+Widget _button(String? label, double side, {Widget? child}) => Semantics(
+  container: true,
+  button: true,
+  label: label,
+  onTap: _noop,
+  child: _box(side, side, child),
+);
+
+class _InvisibleNode extends SingleChildRenderObjectWidget {
+  const _InvisibleNode({super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderInvisibleNode();
+}
+
+class _RenderInvisibleNode extends RenderProxyBox {
+  @override
+  void describeSemanticsConfiguration(SemanticsConfiguration config) {
+    super.describeSemanticsConfiguration(config);
+    config.isSemanticBoundary = true;
+  }
+
+  @override
+  void assembleSemanticsNode(
+    SemanticsNode node,
+    SemanticsConfiguration config,
+    Iterable<SemanticsNode> children,
+  ) {
+    node.updateWith(
+      config: config,
+      childrenInInversePaintOrder: <SemanticsNode>[
+        ...children,
+        SemanticsNode()
+          ..rect = Rect.zero
+          ..updateWith(
+            config: SemanticsConfiguration()
+              ..isButton = true
+              ..label = 'Invisible'
+              ..onTap = _noop,
+          ),
+      ],
+    );
+  }
+}
+
+List<SemanticsNode> _childrenOf(SemanticsNode node) {
+  final List<SemanticsNode> children = <SemanticsNode>[];
+  node.visitChildren((SemanticsNode child) {
+    children.add(child);
+    return true;
+  });
+  return children;
+}
+
 A11yFinding _finding(String rule, String label) => A11yFinding(
   rule: rule,
   state: 'baseline',
@@ -347,5 +414,241 @@ void main() {
       compareA11yBaseline(path, <A11yFinding>[added, kept]).matches,
       isTrue,
     );
+  });
+
+  testWidgets('a doubled target is reported on the later node unless only '
+      'the earlier one is labelled', (WidgetTester tester) async {
+    Widget doubled(String? outer, String? inner) =>
+        _button(outer, 64, child: _button(inner, 64));
+
+    expect(await _idsOf(tester, doubled('Outer', 'Inner')), <String>[
+      'doubled-target | planted | Inner | Outer',
+    ]);
+    expect(await _idsOf(tester, doubled(null, null)), <String>[
+      'unlabelled-tap | planted | <unlabelled> | <root>',
+      'unlabelled-tap | planted | <unlabelled> | <root> #2',
+      'doubled-target | planted | <unlabelled> | <root>',
+    ]);
+    expect(await _idsOf(tester, doubled('Outer', null)), <String>[
+      'doubled-target | planted | Outer | <root>',
+      'unlabelled-tap | planted | <unlabelled> | Outer',
+    ]);
+    expect(await _idsOf(tester, doubled(null, 'Inner')), <String>[
+      'unlabelled-tap | planted | <unlabelled> | <root>',
+      'doubled-target | planted | Inner | <root>',
+    ]);
+  });
+
+  testWidgets('a repeated ID is numbered from its second occurrence', (
+    WidgetTester tester,
+  ) async {
+    expect(
+      await _idsOf(
+        tester,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _button(null, 48),
+            _button('Close', 24),
+            _button(null, 48),
+            _button(null, 48),
+          ],
+        ),
+      ),
+      <String>[
+        'unlabelled-tap | planted | <unlabelled> | <root>',
+        'small-target | planted | Close | <root>',
+        'unlabelled-tap | planted | <unlabelled> | <root> #2',
+        'unlabelled-tap | planted | <unlabelled> | <root> #3',
+      ],
+    );
+  });
+
+  testWidgets('merged and hidden nodes are not judged', (
+    WidgetTester tester,
+  ) async {
+    Widget unnamed({required bool hidden}) => Semantics(
+      container: true,
+      hidden: hidden,
+      onTap: _noop,
+      child: _box(48, 48),
+    );
+
+    expect(await _idsOf(tester, _button('Close', 24)), <String>[
+      'small-target | planted | Close | <root>',
+    ]);
+    expect(
+      await _idsOf(
+        tester,
+        MergeSemantics(
+          child: _box(48, 48, Center(child: _button('Close', 24))),
+        ),
+      ),
+      isEmpty,
+    );
+    expect(await _idsOf(tester, unnamed(hidden: false)), <String>[
+      'unlabelled-tap | planted | <unlabelled> | <root>',
+      'missing-role | planted | <unlabelled> | <root>',
+    ]);
+    expect(await _idsOf(tester, unnamed(hidden: true)), isEmpty);
+  });
+
+  testWidgets('an invisible node Flutter rejects is not judged', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Material(
+          child: Center(child: _InvisibleNode(child: _box(48, 48))),
+        ),
+      ),
+    );
+    expect(
+      tester.takeException(),
+      isA<FlutterError>().having(
+        (FlutterError error) => error.toString(),
+        'text',
+        contains('Invisible SemanticsNodes should not be added to the tree.'),
+      ),
+    );
+    expect(
+      <String>[
+        for (final SemanticsNode child in _childrenOf(
+          tester.getSemantics(find.byType(_InvisibleNode)),
+        ))
+          if (child.isInvisible) child.label,
+      ],
+      <String>['Invisible'],
+    );
+    expect(a11yFindings(tester, state: 'planted'), isEmpty);
+    handle.dispose();
+  });
+
+  testWidgets('an unlabelled text field is not reported as unlabelled', (
+    WidgetTester tester,
+  ) async {
+    Widget field({required bool textField}) => Semantics(
+      container: true,
+      textField: textField,
+      onTap: _noop,
+      child: _box(200, 48),
+    );
+
+    expect(await _idsOf(tester, field(textField: true)), isEmpty);
+    expect(await _idsOf(tester, field(textField: false)), <String>[
+      'unlabelled-tap | planted | <unlabelled> | <root>',
+      'missing-role | planted | <unlabelled> | <root>',
+    ]);
+  });
+
+  testWidgets('repeated text ignores blank lines and keeps letter case', (
+    WidgetTester tester,
+  ) async {
+    Widget labelled(String label) => Semantics(
+      container: true,
+      button: true,
+      label: label,
+      onTap: _noop,
+      child: _box(200, 48),
+    );
+
+    expect(await _idsOf(tester, labelled('Walk\n\nRun\n  \nSit')), isEmpty);
+    expect(await _idsOf(tester, labelled('Walk\nwalk')), isEmpty);
+    expect(await _idsOf(tester, labelled(' Walk\n\nWalk ')), <String>[
+      'repeated-text | planted | Walk / Walk | <root>',
+    ]);
+  });
+
+  testWidgets('a small button flush against the view is judged', (
+    WidgetTester tester,
+  ) async {
+    final A11yStateResult result = await runA11yState(
+      tester,
+      A11yState(
+        id: 'flush',
+        pump: (WidgetTester tester) => tester.pumpWidget(
+          MaterialApp(
+            home: Material(
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: KeyedSubtree(
+                  key: _plantedKey,
+                  child: _button('Today', 40),
+                ),
+              ),
+            ),
+          ),
+        ),
+        proof: <A11yProof>[A11yProof(find.byKey(_plantedKey))],
+      ),
+    );
+    expect(
+      switch (result) {
+        A11yLoaded(:final List<A11yFinding> findings) => <String>[
+          for (final A11yFinding finding in findings) finding.id,
+        ],
+        A11yNotLoaded(:final String message) => throw TestFailure(message),
+      },
+      <String>['small-target | flush | Today | <root>'],
+    );
+  });
+
+  testWidgets(
+    'a node several render objects share is judged by their combined bounds',
+    (WidgetTester tester) async {
+      final List<String> ids = <String>[
+        for (final A11yFinding finding in await _findingsOf(
+          tester,
+          KeyedSubtree(
+            key: _plantedKey,
+            child: SizedBox(
+              width: 200,
+              child: ClipRect(
+                child: SizedBox(
+                  height: 30,
+                  child: OverflowBox(
+                    alignment: Alignment.topLeft,
+                    maxHeight: 80,
+                    child: const TextField(
+                      decoration: InputDecoration(labelText: 'Name'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const <A11yStatefulControl>[],
+        ))
+          finding.id,
+      ];
+      expect(ids, isEmpty);
+    },
+  );
+
+  testWidgets('a node no render object owns is judged by its visible rect', (
+    WidgetTester tester,
+  ) async {
+    final LongPressGestureRecognizer hold = LongPressGestureRecognizer()
+      ..onLongPress = _noop;
+    addTearDown(hold.dispose);
+    final List<String> ids = <String>[
+      for (final A11yFinding finding in await _findingsOf(
+        tester,
+        KeyedSubtree(
+          key: _plantedKey,
+          child: SizedBox(
+            width: 200,
+            height: 10,
+            child: SingleChildScrollView(
+              child: Text.rich(TextSpan(text: 'Hold me', recognizer: hold)),
+            ),
+          ),
+        ),
+        const <A11yStatefulControl>[],
+      ))
+        finding.id,
+    ];
+    expect(ids, contains('small-target | planted | Hold me | <root>'));
   });
 }
