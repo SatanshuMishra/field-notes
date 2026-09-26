@@ -3,5 +3,9 @@ missing-role | d13-change-mood-dialog | Dismiss | <root>
 missing-role | d14-delete-entry-dialog | Dismiss | <root>
 missing-role | d7-day-with-entries | Dismiss day detail | <root>
 missing-role | d8-day-empty | Dismiss day detail | <root>
+small-target | d1-viewer-todos | call the ferry office | Friday, September 18 / Morning note
+small-target | d1-viewer-todos | pack the tide tables | Friday, September 18 / Morning note
 small-target | d5-reader-menu | Copy | <root>
 small-target | d5-reader-menu | Select all | <root>
+small-target | d6-task-toast | call the ferry office | Friday, September 18 / Morning note
+small-target | d6-task-toast | pack the tide tables | Friday, September 18 / Morning note

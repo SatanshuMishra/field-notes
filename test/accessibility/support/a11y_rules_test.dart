@@ -651,4 +651,56 @@ void main() {
     ];
     expect(ids, contains('small-target | planted | Hold me | <root>'));
   });
+
+  testWidgets('a node that reaches past its parent is judged by the part a '
+      'tap can reach', (WidgetTester tester) async {
+    final List<String> ids = <String>[
+      for (final A11yFinding finding in await _findingsOf(
+        tester,
+        KeyedSubtree(
+          key: _plantedKey,
+          child: Semantics(
+            container: true,
+            child: _box(
+              48,
+              20,
+              OverflowBox(maxHeight: 48, child: _button('Reach me', 48)),
+            ),
+          ),
+        ),
+        const <A11yStatefulControl>[],
+      ))
+        finding.id,
+    ];
+    expect(ids, contains('small-target | planted | Reach me | <root>'));
+  });
+
+  testWidgets('a node is judged by the part inside every ancestor, not only '
+      'its parent', (WidgetTester tester) async {
+    final List<String> ids = <String>[
+      for (final A11yFinding finding in await _findingsOf(
+        tester,
+        KeyedSubtree(
+          key: _plantedKey,
+          child: Semantics(
+            container: true,
+            child: _box(
+              48,
+              20,
+              OverflowBox(
+                maxHeight: 48,
+                child: Semantics(
+                  container: true,
+                  child: _box(48, 48, _button('Reach me too', 48)),
+                ),
+              ),
+            ),
+          ),
+        ),
+        const <A11yStatefulControl>[],
+      ))
+        finding.id,
+    ];
+    expect(ids, contains('small-target | planted | Reach me too | <root>'));
+  });
 }

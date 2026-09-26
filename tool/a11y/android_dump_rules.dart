@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 const String _usage =
     'usage: dart run tool/a11y/android_dump_rules.dart --density <dpi> '
@@ -60,12 +61,24 @@ final class _Bounds {
 
   int get height => bottom - top;
 
+  _Bounds within(_Bounds other) {
+    final _Bounds overlap = _Bounds(
+      math.max(left, other.left),
+      math.max(top, other.top),
+      math.min(right, other.right),
+      math.min(bottom, other.bottom),
+    );
+    return overlap.width > 0 && overlap.height > 0 ? overlap : _nowhere;
+  }
+
   bool matches(_Bounds other) =>
       (left - other.left).abs() <= 2 &&
       (top - other.top).abs() <= 2 &&
       (right - other.right).abs() <= 2 &&
       (bottom - other.bottom).abs() <= 2;
 }
+
+const _Bounds _nowhere = _Bounds(0, 0, 0, 0);
 
 final class _Node {
   const _Node({
@@ -78,6 +91,7 @@ final class _Node {
     required this.enabled,
     required this.scrollable,
     required this.bounds,
+    required this.reach,
     required this.scrollers,
   });
 
@@ -90,6 +104,7 @@ final class _Node {
   final bool enabled;
   final bool scrollable;
   final _Bounds bounds;
+  final _Bounds reach;
   final List<_Bounds> scrollers;
 
   List<String> get lines => description.isNotEmpty ? description : text;
@@ -202,8 +217,8 @@ List<String> _findings(List<_Node> nodes, String state, int density) {
         id('inert-button', node),
       if (node.repeatsText) id('repeated-text', node),
       if (node.tappable &&
-          ((!_clippedAcross(node, screen) && node.bounds.width < minimum) ||
-              (!_clippedAlong(node, screen) && node.bounds.height < minimum)))
+          ((!_clippedAcross(node, screen) && node.reach.width < minimum) ||
+              (!_clippedAlong(node, screen) && node.reach.height < minimum)))
         id('small-target', node),
     ],
     for (final _Node node in _doubledTargets(nodes)) id('doubled-target', node),
@@ -322,31 +337,38 @@ Map<String, String> _attributes(String source) => <String, String>{
     match[1]!: _decoded(match[2] ?? match[3]!),
 };
 
-_Node _node(Map<String, String> attributes, _Node? parent) => _Node(
-  className: attributes['class'] ?? '',
-  description: _lines(attributes['content-desc'] ?? ''),
-  text: _lines(attributes['text'] ?? ''),
-  anchor: switch (parent) {
-    null => '<root>',
-    _Node(labelled: true, :final String label) => label,
-    _Node(:final String anchor) => anchor,
-  },
-  clickable: attributes['clickable'] == 'true',
-  longClickable: attributes['long-clickable'] == 'true',
-  enabled: attributes['enabled'] == 'true',
-  scrollable: attributes['scrollable'] == 'true',
-  bounds: _bounds(attributes['bounds']),
-  scrollers: switch (parent) {
-    null => const <_Bounds>[],
-    _Node(
-      scrollable: true,
-      :final List<_Bounds> scrollers,
-      :final _Bounds bounds,
-    ) =>
-      List<_Bounds>.unmodifiable(<_Bounds>[...scrollers, bounds]),
-    _Node(:final List<_Bounds> scrollers) => scrollers,
-  },
-);
+_Node _node(Map<String, String> attributes, _Node? parent) {
+  final _Bounds bounds = _bounds(attributes['bounds']);
+  return _Node(
+    className: attributes['class'] ?? '',
+    description: _lines(attributes['content-desc'] ?? ''),
+    text: _lines(attributes['text'] ?? ''),
+    anchor: switch (parent) {
+      null => '<root>',
+      _Node(labelled: true, :final String label) => label,
+      _Node(:final String anchor) => anchor,
+    },
+    clickable: attributes['clickable'] == 'true',
+    longClickable: attributes['long-clickable'] == 'true',
+    enabled: attributes['enabled'] == 'true',
+    scrollable: attributes['scrollable'] == 'true',
+    bounds: bounds,
+    reach: switch (parent) {
+      null => bounds,
+      _Node(:final _Bounds reach) => bounds.within(reach),
+    },
+    scrollers: switch (parent) {
+      null => const <_Bounds>[],
+      _Node(
+        scrollable: true,
+        :final List<_Bounds> scrollers,
+        :final _Bounds bounds,
+      ) =>
+        List<_Bounds>.unmodifiable(<_Bounds>[...scrollers, bounds]),
+      _Node(:final List<_Bounds> scrollers) => scrollers,
+    },
+  );
+}
 
 List<String> _lines(String text) => List<String>.unmodifiable(<String>[
   for (final String line in text.split(_lineBreak).map(_trimmed))
