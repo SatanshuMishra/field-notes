@@ -904,15 +904,15 @@ class RenderNoteView extends RenderBox
     if (_readOnly) {
       _semanticsNodes.dropTextField();
     }
-    final List<SemanticsNode> synthesized = <SemanticsNode>[
-      if (!_readOnly) _textFieldNode(),
-      ..._checkboxNodes(),
-      ..._tableNodes(),
-      ..._readerNodes(),
-    ];
     node.updateWith(
       config: config,
-      childrenInInversePaintOrder: <SemanticsNode>[...synthesized, ...children],
+      childrenInInversePaintOrder: <SemanticsNode>[
+        if (!_readOnly) _textFieldNode(),
+        ..._tableNodes(),
+        ..._readerNodes(),
+        ...children,
+        ..._checkboxNodes(),
+      ],
     );
   }
 
@@ -1076,6 +1076,47 @@ class RenderNoteView extends RenderBox
     );
   }
 
+  List<Rect> _checkboxAreas(List<Rect> boxes) {
+    final List<(double, Rect)> targets = <(double, Rect)>[
+      for (final Rect box in boxes) (box.center.dy, _withMinimumTarget(box)),
+    ];
+    return List<Rect>.unmodifiable(<Rect>[
+      for (final (double centre, Rect target) in targets)
+        _onView(_ownSide(centre, target, targets)),
+    ]);
+  }
+
+  Rect _ownSide(double centre, Rect target, List<(double, Rect)> targets) =>
+      targets.fold(target, (Rect area, (double, Rect) other) {
+        final (double otherCentre, Rect otherTarget) = other;
+        if (!otherTarget.overlaps(target)) {
+          return area;
+        }
+        final double halfway = (centre + otherCentre) / 2;
+        if (otherCentre > centre) {
+          return Rect.fromLTRB(
+            area.left,
+            area.top,
+            area.right,
+            math.min(area.bottom, halfway),
+          );
+        }
+        if (otherCentre < centre) {
+          return Rect.fromLTRB(
+            area.left,
+            math.max(area.top, halfway),
+            area.right,
+            area.bottom,
+          );
+        }
+        return area;
+      });
+
+  Rect _onView(Rect area) {
+    final Rect bounds = Offset.zero & size;
+    return area.overlaps(bounds) ? area.intersect(bounds) : area;
+  }
+
   List<SemanticsNode> _checkboxNodes() {
     final List<(NoteCheckboxSemantics, Rect)> placed =
         <(NoteCheckboxSemantics, Rect)>[
@@ -1085,8 +1126,11 @@ class RenderNoteView extends RenderBox
           ))
             if (contentRectToLocal(_noteLayout.rangeBounds(box.boxRange))
                 case final Rect rect)
-              (box, _withMinimumTarget(rect)),
+              (box, rect),
         ];
+    final List<Rect> areas = _checkboxAreas(<Rect>[
+      for (final (NoteCheckboxSemantics _, Rect rect) in placed) rect,
+    ]);
     final List<SemanticsNode> nodes = _semanticsNodes.checkboxes(<int>[
       for (final (NoteCheckboxSemantics box, Rect _) in placed) box.boxStart,
     ]);
@@ -1095,7 +1139,7 @@ class RenderNoteView extends RenderBox
         ? _onToggleTask
         : delegate.toggleCheckbox;
     for (int i = 0; i < placed.length; i++) {
-      final (NoteCheckboxSemantics box, Rect rect) = placed[i];
+      final (NoteCheckboxSemantics box, Rect _) = placed[i];
       final int boxStart = box.boxStart;
       final SemanticsConfiguration config = SemanticsConfiguration()
         ..sortKey = OrdinalSortKey(boxStart.toDouble())
@@ -1107,7 +1151,7 @@ class RenderNoteView extends RenderBox
       }
       nodes[i]
         ..updateWith(config: config)
-        ..rect = rect;
+        ..rect = areas[i];
     }
     return nodes;
   }

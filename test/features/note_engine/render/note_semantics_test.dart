@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +27,19 @@ void _pinSurface(WidgetTester tester) {
 
 int _lineOf(String source, int offset) =>
     '\n'.allMatches(source.substring(0, offset)).length;
+
+Rect _honestTarget(RenderNoteView view, double minimum) {
+  final Rect box = view.contentRectToLocal(
+    view.noteLayout.rangeBounds(
+      noteCheckboxSemanticsOf(view.tree, view.visibleText).single.boxRange,
+    ),
+  )!;
+  return Rect.fromCenter(
+    center: box.center,
+    width: math.max(box.width, minimum),
+    height: math.max(box.height, minimum),
+  ).intersect(Offset.zero & view.size);
+}
 
 final class _RecordingDelegate implements NoteViewDelegate {
   final List<TextSelection> selections = <TextSelection>[];
@@ -341,7 +356,8 @@ void main() {
     });
 
     testWidgets(
-      'an Android checkbox target is at least 48 by 48',
+      'an Android checkbox target is the 48 by 48 minimum around its box, '
+      'cut to the view',
       (WidgetTester tester) async {
         _pinSurface(tester);
         final SemanticsHandle handle = _semantics(tester);
@@ -352,16 +368,18 @@ void main() {
           selection: const NoteSelection.collapsed(0),
           focused: false,
         );
-        final Rect rect = harness.labelled(tester, 'passport').rect;
-        expect(rect.width, greaterThanOrEqualTo(48));
-        expect(rect.height, greaterThanOrEqualTo(48));
+        expect(
+          harness.labelled(tester, 'passport').rect,
+          rectMoreOrLessEquals(_honestTarget(harness.view, 48)),
+        );
         handle.dispose();
       },
       variant: TargetPlatformVariant.only(TargetPlatform.android),
     );
 
     testWidgets(
-      'a macOS checkbox target is at least 24 by 24',
+      'a macOS checkbox target is the 24 by 24 minimum around its box, '
+      'cut to the view',
       (WidgetTester tester) async {
         _pinSurface(tester);
         final SemanticsHandle handle = _semantics(tester);
@@ -372,9 +390,10 @@ void main() {
           selection: const NoteSelection.collapsed(0),
           focused: false,
         );
-        final Rect rect = harness.labelled(tester, 'passport').rect;
-        expect(rect.width, greaterThanOrEqualTo(24));
-        expect(rect.height, greaterThanOrEqualTo(24));
+        expect(
+          harness.labelled(tester, 'passport').rect,
+          rectMoreOrLessEquals(_honestTarget(harness.view, 24)),
+        );
         handle.dispose();
       },
       variant: TargetPlatformVariant.only(TargetPlatform.macOS),
