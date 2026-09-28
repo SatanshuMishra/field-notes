@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:field_notes/app/macos_menu_bar.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart'
@@ -236,6 +237,7 @@ class NoteEditorViewState extends State<NoteEditorView>
   SpellChecker? _spellChecker;
   bool _spellCheckerResolved = false;
   NoteCaretReveal? _reveal;
+  MacosEditRegistry? _editRegistry;
   bool _firstFrameDone = false;
 
   NoteComposition _composition = const NoteComposition.idle();
@@ -381,6 +383,12 @@ class NoteEditorViewState extends State<NoteEditorView>
       _spellChecker = _createSpellChecker(locale);
     }
     _reveal ??= _createReveal();
+    final MacosEditRegistry? registry = MacosEditRegistry.maybeOf(context);
+    if (!identical(registry, _editRegistry)) {
+      _editRegistry?.release(widget.focusNode);
+      _editRegistry = registry;
+      _publishEditTarget();
+    }
   }
 
   @override
@@ -426,10 +434,15 @@ class NoteEditorViewState extends State<NoteEditorView>
     if (oldWidget.spellCheckEnabled != widget.spellCheckEnabled) {
       _spellChecker?.enabled = widget.spellCheckEnabled;
     }
+    if (!identical(oldWidget.focusNode, widget.focusNode)) {
+      _editRegistry?.release(oldWidget.focusNode);
+    }
+    _publishEditTarget();
   }
 
   @override
   void dispose() {
+    _editRegistry?.release(widget.focusNode);
     _detachController(widget.controller);
     _detachUndo(widget.undoController);
     _client.dispose();
@@ -553,6 +566,24 @@ class NoteEditorViewState extends State<NoteEditorView>
     if (widget.undoController.value != next) {
       widget.undoController.value = next;
     }
+  }
+
+  void _publishEditTarget() {
+    final MacosEditRegistry? registry = _editRegistry;
+    if (registry == null) {
+      return;
+    }
+    if (!widget.focusNode.hasFocus) {
+      registry.release(widget.focusNode);
+      return;
+    }
+    registry.register(
+      MacosEditTarget(
+        focusNode: widget.focusNode,
+        undoController: widget.undoController,
+        hasSelection: !_state.selection.isCollapsed,
+      ),
+    );
   }
 
   void _syncUndoValueAfterFrame() {
@@ -802,6 +833,7 @@ class NoteEditorViewState extends State<NoteEditorView>
     _imports.mapThrough(transaction.changes);
     _spellChecker?.didChange(state, transaction.changes);
     _syncUndoValue();
+    _publishEditTarget();
     if (_removalToastArmed) {
       _removalToastArmed = false;
       dismissTransientToast();
@@ -825,6 +857,7 @@ class NoteEditorViewState extends State<NoteEditorView>
     _refreshActiveLine();
     _client.focusChanged(widget.focusNode);
     _client.sendStateIfChanged();
+    _publishEditTarget();
     _markNeedsBuild();
   }
 

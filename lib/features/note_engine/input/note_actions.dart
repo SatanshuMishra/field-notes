@@ -1,11 +1,14 @@
 import 'dart:ui' show PointerDeviceKind;
 
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
+import 'package:field_notes/features/note_engine/commands/table_commands.dart';
 import 'package:field_notes/features/note_engine/document/change_set.dart';
 import 'package:field_notes/features/note_engine/document/editor_state.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/document/transaction.dart';
+import 'package:field_notes/features/note_engine/gestures/clipboard_actions.dart';
 import 'package:field_notes/features/note_engine/input/command_registry.dart';
+import 'package:field_notes/features/note_engine/input/cut_buffer.dart';
 import 'package:field_notes/features/note_engine/input/delta_mapping.dart';
 import 'package:field_notes/features/note_engine/input/note_shortcuts.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
@@ -53,8 +56,64 @@ abstract interface class NoteActionHost {
   bool focusPhotoToolbar();
 }
 
+final class _CutToLineEndIntent extends Intent {
+  const _CutToLineEndIntent();
+}
+
+final class _YankIntent extends Intent {
+  const _YankIntent();
+}
+
+final class _InsertLineBreakIntent extends Intent {
+  const _InsertLineBreakIntent();
+}
+
+final class _SelectorIntent extends Intent {
+  const _SelectorIntent(this.intent);
+
+  final Intent intent;
+}
+
+const Map<String, Intent> _noteSelectors = <String, Intent>{
+  'deleteToEndOfParagraph:': _CutToLineEndIntent(),
+  'yank:': _YankIntent(),
+  'insertNewlineIgnoringFieldEditor:': _InsertLineBreakIntent(),
+  'pageDown:': ExtendSelectionVerticallyToAdjacentPageIntent(
+    forward: true,
+    collapseSelection: true,
+  ),
+  'moveToBeginningOfParagraphAndModifySelection:':
+      ExtendSelectionToLineBreakIntent(
+        forward: false,
+        collapseSelection: false,
+      ),
+  'moveToEndOfParagraphAndModifySelection:': ExtendSelectionToLineBreakIntent(
+    forward: true,
+    collapseSelection: false,
+  ),
+  'moveForwardAndModifySelection:': ExtendSelectionByCharacterIntent(
+    forward: true,
+    collapseSelection: false,
+  ),
+  'moveBackwardAndModifySelection:': ExtendSelectionByCharacterIntent(
+    forward: false,
+    collapseSelection: false,
+  ),
+  'moveWordForward:': ExtendSelectionToNextWordBoundaryIntent(
+    forward: true,
+    collapseSelection: true,
+  ),
+  'moveWordBackward:': ExtendSelectionToNextWordBoundaryIntent(
+    forward: false,
+    collapseSelection: true,
+  ),
+};
+
 void invokeMacOSSelector(BuildContext context, String selectorName) {
-  final Intent? intent = intentForMacOSSelector(selectorName);
+  final Intent? noteIntent = _noteSelectors[selectorName];
+  final Intent? intent = noteIntent == null
+      ? intentForMacOSSelector(selectorName)
+      : _SelectorIntent(noteIntent);
   if (intent == null) {
     assert(() {
       debugPrint('NoteActions: ignored unmapped selector $selectorName');
@@ -165,6 +224,21 @@ class NoteActions {
     ),
     RedoTextIntent: _textAction<RedoTextIntent>(
       (RedoTextIntent _) => host.redo(),
+    ),
+    _CutToLineEndIntent: _textAction<_CutToLineEndIntent>(
+      (_CutToLineEndIntent _) => _cutToLineEnd(),
+    ),
+    _YankIntent: _textAction<_YankIntent>((_YankIntent _) => _yank()),
+    _InsertLineBreakIntent: _textAction<_InsertLineBreakIntent>(
+      (_InsertLineBreakIntent _) => _insertLineBreak(),
+    ),
+    _SelectorIntent: _NoteAction<_SelectorIntent>(
+      enabled: (_SelectorIntent intent) =>
+          host.state.composing == null &&
+          (actions[intent.intent.runtimeType]?.isEnabled(intent.intent) ??
+              false),
+      onInvoke: (_SelectorIntent intent) => const ActionDispatcher()
+          .invokeAction(actions[intent.intent.runtimeType]!, intent.intent),
     ),
     UpdateSelectionIntent: _textAction<UpdateSelectionIntent>(
       _updateFromVisible,
@@ -305,12 +379,14 @@ class NoteActions {
     );
   }
 
-  void _deleteTo(bool forward, _Boundary boundary) {
+  void _deleteTo(bool forward, _Boundary boundary) =>
+      _deleteSources(_rangesTo(forward, boundary));
+
+  List<MdRange> _rangesTo(bool forward, _Boundary boundary) {
     final EditorState state = host.state;
     final NoteSelection selection = state.selection;
     if (!selection.isCollapsed) {
-      _deleteSource(MdRange(selection.start, selection.end));
-      return;
+      return <MdRange>[MdRange(selection.start, selection.end)];
     }
     final int target = boundary(
       TextPosition(offset: selection.head, affinity: selection.affinity),
@@ -319,7 +395,7 @@ class NoteActions {
     final int caret = _toVisible(selection.head);
     final int reached = _toVisible(target);
     if (reached == caret) {
-      return;
+      return const <MdRange>[];
     }
     final MdRange range = sourceRangeForVisible(
       state: state,
@@ -327,10 +403,59 @@ class NoteActions {
       visibleRange: TextRange(start: caret, end: reached),
     );
     final MdRange? cell = _cellContentAt(state.tree, selection.head);
-    _deleteSources(
-      cell == null
-          ? splitAtTables(state.tree, range)
-          : <MdRange>[_clampTo(range, cell)],
+    return cell == null
+        ? splitAtTables(state.tree, range)
+        : <MdRange>[_clampTo(range, cell)];
+  }
+
+  TextPosition _lineEndToCut(TextPosition extent, bool forward) => TextPosition(
+    offset: cutRangeToLineEnd(host.state.source, extent.offset).end,
+  );
+
+  void _cutToLineEnd() {
+    final List<MdRange> ranges = _rangesTo(true, _lineEndToCut);
+    final String source = host.state.source;
+    CutBuffer.instance.store(
+      ranges.map((MdRange range) => range.sliceOf(source)).join(),
+    );
+    _deleteSources(ranges);
+  }
+
+  void _yank() {
+    final String text = CutBuffer.instance.text;
+    if (text.isEmpty) {
+      return;
+    }
+    final EditorState state = host.state;
+    final MdBlock? block = state.tree.blockAt(state.selection.head);
+    final Transaction? transaction =
+        block != null && block.kind == MdBlockKind.table
+        ? replaceInCell(state, text, paste: true)
+        : notePasteTransaction(state, text);
+    if (transaction != null) {
+      host.apply(transaction);
+    }
+  }
+
+  void _insertLineBreak() {
+    final EditorState state = host.state;
+    final NoteSelection selection = state.selection;
+    if (selectedPhotoLine(state) != null ||
+        _cellContentAt(state.tree, selection.start) != null ||
+        _cellContentAt(state.tree, selection.end) != null) {
+      return;
+    }
+    host.apply(
+      Transaction(
+        changes: ChangeSet.single(
+          state.source.length,
+          selection.start,
+          selection.end,
+          '\n',
+        ),
+        selection: NoteSelection.collapsed(selection.start + 1),
+        event: TransactionEvent.inputType,
+      ),
     );
   }
 
