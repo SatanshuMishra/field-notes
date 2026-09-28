@@ -40,13 +40,33 @@ void main() {
     expect(find.text('Sunday'), findsOneWidget);
   });
 
-  testWidgets('dragging the text size slider to the end saves the largest size',
+  testWidgets(
+      'the text size row offers Small, Medium and Large and saves the choice',
       (WidgetTester tester) async {
     final FakeSettingsRepository repository = FakeSettingsRepository();
-    await _pumpSection(tester, repository: repository);
+    await _pumpSection(
+      tester,
+      repository: repository,
+      settings: AppSettings.defaults.copyWith(textSize: TextSize.medium),
+    );
 
-    final Rect track = tester.getRect(find.byType(Slider));
-    await tester.tapAt(Offset(track.right - 4, track.center.dy));
+    final Finder segmented = find.byType(SettingsSegmented<TextSize>);
+    Finder segment(String label) =>
+        find.descendant(of: segmented, matching: find.text(label));
+    expect(segment('Small'), findsOneWidget);
+    expect(segment('Medium'), findsOneWidget);
+    expect(segment('Large'), findsOneWidget);
+    expect(
+      tester.getSemantics(segment('Medium')),
+      isSemantics(label: 'Medium', isButton: true, isSelected: true),
+    );
+    expect(
+      tester.getSemantics(segment('Large')),
+      isSemantics(label: 'Large', isButton: true, isSelected: false),
+    );
+    expect(find.byType(Slider), findsNothing);
+
+    await tester.tap(segment('Large'));
     await tester.pumpAndSettle();
 
     expect(repository.textSizeWrites, <TextSize>[TextSize.large]);
