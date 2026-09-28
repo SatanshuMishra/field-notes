@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
+
 import '../../design/tokens/tokens.dart';
 import 'shell_destination.dart';
 
@@ -104,38 +106,31 @@ class BottomBarShell extends StatelessWidget {
   Widget _tab(ShellDestination d) {
     final bool isSelected = d == selected;
     final Color color = isSelected ? Palette.coral : Palette.mutedDeep;
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: d.label,
-      child: GestureDetector(
-        key: ValueKey<String>('tab-${d.name}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onSelect(d),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: kMinInteractiveDimension,
-            minHeight: kMinInteractiveDimension,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-              child: ExcludeSemantics(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Icon(d.icon, size: 22, color: color),
-                    const SizedBox(height: 2),
-                    Text(
-                      d.label,
-                      style: TypographyTokens.captionSans.copyWith(
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
+    return CalendarTapArea(
+      reach: const EdgeInsets.symmetric(
+        horizontal: kMinInteractiveDimension / 2,
+      ),
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: d.label,
+        child: GestureDetector(
+          key: ValueKey<String>('tab-${d.name}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onSelect(d),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+            child: ExcludeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Icon(d.icon, size: 22, color: color),
+                  const SizedBox(height: 2),
+                  Text(
+                    d.label,
+                    style: TypographyTokens.captionSans.copyWith(color: color),
+                  ),
+                ],
               ),
             ),
           ),

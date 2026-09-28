@@ -20,6 +20,7 @@ class CalendarChevronButton extends StatelessWidget {
     this.size = calendarChevronButtonSize,
     this.glyphSize = 15,
     this.alignment = Alignment.center,
+    this.reach,
   });
 
   final ChevronDirection direction;
@@ -28,43 +29,45 @@ class CalendarChevronButton extends StatelessWidget {
   final double size;
   final double glyphSize;
   final Alignment alignment;
+  final EdgeInsets? reach;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: semanticLabel,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: CalendarTapSlot(
-            alignment: alignment,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: Palette.cardWarm,
-                border: Shapes.outline,
-                borderRadius: BorderRadius.all(
-                  Radius.circular(Shapes.radiusCell),
-                ),
-                boxShadow: Shadows.chip,
-              ),
-              child: SizedBox.square(
-                dimension: size,
-                child: Center(
-                  child: CalendarChevronGlyph(
-                    direction: direction,
-                    size: glyphSize,
-                  ),
-                ),
-              ),
-            ),
-          ),
+    final Widget face = DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Palette.cardWarm,
+        border: Shapes.outline,
+        borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusCell)),
+        boxShadow: Shadows.chip,
+      ),
+      child: SizedBox.square(
+        dimension: size,
+        child: Center(
+          child: CalendarChevronGlyph(direction: direction, size: glyphSize),
         ),
       ),
     );
+    return switch (reach) {
+      final EdgeInsets reach => CalendarTapArea(
+        reach: reach,
+        child: _pressable(face),
+      ),
+      null => _pressable(CalendarTapSlot(alignment: alignment, child: face)),
+    };
   }
+
+  Widget _pressable(Widget child) => Semantics(
+    button: true,
+    label: semanticLabel,
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: child,
+      ),
+    ),
+  );
 }
 
 class CalendarChevronGlyph extends StatelessWidget {

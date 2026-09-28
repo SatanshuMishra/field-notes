@@ -7,7 +7,13 @@ import 'calendar_chevron_button.dart';
 
 const String calendarBrowseHint = '← → to browse · T for this week';
 
+const double calendarHeaderTrailingReach =
+    calendarMinTapTarget - calendarChevronButtonSize;
+
 const double _hintGap = 16;
+const double _actionGap = 8;
+const double _chevronGap = 6;
+const double _chevronRise = calendarMinTapTarget - calendarChevronButtonSize;
 const double _titleCaretSize = 16;
 const double _titleCaretGap = 4;
 const EdgeInsets _titlePadding = EdgeInsets.symmetric(
@@ -73,8 +79,10 @@ class CalendarHeader extends StatelessWidget {
         final TextScaler scaler = MediaQuery.textScalerOf(context);
         final TextDirection direction = Directionality.of(context);
         final double actionsWidth =
-            calendarMinTapTarget * 2 +
-            (showThisWeek ? _thisWeekWidth(scaler, direction) : 0);
+            calendarChevronButtonSize * 2 +
+            _chevronGap +
+            calendarHeaderTrailingReach +
+            (showThisWeek ? _actionGap + _thisWeekWidth(scaler, direction) : 0);
         final double titleWidth =
             _textWidth(month.title, _titleStyle, scaler, direction) +
             _titlePadding.horizontal +
@@ -129,7 +137,7 @@ class CalendarHeader extends StatelessWidget {
                   style: _hintStyle,
                 ),
               ),
-              SizedBox(width: showThisWeek ? _hintGap : 0),
+              const SizedBox(width: _hintGap),
             ],
             if (showThisWeek) ...<Widget>[
               _ThisWeekButton(
@@ -137,19 +145,30 @@ class CalendarHeader extends StatelessWidget {
                 pointsBack: thisWeekPointsBack,
                 onPressed: showCurrent,
               ),
+              const SizedBox(width: _actionGap),
             ],
             CalendarChevronButton(
               direction: ChevronDirection.previous,
               semanticLabel: 'Previous month',
               onPressed: onPreviousMonth,
-              alignment: Alignment.bottomRight,
+              reach: const EdgeInsets.fromLTRB(
+                _actionGap,
+                _chevronRise,
+                _chevronGap,
+                0,
+              ),
             ),
+            const SizedBox(width: _chevronGap),
             CalendarChevronButton(
               direction: ChevronDirection.next,
               semanticLabel: 'Next month',
               onPressed: onNextMonth,
-              alignment: Alignment.bottomRight,
+              reach: const EdgeInsets.only(
+                top: _chevronRise,
+                right: calendarHeaderTrailingReach,
+              ),
             ),
+            const SizedBox(width: calendarHeaderTrailingReach),
           ],
         );
       },
@@ -268,6 +287,7 @@ class _ThisWeekButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      container: true,
       button: true,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
