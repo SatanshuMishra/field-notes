@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:field_notes/data/media/capture_temp_sweep.dart';
+import 'package:field_notes/design/format/plural.dart';
 import 'package:field_notes/domain/services/delete_all_service.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/data/export_delivery.dart';
@@ -29,8 +30,9 @@ class JournalDataController implements SettingsDataController {
     try {
       final ExportOutcome outcome = await _exportRunner.run();
       return switch (outcome) {
-        ExportDelivered(:final String location) =>
-          DataActionSucceeded('Exported to $location'),
+        ExportDelivered(:final String location) => DataActionSucceeded(
+          'Exported to $location',
+        ),
         ExportDismissed() => const DataActionDismissed(),
       };
     } catch (error, stackTrace) {
@@ -44,8 +46,8 @@ class JournalDataController implements SettingsDataController {
     try {
       final DeleteAllResult result = await _deleteAllService.deleteAll();
       return DataActionSucceeded(
-        'Deleted ${result.deletedDays} days '
-        'and ${result.deletedEntries} entries.',
+        'Deleted ${pluralize(result.deletedDays, 'day')} '
+        'and ${pluralize(result.deletedEntries, 'entry', 'entries')}.',
       );
     } catch (error, stackTrace) {
       _onError?.call(error, stackTrace);

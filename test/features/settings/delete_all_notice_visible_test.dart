@@ -16,7 +16,7 @@ import 'support/fake_settings_repository.dart';
 import 'support/recording_reminder_scheduler.dart';
 import 'support/settings_harness.dart';
 
-const String _notice = 'Deleted 1 days and 2 entries.';
+const String _notice = 'Deleted 1 day and 2 entries.';
 
 void main() {
   testWidgets('the delete-all notice is scrolled into view', (

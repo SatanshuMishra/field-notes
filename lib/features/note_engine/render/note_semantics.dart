@@ -3,13 +3,14 @@ import 'dart:math' as math;
 import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/format/plural.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/projection/visible_text.dart';
 
 const String _objectReplacement = '\uFFFC';
 
 String noteTableSemanticsLabel({required int rows, required int columns}) =>
-    'Table, $rows rows, $columns columns';
+    'Table, ${pluralize(rows, 'row')}, ${pluralize(columns, 'column')}';
 
 class NoteCheckboxSemantics {
   const NoteCheckboxSemantics({

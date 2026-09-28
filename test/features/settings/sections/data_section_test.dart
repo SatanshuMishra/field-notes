@@ -35,8 +35,9 @@ Future<void> _pumpSection(
 }
 
 void main() {
-  testWidgets('renders the data actions with the right emphasis',
-      (WidgetTester tester) async {
+  testWidgets('renders the data actions with the right emphasis', (
+    WidgetTester tester,
+  ) async {
     await _pumpSection(
       tester,
       controller: FakeSettingsDataController(),
@@ -46,9 +47,7 @@ void main() {
     expect(find.text('Data'), findsOneWidget);
     expect(
       tester
-          .widget<StickerButton>(
-            find.widgetWithText(StickerButton, 'Export…'),
-          )
+          .widget<StickerButton>(find.widgetWithText(StickerButton, 'Export…'))
           .variant,
       StickerButtonVariant.secondary,
     );
@@ -62,17 +61,14 @@ void main() {
     );
   });
 
-  testWidgets('exporting reports where the file went',
-      (WidgetTester tester) async {
+  testWidgets('exporting reports where the file went', (
+    WidgetTester tester,
+  ) async {
     final List<String> messages = <String>[];
     final FakeSettingsDataController controller = FakeSettingsDataController(
       exportResult: const DataActionSucceeded('Exported to /tmp/a.zip'),
     );
-    await _pumpSection(
-      tester,
-      controller: controller,
-      messages: messages,
-    );
+    await _pumpSection(tester, controller: controller, messages: messages);
 
     await tester.tap(find.text('Export…'));
     await tester.pumpAndSettle();
@@ -95,8 +91,9 @@ void main() {
     expect(messages, isEmpty);
   });
 
-  testWidgets('a failed export reports the failure',
-      (WidgetTester tester) async {
+  testWidgets('a failed export reports the failure', (
+    WidgetTester tester,
+  ) async {
     final List<String> messages = <String>[];
     await _pumpSection(
       tester,
@@ -112,27 +109,25 @@ void main() {
     expect(messages, <String>['Export failed.']);
   });
 
-  testWidgets('delete-all runs only after confirmation',
-      (WidgetTester tester) async {
+  testWidgets('delete-all runs only after confirmation', (
+    WidgetTester tester,
+  ) async {
     final List<String> messages = <String>[];
     final FakeSettingsDataController controller = FakeSettingsDataController(
-      deleteResult: const DataActionSucceeded('Deleted 1 days and 2 entries.'),
+      deleteResult: const DataActionSucceeded('Deleted 1 day and 2 entries.'),
     );
-    await _pumpSection(
-      tester,
-      controller: controller,
-      messages: messages,
-    );
+    await _pumpSection(tester, controller: controller, messages: messages);
 
     await tester.tap(find.text('Delete all…'));
     await tester.pumpAndSettle();
 
     expect(controller.deleteCalls, 1);
-    expect(messages, <String>['Deleted 1 days and 2 entries.']);
+    expect(messages, <String>['Deleted 1 day and 2 entries.']);
   });
 
-  testWidgets('declining the confirmation deletes nothing',
-      (WidgetTester tester) async {
+  testWidgets('declining the confirmation deletes nothing', (
+    WidgetTester tester,
+  ) async {
     final List<String> messages = <String>[];
     final FakeSettingsDataController controller = FakeSettingsDataController();
     await _pumpSection(
@@ -149,8 +144,9 @@ void main() {
     expect(messages, isEmpty);
   });
 
-  testWidgets('a second tap while an export is in flight starts nothing new',
-      (WidgetTester tester) async {
+  testWidgets('a second tap while an export is in flight starts nothing new', (
+    WidgetTester tester,
+  ) async {
     final Completer<void> gate = Completer<void>();
     final List<String> messages = <String>[];
     final FakeSettingsDataController controller = FakeSettingsDataController(
@@ -173,8 +169,9 @@ void main() {
     expect(messages, <String>['Exported to /tmp/a.zip']);
   });
 
-  testWidgets('an export finishing after the page is gone reports nothing',
-      (WidgetTester tester) async {
+  testWidgets('an export finishing after the page is gone reports nothing', (
+    WidgetTester tester,
+  ) async {
     final Completer<void> gate = Completer<void>();
     final List<String> messages = <String>[];
     final FakeSettingsDataController controller = FakeSettingsDataController(
@@ -296,11 +293,7 @@ void main() {
 
   testWidgets('a sweep never runs without a tap', (WidgetTester tester) async {
     final FakeSettingsDataController controller = FakeSettingsDataController();
-    await _pumpSection(
-      tester,
-      controller: controller,
-      messages: <String>[],
-    );
+    await _pumpSection(tester, controller: controller, messages: <String>[]);
 
     expect(controller.reclaimCalls, 0);
   });

@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/flowers/garden_plant_painter.dart';
+import 'package:field_notes/design/format/plural.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 import '../model/garden_data.dart';
@@ -36,6 +37,7 @@ class MoodTallyChips extends StatelessWidget {
             icon: const _SproutIcon(size: 24),
             count: sproutCount,
             label: 'Sprouts',
+            mergedText: pluralize(sproutCount, 'Sprout'),
           ),
       ],
     );
@@ -47,17 +49,20 @@ class _TallyChip extends StatelessWidget {
     required this.icon,
     required this.count,
     required this.label,
+    this.mergedText,
   });
 
   final Widget icon;
   final int count;
   final String label;
+  final String? mergedText;
 
   @override
   Widget build(BuildContext context) {
+    final String? merged = mergedText;
     return Semantics(
       container: true,
-      label: '$count $label',
+      label: merged ?? '$count $label',
       child: DecoratedBox(
         decoration: const BoxDecoration(
           color: Palette.cardBright,
@@ -75,9 +80,13 @@ class _TallyChip extends StatelessWidget {
               children: <Widget>[
                 icon,
                 const SizedBox(width: 6),
-                Text('$count', style: TypographyTokens.labelSans),
-                const SizedBox(width: 4),
-                Text(label, style: TypographyTokens.captionSans),
+                if (merged != null)
+                  Text(merged, style: TypographyTokens.labelSans)
+                else ...<Widget>[
+                  Text('$count', style: TypographyTokens.labelSans),
+                  const SizedBox(width: 4),
+                  Text(label, style: TypographyTokens.captionSans),
+                ],
               ],
             ),
           ),
