@@ -774,4 +774,56 @@ void main() {
       'insertTab:',
     ]);
   });
+
+  testWidgets(
+    'an empty composing range from the input method is not echoed back',
+    (WidgetTester tester) async {
+      await _pumpFocused(
+        tester,
+        source: '',
+        selection: const NoteSelection.collapsed(0),
+      );
+      tester.testTextInput.log.clear();
+      await sendDeltas(tester, <Map<String, Object?>>[
+        selectionDelta(
+          oldText: '',
+          selection: const TextSelection.collapsed(offset: 0),
+          composing: const TextRange(start: 0, end: 0),
+        ),
+      ]);
+      await tester.pump();
+      expect(textInputCalls(tester, 'TextInput.setEditingState'), isEmpty);
+    },
+  );
+
+  testWidgets('pinyin-shaped composing deltas keep their composing range', (
+    WidgetTester tester,
+  ) async {
+    final _HarnessState harness = await _pumpFocused(
+      tester,
+      source: '',
+      selection: const NoteSelection.collapsed(0),
+    );
+    tester.testTextInput.log.clear();
+    await sendDeltas(tester, <Map<String, Object?>>[
+      insertionDelta(
+        oldText: '',
+        at: 0,
+        text: 'z',
+        composing: const TextRange(start: 0, end: 1),
+      ),
+    ]);
+    await tester.pump();
+    await sendDeltas(tester, <Map<String, Object?>>[
+      replacementDelta(
+        oldText: 'z',
+        range: const TextRange(start: 0, end: 1),
+        text: 'zhong w',
+        composing: const TextRange(start: 0, end: 7),
+      ),
+    ]);
+    await tester.pump();
+    expect(harness.host.state.composing, const MdRange(0, 7));
+    expect(textInputCalls(tester, 'TextInput.setEditingState'), isEmpty);
+  });
 }
