@@ -43,12 +43,14 @@ Future<void> _pumpControl(
   WidgetTester tester,
   FocusNode focusNode, {
   FocusRingSurface surface = FocusRingSurface.light,
+  BorderRadius borderRadius = BorderRadius.zero,
 }) => tester.pumpWidget(
   _bare(
     FocusRing(
       key: _controlKey,
       focusNode: focusNode,
       surface: surface,
+      borderRadius: borderRadius,
       onPressed: () {},
       child: SizedBox.fromSize(size: _controlSize),
     ),
@@ -57,7 +59,7 @@ Future<void> _pumpControl(
 
 void main() {
   testWidgets(
-    'a focused control paints the focus ring token without changing its size',
+    'a focused control paints its ring 2 px outside its edge without changing its size',
     (WidgetTester tester) async {
       _useKeyboardHighlight();
       final FocusNode focusNode = _focusNode();
@@ -74,10 +76,41 @@ void main() {
       expect(
         tester.renderObject(find.byKey(focusRingKey)),
         paints..rect(
-          rect: (Offset.zero & _controlSize).deflate(1.5),
+          rect: (Offset.zero & _controlSize).inflate(3.5),
           color: Palette.focusRing,
           strokeWidth: 3,
           style: PaintingStyle.stroke,
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'a focused rounded control paints its ring 2 px outside its rounded edge',
+    (WidgetTester tester) async {
+      _useKeyboardHighlight();
+      final FocusNode focusNode = _focusNode();
+      await _pumpControl(
+        tester,
+        focusNode,
+        borderRadius: const BorderRadius.all(Radius.circular(15)),
+      );
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+
+      final Rect control = Offset.zero & _controlSize;
+      expect(
+        tester.renderObject(find.byKey(focusRingKey)),
+        paints..drrect(
+          outer: RRect.fromRectAndRadius(
+            control.inflate(5),
+            const Radius.circular(20),
+          ),
+          inner: RRect.fromRectAndRadius(
+            control.inflate(2),
+            const Radius.circular(17),
+          ),
+          color: Palette.focusRing,
         ),
       );
     },
@@ -145,23 +178,113 @@ void main() {
     },
   );
 
-  testWidgets('a control on a dark surface paints the dark ring token', (
+  testWidgets(
+    'a control on a dark surface paints the dark ring 2 px outside its edge',
+    (WidgetTester tester) async {
+      _useKeyboardHighlight();
+      final FocusNode focusNode = _focusNode();
+      await _pumpControl(tester, focusNode, surface: FocusRingSurface.dark);
+      focusNode.requestFocus();
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.renderObject(find.byKey(focusRingKey)),
+        paints..rect(
+          rect: (Offset.zero & _controlSize).inflate(3),
+          color: Palette.focusRingOnDark,
+          strokeWidth: 2,
+          style: PaintingStyle.stroke,
+        ),
+      );
+    },
+  );
+
+  testWidgets(
+    'a focused control at the end of a list scrolls its whole ring into view',
+    (WidgetTester tester) async {
+      _useKeyboardHighlight();
+      final List<FocusNode> nodes = <FocusNode>[
+        for (int index = 0; index < 6; index++) _focusNode(),
+      ];
+      final ScrollController scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: SizedBox(
+              width: 200,
+              height: 200,
+              child: ListView(
+                key: const ValueKey<String>('list'),
+                controller: scroll,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                children: <Widget>[
+                  for (int index = 0; index < nodes.length; index++)
+                    FocusRing(
+                      key: ValueKey<int>(index),
+                      focusNode: nodes[index],
+                      onPressed: () {},
+                      child: const SizedBox(height: 50),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      nodes[3].requestFocus();
+      await tester.pumpAndSettle();
+
+      final Rect list = tester.getRect(
+        find.byKey(const ValueKey<String>('list')),
+      );
+      final Rect ring = tester
+          .getRect(find.byKey(const ValueKey<int>(3)))
+          .inflate(5);
+      expect(scroll.offset, 5);
+      expect(list.top, lessThanOrEqualTo(ring.top));
+      expect(list.bottom, greaterThanOrEqualTo(ring.bottom));
+    },
+  );
+
+  testWidgets('a ring that is already fully visible scrolls nothing', (
     WidgetTester tester,
   ) async {
     _useKeyboardHighlight();
     final FocusNode focusNode = _focusNode();
-    await _pumpControl(tester, focusNode, surface: FocusRingSurface.dark);
+    final ScrollController scroll = ScrollController();
+    addTearDown(scroll.dispose);
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox(
+            width: 200,
+            height: 200,
+            child: ListView(
+              controller: scroll,
+              padding: const EdgeInsets.all(8),
+              children: <Widget>[
+                FocusRing(
+                  focusNode: focusNode,
+                  onPressed: () {},
+                  child: const SizedBox(height: 48),
+                ),
+                const SizedBox(height: 400),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     focusNode.requestFocus();
     await tester.pumpAndSettle();
 
-    expect(
-      tester.renderObject(find.byKey(focusRingKey)),
-      paints..rect(
-        rect: (Offset.zero & _controlSize).deflate(1),
-        color: Palette.focusRingOnDark,
-        strokeWidth: 2,
-        style: PaintingStyle.stroke,
-      ),
-    );
+    expect(scroll.offset, 0);
   });
 }

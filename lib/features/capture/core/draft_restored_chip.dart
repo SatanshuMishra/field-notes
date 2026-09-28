@@ -101,6 +101,7 @@ class DraftRestoredChip extends StatelessWidget {
             enabled: onDiscard != null,
             onPressed: onDiscard,
             borderRadius: _discardFocusRadius,
+            placement: FocusRingPlacement.edge,
             child: ConstrainedBox(
               constraints: const BoxConstraints(minWidth: _discardTarget),
               child: Padding(
