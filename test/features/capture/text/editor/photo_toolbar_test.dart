@@ -829,7 +829,7 @@ void main() {
 
     await _press(tester, photoToolbarMoveUpKey);
 
-    expect(harness.controller.text, 'one\n$a\n$b\ntwo\n\nthree');
+    expect(harness.controller.text, 'one\n$a\n$b\ntwo\nthree');
   });
 
   testWidgets('a narrow bar drops the move controls and keeps the rest', (
@@ -889,7 +889,7 @@ void main() {
 
         expect(harness.controller.text, isNot(note), reason: '$item $hold');
         if (item == photoToolbarMoveUpKey) {
-          expect(harness.controller.text, 'one\n$a\n$b\ntwo\n\nthree');
+          expect(harness.controller.text, 'one\n$a\n$b\ntwo\nthree');
         }
         if (item == photoToolbarReplaceKey) {
           expect(

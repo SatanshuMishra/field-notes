@@ -1819,7 +1819,7 @@ void main() {
     );
 
     test('mid-line, the photo goes below that line and the caret after it', () {
-      expect(_insert('one\ntwo', 2).$1, 'one\ntwo\n$_a\n');
+      expect(_insert('one\ntwo', 2).$1, 'one\n$_a\ntwo');
     });
 
     test('at the end of the last line it appends and opens a new line', () {
@@ -2040,7 +2040,7 @@ void main() {
       final EditorState other = _state('one\ntwo\n$_a\nthree\n\nfour');
       expect(
         _applied(other, movePhotoUp(other, _photos(other.tree).single)),
-        '$_a\none\ntwo\n\nthree\n\nfour',
+        'one\n$_a\ntwo\nthree\n\nfour',
       );
     });
 
@@ -2048,7 +2048,7 @@ void main() {
       final EditorState state = _state('one\ntwo\nthree\n$_a');
       expect(
         _applied(state, movePhotoUp(state, _photos(state.tree).single)),
-        '$_a\none\ntwo\nthree',
+        'one\ntwo\n$_a\nthree',
       );
     });
 
@@ -2109,8 +2109,8 @@ void main() {
       final EditorState removed = state.apply(
         removePhoto(state, _photos(state.tree).single).transaction,
       );
-      expect(removed.source, 'one\n\ntwo');
-      expect(removed.selection, const NoteSelection.collapsed(5));
+      expect(removed.source, 'one\ntwo');
+      expect(removed.selection, const NoteSelection.collapsed(4));
     });
 
     test(
@@ -2132,16 +2132,16 @@ void main() {
         final EditorState removed = state.apply(
           removePhoto(state, _photos(state.tree).single).transaction,
         );
-        expect(removed.source, 'one\n\ntwo');
+        expect(removed.source, 'one\ntwo');
         final EditorState edited = removed.apply(
           Transaction(
-            changes: ChangeSet.single(8, 8, 8, '!'),
-            selection: const NoteSelection.collapsed(9),
+            changes: ChangeSet.single(7, 7, 7, '!'),
+            selection: const NoteSelection.collapsed(8),
             event: TransactionEvent.external,
             addToHistory: false,
           ),
         );
-        expect(edited.source, 'one\n\ntwo!');
+        expect(edited.source, 'one\ntwo!');
         final EditorState restored = edited.undo();
         expect(restored.source, 'one\n$_a\ntwo!');
         expect(_photos(restored.tree), hasLength(1));
