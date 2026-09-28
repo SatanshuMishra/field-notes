@@ -63,6 +63,7 @@ class _VoiceComposerConnectorState
   String? _errorMessage;
   Duration _elapsed = Duration.zero;
   Timer? _elapsedTicker;
+  bool _closing = false;
 
   VoiceRecorder get _recorder => ref.read(voiceRecorderProvider);
 
@@ -222,6 +223,7 @@ class _VoiceComposerConnectorState
   }
 
   Future<void> _cancel() async {
+    _closing = true;
     _stopTicker();
     if (_phase == VoiceRecorderPhase.recording ||
         _phase == VoiceRecorderPhase.paused) {
@@ -247,6 +249,7 @@ class _VoiceComposerConnectorState
     if (confirmed != true || !mounted) {
       return;
     }
+    _closing = true;
     _stopTicker();
     await _recorder.cancel();
     if (!mounted) {
@@ -256,18 +259,37 @@ class _VoiceComposerConnectorState
     Navigator.of(context).pop();
   }
 
+  void _dismiss() {
+    if (_closing || _phase == VoiceRecorderPhase.saving) {
+      return;
+    }
+    unawaited(_discard());
+  }
+
+  void _onPopInvoked(bool didPop, Object? result) {
+    if (didPop) {
+      return;
+    }
+    _dismiss();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return VoiceRecorderSheet(
-      phase: _phase,
-      onStart: _start,
-      onStop: _stop,
-      onCancel: _cancel,
-      onPause: _pause,
-      onResume: _resume,
-      onDiscard: _discard,
-      elapsed: _elapsed,
-      errorMessage: _errorMessage,
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: VoiceRecorderSheet(
+        phase: _phase,
+        onStart: _start,
+        onStop: _stop,
+        onCancel: _cancel,
+        onPause: _pause,
+        onResume: _resume,
+        onDiscard: _discard,
+        onDismiss: _dismiss,
+        elapsed: _elapsed,
+        errorMessage: _errorMessage,
+      ),
     );
   }
 }
