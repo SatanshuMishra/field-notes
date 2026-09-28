@@ -44,6 +44,7 @@ class _DataSectionState extends ConsumerState<DataSection> {
           control: StickerButton(
             label: 'Export…',
             variant: StickerButtonVariant.secondary,
+            padTapTarget: true,
             onPressed: _exporting ? null : _runExport,
           ),
         ),
@@ -53,6 +54,7 @@ class _DataSectionState extends ConsumerState<DataSection> {
           control: StickerButton(
             label: reclaimSpaceLabel,
             variant: StickerButtonVariant.secondary,
+            padTapTarget: true,
             onPressed: _reclaiming ? null : _runReclaimSpace,
           ),
         ),
@@ -62,6 +64,7 @@ class _DataSectionState extends ConsumerState<DataSection> {
           control: StickerButton(
             label: 'Delete all…',
             variant: StickerButtonVariant.danger,
+            padTapTarget: true,
             onPressed: _deleting ? null : _runDeleteAll,
           ),
         ),

@@ -16,6 +16,7 @@ import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
 import '../../support/note_editor_driver.dart';
+import '../entry_cards/support/reading_path.dart';
 import 'support/day_detail_harness.dart';
 
 Finder _panelCard() => find.byKey(dayDetailPanelKey);
@@ -68,7 +69,38 @@ String _longNote(int index) {
   return buffer.toString();
 }
 
+FakeJournalRepository _twoNotes() => FakeJournalRepository(
+  entries: <Entry>[
+    entryOf(id: 'entry-1', type: EntryType.text, textContent: 'a good day'),
+    entryOf(id: 'entry-2', type: EntryType.text, textContent: 'and a walk'),
+  ],
+);
+
 void main() {
+  testWidgets('a revealed day pill lies inside every reading-order frame',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_panelApp(_twoNotes()));
+    await tester.pumpAndSettle();
+
+    for (int card = 0; card < 2; card += 1) {
+      await _revealPillOn(tester, find.byType(CompactLogCard).at(card));
+      expectInsideEveryReadingFrame(tester, logActionsEditLabel);
+      expectInsideEveryReadingFrame(tester, logActionsDeleteLabel);
+    }
+    semantics.dispose();
+  });
+
+  testWidgets('day cards keep their list positions for screen readers',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_panelApp(_twoNotes()));
+    await tester.pumpAndSettle();
+
+    expect(scrolledChildIndexes(tester), <int?>[0, 1, 2]);
+    semantics.dispose();
+  });
+
   testWidgets('renders the day heading, mood prompt, count and entries',
       (WidgetTester tester) async {
     final FakeJournalRepository repository = FakeJournalRepository(

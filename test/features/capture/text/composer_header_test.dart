@@ -131,7 +131,7 @@ void main() {
     );
     await _open(tester);
 
-    expect(find.text('Today · 14:30'), findsOneWidget);
+    expect(find.text('Today · 2:30 PM'), findsOneWidget);
     expect(find.text(newNoteTitle), findsOneWidget);
     expect(
       find.descendant(

@@ -268,6 +268,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       shrinkWrap: true,
       padding: _bodyPadding,
       itemCount: 1 + listed.length,
+      addSemanticIndexes: false,
       findChildIndexCallback: (Key key) {
         final int index = listed.indexWhere(
           (Entry entry) => key == ValueKey<String>(entry.id),
@@ -277,7 +278,10 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       itemBuilder: (BuildContext context, int index) {
         final MediaResolver? listResolver = resolver;
         if (index == 0 || listResolver == null) {
-          return _summary(entriesAsync, entries, resolverAsync);
+          return IndexedSemantics(
+            index: index,
+            child: _summary(entriesAsync, entries, resolverAsync),
+          );
         }
         final Entry entry = listed[index - 1];
         return KeyedSubtree(
@@ -291,6 +295,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
               entry: entry,
               resolver: listResolver,
               density: CompactLogDensity.day,
+              semanticIndex: index,
               audioPlayerFactory: createJustAudioPlayer,
               onOpen: () => _open(entry),
               onEdit: () => _edit(entry),

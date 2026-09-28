@@ -17,6 +17,7 @@ import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/mood/mood_banner.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
 import 'package:field_notes/features/note_engine/reader/note_reader_view.dart';
 import 'package:field_notes/features/note_engine/render/render_note_view.dart';
@@ -216,13 +217,17 @@ Future<void> _longPressText(WidgetTester tester, int sourceOffset) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> _openDay(WidgetTester tester, List<Entry> entries) async {
+Future<void> _openDay(
+  WidgetTester tester,
+  List<Entry> entries, {
+  Day? day,
+}) async {
   _useNote10Surface(tester);
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
         journalRepositoryProvider.overrideWithValue(
-          FakeJournalRepository(entries: entries),
+          FakeJournalRepository(entries: entries, day: day),
         ),
         draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
         dayDetailMediaResolverProvider.overrideWith(
@@ -456,5 +461,27 @@ final List<A11yState> viewerStates = <A11yState>[
       A11yProof(find.byType(LogViewerPanel)),
       A11yProof(find.text('2 of 3')),
     ],
+  ),
+  A11yState(
+    id: 'd16-day-past-mood',
+    pump: (WidgetTester tester) => _openDay(
+      tester,
+      <Entry>[
+        _entry(
+          id: 'entry-1',
+          type: EntryType.text,
+          createdAt: DateTime(2026, 9, 17, 9, 30),
+          textContent: 'a good day',
+        ),
+      ],
+      day: const Day(
+        id: 'day-1',
+        date: _pastDay,
+        mood: Mood.grateful,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    ),
+    proof: <A11yProof>[A11yProof(find.byType(DayMoodCard))],
   ),
 ];

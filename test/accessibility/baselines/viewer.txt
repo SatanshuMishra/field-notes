@@ -1,6 +1,7 @@
 missing-role | d11-mood-picker | Dismiss mood picker | <root>
 missing-role | d13-change-mood-dialog | Dismiss | <root>
 missing-role | d14-delete-entry-dialog | Dismiss | <root>
+missing-role | d16-day-past-mood | Dismiss day detail | <root>
 missing-role | d7-day-with-entries | Dismiss day detail | <root>
 missing-role | d8-day-empty | Dismiss day detail | <root>
 small-target | d1-viewer-todos | call the ferry office | Friday, September 18 / Morning note

@@ -106,7 +106,7 @@ void main() {
       overrides: _overrides(FakeJournalRepository(entries: _entries())),
     );
 
-    await tester.tap(find.text('14:12 · afternoon'));
+    await tester.tap(find.text('2:12 PM · afternoon'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(logViewerPanelKey), findsOneWidget);

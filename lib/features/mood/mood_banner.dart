@@ -111,27 +111,36 @@ class _MoodChangePill extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _minTapTarget,
-              minHeight: _minTapTarget,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: DecoratedBox(
-                decoration: _changePillDecoration,
-                child: Padding(
-                  padding: _moodPillPadding,
-                  child: ExcludeSemantics(
-                    child: Text(label, style: TypographyTokens.caption11Sans),
-                  ),
+          child: _MinTapTarget(
+            child: DecoratedBox(
+              decoration: _changePillDecoration,
+              child: Padding(
+                padding: _moodPillPadding,
+                child: ExcludeSemantics(
+                  child: Text(label, style: TypographyTokens.caption11Sans),
                 ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MinTapTarget extends StatelessWidget {
+  const _MinTapTarget({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: _minTapTarget,
+        minHeight: _minTapTarget,
+      ),
+      child: Center(widthFactor: 1, heightFactor: 1, child: child),
     );
   }
 }
@@ -194,11 +203,13 @@ class DayMoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return StickerCard(
       surface: Palette.cardWarm,
-      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 13),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 13),
       shadow: _dayMoodCardShadow,
       child: Row(
         children: <Widget>[
-          FlowerBloom.forMood(mood, size: _dayMoodFlowerSize),
+          ExcludeSemantics(
+            child: FlowerBloom.forMood(mood, size: _dayMoodFlowerSize),
+          ),
           const SizedBox(width: _dayMoodCardGap),
           Expanded(
             child: Column(
@@ -239,12 +250,14 @@ class _ChangeMoodButton extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: DecoratedBox(
-            decoration: _changeMoodButtonDecoration,
-            child: Padding(
-              padding: _changeMoodButtonPadding,
-              child: ExcludeSemantics(
-                child: Text(label, style: _changeMoodButtonLabelStyle),
+          child: _MinTapTarget(
+            child: DecoratedBox(
+              decoration: _changeMoodButtonDecoration,
+              child: Padding(
+                padding: _changeMoodButtonPadding,
+                child: ExcludeSemantics(
+                  child: Text(label, style: _changeMoodButtonLabelStyle),
+                ),
               ),
             ),
           ),

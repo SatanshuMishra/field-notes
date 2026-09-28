@@ -213,6 +213,7 @@ class CompactLogCard extends StatefulWidget {
     required this.onDelete,
     this.audioPlayerFactory,
     this.onToggleTask,
+    this.semanticIndex,
   });
 
   final Entry entry;
@@ -223,6 +224,7 @@ class CompactLogCard extends StatefulWidget {
   final VoidCallback onDelete;
   final EntryAudioPlayerFactory? audioPlayerFactory;
   final ValueChanged<int>? onToggleTask;
+  final int? semanticIndex;
 
   @override
   State<CompactLogCard> createState() => _CompactLogCardState();
@@ -272,13 +274,13 @@ class _CompactLogCardState extends State<CompactLogCard> {
           },
         ),
       },
-      child: Semantics(
-        container: true,
-        button: true,
-        onTap: widget.onOpen,
-        child: LogActionsReveal(
-          onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
-          onDelete: widget.onDelete,
+      child: LogActionsReveal(
+        onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
+        onDelete: widget.onDelete,
+        semanticIndex: widget.semanticIndex,
+        child: Semantics(
+          button: true,
+          onTap: widget.onOpen,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             onEnter: (PointerEnterEvent event) => _onHover(true),
@@ -304,7 +306,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
   }
 
   Widget _stamp() {
-    final String stamp = logStampFor(widget.entry.createdAt);
+    final String stamp = logStampFor(context, widget.entry.createdAt);
     final String type = logTypeLabelFor(widget.entry.type);
     switch (widget.density) {
       case CompactLogDensity.feed:

@@ -151,29 +151,44 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
   Widget _field() {
     return Material(
       type: MaterialType.transparency,
-      child: TextField(
-        key: photoCaptionFieldEditorKey,
-        controller: _controller,
-        focusNode: _focus,
-        autofocus: true,
-        maxLines: 1,
-        style: NoteTypography.caption,
-        textAlign: TextAlign.center,
-        cursorColor: Palette.coral,
-        keyboardType: TextInputType.text,
-        textInputAction: TextInputAction.done,
-        textCapitalization: TextCapitalization.sentences,
-        inputFormatters: <TextInputFormatter>[
-          FilteringTextInputFormatter.deny(_forbidden),
-        ],
-        onSubmitted: (String _) => _commit(),
-        decoration: InputDecoration.collapsed(
-          hintText: photoCaptionFieldHint,
-          hintStyle: NoteTypography.caption.copyWith(
-            color: Palette.placeholder,
+      child: Semantics(
+        label: photoCaptionFieldHint,
+        child: TextField(
+          key: photoCaptionFieldEditorKey,
+          controller: _controller,
+          focusNode: _focus,
+          autofocus: true,
+          maxLines: 1,
+          style: NoteTypography.caption,
+          textAlign: TextAlign.center,
+          cursorColor: Palette.coral,
+          keyboardType: TextInputType.text,
+          textInputAction: TextInputAction.done,
+          textCapitalization: TextCapitalization.sentences,
+          inputFormatters: <TextInputFormatter>[
+            FilteringTextInputFormatter.deny(_forbidden),
+          ],
+          onSubmitted: (String _) => _commit(),
+          decoration: InputDecoration.collapsed(
+            hintText: null,
+            hint: ExcludeSemantics(
+              child: Text(
+                photoCaptionFieldHint,
+                style: Theme.of(context).textTheme.bodyLarge!
+                    .merge(NoteTypography.caption)
+                    .merge(_hintStyle),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+
+  static final TextStyle _hintStyle = NoteTypography.caption.copyWith(
+    color: Palette.placeholder,
+  );
 }

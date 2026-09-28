@@ -358,7 +358,7 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('08:30 · morning · note'), findsOneWidget);
+    expect(find.text('8:30 AM · morning · note'), findsOneWidget);
     expect(find.text('NOTE'), findsNothing);
     final Iterable<Transform> transforms = tester.widgetList<Transform>(
       find.descendant(

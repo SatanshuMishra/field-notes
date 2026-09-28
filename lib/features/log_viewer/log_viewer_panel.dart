@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -446,7 +448,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Text(
-          _metaFor(entry),
+          _metaFor(context, entry),
           style: TypographyTokens.captureLabelSans.copyWith(
             fontSize: _metaSize,
             letterSpacing: _metaLetterSpacing,
@@ -546,17 +548,15 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 }
 
-String _clockOf(Entry entry) {
+String _clockOf(BuildContext context, Entry entry) {
   final DateTime at = DateTime.fromMillisecondsSinceEpoch(entry.createdAt);
-  final String hour = at.hour.toString().padLeft(2, '0');
-  final String minute = at.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
+  return formatClock(context, TimeOfDay.fromDateTime(at));
 }
 
-String _metaFor(Entry entry) {
+String _metaFor(BuildContext context, Entry entry) {
   final int? durationMs = entry.durationMs;
   final List<String> parts = <String>[
-    _clockOf(entry),
+    _clockOf(context, entry),
     if (entry.type == EntryType.text) logPreviewOf(entry).meta,
     if (entry.type != EntryType.text && durationMs != null)
       formatMediaDuration(durationMs),
@@ -584,7 +584,7 @@ class _StepControl extends StatelessWidget {
     final bool enabled = target != null;
     final String caption = target == null
         ? label
-        : '${_clockOf(target)} · ${logTypeLabelFor(target.type)}';
+        : '${_clockOf(context, target)} · ${logTypeLabelFor(target.type)}';
     final Widget glyph = SizedBox.square(
       dimension: _stepGlyphSize,
       child: CustomPaint(painter: _ChevronPainter(pointsBack: pointsBack)),

@@ -140,6 +140,7 @@ class SidebarShell extends StatelessWidget {
           glyphColor: settingsSelected ? Palette.onAccent : Palette.ink,
           background: settingsSelected ? Palette.coral : Palette.cardLight,
           semanticLabel: ShellDestination.settings.label,
+          selected: settingsSelected,
           onPressed: () => onSelect(ShellDestination.settings),
         ),
         const SizedBox(width: _footerGap),
@@ -184,40 +185,49 @@ class SidebarShell extends StatelessWidget {
     final NavGlyph? glyph = d.glyph;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: GestureDetector(
-        key: ValueKey<String>('rail-${d.name}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onSelect(d),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isSelected ? Palette.coral : null,
-            border: isSelected ? Shapes.outline : null,
-            borderRadius: _navItemRadius,
-            boxShadow: isSelected ? Shadows.emphasis : null,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            child: Row(
-              children: <Widget>[
-                if (glyph == null)
-                  Icon(d.icon, size: 18, color: foreground)
-                else
-                  NavIcon(glyph: glyph, color: foreground, size: 18),
-                const SizedBox(width: 10),
-                Text(
-                  d.label,
-                  style: TypographyTokens.navLabelSans.copyWith(
-                    color: foreground,
-                  ),
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: d.label,
+        child: GestureDetector(
+          key: ValueKey<String>('rail-${d.name}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onSelect(d),
+          child: ExcludeSemantics(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: isSelected ? Palette.coral : null,
+                border: isSelected ? Shapes.outline : null,
+                borderRadius: _navItemRadius,
+                boxShadow: isSelected ? Shadows.emphasis : null,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 9,
                 ),
-              ],
+                child: Row(
+                  children: <Widget>[
+                    if (glyph == null)
+                      Icon(d.icon, size: 18, color: foreground)
+                    else
+                      NavIcon(glyph: glyph, color: foreground, size: 18),
+                    const SizedBox(width: 10),
+                    Text(
+                      d.label,
+                      style: TypographyTokens.navLabelSans.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
 }
 
 const BorderRadius _navItemRadius = BorderRadius.all(
@@ -231,11 +241,12 @@ const String _syncSecondaryCopy = 'on this device only';
 const String _soundOnLabel = 'Sound effects on';
 const String _soundOffLabel = 'Sound effects off';
 
-final TextStyle _syncPrimaryStyle =
-    TypographyTokens.syncPrimarySans.copyWith(height: _syncLineHeight);
+final TextStyle _syncPrimaryStyle = TypographyTokens.syncPrimarySans.copyWith(
+  height: _syncLineHeight,
+);
 
-final TextStyle _syncSecondaryStyle =
-    TypographyTokens.syncSecondarySans.copyWith(height: _syncLineHeight);
+final TextStyle _syncSecondaryStyle = TypographyTokens.syncSecondarySans
+    .copyWith(height: _syncLineHeight);
 
 const double _panelGlowBaseRadius = 0.5;
 const double _panelGlowExtentX = 1.2;

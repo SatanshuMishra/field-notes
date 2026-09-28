@@ -186,7 +186,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       focusNode: _focusNode,
       onKeyEvent: _handleKey,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(
+          20,
+          20,
+          20 - calendarHeaderTrailingReach,
+          20,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
@@ -203,22 +208,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: daysAsync.when(
-                data: (List<Day> days) => CalendarGrid(
-                  month: _month,
-                  daysByDate: <String, Day>{
-                    for (final Day day in days) day.date: day,
-                  },
-                  firstWeekday: firstWeekday,
-                  todayKey: todayKey,
-                  journaledDates: journaledDates,
-                  onSelectDay: (String date) =>
-                      _selectDay(date, todayKey: todayKey),
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  right: calendarHeaderTrailingReach,
                 ),
-                loading: () =>
-                    const _CalendarMessage(text: calendarLoadingMessage),
-                error: (Object error, StackTrace stackTrace) =>
-                    const _CalendarError(),
+                child: daysAsync.when(
+                  data: (List<Day> days) => CalendarGrid(
+                    month: _month,
+                    daysByDate: <String, Day>{
+                      for (final Day day in days) day.date: day,
+                    },
+                    firstWeekday: firstWeekday,
+                    todayKey: todayKey,
+                    journaledDates: journaledDates,
+                    onSelectDay: (String date) =>
+                        _selectDay(date, todayKey: todayKey),
+                  ),
+                  loading: () =>
+                      const _CalendarMessage(text: calendarLoadingMessage),
+                  error: (Object error, StackTrace stackTrace) =>
+                      const _CalendarError(),
+                ),
               ),
             ),
           ],

@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
+
+import '../support/entry_cards_harness.dart';
 
 String _words(int characters) {
   final StringBuffer buffer = StringBuffer();
@@ -18,6 +22,15 @@ String _words(int characters) {
 
 int _createdAt({required int hour, required int minute}) =>
     DateTime(2026, 1, 1, hour, minute).millisecondsSinceEpoch;
+
+void _useClockFormat(WidgetTester tester, {required bool twentyFourHour}) {
+  tester.platformDispatcher.alwaysUse24HourFormatTestValue = twentyFourHour;
+  tester.binding.handleMetricsChanged();
+  addTearDown(() {
+    tester.platformDispatcher.clearAlwaysUse24HourTestValue();
+    tester.binding.handleMetricsChanged();
+  });
+}
 
 Entry _textEntry({
   required String id,
@@ -148,5 +161,41 @@ void main() {
       expect(logPreviewOf(note).heading, 'Afternoon note');
       expect(logPreviewOf(voice).heading, 'Evening voice log');
     });
+  });
+
+  testWidgets('card times follow the system 12 or 24 hour setting', (
+    WidgetTester tester,
+  ) async {
+    final Widget cards = MaterialApp(
+      home: Scaffold(
+        body: Column(
+          children: <Widget>[
+            for (final Entry entry in <Entry>[
+              _textEntry(id: 'e1', textContent: 'Tide.', hour: 9, minute: 30),
+              _textEntry(id: 'e2', textContent: 'Moon.', hour: 20, minute: 5),
+            ])
+              CompactLogCard(
+                entry: entry,
+                resolver: FakeMediaResolver(),
+                density: CompactLogDensity.feed,
+                onOpen: () {},
+                onDelete: () {},
+              ),
+          ],
+        ),
+      ),
+    );
+
+    _useClockFormat(tester, twentyFourHour: false);
+    await tester.pumpWidget(cards);
+
+    expect(find.text('9:30 AM · morning'), findsOneWidget);
+    expect(find.text('8:05 PM · evening'), findsOneWidget);
+
+    _useClockFormat(tester, twentyFourHour: true);
+    await tester.pumpWidget(cards);
+
+    expect(find.text('09:30 · morning'), findsOneWidget);
+    expect(find.text('20:05 · evening'), findsOneWidget);
   });
 }

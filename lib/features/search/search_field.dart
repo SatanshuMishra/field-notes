@@ -34,33 +34,62 @@ class _SearchFieldState extends ConsumerState<SearchField> {
   @override
   Widget build(BuildContext context) {
     final String query = ref.watch(searchQueryProvider);
-    return TextField(
-      controller: _controller,
-      style: TypographyTokens.bodySans,
-      onChanged: (String value) =>
-          ref.read(searchQueryProvider.notifier).update(value),
-      decoration: InputDecoration(
-        hintText: 'Search your days',
-        hintStyle:
-            TypographyTokens.bodySans.copyWith(color: Palette.placeholder),
-        prefixIcon: const Icon(Icons.search, color: Palette.mutedDeep),
-        suffixIcon: query.isEmpty
-            ? null
-            : IconButton(
-                icon: const Icon(Icons.close, color: Palette.mutedDeep),
-                tooltip: 'Clear search',
-                onPressed: _clear,
-              ),
-        filled: true,
-        fillColor: Palette.cardBright,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        border: _border,
-        enabledBorder: _border,
-        focusedBorder: _border,
+    return Semantics(
+      label: _name,
+      child: TextField(
+        controller: _controller,
+        style: TypographyTokens.bodySans,
+        onChanged: (String value) =>
+            ref.read(searchQueryProvider.notifier).update(value),
+        decoration: InputDecoration(
+          hint: ExcludeSemantics(
+            child: Text(
+              _name,
+              style: Theme.of(context).textTheme.bodyLarge!
+                  .merge(TypographyTokens.bodySans)
+                  .merge(_hintStyle),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          prefixIcon: const Icon(Icons.search, color: Palette.mutedDeep),
+          suffixIcon: query.isEmpty
+              ? null
+              : TooltipTheme(
+                  data: TooltipTheme.of(
+                    context,
+                  ).copyWith(excludeFromSemantics: true),
+                  child: IconButton(
+                    icon: const Icon(
+                      Icons.close,
+                      color: Palette.mutedDeep,
+                      semanticLabel: _clearName,
+                    ),
+                    tooltip: _clearName,
+                    onPressed: _clear,
+                  ),
+                ),
+          filled: true,
+          fillColor: Palette.cardBright,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
+          border: _border,
+          enabledBorder: _border,
+          focusedBorder: _border,
+        ),
       ),
     );
   }
+
+  static const String _name = 'Search your days';
+
+  static const String _clearName = 'Clear search';
+
+  static final TextStyle _hintStyle = TypographyTokens.bodySans.copyWith(
+    color: Palette.placeholder,
+  );
 
   static final OutlineInputBorder _border = OutlineInputBorder(
     borderRadius: BorderRadius.circular(Shapes.radiusSm),

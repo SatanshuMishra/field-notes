@@ -33,8 +33,10 @@ List<String> _recordWindowCalls(WidgetTester tester) {
     },
   );
   addTearDown(
-    () => tester.binding.defaultBinaryMessenger
-        .setMockMethodCallHandler(windowChannel, null),
+    () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      windowChannel,
+      null,
+    ),
   );
   return calls;
 }
@@ -49,8 +51,9 @@ bool _isPaintedDot(Widget widget) {
 
 void main() {
   group('SidebarShell', () {
-    testWidgets('the titlebar paints no window buttons and keeps their slot',
-        (WidgetTester tester) async {
+    testWidgets('the titlebar paints no window buttons and keeps their slot', (
+      WidgetTester tester,
+    ) async {
       tester.view.physicalSize = const Size(1280, 900);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
@@ -77,8 +80,9 @@ void main() {
       );
     });
 
-    testWidgets('dragging the titlebar starts a window drag',
-        (WidgetTester tester) async {
+    testWidgets('dragging the titlebar starts a window drag', (
+      WidgetTester tester,
+    ) async {
       final List<String> calls = _recordWindowCalls(tester);
       await tester.pumpWidget(appHarness(_shell()));
 
@@ -88,8 +92,9 @@ void main() {
       expect(calls, <String>[startDragMethod]);
     });
 
-    testWidgets('double-clicking the titlebar runs the window double-click',
-        (WidgetTester tester) async {
+    testWidgets('double-clicking the titlebar runs the window double-click', (
+      WidgetTester tester,
+    ) async {
       final List<String> calls = _recordWindowCalls(tester);
       await tester.pumpWidget(appHarness(_shell()));
 
@@ -101,8 +106,9 @@ void main() {
       expect(calls, <String>[titlebarDoubleClickMethod]);
     });
 
-    testWidgets('a single click on the titlebar asks the window for nothing',
-        (WidgetTester tester) async {
+    testWidgets('a single click on the titlebar asks the window for nothing', (
+      WidgetTester tester,
+    ) async {
       final List<String> calls = _recordWindowCalls(tester);
       await tester.pumpWidget(appHarness(_shell()));
 
@@ -113,19 +119,21 @@ void main() {
     });
 
     testWidgets('reserves the window-button slot and renders every rail '
-        'destination',
-        (WidgetTester tester) async {
+        'destination', (WidgetTester tester) async {
       await tester.pumpWidget(appHarness(_shell()));
 
-      expect(find.byKey(const ValueKey<String>('traffic-lights')),
-          findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('traffic-lights')),
+        findsOneWidget,
+      );
       for (final ShellDestination d in ShellDestination.primary) {
         expect(find.byKey(ValueKey<String>('rail-${d.name}')), findsOneWidget);
       }
     });
 
-    testWidgets('a rail item reports its destination on tap',
-        (WidgetTester tester) async {
+    testWidgets('a rail item reports its destination on tap', (
+      WidgetTester tester,
+    ) async {
       ShellDestination? picked;
       await tester.pumpWidget(
         appHarness(_shell(onSelect: (ShellDestination d) => picked = d)),
@@ -135,8 +143,9 @@ void main() {
       expect(picked, ShellDestination.garden);
     });
 
-    testWidgets('the settings button selects the settings destination',
-        (WidgetTester tester) async {
+    testWidgets('the settings button selects the settings destination', (
+      WidgetTester tester,
+    ) async {
       ShellDestination? picked;
       await tester.pumpWidget(
         appHarness(_shell(onSelect: (ShellDestination d) => picked = d)),
@@ -146,8 +155,9 @@ void main() {
       expect(picked, ShellDestination.settings);
     });
 
-    testWidgets('the sound button invokes onSound',
-        (WidgetTester tester) async {
+    testWidgets('the sound button invokes onSound', (
+      WidgetTester tester,
+    ) async {
       bool sounded = false;
       await tester.pumpWidget(
         appHarness(_shell(onSound: () => sounded = true)),
@@ -155,6 +165,68 @@ void main() {
 
       await tester.tap(find.byKey(const ValueKey<String>('sound-button')));
       expect(sounded, isTrue);
+    });
+
+    testWidgets(
+      'each rail item is a button that reports whether it is selected',
+      (WidgetTester tester) async {
+        final SemanticsHandle handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          appHarness(_shell(selected: ShellDestination.today)),
+        );
+
+        expect(
+          tester.getSemantics(find.byKey(const ValueKey<String>('rail-today'))),
+          isSemantics(
+            label: 'Today',
+            isButton: true,
+            isSelected: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          tester.getSemantics(
+            find.byKey(const ValueKey<String>('rail-garden')),
+          ),
+          isSemantics(
+            label: 'Garden',
+            isButton: true,
+            isSelected: false,
+            hasTapAction: true,
+          ),
+        );
+
+        handle.dispose();
+      },
+    );
+
+    testWidgets('the settings button reports selected while Settings is open', (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        appHarness(_shell(selected: ShellDestination.today)),
+      );
+
+      expect(
+        tester.getSemantics(
+          find.byKey(const ValueKey<String>('settings-button')),
+        ),
+        isSemantics(label: 'Settings', isButton: true, isSelected: false),
+      );
+
+      await tester.pumpWidget(
+        appHarness(_shell(selected: ShellDestination.settings)),
+      );
+
+      expect(
+        tester.getSemantics(
+          find.byKey(const ValueKey<String>('settings-button')),
+        ),
+        isSemantics(label: 'Settings', isButton: true, isSelected: true),
+      );
+
+      handle.dispose();
     });
   });
 }
