@@ -1,6 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show DragStartBehavior;
+import 'package:flutter/services.dart'
+    show
+        KeyDownEvent,
+        KeyEvent,
+        KeyRepeatEvent,
+        KeyUpEvent,
+        LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/icons/format_icons.dart';
@@ -19,6 +26,8 @@ import 'package:field_notes/features/note_engine/document/transaction.dart'
     show Transaction;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorController;
+import 'package:field_notes/features/note_engine/toolbars/table_toolbar.dart'
+    show ToolbarScrollFade;
 
 const Key formatBoldKey = ValueKey<String>('format-bold');
 const Key formatItalicKey = ValueKey<String>('format-italic');
@@ -35,6 +44,8 @@ const Key formatMoreKey = ValueKey<String>('format-more');
 const Key formatStrikethroughKey = ValueKey<String>('format-strikethrough');
 const Key formatHighlightKey = ValueKey<String>('format-highlight');
 const Key formatCodeKey = ValueKey<String>('format-code');
+const Key formatBarFadeStartKey = ValueKey<String>('format-bar-fade-start');
+const Key formatBarFadeEndKey = ValueKey<String>('format-bar-fade-end');
 
 const double formatBarHeight = 48;
 
@@ -78,100 +89,106 @@ class FormatBar extends StatelessWidget {
           child: Row(
             children: <Widget>[
               Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  dragStartBehavior: DragStartBehavior.down,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      _action(
-                        formatBoldKey,
-                        const FormatIcon(
-                          glyph: FormatGlyph.bold,
-                          color: Palette.ink,
-                          size: _glyphExtent,
-                        ),
-                        'Bold',
-                        (EditorState s) =>
-                            toggleInlineFormat(s, InlineFormat.bold),
-                      ),
-                      _action(
-                        formatItalicKey,
-                        const FormatIcon(
-                          glyph: FormatGlyph.italic,
-                          color: Palette.ink,
-                          size: _glyphExtent,
-                        ),
-                        'Italic',
-                        (EditorState s) =>
-                            toggleInlineFormat(s, InlineFormat.italic),
-                      ),
-                      _action(
-                        formatHeadingKey,
-                        const FormatIcon(
-                          glyph: FormatGlyph.heading,
-                          color: Palette.ink,
-                          size: _glyphExtent,
-                        ),
-                        'Heading',
-                        cycleHeading,
-                      ),
-                      _action(
-                        formatListKey,
-                        const FormatIcon(
-                          glyph: FormatGlyph.list,
-                          color: Palette.ink,
-                          size: _glyphExtent,
-                        ),
-                        'Bullet list',
-                        (EditorState s) => toggleList(s, NoteListKind.bullet),
-                      ),
-                      _action(
-                        formatNumberedKey,
-                        const _BarIcon(glyph: _BarGlyph.numbered),
-                        'Numbered list',
-                        (EditorState s) =>
-                            toggleList(s, NoteListKind.numbered),
-                      ),
-                      _action(
-                        formatTaskKey,
-                        const _BarIcon(glyph: _BarGlyph.task),
-                        'Task list',
-                        (EditorState s) => toggleList(s, NoteListKind.task),
-                      ),
-                      _action(
-                        formatQuoteKey,
-                        const FormatIcon(
-                          glyph: FormatGlyph.quote,
-                          color: Palette.ink,
-                          size: _glyphExtent,
-                        ),
-                        'Quote',
-                        toggleQuote,
-                      ),
-                      _action(
-                        formatLinkKey,
-                        const FormatIcon(
-                          glyph: FormatGlyph.link,
-                          color: Palette.ink,
-                          size: _glyphExtent,
-                        ),
-                        'Link',
-                        (EditorState s) =>
-                            toggleInlineFormat(s, InlineFormat.link),
-                      ),
-                      if (tablesAvailable)
+                child: ToolbarScrollFade(
+                  color: Palette.composerPaper,
+                  startKey: formatBarFadeStartKey,
+                  endKey: formatBarFadeEndKey,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    dragStartBehavior: DragStartBehavior.down,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
                         _action(
-                          formatTableKey,
-                          const _BarIcon(glyph: _BarGlyph.table),
-                          'Table',
-                          insertTable,
+                          formatBoldKey,
+                          const FormatIcon(
+                            glyph: FormatGlyph.bold,
+                            color: Palette.ink,
+                            size: _glyphExtent,
+                          ),
+                          'Bold',
+                          (EditorState s) =>
+                              toggleInlineFormat(s, InlineFormat.bold),
                         ),
-                      _MoreFormats(
-                        key: formatMoreKey,
-                        onChosen: _runner(),
-                      ),
-                    ],
+                        _action(
+                          formatItalicKey,
+                          const FormatIcon(
+                            glyph: FormatGlyph.italic,
+                            color: Palette.ink,
+                            size: _glyphExtent,
+                          ),
+                          'Italic',
+                          (EditorState s) =>
+                              toggleInlineFormat(s, InlineFormat.italic),
+                        ),
+                        _action(
+                          formatHeadingKey,
+                          const FormatIcon(
+                            glyph: FormatGlyph.heading,
+                            color: Palette.ink,
+                            size: _glyphExtent,
+                          ),
+                          'Heading',
+                          cycleHeading,
+                        ),
+                        _action(
+                          formatListKey,
+                          const FormatIcon(
+                            glyph: FormatGlyph.list,
+                            color: Palette.ink,
+                            size: _glyphExtent,
+                          ),
+                          'Bullet list',
+                          (EditorState s) => toggleList(s, NoteListKind.bullet),
+                        ),
+                        _action(
+                          formatNumberedKey,
+                          const _BarIcon(glyph: _BarGlyph.numbered),
+                          'Numbered list',
+                          (EditorState s) =>
+                              toggleList(s, NoteListKind.numbered),
+                        ),
+                        _action(
+                          formatTaskKey,
+                          const _BarIcon(glyph: _BarGlyph.task),
+                          'Task list',
+                          (EditorState s) => toggleList(s, NoteListKind.task),
+                        ),
+                        _action(
+                          formatQuoteKey,
+                          const FormatIcon(
+                            glyph: FormatGlyph.quote,
+                            color: Palette.ink,
+                            size: _glyphExtent,
+                          ),
+                          'Quote',
+                          toggleQuote,
+                        ),
+                        _action(
+                          formatLinkKey,
+                          const FormatIcon(
+                            glyph: FormatGlyph.link,
+                            color: Palette.ink,
+                            size: _glyphExtent,
+                          ),
+                          'Link',
+                          (EditorState s) =>
+                              toggleInlineFormat(s, InlineFormat.link),
+                        ),
+                        if (tablesAvailable)
+                          _action(
+                            formatTableKey,
+                            const _BarIcon(glyph: _BarGlyph.table),
+                            'Table',
+                            insertTable,
+                          ),
+                        _MoreFormats(
+                          key: formatMoreKey,
+                          controller: controller,
+                          onChosen: _runner(),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -295,8 +312,13 @@ const List<_MoreItem> _moreItems = <_MoreItem>[
 ];
 
 class _MoreFormats extends StatefulWidget {
-  const _MoreFormats({super.key, required this.onChosen});
+  const _MoreFormats({
+    super.key,
+    required this.controller,
+    required this.onChosen,
+  });
 
+  final TextEditingController controller;
   final void Function(_Command command)? onChosen;
 
   @override
@@ -304,37 +326,38 @@ class _MoreFormats extends StatefulWidget {
 }
 
 class _MoreFormatsState extends State<_MoreFormats> {
-  final OverlayPortalController _menu = OverlayPortalController();
+  late final AnchoredMenu _menu = AnchoredMenu(
+    anchor: () => mounted ? context : null,
+    composing: () => widget.controller.value.composing.isValid,
+    builder: _panel,
+  );
   final Object _group = Object();
 
   @override
   void didUpdateWidget(_MoreFormats oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.onChosen == null && _menu.isShowing) {
-      _menu.hide();
+    if (widget.onChosen == null) {
+      _menu.close();
     }
+  }
+
+  @override
+  void dispose() {
+    _menu.dispose();
+    super.dispose();
   }
 
   void _toggle() {
-    setState(() {
-      if (_menu.isShowing) {
-        _menu.hide();
-      } else {
-        _menu.show();
-      }
-    });
-  }
-
-  void _close() {
-    if (!_menu.isShowing) {
-      return;
+    if (_menu.isOpen) {
+      _menu.close();
+    } else {
+      _menu.open();
     }
-    setState(_menu.hide);
   }
 
   void _choose(InlineFormat format) {
     final void Function(_Command command)? run = widget.onChosen;
-    _close();
+    _menu.close();
     if (run != null) {
       run((EditorState s) => toggleInlineFormat(s, format));
     }
@@ -342,16 +365,13 @@ class _MoreFormatsState extends State<_MoreFormats> {
 
   @override
   Widget build(BuildContext context) {
+    _menu.refresh();
     return TapRegion(
       groupId: _group,
-      child: OverlayPortal(
-        controller: _menu,
-        overlayChildBuilder: _panel,
-        child: _FormatButton(
-          icon: const _BarIcon(glyph: _BarGlyph.more),
-          label: 'More formats',
-          onTap: widget.onChosen == null ? null : _toggle,
-        ),
+      child: _FormatButton(
+        icon: const _BarIcon(glyph: _BarGlyph.more),
+        label: 'More formats',
+        onTap: widget.onChosen == null ? null : _toggle,
       ),
     );
   }
@@ -375,7 +395,7 @@ class _MoreFormatsState extends State<_MoreFormats> {
       child: TextFieldTapRegion(
         child: TapRegion(
           groupId: _group,
-          onTapOutside: (PointerDownEvent _) => _close(),
+          onTapOutside: (PointerDownEvent _) => _menu.close(),
           child: DecoratedBox(
             decoration: const BoxDecoration(
               color: Palette.toolbarInk,
@@ -428,6 +448,160 @@ class _MoreFormatsState extends State<_MoreFormats> {
         ),
       ),
     );
+  }
+}
+
+typedef _AnchorScene = ({
+  CapturedThemes themes,
+  MediaQueryData? media,
+  FocusNode? focus,
+});
+
+final class AnchoredMenu {
+  AnchoredMenu({
+    required this.anchor,
+    required this.composing,
+    required this.builder,
+    this.escapeOwner,
+  });
+
+  final ValueGetter<BuildContext?> anchor;
+  final ValueGetter<bool> composing;
+  final WidgetBuilder builder;
+  final FocusNode? escapeOwner;
+
+  OverlayEntry? _entry;
+  _AnchorScene? _scene;
+  bool _refreshing = false;
+  bool _escapeHeld = false;
+  bool _listening = false;
+
+  bool get isOpen => _entry != null;
+
+  void open() {
+    final BuildContext? at = anchor();
+    if (_entry != null || at == null) {
+      return;
+    }
+    final OverlayState overlay = Overlay.of(at);
+    _scene = _sceneOf(at, overlay);
+    final OverlayEntry entry = OverlayEntry(builder: _build);
+    _entry = entry;
+    overlay.insert(entry);
+    _syncEscape();
+  }
+
+  void close() {
+    final OverlayEntry? entry = _entry;
+    if (entry == null) {
+      return;
+    }
+    _entry = null;
+    _scene = null;
+    entry.remove();
+    entry.dispose();
+    _syncEscape();
+  }
+
+  void refresh() {
+    if (_entry == null || _refreshing) {
+      return;
+    }
+    _refreshing = true;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      _refreshing = false;
+      final OverlayEntry? entry = _entry;
+      if (entry == null) {
+        return;
+      }
+      final BuildContext? at = anchor();
+      if (at == null || !at.mounted) {
+        close();
+        return;
+      }
+      _scene = _sceneOf(at, Overlay.of(at));
+      entry.markNeedsBuild();
+    });
+  }
+
+  void dispose() {
+    close();
+    _escapeHeld = false;
+    _syncEscape();
+  }
+
+  _AnchorScene _sceneOf(BuildContext at, OverlayState overlay) => (
+    themes: InheritedTheme.capture(from: at, to: overlay.context),
+    media: at.getInheritedWidgetOfExactType<MediaQuery>()?.data,
+    focus: Focus.maybeOf(at, createDependency: false),
+  );
+
+  Widget _build(BuildContext overlayContext) {
+    final _AnchorScene? scene = _scene;
+    if (scene == null) {
+      return const SizedBox.shrink();
+    }
+    final MediaQueryData overlayMedia = MediaQuery.of(overlayContext);
+    final MediaQueryData media = scene.media ?? overlayMedia;
+    return Semantics(
+      container: true,
+      child: MediaQuery(
+        data: media.copyWith(
+          padding: overlayMedia.padding,
+          viewInsets: overlayMedia.viewInsets,
+          viewPadding: overlayMedia.viewPadding,
+        ),
+        child: scene.themes.wrap(
+          Focus(
+            parentNode: scene.focus,
+            canRequestFocus: false,
+            skipTraversal: true,
+            includeSemantics: false,
+            child: Builder(builder: builder),
+          ),
+        ),
+      ),
+    );
+  }
+
+  KeyEventResult _onKey(KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.escape) {
+      return KeyEventResult.ignored;
+    }
+    switch (event) {
+      case KeyDownEvent()
+          when _entry != null &&
+              !composing() &&
+              !(escapeOwner?.hasFocus ?? false):
+        _escapeHeld = true;
+        close();
+        return KeyEventResult.handled;
+      case KeyDownEvent():
+        _escapeHeld = false;
+        _syncEscape();
+        return KeyEventResult.ignored;
+      case KeyRepeatEvent() when _escapeHeld:
+        return KeyEventResult.handled;
+      case KeyUpEvent() when _escapeHeld:
+        _escapeHeld = false;
+        _syncEscape();
+        return KeyEventResult.handled;
+      case _:
+        return KeyEventResult.ignored;
+    }
+  }
+
+  void _syncEscape() {
+    final bool wanted = _entry != null || _escapeHeld;
+    if (wanted == _listening) {
+      return;
+    }
+    _listening = wanted;
+    if (wanted) {
+      FocusManager.instance.addEarlyKeyEventHandler(_onKey);
+    } else {
+      FocusManager.instance.removeEarlyKeyEventHandler(_onKey);
+    }
   }
 }
 

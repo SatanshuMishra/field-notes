@@ -114,6 +114,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   late final ScrollController _scrollController;
   late final UndoHistoryController _undoController;
   final GlobalKey _footerKey = GlobalKey();
+  final GlobalKey _dockedFooterKey = GlobalKey();
+  final GlobalKey _dockedBarKey = GlobalKey();
 
   @override
   void initState() {
@@ -148,43 +150,42 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool roomy = _hasRoomForFormatBar(
-          context,
-          constraints.maxHeight,
-        );
-        final bool sidebar = resolveShellLayout(Theme.of(context).platform) ==
-            ShellLayout.sidebar;
-        final Widget formatBar = _formatBar(
-          trailing: roomy ? null : _compactAdd(),
-        );
-        return CallbackShortcuts(
-          bindings: _shortcuts(context),
-          child: Focus(
-            autofocus: true,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: <Widget>[
-                _header(
-                  middle: roomy ? _titleBlock() : formatBar,
-                  below: roomy && sidebar ? formatBar : null,
-                ),
-                const DashedDivider(
-                  thickness: _headerRuleThickness,
-                  color: Palette.ink25,
-                ),
-                Expanded(
-                  child: _body(
-                    formatBar: roomy && !sidebar ? formatBar : null,
-                    footer: roomy ? _footer(showHints: true) : null,
-                  ),
-                ),
-              ],
+    return ToastClearance(
+      anchors: <GlobalKey>[_dockedFooterKey, _dockedBarKey],
+      child: LayoutBuilder(builder: _layout),
+    );
+  }
+
+  Widget _layout(BuildContext context, BoxConstraints constraints) {
+    final bool roomy = _hasRoomForFormatBar(context, constraints.maxHeight);
+    final bool sidebar =
+        resolveShellLayout(Theme.of(context).platform) == ShellLayout.sidebar;
+    final Widget formatBar = _formatBar(trailing: roomy ? null : _compactAdd());
+    return CallbackShortcuts(
+      bindings: _shortcuts(context),
+      child: Focus(
+        autofocus: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            _header(
+              context,
+              middle: roomy ? _titleBlock() : formatBar,
+              below: roomy && sidebar ? formatBar : null,
             ),
-          ),
-        );
-      },
+            const DashedDivider(
+              thickness: _headerRuleThickness,
+              color: Palette.ink25,
+            ),
+            Expanded(
+              child: _body(
+                formatBar: roomy && !sidebar ? formatBar : null,
+                footer: roomy ? _footer(showHints: true) : null,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -193,7 +194,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       TargetPlatform.macOS || TargetPlatform.iOS => true,
       _ => false,
     };
-    final VoidCallback save = _handleSaveShortcut;
+    void save() => _handleSaveShortcut(context);
     return <ShortcutActivator, VoidCallback>{
       SingleActivator(
         LogicalKeyboardKey.enter,
@@ -209,11 +210,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     };
   }
 
-  void _handleSaveShortcut() {
+  void _handleSaveShortcut(BuildContext context) {
     if (widget.isSaving) {
       return;
     }
-    _handleSaveTap();
+    _handleSaveTap(context);
   }
 
   void _handleEscape() {
@@ -261,7 +262,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget _header({required Widget middle, Widget? below}) {
+  Widget _header(
+    BuildContext context, {
+    required Widget middle,
+    Widget? below,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: _headerHorizontalPadding,
@@ -281,7 +286,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                   child: middle,
                 ),
               ),
-              _saveButton(),
+              _saveButton(context),
             ],
           ),
           ?below,
@@ -381,10 +386,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget _saveButton() {
+  Widget _saveButton(BuildContext context) {
     final bool enabled = !widget.isSaving;
     return _headerAction(
-      onTap: enabled ? _handleSaveTap : null,
+      onTap: enabled ? () => _handleSaveTap(context) : null,
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
         child: DecoratedBox(
@@ -410,17 +415,13 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  void _handleSaveTap() {
+  void _handleSaveTap(BuildContext context) {
     final String text = _controller.text;
     if (text.trim().isEmpty) {
-      _showGuard();
+      showTransientToast(context, emptySaveGuardMessage);
       return;
     }
     widget.onSave(text);
-  }
-
-  void _showGuard() {
-    showTransientToast(context, emptySaveGuardMessage);
   }
 
   Widget _body({Widget? formatBar, Widget? footer}) {
@@ -448,19 +449,23 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: ComposerFooterVeil(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _bodyHorizontalPadding,
+                  child: KeyedSubtree(
+                    key: _dockedFooterKey,
+                    child: ComposerFooterVeil(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: _bodyHorizontalPadding,
+                        ),
+                        child: footer,
                       ),
-                      child: footer,
                     ),
                   ),
                 ),
             ],
           ),
         ),
-        ?formatBar,
+        if (formatBar != null)
+          KeyedSubtree(key: _dockedBarKey, child: formatBar),
         if (errorMessage != null)
           Padding(
             padding: const EdgeInsets.only(

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -6,6 +8,7 @@ import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:field_notes/features/capture/video/video_timeline.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -56,6 +59,16 @@ Future<void> _startRecording(WidgetTester tester) async {
   for (int i = 0; i < 4; i++) {
     await tester.pump(const Duration(milliseconds: 50));
   }
+}
+
+Future<void> _sendSystemBack(WidgetTester tester) async {
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    'flutter/navigation',
+    const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
+    (_) {},
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 void main() {
@@ -324,4 +337,130 @@ void main() {
     expect(failed.stopCalls, 1);
     expect(failed.releaseSavedCalls, 0);
   });
+
+  testWidgets('Escape closes an idle video recorder',
+      (WidgetTester tester) async {
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: FakeVideoRecorder(),
+        service: FakeCaptureService(),
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await _openComposer(tester);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(VideoRecorderSheet), findsNothing);
+    expect(result, isNull);
+  });
+
+  testWidgets('Escape while recording asks to discard first',
+      (WidgetTester tester) async {
+    final FakeVideoRecorder recorder = FakeVideoRecorder();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: FakeCaptureService(),
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await _openComposer(tester);
+    await _startRecording(tester);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(videoDiscardConfirmTitle), findsOneWidget);
+    expect(recorder.cancelCalls, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(videoDiscardConfirmTitle), findsNothing);
+    expect(find.byType(VideoRecorderSheet), findsOneWidget);
+    expect(find.bySemanticsLabel('Stop recording'), findsOneWidget);
+    expect(recorder.cancelCalls, 0);
+    expect(recorder.stopCalls, 0);
+    expect(result, 'unset');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+    'Android back while recording asks to discard first',
+    (WidgetTester tester) async {
+      final FakeVideoRecorder recorder = FakeVideoRecorder();
+      String? result = 'unset';
+
+      await tester.pumpWidget(
+        _recorderApp(
+          recorder: recorder,
+          service: FakeCaptureService(),
+          onResult: (String? id) => result = id,
+        ),
+      );
+
+      await _openComposer(tester);
+      await _startRecording(tester);
+
+      await _sendSystemBack(tester);
+
+      expect(find.text(videoDiscardConfirmTitle), findsOneWidget);
+      expect(find.byType(VideoRecorderSheet), findsOneWidget);
+      expect(recorder.cancelCalls, 0);
+      expect(result, 'unset');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets('a second Escape while the camera releases closes only the recorder',
+      (WidgetTester tester) async {
+    final _GatedReleaseVideoRecorder recorder = _GatedReleaseVideoRecorder();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: FakeCaptureService(),
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await _openComposer(tester);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+
+    recorder.releaseGate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VideoRecorderSheet), findsNothing);
+    expect(find.text('open'), findsOneWidget);
+    expect(result, isNull);
+  });
+}
+
+class _GatedReleaseVideoRecorder extends FakeVideoRecorder {
+  final Completer<void> releaseGate = Completer<void>();
+
+  @override
+  Future<void> release() async {
+    await releaseGate.future;
+    await super.release();
+  }
 }

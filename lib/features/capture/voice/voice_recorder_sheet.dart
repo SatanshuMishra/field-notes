@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/icons/capture_icons.dart';
@@ -108,6 +109,7 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.onPause,
     this.onResume,
     this.onDiscard,
+    this.onDismiss,
     this.elapsed = Duration.zero,
     this.errorMessage,
     this.title = 'New voice memo',
@@ -128,6 +130,7 @@ class VoiceRecorderSheet extends StatelessWidget {
   final VoidCallback? onPause;
   final VoidCallback? onResume;
   final VoidCallback? onDiscard;
+  final VoidCallback? onDismiss;
   final Duration elapsed;
   final String? errorMessage;
   final String title;
@@ -147,6 +150,20 @@ class VoiceRecorderSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.escape): ?onDismiss,
+      },
+      child: Focus(
+        autofocus: true,
+        skipTraversal: true,
+        includeSemantics: false,
+        child: _body(),
+      ),
+    );
+  }
+
+  Widget _body() {
     final String? errorMessage = this.errorMessage;
     return Stack(
       children: <Widget>[
