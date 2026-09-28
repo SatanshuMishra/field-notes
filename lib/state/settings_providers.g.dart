@@ -170,3 +170,45 @@ final class SpellCheckEnabledProvider
 }
 
 String _$spellCheckEnabledHash() => r'fe6e15d4a43dc37e1ebad23e519cd08963487228';
+
+@ProviderFor(reflectionPromptsEnabled)
+final reflectionPromptsEnabledProvider = ReflectionPromptsEnabledProvider._();
+
+final class ReflectionPromptsEnabledProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  ReflectionPromptsEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'reflectionPromptsEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$reflectionPromptsEnabledHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return reflectionPromptsEnabled(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$reflectionPromptsEnabledHash() =>
+    r'a6468d934bca030b7f179e6a743e56a1fc55214f';

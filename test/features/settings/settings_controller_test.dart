@@ -12,11 +12,13 @@ void main() {
   group('SettingsController', () {
     test('writes the daily reminder toggle through the repository', () async {
       final FakeSettingsRepository repository = FakeSettingsRepository();
-      final SettingsController controller =
-          SettingsController(repository: repository);
+      final SettingsController controller = SettingsController(
+        repository: repository,
+      );
 
-      final SettingsWriteResult result =
-          await controller.setReminderEnabled(false);
+      final SettingsWriteResult result = await controller.setReminderEnabled(
+        false,
+      );
 
       expect(result, isA<SettingsWriteSucceeded>());
       expect(repository.reminderEnabledWrites, <bool>[false]);
@@ -24,26 +26,26 @@ void main() {
 
     test('writes the reminder time, sound, and week start', () async {
       final FakeSettingsRepository repository = FakeSettingsRepository();
-      final SettingsController controller =
-          SettingsController(repository: repository);
+      final SettingsController controller = SettingsController(
+        repository: repository,
+      );
 
-      await controller
-          .setReminderTime(const ReminderTime(hour: 7, minute: 5));
+      await controller.setReminderTime(const ReminderTime(hour: 7, minute: 5));
       await controller.setSoundEnabled(false);
       await controller.setWeekStart(WeekStart.monday);
 
-      expect(
-        repository.reminderTimeWrites,
-        <ReminderTime>[const ReminderTime(hour: 7, minute: 5)],
-      );
+      expect(repository.reminderTimeWrites, <ReminderTime>[
+        const ReminderTime(hour: 7, minute: 5),
+      ]);
       expect(repository.soundEnabledWrites, <bool>[false]);
       expect(repository.weekStartWrites, <WeekStart>[WeekStart.monday]);
     });
 
     test('maps a slider value to a text size before writing', () async {
       final FakeSettingsRepository repository = FakeSettingsRepository();
-      final SettingsController controller =
-          SettingsController(repository: repository);
+      final SettingsController controller = SettingsController(
+        repository: repository,
+      );
 
       final SettingsWriteResult result = await controller.setTextSize(3);
 
@@ -53,8 +55,9 @@ void main() {
 
     test('refuses an out-of-range text size without writing', () async {
       final FakeSettingsRepository repository = FakeSettingsRepository();
-      final SettingsController controller =
-          SettingsController(repository: repository);
+      final SettingsController controller = SettingsController(
+        repository: repository,
+      );
 
       final SettingsWriteResult result = await controller.setTextSize(9);
 
@@ -70,16 +73,16 @@ void main() {
     });
 
     test('turns a repository failure into a user-facing message', () async {
-      final FakeSettingsRepository repository =
-          FakeSettingsRepository(writeError: StateError('disk full'));
+      final FakeSettingsRepository repository = FakeSettingsRepository(
+        writeError: StateError('disk full'),
+      );
       final List<Object> reported = <Object>[];
       final SettingsController controller = SettingsController(
         repository: repository,
         onError: (Object error, StackTrace _) => reported.add(error),
       );
 
-      final SettingsWriteResult result =
-          await controller.setSoundEnabled(true);
+      final SettingsWriteResult result = await controller.setSoundEnabled(true);
 
       expect(
         result,
@@ -91,22 +94,61 @@ void main() {
       );
       expect(reported, hasLength(1));
     });
-  });
 
-  test('settingsControllerProvider writes through the app repository',
+    test('setReflectionPromptsEnabled writes through the repository', () async {
+      final FakeSettingsRepository repository = FakeSettingsRepository();
+      final SettingsController controller = SettingsController(
+        repository: repository,
+      );
+
+      final SettingsWriteResult result = await controller
+          .setReflectionPromptsEnabled(true);
+
+      expect(result, isA<SettingsWriteSucceeded>());
+      expect(repository.reflectionPromptsEnabledWrites, <bool>[true]);
+    });
+
+    test(
+      'setReflectionPromptsEnabled reports the reflection question failure message',
       () async {
-    final FakeSettingsRepository repository = FakeSettingsRepository();
-    final ProviderContainer container = ProviderContainer(
-      overrides: <Override>[
-        settingsRepositoryProvider.overrideWithValue(repository),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await container.read(settingsControllerProvider).setWeekStart(
-          WeekStart.monday,
+        final FakeSettingsRepository repository = FakeSettingsRepository(
+          writeError: StateError('disk full'),
+        );
+        final SettingsController controller = SettingsController(
+          repository: repository,
         );
 
-    expect(repository.weekStartWrites, <WeekStart>[WeekStart.monday]);
+        final SettingsWriteResult result = await controller
+            .setReflectionPromptsEnabled(true);
+
+        expect(
+          result,
+          isA<SettingsWriteFailed>().having(
+            (SettingsWriteFailed f) => f.message,
+            'message',
+            'Could not save your reflection question setting.',
+          ),
+        );
+      },
+    );
   });
+
+  test(
+    'settingsControllerProvider writes through the app repository',
+    () async {
+      final FakeSettingsRepository repository = FakeSettingsRepository();
+      final ProviderContainer container = ProviderContainer(
+        overrides: <Override>[
+          settingsRepositoryProvider.overrideWithValue(repository),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(settingsControllerProvider)
+          .setWeekStart(WeekStart.monday);
+
+      expect(repository.weekStartWrites, <WeekStart>[WeekStart.monday]);
+    },
+  );
 }

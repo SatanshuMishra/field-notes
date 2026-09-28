@@ -55,31 +55,37 @@ void main() {
       expect((await repository.load()).weekStart, WeekStart.monday);
     });
 
-    test('a repeated setter upserts the key rather than duplicating it',
-        () async {
-      await repository.setTextSize(TextSize.small);
-      await repository.setTextSize(TextSize.large);
+    test(
+      'a repeated setter upserts the key rather than duplicating it',
+      () async {
+        await repository.setTextSize(TextSize.small);
+        await repository.setTextSize(TextSize.large);
 
-      final rows = await db.select(db.settings).get();
-      final textRows = rows.where((r) => r.key == 'text_size');
-      expect(textRows.length, 1);
-      expect((await repository.load()).textSize, TextSize.large);
-    });
+        final rows = await db.select(db.settings).get();
+        final textRows = rows.where((r) => r.key == 'text_size');
+        expect(textRows.length, 1);
+        expect((await repository.load()).textSize, TextSize.large);
+      },
+    );
 
     test('load falls back to defaults for malformed stored values', () async {
-      await db.into(db.settings).insert(
+      await db
+          .into(db.settings)
+          .insert(
             SettingsCompanion.insert(
               key: 'reminder_time',
               value: 'not-a-number',
             ),
           );
-      await db.into(db.settings).insert(
-            SettingsCompanion.insert(key: 'text_size', value: '9'),
-          );
-      await db.into(db.settings).insert(
-            SettingsCompanion.insert(key: 'week_start', value: 'xyz'),
-          );
-      await db.into(db.settings).insert(
+      await db
+          .into(db.settings)
+          .insert(SettingsCompanion.insert(key: 'text_size', value: '9'));
+      await db
+          .into(db.settings)
+          .insert(SettingsCompanion.insert(key: 'week_start', value: 'xyz'));
+      await db
+          .into(db.settings)
+          .insert(
             SettingsCompanion.insert(key: 'sound_enabled', value: 'maybe'),
           );
 
@@ -90,18 +96,54 @@ void main() {
       expect(settings.soundEnabled, isTrue);
     });
 
-    test('watch emits the current settings and re-emits after a change',
-        () async {
-      final emissions = <AppSettings>[];
-      final subscription = repository.watch().listen(emissions.add);
-      addTearDown(subscription.cancel);
+    test(
+      'watch emits the current settings and re-emits after a change',
+      () async {
+        final emissions = <AppSettings>[];
+        final subscription = repository.watch().listen(emissions.add);
+        addTearDown(subscription.cancel);
 
-      await pumpEventQueue();
-      await repository.setTextSize(TextSize.large);
-      await pumpEventQueue();
+        await pumpEventQueue();
+        await repository.setTextSize(TextSize.large);
+        await pumpEventQueue();
 
-      expect(emissions.first, AppSettings.defaults);
-      expect(emissions.last.textSize, TextSize.large);
+        expect(emissions.first, AppSettings.defaults);
+        expect(emissions.last.textSize, TextSize.large);
+      },
+    );
+
+    test(
+      'a new store reports no onboarding status, reflection questions off and no stored values',
+      () async {
+        final settings = await repository.load();
+
+        expect(settings.onboardingStatus, isNull);
+        expect(settings.reflectionPromptsEnabled, isFalse);
+        expect(await repository.hasStoredValues(), isFalse);
+      },
+    );
+
+    test(
+      'Saturday, reflection questions and onboarding status survive a reload',
+      () async {
+        await repository.setWeekStart(WeekStart.saturday);
+        await repository.setReflectionPromptsEnabled(true);
+        await repository.setOnboardingStatus(OnboardingStatus.pending);
+        await repository.setOnboardingStatus(OnboardingStatus.done);
+
+        final reloaded = DriftSettingsRepository(db);
+        final settings = await reloaded.load();
+
+        expect(settings.weekStart, WeekStart.saturday);
+        expect(settings.reflectionPromptsEnabled, isTrue);
+        expect(settings.onboardingStatus, OnboardingStatus.done);
+      },
+    );
+
+    test('any stored setting makes hasStoredValues true', () async {
+      await repository.setSoundEnabled(false);
+
+      expect(await repository.hasStoredValues(), isTrue);
     });
   });
 }

@@ -17,15 +17,13 @@ Stream<AppSettings> appSettings(Ref ref) {
 
 @riverpod
 double textScale(Ref ref) {
-  final settings =
-      ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+  final settings = ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
   return _textScaleBySize[settings.textSize] ?? 1.0;
 }
 
 @riverpod
 WeekStart weekStart(Ref ref) {
-  final settings =
-      ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+  final settings = ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
   return settings.weekStart;
 }
 
@@ -34,4 +32,11 @@ bool spellCheckEnabled(Ref ref) {
   final AppSettings settings =
       ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
   return settings.spellCheckEnabled;
+}
+
+@riverpod
+bool reflectionPromptsEnabled(Ref ref) {
+  final AppSettings settings =
+      ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+  return settings.reflectionPromptsEnabled;
 }

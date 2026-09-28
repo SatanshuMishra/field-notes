@@ -7,4 +7,6 @@ abstract final class SettingsKeys {
   static const String spellCheck = 'spell_check';
   static const String notificationPermissionAsked =
       'notification_permission_asked';
+  static const String reflectionPrompts = 'reflection_prompts';
+  static const String onboardingStatus = 'onboarding_status';
 }
