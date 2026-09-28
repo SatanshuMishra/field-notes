@@ -1,4 +1,5 @@
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -8,11 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'search_day_view.dart';
 
 class SearchDayTile extends StatelessWidget {
-  const SearchDayTile({
-    super.key,
-    required this.view,
-    required this.onTap,
-  });
+  const SearchDayTile({super.key, required this.view, required this.onTap});
 
   final SearchDayView view;
   final VoidCallback onTap;
@@ -21,10 +18,12 @@ class SearchDayTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final String title = dayDetailHeadingFor(view.date).title;
     final Mood? mood = view.mood;
-    final String previewText =
-        view.preview.isEmpty ? 'No entries yet' : view.preview;
-    final String countLabel =
-        view.entryCount == 1 ? '1 entry' : '${view.entryCount} entries';
+    final String previewText = view.preview.isEmpty
+        ? 'No entries yet'
+        : view.preview;
+    final String countLabel = view.entryCount == 1
+        ? '1 entry'
+        : '${view.entryCount} entries';
     final String label = <String>[
       title,
       if (mood != null) mood.label,
@@ -38,36 +37,40 @@ class SearchDayTile extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: ExcludeSemantics(
-          child: StickerCard(
-            child: Row(
-              children: <Widget>[
-                _SearchDayFlower(mood: view.mood),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        title,
-                        style: TypographyTokens.dateSerif,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        previewText,
-                        style: TypographyTokens.bodySans,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+        child: FocusRing(
+          onPressed: onTap,
+          borderRadius: Shapes.cardBorderRadius,
+          child: ExcludeSemantics(
+            child: StickerCard(
+              child: Row(
+                children: <Widget>[
+                  _SearchDayFlower(mood: view.mood),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          title,
+                          style: TypographyTokens.dateSerif,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          previewText,
+                          style: TypographyTokens.bodySans,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Text(countLabel, style: TypographyTokens.captionSans),
-              ],
+                  const SizedBox(width: 12),
+                  Text(countLabel, style: TypographyTokens.captionSans),
+                ],
+              ),
             ),
           ),
         ),
@@ -92,10 +95,7 @@ class _SearchDayFlower extends StatelessWidget {
           shape: BoxShape.circle,
           color: Palette.cardAlt,
           border: Border.fromBorderSide(
-            BorderSide(
-              color: Palette.placeholder,
-              width: Shapes.outlineWidth,
-            ),
+            BorderSide(color: Palette.placeholder, width: Shapes.outlineWidth),
           ),
         ),
       );

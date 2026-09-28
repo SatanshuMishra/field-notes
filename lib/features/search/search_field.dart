@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,22 +54,7 @@ class _SearchFieldState extends ConsumerState<SearchField> {
             ),
           ),
           prefixIcon: const Icon(Icons.search, color: Palette.mutedDeep),
-          suffixIcon: query.isEmpty
-              ? null
-              : TooltipTheme(
-                  data: TooltipTheme.of(
-                    context,
-                  ).copyWith(excludeFromSemantics: true),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.close,
-                      color: Palette.mutedDeep,
-                      semanticLabel: _clearName,
-                    ),
-                    tooltip: _clearName,
-                    onPressed: _clear,
-                  ),
-                ),
+          suffixIcon: query.isEmpty ? null : _ClearButton(onPressed: _clear),
           filled: true,
           fillColor: Palette.cardBright,
           contentPadding: const EdgeInsets.symmetric(
@@ -85,8 +71,6 @@ class _SearchFieldState extends ConsumerState<SearchField> {
 
   static const String _name = 'Search your days';
 
-  static const String _clearName = 'Clear search';
-
   static final TextStyle _hintStyle = TypographyTokens.bodySans.copyWith(
     color: Palette.placeholder,
   );
@@ -98,4 +82,53 @@ class _SearchFieldState extends ConsumerState<SearchField> {
       width: Shapes.outlineWidth,
     ),
   );
+}
+
+const String _clearName = 'Clear search';
+
+const double _clearFaceExtent = 40;
+
+const BorderRadius _clearRadius = BorderRadius.all(
+  Radius.circular(_clearFaceExtent / 2),
+);
+
+class _ClearButton extends StatelessWidget {
+  const _ClearButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: _clearName,
+      excludeFromSemantics: true,
+      child: Semantics(
+        container: true,
+        button: true,
+        label: _clearName,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onPressed,
+            child: SizedBox.square(
+              dimension: kMinInteractiveDimension,
+              child: Center(
+                child: FocusRing(
+                  onPressed: onPressed,
+                  borderRadius: _clearRadius,
+                  child: const SizedBox.square(
+                    dimension: _clearFaceExtent,
+                    child: ExcludeSemantics(
+                      child: Icon(Icons.close, color: Palette.mutedDeep),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

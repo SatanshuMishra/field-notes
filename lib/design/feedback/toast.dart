@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../focus/focus_ring.dart';
 import '../motion/motion_tokens.dart';
 import '../tokens/tokens.dart';
 import '../widgets/icon_sticker_button.dart';
@@ -58,10 +59,19 @@ const double toastActionMinTarget = 48;
 const double _actionGap = 8;
 const double _actionHorizontalPadding = 12;
 const double _darkActionInset = 4;
-const EdgeInsets _lightPadding =
-    EdgeInsets.symmetric(horizontal: 16, vertical: 10);
-const EdgeInsets _lightPaddingWithAction =
-    EdgeInsets.only(left: 16, right: 4, top: 4, bottom: 4);
+const BorderRadius _actionRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
+const EdgeInsets _lightPadding = EdgeInsets.symmetric(
+  horizontal: 16,
+  vertical: 10,
+);
+const EdgeInsets _lightPaddingWithAction = EdgeInsets.only(
+  left: 16,
+  right: 4,
+  top: 4,
+  bottom: 4,
+);
 
 @immutable
 class ToastAction {
@@ -107,13 +117,8 @@ class Toast extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (icon != null) ...<Widget>[
-            icon!,
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Text(message, style: TypographyTokens.bodySans),
-          ),
+          if (icon != null) ...<Widget>[icon!, const SizedBox(width: 8)],
+          Flexible(child: Text(message, style: TypographyTokens.bodySans)),
           if (action != null) ...<Widget>[
             const SizedBox(width: _actionGap),
             _ToastActionButton(action: action),
@@ -148,10 +153,7 @@ class Toast extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (icon != null) ...<Widget>[
-              icon,
-              SizedBox(width: metrics.gap),
-            ],
+            if (icon != null) ...<Widget>[icon, SizedBox(width: metrics.gap)],
             Flexible(
               child: Text(
                 message,
@@ -160,7 +162,11 @@ class Toast extends StatelessWidget {
             ),
             if (action != null) ...<Widget>[
               const SizedBox(width: _actionGap),
-              _ToastActionButton(action: action, color: Palette.waveLight),
+              _ToastActionButton(
+                action: action,
+                color: Palette.waveLight,
+                focusSurface: FocusRingSurface.dark,
+              ),
             ],
           ],
         ),
@@ -173,10 +179,12 @@ class _ToastActionButton extends StatelessWidget {
   const _ToastActionButton({
     required this.action,
     this.color = Palette.coralLink,
+    this.focusSurface = FocusRingSurface.light,
   });
 
   final ToastAction action;
   final Color color;
+  final FocusRingSurface focusSurface;
 
   @override
   Widget build(BuildContext context) {
@@ -186,23 +194,28 @@ class _ToastActionButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: action.onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: toastActionMinTarget,
-            minHeight: toastActionMinTarget,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _actionHorizontalPadding,
+        child: FocusRing(
+          onPressed: action.onPressed,
+          surface: focusSurface,
+          borderRadius: _actionRadius,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: toastActionMinTarget,
+              minHeight: toastActionMinTarget,
             ),
-            child: Center(
-              widthFactor: 1,
-              child: ExcludeSemantics(
-                child: Text(
-                  action.label,
-                  style: TypographyTokens.bodySans.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _actionHorizontalPadding,
+              ),
+              child: Center(
+                widthFactor: 1,
+                child: ExcludeSemantics(
+                  child: Text(
+                    action.label,
+                    style: TypographyTokens.bodySans.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -311,6 +324,11 @@ void showTransientToast(
   Duration? lifetime,
 }) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
+  final FocusScopeNode? focusHost = Focus.maybeOf(
+    context,
+    scopeOk: true,
+    createDependency: false,
+  )?.nearestScope;
   final ToastScale scale = toastScaleFor(Theme.of(context).platform);
   final ValueListenable<double>? clearance = ToastClearance.maybeOf(context);
   dismissTransientToast();
@@ -327,6 +345,7 @@ void showTransientToast(
       glyph: glyph,
       scale: scale,
       clearance: clearance,
+      focusHost: focusHost,
       lifetime:
           lifetime ?? (action == null ? kToastLifetime : kToastActionLifetime),
       action: action == null
@@ -352,6 +371,7 @@ class _TransientToastLayer extends StatefulWidget {
     required this.glyph,
     required this.scale,
     required this.clearance,
+    required this.focusHost,
     required this.lifetime,
     required this.action,
     required this.onFinished,
@@ -361,6 +381,7 @@ class _TransientToastLayer extends StatefulWidget {
   final IconStickerGlyph glyph;
   final ToastScale scale;
   final ValueListenable<double>? clearance;
+  final FocusScopeNode? focusHost;
   final Duration lifetime;
   final ToastAction? action;
   final VoidCallback onFinished;
@@ -433,31 +454,42 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
     );
   }
 
+  FocusScopeNode? get _liveFocusHost {
+    final FocusScopeNode? host = widget.focusHost;
+    return host != null && (host.context?.mounted ?? false) ? host : null;
+  }
+
   Widget _toast() {
     final _DarkMetrics metrics = _metricsFor(widget.scale);
     return IgnorePointer(
       ignoring: widget.action == null,
-      child: Material(
-        type: MaterialType.transparency,
-        child: Center(
-          child: FadeTransition(
-            opacity: _rise,
-            child: AnimatedBuilder(
-              animation: _rise,
-              builder: (BuildContext context, Widget? child) =>
-                  Transform.translate(
-                    offset: Offset(0, _riseOffset * (1 - _rise.value)),
-                    child: child,
+      child: Focus(
+        parentNode: _liveFocusHost,
+        canRequestFocus: false,
+        skipTraversal: true,
+        includeSemantics: false,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Center(
+            child: FadeTransition(
+              opacity: _rise,
+              child: AnimatedBuilder(
+                animation: _rise,
+                builder: (BuildContext context, Widget? child) =>
+                    Transform.translate(
+                      offset: Offset(0, _riseOffset * (1 - _rise.value)),
+                      child: child,
+                    ),
+                child: Toast(
+                  message: widget.message,
+                  variant: ToastVariant.dark,
+                  scale: widget.scale,
+                  action: widget.action,
+                  icon: IconStickerGlyphIcon(
+                    glyph: widget.glyph,
+                    color: Palette.toastInk,
+                    size: metrics.iconSize,
                   ),
-              child: Toast(
-                message: widget.message,
-                variant: ToastVariant.dark,
-                scale: widget.scale,
-                action: widget.action,
-                icon: IconStickerGlyphIcon(
-                  glyph: widget.glyph,
-                  color: Palette.toastInk,
-                  size: metrics.iconSize,
                 ),
               ),
             ),

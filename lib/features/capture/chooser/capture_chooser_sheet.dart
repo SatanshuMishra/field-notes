@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -30,6 +31,10 @@ const double _rowPaddingVertical = 13;
 const double _rowPaddingHorizontal = 15;
 const double _rowIconSize = 20;
 const double _rowPrimarySubtitleOpacity = 0.85;
+
+const BorderRadius _rowRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusMd),
+);
 
 CaptureGlyph _glyphFor(EntryType type) {
   switch (type) {
@@ -187,54 +192,63 @@ class _CaptureOptionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color foreground = _isPrimary ? Palette.onAccent : Palette.ink;
+    final VoidCallback? select = isAvailable
+        ? () => onSelected(option.type)
+        : null;
     final Widget detector = GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: isAvailable ? () => onSelected(option.type) : null,
-      child: Container(
-        decoration: BoxDecoration(
-          color: _isPrimary ? Palette.coral : Palette.cardWarm,
-          border: Border.all(color: Palette.ink, width: _rowBorderWidth),
-          borderRadius: BorderRadius.circular(Shapes.radiusMd),
-          boxShadow: _isPrimary ? Shadows.emphasis : null,
-        ),
-        padding: const EdgeInsets.symmetric(
-          vertical: _rowPaddingVertical,
-          horizontal: _rowPaddingHorizontal,
-        ),
-        child: Row(
-          children: <Widget>[
-            CaptureIcon(
-              glyph: _glyphFor(option.type),
-              color: foreground,
-              size: _rowIconSize,
-            ),
-            const SizedBox(width: _rowIconGap),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    option.label,
-                    style: TypographyTokens.labelSans.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: foreground,
-                    ),
-                  ),
-                  Text(
-                    isAvailable ? option.description : unavailableLabel,
-                    style: _isPrimary
-                        ? TypographyTokens.caption10Sans.copyWith(
-                            color: Palette.onAccent.withValues(
-                              alpha: _rowPrimarySubtitleOpacity,
-                            ),
-                          )
-                        : TypographyTokens.caption10Sans,
-                  ),
-                ],
+      onTap: select,
+      child: FocusRing(
+        enabled: isAvailable,
+        includeFocusSemantics: isAvailable,
+        onPressed: select,
+        borderRadius: _rowRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _isPrimary ? Palette.coral : Palette.cardWarm,
+            border: Border.all(color: Palette.ink, width: _rowBorderWidth),
+            borderRadius: _rowRadius,
+            boxShadow: _isPrimary ? Shadows.emphasis : null,
+          ),
+          padding: const EdgeInsets.symmetric(
+            vertical: _rowPaddingVertical,
+            horizontal: _rowPaddingHorizontal,
+          ),
+          child: Row(
+            children: <Widget>[
+              CaptureIcon(
+                glyph: _glyphFor(option.type),
+                color: foreground,
+                size: _rowIconSize,
               ),
-            ),
-          ],
+              const SizedBox(width: _rowIconGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      option.label,
+                      style: TypographyTokens.labelSans.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: foreground,
+                      ),
+                    ),
+                    Text(
+                      isAvailable ? option.description : unavailableLabel,
+                      style: _isPrimary
+                          ? TypographyTokens.caption10Sans.copyWith(
+                              color: Palette.onAccent.withValues(
+                                alpha: _rowPrimarySubtitleOpacity,
+                              ),
+                            )
+                          : TypographyTokens.caption10Sans,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
