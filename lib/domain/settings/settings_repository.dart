@@ -21,5 +21,7 @@ abstract interface class SettingsRepository {
 
   Future<void> setSpellCheckEnabled(bool value);
 
+  Future<void> setNotificationPermissionAsked(bool value);
+
   StorageMode get storageMode;
 }

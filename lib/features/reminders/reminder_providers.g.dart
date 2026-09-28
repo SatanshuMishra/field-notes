@@ -190,4 +190,101 @@ final class ReminderSyncProvider
   }
 }
 
-String _$reminderSyncHash() => r'06a46fc24e28604d79264385bab6876b2202cad2';
+String _$reminderSyncHash() => r'41f0a31480613186587e6c1925d3217e5b37c9bc';
+
+@ProviderFor(notificationSettingsOpener)
+final notificationSettingsOpenerProvider =
+    NotificationSettingsOpenerProvider._();
+
+final class NotificationSettingsOpenerProvider
+    extends
+        $FunctionalProvider<
+          NotificationSettingsOpener,
+          NotificationSettingsOpener,
+          NotificationSettingsOpener
+        >
+    with $Provider<NotificationSettingsOpener> {
+  NotificationSettingsOpenerProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'notificationSettingsOpenerProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$notificationSettingsOpenerHash();
+
+  @$internal
+  @override
+  $ProviderElement<NotificationSettingsOpener> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  NotificationSettingsOpener create(Ref ref) {
+    return notificationSettingsOpener(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(NotificationSettingsOpener value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<NotificationSettingsOpener>(value),
+    );
+  }
+}
+
+String _$notificationSettingsOpenerHash() =>
+    r'86de92dd1fc8cc823958d2130502d62ebee1a06e';
+
+@ProviderFor(ReminderPermissionStatus)
+final reminderPermissionStatusProvider = ReminderPermissionStatusProvider._();
+
+final class ReminderPermissionStatusProvider
+    extends
+        $AsyncNotifierProvider<ReminderPermissionStatus, ReminderPermission> {
+  ReminderPermissionStatusProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'reminderPermissionStatusProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$reminderPermissionStatusHash();
+
+  @$internal
+  @override
+  ReminderPermissionStatus create() => ReminderPermissionStatus();
+}
+
+String _$reminderPermissionStatusHash() =>
+    r'aed049fb05fefff51ed059627a71faf5d4cec629';
+
+abstract class _$ReminderPermissionStatus
+    extends $AsyncNotifier<ReminderPermission> {
+  FutureOr<ReminderPermission> build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AsyncValue<ReminderPermission>, ReminderPermission>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<ReminderPermission>, ReminderPermission>,
+              AsyncValue<ReminderPermission>,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}

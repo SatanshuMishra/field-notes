@@ -35,6 +35,7 @@ class ReminderCoordinator {
     required ReminderTime time,
     required DateTime now,
     required bool todayHasEntry,
+    Set<DateTime> daysWithEntries = const <DateTime>{},
   }) {
     final int generation = ++_generation;
     final Future<ReminderSyncResult> result = _pending.then(
@@ -44,6 +45,7 @@ class ReminderCoordinator {
         time: time,
         now: now,
         todayHasEntry: todayHasEntry,
+        daysWithEntries: daysWithEntries,
       ),
     );
     _pending = result.then<void>((ReminderSyncResult _) {});
@@ -56,27 +58,30 @@ class ReminderCoordinator {
     required ReminderTime time,
     required DateTime now,
     required bool todayHasEntry,
+    required Set<DateTime> daysWithEntries,
   }) async {
     if (generation != _generation) {
       return ReminderSyncResult.superseded;
     }
     try {
-      final DateTime? at = _service.nextReminderAt(
+      final List<ReminderBooking>? bookings = _service.upcomingReminders(
         enabled: enabled,
         time: time,
         now: now,
         todayHasEntry: todayHasEntry,
+        daysWithEntries: daysWithEntries,
       );
-      if (at == null) {
+      if (bookings == null || bookings.isEmpty) {
         await _scheduler.cancel();
         return ReminderSyncResult.cancelled;
       }
-      final bool granted = await _scheduler.ensurePermission();
-      if (!granted) {
+      final ReminderPermission permission =
+          await _scheduler.permissionStatus();
+      if (permission == ReminderPermission.denied) {
         await _scheduler.cancel();
         return ReminderSyncResult.permissionDenied;
       }
-      await _scheduler.schedule(at);
+      await _scheduler.schedule(bookings);
       return ReminderSyncResult.scheduled;
     } catch (error, stackTrace) {
       _onError?.call(error, stackTrace);

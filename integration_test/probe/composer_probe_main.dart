@@ -17,6 +17,7 @@ import 'package:field_notes/domain/notes/markdown/syntax_tree.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/services/draft_store.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
+import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -404,10 +405,14 @@ final class _SilentReminderScheduler implements ReminderScheduler {
   const _SilentReminderScheduler();
 
   @override
-  Future<bool> ensurePermission() async => false;
+  Future<ReminderPermission> permissionStatus() async =>
+      ReminderPermission.denied;
 
   @override
-  Future<void> schedule(DateTime at) async {}
+  Future<bool> requestPermission() async => false;
+
+  @override
+  Future<void> schedule(List<ReminderBooking> bookings) async {}
 
   @override
   Future<void> cancel() async {}
