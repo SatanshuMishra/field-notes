@@ -92,8 +92,7 @@ List<int> photoBoundaries(String source, MdTree tree) {
   _checkTree(source, tree);
   return List<int>.unmodifiable(<int>[
     0,
-    for (final MdBlock unit in tree.blocks)
-      if (!_isUnclosedFence(unit)) unit.sourceRange.end,
+    for (final MdBlock unit in tree.blocks) ..._unitStops(source, unit),
   ]);
 }
 
@@ -102,6 +101,10 @@ int? photoMoveUpBoundary(String source, MdTree tree, MdBlock photo) {
   final int index = _photoIndex(tree, photo);
   if (index == 0) {
     return null;
+  }
+  final List<int> lines = _lineStops(source, tree.blocks[index - 1]);
+  if (lines.isNotEmpty) {
+    return lines.last;
   }
   return index == 1 ? 0 : tree.blocks[index - 2].sourceRange.end;
 }
@@ -112,8 +115,8 @@ int? photoMoveDownBoundary(String source, MdTree tree, MdBlock photo) {
   if (index == tree.blocks.length - 1) {
     return null;
   }
-  final MdBlock next = tree.blocks[index + 1];
-  return _isUnclosedFence(next) ? null : next.sourceRange.end;
+  final List<int> next = _unitStops(source, tree.blocks[index + 1]);
+  return next.isEmpty ? null : next.first;
 }
 
 PhotoEdit photoRemoval(String source, MdTree tree, MdBlock photo) {
@@ -191,14 +194,7 @@ PhotoTarget photoTargetAt(String source, MdTree tree, int caret) {
   _checkTree(source, tree);
   _checkOffset(source, caret, 'caret');
   final List<MdBlock> units = tree.blocks;
-  int? holder;
-  for (int i = 0; i < units.length; i++) {
-    if (_firstLineStart(source, units[i]) <= caret) {
-      holder = i;
-    } else {
-      break;
-    }
-  }
+  final int? holder = _holderIndex(source, units, caret);
   final int lineStart = _lineStartAt(source, caret);
   final int lineEnd = _lineContentEnd(source, lineStart);
   final bool insideUnit =
@@ -214,7 +210,32 @@ PhotoTarget photoTargetAt(String source, MdTree tree, int caret) {
       holder == 0 ? 0 : units[holder - 1].sourceRange.end,
     );
   }
-  return PhotoBoundaryTarget(units[holder].sourceRange.end);
+  return PhotoBoundaryTarget(
+    insideUnit
+        ? _stopAfterLine(source, units[holder], lineEnd)
+        : units[holder].sourceRange.end,
+  );
+}
+
+int? photoLineStopAt(String source, MdTree tree, int offset) {
+  _checkTree(source, tree);
+  _checkOffset(source, offset, 'offset');
+  final List<MdBlock> units = tree.blocks;
+  final int? holder = _holderIndex(source, units, offset);
+  if (holder == null) {
+    return 0;
+  }
+  final MdBlock unit = units[holder];
+  if (_isUnclosedFence(unit)) {
+    return null;
+  }
+  return offset <= unit.sourceRange.end
+      ? _stopAfterLine(
+          source,
+          unit,
+          _lineContentEnd(source, _lineStartAt(source, offset)),
+        )
+      : unit.sourceRange.end;
 }
 
 PhotoEdit photoInsertion(
@@ -289,12 +310,99 @@ MdRange _removalRange(String source, MdTree tree, int index) {
   final int s1 = _lineBreakCount(source, previousEnd, line.start);
   final int s2 = _lineBreakCount(source, line.end, nextStart);
   if (s1 == 1 && s2 == 1) {
-    return line;
+    final MdRange joined = MdRange(line.start, nextStart);
+    return _joinDrawsTheSame(source, tree, index, joined) ? joined : line;
   }
   return s1 >= s2
       ? MdRange(line.start, nextStart)
       : MdRange(previousEnd, line.end);
 }
+
+bool _joinDrawsTheSame(
+  String source,
+  MdTree tree,
+  int index,
+  MdRange deletion,
+) {
+  final List<MdBlock> blocks = tree.blocks;
+  final List<MdBlock> joined = parseNoteTree(
+    source.replaceRange(deletion.start, deletion.end, ''),
+  ).blocks;
+  final MdBlock previous = blocks[index - 1];
+  final List<MdBlock> following = <MdBlock>[
+    for (final MdBlock block in blocks.skip(index + 1))
+      block.shifted(-deletion.length),
+  ];
+  final List<MdBlock> kept = <MdBlock>[...blocks.take(index), ...following];
+  if (listEquals(joined, kept)) {
+    return true;
+  }
+  final MdBlock next = following.first;
+  return previous.kind == MdBlockKind.paragraph &&
+      next.kind == MdBlockKind.paragraph &&
+      joined.length == kept.length - 1 &&
+      listEquals(joined.sublist(0, index - 1), kept.sublist(0, index - 1)) &&
+      listEquals(joined.sublist(index), kept.sublist(index + 1)) &&
+      _paragraphsJoinAsLines(previous, next, joined[index - 1]);
+}
+
+bool _paragraphsJoinAsLines(MdBlock previous, MdBlock next, MdBlock merged) {
+  final List<MdInline> inlines = merged.inlines;
+  final int split = previous.inlines.length;
+  return merged.kind == MdBlockKind.paragraph &&
+      merged.sourceRange ==
+          MdRange(previous.sourceRange.start, next.sourceRange.end) &&
+      inlines.length == split + 1 + next.inlines.length &&
+      inlines[split].kind == MdInlineKind.softBreak &&
+      listEquals(inlines.sublist(0, split), previous.inlines) &&
+      listEquals(inlines.sublist(split + 1), next.inlines);
+}
+
+List<int> _unitStops(String source, MdBlock unit) => <int>[
+  ..._lineStops(source, unit),
+  if (!_isUnclosedFence(unit)) unit.sourceRange.end,
+];
+
+List<int> _lineStops(String source, MdBlock unit) => <int>[
+  if (unit.kind == MdBlockKind.paragraph)
+    for (final MdInline inline in unit.inlines)
+      if (inline.kind == MdInlineKind.softBreak)
+        ?_lineStopIn(source, inline.sourceRange),
+];
+
+int? _lineStopIn(String source, MdRange softBreak) {
+  final int lineFeed = source.indexOf('\n', softBreak.start);
+  if (lineFeed < 0 || lineFeed >= softBreak.end) {
+    return null;
+  }
+  final int nextStart = lineFeed + 1;
+  final List<MdBlock> next = const MdBlockParser().parse(
+    source.substring(nextStart, _lineContentEnd(source, nextStart)),
+  );
+  if (next.length != 1 || next.single.kind != MdBlockKind.paragraph) {
+    return null;
+  }
+  return lineFeed > 0 && source.codeUnitAt(lineFeed - 1) == _carriageReturn
+      ? lineFeed - 1
+      : lineFeed;
+}
+
+int? _holderIndex(String source, List<MdBlock> units, int offset) {
+  int? holder;
+  for (int i = 0; i < units.length; i++) {
+    if (_firstLineStart(source, units[i]) <= offset) {
+      holder = i;
+    } else {
+      break;
+    }
+  }
+  return holder;
+}
+
+int _stopAfterLine(String source, MdBlock unit, int lineEnd) => _unitStops(
+  source,
+  unit,
+).firstWhere((int stop) => stop >= lineEnd, orElse: () => unit.sourceRange.end);
 
 int _caretAfterRemoval(String source, MdRange line) {
   final int after = _lineBreakLengthAt(source, line.end);

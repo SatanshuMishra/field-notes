@@ -674,7 +674,7 @@ void main() {
       await sendSelectors(tester, <String>['deleteBackward:']);
       await tester.pump();
 
-      expect(editor.controller.text, 'A\n\nB');
+      expect(editor.controller.text, 'A\nB');
     },
     variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );

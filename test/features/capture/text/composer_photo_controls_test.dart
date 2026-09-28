@@ -510,7 +510,7 @@ void main() {
     await _press(tester, find.byKey(composerAddPhotoKey));
 
     expect(importer.calls, 1);
-    expect(controller.text, 'one\ntwo\n$a\n');
+    expect(controller.text, 'one\n$a\ntwo');
     expect(_photos(controller.text), hasLength(1));
     expect(_photos(controller.text).single.reference, prefixOf(photoIdA));
   });
@@ -714,7 +714,7 @@ void main() {
     await _selectPhoto(tester, 1);
     await _pressControl(tester, photoToolbarMoveUpKey);
 
-    expect(harness.controller.text, 'one\n$first\n$second\ntwo\n\nthree');
+    expect(harness.controller.text, 'one\n$first\n$second\ntwo\nthree');
     final int moved = harness.controller.text.indexOf(second);
     expect(harness.controller.selection.start, moved);
     expect(_photos(harness.controller.text)[1].caption, 'harbour');
@@ -725,7 +725,7 @@ void main() {
 
     await _pressControl(tester, photoToolbarMoveDownKey);
 
-    final String down = 'one\n$first\n\ntwo\n$second\n\nthree';
+    final String down = 'one\n$first\ntwo\n$second\nthree';
     expect(harness.controller.text, down);
     expect(_photos(harness.controller.text)[1].caption, 'harbour');
 

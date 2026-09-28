@@ -915,8 +915,8 @@ void main() {
         final EditorState next = state.apply(
           (result! as PhotoKeyEdit).transaction,
         );
-        expect(next.source, 'one\n\ntwo', reason: why);
-        expect(next.selection, const NoteSelection.collapsed(5), reason: why);
+        expect(next.source, 'one\ntwo', reason: why);
+        expect(next.selection, const NoteSelection.collapsed(4), reason: why);
       }
     });
 
@@ -1546,7 +1546,7 @@ void main() {
       expect(driver.selection.start, 4, reason: why);
       expect(driver.selection.end, 42, reason: why);
       await driver.pressKey(LogicalKeyboardKey.backspace);
-      expect(driver.source, 'one\n\ntwo', reason: why);
+      expect(driver.source, 'one\ntwo', reason: why);
       expect(driver.photoFinder(0), findsNothing, reason: why);
     });
 

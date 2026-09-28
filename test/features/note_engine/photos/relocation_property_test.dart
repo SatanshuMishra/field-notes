@@ -149,12 +149,51 @@ final class _NoteGenerator {
   }
 }
 
-List<(MdBlockKind, String)> _nonPhotoUnits(String source, MdTree tree) =>
-    <(MdBlockKind, String)>[
-      for (final MdBlock block in tree.blocks)
-        if (block.kind != MdBlockKind.photoLine)
-          (block.kind, block.sourceRange.sliceOf(source)),
-    ];
+List<String> _visibleLines(String source, MdTree tree) => <String>[
+  for (final MdBlock block in tree.blocks)
+    if (block.kind != MdBlockKind.photoLine)
+      for (final MdRange line in _linesOf(source, block.sourceRange))
+        if (line.sliceOf(source).trim().isNotEmpty)
+          '${_startsBlock(block, line) ? '+' : ''}'
+              '${_kindsAt(block, _firstVisible(source, line)).join('/')}: '
+              '${line.sliceOf(source).trim()}',
+];
+
+bool _startsBlock(MdBlock block, MdRange line) =>
+    block.kind != MdBlockKind.paragraph &&
+    line.start <= block.sourceRange.start &&
+    block.sourceRange.start <= line.end;
+
+List<MdRange> _linesOf(String source, MdRange range) {
+  final List<MdRange> lines = <MdRange>[];
+  int start = range.start;
+  while (start <= range.end) {
+    final int lineFeed = source.indexOf('\n', start);
+    final int end = lineFeed < 0 || lineFeed > range.end ? range.end : lineFeed;
+    lines.add(MdRange(start, end));
+    start = end + 1;
+  }
+  return lines;
+}
+
+int _firstVisible(String source, MdRange line) {
+  int at = line.start;
+  while (at < line.end && source.substring(at, at + 1).trim().isEmpty) {
+    at += 1;
+  }
+  return at;
+}
+
+List<String> _kindsAt(MdBlock block, int offset) {
+  final List<MdBlock> inside = <MdBlock>[
+    for (final MdBlock child in block.blocks)
+      if (child.sourceRange.contains(offset)) child,
+  ];
+  return <String>[
+    block.kind.name,
+    if (inside.isNotEmpty) ..._kindsAt(inside.first, offset),
+  ];
+}
 
 int _photoCount(MdTree tree) =>
     tree.blocks.where((MdBlock b) => b.kind == MdBlockKind.photoLine).length;
@@ -213,7 +252,7 @@ String _escaped(String source) =>
     source.replaceAll('\r', r'\r').replaceAll('\n', r'\n');
 
 void main() {
-  test('relocation never changes non photo blocks', () {
+  test('relocation never changes how non-photo content draws', () {
     final _NoteGenerator generator = _NoteGenerator(_seed);
     int compared = 0;
     int skipped = 0;
@@ -262,13 +301,10 @@ void main() {
           'iteration $iteration, $operation'
           '${boundary == null ? '' : ' to $boundary'}, '
           "source '${_escaped(source)}', result '${_escaped(result)}'";
-      final List<(MdBlockKind, String)> before = _nonPhotoUnits(source, tree);
-      final List<(MdBlockKind, String)> after = _nonPhotoUnits(
-        result,
-        resultTree,
-      );
-      if (!_sameUnits(before, after)) {
-        fail('non-photo units changed at $context: $before -> $after');
+      final List<String> before = _visibleLines(source, tree);
+      final List<String> after = _visibleLines(result, resultTree);
+      if (!_sameLines(before, after)) {
+        fail('non-photo lines changed at $context: $before -> $after');
       }
       final int expectedPhotos = _photoCount(tree) - (boundary == null ? 1 : 0);
       if (_photoCount(resultTree) != expectedPhotos) {
@@ -297,10 +333,7 @@ void main() {
   });
 }
 
-bool _sameUnits(
-  List<(MdBlockKind, String)> before,
-  List<(MdBlockKind, String)> after,
-) {
+bool _sameLines(List<String> before, List<String> after) {
   if (before.length != after.length) {
     return false;
   }

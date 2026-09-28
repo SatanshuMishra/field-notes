@@ -61,9 +61,33 @@ List<PhotoDropTarget> photoDropTargets(
         boundary: boundaries[i],
         y: i == 0 && boundaries[i] == 0
             ? 0
-            : _boundaryY(units, unitEndingAt[boundaries[i]]!, bounds),
+            : switch (unitEndingAt[boundaries[i]]) {
+                final int unit => _boundaryY(units, unit, bounds),
+                null => _lineSeamY(source, layout, boundaries[i]),
+              },
       ),
   ]);
+}
+
+double _lineSeamY(String source, NoteLayout layout, int lineEnd) {
+  final int nextStart = source.indexOf('\n', lineEnd) + 1;
+  final double bottom = layout
+      .rangeBounds(MdRange(source.lastIndexOf('\n', lineEnd - 1) + 1, lineEnd))
+      .bottom;
+  final double nextTop = layout
+      .rangeBounds(MdRange(nextStart, _lineEnd(source, nextStart)))
+      .top;
+  return nextTop < bottom ? nextTop : bottom;
+}
+
+int _lineEnd(String source, int lineStart) {
+  final int lineFeed = source.indexOf('\n', lineStart);
+  if (lineFeed < 0) {
+    return source.length;
+  }
+  return lineFeed > lineStart && source.codeUnitAt(lineFeed - 1) == 0x0D
+      ? lineFeed - 1
+      : lineFeed;
 }
 
 double _boundaryY(

@@ -39,7 +39,7 @@ void main() {
     await tester.pump();
 
     expect(importer.calls, 1);
-    expect(controller.text, 'one\ntwo\n${mdPhotoLine(photoIdA)}\n');
+    expect(controller.text, 'one\n${mdPhotoLine(photoIdA)}\ntwo');
   });
 
   testWidgets('a refused pick is reported and leaves the note alone',
