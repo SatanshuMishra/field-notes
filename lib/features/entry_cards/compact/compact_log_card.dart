@@ -272,13 +272,12 @@ class _CompactLogCardState extends State<CompactLogCard> {
           },
         ),
       },
-      child: Semantics(
-        container: true,
-        button: true,
-        onTap: widget.onOpen,
-        child: LogActionsReveal(
-          onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
-          onDelete: widget.onDelete,
+      child: LogActionsReveal(
+        onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
+        onDelete: widget.onDelete,
+        child: Semantics(
+          button: true,
+          onTap: widget.onOpen,
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             onEnter: (PointerEnterEvent event) => _onHover(true),
@@ -304,7 +303,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
   }
 
   Widget _stamp() {
-    final String stamp = logStampFor(widget.entry.createdAt);
+    final String stamp = logStampFor(context, widget.entry.createdAt);
     final String type = logTypeLabelFor(widget.entry.type);
     switch (widget.density) {
       case CompactLogDensity.feed:

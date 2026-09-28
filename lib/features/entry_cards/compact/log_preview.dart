@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show BuildContext, TimeOfDay;
 
+import '../../../design/format/clock_format.dart';
 import '../../../domain/models/models.dart';
 import '../../../domain/notes/markdown/markdown.dart';
 import '../../../domain/notes/note_plain_text.dart';
@@ -28,14 +30,13 @@ String partOfDayFor(int hour) {
   return 'night';
 }
 
-String logStampFor(int createdAtMs) {
+String logStampFor(BuildContext context, int createdAtMs) {
   if (createdAtMs < 0 || createdAtMs > _maxEpochMs) {
     return '';
   }
   final DateTime at = DateTime.fromMillisecondsSinceEpoch(createdAtMs);
-  final String hour = at.hour.toString().padLeft(2, '0');
-  final String minute = at.minute.toString().padLeft(2, '0');
-  return '$hour:$minute · ${partOfDayFor(at.hour)}';
+  final String clock = formatClock(context, TimeOfDay.fromDateTime(at));
+  return '$clock · ${partOfDayFor(at.hour)}';
 }
 
 String logTypeLabelFor(EntryType type) {

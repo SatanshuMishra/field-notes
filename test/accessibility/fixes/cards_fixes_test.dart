@@ -80,7 +80,7 @@ void main() {
       tester,
       (SemanticsNode node) =>
           node.getSemanticsData().flagsCollection.isButton &&
-          node.label.contains('09:30'),
+          node.label.contains('9:30 AM'),
     );
     expect(cards, hasLength(5));
     for (final SemanticsNode card in cards) {

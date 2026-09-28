@@ -9,6 +9,7 @@ import 'package:field_notes/features/capture/text/composer_footer.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/draft_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 import 'package:flutter/widgets.dart';
@@ -37,6 +38,15 @@ class _ComposerTrigger extends StatelessWidget {
       child: const Text('open'),
     );
   }
+}
+
+void _useClockFormat(WidgetTester tester, {required bool twentyFourHour}) {
+  tester.platformDispatcher.alwaysUse24HourFormatTestValue = twentyFourHour;
+  tester.binding.handleMetricsChanged();
+  addTearDown(() {
+    tester.platformDispatcher.clearAlwaysUse24HourTestValue();
+    tester.binding.handleMetricsChanged();
+  });
 }
 
 Widget _composerApp({
@@ -703,5 +713,30 @@ void main() {
       expect(writer.saves.single.photoMediaIds, isEmpty);
       expect(store.prefixLookups, isEmpty);
     });
+  });
+
+  testWidgets('the composer header time follows the system setting',
+      (WidgetTester tester) async {
+    _useClockFormat(tester, twentyFourHour: false);
+    await tester.pumpWidget(
+      _composerApp(
+        writer: FakeNoteWriter(),
+        onResult: (String? _) {},
+        overrides: <Override>[
+          todayClockProvider.overrideWith(
+            (Ref ref) => () => DateTime(2026, 7, 19, 14, 30),
+          ),
+        ],
+      ),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Today · 2:30 PM'), findsOneWidget);
+
+    _useClockFormat(tester, twentyFourHour: true);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Today · 14:30'), findsOneWidget);
   });
 }

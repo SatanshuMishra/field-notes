@@ -61,7 +61,7 @@ FinderBase<SemanticsNode> _unlabelledTappable() => find.semantics.byPredicate(
 );
 
 FinderBase<SemanticsNode> _openButton() => find.semantics.byPredicate(
-  (SemanticsNode node) => _tappable(node) && node.label.contains('23:45'),
+  (SemanticsNode node) => _tappable(node) && node.label.contains('11:45 PM'),
 );
 
 void main() {
@@ -77,7 +77,7 @@ void main() {
     expect(_unlabelledTappable(), findsNothing);
     expect(_openButton(), findsOne);
     final String label = _openButton().evaluate().single.label;
-    expect(_count(label, '23:45'), 1);
+    expect(_count(label, '11:45 PM'), 1);
     expect(label, isNot(contains('Harbour walk')));
     expect(find.semantics.byLabel(RegExp('Harbour walk')), findsOne);
     tester.semantics.tap(_openButton());
@@ -98,7 +98,7 @@ void main() {
     expect(_unlabelledTappable(), findsNothing);
     expect(_openButton(), findsOne);
     final String label = _openButton().evaluate().single.label;
-    expect(_count(label, '23:45'), 1);
+    expect(_count(label, '11:45 PM'), 1);
     expect(label, contains('0:16'));
     expect(label, contains('Watch'));
     tester.semantics.tap(_openButton());

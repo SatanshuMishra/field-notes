@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
@@ -157,6 +159,60 @@ final class _PillGeometry {
     _outer,
     _bottom,
   );
+
+  Size get size => Size(
+    rowPadding.horizontal +
+        (paired ? leadingMargin.horizontal + buttonExtent : 0) +
+        trailingMargin.horizontal +
+        buttonExtent,
+    rowPadding.vertical + _top + buttonExtent + _bottom,
+  );
+}
+
+class _PillReach extends SingleChildRenderObjectWidget {
+  const _PillReach({required this.reach, required super.child});
+
+  final Rect? reach;
+
+  @override
+  _RenderPillReach createRenderObject(BuildContext context) =>
+      _RenderPillReach(reach);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderPillReach renderObject) {
+    renderObject.reach = reach;
+  }
+}
+
+class _RenderPillReach extends RenderProxyBox {
+  _RenderPillReach(this._reach);
+
+  Rect? _reach;
+
+  set reach(Rect? value) {
+    if (value == _reach) {
+      return;
+    }
+    _reach = value;
+    markNeedsSemanticsUpdate();
+    parent?.markNeedsSemanticsUpdate();
+  }
+
+  @override
+  Rect get semanticBounds {
+    final Rect card = Offset.zero & size;
+    final Rect? reach = _reach;
+    if (reach == null) {
+      return card;
+    }
+    return card.expandToInclude(reach.shift(Offset(size.width, 0)));
+  }
+
+  @override
+  void describeSemanticsConfiguration(SemanticsConfiguration config) {
+    super.describeSemanticsConfiguration(config);
+    config.isSemanticBoundary = true;
+  }
 }
 
 class _LogActionButton extends StatefulWidget {
@@ -287,14 +343,27 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   );
 
   ScrollPosition? _scroll;
+  Size? _window;
   bool _cardHovered = false;
+  bool _awaitingMove = false;
   bool _pillHovered = false;
   bool _focusInside = false;
   bool _pinned = false;
   bool _suppressed = false;
+  bool _topInView = true;
+  bool _viewCheckScheduled = false;
 
-  bool get _visible =>
-      !_suppressed && (_cardHovered || _pillHovered || _focusInside || _pinned);
+  bool get _wanted =>
+      (_cardHovered && !_awaitingMove) ||
+      _pillHovered ||
+      _focusInside ||
+      _pinned;
+
+  bool get _visible => !_suppressed && _topInView && _wanted;
+
+  bool get _pointerIsStill =>
+      SchedulerBinding.instance.schedulerPhase ==
+      SchedulerPhase.postFrameCallbacks;
 
   @override
   void initState() {
@@ -311,6 +380,11 @@ class _LogActionsRevealState extends State<LogActionsReveal>
       _scroll?.removeListener(_onScrolled);
       _scroll = scroll;
       _scroll?.addListener(_onScrolled);
+    }
+    final Size? window = MediaQuery.maybeSizeOf(context);
+    if (window != _window) {
+      _window = window;
+      _scheduleViewCheck();
     }
   }
 
@@ -349,8 +423,48 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   }
 
   void _onScrolled() {
+    _scheduleViewCheck();
     if (_pinned) {
       _update(() => _pinned = false);
+    }
+  }
+
+  bool _cardTopInView() {
+    final RenderObject? card = context.findRenderObject();
+    final RenderObject? viewport = RenderAbstractViewport.maybeOf(card);
+    if (card is! RenderBox ||
+        viewport is! RenderBox ||
+        !card.hasSize ||
+        !viewport.hasSize) {
+      return true;
+    }
+    final double top = card.localToGlobal(Offset.zero, ancestor: viewport).dy;
+    return top >= -precisionErrorTolerance &&
+        top <= viewport.size.height + precisionErrorTolerance;
+  }
+
+  void _scheduleViewCheck() {
+    if (_viewCheckScheduled || !_wanted) {
+      return;
+    }
+    _viewCheckScheduled = true;
+    SchedulerBinding.instance.addPostFrameCallback((Duration _) {
+      _viewCheckScheduled = false;
+      _recheckView();
+    });
+  }
+
+  void _recheckView() {
+    if (!mounted) {
+      return;
+    }
+    final bool inView = _cardTopInView();
+    if (inView == _topInView) {
+      return;
+    }
+    _update(() => _topInView = inView);
+    if (!inView) {
+      _reveal.value = 0;
     }
   }
 
@@ -364,12 +478,29 @@ class _LogActionsRevealState extends State<LogActionsReveal>
     action();
   }
 
-  void _onCardHover(bool hovered) {
+  void _onCardEnter(PointerEnterEvent event) {
+    final bool still = _pointerIsStill;
     _update(() {
-      _cardHovered = hovered;
-      if (hovered) {
-        _suppressed = false;
-      }
+      _cardHovered = true;
+      _awaitingMove = still;
+      _suppressed = false;
+      _topInView = _cardTopInView();
+    });
+  }
+
+  void _onCardMove(PointerHoverEvent event) {
+    if (_awaitingMove) {
+      _update(() {
+        _awaitingMove = false;
+        _topInView = _cardTopInView();
+      });
+    }
+  }
+
+  void _onCardExit(PointerExitEvent event) {
+    _update(() {
+      _cardHovered = false;
+      _awaitingMove = false;
     });
   }
 
@@ -382,6 +513,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
       _focusInside = focused;
       if (focused) {
         _suppressed = false;
+        _topInView = _cardTopInView();
       }
     });
   }
@@ -390,6 +522,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
     _update(() {
       _pinned = true;
       _suppressed = false;
+      _topInView = _cardTopInView();
     });
   }
 
@@ -407,13 +540,32 @@ class _LogActionsRevealState extends State<LogActionsReveal>
     };
   }
 
+  _PillGeometry get _geometry => _PillGeometry(
+    buttonExtent: _defaultButtonExtent,
+    paired: widget.onEdit != null,
+    growDown: true,
+  );
+
+  Offset _pillCorner(_PillGeometry geometry) => Offset(
+    geometry.pillInset.right - _pillInset,
+    -geometry.pillInset.top - _pillRise,
+  );
+
+  Rect _pillReach() {
+    final _PillGeometry geometry = _geometry;
+    final Offset corner = _pillCorner(geometry);
+    final Size size = geometry.size;
+    return Rect.fromLTRB(
+      corner.dx - size.width,
+      corner.dy,
+      corner.dx,
+      corner.dy + size.height,
+    );
+  }
+
   Widget _buildPill(BuildContext context) {
     final VoidCallback? edit = widget.onEdit;
     final bool visible = _visible;
-    final EdgeInsets inset = logActionsPillTapInset(
-      withEdit: edit != null,
-      growDown: true,
-    );
     return Align(
       alignment: AlignmentDirectional.topStart,
       child: CompositedTransformFollower(
@@ -421,7 +573,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
         showWhenUnlinked: false,
         targetAnchor: Alignment.topRight,
         followerAnchor: Alignment.topRight,
-        offset: Offset(inset.right - _pillInset, -inset.top - _pillRise),
+        offset: _pillCorner(_geometry),
         child: IgnorePointer(
           ignoring: !visible,
           child: TapRegion(
@@ -465,28 +617,32 @@ class _LogActionsRevealState extends State<LogActionsReveal>
 
   @override
   Widget build(BuildContext context) {
-    return OverlayPortal(
-      controller: _portal,
-      overlayChildBuilder: _buildPill,
-      child: CompositedTransformTarget(
-        link: _link,
-        child: TapRegion(
-          groupId: this,
-          onTapOutside: _onTapOutside,
-          child: MouseRegion(
-            onEnter: (PointerEnterEvent event) => _onCardHover(true),
-            onExit: (PointerExitEvent event) => _onCardHover(false),
-            child: Focus(
-              canRequestFocus: true,
-              onFocusChange: _onFocusChange,
-              child: Semantics(
-                onLongPress: _onLongPress,
-                customSemanticsActions: _semanticActions(),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  excludeFromSemantics: true,
+    return _PillReach(
+      reach: _visible ? _pillReach() : null,
+      child: OverlayPortal(
+        controller: _portal,
+        overlayChildBuilder: _buildPill,
+        child: CompositedTransformTarget(
+          link: _link,
+          child: TapRegion(
+            groupId: this,
+            onTapOutside: _onTapOutside,
+            child: MouseRegion(
+              onEnter: _onCardEnter,
+              onHover: _onCardMove,
+              onExit: _onCardExit,
+              child: Focus(
+                canRequestFocus: true,
+                onFocusChange: _onFocusChange,
+                child: Semantics(
                   onLongPress: _onLongPress,
-                  child: widget.child,
+                  customSemanticsActions: _semanticActions(),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    excludeFromSemantics: true,
+                    onLongPress: _onLongPress,
+                    child: widget.child,
+                  ),
                 ),
               ),
             ),

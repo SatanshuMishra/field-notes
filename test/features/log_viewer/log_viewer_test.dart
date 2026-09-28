@@ -218,6 +218,15 @@ Future<_Session> _open(
   return session;
 }
 
+void _useClockFormat(WidgetTester tester, {required bool twentyFourHour}) {
+  tester.platformDispatcher.alwaysUse24HourFormatTestValue = twentyFourHour;
+  tester.binding.handleMetricsChanged();
+  addTearDown(() {
+    tester.platformDispatcher.clearAlwaysUse24HourTestValue();
+    tester.binding.handleMetricsChanged();
+  });
+}
+
 Future<void> _drainToast(WidgetTester tester) async {
   await tester.pump(kToastLifetime);
   await tester.pumpAndSettle();
@@ -247,7 +256,7 @@ void main() {
     expect(
       find.byWidgetPredicate(
         (Widget widget) =>
-            widget is Text && (widget.data ?? '').startsWith('14:30'),
+            widget is Text && (widget.data ?? '').startsWith('2:30 PM'),
       ),
       findsOneWidget,
     );
@@ -445,5 +454,20 @@ void main() {
       tester.widget<VoiceBody>(find.byType(VoiceBody)).playerFactory,
       same(audio),
     );
+  });
+
+  testWidgets('the viewer header time follows the system setting',
+      (WidgetTester tester) async {
+    _useClockFormat(tester, twentyFourHour: false);
+    await _open(tester, entryId: 'entry-2');
+
+    expect(find.text('2:30 PM'), findsOneWidget);
+    expect(find.text('8:12 AM · note'), findsOneWidget);
+
+    _useClockFormat(tester, twentyFourHour: true);
+    await tester.pumpAndSettle();
+
+    expect(find.text('14:30'), findsOneWidget);
+    expect(find.text('08:12 · note'), findsOneWidget);
   });
 }

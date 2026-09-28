@@ -244,4 +244,28 @@ void main() {
       'one\n${mdPhotoLine(photoIdA, caption: 'Low tide')}\ntwo',
     );
   });
+
+  testWidgets('the caption field keeps its name after typing', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await _pump(tester, 'one\n$a\ntwo');
+
+    await _openCaption(tester, 0);
+    await tester.enterText(find.byKey(photoCaptionFieldEditorKey), 'shells');
+    await tester.pumpAndSettle();
+
+    expect(
+      tester
+          .getSemantics(
+            find.descendant(
+              of: find.byKey(photoCaptionFieldEditorKey),
+              matching: find.byType(EditableText),
+            ),
+          )
+          .label,
+      'Caption',
+    );
+    semantics.dispose();
+  });
 }
