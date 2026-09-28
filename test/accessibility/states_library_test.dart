@@ -69,6 +69,7 @@ void main() {
       'd13-change-mood-dialog',
       'd14-delete-entry-dialog',
       'd15-viewer-middle-entry',
+      'd16-day-past-mood',
     ]);
   });
 
