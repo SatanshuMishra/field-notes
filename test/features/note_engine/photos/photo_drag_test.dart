@@ -29,8 +29,9 @@ const Offset _inSquare = Offset(50, 50);
 const double _precision = 0.01;
 
 final class _BandLayout implements NoteLayout {
-  _BandLayout(this.units, this.photoRects);
+  _BandLayout(this.source, this.units, this.photoRects);
 
+  final String source;
   final List<MdBlock> units;
 
   @override
@@ -39,10 +40,27 @@ final class _BandLayout implements NoteLayout {
   @override
   Rect rangeBounds(MdRange range) {
     final int index = units.indexWhere(
-      (MdBlock unit) => unit.sourceRange == range,
+      (MdBlock unit) =>
+          unit.sourceRange.start <= range.start &&
+          range.end <= unit.sourceRange.end,
     );
-    expect(index, isNonNegative, reason: 'rangeBounds of a unit only');
-    return _band(index);
+    expect(index, isNonNegative, reason: 'rangeBounds inside a unit only');
+    final MdRange unit = units[index].sourceRange;
+    if (unit == range) {
+      return _band(index);
+    }
+    final Rect band = _band(index);
+    final double height =
+        band.height / ('\n'.allMatches(unit.sliceOf(source)).length + 1);
+    final int line = '\n'
+        .allMatches(source.substring(unit.start, range.start))
+        .length;
+    return Rect.fromLTWH(
+      band.left,
+      band.top + height * line,
+      band.width,
+      height,
+    );
   }
 
   @override
@@ -244,7 +262,7 @@ void main() {
     final int photoIndex = units.indexWhere(
       (MdBlock b) => b.kind == MdBlockKind.photoLine,
     );
-    final NoteLayout layout = _BandLayout(units, <PhotoRect>[
+    final NoteLayout layout = _BandLayout(source, units, <PhotoRect>[
       PhotoRect(
         sourceRange: units[photoIndex].sourceRange,
         reference: 'abc123abc123',
@@ -267,6 +285,7 @@ void main() {
     );
     expect(targets.map((PhotoDropTarget t) => t.boundary).toList(), <int>[
       0,
+      1,
       4,
       15,
       20,
@@ -276,6 +295,7 @@ void main() {
     ]);
     expect(targets.map((PhotoDropTarget t) => t.y).toList(), <double>[
       0,
+      15,
       30,
       70,
       110,
@@ -298,7 +318,9 @@ void main() {
       for (final MdBlock unit in units) {
         expect(
           unit.sourceRange.start < nearest!.boundary &&
-              nearest.boundary < unit.sourceRange.end,
+              nearest.boundary < unit.sourceRange.end &&
+              !(unit.kind == MdBlockKind.paragraph &&
+                  source.codeUnitAt(nearest.boundary) == 0x0A),
           isFalse,
           reason: 'at y $y inside ${unit.sourceRange}',
         );
@@ -719,5 +741,52 @@ void main() {
       (PhotoDropTarget t) => t.boundary == photo.sourceRange.end,
     );
     expect(afterPhoto.y, closeTo(photo.rect.top, 0.5));
+  });
+
+  test('a drop between two lines beside a float lands between them', () {
+    const String f = '![](photo/abc123abc123 "right medium")';
+    const String source = 'Alpha\n$f\nBravo\nCharlie\nDelta\nEcho';
+    final MdTree tree = parseNoteTree(source);
+    final NoteLayout
+    layout = NoteLayoutEngine(projector: const NoteVisibleProjector()).layout(
+      LayoutInputs(
+        source: source,
+        tree: tree,
+        visibleText: const NoteVisibleProjector().project(source, tree, null),
+        activeLine: null,
+        columnWidth: 688,
+        textScaler: TextScaler.noScaling,
+        boldText: false,
+        locale: const ui.Locale('en'),
+        readerMode: false,
+        mediaDimensions: const <String, Size>{'abc123abc123': Size(1200, 900)},
+      ),
+    );
+    final PhotoRect photo = layout.photoRects.single;
+    expect(photo.flow, PhotoFlow.floatRight);
+    final Rect bravo = layout.rangeBounds(const MdRange(45, 50));
+    final Rect charlie = layout.rangeBounds(const MdRange(51, 58));
+    expect(charlie.bottom, lessThan(photo.rect.bottom));
+    final double seam = (bravo.bottom + charlie.top) / 2;
+
+    final List<PhotoDropTarget> targets = photoDropTargets(
+      source,
+      tree,
+      layout,
+    );
+    final PhotoDropTarget nearest = nearestPhotoDropTarget(targets, seam)!;
+
+    expect(nearest.boundary, 50);
+    expect(nearest.y, closeTo(seam, 0.5));
+    final PhotoEdit edit = photoRelocation(
+      source,
+      tree,
+      _photoUnit(tree),
+      nearest.boundary,
+    )!;
+    expect(
+      edit.changes.apply(source),
+      'Alpha\nBravo\n$f\nCharlie\nDelta\nEcho',
+    );
   });
 }

@@ -6,6 +6,7 @@ import 'package:field_notes/features/note_engine/document/change_set.dart';
 import 'package:field_notes/features/note_engine/document/editor_state.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/document/transaction.dart';
+import 'package:field_notes/features/note_engine/photos/photo_relocation.dart';
 import 'package:field_notes/features/note_engine/render/render_note_view.dart';
 
 String? noteCopyText(EditorState state) {
@@ -69,23 +70,24 @@ Transaction? notePasteTransaction(EditorState state, String text) {
     return plain;
   }
   final String remaining = _withoutLines(text, candidates);
-  final MdTree bare = state.parse(source.replaceRange(start, end, remaining));
-  if (_photoLinesLand(state, start, end, text, bare, candidates)) {
+  final String bareSource = source.replaceRange(start, end, remaining);
+  final MdTree bare = state.parse(bareSource);
+  if (_photoLinesLand(state, start, end, text, bareSource, bare, candidates)) {
     return plain;
   }
-  final MdBlock? holder = _holderAt(bare, start);
-  if (holder != null && _isUnclosedFence(holder)) {
+  final int? boundary = photoLineStopAt(bareSource, bare, start);
+  if (boundary == null) {
     return plain;
   }
+  final bool atNoteStart = boundary == 0;
   final String moved = _movedLines(
     text,
     candidates,
     lineBreak,
-    atNoteStart: holder == null,
+    atNoteStart: atNoteStart,
   );
-  final int boundary = holder?.sourceRange.end ?? 0;
   final int pasted = start + remaining.length;
-  if (holder != null && boundary >= pasted) {
+  if (!atNoteStart && boundary >= pasted) {
     final int at = end + boundary - pasted;
     return _pasteTransaction(source.length, <TextReplacement>[
       TextReplacement(start, end, remaining),
@@ -107,10 +109,6 @@ Transaction? notePasteTransaction(EditorState state, String text) {
     TextReplacement(start, end, remaining),
   ], pasted + moved.length);
 }
-
-MdBlock? _holderAt(MdTree tree, int offset) => tree.blocks
-    .where((MdBlock block) => block.sourceRange.start <= offset)
-    .lastOrNull;
 
 String _movedLines(
   String text,
@@ -273,13 +271,6 @@ String _lineBreakOf(String source) {
       : '\n';
 }
 
-bool _isUnclosedFence(MdBlock block) {
-  final MdBlockData? data = block.data;
-  return block.kind == MdBlockKind.fencedCode &&
-      data is MdFenceData &&
-      !data.isClosed;
-}
-
 List<_Line> _photoLines(String text) {
   final List<_Line> lines = <_Line>[];
   int start = 0;
@@ -335,11 +326,12 @@ bool _photoLinesLand(
   int start,
   int end,
   String text,
+  String bareSource,
   MdTree bare,
   List<_Line> candidates,
 ) {
-  final String source = state.source;
-  final MdTree plain = state.parse(source.replaceRange(start, end, text));
+  final String plainSource = state.source.replaceRange(start, end, text);
+  final MdTree plain = state.parse(plainSource);
   for (final _Line line in candidates) {
     final int at = start + line.start;
     final MdBlock? block = plain.blockAt(at);
@@ -349,7 +341,28 @@ bool _photoLinesLand(
       return false;
     }
   }
-  return _textBlockCount(plain) == _textBlockCount(bare);
+  return _textBlockCount(plain) == _textBlockCount(bare) ||
+      _withoutPhotoLines(state, plainSource, <int>[
+            for (final _Line line in candidates) start + line.start,
+          ]) ==
+          bareSource;
+}
+
+String _withoutPhotoLines(EditorState state, String source, List<int> starts) {
+  if (starts.isEmpty) {
+    return source;
+  }
+  final MdTree tree = state.parse(source);
+  final PhotoEdit removal = photoRemoval(
+    source,
+    tree,
+    tree.blockAt(starts.last)!,
+  );
+  return _withoutPhotoLines(
+    state,
+    removal.changes.apply(source),
+    starts.sublist(0, starts.length - 1),
+  );
 }
 
 int _textBlockCount(MdTree tree) => tree.blocks

@@ -72,14 +72,15 @@ String insertAt(String source, int caret, List<String> references) {
 void main() {
   test('removal keeps the longer separator or an empty line', () {
     final List<(String, String, int?)> cases = <(String, String, int?)>[
-      ('A\n$p\nB', 'A\n\nB', 3),
+      ('A\n$p\nB', 'A\nB', 2),
+      ('- a\n$p\nB', '- a\n\nB', 5),
       ('A\n\n$p\nB', 'A\n\nB', 3),
       ('A\n$p\n\nB', 'A\n\nB', 2),
       ('A\n\n$p\n\n\nB', 'A\n\n\nB', null),
       ('$p\n\nA', 'A', 0),
       ('A\n\n$p', 'A', 1),
       (p, '', 0),
-      ('A\r\n$p\r\nB', 'A\r\n\r\nB', null),
+      ('A\r\n$p\r\nB', 'A\r\nB', 3),
       ('A\r\n\r\n$p\nB', 'A\r\n\r\nB', null),
     ];
     for (final (String source, String expected, int? caret) in cases) {
@@ -91,6 +92,91 @@ void main() {
         expect(edit.selection, NoteSelection.collapsed(caret), reason: source);
       }
     }
+  });
+
+  test('removing a photo between two lines joins them', () {
+    const String source = 'Anemones everywhere.\n$p\nHome before the rain.';
+    final PhotoEdit edit = removeOnly(source);
+    expect(
+      edit.changes.apply(source),
+      'Anemones everywhere.\nHome before the rain.',
+    );
+    expect(edit.selection, const NoteSelection.collapsed(21));
+    expectCleanEdit(source, edit.changes);
+    expect(
+      edit.changes.invert(source).apply(edit.changes.apply(source)),
+      source,
+    );
+  });
+
+  test('removing a photo after a heading leaves no blank line', () {
+    const String source = '# Tide\n$p\nText';
+    expect(removeOnly(source).changes.apply(source), '# Tide\nText');
+  });
+
+  test('a blank line stays where joining would change a neighbour', () {
+    for (final (String source, String expected) in <(String, String)>[
+      ('> q\n$p\nB', '> q\n\nB'),
+      ('| a |\n| --- |\n$p\nB', '| a |\n| --- |\n\nB'),
+      ('- a\n$p\nB', '- a\n\nB'),
+      ('A\n$p\n2. x', 'A\n\n2. x'),
+      ('*a\n$p\nb*', '*a\n\nb*'),
+    ]) {
+      expect(
+        removeOnly(source).changes.apply(source),
+        expected,
+        reason: source,
+      );
+    }
+  });
+
+  test('photo boundaries include every Enter-typed line end inside a top-level '
+      'paragraph', () {
+    const String source = 'Alpha\n$canonical\nBravo\nCharlie\nDelta\nEcho';
+    expect(photoBoundaries(source, parseNoteTree(source)), <int>[
+      0,
+      5,
+      44,
+      50,
+      58,
+      64,
+      69,
+    ]);
+  });
+
+  test('no line stop sits inside a container or before a block start', () {
+    final List<(String, List<int>)> cases = <(String, List<int>)>[
+      ('A\n2. x\nB', <int>[0, 6, 8]),
+      ('A\n-\nB', <int>[0, 3, 5]),
+      ('*a\nb*', <int>[0, 5]),
+      ('A\\\nB', <int>[0, 4]),
+      ('- a\n  b', <int>[0, 7]),
+      ('> a\n> b', <int>[0, 7]),
+      ('| a |\n| - |\n| b |', <int>[0, 17]),
+      ('```\na\nb\n```', <int>[0, 11]),
+      ('A\r\nB', <int>[0, 1, 4]),
+      ('A \nB', <int>[0, 2, 4]),
+    ];
+    for (final (String source, List<int> stops) in cases) {
+      expect(
+        photoBoundaries(source, parseNoteTree(source)),
+        stops,
+        reason: source,
+      );
+    }
+  });
+
+  test('move down steps past one line and move up restores the source '
+      'exactly', () {
+    const String source = 'Alpha\n$canonical\nBravo\nCharlie\nDelta\nEcho';
+    final PhotoEdit down = moveDown(source)!;
+    final String moved = down.changes.apply(source);
+    expect(moved, 'Alpha\nBravo\n$canonical\nCharlie\nDelta\nEcho');
+    expect(down.selection, const NoteSelection(anchor: 12, head: 50));
+    expectCleanEdit(source, down.changes);
+    final PhotoEdit up = moveUp(moved)!;
+    expect(up.changes.apply(moved), source);
+    expect(up.selection, const NoteSelection(anchor: 6, head: 44));
   });
 
   test('move up and move down reproduce the spec examples', () {
@@ -108,7 +194,7 @@ void main() {
     expect(back.selection, const NoteSelection(anchor: 2, head: 26));
 
     final PhotoEdit joined = moveUp('A\n$p\nB')!;
-    expect(joined.changes.apply('A\n$p\nB'), '$p\nA\n\nB');
+    expect(joined.changes.apply('A\n$p\nB'), '$p\nA\nB');
     expect(joined.selection, const NoteSelection(anchor: 0, head: 24));
 
     const String tableSource = '$p\n| a |\n| --- |';
@@ -203,7 +289,14 @@ void main() {
     );
 
     const String closed = 'A\n$p\n~~~\ncode\n~~~';
-    expect(moveDown(closed)!.changes.apply(closed), 'A\n\n~~~\ncode\n~~~\n$p');
+    expect(moveDown(closed)!.changes.apply(closed), 'A\n~~~\ncode\n~~~\n$p');
+  });
+
+  test('add memory inserts after the line holding the caret', () {
+    expect(
+      insertAt('one\ntwo\n\nB', 1, <String>['abc123abc123']),
+      'one\n$canonical\ntwo\n\nB',
+    );
   });
 
   group('insertion', () {
@@ -214,7 +307,7 @@ void main() {
       );
       expect(
         insertAt('one\ntwo\n\nB', 1, <String>['abc123abc123']),
-        'one\ntwo\n$canonical\n\nB',
+        'one\n$canonical\ntwo\n\nB',
       );
       expect(insertAt('', 0, <String>['abc123abc123']), '$canonical\n');
       expect(insertAt('A\n', 2, <String>['abc123abc123']), 'A\n$canonical\n');
@@ -297,7 +390,7 @@ void main() {
     const String source = '$p1\n$p2\n$p3';
     final MdTree tree = parseNoteTree(source);
     final PhotoEdit edit = photoRemoval(source, tree, photosOf(tree)[1]);
-    expect(edit.changes.apply(source), '$p1\n\n$p3');
+    expect(edit.changes.apply(source), '$p1\n$p3');
   });
 
   test('an upper-case reference with an invalid title keeps its bytes', () {
@@ -351,7 +444,7 @@ void main() {
     expect(noteLineBreak('A\r\nB'), '\r\n');
     expect(noteLineBreak('AB'), '\n');
     const String source = 'A\rx\n$p\nB';
-    expect(removeOnly(source).changes.apply(source), 'A\rx\n\nB');
+    expect(removeOnly(source).changes.apply(source), 'A\rx\nB');
   });
 
   test('photo line range and selection cover the whole line', () {

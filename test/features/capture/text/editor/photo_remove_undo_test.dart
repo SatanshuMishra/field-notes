@@ -103,7 +103,7 @@ void main() {
 
     await _removeSelectedPhoto(tester);
 
-    expect(harness.controller.text, 'one\n\ntwo');
+    expect(harness.controller.text, 'one\ntwo');
     expect(NoteEditorDriver(tester).photoFinder(0), findsNothing);
     expect(find.text(photoRemovedMessage), findsOneWidget);
     expect(find.text(photoRemovedUndoLabel), findsOneWidget);
@@ -154,7 +154,7 @@ void main() {
     await NoteEditorDriver(tester).pressKey(LogicalKeyboardKey.backspace);
     await tester.pumpAndSettle();
 
-    expect(harness.controller.text, 'one\n\ntwo');
+    expect(harness.controller.text, 'one\ntwo');
     expect(find.text(photoRemovedMessage), findsNothing);
   });
 
@@ -171,11 +171,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(photoRemovedMessage), findsNothing);
-      expect(harness.controller.text, isNot('one\n\ntwo'));
+      expect(harness.controller.text, isNot('one\ntwo'));
 
       await driver.pressKey(LogicalKeyboardKey.keyZ, meta: true);
 
-      expect(harness.controller.text, 'one\n\ntwo');
+      expect(harness.controller.text, 'one\ntwo');
     },
     variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );

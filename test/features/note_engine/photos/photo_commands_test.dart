@@ -117,8 +117,8 @@ void main() {
     final PhotoKeyResult? second = photoBackspace(selected);
     expect(second, isA<PhotoKeyEdit>());
     final Transaction removal = (second! as PhotoKeyEdit).transaction;
-    expect(applied(selected, removal), 'A\n\nB');
-    expect(removal.selection, const NoteSelection.collapsed(3));
+    expect(applied(selected, removal), 'A\nB');
+    expect(removal.selection, const NoteSelection.collapsed(2));
     expect(removal.event, TransactionEvent.photo);
 
     final PhotoKeyResult? forward = photoDelete(caretAt(source, 1));
@@ -131,8 +131,8 @@ void main() {
     expect(forwardSecond, isA<PhotoKeyEdit>());
     final Transaction forwardRemoval =
         (forwardSecond! as PhotoKeyEdit).transaction;
-    expect(applied(forwardSelected, forwardRemoval), 'A\n\nB');
-    expect(forwardRemoval.selection, const NoteSelection.collapsed(3));
+    expect(applied(forwardSelected, forwardRemoval), 'A\nB');
+    expect(forwardRemoval.selection, const NoteSelection.collapsed(2));
     expect(forwardRemoval.event, TransactionEvent.photo);
 
     for (final Object? result in <Object?>[
@@ -344,7 +344,7 @@ void main() {
     const String source = 'A\n$p\nB';
     final EditorState state = stateOf(source);
     final PhotoCommandResult result = removePhoto(state, photoIn(state));
-    expect(applied(state, result.transaction), 'A\n\nB');
+    expect(applied(state, result.transaction), 'A\nB');
     expect(result.toast, PhotoToast.removed);
     expect(result.transaction.event, TransactionEvent.photo);
     expect(
@@ -381,7 +381,7 @@ void main() {
     final EditorState withBreak = selecting(source, 2, 27);
     final PhotoKeyResult? result = photoBackspace(withBreak);
     expect(result, isA<PhotoKeyEdit>());
-    expect(applied(withBreak, (result! as PhotoKeyEdit).transaction), 'A\n\nB');
+    expect(applied(withBreak, (result! as PhotoKeyEdit).transaction), 'A\nB');
   });
 
   test('a composition over a selected photo composes on the new line', () {

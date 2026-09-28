@@ -153,12 +153,12 @@ void main() {
       'The tide came in.\n$_pl\n\nLater.',
       8,
     );
-    _expectPaste('XY', 1, 'a\n$_p\nb', 'Xa\nbY\n$_p', 4);
+    _expectPaste('XY', 1, 'a\n$_p\nb', 'Xa\n$_p\nbY', 29);
     _expectPaste(
       'One\r\ntwo\r\n\r\nNext',
       3,
       _p,
-      'One\r\ntwo\r\n$_p\r\n\r\nNext',
+      'One\r\n$_p\r\ntwo\r\n\r\nNext',
       3,
     );
     _expectPaste('A\n\nB', 2, _p, 'A\n$_p\nB', 26);
@@ -166,21 +166,29 @@ void main() {
     _expectPaste('X', 1, '\n\n$_p\n\nY', 'X\n\n$_p\n\nY', 30);
   });
 
+  test('a pasted photo line lands at the nearest line end', () {
+    _expectPaste('one\ntwo', 2, _p, 'one\n$_p\ntwo', 2);
+    _expectPaste('one\ntwo', 4, '$_p\n', 'one\n$_p\ntwo', 29);
+    _expectPaste('> q\nB', 4, '$_p\n', '> q\nB\n$_p', 4);
+    _expectPaste('A\n2. x', 2, '$_p\n', 'A\n2. x\n$_p', 2);
+    _expectPaste('XY', 1, 'a\nb\n$_p\nc', 'Xa\nb\n$_p\ncY', 31);
+  });
+
   test('a pasted photo line lands at a boundary when the range ends '
       'between blocks', () {
-    _expectPaste('Hello world\n\nNext', 5, _p, 'Hello\nNext\n$_p', 5, head: 12);
+    _expectPaste('Hello world\n\nNext', 5, _p, 'Hello\n$_p\nNext', 5, head: 12);
     _expectPaste(
       'Hello world\n![a](photo/aaaaaaaaaaaa)\n\nNext',
       5,
       _p,
-      'Hello\nNext\n$_p',
+      'Hello\n$_p\nNext',
       5,
       head: 37,
     );
   });
 
   test('a moved photo line follows the block that holds the paste point', () {
-    _expectPaste('XY', 1, 'a\n$_p\nb\n\nc', 'Xa\nb\n$_p\n\ncY', 32);
+    _expectPaste('XY', 1, 'a\n$_p\nb\n\nc', 'Xa\n$_p\nb\n\ncY', 32);
     _expectPaste('A\n  \nB', 3, _p, 'A\n$_p\n  \nB', 28);
     _expectPaste('  \n\nA', 1, _p, '$_p\n  \n\nA', 26);
   });
