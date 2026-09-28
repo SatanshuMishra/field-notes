@@ -5,6 +5,7 @@ import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/settings/sections/journal_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/spell_check_availability.dart';
+import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -69,6 +70,8 @@ Future<void> _pumpScreen(
   );
   await tester.pumpAndSettle();
   await tester.pump(const Duration(seconds: 3));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(settingsTabKey(SettingsTab.journal)));
   await tester.pumpAndSettle();
 }
 

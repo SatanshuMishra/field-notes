@@ -1,5 +1,6 @@
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
+import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,11 @@ import '../support/app_shell_harness.dart';
 const int _maxPresses = 90;
 
 const String _lastSettingsControl = 'Delete all…';
+
+Future<void> _selectDataTab(WidgetTester tester) async {
+  await tester.tap(find.byKey(settingsTabKey(SettingsTab.data)));
+  await tester.pumpAndSettle();
+}
 
 bool _inSettings(FocusNode node) =>
     node.context?.findAncestorWidgetOfExactType<SettingsScreen>() != null;
@@ -119,6 +125,13 @@ void _expectOneSettingsRun(List<_Stop> lap) {
   );
   expect(
     lap.where((_Stop stop) => stop.inSettings).map((_Stop stop) => stop.label),
+    containsAll(<String>[
+      for (final SettingsTab tab in SettingsTab.values) tab.label,
+    ]),
+    reason: 'one lap never reaches every Settings tab: $order',
+  );
+  expect(
+    lap.where((_Stop stop) => stop.inSettings).map((_Stop stop) => stop.label),
     contains(_lastSettingsControl),
     reason: 'one lap never reaches $_lastSettingsControl: $order',
   );
@@ -154,6 +167,7 @@ void main() {
       _useKeyboardHighlight();
       await tester.tap(find.byKey(const ValueKey<String>('gear-button')));
       await tester.pumpAndSettle();
+      await _selectDataTab(tester);
 
       final List<List<_Stop>> laps = await _laps(tester, 2);
 
@@ -169,6 +183,7 @@ void main() {
     _useKeyboardHighlight();
     await tester.tap(find.bySemanticsLabel('Settings').first);
     await tester.pumpAndSettle();
+    await _selectDataTab(tester);
 
     final List<List<_Stop>> laps = await _laps(tester, 2);
 
@@ -188,6 +203,7 @@ void main() {
       _useKeyboardHighlight();
       await tester.tap(find.byKey(const ValueKey<String>('gear-button')));
       await tester.pumpAndSettle();
+      await _selectDataTab(tester);
 
       final List<List<_Stop>> laps = await _laps(tester, 2, backward: true);
 
@@ -203,6 +219,7 @@ void main() {
       _useKeyboardHighlight();
       await tester.tap(find.bySemanticsLabel('Settings').first);
       await tester.pumpAndSettle();
+      await _selectDataTab(tester);
 
       final List<List<_Stop>> laps = await _laps(tester, 2, backward: true);
 

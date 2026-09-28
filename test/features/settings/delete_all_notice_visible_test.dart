@@ -4,6 +4,7 @@ import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/settings/settings_data_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
+import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -57,6 +58,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(settingsTabKey(SettingsTab.data)));
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Delete all…'),
       200,
