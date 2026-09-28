@@ -1,3 +1,4 @@
+import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,17 +10,23 @@ const ValueKey<String> _scrubBar = ValueKey<String>('video-scrub-bar');
 const Duration _minute = Duration(minutes: 1);
 const Duration _realPosition = Duration(seconds: 5);
 
-Widget _scrubber({required Duration position, required Duration? total}) {
+Widget _scrubber({
+  required Duration position,
+  required Duration? total,
+  required ValueChanged<Duration>? onSeek,
+}) {
   return cardHarness(
     VideoScrubber(
       position: position,
       total: total,
-      onSeek: (Duration _) {},
+      onSeek: onSeek,
       onScrubUpdate: null,
       onScrubEnd: null,
     ),
   );
 }
+
+void _noopSeek(Duration _) {}
 
 String _spokenPosition(WidgetTester tester) =>
     tester.getSemantics(find.byKey(_scrubBar)).value;
@@ -32,7 +39,11 @@ void main() {
         final SemanticsHandle handle = tester.ensureSemantics();
         try {
           await tester.pumpWidget(
-            _scrubber(position: _realPosition, total: _minute),
+            _scrubber(
+              position: _realPosition,
+              total: _minute,
+              onSeek: _noopSeek,
+            ),
           );
 
           final Rect bar = tester.getRect(find.byKey(_scrubBar));
@@ -45,15 +56,46 @@ void main() {
           expect(_spokenPosition(tester), '0:30 of 1:00');
 
           await tester.pumpWidget(
-            _scrubber(position: _realPosition, total: null),
+            _scrubber(position: _realPosition, total: null, onSeek: _noopSeek),
           );
           await tester.pumpWidget(
-            _scrubber(position: _realPosition, total: _minute),
+            _scrubber(
+              position: _realPosition,
+              total: _minute,
+              onSeek: _noopSeek,
+            ),
           );
 
           expect(_spokenPosition(tester), '0:05 of 1:00');
 
           await gesture.up();
+        } finally {
+          handle.dispose();
+        }
+      },
+    );
+
+    testWidgets(
+      'before it can seek the scrubber is a disabled slider with increase and decrease',
+      (WidgetTester tester) async {
+        final SemanticsHandle handle = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            _scrubber(position: _realPosition, total: _minute, onSeek: null),
+          );
+
+          expect(
+            tester.getSemantics(find.byKey(_scrubBar)),
+            isSemantics(
+              label: 'Video position',
+              isSlider: true,
+              hasEnabledState: true,
+              isEnabled: false,
+              hasIncreaseAction: true,
+              hasDecreaseAction: true,
+              hasTapAction: false,
+            ),
+          );
         } finally {
           handle.dispose();
         }
