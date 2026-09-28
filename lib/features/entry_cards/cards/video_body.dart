@@ -515,15 +515,20 @@ class _VideoBodyState extends State<VideoBody> {
   bool get _showCapturedPoster => _hasCapturedPoster && !_isRenderingVideo;
 
   Duration? get _total {
-    final Duration? reported = _player?.duration;
-    if (reported != null && reported > Duration.zero) {
-      return reported;
-    }
     final int? declared = widget.entry.durationMs;
-    if (declared == null || declared <= 0) {
+    if (declared != null && declared > 0) {
+      return Duration(milliseconds: declared);
+    }
+    final Duration? reported = _player?.duration;
+    if (reported == null || reported <= Duration.zero) {
       return null;
     }
-    return Duration(milliseconds: declared);
+    return reported;
+  }
+
+  Duration get _shownPosition {
+    final Duration? total = _total;
+    return total == null ? _position : clampPlaybackPosition(_position, total);
   }
 
   Future<void> _seek(Duration position) async {
@@ -696,7 +701,7 @@ class _VideoBodyState extends State<VideoBody> {
           hint: _claimDenied ? videoTransportBusyHint : null,
         ),
         controlBar: VideoControlBar(
-          position: _position,
+          position: _shownPosition,
           total: _total,
           muted: _muted,
           onSeek: _ready ? _seek : null,

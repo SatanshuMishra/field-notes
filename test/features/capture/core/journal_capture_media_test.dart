@@ -4,15 +4,82 @@ import 'package:field_notes/data/database/app_database.dart' show AppDatabase;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
+import 'package:field_notes/data/media/media_duration.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 
 import 'capture_test_support.dart';
 
 const String _date = '2026-07-19';
+
+typedef _ProbeCall = ({String path, MediaKind kind});
+
+class _FakeDurationProbe implements MediaDurationProbe {
+  _FakeDurationProbe(this._measure);
+
+  final Future<Duration?> Function() _measure;
+  final List<_ProbeCall> calls = <_ProbeCall>[];
+
+  @override
+  Future<Duration?> duration({required File file, required MediaKind kind}) {
+    calls.add((path: file.path, kind: kind));
+    return _measure();
+  }
+}
+
+const int _playerId = 11;
+
+class _MeasuringVideoPlatform extends VideoPlayerPlatform {
+  _MeasuringVideoPlatform(this._duration);
+
+  final Duration _duration;
+  final List<String?> openedUris = <String?>[];
+  final List<int> disposedPlayers = <int>[];
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<int?> createWithOptions(VideoCreationOptions options) async {
+    openedUris.add(options.dataSource.uri);
+    return _playerId;
+  }
+
+  @override
+  Stream<VideoEvent> videoEventsFor(int playerId) => Stream<VideoEvent>.value(
+        VideoEvent(
+          eventType: VideoEventType.initialized,
+          size: const Size(1920, 1080),
+          duration: _duration,
+        ),
+      );
+
+  @override
+  Future<void> setLooping(int playerId, bool looping) async {}
+
+  @override
+  Future<void> setVolume(int playerId, double volume) async {}
+
+  @override
+  Future<void> setPlaybackSpeed(int playerId, double speed) async {}
+
+  @override
+  Future<void> play(int playerId) async {}
+
+  @override
+  Future<void> pause(int playerId) async {}
+
+  @override
+  Future<Duration> getPosition(int playerId) async => Duration.zero;
+
+  @override
+  Future<void> dispose(int playerId) async => disposedPlayers.add(playerId);
+}
 
 void main() {
   late AppDatabase db;
@@ -100,6 +167,111 @@ void main() {
       result.entry.id,
     );
     expect(stored, hasLength(3));
+  });
+
+  test("the stored duration is the finished file's duration", () async {
+    final _FakeDurationProbe probe = _FakeDurationProbe(
+      () async => const Duration(milliseconds: 8990),
+    );
+    final JournalCaptureService probed = JournalCaptureService(
+      journal: journal,
+      media: media,
+      durationProbe: probe,
+    );
+
+    final CaptureResult video = await probed.capture(
+      VideoCaptureRequest(
+        date: _date,
+        video: const CaptureBytes(bytes: <int>[9, 0, 5], mime: 'video/mp4'),
+        thumbnail: const CaptureBytes(bytes: <int>[7, 7], mime: 'image/jpeg'),
+        durationMs: 9050,
+      ),
+    );
+    final CaptureResult voice = await probed.capture(
+      VoiceCaptureRequest(
+        date: _date,
+        audio: const CaptureBytes(bytes: <int>[4, 0, 5], mime: 'audio/mp4'),
+        durationMs: 9050,
+      ),
+    );
+
+    expect(video.entry.durationMs, 8990);
+    expect(voice.entry.durationMs, 8990);
+    final List<Entry> stored = await journal.entriesForDay(video.day.id);
+    expect(
+      stored.map((Entry entry) => entry.durationMs),
+      <int>[8990, 8990],
+    );
+    final MediaBlob? videoBlob = await media.blobById(video.entry.mediaId!);
+    final MediaBlob? voiceBlob = await media.blobById(voice.entry.mediaId!);
+    expect(probe.calls, <_ProbeCall>[
+      (path: media.absolutePath(videoBlob!), kind: MediaKind.video),
+      (path: media.absolutePath(voiceBlob!), kind: MediaKind.audio),
+    ]);
+  });
+
+  testWidgets(
+      'the platform probe reads a saved video from the video player '
+      'and releases it', (WidgetTester tester) async {
+    final VideoPlayerPlatform previous = VideoPlayerPlatform.instance;
+    final _MeasuringVideoPlatform platform = _MeasuringVideoPlatform(
+      const Duration(milliseconds: 8990),
+    );
+    VideoPlayerPlatform.instance = platform;
+    addTearDown(() => VideoPlayerPlatform.instance = previous);
+    final JournalCaptureService probed = JournalCaptureService(
+      journal: journal,
+      media: media,
+      durationProbe: const PlatformMediaDurationProbe(),
+    );
+
+    final CaptureResult? result = await tester.runAsync(
+      () => probed.capture(
+        VideoCaptureRequest(
+          date: _date,
+          video: const CaptureBytes(bytes: <int>[9, 0, 5], mime: 'video/mp4'),
+          durationMs: 9050,
+        ),
+      ),
+    );
+
+    expect(result!.entry.durationMs, 8990);
+    final MediaBlob? blob = await tester.runAsync<MediaBlob?>(
+      () => media.blobById(result.entry.mediaId!),
+    );
+    expect(
+      platform.openedUris.map((String? uri) => Uri.parse(uri!).toFilePath()),
+      <String>[media.absolutePath(blob!)],
+    );
+    expect(platform.disposedPlayers, <int>[_playerId]);
+  });
+
+  test("a failed or empty measurement keeps the recorder's duration",
+      () async {
+    final List<Future<Duration?> Function()> failures =
+        <Future<Duration?> Function()>[
+      () async => throw StateError('the player could not open the file'),
+      () async => Duration.zero,
+      () async => null,
+    ];
+
+    for (final Future<Duration?> Function() failure in failures) {
+      final JournalCaptureService probed = JournalCaptureService(
+        journal: journal,
+        media: media,
+        durationProbe: _FakeDurationProbe(failure),
+      );
+
+      final CaptureResult result = await probed.capture(
+        VideoCaptureRequest(
+          date: _date,
+          video: const CaptureBytes(bytes: <int>[9, 0, 5], mime: 'video/mp4'),
+          durationMs: 9050,
+        ),
+      );
+
+      expect(result.entry.durationMs, 9050);
+    }
   });
 
   test('a non-positive duration is rejected before any blob is written',

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
 import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
+import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
@@ -67,6 +68,63 @@ void main() {
       expect(find.byKey(_scrubBar), findsOneWidget);
       expect(find.byKey(_muteToggle), findsOneWidget);
       expect(find.text('0:00 / 1:05'), findsOneWidget);
+    });
+
+    testWidgets("the player total equals the card's duration after loading", (
+      WidgetTester tester,
+    ) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      try {
+        final Entry entry = entryOf(
+          type: EntryType.video,
+          mediaId: 'vid',
+          durationMs: 9050,
+        );
+        final FakeEntryVideoPlayer player = FakeEntryVideoPlayer()
+          ..duration = const Duration(milliseconds: 8990);
+        await tester.pumpWidget(
+          cardHarness(
+            VideoBody(
+              entry: entry,
+              resolver: _resolverWithVideo(),
+              playerFactory: () => player,
+              slots: const UnlimitedVideoSlots(),
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final String cardDuration = logPreviewOf(entry).meta;
+        expect(player.loadCalls, <String>['/tmp/v.mp4']);
+        expect(cardDuration, '0:09');
+        expect(find.text('0:00 / $cardDuration'), findsOneWidget);
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('Video position')).value,
+          '0:00 of $cardDuration',
+        );
+      } finally {
+        handle.dispose();
+      }
+    });
+
+    testWidgets('the elapsed readout stops at the stored total', (
+      WidgetTester tester,
+    ) async {
+      final FakeEntryVideoPlayer player = FakeEntryVideoPlayer()
+        ..duration = const Duration(milliseconds: 9100);
+      await tester.pumpWidget(
+        _videoCard(
+          resolver: _resolverWithVideo(),
+          player: player,
+          durationMs: 8000,
+        ),
+      );
+      await tester.pump();
+
+      player.emitPosition(const Duration(milliseconds: 9050));
+      await tester.pump();
+
+      expect(find.text('0:08 / 0:08'), findsOneWidget);
     });
 
     testWidgets('seeks to the tapped position on the scrub bar', (
