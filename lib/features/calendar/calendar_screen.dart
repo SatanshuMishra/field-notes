@@ -56,6 +56,7 @@ class CalendarScreen extends ConsumerStatefulWidget {
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   late MonthRef _month = widget.initialMonth ?? MonthRef.forDate(_today);
   final FocusNode _focusNode = FocusNode(debugLabel: 'calendar');
+  final FocusNode _titleFocusNode = FocusNode(debugLabel: 'calendar title');
   final LayerLink _pickerLink = LayerLink();
 
   DateTime get _today => widget.today ?? DateTime.now();
@@ -75,6 +76,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   @override
   void dispose() {
     _focusNode.dispose();
+    _titleFocusNode.dispose();
     super.dispose();
   }
 
@@ -92,6 +94,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     if (ModalRoute.isCurrentOf(context) == false) {
       return;
     }
+    final FocusNode returnFocus = _titleFocusNode.hasPrimaryFocus
+        ? _titleFocusNode
+        : _focusNode;
     final MonthRef? picked = await showCalendarMonthPicker(
       context,
       titleLink: _pickerLink,
@@ -105,7 +110,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     if (picked != null) {
       _showMonth(picked);
     }
-    _focusNode.requestFocus();
+    returnFocus.requestFocus();
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
@@ -184,6 +189,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final int firstWeekday = _firstWeekday();
     return Focus(
       focusNode: _focusNode,
+      skipTraversal: true,
       onKeyEvent: _handleKey,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
@@ -205,6 +211,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               titleKey: calendarTitleKey,
               thisWeekKey: calendarThisWeekKey,
               pickerLink: _pickerLink,
+              titleFocusNode: _titleFocusNode,
             ),
             const SizedBox(height: 20),
             Expanded(

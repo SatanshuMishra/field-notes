@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 
@@ -19,6 +20,12 @@ const double _actionGap = 10;
 const int _monthColumns = 3;
 const int _monthRows = 12 ~/ _monthColumns;
 const double _monthRadius = 9;
+const BorderRadius _monthBorderRadius = BorderRadius.all(
+  Radius.circular(_monthRadius),
+);
+const BorderRadius _actionRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusXs),
+);
 const Duration _popDuration = Duration(milliseconds: 140);
 
 const TextStyle _yearStyle = TextStyle(
@@ -208,7 +215,7 @@ class _MonthTile extends StatelessWidget {
         decoration: const BoxDecoration(
           color: Palette.coral,
           border: Shapes.outline,
-          borderRadius: BorderRadius.all(Radius.circular(_monthRadius)),
+          borderRadius: _monthBorderRadius,
           boxShadow: Shadows.control,
         ),
         child: text,
@@ -232,7 +239,14 @@ class _MonthTile extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: CalendarTapSlot(margin: margin, child: face),
+          child: CalendarTapSlot(
+            margin: margin,
+            child: FocusRing(
+              onPressed: onPressed,
+              borderRadius: _monthBorderRadius,
+              child: face,
+            ),
+          ),
         ),
       ),
     );
@@ -259,9 +273,13 @@ class _PickerAction extends StatelessWidget {
               top: _actionGap,
               bottom: _pickerPadding,
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Text(label, style: TypographyTokens.caption11Sans),
+            child: FocusRing(
+              onPressed: onPressed,
+              borderRadius: _actionRadius,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(label, style: TypographyTokens.caption11Sans),
+              ),
             ),
           ),
         ),

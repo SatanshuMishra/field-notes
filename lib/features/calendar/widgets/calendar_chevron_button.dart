@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 enum ChevronDirection { previous, next, down }
@@ -10,6 +11,10 @@ enum ChevronDirection { previous, next, down }
 const double calendarChevronButtonSize = 34;
 
 const double calendarMinTapTarget = 48;
+
+const BorderRadius _chevronRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusCell),
+);
 
 class CalendarChevronButton extends StatelessWidget {
   const CalendarChevronButton({
@@ -33,17 +38,21 @@ class CalendarChevronButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget face = DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.cardWarm,
-        border: Shapes.outline,
-        borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusCell)),
-        boxShadow: Shadows.chip,
-      ),
-      child: SizedBox.square(
-        dimension: size,
-        child: Center(
-          child: CalendarChevronGlyph(direction: direction, size: glyphSize),
+    final Widget face = FocusRing(
+      onPressed: onPressed,
+      borderRadius: _chevronRadius,
+      child: DecoratedBox(
+        decoration: const BoxDecoration(
+          color: Palette.cardWarm,
+          border: Shapes.outline,
+          borderRadius: _chevronRadius,
+          boxShadow: Shadows.chip,
+        ),
+        child: SizedBox.square(
+          dimension: size,
+          child: Center(
+            child: CalendarChevronGlyph(direction: direction, size: glyphSize),
+          ),
         ),
       ),
     );
