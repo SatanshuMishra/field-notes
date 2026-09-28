@@ -2,7 +2,16 @@ import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
 
-enum IconStickerGlyph { gear, soundOn, soundOff, edit, trash, close, check, pause }
+enum IconStickerGlyph {
+  gear,
+  soundOn,
+  soundOff,
+  edit,
+  trash,
+  close,
+  check,
+  pause,
+}
 
 const double _pauseBarWidth = 4.5;
 const double _pauseBarHeight = 16;
@@ -67,6 +76,7 @@ class IconStickerButton extends StatelessWidget {
     required this.background,
     required this.semanticLabel,
     required this.onPressed,
+    this.selected,
   });
 
   final IconStickerGlyph glyph;
@@ -74,11 +84,13 @@ class IconStickerButton extends StatelessWidget {
   final Color background;
   final String semanticLabel;
   final VoidCallback onPressed;
+  final bool? selected;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
+      selected: selected,
       label: semanticLabel,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -215,9 +227,7 @@ class IconStickerGlyphPainter extends CustomPainter {
 
   Path _gear() => Path()
     ..addPolygon(_gearOutline, true)
-    ..addOval(
-      Rect.fromCircle(center: _gearHubCentre, radius: _gearHubRadius),
-    );
+    ..addOval(Rect.fromCircle(center: _gearHubCentre, radius: _gearHubRadius));
 
   Path _soundOn() => _speaker()
     ..moveTo(16, 9)
