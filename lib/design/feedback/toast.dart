@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../motion/motion_tokens.dart';
@@ -213,6 +214,85 @@ class _ToastActionButton extends StatelessWidget {
   }
 }
 
+class ToastClearance extends StatefulWidget {
+  const ToastClearance({super.key, required this.anchors, required this.child});
+
+  final List<GlobalKey> anchors;
+  final Widget child;
+
+  static ValueListenable<double>? maybeOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<_ToastClearanceScope>()?.bottom;
+
+  @override
+  State<ToastClearance> createState() => _ToastClearanceState();
+}
+
+class _ToastClearanceState extends State<ToastClearance> {
+  final ValueNotifier<double> _bottom = ValueNotifier<double>(0);
+
+  @override
+  void initState() {
+    super.initState();
+    _measureAfterFrame();
+  }
+
+  @override
+  void dispose() {
+    final ValueNotifier<double> bottom = _bottom;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      bottom.value = 0;
+      bottom.dispose();
+    });
+    super.dispose();
+  }
+
+  void _measureAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (!mounted) {
+        return;
+      }
+      _bottom.value = _measure();
+      _measureAfterFrame();
+    });
+  }
+
+  double _measure() {
+    final RenderObject? overlay = Overlay.maybeOf(
+      context,
+      rootOverlay: true,
+    )?.context.findRenderObject();
+    if (overlay is! RenderBox || !overlay.hasSize) {
+      return 0;
+    }
+    final double height = overlay.size.height;
+    final double top = widget.anchors
+        .map((GlobalKey anchor) => anchor.currentContext?.findRenderObject())
+        .whereType<RenderBox>()
+        .where((RenderBox box) => box.attached && box.hasSize)
+        .map(
+          (RenderBox box) =>
+              box.localToGlobal(Offset.zero, ancestor: overlay).dy,
+        )
+        .fold<double>(height, math.min);
+    return height - top;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ToastClearanceScope(bottom: _bottom, child: widget.child);
+  }
+}
+
+class _ToastClearanceScope extends InheritedWidget {
+  const _ToastClearanceScope({required this.bottom, required super.child});
+
+  final ValueListenable<double> bottom;
+
+  @override
+  bool updateShouldNotify(_ToastClearanceScope oldWidget) =>
+      bottom != oldWidget.bottom;
+}
+
 OverlayEntry? _activeTransientToast;
 
 void dismissTransientToast() {
@@ -232,6 +312,7 @@ void showTransientToast(
 }) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   final ToastScale scale = toastScaleFor(Theme.of(context).platform);
+  final ValueListenable<double>? clearance = ToastClearance.maybeOf(context);
   dismissTransientToast();
   late final OverlayEntry entry;
   void finish() {
@@ -245,6 +326,7 @@ void showTransientToast(
       message: message,
       glyph: glyph,
       scale: scale,
+      clearance: clearance,
       lifetime:
           lifetime ?? (action == null ? kToastLifetime : kToastActionLifetime),
       action: action == null
@@ -269,6 +351,7 @@ class _TransientToastLayer extends StatefulWidget {
     required this.message,
     required this.glyph,
     required this.scale,
+    required this.clearance,
     required this.lifetime,
     required this.action,
     required this.onFinished,
@@ -277,6 +360,7 @@ class _TransientToastLayer extends StatefulWidget {
   final String message;
   final IconStickerGlyph glyph;
   final ToastScale scale;
+  final ValueListenable<double>? clearance;
   final Duration lifetime;
   final ToastAction? action;
   final VoidCallback onFinished;
@@ -313,38 +397,67 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
 
   @override
   Widget build(BuildContext context) {
-    final _DarkMetrics metrics = _metricsFor(widget.scale);
+    final Widget toast = _toast();
+    final ValueListenable<double>? clearance = widget.clearance;
+    if (clearance == null) {
+      return _placed(context, clearance: 0, toast: toast);
+    }
+    return ValueListenableBuilder<double>(
+      valueListenable: clearance,
+      child: toast,
+      builder: (BuildContext context, double bottom, Widget? child) =>
+          _placed(context, clearance: bottom, toast: child!),
+    );
+  }
+
+  Widget _placed(
+    BuildContext context, {
+    required double clearance,
+    required Widget toast,
+  }) {
+    final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
     return Positioned(
       left: 0,
       right: 0,
-      bottom: math.max(
-        metrics.bottomInset,
-        MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
+      top: MediaQuery.paddingOf(context).top,
+      bottom: 0,
+      child: CustomSingleChildLayout(
+        delegate: _ToastPlacement(
+          bottom: math.max(
+            _metricsFor(widget.scale).bottomInset,
+            math.max(keyboard, clearance) + _transientKeyboardGap,
+          ),
+        ),
+        child: toast,
       ),
-      child: IgnorePointer(
-        ignoring: widget.action == null,
-        child: Material(
-          type: MaterialType.transparency,
-          child: Center(
-            child: FadeTransition(
-              opacity: _rise,
-              child: AnimatedBuilder(
-                animation: _rise,
-                builder: (BuildContext context, Widget? child) =>
-                    Transform.translate(
-                  offset: Offset(0, _riseOffset * (1 - _rise.value)),
-                  child: child,
-                ),
-                child: Toast(
-                  message: widget.message,
-                  variant: ToastVariant.dark,
-                  scale: widget.scale,
-                  action: widget.action,
-                  icon: IconStickerGlyphIcon(
-                    glyph: widget.glyph,
-                    color: Palette.toastInk,
-                    size: metrics.iconSize,
+    );
+  }
+
+  Widget _toast() {
+    final _DarkMetrics metrics = _metricsFor(widget.scale);
+    return IgnorePointer(
+      ignoring: widget.action == null,
+      child: Material(
+        type: MaterialType.transparency,
+        child: Center(
+          child: FadeTransition(
+            opacity: _rise,
+            child: AnimatedBuilder(
+              animation: _rise,
+              builder: (BuildContext context, Widget? child) =>
+                  Transform.translate(
+                    offset: Offset(0, _riseOffset * (1 - _rise.value)),
+                    child: child,
                   ),
+              child: Toast(
+                message: widget.message,
+                variant: ToastVariant.dark,
+                scale: widget.scale,
+                action: widget.action,
+                icon: IconStickerGlyphIcon(
+                  glyph: widget.glyph,
+                  color: Palette.toastInk,
+                  size: metrics.iconSize,
                 ),
               ),
             ),
@@ -353,4 +466,22 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
       ),
     );
   }
+}
+
+class _ToastPlacement extends SingleChildLayoutDelegate {
+  const _ToastPlacement({required this.bottom});
+
+  final double bottom;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints.tightFor(width: constraints.maxWidth);
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      Offset(0, math.max(0, size.height - bottom - childSize.height));
+
+  @override
+  bool shouldRelayout(_ToastPlacement oldDelegate) =>
+      bottom != oldDelegate.bottom;
 }
