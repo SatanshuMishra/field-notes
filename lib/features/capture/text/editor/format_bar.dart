@@ -2,14 +2,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart' show DragStartBehavior;
 import 'package:flutter/services.dart'
-    show
-        KeyDownEvent,
-        KeyEvent,
-        KeyRepeatEvent,
-        KeyUpEvent,
-        LogicalKeyboardKey;
+    show KeyDownEvent, KeyEvent, KeyRepeatEvent, KeyUpEvent, LogicalKeyboardKey;
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/format_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart'
@@ -58,6 +54,9 @@ const double _menuPadding = 5;
 const double _menuItemHeight = 48;
 const double _menuItemPadding = 14;
 const double _menuMinWidth = 160;
+const BorderRadius _focusRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusXs),
+);
 
 typedef _Command = Transaction? Function(EditorState state);
 
@@ -83,9 +82,7 @@ class FormatBar extends StatelessWidget {
       child: SizedBox(
         height: formatBarHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: _horizontalPadding,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: _horizontalPadding),
           child: Row(
             children: <Widget>[
               Expanded(
@@ -245,11 +242,7 @@ class FormatBar extends StatelessWidget {
   ) {
     return ValueListenableBuilder<UndoHistoryValue>(
       valueListenable: undoController,
-      builder: (
-        BuildContext context,
-        UndoHistoryValue history,
-        Widget? child,
-      ) {
+      builder: (BuildContext context, UndoHistoryValue history, Widget? child) {
         return _FormatButton(
           key: key,
           icon: icon,
@@ -283,12 +276,17 @@ class _FormatButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: SizedBox.square(
-          dimension: _buttonExtent,
-          child: Center(
-            child: Opacity(
-              opacity: enabled ? 1 : _disabledOpacity,
-              child: icon,
+        child: FocusRing(
+          enabled: enabled,
+          onPressed: onTap,
+          borderRadius: _focusRadius,
+          child: SizedBox.square(
+            dimension: _buttonExtent,
+            child: Center(
+              child: Opacity(
+                opacity: enabled ? 1 : _disabledOpacity,
+                child: icon,
+              ),
             ),
           ),
         ),
@@ -306,7 +304,11 @@ class _MoreItem {
 }
 
 const List<_MoreItem> _moreItems = <_MoreItem>[
-  _MoreItem(formatStrikethroughKey, 'Strikethrough', InlineFormat.strikethrough),
+  _MoreItem(
+    formatStrikethroughKey,
+    'Strikethrough',
+    InlineFormat.strikethrough,
+  ),
   _MoreItem(formatHighlightKey, 'Highlight', InlineFormat.highlight),
   _MoreItem(formatCodeKey, 'Inline code', InlineFormat.code),
 ];
@@ -420,18 +422,23 @@ class _MoreFormatsState extends State<_MoreFormats> {
                             key: item.key,
                             behavior: HitTestBehavior.opaque,
                             onTap: () => _choose(item.format),
-                            child: SizedBox(
-                              height: _menuItemHeight,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: _menuItemPadding,
-                                ),
-                                child: Align(
-                                  alignment: AlignmentDirectional.centerStart,
-                                  child: ExcludeSemantics(
-                                    child: Text(
-                                      item.label,
-                                      style: TypographyTokens.toolbarSans,
+                            child: FocusRing(
+                              onPressed: () => _choose(item.format),
+                              surface: FocusRingSurface.dark,
+                              borderRadius: _focusRadius,
+                              child: SizedBox(
+                                height: _menuItemHeight,
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: _menuItemPadding,
+                                  ),
+                                  child: Align(
+                                    alignment: AlignmentDirectional.centerStart,
+                                    child: ExcludeSemantics(
+                                      child: Text(
+                                        item.label,
+                                        style: TypographyTokens.toolbarSans,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -695,67 +702,71 @@ class _BarGlyphPainter extends CustomPainter {
   }
 
   Path _path() => switch (glyph) {
-    _BarGlyph.numbered => Path()
-      ..moveTo(4, 5)
-      ..lineTo(5, 4.5)
-      ..lineTo(5, 9)
-      ..moveTo(3.5, 14)
-      ..quadraticBezierTo(5, 12.5, 6.2, 14)
-      ..lineTo(3.5, 18)
-      ..lineTo(6.5, 18)
-      ..moveTo(10, 7)
-      ..lineTo(20, 7)
-      ..moveTo(10, 12)
-      ..lineTo(20, 12)
-      ..moveTo(10, 17)
-      ..lineTo(20, 17),
-    _BarGlyph.task => Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          const Rect.fromLTWH(3, 4, 6, 6),
-          const Radius.circular(1.5),
-        ),
-      )
-      ..moveTo(4.5, 7)
-      ..lineTo(5.8, 8.3)
-      ..lineTo(7.8, 5.6)
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          const Rect.fromLTWH(3, 14, 6, 6),
-          const Radius.circular(1.5),
-        ),
-      )
-      ..moveTo(12, 7)
-      ..lineTo(21, 7)
-      ..moveTo(12, 17)
-      ..lineTo(21, 17),
-    _BarGlyph.table => Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          const Rect.fromLTRB(3, 5, 21, 19),
-          const Radius.circular(2),
-        ),
-      )
-      ..moveTo(3, 10)
-      ..lineTo(21, 10)
-      ..moveTo(3, 14.5)
-      ..lineTo(21, 14.5)
-      ..moveTo(9, 5)
-      ..lineTo(9, 19)
-      ..moveTo(15, 5)
-      ..lineTo(15, 19),
-    _BarGlyph.redo => Path()
-      ..moveTo(16, 6.5)
-      ..lineTo(20.2, 10.8)
-      ..lineTo(16, 15)
-      ..moveTo(20.2, 10.8)
-      ..lineTo(9.5, 10.8)
-      ..arcToPoint(
-        const Offset(9.5, 19),
-        radius: const Radius.circular(4.1),
-        clockwise: false,
-      )
-      ..lineTo(14.5, 19),
+    _BarGlyph.numbered =>
+      Path()
+        ..moveTo(4, 5)
+        ..lineTo(5, 4.5)
+        ..lineTo(5, 9)
+        ..moveTo(3.5, 14)
+        ..quadraticBezierTo(5, 12.5, 6.2, 14)
+        ..lineTo(3.5, 18)
+        ..lineTo(6.5, 18)
+        ..moveTo(10, 7)
+        ..lineTo(20, 7)
+        ..moveTo(10, 12)
+        ..lineTo(20, 12)
+        ..moveTo(10, 17)
+        ..lineTo(20, 17),
+    _BarGlyph.task =>
+      Path()
+        ..addRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(3, 4, 6, 6),
+            const Radius.circular(1.5),
+          ),
+        )
+        ..moveTo(4.5, 7)
+        ..lineTo(5.8, 8.3)
+        ..lineTo(7.8, 5.6)
+        ..addRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTWH(3, 14, 6, 6),
+            const Radius.circular(1.5),
+          ),
+        )
+        ..moveTo(12, 7)
+        ..lineTo(21, 7)
+        ..moveTo(12, 17)
+        ..lineTo(21, 17),
+    _BarGlyph.table =>
+      Path()
+        ..addRRect(
+          RRect.fromRectAndRadius(
+            const Rect.fromLTRB(3, 5, 21, 19),
+            const Radius.circular(2),
+          ),
+        )
+        ..moveTo(3, 10)
+        ..lineTo(21, 10)
+        ..moveTo(3, 14.5)
+        ..lineTo(21, 14.5)
+        ..moveTo(9, 5)
+        ..lineTo(9, 19)
+        ..moveTo(15, 5)
+        ..lineTo(15, 19),
+    _BarGlyph.redo =>
+      Path()
+        ..moveTo(16, 6.5)
+        ..lineTo(20.2, 10.8)
+        ..lineTo(16, 15)
+        ..moveTo(20.2, 10.8)
+        ..lineTo(9.5, 10.8)
+        ..arcToPoint(
+          const Offset(9.5, 19),
+          radius: const Radius.circular(4.1),
+          clockwise: false,
+        )
+        ..lineTo(14.5, 19),
     _BarGlyph.more => Path(),
   };
 

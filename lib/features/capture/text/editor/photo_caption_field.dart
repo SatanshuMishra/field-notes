@@ -7,8 +7,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart'
     show NoteTypography;
 
-const Key photoCaptionFieldEditorKey =
-    ValueKey<String>('photo-caption-editor');
+const Key photoCaptionFieldEditorKey = ValueKey<String>('photo-caption-editor');
 
 const String photoCaptionFieldHint = 'Caption';
 
@@ -60,14 +59,20 @@ class PhotoCaptionField extends StatefulWidget {
 }
 
 class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.caption,
-  )..selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: widget.caption.length,
-    );
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.caption)
+        ..selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.caption.length,
+        );
   final FocusNode _focus = FocusNode(debugLabel: photoCaptionFieldHint);
   bool _settled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.requestFocus();
+  }
 
   @override
   void dispose() {
@@ -110,37 +115,35 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
 
   @override
   Widget build(BuildContext context) {
-    return FocusScope(
-      child: TapRegion(
-        onTapOutside: (PointerDownEvent event) => _commit(),
-        child: Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          onKeyEvent: _onKey,
-          child: Semantics(
-            container: true,
-            child: SizedBox(
-              width: widget.width,
-              height: widget.height + widget.reach.vertical,
-              child: Stack(
-                children: <Widget>[
-                  Positioned.fill(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      excludeFromSemantics: true,
-                      onTap: _focus.requestFocus,
-                    ),
+    return TapRegion(
+      onTapOutside: (PointerDownEvent event) => _commit(),
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _onKey,
+        child: Semantics(
+          container: true,
+          child: SizedBox(
+            width: widget.width,
+            height: widget.height + widget.reach.vertical,
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    excludeFromSemantics: true,
+                    onTap: _focus.requestFocus,
                   ),
-                  Padding(
-                    padding: widget.reach,
-                    child: SizedBox(
-                      width: widget.width,
-                      height: widget.height,
-                      child: _field(),
-                    ),
+                ),
+                Padding(
+                  padding: widget.reach,
+                  child: SizedBox(
+                    width: widget.width,
+                    height: widget.height,
+                    child: _field(),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -157,7 +160,6 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
           key: photoCaptionFieldEditorKey,
           controller: _controller,
           focusNode: _focus,
-          autofocus: true,
           maxLines: 1,
           style: NoteTypography.caption,
           textAlign: TextAlign.center,

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import '../../../design/tokens/tokens.dart';
 
 const double _transportSize = 56;
@@ -63,6 +64,7 @@ class _VideoTransportState extends State<VideoTransport> {
           child: Opacity(
             opacity: enabled ? 1.0 : 0.5,
             child: Container(
+              key: _focused ? focusRingKey : null,
               width: _transportSize,
               height: _transportSize,
               decoration: BoxDecoration(

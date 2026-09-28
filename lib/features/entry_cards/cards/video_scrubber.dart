@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import '../../../design/tokens/tokens.dart';
 import '../util/duration_format.dart';
 
@@ -236,6 +237,7 @@ class _VideoScrubberState extends State<VideoScrubber> {
                 child: SizedBox(
                   height: scrubberHeight,
                   child: CustomPaint(
+                    key: _focused ? focusRingKey : null,
                     painter: _ScrubberPainter(
                       fraction: _fraction,
                       focused: _focused,

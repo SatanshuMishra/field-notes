@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import '../../../design/tokens/tokens.dart';
 import '../util/duration_format.dart';
 import 'video_scrubber.dart';
@@ -117,6 +118,7 @@ class _VideoMuteToggleState extends State<VideoMuteToggle> {
               height: _muteTarget,
               child: Center(
                 child: Container(
+                  key: _focused ? focusRingKey : null,
                   width: _muteChip,
                   height: _muteChip,
                   decoration: BoxDecoration(

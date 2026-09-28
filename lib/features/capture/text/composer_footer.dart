@@ -4,6 +4,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -59,8 +60,9 @@ class ComposerFooterVeil extends StatelessWidget {
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Palette.composerPaper
-                .withValues(alpha: composerFooterVeilOpacity),
+            color: Palette.composerPaper.withValues(
+              alpha: composerFooterVeilOpacity,
+            ),
           ),
           child: child,
         ),
@@ -183,7 +185,8 @@ class _ComposerFooterState extends State<ComposerFooter> {
         height: composerFooterHeight,
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            final bool hints = widget.showHints &&
+            final bool hints =
+                widget.showHints &&
                 constraints.maxWidth >= composerFooterHintsMinWidth;
             return Row(
               children: <Widget>[
@@ -225,10 +228,10 @@ class _ComposerFooterState extends State<ComposerFooter> {
           onTap: enabled ? () => unawaited(_add()) : null,
           child: ExcludeSemantics(
             child: SizedBox(
-              height:
-                  widget.compact ? formatBarHeight : composerFooterHeight,
+              height: widget.compact ? formatBarHeight : composerFooterHeight,
               child: Center(
                 child: DecoratedBox(
+                  key: _addFocused ? focusRingKey : null,
                   decoration: BoxDecoration(
                     color: Palette.coral,
                     border: _addFocused ? _focusBorder : Shapes.outline,
@@ -254,8 +257,9 @@ class _ComposerFooterState extends State<ComposerFooter> {
                             enabled
                                 ? composerAddPhotoLabel
                                 : composerAddingLabel,
-                            style: TypographyTokens.captureLabelSans
-                                .copyWith(color: Palette.onAccent),
+                            style: TypographyTokens.captureLabelSans.copyWith(
+                              color: Palette.onAccent,
+                            ),
                           ),
                         ],
                       ),
@@ -276,17 +280,17 @@ class _ComposerFooterState extends State<ComposerFooter> {
       child: Text.rich(
         TextSpan(
           children: <InlineSpan>[
-            for (final (String marker, String word) in composerMarkdownHints)
-              ...<InlineSpan>[
-                TextSpan(
-                  text: marker,
-                  style: TypographyTokens.caption10Sans.copyWith(
-                    color: Palette.ink40,
-                    fontWeight: FontWeight.w700,
-                  ),
+            for (final (String marker, String word)
+                in composerMarkdownHints) ...<InlineSpan>[
+              TextSpan(
+                text: marker,
+                style: TypographyTokens.caption10Sans.copyWith(
+                  color: Palette.ink40,
+                  fontWeight: FontWeight.w700,
                 ),
-                TextSpan(text: '$word   '),
-              ],
+              ),
+              TextSpan(text: '$word   '),
+            ],
           ],
         ),
         key: composerHintsKey,
@@ -329,4 +333,3 @@ class _CameraPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CameraPainter oldDelegate) => false;
 }
-

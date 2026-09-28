@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -22,7 +23,7 @@ enum VideoRecorderPhase {
   recording,
   paused,
   saving,
-  denied
+  denied,
 }
 
 const Key videoCloseKey = ValueKey<String>('video-close');
@@ -51,8 +52,10 @@ const double _closeTargetInset = (_minTapTarget - _closeGlyphSize) / 2;
 const double _pillRadius = Shapes.radiusMd;
 const double _pillGap = 7;
 const double _pillDotSize = 8;
-const EdgeInsets _pillPadding =
-    EdgeInsets.symmetric(horizontal: 12, vertical: 5);
+const EdgeInsets _pillPadding = EdgeInsets.symmetric(
+  horizontal: 12,
+  vertical: 5,
+);
 const double _pillTimeSize = 13;
 const Duration _pillBlinkDuration = Duration(milliseconds: 1200);
 
@@ -68,12 +71,16 @@ const double _underPillGap = 8;
 const double _hintBottom = 100;
 const double _hintSize = 13;
 const double _errorGap = 10;
-const EdgeInsets _errorPadding =
-    EdgeInsets.symmetric(horizontal: 14, vertical: 8);
+const EdgeInsets _errorPadding = EdgeInsets.symmetric(
+  horizontal: 14,
+  vertical: 8,
+);
 
 const double _deniedMaxWidth = 420;
-const EdgeInsets _deniedPadding =
-    EdgeInsets.symmetric(horizontal: 22, vertical: 20);
+const EdgeInsets _deniedPadding = EdgeInsets.symmetric(
+  horizontal: 22,
+  vertical: 20,
+);
 
 const double _controlRowBottom = 22;
 const double _controlRowGap = 30;
@@ -81,8 +88,14 @@ const double _shutterSize = 70;
 const double _shutterBorderWidth = 4;
 const double _shutterCoreSize = 24;
 const double _shutterPauseGlyphSize = 26;
+const BorderRadius _shutterFocusRadius = BorderRadius.all(
+  Radius.circular(_shutterSize / 2),
+);
 
 const double _sideCircleSize = 44;
+const BorderRadius _sideFocusRadius = BorderRadius.all(
+  Radius.circular(_sideCircleSize / 2),
+);
 const double _sideCircleBorderWidth = 1.5;
 const double _sideGlyphSize = 18;
 const double _sideCaptionGap = 3;
@@ -237,16 +250,22 @@ class VideoRecorderSheet extends StatelessWidget {
           key: videoCloseKey,
           behavior: HitTestBehavior.opaque,
           onTap: _isSaving ? null : onCancel,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _minTapTarget,
-              minHeight: _minTapTarget,
-            ),
-            child: const Center(
-              child: IconStickerGlyphIcon(
-                glyph: IconStickerGlyph.close,
-                color: Palette.onAccent,
-                size: _closeGlyphSize,
+          child: FocusRing(
+            enabled: !_isSaving,
+            onPressed: onCancel,
+            surface: FocusRingSurface.dark,
+            borderRadius: Shapes.buttonBorderRadius,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: _minTapTarget,
+                minHeight: _minTapTarget,
+              ),
+              child: const Center(
+                child: IconStickerGlyphIcon(
+                  glyph: IconStickerGlyph.close,
+                  color: Palette.onAccent,
+                  size: _closeGlyphSize,
+                ),
               ),
             ),
           ),
@@ -369,8 +388,9 @@ class VideoRecorderSheet extends StatelessWidget {
                 child: Text(
                   errorMessage,
                   textAlign: TextAlign.center,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.onDark85),
+                  style: TypographyTokens.captionSans.copyWith(
+                    color: Palette.onDark85,
+                  ),
                 ),
               ),
             ),
@@ -454,39 +474,46 @@ class VideoRecorderSheet extends StatelessWidget {
   }
 
   Widget _shutter() {
+    final VoidCallback? tap = _shutterTap;
     return Semantics(
       button: true,
       label: _shutterLabel,
       child: GestureDetector(
         key: videoShutterKey,
         behavior: HitTestBehavior.opaque,
-        onTap: _shutterTap,
-        child: Container(
-          width: _shutterSize,
-          height: _shutterSize,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Palette.onAccent,
-              width: _shutterBorderWidth,
+        onTap: tap,
+        child: FocusRing(
+          enabled: tap != null,
+          onPressed: tap,
+          surface: FocusRingSurface.dark,
+          borderRadius: _shutterFocusRadius,
+          child: Container(
+            width: _shutterSize,
+            height: _shutterSize,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Palette.onAccent,
+                width: _shutterBorderWidth,
+              ),
             ),
-          ),
-          child: _showsPauseGlyph
-              ? const IconStickerGlyphIcon(
-                  glyph: IconStickerGlyph.pause,
-                  color: Palette.onAccent,
-                  size: _shutterPauseGlyphSize,
-                )
-              : const SizedBox.square(
-                  dimension: _shutterCoreSize,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Palette.recordFill,
-                      shape: BoxShape.circle,
+            child: _showsPauseGlyph
+                ? const IconStickerGlyphIcon(
+                    glyph: IconStickerGlyph.pause,
+                    color: Palette.onAccent,
+                    size: _shutterPauseGlyphSize,
+                  )
+                : const SizedBox.square(
+                    dimension: _shutterCoreSize,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Palette.recordFill,
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
-                ),
+          ),
         ),
       ),
     );
@@ -515,9 +542,9 @@ class VideoRecorderSheet extends StatelessWidget {
   }
 
   TextStyle get _hintStyle => TypographyTokens.hintAccent.copyWith(
-        fontSize: _hintSize,
-        color: Palette.onDark72,
-      );
+    fontSize: _hintSize,
+    color: Palette.onDark72,
+  );
 }
 
 enum _TopBandSlot { reserve, pill, picker }
@@ -552,11 +579,8 @@ class _RenderTopBand extends RenderBox
   RenderBox get _pill => childForSlot(_TopBandSlot.pill)!;
   RenderBox? get _picker => childForSlot(_TopBandSlot.picker);
 
-  Iterable<RenderBox> get _paintOrder => <RenderBox?>[
-        _reserve,
-        _pill,
-        _picker,
-      ].nonNulls;
+  Iterable<RenderBox> get _paintOrder =>
+      <RenderBox?>[_reserve, _pill, _picker].nonNulls;
 
   ({double slotLeft, double pickerWidth}) _geometry(
     double width,
@@ -592,9 +616,12 @@ class _RenderTopBand extends RenderBox
     final Size reserve = _reserve.getDryLayout(loose);
     final Size pill = _pill.getDryLayout(loose);
     final double slotWidth = math.max(reserve.width, pill.width);
-    final double pickerWidth =
-        _geometry(constraints.maxWidth, slotWidth).pickerWidth;
-    final double pickerHeight = _picker
+    final double pickerWidth = _geometry(
+      constraints.maxWidth,
+      slotWidth,
+    ).pickerWidth;
+    final double pickerHeight =
+        _picker
             ?.getDryLayout(BoxConstraints.tightFor(width: pickerWidth))
             .height ??
         0;
@@ -612,8 +639,10 @@ class _RenderTopBand extends RenderBox
     final RenderBox reserve = _reserve..layout(loose, parentUsesSize: true);
     final RenderBox pill = _pill..layout(loose, parentUsesSize: true);
     final double slotWidth = math.max(reserve.size.width, pill.size.width);
-    final (:double slotLeft, :double pickerWidth) =
-        _geometry(constraints.maxWidth, slotWidth);
+    final (:double slotLeft, :double pickerWidth) = _geometry(
+      constraints.maxWidth,
+      slotWidth,
+    );
     _place(reserve, slotLeft + (slotWidth - reserve.size.width) / 2);
     _place(pill, slotLeft + (slotWidth - pill.size.width) / 2);
     final RenderBox? picker = _picker;
@@ -627,7 +656,9 @@ class _RenderTopBand extends RenderBox
     size = constraints.constrain(
       Size(
         constraints.maxWidth,
-        _paintOrder.map((RenderBox child) => child.size.height).reduce(math.max),
+        _paintOrder
+            .map((RenderBox child) => child.size.height)
+            .reduce(math.max),
       ),
     );
   }
@@ -719,22 +750,27 @@ class _SideControl extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Container(
-                  width: _sideCircleSize,
-                  height: _sideCircleSize,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: background,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: borderColor,
-                      width: _sideCircleBorderWidth,
+                FocusRing(
+                  onPressed: onTap,
+                  surface: FocusRingSurface.dark,
+                  borderRadius: _sideFocusRadius,
+                  child: Container(
+                    width: _sideCircleSize,
+                    height: _sideCircleSize,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: background,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: borderColor,
+                        width: _sideCircleBorderWidth,
+                      ),
                     ),
-                  ),
-                  child: IconStickerGlyphIcon(
-                    glyph: glyph,
-                    color: Palette.onAccent,
-                    size: _sideGlyphSize,
+                    child: IconStickerGlyphIcon(
+                      glyph: glyph,
+                      color: Palette.onAccent,
+                      size: _sideGlyphSize,
+                    ),
                   ),
                 ),
                 const SizedBox(height: _sideCaptionGap),
