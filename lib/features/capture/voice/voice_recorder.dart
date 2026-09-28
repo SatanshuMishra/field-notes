@@ -42,6 +42,8 @@ abstract interface class VoiceRecorder {
 
   Future<VoiceRecording> stop();
 
+  Future<void> releaseSaved(VoiceRecording recording);
+
   Future<void> cancel();
 
   Future<void> dispose();

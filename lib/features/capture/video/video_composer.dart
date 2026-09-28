@@ -74,6 +74,7 @@ class _VideoComposerConnectorState
   String? _deviceId;
   bool _released = false;
   bool _switching = false;
+  bool _closing = false;
   Duration _elapsed = Duration.zero;
   Timer? _elapsedTicker;
   final List<Timer> _timers = <Timer>[];
@@ -335,6 +336,7 @@ class _VideoComposerConnectorState
     _stopTicker();
     setState(() {
       _phase = VideoRecorderPhase.saving;
+      _preview = null;
       _elapsed = _recorder.elapsed;
       _errorMessage = null;
       _nudgeMessage = null;
@@ -377,6 +379,11 @@ class _VideoComposerConnectorState
         thumbnail: recording.thumbnail,
       ),
     );
+    try {
+      await _recorder.releaseSaved(recording);
+    } catch (error, stackTrace) {
+      debugPrint('Video capture release failed: $error\n$stackTrace');
+    }
     return result.entry.id;
   }
 
@@ -384,13 +391,16 @@ class _VideoComposerConnectorState
     if (!mounted) {
       return;
     }
+    final String? deviceId = _deviceId;
     setState(() {
       _phase = phase;
       _errorMessage = message;
+      _preview = deviceId == null ? null : _recorder.openSession(deviceId);
     });
   }
 
   Future<void> _cancel() async {
+    _closing = true;
     _cancelTimers();
     _stopTicker();
     if (_phase == VideoRecorderPhase.recording ||
@@ -423,6 +433,7 @@ class _VideoComposerConnectorState
     if (confirmed != true || !mounted) {
       return;
     }
+    _closing = true;
     _cancelTimers();
     _stopTicker();
     try {
@@ -436,6 +447,20 @@ class _VideoComposerConnectorState
     }
     showTransientToast(context, videoDiscardedToastMessage);
     Navigator.of(context).pop();
+  }
+
+  void _dismiss() {
+    if (_closing || _phase == VideoRecorderPhase.saving) {
+      return;
+    }
+    unawaited(_discard());
+  }
+
+  void _onPopInvoked(bool didPop, Object? result) {
+    if (didPop) {
+      return;
+    }
+    _dismiss();
   }
 
   Future<void> _release() async {
@@ -462,23 +487,28 @@ class _VideoComposerConnectorState
 
   @override
   Widget build(BuildContext context) {
-    return VideoRecorderSheet(
-      phase: _phase,
-      preview: _preview,
-      devices: _devices,
-      selectedDeviceId: _deviceId,
-      onDeviceChanged: _selectDevice,
-      elapsed: _elapsed,
-      nudgeMessage: _nudgeMessage,
-      errorMessage: _errorMessage,
-      deniedMessage: _deniedMessage ?? cameraPermissionMessage,
-      onStart: _start,
-      onStop: _stop,
-      onCancel: _cancel,
-      onPause: _pause,
-      onResume: _resume,
-      onDiscard: _discard,
-      supportsPause: _recorder.supportsPause,
+    return PopScope<Object?>(
+      canPop: false,
+      onPopInvokedWithResult: _onPopInvoked,
+      child: VideoRecorderSheet(
+        phase: _phase,
+        preview: _preview,
+        devices: _devices,
+        selectedDeviceId: _deviceId,
+        onDeviceChanged: _selectDevice,
+        elapsed: _elapsed,
+        nudgeMessage: _nudgeMessage,
+        errorMessage: _errorMessage,
+        deniedMessage: _deniedMessage ?? cameraPermissionMessage,
+        onStart: _start,
+        onStop: _stop,
+        onCancel: _cancel,
+        onPause: _pause,
+        onResume: _resume,
+        onDiscard: _discard,
+        onDismiss: _dismiss,
+        supportsPause: _recorder.supportsPause,
+      ),
     );
   }
 }
@@ -517,6 +547,8 @@ class _DiscardConfirmDialog extends StatelessWidget {
                     StickerButton(
                       label: videoDiscardConfirmCancelLabel,
                       variant: StickerButtonVariant.secondary,
+                      padTapTarget: true,
+                      autofocus: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
@@ -524,6 +556,7 @@ class _DiscardConfirmDialog extends StatelessWidget {
                       label: videoDiscardConfirmLabel,
                       variant: StickerButtonVariant.danger,
                       labelStyle: TypographyTokens.captureLabelSans,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ],

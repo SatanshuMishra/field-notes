@@ -5,24 +5,40 @@ import 'package:field_notes/design/settings_fields/settings_fields.dart';
 
 import 'settings_harness.dart';
 
+void _useClockFormat(WidgetTester tester, {required bool twentyFourHour}) {
+  tester.platformDispatcher.alwaysUse24HourFormatTestValue = twentyFourHour;
+  tester.binding.handleMetricsChanged();
+  addTearDown(() {
+    tester.platformDispatcher.clearAlwaysUse24HourTestValue();
+    tester.binding.handleMetricsChanged();
+  });
+}
+
 void main() {
   group('SettingsTimeField', () {
-    testWidgets('renders the time as zero-padded 24h HH:mm',
+    testWidgets('the time follows the system 12 or 24 hour setting',
         (WidgetTester tester) async {
-      await tester.pumpWidget(
-        settingsHarness(
-          SettingsTimeField(
-            value: const TimeOfDay(hour: 20, minute: 30),
-            onTap: () {},
-          ),
+      final Widget field = settingsHarness(
+        SettingsTimeField(
+          value: const TimeOfDay(hour: 20, minute: 30),
+          onTap: () {},
         ),
       );
+
+      _useClockFormat(tester, twentyFourHour: false);
+      await tester.pumpWidget(field);
+
+      expect(find.text('8:30 PM'), findsOneWidget);
+
+      _useClockFormat(tester, twentyFourHour: true);
+      await tester.pumpWidget(field);
 
       expect(find.text('20:30'), findsOneWidget);
     });
 
     testWidgets('pads single-digit hours and minutes',
         (WidgetTester tester) async {
+      _useClockFormat(tester, twentyFourHour: true);
       await tester.pumpWidget(
         settingsHarness(
           SettingsTimeField(

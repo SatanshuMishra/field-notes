@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 
@@ -10,9 +11,21 @@ import 'calendar_chevron_button.dart';
 const double calendarMonthPickerWidth = 264;
 const double calendarMonthPickerCompactWidth = 236;
 
+const double _pickerPadding = 12;
+const double _yearArrowSize = 28;
+const double _yearOverhang = (calendarMinTapTarget - _yearArrowSize) / 2;
 const double _monthGap = 6;
+const double _dividerGap = 12;
+const double _actionGap = 10;
 const int _monthColumns = 3;
+const int _monthRows = 12 ~/ _monthColumns;
 const double _monthRadius = 9;
+const BorderRadius _monthBorderRadius = BorderRadius.all(
+  Radius.circular(_monthRadius),
+);
+const BorderRadius _actionRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusXs),
+);
 const Duration _popDuration = Duration(milliseconds: 140);
 
 const TextStyle _yearStyle = TextStyle(
@@ -82,7 +95,12 @@ class CalendarMonthPicker extends StatelessWidget {
               boxShadow: Shadows.softLift,
             ),
             child: Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(
+                _pickerPadding,
+                _pickerPadding - _yearOverhang,
+                _pickerPadding,
+                0,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -93,8 +111,9 @@ class CalendarMonthPicker extends StatelessWidget {
                         direction: ChevronDirection.previous,
                         semanticLabel: 'Previous year',
                         onPressed: onPreviousYear,
-                        size: 28,
+                        size: _yearArrowSize,
                         glyphSize: 13,
+                        alignment: Alignment.centerLeft,
                       ),
                       Expanded(
                         child: Text(
@@ -107,16 +126,13 @@ class CalendarMonthPicker extends StatelessWidget {
                         direction: ChevronDirection.next,
                         semanticLabel: 'Next year',
                         onPressed: onNextYear,
-                        size: 28,
+                        size: _yearArrowSize,
                         glyphSize: 13,
+                        alignment: Alignment.centerRight,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
-                  for (int row = 0;
-                      row < 12 ~/ _monthColumns;
-                      row++) ...<Widget>[
-                    if (row > 0) const SizedBox(height: _monthGap),
+                  for (int row = 0; row < _monthRows; row++)
                     Row(
                       children: <Widget>[
                         for (int column = 0;
@@ -126,15 +142,18 @@ class CalendarMonthPicker extends StatelessWidget {
                           Expanded(
                             child: _monthTile(
                               MonthRef(year, row * _monthColumns + column + 1),
+                              margin: EdgeInsets.only(
+                                top: row == 0 ? 0 : _monthGap / 2,
+                                bottom: row == _monthRows - 1
+                                    ? _dividerGap
+                                    : _monthGap / 2,
+                              ),
                             ),
                           ),
                         ],
                       ],
                     ),
-                  ],
-                  const SizedBox(height: 12),
                   const DashedDivider(color: Palette.dashMuted),
-                  const SizedBox(height: 10),
                   Center(
                     child: _PickerAction(
                       label: 'Back to this week',
@@ -150,11 +169,12 @@ class CalendarMonthPicker extends StatelessWidget {
     );
   }
 
-  Widget _monthTile(MonthRef month) {
+  Widget _monthTile(MonthRef month, {required EdgeInsets margin}) {
     return _MonthTile(
       label: monthAbbreviation(month.month),
       isDisplayed: month == displayedMonth,
       isCurrent: month == currentMonth,
+      margin: margin,
       onPressed: () => onPickMonth(month),
     );
   }
@@ -165,12 +185,14 @@ class _MonthTile extends StatelessWidget {
     required this.label,
     required this.isDisplayed,
     required this.isCurrent,
+    required this.margin,
     required this.onPressed,
   });
 
   final String label;
   final bool isDisplayed;
   final bool isCurrent;
+  final EdgeInsets margin;
   final VoidCallback onPressed;
 
   @override
@@ -193,7 +215,7 @@ class _MonthTile extends StatelessWidget {
         decoration: const BoxDecoration(
           color: Palette.coral,
           border: Shapes.outline,
-          borderRadius: BorderRadius.all(Radius.circular(_monthRadius)),
+          borderRadius: _monthBorderRadius,
           boxShadow: Shadows.control,
         ),
         child: text,
@@ -217,7 +239,14 @@ class _MonthTile extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: face,
+          child: CalendarTapSlot(
+            margin: margin,
+            child: FocusRing(
+              onPressed: onPressed,
+              borderRadius: _monthBorderRadius,
+              child: face,
+            ),
+          ),
         ),
       ),
     );
@@ -239,9 +268,19 @@ class _PickerAction extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Text(label, style: TypographyTokens.caption11Sans),
+          child: CalendarTapSlot(
+            margin: const EdgeInsets.only(
+              top: _actionGap,
+              bottom: _pickerPadding,
+            ),
+            child: FocusRing(
+              onPressed: onPressed,
+              borderRadius: _actionRadius,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(label, style: TypographyTokens.caption11Sans),
+              ),
+            ),
           ),
         ),
       ),

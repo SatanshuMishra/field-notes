@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
 
@@ -44,8 +45,9 @@ class CorruptMediaPlaceholder extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style:
-                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
+              style: TypographyTokens.captionSans.copyWith(
+                color: Palette.danger,
+              ),
             ),
             if (retry != null) _MediaRetryButton(onTap: retry),
           ],
@@ -99,6 +101,7 @@ class _MediaRetryButtonState extends State<_MediaRetryButton> {
             height: _retryTarget,
             child: Center(
               child: Container(
+                key: _focused ? focusRingKey : null,
                 height: _retryChipHeight,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(

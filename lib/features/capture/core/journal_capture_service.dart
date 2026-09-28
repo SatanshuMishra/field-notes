@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:field_notes/data/media/media_duration.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
@@ -9,6 +10,7 @@ import 'capture_date.dart';
 
 const Duration _mediaReadyPollInterval = Duration(milliseconds: 50);
 const int _mediaReadyPollAttempts = 20;
+const Duration _durationProbeTimeout = Duration(seconds: 5);
 
 const String blankTextMessage = 'Add a few words before saving your note.';
 const String invalidDateMessage =
@@ -32,10 +34,15 @@ typedef _Resolved = ({
 });
 
 class JournalCaptureService implements CaptureService {
-  const JournalCaptureService({required this.journal, required this.media});
+  const JournalCaptureService({
+    required this.journal,
+    required this.media,
+    this.durationProbe,
+  });
 
   final JournalRepository journal;
   final MediaStore media;
+  final MediaDurationProbe? durationProbe;
 
   @override
   Future<CaptureResult> capture(CaptureRequest request) async {
@@ -108,7 +115,7 @@ class JournalCaptureService implements CaptureService {
       text: null,
       media: audio,
       thumbnail: null,
-      durationMs: request.durationMs,
+      durationMs: await _finishedDuration(audio, request.durationMs),
     );
   }
 
@@ -122,8 +129,28 @@ class JournalCaptureService implements CaptureService {
       text: null,
       media: video,
       thumbnail: thumbnail,
-      durationMs: request.durationMs,
+      durationMs: await _finishedDuration(video, request.durationMs),
     );
+  }
+
+  Future<int> _finishedDuration(MediaBlob blob, int recordedMs) async {
+    final MediaDurationProbe? probe = durationProbe;
+    if (probe == null) {
+      return recordedMs;
+    }
+    final Duration? measured;
+    try {
+      measured = await probe
+          .duration(file: File(media.absolutePath(blob)), kind: blob.kind)
+          .timeout(_durationProbeTimeout);
+    } catch (_) {
+      return recordedMs;
+    }
+    final int? measuredMs = measured?.inMilliseconds;
+    if (measuredMs == null || measuredMs <= 0) {
+      return recordedMs;
+    }
+    return measuredMs;
   }
 
   void _requireDuration(int durationMs) {

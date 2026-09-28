@@ -1,19 +1,24 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/data/drafts/draft_paths.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/capture_service.dart'
+    show CaptureMedia;
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/core/note_draft_controller.dart';
-import 'package:field_notes/features/capture/text/editor/editor.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show ComposerMediaScope, spellCheckAvailable;
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 import 'package:field_notes/features/today/today_date.dart';
@@ -73,7 +78,8 @@ class TextComposerConnector extends ConsumerStatefulWidget {
 class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   bool _isSaving = false;
   String? _errorMessage;
-  late final String _kicker;
+  late final DateTime _openedAt;
+  late final bool _forToday;
   late final String _draftKey;
   late final TextEditingController _controller;
   late final NoteDraftController _draft;
@@ -81,7 +87,8 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
   @override
   void initState() {
     super.initState();
-    _kicker = _composeKicker();
+    _openedAt = ref.read(todayClockProvider)();
+    _forToday = widget.date == ref.read(todayDateProvider);
     _draftKey = newNoteDraftKey(widget.date);
     _controller = TextEditingController();
     _draft = NoteDraftController(
@@ -98,15 +105,16 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
     super.dispose();
   }
 
-  String _composeKicker() {
-    final DateTime now = ref.read(todayClockProvider)();
-    if (widget.date == ref.read(todayDateProvider)) {
-      final String hour = now.hour.toString().padLeft(2, '0');
-      final String minute = now.minute.toString().padLeft(2, '0');
-      return 'Today · $hour:$minute';
+  String _composeKicker(BuildContext context) {
+    if (_forToday) {
+      final String clock = formatClock(
+        context,
+        TimeOfDay.fromDateTime(_openedAt),
+      );
+      return 'Today · $clock';
     }
     final DateTime? parsed = parseDateKey(widget.date);
-    return parsed == null ? widget.date : dayTitleFor(parsed, today: now);
+    return parsed == null ? widget.date : dayTitleFor(parsed, today: _openedAt);
   }
 
   String _savedToMessage() {
@@ -170,13 +178,16 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
 
   @override
   Widget build(BuildContext context) {
+    final bool spellCheck = spellCheckAvailable &&
+        ref.exists(appSettingsProvider) &&
+        ref.watch(spellCheckEnabledProvider);
     return ComposerMediaScope(
       resolver: ref.watch(notesMediaResolverProvider).value,
-      child: _composer(),
+      child: _composer(spellCheck: spellCheck),
     );
   }
 
-  Widget _composer() {
+  Widget _composer({required bool spellCheck}) {
     return ListenableBuilder(
       listenable: _draft,
       builder: (BuildContext context, Widget? child) {
@@ -194,9 +205,13 @@ class _TextComposerConnectorState extends ConsumerState<TextComposerConnector> {
               errorMessage: _errorMessage,
               isSaving: _isSaving,
               title: newNoteTitle,
-              kicker: _kicker,
+              kicker: _composeKicker(context),
               exit: widget.exit,
               onAddPhoto: () => importNotePhotos(ref),
+              spellCheckEnabled: spellCheck,
+              photoMediaImporter: (CaptureMedia photo) async =>
+                  (await ref.read(notePhotoStoreProvider.future))
+                      .importPhoto(photo),
             );
           },
         );
@@ -225,6 +240,7 @@ Future<String?> showTextComposer(
         child: ComposerShell(
           closeOnScrimTap: true,
           responsive: true,
+          sprig: ComposerSprigPlacement.rightEdge,
           child: TextComposerConnector(date: date, exit: exit),
         ),
       );

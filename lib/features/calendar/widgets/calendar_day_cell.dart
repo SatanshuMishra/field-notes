@@ -2,10 +2,12 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 
 import '../model/calendar_month.dart';
+import 'calendar_chevron_button.dart';
 
 const Key calendarActivityDotKey = Key('calendar-activity-dot');
 
@@ -21,44 +23,70 @@ class CalendarDayCell extends StatelessWidget {
     this.day,
     this.isToday = false,
     this.isFuture = false,
+    this.hasEntries = false,
     this.onTap,
+    this.tapReach = EdgeInsets.zero,
   });
 
   final CalendarCell cell;
   final Day? day;
   final bool isToday;
   final bool isFuture;
+  final bool hasEntries;
   final VoidCallback? onTap;
+  final EdgeInsets tapReach;
+
+  String get semanticLabel {
+    final Mood? mood = cell.isInMonth ? day?.mood : null;
+    return <String>[
+      'Day ${cell.dayOfMonth}',
+      if (isToday) 'today',
+      if (mood != null) mood.label,
+      if (hasEntries) 'has entries',
+    ].join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
-    final Widget face = LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final _CellMetrics metrics =
-            constraints.maxWidth < _compactWidthBelow ||
-                    constraints.maxHeight < _compactHeightBelow
-                ? _CellMetrics.compact
-                : _CellMetrics.regular;
-        return cell.isInMonth
-            ? _InMonthFace(
-                dayOfMonth: cell.dayOfMonth,
-                day: day,
-                isToday: isToday,
-                metrics: metrics,
-              )
-            : _NumberOnly(dayOfMonth: cell.dayOfMonth, metrics: metrics);
-      },
-    );
     final double? dimming = !cell.isInMonth
         ? _neighbourOpacity
         : (isFuture ? _futureOpacity : null);
-    return Semantics(
-      button: onTap != null,
-      label: 'Day ${cell.dayOfMonth}',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: dimming == null ? face : Opacity(opacity: dimming, child: face),
+    return CalendarTapArea(
+      reach: onTap == null ? EdgeInsets.zero : tapReach,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          final _CellMetrics metrics =
+              constraints.maxWidth < _compactWidthBelow ||
+                  constraints.maxHeight < _compactHeightBelow
+              ? _CellMetrics.compact
+              : _CellMetrics.regular;
+          final Widget face = cell.isInMonth
+              ? _InMonthFace(
+                  dayOfMonth: cell.dayOfMonth,
+                  day: day,
+                  isToday: isToday,
+                  metrics: metrics,
+                )
+              : _NumberOnly(dayOfMonth: cell.dayOfMonth, metrics: metrics);
+          return FocusRing(
+            enabled: onTap != null,
+            onPressed: onTap,
+            borderRadius: BorderRadius.circular(metrics.radius),
+            child: Semantics(
+              button: onTap != null,
+              label: semanticLabel,
+              onTap: onTap,
+              excludeSemantics: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onTap,
+                child: dimming == null
+                    ? face
+                    : Opacity(opacity: dimming, child: face),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

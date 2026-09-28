@@ -8,6 +8,12 @@ import '../paint/meadow_painter.dart';
 
 const Duration _swayCycle = Duration(seconds: 6);
 
+String _meadowDescription({required int blooms, required int sprouts}) {
+  final String bloomPart = blooms == 1 ? '1 bloom' : '$blooms blooms';
+  final String sproutPart = sprouts == 1 ? '1 sprout' : '$sprouts sprouts';
+  return 'Garden meadow with $bloomPart and $sproutPart';
+}
+
 class MeadowScene extends StatefulWidget {
   const MeadowScene({
     super.key,
@@ -15,12 +21,14 @@ class MeadowScene extends StatefulWidget {
     required this.motion,
     this.seed = 0,
     this.insects = defaultGardenInsects,
+    this.sprouts = const <String>[],
   });
 
   final List<GardenBloomData> blooms;
   final GardenMotionProfile motion;
   final int seed;
   final List<GardenInsect> insects;
+  final List<String> sprouts;
 
   @override
   State<MeadowScene> createState() => _MeadowSceneState();
@@ -71,21 +79,29 @@ class _MeadowSceneState extends State<MeadowScene>
           blooms: widget.blooms,
           size: size,
           seed: widget.seed,
+          sprouts: widget.sprouts,
         );
-        return RepaintBoundary(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (BuildContext context, Widget? child) {
-              return CustomPaint(
-                size: size,
-                painter: MeadowPainter(
-                  t: animate ? _controller.value : 0.0,
-                  planted: planted,
-                  insects: widget.insects,
-                  showInsects: animate,
-                ),
-              );
-            },
+        return Semantics(
+          container: true,
+          label: _meadowDescription(
+            blooms: widget.blooms.length,
+            sprouts: widget.sprouts.length,
+          ),
+          child: RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (BuildContext context, Widget? child) {
+                return CustomPaint(
+                  size: size,
+                  painter: MeadowPainter(
+                    t: animate ? _controller.value : 0.0,
+                    planted: planted,
+                    insects: widget.insects,
+                    showInsects: animate,
+                  ),
+                );
+              },
+            ),
           ),
         );
       },

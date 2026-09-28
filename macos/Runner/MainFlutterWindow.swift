@@ -20,8 +20,15 @@ private let minimumContentHeight: CGFloat = 600
 private let titleBarHeight: CGFloat = 42
 private let windowButtonsLeading: CGFloat = 16
 private let windowChannelName = "field_notes/window"
+private let notificationSettingsChannelName = "field_notes/notification_settings"
+private let notificationSettingsURLPrefix =
+  "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id="
 
 class MainFlutterWindow: NSWindow {
+  private var spellCheckBridge: SpellCheckBridge?
+  private var imagePasteboardBridge: ImagePasteboardBridge?
+  private var fileDropBridge: FileDropBridge?
+
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
     let windowFrame = self.frame
@@ -37,6 +44,10 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     self.registerWindowChannel(flutterViewController.engine.binaryMessenger)
+    self.registerNotificationSettingsChannel(flutterViewController.engine.binaryMessenger)
+    self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
+    self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
+    self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
     self.observeWindowButtonLayout()
 
     super.awakeFromNib()
@@ -60,6 +71,35 @@ class MainFlutterWindow: NSWindow {
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  private func registerNotificationSettingsChannel(_ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: notificationSettingsChannelName,
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "open":
+        result(MainFlutterWindow.openNotificationSettings())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private static func openNotificationSettings() -> Any? {
+    let bundleIdentifier = Bundle.main.bundleIdentifier ?? ""
+    guard let url = URL(string: notificationSettingsURLPrefix + bundleIdentifier),
+      NSWorkspace.shared.open(url)
+    else {
+      return FlutterError(
+        code: "unavailable",
+        message: "System Settings did not open.",
+        details: nil
+      )
+    }
+    return nil
   }
 
   private func startDrag() {

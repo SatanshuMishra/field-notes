@@ -20,6 +20,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 
 import '../../notes/support/notes_harness.dart'
     show FakeNoteMediaStore, photoIdA, prefixOf;
+import '../../../support/note_editor_driver.dart';
+import '../../../support/photo_line_fixture.dart';
 import '../core/capture_test_support.dart';
 import '../photo/photo_test_support.dart' show FakePhotoPicker;
 
@@ -87,6 +89,7 @@ void main() {
   testWidgets(
       'the new-note composer keeps Add memory on a landscape phone with the keyboard up',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     _useLandscapePhone(tester);
     await tester.pumpWidget(
       _composerApp(
@@ -110,7 +113,7 @@ void main() {
       tester.getRect(find.byType(FormatBar)),
     );
     expect(
-      tester.getSize(find.byType(EditableText)).height,
+      driver.contentRect.height,
       greaterThanOrEqualTo(3 * _lineHeight),
     );
     expect(tester.takeException(), isNull);
@@ -118,6 +121,7 @@ void main() {
 
   testWidgets('a pick started from the footer lands after the keyboard closes',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     _useLandscapePhone(tester);
     final Completer<List<String>> pick = Completer<List<String>>();
     final String reference = prefixOf(photoIdA);
@@ -150,9 +154,7 @@ void main() {
     pick.complete(<String>[reference]);
     await tester.pump();
 
-    final EditableText editor =
-        tester.widget<EditableText>(find.byType(EditableText));
-    expect(editor.controller.text, contains(photoLineFor(reference: reference)));
+    expect(driver.source, contains(mdPhotoLine(photoIdA)));
     expect(
       tester.getRect(find.byType(ComposerFooter)).bottom,
       closeTo(

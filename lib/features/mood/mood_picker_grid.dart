@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 
@@ -19,6 +20,10 @@ const double _sheetTilePaddingVertical = 8;
 const double _sheetTileLabelGap = 4;
 const double _sheetFlowerSize = 34;
 const double _sheetGap = 8;
+
+const BorderRadius _tileRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusMd),
+);
 
 class MoodPickerGrid extends StatelessWidget {
   const MoodPickerGrid({
@@ -113,50 +118,57 @@ class _MoodTile extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isSelected ? Palette.cardLight : Palette.cardBright,
-            border: Border.all(
-              color: isSelected ? Palette.coral : Palette.ink20,
-              width: isSelected ? _tileBorderWidth : Shapes.outlineWidth,
+        child: FocusRing(
+          onPressed: onTap,
+          borderRadius: _tileRadius,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: isSelected ? Palette.cardLight : Palette.cardBright,
+              border: Border.all(
+                color: isSelected ? Palette.coral : Palette.ink20,
+                width: isSelected ? _tileBorderWidth : Shapes.outlineWidth,
+              ),
+              borderRadius: _tileRadius,
+              boxShadow: isSelected ? Shadows.tileSelected : null,
             ),
-            borderRadius: BorderRadius.circular(Shapes.radiusMd),
-            boxShadow: isSelected ? Shadows.tileSelected : null,
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: isSheet
-                  ? _sheetTilePaddingHorizontal
-                  : _tilePaddingHorizontal,
-              vertical:
-                  isSheet ? _sheetTilePaddingVertical : _tilePaddingVertical,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                FlowerBloom.forMood(mood, size: flowerSize),
-                SizedBox(
-                  height: isSheet ? _sheetTileLabelGap : _tileLabelGap,
+            child: ExcludeSemantics(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSheet
+                      ? _sheetTilePaddingHorizontal
+                      : _tilePaddingHorizontal,
+                  vertical: isSheet
+                      ? _sheetTilePaddingVertical
+                      : _tilePaddingVertical,
                 ),
-                Text(
-                  mood.label,
-                  style: isSheet
-                      ? TypographyTokens.caption9Sans.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: Palette.ink,
-                        )
-                      : TypographyTokens.caption11Sans.copyWith(
-                          color: Palette.ink,
-                        ),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    FlowerBloom.forMood(mood, size: flowerSize),
+                    SizedBox(
+                      height: isSheet ? _sheetTileLabelGap : _tileLabelGap,
+                    ),
+                    Text(
+                      mood.label,
+                      style: isSheet
+                          ? TypographyTokens.caption9Sans.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: Palette.ink,
+                            )
+                          : TypographyTokens.caption11Sans.copyWith(
+                              color: Palette.ink,
+                            ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (!isSheet)
+                      Text(
+                        mood.flower.label,
+                        style: TypographyTokens.caption9Sans,
+                        textAlign: TextAlign.center,
+                      ),
+                  ],
                 ),
-                if (!isSheet)
-                  Text(
-                    mood.flower.label,
-                    style: TypographyTokens.caption9Sans,
-                    textAlign: TextAlign.center,
-                  ),
-              ],
+              ),
             ),
           ),
         ),

@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -13,6 +17,9 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
+import 'package:field_notes/features/entry_cards/task_toggle.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show isTextInputFocused;
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -44,11 +51,13 @@ const double _titleLineHeight = 1.05;
 const double _exitPillHeight = 34;
 const double _exitPillStartPadding = 8;
 const double _exitPillEndPadding = 12;
-const double _exitPillRadius = 10;
+const BorderRadius _exitPillBorderRadius = BorderRadius.all(
+  Radius.circular(10),
+);
 const double _exitGlyphSize = 15;
 const double _exitGlyphGap = 4;
 const double _actionButtonExtent = 30;
-const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(34, 22, 34, 28);
+const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(38, 22, 38, 28);
 const double _metaSize = 11;
 const double _metaLetterSpacing = 0.44;
 const double _metaGap = 14;
@@ -59,6 +68,8 @@ const double _stepGlyphGap = 6;
 const double _absentStepOpacity = 0.35;
 const double _chevronStrokeWidth = 2;
 const double _chevronArm = 5;
+const double _minTapTarget = 48;
+const double _exitPillReach = (_minTapTarget - _exitPillHeight) / 2;
 
 class LogViewerPanel extends ConsumerStatefulWidget {
   const LogViewerPanel({
@@ -153,21 +164,12 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     setState(() => _entryId = entries[target].id);
   }
 
-  bool _textFieldFocused() {
-    final BuildContext? focused = FocusManager.instance.primaryFocus?.context;
-    if (focused == null) {
-      return false;
-    }
-    return focused.widget is EditableText ||
-        focused.findAncestorWidgetOfExactType<EditableText>() != null;
-  }
-
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
       return KeyEventResult.ignored;
     }
     final bool topmost = ModalRoute.of(context)?.isCurrent ?? true;
-    if (_editing || !topmost || _textFieldFocused()) {
+    if (_editing || !topmost || isTextInputFocused()) {
       return KeyEventResult.ignored;
     }
     final LogicalKeyboardKey key = event.logicalKey;
@@ -257,8 +259,9 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Entry>? entries =
-        ref.watch(entriesForDateProvider(widget.date)).value;
+    final List<Entry>? entries = ref
+        .watch(entriesForDateProvider(widget.date))
+        .value;
     _leaveIfRemoved(entries);
     final int index = entries == null ? -1 : _indexIn(entries);
     final Entry? entry = index < 0 ? null : entries![index];
@@ -270,6 +273,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
         child: Focus(
           focusNode: _keys,
           autofocus: true,
+          skipTraversal: true,
           onKeyEvent: _onKey,
           child: AnimatedSize(
             key: logViewerPanelKey,
@@ -313,20 +317,40 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 
   Widget _header(Entry? entry) {
+    final bool editable = entry?.type == EntryType.text;
+    final EdgeInsets reach = entry == null
+        ? EdgeInsets.zero
+        : logActionsPillTapInset(
+            buttonExtent: _actionButtonExtent,
+            withEdit: editable,
+          );
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: _headerHorizontalPadding,
-        vertical: _headerVerticalPadding,
+      padding: EdgeInsetsDirectional.only(
+        start: _headerHorizontalPadding,
+        end: math.max<double>(0, _headerHorizontalPadding - reach.right),
       ),
       child: Row(
         children: <Widget>[
           _exitPill(),
-          Expanded(child: _titleBlock(entry)),
+          Expanded(
+            child: _titleBlock(
+              entry,
+              endGap: math.max<double>(0, _headerGap - reach.left),
+            ),
+          ),
           if (entry != null)
-            LogActionsPill(
-              buttonExtent: _actionButtonExtent,
-              onEdit: entry.type == EntryType.text ? _edit : null,
-              onDelete: () => _delete(entry),
+            Padding(
+              padding: EdgeInsets.symmetric(
+                vertical: math.max<double>(
+                  0,
+                  _headerVerticalPadding - reach.top,
+                ),
+              ),
+              child: LogActionsPill(
+                buttonExtent: _actionButtonExtent,
+                onEdit: editable ? _edit : null,
+                onDelete: () => _delete(entry),
+              ),
             ),
         ],
       ),
@@ -334,54 +358,76 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 
   Widget _exitPill() {
-    final String label =
-        widget.exit == LogViewerExit.back ? 'Back' : 'Close';
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _leave(LogViewerOutcome.returned),
-        child: Container(
-          height: _exitPillHeight,
-          padding: const EdgeInsets.only(
-            left: _exitPillStartPadding,
-            right: _exitPillEndPadding,
-          ),
-          decoration: BoxDecoration(
-            color: Palette.cardWarm,
-            border: Shapes.outline,
-            borderRadius: BorderRadius.circular(_exitPillRadius),
-            boxShadow: Shadows.chip,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const SizedBox.square(
-                dimension: _exitGlyphSize,
-                child: CustomPaint(
-                  painter: _ChevronPainter(pointsBack: true),
+    final String label = widget.exit == LogViewerExit.back ? 'Back' : 'Close';
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        vertical: _headerVerticalPadding - _exitPillReach,
+      ),
+      child: Semantics(
+        button: true,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _leave(LogViewerOutcome.returned),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: _minTapTarget,
+              minHeight: _minTapTarget,
+            ),
+            child: Center(
+              child: FocusRing(
+                onPressed: () => _leave(LogViewerOutcome.returned),
+                borderRadius: _exitPillBorderRadius,
+                child: Container(
+                  height: _exitPillHeight,
+                  padding: const EdgeInsets.only(
+                    left: _exitPillStartPadding,
+                    right: _exitPillEndPadding,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Palette.cardWarm,
+                    border: Shapes.outline,
+                    borderRadius: _exitPillBorderRadius,
+                    boxShadow: Shadows.chip,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const SizedBox.square(
+                        dimension: _exitGlyphSize,
+                        child: CustomPaint(
+                          painter: _ChevronPainter(pointsBack: true),
+                        ),
+                      ),
+                      const SizedBox(width: _exitGlyphGap),
+                      Text(
+                        label,
+                        style: TypographyTokens.captureLabelSans.copyWith(
+                          color: Palette.ink,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(width: _exitGlyphGap),
-              Text(
-                label,
-                style: TypographyTokens.captureLabelSans
-                    .copyWith(color: Palette.ink),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _titleBlock(Entry? entry) {
+  Widget _titleBlock(Entry? entry, {required double endGap}) {
     final DateTime? day = parseDateKey(widget.date);
     final String kicker = day == null
         ? widget.date
         : dayTitleFor(day, today: ref.watch(todayClockProvider)());
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: _headerGap),
+      padding: EdgeInsetsDirectional.fromSTEB(
+        _headerGap,
+        _headerVerticalPadding,
+        endGap,
+        _headerVerticalPadding,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -411,7 +457,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Text(
-          _metaFor(entry),
+          _metaFor(context, entry),
           style: TypographyTokens.captureLabelSans.copyWith(
             fontSize: _metaSize,
             letterSpacing: _metaLetterSpacing,
@@ -428,16 +474,25 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 
   Widget _content(Entry entry) {
-    final MediaResolver? resolver =
-        ref.watch(notesMediaResolverProvider).value;
+    final MediaResolver? resolver = ref.watch(notesMediaResolverProvider).value;
     if (resolver == null) {
       return const SizedBox.shrink();
     }
     switch (entry.type) {
       case EntryType.text:
-        return NoteMediaScope(
-          resolver: resolver,
-          child: NoteBody(text: entry.textContent ?? ''),
+        return _NoteFocusRing(
+          child: NoteMediaScope(
+            resolver: resolver,
+            child: NoteBody(
+              text: entry.textContent ?? '',
+              onToggleTask: (int boxOffset) => toggleTaskWithUndo(
+                context,
+                entry: entry,
+                date: widget.date,
+                boxOffset: boxOffset,
+              ),
+            ),
+          ),
         );
       case EntryType.voice:
         return VoiceBody(
@@ -459,10 +514,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     final Entry? earlier = index > 0 ? entries[index - 1] : null;
     final Entry? later = index + 1 < entries.length ? entries[index + 1] : null;
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: _footerHorizontalPadding,
-        vertical: _footerVerticalPadding,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: _footerHorizontalPadding),
       child: Row(
         children: <Widget>[
           Expanded(
@@ -477,9 +529,14 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
               ),
             ),
           ),
-          Text(
-            '${index + 1} of ${entries.length}',
-            style: TypographyTokens.promptAccent,
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: _footerVerticalPadding,
+            ),
+            child: Text(
+              '${index + 1} of ${entries.length}',
+              style: TypographyTokens.promptAccent,
+            ),
           ),
           Expanded(
             child: Align(
@@ -499,17 +556,15 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 }
 
-String _clockOf(Entry entry) {
+String _clockOf(BuildContext context, Entry entry) {
   final DateTime at = DateTime.fromMillisecondsSinceEpoch(entry.createdAt);
-  final String hour = at.hour.toString().padLeft(2, '0');
-  final String minute = at.minute.toString().padLeft(2, '0');
-  return '$hour:$minute';
+  return formatClock(context, TimeOfDay.fromDateTime(at));
 }
 
-String _metaFor(Entry entry) {
+String _metaFor(BuildContext context, Entry entry) {
   final int? durationMs = entry.durationMs;
   final List<String> parts = <String>[
-    _clockOf(entry),
+    _clockOf(context, entry),
     if (entry.type == EntryType.text) logPreviewOf(entry).meta,
     if (entry.type != EntryType.text && durationMs != null)
       formatMediaDuration(durationMs),
@@ -537,7 +592,7 @@ class _StepControl extends StatelessWidget {
     final bool enabled = target != null;
     final String caption = target == null
         ? label
-        : '${_clockOf(target)} · ${logTypeLabelFor(target.type)}';
+        : '${_clockOf(context, target)} · ${logTypeLabelFor(target.type)}';
     final Widget glyph = SizedBox.square(
       dimension: _stepGlyphSize,
       child: CustomPaint(painter: _ChevronPainter(pointsBack: pointsBack)),
@@ -548,32 +603,135 @@ class _StepControl extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: TypographyTokens.captureLabelSans.copyWith(color: Palette.ink),
     );
+    final VoidCallback? step = enabled ? onStep : null;
     return Semantics(
       button: true,
       enabled: enabled,
       label: label,
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? onStep : null,
-          child: Opacity(
-            opacity: enabled ? 1 : _absentStepOpacity,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: pointsBack
-                  ? <Widget>[
-                      glyph,
-                      const SizedBox(width: _stepGlyphGap),
-                      Flexible(child: text),
-                    ]
-                  : <Widget>[
-                      Flexible(child: text),
-                      const SizedBox(width: _stepGlyphGap),
-                      glyph,
-                    ],
+      onTap: step,
+      child: FocusRing(
+        enabled: enabled,
+        onPressed: step,
+        borderRadius: _stepBorderRadius,
+        child: ExcludeSemantics(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: step,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: _minTapTarget,
+                minHeight: _minTapTarget,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: _footerVerticalPadding,
+                ),
+                child: Opacity(
+                  opacity: enabled ? 1 : _absentStepOpacity,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: pointsBack
+                        ? MainAxisAlignment.start
+                        : MainAxisAlignment.end,
+                    children: pointsBack
+                        ? <Widget>[
+                            glyph,
+                            const SizedBox(width: _stepGlyphGap),
+                            Flexible(child: text),
+                          ]
+                        : <Widget>[
+                            Flexible(child: text),
+                            const SizedBox(width: _stepGlyphGap),
+                            glyph,
+                          ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+const double _noteRingOutset = 8;
+
+const BorderRadius _stepBorderRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
+
+final BoxDecoration _noteFocusRingDecoration = BoxDecoration(
+  border: Border.all(
+    color: FocusRingSurface.light.color,
+    width: FocusRingSurface.light.width,
+  ),
+  borderRadius: const BorderRadius.all(Radius.circular(Shapes.radiusSm)),
+);
+
+class _NoteFocusRing extends StatefulWidget {
+  const _NoteFocusRing({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_NoteFocusRing> createState() => _NoteFocusRingState();
+}
+
+class _NoteFocusRingState extends State<_NoteFocusRing> {
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    super.dispose();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  void _onFocusChange(bool focused) {
+    if (mounted && focused != _focused) {
+      setState(() => _focused = focused);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool ringed =
+        _focused &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      includeSemantics: false,
+      onFocusChange: _onFocusChange,
+      child: Stack(
+        fit: StackFit.passthrough,
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          widget.child,
+          if (ringed)
+            Positioned(
+              left: -_noteRingOutset,
+              top: -_noteRingOutset,
+              right: -_noteRingOutset,
+              bottom: -_noteRingOutset,
+              child: IgnorePointer(
+                key: focusRingKey,
+                child: DecoratedBox(decoration: _noteFocusRingDecoration),
+              ),
+            ),
+        ],
       ),
     );
   }

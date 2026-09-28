@@ -6,6 +6,7 @@ import 'package:field_notes/features/capture/voice/voice_composer.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -49,6 +50,16 @@ Future<void> _openComposer(WidgetTester tester) async {
   await tester.tap(find.text('open'));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 250));
+}
+
+Future<void> _sendSystemBack(WidgetTester tester) async {
+  await tester.binding.defaultBinaryMessenger.handlePlatformMessage(
+    'flutter/navigation',
+    const JSONMethodCodec().encodeMethodCall(const MethodCall('popRoute')),
+    (_) {},
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 void main() {
@@ -181,4 +192,132 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('a confirmed save releases the capture file',
+      (WidgetTester tester) async {
+    Future<FakeVoiceRecorder> recordAndSave(CaptureService service) async {
+      final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+      await tester.pumpWidget(
+        _recorderApp(
+          recorder: recorder,
+          service: service,
+          onResult: (String? id) {},
+        ),
+      );
+      await _openComposer(tester);
+      await tester.tap(find.byKey(voiceRecordButtonKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.byKey(voiceSavePillKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpWidget(const SizedBox.shrink());
+      return recorder;
+    }
+
+    final FakeVoiceRecorder saved = await recordAndSave(FakeCaptureService());
+    final FakeVoiceRecorder failed = await recordAndSave(
+      FakeCaptureService(
+        failure: const CaptureException('Could not save your entry.'),
+      ),
+    );
+
+    expect(saved.stopCalls, 1);
+    expect(saved.releaseSavedCalls, 1);
+    expect(failed.stopCalls, 1);
+    expect(failed.releaseSavedCalls, 0);
+  });
+
+  testWidgets('Escape closes an idle voice recorder',
+      (WidgetTester tester) async {
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: FakeVoiceRecorder(),
+        service: FakeCaptureService(),
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await _openComposer(tester);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.byType(VoiceRecorderSheet), findsNothing);
+    expect(result, isNull);
+  });
+
+  testWidgets('Escape while recording asks to discard first',
+      (WidgetTester tester) async {
+    final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+    String? result = 'unset';
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: FakeCaptureService(),
+        onResult: (String? id) => result = id,
+      ),
+    );
+
+    await _openComposer(tester);
+
+    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(voiceDiscardConfirmTitle), findsOneWidget);
+    expect(recorder.cancelCalls, 0);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text(voiceDiscardConfirmTitle), findsNothing);
+    expect(find.byType(VoiceRecorderSheet), findsOneWidget);
+    expect(find.byType(WaveformBars), findsOneWidget);
+    expect(recorder.cancelCalls, 0);
+    expect(result, 'unset');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets(
+    'Android back while recording asks to discard first',
+    (WidgetTester tester) async {
+      final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+      String? result = 'unset';
+
+      await tester.pumpWidget(
+        _recorderApp(
+          recorder: recorder,
+          service: FakeCaptureService(),
+          onResult: (String? id) => result = id,
+        ),
+      );
+
+      await _openComposer(tester);
+
+      await tester.tap(find.byKey(voiceRecordButtonKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await _sendSystemBack(tester);
+
+      expect(find.text(voiceDiscardConfirmTitle), findsOneWidget);
+      expect(find.byType(VoiceRecorderSheet), findsOneWidget);
+      expect(recorder.cancelCalls, 0);
+      expect(result, 'unset');
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 }

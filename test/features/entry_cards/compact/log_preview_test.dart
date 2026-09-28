@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart';
+import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_preview.dart';
-import 'package:field_notes/features/notes/model/photo_placement.dart';
+
+import '../support/entry_cards_harness.dart';
 
 String _words(int characters) {
   final StringBuffer buffer = StringBuffer();
@@ -18,6 +22,15 @@ String _words(int characters) {
 
 int _createdAt({required int hour, required int minute}) =>
     DateTime(2026, 1, 1, hour, minute).millisecondsSinceEpoch;
+
+void _useClockFormat(WidgetTester tester, {required bool twentyFourHour}) {
+  tester.platformDispatcher.alwaysUse24HourFormatTestValue = twentyFourHour;
+  tester.binding.handleMetricsChanged();
+  addTearDown(() {
+    tester.platformDispatcher.clearAlwaysUse24HourTestValue();
+    tester.binding.handleMetricsChanged();
+  });
+}
 
 Entry _textEntry({
   required String id,
@@ -65,7 +78,8 @@ void main() {
       const String reference = '7f3ac91b2d4e';
       final Entry entry = _textEntry(
         id: 'e3',
-        textContent: 'Hi.\n\n${photoLineFor(reference: reference)}',
+        textContent:
+            'Hi.\n\n${canonicalPhotoLine(reference, '', const MdPhotoPlacement())}',
       );
 
       final LogPreview preview = logPreviewOf(entry);
@@ -97,7 +111,7 @@ void main() {
       final Entry entry = _textEntry(
         id: 'e5',
         textContent:
-            'Hi.\n\n${photoLineFor(reference: reference, caption: caption)}',
+            'Hi.\n\n${canonicalPhotoLine(reference, caption, const MdPhotoPlacement())}',
       );
 
       final LogPreview preview = logPreviewOf(entry);
@@ -114,8 +128,9 @@ void main() {
       const String ref2 = '2b8e04d9c1a7';
       final Entry note = _textEntry(
         id: 'e6',
-        textContent: '$words\n\n${photoLineFor(reference: ref1)}\n\n'
-            '${photoLineFor(reference: ref2)}',
+        textContent:
+            '$words\n\n${canonicalPhotoLine(ref1, '', const MdPhotoPlacement())}'
+            '\n\n${canonicalPhotoLine(ref2, '', const MdPhotoPlacement())}',
       );
       final int at = _createdAt(hour: 9, minute: 0);
       final Entry video = Entry(
@@ -146,5 +161,41 @@ void main() {
       expect(logPreviewOf(note).heading, 'Afternoon note');
       expect(logPreviewOf(voice).heading, 'Evening voice log');
     });
+  });
+
+  testWidgets('card times follow the system 12 or 24 hour setting', (
+    WidgetTester tester,
+  ) async {
+    final Widget cards = MaterialApp(
+      home: Scaffold(
+        body: Column(
+          children: <Widget>[
+            for (final Entry entry in <Entry>[
+              _textEntry(id: 'e1', textContent: 'Tide.', hour: 9, minute: 30),
+              _textEntry(id: 'e2', textContent: 'Moon.', hour: 20, minute: 5),
+            ])
+              CompactLogCard(
+                entry: entry,
+                resolver: FakeMediaResolver(),
+                density: CompactLogDensity.feed,
+                onOpen: () {},
+                onDelete: () {},
+              ),
+          ],
+        ),
+      ),
+    );
+
+    _useClockFormat(tester, twentyFourHour: false);
+    await tester.pumpWidget(cards);
+
+    expect(find.text('9:30 AM · morning'), findsOneWidget);
+    expect(find.text('8:05 PM · evening'), findsOneWidget);
+
+    _useClockFormat(tester, twentyFourHour: true);
+    await tester.pumpWidget(cards);
+
+    expect(find.text('09:30 · morning'), findsOneWidget);
+    expect(find.text('20:05 · evening'), findsOneWidget);
   });
 }

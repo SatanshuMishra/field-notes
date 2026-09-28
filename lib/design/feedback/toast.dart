@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../focus/focus_ring.dart';
 import '../motion/motion_tokens.dart';
 import '../tokens/tokens.dart';
 import '../widgets/icon_sticker_button.dart';
@@ -57,17 +59,31 @@ const double toastActionMinTarget = 48;
 const double _actionGap = 8;
 const double _actionHorizontalPadding = 12;
 const double _darkActionInset = 4;
-const EdgeInsets _lightPadding =
-    EdgeInsets.symmetric(horizontal: 16, vertical: 10);
-const EdgeInsets _lightPaddingWithAction =
-    EdgeInsets.only(left: 16, right: 4, top: 4, bottom: 4);
+const BorderRadius _actionRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
+const EdgeInsets _lightPadding = EdgeInsets.symmetric(
+  horizontal: 16,
+  vertical: 10,
+);
+const EdgeInsets _lightPaddingWithAction = EdgeInsets.only(
+  left: 16,
+  right: 4,
+  top: 4,
+  bottom: 4,
+);
 
 @immutable
 class ToastAction {
-  const ToastAction({required this.label, required this.onPressed});
+  const ToastAction({
+    required this.label,
+    required this.onPressed,
+    this.semanticLabel,
+  });
 
   final String label;
   final VoidCallback onPressed;
+  final String? semanticLabel;
 }
 
 class Toast extends StatelessWidget {
@@ -101,13 +117,8 @@ class Toast extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          if (icon != null) ...<Widget>[
-            icon!,
-            const SizedBox(width: 8),
-          ],
-          Flexible(
-            child: Text(message, style: TypographyTokens.bodySans),
-          ),
+          if (icon != null) ...<Widget>[icon!, const SizedBox(width: 8)],
+          Flexible(child: Text(message, style: TypographyTokens.bodySans)),
           if (action != null) ...<Widget>[
             const SizedBox(width: _actionGap),
             _ToastActionButton(action: action),
@@ -142,10 +153,7 @@ class Toast extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            if (icon != null) ...<Widget>[
-              icon,
-              SizedBox(width: metrics.gap),
-            ],
+            if (icon != null) ...<Widget>[icon, SizedBox(width: metrics.gap)],
             Flexible(
               child: Text(
                 message,
@@ -154,7 +162,11 @@ class Toast extends StatelessWidget {
             ),
             if (action != null) ...<Widget>[
               const SizedBox(width: _actionGap),
-              _ToastActionButton(action: action, color: Palette.waveLight),
+              _ToastActionButton(
+                action: action,
+                color: Palette.waveLight,
+                focusSurface: FocusRingSurface.dark,
+              ),
             ],
           ],
         ),
@@ -167,36 +179,43 @@ class _ToastActionButton extends StatelessWidget {
   const _ToastActionButton({
     required this.action,
     this.color = Palette.coralLink,
+    this.focusSurface = FocusRingSurface.light,
   });
 
   final ToastAction action;
   final Color color;
+  final FocusRingSurface focusSurface;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: action.label,
+      label: action.semanticLabel ?? action.label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: action.onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: toastActionMinTarget,
-            minHeight: toastActionMinTarget,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _actionHorizontalPadding,
+        child: FocusRing(
+          onPressed: action.onPressed,
+          surface: focusSurface,
+          borderRadius: _actionRadius,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: toastActionMinTarget,
+              minHeight: toastActionMinTarget,
             ),
-            child: Center(
-              widthFactor: 1,
-              child: ExcludeSemantics(
-                child: Text(
-                  action.label,
-                  style: TypographyTokens.bodySans.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _actionHorizontalPadding,
+              ),
+              child: Center(
+                widthFactor: 1,
+                child: ExcludeSemantics(
+                  child: Text(
+                    action.label,
+                    style: TypographyTokens.bodySans.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -206,6 +225,85 @@ class _ToastActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class ToastClearance extends StatefulWidget {
+  const ToastClearance({super.key, required this.anchors, required this.child});
+
+  final List<GlobalKey> anchors;
+  final Widget child;
+
+  static ValueListenable<double>? maybeOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<_ToastClearanceScope>()?.bottom;
+
+  @override
+  State<ToastClearance> createState() => _ToastClearanceState();
+}
+
+class _ToastClearanceState extends State<ToastClearance> {
+  final ValueNotifier<double> _bottom = ValueNotifier<double>(0);
+
+  @override
+  void initState() {
+    super.initState();
+    _measureAfterFrame();
+  }
+
+  @override
+  void dispose() {
+    final ValueNotifier<double> bottom = _bottom;
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      bottom.value = 0;
+      bottom.dispose();
+    });
+    super.dispose();
+  }
+
+  void _measureAfterFrame() {
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (!mounted) {
+        return;
+      }
+      _bottom.value = _measure();
+      _measureAfterFrame();
+    });
+  }
+
+  double _measure() {
+    final RenderObject? overlay = Overlay.maybeOf(
+      context,
+      rootOverlay: true,
+    )?.context.findRenderObject();
+    if (overlay is! RenderBox || !overlay.hasSize) {
+      return 0;
+    }
+    final double height = overlay.size.height;
+    final double top = widget.anchors
+        .map((GlobalKey anchor) => anchor.currentContext?.findRenderObject())
+        .whereType<RenderBox>()
+        .where((RenderBox box) => box.attached && box.hasSize)
+        .map(
+          (RenderBox box) =>
+              box.localToGlobal(Offset.zero, ancestor: overlay).dy,
+        )
+        .fold<double>(height, math.min);
+    return height - top;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _ToastClearanceScope(bottom: _bottom, child: widget.child);
+  }
+}
+
+class _ToastClearanceScope extends InheritedWidget {
+  const _ToastClearanceScope({required this.bottom, required super.child});
+
+  final ValueListenable<double> bottom;
+
+  @override
+  bool updateShouldNotify(_ToastClearanceScope oldWidget) =>
+      bottom != oldWidget.bottom;
 }
 
 OverlayEntry? _activeTransientToast;
@@ -223,9 +321,16 @@ void showTransientToast(
   String message, {
   IconStickerGlyph glyph = IconStickerGlyph.check,
   ToastAction? action,
+  Duration? lifetime,
 }) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
+  final FocusScopeNode? focusHost = Focus.maybeOf(
+    context,
+    scopeOk: true,
+    createDependency: false,
+  )?.nearestScope;
   final ToastScale scale = toastScaleFor(Theme.of(context).platform);
+  final ValueListenable<double>? clearance = ToastClearance.maybeOf(context);
   dismissTransientToast();
   late final OverlayEntry entry;
   void finish() {
@@ -239,11 +344,15 @@ void showTransientToast(
       message: message,
       glyph: glyph,
       scale: scale,
-      lifetime: action == null ? kToastLifetime : kToastActionLifetime,
+      clearance: clearance,
+      focusHost: focusHost,
+      lifetime:
+          lifetime ?? (action == null ? kToastLifetime : kToastActionLifetime),
       action: action == null
           ? null
           : ToastAction(
               label: action.label,
+              semanticLabel: action.semanticLabel,
               onPressed: () {
                 finish();
                 action.onPressed();
@@ -261,6 +370,8 @@ class _TransientToastLayer extends StatefulWidget {
     required this.message,
     required this.glyph,
     required this.scale,
+    required this.clearance,
+    required this.focusHost,
     required this.lifetime,
     required this.action,
     required this.onFinished,
@@ -269,6 +380,8 @@ class _TransientToastLayer extends StatefulWidget {
   final String message;
   final IconStickerGlyph glyph;
   final ToastScale scale;
+  final ValueListenable<double>? clearance;
+  final FocusScopeNode? focusHost;
   final Duration lifetime;
   final ToastAction? action;
   final VoidCallback onFinished;
@@ -305,16 +418,56 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
 
   @override
   Widget build(BuildContext context) {
-    final _DarkMetrics metrics = _metricsFor(widget.scale);
+    final Widget toast = _toast();
+    final ValueListenable<double>? clearance = widget.clearance;
+    if (clearance == null) {
+      return _placed(context, clearance: 0, toast: toast);
+    }
+    return ValueListenableBuilder<double>(
+      valueListenable: clearance,
+      child: toast,
+      builder: (BuildContext context, double bottom, Widget? child) =>
+          _placed(context, clearance: bottom, toast: child!),
+    );
+  }
+
+  Widget _placed(
+    BuildContext context, {
+    required double clearance,
+    required Widget toast,
+  }) {
+    final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
     return Positioned(
       left: 0,
       right: 0,
-      bottom: math.max(
-        metrics.bottomInset,
-        MediaQuery.viewInsetsOf(context).bottom + _transientKeyboardGap,
+      top: MediaQuery.paddingOf(context).top,
+      bottom: 0,
+      child: CustomSingleChildLayout(
+        delegate: _ToastPlacement(
+          bottom: math.max(
+            _metricsFor(widget.scale).bottomInset,
+            math.max(keyboard, clearance) + _transientKeyboardGap,
+          ),
+        ),
+        child: toast,
       ),
-      child: IgnorePointer(
-        ignoring: widget.action == null,
+    );
+  }
+
+  FocusScopeNode? get _liveFocusHost {
+    final FocusScopeNode? host = widget.focusHost;
+    return host != null && (host.context?.mounted ?? false) ? host : null;
+  }
+
+  Widget _toast() {
+    final _DarkMetrics metrics = _metricsFor(widget.scale);
+    return IgnorePointer(
+      ignoring: widget.action == null,
+      child: Focus(
+        parentNode: _liveFocusHost,
+        canRequestFocus: false,
+        skipTraversal: true,
+        includeSemantics: false,
         child: Material(
           type: MaterialType.transparency,
           child: Center(
@@ -324,9 +477,9 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
                 animation: _rise,
                 builder: (BuildContext context, Widget? child) =>
                     Transform.translate(
-                  offset: Offset(0, _riseOffset * (1 - _rise.value)),
-                  child: child,
-                ),
+                      offset: Offset(0, _riseOffset * (1 - _rise.value)),
+                      child: child,
+                    ),
                 child: Toast(
                   message: widget.message,
                   variant: ToastVariant.dark,
@@ -345,4 +498,22 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
       ),
     );
   }
+}
+
+class _ToastPlacement extends SingleChildLayoutDelegate {
+  const _ToastPlacement({required this.bottom});
+
+  final double bottom;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints.tightFor(width: constraints.maxWidth);
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      Offset(0, math.max(0, size.height - bottom - childSize.height));
+
+  @override
+  bool shouldRelayout(_ToastPlacement oldDelegate) =>
+      bottom != oldDelegate.bottom;
 }

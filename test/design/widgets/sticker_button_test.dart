@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,6 +79,30 @@ void main() {
 
       expect(_opacity(tester), 0.5);
       await tester.tap(find.byType(StickerButton), warnIfMissed: false);
+    });
+
+    testWidgets('Enter and Space press a focused sticker button',
+        (WidgetTester tester) async {
+      int presses = 0;
+      await tester.pumpWidget(
+        stickerHarness(
+          StickerButton(label: 'Save', onPressed: () => presses++),
+        ),
+      );
+
+      final FocusNode? focus = Focus.maybeOf(tester.element(find.text('Save')));
+      expect(focus, isNotNull);
+      focus!.requestFocus();
+      await tester.pump();
+      expect(focus.hasPrimaryFocus, isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(presses, 1);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.space);
+      await tester.pump();
+      expect(presses, 2);
     });
 
     testWidgets('outlines every variant in 1.5px ink',

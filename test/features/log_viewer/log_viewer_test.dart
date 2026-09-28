@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,15 +10,21 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/core/composer_guard.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteEditorView;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
+import '../../support/note_editor_driver.dart';
 import '../day_detail/support/day_detail_harness.dart';
 
 const String _date = '2026-07-19';
@@ -211,13 +218,23 @@ Future<_Session> _open(
   return session;
 }
 
+void _useClockFormat(WidgetTester tester, {required bool twentyFourHour}) {
+  tester.platformDispatcher.alwaysUse24HourFormatTestValue = twentyFourHour;
+  tester.binding.handleMetricsChanged();
+  addTearDown(() {
+    tester.platformDispatcher.clearAlwaysUse24HourTestValue();
+    tester.binding.handleMetricsChanged();
+  });
+}
+
 Future<void> _drainToast(WidgetTester tester) async {
   await tester.pump(kToastLifetime);
   await tester.pumpAndSettle();
 }
 
-Finder _noteText(String text) =>
-    find.textContaining(text, findRichText: true);
+Finder _noteText(String text) => find.byWidgetPredicate(
+      (Widget w) => w is NoteBody && w.text.contains(text),
+    );
 
 void main() {
   testWidgets('view mode text carries no fallback underline',
@@ -239,7 +256,7 @@ void main() {
     expect(
       find.byWidgetPredicate(
         (Widget widget) =>
-            widget is Text && (widget.data ?? '').startsWith('14:30'),
+            widget is Text && (widget.data ?? '').startsWith('2:30 PM'),
       ),
       findsOneWidget,
     );
@@ -267,6 +284,7 @@ void main() {
 
   testWidgets('Edit switches to edit mode without moving the panel',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     await _open(tester, entryId: 'entry-2');
     final Rect before = tester.getRect(find.byKey(logViewerPanelKey));
 
@@ -274,7 +292,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final Rect after = tester.getRect(find.byKey(logViewerPanelKey));
-    expect(find.byType(EditableText), findsOneWidget);
+    expect(driver.find, findsOneWidget);
     expect(find.text('Editing afternoon note'), findsOneWidget);
     expect(after.left, before.left);
     expect(after.right, before.right);
@@ -284,25 +302,69 @@ void main() {
   testWidgets(
       'Back from edit mode returns to view mode showing the saved text',
       (WidgetTester tester) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
     final _Session session = await _open(tester, entryId: 'entry-2');
 
     await tester.tap(find.byKey(logActionsEditKey));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(EditableText), 'a better day');
+    await driver.enterText('a better day');
     await tester.pump(draftIdleDebounceForTest);
     await tester.tap(find.text(editNoteSaveLabel));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(confirmDialogConfirmKey));
-    await tester.pumpAndSettle();
 
     expect(session.repository.noteSaves, hasLength(1));
-    expect(find.byType(EditableText), findsNothing);
+    expect(driver.find, findsNothing);
     expect(find.text('Afternoon note'), findsOneWidget);
     expect(_noteText('a better day'), findsOneWidget);
     expect(find.byKey(logViewerPanelKey), findsOneWidget);
     expect(session.outcomes, isEmpty);
     await _drainToast(tester);
   });
+
+  testWidgets(
+    'on macOS Keep editing after Back in an inline edit returns focus to the editor',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await _open(tester, entryId: 'entry-2');
+      await tester.tap(find.byKey(logActionsEditKey));
+      await tester.pumpAndSettle();
+      await driver.typeText(' never mind');
+      final TextSelection before = driver.selection;
+
+      await driver.press(
+        find.byKey(composerCloseKey),
+        const Duration(milliseconds: 110),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(composerDiscardTitle), findsOneWidget);
+
+      await driver.press(
+        find.byKey(composerKeepEditingKey),
+        const Duration(milliseconds: 110),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(composerDiscardTitle), findsNothing);
+      expect(driver.find, findsOneWidget);
+      expect(
+        tester
+            .widget<NoteEditorView>(find.byType(NoteEditorView))
+            .focusNode
+            .hasPrimaryFocus,
+        isTrue,
+      );
+      expect(driver.selection, before);
+
+      await driver.typeText('!');
+
+      expect(driver.source, '${_longNote()} never mind!');
+      await tester.pump(draftIdleDebounceForTest);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 
   testWidgets('Delete asks first, then deletes the log and leaves',
       (WidgetTester tester) async {
@@ -392,5 +454,20 @@ void main() {
       tester.widget<VoiceBody>(find.byType(VoiceBody)).playerFactory,
       same(audio),
     );
+  });
+
+  testWidgets('the viewer header time follows the system setting',
+      (WidgetTester tester) async {
+    _useClockFormat(tester, twentyFourHour: false);
+    await _open(tester, entryId: 'entry-2');
+
+    expect(find.text('2:30 PM'), findsOneWidget);
+    expect(find.text('8:12 AM · note'), findsOneWidget);
+
+    _useClockFormat(tester, twentyFourHour: true);
+    await tester.pumpAndSettle();
+
+    expect(find.text('14:30'), findsOneWidget);
+    expect(find.text('08:12 · note'), findsOneWidget);
   });
 }

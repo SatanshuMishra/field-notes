@@ -114,6 +114,7 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
             mood: mood,
             promptText: widget.promptText,
             onChangeMood: onChangeMood,
+            isToday: _isToday,
           ),
         if (dayAsync.hasError) ...<Widget>[
           const SizedBox(height: 8),
@@ -165,11 +166,14 @@ class _MoodChangeConfirmDialog extends StatelessWidget {
                     StickerButton(
                       label: 'Cancel',
                       variant: StickerButtonVariant.secondary,
+                      padTapTarget: true,
+                      autofocus: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
                       label: 'Change mood',
                       variant: StickerButtonVariant.primary,
+                      padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ],

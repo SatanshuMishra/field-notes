@@ -4,11 +4,19 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart'
+    show parseNoteTree;
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
+import 'package:field_notes/features/note_engine/capabilities.dart'
+    show tablesEnabled;
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteEditorController;
+import 'package:field_notes/features/note_engine/photos/photo_relocation.dart'
+    show PhotoEdit, photoInsertion, photoTargetAt;
 import 'package:field_notes/features/notes/photos/photo_import.dart';
-import 'package:field_notes/features/notes/photos/photo_line_edits.dart';
 
 import 'editor/format_bar.dart';
 
@@ -29,7 +37,7 @@ const List<(String, String)> composerMarkdownHints = <(String, String)>[
   ('> ', 'quote'),
 ];
 
-const double composerFooterHeight = 44;
+const double composerFooterHeight = 48;
 
 const double composerFooterHintsMinWidth = 360;
 
@@ -52,8 +60,9 @@ class ComposerFooterVeil extends StatelessWidget {
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Palette.composerPaper
-                .withValues(alpha: composerFooterVeilOpacity),
+            color: Palette.composerPaper.withValues(
+              alpha: composerFooterVeilOpacity,
+            ),
           ),
           child: child,
         ),
@@ -111,9 +120,14 @@ class _ComposerFooterState extends State<ComposerFooter> {
     }
     setState(() => _busy = true);
     try {
-      final List<String> picked = await widget.onAddPhoto();
-      if (mounted && picked.isNotEmpty) {
-        _insert(picked);
+      final TextEditingController controller = widget.controller;
+      if (controller is NoteEditorController) {
+        await controller.addPhotos(widget.onAddPhoto);
+      } else {
+        final List<String> picked = await widget.onAddPhoto();
+        if (mounted && picked.isNotEmpty) {
+          _insert(controller, picked);
+        }
       }
     } on PhotoPickException catch (error) {
       _report(error.message);
@@ -128,12 +142,23 @@ class _ComposerFooterState extends State<ComposerFooter> {
     }
   }
 
-  void _insert(List<String> references) {
-    final TextEditingValue current = widget.controller.value;
-    final TextEditingValue next = insertPhotoLinesAtCaret(current, references);
-    if (next != current) {
-      widget.controller.value = next;
-    }
+  void _insert(TextEditingController controller, List<String> references) {
+    final String text = controller.text;
+    final int caret = controller.selection.isValid
+        ? controller.selection.end
+        : text.length;
+    final PhotoEdit edit = photoInsertion(
+      text,
+      photoTargetAt(text, parseNoteTree(text, tables: tablesEnabled), caret),
+      references,
+    );
+    controller.value = TextEditingValue(
+      text: edit.changes.apply(text),
+      selection: TextSelection(
+        baseOffset: edit.selection.anchor,
+        extentOffset: edit.selection.head,
+      ),
+    );
   }
 
   void _report(String message) {
@@ -160,7 +185,8 @@ class _ComposerFooterState extends State<ComposerFooter> {
         height: composerFooterHeight,
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
-            final bool hints = widget.showHints &&
+            final bool hints =
+                widget.showHints &&
                 constraints.maxWidth >= composerFooterHintsMinWidth;
             return Row(
               children: <Widget>[
@@ -202,10 +228,10 @@ class _ComposerFooterState extends State<ComposerFooter> {
           onTap: enabled ? () => unawaited(_add()) : null,
           child: ExcludeSemantics(
             child: SizedBox(
-              height:
-                  widget.compact ? formatBarHeight : composerFooterHeight,
+              height: widget.compact ? formatBarHeight : composerFooterHeight,
               child: Center(
                 child: DecoratedBox(
+                  key: _addFocused ? focusRingKey : null,
                   decoration: BoxDecoration(
                     color: Palette.coral,
                     border: _addFocused ? _focusBorder : Shapes.outline,
@@ -231,8 +257,9 @@ class _ComposerFooterState extends State<ComposerFooter> {
                             enabled
                                 ? composerAddPhotoLabel
                                 : composerAddingLabel,
-                            style: TypographyTokens.captureLabelSans
-                                .copyWith(color: Palette.onAccent),
+                            style: TypographyTokens.captureLabelSans.copyWith(
+                              color: Palette.onAccent,
+                            ),
                           ),
                         ],
                       ),
@@ -253,17 +280,17 @@ class _ComposerFooterState extends State<ComposerFooter> {
       child: Text.rich(
         TextSpan(
           children: <InlineSpan>[
-            for (final (String marker, String word) in composerMarkdownHints)
-              ...<InlineSpan>[
-                TextSpan(
-                  text: marker,
-                  style: TypographyTokens.caption10Sans.copyWith(
-                    color: Palette.ink40,
-                    fontWeight: FontWeight.w700,
-                  ),
+            for (final (String marker, String word)
+                in composerMarkdownHints) ...<InlineSpan>[
+              TextSpan(
+                text: marker,
+                style: TypographyTokens.caption10Sans.copyWith(
+                  color: Palette.ink40,
+                  fontWeight: FontWeight.w700,
                 ),
-                TextSpan(text: '$word   '),
-              ],
+              ),
+              TextSpan(text: '$word   '),
+            ],
           ],
         ),
         key: composerHintsKey,
@@ -306,4 +333,3 @@ class _CameraPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CameraPainter oldDelegate) => false;
 }
-

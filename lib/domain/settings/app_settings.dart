@@ -9,6 +9,8 @@ class AppSettings {
     required this.soundEnabled,
     required this.textSize,
     required this.weekStart,
+    required this.spellCheckEnabled,
+    required this.notificationPermissionAsked,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -17,6 +19,8 @@ class AppSettings {
     soundEnabled: true,
     textSize: TextSize.medium,
     weekStart: WeekStart.sunday,
+    spellCheckEnabled: false,
+    notificationPermissionAsked: false,
   );
 
   final bool reminderEnabled;
@@ -24,6 +28,8 @@ class AppSettings {
   final bool soundEnabled;
   final TextSize textSize;
   final WeekStart weekStart;
+  final bool spellCheckEnabled;
+  final bool notificationPermissionAsked;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -31,6 +37,8 @@ class AppSettings {
     bool? soundEnabled,
     TextSize? textSize,
     WeekStart? weekStart,
+    bool? spellCheckEnabled,
+    bool? notificationPermissionAsked,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -38,6 +46,9 @@ class AppSettings {
       soundEnabled: soundEnabled ?? this.soundEnabled,
       textSize: textSize ?? this.textSize,
       weekStart: weekStart ?? this.weekStart,
+      spellCheckEnabled: spellCheckEnabled ?? this.spellCheckEnabled,
+      notificationPermissionAsked:
+          notificationPermissionAsked ?? this.notificationPermissionAsked,
     );
   }
 
@@ -50,7 +61,9 @@ class AppSettings {
           reminderTime == other.reminderTime &&
           soundEnabled == other.soundEnabled &&
           textSize == other.textSize &&
-          weekStart == other.weekStart;
+          weekStart == other.weekStart &&
+          spellCheckEnabled == other.spellCheckEnabled &&
+          notificationPermissionAsked == other.notificationPermissionAsked;
 
   @override
   int get hashCode => Object.hash(
@@ -59,11 +72,15 @@ class AppSettings {
         soundEnabled,
         textSize,
         weekStart,
+        spellCheckEnabled,
+        notificationPermissionAsked,
       );
 
   @override
   String toString() =>
       'AppSettings(reminderEnabled: $reminderEnabled, '
       'reminderTime: $reminderTime, soundEnabled: $soundEnabled, '
-      'textSize: $textSize, weekStart: $weekStart)';
+      'textSize: $textSize, weekStart: $weekStart, '
+      'spellCheckEnabled: $spellCheckEnabled, '
+      'notificationPermissionAsked: $notificationPermissionAsked)';
 }

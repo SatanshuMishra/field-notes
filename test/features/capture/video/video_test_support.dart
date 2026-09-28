@@ -60,10 +60,12 @@ class FakeVideoRecorder implements VideoRecorder {
   int stopCalls = 0;
   int cancelCalls = 0;
   int releaseCalls = 0;
+  int releaseSavedCalls = 0;
   int disposeCalls = 0;
   int listCalls = 0;
   bool _sessionLive = false;
   final List<String> previewDeviceIds = <String>[];
+  Completer<void>? stopGate;
 
   Duration elapsedValue = Duration.zero;
 
@@ -105,6 +107,10 @@ class FakeVideoRecorder implements VideoRecorder {
   @override
   Future<VideoRecording> stop() async {
     stopCalls++;
+    final Completer<void>? gate = stopGate;
+    if (gate != null) {
+      await gate.future;
+    }
     final VideoRecorderException? error = stopError;
     if (error != null) {
       throw error;
@@ -119,6 +125,11 @@ class FakeVideoRecorder implements VideoRecorder {
           durationMs: 6000,
           thumbnail: CaptureBytes(bytes: <int>[7, 8], mime: 'image/jpeg'),
         );
+  }
+
+  @override
+  Future<void> releaseSaved(VideoRecording recording) async {
+    releaseSavedCalls++;
   }
 
   @override
@@ -172,6 +183,7 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
   int stopCalls = 0;
   int cancelCalls = 0;
   int releaseCalls = 0;
+  int releaseSavedCalls = 0;
   int disposeCalls = 0;
 
   @override
@@ -204,6 +216,11 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
       media: CaptureBytes(bytes: <int>[1], mime: 'video/mp4', durationMs: 1),
       durationMs: 1,
     );
+  }
+
+  @override
+  Future<void> releaseSaved(VideoRecording recording) async {
+    releaseSavedCalls++;
   }
 
   @override

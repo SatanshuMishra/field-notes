@@ -3,6 +3,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
+import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_day_cell.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_weekday_bar.dart';
 import 'package:field_notes/state/journal_providers.dart';
@@ -29,6 +30,9 @@ Future<void> _pumpCalendar(
       retry: (int retryCount, Object error) => null,
       overrides: <Override>[
         weekStartProvider.overrideWithValue(weekStart),
+        journaledDatesProvider.overrideWith(
+          (Ref ref) => Stream<List<String>>.value(const <String>[]),
+        ),
         daysInMonthProvider(
           year: 2026,
           month: 7,

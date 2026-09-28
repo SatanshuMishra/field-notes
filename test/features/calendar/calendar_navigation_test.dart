@@ -1,6 +1,7 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
+import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,9 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
       retry: (int retryCount, Object error) => null,
       overrides: <Override>[
         weekStartProvider.overrideWithValue(WeekStart.sunday),
+        journaledDatesProvider.overrideWith(
+          (Ref ref) => Stream<List<String>>.value(const <String>[]),
+        ),
         daysInMonthProvider.overrideWith(
           (Ref ref, ({int year, int month}) args) =>
               Stream<List<Day>>.value(const <Day>[]),

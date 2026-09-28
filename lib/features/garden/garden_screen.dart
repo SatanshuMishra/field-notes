@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 
 import 'model/garden_data.dart';
@@ -18,11 +19,14 @@ class GardenScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final int resolvedYear = year ?? DateTime.now().year;
     final AsyncValue<List<Day>> days = ref.watch(allDaysProvider);
+    final List<String> journaled =
+        ref.watch(journaledDatesProvider).value ?? const <String>[];
     return days.when(
       data: (List<Day> list) => GardenView(
         blooms: gardenBloomsForYear(list, resolvedYear),
         tally: moodTally(list, resolvedYear),
         year: resolvedYear,
+        sprouts: gardenSproutsForYear(list, journaled, resolvedYear),
       ),
       loading: () => const _GardenLoading(),
       error: (Object error, StackTrace stackTrace) => const _GardenError(),

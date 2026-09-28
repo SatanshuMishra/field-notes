@@ -4,25 +4,31 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/domain/services/capture_service.dart'
+    show CaptureMedia;
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteEditorController;
 import 'package:field_notes/features/notes/photos/photo_import.dart';
 
 import 'composer_footer.dart';
-import 'editor/editor.dart';
+import 'editor/format_bar.dart';
+import 'editor/note_editor.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
 
 const double composerMeasureEm = 45;
 
-const Key composerWritingSurfaceKey =
-    ValueKey<String>('composer-writing-surface');
+const Key composerWritingSurfaceKey = ValueKey<String>(
+  'composer-writing-surface',
+);
 
 const String emptySaveGuardMessage = 'Write something first';
 
 enum ComposerExit { cancel, back }
-
 
 const double _headerVerticalPadding = 16;
 const double _headerHorizontalPadding = 18;
@@ -30,9 +36,13 @@ const double _headerGap = 14;
 const double _headerRuleThickness = 1.5;
 const double _titleLineHeight = 1.05;
 const double _exitPillHeight = 34;
+const double _headerTargetInset =
+    (kMinInteractiveDimension - _exitPillHeight) / 2;
 const double _exitPillStartPadding = 8;
 const double _exitPillEndPadding = 12;
-const double _exitPillRadius = 10;
+const BorderRadius _exitPillBorderRadius = BorderRadius.all(
+  Radius.circular(10),
+);
 const double _exitGlyphSize = 15;
 const double _exitGlyphGap = 4;
 const double _exitStrokeWidth = 2.2;
@@ -42,6 +52,9 @@ const double _backChevronArm = 5;
 const double _saveVerticalPadding = 7;
 const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
+const BorderRadius _saveBorderRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusPill),
+);
 const double _bodyHorizontalPadding = 18;
 const double _bodyBottomPadding = 14;
 const double _surfaceRuleThickness = 1;
@@ -74,6 +87,8 @@ class TextComposerSheet extends StatefulWidget {
     this.saveLabel = 'Save',
     this.savingLabel = 'Saving…',
     this.onAddPhoto,
+    this.spellCheckEnabled = false,
+    this.photoMediaImporter,
   });
 
   final ValueChanged<String> onSave;
@@ -91,32 +106,41 @@ class TextComposerSheet extends StatefulWidget {
   final String saveLabel;
   final String savingLabel;
   final PhotoImporter? onAddPhoto;
+  final bool spellCheckEnabled;
+  final Future<String> Function(CaptureMedia photo)? photoMediaImporter;
 
   @override
   State<TextComposerSheet> createState() => _TextComposerSheetState();
 }
 
 class _TextComposerSheetState extends State<TextComposerSheet> {
-  late final MarkdownStyleController _controller;
+  late final NoteEditorController _controller;
   late final bool _ownsController;
   late final FocusNode _focusNode;
   late final ScrollController _scrollController;
   late final UndoHistoryController _undoController;
   final GlobalKey _footerKey = GlobalKey();
+  final GlobalKey _dockedFooterKey = GlobalKey();
+  final GlobalKey _dockedBarKey = GlobalKey();
 
   @override
   void initState() {
     super.initState();
     final TextEditingController? external = widget.controller;
-    _ownsController = external is! MarkdownStyleController;
+    _ownsController = external is! NoteEditorController;
     _controller = switch (external) {
-      null => MarkdownStyleController(text: widget.initialText),
-      MarkdownStyleController() => external,
-      _ => MarkdownStyleController.attachedTo(external),
+      null => NoteEditorController(text: widget.initialText),
+      NoteEditorController() => external,
+      _ => NoteEditorController.attachedTo(external),
     };
     _focusNode = FocusNode();
     _scrollController = ScrollController();
     _undoController = UndoHistoryController();
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (mounted) {
+        _focusNode.requestFocus();
+      }
+    });
   }
 
   @override
@@ -132,43 +156,43 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool roomy = _hasRoomForFormatBar(
-          context,
-          constraints.maxHeight,
-        );
-        final bool sidebar = resolveShellLayout(Theme.of(context).platform) ==
-            ShellLayout.sidebar;
-        final Widget formatBar = _formatBar(
-          trailing: roomy ? null : _compactAdd(),
-        );
-        return CallbackShortcuts(
-          bindings: _shortcuts(context),
-          child: Focus(
-            autofocus: true,
-            child: Column(
-              mainAxisSize: MainAxisSize.max,
-              children: <Widget>[
-                _header(
-                  middle: roomy ? _titleBlock() : formatBar,
-                  below: roomy && sidebar ? formatBar : null,
-                ),
-                const DashedDivider(
-                  thickness: _headerRuleThickness,
-                  color: Palette.ink25,
-                ),
-                Expanded(
-                  child: _body(
-                    formatBar: roomy && !sidebar ? formatBar : null,
-                    footer: roomy ? _footer(showHints: true) : null,
-                  ),
-                ),
-              ],
+    return ToastClearance(
+      anchors: <GlobalKey>[_dockedFooterKey, _dockedBarKey],
+      child: LayoutBuilder(builder: _layout),
+    );
+  }
+
+  Widget _layout(BuildContext context, BoxConstraints constraints) {
+    final bool roomy = _hasRoomForFormatBar(context, constraints.maxHeight);
+    final bool sidebar =
+        resolveShellLayout(Theme.of(context).platform) == ShellLayout.sidebar;
+    final Widget formatBar = _formatBar(trailing: roomy ? null : _compactAdd());
+    return CallbackShortcuts(
+      bindings: _shortcuts(context),
+      child: Focus(
+        autofocus: true,
+        skipTraversal: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          children: <Widget>[
+            _header(
+              context,
+              middle: roomy ? _titleBlock() : formatBar,
+              below: roomy && sidebar ? formatBar : null,
             ),
-          ),
-        );
-      },
+            const DashedDivider(
+              thickness: _headerRuleThickness,
+              color: Palette.ink25,
+            ),
+            Expanded(
+              child: _body(
+                formatBar: roomy && !sidebar ? formatBar : null,
+                footer: roomy ? _footer(showHints: true) : null,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -177,13 +201,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       TargetPlatform.macOS || TargetPlatform.iOS => true,
       _ => false,
     };
-    final VoidCallback save = _handleSaveShortcut;
+    void save() => _handleSaveShortcut(context);
     return <ShortcutActivator, VoidCallback>{
-      SingleActivator(
-        LogicalKeyboardKey.enter,
-        meta: apple,
-        control: !apple,
-      ): save,
+      SingleActivator(LogicalKeyboardKey.enter, meta: apple, control: !apple):
+          save,
       SingleActivator(
         LogicalKeyboardKey.numpadEnter,
         meta: apple,
@@ -193,11 +214,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     };
   }
 
-  void _handleSaveShortcut() {
+  void _handleSaveShortcut(BuildContext context) {
     if (widget.isSaving) {
       return;
     }
-    _handleSaveTap();
+    _handleSaveTap(context);
   }
 
   void _handleEscape() {
@@ -245,11 +266,15 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget _header({required Widget middle, Widget? below}) {
+  Widget _header(
+    BuildContext context, {
+    required Widget middle,
+    Widget? below,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: _headerHorizontalPadding,
-        vertical: _headerVerticalPadding,
+        vertical: _headerVerticalPadding - _headerTargetInset,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -257,8 +282,15 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           Row(
             children: <Widget>[
               _exitPill(),
-              Expanded(child: middle),
-              _saveButton(),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: _headerTargetInset,
+                  ),
+                  child: middle,
+                ),
+              ),
+              _saveButton(context),
             ],
           ),
           ?below,
@@ -267,22 +299,56 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
+  Widget _headerAction({
+    required VoidCallback? onTap,
+    required BorderRadius focusRadius,
+    required Widget child,
+  }) {
+    return TextFieldTapRegion(
+      child: Semantics(
+        container: true,
+        button: true,
+        enabled: onTap != null,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: kMinInteractiveDimension,
+              minHeight: kMinInteractiveDimension,
+            ),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: FocusRing(
+                enabled: onTap != null,
+                onPressed: onTap,
+                borderRadius: focusRadius,
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _exitPill() {
     final bool back = widget.exit == ComposerExit.back;
-    return GestureDetector(
-      key: composerCloseKey,
-      behavior: HitTestBehavior.opaque,
+    return _headerAction(
       onTap: widget.isSaving ? null : widget.onCancel,
+      focusRadius: _exitPillBorderRadius,
       child: Container(
+        key: composerCloseKey,
         height: _exitPillHeight,
         padding: const EdgeInsets.only(
           left: _exitPillStartPadding,
           right: _exitPillEndPadding,
         ),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Palette.cardWarm,
           border: Shapes.outline,
-          borderRadius: BorderRadius.circular(_exitPillRadius),
+          borderRadius: _exitPillBorderRadius,
           boxShadow: Shadows.chip,
         ),
         child: Row(
@@ -299,8 +365,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             const SizedBox(width: _exitGlyphGap),
             Text(
               back ? 'Back' : 'Cancel',
-              style: TypographyTokens.captureLabelSans
-                  .copyWith(color: Palette.ink),
+              style: TypographyTokens.captureLabelSans.copyWith(
+                color: Palette.ink,
+              ),
             ),
           ],
         ),
@@ -321,8 +388,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               kicker,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TypographyTokens.stampAccent
-                  .copyWith(color: Palette.coral),
+              style: TypographyTokens.stampAccent.copyWith(
+                color: Palette.coral,
+              ),
             ),
           Text(
             widget.title,
@@ -338,18 +406,18 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget _saveButton() {
+  Widget _saveButton(BuildContext context) {
     final bool enabled = !widget.isSaving;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: enabled ? _handleSaveTap : null,
+    return _headerAction(
+      onTap: enabled ? () => _handleSaveTap(context) : null,
+      focusRadius: _saveBorderRadius,
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
         child: DecoratedBox(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Palette.coral,
             border: Shapes.outline,
-            borderRadius: BorderRadius.circular(Shapes.radiusPill),
+            borderRadius: _saveBorderRadius,
             boxShadow: Shadows.control,
           ),
           child: Padding(
@@ -359,8 +427,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: Text(
               widget.isSaving ? widget.savingLabel : widget.saveLabel,
-              style: TypographyTokens.captureLabelSans
-                  .copyWith(color: Palette.onAccent),
+              style: TypographyTokens.captureLabelSans.copyWith(
+                color: Palette.onAccent,
+              ),
             ),
           ),
         ),
@@ -368,17 +437,13 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  void _handleSaveTap() {
+  void _handleSaveTap(BuildContext context) {
     final String text = _controller.text;
     if (text.trim().isEmpty) {
-      _showGuard();
+      showTransientToast(context, emptySaveGuardMessage);
       return;
     }
     widget.onSave(text);
-  }
-
-  void _showGuard() {
-    showTransientToast(context, emptySaveGuardMessage);
   }
 
   Widget _body({Widget? formatBar, Widget? footer}) {
@@ -391,9 +456,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: _bodyHorizontalPadding,
-              vertical: _chipVerticalPadding,
             ),
-            child: DraftRestoredChip(onDiscard: widget.onDiscardDraft),
+            child: DraftRestoredChip(
+              onDiscard: widget.onDiscardDraft,
+              verticalMargin: _chipVerticalPadding,
+            ),
           ),
         Expanded(
           child: Stack(
@@ -404,19 +471,23 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: ComposerFooterVeil(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _bodyHorizontalPadding,
+                  child: KeyedSubtree(
+                    key: _dockedFooterKey,
+                    child: ComposerFooterVeil(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: _bodyHorizontalPadding,
+                        ),
+                        child: footer,
                       ),
-                      child: footer,
                     ),
                   ),
                 ),
             ],
           ),
         ),
-        ?formatBar,
+        if (formatBar != null)
+          KeyedSubtree(key: _dockedBarKey, child: formatBar),
         if (errorMessage != null)
           Padding(
             padding: const EdgeInsets.only(
@@ -426,8 +497,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: Text(
               errorMessage,
-              style:
-                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
+              style: TypographyTokens.captionSans.copyWith(
+                color: Palette.danger,
+              ),
             ),
           ),
         if (formatBar != null || errorMessage != null)
@@ -484,6 +556,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         hintText: widget.hintText,
         photoImporter: widget.onAddPhoto,
         bottomInset: bottomInset,
+        spellCheckEnabled: widget.spellCheckEnabled,
+        photoMediaImporter: widget.photoMediaImporter,
       ),
     );
   }

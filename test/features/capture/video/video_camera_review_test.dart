@@ -72,6 +72,9 @@ class _ArmingRecorder implements VideoRecorder {
   }
 
   @override
+  Future<void> releaseSaved(VideoRecording recording) async {}
+
+  @override
   Future<void> cancel() async {
     cancelCalls++;
     _aborted = true;
@@ -132,6 +135,9 @@ class _HangingReleaseRecorder implements VideoRecorder {
       durationMs: 1,
     );
   }
+
+  @override
+  Future<void> releaseSaved(VideoRecording recording) async {}
 
   @override
   Future<void> cancel() async {}
@@ -248,12 +254,6 @@ void main() {
         'Back camera 2',
       ]);
     });
-  });
-
-  test('the mobile recorder offers no pre-record preview widget', () {
-    final CameraVideoRecorder recorder = CameraVideoRecorder();
-
-    expect(recorder.openSession('back'), isNull);
   });
 
   testWidgets(

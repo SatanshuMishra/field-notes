@@ -85,3 +85,33 @@ List<MoodTallyEntry> moodTally(List<Day> days, int year) {
   }
   return tally;
 }
+
+List<String> gardenSproutsForYear(
+  List<Day> days,
+  List<String> journaledDates,
+  int year,
+) {
+  final Set<String> knownDates = <String>{for (final Day day in days) day.date};
+  final Map<String, Day> liveDays = <String, Day>{
+    for (final Day day in days)
+      if (!day.isDeleted) day.date: day,
+  };
+  final Set<String> sprouts = <String>{
+    for (final String date in journaledDates)
+      if (_isInYear(date, year) && _isSproutDate(date, knownDates, liveDays))
+        date,
+  };
+  return sprouts.toList()..sort();
+}
+
+bool _isSproutDate(
+  String date,
+  Set<String> knownDates,
+  Map<String, Day> liveDays,
+) {
+  final Day? live = liveDays[date];
+  if (live == null) {
+    return !knownDates.contains(date);
+  }
+  return live.mood == null;
+}

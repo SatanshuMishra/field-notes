@@ -1,12 +1,21 @@
 import 'dart:async';
 
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart'
+    show MdPhotoSize;
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
-import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteReaderView;
+import 'package:field_notes/features/note_engine/render/photo_figure.dart'
+    show PhotoFigure;
+import 'package:field_notes/features/note_engine/render/render_note_view.dart'
+    show NoteViewBody;
+import 'package:field_notes/features/notes/notes_providers.dart'
+    show notesMediaResolverProvider;
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -15,16 +24,44 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/photo_line_fixture.dart';
 import '../entry_cards/support/fake_video_player.dart';
+import '../entry_cards/support/reading_path.dart';
 import '../notes/support/notes_harness.dart'
-    show FakeNoteMediaResolver, availablePhoto, photoIdA, photoLine, prefixOf;
+    show FakeNoteMediaResolver, availablePhoto, photoIdA, prefixOf;
 import 'support/today_harness.dart';
+
+Finder _noteBody(String text) =>
+    find.byWidgetPredicate((Widget w) => w is NoteBody && w.text == text);
 
 Widget _feed(String date) {
   return CustomScrollView(
     slivers: <Widget>[TodayEntryFeed(date: date)],
   );
 }
+
+Widget _feedUnderHeader(String date) {
+  return CustomScrollView(
+    slivers: <Widget>[
+      SliverPadding(
+        padding: const EdgeInsets.all(20),
+        sliver: SliverMainAxisGroup(
+          slivers: <Widget>[
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            TodayEntryFeed(date: date),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+List<Override> _twoNotes() => _overrides(
+  entries: Stream<List<Entry>>.value(<Entry>[
+    todayTestEntry(id: 'entry-1', textContent: 'morning walk'),
+    todayTestEntry(id: 'entry-2', textContent: 'coffee on the porch'),
+  ]),
+);
 
 List<Override> _overrides({
   required Stream<List<Entry>> entries,
@@ -68,6 +105,33 @@ List<Override> _videoEntryOverrides({
 }
 
 void main() {
+  testWidgets('a revealed feed pill lies inside every reading-order frame',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await pumpToday(
+      tester,
+      _feedUnderHeader('2026-07-19'),
+      overrides: _twoNotes(),
+    );
+
+    for (int card = 0; card < 2; card += 1) {
+      await tester.longPress(find.byType(CompactLogCard).at(card));
+      await tester.pumpAndSettle();
+      expectInsideEveryReadingFrame(tester, logActionsEditLabel);
+      expectInsideEveryReadingFrame(tester, logActionsDeleteLabel);
+    }
+    semantics.dispose();
+  });
+
+  testWidgets('feed cards keep their list positions for screen readers',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await pumpToday(tester, _feed('2026-07-19'), overrides: _twoNotes());
+
+    expect(scrolledChildIndexes(tester), <int?>[0, 1]);
+    semantics.dispose();
+  });
+
   testWidgets('renders one card per entry and no photo strip',
       (WidgetTester tester) async {
     await pumpToday(
@@ -83,8 +147,8 @@ void main() {
     );
 
     expect(find.byType(CompactLogCard), findsNWidgets(2));
-    expect(find.text('morning walk'), findsOneWidget);
-    expect(find.text('coffee on the porch'), findsOneWidget);
+    expect(_noteBody('morning walk'), findsOneWidget);
+    expect(_noteBody('coffee on the porch'), findsOneWidget);
     expect(find.byType(MediaImage), findsNothing);
   });
 
@@ -98,7 +162,7 @@ void main() {
           todayTestEntry(
             id: 'entry-1',
             textContent:
-                'morning walk\n${photoLine(photoIdA, size: PhotoSize.small)}',
+                'morning walk\n${mdPhotoLine(photoIdA, size: MdPhotoSize.small)}',
           ),
         ]),
         resolver: FakeNoteMediaResolver(<String, ResolvedMedia>{
@@ -107,7 +171,7 @@ void main() {
       ),
     );
 
-    expect(find.byType(StackedPhoto), findsNothing);
+    expect(find.byType(PhotoFigure), findsNothing);
     expect(find.byType(MediaImage), findsOneWidget);
     expect(
       find.descendant(
@@ -135,7 +199,15 @@ void main() {
     );
 
     expect(tester.getSize(find.byType(CompactLogCard)).width, 1000);
-    expect(tester.getSize(find.text('morning walk')).width, 970);
+    expect(
+      tester.getSize(
+        find.descendant(
+          of: find.byType(NoteReaderView),
+          matching: find.byType(NoteViewBody),
+        ),
+      ).width,
+      970,
+    );
   });
 
   testWidgets('a video card fills a desktop pane',
@@ -178,7 +250,7 @@ void main() {
     );
 
     expect(tester.getSize(find.byType(CompactLogCard)).width, 420);
-    expect(tester.getSize(find.text('morning walk')).width, 390);
+    expect(tester.getSize(find.byType(NoteReaderView)).width, 390);
   });
 
   testWidgets('renders an empty state when today has no entries',
@@ -215,7 +287,7 @@ void main() {
     );
 
     expect(find.byType(CompactLogCard), findsOneWidget);
-    expect(find.text('morning walk'), findsOneWidget);
+    expect(_noteBody('morning walk'), findsOneWidget);
 
     pending.complete(const StubMediaResolver());
     await tester.pumpAndSettle();

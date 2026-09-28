@@ -11,6 +11,7 @@ import 'package:field_notes/features/day_detail/day_detail_header.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/day_detail/show_day_detail.dart';
+import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -184,10 +185,10 @@ void main() {
     final Rect panel = tester.getRect(_panel());
     expect(panel.width, lessThanOrEqualTo(360 - 32));
     for (final (String stamp, bool fitsWhole) in <(String, bool)>[
-      ('08:12 · morning · note', true),
-      ('12:12 · afternoon · note', true),
-      ('18:12 · evening · note', false),
-      ('20:12 · evening · voice', true),
+      ('8:12 AM · morning · note', true),
+      ('12:12 PM · afternoon · note', true),
+      ('6:12 PM · evening · note', false),
+      ('8:12 PM · evening · voice', true),
     ]) {
       await tester.scrollUntilVisible(
         find.text(stamp),
@@ -227,7 +228,9 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(CompactLogCard),
-          matching: find.textContaining(text, findRichText: true),
+          matching: find.byWidgetPredicate(
+            (Widget w) => w is NoteBody && w.text.contains(text),
+          ),
         ),
         findsOneWidget,
       );
@@ -238,7 +241,7 @@ void main() {
       (WidgetTester tester) async {
     await _openDay(tester, entries: _threeNotes());
 
-    await tester.tap(find.text('08:12 · morning · note'));
+    await tester.tap(find.text('8:12 AM · morning · note'));
     await tester.pumpAndSettle();
 
     expect(find.text('Morning note'), findsOneWidget);
@@ -256,7 +259,7 @@ void main() {
       (WidgetTester tester) async {
     await _openDay(tester, entries: _threeNotes());
 
-    await tester.tap(find.text('08:12 · morning · note'));
+    await tester.tap(find.text('8:12 AM · morning · note'));
     await tester.pumpAndSettle();
     expect(find.text('Morning note'), findsOneWidget);
 

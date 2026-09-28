@@ -1,3 +1,4 @@
+import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
@@ -9,7 +10,6 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   LocalNotificationsReminderScheduler({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
-  static const int notificationId = 1001;
   static const String _channelId = 'daily_reminder';
   static const String _channelName = 'Daily reminder';
   static const String _channelDescription =
@@ -51,13 +51,37 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings(_androidIcon),
-        macOS: DarwinInitializationSettings(),
+        macOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestSoundPermission: false,
+          requestBadgePermission: false,
+        ),
       ),
     );
   }
 
   @override
-  Future<bool> ensurePermission() async {
+  Future<ReminderPermission> permissionStatus() async {
+    await _ensureInitialized();
+    final AndroidFlutterLocalNotificationsPlugin? android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android != null) {
+      return _permissionFrom(await android.areNotificationsEnabled());
+    }
+    final MacOSFlutterLocalNotificationsPlugin? macOS = _plugin
+        .resolvePlatformSpecificImplementation<
+          MacOSFlutterLocalNotificationsPlugin
+        >();
+    if (macOS != null) {
+      return _permissionFrom((await macOS.checkPermissions())?.isEnabled);
+    }
+    return ReminderPermission.unknown;
+  }
+
+  @override
+  Future<bool> requestPermission() async {
     await _ensureInitialized();
     final AndroidFlutterLocalNotificationsPlugin? android = _plugin
         .resolvePlatformSpecificImplementation<
@@ -81,22 +105,37 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
     return false;
   }
 
+  ReminderPermission _permissionFrom(bool? enabled) => switch (enabled) {
+        true => ReminderPermission.granted,
+        false => ReminderPermission.denied,
+        null => ReminderPermission.unknown,
+      };
+
   @override
-  Future<void> schedule(DateTime at) async {
+  Future<void> schedule(List<ReminderBooking> bookings) async {
     await _ensureInitialized();
-    await _plugin.zonedSchedule(
-      id: notificationId,
-      title: _title,
-      body: _body,
-      scheduledDate: tz.TZDateTime.from(at, tz.local),
-      notificationDetails: _details,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-    );
+    await _cancelAll();
+    for (final ReminderBooking booking in bookings) {
+      await _plugin.zonedSchedule(
+        id: booking.id,
+        title: _title,
+        body: _body,
+        scheduledDate: tz.TZDateTime.from(booking.at, tz.local),
+        notificationDetails: _details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    }
   }
 
   @override
   Future<void> cancel() async {
     await _ensureInitialized();
-    await _plugin.cancel(id: notificationId);
+    await _cancelAll();
+  }
+
+  Future<void> _cancelAll() async {
+    for (final int id in ReminderService.bookingIds) {
+      await _plugin.cancel(id: id);
+    }
   }
 }

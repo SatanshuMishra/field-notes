@@ -5,8 +5,20 @@ part 'shell_navigation.g.dart';
 
 @Riverpod(keepAlive: true)
 class ShellNavigation extends _$ShellNavigation {
+  ShellDestination _settingsOrigin = ShellDestination.today;
+
   @override
   ShellDestination build() => ShellDestination.today;
 
-  void select(ShellDestination destination) => state = destination;
+  void select(ShellDestination destination) {
+    if (destination == ShellDestination.settings &&
+        state != ShellDestination.settings) {
+      _settingsOrigin = state;
+    }
+    state = destination;
+  }
+
+  void back() => state = state == ShellDestination.settings
+      ? _settingsOrigin
+      : ShellDestination.today;
 }

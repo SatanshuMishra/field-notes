@@ -1,6 +1,12 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart' show clampDouble;
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -17,7 +23,7 @@ enum VideoRecorderPhase {
   recording,
   paused,
   saving,
-  denied
+  denied,
 }
 
 const Key videoCloseKey = ValueKey<String>('video-close');
@@ -37,31 +43,44 @@ const List<Color> _vignetteColors = <Color>[
 ];
 const List<double> _vignetteStops = <double>[0, 0.22, 0.68, 1];
 
+const double _minTapTarget = 48;
+
 const double _chromeInset = 16;
 const double _closeGlyphSize = 22;
+const double _closeTargetInset = (_minTapTarget - _closeGlyphSize) / 2;
 
 const double _pillRadius = Shapes.radiusMd;
 const double _pillGap = 7;
 const double _pillDotSize = 8;
-const EdgeInsets _pillPadding =
-    EdgeInsets.symmetric(horizontal: 12, vertical: 5);
+const EdgeInsets _pillPadding = EdgeInsets.symmetric(
+  horizontal: 12,
+  vertical: 5,
+);
 const double _pillTimeSize = 13;
 const Duration _pillBlinkDuration = Duration(milliseconds: 1200);
 
 const double _pickerWidth = 280;
 
+const double _bandLeft = _chromeInset - _closeTargetInset + _minTapTarget;
+const double _bandGap = 8;
+const String _widestReadout = '00:00';
+
 const double _underPillTop = 54;
 const double _underPillGap = 8;
 
-const double _hintBottom = 70;
+const double _hintBottom = 100;
 const double _hintSize = 13;
 const double _errorGap = 10;
-const EdgeInsets _errorPadding =
-    EdgeInsets.symmetric(horizontal: 14, vertical: 8);
+const EdgeInsets _errorPadding = EdgeInsets.symmetric(
+  horizontal: 14,
+  vertical: 8,
+);
 
 const double _deniedMaxWidth = 420;
-const EdgeInsets _deniedPadding =
-    EdgeInsets.symmetric(horizontal: 22, vertical: 20);
+const EdgeInsets _deniedPadding = EdgeInsets.symmetric(
+  horizontal: 22,
+  vertical: 20,
+);
 
 const double _controlRowBottom = 22;
 const double _controlRowGap = 30;
@@ -69,8 +88,14 @@ const double _shutterSize = 70;
 const double _shutterBorderWidth = 4;
 const double _shutterCoreSize = 24;
 const double _shutterPauseGlyphSize = 26;
+const BorderRadius _shutterFocusRadius = BorderRadius.all(
+  Radius.circular(_shutterSize / 2),
+);
 
 const double _sideCircleSize = 44;
+const BorderRadius _sideFocusRadius = BorderRadius.all(
+  Radius.circular(_sideCircleSize / 2),
+);
 const double _sideCircleBorderWidth = 1.5;
 const double _sideGlyphSize = 18;
 const double _sideCaptionGap = 3;
@@ -87,6 +112,7 @@ class VideoRecorderSheet extends StatelessWidget {
     this.onPause,
     this.onResume,
     this.onDiscard,
+    this.onDismiss,
     this.supportsPause = false,
     this.preview,
     this.devices = const <VideoCaptureDevice>[],
@@ -114,6 +140,7 @@ class VideoRecorderSheet extends StatelessWidget {
   final VoidCallback? onPause;
   final VoidCallback? onResume;
   final VoidCallback? onDiscard;
+  final VoidCallback? onDismiss;
   final bool supportsPause;
   final Widget? preview;
   final List<VideoCaptureDevice> devices;
@@ -147,6 +174,20 @@ class VideoRecorderSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.escape): ?onDismiss,
+      },
+      child: Focus(
+        autofocus: true,
+        skipTraversal: true,
+        includeSemantics: false,
+        child: _viewport(),
+      ),
+    );
+  }
+
+  Widget _viewport() {
     final String? errorMessage = this.errorMessage;
     final String? hint = _hint;
     return SizedBox(
@@ -159,8 +200,7 @@ class VideoRecorderSheet extends StatelessWidget {
           const IgnorePointer(child: _Vignette()),
           if (_isDenied) _deniedPanel(),
           _closeButton(),
-          _timerPill(),
-          if (_showsPicker) _picker(),
+          _topBand(),
           _underPill(),
           if (errorMessage != null || hint != null)
             _bottomText(errorMessage, hint),
@@ -200,49 +240,86 @@ class VideoRecorderSheet extends StatelessWidget {
 
   Widget _closeButton() {
     return Positioned(
-      left: _chromeInset,
-      top: _chromeInset,
-      child: GestureDetector(
-        key: videoCloseKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: _isSaving ? null : onCancel,
-        child: const IconStickerGlyphIcon(
-          glyph: IconStickerGlyph.close,
-          color: Palette.onAccent,
-          size: _closeGlyphSize,
+      left: _chromeInset - _closeTargetInset,
+      top: _chromeInset - _closeTargetInset,
+      child: Semantics(
+        button: true,
+        enabled: !_isSaving,
+        label: 'Close',
+        child: GestureDetector(
+          key: videoCloseKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: _isSaving ? null : onCancel,
+          child: FocusRing(
+            enabled: !_isSaving,
+            onPressed: onCancel,
+            surface: FocusRingSurface.dark,
+            borderRadius: Shapes.buttonBorderRadius,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minWidth: _minTapTarget,
+                minHeight: _minTapTarget,
+              ),
+              child: const Center(
+                child: IconStickerGlyphIcon(
+                  glyph: IconStickerGlyph.close,
+                  color: Palette.onAccent,
+                  size: _closeGlyphSize,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 
-  Widget _timerPill() {
+  Widget _topBand() {
     return Positioned(
       top: _chromeInset,
       left: 0,
       right: 0,
-      child: Center(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Palette.viewportScrim,
-            borderRadius: BorderRadius.circular(_pillRadius),
+      child: _TopBand(
+        reserve: Visibility(
+          visible: false,
+          maintainState: true,
+          maintainAnimation: true,
+          maintainSize: true,
+          child: _timerPill(
+            _widestReadout,
+            const _PillDot(color: Palette.onDark30),
           ),
-          child: Padding(
-            padding: _pillPadding,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _stateDot(),
-                const SizedBox(width: _pillGap),
-                Text(
-                  formatMediaDuration(elapsed.inMilliseconds),
-                  style: TypographyTokens.captureLabelSans.copyWith(
-                    fontSize: _pillTimeSize,
-                    color: Palette.onAccent,
-                  ),
-                ),
-              ],
+        ),
+        pill: _timerPill(
+          formatMediaDuration(elapsed.inMilliseconds),
+          _stateDot(),
+        ),
+        picker: _showsPicker ? _picker() : null,
+      ),
+    );
+  }
+
+  Widget _timerPill(String readout, Widget dot) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Palette.viewportScrim,
+        borderRadius: BorderRadius.circular(_pillRadius),
+      ),
+      child: Padding(
+        padding: _pillPadding,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            dot,
+            const SizedBox(width: _pillGap),
+            Text(
+              readout,
+              style: TypographyTokens.captureLabelSans.copyWith(
+                fontSize: _pillTimeSize,
+                color: Palette.onAccent,
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -264,19 +341,12 @@ class VideoRecorderSheet extends StatelessWidget {
   }
 
   Widget _picker() {
-    return Positioned(
-      top: _chromeInset,
-      right: _chromeInset,
-      child: SizedBox(
-        width: _pickerWidth,
-        child: CameraPicker(
-          devices: devices,
-          selectedDeviceId: selectedDeviceId,
-          onChanged: _isIdle ? onDeviceChanged : null,
-          enabled: _isIdle,
-          label: cameraLabel,
-        ),
-      ),
+    return CameraPicker(
+      devices: devices,
+      selectedDeviceId: selectedDeviceId,
+      onChanged: _isIdle ? onDeviceChanged : null,
+      enabled: _isIdle,
+      label: cameraLabel,
     );
   }
 
@@ -318,8 +388,9 @@ class VideoRecorderSheet extends StatelessWidget {
                 child: Text(
                   errorMessage,
                   textAlign: TextAlign.center,
-                  style: TypographyTokens.captionSans
-                      .copyWith(color: Palette.onDark85),
+                  style: TypographyTokens.captionSans.copyWith(
+                    color: Palette.onDark85,
+                  ),
                 ),
               ),
             ),
@@ -403,41 +474,62 @@ class VideoRecorderSheet extends StatelessWidget {
   }
 
   Widget _shutter() {
-    return GestureDetector(
-      key: videoShutterKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: _shutterTap,
-      child: Container(
-        width: _shutterSize,
-        height: _shutterSize,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: Palette.onAccent,
-            width: _shutterBorderWidth,
+    final VoidCallback? tap = _shutterTap;
+    return Semantics(
+      button: true,
+      label: _shutterLabel,
+      child: GestureDetector(
+        key: videoShutterKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: tap,
+        child: FocusRing(
+          enabled: tap != null,
+          onPressed: tap,
+          surface: FocusRingSurface.dark,
+          borderRadius: _shutterFocusRadius,
+          child: Container(
+            width: _shutterSize,
+            height: _shutterSize,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Palette.onAccent,
+                width: _shutterBorderWidth,
+              ),
+            ),
+            child: _showsPauseGlyph
+                ? const IconStickerGlyphIcon(
+                    glyph: IconStickerGlyph.pause,
+                    color: Palette.onAccent,
+                    size: _shutterPauseGlyphSize,
+                  )
+                : const SizedBox.square(
+                    dimension: _shutterCoreSize,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: Palette.recordFill,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
           ),
         ),
-        child: _showsPauseGlyph
-            ? const IconStickerGlyphIcon(
-                glyph: IconStickerGlyph.pause,
-                color: Palette.onAccent,
-                size: _shutterPauseGlyphSize,
-              )
-            : const SizedBox.square(
-                dimension: _shutterCoreSize,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Palette.recordFill,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
       ),
     );
   }
 
   bool get _showsPauseGlyph => _isRecording && supportsPause && onPause != null;
+
+  String get _shutterLabel {
+    if (_isRecording) {
+      return _showsPauseGlyph ? 'Pause recording' : 'Stop recording';
+    }
+    if (_isPaused) {
+      return onResume != null ? 'Resume recording' : 'Stop recording';
+    }
+    return 'Start recording';
+  }
 
   VoidCallback? get _shutterTap {
     if (_isSaving || _isPreparing) {
@@ -450,9 +542,156 @@ class VideoRecorderSheet extends StatelessWidget {
   }
 
   TextStyle get _hintStyle => TypographyTokens.hintAccent.copyWith(
-        fontSize: _hintSize,
-        color: Palette.onDark72,
+    fontSize: _hintSize,
+    color: Palette.onDark72,
+  );
+}
+
+enum _TopBandSlot { reserve, pill, picker }
+
+class _TopBand
+    extends SlottedMultiChildRenderObjectWidget<_TopBandSlot, RenderBox> {
+  const _TopBand({required this.reserve, required this.pill, this.picker});
+
+  final Widget reserve;
+  final Widget pill;
+  final Widget? picker;
+
+  @override
+  Iterable<_TopBandSlot> get slots => _TopBandSlot.values;
+
+  @override
+  Widget? childForSlot(_TopBandSlot slot) {
+    return switch (slot) {
+      _TopBandSlot.reserve => reserve,
+      _TopBandSlot.pill => pill,
+      _TopBandSlot.picker => picker,
+    };
+  }
+
+  @override
+  _RenderTopBand createRenderObject(BuildContext context) => _RenderTopBand();
+}
+
+class _RenderTopBand extends RenderBox
+    with SlottedContainerRenderObjectMixin<_TopBandSlot, RenderBox> {
+  RenderBox get _reserve => childForSlot(_TopBandSlot.reserve)!;
+  RenderBox get _pill => childForSlot(_TopBandSlot.pill)!;
+  RenderBox? get _picker => childForSlot(_TopBandSlot.picker);
+
+  Iterable<RenderBox> get _paintOrder =>
+      <RenderBox?>[_reserve, _pill, _picker].nonNulls;
+
+  ({double slotLeft, double pickerWidth}) _geometry(
+    double width,
+    double slotWidth,
+  ) {
+    final double centred = (width - slotWidth) / 2;
+    final RenderBox? picker = _picker;
+    if (picker == null) {
+      return (slotLeft: centred, pickerWidth: 0);
+    }
+    final double right = width - _chromeInset;
+    final double content = math.min(
+      _pickerWidth,
+      picker.getMinIntrinsicWidth(double.infinity),
+    );
+    final double slotLeft = math.max(
+      _bandLeft,
+      math.min(centred, right - content - _bandGap - slotWidth),
+    );
+    return (
+      slotLeft: slotLeft,
+      pickerWidth: clampDouble(
+        right - slotLeft - slotWidth - _bandGap,
+        0,
+        _pickerWidth,
+      ),
+    );
+  }
+
+  @override
+  Size computeDryLayout(covariant BoxConstraints constraints) {
+    final BoxConstraints loose = constraints.loosen();
+    final Size reserve = _reserve.getDryLayout(loose);
+    final Size pill = _pill.getDryLayout(loose);
+    final double slotWidth = math.max(reserve.width, pill.width);
+    final double pickerWidth = _geometry(
+      constraints.maxWidth,
+      slotWidth,
+    ).pickerWidth;
+    final double pickerHeight =
+        _picker
+            ?.getDryLayout(BoxConstraints.tightFor(width: pickerWidth))
+            .height ??
+        0;
+    return constraints.constrain(
+      Size(
+        constraints.maxWidth,
+        math.max(math.max(reserve.height, pill.height), pickerHeight),
+      ),
+    );
+  }
+
+  @override
+  void performLayout() {
+    final BoxConstraints loose = constraints.loosen();
+    final RenderBox reserve = _reserve..layout(loose, parentUsesSize: true);
+    final RenderBox pill = _pill..layout(loose, parentUsesSize: true);
+    final double slotWidth = math.max(reserve.size.width, pill.size.width);
+    final (:double slotLeft, :double pickerWidth) = _geometry(
+      constraints.maxWidth,
+      slotWidth,
+    );
+    _place(reserve, slotLeft + (slotWidth - reserve.size.width) / 2);
+    _place(pill, slotLeft + (slotWidth - pill.size.width) / 2);
+    final RenderBox? picker = _picker;
+    if (picker != null) {
+      picker.layout(
+        BoxConstraints.tightFor(width: pickerWidth),
+        parentUsesSize: true,
       );
+      _place(picker, constraints.maxWidth - _chromeInset - pickerWidth);
+    }
+    size = constraints.constrain(
+      Size(
+        constraints.maxWidth,
+        _paintOrder
+            .map((RenderBox child) => child.size.height)
+            .reduce(math.max),
+      ),
+    );
+  }
+
+  void _place(RenderBox child, double dx) {
+    (child.parentData! as BoxParentData).offset = Offset(dx, 0);
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    for (final RenderBox child in _paintOrder) {
+      context.paintChild(
+        child,
+        offset + (child.parentData! as BoxParentData).offset,
+      );
+    }
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    for (final RenderBox child in _paintOrder.toList().reversed) {
+      final bool hit = result.addWithPaintOffset(
+        offset: (child.parentData! as BoxParentData).offset,
+        position: position,
+        hitTest: (BoxHitTestResult result, Offset transformed) =>
+            child.hitTest(result, position: transformed),
+      );
+      if (hit) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
 
 class _Vignette extends StatelessWidget {
@@ -495,40 +734,57 @@ class _SideControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: controlKey,
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Container(
-            width: _sideCircleSize,
-            height: _sideCircleSize,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: background,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: borderColor,
-                width: _sideCircleBorderWidth,
-              ),
-            ),
-            child: IconStickerGlyphIcon(
-              glyph: glyph,
-              color: Palette.onAccent,
-              size: _sideGlyphSize,
+    return Semantics(
+      container: true,
+      button: true,
+      child: GestureDetector(
+        key: controlKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                FocusRing(
+                  onPressed: onTap,
+                  surface: FocusRingSurface.dark,
+                  borderRadius: _sideFocusRadius,
+                  child: Container(
+                    width: _sideCircleSize,
+                    height: _sideCircleSize,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: background,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: borderColor,
+                        width: _sideCircleBorderWidth,
+                      ),
+                    ),
+                    child: IconStickerGlyphIcon(
+                      glyph: glyph,
+                      color: Palette.onAccent,
+                      size: _sideGlyphSize,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: _sideCaptionGap),
+                Text(
+                  label,
+                  style: TypographyTokens.labelSans.copyWith(
+                    fontSize: _sideCaptionSize,
+                    color: captionColor,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: _sideCaptionGap),
-          Text(
-            label,
-            style: TypographyTokens.labelSans.copyWith(
-              fontSize: _sideCaptionSize,
-              color: captionColor,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

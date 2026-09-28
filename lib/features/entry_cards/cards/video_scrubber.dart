@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import '../../../design/tokens/tokens.dart';
 import '../util/duration_format.dart';
 
@@ -35,13 +36,13 @@ class _SeekEdgeIntent extends Intent {
 
 const Map<ShortcutActivator, Intent> _scrubberShortcuts =
     <ShortcutActivator, Intent>{
-  SingleActivator(LogicalKeyboardKey.arrowRight): _SeekStepIntent(1),
-  SingleActivator(LogicalKeyboardKey.arrowLeft): _SeekStepIntent(-1),
-  SingleActivator(LogicalKeyboardKey.arrowUp): _SeekStepIntent(1),
-  SingleActivator(LogicalKeyboardKey.arrowDown): _SeekStepIntent(-1),
-  SingleActivator(LogicalKeyboardKey.home): _SeekEdgeIntent(false),
-  SingleActivator(LogicalKeyboardKey.end): _SeekEdgeIntent(true),
-};
+      SingleActivator(LogicalKeyboardKey.arrowRight): _SeekStepIntent(1),
+      SingleActivator(LogicalKeyboardKey.arrowLeft): _SeekStepIntent(-1),
+      SingleActivator(LogicalKeyboardKey.arrowUp): _SeekStepIntent(1),
+      SingleActivator(LogicalKeyboardKey.arrowDown): _SeekStepIntent(-1),
+      SingleActivator(LogicalKeyboardKey.home): _SeekEdgeIntent(false),
+      SingleActivator(LogicalKeyboardKey.end): _SeekEdgeIntent(true),
+    };
 
 class VideoScrubber extends StatefulWidget {
   const VideoScrubber({
@@ -123,8 +124,10 @@ class _VideoScrubberState extends State<VideoScrubber> {
     if (total == null || !width.isFinite || span <= 0) {
       return null;
     }
-    final double fraction =
-        ((dx - scrubberHandleRadius) / span).clamp(0.0, 1.0);
+    final double fraction = ((dx - scrubberHandleRadius) / span).clamp(
+      0.0,
+      1.0,
+    );
     return Duration(milliseconds: (total.inMilliseconds * fraction).round());
   }
 
@@ -205,8 +208,8 @@ class _VideoScrubberState extends State<VideoScrubber> {
               ? Duration.zero
               : clampPlaybackPosition(_stepped(-1), total),
         ),
-        onIncrease: enabled ? () => _emit(_stepped(1)) : null,
-        onDecrease: enabled ? () => _emit(_stepped(-1)) : null,
+        onIncrease: () => _emit(_stepped(1)),
+        onDecrease: () => _emit(_stepped(-1)),
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final double width = constraints.maxWidth;
@@ -215,24 +218,26 @@ class _VideoScrubberState extends State<VideoScrubber> {
               behavior: HitTestBehavior.opaque,
               onTapDown: enabled
                   ? (TapDownDetails details) =>
-                      _seekToOffset(details.localPosition.dx, width)
+                        _seekToOffset(details.localPosition.dx, width)
                   : null,
               onHorizontalDragStart: enabled
                   ? (DragStartDetails details) =>
-                      _previewOffset(details.localPosition.dx, width)
+                        _previewOffset(details.localPosition.dx, width)
                   : null,
               onHorizontalDragUpdate: enabled
                   ? (DragUpdateDetails details) =>
-                      _previewOffset(details.localPosition.dx, width)
+                        _previewOffset(details.localPosition.dx, width)
                   : null,
-              onHorizontalDragEnd:
-                  enabled ? (DragEndDetails details) => _endDrag() : null,
+              onHorizontalDragEnd: enabled
+                  ? (DragEndDetails details) => _endDrag()
+                  : null,
               onHorizontalDragCancel: enabled ? _endDrag : null,
               child: Opacity(
                 opacity: enabled ? 1.0 : 0.5,
                 child: SizedBox(
                   height: scrubberHeight,
                   child: CustomPaint(
+                    key: _focused ? focusRingKey : null,
                     painter: _ScrubberPainter(
                       fraction: _fraction,
                       focused: _focused,
@@ -293,7 +298,11 @@ class _ScrubberPainter extends CustomPainter {
     );
 
     final Offset handle = Offset(left + filled, centerY);
-    canvas.drawCircle(handle, scrubberHandleRadius, Paint()..color = Palette.coral);
+    canvas.drawCircle(
+      handle,
+      scrubberHandleRadius,
+      Paint()..color = Palette.coral,
+    );
     canvas.drawCircle(
       handle,
       scrubberHandleRadius,

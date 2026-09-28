@@ -7,6 +7,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/day_detail/show_day_detail.dart';
+import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/state/state.dart';
 
 import 'support/day_detail_harness.dart';
@@ -70,7 +71,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sunday, July 19'), findsOneWidget);
-    expect(find.text('a good day'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'a good day',
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Add a note'), findsOneWidget);
   });
 
@@ -161,6 +167,11 @@ void main() {
     final DayDetailPanel panel =
         tester.widget<DayDetailPanel>(find.byType(DayDetailPanel));
     expect(panel.focusEntryId, isNull);
-    expect(find.text('a good day'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'a good day',
+      ),
+      findsOneWidget,
+    );
   });
 }

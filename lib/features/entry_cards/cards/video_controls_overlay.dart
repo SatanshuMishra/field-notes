@@ -185,6 +185,7 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
         child: GestureDetector(
           key: const ValueKey<String>('video-surface-tap'),
           behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
           onTap: _onSurfaceTap,
           child: Focus(
             canRequestFocus: false,

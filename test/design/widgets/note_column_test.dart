@@ -60,16 +60,17 @@ void main() {
       expect(tester.getSize(find.byKey(_childKey)).width, 1100);
     });
 
-    testWidgets('pins at 35 em when the parent is wider', (
+    testWidgets('the default column cap is forty five em', (
       WidgetTester tester,
     ) async {
-      await _pump(tester, parentWidth: 800, child: NoteColumn(child: _probe()));
+      await _pump(tester, parentWidth: 1000, child: NoteColumn(child: _probe()));
 
       expect(
         tester.getSize(find.byKey(_childKey)).width,
-        35 * TypographyTokens.noteBody.fontSize!,
+        45 * TypographyTokens.noteBody.fontSize!,
       );
-      expect(tester.getSize(find.byKey(_childKey)).width, 560);
+      expect(tester.getSize(find.byKey(_childKey)).width, 720);
+      expect(NoteColumn.measureEm, 45);
     });
 
     testWidgets('takes the parent width when the parent is narrower', (
@@ -86,8 +87,8 @@ void main() {
       await _pump(tester, parentWidth: 800, child: NoteColumn(child: _probe()));
 
       final Rect child = tester.getRect(find.byKey(_childKey));
-      expect(child.left, 120);
-      expect(child.right, 680);
+      expect(child.left, 40);
+      expect(child.right, 760);
       expect(child.top, 0);
     });
 
@@ -108,7 +109,7 @@ void main() {
         child: NoteColumn(horizontalInset: 30, child: _probe()),
       );
 
-      expect(tester.getSize(find.byKey(_childKey)).width, 590);
+      expect(tester.getSize(find.byKey(_childKey)).width, 750);
     });
 
     testWidgets('tracks the ambient text scaler, not the raw token', (
@@ -116,12 +117,12 @@ void main() {
     ) async {
       await _pump(
         tester,
-        parentWidth: 1000,
+        parentWidth: 1200,
         textScaler: const TextScaler.linear(1.5),
         child: NoteColumn(child: _probe()),
       );
 
-      expect(tester.getSize(find.byKey(_childKey)).width, 35 * 16 * 1.5);
+      expect(tester.getSize(find.byKey(_childKey)).width, 45 * 16 * 1.5);
     });
 
     testWidgets('measures em through scale(fontSize), never scale(1) * size', (
@@ -135,7 +136,7 @@ void main() {
       );
 
       expect(const _StepTextScaler().scale(1) * 16, 16);
-      expect(tester.getSize(find.byKey(_childKey)).width, 35 * 20);
+      expect(tester.getSize(find.byKey(_childKey)).width, 45 * 20);
     });
 
     testWidgets('exposes the same em and measure it lays out with', (
@@ -159,6 +160,7 @@ void main() {
         NoteColumn.measureOf(captured),
         tester.getSize(find.byKey(_childKey)).width,
       );
+      expect(tester.getSize(find.byKey(_childKey)).width, closeTo(828, 1e-9));
     });
   });
 }

@@ -12,6 +12,37 @@ Color _surface(WidgetTester tester) {
   return tester.widget<StickerCard>(find.byType(StickerCard)).surface;
 }
 
+class _AnchoredBand extends StatelessWidget {
+  const _AnchoredBand({
+    required this.anchor,
+    required this.height,
+    this.published = true,
+  });
+
+  final GlobalKey anchor;
+  final double height;
+  final bool published;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget band = Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Builder(
+          builder: (BuildContext context) => GestureDetector(
+            onTap: () => showTransientToast(context, 'Photo removed'),
+            child: const Text('show'),
+          ),
+        ),
+        SizedBox(key: anchor, height: height),
+      ],
+    );
+    return published
+        ? ToastClearance(anchors: <GlobalKey>[anchor], child: band)
+        : band;
+  }
+}
+
 void main() {
   group('Toast', () {
     testWidgets('renders its message on a sticker surface',
@@ -213,6 +244,64 @@ void main() {
       expect(toast.center.dx, 195);
       expect(messageSize(tester), 11);
       expect(glyphSize(tester), 13);
+
+      await tester.pump(kToastLifetime);
+    });
+
+    Future<void> showAboveBand(
+      WidgetTester tester,
+      GlobalKey anchor, {
+      required double band,
+      double statusBar = 0,
+    }) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = FakeViewPadding(top: statusBar);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: _AnchoredBand(anchor: anchor, height: band),
+        ),
+      );
+      await tester.tap(find.text('show'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('inside a clearance it floats 16 above the anchored band', (
+      WidgetTester tester,
+    ) async {
+      await showAboveBand(tester, GlobalKey(), band: 200);
+
+      expect(tester.getRect(find.byType(Toast)).bottom, 844 - 200 - 16);
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('inside a clearance its top stays below the status bar', (
+      WidgetTester tester,
+    ) async {
+      await showAboveBand(tester, GlobalKey(), band: 790, statusBar: 24);
+
+      expect(tester.getRect(find.byType(Toast)).top, 24);
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('when its clearance goes away the toast drops back to 84', (
+      WidgetTester tester,
+    ) async {
+      final GlobalKey anchor = GlobalKey();
+      await showAboveBand(tester, anchor, band: 200);
+      expect(tester.getRect(find.byType(Toast)).bottom, 844 - 200 - 16);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: _AnchoredBand(anchor: anchor, height: 200, published: false),
+        ),
+      );
+      await tester.pump();
+
+      expect(tester.getRect(find.byType(Toast)).bottom, 844 - 84);
 
       await tester.pump(kToastLifetime);
     });

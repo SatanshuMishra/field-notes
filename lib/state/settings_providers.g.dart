@@ -129,3 +129,44 @@ final class WeekStartProvider
 }
 
 String _$weekStartHash() => r'62914b2e9fa9c5c0af94f55f3c189a2d1307453f';
+
+@ProviderFor(spellCheckEnabled)
+final spellCheckEnabledProvider = SpellCheckEnabledProvider._();
+
+final class SpellCheckEnabledProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  SpellCheckEnabledProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'spellCheckEnabledProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$spellCheckEnabledHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return spellCheckEnabled(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$spellCheckEnabledHash() => r'fe6e15d4a43dc37e1ebad23e519cd08963487228';

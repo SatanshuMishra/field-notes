@@ -96,6 +96,16 @@ class MeadowPainter extends CustomPainter {
   void _paintBloom(Canvas canvas, PlantedBloom bloom) {
     final double sway =
         bloom.swayAmplitude * math.sin(2 * math.pi * t + bloom.swayPhase);
+    if (bloom.isSprout) {
+      final double height = bloom.size * sproutRatio;
+      canvas.save();
+      canvas.translate(bloom.dx, bloom.baseY);
+      canvas.rotate(sway);
+      canvas.translate(-bloom.size * 0.5, -height);
+      const GardenSproutPainter().paint(canvas, Size(bloom.size, height));
+      canvas.restore();
+      return;
+    }
     final GardenPlantSpec spec = gardenPlantSpecFor(bloom.kind);
     final double height = bloom.size * spec.ratio;
     canvas.save();

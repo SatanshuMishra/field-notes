@@ -5,10 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
-import 'package:field_notes/features/notes/notes.dart';
 
 final String photoIdA = 'a1b2c3d4e5f6${'0' * 52}';
 final String photoIdB = 'b2c3d4e5f6a1${'1' * 52}';
@@ -19,13 +19,13 @@ String prefixOf(String id) => id.substring(0, 12);
 String photoLine(
   String id, {
   String caption = '',
-  PhotoSide side = PhotoSide.right,
-  PhotoSize size = PhotoSize.medium,
+  MdPhotoSide side = MdPhotoSide.right,
+  MdPhotoSize size = MdPhotoSize.medium,
 }) {
-  return photoLineFor(
-    reference: prefixOf(id),
-    caption: caption,
-    placement: PhotoPlacement(side: side, size: size),
+  return canonicalPhotoLine(
+    prefixOf(id),
+    caption,
+    MdPhotoPlacement(side: side, size: size),
   );
 }
 
@@ -42,7 +42,11 @@ MediaBlob photoBlob(String id, {int? width = 1200, int? height = 800}) {
   );
 }
 
-ResolvedMedia availablePhoto(String id, {int? width = 1200, int? height = 800}) {
+ResolvedMedia availablePhoto(
+  String id, {
+  int? width = 1200,
+  int? height = 800,
+}) {
   return ResolvedMedia.available(
     blob: photoBlob(id, width: width, height: height),
     file: File('${Directory.systemTemp.path}/field-notes-absent/$id.jpg'),
@@ -51,7 +55,7 @@ ResolvedMedia availablePhoto(String id, {int? width = 1200, int? height = 800}) 
 
 class FakeNoteMediaResolver implements MediaResolver {
   FakeNoteMediaResolver([Map<String, ResolvedMedia>? results])
-      : _results = <String, ResolvedMedia>{...?results};
+    : _results = <String, ResolvedMedia>{...?results};
 
   final Map<String, ResolvedMedia> _results;
   final Set<String> _memoized = <String>{};
@@ -69,7 +73,7 @@ class FakeNoteMediaResolver implements MediaResolver {
 
 class FakeNoteMediaStore implements MediaStore {
   FakeNoteMediaStore({List<String> assignIds = const <String>[]})
-      : _assign = <String>[...assignIds];
+    : _assign = <String>[...assignIds];
 
   final List<String> _assign;
   final Map<String, MediaBlob> _blobs = <String, MediaBlob>{};
@@ -102,8 +106,7 @@ class FakeNoteMediaStore implements MediaStore {
     int? width,
     int? height,
     int? durationMs,
-  }) async =>
-      _put(mime, bytes.length, width, height);
+  }) async => _put(mime, bytes.length, width, height);
 
   @override
   Future<MediaBlob> putFile({
@@ -113,8 +116,7 @@ class FakeNoteMediaStore implements MediaStore {
     int? width,
     int? height,
     int? durationMs,
-  }) async =>
-      _put(mime, 1, width, height);
+  }) async => _put(mime, 1, width, height);
 
   @override
   Future<MediaBlob?> blobById(String id) async => _blobs[id];
@@ -133,8 +135,9 @@ class FakeNoteMediaStore implements MediaStore {
     int length = photoRefPrefixLength;
     while (length < id.length) {
       final String prefix = id.substring(0, length);
-      if (!_blobs.keys.any((String other) =>
-          other != id && other.startsWith(prefix))) {
+      if (!_blobs.keys.any(
+        (String other) => other != id && other.startsWith(prefix),
+      )) {
         return prefix;
       }
       length = nextPrefixLength(length);
@@ -152,7 +155,7 @@ class FakeNoteMediaStore implements MediaStore {
 
 class FakePhotoImporter {
   FakePhotoImporter({List<List<String>>? results, this.error})
-      : _results = <List<String>>[...?results];
+    : _results = <List<String>>[...?results];
 
   final List<List<String>> _results;
   final Object? error;

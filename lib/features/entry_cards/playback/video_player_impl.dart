@@ -7,7 +7,7 @@ import 'package:video_player/video_player.dart' as vp;
 import 'video_playback.dart';
 
 const double _fallbackAspectRatio = 1.0;
-const double _surfaceUnitHeight = 1.0;
+const double _fallbackSurfaceHeight = 1000.0;
 
 VideoPlaybackState videoStateFromValue({
   required bool hasError,
@@ -48,8 +48,9 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
   @override
   Future<void> load(String filePath) async {
     _setState(VideoPlaybackState.loading);
-    final vp.VideoPlayerController controller =
-        vp.VideoPlayerController.file(File(filePath));
+    final vp.VideoPlayerController controller = vp.VideoPlayerController.file(
+      File(filePath),
+    );
     _controller = controller;
     controller.addListener(_onValue);
     try {
@@ -124,18 +125,28 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
     if (controller == null || !controller.value.isInitialized) {
       return const SizedBox.shrink();
     }
-    final double reported = controller.value.aspectRatio;
-    final double ratio =
-        reported.isFinite && reported > 0 ? reported : _fallbackAspectRatio;
+    final Size surface = _surfaceSize(controller.value);
     return FittedBox(
       fit: BoxFit.cover,
       clipBehavior: Clip.hardEdge,
       child: SizedBox(
-        width: ratio,
-        height: _surfaceUnitHeight,
+        width: surface.width,
+        height: surface.height,
         child: vp.VideoPlayer(controller),
       ),
     );
+  }
+
+  Size _surfaceSize(vp.VideoPlayerValue value) {
+    final Size natural = value.size;
+    if (!natural.isEmpty && natural.isFinite) {
+      return natural;
+    }
+    final double reported = value.aspectRatio;
+    final double ratio = reported.isFinite && reported > 0
+        ? reported
+        : _fallbackAspectRatio;
+    return Size(ratio * _fallbackSurfaceHeight, _fallbackSurfaceHeight);
   }
 
   @override

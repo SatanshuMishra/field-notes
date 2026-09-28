@@ -1,6 +1,7 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
+import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/today/this_week_garden.dart';
 import 'package:field_notes/features/today/today_layout.dart';
@@ -94,7 +95,12 @@ void main() {
     expect(find.text('Sunday, July 19'), findsOneWidget);
     expect(find.text('Feeling Calm today'), findsOneWidget);
     expect(find.text('change'), findsOneWidget);
-    expect(find.text('morning walk'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'morning walk',
+      ),
+      findsOneWidget,
+    );
 
     expect(find.byType(ThisWeekGarden), findsNothing);
     expect(find.text('capture a moment'), findsNothing);
@@ -111,7 +117,12 @@ void main() {
     );
 
     expect(find.text('Good evening'), findsOneWidget);
-    expect(find.text('morning walk'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'morning walk',
+      ),
+      findsOneWidget,
+    );
 
     expect(find.byType(ThisWeekGarden), findsOneWidget);
     expect(find.text("this week's garden"), findsOneWidget);

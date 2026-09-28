@@ -1,26 +1,39 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/features/notes/notes.dart';
+import 'package:field_notes/features/note_engine/layout/note_typography.dart'
+    show NoteTypography;
 
-const Key photoCaptionFieldEditorKey =
-    ValueKey<String>('photo-caption-editor');
+const Key photoCaptionFieldEditorKey = ValueKey<String>('photo-caption-editor');
 
 const String photoCaptionFieldHint = 'Caption';
+
+const double photoCaptionFieldTarget = 48;
 
 final RegExp _forbidden = RegExp(r'[\]\r\n]');
 
 double photoCaptionLineHeight(TextScaler scaler) {
   final TextPainter painter = TextPainter(
-    text: const TextSpan(text: 'Ag', style: notePhotoCaptionStyle),
-    textAlign: notePhotoCaptionAlign,
+    text: const TextSpan(text: 'Ag', style: NoteTypography.caption),
+    textAlign: TextAlign.center,
     textDirection: TextDirection.ltr,
     textScaler: scaler,
   )..layout();
   final double height = painter.height;
   painter.dispose();
   return height;
+}
+
+EdgeInsets photoCaptionFieldReach({
+  required double lineHeight,
+  required double roomAbove,
+}) {
+  final double spare = math.max(0, photoCaptionFieldTarget - lineHeight);
+  final double above = math.min(roomAbove, spare / 2);
+  return EdgeInsets.only(top: above, bottom: spare - above);
 }
 
 class PhotoCaptionField extends StatefulWidget {
@@ -31,6 +44,7 @@ class PhotoCaptionField extends StatefulWidget {
     required this.height,
     required this.onCommit,
     required this.onCancel,
+    this.reach = EdgeInsets.zero,
   });
 
   final String caption;
@@ -38,20 +52,27 @@ class PhotoCaptionField extends StatefulWidget {
   final double height;
   final ValueChanged<String> onCommit;
   final VoidCallback onCancel;
+  final EdgeInsets reach;
 
   @override
   State<PhotoCaptionField> createState() => _PhotoCaptionFieldState();
 }
 
 class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.caption,
-  )..selection = TextSelection(
-      baseOffset: 0,
-      extentOffset: widget.caption.length,
-    );
+  late final TextEditingController _controller =
+      TextEditingController(text: widget.caption)
+        ..selection = TextSelection(
+          baseOffset: 0,
+          extentOffset: widget.caption.length,
+        );
   final FocusNode _focus = FocusNode(debugLabel: photoCaptionFieldHint);
   bool _settled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.requestFocus();
+  }
 
   @override
   void dispose() {
@@ -94,40 +115,73 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
 
   @override
   Widget build(BuildContext context) {
-    return FocusScope(
-      child: TapRegion(
-        onTapOutside: (PointerDownEvent event) => _commit(),
-        child: Focus(
-          canRequestFocus: false,
-          skipTraversal: true,
-          onKeyEvent: _onKey,
+    return TapRegion(
+      onTapOutside: (PointerDownEvent event) => _commit(),
+      child: Focus(
+        canRequestFocus: false,
+        skipTraversal: true,
+        onKeyEvent: _onKey,
+        child: Semantics(
+          container: true,
           child: SizedBox(
             width: widget.width,
-            height: widget.height,
-            child: Material(
-              type: MaterialType.transparency,
-              child: TextField(
-                key: photoCaptionFieldEditorKey,
-                controller: _controller,
-                focusNode: _focus,
-                autofocus: true,
-                maxLines: 1,
-                style: notePhotoCaptionStyle,
-                textAlign: notePhotoCaptionAlign,
-                cursorColor: Palette.coral,
-                keyboardType: TextInputType.text,
-                textInputAction: TextInputAction.done,
-                textCapitalization: TextCapitalization.sentences,
-                inputFormatters: <TextInputFormatter>[
-                  FilteringTextInputFormatter.deny(_forbidden),
-                ],
-                onSubmitted: (String _) => _commit(),
-                decoration: InputDecoration.collapsed(
-                  hintText: photoCaptionFieldHint,
-                  hintStyle: notePhotoCaptionStyle.copyWith(
-                    color: Palette.placeholder,
+            height: widget.height + widget.reach.vertical,
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    excludeFromSemantics: true,
+                    onTap: _focus.requestFocus,
                   ),
                 ),
+                Padding(
+                  padding: widget.reach,
+                  child: SizedBox(
+                    width: widget.width,
+                    height: widget.height,
+                    child: _field(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _field() {
+    return Material(
+      type: MaterialType.transparency,
+      child: Semantics(
+        label: photoCaptionFieldHint,
+        child: TextField(
+          key: photoCaptionFieldEditorKey,
+          controller: _controller,
+          focusNode: _focus,
+          maxLines: 1,
+          style: NoteTypography.caption,
+          textAlign: TextAlign.center,
+          cursorColor: Palette.coral,
+          keyboardType: TextInputType.text,
+          textInputAction: TextInputAction.done,
+          textCapitalization: TextCapitalization.sentences,
+          inputFormatters: <TextInputFormatter>[
+            FilteringTextInputFormatter.deny(_forbidden),
+          ],
+          onSubmitted: (String _) => _commit(),
+          decoration: InputDecoration.collapsed(
+            hintText: null,
+            hint: ExcludeSemantics(
+              child: Text(
+                photoCaptionFieldHint,
+                style: Theme.of(context).textTheme.bodyLarge!
+                    .merge(NoteTypography.caption)
+                    .merge(_hintStyle),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
@@ -135,4 +189,8 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
       ),
     );
   }
+
+  static final TextStyle _hintStyle = NoteTypography.caption.copyWith(
+    color: Palette.placeholder,
+  );
 }

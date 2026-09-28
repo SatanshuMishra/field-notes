@@ -17,16 +17,18 @@ class GardenView extends StatelessWidget {
     required this.tally,
     required this.year,
     this.motionOverride,
+    this.sprouts = const <String>[],
   });
 
   final List<GardenBloomData> blooms;
   final List<MoodTallyEntry> tally;
   final int year;
   final GardenMotionProfile? motionOverride;
+  final List<String> sprouts;
 
   @override
   Widget build(BuildContext context) {
-    if (blooms.isEmpty) {
+    if (blooms.isEmpty && sprouts.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
@@ -45,18 +47,23 @@ class GardenView extends StatelessWidget {
     final GardenMotionProfile motion = motionOverride ??
         resolveGardenMotion(
           reduceMotion: reduceMotion,
-          bloomCount: blooms.length,
+          bloomCount: blooms.length + sprouts.length,
         );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(
-          child: MeadowScene(blooms: blooms, motion: motion, seed: year),
+          child: MeadowScene(
+            blooms: blooms,
+            motion: motion,
+            seed: year,
+            sprouts: sprouts,
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: MoodTallyChips(entries: tally),
+          child: MoodTallyChips(entries: tally, sproutCount: sprouts.length),
         ),
       ],
     );

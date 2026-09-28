@@ -21,6 +21,7 @@ class SettingsNotice extends StatelessWidget {
         StickerButton(
           label: 'Dismiss',
           variant: StickerButtonVariant.secondary,
+          padTapTarget: true,
           onPressed: onDismiss,
         ),
       ],

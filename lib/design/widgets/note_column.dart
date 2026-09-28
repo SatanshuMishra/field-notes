@@ -12,7 +12,7 @@ class NoteColumn extends StatelessWidget {
     this.maxEm = measureEm,
   });
 
-  static const double measureEm = 35;
+  static const double measureEm = 45;
 
   final Widget child;
   final double horizontalInset;

@@ -11,6 +11,7 @@ class SettingsTextField extends StatefulWidget {
     this.obscureText = false,
     this.keyboardType,
     this.onChanged,
+    this.semanticLabel,
   });
 
   final TextEditingController controller;
@@ -19,6 +20,7 @@ class SettingsTextField extends StatefulWidget {
   final bool obscureText;
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
+  final String? semanticLabel;
 
   @override
   State<SettingsTextField> createState() => _SettingsTextFieldState();
@@ -96,9 +98,12 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: MergeSemantics(
             child: Semantics(
-              label: widget.hintText,
+              label: widget.semanticLabel ?? widget.hintText,
+              hint: widget.semanticLabel == null ? null : widget.hintText,
+              enabled: widget.enabled ? null : false,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
+                excludeFromSemantics: !widget.enabled,
                 onTapDown: _handleTapDown,
                 onTapUp: _handleTapUp,
                 child: Stack(
@@ -153,12 +158,14 @@ class SettingsSecretField extends StatelessWidget {
     this.hintText,
     this.enabled = true,
     this.onChanged,
+    this.semanticLabel,
   });
 
   final TextEditingController controller;
   final String? hintText;
   final bool enabled;
   final ValueChanged<String>? onChanged;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -168,6 +175,7 @@ class SettingsSecretField extends StatelessWidget {
       enabled: enabled,
       obscureText: true,
       onChanged: onChanged,
+      semanticLabel: semanticLabel,
     );
   }
 }

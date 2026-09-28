@@ -3,6 +3,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
+import 'package:field_notes/features/settings/spell_check_availability.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,11 @@ List<Override> shellOverrides() => <Override>[
       ),
       reminderClockProvider.overrideWithValue(() => DateTime(2026, 7, 20, 9)),
       reminderSchedulerProvider.overrideWithValue(RecordingReminderScheduler()),
+      spellCheckAvailabilityProvider.overrideWithValue(
+        const AsyncValue<SpellCheckAvailability>.data(
+          SpellCheckAvailability.available,
+        ),
+      ),
     ];
 
 Future<void> pumpShell(

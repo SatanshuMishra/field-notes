@@ -126,6 +126,35 @@ void main() {
     expect((coralBox.decoration as BoxDecoration).color, Palette.coral);
   });
 
+  testWidgets('the dialog focuses its safe button first',
+      (WidgetTester tester) async {
+    await tester.pumpWidget(const _Harness(danger: true));
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    final BuildContext? focused = FocusManager.instance.primaryFocus?.context;
+    expect(
+      find.descendant(
+        of: find.byKey(confirmDialogCancelKey),
+        matching: find.byElementPredicate(
+          (Element element) => identical(element, focused),
+        ),
+        matchRoot: true,
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(confirmDialogConfirmKey),
+        matching: find.byElementPredicate(
+          (Element element) => identical(element, focused),
+        ),
+        matchRoot: true,
+      ),
+      findsNothing,
+    );
+  });
+
   testWidgets('dialog text carries no fallback underline',
       (WidgetTester tester) async {
     await tester.pumpWidget(

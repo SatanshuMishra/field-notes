@@ -15,6 +15,7 @@ on:
       - 'lib/data/media/blob_prefix.dart'
       - 'test/design/widgets/widget_harness.dart'
       - 'test/flutter_test_config.dart'
+      - 'lib/features/note_engine/**'
 
 jobs:
   goldens:

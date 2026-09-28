@@ -1,13 +1,22 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteReaderView;
+
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
-import '../notes/note_document.dart';
 
 class NoteBody extends StatelessWidget {
-  const NoteBody({super.key, required this.text});
+  const NoteBody({
+    super.key,
+    required this.text,
+    this.selectable = true,
+    this.onToggleTask,
+  });
 
   final String text;
+  final bool selectable;
+  final ValueChanged<int>? onToggleTask;
 
   @override
   Widget build(BuildContext context) {
@@ -21,6 +30,10 @@ class NoteBody extends StatelessWidget {
         style: TypographyTokens.noteBodyItalic.copyWith(color: Palette.muted),
       );
     }
-    return NoteDocument(source: text);
+    return NoteReaderView(
+      source: text,
+      selectable: selectable,
+      onToggleTask: onToggleTask,
+    );
   }
 }

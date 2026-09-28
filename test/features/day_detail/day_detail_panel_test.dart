@@ -15,6 +15,8 @@ import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
+import '../../support/note_editor_driver.dart';
+import '../entry_cards/support/reading_path.dart';
 import 'support/day_detail_harness.dart';
 
 Finder _panelCard() => find.byKey(dayDetailPanelKey);
@@ -67,7 +69,38 @@ String _longNote(int index) {
   return buffer.toString();
 }
 
+FakeJournalRepository _twoNotes() => FakeJournalRepository(
+  entries: <Entry>[
+    entryOf(id: 'entry-1', type: EntryType.text, textContent: 'a good day'),
+    entryOf(id: 'entry-2', type: EntryType.text, textContent: 'and a walk'),
+  ],
+);
+
 void main() {
+  testWidgets('a revealed day pill lies inside every reading-order frame',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_panelApp(_twoNotes()));
+    await tester.pumpAndSettle();
+
+    for (int card = 0; card < 2; card += 1) {
+      await _revealPillOn(tester, find.byType(CompactLogCard).at(card));
+      expectInsideEveryReadingFrame(tester, logActionsEditLabel);
+      expectInsideEveryReadingFrame(tester, logActionsDeleteLabel);
+    }
+    semantics.dispose();
+  });
+
+  testWidgets('day cards keep their list positions for screen readers',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_panelApp(_twoNotes()));
+    await tester.pumpAndSettle();
+
+    expect(scrolledChildIndexes(tester), <int?>[0, 1, 2]);
+    semantics.dispose();
+  });
+
   testWidgets('renders the day heading, mood prompt, count and entries',
       (WidgetTester tester) async {
     final FakeJournalRepository repository = FakeJournalRepository(
@@ -86,8 +119,18 @@ void main() {
     expect(find.text(dayDetailMoodPrompt), findsOneWidget);
     expect(find.text('2 logs that day'), findsOneWidget);
     expect(find.byType(CompactLogCard), findsNWidgets(2));
-    expect(find.text('a good day'), findsOneWidget);
-    expect(find.text('and a walk'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'a good day',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'and a walk',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('shows the dashed empty state when the day has no entries',
@@ -136,7 +179,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('a good day'), findsWidgets);
+    expect(NoteEditorDriver(tester).source, 'a good day');
   });
 
   testWidgets('deleting an entry soft-deletes it and updates the list',
@@ -155,7 +198,12 @@ void main() {
     await _confirmDelete(tester);
 
     expect(repository.deletedEntryIds, <String>['entry-1']);
-    expect(find.text('a good day'), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'a good day',
+      ),
+      findsNothing,
+    );
     expect(find.text('0 logs that day'), findsOneWidget);
     await _drainToast(tester);
   });
@@ -192,7 +240,12 @@ void main() {
 
     expect(repository.deletedEntryIds, <String>['entry-1']);
     expect(find.byKey(const ValueKey<String>('entry-1')), findsNothing);
-    expect(find.text('a good day'), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'a good day',
+      ),
+      findsNothing,
+    );
     expect(survivor, findsOneWidget);
     expect(identical(tester.element(survivor), survivorElement), isTrue);
     await _drainToast(tester);
@@ -214,7 +267,12 @@ void main() {
 
     expect(repository.deletedEntryIds, isEmpty);
     expect(find.text(dayDetailDeleteErrorMessage), findsOneWidget);
-    expect(find.text('a good day'), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'a good day',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('surfaces a load error and never claims the day is empty',
@@ -252,7 +310,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(dayDetailMediaErrorMessage), findsOneWidget);
-    expect(find.text('a good day'), findsNothing);
+    expect(
+      find.byWidgetPredicate(
+        (Widget w) => w is NoteBody && w.text == 'a good day',
+      ),
+      findsNothing,
+    );
     expect(find.byKey(const ValueKey<String>('entry-1')), findsNothing);
     expect(find.text('1 log that day'), findsOneWidget);
     expect(find.text('Sunday, July 19'), findsOneWidget);
@@ -388,7 +451,7 @@ void main() {
     expect(find.byKey(compactLogOpenLabelKey), findsOneWidget);
     expect(find.text('journal note number 0 word0 word1 word2 word3 word4…'),
         findsNothing);
-    expect(find.byType(NoteDocument), findsNothing);
+    expect(find.byType(NoteBody), findsNothing);
     expect(find.textContaining('word60'), findsNothing);
   });
 

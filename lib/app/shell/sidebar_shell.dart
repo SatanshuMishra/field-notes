@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/material.dart';
 
 import '../../design/flowers/flowers.dart';
@@ -8,6 +9,7 @@ import '../../design/tokens/tokens.dart';
 import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/mood/flower_kind.dart';
+import 'keep_focus_in_view.dart';
 import 'shell_destination.dart';
 import 'window_chrome.dart';
 
@@ -33,32 +35,34 @@ class SidebarShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Palette.panelTop,
-      body: Column(
-        children: <Widget>[
-          _titleBar(),
-          Expanded(
-            child: DecoratedBox(
-              decoration: _panelWash,
+    return KeepFocusInView(
+      child: Scaffold(
+        backgroundColor: Palette.panelTop,
+        body: Column(
+          children: <Widget>[
+            _titleBar(),
+            Expanded(
               child: DecoratedBox(
-                decoration: _panelGlow,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    _rail(),
-                    const DashedDivider(
-                      axis: Axis.vertical,
-                      thickness: 1.0,
-                      color: Palette.ink22,
-                    ),
-                    Expanded(child: body),
-                  ],
+                decoration: _panelWash,
+                child: DecoratedBox(
+                  decoration: _panelGlow,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      FocusTraversalGroup(child: _rail()),
+                      const DashedDivider(
+                        axis: Axis.vertical,
+                        thickness: 1.0,
+                        color: Palette.ink22,
+                      ),
+                      Expanded(child: FocusTraversalGroup(child: body)),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -140,6 +144,7 @@ class SidebarShell extends StatelessWidget {
           glyphColor: settingsSelected ? Palette.onAccent : Palette.ink,
           background: settingsSelected ? Palette.coral : Palette.cardLight,
           semanticLabel: ShellDestination.settings.label,
+          selected: settingsSelected,
           onPressed: () => onSelect(ShellDestination.settings),
         ),
         const SizedBox(width: _footerGap),
@@ -184,40 +189,53 @@ class SidebarShell extends StatelessWidget {
     final NavGlyph? glyph = d.glyph;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: GestureDetector(
-        key: ValueKey<String>('rail-${d.name}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onSelect(d),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: isSelected ? Palette.coral : null,
-            border: isSelected ? Shapes.outline : null,
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: d.label,
+        child: GestureDetector(
+          key: ValueKey<String>('rail-${d.name}'),
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onSelect(d),
+          child: FocusRing(
+            onPressed: () => onSelect(d),
             borderRadius: _navItemRadius,
-            boxShadow: isSelected ? Shadows.emphasis : null,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-            child: Row(
-              children: <Widget>[
-                if (glyph == null)
-                  Icon(d.icon, size: 18, color: foreground)
-                else
-                  NavIcon(glyph: glyph, color: foreground, size: 18),
-                const SizedBox(width: 10),
-                Text(
-                  d.label,
-                  style: TypographyTokens.navLabelSans.copyWith(
-                    color: foreground,
+            child: ExcludeSemantics(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: isSelected ? Palette.coral : null,
+                  border: isSelected ? Shapes.outline : null,
+                  borderRadius: _navItemRadius,
+                  boxShadow: isSelected ? Shadows.emphasis : null,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      if (glyph == null)
+                        Icon(d.icon, size: 18, color: foreground)
+                      else
+                        NavIcon(glyph: glyph, color: foreground, size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        d.label,
+                        style: TypographyTokens.navLabelSans.copyWith(
+                          color: foreground,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-
 }
 
 const BorderRadius _navItemRadius = BorderRadius.all(
@@ -231,11 +249,12 @@ const String _syncSecondaryCopy = 'on this device only';
 const String _soundOnLabel = 'Sound effects on';
 const String _soundOffLabel = 'Sound effects off';
 
-final TextStyle _syncPrimaryStyle =
-    TypographyTokens.syncPrimarySans.copyWith(height: _syncLineHeight);
+final TextStyle _syncPrimaryStyle = TypographyTokens.syncPrimarySans.copyWith(
+  height: _syncLineHeight,
+);
 
-final TextStyle _syncSecondaryStyle =
-    TypographyTokens.syncSecondarySans.copyWith(height: _syncLineHeight);
+final TextStyle _syncSecondaryStyle = TypographyTokens.syncSecondarySans
+    .copyWith(height: _syncLineHeight);
 
 const double _panelGlowBaseRadius = 0.5;
 const double _panelGlowExtentX = 1.2;

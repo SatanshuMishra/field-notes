@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -14,25 +15,31 @@ class MoodBanner extends StatelessWidget {
     required this.onChangeMood,
     this.promptText = 'How are you feeling today?',
     this.changeLabel = 'change',
+    this.isToday = true,
   });
 
   final Mood? mood;
   final VoidCallback? onChangeMood;
   final String promptText;
   final String changeLabel;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
     final Mood? current = mood;
     if (current == null) {
-      return _MoodPrompt(text: promptText, onTap: onChangeMood);
+      return _MoodPrompt(
+        text: promptText,
+        isToday: isToday,
+        onTap: onChangeMood,
+      );
     }
     return StickerCard(
       surface: Palette.cardWarm,
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
       child: Row(
         children: <Widget>[
-          FlowerBloom.forMood(current, size: 54),
+          ExcludeSemantics(child: FlowerBloom.forMood(current, size: 54)),
           const SizedBox(width: _moodBannerGap),
           Expanded(
             child: Column(
@@ -60,11 +67,15 @@ class MoodBanner extends StatelessWidget {
 
 const double _moodBannerGap = 15;
 
+const BorderRadius _pillRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusPill),
+);
+
 const BoxDecoration _changePillDecoration = BoxDecoration(
   border: Border.fromBorderSide(
     BorderSide(color: Palette.coral, width: Shapes.outlineWidth),
   ),
-  borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusPill)),
+  borderRadius: _pillRadius,
 );
 
 const BoxDecoration _choosePillDecoration = BoxDecoration(
@@ -72,18 +83,27 @@ const BoxDecoration _choosePillDecoration = BoxDecoration(
   border: Border.fromBorderSide(
     BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
   ),
-  borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusPill)),
+  borderRadius: _pillRadius,
 );
 
-const EdgeInsets _moodPillPadding =
-    EdgeInsets.symmetric(vertical: 6, horizontal: 13);
+const EdgeInsets _moodPillPadding = EdgeInsets.symmetric(
+  vertical: 6,
+  horizontal: 13,
+);
 
-final TextStyle _choosePillLabelStyle =
-    TypographyTokens.caption11Sans.copyWith(color: Palette.onAccent);
+final TextStyle _choosePillLabelStyle = TypographyTokens.caption11Sans.copyWith(
+  color: Palette.onAccent,
+);
 
 const double _promptBloomOpacity = 0.5;
 
+const BorderRadius _promptRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusLg),
+);
+
 const double _promptBloomSize = 46;
+
+const double _minTapTarget = 48;
 
 class _MoodChangePill extends StatelessWidget {
   const _MoodChangePill({required this.label, required this.onTap});
@@ -103,15 +123,41 @@ class _MoodChangePill extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: DecoratedBox(
-            decoration: _changePillDecoration,
-            child: Padding(
-              padding: _moodPillPadding,
-              child: Text(label, style: TypographyTokens.caption11Sans),
+          child: _MinTapTarget(
+            child: FocusRing(
+              enabled: isEnabled,
+              onPressed: onTap,
+              borderRadius: _pillRadius,
+              child: DecoratedBox(
+                decoration: _changePillDecoration,
+                child: Padding(
+                  padding: _moodPillPadding,
+                  child: ExcludeSemantics(
+                    child: Text(label, style: TypographyTokens.caption11Sans),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _MinTapTarget extends StatelessWidget {
+  const _MinTapTarget({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        minWidth: _minTapTarget,
+        minHeight: _minTapTarget,
+      ),
+      child: Center(widthFactor: 1, heightFactor: 1, child: child),
     );
   }
 }
@@ -141,22 +187,28 @@ const List<BoxShadow> _dayMoodCardShadow = <BoxShadow>[
   BoxShadow(color: Palette.ink20, offset: Offset(2, 2)),
 ];
 
+const BorderRadius _changeMoodButtonRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusSm),
+);
+
 const BoxDecoration _changeMoodButtonDecoration = BoxDecoration(
   color: Palette.cardLight,
   border: Border.fromBorderSide(
     BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
   ),
-  borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusSm)),
+  borderRadius: _changeMoodButtonRadius,
   boxShadow: <BoxShadow>[
     BoxShadow(color: Palette.ink20, offset: Offset(1.5, 1.5)),
   ],
 );
 
-const EdgeInsets _changeMoodButtonPadding =
-    EdgeInsets.symmetric(vertical: 8, horizontal: 14);
+const EdgeInsets _changeMoodButtonPadding = EdgeInsets.symmetric(
+  vertical: 8,
+  horizontal: 14,
+);
 
-final TextStyle _changeMoodButtonLabelStyle =
-    TypographyTokens.caption11Sans.copyWith(fontSize: 12, color: Palette.ink);
+final TextStyle _changeMoodButtonLabelStyle = TypographyTokens.caption11Sans
+    .copyWith(fontSize: 12, color: Palette.ink);
 
 class DayMoodCard extends StatelessWidget {
   const DayMoodCard({
@@ -174,18 +226,23 @@ class DayMoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return StickerCard(
       surface: Palette.cardWarm,
-      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 13),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 13),
       shadow: _dayMoodCardShadow,
       child: Row(
         children: <Widget>[
-          FlowerBloom.forMood(mood, size: _dayMoodFlowerSize),
+          ExcludeSemantics(
+            child: FlowerBloom.forMood(mood, size: _dayMoodFlowerSize),
+          ),
           const SizedBox(width: _dayMoodCardGap),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('Felt ${mood.label}', style: TypographyTokens.sectionSerif),
+                Text(
+                  'Felt ${mood.label}',
+                  style: TypographyTokens.sectionSerif,
+                ),
                 Text(
                   "${mood.flower.label} · the day's bloom",
                   style: TypographyTokens.caption10Sans,
@@ -219,11 +276,20 @@ class _ChangeMoodButton extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
-          child: DecoratedBox(
-            decoration: _changeMoodButtonDecoration,
-            child: Padding(
-              padding: _changeMoodButtonPadding,
-              child: Text(label, style: _changeMoodButtonLabelStyle),
+          child: _MinTapTarget(
+            child: FocusRing(
+              enabled: isEnabled,
+              onPressed: onTap,
+              borderRadius: _changeMoodButtonRadius,
+              child: DecoratedBox(
+                decoration: _changeMoodButtonDecoration,
+                child: Padding(
+                  padding: _changeMoodButtonPadding,
+                  child: ExcludeSemantics(
+                    child: Text(label, style: _changeMoodButtonLabelStyle),
+                  ),
+                ),
+              ),
             ),
           ),
         ),
@@ -233,49 +299,65 @@ class _ChangeMoodButton extends StatelessWidget {
 }
 
 class _MoodPrompt extends StatelessWidget {
-  const _MoodPrompt({required this.text, required this.onTap});
+  const _MoodPrompt({
+    required this.text,
+    required this.onTap,
+    this.isToday = true,
+  });
 
   final String text;
   final VoidCallback? onTap;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
+    final String hint = isToday
+        ? "tap to plant today's bloom"
+        : "tap to plant this day's bloom";
     return Semantics(
       button: onTap != null,
-      label: text,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: CustomPaint(
-          painter: const MoodPromptBorderPainter(),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-            child: Row(
-              children: <Widget>[
-                const Opacity(
-                  opacity: _promptBloomOpacity,
-                  child: FlowerBloom(
-                    kind: FlowerKind.peony,
-                    size: _promptBloomSize,
-                  ),
+      label: '$text\n$hint',
+      onTap: onTap,
+      child: FocusRing(
+        enabled: onTap != null,
+        onPressed: onTap,
+        borderRadius: _promptRadius,
+        child: ExcludeSemantics(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: CustomPaint(
+              painter: const MoodPromptBorderPainter(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 16,
                 ),
-                const SizedBox(width: _moodBannerGap),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(text, style: TypographyTokens.bannerSerif),
-                      Text(
-                        "tap to plant today's bloom",
-                        style: TypographyTokens.promptAccent,
+                child: Row(
+                  children: <Widget>[
+                    const Opacity(
+                      opacity: _promptBloomOpacity,
+                      child: FlowerBloom(
+                        kind: FlowerKind.peony,
+                        size: _promptBloomSize,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: _moodBannerGap),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(text, style: TypographyTokens.bannerSerif),
+                          Text(hint, style: TypographyTokens.promptAccent),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: _moodBannerGap),
+                    const _MoodChoosePill(label: 'choose'),
+                  ],
                 ),
-                const SizedBox(width: _moodBannerGap),
-                const _MoodChoosePill(label: 'choose'),
-              ],
+              ),
             ),
           ),
         ),

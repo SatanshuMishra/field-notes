@@ -1,12 +1,14 @@
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
 import '../../../domain/models/models.dart';
-import '../../notes/render/note_photo_block.dart';
+import '../../notes/render/note_photo_block.dart' show NoteMediaScope;
 import '../cards/note_body.dart';
 import '../cards/voice_body.dart';
 import '../media/media_image.dart';
@@ -212,6 +214,8 @@ class CompactLogCard extends StatefulWidget {
     this.onEdit,
     required this.onDelete,
     this.audioPlayerFactory,
+    this.onToggleTask,
+    this.semanticIndex,
   });
 
   final Entry entry;
@@ -221,6 +225,8 @@ class CompactLogCard extends StatefulWidget {
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
   final EntryAudioPlayerFactory? audioPlayerFactory;
+  final ValueChanged<int>? onToggleTask;
+  final int? semanticIndex;
 
   @override
   State<CompactLogCard> createState() => _CompactLogCardState();
@@ -239,20 +245,24 @@ class _CompactLogCardState extends State<CompactLogCard> {
   Widget build(BuildContext context) {
     final _DensityStyle style = _styleFor(widget.density);
     final LogPreview preview = logPreviewOf(widget.entry);
-    final Widget sticker = StickerCard(
-      surface: Palette.cardWarm,
-      borderRadius: _cardRadius,
-      shadow: _hovered ? style.hoverShadow : style.restShadow,
-      padding: style.padding,
-      rotationDegrees: style.tilts ? _tiltDegrees(widget.entry.id) : 0,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          _stamp(),
-          const SizedBox(height: _stampGap),
-          _body(context, style, preview),
-        ],
+    final double tilt = style.tilts ? _tiltDegrees(widget.entry.id) : 0;
+    final Widget sticker = _CardFocusRing(
+      rotationDegrees: tilt,
+      child: StickerCard(
+        surface: Palette.cardWarm,
+        borderRadius: _cardRadius,
+        shadow: _hovered ? style.hoverShadow : style.restShadow,
+        padding: style.padding,
+        rotationDegrees: tilt,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _stamp(),
+            const SizedBox(height: _stampGap),
+            _body(context, style, preview),
+          ],
+        ),
       ),
     );
     final Widget lifted = _hovered && style.risesOnHover
@@ -273,8 +283,8 @@ class _CompactLogCardState extends State<CompactLogCard> {
       child: LogActionsReveal(
         onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
         onDelete: widget.onDelete,
+        semanticIndex: widget.semanticIndex,
         child: Semantics(
-          container: true,
           button: true,
           onTap: widget.onOpen,
           child: MouseRegion(
@@ -283,6 +293,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
             onExit: (PointerExitEvent event) => _onHover(false),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
+              excludeFromSemantics: true,
               onTap: widget.onOpen,
               child: lifted,
             ),
@@ -301,7 +312,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
   }
 
   Widget _stamp() {
-    final String stamp = logStampFor(widget.entry.createdAt);
+    final String stamp = logStampFor(context, widget.entry.createdAt);
     final String type = logTypeLabelFor(widget.entry.type);
     switch (widget.density) {
       case CompactLogDensity.feed:
@@ -361,14 +372,25 @@ class _CompactLogCardState extends State<CompactLogCard> {
         media.textScaler.scale(bodySize) /
         bodySize *
         (_shortNoteSize / bodySize);
+    final ValueChanged<int>? onToggleTask = widget.onToggleTask;
+    final String text = widget.entry.textContent ?? '';
     return MediaQuery(
       data: media.copyWith(textScaler: TextScaler.linear(scale)),
-      child: IgnorePointer(
-        child: NoteMediaScope(
-          resolver: widget.resolver,
-          child: NoteBody(text: widget.entry.textContent ?? ''),
-        ),
-      ),
+      child: onToggleTask == null
+          ? IgnorePointer(
+              child: NoteMediaScope(
+                resolver: widget.resolver,
+                child: NoteBody(text: text),
+              ),
+            )
+          : NoteMediaScope(
+              resolver: widget.resolver,
+              child: NoteBody(
+                text: text,
+                selectable: false,
+                onToggleTask: onToggleTask,
+              ),
+            ),
     );
   }
 
@@ -542,6 +564,71 @@ class _CompactLogCardState extends State<CompactLogCard> {
   }
 }
 
+final BoxDecoration _cardFocusRingDecoration = BoxDecoration(
+  border: Border.all(
+    color: FocusRingSurface.light.color,
+    width: FocusRingSurface.light.width,
+  ),
+  borderRadius: _cardRadius,
+);
+
+class _CardFocusRing extends StatefulWidget {
+  const _CardFocusRing({required this.rotationDegrees, required this.child});
+
+  final double rotationDegrees;
+  final Widget child;
+
+  @override
+  State<_CardFocusRing> createState() => _CardFocusRingState();
+}
+
+class _CardFocusRingState extends State<_CardFocusRing> {
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    super.dispose();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  bool _showsRing(BuildContext context) {
+    final FocusNode? focus = Focus.maybeOf(context);
+    return focus != null &&
+        focus.hasPrimaryFocus &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.passthrough,
+      children: <Widget>[
+        widget.child,
+        if (_showsRing(context))
+          Positioned.fill(
+            child: IgnorePointer(
+              key: focusRingKey,
+              child: Transform.rotate(
+                angle: widget.rotationDegrees * math.pi / 180,
+                child: DecoratedBox(decoration: _cardFocusRingDecoration),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _PlayTrianglePainter extends CustomPainter {
   const _PlayTrianglePainter();
 
@@ -647,16 +734,18 @@ class _CompactMediaState extends State<_CompactMedia> {
         variant: widget.variant,
       );
     }
-    return MediaImage(
-      resolver: widget.resolver,
-      mediaId: widget.mediaId,
-      errorLabel: widget.errorLabel,
-      width: widget.width,
-      height: widget.height,
-      borderRadius: widget.borderRadius,
-      fit: BoxFit.cover,
-      border: Shapes.outline,
-      onDecodeError: _onDecodeError,
+    return ExcludeSemantics(
+      child: MediaImage(
+        resolver: widget.resolver,
+        mediaId: widget.mediaId,
+        errorLabel: widget.errorLabel,
+        width: widget.width,
+        height: widget.height,
+        borderRadius: widget.borderRadius,
+        fit: BoxFit.cover,
+        border: Shapes.outline,
+        onDecodeError: _onDecodeError,
+      ),
     );
   }
 }

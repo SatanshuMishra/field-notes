@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
@@ -55,6 +56,7 @@ class CameraPicker extends StatelessWidget {
             color: Palette.onDark40,
             width: _pickerBorderWidth,
           ),
+          focusSurface: FocusRingSurface.dark,
         ),
       ),
     );

@@ -1,4 +1,5 @@
-import 'package:field_notes/domain/notes/notes.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart';
+import 'package:field_notes/domain/notes/note_plain_text.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'note_fuzz_corpus.dart';
@@ -69,6 +70,134 @@ void main() {
       for (final String source in noteFuzzCorpus) {
         expect(plainTextOf(source), isA<String>(), reason: source);
       }
+    });
+
+    test('plain text follows the new grammar', () {
+      const Map<String, String> pairs = <String, String>{
+        '- eggs\nThen we left.': 'eggs\nThen we left.',
+        '> "Quote"\n\u2014 Author': '"Quote"\n\u2014 Author',
+        '- a\n  detail': 'a\ndetail',
+        '- a\n\t- b': 'a\nb',
+        '- a\n    - b': 'a\nb',
+        '[label]()': 'label',
+        '**line one\nline two**': 'line one\nline two',
+        'Windows:\n14. doors': 'Windows:\n14. doors',
+        '\u00af\\_(\u30c4)_/\u00af': '\u00af_(\u30c4)_/\u00af',
+        r'a \* b': 'a * b',
+        'end\\\nnext': 'end\nnext',
+        '***a***': 'a',
+        '``a``': 'a',
+        '# Title #': 'Title',
+        '#### x': 'x',
+        '###### x': 'x',
+        '~~~\ncode': 'code',
+        '<https://x>': 'https://x',
+        '[a](b(c))': 'a',
+        '[a](u "t")': 'a',
+        'x==y==': 'xy',
+        '> > x': 'x',
+        '> - x': 'x',
+        '> # x': 'x',
+        '- [ ] x': 'x',
+        '- [x] packed': 'packed',
+        '- a\n  ![p](photo/abc123abc123)': 'a\n!p',
+      };
+      for (final MapEntry<String, String> pair in pairs.entries) {
+        expect(plainTextOf(pair.key), pair.value, reason: pair.key);
+      }
+    });
+  });
+
+  group('notePlainSegments', () {
+    const String mixed = '# T\n\n- a\n- b\n\n![c](photo/abc123abc123)\n\n'
+        '| x |\n| - |\n| y |';
+
+    test('walks headings, items, photos and tables in source order', () {
+      expect(
+        notePlainSegments(parseNoteTree(mixed), mixed),
+        const <NotePlainSegment>[
+          NotePlainSegment(kind: NotePlainKind.heading, text: 'T'),
+          NotePlainSegment(kind: NotePlainKind.listItem, text: 'a'),
+          NotePlainSegment(kind: NotePlainKind.listItem, text: 'b'),
+          NotePlainSegment(kind: NotePlainKind.photo, text: 'c'),
+          NotePlainSegment(kind: NotePlainKind.table, text: 'x\ny'),
+        ],
+      );
+    });
+
+    test('a table is cells joined by tabs, or pipe text with tables off', () {
+      expect(plainTextOf(mixed), 'T\n\na\nb\n\nc\n\nx\ny');
+      expect(
+        plainTextOf(mixed, tables: false),
+        'T\n\na\nb\n\nc\n\n| x |\n| - |\n| y |',
+      );
+      expect(plainTextOf('| a | b |\n| - | - |\n| c | d |'), 'a\tb\nc\td');
+    });
+
+    test('a CRLF is one line break and a lone CR is content', () {
+      expect(plainTextOf('one\r\ntwo'), 'one\ntwo');
+      expect(plainTextOf('one\rtwo'), 'one\rtwo');
+    });
+
+    test('code drops its fences, fence indentation and trailing blanks', () {
+      expect(plainTextOf('```\ncode\n\n'), 'code');
+      expect(plainTextOf(' ```\n code\n ```'), 'code');
+      expect(plainTextOf('```\n   '), '');
+      expect(plainTextOf('a\n\n```\n   '), 'a');
+    });
+
+    test('items join by one break and other blocks by a paragraph break', () {
+      expect(plainTextOf('- a\n\n  more'), 'a\n\nmore');
+      expect(plainTextOf('- a\n\n- b'), 'a\nb');
+      expect(plainTextOf('1. a\n2) b'), 'a\nb');
+      expect(plainTextOf('- # x'), 'x');
+      expect(plainTextOf('- a\n![p](photo/abc123abc123)'), 'a\n\np');
+      expect(plainTextOf('> q\n![p](photo/abc123abc123)'), 'q\n\np');
+    });
+
+    test('an empty or blank source gives no text', () {
+      expect(plainTextOf(''), '');
+      expect(plainTextOf('\n \n'), '');
+    });
+
+    test('marker whitespace goes with the markers', () {
+      expect(plainTextOf('a  \nb'), 'a\nb');
+      expect(plainTextOf('  indented'), 'indented');
+    });
+
+    test('the join skips empty segments before choosing a break', () {
+      expect(
+        joinNotePlainSegments(const <NotePlainSegment>[
+          NotePlainSegment(kind: NotePlainKind.listItem, text: 'a'),
+          NotePlainSegment(kind: NotePlainKind.heading, text: ''),
+          NotePlainSegment(kind: NotePlainKind.listItem, text: 'b'),
+        ]),
+        'a\nb',
+      );
+      expect(
+        joinNotePlainSegments(const <NotePlainSegment>[
+          NotePlainSegment(kind: NotePlainKind.paragraph, text: 'a'),
+          NotePlainSegment(kind: NotePlainKind.photo, text: ''),
+          NotePlainSegment(kind: NotePlainKind.paragraph, text: 'b'),
+        ]),
+        'a\n\nb',
+      );
+    });
+
+    test('a segment compares by value', () {
+      final String text = String.fromCharCodes(<int>[0x61]);
+      expect(
+        NotePlainSegment(kind: NotePlainKind.code, text: text),
+        const NotePlainSegment(kind: NotePlainKind.code, text: 'a'),
+      );
+      expect(
+        NotePlainSegment(kind: NotePlainKind.code, text: text).hashCode,
+        const NotePlainSegment(kind: NotePlainKind.code, text: 'a').hashCode,
+      );
+      expect(
+        const NotePlainSegment(kind: NotePlainKind.code, text: 'a'),
+        isNot(const NotePlainSegment(kind: NotePlainKind.paragraph, text: 'a')),
+      );
     });
   });
 }
