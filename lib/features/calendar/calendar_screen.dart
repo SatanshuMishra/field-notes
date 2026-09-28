@@ -18,7 +18,7 @@ import 'package:field_notes/state/shell_navigation.dart';
 import 'model/calendar_month.dart';
 import 'widgets/calendar_grid.dart';
 import 'widgets/calendar_header.dart';
-import 'widgets/calendar_month_picker.dart';
+import 'widgets/month_picker_route.dart';
 
 typedef OpenDayDetail = Future<void> Function(
   BuildContext context, {
@@ -32,11 +32,6 @@ const String calendarErrorMessage =
 const Key calendarTitleKey = Key('calendar-title');
 const Key calendarThisWeekKey = Key('calendar-this-week');
 const Key calendarPickerKey = Key('calendar-month-picker');
-
-const String _dismissPickerLabel = 'Dismiss month picker';
-
-const double _compactPickerBelowWidth = 520;
-const Offset _pickerOffset = Offset(0, 8);
 
 class CalendarScreen extends ConsumerStatefulWidget {
   const CalendarScreen({
@@ -60,9 +55,7 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   late MonthRef _month = widget.initialMonth ?? MonthRef.forDate(_today);
-  late int _pickerYear = _month.year;
   final FocusNode _focusNode = FocusNode(debugLabel: 'calendar');
-  final OverlayPortalController _pickerController = OverlayPortalController();
   final LayerLink _pickerLink = LayerLink();
 
   DateTime get _today => widget.today ?? DateTime.now();
@@ -86,7 +79,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   void _showMonth(MonthRef month) {
-    _pickerController.hide();
     setState(() => _month = month);
   }
 
@@ -96,19 +88,24 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   void _showCurrentMonth() => _showMonth(_currentMonth);
 
-  void _togglePicker() {
-    if (_pickerController.isShowing) {
-      _closePicker();
+  Future<void> _openPicker() async {
+    if (ModalRoute.isCurrentOf(context) == false) {
       return;
     }
-    setState(() => _pickerYear = _month.year);
-    _pickerController.show();
-  }
-
-  void _closePicker() => _pickerController.hide();
-
-  void _stepPickerYear(int delta) {
-    setState(() => _pickerYear += delta);
+    final MonthRef? picked = await showCalendarMonthPicker(
+      context,
+      titleLink: _pickerLink,
+      displayedMonth: _month,
+      currentMonth: _currentMonth,
+      pickerKey: calendarPickerKey,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (picked != null) {
+      _showMonth(picked);
+    }
+    _focusNode.requestFocus();
   }
 
   KeyEventResult _handleKey(FocusNode node, KeyEvent event) {
@@ -129,10 +126,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     }
     if (key == LogicalKeyboardKey.keyT) {
       _showCurrentMonth();
-      return KeyEventResult.handled;
-    }
-    if (key == LogicalKeyboardKey.escape && _pickerController.isShowing) {
-      _closePicker();
       return KeyEventResult.handled;
     }
     return KeyEventResult.ignored;
@@ -192,92 +185,44 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     return Focus(
       focusNode: _focusNode,
       onKeyEvent: _handleKey,
-      child: OverlayPortal(
-        controller: _pickerController,
-        overlayChildBuilder: _buildPicker,
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              CalendarHeader(
-                month: _month,
-                currentMonth: _currentMonth,
-                onPreviousMonth: _showPreviousMonth,
-                onNextMonth: _showNextMonth,
-                onShowCurrentMonth: _showCurrentMonth,
-                onOpenPicker: _togglePicker,
-                titleKey: calendarTitleKey,
-                thisWeekKey: calendarThisWeekKey,
-                pickerLink: _pickerLink,
-              ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: daysAsync.when(
-                  data: (List<Day> days) => CalendarGrid(
-                    month: _month,
-                    daysByDate: <String, Day>{
-                      for (final Day day in days) day.date: day,
-                    },
-                    firstWeekday: firstWeekday,
-                    todayKey: todayKey,
-                    journaledDates: journaledDates,
-                    onSelectDay: (String date) =>
-                        _selectDay(date, todayKey: todayKey),
-                  ),
-                  loading: () =>
-                      const _CalendarMessage(text: calendarLoadingMessage),
-                  error: (Object error, StackTrace stackTrace) =>
-                      const _CalendarError(),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            CalendarHeader(
+              month: _month,
+              currentMonth: _currentMonth,
+              onPreviousMonth: _showPreviousMonth,
+              onNextMonth: _showNextMonth,
+              onShowCurrentMonth: _showCurrentMonth,
+              onOpenPicker: _openPicker,
+              titleKey: calendarTitleKey,
+              thisWeekKey: calendarThisWeekKey,
+              pickerLink: _pickerLink,
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: daysAsync.when(
+                data: (List<Day> days) => CalendarGrid(
+                  month: _month,
+                  daysByDate: <String, Day>{
+                    for (final Day day in days) day.date: day,
+                  },
+                  firstWeekday: firstWeekday,
+                  todayKey: todayKey,
+                  journaledDates: journaledDates,
+                  onSelectDay: (String date) =>
+                      _selectDay(date, todayKey: todayKey),
                 ),
+                loading: () =>
+                    const _CalendarMessage(text: calendarLoadingMessage),
+                error: (Object error, StackTrace stackTrace) =>
+                    const _CalendarError(),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildPicker(BuildContext context) {
-    final double width =
-        MediaQuery.sizeOf(context).width < _compactPickerBelowWidth
-            ? calendarMonthPickerCompactWidth
-            : calendarMonthPickerWidth;
-    return BlockSemantics(
-      child: Stack(
-        children: <Widget>[
-          Positioned.fill(
-            child: Semantics(
-              button: true,
-              label: _dismissPickerLabel,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: _closePicker,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            top: 0,
-            child: CompositedTransformFollower(
-              link: _pickerLink,
-              showWhenUnlinked: false,
-              targetAnchor: Alignment.bottomLeft,
-              offset: _pickerOffset,
-              child: CalendarMonthPicker(
-                key: calendarPickerKey,
-                year: _pickerYear,
-                displayedMonth: _month,
-                currentMonth: _currentMonth,
-                width: width,
-                onPreviousYear: () => _stepPickerYear(-1),
-                onNextYear: () => _stepPickerYear(1),
-                onPickMonth: _showMonth,
-                onBackToThisWeek: _showCurrentMonth,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -14,6 +14,12 @@ const Key spellCheckToggleKey = ValueKey<String>('settings-spell-check');
 const String spellCheckUnavailableDescription =
     "Your keyboard's spell checker isn't available to Field Notes.";
 
+String _textSizeLabel(TextSize size) => switch (size) {
+  TextSize.small => 'Small',
+  TextSize.medium => 'Medium',
+  TextSize.large => 'Large',
+};
+
 class JournalSection extends ConsumerWidget {
   const JournalSection({
     super.key,
@@ -38,11 +44,19 @@ class JournalSection extends ConsumerWidget {
         SettingsFieldRow(
           label: 'Text size',
           description: 'Applies across the app.',
-          control: SettingsSlider(
-            value: settings.textSize.value,
-            onChanged: (int value) => _apply(
+          control: SettingsSegmented<TextSize>(
+            segments: <SettingsSegment<TextSize>>[
+              for (final TextSize size in TextSize.values)
+                SettingsSegment<TextSize>(
+                  value: size,
+                  label: _textSizeLabel(size),
+                ),
+            ],
+            value: settings.textSize,
+            onChanged: (TextSize size) => _apply(
               ref,
-              () => ref.read(settingsControllerProvider).setTextSize(value),
+              () =>
+                  ref.read(settingsControllerProvider).setTextSize(size.value),
             ),
           ),
         ),
