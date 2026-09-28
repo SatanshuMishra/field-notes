@@ -56,7 +56,7 @@ void main() {
         'b1-settings',
       );
       _expectNone(ids, 'missing-role', 'b1-settings', <String>[
-        '20:30 |',
+        '8:30 PM |',
         'Sunday |',
       ]);
       _expectNone(ids, 'missing-state', 'b1-settings', <String>[

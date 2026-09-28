@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../format/clock_format.dart';
 import '../tokens/tokens.dart';
 
 class SettingsTimeField extends StatelessWidget {
@@ -13,12 +14,6 @@ class SettingsTimeField extends StatelessWidget {
   final TimeOfDay value;
   final VoidCallback? onTap;
   final bool enabled;
-
-  String get _formatted {
-    final String hh = value.hour.toString().padLeft(2, '0');
-    final String mm = value.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +49,10 @@ class SettingsTimeField extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Text(_formatted, style: TypographyTokens.bodySans),
+                      Text(
+                        formatClock(context, value),
+                        style: TypographyTokens.bodySans,
+                      ),
                       const SizedBox(width: 8),
                       const Icon(Icons.schedule, size: 18, color: Palette.ink),
                     ],

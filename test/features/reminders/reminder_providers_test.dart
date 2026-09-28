@@ -1,6 +1,8 @@
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/reminder_coordinator.dart';
+import 'package:field_notes/features/reminders/reminder_date.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -33,7 +35,9 @@ ProviderContainer _container({
       ),
       entriesForDateProvider.overrideWith((ref, date) {
         queriedDates?.add(date);
-        return Stream<List<Entry>>.value(todayEntries);
+        return Stream<List<Entry>>.value(
+          date == reminderDateKey(now) ? todayEntries : const <Entry>[],
+        );
       }),
       reminderClockProvider.overrideWithValue(() => now),
       reminderSchedulerProvider.overrideWithValue(scheduler),
@@ -68,7 +72,18 @@ void main() {
       final ReminderSyncResult? result = await _settledSync(container);
 
       expect(result, ReminderSyncResult.scheduled);
-      expect(scheduler.scheduled, <DateTime>[DateTime(2026, 7, 19, 20, 30)]);
+      expect(scheduler.scheduled, <ReminderBooking>[
+        for (final (int id, int day) in const <(int, int)>[
+          (1001, 19),
+          (1002, 20),
+          (1003, 21),
+          (1004, 22),
+          (1005, 23),
+          (1006, 24),
+          (1007, 25),
+        ])
+          ReminderBooking(id: id, at: DateTime(2026, 7, day, 20, 30)),
+      ]);
     });
 
     test('suppresses today and schedules tomorrow once an entry exists',
@@ -84,7 +99,17 @@ void main() {
       final ReminderSyncResult? result = await _settledSync(container);
 
       expect(result, ReminderSyncResult.scheduled);
-      expect(scheduler.scheduled, <DateTime>[DateTime(2026, 7, 20, 20, 30)]);
+      expect(scheduler.scheduled, <ReminderBooking>[
+        for (final (int id, int day) in const <(int, int)>[
+          (1002, 20),
+          (1003, 21),
+          (1004, 22),
+          (1005, 23),
+          (1006, 24),
+          (1007, 25),
+        ])
+          ReminderBooking(id: id, at: DateTime(2026, 7, day, 20, 30)),
+      ]);
     });
 
     test('cancels when the reminder toggle is off', () async {

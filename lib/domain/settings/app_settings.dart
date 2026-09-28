@@ -10,6 +10,7 @@ class AppSettings {
     required this.textSize,
     required this.weekStart,
     required this.spellCheckEnabled,
+    required this.notificationPermissionAsked,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -19,6 +20,7 @@ class AppSettings {
     textSize: TextSize.medium,
     weekStart: WeekStart.sunday,
     spellCheckEnabled: false,
+    notificationPermissionAsked: false,
   );
 
   final bool reminderEnabled;
@@ -27,6 +29,7 @@ class AppSettings {
   final TextSize textSize;
   final WeekStart weekStart;
   final bool spellCheckEnabled;
+  final bool notificationPermissionAsked;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -35,6 +38,7 @@ class AppSettings {
     TextSize? textSize,
     WeekStart? weekStart,
     bool? spellCheckEnabled,
+    bool? notificationPermissionAsked,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -43,6 +47,8 @@ class AppSettings {
       textSize: textSize ?? this.textSize,
       weekStart: weekStart ?? this.weekStart,
       spellCheckEnabled: spellCheckEnabled ?? this.spellCheckEnabled,
+      notificationPermissionAsked:
+          notificationPermissionAsked ?? this.notificationPermissionAsked,
     );
   }
 
@@ -56,7 +62,8 @@ class AppSettings {
           soundEnabled == other.soundEnabled &&
           textSize == other.textSize &&
           weekStart == other.weekStart &&
-          spellCheckEnabled == other.spellCheckEnabled;
+          spellCheckEnabled == other.spellCheckEnabled &&
+          notificationPermissionAsked == other.notificationPermissionAsked;
 
   @override
   int get hashCode => Object.hash(
@@ -66,6 +73,7 @@ class AppSettings {
         textSize,
         weekStart,
         spellCheckEnabled,
+        notificationPermissionAsked,
       );
 
   @override
@@ -73,5 +81,6 @@ class AppSettings {
       'AppSettings(reminderEnabled: $reminderEnabled, '
       'reminderTime: $reminderTime, soundEnabled: $soundEnabled, '
       'textSize: $textSize, weekStart: $weekStart, '
-      'spellCheckEnabled: $spellCheckEnabled)';
+      'spellCheckEnabled: $spellCheckEnabled, '
+      'notificationPermissionAsked: $notificationPermissionAsked)';
 }

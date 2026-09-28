@@ -1,7 +1,10 @@
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/reminders/notification_settings_opener.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:field_notes/features/settings/sections/reminders_sound_section.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
@@ -15,6 +18,13 @@ import '../support/fake_settings_repository.dart';
 import '../support/recording_reminder_scheduler.dart';
 import '../support/settings_harness.dart';
 
+class _RecordingOpener implements NotificationSettingsOpener {
+  int opens = 0;
+
+  @override
+  Future<void> open() async => opens++;
+}
+
 Future<void> _pumpSection(
   WidgetTester tester, {
   required FakeSettingsRepository repository,
@@ -22,6 +32,7 @@ Future<void> _pumpSection(
   List<String>? messages,
   TimeOfDayPicker? pickTime,
   RecordingReminderScheduler? scheduler,
+  NotificationSettingsOpener? opener,
 }) async {
   useWideSurface(tester);
   await tester.pumpWidget(
@@ -47,6 +58,8 @@ Future<void> _pumpSection(
         ),
         if (scheduler != null)
           reminderSchedulerProvider.overrideWithValue(scheduler),
+        if (opener != null)
+          notificationSettingsOpenerProvider.overrideWithValue(opener),
       ],
     ),
   );
@@ -61,7 +74,7 @@ void main() {
     expect(find.text('Reminders & sound'), findsOneWidget);
     expect(find.text('Daily reminder'), findsOneWidget);
     expect(find.text('Reminder time'), findsOneWidget);
-    expect(find.text('20:30'), findsOneWidget);
+    expect(find.text('8:30 PM'), findsOneWidget);
     expect(find.text('Sound effects'), findsOneWidget);
   });
 
@@ -132,7 +145,7 @@ void main() {
     expect(messages, <String>['Could not save your daily reminder setting.']);
   });
 
-  testWidgets('keeps reminder scheduling live while settings are open',
+  testWidgets('settings no longer books reminders itself',
       (WidgetTester tester) async {
     final RecordingReminderScheduler scheduler = RecordingReminderScheduler();
     await _pumpSection(
@@ -141,7 +154,53 @@ void main() {
       scheduler: scheduler,
     );
 
-    expect(scheduler.scheduled, hasLength(1));
-    expect(scheduler.scheduled.single, DateTime(2026, 7, 20, 20, 30));
+    expect(scheduler.bookings, isEmpty);
+    expect(scheduler.cancelCount, 0);
+  });
+
+  testWidgets(
+      'a refused permission says notifications are off and offers Open System Settings',
+      (WidgetTester tester) async {
+    final _RecordingOpener opener = _RecordingOpener();
+    await _pumpSection(
+      tester,
+      repository: FakeSettingsRepository(),
+      scheduler: RecordingReminderScheduler(
+        permission: ReminderPermission.denied,
+      ),
+      opener: opener,
+    );
+
+    expect(find.text('Notifications are off for Field Notes.'), findsOneWidget);
+    expect(
+      tester.widget<SettingsToggle>(find.byType(SettingsToggle).first).value,
+      isTrue,
+    );
+
+    await tester.tap(find.widgetWithText(StickerButton, 'Open System Settings'));
+    await tester.pumpAndSettle();
+
+    expect(opener.opens, 1);
+  });
+
+  testWidgets('turning the reminder on asks for a permission not yet granted',
+      (WidgetTester tester) async {
+    final FakeSettingsRepository repository = FakeSettingsRepository();
+    final RecordingReminderScheduler scheduler = RecordingReminderScheduler(
+      permission: ReminderPermission.denied,
+    );
+    await _pumpSection(
+      tester,
+      repository: repository,
+      settings: AppSettings.defaults.copyWith(reminderEnabled: false),
+      scheduler: scheduler,
+    );
+
+    await tester.tap(find.byType(SettingsToggle).first);
+    await tester.pumpAndSettle();
+
+    expect(repository.reminderEnabledWrites, <bool>[true]);
+    expect(scheduler.permissionRequests, 1);
+    expect(repository.notificationPermissionAskedWrites, <bool>[true]);
   });
 }

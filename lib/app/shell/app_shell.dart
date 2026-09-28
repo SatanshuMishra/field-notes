@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/features/capture/core/capture.dart';
+import 'package:field_notes/features/reminders/reminder_lifecycle.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
@@ -57,29 +58,29 @@ class _AppShellState extends ConsumerState<AppShell> {
     final VoidCallback onCapture = widget.onCapturePressed ?? _openCapture;
     final VoidCallback onSound = widget.onSoundPressed ?? _toggleSound;
 
-    switch (layout) {
-      case ShellLayout.sidebar:
-        return SidebarShell(
-          destinations: ShellDestination.primary,
-          selected: selected,
-          onSelect: _select,
-          onSound: onSound,
-          soundOn: ref.watch(soundEnabledProvider),
-          streak: const StreakCard(),
-          body: body,
-        );
-      case ShellLayout.bottomBar:
-        return PopScope<Object?>(
-          canPop: selected == ShellDestination.today,
-          onPopInvokedWithResult: _onBottomBarPop,
-          child: BottomBarShell(
+    return ReminderLifecycle(
+      child: switch (layout) {
+        ShellLayout.sidebar => SidebarShell(
             destinations: ShellDestination.primary,
             selected: selected,
             onSelect: _select,
-            onCapture: onCapture,
+            onSound: onSound,
+            soundOn: ref.watch(soundEnabledProvider),
+            streak: const StreakCard(),
             body: body,
           ),
-        );
-    }
+        ShellLayout.bottomBar => PopScope<Object?>(
+            canPop: selected == ShellDestination.today,
+            onPopInvokedWithResult: _onBottomBarPop,
+            child: BottomBarShell(
+              destinations: ShellDestination.primary,
+              selected: selected,
+              onSelect: _select,
+              onCapture: onCapture,
+              body: body,
+            ),
+          ),
+      },
+    );
   }
 }

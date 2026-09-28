@@ -49,6 +49,12 @@ class DriftSettingsRepository implements SettingsRepository {
   Future<void> setSpellCheckEnabled(bool value) =>
       _put(SettingsKeys.spellCheck, value ? _trueValue : _falseValue);
 
+  @override
+  Future<void> setNotificationPermissionAsked(bool value) => _put(
+        SettingsKeys.notificationPermissionAsked,
+        value ? _trueValue : _falseValue,
+      );
+
   Future<void> _put(String key, String value) async {
     await _db.into(_db.settings).insertOnConflictUpdate(
           SettingsCompanion.insert(key: key, value: value),
@@ -81,6 +87,10 @@ class DriftSettingsRepository implements SettingsRepository {
       spellCheckEnabled: _decodeBool(
         values[SettingsKeys.spellCheck],
         defaults.spellCheckEnabled,
+      ),
+      notificationPermissionAsked: _decodeBool(
+        values[SettingsKeys.notificationPermissionAsked],
+        defaults.notificationPermissionAsked,
       ),
     );
   }

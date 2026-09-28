@@ -5,4 +5,6 @@ abstract final class SettingsKeys {
   static const String textSize = 'text_size';
   static const String weekStart = 'week_start';
   static const String spellCheck = 'spell_check';
+  static const String notificationPermissionAsked =
+      'notification_permission_asked';
 }

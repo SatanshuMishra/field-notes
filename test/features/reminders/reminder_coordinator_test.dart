@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/domain/services/reminder_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/reminder_coordinator.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,7 +22,18 @@ void main() {
       );
 
       expect(result, ReminderSyncResult.scheduled);
-      expect(scheduler.scheduled, <DateTime>[DateTime(2026, 7, 19, 20, 30)]);
+      expect(scheduler.scheduled, <ReminderBooking>[
+        for (final (int id, int day) in const <(int, int)>[
+          (1001, 19),
+          (1002, 20),
+          (1003, 21),
+          (1004, 22),
+          (1005, 23),
+          (1006, 24),
+          (1007, 25),
+        ])
+          ReminderBooking(id: id, at: DateTime(2026, 7, day, 20, 30)),
+      ]);
     });
 
     test('schedules tomorrow when today already has an entry', () async {
@@ -37,7 +49,17 @@ void main() {
       );
 
       expect(result, ReminderSyncResult.scheduled);
-      expect(scheduler.scheduled, <DateTime>[DateTime(2026, 7, 20, 20, 30)]);
+      expect(scheduler.scheduled, <ReminderBooking>[
+        for (final (int id, int day) in const <(int, int)>[
+          (1002, 20),
+          (1003, 21),
+          (1004, 22),
+          (1005, 23),
+          (1006, 24),
+          (1007, 25),
+        ])
+          ReminderBooking(id: id, at: DateTime(2026, 7, day, 20, 30)),
+      ]);
     });
 
     test('cancels without asking for permission when disabled', () async {
@@ -160,7 +182,18 @@ void main() {
         scheduler.calls,
         <String>['permission', 'schedule', 'cancel'],
       );
-      expect(scheduler.scheduled, <DateTime>[DateTime(2026, 7, 19, 20, 30)]);
+      expect(scheduler.scheduled, <ReminderBooking>[
+        for (final (int id, int day) in const <(int, int)>[
+          (1001, 19),
+          (1002, 20),
+          (1003, 21),
+          (1004, 22),
+          (1005, 23),
+          (1006, 24),
+          (1007, 25),
+        ])
+          ReminderBooking(id: id, at: DateTime(2026, 7, day, 20, 30)),
+      ]);
       expect(scheduler.cancelCount, 1);
     });
   });
