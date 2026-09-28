@@ -61,9 +61,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildLoading() {
-    return const Center(
-      child: CrossHatchPlaceholder(width: 28, height: 28),
-    );
+    return const Center(child: CrossHatchPlaceholder(width: 28, height: 28));
   }
 
   Widget _buildError() {
@@ -94,33 +92,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final SpellCheckAvailability spellCheckAvailability =
         ref.watch(spellCheckAvailabilityProvider).value ??
         SpellCheckAvailability.available;
-    return ListView(
+    return SingleChildScrollView(
       controller: _scrollController,
       padding: const EdgeInsets.all(20),
-      children: <Widget>[
-        Text('Settings', style: TypographyTokens.titleSerif),
-        const SizedBox(height: 16),
-        if (notice != null) ...<Widget>[
-          SettingsNotice(message: notice, onDismiss: _dismissNotice),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text('Settings', style: TypographyTokens.titleSerif),
           const SizedBox(height: 16),
+          if (notice != null) ...<Widget>[
+            SettingsNotice(message: notice, onDismiss: _dismissNotice),
+            const SizedBox(height: 16),
+          ],
+          SyncStorageSection(
+            storageMode: ref.watch(settingsRepositoryProvider).storageMode,
+          ),
+          const SizedBox(height: 16),
+          RemindersSoundSection(settings: settings, onFeedback: _showNotice),
+          const SizedBox(height: 16),
+          JournalSection(
+            settings: settings,
+            onFeedback: _showNotice,
+            spellCheckAvailability: spellCheckAvailability,
+          ),
+          const SizedBox(height: 16),
+          DataSection(onFeedback: _showNotice),
         ],
-        SyncStorageSection(
-          storageMode: ref.watch(settingsRepositoryProvider).storageMode,
-        ),
-        const SizedBox(height: 16),
-        RemindersSoundSection(
-          settings: settings,
-          onFeedback: _showNotice,
-        ),
-        const SizedBox(height: 16),
-        JournalSection(
-          settings: settings,
-          onFeedback: _showNotice,
-          spellCheckAvailability: spellCheckAvailability,
-        ),
-        const SizedBox(height: 16),
-        DataSection(onFeedback: _showNotice),
-      ],
+      ),
     );
   }
 }
