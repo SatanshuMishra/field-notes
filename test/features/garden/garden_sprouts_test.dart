@@ -62,16 +62,50 @@ void main() {
 
     expect(find.textContaining('Your meadow is waiting'), findsNothing);
     final Finder chip = find.ancestor(
-      of: find.text('Sprouts'),
+      of: find.text('1 Sprout'),
       matching: find.byType(DecoratedBox),
     );
     expect(chip, findsOneWidget);
-    expect(find.descendant(of: chip, matching: find.text('1')), findsOneWidget);
     expect(
-      find.descendant(of: chip, matching: find.text('Sprouts')),
+      find.descendant(of: chip, matching: find.text('1 Sprout')),
       findsOneWidget,
     );
 
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('one sprout reads 1 Sprout', (WidgetTester tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    final int year = DateTime.now().year;
+    final String date = '$year-09-23';
+    await tester.pumpWidget(
+      gardenHarness(
+        const GardenScreen(),
+        overrides: <Override>[
+          allDaysProvider.overrideWith(
+            (_) => Stream<List<Day>>.value(<Day>[dayOf(date)]),
+          ),
+          journaledDatesProvider.overrideWith(
+            (_) => Stream<List<String>>.value(<String>[date]),
+          ),
+        ],
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    final Finder chip = find.ancestor(
+      of: find.text('1 Sprout'),
+      matching: find.byType(DecoratedBox),
+    );
+    expect(chip, findsOneWidget);
+    expect(
+      find.descendant(of: chip, matching: find.text('1 Sprout')),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel('1 Sprout'), findsOneWidget);
+
+    handle.dispose();
     await tester.pumpWidget(const SizedBox());
   });
 }

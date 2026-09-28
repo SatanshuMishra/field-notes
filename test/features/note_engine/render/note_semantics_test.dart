@@ -308,12 +308,34 @@ void main() {
       selection: const NoteSelection.collapsed(0),
     );
     expect(
-      harness.labelled(tester, 'Table, 1 rows, 3 columns'),
+      harness.labelled(tester, 'Table, 1 row, 3 columns'),
       isA<SemanticsNode>(),
     );
     expect(
       noteTableSemanticsLabel(rows: 3, columns: 2),
       'Table, 3 rows, 2 columns',
+    );
+    handle.dispose();
+  });
+
+  testWidgets('a one-row one-column table reads the singular', (
+    WidgetTester tester,
+  ) async {
+    _pinSurface(tester);
+    final SemanticsHandle handle = _semantics(tester);
+    final _Harness harness = _Harness();
+    await harness.pump(
+      tester,
+      '| a |\n| - |',
+      selection: const NoteSelection.collapsed(0),
+    );
+    expect(
+      harness.labelled(tester, 'Table, 1 row, 1 column'),
+      isA<SemanticsNode>(),
+    );
+    expect(
+      noteTableSemanticsLabel(rows: 1, columns: 1),
+      'Table, 1 row, 1 column',
     );
     handle.dispose();
   });
@@ -593,7 +615,7 @@ void main() {
       );
       expect(
         harness.children(tester).map((SemanticsNode n) => n.label),
-        <String>['Intro', 'Table, 1 rows, 2 columns', 'After'],
+        <String>['Intro', 'Table, 1 row, 2 columns', 'After'],
       );
       handle.dispose();
     });

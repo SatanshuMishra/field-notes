@@ -14,20 +14,20 @@ import 'package:path/path.dart' as p;
 class _FakeExportService implements ExportService {
   @override
   Future<ExportBundle> buildBundle() async => const ExportBundle(
-        manifest: ExportManifest(
-          formatVersion: 1,
-          appName: 'Field Notes',
-          exportedAt: 1751000000000,
-          stats: ExportStats(
-            dayCount: 1,
-            entryCount: 2,
-            photoCount: 0,
-            mediaBlobCount: 0,
-          ),
-        ),
-        journalJson: '{"days":[]}',
-        mediaFiles: <String, List<int>>{},
-      );
+    manifest: ExportManifest(
+      formatVersion: 1,
+      appName: 'Field Notes',
+      exportedAt: 1751000000000,
+      stats: ExportStats(
+        dayCount: 1,
+        entryCount: 2,
+        photoCount: 0,
+        mediaBlobCount: 0,
+      ),
+    ),
+    journalJson: '{"days":[]}',
+    mediaFiles: <String, List<int>>{},
+  );
 }
 
 class _ThrowingExportService implements ExportService {
@@ -45,14 +45,22 @@ class _StubDelivery implements ExportDelivery {
   Future<ExportOutcome> deliver({
     required List<int> zipBytes,
     required String fileName,
-  }) async =>
-      outcome;
+  }) async => outcome;
 }
 
 class _StubDeleteAllService implements DeleteAllService {
-  _StubDeleteAllService({this.error});
+  _StubDeleteAllService({this.error, this.result = _defaultResult});
+
+  static const DeleteAllResult _defaultResult = DeleteAllResult(
+    deletedDays: 3,
+    deletedEntries: 7,
+    deletedPhotos: 2,
+    deletedMediaBlobs: 2,
+    deletedFiles: 2,
+  );
 
   final Object? error;
+  final DeleteAllResult result;
   int calls = 0;
 
   @override
@@ -62,13 +70,7 @@ class _StubDeleteAllService implements DeleteAllService {
     if (failure != null) {
       throw failure;
     }
-    return const DeleteAllResult(
-      deletedDays: 3,
-      deletedEntries: 7,
-      deletedPhotos: 2,
-      deletedMediaBlobs: 2,
-      deletedFiles: 2,
-    );
+    return result;
   }
 }
 
@@ -186,6 +188,33 @@ void main() {
       );
     });
 
+    test('deleting one day and one entry reports the singular', () async {
+      final SettingsDataController controller = _controller(
+        exportService: _FakeExportService(),
+        outcome: const ExportDismissed(),
+        deleteAllService: _StubDeleteAllService(
+          result: const DeleteAllResult(
+            deletedDays: 1,
+            deletedEntries: 1,
+            deletedPhotos: 0,
+            deletedMediaBlobs: 0,
+            deletedFiles: 0,
+          ),
+        ),
+      );
+
+      final DataActionResult result = await controller.deleteAll();
+
+      expect(
+        result,
+        isA<DataActionSucceeded>().having(
+          (DataActionSucceeded s) => s.message,
+          'message',
+          'Deleted 1 day and 1 entry.',
+        ),
+      );
+    });
+
     test('turns a delete failure into a user-facing message', () async {
       final List<Object> reported = <Object>[];
       final SettingsDataController controller = _controller(
@@ -268,8 +297,9 @@ void main() {
     });
 
     test('reclaim space removes temporary capture files', () async {
-      final Directory temporary =
-          await Directory.systemTemp.createTemp('fn_reclaim_tmp');
+      final Directory temporary = await Directory.systemTemp.createTemp(
+        'fn_reclaim_tmp',
+      );
       addTearDown(() => temporary.delete(recursive: true));
       final List<File> captures = <File>[
         File(p.join(temporary.path, 'voice_1720000000000.m4a')),
