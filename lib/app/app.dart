@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,8 @@ import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/state/settings_providers.dart';
 
 import 'capture/app_capture_routes.dart';
+import 'macos_menu_bar.dart';
+import 'macos_text_shortcuts.dart';
 import 'shell/app_shell.dart';
 import 'theme/app_theme.dart';
 
@@ -20,11 +23,17 @@ class FieldNotesApp extends StatelessWidget {
         title: 'Field Notes',
         debugShowCheckedModeBanner: false,
         theme: fieldNotesTheme(),
-        builder: (BuildContext context, Widget? child) =>
-            AppTextScale(child: child!),
+        builder: _appBuilder,
         home: const AppShell(),
       ),
     );
+  }
+
+  static Widget _appBuilder(BuildContext context, Widget? child) {
+    final Widget scaled = AppTextScale(child: child!);
+    return defaultTargetPlatform == TargetPlatform.macOS
+        ? MacosMenuBar(child: MacosTextShortcuts(child: scaled))
+        : scaled;
   }
 }
 

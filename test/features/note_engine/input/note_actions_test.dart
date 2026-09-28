@@ -1180,4 +1180,143 @@ void main() {
       TargetPlatform.android,
     }),
   );
+
+  testWidgets(
+    'deleteToEndOfParagraph: deletes to the end of the paragraph in the note editor',
+    (WidgetTester tester) async {
+      final _Harness harness = await _pump(
+        tester,
+        'alpha beta\ngamma',
+        selection: const NoteSelection.collapsed(3),
+      );
+
+      invokeMacOSSelector(harness.editorContext, 'deleteToEndOfParagraph:');
+      await tester.pump();
+
+      expect(harness.host.state.source, 'alp\ngamma');
+      expect(harness.host.state.selection, const NoteSelection.collapsed(3));
+      expect(harness.host.applied.single.event, TransactionEvent.inputDelete);
+    },
+  );
+
+  testWidgets('deleteToEndOfParagraph: at a line end deletes the line break', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = await _pump(
+      tester,
+      'alpha beta\ngamma',
+      selection: const NoteSelection.collapsed(10),
+    );
+
+    invokeMacOSSelector(harness.editorContext, 'deleteToEndOfParagraph:');
+    await tester.pump();
+
+    expect(harness.host.state.source, 'alpha betagamma');
+    expect(harness.host.state.selection, const NoteSelection.collapsed(10));
+  });
+
+  testWidgets('yank: inserts what the last Ctrl+K deleted', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = await _pump(
+      tester,
+      'alpha beta\ngamma',
+      selection: const NoteSelection.collapsed(3),
+    );
+    invokeMacOSSelector(harness.editorContext, 'deleteToEndOfParagraph:');
+    await tester.pump();
+    expect(harness.host.state.source, 'alp\ngamma');
+
+    harness.host.state = harness.host.state.withSelection(
+      NoteSelection.collapsed(harness.host.state.source.length),
+    );
+    invokeMacOSSelector(harness.editorContext, 'yank:');
+    await tester.pump();
+
+    expect(harness.host.state.source, 'alp\ngammaha beta');
+    expect(harness.host.state.selection, const NoteSelection.collapsed(16));
+  });
+
+  testWidgets('Ctrl+O opens a line and keeps the caret before it', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = await _pump(
+      tester,
+      'alpha beta',
+      selection: const NoteSelection.collapsed(5),
+    );
+
+    for (final String name in <String>[
+      'insertNewlineIgnoringFieldEditor:',
+      'moveBackward:',
+    ]) {
+      invokeMacOSSelector(harness.editorContext, name);
+      await tester.pump();
+    }
+
+    expect(harness.host.state.source, 'alpha\n beta');
+    expect(harness.host.state.selection.isCollapsed, isTrue);
+    expect(harness.host.state.selection.head, 5);
+  });
+
+  testWidgets('the Emacs movement selectors move and extend the selection', (
+    WidgetTester tester,
+  ) async {
+    const String source = 'alpha beta\ngamma';
+    const NoteSelection caret = NoteSelection.collapsed(3);
+    final _Harness harness = await _pump(tester, source, selection: caret);
+    final Map<String, (int, int)> expected = <String, (int, int)>{
+      'moveForwardAndModifySelection:': (3, 4),
+      'moveBackwardAndModifySelection:': (3, 2),
+      'moveWordForward:': (5, 5),
+      'moveWordBackward:': (0, 0),
+      'moveToBeginningOfParagraphAndModifySelection:': (3, 0),
+      'moveToEndOfParagraphAndModifySelection:': (3, 9),
+      'pageDown:': (16, 16),
+    };
+    for (final MapEntry<String, (int, int)> entry in expected.entries) {
+      harness.host.reset(source, caret);
+      invokeMacOSSelector(harness.editorContext, entry.key);
+      await tester.pump();
+      final NoteSelection selection = harness.host.state.selection;
+      expect(
+        (selection.anchor, selection.head),
+        entry.value,
+        reason: entry.key,
+      );
+      expect(harness.host.state.source, source, reason: entry.key);
+    }
+  });
+
+  testWidgets('the Emacs selectors do nothing while composing', (
+    WidgetTester tester,
+  ) async {
+    const String source = 'alpha beta\ngamma';
+    final _Harness harness = await _pump(
+      tester,
+      source,
+      selection: const NoteSelection.collapsed(3),
+    );
+    harness.host.compose(const MdRange(0, 5));
+
+    for (final String name in <String>[
+      'deleteToEndOfParagraph:',
+      'yank:',
+      'insertNewlineIgnoringFieldEditor:',
+      'pageDown:',
+      'moveToBeginningOfParagraphAndModifySelection:',
+      'moveToEndOfParagraphAndModifySelection:',
+      'moveForwardAndModifySelection:',
+      'moveBackwardAndModifySelection:',
+      'moveWordForward:',
+      'moveWordBackward:',
+    ]) {
+      invokeMacOSSelector(harness.editorContext, name);
+      await tester.pump();
+    }
+
+    expect(tester.takeException(), isNull);
+    expect(harness.host.recordedNothing, isTrue);
+    expect(harness.host.state.source, source);
+  });
 }

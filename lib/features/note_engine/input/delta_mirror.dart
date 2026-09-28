@@ -166,7 +166,9 @@ final class DeltaMirror {
     }
     final _Entry match = _entries[index];
     final KnownValue known = match.known;
-    final TextEditingValue applied = delta.apply(known.value);
+    final TextEditingValue applied = _withoutEmptyComposing(
+      delta.apply(known.value),
+    );
     final bool keepsAffinity = _keepsAffinity(
       delta,
       known,
@@ -674,6 +676,11 @@ ChangeSet? _chained(List<ChangeSet> logged, int from, int to) {
 
 MdRange? _nonEmpty(int? start, int? end) =>
     start != null && end != null && end > start ? MdRange(start, end) : null;
+
+TextEditingValue _withoutEmptyComposing(TextEditingValue value) =>
+    value.composing.isValid && value.composing.isCollapsed
+    ? value.copyWith(composing: TextRange.empty)
+    : value;
 
 (int, int) _minimalRange(
   String before,
