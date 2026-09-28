@@ -44,6 +44,7 @@ class DeleteAllConfirmDialog extends StatelessWidget {
                       label: 'Keep my journal',
                       variant: StickerButtonVariant.secondary,
                       padTapTarget: true,
+                      autofocus: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(

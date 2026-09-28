@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
@@ -22,6 +23,7 @@ class SettingsSelect<T> extends StatefulWidget {
     this.surface,
     this.foreground,
     this.border,
+    this.focusSurface = FocusRingSurface.light,
   });
 
   final List<SettingsSelectOption<T>> options;
@@ -31,6 +33,7 @@ class SettingsSelect<T> extends StatefulWidget {
   final Color? surface;
   final Color? foreground;
   final Border? border;
+  final FocusRingSurface focusSurface;
 
   @override
   State<SettingsSelect<T>> createState() => _SettingsSelectState<T>();
@@ -66,50 +69,60 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
             child: Center(
               widthFactor: 1,
               heightFactor: 1,
-              child: PopupMenuButton<T>(
-                key: _menuKey,
+              child: FocusRing(
                 enabled: _canOpen,
-                initialValue: widget.value,
-                onSelected: widget.onChanged,
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<T>>[
-                  for (final SettingsSelectOption<T> option in widget.options)
-                    PopupMenuItem<T>(
-                      value: option.value,
-                      child: Text(
-                        option.label,
-                        style: TypographyTokens.bodySans,
-                      ),
-                    ),
-                ],
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: widget.surface ?? Palette.cardBright,
-                    border: widget.border ?? Shapes.outline,
-                    borderRadius: Shapes.buttonBorderRadius,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Flexible(
+                onPressed: _openMenu,
+                surface: widget.focusSurface,
+                borderRadius: Shapes.buttonBorderRadius,
+                includeFocusSemantics: false,
+                child: ExcludeFocus(
+                  child: PopupMenuButton<T>(
+                    key: _menuKey,
+                    enabled: _canOpen,
+                    initialValue: widget.value,
+                    onSelected: widget.onChanged,
+                    itemBuilder: (BuildContext context) => <PopupMenuEntry<T>>[
+                      for (final SettingsSelectOption<T> option
+                          in widget.options)
+                        PopupMenuItem<T>(
+                          value: option.value,
                           child: Text(
-                            current.label,
-                            overflow: TextOverflow.ellipsis,
-                            style: TypographyTokens.bodySans
-                                .copyWith(color: widget.foreground),
+                            option.label,
+                            style: TypographyTokens.bodySans,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.expand_more,
-                          size: 18,
-                          color: widget.foreground ?? Palette.ink,
+                    ],
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: widget.surface ?? Palette.cardBright,
+                        border: widget.border ?? Shapes.outline,
+                        borderRadius: Shapes.buttonBorderRadius,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
                         ),
-                      ],
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Flexible(
+                              child: Text(
+                                current.label,
+                                overflow: TextOverflow.ellipsis,
+                                style: TypographyTokens.bodySans
+                                    .copyWith(color: widget.foreground),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.expand_more,
+                              size: 18,
+                              color: widget.foreground ?? Palette.ink,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),

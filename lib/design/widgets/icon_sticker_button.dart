@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
@@ -95,16 +96,20 @@ class IconStickerButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onPressed,
-        child: SizedBox.square(
-          dimension: _buttonExtent,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: background,
-              border: Shapes.outline,
-              borderRadius: _buttonRadius,
-            ),
-            child: Center(
-              child: IconStickerGlyphIcon(glyph: glyph, color: glyphColor),
+        child: FocusRing(
+          onPressed: onPressed,
+          borderRadius: _buttonRadius,
+          child: SizedBox.square(
+            dimension: _buttonExtent,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: background,
+                border: Shapes.outline,
+                borderRadius: _buttonRadius,
+              ),
+              child: Center(
+                child: IconStickerGlyphIcon(glyph: glyph, color: glyphColor),
+              ),
             ),
           ),
         ),

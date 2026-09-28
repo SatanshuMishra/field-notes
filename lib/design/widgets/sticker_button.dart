@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
@@ -26,6 +27,8 @@ class StickerButton extends StatelessWidget {
     this.icon,
     this.labelStyle,
     this.padTapTarget = false,
+    this.focusSurface = FocusRingSurface.light,
+    this.autofocus = false,
   });
 
   final String label;
@@ -34,6 +37,8 @@ class StickerButton extends StatelessWidget {
   final Widget? icon;
   final TextStyle? labelStyle;
   final bool padTapTarget;
+  final FocusRingSurface focusSurface;
+  final bool autofocus;
 
   bool get isEnabled => onPressed != null;
 
@@ -67,6 +72,14 @@ class StickerButton extends StatelessWidget {
         ),
       ),
     );
+    final Widget ringed = FocusRing(
+      enabled: isEnabled,
+      autofocus: autofocus,
+      onPressed: onPressed,
+      surface: focusSurface,
+      borderRadius: style.borderRadius,
+      child: face,
+    );
     return Semantics(
       button: true,
       enabled: isEnabled,
@@ -76,7 +89,7 @@ class StickerButton extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: padTapTarget ? _paddedTapTarget(face) : face,
+          child: padTapTarget ? _paddedTapTarget(ringed) : ringed,
         ),
       ),
     );
