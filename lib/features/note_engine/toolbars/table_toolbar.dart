@@ -7,7 +7,8 @@ import 'package:field_notes/features/note_engine/commands/table_commands.dart';
 import 'package:field_notes/features/note_engine/document/editor_state.dart';
 import 'package:field_notes/features/note_engine/document/transaction.dart';
 import 'package:field_notes/features/note_engine/projection/active_line.dart';
-import 'package:flutter/foundation.dart' show defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, precisionErrorTolerance;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -38,6 +39,10 @@ const Key tableToolbarAlignRightKey = ValueKey<String>(
 const Key tableToolbarDeleteTableKey = ValueKey<String>(
   'table-toolbar-delete-table',
 );
+const Key tableToolbarFadeStartKey = ValueKey<String>(
+  'table-toolbar-fade-start',
+);
+const Key tableToolbarFadeEndKey = ValueKey<String>('table-toolbar-fade-end');
 
 const double tableToolbarGap = 10;
 
@@ -51,6 +56,7 @@ const double _ruleHeight = 17;
 const double _glyphExtent = 14;
 const double _disabledOpacity = 0.4;
 const double _focusRingWidth = 2;
+const double _fadeExtent = 24;
 const BorderRadius _controlRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusXs + 1),
 );
@@ -223,9 +229,14 @@ class TableToolbar extends StatelessWidget {
             behavior: ScrollConfiguration.of(
               context,
             ).copyWith(scrollbars: false),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(mainAxisSize: MainAxisSize.min, children: children),
+            child: ToolbarScrollFade(
+              color: Palette.toolbarInk,
+              startKey: tableToolbarFadeStartKey,
+              endKey: tableToolbarFadeEndKey,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(mainAxisSize: MainAxisSize.min, children: children),
+              ),
             ),
           ),
         ),
@@ -267,6 +278,88 @@ class TableToolbar extends StatelessWidget {
           painter: _TableGlyphPainter(
             glyph: control.edit,
             color: Palette.toolbarLabel,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class ToolbarScrollFade extends StatefulWidget {
+  const ToolbarScrollFade({
+    super.key,
+    required this.color,
+    required this.startKey,
+    required this.endKey,
+    required this.child,
+  });
+
+  final Color color;
+  final Key startKey;
+  final Key endKey;
+  final Widget child;
+
+  @override
+  State<ToolbarScrollFade> createState() => _ToolbarScrollFadeState();
+}
+
+class _ToolbarScrollFadeState extends State<ToolbarScrollFade> {
+  bool _before = false;
+  bool _after = false;
+
+  bool _onNotification(Notification notification) {
+    final ScrollMetrics? metrics = switch (notification) {
+      ScrollNotification(depth: 0, :final ScrollMetrics metrics) => metrics,
+      ScrollMetricsNotification(depth: 0, :final ScrollMetrics metrics) =>
+        metrics,
+      _ => null,
+    };
+    if (metrics == null) {
+      return false;
+    }
+    final bool before = metrics.extentBefore > precisionErrorTolerance;
+    final bool after = metrics.extentAfter > precisionErrorTolerance;
+    if (before != _before || after != _after) {
+      setState(() {
+        _before = before;
+        _after = after;
+      });
+    }
+    return false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return NotificationListener<Notification>(
+      onNotification: _onNotification,
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: <Widget>[
+          widget.child,
+          if (_before) _fade(widget.startKey, AlignmentDirectional.centerStart),
+          if (_after) _fade(widget.endKey, AlignmentDirectional.centerEnd),
+        ],
+      ),
+    );
+  }
+
+  Widget _fade(Key key, AlignmentDirectional edge) {
+    final bool start = edge == AlignmentDirectional.centerStart;
+    return PositionedDirectional(
+      key: key,
+      start: start ? 0 : null,
+      end: start ? null : 0,
+      top: 0,
+      bottom: 0,
+      width: _fadeExtent,
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: edge,
+              end: -edge,
+              colors: <Color>[widget.color, widget.color.withValues(alpha: 0)],
+            ),
           ),
         ),
       ),

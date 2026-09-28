@@ -31,6 +31,46 @@ Future<void> _pumpApp(WidgetTester tester, Widget app) {
 Future<void> _press(WidgetTester tester, Key key) =>
     NoteEditorDriver(tester).press(find.byKey(key), _hold);
 
+final Map<Key, String> _pressedHello = <Key, String>{
+  formatBoldKey: '**hello** world',
+  formatItalicKey: '*hello* world',
+  formatHeadingKey: '# hello world',
+  formatListKey: '- hello world',
+  formatNumberedKey: '1. hello world',
+  formatTaskKey: '- [ ] hello world',
+  formatQuoteKey: '> hello world',
+  formatLinkKey: '[hello]() world',
+};
+
+Future<void> _expectPressUnderFade(
+  WidgetTester tester,
+  NoteEditorController controller,
+  Key fade,
+  String reason,
+) async {
+  final Rect shade = tester.getRect(find.byKey(fade));
+  final List<({Key key, Rect overlap})> under = <({Key key, Rect overlap})>[
+    for (final Key key in _pressedHello.keys)
+      if (tester.getRect(find.byKey(key)).intersect(shade)
+          case final Rect overlap
+          when overlap.width > 0 && overlap.height > 0)
+        (key: key, overlap: overlap),
+  ]..sort(
+      (({Key key, Rect overlap}) a, ({Key key, Rect overlap}) b) =>
+          b.overlap.width.compareTo(a.overlap.width),
+    );
+  expect(under, isNotEmpty, reason: reason);
+  controller.value = _helloSelected;
+  await tester.pump();
+  final TestGesture gesture = await tester.startGesture(
+    under.first.overlap.center,
+  );
+  await tester.pump(_hold);
+  await gesture.up();
+  await tester.pump();
+  expect(controller.text, _pressedHello[under.first.key], reason: reason);
+}
+
 
 class _Harness {
   _Harness({this.tablesAvailable = true})
@@ -525,6 +565,94 @@ void main() {
     await _press(tester, formatMoreKey);
     expect(find.byKey(formatHighlightKey), findsNothing);
     expect(harness.controller.text, 'hello world');
+  });
+
+  testWidgets('a scrolling format bar fades the edge that has more', (
+    WidgetTester tester,
+  ) async {
+    for (final double width in <double>[360, 384, 411.4, 412, 430]) {
+      final String reason = 'at $width dp';
+      final NoteEditorController controller = NoteEditorController();
+      addTearDown(controller.dispose);
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          key: ValueKey<double>(width),
+          debugShowCheckedModeBanner: false,
+          home: DialogHost(
+            child: ComposerShell(
+              child: TextComposerSheet(
+                controller: controller,
+                onSave: (String _) {},
+                onCancel: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      final Finder scroller = find.descendant(
+        of: find.byType(FormatBar),
+        matching: find.byType(Scrollable),
+      );
+      final ScrollPosition position =
+          tester.state<ScrollableState>(scroller).position;
+      final Rect view = tester.getRect(scroller);
+      expect(position.extentAfter, greaterThan(0), reason: reason);
+      expect(find.byKey(formatBarFadeEndKey), findsOneWidget, reason: reason);
+      expect(find.byKey(formatBarFadeStartKey), findsNothing, reason: reason);
+      expect(
+        tester.getRect(find.byKey(formatBarFadeEndKey)).right,
+        view.right,
+        reason: reason,
+      );
+      await _expectPressUnderFade(
+        tester,
+        controller,
+        formatBarFadeEndKey,
+        reason,
+      );
+
+      position.jumpTo(position.maxScrollExtent);
+      await tester.pump();
+
+      expect(position.extentBefore, greaterThan(0), reason: reason);
+      expect(find.byKey(formatBarFadeStartKey), findsOneWidget, reason: reason);
+      expect(find.byKey(formatBarFadeEndKey), findsNothing, reason: reason);
+      expect(
+        tester.getRect(find.byKey(formatBarFadeStartKey)).left,
+        view.left,
+        reason: reason,
+      );
+      await _expectPressUnderFade(
+        tester,
+        controller,
+        formatBarFadeStartKey,
+        reason,
+      );
+    }
+
+    final _Harness wide = _Harness();
+    addTearDown(wide.dispose);
+    await _pumpApp(tester, wide.app);
+    await tester.pump();
+    expect(
+      tester
+          .state<ScrollableState>(
+            find.descendant(
+              of: find.byType(FormatBar),
+              matching: find.byType(Scrollable),
+            ),
+          )
+          .position
+          .maxScrollExtent,
+      0,
+    );
+    expect(find.byKey(formatBarFadeStartKey), findsNothing);
+    expect(find.byKey(formatBarFadeEndKey), findsNothing);
   });
 
   group('where the composer mounts the bar', () {

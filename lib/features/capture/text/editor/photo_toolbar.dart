@@ -16,6 +16,8 @@ import 'package:field_notes/domain/notes/markdown/markdown.dart'
         MdPhotoPlacement,
         MdPhotoSide,
         MdPhotoSize;
+import 'package:field_notes/features/capture/text/editor/format_bar.dart'
+    show AnchoredMenu;
 import 'package:field_notes/features/note_engine/document/editor_state.dart'
     show EditorState;
 import 'package:field_notes/features/note_engine/document/transaction.dart'
@@ -323,28 +325,37 @@ class PhotoToolbar extends StatefulWidget {
 }
 
 class _PhotoToolbarState extends State<PhotoToolbar> {
-  final OverlayPortalController _menu = OverlayPortalController();
   final Object _menuGroup = Object();
   final GlobalKey _moreKey = GlobalKey();
+  final FocusNode _keys = FocusNode(
+    canRequestFocus: false,
+    skipTraversal: true,
+  );
+  late final AnchoredMenu _menu = AnchoredMenu(
+    anchor: () => _moreKey.currentContext,
+    composing: () => _request.controller.value.composing.isValid,
+    builder: _menuPanel,
+    escapeOwner: _keys,
+  );
 
   NotePhotoToolbarRequest get _request => widget.request;
 
-  void _toggleMenu() {
-    setState(() {
-      if (_menu.isShowing) {
-        _menu.hide();
-      } else {
-        _menu.show();
-      }
-    });
+  @override
+  void dispose() {
+    _menu.dispose();
+    _keys.dispose();
+    super.dispose();
   }
 
-  void _closeMenu() {
-    if (!_menu.isShowing || !mounted) {
-      return;
+  void _toggleMenu() {
+    if (_menu.isOpen) {
+      _menu.close();
+    } else {
+      _menu.open();
     }
-    setState(_menu.hide);
   }
+
+  void _closeMenu() => _menu.close();
 
   void _remove() {
     final NotePhotoToolbarRequest request = _request;
@@ -410,6 +421,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
 
   @override
   Widget build(BuildContext context) {
+    _menu.refresh();
     final NotePhotoToolbarRequest request = _request;
     final EditorState state = request.controller.state;
     final MdBlock? photo = _photoAt(state, request.photoLineStart);
@@ -437,7 +449,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
           if (moves)
             _moveControls(state, photo, target)
           else
-            <Widget>[_moreControl(state, photo, target)],
+            <Widget>[_moreControl(target)],
           <Widget>[
             _PhotoToolbarControl(
               controlKey: photoToolbarCaptionKey,
@@ -472,8 +484,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
         ]);
         return TextFieldTapRegion(
           child: Focus(
-            canRequestFocus: false,
-            skipTraversal: true,
+            focusNode: _keys,
             onKeyEvent: _onKey,
             child: Semantics(
               container: true,
@@ -652,13 +663,10 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
     ];
   }
 
-  Widget _moreControl(EditorState state, MdBlock photo, double target) {
+  Widget _moreControl(double target) {
     return _PhotoToolbarMenuAnchor(
       groupId: _menuGroup,
-      portalKey: _moreKey,
-      controller: _menu,
-      overlayChildBuilder: (BuildContext overlayContext) =>
-          _menuPanel(state, photo, target),
+      anchorKey: _moreKey,
       control: _PhotoToolbarControl(
         controlKey: photoToolbarMoreKey,
         label: photoToolbarMoreLabel,
@@ -669,14 +677,20 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
     );
   }
 
-  Widget _menuPanel(EditorState state, MdBlock photo, double target) {
+  Widget _menuPanel(BuildContext overlayContext) {
+    final EditorState state = _request.controller.state;
+    final MdBlock? photo = _photoAt(state, _request.photoLineStart);
     final RenderBox? button =
         _moreKey.currentContext?.findRenderObject() as RenderBox?;
     final RenderBox? overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox?;
-    if (button == null || overlay == null || !button.hasSize) {
+    if (photo == null ||
+        button == null ||
+        overlay == null ||
+        !button.hasSize) {
       return const SizedBox.shrink();
     }
+    final double target = photoToolbarTargetFor(defaultTargetPlatform);
     final Rect anchor = MatrixUtils.transformRect(
       button.getTransformTo(overlay),
       Offset.zero & button.size,
@@ -855,39 +869,25 @@ class _PhotoToolbarMenuAnchor extends StatelessWidget
     implements _PhotoToolbarFocusable {
   const _PhotoToolbarMenuAnchor({
     required this.groupId,
-    required this.portalKey,
-    required this.controller,
-    required this.overlayChildBuilder,
+    required this.anchorKey,
     required this.control,
   });
 
   final Object groupId;
-  final GlobalKey portalKey;
-  final OverlayPortalController controller;
-  final WidgetBuilder overlayChildBuilder;
+  final GlobalKey anchorKey;
   final _PhotoToolbarControl control;
 
   @override
   _PhotoToolbarMenuAnchor withFocusNode(FocusNode node) =>
       _PhotoToolbarMenuAnchor(
         groupId: groupId,
-        portalKey: portalKey,
-        controller: controller,
-        overlayChildBuilder: overlayChildBuilder,
+        anchorKey: anchorKey,
         control: control.withFocusNode(node),
       );
 
   @override
   Widget build(BuildContext context) {
-    return TapRegion(
-      groupId: groupId,
-      child: OverlayPortal(
-        key: portalKey,
-        controller: controller,
-        overlayChildBuilder: overlayChildBuilder,
-        child: control,
-      ),
-    );
+    return TapRegion(key: anchorKey, groupId: groupId, child: control);
   }
 }
 

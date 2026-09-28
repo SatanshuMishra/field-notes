@@ -94,6 +94,40 @@ Future<_Harness> _pump(
   return harness;
 }
 
+Future<void> _expectPressUnderFade(
+  WidgetTester tester,
+  _Harness harness,
+  Key fade,
+  String reason,
+) async {
+  final Rect shade = tester.getRect(find.byKey(fade));
+  final List<({Key key, Rect overlap})> under =
+      <({Key key, Rect overlap})>[
+        for (final Key key in _edits.keys)
+          if (tester.getRect(find.byKey(key)).intersect(shade)
+              case final Rect overlap
+              when overlap.width > 0 && overlap.height > 0)
+            (key: key, overlap: overlap),
+      ]..sort(
+        (({Key key, Rect overlap}) a, ({Key key, Rect overlap}) b) =>
+            b.overlap.width.compareTo(a.overlap.width),
+      );
+  expect(under, isNotEmpty, reason: reason);
+  final EditorState start = harness.state;
+  final TestGesture gesture = await tester.startGesture(
+    under.first.overlap.center,
+  );
+  await tester.pump(const Duration(milliseconds: 110));
+  await gesture.up();
+  await tester.pump();
+  expect(harness.dispatched, hasLength(1), reason: reason);
+  expect(
+    harness.dispatched.single.changes,
+    editTable(start, _edits[under.first.key]!)!.changes,
+    reason: reason,
+  );
+}
+
 Future<void> _hold(WidgetTester tester, Key key, Duration hold) async {
   final TestGesture gesture = await tester.startGesture(
     tester.getCenter(find.byKey(key)),
@@ -334,6 +368,85 @@ void main() {
         ),
         findsNothing,
       );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'a scrolling table toolbar fades the edge that has more',
+    (WidgetTester tester) async {
+      for (final double width in <double>[360, 384, 411.4, 412, 430]) {
+        final String reason = 'at $width dp';
+        _pinSurface(tester, width: width);
+        final _Harness harness = await _pump(tester, _framed, 34);
+        await tester.pump();
+        final Finder scroller = find.descendant(
+          of: find.byKey(tableToolbarKey),
+          matching: find.byType(Scrollable),
+        );
+        final ScrollPosition position = tester
+            .state<ScrollableState>(scroller)
+            .position;
+        final Rect view = tester.getRect(scroller);
+        expect(position.extentAfter, greaterThan(0), reason: reason);
+        expect(
+          find.byKey(tableToolbarFadeEndKey),
+          findsOneWidget,
+          reason: reason,
+        );
+        expect(
+          find.byKey(tableToolbarFadeStartKey),
+          findsNothing,
+          reason: reason,
+        );
+        expect(
+          tester.getRect(find.byKey(tableToolbarFadeEndKey)).right,
+          view.right,
+          reason: reason,
+        );
+        await _expectPressUnderFade(
+          tester,
+          harness,
+          tableToolbarFadeEndKey,
+          reason,
+        );
+
+        final _Harness scrolled = await _pump(tester, _framed, 34);
+        await tester.pump();
+        final ScrollPosition end = tester
+            .state<ScrollableState>(scroller)
+            .position;
+        end.jumpTo(end.maxScrollExtent);
+        await tester.pump();
+        expect(end.extentBefore, greaterThan(0), reason: reason);
+        expect(
+          find.byKey(tableToolbarFadeStartKey),
+          findsOneWidget,
+          reason: reason,
+        );
+        expect(
+          find.byKey(tableToolbarFadeEndKey),
+          findsNothing,
+          reason: reason,
+        );
+        expect(
+          tester.getRect(find.byKey(tableToolbarFadeStartKey)).left,
+          view.left,
+          reason: reason,
+        );
+        await _expectPressUnderFade(
+          tester,
+          scrolled,
+          tableToolbarFadeStartKey,
+          reason,
+        );
+      }
+
+      _pinSurface(tester);
+      await _pump(tester, _framed, 34);
+      await tester.pump();
+      expect(find.byKey(tableToolbarFadeStartKey), findsNothing);
+      expect(find.byKey(tableToolbarFadeEndKey), findsNothing);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
