@@ -170,24 +170,40 @@ final class _PillGeometry {
 }
 
 class _PillReach extends SingleChildRenderObjectWidget {
-  const _PillReach({required this.reach, required super.child});
+  const _PillReach({
+    required this.reach,
+    required this.semanticIndex,
+    required super.child,
+  });
 
   final Rect? reach;
+  final int? semanticIndex;
 
   @override
   _RenderPillReach createRenderObject(BuildContext context) =>
-      _RenderPillReach(reach);
+      _RenderPillReach(reach, semanticIndex);
 
   @override
   void updateRenderObject(BuildContext context, _RenderPillReach renderObject) {
-    renderObject.reach = reach;
+    renderObject
+      ..reach = reach
+      ..semanticIndex = semanticIndex;
   }
 }
 
 class _RenderPillReach extends RenderProxyBox {
-  _RenderPillReach(this._reach);
+  _RenderPillReach(this._reach, this._semanticIndex);
 
   Rect? _reach;
+  int? _semanticIndex;
+
+  set semanticIndex(int? value) {
+    if (value == _semanticIndex) {
+      return;
+    }
+    _semanticIndex = value;
+    markNeedsSemanticsUpdate();
+  }
 
   set reach(Rect? value) {
     if (value == _reach) {
@@ -212,6 +228,10 @@ class _RenderPillReach extends RenderProxyBox {
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
     super.describeSemanticsConfiguration(config);
     config.isSemanticBoundary = true;
+    final int? index = _semanticIndex;
+    if (index != null) {
+      config.indexInParent = index;
+    }
   }
 }
 
@@ -316,11 +336,13 @@ class LogActionsReveal extends StatefulWidget {
     required this.child,
     this.onEdit,
     required this.onDelete,
+    this.semanticIndex,
   });
 
   final Widget child;
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
+  final int? semanticIndex;
 
   @override
   State<LogActionsReveal> createState() => _LogActionsRevealState();
@@ -619,6 +641,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   Widget build(BuildContext context) {
     return _PillReach(
       reach: _visible ? _pillReach() : null,
+      semanticIndex: widget.semanticIndex,
       child: OverlayPortal(
         controller: _portal,
         overlayChildBuilder: _buildPill,

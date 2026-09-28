@@ -1,118 +1,17 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/entry_cards_harness.dart';
+import '../support/reading_path.dart';
 
 const Key _cardKey = ValueKey<String>('card');
 
 const Duration _settle = Duration(milliseconds: 200);
-
-Set<SemanticsNode> _sentNodes(SemanticsNode root) {
-  final Set<SemanticsNode> sent = <SemanticsNode>{};
-  void walk(SemanticsNode node) {
-    if (node.isMergedIntoParent) {
-      return;
-    }
-    sent.add(node);
-    if (node.mergeAllDescendantsIntoThisNode) {
-      return;
-    }
-    node.visitChildren((SemanticsNode child) {
-      walk(child);
-      return true;
-    });
-  }
-
-  walk(root);
-  return sent;
-}
-
-List<SemanticsNode> _readingChildren(
-  SemanticsNode node,
-  Set<SemanticsNode> sent,
-) {
-  if (node.hasChildren && !node.mergeAllDescendantsIntoThisNode) {
-    return node.debugListChildrenInOrder(
-      DebugSemanticsDumpOrder.traversalOrder,
-    );
-  }
-  final Object? identifier = node.traversalParentIdentifier;
-  if (identifier == null || kIsWeb) {
-    return const <SemanticsNode>[];
-  }
-  return sent
-      .where(
-        (SemanticsNode candidate) =>
-            candidate.attached &&
-            candidate.traversalChildIdentifier == identifier,
-      )
-      .toList();
-}
-
-Rect _globalRect(WidgetTester tester, SemanticsNode node) {
-  Rect rect = node.rect;
-  for (
-    SemanticsNode? current = node;
-    current != null;
-    current = current.parent
-  ) {
-    final Matrix4? transform = current.transform;
-    if (transform != null) {
-      rect = MatrixUtils.transformRect(transform, rect);
-    }
-  }
-  final double ratio = tester.view.devicePixelRatio;
-  return Rect.fromLTRB(
-    rect.left / ratio,
-    rect.top / ratio,
-    rect.right / ratio,
-    rect.bottom / ratio,
-  );
-}
-
-List<SemanticsNode>? _readingPath(WidgetTester tester, String label) {
-  final SemanticsNode root = tester
-      .binding
-      .renderViews
-      .single
-      .owner!
-      .semanticsOwner!
-      .rootSemanticsNode!;
-  final Set<SemanticsNode> sent = _sentNodes(root);
-  final Set<SemanticsNode> seen = <SemanticsNode>{};
-  List<SemanticsNode>? walk(SemanticsNode node, List<SemanticsNode> path) {
-    if (!seen.add(node)) {
-      return null;
-    }
-    if (node.getSemanticsData().label == label) {
-      return <SemanticsNode>[...path, node];
-    }
-    for (final SemanticsNode child in _readingChildren(node, sent)) {
-      final List<SemanticsNode>? found = walk(child, <SemanticsNode>[
-        ...path,
-        node,
-      ]);
-      if (found != null) {
-        return found;
-      }
-    }
-    return null;
-  }
-
-  return walk(root, const <SemanticsNode>[]);
-}
-
-bool _covers(Rect frame, Rect button) {
-  final Rect reached = frame.intersect(button);
-  return reached.width >= button.width - 0.01 &&
-      reached.height >= button.height - 0.01;
-}
 
 Future<void> _settleReveal(WidgetTester tester) async {
   await tester.pump();
@@ -187,14 +86,14 @@ void main() {
       logActionsEditLabel,
       logActionsDeleteLabel,
     ]) {
-      final List<SemanticsNode>? path = _readingPath(tester, label);
+      final List<SemanticsNode>? path = readingPathTo(tester, label);
       expect(path, isNotNull, reason: '$label is not in reading order');
-      final Rect button = _globalRect(tester, path!.last);
+      final Rect button = globalSemanticsRect(tester, path!.last);
       expect(button.height, moreOrLessEquals(48, epsilon: 0.01));
       for (final SemanticsNode ancestor in path.sublist(0, path.length - 1)) {
-        final Rect frame = _globalRect(tester, ancestor);
+        final Rect frame = globalSemanticsRect(tester, ancestor);
         expect(
-          _covers(frame, button),
+          frameCovers(frame, button),
           isTrue,
           reason: 'node #${ancestor.id} $frame clips $label at $button',
         );
@@ -368,14 +267,14 @@ void main() {
       logActionsEditLabel,
       logActionsDeleteLabel,
     ]) {
-      final List<SemanticsNode> path = _readingPath(tester, label)!;
-      final Rect button = _globalRect(tester, path.last);
+      final List<SemanticsNode> path = readingPathTo(tester, label)!;
+      final Rect button = globalSemanticsRect(tester, path.last);
       final SemanticsNode card = path.lastWhere(
         (SemanticsNode node) =>
             node.getSemanticsData().hasAction(SemanticsAction.longPress),
       );
       expect(
-        _covers(_globalRect(tester, card), button),
+        frameCovers(globalSemanticsRect(tester, card), button),
         isTrue,
         reason: 'the card node clips $label at $button',
       );

@@ -26,6 +26,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/photo_line_fixture.dart';
 import '../entry_cards/support/fake_video_player.dart';
+import '../entry_cards/support/reading_path.dart';
 import '../notes/support/notes_harness.dart'
     show FakeNoteMediaResolver, availablePhoto, photoIdA, prefixOf;
 import 'support/today_harness.dart';
@@ -38,6 +39,29 @@ Widget _feed(String date) {
     slivers: <Widget>[TodayEntryFeed(date: date)],
   );
 }
+
+Widget _feedUnderHeader(String date) {
+  return CustomScrollView(
+    slivers: <Widget>[
+      SliverPadding(
+        padding: const EdgeInsets.all(20),
+        sliver: SliverMainAxisGroup(
+          slivers: <Widget>[
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            TodayEntryFeed(date: date),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+List<Override> _twoNotes() => _overrides(
+  entries: Stream<List<Entry>>.value(<Entry>[
+    todayTestEntry(id: 'entry-1', textContent: 'morning walk'),
+    todayTestEntry(id: 'entry-2', textContent: 'coffee on the porch'),
+  ]),
+);
 
 List<Override> _overrides({
   required Stream<List<Entry>> entries,
@@ -81,6 +105,33 @@ List<Override> _videoEntryOverrides({
 }
 
 void main() {
+  testWidgets('a revealed feed pill lies inside every reading-order frame',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await pumpToday(
+      tester,
+      _feedUnderHeader('2026-07-19'),
+      overrides: _twoNotes(),
+    );
+
+    for (int card = 0; card < 2; card += 1) {
+      await tester.longPress(find.byType(CompactLogCard).at(card));
+      await tester.pumpAndSettle();
+      expectInsideEveryReadingFrame(tester, logActionsEditLabel);
+      expectInsideEveryReadingFrame(tester, logActionsDeleteLabel);
+    }
+    semantics.dispose();
+  });
+
+  testWidgets('feed cards keep their list positions for screen readers',
+      (WidgetTester tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await pumpToday(tester, _feed('2026-07-19'), overrides: _twoNotes());
+
+    expect(scrolledChildIndexes(tester), <int?>[0, 1]);
+    semantics.dispose();
+  });
+
   testWidgets('renders one card per entry and no photo strip',
       (WidgetTester tester) async {
     await pumpToday(

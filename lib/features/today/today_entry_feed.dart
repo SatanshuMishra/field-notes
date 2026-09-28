@@ -86,6 +86,7 @@ class TodayEntryFeed extends ConsumerWidget {
 
     return SliverList.builder(
       itemCount: entries.length,
+      addSemanticIndexes: false,
       findChildIndexCallback: (Key key) {
         final int index = entries.indexWhere(
           (Entry entry) => key == ValueKey<String>(entry.id),
@@ -103,6 +104,7 @@ class TodayEntryFeed extends ConsumerWidget {
               entry: entry,
               date: date,
               resolver: resolver,
+              semanticIndex: index,
             ),
           ),
         );
@@ -126,11 +128,13 @@ class TodayEntryTile extends ConsumerWidget {
     required this.entry,
     required this.date,
     required this.resolver,
+    this.semanticIndex,
   });
 
   final Entry entry;
   final String date;
   final MediaResolver resolver;
+  final int? semanticIndex;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -138,6 +142,7 @@ class TodayEntryTile extends ConsumerWidget {
       entry: entry,
       resolver: resolver,
       density: CompactLogDensity.feed,
+      semanticIndex: semanticIndex,
       audioPlayerFactory: ref.watch(todayAudioPlayerFactoryProvider),
       onOpen: () => _open(context),
       onEdit: entry.type == EntryType.text ? () => _edit(context) : null,

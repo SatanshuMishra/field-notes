@@ -213,6 +213,7 @@ class CompactLogCard extends StatefulWidget {
     required this.onDelete,
     this.audioPlayerFactory,
     this.onToggleTask,
+    this.semanticIndex,
   });
 
   final Entry entry;
@@ -223,6 +224,7 @@ class CompactLogCard extends StatefulWidget {
   final VoidCallback onDelete;
   final EntryAudioPlayerFactory? audioPlayerFactory;
   final ValueChanged<int>? onToggleTask;
+  final int? semanticIndex;
 
   @override
   State<CompactLogCard> createState() => _CompactLogCardState();
@@ -275,6 +277,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
       child: LogActionsReveal(
         onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
         onDelete: widget.onDelete,
+        semanticIndex: widget.semanticIndex,
         child: Semantics(
           button: true,
           onTap: widget.onOpen,
