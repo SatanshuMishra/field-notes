@@ -291,19 +291,21 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _headerAction({required VoidCallback? onTap, required Widget child}) {
-    return Semantics(
-      container: true,
-      button: true,
-      enabled: onTap != null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: kMinInteractiveDimension,
-            minHeight: kMinInteractiveDimension,
+    return TextFieldTapRegion(
+      child: Semantics(
+        container: true,
+        button: true,
+        enabled: onTap != null,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: kMinInteractiveDimension,
+              minHeight: kMinInteractiveDimension,
+            ),
+            child: Center(widthFactor: 1, heightFactor: 1, child: child),
           ),
-          child: Center(widthFactor: 1, heightFactor: 1, child: child),
         ),
       ),
     );

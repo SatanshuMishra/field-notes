@@ -83,27 +83,29 @@ class DraftRestoredChip extends StatelessWidget {
   }
 
   Widget _discardButton() {
-    return Semantics(
-      container: true,
-      button: true,
-      enabled: onDiscard != null,
-      label: draftRestoredDiscardLabel,
-      child: GestureDetector(
-        key: draftRestoredDiscardKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onDiscard,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: _discardTarget),
-          child: Padding(
-            padding: const EdgeInsetsDirectional.only(
-              start: _chipGap,
-              end: _chipHorizontalPadding,
-            ),
-            child: Center(
-              widthFactor: 1,
-              child: Opacity(
-                opacity: 0,
-                child: Text(draftRestoredDiscardLabel, style: _discardStyle),
+    return TextFieldTapRegion(
+      child: Semantics(
+        container: true,
+        button: true,
+        enabled: onDiscard != null,
+        label: draftRestoredDiscardLabel,
+        child: GestureDetector(
+          key: draftRestoredDiscardKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onDiscard,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: _discardTarget),
+            child: Padding(
+              padding: const EdgeInsetsDirectional.only(
+                start: _chipGap,
+                end: _chipHorizontalPadding,
+              ),
+              child: Center(
+                widthFactor: 1,
+                child: Opacity(
+                  opacity: 0,
+                  child: Text(draftRestoredDiscardLabel, style: _discardStyle),
+                ),
               ),
             ),
           ),
