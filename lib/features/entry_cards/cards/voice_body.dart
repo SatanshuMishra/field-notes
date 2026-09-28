@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../design/motion/motion.dart';
@@ -48,6 +49,9 @@ const double _toggleTarget = 48;
 const double _toggleGap = 12;
 const double _toggleGlyphSize = 15;
 const double _toggleGlyphOffset = 2;
+const BorderRadius _toggleRadius = BorderRadius.all(
+  Radius.circular(_toggleSize / 2),
+);
 
 Color _entryWaveTint(double height) {
   if (height > _waveCoralThreshold) {
@@ -307,20 +311,25 @@ class _PlayToggle extends StatelessWidget {
             alignment: AlignmentDirectional.centerStart,
             child: Opacity(
               opacity: onTap == null ? 0.5 : 1.0,
-              child: Container(
-                width: _toggleSize,
-                height: _toggleSize,
-                decoration: const BoxDecoration(
-                  color: Palette.coral,
-                  shape: BoxShape.circle,
-                  border: Shapes.outline,
-                ),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: _toggleGlyphOffset),
-                    child: CustomPaint(
-                      size: const Size(_toggleGlyphSize, _toggleGlyphSize),
-                      painter: _TransportGlyph(isPlaying: isPlaying),
+              child: FocusRing(
+                enabled: onTap != null,
+                onPressed: onTap,
+                borderRadius: _toggleRadius,
+                child: Container(
+                  width: _toggleSize,
+                  height: _toggleSize,
+                  decoration: const BoxDecoration(
+                    color: Palette.coral,
+                    shape: BoxShape.circle,
+                    border: Shapes.outline,
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: _toggleGlyphOffset),
+                      child: CustomPaint(
+                        size: const Size(_toggleGlyphSize, _toggleGlyphSize),
+                        painter: _TransportGlyph(isPlaying: isPlaying),
+                      ),
                     ),
                   ),
                 ),

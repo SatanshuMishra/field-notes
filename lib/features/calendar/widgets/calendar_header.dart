@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 import '../model/calendar_month.dart';
@@ -23,6 +24,12 @@ const EdgeInsets _titlePadding = EdgeInsets.symmetric(
 const EdgeInsets _thisWeekPadding = EdgeInsets.fromLTRB(10, 7, 12, 7);
 const double _thisWeekArrowSize = 12;
 const double _thisWeekArrowGap = 5;
+const BorderRadius _titleRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusCell),
+);
+const BorderRadius _thisWeekRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusSm),
+);
 
 const TextStyle _titleStyle = TypographyTokens.displaySerif;
 
@@ -53,6 +60,7 @@ class CalendarHeader extends StatelessWidget {
     this.titleKey,
     this.thisWeekKey,
     this.pickerLink,
+    this.titleFocusNode,
   });
 
   final MonthRef month;
@@ -64,6 +72,7 @@ class CalendarHeader extends StatelessWidget {
   final Key? titleKey;
   final Key? thisWeekKey;
   final LayerLink? pickerLink;
+  final FocusNode? titleFocusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +129,7 @@ class CalendarHeader extends StatelessWidget {
                         key: titleKey,
                         title: month.title,
                         onPressed: onOpenPicker,
+                        focusNode: titleFocusNode,
                       ),
                     ),
                   ),
@@ -209,10 +219,16 @@ class CalendarHeader extends StatelessWidget {
 }
 
 class _TitleButton extends StatefulWidget {
-  const _TitleButton({super.key, required this.title, this.onPressed});
+  const _TitleButton({
+    super.key,
+    required this.title,
+    this.onPressed,
+    this.focusNode,
+  });
 
   final String title;
   final VoidCallback? onPressed;
+  final FocusNode? focusNode;
 
   @override
   State<_TitleButton> createState() => _TitleButtonState();
@@ -239,32 +255,36 @@ class _TitleButtonState extends State<_TitleButton> {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: widget.onPressed,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: _hovered ? Palette.ink08 : null,
-              borderRadius: const BorderRadius.all(
-                Radius.circular(Shapes.radiusCell),
+          child: FocusRing(
+            enabled: widget.onPressed != null,
+            onPressed: widget.onPressed,
+            focusNode: widget.focusNode,
+            borderRadius: _titleRadius,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: _hovered ? Palette.ink08 : null,
+                borderRadius: _titleRadius,
               ),
-            ),
-            child: Padding(
-              padding: _titlePadding,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Flexible(
-                    child: Text(
-                      widget.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: _titleStyle,
+              child: Padding(
+                padding: _titlePadding,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Flexible(
+                      child: Text(
+                        widget.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _titleStyle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: _titleCaretGap),
-                  const CalendarChevronGlyph(
-                    direction: ChevronDirection.down,
-                    size: _titleCaretSize,
-                  ),
-                ],
+                    const SizedBox(width: _titleCaretGap),
+                    const CalendarChevronGlyph(
+                      direction: ChevronDirection.down,
+                      size: _titleCaretSize,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -296,29 +316,31 @@ class _ThisWeekButton extends StatelessWidget {
           onTap: onPressed,
           child: CalendarTapSlot(
             alignment: Alignment.bottomCenter,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: Palette.coral,
-                border: Shapes.outline,
-                borderRadius: BorderRadius.all(
-                  Radius.circular(Shapes.radiusSm),
+            child: FocusRing(
+              onPressed: onPressed,
+              borderRadius: _thisWeekRadius,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: Palette.coral,
+                  border: Shapes.outline,
+                  borderRadius: _thisWeekRadius,
+                  boxShadow: Shadows.control,
                 ),
-                boxShadow: Shadows.control,
-              ),
-              child: Padding(
-                padding: _thisWeekPadding,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    SizedBox.square(
-                      dimension: _thisWeekArrowSize,
-                      child: CustomPaint(
-                        painter: _ArrowPainter(pointsBack: pointsBack),
+                child: Padding(
+                  padding: _thisWeekPadding,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      SizedBox.square(
+                        dimension: _thisWeekArrowSize,
+                        child: CustomPaint(
+                          painter: _ArrowPainter(pointsBack: pointsBack),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: _thisWeekArrowGap),
-                    const Text('This week', style: _thisWeekStyle),
-                  ],
+                      const SizedBox(width: _thisWeekArrowGap),
+                      const Text('This week', style: _thisWeekStyle),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -27,8 +28,9 @@ const EdgeInsets _cellContentPadding = EdgeInsets.fromLTRB(
   _cellPaddingBottom + Shapes.outlineWidth,
 );
 
-const BorderRadius _cellBorderRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusCell));
+const BorderRadius _cellBorderRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusCell),
+);
 
 const List<String> _shortMonthNames = <String>[
   'Jan',
@@ -152,9 +154,9 @@ class _WeekCell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final Mood? mood = cell.mood;
     void openCalendar() {
-      ref.read(shellNavigationProvider.notifier).select(
-            ShellDestination.calendar,
-          );
+      ref
+          .read(shellNavigationProvider.notifier)
+          .select(ShellDestination.calendar);
     }
 
     return Semantics(
@@ -163,11 +165,15 @@ class _WeekCell extends ConsumerWidget {
       label: mood == null
           ? '${cell.weekdayLabel}, no mood'
           : '${cell.weekdayLabel}, ${mood.label}',
-      child: ExcludeSemantics(
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: openCalendar,
-          child: _tile(mood),
+      child: FocusRing(
+        onPressed: openCalendar,
+        borderRadius: _cellBorderRadius,
+        child: ExcludeSemantics(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: openCalendar,
+            child: _tile(mood),
+          ),
         ),
       ),
     );

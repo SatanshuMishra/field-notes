@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
@@ -69,6 +70,7 @@ class SettingsSegmented<T> extends StatelessWidget {
 
   Widget _segmentTile(SettingsSegment<T> segment) {
     final bool selected = segment.value == value;
+    final VoidCallback? choose = enabled ? () => _choose(segment.value) : null;
     return _SegmentReach(
       child: Semantics(
         button: true,
@@ -77,17 +79,25 @@ class SettingsSegmented<T> extends StatelessWidget {
         enabled: enabled,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: enabled ? () => _choose(segment.value) : null,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: selected ? Palette.cardBright : const Color(0x00000000),
-              border: selected ? Shapes.outline : null,
-              borderRadius: Shapes.buttonBorderRadius,
-              boxShadow: selected ? Shadows.button : const <BoxShadow>[],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-              child: Text(segment.label, style: TypographyTokens.labelSans),
+          onTap: choose,
+          child: FocusRing(
+            enabled: choose != null,
+            onPressed: choose,
+            borderRadius: Shapes.buttonBorderRadius,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: selected ? Palette.cardBright : const Color(0x00000000),
+                border: selected ? Shapes.outline : null,
+                borderRadius: Shapes.buttonBorderRadius,
+                boxShadow: selected ? Shadows.button : const <BoxShadow>[],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
+                ),
+                child: Text(segment.label, style: TypographyTokens.labelSans),
+              ),
             ),
           ),
         ),

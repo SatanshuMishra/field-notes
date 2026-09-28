@@ -265,6 +265,10 @@ class NoteActions {
     PreviousFocusIntent: _NoteAction<PreviousFocusIntent>(
       onInvoke: (PreviousFocusIntent _) => _focusStep(forward: false),
     ),
+    NoteLeaveEditorIntent: _NoteAction<NoteLeaveEditorIntent>(
+      onInvoke: (NoteLeaveEditorIntent intent) =>
+          _moveFocus(forward: intent.forward),
+    ),
     NoteCommandIntent: _NoteAction<NoteCommandIntent>(
       enabled: (NoteCommandIntent intent) =>
           host.state.composing == null &&
@@ -933,6 +937,10 @@ class NoteActions {
         host.focusPhotoToolbar()) {
       return true;
     }
+    return _moveFocus(forward: forward);
+  }
+
+  bool _moveFocus({required bool forward}) {
     final FocusNode? focused = primaryFocus;
     return forward
         ? focused?.nextFocus() ?? false

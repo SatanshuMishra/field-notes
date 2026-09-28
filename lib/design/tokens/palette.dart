@@ -56,6 +56,9 @@ abstract final class Palette {
   static const Color toolbarLabel = Color(0xFFE9DCC6);
   static const Color toolbarRule = Color(0x33FFFFFF);
 
+  static const Color focusRing = ink;
+  static const Color focusRingOnDark = toolbarLabel;
+
   static const Color titleBar = Color(0xFFE4D6BF);
   static const Color windowTitle = Color(0xFFA3866A);
   static const Color trafficRed = Color(0xFFFF5F57);

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -172,8 +173,7 @@ const BorderRadius _barRadius = BorderRadius.all(
 
 typedef PhotoToolbarImporter = Future<List<String>> Function();
 
-typedef _PhotoCommand =
-    Transaction? Function(EditorState state, MdBlock photo);
+typedef _PhotoCommand = Transaction? Function(EditorState state, MdBlock photo);
 
 MdBlock? _photoAt(EditorState state, int lineStart) {
   for (final MdBlock block in state.tree.blocks) {
@@ -523,9 +523,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
   }
 
   List<Widget> _withFirstFocus(List<Widget> row) {
-    final int first = row.indexWhere(
-      (Widget w) => w is _PhotoToolbarFocusable,
-    );
+    final int first = row.indexWhere((Widget w) => w is _PhotoToolbarFocusable);
     if (first < 0) {
       return row;
     }
@@ -623,11 +621,12 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
     double target, {
     VoidCallback? after,
   }) {
-    VoidCallback? run(VoidCallback? action) =>
-        action == null ? null : () {
-          after?.call();
-          action();
-        };
+    VoidCallback? run(VoidCallback? action) => action == null
+        ? null
+        : () {
+            after?.call();
+            action();
+          };
     return <Widget>[
       _PhotoToolbarControl(
         controlKey: photoToolbarMoveUpKey,
@@ -684,10 +683,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
         _moreKey.currentContext?.findRenderObject() as RenderBox?;
     final RenderBox? overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox?;
-    if (photo == null ||
-        button == null ||
-        overlay == null ||
-        !button.hasSize) {
+    if (photo == null || button == null || overlay == null || !button.hasSize) {
       return const SizedBox.shrink();
     }
     final double target = photoToolbarTargetFor(defaultTargetPlatform);
@@ -829,29 +825,32 @@ class _PhotoToolbarGlyphPainter extends CustomPainter {
 
   Path _path() {
     return switch (glyph) {
-      _PhotoToolbarGlyph.up => Path()
-        ..moveTo(12, 19)
-        ..lineTo(12, 5)
-        ..moveTo(6, 11)
-        ..lineTo(12, 5)
-        ..lineTo(18, 11),
-      _PhotoToolbarGlyph.down => Path()
-        ..moveTo(12, 5)
-        ..lineTo(12, 19)
-        ..moveTo(6, 13)
-        ..lineTo(12, 19)
-        ..lineTo(18, 13),
-      _PhotoToolbarGlyph.swap => Path()
-        ..moveTo(4, 8)
-        ..lineTo(19, 8)
-        ..moveTo(15, 4)
-        ..lineTo(19, 8)
-        ..lineTo(15, 12)
-        ..moveTo(20, 16)
-        ..lineTo(5, 16)
-        ..moveTo(9, 12)
-        ..lineTo(5, 16)
-        ..lineTo(9, 20),
+      _PhotoToolbarGlyph.up =>
+        Path()
+          ..moveTo(12, 19)
+          ..lineTo(12, 5)
+          ..moveTo(6, 11)
+          ..lineTo(12, 5)
+          ..lineTo(18, 11),
+      _PhotoToolbarGlyph.down =>
+        Path()
+          ..moveTo(12, 5)
+          ..lineTo(12, 19)
+          ..moveTo(6, 13)
+          ..lineTo(12, 19)
+          ..lineTo(18, 13),
+      _PhotoToolbarGlyph.swap =>
+        Path()
+          ..moveTo(4, 8)
+          ..lineTo(19, 8)
+          ..moveTo(15, 4)
+          ..lineTo(19, 8)
+          ..lineTo(15, 12)
+          ..moveTo(20, 16)
+          ..lineTo(5, 16)
+          ..moveTo(9, 12)
+          ..lineTo(5, 16)
+          ..lineTo(9, 20),
       _PhotoToolbarGlyph.more => Path(),
     };
   }
@@ -974,6 +973,7 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
                 minHeight: widget.target,
               ),
               child: DecoratedBox(
+                key: _focused ? focusRingKey : null,
                 decoration: BoxDecoration(
                   color: marked ? Palette.coral : null,
                   border: _focused

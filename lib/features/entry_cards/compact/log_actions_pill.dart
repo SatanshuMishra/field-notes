@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -300,31 +301,45 @@ class _LogActionButtonState extends State<_LogActionButton> {
               padding: widget.margin,
               child: SizedBox.square(
                 dimension: widget.extent,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: _hovered || _focused ? widget.hoverColor : null,
-                    border: _focused
-                        ? const Border.fromBorderSide(
-                            BorderSide(
-                              color: Palette.toolbarLabel,
-                              width: _focusRingWidth,
-                            ),
-                          )
-                        : null,
-                    borderRadius: _buttonRadius,
-                  ),
-                  child: Center(
-                    child: IconStickerGlyphIcon(
-                      glyph: widget.glyph,
-                      color: Palette.onAccent,
-                      size: _glyphExtent,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: _hovered || _focused ? widget.hoverColor : null,
+                        borderRadius: _buttonRadius,
+                      ),
                     ),
-                  ),
+                    if (_focused) const _LogActionFocusRing(key: focusRingKey),
+                    Center(
+                      child: IconStickerGlyphIcon(
+                        glyph: widget.glyph,
+                        color: Palette.onAccent,
+                        size: _glyphExtent,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LogActionFocusRing extends StatelessWidget {
+  const _LogActionFocusRing({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border.fromBorderSide(
+          BorderSide(color: Palette.toolbarLabel, width: _focusRingWidth),
+        ),
+        borderRadius: _buttonRadius,
       ),
     );
   }
@@ -370,6 +385,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   bool _awaitingMove = false;
   bool _pillHovered = false;
   bool _focusInside = false;
+  bool _focusInPill = false;
   bool _pinned = false;
   bool _suppressed = false;
   bool _topInView = true;
@@ -379,6 +395,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
       (_cardHovered && !_awaitingMove) ||
       _pillHovered ||
       _focusInside ||
+      _focusInPill ||
       _pinned;
 
   bool get _visible => !_suppressed && _topInView && _wanted;
@@ -540,6 +557,10 @@ class _LogActionsRevealState extends State<LogActionsReveal>
     });
   }
 
+  void _onPillFocusChange(bool focused) {
+    _update(() => _focusInPill = focused);
+  }
+
   void _onLongPress() {
     _update(() {
       _pinned = true;
@@ -603,29 +624,35 @@ class _LogActionsRevealState extends State<LogActionsReveal>
             child: MouseRegion(
               onEnter: (PointerEnterEvent event) => _onPillHover(true),
               onExit: (PointerExitEvent event) => _onPillHover(false),
-              child: ExcludeFocus(
-                excluding: !visible,
-                child: ExcludeSemantics(
+              child: Focus(
+                canRequestFocus: false,
+                skipTraversal: true,
+                includeSemantics: false,
+                onFocusChange: _onPillFocusChange,
+                child: ExcludeFocus(
                   excluding: !visible,
-                  child: AnimatedBuilder(
-                    animation: _progress,
-                    builder: (BuildContext context, Widget? child) {
-                      return Opacity(
-                        opacity: _progress.value,
-                        child: Transform.translate(
-                          offset: Offset(
-                            0,
-                            _hiddenDrop * (1 - _progress.value),
+                  child: ExcludeSemantics(
+                    excluding: !visible,
+                    child: AnimatedBuilder(
+                      animation: _progress,
+                      builder: (BuildContext context, Widget? child) {
+                        return Opacity(
+                          opacity: _progress.value,
+                          child: Transform.translate(
+                            offset: Offset(
+                              0,
+                              _hiddenDrop * (1 - _progress.value),
+                            ),
+                            child: child,
                           ),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: LogActionsPill(
-                      key: logActionsPillKey,
-                      onEdit: edit == null ? null : () => _choose(edit),
-                      onDelete: () => _choose(widget.onDelete),
-                      growDown: true,
+                        );
+                      },
+                      child: LogActionsPill(
+                        key: logActionsPillKey,
+                        onEdit: edit == null ? null : () => _choose(edit),
+                        onDelete: () => _choose(widget.onDelete),
+                        growDown: true,
+                      ),
                     ),
                   ),
                 ),

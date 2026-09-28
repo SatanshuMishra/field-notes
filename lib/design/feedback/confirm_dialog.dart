@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
@@ -13,7 +14,7 @@ const double _padding = 22;
 const double _titleGap = 7;
 const double _actionsGap = 20;
 const double _buttonGap = 9;
-const double _buttonRadius = 11;
+const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(11));
 const double _buttonBorderWidth = 1.5;
 const double _buttonMinTarget = 48;
 
@@ -126,6 +127,7 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
                       background: Palette.cardBright,
                       foreground: Palette.ink,
                       boxShadow: null,
+                      autofocus: true,
                       onTap: () => _resolve(false),
                     ),
                     const SizedBox(width: _buttonGap),
@@ -156,6 +158,7 @@ class _ConfirmDialogButton extends StatelessWidget {
     required this.foreground,
     required this.boxShadow,
     required this.onTap,
+    this.autofocus = false,
   });
 
   final Key buttonKey;
@@ -164,6 +167,7 @@ class _ConfirmDialogButton extends StatelessWidget {
   final Color foreground;
   final List<BoxShadow>? boxShadow;
   final VoidCallback onTap;
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -182,29 +186,34 @@ class _ConfirmDialogButton extends StatelessWidget {
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: background,
-                border: Border.all(
-                  color: Palette.ink,
-                  width: _buttonBorderWidth,
+            child: FocusRing(
+              autofocus: autofocus,
+              onPressed: onTap,
+              borderRadius: _buttonRadius,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: background,
+                  border: Border.all(
+                    color: Palette.ink,
+                    width: _buttonBorderWidth,
+                  ),
+                  borderRadius: _buttonRadius,
+                  boxShadow: boxShadow,
                 ),
-                borderRadius: BorderRadius.circular(_buttonRadius),
-                boxShadow: boxShadow,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 9,
-                  horizontal: 16,
-                ),
-                child: ExcludeSemantics(
-                  child: Text(
-                    label,
-                    style: TextStyle(
-                      fontFamily: TypographyTokens.sans,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: foreground,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 9,
+                    horizontal: 16,
+                  ),
+                  child: ExcludeSemantics(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontFamily: TypographyTokens.sans,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: foreground,
+                      ),
                     ),
                   ),
                 ),

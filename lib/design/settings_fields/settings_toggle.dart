@@ -1,8 +1,11 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
 
 const double _minTapTarget = 48;
+
+const BorderRadius _trackRadius = BorderRadius.all(Radius.circular(15));
 
 class SettingsToggle extends StatelessWidget {
   const SettingsToggle({
@@ -41,29 +44,34 @@ class SettingsToggle extends StatelessWidget {
             child: Center(
               widthFactor: 1,
               heightFactor: 1,
-              child: SizedBox(
-                width: 52,
-                height: 30,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: value ? Palette.coral : Palette.panelTop,
-                    border: Shapes.outline,
-                    borderRadius: const BorderRadius.all(Radius.circular(15)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(3),
-                    child: AnimatedAlign(
-                      duration: const Duration(milliseconds: 150),
-                      alignment: value
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
-                      child: const DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Palette.cardBright,
-                          border: Shapes.outline,
-                          shape: BoxShape.circle,
+              child: FocusRing(
+                enabled: toggle != null,
+                onPressed: toggle,
+                borderRadius: _trackRadius,
+                child: SizedBox(
+                  width: 52,
+                  height: 30,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: value ? Palette.coral : Palette.panelTop,
+                      border: Shapes.outline,
+                      borderRadius: _trackRadius,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(3),
+                      child: AnimatedAlign(
+                        duration: const Duration(milliseconds: 150),
+                        alignment: value
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: const DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Palette.cardBright,
+                            border: Shapes.outline,
+                            shape: BoxShape.circle,
+                          ),
+                          child: SizedBox(width: 22, height: 22),
                         ),
-                        child: SizedBox(width: 22, height: 22),
                       ),
                     ),
                   ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/material.dart';
 
 import '../../design/flowers/flowers.dart';
@@ -193,33 +194,37 @@ class SidebarShell extends StatelessWidget {
           key: ValueKey<String>('rail-${d.name}'),
           behavior: HitTestBehavior.opaque,
           onTap: () => onSelect(d),
-          child: ExcludeSemantics(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: isSelected ? Palette.coral : null,
-                border: isSelected ? Shapes.outline : null,
-                borderRadius: _navItemRadius,
-                boxShadow: isSelected ? Shadows.emphasis : null,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 9,
+          child: FocusRing(
+            onPressed: () => onSelect(d),
+            borderRadius: _navItemRadius,
+            child: ExcludeSemantics(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: isSelected ? Palette.coral : null,
+                  border: isSelected ? Shapes.outline : null,
+                  borderRadius: _navItemRadius,
+                  boxShadow: isSelected ? Shadows.emphasis : null,
                 ),
-                child: Row(
-                  children: <Widget>[
-                    if (glyph == null)
-                      Icon(d.icon, size: 18, color: foreground)
-                    else
-                      NavIcon(glyph: glyph, color: foreground, size: 18),
-                    const SizedBox(width: 10),
-                    Text(
-                      d.label,
-                      style: TypographyTokens.navLabelSans.copyWith(
-                        color: foreground,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 9,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      if (glyph == null)
+                        Icon(d.icon, size: 18, color: foreground)
+                      else
+                        NavIcon(glyph: glyph, color: foreground, size: 18),
+                      const SizedBox(width: 10),
+                      Text(
+                        d.label,
+                        style: TypographyTokens.navLabelSans.copyWith(
+                          color: foreground,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

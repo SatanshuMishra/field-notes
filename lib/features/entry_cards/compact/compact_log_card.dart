@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
@@ -243,20 +245,24 @@ class _CompactLogCardState extends State<CompactLogCard> {
   Widget build(BuildContext context) {
     final _DensityStyle style = _styleFor(widget.density);
     final LogPreview preview = logPreviewOf(widget.entry);
-    final Widget sticker = StickerCard(
-      surface: Palette.cardWarm,
-      borderRadius: _cardRadius,
-      shadow: _hovered ? style.hoverShadow : style.restShadow,
-      padding: style.padding,
-      rotationDegrees: style.tilts ? _tiltDegrees(widget.entry.id) : 0,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          _stamp(),
-          const SizedBox(height: _stampGap),
-          _body(context, style, preview),
-        ],
+    final double tilt = style.tilts ? _tiltDegrees(widget.entry.id) : 0;
+    final Widget sticker = _CardFocusRing(
+      rotationDegrees: tilt,
+      child: StickerCard(
+        surface: Palette.cardWarm,
+        borderRadius: _cardRadius,
+        shadow: _hovered ? style.hoverShadow : style.restShadow,
+        padding: style.padding,
+        rotationDegrees: tilt,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _stamp(),
+            const SizedBox(height: _stampGap),
+            _body(context, style, preview),
+          ],
+        ),
       ),
     );
     final Widget lifted = _hovered && style.risesOnHover
@@ -554,6 +560,71 @@ class _CompactLogCardState extends State<CompactLogCard> {
           ),
         ],
       ),
+    );
+  }
+}
+
+final BoxDecoration _cardFocusRingDecoration = BoxDecoration(
+  border: Border.all(
+    color: FocusRingSurface.light.color,
+    width: FocusRingSurface.light.width,
+  ),
+  borderRadius: _cardRadius,
+);
+
+class _CardFocusRing extends StatefulWidget {
+  const _CardFocusRing({required this.rotationDegrees, required this.child});
+
+  final double rotationDegrees;
+  final Widget child;
+
+  @override
+  State<_CardFocusRing> createState() => _CardFocusRingState();
+}
+
+class _CardFocusRingState extends State<_CardFocusRing> {
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
+    super.dispose();
+  }
+
+  void _onHighlightModeChanged(FocusHighlightMode mode) {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  bool _showsRing(BuildContext context) {
+    final FocusNode? focus = Focus.maybeOf(context);
+    return focus != null &&
+        focus.hasPrimaryFocus &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.passthrough,
+      children: <Widget>[
+        widget.child,
+        if (_showsRing(context))
+          Positioned.fill(
+            child: IgnorePointer(
+              key: focusRingKey,
+              child: Transform.rotate(
+                angle: widget.rotationDegrees * math.pi / 180,
+                child: DecoratedBox(decoration: _cardFocusRingDecoration),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

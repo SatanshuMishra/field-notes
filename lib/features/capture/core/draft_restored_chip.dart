@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 const String draftRestoredLabel = 'Draft restored';
@@ -10,6 +11,9 @@ const double _chipHorizontalPadding = 12;
 const double _chipVerticalPadding = 5;
 const double _chipGap = 8;
 const double _discardTarget = 48;
+const BorderRadius _discardFocusRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusPill),
+);
 
 final TextStyle _discardStyle = TypographyTokens.captureLabelSans.copyWith(
   color: Palette.coralLink,
@@ -93,18 +97,26 @@ class DraftRestoredChip extends StatelessWidget {
           key: draftRestoredDiscardKey,
           behavior: HitTestBehavior.opaque,
           onTap: onDiscard,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: _discardTarget),
-            child: Padding(
-              padding: const EdgeInsetsDirectional.only(
-                start: _chipGap,
-                end: _chipHorizontalPadding,
-              ),
-              child: Center(
-                widthFactor: 1,
-                child: Opacity(
-                  opacity: 0,
-                  child: Text(draftRestoredDiscardLabel, style: _discardStyle),
+          child: FocusRing(
+            enabled: onDiscard != null,
+            onPressed: onDiscard,
+            borderRadius: _discardFocusRadius,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: _discardTarget),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(
+                  start: _chipGap,
+                  end: _chipHorizontalPadding,
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  child: Opacity(
+                    opacity: 0,
+                    child: Text(
+                      draftRestoredDiscardLabel,
+                      style: _discardStyle,
+                    ),
+                  ),
                 ),
               ),
             ),

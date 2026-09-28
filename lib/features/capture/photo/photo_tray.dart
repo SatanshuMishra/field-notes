@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
@@ -7,6 +8,8 @@ import 'photo_picker.dart';
 import 'photo_thumbnail.dart';
 
 const int defaultMaxPhotos = 8;
+
+const BorderRadius _removeRadius = BorderRadius.all(Radius.circular(11));
 
 class PhotoTray extends StatefulWidget {
   const PhotoTray({
@@ -180,19 +183,24 @@ class _PhotoTrayTile extends StatelessWidget {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onRemove,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Palette.cardBright,
-                  border: Shapes.outline,
-                  borderRadius: BorderRadius.circular(11),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(4),
-                  child: ExcludeSemantics(
-                    child: Text(
-                      '×',
-                      style: TypographyTokens.buttonSans
-                          .copyWith(color: Palette.ink),
+              child: FocusRing(
+                onPressed: onRemove,
+                borderRadius: _removeRadius,
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    color: Palette.cardBright,
+                    border: Shapes.outline,
+                    borderRadius: _removeRadius,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: ExcludeSemantics(
+                      child: Text(
+                        '×',
+                        style: TypographyTokens.buttonSans.copyWith(
+                          color: Palette.ink,
+                        ),
+                      ),
                     ),
                   ),
                 ),

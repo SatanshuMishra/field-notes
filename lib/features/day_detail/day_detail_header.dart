@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
@@ -14,7 +15,7 @@ const double _headerHorizontalPadding = 18;
 const double _headerGap = 12;
 const double _ruleThickness = 1.5;
 const double _backExtent = 34;
-const double _backRadius = 10;
+const BorderRadius _backBorderRadius = BorderRadius.all(Radius.circular(10));
 const double _minTapTarget = 48;
 const double _backReach = (_minTapTarget - _backExtent) / 2;
 const double _backVerticalReach = 4;
@@ -102,19 +103,23 @@ class DayDetailHeader extends StatelessWidget {
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: Container(
-              key: dayDetailBackKey,
-              width: _backExtent,
-              height: _backExtent,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Palette.cardWarm,
-                border: Shapes.outline,
-                borderRadius: BorderRadius.circular(_backRadius),
-              ),
-              child: const SizedBox.square(
-                dimension: _chevronExtent,
-                child: CustomPaint(painter: _BackChevronPainter()),
+            child: FocusRing(
+              onPressed: onClose,
+              borderRadius: _backBorderRadius,
+              child: Container(
+                key: dayDetailBackKey,
+                width: _backExtent,
+                height: _backExtent,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Palette.cardWarm,
+                  border: Shapes.outline,
+                  borderRadius: _backBorderRadius,
+                ),
+                child: const SizedBox.square(
+                  dimension: _chevronExtent,
+                  child: CustomPaint(painter: _BackChevronPainter()),
+                ),
               ),
             ),
           ),

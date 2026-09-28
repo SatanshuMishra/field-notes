@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart'
@@ -21,13 +22,13 @@ const Key composerCloseKey = ValueKey<String>('composer-close');
 
 const double composerMeasureEm = 45;
 
-const Key composerWritingSurfaceKey =
-    ValueKey<String>('composer-writing-surface');
+const Key composerWritingSurfaceKey = ValueKey<String>(
+  'composer-writing-surface',
+);
 
 const String emptySaveGuardMessage = 'Write something first';
 
 enum ComposerExit { cancel, back }
-
 
 const double _headerVerticalPadding = 16;
 const double _headerHorizontalPadding = 18;
@@ -39,7 +40,9 @@ const double _headerTargetInset =
     (kMinInteractiveDimension - _exitPillHeight) / 2;
 const double _exitPillStartPadding = 8;
 const double _exitPillEndPadding = 12;
-const double _exitPillRadius = 10;
+const BorderRadius _exitPillBorderRadius = BorderRadius.all(
+  Radius.circular(10),
+);
 const double _exitGlyphSize = 15;
 const double _exitGlyphGap = 4;
 const double _exitStrokeWidth = 2.2;
@@ -49,6 +52,9 @@ const double _backChevronArm = 5;
 const double _saveVerticalPadding = 7;
 const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
+const BorderRadius _saveBorderRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusPill),
+);
 const double _bodyHorizontalPadding = 18;
 const double _bodyBottomPadding = 14;
 const double _surfaceRuleThickness = 1;
@@ -165,6 +171,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       bindings: _shortcuts(context),
       child: Focus(
         autofocus: true,
+        skipTraversal: true,
         child: Column(
           mainAxisSize: MainAxisSize.max,
           children: <Widget>[
@@ -196,11 +203,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     };
     void save() => _handleSaveShortcut(context);
     return <ShortcutActivator, VoidCallback>{
-      SingleActivator(
-        LogicalKeyboardKey.enter,
-        meta: apple,
-        control: !apple,
-      ): save,
+      SingleActivator(LogicalKeyboardKey.enter, meta: apple, control: !apple):
+          save,
       SingleActivator(
         LogicalKeyboardKey.numpadEnter,
         meta: apple,
@@ -295,7 +299,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     );
   }
 
-  Widget _headerAction({required VoidCallback? onTap, required Widget child}) {
+  Widget _headerAction({
+    required VoidCallback? onTap,
+    required BorderRadius focusRadius,
+    required Widget child,
+  }) {
     return TextFieldTapRegion(
       child: Semantics(
         container: true,
@@ -309,7 +317,16 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               minWidth: kMinInteractiveDimension,
               minHeight: kMinInteractiveDimension,
             ),
-            child: Center(widthFactor: 1, heightFactor: 1, child: child),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: FocusRing(
+                enabled: onTap != null,
+                onPressed: onTap,
+                borderRadius: focusRadius,
+                child: child,
+              ),
+            ),
           ),
         ),
       ),
@@ -320,6 +337,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     final bool back = widget.exit == ComposerExit.back;
     return _headerAction(
       onTap: widget.isSaving ? null : widget.onCancel,
+      focusRadius: _exitPillBorderRadius,
       child: Container(
         key: composerCloseKey,
         height: _exitPillHeight,
@@ -327,10 +345,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           left: _exitPillStartPadding,
           right: _exitPillEndPadding,
         ),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Palette.cardWarm,
           border: Shapes.outline,
-          borderRadius: BorderRadius.circular(_exitPillRadius),
+          borderRadius: _exitPillBorderRadius,
           boxShadow: Shadows.chip,
         ),
         child: Row(
@@ -347,8 +365,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             const SizedBox(width: _exitGlyphGap),
             Text(
               back ? 'Back' : 'Cancel',
-              style: TypographyTokens.captureLabelSans
-                  .copyWith(color: Palette.ink),
+              style: TypographyTokens.captureLabelSans.copyWith(
+                color: Palette.ink,
+              ),
             ),
           ],
         ),
@@ -369,8 +388,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               kicker,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TypographyTokens.stampAccent
-                  .copyWith(color: Palette.coral),
+              style: TypographyTokens.stampAccent.copyWith(
+                color: Palette.coral,
+              ),
             ),
           Text(
             widget.title,
@@ -390,13 +410,14 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     final bool enabled = !widget.isSaving;
     return _headerAction(
       onTap: enabled ? () => _handleSaveTap(context) : null,
+      focusRadius: _saveBorderRadius,
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
         child: DecoratedBox(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Palette.coral,
             border: Shapes.outline,
-            borderRadius: BorderRadius.circular(Shapes.radiusPill),
+            borderRadius: _saveBorderRadius,
             boxShadow: Shadows.control,
           ),
           child: Padding(
@@ -406,8 +427,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: Text(
               widget.isSaving ? widget.savingLabel : widget.saveLabel,
-              style: TypographyTokens.captureLabelSans
-                  .copyWith(color: Palette.onAccent),
+              style: TypographyTokens.captureLabelSans.copyWith(
+                color: Palette.onAccent,
+              ),
             ),
           ),
         ),
@@ -475,8 +497,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: Text(
               errorMessage,
-              style:
-                  TypographyTokens.captionSans.copyWith(color: Palette.danger),
+              style: TypographyTokens.captionSans.copyWith(
+                color: Palette.danger,
+              ),
             ),
           ),
         if (formatBar != null || errorMessage != null)

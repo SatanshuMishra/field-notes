@@ -1,3 +1,4 @@
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/material.dart';
 
 import '../format/clock_format.dart';
@@ -35,27 +36,36 @@ class SettingsTimeField extends StatelessWidget {
             child: Center(
               widthFactor: 1,
               heightFactor: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Palette.cardBright,
-                  border: Shapes.outline,
-                  borderRadius: Shapes.buttonBorderRadius,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
+              child: FocusRing(
+                enabled: tap != null,
+                onPressed: tap,
+                borderRadius: Shapes.buttonBorderRadius,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Palette.cardBright,
+                    border: Shapes.outline,
+                    borderRadius: Shapes.buttonBorderRadius,
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
-                        formatClock(context, value),
-                        style: TypographyTokens.bodySans,
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.schedule, size: 18, color: Palette.ink),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          formatClock(context, value),
+                          style: TypographyTokens.bodySans,
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.schedule,
+                          size: 18,
+                          color: Palette.ink,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),

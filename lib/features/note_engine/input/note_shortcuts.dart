@@ -12,6 +12,12 @@ final class NoteEscapeIntent extends Intent {
   const NoteEscapeIntent();
 }
 
+final class NoteLeaveEditorIntent extends Intent {
+  const NoteLeaveEditorIntent({required this.forward});
+
+  final bool forward;
+}
+
 Map<ShortcutActivator, Intent> noteShortcuts(TargetPlatform platform) {
   final bool apple =
       platform == TargetPlatform.macOS || platform == TargetPlatform.iOS;
@@ -55,6 +61,10 @@ Map<ShortcutActivator, Intent> noteShortcuts(TargetPlatform platform) {
     const SingleActivator(LogicalKeyboardKey.numpadEnter, shift: true):
         const NoteCommandIntent(NoteCommandId.lineBreak),
     const SingleActivator(LogicalKeyboardKey.escape): const NoteEscapeIntent(),
+    const SingleActivator(LogicalKeyboardKey.tab, control: true):
+        const NoteLeaveEditorIntent(forward: true),
+    const SingleActivator(LogicalKeyboardKey.tab, control: true, shift: true):
+        const NoteLeaveEditorIntent(forward: false),
     if (!apple)
       const SingleActivator(LogicalKeyboardKey.keyY, control: true):
           const RedoTextIntent(SelectionChangedCause.keyboard),

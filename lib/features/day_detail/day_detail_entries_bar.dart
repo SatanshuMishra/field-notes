@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 const Key dayDetailAddNoteKey = ValueKey<String>('day-detail-add-note');
@@ -67,31 +68,37 @@ class DayDetailEntriesBar extends StatelessWidget {
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _buttonHorizontalPadding,
-                vertical: _buttonVerticalPadding,
-              ),
-              decoration: const BoxDecoration(
-                color: Palette.coral,
-                border: Shapes.outline,
-                borderRadius: Shapes.buttonBorderRadius,
-                boxShadow: Shadows.control,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const SizedBox.square(
-                    dimension: _plusExtent,
-                    child: CustomPaint(painter: _PlusPainter()),
-                  ),
-                  const SizedBox(width: _plusGap),
-                  Text(
-                    addNoteLabel,
-                    style: TypographyTokens.captureLabelSans
-                        .copyWith(color: Palette.onAccent),
-                  ),
-                ],
+            child: FocusRing(
+              enabled: onAddNote != null,
+              onPressed: onAddNote,
+              borderRadius: Shapes.buttonBorderRadius,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _buttonHorizontalPadding,
+                  vertical: _buttonVerticalPadding,
+                ),
+                decoration: const BoxDecoration(
+                  color: Palette.coral,
+                  border: Shapes.outline,
+                  borderRadius: Shapes.buttonBorderRadius,
+                  boxShadow: Shadows.control,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const SizedBox.square(
+                      dimension: _plusExtent,
+                      child: CustomPaint(painter: _PlusPainter()),
+                    ),
+                    const SizedBox(width: _plusGap),
+                    Text(
+                      addNoteLabel,
+                      style: TypographyTokens.captureLabelSans.copyWith(
+                        color: Palette.onAccent,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

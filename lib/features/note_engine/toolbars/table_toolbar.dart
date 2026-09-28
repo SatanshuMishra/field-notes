@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
@@ -213,29 +214,35 @@ class TableToolbar extends StatelessWidget {
         ],
       ],
     ];
-    final Widget bar = Semantics(
-      container: true,
-      explicitChildNodes: true,
-      child: DecoratedBox(
-        key: tableToolbarKey,
-        decoration: const BoxDecoration(
-          color: Palette.toolbarInk,
-          borderRadius: _barRadius,
-          boxShadow: Shadows.toastLift,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(_barPadding),
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(
-              context,
-            ).copyWith(scrollbars: false),
-            child: ToolbarScrollFade(
-              color: Palette.toolbarInk,
-              startKey: tableToolbarFadeStartKey,
-              endKey: tableToolbarFadeEndKey,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(mainAxisSize: MainAxisSize.min, children: children),
+    final Widget bar = FocusTraversalGroup(
+      policy: WidgetOrderTraversalPolicy(),
+      child: Semantics(
+        container: true,
+        explicitChildNodes: true,
+        child: DecoratedBox(
+          key: tableToolbarKey,
+          decoration: const BoxDecoration(
+            color: Palette.toolbarInk,
+            borderRadius: _barRadius,
+            boxShadow: Shadows.toastLift,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(_barPadding),
+            child: ScrollConfiguration(
+              behavior: ScrollConfiguration.of(
+                context,
+              ).copyWith(scrollbars: false),
+              child: ToolbarScrollFade(
+                color: Palette.toolbarInk,
+                startKey: tableToolbarFadeStartKey,
+                endKey: tableToolbarFadeEndKey,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: children,
+                  ),
+                ),
               ),
             ),
           ),
@@ -566,6 +573,7 @@ class _TableToolbarControlState extends State<_TableToolbarControl> {
                 minHeight: widget.target,
               ),
               child: DecoratedBox(
+                key: _focused ? focusRingKey : null,
                 decoration: BoxDecoration(
                   color: marked ? Palette.coral : null,
                   border: _focused

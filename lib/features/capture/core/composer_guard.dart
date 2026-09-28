@@ -169,6 +169,7 @@ class _DiscardConfirmDialog extends StatelessWidget {
                       label: composerKeepEditingLabel,
                       variant: StickerButtonVariant.secondary,
                       padTapTarget: true,
+                      autofocus: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(

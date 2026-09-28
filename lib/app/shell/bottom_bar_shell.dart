@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
 
 import '../../design/tokens/tokens.dart';
@@ -13,7 +14,10 @@ class BottomBarShell extends StatelessWidget {
     required this.onSelect,
     required this.onCapture,
     required this.body,
-  }) : assert(destinations.length == 4, 'BottomBarShell requires four destinations');
+  }) : assert(
+         destinations.length == 4,
+         'BottomBarShell requires four destinations',
+       );
 
   final List<ShellDestination> destinations;
   final ShellDestination selected;
@@ -57,13 +61,20 @@ class BottomBarShell extends StatelessWidget {
                   minWidth: kMinInteractiveDimension,
                   minHeight: kMinInteractiveDimension,
                 ),
-                child: const Center(
+                child: Center(
                   widthFactor: 1,
                   heightFactor: 1,
-                  child: Padding(
-                    padding: EdgeInsets.all(8),
-                    child: ExcludeSemantics(
-                      child: Icon(Icons.settings_outlined, color: Palette.ink),
+                  child: FocusRing(
+                    onPressed: () => onSelect(ShellDestination.settings),
+                    borderRadius: _gearRadius,
+                    child: const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: ExcludeSemantics(
+                        child: Icon(
+                          Icons.settings_outlined,
+                          color: Palette.ink,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -118,19 +129,25 @@ class BottomBarShell extends StatelessWidget {
           key: ValueKey<String>('tab-${d.name}'),
           behavior: HitTestBehavior.opaque,
           onTap: () => onSelect(d),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-            child: ExcludeSemantics(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(d.icon, size: 22, color: color),
-                  const SizedBox(height: 2),
-                  Text(
-                    d.label,
-                    style: TypographyTokens.captionSans.copyWith(color: color),
-                  ),
-                ],
+          child: FocusRing(
+            onPressed: () => onSelect(d),
+            borderRadius: _tabRadius,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+              child: ExcludeSemantics(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(d.icon, size: 22, color: color),
+                    const SizedBox(height: 2),
+                    Text(
+                      d.label,
+                      style: TypographyTokens.captionSans.copyWith(
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -147,20 +164,41 @@ class BottomBarShell extends StatelessWidget {
         key: const ValueKey<String>('capture-button'),
         behavior: HitTestBehavior.opaque,
         onTap: onCapture,
-        child: Container(
-          width: 52,
-          height: 52,
-          decoration: BoxDecoration(
-            color: Palette.coral,
-            shape: BoxShape.circle,
-            border: Border.all(color: Palette.ink, width: Shapes.outlineWidth),
-            boxShadow: Shadows.button,
-          ),
-          child: const ExcludeSemantics(
-            child: Icon(Icons.add, color: Palette.cardBright, size: 28),
+        child: FocusRing(
+          onPressed: onCapture,
+          borderRadius: _captureRadius,
+          child: Container(
+            width: _captureExtent,
+            height: _captureExtent,
+            decoration: BoxDecoration(
+              color: Palette.coral,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Palette.ink,
+                width: Shapes.outlineWidth,
+              ),
+              boxShadow: Shadows.button,
+            ),
+            child: const ExcludeSemantics(
+              child: Icon(Icons.add, color: Palette.cardBright, size: 28),
+            ),
           ),
         ),
       ),
     );
   }
 }
+
+const double _captureExtent = 52;
+
+const BorderRadius _captureRadius = BorderRadius.all(
+  Radius.circular(_captureExtent / 2),
+);
+
+const BorderRadius _gearRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
+
+const BorderRadius _tabRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);

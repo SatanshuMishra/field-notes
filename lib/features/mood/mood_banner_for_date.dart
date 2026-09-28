@@ -167,6 +167,7 @@ class _MoodChangeConfirmDialog extends StatelessWidget {
                       label: 'Cancel',
                       variant: StickerButtonVariant.secondary,
                       padTapTarget: true,
+                      autofocus: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
