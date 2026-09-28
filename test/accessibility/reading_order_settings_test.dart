@@ -1,3 +1,4 @@
+import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -23,7 +24,7 @@ void main() {
         final ScrollableState scrollable = tester.state<ScrollableState>(
           find
               .descendant(
-                of: find.byType(ListView),
+                of: find.byType(SettingsScreen),
                 matching: find.byType(Scrollable),
               )
               .first,

@@ -4,6 +4,7 @@ import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
 
 import '../../design/tokens/tokens.dart';
+import 'keep_focus_in_view.dart';
 import 'shell_destination.dart';
 
 class BottomBarShell extends StatelessWidget {
@@ -27,18 +28,20 @@ class BottomBarShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Palette.panelTop,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: <Widget>[
-            _topBar(),
-            Expanded(child: body),
-          ],
+    return KeepFocusInView(
+      child: Scaffold(
+        backgroundColor: Palette.panelTop,
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: <Widget>[
+              FocusTraversalGroup(child: _topBar()),
+              Expanded(child: FocusTraversalGroup(child: body)),
+            ],
+          ),
         ),
+        bottomNavigationBar: FocusTraversalGroup(child: _bottomBar()),
       ),
-      bottomNavigationBar: _bottomBar(),
     );
   }
 

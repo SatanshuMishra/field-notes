@@ -9,6 +9,7 @@ import '../../design/tokens/tokens.dart';
 import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/mood/flower_kind.dart';
+import 'keep_focus_in_view.dart';
 import 'shell_destination.dart';
 import 'window_chrome.dart';
 
@@ -34,32 +35,34 @@ class SidebarShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Palette.panelTop,
-      body: Column(
-        children: <Widget>[
-          _titleBar(),
-          Expanded(
-            child: DecoratedBox(
-              decoration: _panelWash,
+    return KeepFocusInView(
+      child: Scaffold(
+        backgroundColor: Palette.panelTop,
+        body: Column(
+          children: <Widget>[
+            _titleBar(),
+            Expanded(
               child: DecoratedBox(
-                decoration: _panelGlow,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    _rail(),
-                    const DashedDivider(
-                      axis: Axis.vertical,
-                      thickness: 1.0,
-                      color: Palette.ink22,
-                    ),
-                    Expanded(child: body),
-                  ],
+                decoration: _panelWash,
+                child: DecoratedBox(
+                  decoration: _panelGlow,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      FocusTraversalGroup(child: _rail()),
+                      const DashedDivider(
+                        axis: Axis.vertical,
+                        thickness: 1.0,
+                        color: Palette.ink22,
+                      ),
+                      Expanded(child: FocusTraversalGroup(child: body)),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
