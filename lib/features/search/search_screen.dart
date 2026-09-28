@@ -18,12 +18,15 @@ class SearchScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final AsyncValue<List<Day>> days = ref.watch(allDaysProvider);
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(10, 16, 10, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const SearchField(),
-          const SizedBox(height: 16),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 6),
+            child: SearchField(),
+          ),
+          const SizedBox(height: 10),
           Expanded(
             child: days.when(
               data: (List<Day> list) => list.isEmpty
@@ -60,6 +63,7 @@ class _SearchResultsList extends ConsumerWidget {
       );
     }
     return ListView.separated(
+      padding: const EdgeInsets.all(6),
       itemCount: results.length,
       separatorBuilder: (BuildContext context, int index) =>
           const SizedBox(height: 12),

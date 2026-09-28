@@ -14,6 +14,8 @@ enum FocusRingSurface {
   final double width;
 }
 
+enum FocusRingPlacement { outside, edge }
+
 const Map<ShortcutActivator, Intent> _activators = <ShortcutActivator, Intent>{
   SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
   SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
@@ -31,6 +33,7 @@ class FocusRing extends StatefulWidget {
     this.surface = FocusRingSurface.light,
     this.borderRadius = BorderRadius.zero,
     this.includeFocusSemantics = true,
+    this.placement = FocusRingPlacement.outside,
   });
 
   final VoidCallback? onPressed;
@@ -41,6 +44,10 @@ class FocusRing extends StatefulWidget {
   final FocusRingSurface surface;
   final BorderRadius borderRadius;
   final bool includeFocusSemantics;
+  final FocusRingPlacement placement;
+
+  double get reach =>
+      placement == FocusRingPlacement.outside ? 2 + surface.width : 0;
 
   @override
   State<FocusRing> createState() => _FocusRingState();
@@ -61,6 +68,19 @@ class _FocusRingState extends State<FocusRing> {
   void _handleShowFocusHighlight(bool highlighted) {
     if (highlighted != _highlighted) {
       setState(() => _highlighted = highlighted);
+    }
+    if (highlighted && widget.reach > 0) {
+      WidgetsBinding.instance.addPostFrameCallback(_revealRing);
+    }
+  }
+
+  void _revealRing(Duration timeStamp) {
+    if (!mounted) {
+      return;
+    }
+    final RenderObject? box = context.findRenderObject();
+    if (box is RenderBox && box.attached && box.hasSize) {
+      box.showOnScreen(rect: (Offset.zero & box.size).inflate(widget.reach));
     }
   }
 
@@ -87,6 +107,7 @@ class _FocusRingState extends State<FocusRing> {
                 painter: _FocusRingPainter(
                   surface: widget.surface,
                   borderRadius: widget.borderRadius,
+                  outset: widget.reach,
                 ),
               ),
             ),
@@ -97,17 +118,25 @@ class _FocusRingState extends State<FocusRing> {
 }
 
 class _FocusRingPainter extends CustomPainter {
-  const _FocusRingPainter({required this.surface, required this.borderRadius});
+  const _FocusRingPainter({
+    required this.surface,
+    required this.borderRadius,
+    required this.outset,
+  });
 
   final FocusRingSurface surface;
   final BorderRadius borderRadius;
+  final double outset;
 
   @override
   void paint(Canvas canvas, Size size) {
-    Border.all(
-      color: surface.color,
-      width: surface.width,
-    ).paint(canvas, Offset.zero & size, borderRadius: borderRadius);
+    Border.all(color: surface.color, width: surface.width).paint(
+      canvas,
+      (Offset.zero & size).inflate(outset),
+      borderRadius: borderRadius == BorderRadius.zero
+          ? null
+          : borderRadius + BorderRadius.all(Radius.circular(outset)),
+    );
   }
 
   @override
@@ -116,5 +145,6 @@ class _FocusRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_FocusRingPainter oldDelegate) =>
       oldDelegate.surface != surface ||
-      oldDelegate.borderRadius != borderRadius;
+      oldDelegate.borderRadius != borderRadius ||
+      oldDelegate.outset != outset;
 }

@@ -280,6 +280,7 @@ class _FormatButton extends StatelessWidget {
           enabled: enabled,
           onPressed: onTap,
           borderRadius: _focusRadius,
+          placement: FocusRingPlacement.edge,
           child: SizedBox.square(
             dimension: _buttonExtent,
             child: Center(
