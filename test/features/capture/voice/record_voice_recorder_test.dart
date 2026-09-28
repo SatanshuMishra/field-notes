@@ -1,9 +1,33 @@
 import 'dart:io';
 
+import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/voice/record_voice_recorder.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:record/record.dart';
+
+class _FakeAudioRecorder extends Fake implements AudioRecorder {
+  String? _path;
+
+  @override
+  Future<void> start(RecordConfig config, {required String path}) async {
+    _path = path;
+    await File(path).writeAsBytes(<int>[1, 2, 3], flush: true);
+  }
+
+  @override
+  Future<String?> stop() async => _path;
+
+  @override
+  Future<void> cancel() async {}
+
+  @override
+  Future<void> dispose() async {}
+}
+
+File _capturedFile(VoiceRecording recording) =>
+    (recording.media as CaptureFile).file;
 
 void main() {
   group('voice recording format', () {
@@ -51,6 +75,67 @@ void main() {
 
       expect(base.existsSync(), isTrue);
       expect(path, p.join(base.path, 'voice_42.m4a'));
+    });
+  });
+
+  group('releasing saved memos', () {
+    late Directory temp;
+    late RecordVoiceRecorder recorder;
+
+    setUp(() async {
+      temp = await Directory.systemTemp.createTemp('voice_release_test_');
+      recorder = RecordVoiceRecorder(
+        recorder: _FakeAudioRecorder(),
+        temporaryDirectory: () async => temp,
+      );
+    });
+
+    tearDown(() => temp.delete(recursive: true));
+
+    test('releasing a saved memo deletes the file the recorder created',
+        () async {
+      final File picked = File(p.join(temp.path, 'picked.m4a'))
+        ..writeAsBytesSync(<int>[9, 9]);
+
+      await recorder.start();
+      final VoiceRecording recording = await recorder.stop();
+      final File captured = _capturedFile(recording);
+
+      expect(p.isWithin(temp.path, captured.path), isTrue);
+      expect(captured.existsSync(), isTrue);
+
+      await recorder.releaseSaved(
+        VoiceRecording(
+          media: CaptureFile(file: picked, mime: voiceRecordingMime),
+          durationMs: 1,
+        ),
+      );
+
+      expect(picked.existsSync(), isTrue);
+      expect(captured.existsSync(), isTrue);
+
+      await recorder.releaseSaved(recording);
+
+      expect(captured.existsSync(), isFalse);
+      expect(picked.existsSync(), isTrue);
+    });
+
+    test('releasing an earlier stop keeps the file a later stop still holds',
+        () async {
+      await recorder.start();
+      final VoiceRecording first = await recorder.stop();
+      final VoiceRecording retry = await recorder.stop();
+      final File captured = _capturedFile(retry);
+
+      expect(_capturedFile(first).path, captured.path);
+
+      await recorder.releaseSaved(first);
+
+      expect(captured.existsSync(), isTrue);
+
+      await recorder.releaseSaved(retry);
+
+      expect(captured.existsSync(), isFalse);
     });
   });
 }

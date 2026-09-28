@@ -291,4 +291,37 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('a confirmed save releases the capture files',
+      (WidgetTester tester) async {
+    Future<FakeVideoRecorder> recordAndSave(CaptureService service) async {
+      final FakeVideoRecorder recorder = FakeVideoRecorder();
+      await tester.pumpWidget(
+        _recorderApp(
+          recorder: recorder,
+          service: service,
+          onResult: (String? id) {},
+        ),
+      );
+      await _openComposer(tester);
+      await _startRecording(tester);
+      await tester.tap(find.byKey(videoShutterKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpWidget(const SizedBox.shrink());
+      return recorder;
+    }
+
+    final FakeVideoRecorder saved = await recordAndSave(FakeCaptureService());
+    final FakeVideoRecorder failed = await recordAndSave(
+      FakeCaptureService(
+        failure: const CaptureException('Could not save your entry.'),
+      ),
+    );
+
+    expect(saved.stopCalls, 1);
+    expect(saved.releaseSavedCalls, 1);
+    expect(failed.stopCalls, 1);
+    expect(failed.releaseSavedCalls, 0);
+  });
 }

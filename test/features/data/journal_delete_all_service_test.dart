@@ -139,4 +139,27 @@ void main() {
 
     expect(await draftsRoot.exists(), isFalse);
   });
+
+  test('delete all removes temporary capture files', () async {
+    final temporary = await Directory.systemTemp.createTemp('fn_delete_tmp');
+    addTearDown(() => temporary.delete(recursive: true));
+    final recording = File(p.join(temporary.path, 'voice_1720000000000.m4a'));
+    final movie = File(p.join(temporary.path, 'REC4471928344313816437.mp4'));
+    final unrelated = File(p.join(temporary.path, 'notes.txt'));
+    for (final file in [recording, movie, unrelated]) {
+      await file.writeAsBytes([1, 2, 3], flush: true);
+    }
+    final withTemporary = JournalDeleteAllService(
+      database: db,
+      mediaRoot: root,
+      temporaryDirectory: () async => temporary,
+    );
+
+    final result = await withTemporary.deleteAll();
+
+    expect(await recording.exists(), isFalse);
+    expect(await movie.exists(), isFalse);
+    expect(await unrelated.exists(), isTrue);
+    expect(result.deletedFiles, 2);
+  });
 }

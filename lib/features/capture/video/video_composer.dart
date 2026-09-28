@@ -378,6 +378,11 @@ class _VideoComposerConnectorState
         thumbnail: recording.thumbnail,
       ),
     );
+    try {
+      await _recorder.releaseSaved(recording);
+    } catch (error, stackTrace) {
+      debugPrint('Video capture release failed: $error\n$stackTrace');
+    }
     return result.entry.id;
   }
 

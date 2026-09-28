@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
@@ -20,12 +21,17 @@ Future<String> resolveVoiceRecordingPath(Directory directory, int nowMs) async {
 }
 
 class RecordVoiceRecorder implements VoiceRecorder {
-  RecordVoiceRecorder({AudioRecorder? recorder})
-      : _recorder = recorder ?? AudioRecorder();
+  RecordVoiceRecorder({
+    AudioRecorder? recorder,
+    Future<Directory> Function()? temporaryDirectory,
+  })  : _recorder = recorder ?? AudioRecorder(),
+        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
   final AudioRecorder _recorder;
+  final Future<Directory> Function() _temporaryDirectory;
   final Stopwatch _elapsed = Stopwatch();
   String? _activePath;
+  Map<String, VoiceRecording> _owned = const <String, VoiceRecording>{};
 
   @override
   Duration get elapsed => _elapsed.elapsed;
@@ -36,7 +42,7 @@ class RecordVoiceRecorder implements VoiceRecorder {
   @override
   Future<void> start() async {
     try {
-      final Directory directory = await getTemporaryDirectory();
+      final Directory directory = await _temporaryDirectory();
       final String path = await resolveVoiceRecordingPath(
         directory,
         DateTime.now().millisecondsSinceEpoch,
@@ -85,7 +91,7 @@ class RecordVoiceRecorder implements VoiceRecorder {
       if (resolved.isEmpty) {
         throw const VoiceRecorderException(recordStopMessage);
       }
-      return VoiceRecording(
+      final VoiceRecording recording = VoiceRecording(
         media: CaptureFile(
           file: File(resolved),
           mime: voiceRecordingMime,
@@ -93,10 +99,32 @@ class RecordVoiceRecorder implements VoiceRecorder {
         ),
         durationMs: durationMs,
       );
+      _owned = <String, VoiceRecording>{..._owned, resolved: recording};
+      return recording;
     } on VoiceRecorderException {
       rethrow;
     } catch (error) {
       throw VoiceRecorderException(recordStopMessage, cause: error);
+    }
+  }
+
+  @override
+  Future<void> releaseSaved(VoiceRecording recording) async {
+    final CaptureMedia media = recording.media;
+    if (media is! CaptureFile ||
+        !identical(_owned[media.file.path], recording)) {
+      return;
+    }
+    _owned = <String, VoiceRecording>{
+      for (final MapEntry<String, VoiceRecording> entry in _owned.entries)
+        if (entry.key != media.file.path) entry.key: entry.value,
+    };
+    try {
+      if (await media.file.exists()) {
+        await media.file.delete();
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Saved recording delete failed: $error\n$stackTrace');
     }
   }
 

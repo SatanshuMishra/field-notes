@@ -29,10 +29,72 @@ Future<String> resolveVideoThumbnailPath(Directory directory, int nowMs) async {
 VideoRecorder createPlatformVideoRecorder() =>
     Platform.isMacOS ? CameraMacosVideoRecorder() : CameraVideoRecorder();
 
+List<File> _recordingFiles(VideoRecording recording) => <File>[
+      for (final CaptureMedia? media in <CaptureMedia?>[
+        recording.media,
+        recording.thumbnail,
+      ])
+        if (media is CaptureFile) media.file,
+    ];
+
+bool _isMovieOf(String path, VideoRecording recording) {
+  final CaptureMedia media = recording.media;
+  return media is CaptureFile && media.file.path == path;
+}
+
+class _OwnedCaptures {
+  const _OwnedCaptures([this._byPath = const <String, VideoRecording>{}]);
+
+  final Map<String, VideoRecording> _byPath;
+
+  _OwnedCaptures adopt(VideoRecording recording) =>
+      _OwnedCaptures(<String, VideoRecording>{
+        ..._byPath,
+        for (final File file in _recordingFiles(recording)) file.path: recording,
+      });
+
+  _OwnedCaptures without(VideoRecording recording) =>
+      _OwnedCaptures(<String, VideoRecording>{
+        for (final MapEntry<String, VideoRecording> entry in _byPath.entries)
+          if (!identical(entry.value, recording)) entry.key: entry.value,
+      });
+
+  _OwnedCaptures withoutMovies() => _OwnedCaptures(<String, VideoRecording>{
+        for (final MapEntry<String, VideoRecording> entry in _byPath.entries)
+          if (!_isMovieOf(entry.key, entry.value)) entry.key: entry.value,
+      });
+
+  List<File> filesOf(VideoRecording recording) => <File>[
+        for (final File file in _recordingFiles(recording))
+          if (identical(_byPath[file.path], recording)) file,
+      ];
+}
+
+Future<void> _deleteCaptureFile(String? path) async {
+  if (path == null || path.isEmpty) {
+    return;
+  }
+  try {
+    final File file = File(path);
+    if (await file.exists()) {
+      await file.delete();
+    }
+  } catch (error, stackTrace) {
+    debugPrint('Capture file delete failed: $error\n$stackTrace');
+  }
+}
+
+Future<void> _deleteCaptureFiles(List<File> files) async {
+  for (final File file in files) {
+    await _deleteCaptureFile(file.path);
+  }
+}
+
 class CameraVideoRecorder implements VideoRecorder {
   CameraController? _controller;
   _CameraSession? _session;
   final Stopwatch _elapsed = Stopwatch();
+  _OwnedCaptures _owned = const _OwnedCaptures();
 
   @override
   Duration get elapsed => _elapsed.elapsed;
@@ -114,7 +176,7 @@ class CameraVideoRecorder implements VideoRecorder {
     try {
       final CaptureMedia? thumbnail = await _captureThumbnail(controller);
       final XFile file = await controller.stopVideoRecording();
-      return VideoRecording(
+      final VideoRecording recording = VideoRecording(
         media: CaptureFile(
           file: File(file.path),
           mime: videoRecordingMime,
@@ -123,6 +185,8 @@ class CameraVideoRecorder implements VideoRecorder {
         durationMs: durationMs,
         thumbnail: thumbnail,
       );
+      _owned = _owned.adopt(recording);
+      return recording;
     } on VideoRecorderException {
       rethrow;
     } catch (error) {
@@ -154,13 +218,21 @@ class CameraVideoRecorder implements VideoRecorder {
     }
     try {
       if (controller.value.isRecordingVideo) {
-        await controller.stopVideoRecording();
+        final XFile take = await controller.stopVideoRecording();
+        await _deleteCaptureFile(take.path);
       }
     } on CameraException {
       return;
     } finally {
       await controller.dispose();
     }
+  }
+
+  @override
+  Future<void> releaseSaved(VideoRecording recording) async {
+    final List<File> files = _owned.filesOf(recording);
+    _owned = _owned.without(recording);
+    await _deleteCaptureFiles(files);
   }
 
   @override
@@ -324,6 +396,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
   CameraMacOSController? _controller;
   bool _destroyRequested = false;
   bool _aborted = false;
+  _OwnedCaptures _owned = const _OwnedCaptures();
 
   @override
   Duration get elapsed => _elapsed.elapsed;
@@ -449,6 +522,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
     if (_aborted) {
       throw const VideoRecorderException(videoStartMessage);
     }
+    _owned = _owned.withoutMovies();
     try {
       await controller.recordVideo(maxVideoDuration: videoHardCapSeconds);
     } catch (error) {
@@ -479,7 +553,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       if (path == null || path.isEmpty) {
         throw const VideoRecorderException(videoStopMessage);
       }
-      return VideoRecording(
+      final VideoRecording recording = VideoRecording(
         media: CaptureFile(
           file: File(path),
           mime: videoRecordingMime,
@@ -488,6 +562,8 @@ class CameraMacosVideoRecorder implements VideoRecorder {
         durationMs: durationMs,
         thumbnail: thumbnail,
       );
+      _owned = _owned.adopt(recording);
+      return recording;
     } on VideoRecorderException {
       rethrow;
     } catch (error) {
@@ -537,25 +613,18 @@ class CameraMacosVideoRecorder implements VideoRecorder {
   Future<void> _discard(CameraMacOSController controller) async {
     try {
       final CameraMacOSFile? file = await controller.stopRecording();
-      await _deleteIfPresent(file?.url);
+      await _deleteCaptureFile(file?.url);
     } catch (error, stackTrace) {
       debugPrint('Video discard failed: $error\n$stackTrace');
     }
     await _destroy(controller);
   }
 
-  Future<void> _deleteIfPresent(String? path) async {
-    if (path == null || path.isEmpty) {
-      return;
-    }
-    try {
-      final File file = File(path);
-      if (await file.exists()) {
-        await file.delete();
-      }
-    } catch (error, stackTrace) {
-      debugPrint('Discarded recording delete failed: $error\n$stackTrace');
-    }
+  @override
+  Future<void> releaseSaved(VideoRecording recording) async {
+    final List<File> files = _owned.filesOf(recording);
+    _owned = _owned.without(recording);
+    await _deleteCaptureFiles(files);
   }
 
   @override
