@@ -257,13 +257,18 @@ class NoteInputClient with DeltaTextInputClient {
 
   void _clearComposing() {
     final EditorState state = host.state;
-    if (state.composing == null) {
+    final MdRange? composing = state.composing;
+    if (composing == null) {
       return;
     }
+    final NoteSelection selection = state.selection;
     host.applyInput(
       Transaction(
         changes: ChangeSet.empty(state.source.length),
-        selection: state.selection,
+        selection:
+            selection.start >= composing.start && selection.end <= composing.end
+            ? NoteSelection.collapsed(composing.end)
+            : selection,
         event: TransactionEvent.inputIme,
         addToHistory: false,
       ),
