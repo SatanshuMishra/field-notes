@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:field_notes/data/media/capture_temp_sweep.dart';
 import 'package:field_notes/domain/services/delete_all_service.dart';
 import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/data/export_delivery.dart';
@@ -11,12 +14,14 @@ class JournalDataController implements SettingsDataController {
     required this._exportRunner,
     required this._deleteAllService,
     required this._mediaStore,
+    this._temporaryDirectory,
     this._onError,
   });
 
   final ExportRunner _exportRunner;
   final DeleteAllService _deleteAllService;
   final MediaStore _mediaStore;
+  final Future<Directory> Function()? _temporaryDirectory;
   final SettingsErrorHandler? _onError;
 
   @override
@@ -53,7 +58,8 @@ class JournalDataController implements SettingsDataController {
   @override
   Future<DataActionResult> reclaimSpace() async {
     try {
-      final int reclaimed = await _mediaStore.collectGarbage();
+      final int reclaimed =
+          await _mediaStore.collectGarbage() + await _sweepCaptureTemp();
       return DataActionSucceeded(
         reclaimed == 0
             ? 'Nothing to reclaim. Every photo is still in use.'
@@ -65,5 +71,14 @@ class JournalDataController implements SettingsDataController {
         'Reclaim space failed. Nothing was removed.',
       );
     }
+  }
+
+  Future<int> _sweepCaptureTemp() async {
+    final Future<Directory> Function()? temporaryDirectory =
+        _temporaryDirectory;
+    if (temporaryDirectory == null) {
+      return 0;
+    }
+    return sweepCaptureTemp(await temporaryDirectory());
   }
 }

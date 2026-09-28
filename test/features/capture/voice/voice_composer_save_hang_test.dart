@@ -38,6 +38,9 @@ class _HangingStopRecorder implements VoiceRecorder {
   }
 
   @override
+  Future<void> releaseSaved(VoiceRecording recording) async {}
+
+  @override
   Future<void> cancel() async {}
 
   @override

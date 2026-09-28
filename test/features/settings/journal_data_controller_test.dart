@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:field_notes/domain/services/delete_all_service.dart';
 import 'package:field_notes/domain/services/export_service.dart';
 import 'package:field_notes/domain/services/media_store.dart';
@@ -7,6 +9,7 @@ import 'package:field_notes/features/data/export_runner.dart';
 import 'package:field_notes/features/settings/journal_data_controller.dart';
 import 'package:field_notes/features/settings/settings_data_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
 
 class _FakeExportService implements ExportService {
   @override
@@ -95,6 +98,7 @@ JournalDataController _controller({
   required ExportOutcome outcome,
   DeleteAllService? deleteAllService,
   MediaStore? mediaStore,
+  Future<Directory> Function()? temporaryDirectory,
   void Function(Object error)? onError,
 }) {
   return JournalDataController(
@@ -104,6 +108,7 @@ JournalDataController _controller({
     ),
     deleteAllService: deleteAllService ?? _StubDeleteAllService(),
     mediaStore: mediaStore ?? _StubReclaimMediaStore(),
+    temporaryDirectory: temporaryDirectory,
     onError: (Object error, StackTrace _) => onError?.call(error),
   );
 }
@@ -258,6 +263,41 @@ void main() {
           (DataActionSucceeded s) => s.message,
           'message',
           'Reclaimed 1 unused file.',
+        ),
+      );
+    });
+
+    test('reclaim space removes temporary capture files', () async {
+      final Directory temporary =
+          await Directory.systemTemp.createTemp('fn_reclaim_tmp');
+      addTearDown(() => temporary.delete(recursive: true));
+      final List<File> captures = <File>[
+        File(p.join(temporary.path, 'voice_1720000000000.m4a')),
+        File(p.join(temporary.path, 'video_thumb_1720000000000.jpg')),
+      ];
+      final File unrelated = File(p.join(temporary.path, 'notes.txt'));
+      for (final File file in <File>[...captures, unrelated]) {
+        await file.writeAsBytes(<int>[1, 2, 3], flush: true);
+      }
+      final SettingsDataController controller = _controller(
+        exportService: _FakeExportService(),
+        outcome: const ExportDismissed(),
+        mediaStore: _StubReclaimMediaStore(reclaimed: 1),
+        temporaryDirectory: () async => temporary,
+      );
+
+      final DataActionResult result = await controller.reclaimSpace();
+
+      for (final File capture in captures) {
+        expect(await capture.exists(), isFalse);
+      }
+      expect(await unrelated.exists(), isTrue);
+      expect(
+        result,
+        isA<DataActionSucceeded>().having(
+          (DataActionSucceeded s) => s.message,
+          'message',
+          'Reclaimed 3 unused files.',
         ),
       );
     });

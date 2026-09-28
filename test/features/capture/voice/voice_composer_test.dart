@@ -181,4 +181,39 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
+
+  testWidgets('a confirmed save releases the capture file',
+      (WidgetTester tester) async {
+    Future<FakeVoiceRecorder> recordAndSave(CaptureService service) async {
+      final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+      await tester.pumpWidget(
+        _recorderApp(
+          recorder: recorder,
+          service: service,
+          onResult: (String? id) {},
+        ),
+      );
+      await _openComposer(tester);
+      await tester.tap(find.byKey(voiceRecordButtonKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.byKey(voiceSavePillKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpWidget(const SizedBox.shrink());
+      return recorder;
+    }
+
+    final FakeVoiceRecorder saved = await recordAndSave(FakeCaptureService());
+    final FakeVoiceRecorder failed = await recordAndSave(
+      FakeCaptureService(
+        failure: const CaptureException('Could not save your entry.'),
+      ),
+    );
+
+    expect(saved.stopCalls, 1);
+    expect(saved.releaseSavedCalls, 1);
+    expect(failed.stopCalls, 1);
+    expect(failed.releaseSavedCalls, 0);
+  });
 }

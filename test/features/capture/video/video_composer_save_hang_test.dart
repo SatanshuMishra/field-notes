@@ -44,6 +44,9 @@ class _HangingStopRecorder implements VideoRecorder {
   }
 
   @override
+  Future<void> releaseSaved(VideoRecording recording) async {}
+
+  @override
   Future<void> cancel() async {}
 
   @override

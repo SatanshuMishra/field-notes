@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 
 import '../../data/database/app_database.dart' as db;
 import '../../data/media/blob_paths.dart';
+import '../../data/media/capture_temp_sweep.dart';
 import '../../domain/services/delete_all_service.dart';
 import 'data_exceptions.dart';
 
@@ -14,11 +15,13 @@ class JournalDeleteAllService implements DeleteAllService {
     required db.AppDatabase database,
     required this._mediaRoot,
     this._draftsRoot,
+    this._temporaryDirectory,
   }) : _db = database;
 
   final db.AppDatabase _db;
   final Directory _mediaRoot;
   final Directory? _draftsRoot;
+  final Future<Directory> Function()? _temporaryDirectory;
 
   @override
   Future<DeleteAllResult> deleteAll() async {
@@ -31,8 +34,9 @@ class JournalDeleteAllService implements DeleteAllService {
         return (photos: photos, entries: entries, days: days, blobs: blobs);
       });
 
-      final deletedFiles = await _wipeMediaFiles();
+      final deletedMediaFiles = await _wipeMediaFiles();
       await _wipeDrafts();
+      final deletedFiles = deletedMediaFiles + await _sweepCaptureTemp();
 
       return DeleteAllResult(
         deletedDays: counts.days,
@@ -67,6 +71,14 @@ class JournalDeleteAllService implements DeleteAllService {
     }
 
     return deleted;
+  }
+
+  Future<int> _sweepCaptureTemp() async {
+    final temporaryDirectory = _temporaryDirectory;
+    if (temporaryDirectory == null) {
+      return 0;
+    }
+    return sweepCaptureTemp(await temporaryDirectory());
   }
 
   Future<void> _wipeDrafts() async {

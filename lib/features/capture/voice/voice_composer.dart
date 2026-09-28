@@ -192,7 +192,8 @@ class _VoiceComposerConnectorState
   }
 
   Future<String> _persist() async {
-    final VoiceRecording recording = await _recorder.stop();
+    final VoiceRecorder recorder = _recorder;
+    final VoiceRecording recording = await recorder.stop();
     final CaptureService service =
         await ref.read(captureServiceProvider.future);
     final CaptureResult result = await service.capture(
@@ -202,6 +203,11 @@ class _VoiceComposerConnectorState
         durationMs: recording.durationMs,
       ),
     );
+    try {
+      await recorder.releaseSaved(recording);
+    } catch (error, stackTrace) {
+      debugPrint('Voice capture release failed: $error\n$stackTrace');
+    }
     return result.entry.id;
   }
 

@@ -60,6 +60,7 @@ class FakeVideoRecorder implements VideoRecorder {
   int stopCalls = 0;
   int cancelCalls = 0;
   int releaseCalls = 0;
+  int releaseSavedCalls = 0;
   int disposeCalls = 0;
   int listCalls = 0;
   bool _sessionLive = false;
@@ -127,6 +128,11 @@ class FakeVideoRecorder implements VideoRecorder {
   }
 
   @override
+  Future<void> releaseSaved(VideoRecording recording) async {
+    releaseSavedCalls++;
+  }
+
+  @override
   Future<void> cancel() async {
     cancelCalls++;
   }
@@ -177,6 +183,7 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
   int stopCalls = 0;
   int cancelCalls = 0;
   int releaseCalls = 0;
+  int releaseSavedCalls = 0;
   int disposeCalls = 0;
 
   @override
@@ -209,6 +216,11 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
       media: CaptureBytes(bytes: <int>[1], mime: 'video/mp4', durationMs: 1),
       durationMs: 1,
     );
+  }
+
+  @override
+  Future<void> releaseSaved(VideoRecording recording) async {
+    releaseSavedCalls++;
   }
 
   @override

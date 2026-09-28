@@ -80,6 +80,8 @@ abstract interface class VideoRecorder {
 
   Future<VideoRecording> stop();
 
+  Future<void> releaseSaved(VideoRecording recording);
+
   Future<void> cancel();
 
   Future<void> release();

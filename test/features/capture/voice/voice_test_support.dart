@@ -32,6 +32,7 @@ class FakeVoiceRecorder implements VoiceRecorder {
   int stopCalls = 0;
   int cancelCalls = 0;
   int disposeCalls = 0;
+  int releaseSavedCalls = 0;
 
   @override
   Future<bool> hasPermission() async => permission;
@@ -71,6 +72,11 @@ class FakeVoiceRecorder implements VoiceRecorder {
           ),
           durationMs: 4200,
         );
+  }
+
+  @override
+  Future<void> releaseSaved(VoiceRecording recording) async {
+    releaseSavedCalls++;
   }
 
   @override

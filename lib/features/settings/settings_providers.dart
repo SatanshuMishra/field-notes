@@ -6,6 +6,7 @@ import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'journal_data_controller.dart';
@@ -37,10 +38,12 @@ Future<SettingsDataController> settingsDataController(Ref ref) async {
       delivery: defaultExportDelivery(),
     ),
     mediaStore: mediaStore,
+    temporaryDirectory: getTemporaryDirectory,
     deleteAllService: JournalDeleteAllService(
       database: database,
       mediaRoot: root,
       draftsRoot: await ref.watch(mediaDraftsRootProvider.future),
+      temporaryDirectory: getTemporaryDirectory,
     ),
     onError: (Object error, StackTrace _) =>
         debugPrint('Settings data action failed: $error'),
