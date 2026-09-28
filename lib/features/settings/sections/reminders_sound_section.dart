@@ -57,6 +57,7 @@ class RemindersSoundSection extends ConsumerWidget {
             control: StickerButton(
               label: 'Open System Settings',
               variant: StickerButtonVariant.secondary,
+              padTapTarget: true,
               onPressed: () => _openNotificationSettings(ref),
             ),
           ),

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -10,6 +12,7 @@ import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,12 +21,24 @@ import '../support/fake_settings_repository.dart';
 import '../support/recording_reminder_scheduler.dart';
 import '../support/settings_harness.dart';
 
+const double _minTapTarget = 48;
+
 class _RecordingOpener implements NotificationSettingsOpener {
   int opens = 0;
 
   @override
   Future<void> open() async => opens++;
 }
+
+Rect _globalRect(SemanticsNode node) => <SemanticsNode>[
+      for (SemanticsNode? at = node; at != null; at = at.parent) at,
+    ].fold(
+      node.rect,
+      (Rect rect, SemanticsNode at) => switch (at.transform) {
+        final Matrix4 transform => MatrixUtils.transformRect(transform, rect),
+        null => rect,
+      },
+    );
 
 Future<void> _pumpSection(
   WidgetTester tester, {
@@ -181,6 +196,45 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(opener.opens, 1);
+  });
+
+  testWidgets('the Open System Settings button is its own 48 dp target',
+      (WidgetTester tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    await _pumpSection(
+      tester,
+      repository: FakeSettingsRepository(),
+      scheduler: RecordingReminderScheduler(
+        permission: ReminderPermission.denied,
+      ),
+      opener: _RecordingOpener(),
+    );
+
+    final Rect node = _globalRect(
+      tester.getSemantics(find.bySemanticsLabel('Open System Settings')),
+    );
+    final Rect painted = tester.getRect(
+      find
+          .descendant(
+            of: find.widgetWithText(StickerButton, 'Open System Settings'),
+            matching: find.byType(DecoratedBox),
+          )
+          .first,
+    );
+    final Rect target = Rect.fromCenter(
+      center: painted.center,
+      width: math.max(painted.width, _minTapTarget),
+      height: math.max(painted.height, _minTapTarget),
+    );
+
+    expect(node.width, greaterThanOrEqualTo(_minTapTarget));
+    expect(node.height, greaterThanOrEqualTo(_minTapTarget));
+    expect(
+      target.inflate(0.01).intersect(node),
+      node,
+      reason: 'node $node lies outside $target',
+    );
+    handle.dispose();
   });
 
   testWidgets('turning the reminder on asks for a permission not yet granted',
