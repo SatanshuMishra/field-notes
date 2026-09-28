@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +10,15 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/core/composer_guard.dart';
+import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
+    show composerCloseKey;
 import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/note_engine/note_engine.dart'
+    show NoteEditorView;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -305,6 +311,51 @@ void main() {
     expect(session.outcomes, isEmpty);
     await _drainToast(tester);
   });
+
+  testWidgets(
+    'on macOS Keep editing after Back in an inline edit returns focus to the editor',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await _open(tester, entryId: 'entry-2');
+      await tester.tap(find.byKey(logActionsEditKey));
+      await tester.pumpAndSettle();
+      await driver.typeText(' never mind');
+      final TextSelection before = driver.selection;
+
+      await driver.press(
+        find.byKey(composerCloseKey),
+        const Duration(milliseconds: 110),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(composerDiscardTitle), findsOneWidget);
+
+      await driver.press(
+        find.byKey(composerKeepEditingKey),
+        const Duration(milliseconds: 110),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(composerDiscardTitle), findsNothing);
+      expect(driver.find, findsOneWidget);
+      expect(
+        tester
+            .widget<NoteEditorView>(find.byType(NoteEditorView))
+            .focusNode
+            .hasPrimaryFocus,
+        isTrue,
+      );
+      expect(driver.selection, before);
+
+      await driver.typeText('!');
+
+      expect(driver.source, '${_longNote()} never mind!');
+      await tester.pump(draftIdleDebounceForTest);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 
   testWidgets('Delete asks first, then deletes the log and leaves',
       (WidgetTester tester) async {

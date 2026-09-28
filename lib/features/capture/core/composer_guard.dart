@@ -45,6 +45,40 @@ class ComposerGuard extends StatefulWidget {
 
 class _ComposerGuardState extends State<ComposerGuard> {
   bool _confirming = false;
+  FocusNode? _lastFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_trackFocus);
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_trackFocus);
+    super.dispose();
+  }
+
+  void _trackFocus() {
+    final FocusNode? focused = FocusManager.instance.primaryFocus;
+    final BuildContext? focusedContext = focused?.context;
+    if (focusedContext == null || !focusedContext.mounted) {
+      return;
+    }
+    final _ComposerGuardState? owner =
+        focusedContext.findAncestorStateOfType<_ComposerGuardState>();
+    if (identical(owner, this)) {
+      _lastFocus = focused;
+    }
+  }
+
+  void _resumeEditing() {
+    final FocusNode? node = _lastFocus;
+    final bool attached = node?.context?.mounted ?? false;
+    if (node != null && attached && node.canRequestFocus) {
+      node.requestFocus();
+    }
+  }
 
   Future<void> _requestClose() async {
     if (widget.locked || _confirming) {
@@ -61,7 +95,11 @@ class _ComposerGuardState extends State<ComposerGuard> {
       builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
     );
     _confirming = false;
-    if (discard != true || !mounted) {
+    if (!mounted) {
+      return;
+    }
+    if (discard != true) {
+      _resumeEditing();
       return;
     }
     await _discardAndPop();

@@ -1,6 +1,11 @@
+import 'package:field_notes/design/feedback/feedback.dart' show kToastLifetime;
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart'
+    show composerPanelKey;
+import 'package:field_notes/features/capture/core/draft_restored_chip.dart'
+    show draftRestoredDiscardKey;
 import 'package:field_notes/features/capture/text/editor/format_bar.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -9,6 +14,7 @@ import 'package:field_notes/features/note_engine/note_engine.dart';
 import 'package:field_notes/features/notes/render/note_photo_block.dart'
     show NoteMediaScope;
 import 'package:field_notes/state/state.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -334,4 +340,131 @@ void main() {
 
     expect(_view(tester).photoMediaImporter, isNotNull);
   });
+
+  testWidgets(
+    'on macOS Keep editing after a mouse Cancel returns focus, input and selection',
+    (WidgetTester tester) async {
+      await _open(tester, _composerApp());
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await driver.typeText('never mind');
+      final TextSelection before = driver.selection;
+
+      await driver.press(
+        find.byKey(composerCloseKey),
+        _hold,
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(composerDiscardTitle), findsOneWidget);
+
+      await _keepEditingByMouse(tester);
+
+      await _expectEditorResumes(tester, before: before, typed: 'never mind!');
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
+  testWidgets(
+    'on macOS Keep editing after a scrim click returns focus, input and selection',
+    (WidgetTester tester) async {
+      await _open(tester, _composerApp());
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      await driver.typeText('never mind');
+      final TextSelection before = driver.selection;
+      final Rect panel = tester.getRect(find.byKey(composerPanelKey));
+
+      await tester.tapAt(
+        Offset(panel.left / 2, panel.center.dy),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(composerDiscardTitle), findsOneWidget);
+
+      await _keepEditingByMouse(tester);
+
+      await _expectEditorResumes(tester, before: before, typed: 'never mind!');
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
+  testWidgets(
+    'on macOS Save on an empty note keeps the editor focused',
+    (WidgetTester tester) async {
+      await _open(tester, _composerApp());
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+      await driver.press(
+        find.text('Save'),
+        _hold,
+        kind: PointerDeviceKind.mouse,
+      );
+
+      expect(find.text(emptySaveGuardMessage), findsOneWidget);
+      expect(_view(tester).focusNode.hasPrimaryFocus, isTrue);
+      expect(tester.testTextInput.hasAnyClients, isTrue);
+
+      await tester.pump(kToastLifetime);
+      await tester.pumpAndSettle();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
+  testWidgets(
+    "on macOS the restored draft's Discard keeps the editor focused",
+    (WidgetTester tester) async {
+      await _open(
+        tester,
+        _composerApp(
+          drafts: FakeDraftStore(
+            drafts: <String, String>{'new-2026-07-19': 'left by a crash'},
+          ),
+        ),
+      );
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+      await driver.press(
+        find.byKey(draftRestoredDiscardKey),
+        _hold,
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(draftRestoredDiscardKey), findsNothing);
+      expect(_view(tester).focusNode.hasPrimaryFocus, isTrue);
+      expect(tester.testTextInput.hasAnyClients, isTrue);
+
+      await driver.typeText('fresh');
+
+      expect(driver.source, 'fresh');
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+}
+
+Future<void> _keepEditingByMouse(WidgetTester tester) async {
+  await NoteEditorDriver(tester).press(
+    find.byKey(composerKeepEditingKey),
+    _hold,
+    kind: PointerDeviceKind.mouse,
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _expectEditorResumes(
+  WidgetTester tester, {
+  required TextSelection before,
+  required String typed,
+}) async {
+  final NoteEditorDriver driver = NoteEditorDriver(tester);
+
+  expect(find.text(composerDiscardTitle), findsNothing);
+  expect(_view(tester).focusNode.hasPrimaryFocus, isTrue);
+  expect(tester.testTextInput.hasAnyClients, isTrue);
+  expect(driver.selection, before);
+
+  await driver.typeText('!');
+
+  expect(driver.source, typed);
 }
