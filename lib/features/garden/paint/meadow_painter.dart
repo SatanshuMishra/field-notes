@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 
+import 'package:field_notes/design/flowers/garden_art_colors.dart';
 import 'package:field_notes/design/flowers/garden_plant_painter.dart';
 import 'package:field_notes/design/flowers/garden_plant_spec.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -117,8 +118,12 @@ class MeadowPainter extends CustomPainter {
   }
 
   void _paintInsect(Canvas canvas, Size size, GardenInsect insect) {
-    final Offset p =
-        insectOffset(insect, t, size, size.height * soilLineFraction);
+    final Offset p = insectOffset(
+      insect,
+      t,
+      size,
+      size.height * soilLineFraction,
+    );
     final double flap = math.sin(2 * math.pi * (t * 8 + insect.phase));
     switch (insect.kind) {
       case GardenInsectKind.butterfly:
@@ -129,7 +134,7 @@ class MeadowPainter extends CustomPainter {
   }
 
   Paint get _insectStroke => Paint()
-    ..color = Palette.ink
+    ..color = GardenArtColors.insectStroke
     ..style = PaintingStyle.stroke
     ..strokeWidth = Shapes.outlineWidth
     ..strokeCap = StrokeCap.round;
@@ -137,7 +142,7 @@ class MeadowPainter extends CustomPainter {
   void _paintButterfly(Canvas canvas, Offset c, double flap) {
     final double wingW = 5 + flap.abs() * 4;
     final Paint wing = Paint()
-      ..color = Palette.coral
+      ..color = GardenArtColors.butterflyWing
       ..style = PaintingStyle.fill;
     final Rect left = Rect.fromCenter(
       center: c.translate(-wingW * 0.6, 0),
@@ -164,7 +169,7 @@ class MeadowPainter extends CustomPainter {
     final double wingW = 4 + flap.abs() * 3;
     final Rect body = Rect.fromCenter(center: c, width: 12, height: 8);
     final Paint bodyPaint = Paint()
-      ..color = Palette.sage
+      ..color = GardenArtColors.beeBody
       ..style = PaintingStyle.fill;
     canvas.drawOval(body, bodyPaint);
     canvas.drawOval(body, _insectStroke);
@@ -174,7 +179,7 @@ class MeadowPainter extends CustomPainter {
       height: wingW,
     );
     final Paint wingPaint = Paint()
-      ..color = Palette.cardBright.withValues(alpha: 0.8);
+      ..color = GardenArtColors.beeWing.withValues(alpha: 0.8);
     canvas.drawOval(wing, wingPaint);
     canvas.drawOval(wing, _insectStroke);
   }
