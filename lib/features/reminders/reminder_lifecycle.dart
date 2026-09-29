@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/onboarding/onboarding_gate.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,7 +32,16 @@ class _ReminderLifecycleState extends ConsumerState<ReminderLifecycle> {
     );
     ref.listenManual<AsyncValue<AppSettings>>(
       appSettingsProvider,
-      _promptOnFirstLaunch,
+      (AsyncValue<AppSettings>? _, AsyncValue<AppSettings> _) =>
+          _promptOnFirstLaunch(),
+      fireImmediately: true,
+    );
+    ref.listenManual<AsyncValue<OnboardingVisibility>>(
+      onboardingGateProvider,
+      (
+        AsyncValue<OnboardingVisibility>? _,
+        AsyncValue<OnboardingVisibility> _,
+      ) => _promptOnFirstLaunch(),
       fireImmediately: true,
     );
   }
@@ -47,12 +57,13 @@ class _ReminderLifecycleState extends ConsumerState<ReminderLifecycle> {
     ref.invalidate(reminderSyncProvider);
   }
 
-  void _promptOnFirstLaunch(
-    AsyncValue<AppSettings>? _,
-    AsyncValue<AppSettings> next,
-  ) {
-    final AppSettings? settings = next.value;
+  void _promptOnFirstLaunch() {
+    final AppSettings? settings = ref.read(appSettingsProvider).value;
+    final OnboardingVisibility? onboarding = ref
+        .read(onboardingGateProvider)
+        .value;
     if (_promptStarted ||
+        onboarding != OnboardingVisibility.hidden ||
         settings == null ||
         !settings.reminderEnabled ||
         settings.notificationPermissionAsked) {

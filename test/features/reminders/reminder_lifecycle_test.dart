@@ -4,6 +4,7 @@ import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/onboarding/onboarding_gate.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
@@ -234,5 +235,28 @@ void main() {
 
     expect(relaunch.permissionRequests, 0);
     expect(relaunch.statusChecks, greaterThan(0));
+  });
+
+  testWidgets('the first-launch notification request waits until onboarding is done',
+      (WidgetTester tester) async {
+    final RecordingReminderScheduler scheduler = await _launch(
+      tester,
+      clock: () => DateTime(2026, 7, 20, 9),
+      settings: FakeSettingsRepository(storedValues: false),
+    );
+    final ProviderContainer container = ProviderScope.containerOf(
+      tester.element(find.byType(AppShell)),
+    );
+
+    expect(
+      await container.read(onboardingGateProvider.future),
+      OnboardingVisibility.shown,
+    );
+    expect(scheduler.permissionRequests, 0);
+
+    await container.read(onboardingGateProvider.notifier).complete();
+    await tester.pumpAndSettle();
+
+    expect(scheduler.permissionRequests, 1);
   });
 }
