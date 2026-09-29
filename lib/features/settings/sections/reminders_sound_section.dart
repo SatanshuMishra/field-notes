@@ -10,10 +10,8 @@ import '../settings_controller.dart';
 import '../settings_feedback.dart';
 import '../settings_providers.dart';
 
-typedef TimeOfDayPicker = Future<TimeOfDay?> Function(
-  BuildContext context,
-  TimeOfDay initial,
-);
+typedef TimeOfDayPicker =
+    Future<TimeOfDay?> Function(BuildContext context, TimeOfDay initial);
 
 Future<TimeOfDay?> showSettingsTimePicker(
   BuildContext context,
@@ -36,7 +34,8 @@ class RemindersSoundSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bool notificationsOff = settings.reminderEnabled &&
+    final bool notificationsOff =
+        settings.reminderEnabled &&
         ref.watch(reminderPermissionStatusProvider).value ==
             ReminderPermission.denied;
     return SettingsSection(
@@ -62,6 +61,20 @@ class RemindersSoundSection extends ConsumerWidget {
             ),
           ),
         SettingsFieldRow(
+          label: 'Reflection question',
+          description: 'Show a gentle prompt when recording voice or video.',
+          control: SettingsToggle(
+            semanticLabel: 'Reflection question',
+            value: settings.reflectionPromptsEnabled,
+            onChanged: (bool value) => _apply(
+              ref,
+              () => ref
+                  .read(settingsControllerProvider)
+                  .setReflectionPromptsEnabled(value),
+            ),
+          ),
+        ),
+        SettingsFieldRow(
           label: 'Reminder time',
           description: 'When the nudge arrives.',
           control: SettingsTimeField(
@@ -80,8 +93,7 @@ class RemindersSoundSection extends ConsumerWidget {
             value: settings.soundEnabled,
             onChanged: (bool value) => _apply(
               ref,
-              () =>
-                  ref.read(settingsControllerProvider).setSoundEnabled(value),
+              () => ref.read(settingsControllerProvider).setSoundEnabled(value),
             ),
           ),
         ),
@@ -111,10 +123,13 @@ class RemindersSoundSection extends ConsumerWidget {
 
   Future<void> _setReminderEnabled(WidgetRef ref, bool value) async {
     final SettingsController controller = ref.read(settingsControllerProvider);
-    final ReminderPermissionStatus permission =
-        ref.read(reminderPermissionStatusProvider.notifier);
-    final bool saved =
-        await _apply(ref, () => controller.setReminderEnabled(value));
+    final ReminderPermissionStatus permission = ref.read(
+      reminderPermissionStatusProvider.notifier,
+    );
+    final bool saved = await _apply(
+      ref,
+      () => controller.setReminderEnabled(value),
+    );
     if (saved && value) {
       await permission.requestUnlessGranted();
     }
