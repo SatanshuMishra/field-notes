@@ -15,7 +15,7 @@ enum SettingsTab {
   ),
   journal(
     label: 'Journal',
-    sublabel: 'calendar, text size',
+    sublabel: 'theme, calendar, text size',
     chipLabel: 'Journal',
   ),
   data(label: 'Data', sublabel: 'export, delete', chipLabel: 'Data');
