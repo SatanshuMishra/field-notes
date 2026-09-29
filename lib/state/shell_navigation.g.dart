@@ -41,7 +41,7 @@ final class ShellNavigationProvider
   }
 }
 
-String _$shellNavigationHash() => r'c7fc0efb9610318f65c006b7813628e968fc253b';
+String _$shellNavigationHash() => r'72e049214111746aec2b22fbe18cbb6d7b4179e8';
 
 abstract class _$ShellNavigation extends $Notifier<ShellDestination> {
   ShellDestination build();
