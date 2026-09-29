@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'states/capture_states.dart';
+import 'states/immersive_states.dart';
 import 'states/settings_states.dart';
 import 'states/shell_states.dart';
 import 'states/viewer_states.dart';
@@ -55,5 +56,6 @@ void main() {
   _sweepReadingOrder('shell', shellStates);
   _sweepReadingOrder('settings', settingsStates);
   _sweepReadingOrder('capture', captureStates);
+  _sweepReadingOrder('immersive', immersiveStates);
   _sweepReadingOrder('viewer', viewerStates);
 }

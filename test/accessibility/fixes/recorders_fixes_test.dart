@@ -58,13 +58,13 @@ void main() {
       'c13-voice-recording',
     );
     _expectNone(ids, 'missing-role', 'c13-voice-recording', <String>[
-      'Discard |',
-      'Save memo |',
+      'Let it go |',
+      'Keep this |',
     ]);
     _expectNone(ids, 'small-target', 'c13-voice-recording', <String>[
-      'Discard |',
-      'Save memo |',
-      'Close |',
+      'Let it go |',
+      'Keep this |',
+      'Leave |',
     ]);
   });
 
@@ -77,13 +77,13 @@ void main() {
       'c16-video-recording',
     );
     _expectNone(ids, 'missing-role', 'c16-video-recording', <String>[
-      'Discard |',
-      'Save |',
+      'Let go |',
+      'Keep |',
     ]);
     _expectNone(ids, 'small-target', 'c16-video-recording', <String>[
-      'Discard |',
-      'Save |',
-      'Close |',
+      'Let go |',
+      'Keep |',
+      'Leave |',
     ]);
   });
 }

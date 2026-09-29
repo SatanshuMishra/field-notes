@@ -1,6 +1,5 @@
 missing-role | c1-chooser | Dismiss capture chooser | <root>
 missing-role | c10-discard-dialog | Dismiss | <root>
-missing-role | c18-discard-recording | Dismiss | <root>
 small-target | c9-selection-menu | Copy | <root>
 small-target | c9-selection-menu | Cut | <root>
 small-target | c9-selection-menu | Paste | <root>

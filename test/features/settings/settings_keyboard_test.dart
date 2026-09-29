@@ -94,9 +94,9 @@ final List<_SafeButton> _safeButtons = <_SafeButton>[
   _SafeButton(
     'c18-discard-recording',
     (WidgetTester tester) => _pumpState(tester, 'c18-discard-recording'),
-    'Cancel',
+    'Keep going',
   ),
-  const _SafeButton('video discard', _pumpVideoDiscard, 'Cancel'),
+  const _SafeButton('video discard', _pumpVideoDiscard, 'Keep going'),
   _SafeButton(
     'd13-change-mood-dialog',
     (WidgetTester tester) => _pumpState(tester, 'd13-change-mood-dialog'),

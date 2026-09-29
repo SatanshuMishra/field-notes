@@ -7,6 +7,8 @@ import 'package:field_notes/features/capture/chooser/capture_routes_provider.dar
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
+import 'package:field_notes/features/capture/immersive/stage_phase.dart'
+    show stagePausedStatus;
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart'
     show cameraDeviceLabels;
 import 'package:field_notes/features/capture/text/editor/format_bar.dart';
@@ -29,6 +31,8 @@ import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/draft_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
+import 'package:field_notes/state/settings_providers.dart'
+    show reflectionPromptsEnabledProvider;
 import 'package:field_notes/state/state.dart' show journalRepositoryProvider;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
@@ -74,14 +78,13 @@ const int _insideHarbour = 8;
 const String _tableNote =
     'Intro\n\n| a | b |\n| --- | --- |\n| c | d |\n| e | f |\n\nOutro';
 const int _insideTable = 34;
-const String _voicePausedHint = 'paused · resume when you’re ready';
 
 const Duration _photoHold = Duration(milliseconds: 110);
 const Duration _longPressHold = Duration(milliseconds: 600);
 const Duration _recorderOpen = Duration(milliseconds: 250);
 const Duration _recorderStep = Duration(milliseconds: 50);
 const Duration _recorderSettle = Duration(milliseconds: 500);
-const Duration _dialogOpen = Duration(milliseconds: 300);
+const Duration _letGoOpen = Duration(milliseconds: 300);
 const int _shutterSteps = 4;
 
 DateTime _clock() => DateTime(2026, 9, 18, 9, 30);
@@ -343,6 +346,7 @@ Future<void> _openVoice(WidgetTester tester) async {
         todayClockProvider.overrideWithValue(_clock),
         voiceRecorderProvider.overrideWith((Ref ref) => FakeVoiceRecorder()),
         captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
+        reflectionPromptsEnabledProvider.overrideWithValue(false),
       ],
       child: voiceHarness(
         _Launcher(
@@ -373,6 +377,8 @@ Future<void> _pumpVoiceIdle(WidgetTester tester) async {
 Future<void> _pumpVoiceRecording(WidgetTester tester) async {
   await _openVoice(tester);
   await _tapRecord(tester);
+  _requireVoicePhase(tester, VoiceRecorderPhase.breathing);
+  await _tapRecord(tester);
   _requireVoicePhase(tester, VoiceRecorderPhase.recording);
 }
 
@@ -386,7 +392,8 @@ Future<void> _pumpDiscardRecording(WidgetTester tester) async {
   await _pumpVoiceRecording(tester);
   await tester.tap(find.byKey(voiceDiscardPillKey));
   await tester.pump();
-  await tester.pump(_dialogOpen);
+  await tester.pump(_letGoOpen);
+  _requireVoicePhase(tester, VoiceRecorderPhase.paused);
 }
 
 Future<void> _openVideo(WidgetTester tester) async {
@@ -400,6 +407,7 @@ Future<void> _openVideo(WidgetTester tester) async {
               FakeVideoRecorder(devices: _phoneCameras, supportsPause: true),
         ),
         captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
+        reflectionPromptsEnabledProvider.overrideWithValue(false),
       ],
       child: videoHarness(
         _Launcher(
@@ -430,6 +438,10 @@ Future<void> _pumpVideoIdle(WidgetTester tester) async {
 
 Future<void> _pumpVideoRecording(WidgetTester tester) async {
   await _openVideo(tester);
+  await tester.pump(_recorderSettle);
+  _requireVideoPhase(tester, VideoRecorderPhase.idle);
+  await _tapShutter(tester);
+  _requireVideoPhase(tester, VideoRecorderPhase.breathing);
   await _tapShutter(tester);
   _requireVideoPhase(tester, VideoRecorderPhase.recording);
 }
@@ -520,7 +532,7 @@ final List<A11yState> captureStates = <A11yState>[
   A11yState(
     id: 'c14-voice-paused',
     pump: _pumpVoicePaused,
-    proof: <A11yProof>[A11yProof(find.text(_voicePausedHint))],
+    proof: <A11yProof>[A11yProof(find.text(stagePausedStatus))],
   ),
   A11yState(
     id: 'c15-video-idle',
