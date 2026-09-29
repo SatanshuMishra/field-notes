@@ -2,41 +2,51 @@ import 'package:flutter/material.dart';
 
 import '../../design/tokens/tokens.dart';
 
-ThemeData fieldNotesTheme({TargetPlatform? platform}) {
-  final ColorScheme scheme = ColorScheme.fromSeed(
-    seedColor: Palette.coral,
-    brightness: Brightness.light,
-  ).copyWith(
-    primary: Palette.coral,
-    onPrimary: Palette.cardBright,
-    secondary: Palette.sage,
-    surface: Palette.cardWarm,
-    onSurface: Palette.ink,
-    error: Palette.danger,
-    onError: Palette.cardBright,
-  );
+ThemeData fieldNotesTheme({
+  TargetPlatform? platform,
+  Brightness brightness = Brightness.light,
+}) {
+  final FieldNotesColors colors = switch (brightness) {
+    Brightness.light => FieldNotesColors.light,
+    Brightness.dark => FieldNotesColors.dark,
+  };
+
+  final ColorScheme scheme =
+      ColorScheme.fromSeed(
+        seedColor: Palette.coral,
+        brightness: brightness,
+      ).copyWith(
+        primary: Palette.coral,
+        onPrimary: FieldNotesColors.light.cardBright,
+        secondary: colors.sage,
+        surface: colors.cardWarm,
+        onSurface: colors.ink,
+        error: colors.dangerInk,
+        onError: FieldNotesColors.light.cardBright,
+      );
 
   return ThemeData(
     useMaterial3: true,
     platform: platform,
     colorScheme: scheme,
-    scaffoldBackgroundColor: Palette.page,
+    scaffoldBackgroundColor: colors.page,
     fontFamily: TypographyTokens.sans,
-    textTheme: _textTheme,
-    iconTheme: const IconThemeData(color: Palette.ink),
+    textTheme: _textTheme(FieldNotesTextStyles(colors)),
+    iconTheme: IconThemeData(color: colors.ink),
+    extensions: <ThemeExtension<dynamic>>[colors],
   );
 }
 
-const TextTheme _textTheme = TextTheme(
-  displayLarge: TypographyTokens.displaySerif,
-  displayMedium: TypographyTokens.displaySerif,
-  headlineMedium: TypographyTokens.titleSerif,
-  headlineSmall: TypographyTokens.titleSerif,
-  titleLarge: TypographyTokens.titleSerif,
-  titleMedium: TypographyTokens.labelSans,
-  bodyLarge: TypographyTokens.bodySerif,
-  bodyMedium: TypographyTokens.bodySans,
-  labelLarge: TypographyTokens.buttonSans,
-  labelMedium: TypographyTokens.captionSans,
-  bodySmall: TypographyTokens.captionSans,
+TextTheme _textTheme(FieldNotesTextStyles styles) => TextTheme(
+  displayLarge: styles.displaySerif,
+  displayMedium: styles.displaySerif,
+  headlineMedium: styles.titleSerif,
+  headlineSmall: styles.titleSerif,
+  titleLarge: styles.titleSerif,
+  titleMedium: styles.labelSans,
+  bodyLarge: styles.bodySerif,
+  bodyMedium: styles.bodySans,
+  labelLarge: styles.buttonSans,
+  labelMedium: styles.captionSans,
+  bodySmall: styles.captionSans,
 );
