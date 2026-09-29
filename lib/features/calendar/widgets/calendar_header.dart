@@ -31,13 +31,10 @@ const BorderRadius _thisWeekRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusSm),
 );
 
-const TextStyle _titleStyle = TypographyTokens.displaySerif;
-
 const TextStyle _hintStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12,
   fontWeight: FontWeight.w400,
-  color: Palette.muted,
 );
 
 const TextStyle _thisWeekStyle = TextStyle(
@@ -85,6 +82,8 @@ class CalendarHeader extends StatelessWidget {
         (month.year * 12 + month.month) > (current.year * 12 + current.month);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
+        final FieldNotesColors colors = context.colors;
+        final TextStyle titleStyle = context.textStyles.displaySerif;
         final TextScaler scaler = MediaQuery.textScalerOf(context);
         final TextDirection direction = Directionality.of(context);
         final double actionsWidth =
@@ -93,7 +92,7 @@ class CalendarHeader extends StatelessWidget {
             calendarHeaderTrailingReach +
             (showThisWeek ? _actionGap + _thisWeekWidth(scaler, direction) : 0);
         final double titleWidth =
-            _textWidth(month.title, _titleStyle, scaler, direction) +
+            _textWidth(month.title, titleStyle, scaler, direction) +
             _titlePadding.horizontal +
             _titleCaretGap +
             _titleCaretSize;
@@ -118,7 +117,7 @@ class CalendarHeader extends StatelessWidget {
                     padding: EdgeInsets.only(left: _titlePadding.left),
                     child: Text(
                       'explore',
-                      style: TypographyTokens.pageEyebrowAccent,
+                      style: context.textStyles.pageEyebrowAccent,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -144,7 +143,7 @@ class CalendarHeader extends StatelessWidget {
                   calendarBrowseHint,
                   maxLines: 1,
                   softWrap: false,
-                  style: _hintStyle,
+                  style: _hintStyle.copyWith(color: colors.muted),
                 ),
               ),
               const SizedBox(width: _hintGap),
@@ -262,7 +261,7 @@ class _TitleButtonState extends State<_TitleButton> {
             borderRadius: _titleRadius,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: _hovered ? Palette.ink08 : null,
+                color: _hovered ? context.colors.ink08 : null,
                 borderRadius: _titleRadius,
               ),
               child: Padding(
@@ -275,7 +274,7 @@ class _TitleButtonState extends State<_TitleButton> {
                         widget.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: _titleStyle,
+                        style: context.textStyles.displaySerif,
                       ),
                     ),
                     const SizedBox(width: _titleCaretGap),
@@ -320,11 +319,11 @@ class _ThisWeekButton extends StatelessWidget {
               onPressed: onPressed,
               borderRadius: _thisWeekRadius,
               child: DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Palette.coral,
-                  border: Shapes.outline,
+                  border: context.shadows.outline,
                   borderRadius: _thisWeekRadius,
-                  boxShadow: Shadows.control,
+                  boxShadow: context.shadows.control,
                 ),
                 child: Padding(
                   padding: _thisWeekPadding,

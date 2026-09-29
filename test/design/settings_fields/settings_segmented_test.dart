@@ -48,7 +48,10 @@ void main() {
         ),
       );
 
-      expect(_fillBehind(tester, 'On this device'), Palette.cardBright);
+      expect(
+        _fillBehind(tester, 'On this device'),
+        FieldNotesColors.light.cardBright,
+      );
       expect(_fillBehind(tester, 'Sync to server'), const Color(0x00000000));
     });
 

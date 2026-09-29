@@ -1,5 +1,5 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/tokens/palette.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,7 +77,7 @@ void main() {
         tester.renderObject(find.byKey(focusRingKey)),
         paints..rect(
           rect: (Offset.zero & _controlSize).inflate(3.5),
-          color: Palette.focusRing,
+          color: FieldNotesColors.light.ink,
           strokeWidth: 3,
           style: PaintingStyle.stroke,
         ),
@@ -110,7 +110,7 @@ void main() {
             control.inflate(2),
             const Radius.circular(17),
           ),
-          color: Palette.focusRing,
+          color: FieldNotesColors.light.ink,
         ),
       );
     },

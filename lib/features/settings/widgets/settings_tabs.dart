@@ -65,9 +65,6 @@ const Color _clear = Color(0x00000000);
 const Border _clearOutline = Border.fromBorderSide(
   BorderSide(color: _clear, width: Shapes.outlineWidth),
 );
-const Border _chipOutline = Border.fromBorderSide(
-  BorderSide(color: Palette.ink30, width: Shapes.outlineWidth),
-);
 
 const TextStyle _sublabelStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
@@ -201,12 +198,14 @@ class _RailFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: selected ? Palette.coral : _clear,
-        border: selected ? Shapes.outline : _clearOutline,
+        border: selected ? shadows.outline : _clearOutline,
         borderRadius: _railItemRadius,
-        boxShadow: selected ? Shadows.emphasis : null,
+        boxShadow: selected ? shadows.emphasis : null,
       ),
       child: Padding(
         padding: _railItemPadding,
@@ -216,15 +215,15 @@ class _RailFace extends StatelessWidget {
           children: <Widget>[
             Text(
               tab.label,
-              style: TypographyTokens.toastSans.copyWith(
-                color: selected ? Palette.onAccent : Palette.ink,
+              style: context.textStyles.toastSans.copyWith(
+                color: selected ? Palette.onAccent : colors.ink,
               ),
             ),
             const SizedBox(height: _sublabelGap),
             Text(
               tab.sublabel,
               style: _sublabelStyle.copyWith(
-                color: selected ? Palette.onDark85 : Palette.muted,
+                color: selected ? Palette.onDark85 : colors.muted,
               ),
             ),
           ],
@@ -242,10 +241,15 @@ class _ChipFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: selected ? Palette.coral : Palette.cardWarm,
-        border: selected ? Shapes.outline : _chipOutline,
+        color: selected ? Palette.coral : colors.cardWarm,
+        border: selected
+            ? context.shadows.outline
+            : Border.fromBorderSide(
+                BorderSide(color: colors.ink30, width: Shapes.outlineWidth),
+              ),
         borderRadius: _chipRadius,
       ),
       child: Padding(
@@ -254,8 +258,8 @@ class _ChipFace extends StatelessWidget {
           tab.chipLabel,
           maxLines: 1,
           softWrap: false,
-          style: TypographyTokens.caption11Sans.copyWith(
-            color: selected ? Palette.onAccent : Palette.ink,
+          style: context.textStyles.caption11Sans.copyWith(
+            color: selected ? Palette.onAccent : colors.ink,
           ),
         ),
       ),

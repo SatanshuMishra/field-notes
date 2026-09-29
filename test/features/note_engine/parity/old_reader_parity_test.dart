@@ -17,6 +17,7 @@ import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/document/transaction.dart';
 import 'package:field_notes/features/note_engine/layout/block_layout.dart';
 import 'package:field_notes/features/note_engine/layout/line_fragments.dart';
+import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout_engine.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart';
@@ -720,7 +721,11 @@ void _expectLineThrough(
     );
     expect(after.alpha, greaterThan(change.before.alpha), reason: '$change');
     if (after.alpha >= _colourAlphaFloor) {
-      expect(_nearColour(after, Palette.ink), isTrue, reason: '$change');
+      expect(
+        _nearColour(after, FieldNotesColors.light.ink),
+        isTrue,
+        reason: '$change',
+      );
     }
   }
   _expectSpansColumns(
@@ -738,8 +743,13 @@ void _expectLink(_Raster plain, _Raster linked, Rect box, double baseline) {
     box.right,
     box.bottom,
   );
-  _expectOpaqueInk(plain, glyph, Palette.ink, 'plain glyph');
-  _expectOpaqueInk(linked, glyph, Palette.coralLink, 'link glyph');
+  _expectOpaqueInk(plain, glyph, FieldNotesColors.light.ink, 'plain glyph');
+  _expectOpaqueInk(
+    linked,
+    glyph,
+    FieldNotesColors.light.coralLink,
+    'link glyph',
+  );
   expect(_inkIn(plain, below), isEmpty, reason: 'plain underline');
   final List<_Pixel> underline = _inkIn(linked, below);
   expect(underline, isNotEmpty, reason: 'the link has no underline');
@@ -1370,14 +1380,14 @@ void main() {
         NoteTypography.strikethrough.decoration,
         TextDecoration.lineThrough,
       );
-      expect(NoteTypography.link.color, Palette.coralLink);
+      expect(NoteInks.light.link, FieldNotesColors.light.coralLink);
       expect(NoteTypography.link.decoration, TextDecoration.underline);
-      expect(NoteTypography.link.decorationColor, Palette.coral30);
+      expect(NoteInks.light.linkDecoration, Palette.coral30);
       final TextStyle code = NoteTypography.inlineCode(NoteTypography.body);
       expect(code.fontFamily, TypographyTokens.mono);
       expect(code.fontSize, 14);
-      expect(code.backgroundColor, Palette.ink08);
-      expect(NoteTypography.highlight.backgroundColor, Palette.highlight);
+      expect(NoteInks.light.codeBackground, FieldNotesColors.light.ink08);
+      expect(NoteInks.light.highlight, Palette.highlight);
 
       const String source = 'a **b** *c* `d` ~~e~~ [f](g)';
       const String unstruckSource = 'a **b** *c* `d` e [f](g)';
@@ -1411,7 +1421,7 @@ void main() {
         _expectOpaqueInk(
           styled,
           _boxOf(note, _rangeOf(source, run)),
-          Palette.ink,
+          FieldNotesColors.light.ink,
           run,
         );
       }

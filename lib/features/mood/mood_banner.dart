@@ -34,8 +34,9 @@ class MoodBanner extends StatelessWidget {
         onTap: onChangeMood,
       );
     }
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return StickerCard(
-      surface: Palette.cardWarm,
+      surface: context.colors.cardWarm,
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
       child: Row(
         children: <Widget>[
@@ -48,11 +49,11 @@ class MoodBanner extends StatelessWidget {
               children: <Widget>[
                 Text(
                   'Feeling ${current.label} today',
-                  style: TypographyTokens.bannerSerif,
+                  style: textStyles.bannerSerif,
                 ),
                 Text(
                   '${current.flower.label} · your bloom for the day',
-                  style: TypographyTokens.captionSans,
+                  style: textStyles.captionSans,
                 ),
               ],
             ),
@@ -78,10 +79,10 @@ const BoxDecoration _changePillDecoration = BoxDecoration(
   borderRadius: _pillRadius,
 );
 
-const BoxDecoration _choosePillDecoration = BoxDecoration(
+BoxDecoration _choosePillDecoration(FieldNotesColors colors) => BoxDecoration(
   color: Palette.coral,
   border: Border.fromBorderSide(
-    BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
+    BorderSide(color: colors.line, width: Shapes.outlineWidth),
   ),
   borderRadius: _pillRadius,
 );
@@ -89,10 +90,6 @@ const BoxDecoration _choosePillDecoration = BoxDecoration(
 const EdgeInsets _moodPillPadding = EdgeInsets.symmetric(
   vertical: 6,
   horizontal: 13,
-);
-
-final TextStyle _choosePillLabelStyle = TypographyTokens.caption11Sans.copyWith(
-  color: Palette.onAccent,
 );
 
 const double _promptBloomOpacity = 0.5;
@@ -133,7 +130,7 @@ class _MoodChangePill extends StatelessWidget {
                 child: Padding(
                   padding: _moodPillPadding,
                   child: ExcludeSemantics(
-                    child: Text(label, style: TypographyTokens.caption11Sans),
+                    child: Text(label, style: context.textStyles.caption11Sans),
                   ),
                 ),
               ),
@@ -170,10 +167,15 @@ class _MoodChoosePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: _choosePillDecoration,
+      decoration: _choosePillDecoration(context.colors),
       child: Padding(
         padding: _moodPillPadding,
-        child: Text(label, style: _choosePillLabelStyle),
+        child: Text(
+          label,
+          style: context.textStyles.caption11Sans.copyWith(
+            color: Palette.onAccent,
+          ),
+        ),
       ),
     );
   }
@@ -183,32 +185,33 @@ const double _dayMoodCardGap = 13;
 
 const double _dayMoodFlowerSize = 46;
 
-const List<BoxShadow> _dayMoodCardShadow = <BoxShadow>[
-  BoxShadow(color: Palette.ink20, offset: Offset(2, 2)),
+List<BoxShadow> _dayMoodCardShadow(FieldNotesColors colors) => <BoxShadow>[
+  BoxShadow(color: colors.shadowTint(0x33), offset: const Offset(2, 2)),
 ];
 
 const BorderRadius _changeMoodButtonRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusSm),
 );
 
-const BoxDecoration _changeMoodButtonDecoration = BoxDecoration(
-  color: Palette.cardLight,
-  border: Border.fromBorderSide(
-    BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
-  ),
-  borderRadius: _changeMoodButtonRadius,
-  boxShadow: <BoxShadow>[
-    BoxShadow(color: Palette.ink20, offset: Offset(1.5, 1.5)),
-  ],
-);
+BoxDecoration _changeMoodButtonDecoration(FieldNotesColors colors) =>
+    BoxDecoration(
+      color: colors.cardLight,
+      border: Border.fromBorderSide(
+        BorderSide(color: colors.line, width: Shapes.outlineWidth),
+      ),
+      borderRadius: _changeMoodButtonRadius,
+      boxShadow: <BoxShadow>[
+        BoxShadow(
+          color: colors.shadowTint(0x33),
+          offset: const Offset(1.5, 1.5),
+        ),
+      ],
+    );
 
 const EdgeInsets _changeMoodButtonPadding = EdgeInsets.symmetric(
   vertical: 8,
   horizontal: 14,
 );
-
-final TextStyle _changeMoodButtonLabelStyle = TypographyTokens.caption11Sans
-    .copyWith(fontSize: 12, color: Palette.ink);
 
 class DayMoodCard extends StatelessWidget {
   const DayMoodCard({
@@ -224,10 +227,12 @@ class DayMoodCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return StickerCard(
-      surface: Palette.cardWarm,
+      surface: colors.cardWarm,
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 13),
-      shadow: _dayMoodCardShadow,
+      shadow: _dayMoodCardShadow(colors),
       child: Row(
         children: <Widget>[
           ExcludeSemantics(
@@ -239,13 +244,10 @@ class DayMoodCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  'Felt ${mood.label}',
-                  style: TypographyTokens.sectionSerif,
-                ),
+                Text('Felt ${mood.label}', style: textStyles.sectionSerif),
                 Text(
                   "${mood.flower.label} · the day's bloom",
-                  style: TypographyTokens.caption10Sans,
+                  style: textStyles.caption10Sans,
                 ),
               ],
             ),
@@ -266,6 +268,7 @@ class _ChangeMoodButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final bool isEnabled = onTap != null;
     return Semantics(
       button: isEnabled,
@@ -282,11 +285,17 @@ class _ChangeMoodButton extends StatelessWidget {
               onPressed: onTap,
               borderRadius: _changeMoodButtonRadius,
               child: DecoratedBox(
-                decoration: _changeMoodButtonDecoration,
+                decoration: _changeMoodButtonDecoration(colors),
                 child: Padding(
                   padding: _changeMoodButtonPadding,
                   child: ExcludeSemantics(
-                    child: Text(label, style: _changeMoodButtonLabelStyle),
+                    child: Text(
+                      label,
+                      style: context.textStyles.caption11Sans.copyWith(
+                        fontSize: 12,
+                        color: colors.ink,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -314,6 +323,8 @@ class _MoodPrompt extends StatelessWidget {
     final String hint = isToday
         ? "tap to plant today's bloom"
         : "tap to plant this day's bloom";
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Semantics(
       button: onTap != null,
       label: '$text\n$hint',
@@ -327,7 +338,11 @@ class _MoodPrompt extends StatelessWidget {
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
             child: CustomPaint(
-              painter: const MoodPromptBorderPainter(),
+              painter: MoodPromptBorderPainter(
+                color: colors.line,
+                fill: colors.cardWarm,
+                shadows: context.shadows.heroSoft,
+              ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 18,
@@ -348,8 +363,8 @@ class _MoodPrompt extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text(text, style: TypographyTokens.bannerSerif),
-                          Text(hint, style: TypographyTokens.promptAccent),
+                          Text(text, style: textStyles.bannerSerif),
+                          Text(hint, style: textStyles.promptAccent),
                         ],
                       ),
                     ),

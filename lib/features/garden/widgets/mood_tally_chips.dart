@@ -60,17 +60,19 @@ class _TallyChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? merged = mergedText;
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Semantics(
       container: true,
       label: merged ?? '$count $label',
       child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Palette.cardBright,
+        decoration: BoxDecoration(
+          color: colors.cardBright,
           borderRadius: Shapes.buttonBorderRadius,
           border: Border.fromBorderSide(
-            BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
+            BorderSide(color: colors.line, width: Shapes.outlineWidth),
           ),
-          boxShadow: Shadows.button,
+          boxShadow: context.shadows.button,
         ),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -81,11 +83,11 @@ class _TallyChip extends StatelessWidget {
                 icon,
                 const SizedBox(width: 6),
                 if (merged != null)
-                  Text(merged, style: TypographyTokens.labelSans)
+                  Text(merged, style: textStyles.labelSans)
                 else ...<Widget>[
-                  Text('$count', style: TypographyTokens.labelSans),
+                  Text('$count', style: textStyles.labelSans),
                   const SizedBox(width: 4),
-                  Text(label, style: TypographyTokens.captionSans),
+                  Text(label, style: textStyles.captionSans),
                 ],
               ],
             ),

@@ -53,11 +53,11 @@ const BorderRadius _toggleRadius = BorderRadius.all(
   Radius.circular(_toggleSize / 2),
 );
 
-Color _entryWaveTint(double height) {
+Color _entryWaveTint(double height, FieldNotesColors colors) {
   if (height > _waveCoralThreshold) {
     return Palette.coral;
   }
-  return height > _waveMidThreshold ? Palette.waveMid : Palette.waveLight;
+  return height > _waveMidThreshold ? colors.waveMid : colors.waveLight;
 }
 
 class VoiceBody extends StatefulWidget {
@@ -250,6 +250,7 @@ class _VoiceBodyState extends State<VoiceBody> {
         ),
       );
     }
+    final FieldNotesColors colors = context.colors;
     return Row(
       children: <Widget>[
         _PlayToggle(isPlaying: _isPlaying, onTap: _ready ? _toggle : null),
@@ -267,7 +268,7 @@ class _VoiceBodyState extends State<VoiceBody> {
                   animate: _isPlaying,
                   heights: _entryWaveHeights,
                   perBarDurations: _isPlaying ? _entryWaveDurations : null,
-                  colorFor: _entryWaveTint,
+                  colorFor: (double height) => _entryWaveTint(height, colors),
                   barWidth: _waveBarWidth,
                   spacing: _waveSpacing,
                   maxHeight: _waveHeight,
@@ -281,7 +282,7 @@ class _VoiceBodyState extends State<VoiceBody> {
         Text(
           '${formatMediaDuration(_position.inMilliseconds)}'
           ' / ${formatMediaDuration(widget.entry.durationMs)}',
-          style: TypographyTokens.caption11Sans.copyWith(color: Palette.muted),
+          style: context.textStyles.caption11Sans.copyWith(color: colors.muted),
         ),
       ],
     );
@@ -318,17 +319,20 @@ class _PlayToggle extends StatelessWidget {
                 child: Container(
                   width: _toggleSize,
                   height: _toggleSize,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: Palette.coral,
                     shape: BoxShape.circle,
-                    border: Shapes.outline,
+                    border: context.shadows.outline,
                   ),
                   child: Center(
                     child: Padding(
                       padding: const EdgeInsets.only(left: _toggleGlyphOffset),
                       child: CustomPaint(
                         size: const Size(_toggleGlyphSize, _toggleGlyphSize),
-                        painter: _TransportGlyph(isPlaying: isPlaying),
+                        painter: _TransportGlyph(
+                          isPlaying: isPlaying,
+                          color: FieldNotesColors.light.cardBright,
+                        ),
                       ),
                     ),
                   ),
@@ -343,13 +347,14 @@ class _PlayToggle extends StatelessWidget {
 }
 
 class _TransportGlyph extends CustomPainter {
-  const _TransportGlyph({required this.isPlaying});
+  const _TransportGlyph({required this.isPlaying, required this.color});
 
   final bool isPlaying;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint fill = Paint()..color = Palette.cardBright;
+    final Paint fill = Paint()..color = color;
     if (isPlaying) {
       final double barWidth = size.width * 0.3;
       canvas.drawRect(Rect.fromLTWH(0, 0, barWidth, size.height), fill);
@@ -369,5 +374,5 @@ class _TransportGlyph extends CustomPainter {
 
   @override
   bool shouldRepaint(_TransportGlyph oldDelegate) =>
-      isPlaying != oldDelegate.isPlaying;
+      isPlaying != oldDelegate.isPlaying || color != oldDelegate.color;
 }

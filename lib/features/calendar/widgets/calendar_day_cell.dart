@@ -139,6 +139,7 @@ class _InMonthFace extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final Mood? mood = day?.mood;
     final BorderRadius radius = BorderRadius.circular(metrics.radius);
     final Widget content = Stack(
@@ -150,7 +151,7 @@ class _InMonthFace extends StatelessWidget {
           const _ActivityDot(key: calendarActivityDotKey),
         _DayNumber(
           dayOfMonth: dayOfMonth,
-          color: isToday ? Palette.coral : Palette.mutedDeep,
+          color: isToday ? colors.accentInk : colors.mutedDeep,
           metrics: metrics,
         ),
       ],
@@ -158,7 +159,7 @@ class _InMonthFace extends StatelessWidget {
     if (isToday) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: Palette.cardLight,
+          color: colors.cardLight,
           border: Border.all(color: Palette.coral, width: Shapes.outlineWidth),
           borderRadius: radius,
           boxShadow: <BoxShadow>[
@@ -174,11 +175,14 @@ class _InMonthFace extends StatelessWidget {
     if (day != null) {
       return DecoratedBox(
         decoration: BoxDecoration(
-          color: Palette.cardWarm,
-          border: Border.all(color: Palette.ink25, width: Shapes.outlineWidth),
+          color: colors.cardWarm,
+          border: Border.all(color: colors.ink25, width: Shapes.outlineWidth),
           borderRadius: radius,
-          boxShadow: const <BoxShadow>[
-            BoxShadow(color: Palette.ink12, offset: Offset(1.5, 1.5)),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: colors.shadowTint(0x1F),
+              offset: const Offset(1.5, 1.5),
+            ),
           ],
         ),
         child: content,
@@ -186,7 +190,7 @@ class _InMonthFace extends StatelessWidget {
     }
     return CustomPaint(
       foregroundPainter: DashedBorderPainter(
-        color: Palette.ink16,
+        color: colors.ink16,
         radius: metrics.radius,
       ),
       child: content,
@@ -207,7 +211,7 @@ class _NumberOnly extends StatelessWidget {
       children: <Widget>[
         _DayNumber(
           dayOfMonth: dayOfMonth,
-          color: Palette.mutedDeep,
+          color: context.colors.mutedDeep,
           metrics: metrics,
         ),
       ],
@@ -233,7 +237,7 @@ class _DayNumber extends StatelessWidget {
       left: metrics.numberLeft,
       child: Text(
         '$dayOfMonth',
-        style: TypographyTokens.captureLabelSans.copyWith(
+        style: context.textStyles.captureLabelSans.copyWith(
           fontSize: metrics.numberSize,
           height: 1,
           color: color,
@@ -248,13 +252,13 @@ class _ActivityDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: SizedBox(
         width: 8,
         height: 8,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Palette.sage,
+            color: context.colors.sage,
             shape: BoxShape.circle,
           ),
         ),

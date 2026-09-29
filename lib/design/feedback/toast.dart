@@ -27,23 +27,27 @@ typedef _DarkMetrics = ({
   double bottomInset,
 });
 
-const _DarkMetrics _phoneMetrics = (
+const FieldNotesTextStyles _pillTextStyles = FieldNotesTextStyles(
+  FieldNotesColors.light,
+);
+
+final _DarkMetrics _phoneMetrics = (
   padHorizontal: 16,
   padVertical: 8,
   radius: Shapes.radiusXl,
   gap: 7,
   iconSize: 13,
-  style: TypographyTokens.caption11Sans,
+  style: _pillTextStyles.caption11Sans,
   bottomInset: 84,
 );
 
-const _DarkMetrics _desktopMetrics = (
+final _DarkMetrics _desktopMetrics = (
   padHorizontal: 20,
   padVertical: 10,
   radius: 22,
   gap: 8,
   iconSize: 15,
-  style: TypographyTokens.toastSans,
+  style: _pillTextStyles.toastSans,
   bottomInset: 22,
 );
 
@@ -91,7 +95,7 @@ class Toast extends StatelessWidget {
     super.key,
     required this.message,
     this.icon,
-    this.surface = Palette.cardBright,
+    this.surface,
     this.variant = ToastVariant.light,
     this.scale = ToastScale.phone,
     this.action,
@@ -99,7 +103,7 @@ class Toast extends StatelessWidget {
 
   final String message;
   final Widget? icon;
-  final Color surface;
+  final Color? surface;
   final ToastVariant variant;
   final ToastScale scale;
   final ToastAction? action;
@@ -107,18 +111,18 @@ class Toast extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (variant == ToastVariant.dark) {
-      return _dark();
+      return _dark(context);
     }
     final ToastAction? action = this.action;
     return StickerCard(
-      surface: surface,
+      surface: surface ?? context.colors.cardBright,
       padding: action == null ? _lightPadding : _lightPaddingWithAction,
       borderRadius: Shapes.buttonBorderRadius,
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (icon != null) ...<Widget>[icon!, const SizedBox(width: 8)],
-          Flexible(child: Text(message, style: TypographyTokens.bodySans)),
+          Flexible(child: Text(message, style: context.textStyles.bodySans)),
           if (action != null) ...<Widget>[
             const SizedBox(width: _actionGap),
             _ToastActionButton(action: action),
@@ -128,13 +132,13 @@ class Toast extends StatelessWidget {
     );
   }
 
-  Widget _dark() {
+  Widget _dark(BuildContext context) {
     final Widget? icon = this.icon;
     final ToastAction? action = this.action;
     final _DarkMetrics metrics = _metricsFor(scale);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Palette.ink,
+        color: context.colors.pill,
         borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
         boxShadow: Shadows.toastLift,
       ),
@@ -164,7 +168,7 @@ class Toast extends StatelessWidget {
               const SizedBox(width: _actionGap),
               _ToastActionButton(
                 action: action,
-                color: Palette.waveLight,
+                color: FieldNotesColors.light.waveLight,
                 focusSurface: FocusRingSurface.dark,
               ),
             ],
@@ -178,12 +182,12 @@ class Toast extends StatelessWidget {
 class _ToastActionButton extends StatelessWidget {
   const _ToastActionButton({
     required this.action,
-    this.color = Palette.coralLink,
+    this.color,
     this.focusSurface = FocusRingSurface.light,
   });
 
   final ToastAction action;
-  final Color color;
+  final Color? color;
   final FocusRingSurface focusSurface;
 
   @override
@@ -212,8 +216,8 @@ class _ToastActionButton extends StatelessWidget {
                 child: ExcludeSemantics(
                   child: Text(
                     action.label,
-                    style: TypographyTokens.bodySans.copyWith(
-                      color: color,
+                    style: context.textStyles.bodySans.copyWith(
+                      color: color ?? context.colors.coralLink,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

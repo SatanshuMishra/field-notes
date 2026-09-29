@@ -85,12 +85,14 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final Color borderColor = _focused ? Palette.coral : Palette.ink;
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    final Color borderColor = _focused ? Palette.coral : colors.line;
     return Opacity(
       opacity: widget.enabled ? 1.0 : 0.5,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Palette.cardBright,
+          color: colors.cardBright,
           border: Border.all(color: borderColor, width: Shapes.outlineWidth),
           borderRadius: Shapes.buttonBorderRadius,
         ),
@@ -121,8 +123,8 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
                               }
                               return Text(
                                 widget.hintText!,
-                                style: TypographyTokens.bodySans
-                                    .copyWith(color: Palette.placeholder),
+                                style: textStyles.bodySans
+                                    .copyWith(color: colors.placeholder),
                               );
                             },
                           ),
@@ -135,9 +137,9 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
                       readOnly: !widget.enabled,
                       obscureText: widget.obscureText,
                       keyboardType: widget.keyboardType ?? TextInputType.text,
-                      style: TypographyTokens.bodySans,
-                      cursorColor: Palette.coral,
-                      backgroundCursorColor: Palette.muted,
+                      style: textStyles.bodySans,
+                      cursorColor: colors.accentInk,
+                      backgroundCursorColor: colors.muted,
                       onChanged: widget.onChanged,
                     ),
                   ],

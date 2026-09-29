@@ -103,8 +103,8 @@ class PhotoFigure extends StatelessWidget {
     final Widget figure = Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        if (unavailable) _placeholder(width) else _frame(width),
-        if (line.caption.isNotEmpty) _caption(width),
+        if (unavailable) _placeholder(width) else _frame(context, width),
+        if (line.caption.isNotEmpty) _caption(context, width),
       ],
     );
     final String label = photoFigureSemanticsLabelFor(line.caption);
@@ -154,7 +154,7 @@ class PhotoFigure extends StatelessWidget {
     );
   }
 
-  Widget _frame(double width) {
+  Widget _frame(BuildContext context, double width) {
     final double height = rect.imageRect.height;
     final double radians =
         photoFigureTiltDegrees(line.reference) * math.pi / 180;
@@ -172,8 +172,8 @@ class PhotoFigure extends StatelessWidget {
               child: Transform.scale(
                 scale: scale,
                 child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    boxShadow: Shadows.cardDefault,
+                  decoration: BoxDecoration(
+                    boxShadow: context.shadows.cardDefault,
                   ),
                   child: SizedBox.expand(child: _content()),
                 ),
@@ -215,10 +215,11 @@ class PhotoFigure extends StatelessWidget {
     );
   }
 
-  Widget _caption(double width) {
+  Widget _caption(BuildContext context, double width) {
+    final TextStyle style = context.textStyles.captionSans;
     final Widget text = Text(
       line.caption,
-      style: TypographyTokens.captionSans,
+      style: style,
       textAlign: TextAlign.center,
     );
     return Padding(
@@ -227,7 +228,7 @@ class PhotoFigure extends StatelessWidget {
         key: photoFigureCaptionKey,
         width: width,
         child: DefaultTextStyle(
-          style: TypographyTokens.captionSans,
+          style: style,
           child: captionHidden
               ? Visibility(
                   visible: false,

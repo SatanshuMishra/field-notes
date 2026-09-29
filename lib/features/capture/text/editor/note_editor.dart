@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/services/capture_service.dart'
     show CaptureMedia;
 import 'package:field_notes/features/note_engine/note_engine.dart'
@@ -15,10 +14,10 @@ class NoteEditorConfig {
     required this.focusNode,
     required this.undoController,
     required this.scrollController,
-    this.style = TypographyTokens.noteBody,
+    this.style,
     this.hintText = '',
-    this.hintStyle = TypographyTokens.noteBodyPlaceholder,
-    this.cursorColor = Palette.coral,
+    this.hintStyle,
+    this.cursorColor,
     this.photoImporter,
     this.bottomInset = 0,
     this.spellCheckEnabled = false,
@@ -29,10 +28,10 @@ class NoteEditorConfig {
   final FocusNode focusNode;
   final UndoHistoryController undoController;
   final ScrollController scrollController;
-  final TextStyle style;
+  final TextStyle? style;
   final String hintText;
-  final TextStyle hintStyle;
-  final Color cursorColor;
+  final TextStyle? hintStyle;
+  final Color? cursorColor;
   final Future<List<String>> Function()? photoImporter;
   final double bottomInset;
   final bool spellCheckEnabled;

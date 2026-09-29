@@ -88,14 +88,14 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
                           value: option.value,
                           child: Text(
                             option.label,
-                            style: TypographyTokens.bodySans,
+                            style: context.textStyles.bodySans,
                           ),
                         ),
                     ],
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: widget.surface ?? Palette.cardBright,
-                        border: widget.border ?? Shapes.outline,
+                        color: widget.surface ?? context.colors.cardBright,
+                        border: widget.border ?? context.shadows.outline,
                         borderRadius: Shapes.buttonBorderRadius,
                       ),
                       child: Padding(
@@ -110,7 +110,7 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
                               child: Text(
                                 current.label,
                                 overflow: TextOverflow.ellipsis,
-                                style: TypographyTokens.bodySans
+                                style: context.textStyles.bodySans
                                     .copyWith(color: widget.foreground),
                               ),
                             ),
@@ -118,7 +118,7 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
                             Icon(
                               Icons.expand_more,
                               size: 18,
-                              color: widget.foreground ?? Palette.ink,
+                              color: widget.foreground ?? context.colors.ink,
                             ),
                           ],
                         ),

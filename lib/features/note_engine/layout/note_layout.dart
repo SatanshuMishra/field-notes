@@ -2,6 +2,7 @@ import 'dart:ui' show Locale, Offset, Rect, Size, TextAffinity, TextPosition;
 
 import 'package:field_notes/domain/notes/markdown/syntax_tree.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
+import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/projection/visible_text.dart';
 import 'package:flutter/painting.dart' show TextScaler;
 import 'package:flutter/rendering.dart' show TextSelectionPoint;
@@ -23,8 +24,10 @@ final class LayoutInputs {
     required this.readerMode,
     required Map<String, Size> mediaDimensions,
     Set<String> unavailableMedia = const <String>{},
+    NoteInks? inks,
   }) : mediaDimensions = Map<String, Size>.unmodifiable(mediaDimensions),
-       unavailableMedia = Set<String>.unmodifiable(unavailableMedia) {
+       unavailableMedia = Set<String>.unmodifiable(unavailableMedia),
+       inks = inks ?? NoteInks.light {
     if (tree.sourceLength != source.length) {
       throw ArgumentError.value(
         tree.sourceLength,
@@ -73,6 +76,7 @@ final class LayoutInputs {
   final bool readerMode;
   final Map<String, Size> mediaDimensions;
   final Set<String> unavailableMedia;
+  final NoteInks inks;
 
   @override
   bool operator ==(Object other) =>
@@ -87,6 +91,7 @@ final class LayoutInputs {
           readerMode == other.readerMode &&
           _mapEquals(mediaDimensions, other.mediaDimensions) &&
           _setEquals(unavailableMedia, other.unavailableMedia) &&
+          inks == other.inks &&
           tree == other.tree &&
           visibleText == other.visibleText;
 
@@ -106,6 +111,7 @@ final class LayoutInputs {
         Object.hash(entry.key, entry.value),
     ]),
     Object.hashAllUnordered(unavailableMedia),
+    inks,
   );
 
   @override
@@ -113,7 +119,7 @@ final class LayoutInputs {
       'LayoutInputs(${source.length} units, active: $activeLine, '
       'width: $columnWidth, $textScaler, bold: $boldText, $locale, '
       'reader: $readerMode, media: $mediaDimensions, '
-      'unavailable: $unavailableMedia)';
+      'unavailable: $unavailableMedia, $inks)';
 }
 
 final class LineBox {

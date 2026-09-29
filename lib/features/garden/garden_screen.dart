@@ -39,10 +39,10 @@ class _GardenLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Text(
         'Growing your garden…',
-        style: TypographyTokens.captionSans,
+        style: context.textStyles.captionSans,
       ),
     );
   }
@@ -53,12 +53,12 @@ class _GardenError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: EmptyStatePlaceholder(
           message: 'Your garden could not be loaded right now.',
-          messageStyle: TypographyTokens.bodySerif,
+          messageStyle: context.textStyles.bodySerif,
         ),
       ),
     );

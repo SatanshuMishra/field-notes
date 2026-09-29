@@ -9,27 +9,28 @@ class StickerCard extends StatelessWidget {
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
-    this.surface = Palette.cardWarm,
+    this.surface,
     this.borderRadius = Shapes.cardBorderRadius,
-    this.shadow = Shadows.card,
+    this.shadow,
     this.rotationDegrees = 0,
   });
 
   final Widget child;
   final EdgeInsetsGeometry padding;
-  final Color surface;
+  final Color? surface;
   final BorderRadius borderRadius;
-  final List<BoxShadow> shadow;
+  final List<BoxShadow>? shadow;
   final double rotationDegrees;
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesShadows shadows = context.shadows;
     final Widget sticker = DecoratedBox(
       decoration: BoxDecoration(
-        color: surface,
-        border: Shapes.outline,
+        color: surface ?? context.colors.cardWarm,
+        border: shadows.outline,
         borderRadius: borderRadius,
-        boxShadow: shadow,
+        boxShadow: shadow ?? shadows.card,
       ),
       child: Padding(
         padding: padding,

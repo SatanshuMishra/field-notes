@@ -19,18 +19,18 @@ const BorderRadius _optionRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
 );
 
-const TextStyle _titleStyle = TextStyle(
+TextStyle _titleStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 14,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _subtitleStyle = TextStyle(
+TextStyle _subtitleStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 11.5,
   fontWeight: FontWeight.w400,
-  color: Palette.muted,
+  color: colors.muted,
 );
 
 class SetupStorageStep extends StatelessWidget {
@@ -90,6 +90,7 @@ class _StorageOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final bool enabled = onPressed != null;
     return Semantics(
       checked: selected,
@@ -109,9 +110,9 @@ class _StorageOption extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: _optionHeight),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: selected ? Palette.cardLight : Palette.cardWarm,
+                  color: selected ? colors.cardLight : colors.cardWarm,
                   border: Border.all(
-                    color: selected ? Palette.coral : Palette.ink22,
+                    color: selected ? Palette.coral : colors.ink22,
                     width: _optionBorderWidth,
                   ),
                   borderRadius: _optionRadius,
@@ -130,8 +131,8 @@ class _StorageOption extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: selected
                                   ? Palette.coral
-                                  : Palette.cardBright,
-                              border: Shapes.outline,
+                                  : colors.cardBright,
+                              border: context.shadows.outline,
                               borderRadius: const BorderRadius.all(
                                 Radius.circular(Shapes.radiusCell),
                               ),
@@ -139,7 +140,7 @@ class _StorageOption extends StatelessWidget {
                             child: Icon(
                               icon,
                               size: _iconSize,
-                              color: selected ? Palette.onAccent : Palette.ink,
+                              color: selected ? Palette.onAccent : colors.ink,
                             ),
                           ),
                         ),
@@ -149,12 +150,14 @@ class _StorageOption extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
-                              Text(title, style: _titleStyle),
+                              Text(title, style: _titleStyle(colors)),
                               Text(
                                 subtitle,
                                 style: compact
-                                    ? _subtitleStyle.copyWith(fontSize: 11)
-                                    : _subtitleStyle,
+                                    ? _subtitleStyle(
+                                        colors,
+                                      ).copyWith(fontSize: 11)
+                                    : _subtitleStyle(colors),
                               ),
                             ],
                           ),

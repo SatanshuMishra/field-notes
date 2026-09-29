@@ -407,7 +407,7 @@ Future<FocusNode> _mountEditor(
     MaterialApp(
       debugShowCheckedModeBanner: false,
       home: ColoredBox(
-        color: Palette.composerPaper,
+        color: FieldNotesColors.light.composerPaper,
         child: Padding(
           padding: const EdgeInsets.all(_pageInset),
           child: SizedBox(
@@ -459,7 +459,7 @@ Future<BenchStageState> _mountStage(WidgetTester tester) async {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       home: ColoredBox(
-        color: Palette.page,
+        color: FieldNotesColors.light.page,
         child: BenchStage(key: benchStageKey),
       ),
     ),

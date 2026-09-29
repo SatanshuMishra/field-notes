@@ -274,7 +274,10 @@ void main() {
     expect(expected, isNotEmpty);
     final PaintPattern pattern = paints;
     for (final Rect rect in expected) {
-      pattern.rect(rect: rect, color: TypographyTokens.noteBody.color);
+      pattern.rect(
+        rect: rect,
+        color: FieldNotesTextStyles(FieldNotesColors.light).noteBody.color,
+      );
     }
     expect(view, pattern);
 

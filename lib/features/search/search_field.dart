@@ -35,11 +35,17 @@ class _SearchFieldState extends ConsumerState<SearchField> {
   @override
   Widget build(BuildContext context) {
     final String query = ref.watch(searchQueryProvider);
+    final FieldNotesColors colors = context.colors;
+    final TextStyle bodySans = context.textStyles.bodySans;
+    final OutlineInputBorder border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(Shapes.radiusSm),
+      borderSide: BorderSide(color: colors.line, width: Shapes.outlineWidth),
+    );
     return Semantics(
       label: _name,
       child: TextField(
         controller: _controller,
-        style: TypographyTokens.bodySans,
+        style: bodySans,
         onChanged: (String value) =>
             ref.read(searchQueryProvider.notifier).update(value),
         decoration: InputDecoration(
@@ -47,41 +53,29 @@ class _SearchFieldState extends ConsumerState<SearchField> {
             child: Text(
               _name,
               style: Theme.of(context).textTheme.bodyLarge!
-                  .merge(TypographyTokens.bodySans)
-                  .merge(_hintStyle),
+                  .merge(bodySans)
+                  .merge(bodySans.copyWith(color: colors.placeholder)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          prefixIcon: const Icon(Icons.search, color: Palette.mutedDeep),
+          prefixIcon: Icon(Icons.search, color: colors.mutedDeep),
           suffixIcon: query.isEmpty ? null : _ClearButton(onPressed: _clear),
           filled: true,
-          fillColor: Palette.cardBright,
+          fillColor: colors.cardBright,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 12,
           ),
-          border: _border,
-          enabledBorder: _border,
-          focusedBorder: _border,
+          border: border,
+          enabledBorder: border,
+          focusedBorder: border,
         ),
       ),
     );
   }
 
   static const String _name = 'Search your days';
-
-  static final TextStyle _hintStyle = TypographyTokens.bodySans.copyWith(
-    color: Palette.placeholder,
-  );
-
-  static final OutlineInputBorder _border = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(Shapes.radiusSm),
-    borderSide: const BorderSide(
-      color: Palette.ink,
-      width: Shapes.outlineWidth,
-    ),
-  );
 }
 
 const String _clearName = 'Clear search';
@@ -117,10 +111,10 @@ class _ClearButton extends StatelessWidget {
                 child: FocusRing(
                   onPressed: onPressed,
                   borderRadius: _clearRadius,
-                  child: const SizedBox.square(
+                  child: SizedBox.square(
                     dimension: _clearFaceExtent,
                     child: ExcludeSemantics(
-                      child: Icon(Icons.close, color: Palette.mutedDeep),
+                      child: Icon(Icons.close, color: context.colors.mutedDeep),
                     ),
                   ),
                 ),

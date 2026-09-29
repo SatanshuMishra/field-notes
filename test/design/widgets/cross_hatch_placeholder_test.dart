@@ -118,20 +118,20 @@ void main() {
       }
 
       final CrossHatchPainter fallback = await painterFor(null);
-      expect(fallback.ground, Palette.hatchMid);
-      expect(fallback.band, Palette.hatchLight);
+      expect(fallback.ground, FieldNotesColors.light.hatchMid);
+      expect(fallback.band, FieldNotesColors.light.hatchLight);
       expect(fallback.bandWidth, 6);
       expect(fallback.bandPitch, 12);
 
       final CrossHatchPainter photo =
           await painterFor(CrossHatchVariant.photo);
-      expect(photo.ground, Palette.hatchMid);
-      expect(photo.band, Palette.hatchLight);
+      expect(photo.ground, FieldNotesColors.light.hatchMid);
+      expect(photo.band, FieldNotesColors.light.hatchLight);
 
       final CrossHatchPainter video =
           await painterFor(CrossHatchVariant.video);
-      expect(video.ground, Palette.hatchDark);
-      expect(video.band, Palette.hatchMid);
+      expect(video.ground, FieldNotesColors.light.hatchDark);
+      expect(video.band, FieldNotesColors.light.hatchMid);
       expect(video.bandWidth, 6);
       expect(video.bandPitch, 12);
       expect(
@@ -151,21 +151,21 @@ void main() {
         'viewport variant', (WidgetTester tester) async {
       expect(
         await _edgeColours(tester, const CrossHatchPlaceholder()),
-        everyElement(Palette.ink),
+        everyElement(FieldNotesColors.light.line),
       );
       expect(
         await _edgeColours(
           tester,
           const CrossHatchPlaceholder(variant: CrossHatchVariant.video),
         ),
-        everyElement(Palette.ink),
+        everyElement(FieldNotesColors.light.line),
       );
       expect(
         await _edgeColours(
           tester,
           const CrossHatchPlaceholder(variant: CrossHatchVariant.viewport),
         ),
-        everyElement(isNot(Palette.ink)),
+        everyElement(isNot(FieldNotesColors.light.line)),
       );
     });
 
@@ -173,11 +173,11 @@ void main() {
         'painting it at full strength', (WidgetTester tester) async {
       await tester.pumpWidget(
         stickerHarness(
-          const SizedBox(
+          SizedBox(
             width: 120,
             height: 90,
             child: CrossHatchPlaceholder(
-              background: Palette.dangerSurface,
+              background: FieldNotesColors.light.dangerSurface,
               hatchColor: Palette.danger,
             ),
           ),
@@ -185,41 +185,41 @@ void main() {
       );
 
       final CrossHatchPainter painter = _painterOf(tester);
-      expect(painter.ground, Palette.dangerSurface);
+      expect(painter.ground, FieldNotesColors.light.dangerSurface);
       expect(painter.band, isNot(Palette.danger));
-      expect(painter.band, isNot(Palette.dangerSurface));
+      expect(painter.band, isNot(FieldNotesColors.light.dangerSurface));
       expect(
         painter.band.computeLuminance(),
         greaterThan(Palette.danger.computeLuminance()),
       );
       expect(
         painter.band.computeLuminance(),
-        lessThan(Palette.dangerSurface.computeLuminance()),
+        lessThan(FieldNotesColors.light.dangerSurface.computeLuminance()),
       );
     });
 
     test('CrossHatchPainter repaints only when a band input changes', () {
-      const CrossHatchPainter base = CrossHatchPainter(
-        ground: Palette.hatchMid,
-        band: Palette.hatchLight,
+      final CrossHatchPainter base = CrossHatchPainter(
+        ground: FieldNotesColors.light.hatchMid,
+        band: FieldNotesColors.light.hatchLight,
         bandWidth: 6,
         bandPitch: 12,
       );
-      const CrossHatchPainter recoloured = CrossHatchPainter(
-        ground: Palette.hatchDark,
-        band: Palette.hatchMid,
+      final CrossHatchPainter recoloured = CrossHatchPainter(
+        ground: FieldNotesColors.light.hatchDark,
+        band: FieldNotesColors.light.hatchMid,
         bandWidth: 6,
         bandPitch: 12,
       );
-      const CrossHatchPainter respaced = CrossHatchPainter(
-        ground: Palette.hatchMid,
-        band: Palette.hatchLight,
+      final CrossHatchPainter respaced = CrossHatchPainter(
+        ground: FieldNotesColors.light.hatchMid,
+        band: FieldNotesColors.light.hatchLight,
         bandWidth: 8,
         bandPitch: 16,
       );
-      const CrossHatchPainter identical = CrossHatchPainter(
-        ground: Palette.hatchMid,
-        band: Palette.hatchLight,
+      final CrossHatchPainter identical = CrossHatchPainter(
+        ground: FieldNotesColors.light.hatchMid,
+        band: FieldNotesColors.light.hatchLight,
         bandWidth: 6,
         bandPitch: 12,
       );

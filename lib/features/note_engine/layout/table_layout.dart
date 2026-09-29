@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/layout/block_layout.dart';
 import 'package:field_notes/features/note_engine/layout/line_fragments.dart';
+import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart';
 import 'package:field_notes/features/note_engine/projection/visible_text.dart';
@@ -134,7 +135,7 @@ TableColumnPlan tableColumnsOf(
         final ui.Paragraph paragraph = buildVisibleParagraph(
           inputs,
           _cellVisibleRange(inputs.visibleText.map, cells[column]),
-          base: _baseOf(entry.$1),
+          base: _baseOf(entry.$1, inputs.inks),
           width: double.infinity,
         );
         final double natural = paragraph.maxIntrinsicWidth.ceilToDouble();
@@ -183,7 +184,7 @@ LaidOutRow layoutTableRow(
             inputs,
             rows[r].blocks[column],
             column: column,
-            base: _baseOf(r),
+            base: _baseOf(r, inputs.inks),
             width: plan.widths[column] - 2 * padX,
           ),
       ],
@@ -348,9 +349,12 @@ TextRange _cellVisibleRange(OffsetMap map, MdBlock cell) => TextRange(
   end: map.sourceToVisible(cell.contentRange.end),
 );
 
-TextStyle _baseOf(int rowIndex) => rowIndex == 0
-    ? NoteTypography.body.copyWith(fontWeight: NoteTypography.tableHeaderWeight)
-    : NoteTypography.body;
+TextStyle _baseOf(int rowIndex, NoteInks inks) => rowIndex == 0
+    ? NoteTypography.body.copyWith(
+        color: inks.body,
+        fontWeight: NoteTypography.tableHeaderWeight,
+      )
+    : NoteTypography.body.copyWith(color: inks.body);
 
 TextAlign _alignOf(MdBlock cell) {
   final MdBlockData? data = cell.data;

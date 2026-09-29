@@ -20,14 +20,16 @@ class NoteBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return NoteColumn(child: _body());
+    return NoteColumn(child: _body(context));
   }
 
-  Widget _body() {
+  Widget _body(BuildContext context) {
     if (text.trim().isEmpty) {
       return Text(
         'Empty note',
-        style: TypographyTokens.noteBodyItalic.copyWith(color: Palette.muted),
+        style: context.textStyles.noteBodyItalic.copyWith(
+          color: context.colors.muted,
+        ),
       );
     }
     return NoteReaderView(

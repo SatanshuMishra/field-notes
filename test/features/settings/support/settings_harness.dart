@@ -17,16 +17,13 @@ Widget settingsFeatureHarness(
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: Palette.page,
+        backgroundColor: FieldNotesColors.light.page,
         body: scrollable
             ? SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: child,
               )
-            : Padding(
-                padding: const EdgeInsets.all(16),
-                child: child,
-              ),
+            : Padding(padding: const EdgeInsets.all(16), child: child),
       ),
     ),
   );

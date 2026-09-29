@@ -67,34 +67,37 @@ class CaptureChooserSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return layout == ShellLayout.bottomBar ? _buildSheet() : _buildPanel();
+    return layout == ShellLayout.bottomBar
+        ? _buildSheet(context)
+        : _buildPanel(context);
   }
 
-  Widget _buildPanel() {
+  Widget _buildPanel(BuildContext context) {
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: StickerCard(
-          surface: Palette.cardBright,
+          surface: context.colors.cardBright,
           padding: const EdgeInsets.all(_panelPadding),
-          child: _buildBody(),
+          child: _buildBody(context),
         ),
       ),
     );
   }
 
-  Widget _buildSheet() {
+  Widget _buildSheet(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return Align(
       alignment: Alignment.bottomCenter,
       child: SizedBox(
         width: double.infinity,
         child: DecoratedBox(
-          decoration: const BoxDecoration(
-            color: Palette.panelTop,
+          decoration: BoxDecoration(
+            color: colors.panelTop,
             border: Border(
-              top: BorderSide(color: Palette.ink, width: _panelBorderWidth),
+              top: BorderSide(color: colors.line, width: _panelBorderWidth),
             ),
-            borderRadius: BorderRadius.vertical(
+            borderRadius: const BorderRadius.vertical(
               top: Radius.circular(Shapes.radiusSheet),
             ),
             boxShadow: Shadows.chooserSheetLift,
@@ -109,20 +112,20 @@ class CaptureChooserSheet extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const SizedBox(
+                SizedBox(
                   width: _grabHandleWidth,
                   height: _grabHandleHeight,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Palette.ink30,
-                      borderRadius: BorderRadius.all(
+                      color: colors.ink30,
+                      borderRadius: const BorderRadius.all(
                         Radius.circular(_grabHandleRadius),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: _grabHandleGap),
-                _buildBody(),
+                _buildBody(context),
               ],
             ),
           ),
@@ -131,22 +134,21 @@ class CaptureChooserSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Text(
           title,
-          style: TypographyTokens.sectionSerif,
+          style: textStyles.sectionSerif,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: _subtitleGap),
         Text(
           captureChooserSubtitle,
-          style: TypographyTokens.subtitleAccent.copyWith(
-            fontSize: _subtitleSize,
-          ),
+          style: textStyles.subtitleAccent.copyWith(fontSize: _subtitleSize),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: _rowsGap),
@@ -191,7 +193,9 @@ class _CaptureOptionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color foreground = _isPrimary ? Palette.onAccent : Palette.ink;
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    final Color foreground = _isPrimary ? Palette.onAccent : colors.ink;
     final VoidCallback? select = isAvailable
         ? () => onSelected(option.type)
         : null;
@@ -205,10 +209,10 @@ class _CaptureOptionRow extends StatelessWidget {
         borderRadius: _rowRadius,
         child: Container(
           decoration: BoxDecoration(
-            color: _isPrimary ? Palette.coral : Palette.cardWarm,
-            border: Border.all(color: Palette.ink, width: _rowBorderWidth),
+            color: _isPrimary ? Palette.coral : colors.cardWarm,
+            border: Border.all(color: colors.line, width: _rowBorderWidth),
             borderRadius: _rowRadius,
-            boxShadow: _isPrimary ? Shadows.emphasis : null,
+            boxShadow: _isPrimary ? context.shadows.emphasis : null,
           ),
           padding: const EdgeInsets.symmetric(
             vertical: _rowPaddingVertical,
@@ -229,7 +233,7 @@ class _CaptureOptionRow extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       option.label,
-                      style: TypographyTokens.labelSans.copyWith(
+                      style: textStyles.labelSans.copyWith(
                         fontWeight: FontWeight.w600,
                         color: foreground,
                       ),
@@ -237,12 +241,12 @@ class _CaptureOptionRow extends StatelessWidget {
                     Text(
                       isAvailable ? option.description : unavailableLabel,
                       style: _isPrimary
-                          ? TypographyTokens.caption10Sans.copyWith(
+                          ? textStyles.caption10Sans.copyWith(
                               color: Palette.onAccent.withValues(
                                 alpha: _rowPrimarySubtitleOpacity,
                               ),
                             )
-                          : TypographyTokens.caption10Sans,
+                          : textStyles.caption10Sans,
                     ),
                   ],
                 ),

@@ -7,14 +7,14 @@ class DashedDivider extends StatelessWidget {
     super.key,
     this.axis = Axis.horizontal,
     this.thickness = 1.5,
-    this.color = Palette.ink,
+    this.color,
     this.dashLength = Shapes.dashLength,
     this.dashGap = Shapes.dashGap,
   });
 
   final Axis axis;
   final double thickness;
-  final Color color;
+  final Color? color;
   final double dashLength;
   final double dashGap;
 
@@ -23,7 +23,7 @@ class DashedDivider extends StatelessWidget {
     final DashedLinePainter painter = DashedLinePainter(
       axis: axis,
       thickness: thickness,
-      color: color,
+      color: color ?? context.colors.line,
       dashLength: dashLength,
       dashGap: dashGap,
     );

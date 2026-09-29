@@ -16,11 +16,13 @@ class CalendarWeekdayBar extends StatelessWidget {
     fontSize: 10,
     fontWeight: FontWeight.w600,
     letterSpacing: 1,
-    color: Palette.muted,
   );
 
   @override
   Widget build(BuildContext context) {
+    final TextStyle labelStyle = _labelStyle.copyWith(
+      color: context.colors.muted,
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: calendarRowPadding),
       child: Row(
@@ -32,7 +34,7 @@ class CalendarWeekdayBar extends StatelessWidget {
                 child: Text(
                   labels[index],
                   semanticsLabel: names?[index],
-                  style: _labelStyle,
+                  style: labelStyle,
                 ),
               ),
             ),

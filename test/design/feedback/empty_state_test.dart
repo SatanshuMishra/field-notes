@@ -43,7 +43,7 @@ void main() {
       );
 
       final DashedBorderPainter painter = _painter(tester);
-      expect(painter.color, Palette.ink);
+      expect(painter.color, FieldNotesColors.light.line);
       expect(painter.dashLength, Shapes.dashLength);
       expect(painter.dashGap, Shapes.dashGap);
     });
@@ -63,11 +63,12 @@ void main() {
     });
 
     test('DashedBorderPainter repaints only when a paint input changes', () {
-      const DashedBorderPainter base = DashedBorderPainter(color: Palette.ink);
+      final DashedBorderPainter base =
+          DashedBorderPainter(color: FieldNotesColors.light.line);
       const DashedBorderPainter recoloured =
           DashedBorderPainter(color: Palette.coral);
-      const DashedBorderPainter identical =
-          DashedBorderPainter(color: Palette.ink);
+      final DashedBorderPainter identical =
+          DashedBorderPainter(color: FieldNotesColors.light.line);
 
       expect(base.shouldRepaint(recoloured), isTrue);
       expect(base.shouldRepaint(identical), isFalse);

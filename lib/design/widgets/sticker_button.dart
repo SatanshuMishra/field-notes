@@ -44,11 +44,16 @@ class StickerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _StickerButtonStyle style = _StickerButtonStyle.of(variant);
+    final FieldNotesShadows shadows = context.shadows;
+    final _StickerButtonStyle style = _StickerButtonStyle.of(
+      variant,
+      context.colors,
+      shadows,
+    );
     final Widget face = DecoratedBox(
       decoration: BoxDecoration(
         color: style.background,
-        border: Shapes.outline,
+        border: shadows.outline,
         borderRadius: style.borderRadius,
         boxShadow: style.shadow,
       ),
@@ -64,7 +69,7 @@ class StickerButton extends StatelessWidget {
             ExcludeSemantics(
               child: Text(
                 label,
-                style: (labelStyle ?? TypographyTokens.buttonSans)
+                style: (labelStyle ?? context.textStyles.buttonSans)
                     .copyWith(color: style.foreground),
               ),
             ),
@@ -121,31 +126,35 @@ class _StickerButtonStyle {
   final EdgeInsets padding;
   final List<BoxShadow>? shadow;
 
-  static _StickerButtonStyle of(StickerButtonVariant variant) {
+  static _StickerButtonStyle of(
+    StickerButtonVariant variant,
+    FieldNotesColors colors,
+    FieldNotesShadows shadows,
+  ) {
     switch (variant) {
       case StickerButtonVariant.primary:
-        return const _StickerButtonStyle(
+        return _StickerButtonStyle(
           background: Palette.coral,
           foreground: Palette.onAccent,
           borderRadius: _controlBorderRadius,
           padding: _capturePadding,
-          shadow: Shadows.emphasis,
+          shadow: shadows.emphasis,
         );
       case StickerButtonVariant.secondary:
-        return const _StickerButtonStyle(
-          background: Palette.cardWarm,
-          foreground: Palette.ink,
+        return _StickerButtonStyle(
+          background: colors.cardWarm,
+          foreground: colors.ink,
           borderRadius: _controlBorderRadius,
           padding: _capturePadding,
           shadow: null,
         );
       case StickerButtonVariant.danger:
-        return const _StickerButtonStyle(
+        return _StickerButtonStyle(
           background: Palette.danger,
           foreground: Palette.onAccent,
           borderRadius: Shapes.buttonBorderRadius,
           padding: _confirmPadding,
-          shadow: Shadows.control,
+          shadow: shadows.control,
         );
     }
   }

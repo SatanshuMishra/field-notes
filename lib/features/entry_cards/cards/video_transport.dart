@@ -5,9 +5,7 @@ import '../../../design/tokens/tokens.dart';
 
 const double _transportSize = 56;
 const double _transportGlyph = 18;
-const Border _transportFocusOutline = Border.fromBorderSide(
-  BorderSide(color: Palette.ink, width: 3),
-);
+const double _transportFocusWidth = 3;
 
 const String videoTransportBusyNotice = "Can't start this video right now";
 const String videoTransportBusyHint = 'Tap to try again';
@@ -46,6 +44,7 @@ class _VideoTransportState extends State<VideoTransport> {
   @override
   Widget build(BuildContext context) {
     final bool enabled = widget.onTap != null;
+    final FieldNotesColors colors = context.colors;
     return FocusableActionDetector(
       enabled: enabled,
       onShowFocusHighlight: _onFocusHighlight,
@@ -70,12 +69,22 @@ class _VideoTransportState extends State<VideoTransport> {
               decoration: BoxDecoration(
                 color: Palette.coral,
                 shape: BoxShape.circle,
-                border: _focused ? _transportFocusOutline : Shapes.outline,
+                border: _focused
+                    ? Border.fromBorderSide(
+                        BorderSide(
+                          color: colors.ink,
+                          width: _transportFocusWidth,
+                        ),
+                      )
+                    : context.shadows.outline,
               ),
               child: Center(
                 child: CustomPaint(
                   size: const Size(_transportGlyph, _transportGlyph),
-                  painter: _TransportGlyph(isPlaying: widget.isPlaying),
+                  painter: _TransportGlyph(
+                    isPlaying: widget.isPlaying,
+                    color: FieldNotesColors.light.cardBright,
+                  ),
                 ),
               ),
             ),
@@ -95,20 +104,20 @@ class VideoTransportBusyNotice extends StatelessWidget {
       container: true,
       liveRegion: true,
       label: videoTransportBusyNotice,
-      child: const DecoratedBox(
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Palette.cardWarm,
-          border: Shapes.outline,
+          color: context.colors.cardWarm,
+          border: context.shadows.outline,
           borderRadius: Shapes.buttonBorderRadius,
         ),
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: ExcludeSemantics(
             child: Text(
               videoTransportBusyNotice,
               textAlign: TextAlign.center,
               maxLines: 2,
-              style: TypographyTokens.captionSans,
+              style: context.textStyles.captionSans,
             ),
           ),
         ),
@@ -118,13 +127,14 @@ class VideoTransportBusyNotice extends StatelessWidget {
 }
 
 class _TransportGlyph extends CustomPainter {
-  const _TransportGlyph({required this.isPlaying});
+  const _TransportGlyph({required this.isPlaying, required this.color});
 
   final bool isPlaying;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint fill = Paint()..color = Palette.cardBright;
+    final Paint fill = Paint()..color = color;
     if (isPlaying) {
       final double barWidth = size.width * 0.3;
       canvas.drawRect(Rect.fromLTWH(0, 0, barWidth, size.height), fill);
@@ -144,5 +154,5 @@ class _TransportGlyph extends CustomPainter {
 
   @override
   bool shouldRepaint(_TransportGlyph oldDelegate) =>
-      isPlaying != oldDelegate.isPlaying;
+      isPlaying != oldDelegate.isPlaying || color != oldDelegate.color;
 }

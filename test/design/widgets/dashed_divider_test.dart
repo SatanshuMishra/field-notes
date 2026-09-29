@@ -34,17 +34,17 @@ void main() {
         ),
       );
       final DashedLinePainter painter = paint.painter! as DashedLinePainter;
-      expect(painter.color, Palette.ink);
+      expect(painter.color, FieldNotesColors.light.line);
       expect(painter.axis, Axis.horizontal);
       expect(painter.dashLength, Shapes.dashLength);
       expect(painter.dashGap, Shapes.dashGap);
     });
 
     test('DashedLinePainter repaints only when a paint input changes', () {
-      const DashedLinePainter base = DashedLinePainter(
+      final DashedLinePainter base = DashedLinePainter(
         axis: Axis.horizontal,
         thickness: 1.5,
-        color: Palette.ink,
+        color: FieldNotesColors.light.line,
         dashLength: 6,
         dashGap: 4,
       );
@@ -55,10 +55,10 @@ void main() {
         dashLength: 6,
         dashGap: 4,
       );
-      const DashedLinePainter identical = DashedLinePainter(
+      final DashedLinePainter identical = DashedLinePainter(
         axis: Axis.horizontal,
         thickness: 1.5,
-        color: Palette.ink,
+        color: FieldNotesColors.light.line,
         dashLength: 6,
         dashGap: 4,
       );

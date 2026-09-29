@@ -47,41 +47,41 @@ const double _backGlyphSize = 22;
 
 const WeekStart _skipWeekStart = WeekStart.monday;
 
-const TextStyle _titleStyle = TextStyle(
+TextStyle _titleStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.serif,
   fontSize: 28,
   fontWeight: FontWeight.w500,
   height: 1.1,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _subtitleStyle = TextStyle(
+TextStyle _subtitleStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12.5,
   fontWeight: FontWeight.w400,
   height: 1.45,
-  color: Palette.muted,
+  color: colors.muted,
 );
 
-const TextStyle _skipStyle = TextStyle(
+TextStyle _skipStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 11.5,
   fontWeight: FontWeight.w600,
-  color: Palette.mutedDeep,
+  color: colors.mutedDeep,
 );
 
-const TextStyle _hintStyle = TextStyle(
+TextStyle _hintStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 10.5,
   fontWeight: FontWeight.w500,
-  color: Palette.placeholder,
+  color: colors.placeholder,
 );
 
-const TextStyle _backStyle = TextStyle(
+TextStyle _backStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 13,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
 const TextStyle _sidebarPrimaryStyle = TextStyle(
@@ -91,11 +91,11 @@ const TextStyle _sidebarPrimaryStyle = TextStyle(
   color: Palette.onAccent,
 );
 
-const TextStyle _errorStyle = TextStyle(
+TextStyle _errorStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12.5,
   fontWeight: FontWeight.w600,
-  color: Palette.danger,
+  color: colors.dangerInk,
 );
 
 enum _SetupStep {
@@ -395,7 +395,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
           padding: const EdgeInsets.fromLTRB(24, 6, 14, 6),
           child: _header(),
         ),
-        const DashedDivider(color: Palette.ink20),
+        DashedDivider(color: context.colors.ink20),
         Flexible(
           child: SingleChildScrollView(
             key: ValueKey<_SetupStep>(_step),
@@ -433,6 +433,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   }
 
   Widget _header() {
+    final TextStyle skipStyle = _skipStyle(context.colors);
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: _minTapTarget),
       child: Row(
@@ -444,7 +445,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
               key: setupSkipKey,
               label: _sidebar ? _sidebarSkipLabel : _bottomBarSkipLabel,
               onPressed: _busy ? null : _skip,
-              style: _sidebar ? _skipStyle : _skipStyle.copyWith(fontSize: 12),
+              style: _sidebar ? skipStyle : skipStyle.copyWith(fontSize: 12),
             ),
           ],
         ],
@@ -453,6 +454,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   }
 
   Widget _progress() {
+    final FieldNotesColors colors = context.colors;
     final bool complete = _step == _SetupStep.summary;
     final int current = _step.index;
     return Semantics(
@@ -471,7 +473,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
                         ? _progressDone
                         : index == current
                         ? Palette.coral
-                        : Palette.ink18,
+                        : colors.ink18,
                     borderRadius: const BorderRadius.all(Radius.circular(3)),
                   ),
                 ),
@@ -484,19 +486,22 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   }
 
   Widget _body() {
+    final FieldNotesColors colors = context.colors;
     final String? subtitle = _step.subtitle;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Text(
           _step == _SetupStep.summary ? 'all done' : 'basic setup',
-          style: TypographyTokens.pageEyebrowAccent,
+          style: context.textStyles.pageEyebrowAccent,
         ),
         Semantics(
           header: true,
           child: Text(
             _step.title,
-            style: _sidebar ? _titleStyle : _titleStyle.copyWith(fontSize: 25),
+            style: _sidebar
+                ? _titleStyle(colors)
+                : _titleStyle(colors).copyWith(fontSize: 25),
           ),
         ),
         if (subtitle != null) ...<Widget>[
@@ -504,8 +509,8 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
           Text(
             subtitle,
             style: _sidebar
-                ? _subtitleStyle
-                : _subtitleStyle.copyWith(fontSize: 12),
+                ? _subtitleStyle(colors)
+                : _subtitleStyle(colors).copyWith(fontSize: 12),
           ),
         ],
         SizedBox(height: _step == _SetupStep.summary ? 20 : 18),
@@ -550,6 +555,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
   }
 
   Widget _footer() {
+    final FieldNotesColors colors = context.colors;
     final VoidCallback? primary = _writing ? null : _primary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -562,7 +568,7 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
               child: Text(
                 setupSaveErrorMessage,
                 textAlign: _sidebar ? TextAlign.end : TextAlign.center,
-                style: _errorStyle,
+                style: _errorStyle(colors),
               ),
             ),
           ),
@@ -571,8 +577,8 @@ class _OnboardingSetupState extends ConsumerState<OnboardingSetup> {
             if (_sidebar) ...<Widget>[
               _OutlinedBackButton(onPressed: _busy ? null : _back),
               const Spacer(),
-              const ExcludeSemantics(
-                child: Text(_continueHint, style: _hintStyle),
+              ExcludeSemantics(
+                child: Text(_continueHint, style: _hintStyle(colors)),
               ),
               const SizedBox(width: 10),
               OnboardingPrimaryButton(
@@ -620,6 +626,7 @@ class _OutlinedBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(Shapes.radiusControl),
     );
@@ -648,17 +655,17 @@ class _OutlinedBackButton extends StatelessWidget {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     border: Border.all(
-                      color: Palette.ink35,
+                      color: colors.ink35,
                       width: Shapes.outlineWidth,
                     ),
                     borderRadius: radius,
                   ),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Center(
                       widthFactor: 1,
                       child: ExcludeSemantics(
-                        child: Text(_backLabel, style: _backStyle),
+                        child: Text(_backLabel, style: _backStyle(colors)),
                       ),
                     ),
                   ),
@@ -679,6 +686,7 @@ class _RoundBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return Semantics(
       key: setupBackKey,
       button: true,
@@ -699,14 +707,14 @@ class _RoundBackButton extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Palette.ink35,
+                  color: colors.ink35,
                   width: Shapes.outlineWidth,
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.chevron_left_rounded,
                 size: _backGlyphSize,
-                color: Palette.ink,
+                color: colors.ink,
               ),
             ),
           ),

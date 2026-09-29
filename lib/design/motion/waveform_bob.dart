@@ -11,7 +11,7 @@ class WaveformBars extends StatefulWidget {
   const WaveformBars({
     super.key,
     this.barCount = 5,
-    this.color = Palette.coral,
+    this.color,
     this.barWidth = 3,
     this.maxHeight = 20,
     this.minHeightFactor = 0.35,
@@ -26,7 +26,7 @@ class WaveformBars extends StatefulWidget {
   });
 
   final int barCount;
-  final Color color;
+  final Color? color;
   final double barWidth;
   final double maxHeight;
   final double minHeightFactor;
@@ -91,10 +91,11 @@ class _WaveformBarsState extends State<WaveformBars>
     return _bobMinScaleY + (1 - _bobMinScaleY) * wave;
   }
 
-  Color _colorFor(int index) {
+  Color _colorFor(int index, FieldNotesColors colors) {
+    final Color color = widget.color ?? colors.accentInk;
     final List<double>? heights = widget.heights;
     if (heights == null) {
-      return widget.color;
+      return color;
     }
     final Color Function(double)? colorFor = widget.colorFor;
     if (colorFor != null) {
@@ -102,13 +103,14 @@ class _WaveformBarsState extends State<WaveformBars>
     }
     final double? threshold = widget.twoToneThreshold;
     if (threshold == null) {
-      return widget.color;
+      return color;
     }
-    return heights[index] > threshold ? widget.color : Palette.waveMid;
+    return heights[index] > threshold ? color : colors.waveMid;
   }
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return AnimatedBuilder(
       animation: _controller,
       builder: (BuildContext context, Widget? child) {
@@ -124,7 +126,7 @@ class _WaveformBarsState extends State<WaveformBars>
                 height: _heightFor(i, _controller.value),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: _colorFor(i),
+                    color: _colorFor(i, colors),
                     borderRadius: BorderRadius.all(
                       Radius.circular(widget.barRadius ?? widget.barWidth / 2),
                     ),

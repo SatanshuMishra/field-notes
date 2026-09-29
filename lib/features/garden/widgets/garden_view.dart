@@ -29,14 +29,15 @@ class GardenView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (blooms.isEmpty && sprouts.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           child: EmptyStatePlaceholder(
-            icon: FlowerBloom(kind: FlowerKind.daffodil, size: 44),
-            message: 'Your meadow is waiting. Every day you journal plants a '
+            icon: const FlowerBloom(kind: FlowerKind.daffodil, size: 44),
+            message:
+                'Your meadow is waiting. Every day you journal plants a '
                 'bloom here.',
-            messageStyle: TypographyTokens.bodySerif,
+            messageStyle: context.textStyles.bodySerif,
           ),
         ),
       );
@@ -44,7 +45,8 @@ class GardenView extends StatelessWidget {
 
     final bool reduceMotion =
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    final GardenMotionProfile motion = motionOverride ??
+    final GardenMotionProfile motion =
+        motionOverride ??
         resolveGardenMotion(
           reduceMotion: reduceMotion,
           bloomCount: blooms.length + sprouts.length,

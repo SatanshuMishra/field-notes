@@ -8,9 +8,7 @@ import 'video_scrubber.dart';
 const double _muteTarget = 48;
 const double _muteChip = 32;
 const double _muteGlyph = 18;
-const Border _focusOutline = Border.fromBorderSide(
-  BorderSide(color: Palette.ink, width: 3),
-);
+const double _focusWidth = 3;
 
 class VideoControlBar extends StatelessWidget {
   const VideoControlBar({
@@ -35,9 +33,9 @@ class VideoControlBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.cardWarm,
-        border: Shapes.outline,
+      decoration: BoxDecoration(
+        color: context.colors.cardWarm,
+        border: context.shadows.outline,
         borderRadius: Shapes.buttonBorderRadius,
       ),
       child: Padding(
@@ -58,7 +56,7 @@ class VideoControlBar extends StatelessWidget {
               '${formatMediaDuration(position.inMilliseconds)}'
               ' / ${formatMediaDuration(total?.inMilliseconds)}',
               maxLines: 1,
-              style: TypographyTokens.captionSans,
+              style: context.textStyles.captionSans,
             ),
             const SizedBox(width: 4),
             VideoMuteToggle(muted: muted, onTap: onToggleMute),
@@ -97,6 +95,7 @@ class _VideoMuteToggleState extends State<VideoMuteToggle> {
   @override
   Widget build(BuildContext context) {
     final bool enabled = widget.onTap != null;
+    final FieldNotesColors colors = context.colors;
     return FocusableActionDetector(
       enabled: enabled,
       onShowFocusHighlight: _onFocusHighlight,
@@ -122,14 +121,21 @@ class _VideoMuteToggleState extends State<VideoMuteToggle> {
                   width: _muteChip,
                   height: _muteChip,
                   decoration: BoxDecoration(
-                    color: Palette.cardBright,
-                    border: _focused ? _focusOutline : Shapes.outline,
+                    color: colors.cardBright,
+                    border: _focused
+                        ? Border.fromBorderSide(
+                            BorderSide(color: colors.ink, width: _focusWidth),
+                          )
+                        : context.shadows.outline,
                     borderRadius: Shapes.buttonBorderRadius,
                   ),
                   child: Center(
                     child: CustomPaint(
                       size: const Size(_muteGlyph, _muteGlyph),
-                      painter: _MuteGlyph(muted: widget.muted),
+                      painter: _MuteGlyph(
+                        muted: widget.muted,
+                        color: colors.ink,
+                      ),
                     ),
                   ),
                 ),
@@ -143,15 +149,16 @@ class _VideoMuteToggleState extends State<VideoMuteToggle> {
 }
 
 class _MuteGlyph extends CustomPainter {
-  const _MuteGlyph({required this.muted});
+  const _MuteGlyph({required this.muted, required this.color});
 
   final bool muted;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final double w = size.width;
     final double h = size.height;
-    final Paint fill = Paint()..color = Palette.ink;
+    final Paint fill = Paint()..color = color;
     final Path speaker = Path()
       ..moveTo(0, h * 0.35)
       ..lineTo(w * 0.22, h * 0.35)
@@ -163,7 +170,7 @@ class _MuteGlyph extends CustomPainter {
     canvas.drawPath(speaker, fill);
 
     final Paint stroke = Paint()
-      ..color = Palette.ink
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = Shapes.outlineWidth
       ..strokeCap = StrokeCap.round;
@@ -198,5 +205,6 @@ class _MuteGlyph extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_MuteGlyph oldDelegate) => muted != oldDelegate.muted;
+  bool shouldRepaint(_MuteGlyph oldDelegate) =>
+      muted != oldDelegate.muted || color != oldDelegate.color;
 }

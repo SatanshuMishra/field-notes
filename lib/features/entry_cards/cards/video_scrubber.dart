@@ -213,6 +213,7 @@ class _VideoScrubberState extends State<VideoScrubber> {
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final double width = constraints.maxWidth;
+            final FieldNotesColors colors = context.colors;
             return GestureDetector(
               key: const ValueKey<String>('video-scrub-bar'),
               behavior: HitTestBehavior.opaque,
@@ -241,6 +242,9 @@ class _VideoScrubberState extends State<VideoScrubber> {
                     painter: _ScrubberPainter(
                       fraction: _fraction,
                       focused: _focused,
+                      trackColor: colors.cardBright,
+                      lineColor: colors.line,
+                      focusColor: colors.ink,
                     ),
                   ),
                 ),
@@ -254,10 +258,19 @@ class _VideoScrubberState extends State<VideoScrubber> {
 }
 
 class _ScrubberPainter extends CustomPainter {
-  const _ScrubberPainter({required this.fraction, required this.focused});
+  const _ScrubberPainter({
+    required this.fraction,
+    required this.focused,
+    required this.trackColor,
+    required this.lineColor,
+    required this.focusColor,
+  });
 
   final double fraction;
   final bool focused;
+  final Color trackColor;
+  final Color lineColor;
+  final Color focusColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -277,7 +290,7 @@ class _ScrubberPainter extends CustomPainter {
       track,
       const Radius.circular(_trackRadius),
     );
-    canvas.drawRRect(trackShape, Paint()..color = Palette.cardBright);
+    canvas.drawRRect(trackShape, Paint()..color = trackColor);
 
     final double filled = (right - left) * fraction.clamp(0.0, 1.0);
     if (filled > 0) {
@@ -292,7 +305,7 @@ class _ScrubberPainter extends CustomPainter {
     canvas.drawRRect(
       trackShape,
       Paint()
-        ..color = Palette.ink
+        ..color = lineColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = Shapes.outlineWidth,
     );
@@ -307,7 +320,7 @@ class _ScrubberPainter extends CustomPainter {
       handle,
       scrubberHandleRadius,
       Paint()
-        ..color = Palette.ink
+        ..color = focused ? focusColor : lineColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = focused ? _focusStroke : Shapes.outlineWidth,
     );
@@ -315,5 +328,9 @@ class _ScrubberPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ScrubberPainter oldDelegate) =>
-      fraction != oldDelegate.fraction || focused != oldDelegate.focused;
+      fraction != oldDelegate.fraction ||
+      focused != oldDelegate.focused ||
+      trackColor != oldDelegate.trackColor ||
+      lineColor != oldDelegate.lineColor ||
+      focusColor != oldDelegate.focusColor;
 }

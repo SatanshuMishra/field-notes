@@ -26,7 +26,7 @@ void main() {
       final CrossHatchPlaceholder hatch = tester.widget<CrossHatchPlaceholder>(
         find.byType(CrossHatchPlaceholder),
       );
-      expect(hatch.background, Palette.dangerSurface);
+      expect(hatch.background, FieldNotesColors.light.dangerSurface);
       expect(hatch.hatchColor, Palette.danger);
     });
 

@@ -25,20 +25,22 @@ const RadialGradient _scrimGradient = RadialGradient(
   colors: <Color>[Color(0x5C2A2016), Color(0x9E1C140C)],
 );
 
-const List<BoxShadow> _cardShadow = <BoxShadow>[
-  BoxShadow(color: Palette.ink35, offset: Offset(5, 5)),
-  BoxShadow(
-    color: Color(0xB3140C06),
-    offset: Offset(0, 30),
-    blurRadius: 70,
-    spreadRadius: -24,
-  ),
+const BoxShadow _cardLift = BoxShadow(
+  color: Color(0xB3140C06),
+  offset: Offset(0, 30),
+  blurRadius: 70,
+  spreadRadius: -24,
+);
+
+List<BoxShadow> _cardShadow(FieldNotesColors colors) => <BoxShadow>[
+  BoxShadow(color: colors.shadowTint(0x59), offset: const Offset(5, 5)),
+  _cardLift,
 ];
 
-const LinearGradient _pageGradient = LinearGradient(
+LinearGradient _pageGradient(FieldNotesColors colors) => LinearGradient(
   begin: Alignment.topCenter,
   end: Alignment.bottomCenter,
-  colors: <Color>[Color(0xFFF3E7D4), Color(0xFFECDFC8)],
+  colors: <Color>[colors.paperShade, colors.hatchLight],
 );
 
 const RadialGradient _pageGlow = RadialGradient(
@@ -67,15 +69,16 @@ class OnboardingSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return BlockSemantics(
       child: switch (layout) {
-        ShellLayout.sidebar => _card(),
-        ShellLayout.bottomBar => _page(),
+        ShellLayout.sidebar => _card(colors),
+        ShellLayout.bottomBar => _page(colors),
       },
     );
   }
 
-  Widget _card() {
+  Widget _card(FieldNotesColors colors) {
     return Stack(
       children: <Widget>[
         const Positioned.fill(child: _OnboardingScrim()),
@@ -98,13 +101,13 @@ class OnboardingSurface extends StatelessWidget {
                   ),
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: Palette.composerPaper,
+                    color: colors.composerPaper,
                     border: Border.all(
-                      color: Palette.ink,
+                      color: colors.line,
                       width: _cardBorderWidth,
                     ),
                     borderRadius: BorderRadius.circular(Shapes.radiusSheet),
-                    boxShadow: _cardShadow,
+                    boxShadow: _cardShadow(colors),
                   ),
                   child: child,
                 ),
@@ -116,11 +119,11 @@ class OnboardingSurface extends StatelessWidget {
     );
   }
 
-  Widget _page() {
+  Widget _page(FieldNotesColors colors) {
     return SizedBox.expand(
       child: DecoratedBox(
         key: onboardingPageKey,
-        decoration: const BoxDecoration(gradient: _pageGradient),
+        decoration: BoxDecoration(gradient: _pageGradient(colors)),
         child: DecoratedBox(
           decoration: const BoxDecoration(gradient: _pageGlow),
           child: SafeArea(child: child),
@@ -177,15 +180,16 @@ class OnboardingPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool enabled = onPressed != null;
+    final FieldNotesShadows shadows = context.shadows;
     final Widget face = SizedBox(
       height: height,
       width: expand ? double.infinity : null,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Palette.coral,
-          border: Shapes.outline,
+          border: shadows.outline,
           borderRadius: borderRadius,
-          boxShadow: Shadows.emphasis,
+          boxShadow: shadows.emphasis,
         ),
         child: Padding(
           padding: padding,

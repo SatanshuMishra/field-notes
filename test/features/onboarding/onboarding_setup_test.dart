@@ -124,7 +124,7 @@ Future<_Run> _pumpSetup(
           platform: sidebar ? TargetPlatform.macOS : TargetPlatform.android,
         ),
         home: Scaffold(
-          backgroundColor: Palette.page,
+          backgroundColor: FieldNotesColors.light.page,
           body: OnboardingSetup(
             layout: layout,
             countryCode: countryCode,
@@ -279,7 +279,7 @@ void main() {
               _presetFill(tester, preset),
               preset == ReminderPreset.evening
                   ? Palette.coral
-                  : Palette.cardWarm,
+                  : FieldNotesColors.light.cardWarm,
               reason: preset.name,
             );
           }
@@ -301,8 +301,14 @@ void main() {
           expect(find.byType(SettingsTimeField), findsNothing);
 
           expect(_fillOf(tester, setupProgressKey(0)), Palette.coral);
-          expect(_fillOf(tester, setupProgressKey(1)), Palette.ink18);
-          expect(_fillOf(tester, setupProgressKey(2)), Palette.ink18);
+          expect(
+            _fillOf(tester, setupProgressKey(1)),
+            FieldNotesColors.light.ink18,
+          );
+          expect(
+            _fillOf(tester, setupProgressKey(2)),
+            FieldNotesColors.light.ink18,
+          );
           expect(find.text('Continue'), findsOneWidget);
         });
       }
@@ -484,7 +490,7 @@ void main() {
               );
               expect(
                 _fillOf(tester, setupWeekLetterKey(start, 0)),
-                start == selected ? Palette.coral : Palette.ink,
+                start == selected ? Palette.coral : FieldNotesColors.light.pill,
                 reason: start.name,
               );
               for (int index = 1; index < 7; index++) {

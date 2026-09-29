@@ -296,12 +296,13 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 
   Widget _viewMode(List<Entry> entries, int index, Entry? entry) {
+    final Color rule = context.colors.ink25;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _header(entry),
-        const DashedDivider(thickness: _ruleThickness, color: Palette.ink25),
+        DashedDivider(thickness: _ruleThickness, color: rule),
         Flexible(
           child: SingleChildScrollView(
             padding: _bodyPadding,
@@ -309,7 +310,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
           ),
         ),
         if (entry != null && entries.length > 1) ...<Widget>[
-          const DashedDivider(thickness: _ruleThickness, color: Palette.ink25),
+          DashedDivider(thickness: _ruleThickness, color: rule),
           _footer(entries, index),
         ],
       ],
@@ -359,6 +360,8 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
 
   Widget _exitPill() {
     final String label = widget.exit == LogViewerExit.back ? 'Back' : 'Close';
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     return Padding(
       padding: const EdgeInsets.symmetric(
         vertical: _headerVerticalPadding - _exitPillReach,
@@ -383,26 +386,29 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
                     left: _exitPillStartPadding,
                     right: _exitPillEndPadding,
                   ),
-                  decoration: const BoxDecoration(
-                    color: Palette.cardWarm,
-                    border: Shapes.outline,
+                  decoration: BoxDecoration(
+                    color: colors.cardWarm,
+                    border: shadows.outline,
                     borderRadius: _exitPillBorderRadius,
-                    boxShadow: Shadows.chip,
+                    boxShadow: shadows.chip,
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      const SizedBox.square(
+                      SizedBox.square(
                         dimension: _exitGlyphSize,
                         child: CustomPaint(
-                          painter: _ChevronPainter(pointsBack: true),
+                          painter: _ChevronPainter(
+                            pointsBack: true,
+                            color: colors.ink,
+                          ),
                         ),
                       ),
                       const SizedBox(width: _exitGlyphGap),
                       Text(
                         label,
-                        style: TypographyTokens.captureLabelSans.copyWith(
-                          color: Palette.ink,
+                        style: context.textStyles.captureLabelSans.copyWith(
+                          color: colors.ink,
                         ),
                       ),
                     ],
@@ -421,6 +427,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     final String kicker = day == null
         ? widget.date
         : dayTitleFor(day, today: ref.watch(todayClockProvider)());
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Padding(
       padding: EdgeInsetsDirectional.fromSTEB(
         _headerGap,
@@ -436,13 +443,15 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
             kicker,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TypographyTokens.stampAccent.copyWith(color: Palette.coral),
+            style: textStyles.stampAccent.copyWith(
+              color: context.colors.accentInk,
+            ),
           ),
           Text(
             entry == null ? '' : logPreviewOf(entry).heading,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TypographyTokens.headlineSerif.copyWith(
+            style: textStyles.headlineSerif.copyWith(
               fontSize: _titleSize,
               height: _titleLineHeight,
             ),
@@ -458,10 +467,10 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       children: <Widget>[
         Text(
           _metaFor(context, entry),
-          style: TypographyTokens.captureLabelSans.copyWith(
+          style: context.textStyles.captureLabelSans.copyWith(
             fontSize: _metaSize,
             letterSpacing: _metaLetterSpacing,
-            color: Palette.muted,
+            color: context.colors.muted,
           ),
         ),
         const SizedBox(height: _metaGap),
@@ -535,7 +544,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
             ),
             child: Text(
               '${index + 1} of ${entries.length}',
-              style: TypographyTokens.promptAccent,
+              style: context.textStyles.promptAccent,
             ),
           ),
           Expanded(
@@ -593,15 +602,18 @@ class _StepControl extends StatelessWidget {
     final String caption = target == null
         ? label
         : '${_clockOf(context, target)} · ${logTypeLabelFor(target.type)}';
+    final FieldNotesColors colors = context.colors;
     final Widget glyph = SizedBox.square(
       dimension: _stepGlyphSize,
-      child: CustomPaint(painter: _ChevronPainter(pointsBack: pointsBack)),
+      child: CustomPaint(
+        painter: _ChevronPainter(pointsBack: pointsBack, color: colors.ink),
+      ),
     );
     final Widget text = Text(
       caption,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TypographyTokens.captureLabelSans.copyWith(color: Palette.ink),
+      style: context.textStyles.captureLabelSans.copyWith(color: colors.ink),
     );
     final VoidCallback? step = enabled ? onStep : null;
     return Semantics(
@@ -661,12 +673,8 @@ const BorderRadius _stepBorderRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
 );
 
-final BoxDecoration _noteFocusRingDecoration = BoxDecoration(
-  border: Border.all(
-    color: FocusRingSurface.light.color,
-    width: FocusRingSurface.light.width,
-  ),
-  borderRadius: const BorderRadius.all(Radius.circular(Shapes.radiusSm)),
+const BorderRadius _noteRingRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusSm),
 );
 
 class _NoteFocusRing extends StatefulWidget {
@@ -728,7 +736,15 @@ class _NoteFocusRingState extends State<_NoteFocusRing> {
               bottom: -_noteRingOutset,
               child: IgnorePointer(
                 key: focusRingKey,
-                child: DecoratedBox(decoration: _noteFocusRingDecoration),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: context.colors.ink,
+                      width: FocusRingSurface.light.width,
+                    ),
+                    borderRadius: _noteRingRadius,
+                  ),
+                ),
               ),
             ),
         ],
@@ -738,14 +754,15 @@ class _NoteFocusRingState extends State<_NoteFocusRing> {
 }
 
 class _ChevronPainter extends CustomPainter {
-  const _ChevronPainter({required this.pointsBack});
+  const _ChevronPainter({required this.pointsBack, required this.color});
 
   final bool pointsBack;
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint stroke = Paint()
-      ..color = Palette.ink
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = _chevronStrokeWidth
       ..strokeCap = StrokeCap.round
@@ -762,5 +779,5 @@ class _ChevronPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ChevronPainter oldDelegate) =>
-      oldDelegate.pointsBack != pointsBack;
+      oldDelegate.pointsBack != pointsBack || oldDelegate.color != color;
 }

@@ -72,6 +72,7 @@ Future<void> pumpShell(
   TargetPlatform platform = TargetPlatform.macOS,
   Size surface = const Size(1200, 900),
   List<Override> overrides = const <Override>[],
+  Brightness brightness = Brightness.light,
 }) async {
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
@@ -81,7 +82,7 @@ Future<void> pumpShell(
       overrides: <Override>[...shellOverrides(), ...overrides],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: platform),
+        theme: fieldNotesTheme(platform: platform, brightness: brightness),
         home: child,
       ),
     ),

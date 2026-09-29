@@ -39,11 +39,11 @@ const BorderRadius _cardRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
 );
 
-const TextStyle _dayStampStyle = TextStyle(
+TextStyle _dayStampStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.accent,
   fontSize: 11,
   fontWeight: FontWeight.w600,
-  color: Palette.sage,
+  color: colors.sage,
 );
 
 final class _DensityStyle {
@@ -88,12 +88,12 @@ final class _DensityStyle {
   final TextStyle videoTitleStyle;
 }
 
-final _DensityStyle _feedStyle = _DensityStyle(
-  padding: EdgeInsets.symmetric(vertical: 13, horizontal: 15),
-  restShadow: Shadows.cardDefault,
+_DensityStyle _feedStyle(FieldNotesColors colors) => _DensityStyle(
+  padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 15),
+  restShadow: FieldNotesShadows(colors).cardDefault,
   hoverShadow: <BoxShadow>[
     BoxShadow(
-      color: Palette.ink.withValues(alpha: 0.24),
+      color: colors.shadowTintBase.withValues(alpha: 0.24),
       offset: const Offset(3, 3),
     ),
   ],
@@ -104,51 +104,51 @@ final _DensityStyle _feedStyle = _DensityStyle(
     fontSize: 16.5,
     fontWeight: FontWeight.w500,
     height: 1.3,
-    color: Palette.ink,
+    color: colors.ink,
   ),
   snippetStyle: TextStyle(
     fontFamily: TypographyTokens.serif,
     fontSize: 13,
     fontWeight: FontWeight.w400,
     height: 1.5,
-    color: Palette.mutedDeep,
+    color: colors.mutedDeep,
   ),
   snippetGap: 4,
   thumbnailExtent: 64,
-  thumbnailRadius: BorderRadius.all(Radius.circular(10)),
+  thumbnailRadius: const BorderRadius.all(Radius.circular(10)),
   thumbnailGap: 14,
   metaGap: 9,
   metaStyle: TextStyle(
     fontFamily: TypographyTokens.sans,
     fontSize: 11,
     fontWeight: FontWeight.w600,
-    color: Palette.muted,
+    color: colors.muted,
   ),
   openLabelStyle: TextStyle(
     fontFamily: TypographyTokens.sans,
     fontSize: 11.5,
     fontWeight: FontWeight.w600,
-    color: Palette.coral,
+    color: colors.accentInk,
   ),
-  posterSize: Size(104, 64),
-  posterRadius: BorderRadius.all(Radius.circular(10)),
+  posterSize: const Size(104, 64),
+  posterRadius: const BorderRadius.all(Radius.circular(10)),
   playDiscExtent: 28,
   videoTitleStyle: TextStyle(
     fontFamily: TypographyTokens.serif,
     fontSize: 16,
     fontWeight: FontWeight.w500,
     height: 1.3,
-    color: Palette.ink,
+    color: colors.ink,
   ),
 );
 
-const _DensityStyle _dayStyle = _DensityStyle(
-  padding: EdgeInsets.symmetric(vertical: 11, horizontal: 13),
+_DensityStyle _dayStyle(FieldNotesColors colors) => _DensityStyle(
+  padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 13),
   restShadow: <BoxShadow>[
-    BoxShadow(color: Palette.ink16, offset: Offset(1.5, 1.5)),
+    BoxShadow(color: colors.shadowTint(0x29), offset: const Offset(1.5, 1.5)),
   ],
   hoverShadow: <BoxShadow>[
-    BoxShadow(color: Palette.ink22, offset: Offset(3, 3)),
+    BoxShadow(color: colors.shadowTint(0x38), offset: const Offset(3, 3)),
   ],
   tilts: false,
   risesOnHover: true,
@@ -157,50 +157,50 @@ const _DensityStyle _dayStyle = _DensityStyle(
     fontSize: 15.5,
     fontWeight: FontWeight.w500,
     height: 1.3,
-    color: Palette.ink,
+    color: colors.ink,
   ),
   snippetStyle: TextStyle(
     fontFamily: TypographyTokens.serif,
     fontSize: 12.5,
     fontWeight: FontWeight.w400,
     height: 1.5,
-    color: Palette.mutedDeep,
+    color: colors.mutedDeep,
   ),
   snippetGap: 3,
   thumbnailExtent: 56,
-  thumbnailRadius: BorderRadius.all(Radius.circular(Shapes.radiusThumb)),
+  thumbnailRadius: const BorderRadius.all(Radius.circular(Shapes.radiusThumb)),
   thumbnailGap: 12,
   metaGap: 7,
   metaStyle: TextStyle(
     fontFamily: TypographyTokens.sans,
     fontSize: 10.5,
     fontWeight: FontWeight.w600,
-    color: Palette.muted,
+    color: colors.muted,
   ),
   openLabelStyle: TextStyle(
     fontFamily: TypographyTokens.sans,
     fontSize: 11,
     fontWeight: FontWeight.w600,
-    color: Palette.coral,
+    color: colors.accentInk,
   ),
-  posterSize: Size(84, 52),
-  posterRadius: BorderRadius.all(Radius.circular(8)),
+  posterSize: const Size(84, 52),
+  posterRadius: const BorderRadius.all(Radius.circular(8)),
   playDiscExtent: 22,
   videoTitleStyle: TextStyle(
     fontFamily: TypographyTokens.serif,
     fontSize: 15,
     fontWeight: FontWeight.w500,
     height: 1.3,
-    color: Palette.ink,
+    color: colors.ink,
   ),
 );
 
-_DensityStyle _styleFor(CompactLogDensity density) {
+_DensityStyle _styleFor(CompactLogDensity density, FieldNotesColors colors) {
   switch (density) {
     case CompactLogDensity.feed:
-      return _feedStyle;
+      return _feedStyle(colors);
     case CompactLogDensity.day:
-      return _dayStyle;
+      return _dayStyle(colors);
   }
 }
 
@@ -243,13 +243,14 @@ class _CompactLogCardState extends State<CompactLogCard> {
 
   @override
   Widget build(BuildContext context) {
-    final _DensityStyle style = _styleFor(widget.density);
+    final FieldNotesColors colors = context.colors;
+    final _DensityStyle style = _styleFor(widget.density, colors);
     final LogPreview preview = logPreviewOf(widget.entry);
     final double tilt = style.tilts ? _tiltDegrees(widget.entry.id) : 0;
     final Widget sticker = _CardFocusRing(
       rotationDegrees: tilt,
       child: StickerCard(
-        surface: Palette.cardWarm,
+        surface: colors.cardWarm,
         borderRadius: _cardRadius,
         shadow: _hovered ? style.hoverShadow : style.restShadow,
         padding: style.padding,
@@ -321,7 +322,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
             Expanded(
               child: Text(
                 stamp,
-                style: TypographyTokens.stampAccent,
+                style: context.textStyles.stampAccent,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -332,7 +333,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
       case CompactLogDensity.day:
         return Text(
           stamp.isEmpty ? type : '$stamp · $type',
-          style: _dayStampStyle,
+          style: _dayStampStyle(context.colors),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         );
@@ -349,7 +350,10 @@ class _CompactLogCardState extends State<CompactLogCard> {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 7),
-        child: Text(type.toUpperCase(), style: TypographyTokens.chipMicroSans),
+        child: Text(
+          type.toUpperCase(),
+          style: context.textStyles.chipMicroSans,
+        ),
       ),
     );
   }
@@ -366,7 +370,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
   }
 
   Widget _shortNote(BuildContext context) {
-    final double bodySize = TypographyTokens.noteBody.fontSize!;
+    final double bodySize = context.textStyles.noteBody.fontSize!;
     final MediaQueryData media = MediaQuery.of(context);
     final double scale =
         media.textScaler.scale(bodySize) /
@@ -438,7 +442,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
           borderRadius: style.thumbnailRadius,
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Palette.ink.withValues(alpha: 0.14),
+              color: context.colors.shadowTintBase.withValues(alpha: 0.14),
               offset: const Offset(2, 2),
             ),
           ],
@@ -522,6 +526,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
 
   Widget _poster(_DensityStyle style) {
     final double disc = style.playDiscExtent;
+    final FieldNotesColors colors = context.colors;
     return SizedBox.fromSize(
       key: compactLogThumbnailKey,
       size: style.posterSize,
@@ -543,16 +548,16 @@ class _CompactLogCardState extends State<CompactLogCard> {
             dimension: disc,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Palette.cardBright.withValues(alpha: 0.92),
+                color: colors.cardBright.withValues(alpha: 0.92),
                 shape: BoxShape.circle,
-                border: Shapes.outline,
+                border: context.shadows.outline,
               ),
               child: Center(
                 child: Padding(
                   padding: EdgeInsets.only(left: disc * 0.08),
                   child: CustomPaint(
                     size: Size.square(disc * 0.36),
-                    painter: const _PlayTrianglePainter(),
+                    painter: _PlayTrianglePainter(color: colors.ink),
                   ),
                 ),
               ),
@@ -563,14 +568,6 @@ class _CompactLogCardState extends State<CompactLogCard> {
     );
   }
 }
-
-final BoxDecoration _cardFocusRingDecoration = BoxDecoration(
-  border: Border.all(
-    color: FocusRingSurface.light.color,
-    width: FocusRingSurface.light.width,
-  ),
-  borderRadius: _cardRadius,
-);
 
 class _CardFocusRing extends StatefulWidget {
   const _CardFocusRing({required this.rotationDegrees, required this.child});
@@ -620,7 +617,15 @@ class _CardFocusRingState extends State<_CardFocusRing> {
               key: focusRingKey,
               child: Transform.rotate(
                 angle: widget.rotationDegrees * math.pi / 180,
-                child: DecoratedBox(decoration: _cardFocusRingDecoration),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: context.colors.ink,
+                      width: FocusRingSurface.light.width,
+                    ),
+                    borderRadius: _cardRadius,
+                  ),
+                ),
               ),
             ),
           ),
@@ -630,7 +635,9 @@ class _CardFocusRingState extends State<_CardFocusRing> {
 }
 
 class _PlayTrianglePainter extends CustomPainter {
-  const _PlayTrianglePainter();
+  const _PlayTrianglePainter({required this.color});
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -639,11 +646,12 @@ class _PlayTrianglePainter extends CustomPainter {
       ..lineTo(size.width, size.height / 2)
       ..lineTo(0, size.height)
       ..close();
-    canvas.drawPath(triangle, Paint()..color = Palette.ink);
+    canvas.drawPath(triangle, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(_PlayTrianglePainter oldDelegate) => false;
+  bool shouldRepaint(_PlayTrianglePainter oldDelegate) =>
+      color != oldDelegate.color;
 }
 
 class _CompactMedia extends StatefulWidget {
@@ -743,7 +751,7 @@ class _CompactMediaState extends State<_CompactMedia> {
         height: widget.height,
         borderRadius: widget.borderRadius,
         fit: BoxFit.cover,
-        border: Shapes.outline,
+        border: context.shadows.outline,
         onDecodeError: _onDecodeError,
       ),
     );

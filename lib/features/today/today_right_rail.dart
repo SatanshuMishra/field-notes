@@ -54,9 +54,9 @@ class TodayRailRule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
+    return SizedBox(
       height: _railRuleThickness,
-      child: ColoredBox(color: Palette.ink16),
+      child: ColoredBox(color: context.colors.ink16),
     );
   }
 }

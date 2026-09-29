@@ -38,9 +38,9 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         settingsHarness(
-          const SettingsStatusPill(
+          SettingsStatusPill(
             label: 'Connected',
-            dotColor: Palette.sage,
+            dotColor: FieldNotesColors.light.sage,
           ),
         ),
       );
@@ -53,7 +53,10 @@ void main() {
             ),
           )
           .last;
-      expect((dot.decoration as BoxDecoration).color, Palette.sage);
+      expect(
+        (dot.decoration as BoxDecoration).color,
+        FieldNotesColors.light.sage,
+      );
     });
   });
 }

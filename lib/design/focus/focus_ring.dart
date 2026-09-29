@@ -1,17 +1,23 @@
-import 'package:field_notes/design/tokens/palette.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 const ValueKey<String> focusRingKey = ValueKey<String>('focus-ring');
 
 enum FocusRingSurface {
-  light(color: Palette.focusRing, width: 3),
-  dark(color: Palette.focusRingOnDark, width: 2);
+  light(width: 3),
+  dark(width: 2);
 
-  const FocusRingSurface({required this.color, required this.width});
+  const FocusRingSurface({required this.width});
 
-  final Color color;
   final double width;
+
+  Color get color => colorIn(FieldNotesColors.light);
+
+  Color colorIn(FieldNotesColors colors) => switch (this) {
+    FocusRingSurface.light => colors.ink,
+    FocusRingSurface.dark => Palette.focusRingOnDark,
+  };
 }
 
 enum FocusRingPlacement { outside, edge }
@@ -105,7 +111,8 @@ class _FocusRingState extends State<FocusRing> {
               child: CustomPaint(
                 key: focusRingKey,
                 painter: _FocusRingPainter(
-                  surface: widget.surface,
+                  color: widget.surface.colorIn(context.colors),
+                  width: widget.surface.width,
                   borderRadius: widget.borderRadius,
                   outset: widget.reach,
                 ),
@@ -119,18 +126,20 @@ class _FocusRingState extends State<FocusRing> {
 
 class _FocusRingPainter extends CustomPainter {
   const _FocusRingPainter({
-    required this.surface,
+    required this.color,
+    required this.width,
     required this.borderRadius,
     required this.outset,
   });
 
-  final FocusRingSurface surface;
+  final Color color;
+  final double width;
   final BorderRadius borderRadius;
   final double outset;
 
   @override
   void paint(Canvas canvas, Size size) {
-    Border.all(color: surface.color, width: surface.width).paint(
+    Border.all(color: color, width: width).paint(
       canvas,
       (Offset.zero & size).inflate(outset),
       borderRadius: borderRadius == BorderRadius.zero
@@ -144,7 +153,8 @@ class _FocusRingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_FocusRingPainter oldDelegate) =>
-      oldDelegate.surface != surface ||
+      oldDelegate.color != color ||
+      oldDelegate.width != width ||
       oldDelegate.borderRadius != borderRadius ||
       oldDelegate.outset != outset;
 }

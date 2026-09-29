@@ -55,9 +55,8 @@ class _SearchResultsList extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: EmptyStatePlaceholder(
-            message:
-                query.isEmpty ? 'No days yet.' : 'No days match "$query".',
-            messageStyle: TypographyTokens.bodySerif,
+            message: query.isEmpty ? 'No days yet.' : 'No days match "$query".',
+            messageStyle: context.textStyles.bodySerif,
           ),
         ),
       );
@@ -87,12 +86,12 @@ class _SearchEmptyJournal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: EmptyStatePlaceholder(
           message: 'No days yet. Start journaling and your days appear here.',
-          messageStyle: TypographyTokens.bodySerif,
+          messageStyle: context.textStyles.bodySerif,
         ),
       ),
     );
@@ -104,11 +103,8 @@ class _SearchLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text(
-        'Loading your days…',
-        style: TypographyTokens.captionSans,
-      ),
+    return Center(
+      child: Text('Loading your days…', style: context.textStyles.captionSans),
     );
   }
 }
@@ -118,12 +114,12 @@ class _SearchError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: EmptyStatePlaceholder(
           message: 'Your days could not be loaded right now.',
-          messageStyle: TypographyTokens.bodySerif,
+          messageStyle: context.textStyles.bodySerif,
         ),
       ),
     );

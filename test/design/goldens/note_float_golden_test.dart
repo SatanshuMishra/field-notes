@@ -197,7 +197,7 @@ Future<void> _pumpCase(WidgetTester tester, _Case entry) async {
       MediaQuery(
         data: MediaQueryData(textScaler: TextScaler.linear(entry.scale)),
         child: ColoredBox(
-          color: Palette.cardWarm,
+          color: FieldNotesColors.light.cardWarm,
           child: NoteMediaScope(
             resolver: resolver,
             child: SizedBox(

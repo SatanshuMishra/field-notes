@@ -73,14 +73,14 @@ _WeekCellState _stateOf(TodayWeekCell cell) {
   return cell.mood == null ? _WeekCellState.empty : _WeekCellState.filled;
 }
 
-Color _labelColorOf(_WeekCellState state) {
+Color _labelColorOf(_WeekCellState state, FieldNotesColors colors) {
   switch (state) {
     case _WeekCellState.today:
-      return Palette.coral;
+      return colors.accentInk;
     case _WeekCellState.filled:
-      return Palette.muted;
+      return colors.muted;
     case _WeekCellState.empty:
-      return Palette.dashMuted;
+      return colors.dashMuted;
   }
 }
 
@@ -99,14 +99,15 @@ class ThisWeekGarden extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? range = _weekRangeLabel(cells);
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(title, style: TypographyTokens.sectionHeaderAccent),
+        Text(title, style: textStyles.sectionHeaderAccent),
         const SizedBox(height: _titleGap),
         if (range != null) ...<Widget>[
-          Text(range, style: TypographyTokens.caption10Sans),
+          Text(range, style: textStyles.caption10Sans),
           const SizedBox(height: _rangeGap),
         ],
         ..._gridRows(),
@@ -172,14 +173,16 @@ class _WeekCell extends ConsumerWidget {
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTap: openCalendar,
-            child: _tile(mood),
+            child: _tile(context, mood),
           ),
         ),
       ),
     );
   }
 
-  Widget _tile(Mood? mood) {
+  Widget _tile(BuildContext context, Mood? mood) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     final _WeekCellState state = _stateOf(cell);
     final Widget content = Padding(
       padding: _cellContentPadding,
@@ -191,7 +194,7 @@ class _WeekCell extends ConsumerWidget {
             child: mood == null
                 ? CustomPaint(
                     painter: DashedBorderPainter(
-                      color: Palette.dashMuted,
+                      color: colors.dashMuted,
                       radius: bloomSize / 2,
                     ),
                   )
@@ -201,8 +204,8 @@ class _WeekCell extends ConsumerWidget {
           Text(
             cell.weekdayLabel,
             textAlign: TextAlign.center,
-            style: TypographyTokens.caption8Sans.copyWith(
-              color: _labelColorOf(state),
+            style: context.textStyles.caption8Sans.copyWith(
+              color: _labelColorOf(state, colors),
             ),
           ),
         ],
@@ -212,9 +215,9 @@ class _WeekCell extends ConsumerWidget {
     switch (state) {
       case _WeekCellState.today:
         return DecoratedBox(
-          decoration: const BoxDecoration(
-            color: Palette.cardLight,
-            border: Border.fromBorderSide(
+          decoration: BoxDecoration(
+            color: colors.cardLight,
+            border: const Border.fromBorderSide(
               BorderSide(color: Palette.coral, width: Shapes.outlineWidth),
             ),
             borderRadius: _cellBorderRadius,
@@ -224,18 +227,18 @@ class _WeekCell extends ConsumerWidget {
         );
       case _WeekCellState.filled:
         return DecoratedBox(
-          decoration: const BoxDecoration(
-            color: Palette.cardWarm,
-            border: Shapes.outline,
+          decoration: BoxDecoration(
+            color: colors.cardWarm,
+            border: shadows.outline,
             borderRadius: _cellBorderRadius,
-            boxShadow: Shadows.cellFilled,
+            boxShadow: shadows.cellFilled,
           ),
           child: content,
         );
       case _WeekCellState.empty:
         return CustomPaint(
-          painter: const DashedBorderPainter(
-            color: Palette.ink35,
+          painter: DashedBorderPainter(
+            color: colors.ink35,
             radius: Shapes.radiusCell,
           ),
           child: content,

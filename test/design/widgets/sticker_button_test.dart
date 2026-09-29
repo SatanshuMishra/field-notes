@@ -111,7 +111,11 @@ void main() {
         await tester.pumpWidget(stickerHarness(_button(variant)));
 
         final Border border = _buttonDecoration(tester).border! as Border;
-        expect(border.top.color, Palette.ink, reason: '$variant border colour');
+        expect(
+          border.top.color,
+          FieldNotesColors.light.line,
+          reason: '$variant border colour',
+        );
         expect(
           border.top.width,
           Shapes.outlineWidth,
@@ -127,7 +131,10 @@ void main() {
       );
 
       final BoxDecoration deco = _buttonDecoration(tester);
-      expect(deco.boxShadow, Shadows.emphasis);
+      expect(
+        deco.boxShadow,
+        FieldNotesShadows(FieldNotesColors.light).emphasis,
+      );
       expect(deco.color, Palette.coral);
       expect(deco.borderRadius, BorderRadius.circular(Shapes.radiusControl));
       expect(_labelColour(tester, 'Go'), Palette.onAccent);
@@ -145,9 +152,9 @@ void main() {
 
       final BoxDecoration deco = _buttonDecoration(tester);
       expect(deco.boxShadow, isNull);
-      expect(deco.color, Palette.cardWarm);
+      expect(deco.color, FieldNotesColors.light.cardWarm);
       expect(deco.borderRadius, BorderRadius.circular(Shapes.radiusControl));
-      expect(_labelColour(tester, 'Go'), Palette.ink);
+      expect(_labelColour(tester, 'Go'), FieldNotesColors.light.ink);
       expect(
         _buttonPadding(tester),
         const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
@@ -161,7 +168,7 @@ void main() {
       );
 
       final BoxDecoration deco = _buttonDecoration(tester);
-      expect(deco.boxShadow, Shadows.control);
+      expect(deco.boxShadow, FieldNotesShadows(FieldNotesColors.light).control);
       expect(deco.color, Palette.danger);
       expect(deco.borderRadius, Shapes.buttonBorderRadius);
       expect(_labelColour(tester, 'Go'), Palette.onAccent);

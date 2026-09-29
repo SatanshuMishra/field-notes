@@ -324,10 +324,10 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
     if (_isDenied) {
       return const SizedBox.shrink();
     }
-    return const CrossHatchPlaceholder(
+    return CrossHatchPlaceholder(
       variant: CrossHatchVariant.viewport,
       borderRadius: BorderRadius.zero,
-      child: Text(videoFeedLabel, style: TypographyTokens.viewportMonoLabel),
+      child: Text(videoFeedLabel, style: context.textStyles.viewportMonoLabel),
     );
   }
 

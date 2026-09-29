@@ -13,13 +13,14 @@ class TodayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(greeting, style: TypographyTokens.pageEyebrowAccent),
+        Text(greeting, style: textStyles.pageEyebrowAccent),
         const SizedBox(height: 1),
-        Text(longDate, style: TypographyTokens.displaySerifToday),
+        Text(longDate, style: textStyles.displaySerifToday),
       ],
     );
   }

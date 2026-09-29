@@ -22,17 +22,20 @@ class _HatchGeometry {
   final double bandPitch;
 }
 
-_HatchGeometry _geometryFor(CrossHatchVariant variant) {
+_HatchGeometry _geometryFor(
+  CrossHatchVariant variant,
+  FieldNotesColors colors,
+) {
   return switch (variant) {
-    CrossHatchVariant.photo => const _HatchGeometry(
-        ground: Palette.hatchMid,
-        band: Palette.hatchLight,
+    CrossHatchVariant.photo => _HatchGeometry(
+        ground: colors.hatchMid,
+        band: colors.hatchLight,
         bandWidth: 6,
         bandPitch: 12,
       ),
-    CrossHatchVariant.video => const _HatchGeometry(
-        ground: Palette.hatchDark,
-        band: Palette.hatchMid,
+    CrossHatchVariant.video => _HatchGeometry(
+        ground: colors.hatchDark,
+        band: colors.hatchMid,
         bandWidth: 6,
         bandPitch: 12,
       ),
@@ -67,7 +70,7 @@ class CrossHatchPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _HatchGeometry geometry = _geometryFor(variant);
+    final _HatchGeometry geometry = _geometryFor(variant, context.colors);
     final Color ground = background ?? geometry.ground;
     final Color? tint = hatchColor;
     final Color band = tint == null
@@ -85,8 +88,9 @@ class CrossHatchPlaceholder extends StatelessWidget {
         child: DecoratedBox(
           position: DecorationPosition.foreground,
           decoration: BoxDecoration(
-            border:
-                variant == CrossHatchVariant.viewport ? null : Shapes.outline,
+            border: variant == CrossHatchVariant.viewport
+                ? null
+                : context.shadows.outline,
             borderRadius: borderRadius,
           ),
           child: ClipRRect(

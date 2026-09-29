@@ -42,8 +42,8 @@ class SettingsTimeField extends StatelessWidget {
                 borderRadius: Shapes.buttonBorderRadius,
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    color: Palette.cardBright,
-                    border: Shapes.outline,
+                    color: context.colors.cardBright,
+                    border: context.shadows.outline,
                     borderRadius: Shapes.buttonBorderRadius,
                   ),
                   child: Padding(
@@ -56,13 +56,13 @@ class SettingsTimeField extends StatelessWidget {
                       children: <Widget>[
                         Text(
                           formatClock(context, value),
-                          style: TypographyTokens.bodySans,
+                          style: context.textStyles.bodySans,
                         ),
                         const SizedBox(width: 8),
-                        const Icon(
+                        Icon(
                           Icons.schedule,
                           size: 18,
-                          color: Palette.ink,
+                          color: context.colors.ink,
                         ),
                       ],
                     ),

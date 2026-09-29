@@ -150,7 +150,9 @@ class _PhotoTrayState extends State<PhotoTray> {
           const SizedBox(height: 8),
           Text(
             errorMessage,
-            style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+            style: context.textStyles.captionSans.copyWith(
+              color: context.colors.dangerInk,
+            ),
           ),
         ],
       ],
@@ -187,20 +189,15 @@ class _PhotoTrayTile extends StatelessWidget {
                 onPressed: onRemove,
                 borderRadius: _removeRadius,
                 child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Palette.cardBright,
-                    border: Shapes.outline,
+                  decoration: BoxDecoration(
+                    color: context.colors.cardBright,
+                    border: context.shadows.outline,
                     borderRadius: _removeRadius,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(4),
                     child: ExcludeSemantics(
-                      child: Text(
-                        '×',
-                        style: TypographyTokens.buttonSans.copyWith(
-                          color: Palette.ink,
-                        ),
-                      ),
+                      child: Text('×', style: context.textStyles.buttonSans),
                     ),
                   ),
                 ),

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/layout/line_fragments.dart';
+import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart';
 import 'package:field_notes/features/note_engine/projection/visible_text.dart';
@@ -1081,10 +1082,10 @@ List<InlineSpan> _styledSegments(
     }
     TextStyle style = base;
     for (final _Layer layer in open) {
-      style = _applyInline(style, layer.kind);
+      style = _applyInline(style, layer.kind, inputs.inks);
     }
     if (nextDimmed < dimmed.length && dimmed[nextDimmed].start <= previous) {
-      style = style.merge(NoteTypography.marker);
+      style = style.copyWith(color: inputs.inks.marker);
     }
     spans.add(
       TextSpan(
@@ -1097,22 +1098,34 @@ List<InlineSpan> _styledSegments(
   return spans;
 }
 
-TextStyle _applyInline(TextStyle style, MdInlineKind kind) => switch (kind) {
-  MdInlineKind.strong => style.merge(NoteTypography.strong),
-  MdInlineKind.emphasis => style.merge(NoteTypography.emphasis),
-  MdInlineKind.strikethrough => _withDecoration(
-    style,
-    NoteTypography.strikethrough,
-  ),
-  MdInlineKind.highlight => style.merge(NoteTypography.highlight),
-  MdInlineKind.codeSpan => style.merge(NoteTypography.inlineCode(style)),
-  MdInlineKind.link ||
-  MdInlineKind.autolink => _withDecoration(style, NoteTypography.link),
-  MdInlineKind.text ||
-  MdInlineKind.softBreak ||
-  MdInlineKind.hardBreak ||
-  MdInlineKind.escape => style,
-};
+TextStyle _applyInline(TextStyle style, MdInlineKind kind, NoteInks inks) =>
+    switch (kind) {
+      MdInlineKind.strong => style.merge(NoteTypography.strong),
+      MdInlineKind.emphasis => style.merge(NoteTypography.emphasis),
+      MdInlineKind.strikethrough => _withDecoration(
+        style,
+        NoteTypography.strikethrough,
+      ),
+      MdInlineKind.highlight => style.merge(
+        TextStyle(backgroundColor: inks.highlight),
+      ),
+      MdInlineKind.codeSpan => style.merge(
+        NoteTypography.inlineCode(
+          style,
+        ).copyWith(backgroundColor: inks.codeBackground),
+      ),
+      MdInlineKind.link || MdInlineKind.autolink => _withDecoration(
+        style,
+        NoteTypography.link.copyWith(
+          color: inks.link,
+          decorationColor: inks.linkDecoration,
+        ),
+      ),
+      MdInlineKind.text ||
+      MdInlineKind.softBreak ||
+      MdInlineKind.hardBreak ||
+      MdInlineKind.escape => style,
+    };
 
 TextStyle _withDecoration(TextStyle style, TextStyle layer) {
   final TextDecoration? current = style.decoration;
@@ -1849,26 +1862,30 @@ final class _RowScope {
 
   bool get inQuote => frames.any((_Frame frame) => frame.isQuote);
 
-  TextStyle get markerBase => inQuote
-      ? NoteTypography.quoteOf(NoteTypography.body)
-      : NoteTypography.body;
+  TextStyle get markerBase =>
+      _quotedIfInQuote(NoteTypography.body.copyWith(color: inputs.inks.body));
 
   TextStyle get contentBase {
     if (row.kind == LayoutRowKind.divider) {
       return markerBase;
     }
+    final NoteInks inks = inputs.inks;
     final MdBlockData? data = row.block?.data;
     final TextStyle style = data is MdHeadingData
-        ? NoteTypography.heading(data.level)
-        : NoteTypography.body;
-    final TextStyle quoted = inQuote ? NoteTypography.quoteOf(style) : style;
+        ? NoteTypography.heading(data.level).copyWith(color: inks.heading)
+        : NoteTypography.body.copyWith(color: inks.body);
+    final TextStyle quoted = _quotedIfInQuote(style);
     final _Frame? item = _innermostItem(frames);
     final MdBlockData? itemData = item?.block.data;
     return itemData is MdListItemData &&
             itemData.taskState == MdTaskState.checked
-        ? quoted.merge(NoteTypography.checkedItem)
+        ? quoted.copyWith(color: inks.checked)
         : quoted;
   }
+
+  TextStyle _quotedIfInQuote(TextStyle style) => inQuote
+      ? NoteTypography.quoteOf(style).copyWith(color: inputs.inks.quote)
+      : style;
 
   _Part get collapsedPart => _Part(
     prefix: const <_Piece>[],
@@ -2173,7 +2190,9 @@ final class _RowScope {
 
   _Assembly layoutCode(List<_Part> parts) {
     final double padding = NoteTypography.codePaddingEm * em;
-    final TextStyle base = NoteTypography.codeBlock;
+    final TextStyle base = NoteTypography.codeBlock.copyWith(
+      color: inputs.inks.code,
+    );
     final List<LineFragment> fragments = <LineFragment>[];
     double y = region.top + padding;
     if (parts.isEmpty) {

@@ -64,7 +64,7 @@ void main() {
         () {
       for (final mood in moodOrder) {
         final spec = flowerSpecFor(mood.flower);
-        expect(spec.strokeColor, isNot(Palette.ink), reason: mood.flower.name);
+        expect(spec.strokeColor, isNot(FieldNotesColors.light.ink), reason: mood.flower.name);
         expect(spec.strokeWidth, greaterThan(0), reason: mood.flower.name);
       }
     });

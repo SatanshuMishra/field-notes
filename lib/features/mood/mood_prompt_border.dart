@@ -7,9 +7,9 @@ import 'package:field_notes/design/tokens/tokens.dart';
 
 class MoodPromptBorderPainter extends CustomPainter {
   const MoodPromptBorderPainter({
-    this.color = Palette.ink,
-    this.fill = Palette.cardWarm,
-    this.shadows = Shadows.heroSoft,
+    required this.color,
+    required this.fill,
+    required this.shadows,
     this.strokeWidth = Shapes.outlineWidth,
     this.radius = Shapes.radiusLg,
     this.dashLength = Shapes.dashLength,

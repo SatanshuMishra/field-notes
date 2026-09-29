@@ -44,22 +44,26 @@ class MoodPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return layout == ShellLayout.bottomBar ? _buildSheet() : _buildPanel();
+    return layout == ShellLayout.bottomBar
+        ? _buildSheet(context)
+        : _buildPanel();
   }
 
   Widget _buildPanel() {
     return Center(
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
+          final FieldNotesColors colors = context.colors;
+          final FieldNotesTextStyles textStyles = context.textStyles;
           return SizedBox(
             width: math.min(maxWidth, constraints.maxWidth),
             child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: Palette.cardWarm,
+              decoration: BoxDecoration(
+                color: colors.cardWarm,
                 border: Border.fromBorderSide(
-                  BorderSide(color: Palette.ink, width: _panelBorderWidth),
+                  BorderSide(color: colors.line, width: _panelBorderWidth),
                 ),
-                borderRadius: BorderRadius.all(
+                borderRadius: const BorderRadius.all(
                   Radius.circular(Shapes.radiusXl),
                 ),
                 boxShadow: Shadows.softLift,
@@ -71,13 +75,13 @@ class MoodPickerSheet extends StatelessWidget {
                   children: <Widget>[
                     Text(
                       title,
-                      style: TypographyTokens.headlineSerif,
+                      style: textStyles.headlineSerif,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: _subtitleGap),
-                    const Text(
+                    Text(
                       _subtitle,
-                      style: TypographyTokens.subtitleAccent,
+                      style: textStyles.subtitleAccent,
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: _gridGap),
@@ -95,18 +99,20 @@ class MoodPickerSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildSheet() {
+  Widget _buildSheet(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Align(
       alignment: Alignment.bottomCenter,
       child: SizedBox(
         width: double.infinity,
         child: DecoratedBox(
-          decoration: const BoxDecoration(
-            color: Palette.cardWarm,
+          decoration: BoxDecoration(
+            color: colors.cardWarm,
             border: Border(
-              top: BorderSide(color: Palette.ink, width: _panelBorderWidth),
+              top: BorderSide(color: colors.line, width: _panelBorderWidth),
             ),
-            borderRadius: BorderRadius.vertical(
+            borderRadius: const BorderRadius.vertical(
               top: Radius.circular(Shapes.radiusSheet),
             ),
             boxShadow: Shadows.pickerSheetLift,
@@ -121,13 +127,13 @@ class MoodPickerSheet extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                const SizedBox(
+                SizedBox(
                   width: _grabHandleWidth,
                   height: _grabHandleHeight,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: Palette.ink30,
-                      borderRadius: BorderRadius.all(
+                      color: colors.ink30,
+                      borderRadius: const BorderRadius.all(
                         Radius.circular(_grabHandleRadius),
                       ),
                     ),
@@ -136,7 +142,7 @@ class MoodPickerSheet extends StatelessWidget {
                 const SizedBox(height: _grabHandleGap),
                 Text(
                   title,
-                  style: TypographyTokens.headlineSerif.copyWith(
+                  style: textStyles.headlineSerif.copyWith(
                     fontSize: _sheetTitleSize,
                   ),
                   textAlign: TextAlign.center,
@@ -144,7 +150,7 @@ class MoodPickerSheet extends StatelessWidget {
                 const SizedBox(height: _subtitleGap),
                 Text(
                   _subtitle,
-                  style: TypographyTokens.subtitleAccent.copyWith(
+                  style: textStyles.subtitleAccent.copyWith(
                     fontSize: _sheetSubtitleSize,
                   ),
                   textAlign: TextAlign.center,

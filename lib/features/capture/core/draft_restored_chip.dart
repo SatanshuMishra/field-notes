@@ -15,11 +15,6 @@ const BorderRadius _discardFocusRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusPill),
 );
 
-final TextStyle _discardStyle = TypographyTokens.captureLabelSans.copyWith(
-  color: Palette.coralLink,
-  decoration: TextDecoration.underline,
-);
-
 class DraftRestoredChip extends StatelessWidget {
   const DraftRestoredChip({
     super.key,
@@ -32,6 +27,10 @@ class DraftRestoredChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final TextStyle discardStyle = context.textStyles.captureLabelSans.copyWith(
+      color: context.colors.coralLink,
+      decoration: TextDecoration.underline,
+    );
     return Align(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
@@ -41,13 +40,13 @@ class DraftRestoredChip extends StatelessWidget {
           children: <Widget>[
             Padding(
               padding: EdgeInsets.symmetric(vertical: verticalMargin),
-              child: _chip(),
+              child: _chip(context, discardStyle),
             ),
             PositionedDirectional(
               top: 0,
               bottom: 0,
               end: 0,
-              child: _discardButton(),
+              child: _discardButton(discardStyle),
             ),
           ],
         ),
@@ -55,11 +54,13 @@ class DraftRestoredChip extends StatelessWidget {
     );
   }
 
-  Widget _chip() {
+  Widget _chip(BuildContext context, TextStyle discardStyle) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Palette.cardBright,
-        border: Shapes.outline,
+        color: colors.cardBright,
+        border: context.shadows.outline,
         borderRadius: BorderRadius.circular(Shapes.radiusPill),
       ),
       child: Padding(
@@ -72,13 +73,13 @@ class DraftRestoredChip extends StatelessWidget {
           children: <Widget>[
             Text(
               draftRestoredLabel,
-              style: TypographyTokens.captionSans.copyWith(color: Palette.ink),
+              style: textStyles.captionSans.copyWith(color: colors.ink),
             ),
             const SizedBox(width: _chipGap),
-            Text('·', style: TypographyTokens.captionSans),
+            Text('·', style: textStyles.captionSans),
             const SizedBox(width: _chipGap),
             ExcludeSemantics(
-              child: Text(draftRestoredDiscardLabel, style: _discardStyle),
+              child: Text(draftRestoredDiscardLabel, style: discardStyle),
             ),
           ],
         ),
@@ -86,7 +87,7 @@ class DraftRestoredChip extends StatelessWidget {
     );
   }
 
-  Widget _discardButton() {
+  Widget _discardButton(TextStyle discardStyle) {
     return TextFieldTapRegion(
       child: Semantics(
         container: true,
@@ -113,10 +114,7 @@ class DraftRestoredChip extends StatelessWidget {
                   widthFactor: 1,
                   child: Opacity(
                     opacity: 0,
-                    child: Text(
-                      draftRestoredDiscardLabel,
-                      style: _discardStyle,
-                    ),
+                    child: Text(draftRestoredDiscardLabel, style: discardStyle),
                   ),
                 ),
               ),

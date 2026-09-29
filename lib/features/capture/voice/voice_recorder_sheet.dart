@@ -203,13 +203,13 @@ class VoiceRecorderSheet extends StatelessWidget {
         trailing: sidebar ? _KeyHint(text: _keyHint) : null,
         question: ReflectionPrompt(phase: phase.stage, showKicker: true),
         centre: _OrbZone(phase: phase, sidebar: sidebar, onTap: _orbTap),
-        status: _status(),
+        status: _status(context),
         actions: _actions(sidebar),
       ),
     );
   }
 
-  Widget _status() {
+  Widget _status(BuildContext context) {
     final String? errorMessage = this.errorMessage;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -230,7 +230,9 @@ class VoiceRecorderSheet extends StatelessWidget {
                 errorMessage,
                 key: voiceErrorKey,
                 textAlign: TextAlign.center,
-                style: TypographyTokens.captionSans.copyWith(color: _errorInk),
+                style: context.textStyles.captionSans.copyWith(
+                  color: _errorInk,
+                ),
               ),
             ),
           ),

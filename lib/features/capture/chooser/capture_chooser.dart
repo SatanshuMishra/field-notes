@@ -29,7 +29,7 @@ Future<EntryType?> showCaptureChooser(
     barrierLabel: 'Dismiss capture chooser',
     barrierColor: isSheet
         ? _kChooserSheetBarrier
-        : Palette.ink.withValues(alpha: 0.32),
+        : FieldNotesColors.light.ink.withValues(alpha: 0.32),
     transitionDuration: isSheet ? _kChooserSheetEntrance : Motion.modalPop,
     pageBuilder: (
       BuildContext dialogContext,

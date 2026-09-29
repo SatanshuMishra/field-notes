@@ -30,6 +30,7 @@ class SearchDayTile extends StatelessWidget {
       previewText,
       countLabel,
     ].join(', ');
+    final FieldNotesTextStyles textStyles = context.textStyles;
 
     return Semantics(
       button: true,
@@ -53,14 +54,14 @@ class SearchDayTile extends StatelessWidget {
                       children: <Widget>[
                         Text(
                           title,
-                          style: TypographyTokens.dateSerif,
+                          style: textStyles.dateSerif,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 4),
                         Text(
                           previewText,
-                          style: TypographyTokens.bodySans,
+                          style: textStyles.bodySans,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -68,7 +69,7 @@ class SearchDayTile extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Text(countLabel, style: TypographyTokens.captionSans),
+                  Text(countLabel, style: textStyles.captionSans),
                 ],
               ),
             ),
@@ -88,14 +89,15 @@ class _SearchDayFlower extends StatelessWidget {
   Widget build(BuildContext context) {
     final Mood? resolved = mood;
     if (resolved == null) {
+      final FieldNotesColors colors = context.colors;
       return Container(
         width: 40,
         height: 40,
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: Palette.cardAlt,
+          color: colors.cardAlt,
           border: Border.fromBorderSide(
-            BorderSide(color: Palette.placeholder, width: Shapes.outlineWidth),
+            BorderSide(color: colors.placeholder, width: Shapes.outlineWidth),
           ),
         ),
       );

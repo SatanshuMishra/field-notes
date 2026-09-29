@@ -24,6 +24,8 @@ class SettingsToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? toggle = enabled ? () => onChanged?.call(!value) : null;
+    final FieldNotesColors colors = context.colors;
+    final Border outline = context.shadows.outline;
     return Semantics(
       container: true,
       excludeSemantics: true,
@@ -53,8 +55,8 @@ class SettingsToggle extends StatelessWidget {
                   height: 30,
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      color: value ? Palette.coral : Palette.panelTop,
-                      border: Shapes.outline,
+                      color: value ? Palette.coral : colors.panelTop,
+                      border: outline,
                       borderRadius: _trackRadius,
                     ),
                     child: Padding(
@@ -64,13 +66,13 @@ class SettingsToggle extends StatelessWidget {
                         alignment: value
                             ? Alignment.centerRight
                             : Alignment.centerLeft,
-                        child: const DecoratedBox(
+                        child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Palette.cardBright,
-                            border: Shapes.outline,
+                            color: colors.cardBright,
+                            border: outline,
                             shape: BoxShape.circle,
                           ),
-                          child: SizedBox(width: 22, height: 22),
+                          child: const SizedBox(width: 22, height: 22),
                         ),
                       ),
                     ),

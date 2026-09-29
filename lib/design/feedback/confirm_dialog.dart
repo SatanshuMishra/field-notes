@@ -27,19 +27,11 @@ const List<BoxShadow> _panelShadow = <BoxShadow>[
   ),
 ];
 
-const List<BoxShadow> _confirmButtonShadow = <BoxShadow>[
-  BoxShadow(
-    color: Palette.ink,
-    offset: Offset(1.5, 1.5),
-  ),
-];
-
 const TextStyle _messageStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 13,
   fontWeight: FontWeight.w400,
   height: 1.55,
-  color: Palette.mutedDeep,
 );
 
 Future<bool> showConfirmDialog(
@@ -95,13 +87,14 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _maxWidth),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Palette.cardWarm,
-            border: Border.all(color: Palette.ink, width: _borderWidth),
+            color: colors.cardWarm,
+            border: Border.all(color: colors.line, width: _borderWidth),
             borderRadius: BorderRadius.circular(_radius),
             boxShadow: _panelShadow,
           ),
@@ -113,10 +106,15 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
               children: <Widget>[
                 Text(
                   widget.title,
-                  style: TypographyTokens.headlineSerif.copyWith(fontSize: 20),
+                  style: context.textStyles.headlineSerif.copyWith(
+                    fontSize: 20,
+                  ),
                 ),
                 const SizedBox(height: _titleGap),
-                Text(widget.message, style: _messageStyle),
+                Text(
+                  widget.message,
+                  style: _messageStyle.copyWith(color: colors.mutedDeep),
+                ),
                 const SizedBox(height: _actionsGap),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
@@ -124,8 +122,8 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
                     _ConfirmDialogButton(
                       buttonKey: confirmDialogCancelKey,
                       label: 'Cancel',
-                      background: Palette.cardBright,
-                      foreground: Palette.ink,
+                      background: colors.cardBright,
+                      foreground: colors.ink,
                       boxShadow: null,
                       autofocus: true,
                       onTap: () => _resolve(false),
@@ -136,7 +134,7 @@ class _ConfirmDialogState extends State<_ConfirmDialog> {
                       label: widget.confirmLabel,
                       background: widget.danger ? Palette.danger : Palette.coral,
                       foreground: Palette.onAccent,
-                      boxShadow: _confirmButtonShadow,
+                      boxShadow: context.shadows.control,
                       onTap: () => _resolve(true),
                     ),
                   ],
@@ -194,7 +192,7 @@ class _ConfirmDialogButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: background,
                   border: Border.all(
-                    color: Palette.ink,
+                    color: context.colors.line,
                     width: _buttonBorderWidth,
                   ),
                   borderRadius: _buttonRadius,

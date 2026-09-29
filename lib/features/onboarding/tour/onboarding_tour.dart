@@ -49,37 +49,39 @@ const BorderRadius _pillRadius = BorderRadius.all(
   Radius.circular(_bottomBarControlHeight / 2),
 );
 
-const List<BoxShadow> _cardShadow = <BoxShadow>[
-  BoxShadow(color: Palette.ink40, offset: Offset(4, 4)),
-  BoxShadow(
-    color: Color(0xA6140C06),
-    offset: Offset(0, 26),
-    blurRadius: 50,
-    spreadRadius: -20,
-  ),
+const BoxShadow _cardLift = BoxShadow(
+  color: Color(0xA6140C06),
+  offset: Offset(0, 26),
+  blurRadius: 50,
+  spreadRadius: -20,
+);
+
+List<BoxShadow> _cardShadow(FieldNotesColors colors) => <BoxShadow>[
+  BoxShadow(color: colors.shadowTint(0x66), offset: const Offset(4, 4)),
+  _cardLift,
 ];
 
-const TextStyle _titleStyle = TextStyle(
+TextStyle _titleStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.serif,
   fontSize: 22,
   fontWeight: FontWeight.w500,
   height: 1.15,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _lineStyle = TextStyle(
+TextStyle _lineStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12,
   fontWeight: FontWeight.w400,
   height: 1.45,
-  color: Palette.mutedDeep,
+  color: colors.mutedDeep,
 );
 
-const TextStyle _skipStyle = TextStyle(
+TextStyle _skipStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 11.5,
   fontWeight: FontWeight.w600,
-  color: Palette.mutedDeep,
+  color: colors.mutedDeep,
 );
 
 const TextStyle _skipOnScrimStyle = TextStyle(
@@ -89,18 +91,18 @@ const TextStyle _skipOnScrimStyle = TextStyle(
   color: Palette.toastInk,
 );
 
-const TextStyle _hintStyle = TextStyle(
+TextStyle _hintStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 10.5,
   fontWeight: FontWeight.w500,
-  color: Palette.placeholder,
+  color: colors.placeholder,
 );
 
-const TextStyle _backStyle = TextStyle(
+TextStyle _backStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12.5,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
 const TextStyle _nextStyle = TextStyle(
@@ -303,9 +305,11 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     final TourTip tip = tourTips[_tip];
-    final Widget card = _card(tip);
-    final Widget? controls = _sidebar ? null : _controls();
+    final Widget card = _card(tip, colors, shadows);
+    final Widget? controls = _sidebar ? null : _controls(colors, shadows);
     final EdgeInsets safeArea = MediaQuery.paddingOf(context);
     final Duration fade = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -347,6 +351,7 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
                                 painter: TourSpotlightPainter(
                                   hole: _ready ? shown.spotlight : null,
                                   radius: shown.radius,
+                                  innerRingColor: colors.cardLight,
                                 ),
                               ),
                             ),
@@ -390,7 +395,11 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
     );
   }
 
-  Widget _card(TourTip tip) {
+  Widget _card(
+    TourTip tip,
+    FieldNotesColors colors,
+    FieldNotesShadows shadows,
+  ) {
     final String? line = tip.lineFor(
       widget.layout,
       replay: widget.mode == TourMode.replay,
@@ -404,14 +413,14 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
       child: DecoratedBox(
         key: _cardBox,
         decoration: BoxDecoration(
-          color: Palette.composerPaper,
-          border: Border.all(color: Palette.ink, width: _cardBorderWidth),
+          color: colors.composerPaper,
+          border: Border.all(color: colors.line, width: _cardBorderWidth),
           borderRadius: BorderRadius.all(
             Radius.circular(
               _sidebar ? _sidebarCardRadius : _bottomBarCardRadius,
             ),
           ),
-          boxShadow: _cardShadow,
+          boxShadow: _cardShadow(colors),
         ),
         child: Padding(
           padding: _sidebar
@@ -421,7 +430,7 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (_sidebar) _sidebarHeader() else _progress(),
+              if (_sidebar) _sidebarHeader(colors) else _progress(colors),
               Flexible(
                 child: SingleChildScrollView(
                   child: Column(
@@ -433,8 +442,8 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
                         child: Text(
                           tip.title,
                           style: _sidebar
-                              ? _titleStyle
-                              : _titleStyle.copyWith(fontSize: 19),
+                              ? _titleStyle(colors)
+                              : _titleStyle(colors).copyWith(fontSize: 19),
                         ),
                       ),
                       TourTipVisual(visual: tip.visual, layout: widget.layout),
@@ -443,8 +452,8 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
                         Text(
                           line,
                           style: _sidebar
-                              ? _lineStyle
-                              : _lineStyle.copyWith(fontSize: 11.5),
+                              ? _lineStyle(colors)
+                              : _lineStyle(colors).copyWith(fontSize: 11.5),
                         ),
                       ],
                     ],
@@ -453,7 +462,7 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
               ),
               if (_sidebar) ...<Widget>[
                 const SizedBox(height: 10),
-                _sidebarFooter(),
+                _sidebarFooter(colors, shadows),
               ],
             ],
           ),
@@ -462,23 +471,23 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
     );
   }
 
-  Widget _sidebarHeader() {
+  Widget _sidebarHeader(FieldNotesColors colors) {
     return Row(
       children: <Widget>[
-        Expanded(child: _progress()),
+        Expanded(child: _progress(colors)),
         const SizedBox(width: 14),
         _TourTextButton(
           key: tourSkipKey,
           label: _skipLabel,
           onPressed: widget.onSkip,
-          style: _skipStyle,
+          style: _skipStyle(colors),
           padding: EdgeInsets.zero,
         ),
       ],
     );
   }
 
-  Widget _progress() {
+  Widget _progress(FieldNotesColors colors) {
     return Semantics(
       label: 'Tip ${_tip + 1} of ${tourTips.length}',
       child: Row(
@@ -495,7 +504,7 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
                         ? Palette.coral
                         : index < _tip
                         ? _progressDone
-                        : Palette.ink18,
+                        : colors.ink18,
                     borderRadius: const BorderRadius.all(Radius.circular(3)),
                   ),
                 ),
@@ -507,11 +516,13 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
     );
   }
 
-  Widget _sidebarFooter() {
+  Widget _sidebarFooter(FieldNotesColors colors, FieldNotesShadows shadows) {
     return Row(
       children: <Widget>[
-        const Expanded(
-          child: ExcludeSemantics(child: Text(_keysHint, style: _hintStyle)),
+        Expanded(
+          child: ExcludeSemantics(
+            child: Text(_keysHint, style: _hintStyle(colors)),
+          ),
         ),
         _TourButton(
           key: tourBackKey,
@@ -519,9 +530,9 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
           onPressed: _canGoBack ? _back : null,
           height: _sidebarButtonHeight,
           borderRadius: _sidebarButtonRadius,
-          border: Border.all(color: Palette.ink35, width: Shapes.outlineWidth),
+          border: Border.all(color: colors.ink35, width: Shapes.outlineWidth),
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: const Text(_backLabel, maxLines: 1, style: _backStyle),
+          child: Text(_backLabel, maxLines: 1, style: _backStyle(colors)),
         ),
         const SizedBox(width: 8),
         _TourButton(
@@ -530,9 +541,9 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
           onPressed: _next,
           height: _sidebarButtonHeight,
           borderRadius: _sidebarButtonRadius,
-          border: Shapes.outline,
+          border: shadows.outline,
           color: Palette.coral,
-          shadow: Shadows.control,
+          shadow: shadows.control,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           focusNode: _nextFocus,
           autofocus: true,
@@ -542,9 +553,9 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
     );
   }
 
-  Widget _controls() {
+  Widget _controls(FieldNotesColors colors, FieldNotesShadows shadows) {
     final Border pillBorder = Border.all(
-      color: Palette.ink,
+      color: colors.line,
       width: _pillBorderWidth,
     );
     return Row(
@@ -567,12 +578,12 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
           width: _bottomBarControlHeight,
           borderRadius: _pillRadius,
           border: pillBorder,
-          color: Palette.composerPaper,
+          color: colors.composerPaper,
           surface: FocusRingSurface.dark,
-          child: const Icon(
+          child: Icon(
             Icons.chevron_left_rounded,
             size: _backGlyphSize,
-            color: Palette.ink,
+            color: colors.ink,
           ),
         ),
         const SizedBox(width: 8),
@@ -585,7 +596,7 @@ class _OnboardingTourState extends ConsumerState<OnboardingTour>
           borderRadius: _pillRadius,
           border: pillBorder,
           color: Palette.coral,
-          shadow: Shadows.emphasis,
+          shadow: shadows.emphasis,
           padding: const EdgeInsets.symmetric(horizontal: 20),
           surface: FocusRingSurface.dark,
           focusNode: _nextFocus,

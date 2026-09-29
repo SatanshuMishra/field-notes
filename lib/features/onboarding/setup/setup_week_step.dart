@@ -43,25 +43,24 @@ const BorderRadius _optionRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
 );
 
-const TextStyle _labelStyle = TextStyle(
+TextStyle _labelStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 14,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _suggestionStyle = TextStyle(
+TextStyle _suggestionStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 10.5,
   fontWeight: FontWeight.w500,
-  color: Palette.sage,
+  color: colors.sage,
 );
 
 const TextStyle _letterStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 10,
   fontWeight: FontWeight.w600,
-  color: Palette.muted,
 );
 
 List<String> weekLettersFor(WeekStart start) {
@@ -131,6 +130,7 @@ class _WeekOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final String suggestionText = _sidebar
         ? _sidebarSuggestion
         : _bottomBarSuggestion;
@@ -148,9 +148,9 @@ class _WeekOption extends StatelessWidget {
             constraints: const BoxConstraints(minHeight: _optionHeight),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: selected ? Palette.cardLight : Palette.cardWarm,
+                color: selected ? colors.cardLight : colors.cardWarm,
                 border: Border.all(
-                  color: selected ? Palette.coral : Palette.ink22,
+                  color: selected ? Palette.coral : colors.ink22,
                   width: _optionBorderWidth,
                 ),
                 borderRadius: _optionRadius,
@@ -170,20 +170,22 @@ class _WeekOption extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
-                            Text(start.label, style: _labelStyle),
+                            Text(start.label, style: _labelStyle(colors)),
                             if (suggested) ...<Widget>[
                               const SizedBox(height: 1),
                               Text(
                                 suggestionText,
                                 style: _sidebar
-                                    ? _suggestionStyle
-                                    : _suggestionStyle.copyWith(fontSize: 10),
+                                    ? _suggestionStyle(colors)
+                                    : _suggestionStyle(
+                                        colors,
+                                      ).copyWith(fontSize: 10),
                               ),
                             ],
                           ],
                         ),
                       ),
-                      _letters(),
+                      _letters(colors),
                     ],
                   ),
                 ),
@@ -195,12 +197,12 @@ class _WeekOption extends StatelessWidget {
     );
   }
 
-  Widget _letters() {
+  Widget _letters(FieldNotesColors colors) {
     final List<String> letters = weekLettersFor(start);
     final double size = _sidebar ? _sidebarLetterSize : _bottomBarLetterSize;
     final double gap = _sidebar ? _sidebarLetterGap : _bottomBarLetterGap;
     final BorderRadius radius = BorderRadius.circular(_sidebar ? 6 : 5);
-    final Color lead = selected ? Palette.coral : Palette.ink;
+    final Color lead = selected ? Palette.coral : colors.pill;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -214,7 +216,7 @@ class _WeekOption extends StatelessWidget {
                 color: index == 0 ? lead : null,
                 border: index == 0
                     ? null
-                    : Border.all(color: Palette.ink25, width: 1),
+                    : Border.all(color: colors.ink25, width: 1),
                 borderRadius: radius,
               ),
               child: Center(
@@ -222,7 +224,7 @@ class _WeekOption extends StatelessWidget {
                   letters[index],
                   style: _letterStyle.copyWith(
                     fontSize: _sidebar ? 10 : 9,
-                    color: index == 0 ? Palette.onAccent : Palette.muted,
+                    color: index == 0 ? Palette.onAccent : colors.muted,
                   ),
                 ),
               ),
@@ -244,9 +246,9 @@ class SetupRadioDot extends StatelessWidget {
     return SizedBox.square(
       dimension: _radioSize,
       child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Palette.cardBright,
-          border: Shapes.outline,
+        decoration: BoxDecoration(
+          color: context.colors.cardBright,
+          border: context.shadows.outline,
           shape: BoxShape.circle,
         ),
         child: Padding(
