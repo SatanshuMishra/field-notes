@@ -78,6 +78,13 @@ class SettingsController {
     );
   }
 
+  Future<SettingsWriteResult> setAppearance(Appearance value) {
+    return _write(
+      () => _repository.setAppearance(value),
+      'Could not save your appearance.',
+    );
+  }
+
   Future<SettingsWriteResult> _write(
     Future<void> Function() action,
     String failureMessage,

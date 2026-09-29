@@ -64,6 +64,10 @@ class DriftSettingsRepository implements SettingsRepository {
       _put(SettingsKeys.onboardingStatus, value.id);
 
   @override
+  Future<void> setAppearance(Appearance value) =>
+      _put(SettingsKeys.appearance, value.id);
+
+  @override
   Future<bool> hasStoredValues() async {
     final rows = await _db.select(_db.settings).get();
     return rows.isNotEmpty;
@@ -115,6 +119,9 @@ class DriftSettingsRepository implements SettingsRepository {
       onboardingStatus: OnboardingStatus.fromId(
         values[SettingsKeys.onboardingStatus],
       ),
+      appearance:
+          Appearance.fromId(values[SettingsKeys.appearance]) ??
+          defaults.appearance,
     );
   }
 

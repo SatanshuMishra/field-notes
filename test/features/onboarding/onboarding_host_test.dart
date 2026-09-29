@@ -26,6 +26,7 @@ const Size _bottomBarSurface = Size(360, 740);
 const String _welcomeHeadline = 'A journal of days.';
 const String _beginLabel = 'Let’s begin';
 const String _skipTourLabel = 'Skip how it works';
+const String _appearanceTitle = 'Light or dark?';
 const String _reminderTitle = 'A gentle daily nudge?';
 const String _weekTitle = 'Your week starts on';
 const String _storageTitle = 'Where should entries live?';
@@ -52,6 +53,7 @@ const AppSettings _onboarded = AppSettings(
   notificationPermissionAsked: true,
   reflectionPromptsEnabled: false,
   onboardingStatus: OnboardingStatus.done,
+  appearance: Appearance.light,
 );
 
 class _Run {
@@ -64,6 +66,8 @@ class _Run {
 Finder get _tourCard => find.byKey(tourCardKey);
 
 Finder get _welcome => find.text(_welcomeHeadline);
+
+Finder get _appearance => find.byType(OnboardingAppearance);
 
 Finder _tipTitle(int index) =>
     find.descendant(of: _tourCard, matching: find.text(_tipTitles[index]));
@@ -141,6 +145,15 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 Future<void> _tapKey(WidgetTester tester, Key key) =>
     _tap(tester, find.byKey(key));
 
+OnboardingFlow _flow(WidgetTester tester) =>
+    _container(tester).read(onboardingControllerProvider);
+
+Future<void> _continueFromAppearance(WidgetTester tester) async {
+  expect(find.text(_appearanceTitle), findsOneWidget);
+  await _tapKey(tester, onboardingAppearanceContinueKey);
+  expect(_appearance, findsNothing);
+}
+
 Future<void> _walkTourToLastTip(WidgetTester tester) async {
   for (int tip = 0; tip < _tipTitles.length - 1; tip++) {
     expect(_tipTitle(tip), findsOneWidget);
@@ -166,6 +179,7 @@ void _expectNoOnboarding() {
   expect(find.byType(OnboardingWelcome), findsNothing);
   expect(find.byType(OnboardingTour), findsNothing);
   expect(find.byType(OnboardingSetup), findsNothing);
+  expect(_appearance, findsNothing);
 }
 
 void _expectFocusOutsideApp() {
@@ -198,6 +212,7 @@ void main() {
         ]);
 
         await _tap(tester, find.text(_beginLabel));
+        await _continueFromAppearance(tester);
 
         expect(_welcome, findsNothing);
         expect(_destination(tester), ShellDestination.today);
@@ -226,6 +241,7 @@ void main() {
 
       expect(_welcome, findsOneWidget);
       await _tap(tester, find.text(_beginLabel));
+      await _continueFromAppearance(tester);
       await _walkTourToLastTip(tester);
       await _tapKey(tester, tourNextKey);
       await _walkSetupToEnd(tester);
@@ -289,6 +305,7 @@ void main() {
         _expectFocusOutsideApp();
 
         await _tap(tester, find.text(_beginLabel));
+        await _continueFromAppearance(tester);
         expect(_tipTitle(0), findsOneWidget);
         await tester.tapAt(tester.getCenter(calendar));
         await _settle(tester);
@@ -315,6 +332,7 @@ void main() {
         final _Run run = await _pumpApp(tester, surface: _bottomBarSurface);
 
         await _tap(tester, find.text(_skipTourLabel));
+        await _continueFromAppearance(tester);
         expect(find.text(_reminderTitle), findsOneWidget);
         expect(run.scheduler.permissionRequests, 0);
 
@@ -339,12 +357,13 @@ void main() {
   );
 
   testWidgets(
-    'Back from setup returns to the last tip and Back from tip 1 returns to welcome',
+    'Back walks from setup and the first tip to Light or dark and then welcome',
     (WidgetTester tester) async {
       await _onPlatform(TargetPlatform.macOS, () async {
         await _pumpApp(tester, surface: _sidebarSurface);
 
         await _tap(tester, find.text(_beginLabel));
+        await _continueFromAppearance(tester);
         await _walkTourToLastTip(tester);
         await _tapKey(tester, tourNextKey);
         expect(find.text(_reminderTitle), findsOneWidget);
@@ -362,6 +381,35 @@ void main() {
         await _tapKey(tester, tourBackKey);
 
         expect(_tourCard, findsNothing);
+        expect(_welcome, findsNothing);
+        expect(find.text(_appearanceTitle), findsOneWidget);
+        expect(
+          _flow(tester),
+          const OnboardingFlowAppearance(skippedTips: false),
+        );
+
+        await _tapKey(tester, onboardingAppearanceBackKey);
+
+        expect(_appearance, findsNothing);
+        expect(_welcome, findsOneWidget);
+
+        await _tap(tester, find.text(_skipTourLabel));
+        await _continueFromAppearance(tester);
+        expect(find.text(_reminderTitle), findsOneWidget);
+
+        await _tapKey(tester, setupBackKey);
+
+        expect(find.text(_reminderTitle), findsNothing);
+        expect(_tourCard, findsNothing);
+        expect(find.text(_appearanceTitle), findsOneWidget);
+        expect(
+          _flow(tester),
+          const OnboardingFlowAppearance(skippedTips: true),
+        );
+
+        await _tapKey(tester, onboardingAppearanceBackKey);
+
+        expect(_appearance, findsNothing);
         expect(_welcome, findsOneWidget);
       });
     },
@@ -378,6 +426,7 @@ void main() {
         expect(_welcome, findsOneWidget);
 
         await _tap(tester, find.text(_beginLabel));
+        await _continueFromAppearance(tester);
         await _tapKey(tester, tourNextKey);
         expect(_tipTitle(1), findsOneWidget);
         await tester.binding.handlePopRoute();
@@ -386,9 +435,14 @@ void main() {
         await tester.binding.handlePopRoute();
         await _settle(tester);
         expect(_tourCard, findsNothing);
+        expect(find.text(_appearanceTitle), findsOneWidget);
+        await tester.binding.handlePopRoute();
+        await _settle(tester);
+        expect(_appearance, findsNothing);
         expect(_welcome, findsOneWidget);
 
         await _tap(tester, find.text(_beginLabel));
+        await _continueFromAppearance(tester);
         await _walkTourToLastTip(tester);
         await _tapKey(tester, tourNextKey);
         await _tapKey(tester, setupPrimaryKey);
@@ -420,6 +474,7 @@ void main() {
         );
 
         await _tap(tester, find.text(_beginLabel));
+        await _continueFromAppearance(tester);
 
         expect(find.byKey(tourControlsKey), findsOneWidget);
         await _walkTourToLastTip(tester);
@@ -502,6 +557,105 @@ void main() {
       expect(run.settings.soundEnabledWrites, isEmpty);
       expect(run.settings.textSizeWrites, isEmpty);
       expect(run.settings.spellCheckEnabledWrites, isEmpty);
+    });
+  });
+
+  testWidgets("Let's begin shows Light or dark, then the first tip", (
+    WidgetTester tester,
+  ) async {
+    await _onPlatform(TargetPlatform.macOS, () async {
+      await _pumpApp(tester, surface: _sidebarSurface);
+      expect(_welcome, findsOneWidget);
+
+      await _tap(tester, find.text(_beginLabel));
+
+      expect(_welcome, findsNothing);
+      expect(_tourCard, findsNothing);
+      expect(_appearance, findsOneWidget);
+      expect(find.text(_appearanceTitle), findsOneWidget);
+      expect(_flow(tester), const OnboardingFlowAppearance(skippedTips: false));
+      expect(find.byType(TodayScreen), findsOneWidget);
+
+      await _tapKey(tester, onboardingAppearanceContinueKey);
+
+      expect(_appearance, findsNothing);
+      expect(_tipTitle(0), findsOneWidget);
+      expect(
+        _flow(tester),
+        const OnboardingFlowTour(tip: 0, mode: TourMode.firstRun),
+      );
+    });
+  });
+
+  testWidgets('Skip how it works shows Light or dark, then setup', (
+    WidgetTester tester,
+  ) async {
+    await _onPlatform(TargetPlatform.android, () async {
+      await _pumpApp(tester, surface: _bottomBarSurface);
+      expect(_welcome, findsOneWidget);
+
+      await _tap(tester, find.text(_skipTourLabel));
+
+      expect(_welcome, findsNothing);
+      expect(_appearance, findsOneWidget);
+      expect(find.text(_appearanceTitle), findsOneWidget);
+      expect(find.text(_reminderTitle), findsNothing);
+      expect(_flow(tester), const OnboardingFlowAppearance(skippedTips: true));
+
+      await _tapKey(tester, onboardingAppearanceContinueKey);
+
+      expect(_appearance, findsNothing);
+      expect(_tourCard, findsNothing);
+      expect(find.byType(OnboardingSetup), findsOneWidget);
+      expect(find.text(_reminderTitle), findsOneWidget);
+    });
+  });
+
+  testWidgets('first run shows Light or dark but replaying the tour does not', (
+    WidgetTester tester,
+  ) async {
+    await _onPlatform(TargetPlatform.macOS, () async {
+      await _pumpApp(tester, surface: _sidebarSurface);
+      await _tap(tester, find.text(_beginLabel));
+      expect(find.text(_appearanceTitle), findsOneWidget);
+      await _continueFromAppearance(tester);
+      await _tapKey(tester, tourBackKey);
+      expect(find.text(_appearanceTitle), findsOneWidget);
+
+      await _pumpApp(
+        tester,
+        surface: _sidebarSurface,
+        settings: FakeSettingsRepository(initial: _onboarded),
+      );
+      _expectNoOnboarding();
+
+      _container(
+        tester,
+      ).read(onboardingControllerProvider.notifier).replayTour();
+      await _settle(tester);
+
+      expect(_tipTitle(0), findsOneWidget);
+      expect(_appearance, findsNothing);
+      _container(
+        tester,
+      ).read(onboardingControllerProvider.notifier).backFromTour();
+      await _settle(tester);
+      expect(_tipTitle(0), findsOneWidget);
+      expect(_appearance, findsNothing);
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+      await _settle(tester);
+      expect(_tipTitle(0), findsOneWidget);
+      expect(_appearance, findsNothing);
+
+      for (int tip = 0; tip < _tipTitles.length - 1; tip++) {
+        expect(_appearance, findsNothing);
+        await _tapKey(tester, tourNextKey);
+      }
+      expect(_nextReading('Done'), findsOneWidget);
+      await _tapKey(tester, tourNextKey);
+
+      _expectNoOnboarding();
+      expect(find.text(_appearanceTitle), findsNothing);
     });
   });
 }

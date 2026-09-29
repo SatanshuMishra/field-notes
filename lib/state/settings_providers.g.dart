@@ -212,3 +212,44 @@ final class ReflectionPromptsEnabledProvider
 
 String _$reflectionPromptsEnabledHash() =>
     r'a6468d934bca030b7f179e6a743e56a1fc55214f';
+
+@ProviderFor(appearance)
+final appearanceProvider = AppearanceProvider._();
+
+final class AppearanceProvider
+    extends $FunctionalProvider<Appearance, Appearance, Appearance>
+    with $Provider<Appearance> {
+  AppearanceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appearanceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appearanceHash();
+
+  @$internal
+  @override
+  $ProviderElement<Appearance> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Appearance create(Ref ref) {
+    return appearance(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(Appearance value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<Appearance>(value),
+    );
+  }
+}
+
+String _$appearanceHash() => r'8333d9bccb5787bcdada25f1f1fcc8847c1d1361';

@@ -40,3 +40,10 @@ bool reflectionPromptsEnabled(Ref ref) {
       ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
   return settings.reflectionPromptsEnabled;
 }
+
+@riverpod
+Appearance appearance(Ref ref) {
+  final AppSettings settings =
+      ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+  return settings.appearance;
+}

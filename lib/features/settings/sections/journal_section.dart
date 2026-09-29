@@ -16,6 +16,12 @@ const Key spellCheckToggleKey = ValueKey<String>('settings-spell-check');
 const String spellCheckUnavailableDescription =
     "Your keyboard's spell checker isn't available to Field Notes.";
 
+String _appearanceLabel(Appearance appearance) => switch (appearance) {
+  Appearance.light => 'Light',
+  Appearance.dark => 'Dark',
+  Appearance.system => 'System',
+};
+
 String _textSizeLabel(TextSize size) => switch (size) {
   TextSize.small => 'Small',
   TextSize.medium => 'Medium',
@@ -43,6 +49,24 @@ class JournalSection extends ConsumerWidget {
     return SettingsSection(
       title: 'Journal',
       children: <Widget>[
+        SettingsFieldRow(
+          label: 'Appearance',
+          description: 'Light, dark, or match your device.',
+          control: SettingsSegmented<Appearance>(
+            segments: <SettingsSegment<Appearance>>[
+              for (final Appearance appearance in Appearance.values)
+                SettingsSegment<Appearance>(
+                  value: appearance,
+                  label: _appearanceLabel(appearance),
+                ),
+            ],
+            value: settings.appearance,
+            onChanged: (Appearance value) => _apply(
+              ref,
+              () => ref.read(settingsControllerProvider).setAppearance(value),
+            ),
+          ),
+        ),
         SettingsFieldRow(
           label: 'Text size',
           description: 'Applies across the app.',

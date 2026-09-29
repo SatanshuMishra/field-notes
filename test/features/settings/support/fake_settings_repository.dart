@@ -28,15 +28,20 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<bool> notificationPermissionAskedWrites = <bool>[];
   final List<bool> reflectionPromptsEnabledWrites = <bool>[];
   final List<OnboardingStatus> onboardingStatusWrites = <OnboardingStatus>[];
+  final List<Appearance> appearanceWrites = <Appearance>[];
+  late AppSettings _latest = initial;
 
-  void emit(AppSettings settings) => _settings.add(settings);
+  void emit(AppSettings settings) {
+    _latest = settings;
+    _settings.add(settings);
+  }
 
   @override
-  Future<AppSettings> load() async => initial;
+  Future<AppSettings> load() async => _latest;
 
   @override
   Stream<AppSettings> watch() async* {
-    yield initial;
+    yield _latest;
     yield* _settings.stream;
   }
 
@@ -92,6 +97,13 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<void> setOnboardingStatus(OnboardingStatus value) async {
     _failIfConfigured();
     onboardingStatusWrites.add(value);
+  }
+
+  @override
+  Future<void> setAppearance(Appearance value) async {
+    _failIfConfigured();
+    appearanceWrites.add(value);
+    emit(_latest.copyWith(appearance: value));
   }
 
   @override

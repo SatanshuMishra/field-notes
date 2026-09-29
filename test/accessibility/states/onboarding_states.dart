@@ -30,6 +30,7 @@ const List<ShellLayout> _layouts = <ShellLayout>[
 
 const String _beginLabel = 'Let’s begin';
 const String _skipTourLabel = 'Skip how it works';
+const String _appearanceTitle = 'Light or dark?';
 const String _reminderTitle = 'A gentle daily nudge?';
 const String _weekTitle = 'Your week starts on';
 const String _storageTitle = 'Where should entries live?';
@@ -144,8 +145,15 @@ Future<void> _walkTips(WidgetTester tester, int tip) async {
   }
 }
 
+Future<void> _toAppearance(WidgetTester tester) =>
+    _tap(tester, find.text(_beginLabel));
+
+Future<void> _continueFromAppearance(WidgetTester tester) =>
+    _tap(tester, find.byKey(onboardingAppearanceContinueKey));
+
 Future<void> _toTip(WidgetTester tester, int tip) async {
-  await _tap(tester, find.text(_beginLabel));
+  await _toAppearance(tester);
+  await _continueFromAppearance(tester);
   await _walkTips(tester, tip);
 }
 
@@ -157,8 +165,10 @@ Future<void> _toReplayLastTip(WidgetTester tester) async {
   await _walkTips(tester, _tipTitles.length - 1);
 }
 
-Future<void> _toReminder(WidgetTester tester) =>
-    _tap(tester, find.text(_skipTourLabel));
+Future<void> _toReminder(WidgetTester tester) async {
+  await _tap(tester, find.text(_skipTourLabel));
+  await _continueFromAppearance(tester);
+}
 
 Future<void> _toOther(WidgetTester tester) async {
   await _toReminder(tester);
@@ -247,6 +257,14 @@ final List<A11yStatefulControl> _reminderStateful = <A11yStatefulControl>[
     ),
 ];
 
+final List<A11yStatefulControl> _appearanceStateful = <A11yStatefulControl>[
+  for (final Appearance appearance in Appearance.values)
+    A11yStatefulControl.finder(
+      find.byKey(onboardingAppearanceOptionKey(appearance)),
+      A11yStateKind.selected,
+    ),
+];
+
 final List<A11yStatefulControl> _weekStateful = <A11yStatefulControl>[
   for (final WeekStart start in WeekStart.values)
     A11yStatefulControl.finder(
@@ -328,6 +346,17 @@ final List<_Screen> _screens = <_Screen>[
     reach: _toReplayLastTip,
     proof: _tipProof(_tipTitles.length - 1, next: _doneLabel),
     settings: _onboarded,
+  ),
+  _Screen(
+    'appearance',
+    reach: _toAppearance,
+    proof: (ShellLayout layout) => <A11yProof>[
+      _shellProof(layout),
+      A11yProof(find.byKey(onboardingAppearanceKey)),
+      A11yProof(find.byType(OnboardingAppearance)),
+      A11yProof(find.text(_appearanceTitle)),
+    ],
+    stateful: _appearanceStateful,
   ),
 ];
 

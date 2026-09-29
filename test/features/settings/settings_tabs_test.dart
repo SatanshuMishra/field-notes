@@ -54,7 +54,7 @@ const Map<String, String> _tabLabels = <String, String>{
 const List<String> _sublabels = <String>[
   'where entries live',
   'nudges, prompts',
-  'calendar, text size',
+  'theme, calendar, text size',
   'export, delete',
 ];
 
@@ -76,7 +76,12 @@ const Map<String, List<String>> _rowsByTab = <String, List<String>>{
     'Connection',
   ],
   _remindersSound: <String>['Daily reminder', 'Reminder time', 'Sound effects'],
-  _journal: <String>['Text size', 'Week starts on', 'Spell check'],
+  _journal: <String>[
+    'Appearance',
+    'Text size',
+    'Week starts on',
+    'Spell check',
+  ],
   _data: <String>['Export', 'Reclaim space', 'Delete all'],
 };
 
@@ -198,6 +203,31 @@ void _expectSelected(WidgetTester tester, String selected) {
 }
 
 void main() {
+  testWidgets('the Journal tab reads theme, calendar, text size', (
+    WidgetTester tester,
+  ) async {
+    await _onPlatform(TargetPlatform.macOS, () async {
+      await _pumpSettings(
+        tester,
+        platform: TargetPlatform.macOS,
+        size: _desktop,
+      );
+
+      final Finder rail = find.byKey(_railKey);
+      expect(
+        find.descendant(
+          of: rail,
+          matching: find.text('theme, calendar, text size'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: rail, matching: find.text('calendar, text size')),
+        findsNothing,
+      );
+    });
+  });
+
   testWidgets(
     'sidebar settings shows the header and a four-tab rail with sublabels, opening on Sync & storage',
     (WidgetTester tester) async {

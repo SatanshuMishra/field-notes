@@ -1,4 +1,5 @@
 import 'app_settings.dart';
+import 'appearance.dart';
 import 'onboarding_status.dart';
 import 'reminder_time.dart';
 import 'storage_mode.dart';
@@ -27,6 +28,8 @@ abstract interface class SettingsRepository {
   Future<void> setReflectionPromptsEnabled(bool value);
 
   Future<void> setOnboardingStatus(OnboardingStatus value);
+
+  Future<void> setAppearance(Appearance value);
 
   Future<bool> hasStoredValues();
 

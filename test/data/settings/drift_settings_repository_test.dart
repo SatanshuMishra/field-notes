@@ -140,6 +140,38 @@ void main() {
       },
     );
 
+    test(
+      'appearance defaults to light and dark and system survive a reload',
+      () async {
+        expect((await repository.load()).appearance, Appearance.light);
+
+        await repository.setAppearance(Appearance.dark);
+        expect(
+          (await DriftSettingsRepository(db).load()).appearance,
+          Appearance.dark,
+        );
+
+        await repository.setAppearance(Appearance.system);
+        final List<Setting> rows = await db.select(db.settings).get();
+        expect(
+          rows.where((Setting row) => row.key == 'appearance').single.value,
+          'system',
+        );
+        expect(
+          (await DriftSettingsRepository(db).load()).appearance,
+          Appearance.system,
+        );
+      },
+    );
+
+    test('an unknown stored appearance reads as light', () async {
+      await db
+          .into(db.settings)
+          .insert(SettingsCompanion.insert(key: 'appearance', value: 'sepia'));
+
+      expect((await repository.load()).appearance, Appearance.light);
+    });
+
     test('any stored setting makes hasStoredValues true', () async {
       await repository.setSoundEnabled(false);
 
