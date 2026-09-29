@@ -10,6 +10,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
+import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout.dart';
 import 'package:field_notes/features/note_engine/layout/note_layout_engine.dart';
 import 'package:field_notes/features/note_engine/projection/atomic_objects.dart';
@@ -55,9 +56,9 @@ class NoteView extends StatefulWidget {
     this.scrollController,
     this.bottomInset = 0,
     this.hintText = '',
-    this.hintStyle = TypographyTokens.noteBodyPlaceholder,
+    this.hintStyle,
     this.semanticsLabel = 'Note',
-    this.cursorColor = Palette.coral,
+    this.cursorColor,
     this.selectionColor,
     this.platformValue,
     this.platformValueStart = 0,
@@ -85,9 +86,9 @@ class NoteView extends StatefulWidget {
   final ScrollController? scrollController;
   final double bottomInset;
   final String hintText;
-  final TextStyle hintStyle;
+  final TextStyle? hintStyle;
   final String semanticsLabel;
-  final Color cursorColor;
+  final Color? cursorColor;
   final Color? selectionColor;
   final TextEditingValue? platformValue;
   final int platformValueStart;
@@ -401,6 +402,7 @@ class _NoteViewState extends State<NoteView> {
             readerMode: readOnly,
             mediaDimensions: media.dimensions,
             unavailableMedia: media.unavailable,
+            inks: NoteInks.from(context.colors),
           ),
         );
         final List<Widget> children = _photoChildren(layout);
@@ -423,12 +425,13 @@ class _NoteViewState extends State<NoteView> {
             offset: offset,
             bottomInset: widget.bottomInset,
             hintText: widget.hintText,
-            hintStyle: widget.hintStyle,
+            hintStyle:
+                widget.hintStyle ?? context.textStyles.noteBodyPlaceholder,
             semanticsLabel: widget.semanticsLabel,
             textScaler: textScaler,
             textDirection: textDirection,
             devicePixelRatio: devicePixelRatio,
-            cursorColor: widget.cursorColor,
+            cursorColor: widget.cursorColor ?? context.colors.accentInk,
             selectionColor: selectionColor,
             platformValue: widget.platformValue,
             platformValueStart: widget.platformValueStart,

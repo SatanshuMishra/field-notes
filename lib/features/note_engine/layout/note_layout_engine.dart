@@ -84,6 +84,7 @@ final class NoteLayoutEngine {
           readerMode: inputs.readerMode,
           mediaDimensions: inputs.mediaDimensions,
           unavailableMedia: inputs.unavailableMedia,
+          inks: inputs.inks,
         );
         return _Pass(_cache, record, active, mark: false).flow();
       };
@@ -105,7 +106,8 @@ final class _PassRecord {
     return laid.columnWidth == inputs.columnWidth &&
         laid.textScaler == inputs.textScaler &&
         laid.boldText == inputs.boldText &&
-        laid.locale == inputs.locale;
+        laid.locale == inputs.locale &&
+        laid.inks == inputs.inks;
   }
 
   LaidOutRow? layoutAt(int row, _Slot slot) {

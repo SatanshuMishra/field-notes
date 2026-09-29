@@ -31,28 +31,19 @@ abstract final class NoteTypography {
     _ => throw ArgumentError.value(level, 'level', 'must be 1 to 6'),
   };
 
-  static final TextStyle quote = body.copyWith(
-    fontStyle: FontStyle.italic,
-    color: Palette.inkSoft,
-  );
-
-  static TextStyle quoteOf(TextStyle style) => style.copyWith(
-    fontStyle: FontStyle.italic,
-    color: Palette.inkSoft,
-  );
+  static TextStyle quoteOf(TextStyle style) =>
+      style.copyWith(fontStyle: FontStyle.italic);
 
   static const TextStyle codeBlock = TextStyle(
     fontFamily: TypographyTokens.mono,
     fontSize: 14,
     fontWeight: FontWeight.w400,
     height: 1.5,
-    color: Palette.ink,
   );
 
   static TextStyle inlineCode(TextStyle base) => TextStyle(
     fontFamily: TypographyTokens.mono,
     fontSize: (base.fontSize ?? bodyFontSize) * codeScale,
-    backgroundColor: Palette.ink08,
   );
 
   static const TextStyle strong = TextStyle(fontWeight: FontWeight.w700);
@@ -63,19 +54,7 @@ abstract final class NoteTypography {
     decoration: TextDecoration.lineThrough,
   );
 
-  static const TextStyle link = TextStyle(
-    color: Palette.coralLink,
-    decoration: TextDecoration.underline,
-    decorationColor: Palette.coral30,
-  );
-
-  static const TextStyle highlight = TextStyle(
-    backgroundColor: Palette.highlight,
-  );
-
-  static const TextStyle marker = TextStyle(color: Palette.ink34);
-
-  static const TextStyle checkedItem = TextStyle(color: Palette.muted);
+  static const TextStyle link = TextStyle(decoration: TextDecoration.underline);
 
   static const TextStyle caption = TypographyTokens.captionSans;
 
@@ -101,10 +80,4 @@ abstract final class NoteTypography {
   static const double dividerDashGap = Shapes.dashGap;
   static const double tableGridLineWidth = 1;
   static const FontWeight tableHeaderWeight = FontWeight.w600;
-
-  static const Color quoteRuleColor = Palette.dashMuted;
-  static const Color codeBackground = Palette.ink08;
-  static const Color dividerColor = Palette.dashMuted;
-  static const Color tableGridColor = Palette.dashMuted;
-  static const Color tableHeaderBackground = Palette.ink08;
 }

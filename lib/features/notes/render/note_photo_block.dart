@@ -3,7 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 
-const TextStyle notePhotoCaptionStyle = TypographyTokens.captionSans;
+TextStyle notePhotoCaptionStyle(BuildContext context) =>
+    context.textStyles.captionSans;
 const TextAlign notePhotoCaptionAlign = TextAlign.center;
 
 class NoteMediaScope extends InheritedWidget {

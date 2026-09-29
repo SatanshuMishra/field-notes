@@ -114,8 +114,8 @@ class NoteEditorView extends StatefulWidget {
     required this.undoController,
     required this.scrollController,
     this.hintText = '',
-    this.hintStyle = TypographyTokens.noteBodyPlaceholder,
-    this.cursorColor = Palette.coral,
+    this.hintStyle,
+    this.cursorColor,
     this.photoImporter,
     this.photoMediaImporter,
     this.bottomInset = 0,
@@ -128,8 +128,8 @@ class NoteEditorView extends StatefulWidget {
   final UndoHistoryController undoController;
   final ScrollController scrollController;
   final String hintText;
-  final TextStyle hintStyle;
-  final Color cursorColor;
+  final TextStyle? hintStyle;
+  final Color? cursorColor;
   final Future<List<String>> Function()? photoImporter;
   final PhotoMediaImporter? photoMediaImporter;
   final double bottomInset;
@@ -809,6 +809,7 @@ class NoteEditorViewState extends State<NoteEditorView>
         readerMode: inputs.readerMode,
         mediaDimensions: inputs.mediaDimensions,
         unavailableMedia: inputs.unavailableMedia,
+        inks: inputs.inks,
       ),
     );
   }
@@ -1591,8 +1592,10 @@ class NoteEditorViewState extends State<NoteEditorView>
                     scrollController: widget.scrollController,
                     bottomInset: widget.bottomInset,
                     hintText: widget.hintText,
-                    hintStyle: widget.hintStyle,
-                    cursorColor: widget.cursorColor,
+                    hintStyle:
+                        widget.hintStyle ??
+                        context.textStyles.noteBodyPlaceholder,
+                    cursorColor: widget.cursorColor ?? context.colors.accentInk,
                     platformValue: _client.hasConnection
                         ? _client.mirror.value
                         : null,

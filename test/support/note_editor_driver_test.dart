@@ -252,7 +252,10 @@ void main() {
     await _pumpComposer(tester);
     final NoteEditorDriver driver = NoteEditorDriver(tester);
 
-    expect(driver.visibleHintStyle, TypographyTokens.noteBodyPlaceholder);
+    expect(
+      driver.visibleHintStyle,
+      FieldNotesTextStyles(FieldNotesColors.light).noteBodyPlaceholder,
+    );
     expect(driver.paintedHint?.width, tester.getSize(driver.find).width);
 
     await driver.enterText('x');

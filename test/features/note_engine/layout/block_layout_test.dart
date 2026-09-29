@@ -343,7 +343,7 @@ void main() {
         greaterThan(0.5),
       );
       expect(text.lines.single.height, closeTo(24 * 1.2, 0.01));
-      expect(await _inkOf(text), _drawnIn(Palette.inkSoft));
+      expect(await _inkOf(text), _drawnIn(FieldNotesColors.light.inkSoft));
     },
   );
 
@@ -425,7 +425,7 @@ void main() {
       final LineFragment source = _stack(active).single.fragments.single;
       expect(source.kind, FragmentKind.text);
       expect(_textOf(active, source), '---');
-      expect(await _inkOf(source), _drawnIn(Palette.ink34));
+      expect(await _inkOf(source), _drawnIn(FieldNotesColors.light.ink34));
     },
   );
 
@@ -498,11 +498,11 @@ void main() {
     final List<LaidOutRow> rows = _stack(inputs);
     expect(
       await _inkOf(_fragmentWith(inputs, rows, 'passport')),
-      _drawnIn(Palette.muted),
+      _drawnIn(FieldNotesColors.light.muted),
     );
     expect(
       await _inkOf(_fragmentWith(inputs, rows, 'tickets')),
-      _drawnIn(Palette.ink),
+      _drawnIn(FieldNotesColors.light.ink),
     );
     final LayoutInputs active = _inputs(source, activeLine: 0);
     final List<LaidOutRow> activeRows = _stack(active);
@@ -513,10 +513,10 @@ void main() {
       kind: FragmentKind.marker,
     );
     expect(marker.origin.dx, 0);
-    expect(await _inkOf(marker), _drawnIn(Palette.ink));
+    expect(await _inkOf(marker), _drawnIn(FieldNotesColors.light.ink));
     expect(
       await _inkOf(_fragmentWith(active, activeRows, 'passport')),
-      _drawnIn(Palette.muted),
+      _drawnIn(FieldNotesColors.light.muted),
     );
   });
 

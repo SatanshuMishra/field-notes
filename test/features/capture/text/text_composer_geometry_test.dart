@@ -117,7 +117,10 @@ void main() {
       final NoteEditorDriver driver = NoteEditorDriver(tester);
       await _pumpComposer(tester, surface: _desktopSurface);
 
-      expect(driver.visibleHintStyle, TypographyTokens.noteBodyPlaceholder);
+      expect(
+        driver.visibleHintStyle,
+        FieldNotesTextStyles(FieldNotesColors.light).noteBodyPlaceholder,
+      );
       expect(
         driver.paintedHint?.longestLine,
         closeTo(

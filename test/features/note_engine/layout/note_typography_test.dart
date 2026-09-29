@@ -1,4 +1,5 @@
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -14,8 +15,8 @@ void main() {
         expect(style, TypographyTokens.bannerSerif.copyWith(fontSize: sizes[i]));
         expect(style.fontFamily, TypographyTokens.serif);
         expect(style.fontWeight, FontWeight.w500);
-        expect(style.color, Palette.ink);
       }
+      expect(NoteInks.light.heading, FieldNotesColors.light.ink);
     },
   );
 
@@ -23,7 +24,7 @@ void main() {
     expect(Palette.highlight, const Color(0x8CF2D77E));
     expect(Palette.highlight.toARGB32() >> 24, 0x8C);
     expect(Palette.highlight.toARGB32() & 0x00FFFFFF, 0xF2D77E);
-    expect(NoteTypography.highlight.backgroundColor, Palette.highlight);
+    expect(NoteInks.light.highlight, Palette.highlight);
   });
 
   test('block gaps between touching blocks follow the reader rules', () {
@@ -56,11 +57,12 @@ void main() {
     expect(NoteTypography.body, TypographyTokens.noteBody);
   });
 
-  test('quote is italic Palette.inkSoft at sixteen with height 1.6', () {
-    expect(NoteTypography.quote.fontStyle, FontStyle.italic);
-    expect(NoteTypography.quote.color, Palette.inkSoft);
-    expect(NoteTypography.quote.fontSize, 16);
-    expect(NoteTypography.quote.height, 1.6);
+  test('a quoted body is italic soft ink at sixteen with height 1.6', () {
+    final TextStyle quote = NoteTypography.quoteOf(NoteTypography.body);
+    expect(quote.fontStyle, FontStyle.italic);
+    expect(NoteInks.light.quote, FieldNotesColors.light.inkSoft);
+    expect(quote.fontSize, 16);
+    expect(quote.height, 1.6);
   });
 
   test('quoteOf keeps the base size and weight and adds the quote look', () {
@@ -68,7 +70,7 @@ void main() {
     expect(style.fontSize, 21);
     expect(style.fontWeight, FontWeight.w500);
     expect(style.fontStyle, FontStyle.italic);
-    expect(style.color, Palette.inkSoft);
+    expect(style.color, NoteTypography.heading(2).color);
   });
 
   test('codeBlock is monospace at fourteen with height 1.5', () {
@@ -76,23 +78,24 @@ void main() {
     expect(NoteTypography.codeBlock.fontSize, 14);
     expect(NoteTypography.codeBlock.fontWeight, FontWeight.w400);
     expect(NoteTypography.codeBlock.height, 1.5);
-    expect(NoteTypography.codeBlock.color, Palette.ink);
+    expect(NoteTypography.codeBlock.color, isNull);
+    expect(NoteInks.light.code, FieldNotesColors.light.ink);
   });
 
   test('inlineCode scales the base size by 0.875 with an ink08 background', () {
     final TextStyle style = NoteTypography.inlineCode(NoteTypography.heading(1));
     expect(style.fontFamily, TypographyTokens.mono);
     expect(style.fontSize, 21);
-    expect(style.backgroundColor, Palette.ink08);
+    expect(style.backgroundColor, isNull);
+    expect(NoteInks.light.codeBackground, FieldNotesColors.light.ink08);
   });
 
-  test('marker is drawn in Palette.ink34', () {
-    expect(NoteTypography.marker.color, Palette.ink34);
+  test('marker is drawn in the ink34 role', () {
+    expect(NoteInks.light.marker, FieldNotesColors.light.ink34);
   });
 
-  test('checkedItem is Palette.muted with no strikethrough', () {
-    expect(NoteTypography.checkedItem.color, Palette.muted);
-    expect(NoteTypography.checkedItem.decoration, isNull);
+  test('a checked item is drawn in the muted role', () {
+    expect(NoteInks.light.checked, FieldNotesColors.light.muted);
   });
 
   test('caption equals the reader caption style', () {
@@ -108,12 +111,10 @@ void main() {
     );
     expect(
       NoteTypography.link,
-      const TextStyle(
-        color: Palette.coralLink,
-        decoration: TextDecoration.underline,
-        decorationColor: Palette.coral30,
-      ),
+      const TextStyle(decoration: TextDecoration.underline),
     );
+    expect(NoteInks.light.link, FieldNotesColors.light.coralLink);
+    expect(NoteInks.light.linkDecoration, Palette.coral30);
   });
 
   test('withBoldText merges bold only when boldText is true', () {
@@ -156,10 +157,13 @@ void main() {
   });
 
   test('every paint colour matches the reader values', () {
-    expect(NoteTypography.quoteRuleColor, Palette.dashMuted);
-    expect(NoteTypography.codeBackground, Palette.ink08);
-    expect(NoteTypography.dividerColor, Palette.dashMuted);
-    expect(NoteTypography.tableGridColor, Palette.dashMuted);
-    expect(NoteTypography.tableHeaderBackground, Palette.ink08);
+    expect(NoteInks.light.body, FieldNotesColors.light.ink);
+    expect(NoteInks.light.quoteRule, FieldNotesColors.light.dashMuted);
+    expect(NoteInks.light.codeBackground, FieldNotesColors.light.ink08);
+    expect(NoteInks.light.divider, FieldNotesColors.light.dashMuted);
+    expect(NoteInks.light.tableGrid, FieldNotesColors.light.dashMuted);
+    expect(NoteInks.light.tableHeaderBackground, FieldNotesColors.light.ink08);
+    expect(NoteInks.light.caption, FieldNotesColors.light.muted);
+    expect(NoteInks.light, NoteInks.from(FieldNotesColors.light));
   });
 }

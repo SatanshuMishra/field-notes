@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -152,8 +153,10 @@ void main() {
           .where(
             (DecoratedBox box) =>
                 box.decoration is BoxDecoration &&
-                (box.decoration as BoxDecoration).boxShadow ==
-                    Shadows.cardDefault,
+                listEquals(
+                  (box.decoration as BoxDecoration).boxShadow,
+                  FieldNotesShadows(FieldNotesColors.light).cardDefault,
+                ),
           );
       expect(shadowed, hasLength(1));
 
@@ -176,7 +179,10 @@ void main() {
         find.descendant(of: caption, matching: find.byType(Text)),
       );
       expect(text.data, 'Low tide');
-      expect(text.style, TypographyTokens.captionSans);
+      expect(
+        text.style,
+        FieldNotesTextStyles(FieldNotesColors.light).captionSans,
+      );
       expect(text.textAlign, TextAlign.center);
 
       expect(photoFigureTiltDegrees('000001111111'), -1.2);

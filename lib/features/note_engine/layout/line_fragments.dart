@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/features/note_engine/layout/block_layout.dart';
+import 'package:field_notes/features/note_engine/layout/note_inks.dart';
 import 'package:field_notes/features/note_engine/layout/note_typography.dart';
 import 'package:flutter/painting.dart';
 
@@ -285,34 +286,31 @@ final class RowDecoration {
   RowDecoration shifted(Offset delta) =>
       RowDecoration(kind: kind, rect: rect.shift(delta));
 
-  void paint(ui.Canvas canvas, Offset offset) {
+  void paint(ui.Canvas canvas, Offset offset, NoteInks inks) {
     final Rect target = rect.shift(offset);
     switch (kind) {
       case RowDecorationKind.quoteRule:
-        canvas.drawRect(target, Paint()..color = NoteTypography.quoteRuleColor);
+        canvas.drawRect(target, Paint()..color = inks.quoteRule);
       case RowDecorationKind.tableGridLine:
-        canvas.drawRect(target, Paint()..color = NoteTypography.tableGridColor);
+        canvas.drawRect(target, Paint()..color = inks.tableGrid);
       case RowDecorationKind.tableHeaderBackground:
-        canvas.drawRect(
-          target,
-          Paint()..color = NoteTypography.tableHeaderBackground,
-        );
+        canvas.drawRect(target, Paint()..color = inks.tableHeaderBackground);
       case RowDecorationKind.codeBackground:
         canvas.drawRRect(
           RRect.fromRectAndRadius(
             target,
             const Radius.circular(NoteTypography.codeRadius),
           ),
-          Paint()..color = NoteTypography.codeBackground,
+          Paint()..color = inks.codeBackground,
         );
       case RowDecorationKind.dividerRule:
         canvas
           ..save()
           ..translate(target.left, target.top);
-        const DashedLinePainter(
+        DashedLinePainter(
           axis: Axis.horizontal,
           thickness: NoteTypography.dividerThickness,
-          color: NoteTypography.dividerColor,
+          color: inks.divider,
           dashLength: 6,
           dashGap: 4,
         ).paint(canvas, target.size);

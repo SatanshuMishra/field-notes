@@ -7,7 +7,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/layout/block_layout.dart';
@@ -1464,7 +1463,7 @@ class RenderNoteView extends RenderBox
       _eachRow(canvas, rows, (LaidOutRow row) {
         for (final RowDecoration decoration in row.decorations) {
           if (decoration.paintsBehindText) {
-            decoration.paint(canvas, Offset.zero);
+            decoration.paint(canvas, Offset.zero, _noteLayout.inputs.inks);
           }
         }
       });
@@ -1504,7 +1503,7 @@ class RenderNoteView extends RenderBox
       _eachRow(canvas, rows, (LaidOutRow row) {
         for (final RowDecoration decoration in row.decorations) {
           if (!decoration.paintsBehindText) {
-            decoration.paint(canvas, Offset.zero);
+            decoration.paint(canvas, Offset.zero, _noteLayout.inputs.inks);
           }
         }
       });
@@ -1590,7 +1589,7 @@ class RenderNoteView extends RenderBox
       (Canvas canvas) => paintNoteComposingUnderline(
         canvas,
         underlines,
-        TypographyTokens.noteBody.color!,
+        _noteLayout.inputs.inks.body,
       ),
     );
   }
