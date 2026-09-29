@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
+import 'package:field_notes/features/onboarding/tour_anchor.dart';
 
 import '../../design/tokens/tokens.dart';
 import 'keep_focus_in_view.dart';
@@ -52,30 +53,33 @@ class BottomBarShell extends StatelessWidget {
         children: <Widget>[
           const Text('field notes', style: TypographyTokens.wordmarkAccent),
           const Spacer(),
-          Semantics(
-            button: true,
-            label: 'Settings',
-            child: GestureDetector(
-              key: const ValueKey<String>('gear-button'),
-              behavior: HitTestBehavior.opaque,
-              onTap: () => onSelect(ShellDestination.settings),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minWidth: kMinInteractiveDimension,
-                  minHeight: kMinInteractiveDimension,
-                ),
-                child: Center(
-                  widthFactor: 1,
-                  heightFactor: 1,
-                  child: FocusRing(
-                    onPressed: () => onSelect(ShellDestination.settings),
-                    borderRadius: _gearRadius,
-                    child: const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: ExcludeSemantics(
-                        child: Icon(
-                          Icons.settings_outlined,
-                          color: Palette.ink,
+          TourAnchor(
+            target: TourTarget.settings,
+            child: Semantics(
+              button: true,
+              label: 'Settings',
+              child: GestureDetector(
+                key: const ValueKey<String>('gear-button'),
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onSelect(ShellDestination.settings),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: kMinInteractiveDimension,
+                    minHeight: kMinInteractiveDimension,
+                  ),
+                  child: Center(
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    child: FocusRing(
+                      onPressed: () => onSelect(ShellDestination.settings),
+                      borderRadius: _gearRadius,
+                      child: const Padding(
+                        padding: EdgeInsets.all(8),
+                        child: ExcludeSemantics(
+                          child: Icon(
+                            Icons.settings_outlined,
+                            color: Palette.ink,
+                          ),
                         ),
                       ),
                     ),
@@ -101,16 +105,19 @@ class BottomBarShell extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              _tab(destinations[0]),
-              _tab(destinations[1]),
-              _captureButton(),
-              _tab(destinations[2]),
-              _tab(destinations[3]),
-            ],
+          child: TourAnchor(
+            target: TourTarget.nav,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                _tab(destinations[0]),
+                _tab(destinations[1]),
+                _captureButton(),
+                _tab(destinations[2]),
+                _tab(destinations[3]),
+              ],
+            ),
           ),
         ),
       ),
@@ -120,7 +127,7 @@ class BottomBarShell extends StatelessWidget {
   Widget _tab(ShellDestination d) {
     final bool isSelected = d == selected;
     final Color color = isSelected ? Palette.coral : Palette.mutedDeep;
-    return CalendarTapArea(
+    final Widget tab = CalendarTapArea(
       reach: const EdgeInsets.symmetric(
         horizontal: kMinInteractiveDimension / 2,
       ),
@@ -157,33 +164,40 @@ class BottomBarShell extends StatelessWidget {
         ),
       ),
     );
+    if (d != ShellDestination.calendar) {
+      return tab;
+    }
+    return TourAnchor(target: TourTarget.calendar, child: tab);
   }
 
   Widget _captureButton() {
-    return Semantics(
-      button: true,
-      label: 'New entry',
-      child: GestureDetector(
-        key: const ValueKey<String>('capture-button'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onCapture,
-        child: FocusRing(
-          onPressed: onCapture,
-          borderRadius: _captureRadius,
-          child: Container(
-            width: _captureExtent,
-            height: _captureExtent,
-            decoration: BoxDecoration(
-              color: Palette.coral,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Palette.ink,
-                width: Shapes.outlineWidth,
+    return TourAnchor(
+      target: TourTarget.capture,
+      child: Semantics(
+        button: true,
+        label: 'New entry',
+        child: GestureDetector(
+          key: const ValueKey<String>('capture-button'),
+          behavior: HitTestBehavior.opaque,
+          onTap: onCapture,
+          child: FocusRing(
+            onPressed: onCapture,
+            borderRadius: _captureRadius,
+            child: Container(
+              width: _captureExtent,
+              height: _captureExtent,
+              decoration: BoxDecoration(
+                color: Palette.coral,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Palette.ink,
+                  width: Shapes.outlineWidth,
+                ),
+                boxShadow: Shadows.button,
               ),
-              boxShadow: Shadows.button,
-            ),
-            child: const ExcludeSemantics(
-              child: Icon(Icons.add, color: Palette.cardBright, size: 28),
+              child: const ExcludeSemantics(
+                child: Icon(Icons.add, color: Palette.cardBright, size: 28),
+              ),
             ),
           ),
         ),

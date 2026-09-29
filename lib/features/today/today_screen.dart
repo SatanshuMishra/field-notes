@@ -2,6 +2,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/mood/mood.dart';
+import 'package:field_notes/features/onboarding/tour_anchor.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
@@ -34,8 +35,9 @@ class TodayFeedEyebrow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<List<Entry>> entriesAsync =
-        ref.watch(entriesForDateProvider(date));
+    final AsyncValue<List<Entry>> entriesAsync = ref.watch(
+      entriesForDateProvider(date),
+    );
     final bool counted = entriesAsync.hasValue && !entriesAsync.hasError;
     return Padding(
       padding: _feedEyebrowMargin,
@@ -108,7 +110,12 @@ class TodayScreen extends ConsumerWidget {
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(child: MoodBannerForDate(date: date)),
+              SliverToBoxAdapter(
+                child: TourAnchor(
+                  target: TourTarget.mood,
+                  child: MoodBannerForDate(date: date),
+                ),
+              ),
               SliverToBoxAdapter(child: TodayFeedEyebrow(date: date)),
               TodayEntryFeed(date: date),
             ],

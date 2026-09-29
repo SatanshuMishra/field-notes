@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/drafts/draft_paths.dart';
+import 'package:field_notes/data/settings/drift_settings_repository.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/draft_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
@@ -30,9 +32,13 @@ class IntegrationSandbox {
     );
     final Directory mediaRoot = Directory(p.join(root.path, mediaSubdir));
     await mediaRoot.create(recursive: true);
+    final AppDatabase database = AppDatabase(NativeDatabase.memory());
+    await DriftSettingsRepository(
+      database,
+    ).setOnboardingStatus(OnboardingStatus.done);
     return IntegrationSandbox._(
       root: root,
-      database: AppDatabase(NativeDatabase.memory()),
+      database: database,
       mediaRoot: mediaRoot,
     );
   }

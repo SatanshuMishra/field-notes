@@ -9,6 +9,7 @@ import '../../design/tokens/tokens.dart';
 import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/mood/flower_kind.dart';
+import '../../features/onboarding/tour_anchor.dart';
 import 'keep_focus_in_view.dart';
 import 'shell_destination.dart';
 import 'window_chrome.dart';
@@ -122,7 +123,22 @@ class SidebarShell extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            for (final ShellDestination d in destinations) _railItem(d),
+            TourAnchor(
+              target: TourTarget.nav,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (final ShellDestination d in destinations)
+                    if (d == ShellDestination.calendar)
+                      TourAnchor(
+                        target: TourTarget.calendar,
+                        child: _railItem(d),
+                      )
+                    else
+                      _railItem(d),
+                ],
+              ),
+            ),
             const Spacer(),
             streak,
             const SizedBox(height: 14),
@@ -138,14 +154,17 @@ class SidebarShell extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        IconStickerButton(
-          key: const ValueKey<String>('settings-button'),
-          glyph: IconStickerGlyph.gear,
-          glyphColor: settingsSelected ? Palette.onAccent : Palette.ink,
-          background: settingsSelected ? Palette.coral : Palette.cardLight,
-          semanticLabel: ShellDestination.settings.label,
-          selected: settingsSelected,
-          onPressed: () => onSelect(ShellDestination.settings),
+        TourAnchor(
+          target: TourTarget.settings,
+          child: IconStickerButton(
+            key: const ValueKey<String>('settings-button'),
+            glyph: IconStickerGlyph.gear,
+            glyphColor: settingsSelected ? Palette.onAccent : Palette.ink,
+            background: settingsSelected ? Palette.coral : Palette.cardLight,
+            semanticLabel: ShellDestination.settings.label,
+            selected: settingsSelected,
+            onPressed: () => onSelect(ShellDestination.settings),
+          ),
         ),
         const SizedBox(width: _footerGap),
         IconStickerButton(

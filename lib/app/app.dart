@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/features/capture/core/capture.dart';
+import 'package:field_notes/features/onboarding/onboarding.dart';
 import 'package:field_notes/state/settings_providers.dart';
 
 import 'capture/app_capture_routes.dart';
@@ -24,7 +25,7 @@ class FieldNotesApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: fieldNotesTheme(),
         builder: _appBuilder,
-        home: const AppShell(),
+        home: const OnboardingHost(child: AppShell()),
       ),
     );
   }
