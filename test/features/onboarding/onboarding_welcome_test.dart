@@ -46,7 +46,7 @@ Future<List<String>> _pumpWelcome(
         platform: sidebar ? TargetPlatform.macOS : TargetPlatform.android,
       ),
       home: Scaffold(
-        backgroundColor: Palette.page,
+        backgroundColor: FieldNotesColors.light.page,
         body: OnboardingWelcome(
           layout: layout,
           onBegin: () => calls.add('begin'),
@@ -101,7 +101,7 @@ void main() {
         expect(wordmark.fontFamily, TypographyTokens.accent);
         expect(wordmark.fontWeight, FontWeight.w700);
         expect(wordmark.fontSize, 26);
-        expect(wordmark.color, Palette.coral);
+        expect(wordmark.color, FieldNotesColors.light.accentInk);
 
         final TextStyle headline = _styleOf(tester, 'A journal of days.');
         expect(headline.fontFamily, TypographyTokens.serif);
@@ -176,8 +176,11 @@ void main() {
         expect(tester.getCenter(card), const Offset(640, 400));
         final BoxDecoration cardDecoration =
             tester.widget<Container>(card).decoration! as BoxDecoration;
-        expect(cardDecoration.color, Palette.composerPaper);
-        expect(cardDecoration.border, Border.all(color: Palette.ink, width: 2));
+        expect(cardDecoration.color, FieldNotesColors.light.composerPaper);
+        expect(
+          cardDecoration.border,
+          Border.all(color: FieldNotesColors.light.line, width: 2),
+        );
         expect(cardDecoration.borderRadius, BorderRadius.circular(22));
         expect(
           cardDecoration.boxShadow!.first,

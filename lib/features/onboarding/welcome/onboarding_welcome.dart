@@ -25,57 +25,57 @@ const double _partNumberSize = 24;
 const EdgeInsets _sidebarPadding = EdgeInsets.fromLTRB(36, 32, 36, 24);
 const EdgeInsets _bottomBarPadding = EdgeInsets.fromLTRB(20, 24, 20, 22);
 
-const TextStyle _wordmarkStyle = TextStyle(
+TextStyle _wordmarkStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.accent,
   fontSize: 26,
   fontWeight: FontWeight.w700,
   height: 1,
-  color: Palette.coral,
+  color: colors.accentInk,
 );
 
-const TextStyle _headlineStyle = TextStyle(
+TextStyle _headlineStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.serif,
   fontSize: _sidebarHeadlineSize,
   fontWeight: FontWeight.w500,
   height: 1.1,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _ledeStyle = TextStyle(
+TextStyle _ledeStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 13,
   fontWeight: FontWeight.w400,
   height: 1.5,
-  color: Palette.mutedDeep,
+  color: colors.mutedDeep,
 );
 
-const TextStyle _partNumberStyle = TextStyle(
+final TextStyle _partNumberStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12,
   fontWeight: FontWeight.w600,
-  color: Palette.composerPaper,
+  color: FieldNotesColors.light.composerPaper,
 );
 
-const TextStyle _partTitleStyle = TextStyle(
+TextStyle _partTitleStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 14,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _partSubtitleStyle = TextStyle(
+TextStyle _partSubtitleStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 11.5,
   fontWeight: FontWeight.w400,
   height: 1.4,
-  color: Palette.muted,
+  color: colors.muted,
 );
 
-const TextStyle _skipStyle = TextStyle(
+TextStyle _skipStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12,
   fontWeight: FontWeight.w600,
-  color: Palette.mutedDeep,
+  color: colors.mutedDeep,
 );
 
 const List<({String number, String title, String subtitle})> _parts =
@@ -126,6 +126,7 @@ class OnboardingWelcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return OnboardingSurface(
       layout: layout,
       child: FocusScope(
@@ -138,9 +139,13 @@ class OnboardingWelcome extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 if (_sidebar)
-                  Flexible(child: SingleChildScrollView(child: _content()))
+                  Flexible(
+                    child: SingleChildScrollView(child: _content(colors)),
+                  )
                 else
-                  Expanded(child: SingleChildScrollView(child: _content())),
+                  Expanded(
+                    child: SingleChildScrollView(child: _content(colors)),
+                  ),
                 if (_sidebar) const SizedBox(height: 24),
                 OnboardingPrimaryButton(
                   label: _beginLabel,
@@ -159,8 +164,8 @@ class OnboardingWelcome extends StatelessWidget {
                     label: _skipLabel,
                     onPressed: onSkip,
                     style: _sidebar
-                        ? _skipStyle
-                        : _skipStyle.copyWith(fontSize: 12.5),
+                        ? _skipStyle(colors)
+                        : _skipStyle(colors).copyWith(fontSize: 12.5),
                   ),
                 ),
               ],
@@ -171,7 +176,7 @@ class OnboardingWelcome extends StatelessWidget {
     );
   }
 
-  Widget _content() {
+  Widget _content(FieldNotesColors colors) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -182,7 +187,7 @@ class OnboardingWelcome extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        const Text(_wordmark, style: _wordmarkStyle),
+        Text(_wordmark, style: _wordmarkStyle(colors)),
         SizedBox(height: _sidebar ? 12 : 14),
         Semantics(
           header: true,
@@ -190,8 +195,10 @@ class OnboardingWelcome extends StatelessWidget {
             _headline,
             textAlign: TextAlign.center,
             style: _sidebar
-                ? _headlineStyle
-                : _headlineStyle.copyWith(fontSize: _bottomBarHeadlineSize),
+                ? _headlineStyle(colors)
+                : _headlineStyle(
+                    colors,
+                  ).copyWith(fontSize: _bottomBarHeadlineSize),
           ),
         ),
         const SizedBox(height: 8),
@@ -202,7 +209,9 @@ class OnboardingWelcome extends StatelessWidget {
           child: Text(
             _lede,
             textAlign: TextAlign.center,
-            style: _sidebar ? _ledeStyle : _ledeStyle.copyWith(fontSize: 12.5),
+            style: _sidebar
+                ? _ledeStyle(colors)
+                : _ledeStyle(colors).copyWith(fontSize: 12.5),
           ),
         ),
         SizedBox(height: _sidebar ? 24 : 26),
@@ -239,13 +248,17 @@ class _PartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     return MergeSemantics(
       child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Palette.cardWarm,
-          border: Shapes.outline,
-          borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusMd)),
-          boxShadow: Shadows.cardDefault,
+        decoration: BoxDecoration(
+          color: colors.cardWarm,
+          border: shadows.outline,
+          borderRadius: const BorderRadius.all(
+            Radius.circular(Shapes.radiusMd),
+          ),
+          boxShadow: shadows.cardDefault,
         ),
         child: Padding(
           padding: compact
@@ -259,8 +272,8 @@ class _PartCard extends StatelessWidget {
               SizedBox.square(
                 dimension: _partNumberSize,
                 child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Palette.ink,
+                  decoration: BoxDecoration(
+                    color: colors.pill,
                     shape: BoxShape.circle,
                   ),
                   child: Center(
@@ -277,15 +290,15 @@ class _PartCard extends StatelessWidget {
                     Text(
                       part.title,
                       style: compact
-                          ? _partTitleStyle.copyWith(fontSize: 13.5)
-                          : _partTitleStyle,
+                          ? _partTitleStyle(colors).copyWith(fontSize: 13.5)
+                          : _partTitleStyle(colors),
                     ),
                     SizedBox(height: compact ? 1 : 2),
                     Text(
                       part.subtitle,
                       style: compact
-                          ? _partSubtitleStyle.copyWith(fontSize: 11)
-                          : _partSubtitleStyle,
+                          ? _partSubtitleStyle(colors).copyWith(fontSize: 11)
+                          : _partSubtitleStyle(colors),
                     ),
                   ],
                 ),

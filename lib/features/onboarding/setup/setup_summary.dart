@@ -22,26 +22,26 @@ const String _changeLabel = 'Change';
 const double _rowHeight = 56;
 const double _iconSize = 18;
 
-const TextStyle _rowLabelStyle = TextStyle(
+TextStyle _rowLabelStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 9.5,
   fontWeight: FontWeight.w600,
   letterSpacing: 0.86,
-  color: Palette.muted,
+  color: colors.muted,
 );
 
-const TextStyle _rowValueStyle = TextStyle(
+TextStyle _rowValueStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 14,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _changeStyle = TextStyle(
+TextStyle _changeStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12,
   fontWeight: FontWeight.w600,
-  color: Palette.coral,
+  color: colors.accentInk,
 );
 
 class SetupSummary extends StatelessWidget {
@@ -66,13 +66,15 @@ class SetupSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     final bool compact = layout == ShellLayout.bottomBar;
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.cardWarm,
-        border: Shapes.outline,
-        borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusMd)),
-        boxShadow: Shadows.cardDefault,
+      decoration: BoxDecoration(
+        color: colors.cardWarm,
+        border: shadows.outline,
+        borderRadius: const BorderRadius.all(Radius.circular(Shapes.radiusMd)),
+        boxShadow: shadows.cardDefault,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -88,7 +90,7 @@ class SetupSummary extends StatelessWidget {
             compact: compact,
             onChange: onChangeReminder,
           ),
-          const DashedDivider(thickness: 1, color: Palette.ink20),
+          DashedDivider(thickness: 1, color: colors.ink20),
           _SummaryRow(
             icon: Icons.calendar_today_outlined,
             label: 'Week starts on',
@@ -98,7 +100,7 @@ class SetupSummary extends StatelessWidget {
             compact: compact,
             onChange: onChangeWeek,
           ),
-          const DashedDivider(thickness: 1, color: Palette.ink20),
+          DashedDivider(thickness: 1, color: colors.ink20),
           _SummaryRow(
             icon: Icons.lock_outline_rounded,
             label: 'Entries live',
@@ -135,6 +137,7 @@ class _SummaryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: _rowHeight),
       child: Padding(
@@ -142,7 +145,7 @@ class _SummaryRow extends StatelessWidget {
         child: Row(
           children: <Widget>[
             ExcludeSemantics(
-              child: Icon(icon, size: _iconSize, color: Palette.ink),
+              child: Icon(icon, size: _iconSize, color: colors.ink),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -154,13 +157,13 @@ class _SummaryRow extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Text(label.toUpperCase(), style: _rowLabelStyle),
+                      Text(label.toUpperCase(), style: _rowLabelStyle(colors)),
                       const SizedBox(height: 1),
                       Text(
                         value,
                         style: compact
-                            ? _rowValueStyle.copyWith(fontSize: 13.5)
-                            : _rowValueStyle,
+                            ? _rowValueStyle(colors).copyWith(fontSize: 13.5)
+                            : _rowValueStyle(colors),
                       ),
                     ],
                   ),
@@ -172,7 +175,7 @@ class _SummaryRow extends StatelessWidget {
               label: _changeLabel,
               semanticLabel: changeName,
               onPressed: onChange,
-              style: _changeStyle,
+              style: _changeStyle(colors),
             ),
           ],
         ),

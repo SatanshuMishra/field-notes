@@ -31,10 +31,7 @@ const double _appIconBox = 36;
 const double _appIconFlower = 24;
 const double _headerFlower = 16;
 
-const Color _previewPaper = Color(0xF2FFFAF1);
-const Color _previewEdge = Color(0x244A3B2E);
-const Color _previewHeaderInk = Color(0xFF7D6A52);
-const Color _previewBodyInk = Color(0xFF6F6254);
+const int _previewPaperAlpha = 0xF2;
 const Color _presetCaptionOnCoral = Color(0xE0FFFFFF);
 
 const List<BoxShadow> _previewShadow = <BoxShadow>[
@@ -69,25 +66,25 @@ const ColorFilter _greyscale = ColorFilter.matrix(<double>[
   0,
 ]);
 
-const TextStyle _rowLabelStyle = TextStyle(
+TextStyle _rowLabelStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 14,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _presetValueStyle = TextStyle(
+TextStyle _presetValueStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 15,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _presetCaptionStyle = TextStyle(
+TextStyle _presetCaptionStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 10,
   fontWeight: FontWeight.w500,
-  color: Palette.muted,
+  color: colors.muted,
 );
 
 enum ReminderPreset {
@@ -130,6 +127,8 @@ class SetupReminderStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     final double gap = _sidebar ? _sidebarGap : _bottomBarGap;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -138,14 +137,19 @@ class SetupReminderStep extends StatelessWidget {
           key: setupNotificationPreviewKey,
           opacity: enabled ? 1 : _offOpacity,
           child: enabled
-              ? _preview()
-              : ColorFiltered(colorFilter: _greyscale, child: _preview()),
+              ? _preview(colors, shadows)
+              : ColorFiltered(
+                  colorFilter: _greyscale,
+                  child: _preview(colors, shadows),
+                ),
         ),
         SizedBox(height: gap),
-        const DashedDivider(thickness: 1, color: Palette.ink20),
+        DashedDivider(thickness: 1, color: colors.ink20),
         Row(
           children: <Widget>[
-            const Expanded(child: Text(_reminderLabel, style: _rowLabelStyle)),
+            Expanded(
+              child: Text(_reminderLabel, style: _rowLabelStyle(colors)),
+            ),
             SettingsToggle(
               semanticLabel: _reminderLabel,
               value: enabled,
@@ -153,10 +157,10 @@ class SetupReminderStep extends StatelessWidget {
             ),
           ],
         ),
-        const DashedDivider(thickness: 1, color: Palette.ink20),
+        DashedDivider(thickness: 1, color: colors.ink20),
         if (enabled) ...<Widget>[
           SizedBox(height: gap),
-          _presetGrid(),
+          _presetGrid(colors, shadows),
           if (preset == ReminderPreset.other) ...<Widget>[
             SizedBox(height: gap),
             Align(
@@ -183,18 +187,24 @@ class SetupReminderStep extends StatelessWidget {
     onTimeChanged(ReminderTime(hour: picked.hour, minute: picked.minute));
   }
 
-  Widget _preview() {
+  Widget _preview(FieldNotesColors colors, FieldNotesShadows shadows) {
     final String when = enabled ? formatSetupTime(time) : _offLabel;
     return MergeSemantics(
-      child: _sidebar ? _bannerPreview(when) : _shadePreview(when),
+      child: _sidebar
+          ? _bannerPreview(when, colors, shadows)
+          : _shadePreview(when, colors),
     );
   }
 
-  Widget _bannerPreview(String when) {
+  Widget _bannerPreview(
+    String when,
+    FieldNotesColors colors,
+    FieldNotesShadows shadows,
+  ) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: _previewPaper,
-        border: Border.all(color: Palette.ink20),
+        color: colors.cardBright.withAlpha(_previewPaperAlpha),
+        border: Border.all(color: colors.ink20),
         borderRadius: const BorderRadius.all(Radius.circular(Shapes.radiusMd)),
         boxShadow: _previewShadow,
       ),
@@ -205,10 +215,10 @@ class SetupReminderStep extends StatelessWidget {
             SizedBox.square(
               dimension: _appIconBox,
               child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  color: Palette.cardWarm,
-                  border: Shapes.outline,
-                  borderRadius: BorderRadius.all(
+                decoration: BoxDecoration(
+                  color: colors.cardWarm,
+                  border: shadows.outline,
+                  borderRadius: const BorderRadius.all(
                     Radius.circular(Shapes.radiusThumb),
                   ),
                 ),
@@ -229,36 +239,36 @@ class SetupReminderStep extends StatelessWidget {
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           _notificationTitle,
                           style: TextStyle(
                             fontFamily: TypographyTokens.sans,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: Palette.ink,
+                            color: colors.ink,
                           ),
                         ),
                       ),
                       Text(
                         when,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: TypographyTokens.sans,
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
-                          color: Palette.muted,
+                          color: colors.muted,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 1),
-                  const Text(
+                  Text(
                     _notificationBody,
                     style: TextStyle(
                       fontFamily: TypographyTokens.sans,
                       fontSize: 12.5,
                       fontWeight: FontWeight.w400,
-                      color: Palette.ink,
+                      color: colors.ink,
                     ),
                   ),
                 ],
@@ -270,17 +280,17 @@ class SetupReminderStep extends StatelessWidget {
     );
   }
 
-  Widget _shadePreview(String when) {
-    const TextStyle header = TextStyle(
+  Widget _shadePreview(String when, FieldNotesColors colors) {
+    final TextStyle header = TextStyle(
       fontFamily: TypographyTokens.sans,
       fontSize: 10.5,
       fontWeight: FontWeight.w500,
-      color: _previewHeaderInk,
+      color: colors.noticeInk,
     );
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Palette.cardBright,
-        border: Border.all(color: _previewEdge),
+        color: colors.cardBright,
+        border: Border.all(color: colors.ink14),
         borderRadius: const BorderRadius.all(Radius.circular(18)),
         boxShadow: _previewShadow,
       ),
@@ -295,19 +305,19 @@ class SetupReminderStep extends StatelessWidget {
                   child: FlowerBloom.forMood(Mood.happy, size: _headerFlower),
                 ),
                 const SizedBox(width: 6),
-                const Text(_notificationTitle, style: header),
-                const ExcludeSemantics(child: Text(' · ', style: header)),
+                Text(_notificationTitle, style: header),
+                ExcludeSemantics(child: Text(' · ', style: header)),
                 Text(when, style: header),
               ],
             ),
             const SizedBox(height: 5),
-            const Text(
+            Text(
               _notificationBody,
               style: TextStyle(
                 fontFamily: TypographyTokens.sans,
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
-                color: _previewBodyInk,
+                color: colors.noticeBodyInk,
               ),
             ),
           ],
@@ -316,7 +326,7 @@ class SetupReminderStep extends StatelessWidget {
     );
   }
 
-  Widget _presetGrid() {
+  Widget _presetGrid(FieldNotesColors colors, FieldNotesShadows shadows) {
     final int columns = _sidebar ? 4 : 2;
     final List<ReminderPreset> presets = ReminderPreset.values;
     final int rows = (presets.length / columns).ceil();
@@ -330,7 +340,13 @@ class SetupReminderStep extends StatelessWidget {
             children: <Widget>[
               for (int column = 0; column < columns; column++) ...<Widget>[
                 if (column > 0) const SizedBox(width: _presetGap),
-                Expanded(child: _presetTile(presets[row * columns + column])),
+                Expanded(
+                  child: _presetTile(
+                    presets[row * columns + column],
+                    colors,
+                    shadows,
+                  ),
+                ),
               ],
             ],
           ),
@@ -339,7 +355,11 @@ class SetupReminderStep extends StatelessWidget {
     );
   }
 
-  Widget _presetTile(ReminderPreset option) {
+  Widget _presetTile(
+    ReminderPreset option,
+    FieldNotesColors colors,
+    FieldNotesShadows shadows,
+  ) {
     final bool selected = option == preset;
     final ReminderTime? fixed = option.time;
     final String value = fixed != null
@@ -371,15 +391,15 @@ class SetupReminderStep extends StatelessWidget {
             ),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: selected ? Palette.coral : Palette.cardWarm,
+                color: selected ? Palette.coral : colors.cardWarm,
                 border: selected
-                    ? Shapes.outline
+                    ? shadows.outline
                     : Border.all(
-                        color: Palette.ink30,
+                        color: colors.ink30,
                         width: Shapes.outlineWidth,
                       ),
                 borderRadius: radius,
-                boxShadow: selected ? Shadows.emphasis : null,
+                boxShadow: selected ? shadows.emphasis : null,
               ),
               child: Center(
                 heightFactor: 1,
@@ -396,10 +416,10 @@ class SetupReminderStep extends StatelessWidget {
                           value,
                           maxLines: 1,
                           style: selected
-                              ? _presetValueStyle.copyWith(
-                                  color: Palette.onAccent,
-                                )
-                              : _presetValueStyle,
+                              ? _presetValueStyle(
+                                  colors,
+                                ).copyWith(color: Palette.onAccent)
+                              : _presetValueStyle(colors),
                         ),
                         const SizedBox(height: 1),
                         Text(
@@ -407,10 +427,10 @@ class SetupReminderStep extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: selected
-                              ? _presetCaptionStyle.copyWith(
-                                  color: _presetCaptionOnCoral,
-                                )
-                              : _presetCaptionStyle,
+                              ? _presetCaptionStyle(
+                                  colors,
+                                ).copyWith(color: _presetCaptionOnCoral)
+                              : _presetCaptionStyle(colors),
                         ),
                       ],
                     ),

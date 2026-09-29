@@ -154,25 +154,23 @@ const String tourWeekTodayLabel = 'Today';
 const String tourWeekOpenCaption = '← open & edit';
 const String tourWeekClosedCaption = 'closed →';
 
-const Color _tileBorder = Color(0x474A3B2E);
-const Color _dashedChipBorder = Color(0x524A3B2E);
 const double _futureOpacity = 0.6;
 const double _dashedStroke = 1.5;
 const double _headingTracking = 0.855;
 
-const TextStyle _tileLabelStyle = TextStyle(
+TextStyle _tileLabelStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12,
   fontWeight: FontWeight.w600,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
-const TextStyle _tileCaptionStyle = TextStyle(
+TextStyle _tileCaptionStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 10,
   fontWeight: FontWeight.w400,
   height: 1.3,
-  color: Palette.muted,
+  color: colors.muted,
 );
 
 const TextStyle _headingStyle = TextStyle(
@@ -180,35 +178,33 @@ const TextStyle _headingStyle = TextStyle(
   fontSize: 9.5,
   fontWeight: FontWeight.w600,
   letterSpacing: _headingTracking,
-  color: Palette.sage,
 );
 
-const TextStyle _codeStyle = TextStyle(
+TextStyle _codeStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.mono,
   fontSize: 11,
   fontWeight: FontWeight.w600,
-  color: Palette.coral,
+  color: colors.accentInk,
 );
 
-const TextStyle _chipLabelStyle = TextStyle(
+TextStyle _chipLabelStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 12,
   fontWeight: FontWeight.w500,
-  color: Palette.ink,
+  color: colors.ink,
 );
 
 const TextStyle _weekLabelStyle = TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 9,
   fontWeight: FontWeight.w600,
-  color: Palette.mutedDeep,
 );
 
-const TextStyle _weekCaptionStyle = TextStyle(
+TextStyle _weekCaptionStyle(FieldNotesColors colors) => TextStyle(
   fontFamily: TypographyTokens.sans,
   fontSize: 10,
   fontWeight: FontWeight.w600,
-  color: Palette.sage,
+  color: colors.sage,
 );
 
 class TourTipVisual extends StatelessWidget {
@@ -221,12 +217,13 @@ class TourTipVisual extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color ink = context.colors.ink;
     return switch (visual) {
       TourVisual.pages => _tiles(<Widget>[
-        _tile(_nav(NavGlyph.home), 'Today', 'this day'),
-        _tile(_nav(NavGlyph.calendar), 'Calendar', 'past days'),
-        _tile(_nav(NavGlyph.garden), 'Garden', 'your year'),
-        _tile(_nav(NavGlyph.search), 'Search', 'find anything'),
+        _tile(_nav(NavGlyph.home, ink), 'Today', 'this day'),
+        _tile(_nav(NavGlyph.calendar, ink), 'Calendar', 'past days'),
+        _tile(_nav(NavGlyph.garden, ink), 'Garden', 'your year'),
+        _tile(_nav(NavGlyph.search, ink), 'Search', 'find anything'),
       ]),
       TourVisual.moods => _tiles(<Widget>[
         for (final Mood mood in tourMoods)
@@ -237,32 +234,32 @@ class TourTipVisual extends StatelessWidget {
           ),
       ]),
       TourVisual.capture => _tiles(<Widget>[
-        _tile(_capture(CaptureGlyph.pencil), 'Write', 'words + photos'),
-        _tile(_capture(CaptureGlyph.mic), 'Voice', 'speak it'),
-        _tile(_capture(CaptureGlyph.video), 'Video', 'film it'),
+        _tile(_capture(CaptureGlyph.pencil, ink), 'Write', 'words + photos'),
+        _tile(_capture(CaptureGlyph.mic, ink), 'Voice', 'speak it'),
+        _tile(_capture(CaptureGlyph.video, ink), 'Video', 'film it'),
       ]),
       TourVisual.noteContent => _NoteContent(sidebar: _sidebar),
       TourVisual.week => _WeekStrip(sidebar: _sidebar),
       TourVisual.settings => _tiles(<Widget>[
-        _tile(_glyph(_TourGlyph.bell), 'Reminders', null),
-        _tile(_nav(NavGlyph.calendar), 'Week start', null),
-        _tile(_glyph(_TourGlyph.lock), 'Storage', null),
+        _tile(_glyph(_TourGlyph.bell, ink), 'Reminders', null),
+        _tile(_nav(NavGlyph.calendar, ink), 'Week start', null),
+        _tile(_glyph(_TourGlyph.lock, ink), 'Storage', null),
       ]),
     };
   }
 
   double get _glyphSize => _sidebar ? 20 : 18;
 
-  Widget _nav(NavGlyph glyph) {
-    return NavIcon(glyph: glyph, color: Palette.ink, size: _glyphSize);
+  Widget _nav(NavGlyph glyph, Color color) {
+    return NavIcon(glyph: glyph, color: color, size: _glyphSize);
   }
 
-  Widget _capture(CaptureGlyph glyph) {
-    return CaptureIcon(glyph: glyph, color: Palette.ink, size: _glyphSize);
+  Widget _capture(CaptureGlyph glyph, Color color) {
+    return CaptureIcon(glyph: glyph, color: color, size: _glyphSize);
   }
 
-  Widget _glyph(_TourGlyph glyph) {
-    return _TourGlyphIcon(glyph: glyph, color: Palette.ink, size: _glyphSize);
+  Widget _glyph(_TourGlyph glyph, Color color) {
+    return _TourGlyphIcon(glyph: glyph, color: color, size: _glyphSize);
   }
 
   Widget _tile(Widget art, String label, String? caption) {
@@ -308,12 +305,13 @@ class _TourTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final String? line = caption;
     return MergeSemantics(
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Palette.cardWarm,
-          border: Border.all(color: _tileBorder, width: Shapes.outlineWidth),
+          color: colors.cardWarm,
+          border: Border.all(color: colors.ink28, width: Shapes.outlineWidth),
           borderRadius: BorderRadius.all(
             Radius.circular(sidebar ? Shapes.radiusControl : Shapes.radiusSm),
           ),
@@ -333,16 +331,18 @@ class _TourTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
                 style: sidebar
-                    ? _tileLabelStyle
-                    : _tileLabelStyle.copyWith(fontSize: 11),
+                    ? _tileLabelStyle(colors)
+                    : _tileLabelStyle(colors).copyWith(fontSize: 11),
               ),
               if (line != null)
                 Text(
                   line,
                   textAlign: TextAlign.center,
                   style: sidebar
-                      ? _tileCaptionStyle
-                      : _tileCaptionStyle.copyWith(fontSize: 9.5, height: 1.25),
+                      ? _tileCaptionStyle(colors)
+                      : _tileCaptionStyle(
+                          colors,
+                        ).copyWith(fontSize: 9.5, height: 1.25),
                 ),
             ],
           ),
@@ -359,6 +359,7 @@ class _NoteContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final double gap = sidebar ? 6 : 5;
     return Padding(
       padding: EdgeInsets.only(top: sidebar ? 14 : 12),
@@ -368,7 +369,7 @@ class _NoteContent extends StatelessWidget {
           _section(
             key: tourWorksInNotesKey,
             heading: tourWorksInNotesHeading,
-            headingColor: Palette.sage,
+            headingColor: colors.sage,
             chips: <Widget>[
               for (final ({String code, String label}) feature
                   in tourNoteFeatures)
@@ -384,7 +385,7 @@ class _NoteContent extends StatelessWidget {
           _section(
             key: tourNotSupportedKey,
             heading: tourNotSupportedHeading,
-            headingColor: Palette.muted,
+            headingColor: colors.muted,
             chips: <Widget>[
               for (final String label in tourUnsupportedNoteFeatures)
                 _UnsupportedChip(label: label, sidebar: sidebar),
@@ -435,13 +436,16 @@ class _FeatureChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.cardWarm,
+      decoration: BoxDecoration(
+        color: colors.cardWarm,
         border: Border.fromBorderSide(
-          BorderSide(color: Palette.ink30, width: Shapes.outlineWidth),
+          BorderSide(color: colors.ink30, width: Shapes.outlineWidth),
         ),
-        borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusThumb)),
+        borderRadius: const BorderRadius.all(
+          Radius.circular(Shapes.radiusThumb),
+        ),
       ),
       child: Padding(
         padding: sidebar
@@ -454,16 +458,16 @@ class _FeatureChip extends StatelessWidget {
               child: Text(
                 code,
                 style: sidebar
-                    ? _codeStyle
-                    : _codeStyle.copyWith(fontSize: 10.5),
+                    ? _codeStyle(colors)
+                    : _codeStyle(colors).copyWith(fontSize: 10.5),
               ),
             ),
             SizedBox(width: sidebar ? 6 : 5),
             Text(
               label,
               style: sidebar
-                  ? _chipLabelStyle
-                  : _chipLabelStyle.copyWith(fontSize: 11.5),
+                  ? _chipLabelStyle(colors)
+                  : _chipLabelStyle(colors).copyWith(fontSize: 11.5),
             ),
           ],
         ),
@@ -480,9 +484,10 @@ class _UnsupportedChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return CustomPaint(
-      painter: const _DashedOutlinePainter(
-        color: _dashedChipBorder,
+      painter: _DashedOutlinePainter(
+        color: colors.ink32,
         radius: Shapes.radiusThumb,
       ),
       child: Padding(
@@ -495,16 +500,16 @@ class _UnsupportedChip extends StatelessWidget {
             ExcludeSemantics(
               child: _TourGlyphIcon(
                 glyph: _TourGlyph.cross,
-                color: Palette.mutedDeep,
+                color: colors.mutedDeep,
                 size: sidebar ? 9 : 8,
               ),
             ),
             SizedBox(width: sidebar ? 6 : 5),
             Text(
               label,
-              style: _chipLabelStyle.copyWith(
+              style: _chipLabelStyle(colors).copyWith(
                 fontSize: sidebar ? 12 : 11.5,
-                color: Palette.mutedDeep,
+                color: colors.mutedDeep,
               ),
             ),
           ],
@@ -521,6 +526,7 @@ class _WeekStrip extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final FieldNotesColors colors = context.colors;
     final DateTime today = ref.watch(todayClockProvider)();
     final double gap = sidebar ? 5 : 4;
     final List<Widget> cells = <Widget>[
@@ -557,10 +563,10 @@ class _WeekStrip extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text(tourWeekOpenCaption, style: _weekCaptionStyle),
+              Text(tourWeekOpenCaption, style: _weekCaptionStyle(colors)),
               Text(
                 tourWeekClosedCaption,
-                style: _weekCaptionStyle.copyWith(color: Palette.muted),
+                style: _weekCaptionStyle(colors).copyWith(color: colors.muted),
               ),
             ],
           ),
@@ -599,6 +605,7 @@ class _WeekCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final Widget content = Padding(
       padding: sidebar
           ? const EdgeInsets.fromLTRB(0, 7, 0, 5)
@@ -608,7 +615,7 @@ class _WeekCell extends StatelessWidget {
         children: <Widget>[
           SizedBox.square(
             dimension: sidebar ? 24 : 20,
-            child: Center(child: ExcludeSemantics(child: _art())),
+            child: Center(child: ExcludeSemantics(child: _art(colors))),
           ),
           const SizedBox(height: 3),
           Text(
@@ -619,8 +626,8 @@ class _WeekCell extends StatelessWidget {
             style: _weekLabelStyle.copyWith(
               fontSize: sidebar ? 9 : 8.5,
               color: kind == _WeekCellKind.today
-                  ? Palette.coral
-                  : Palette.mutedDeep,
+                  ? colors.accentInk
+                  : colors.mutedDeep,
             ),
           ),
         ],
@@ -629,8 +636,8 @@ class _WeekCell extends StatelessWidget {
     return switch (kind) {
       _WeekCellKind.past => DecoratedBox(
         decoration: BoxDecoration(
-          color: Palette.cardWarm,
-          border: Border.all(color: _tileBorder, width: Shapes.outlineWidth),
+          color: colors.cardWarm,
+          border: Border.all(color: colors.ink28, width: Shapes.outlineWidth),
           borderRadius: const BorderRadius.all(
             Radius.circular(Shapes.radiusCell),
           ),
@@ -639,7 +646,7 @@ class _WeekCell extends StatelessWidget {
       ),
       _WeekCellKind.today => DecoratedBox(
         decoration: BoxDecoration(
-          color: Palette.cardLight,
+          color: colors.cardLight,
           border: Border.all(color: Palette.coral, width: Shapes.outlineWidth),
           borderRadius: const BorderRadius.all(
             Radius.circular(Shapes.radiusCell),
@@ -650,8 +657,8 @@ class _WeekCell extends StatelessWidget {
       _WeekCellKind.future => Opacity(
         opacity: _futureOpacity,
         child: CustomPaint(
-          painter: const _DashedOutlinePainter(
-            color: Palette.ink25,
+          painter: _DashedOutlinePainter(
+            color: colors.ink25,
             radius: Shapes.radiusCell,
           ),
           child: content,
@@ -660,7 +667,7 @@ class _WeekCell extends StatelessWidget {
     };
   }
 
-  Widget _art() {
+  Widget _art(FieldNotesColors colors) {
     final Mood? bloom = mood;
     if (bloom != null) {
       return FlowerBloom.forMood(bloom, size: sidebar ? 24 : 20);
@@ -676,7 +683,7 @@ class _WeekCell extends StatelessWidget {
     }
     return _TourGlyphIcon(
       glyph: _TourGlyph.lock,
-      color: Palette.muted,
+      color: colors.muted,
       size: sidebar ? 14 : 12,
       strokeWidth: 2,
     );

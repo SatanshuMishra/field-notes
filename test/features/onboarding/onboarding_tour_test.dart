@@ -311,7 +311,7 @@ void _expectContent(
           ? Palette.coral
           : bar < index
           ? const Color(0xFFDBA493)
-          : Palette.ink18,
+          : FieldNotesColors.light.ink18,
       reason: 'progress bar ${bar + 1} on tip ${index + 1}',
     );
   }
@@ -548,7 +548,7 @@ void main() {
           .widget<Text>(find.descendant(of: works, matching: find.text('```')))
           .style;
       expect(codeStyle?.fontFamily, TypographyTokens.mono);
-      expect(codeStyle?.color, Palette.coral);
+      expect(codeStyle?.color, FieldNotesColors.light.accentInk);
     }
 
     await _onPlatform(TargetPlatform.macOS, () async {
