@@ -12,6 +12,9 @@ import 'package:field_notes/features/calendar/widgets/calendar_day_cell.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_month_picker.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/garden/garden.dart';
+import 'package:field_notes/features/garden/sky/sky_location.dart';
+import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
+import 'package:field_notes/features/garden/sky/sky_time.dart';
 import 'package:field_notes/features/search/search_day_tile.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
 import 'package:field_notes/features/search/search_screen.dart';
@@ -49,6 +52,16 @@ final DateTime _now = DateTime(2026, 9, 25, 9, 30);
 final int _nineThirty = _now.millisecondsSinceEpoch;
 
 DateTime _clock() => _now;
+
+final DateTime _skyNow = DateTime.utc(2026, 9, 25, 15, 30);
+
+List<Override> _skyOverrides() => <Override>[
+  skyClockProvider.overrideWithValue(() => _skyNow),
+  skyLocationProvider.overrideWith(
+    (Ref ref) async =>
+        resolveSkyLocation('America/Edmonton', const Duration(hours: -6)),
+  ),
+];
 
 bool _isTab(Widget widget) => switch (widget.key) {
   ValueKey<String>(:final String value) => value.startsWith('tab-'),
@@ -152,6 +165,7 @@ List<Override> _shellStateOverrides() => <Override>[
   ...shellOverrides(),
   todayClockProvider.overrideWithValue(_clock),
   streakClockProvider.overrideWithValue(_clock),
+  ..._skyOverrides(),
 ];
 
 List<Override> _feedOverrides() => <Override>[
@@ -185,6 +199,7 @@ List<Override> _gardenOverrides({
     (Ref ref) => Stream<List<String>>.value(journaled),
   ),
   allDaysProvider.overrideWith((Ref ref) => Stream<List<Day>>.value(days)),
+  ..._skyOverrides(),
 ];
 
 List<Override> _searchOverrides() => <Override>[

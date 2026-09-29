@@ -1,12 +1,14 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
+
+import 'package:field_notes/features/garden/sky/sky_scene.dart';
 
 import '../model/garden_data.dart';
 import '../model/garden_insect.dart';
 import '../model/garden_motion.dart';
 import '../model/meadow_layout.dart';
 import '../paint/meadow_painter.dart';
-
-const Duration _swayCycle = Duration(seconds: 6);
 
 String _meadowDescription({required int blooms, required int sprouts}) {
   final String bloomPart = blooms == 1 ? '1 bloom' : '$blooms blooms';
@@ -18,69 +20,139 @@ class MeadowScene extends StatefulWidget {
   const MeadowScene({
     super.key,
     required this.blooms,
-    required this.motion,
-    this.seed = 0,
-    this.insects = defaultGardenInsects,
+    required this.sky,
     this.sprouts = const <String>[],
+    this.seed = 0,
+    this.compact = false,
+    this.motion,
   });
 
   final List<GardenBloomData> blooms;
-  final GardenMotionProfile motion;
-  final int seed;
-  final List<GardenInsect> insects;
+  final SkyScene sky;
   final List<String> sprouts;
+  final int seed;
+  final bool compact;
+  final GardenMotionProfile? motion;
 
   @override
   State<MeadowScene> createState() => _MeadowSceneState();
 }
 
-class _MeadowSceneState extends State<MeadowScene>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+class _LayoutInputs {
+  const _LayoutInputs({
+    required this.blooms,
+    required this.sprouts,
+    required this.seed,
+    required this.compact,
+    required this.size,
+  });
+
+  final List<GardenBloomData> blooms;
+  final List<String> sprouts;
+  final int seed;
+  final bool compact;
+  final Size size;
 
   @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: _swayCycle);
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _LayoutInputs &&
+          seed == other.seed &&
+          compact == other.compact &&
+          size == other.size &&
+          listEquals(blooms, other.blooms) &&
+          listEquals(sprouts, other.sprouts);
+
+  @override
+  int get hashCode => Object.hash(
+    seed,
+    compact,
+    size,
+    Object.hashAll(blooms),
+    Object.hashAll(sprouts),
+  );
+}
+
+class _MeadowSceneState extends State<MeadowScene>
+    with SingleTickerProviderStateMixin {
+  final ValueNotifier<Duration> _clock = ValueNotifier<Duration>(Duration.zero);
+  late final Ticker _ticker = createTicker(_tick);
+  GardenMotionProfile _motion = GardenMotionProfile.reduced;
+  _LayoutInputs? _laidOut;
+  MeadowLayout _layout = MeadowLayout.empty;
+  late List<SkyStar> _stars = skyStarsFor(widget.seed);
+  late List<GardenFirefly> _fireflies = gardenFirefliesFor(widget.seed);
+
+  void _tick(Duration elapsed) {
+    _clock.value = elapsed;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _syncMotion();
   }
 
   @override
   void didUpdateWidget(covariant MeadowScene oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.motion != widget.motion) {
-      _syncMotion();
+    if (oldWidget.seed != widget.seed) {
+      _stars = skyStarsFor(widget.seed);
+      _fireflies = gardenFirefliesFor(widget.seed);
     }
+    _syncMotion();
   }
 
   void _syncMotion() {
-    if (widget.motion == GardenMotionProfile.full) {
-      if (!_controller.isAnimating) {
-        _controller.repeat();
-      }
-      return;
+    _motion =
+        widget.motion ??
+        resolveGardenMotion(
+          reduceMotion: MediaQuery.maybeDisableAnimationsOf(context) ?? false,
+          bloomCount: widget.blooms.length + widget.sprouts.length,
+        );
+    final bool animate = _motion == GardenMotionProfile.full;
+    if (animate && !_ticker.isActive) {
+      _ticker.start();
+    } else if (!animate && _ticker.isActive) {
+      _ticker.stop();
     }
-    _controller.stop();
+  }
+
+  MeadowLayout _layoutFor(Size size) {
+    final _LayoutInputs inputs = _LayoutInputs(
+      blooms: widget.blooms,
+      sprouts: widget.sprouts,
+      seed: widget.seed,
+      compact: widget.compact,
+      size: size,
+    );
+    if (inputs == _laidOut) {
+      return _layout;
+    }
+    _laidOut = inputs;
+    _layout = layoutMeadowByDepth(
+      blooms: widget.blooms,
+      sprouts: widget.sprouts,
+      size: size,
+      seed: widget.seed,
+      compact: widget.compact,
+    );
+    return _layout;
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ticker.dispose();
+    _clock.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool animate = widget.motion == GardenMotionProfile.full;
+    final bool animate = _motion == GardenMotionProfile.full;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final Size size = Size(constraints.maxWidth, constraints.maxHeight);
-        final List<PlantedBloom> planted = layoutMeadow(
-          blooms: widget.blooms,
-          size: size,
-          seed: widget.seed,
-          sprouts: widget.sprouts,
-        );
+        final Size size = constraints.biggest;
         return Semantics(
           container: true,
           label: _meadowDescription(
@@ -88,19 +160,18 @@ class _MeadowSceneState extends State<MeadowScene>
             sprouts: widget.sprouts.length,
           ),
           child: RepaintBoundary(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (BuildContext context, Widget? child) {
-                return CustomPaint(
-                  size: size,
-                  painter: MeadowPainter(
-                    t: animate ? _controller.value : 0.0,
-                    planted: planted,
-                    insects: widget.insects,
-                    showInsects: animate,
-                  ),
-                );
-              },
+            child: CustomPaint(
+              size: size,
+              painter: MeadowPainter(
+                layout: _layoutFor(size),
+                sky: widget.sky,
+                compact: widget.compact,
+                stars: _stars,
+                fireflies: _fireflies,
+                insects: gardenInsectsFor(compact: widget.compact),
+                animate: animate,
+                clock: _clock,
+              ),
             ),
           ),
         );

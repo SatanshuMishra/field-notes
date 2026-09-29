@@ -26,14 +26,14 @@ void main() {
       const GardenBloomData(date: '2026-09-24', mood: Mood.grateful),
     ]);
 
-    final List<PlantedBloom> planted = layoutMeadow(
+    final List<MeadowPlant> planted = layoutMeadowByDepth(
       blooms: blooms,
       sprouts: sprouts,
       size: const Size(400, 300),
       seed: 2026,
-    );
-    final List<PlantedBloom> plantedSprouts = planted
-        .where((PlantedBloom p) => p.isSprout)
+    ).plants;
+    final List<MeadowPlant> plantedSprouts = planted
+        .where((MeadowPlant p) => p.isSprout)
         .toList();
     expect(plantedSprouts, hasLength(1));
     expect(plantedSprouts.single.date, '2026-09-23');
