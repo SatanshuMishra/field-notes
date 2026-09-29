@@ -44,8 +44,13 @@ List<String> weekDateKeys({
 }) {
   final DateTime local = today.toLocal();
   final int isoWeekday = local.weekday;
+  final int startIsoWeekday = switch (weekStart) {
+    WeekStart.sunday => DateTime.sunday,
+    WeekStart.monday => DateTime.monday,
+    WeekStart.saturday => DateTime.saturday,
+  };
   final int offsetFromStart =
-      weekStart == WeekStart.monday ? isoWeekday - 1 : isoWeekday % daysPerWeek;
+      (isoWeekday - startIsoWeekday + daysPerWeek) % daysPerWeek;
   return <String>[
     for (int index = 0; index < daysPerWeek; index++)
       captureDateKey(

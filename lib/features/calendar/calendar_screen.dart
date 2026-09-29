@@ -20,10 +20,8 @@ import 'widgets/calendar_grid.dart';
 import 'widgets/calendar_header.dart';
 import 'widgets/month_picker_route.dart';
 
-typedef OpenDayDetail = Future<void> Function(
-  BuildContext context, {
-  required String date,
-});
+typedef OpenDayDetail =
+    Future<void> Function(BuildContext context, {required String date});
 
 const String calendarLoadingMessage = 'Opening your calendar…';
 const String calendarErrorMessage =
@@ -172,9 +170,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     if (firstWeekday != null) {
       return firstWeekday;
     }
-    return ref.watch(weekStartProvider) == WeekStart.monday
-        ? DateTime.monday
-        : DateTime.sunday;
+    return switch (ref.watch(weekStartProvider)) {
+      WeekStart.sunday => DateTime.sunday,
+      WeekStart.monday => DateTime.monday,
+      WeekStart.saturday => DateTime.saturday,
+    };
   }
 
   @override
@@ -252,9 +252,7 @@ class _CalendarMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(text, style: TypographyTokens.captionSans),
-    );
+    return Center(child: Text(text, style: TypographyTokens.captionSans));
   }
 }
 
