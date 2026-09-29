@@ -7,6 +7,7 @@ import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
 import 'package:field_notes/features/garden/widgets/meadow_scene.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
+import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -238,7 +239,10 @@ void main() {
       final DateTime shifted = sky.now.add(const Duration(minutes: 90));
       final DateTime local = shifted.toLocal();
       expect(
-        find.text('${_weekdays[local.weekday - 1]} ${_clock(tester, shifted)}'),
+        find.text(
+          '${_weekdays[local.weekday - 1]} ${shortMonthDayLabel(shifted)} · '
+          '${_clock(tester, shifted)}',
+        ),
         findsOneWidget,
       );
       expect(_painted(tester), _sceneAt(shifted));

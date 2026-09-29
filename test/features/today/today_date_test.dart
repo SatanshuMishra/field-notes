@@ -27,7 +27,18 @@ void main() {
     test('renders weekday, month name, day and year', () {
       expect(longDateLabel(DateTime(2026, 7, 19)), 'Sunday, July 19, 2026');
       expect(longDateLabel(DateTime(2025, 1, 1)), 'Wednesday, January 1, 2025');
-      expect(longDateLabel(DateTime(2024, 12, 31)), 'Tuesday, December 31, 2024');
+      expect(
+        longDateLabel(DateTime(2024, 12, 31)),
+        'Tuesday, December 31, 2024',
+      );
+    });
+  });
+
+  group('shortMonthDayLabel', () {
+    test('renders a three-letter month and the day', () {
+      expect(shortMonthDayLabel(DateTime(2026, 10, 7)), 'Oct 7');
+      expect(shortMonthDayLabel(DateTime(2025, 1, 1)), 'Jan 1');
+      expect(shortMonthDayLabel(DateTime(2024, 12, 31)), 'Dec 31');
     });
   });
 
