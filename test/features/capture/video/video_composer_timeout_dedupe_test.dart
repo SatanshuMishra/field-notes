@@ -85,6 +85,7 @@ void main() {
         overrides: <Override>[
           videoRecorderProvider.overrideWith((Ref ref) => recorder),
           captureServiceProvider.overrideWith((Ref ref) => service),
+          reflectionPromptsOff(),
         ],
         child: videoHarness(
           _Trigger(
@@ -99,6 +100,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump();
     await tester.tap(find.byKey(videoShutterKey));
     for (int i = 0; i < 4; i++) {
       await tester.pump(const Duration(milliseconds: 50));

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
@@ -114,6 +115,7 @@ void main() {
         overrides: <Override>[
           videoRecorderProvider.overrideWith((Ref ref) => recorder),
           captureServiceProvider.overrideWith((Ref ref) => service),
+          reflectionPromptsOff(),
         ],
         child: videoHarness(
           const _Trigger(timeout: Duration(milliseconds: 100)),
@@ -125,6 +127,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump();
     await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));
@@ -140,7 +144,7 @@ void main() {
     expect(service.requests, isEmpty);
     expect(find.text(videoSaveTimeoutMessage), findsOneWidget);
     expect(find.text('Saving your video…'), findsNothing);
-    expect(find.text('recording… tap pause or stop'), findsOneWidget);
+    expect(find.text(stageRecordingStatus), findsOneWidget);
     expect(find.byType(VideoRecorderSheet), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());

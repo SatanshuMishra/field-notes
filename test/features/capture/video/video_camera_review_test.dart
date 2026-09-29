@@ -4,6 +4,7 @@ import 'package:camera/camera.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
 import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
@@ -172,6 +173,7 @@ class _Trigger extends StatelessWidget {
       overrides: <Override>[
         videoRecorderProvider.overrideWith((Ref ref) => recorder),
         captureServiceProvider.overrideWith((Ref ref) => service),
+        reflectionPromptsOff(),
       ],
       child: videoHarness(
         Builder(
@@ -269,7 +271,7 @@ void main() {
 
     expect(find.byType(CrossHatchPlaceholder), findsWidgets);
     expect(find.byType(CameraPicker), findsOneWidget);
-    expect(find.text('tap the button to start recording'), findsOneWidget);
+    expect(find.text(stageIdleStatus), findsOneWidget);
     expect(fakeVideoPreview(), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -286,6 +288,8 @@ void main() {
     );
     await _open(tester);
 
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump();
     await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));

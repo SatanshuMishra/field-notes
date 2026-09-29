@@ -1,4 +1,5 @@
 import 'package:field_notes/design/motion/motion.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,53 +7,66 @@ import 'package:flutter_test/flutter_test.dart';
 import 'voice_test_support.dart';
 
 void main() {
-  testWidgets('idle phase offers the mic button and shows no recording indicators',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(
-      voiceHarness(
-        VoiceRecorderSheet(
-          phase: VoiceRecorderPhase.idle,
-          onStart: () {},
-          onStop: () {},
-          onCancel: () {},
+  testWidgets(
+    'idle phase offers the orb and leave and shows no recording indicators',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        voiceSheetHarness(
+          VoiceRecorderSheet(
+            phase: VoiceRecorderPhase.idle,
+            onStart: () {},
+            onStop: () {},
+            onCancel: () {},
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
-    expect(find.byKey(voiceCloseKey), findsOneWidget);
-    expect(find.byType(Blink), findsNothing);
-    expect(find.byType(WaveformBars), findsNothing);
-  });
+      expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
+      expect(find.byKey(voiceCloseKey), findsOneWidget);
+      expect(find.byType(BreathingGlow), findsNothing);
+      expect(find.byKey(recorderTimerKey), findsNothing);
+      expect(find.byKey(voiceSavePillKey), findsNothing);
+      expect(find.byType(WaveformBars), findsNothing);
+    },
+  );
 
-  testWidgets('recording phase shows the blinking dot and the live waveform',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(
-      voiceHarness(
-        VoiceRecorderSheet(
-          phase: VoiceRecorderPhase.recording,
-          onStart: () {},
-          onStop: () {},
-          onCancel: () {},
+  testWidgets(
+    'recording phase shows the breathing glow and the soft timer, with no waveform or label',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        voiceSheetHarness(
+          VoiceRecorderSheet(
+            phase: VoiceRecorderPhase.recording,
+            onStart: () {},
+            onStop: () {},
+            onCancel: () {},
+            elapsed: const Duration(seconds: 7),
+          ),
         ),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 50));
+      );
+      await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.byType(Blink), findsOneWidget);
-    expect(find.byType(WaveformBars), findsOneWidget);
-    expect(find.text('RECORDING'), findsOneWidget);
+      expect(
+        tester.widget<BreathingGlow>(find.byType(BreathingGlow)).mode,
+        BreathingGlowMode.breathe,
+      );
+      expect(find.byKey(recorderTimerKey), findsOneWidget);
+      expect(find.text('0:07'), findsOneWidget);
+      expect(find.byType(WaveformBars), findsNothing);
+      expect(find.text('RECORDING'), findsNothing);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
-  testWidgets('taps invoke the matching callbacks',
-      (WidgetTester tester) async {
+  testWidgets('taps invoke the matching callbacks', (
+    WidgetTester tester,
+  ) async {
     int starts = 0;
     int cancels = 0;
 
     await tester.pumpWidget(
-      voiceHarness(
+      voiceSheetHarness(
         VoiceRecorderSheet(
           phase: VoiceRecorderPhase.idle,
           onStart: () => starts++,
@@ -71,19 +85,22 @@ void main() {
     expect(cancels, 1);
   });
 
-  testWidgets('the recording phase mic button pauses and the pill saves',
-      (WidgetTester tester) async {
+  testWidgets('the recording phase orb pauses and Keep this saves', (
+    WidgetTester tester,
+  ) async {
     int pauses = 0;
     int stops = 0;
+    int discards = 0;
 
     await tester.pumpWidget(
-      voiceHarness(
+      voiceSheetHarness(
         VoiceRecorderSheet(
           phase: VoiceRecorderPhase.recording,
           onStart: () {},
           onStop: () => stops++,
           onCancel: () {},
           onPause: () => pauses++,
+          onDiscard: () => discards++,
         ),
       ),
     );
@@ -93,17 +110,22 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
+    await tester.tap(find.byKey(voiceDiscardPillKey));
+    await tester.pump();
 
     expect(pauses, 1);
     expect(stops, 1);
+    expect(discards, 1);
+    expect(find.text('Keep this'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('an error message renders when provided',
-      (WidgetTester tester) async {
+  testWidgets('an error message renders when provided', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      voiceHarness(
+      voiceSheetHarness(
         VoiceRecorderSheet(
           phase: VoiceRecorderPhase.idle,
           onStart: () {},
@@ -117,21 +139,58 @@ void main() {
     expect(find.text('Microphone is off.'), findsOneWidget);
   });
 
-  testWidgets('the saving phase shows the saving hint and no live indicators',
-      (WidgetTester tester) async {
+  testWidgets(
+    'the saving phase shows the saving status and no live indicators',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        voiceSheetHarness(
+          VoiceRecorderSheet(
+            phase: VoiceRecorderPhase.saving,
+            onStart: () {},
+            onStop: () {},
+            onCancel: () {},
+          ),
+        ),
+      );
+
+      expect(find.text('Saving your recording…'), findsOneWidget);
+      expect(find.byType(BreathingGlow), findsNothing);
+      expect(find.byKey(recorderTimerKey), findsNothing);
+      expect(find.byType(WaveformBars), findsNothing);
+    },
+  );
+
+  testWidgets('asking shows the let-go panel in place of the take actions', (
+    WidgetTester tester,
+  ) async {
+    int keptGoing = 0;
+    int letGo = 0;
+
     await tester.pumpWidget(
-      voiceHarness(
+      voiceSheetHarness(
         VoiceRecorderSheet(
-          phase: VoiceRecorderPhase.saving,
+          phase: VoiceRecorderPhase.paused,
+          asking: true,
           onStart: () {},
           onStop: () {},
           onCancel: () {},
+          onKeepGoing: () => keptGoing++,
+          onLetGo: () => letGo++,
+          letGoKey: const ValueKey<String>('let-go'),
         ),
       ),
     );
+    await tester.pump();
 
-    expect(find.text('Saving your recording…'), findsOneWidget);
-    expect(find.byType(Blink), findsNothing);
-    expect(find.byType(WaveformBars), findsNothing);
+    expect(find.byType(LetGoPanel), findsOneWidget);
+    expect(find.byKey(voiceSavePillKey), findsNothing);
+
+    await tester.tap(find.byKey(voiceKeepGoingKey));
+    await tester.pump();
+    await tester.tap(find.byKey(const ValueKey<String>('let-go')));
+    await tester.pump();
+
+    expect(keptGoing, 1);
+    expect(letGo, 1);
   });
 }

@@ -63,12 +63,12 @@ void main() {
   );
 
   testWidgets(
-    'the discard-recording dialog buttons are 48 dp',
+    'the recording let-go panel buttons are 48 dp',
     (WidgetTester tester) => _expectDialogButtons(
       tester,
       captureStates,
       'c18-discard-recording',
-      <String>['Cancel', 'Discard'],
+      <String>['Keep going', 'Let it go'],
     ),
   );
 

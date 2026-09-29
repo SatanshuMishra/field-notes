@@ -1,6 +1,7 @@
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
@@ -36,6 +37,7 @@ Widget _recorderApp({
     overrides: <Override>[
       videoRecorderProvider.overrideWith((Ref ref) => recorder),
       captureServiceProvider.overrideWith((Ref ref) => service),
+      reflectionPromptsOff(),
     ],
     child: videoHarness(const _RecorderTrigger(date: '2026-07-21')),
   );
@@ -49,7 +51,7 @@ Future<void> _openComposer(WidgetTester tester) async {
   }
 }
 
-Future<void> _settle(WidgetTester tester, {int times = 8}) async {
+Future<void> _settle(WidgetTester tester, {int times = 14}) async {
   for (int i = 0; i < times; i++) {
     await tester.pump(const Duration(milliseconds: 50));
   }
@@ -69,7 +71,7 @@ void main() {
 
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
     expect(find.byType(CrossHatchPlaceholder), findsNothing);
-    expect(find.text('tap the button to start recording'), findsOneWidget);
+    expect(find.text(stageIdleStatus), findsOneWidget);
     expect(recorder.startCalls, 0);
 
     await tester.pumpWidget(const SizedBox.shrink());
@@ -108,6 +110,10 @@ void main() {
 
     await tester.tap(find.byKey(videoShutterKey));
     await _settle(tester);
+
+    await tester.tap(find.byKey(videoShutterKey));
+    await _settle(tester);
+    expect(recorder.startCalls, 1);
 
     await tester.tap(find.byKey(videoShutterKey));
     await _settle(tester);
@@ -225,7 +231,7 @@ void main() {
 
     expect(recorder.previewDeviceId, 'built-in-id');
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
-    expect(find.text('Built-in Camera'), findsOneWidget);
+    expect(find.byType(CameraPicker), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

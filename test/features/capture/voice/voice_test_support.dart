@@ -1,13 +1,35 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 Widget voiceHarness(Widget child) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     home: Scaffold(body: Center(child: child)),
   );
+}
+
+Widget voiceSheetHarness(Widget child) {
+  return ProviderScope(
+    overrides: <Override>[
+      reflectionPromptsEnabledProvider.overrideWithValue(false),
+    ],
+    child: voiceHarness(child),
+  );
+}
+
+Future<void> startVoiceTake(WidgetTester tester) async {
+  await tester.tap(find.byKey(voiceRecordButtonKey));
+  await tester.pump();
+  await tester.tap(find.byKey(voiceRecordButtonKey));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 50));
 }
 
 class FakeVoiceRecorder implements VoiceRecorder {
@@ -91,14 +113,19 @@ class FakeVoiceRecorder implements VoiceRecorder {
 }
 
 class FakeCaptureService implements CaptureService {
-  FakeCaptureService({this.failure});
+  FakeCaptureService({this.failure, this.gate});
 
   final CaptureException? failure;
+  final Future<void>? gate;
   final List<CaptureRequest> requests = <CaptureRequest>[];
 
   @override
   Future<CaptureResult> capture(CaptureRequest request) async {
     requests.add(request);
+    final Future<void>? gate = this.gate;
+    if (gate != null) {
+      await gate;
+    }
     final CaptureException? error = failure;
     if (error != null) {
       throw error;

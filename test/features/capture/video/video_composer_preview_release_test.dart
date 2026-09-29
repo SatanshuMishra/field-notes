@@ -24,6 +24,7 @@ void main() {
         overrides: <Override>[
           videoRecorderProvider.overrideWith((Ref ref) => recorder),
           captureServiceProvider.overrideWith((Ref ref) => service),
+          reflectionPromptsOff(),
         ],
         child: videoHarness(
           const VideoComposerConnector(date: '2026-07-21'),
@@ -35,6 +36,8 @@ void main() {
     const String deviceId = 'built-in-id';
     expect(fakeVideoPreview(deviceId: deviceId), findsOneWidget);
 
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump();
     await tester.tap(find.byKey(videoShutterKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 20));

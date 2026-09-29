@@ -5,6 +5,7 @@ import 'package:field_notes/features/capture/voice/voice_composer.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -60,16 +61,17 @@ class _Trigger extends StatelessWidget {
         context: context,
         barrierDismissible: false,
         barrierLabel: 'Dismiss voice recorder',
-        pageBuilder: (
-          BuildContext dialogContext,
-          Animation<double> animation,
-          Animation<double> secondaryAnimation,
-        ) {
-          return VoiceComposerConnector(
-            date: '2026-07-21',
-            saveTimeout: timeout,
-          );
-        },
+        pageBuilder:
+            (
+              BuildContext dialogContext,
+              Animation<double> animation,
+              Animation<double> secondaryAnimation,
+            ) {
+              return VoiceComposerConnector(
+                date: '2026-07-21',
+                saveTimeout: timeout,
+              );
+            },
       ),
       child: const Text('open'),
     );
@@ -78,45 +80,46 @@ class _Trigger extends StatelessWidget {
 
 void main() {
   testWidgets(
-      'when the recorder stop() never completes, the save is bounded: the '
-      '"Saving…" state clears and a timeout error is surfaced instead of '
-      'hanging', (WidgetTester tester) async {
-    final _HangingStopRecorder recorder = _HangingStopRecorder();
-    final FakeCaptureService service = FakeCaptureService();
+    'when the recorder stop() never completes, the save is bounded: the '
+    '"Saving…" state clears and a timeout error is surfaced instead of '
+    'hanging',
+    (WidgetTester tester) async {
+      final _HangingStopRecorder recorder = _HangingStopRecorder();
+      final FakeCaptureService service = FakeCaptureService();
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: <Override>[
-          voiceRecorderProvider.overrideWith((Ref ref) => recorder),
-          captureServiceProvider.overrideWith((Ref ref) => service),
-        ],
-        child: voiceHarness(
-          const _Trigger(timeout: Duration(milliseconds: 100)),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            voiceRecorderProvider.overrideWith((Ref ref) => recorder),
+            captureServiceProvider.overrideWith((Ref ref) => service),
+            reflectionPromptsEnabledProvider.overrideWithValue(false),
+          ],
+          child: voiceHarness(
+            const _Trigger(timeout: Duration(milliseconds: 100)),
+          ),
         ),
-      ),
-    );
+      );
 
-    await tester.tap(find.text('open'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 250));
 
-    await tester.tap(find.byKey(voiceRecordButtonKey));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 20));
+      await startVoiceTake(tester);
 
-    await tester.tap(find.byKey(voiceSavePillKey));
-    await tester.pump();
-    expect(find.text('Saving your recording…'), findsOneWidget);
+      await tester.tap(find.byKey(voiceSavePillKey));
+      await tester.pump();
+      expect(find.text('Saving your recording…'), findsOneWidget);
 
-    await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump(const Duration(milliseconds: 150));
 
-    expect(recorder.stopCalls, 1);
-    expect(service.requests, isEmpty);
-    expect(find.text(voiceSaveTimeoutMessage), findsOneWidget);
-    expect(find.text('Saving your recording…'), findsNothing);
-    expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
-    expect(find.byType(VoiceRecorderSheet), findsOneWidget);
+      expect(recorder.stopCalls, 1);
+      expect(service.requests, isEmpty);
+      expect(find.text(voiceSaveTimeoutMessage), findsOneWidget);
+      expect(find.text('Saving your recording…'), findsNothing);
+      expect(find.byKey(voiceRecordButtonKey), findsOneWidget);
+      expect(find.byType(VoiceRecorderSheet), findsOneWidget);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

@@ -3,13 +3,26 @@ import 'dart:async';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget videoHarness(Widget child) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     home: Scaffold(body: Center(child: child)),
+  );
+}
+
+Override reflectionPromptsOff() =>
+    reflectionPromptsEnabledProvider.overrideWithValue(false);
+
+Widget videoSheetHarness(Widget child) {
+  return ProviderScope(
+    overrides: <Override>[reflectionPromptsOff()],
+    child: videoHarness(child),
   );
 }
 

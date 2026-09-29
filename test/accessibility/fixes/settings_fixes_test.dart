@@ -114,7 +114,11 @@ void main() {
       captureStates,
       'c15-video-idle',
     );
-    _expectNone(ids, 'missing-role', 'c15-video-idle', <String>['Back camera']);
-    _expectNone(ids, 'small-target', 'c15-video-idle', <String>['Back camera']);
+    _expectNone(ids, 'missing-role', 'c15-video-idle', <String>[
+      'Camera / Back camera',
+    ]);
+    _expectNone(ids, 'small-target', 'c15-video-idle', <String>[
+      'Camera / Back camera',
+    ]);
   });
 }

@@ -4,14 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/motion/motion.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
-import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'camera_selection.dart';
 import 'video_recorder.dart';
@@ -31,20 +28,10 @@ const Duration cameraReleaseTimeout = Duration(seconds: 6);
 
 const Duration videoElapsedTick = Duration(milliseconds: 250);
 
-const String videoDiscardConfirmTitle = 'Discard this recording?';
-const String videoDiscardConfirmMessage =
-    'This take will be thrown away and nothing will be saved.';
-const String videoDiscardConfirmLabel = 'Discard';
-const String videoDiscardConfirmCancelLabel = 'Cancel';
-const String videoDiscardedToastMessage = 'Recording discarded';
+const String videoDiscardedToastMessage = 'Let go · nothing was saved';
 const String videoSavedToastMessage = 'Video saved';
 
 const Key videoDiscardConfirmKey = ValueKey<String>('video-discard-confirm');
-
-const double _confirmMaxWidth = 420;
-const double _confirmTitleGap = 8;
-const double _confirmActionsGap = 20;
-const double _confirmActionSpacing = 12;
 
 class VideoComposerConnector extends ConsumerStatefulWidget {
   const VideoComposerConnector({
@@ -75,8 +62,10 @@ class _VideoComposerConnectorState
   bool _released = false;
   bool _switching = false;
   bool _closing = false;
+  bool _asking = false;
   Duration _elapsed = Duration.zero;
   Timer? _elapsedTicker;
+  Timer? _breathTimer;
   final List<Timer> _timers = <Timer>[];
   List<VideoTimelineEvent> _pendingEvents = const <VideoTimelineEvent>[];
   late final VideoRecorder _recorder;
@@ -188,15 +177,46 @@ class _VideoComposerConnectorState
   }
 
   Future<void> _start() async {
-    if (_phase == VideoRecorderPhase.denied) {
-      setState(() {
-        _phase = VideoRecorderPhase.preparing;
-        _errorMessage = null;
-      });
-      await _prepare();
+    switch (_phase) {
+      case VideoRecorderPhase.denied:
+        setState(() {
+          _phase = VideoRecorderPhase.preparing;
+          _errorMessage = null;
+        });
+        await _prepare();
+      case VideoRecorderPhase.idle:
+        _breathe();
+      case VideoRecorderPhase.breathing:
+        _cancelBreath();
+        await _arm();
+      case _:
+        return;
+    }
+  }
+
+  void _breathe() {
+    if (_deviceId == null) {
+      _showDenied();
       return;
     }
-    if (_phase != VideoRecorderPhase.idle) {
+    setState(() {
+      _phase = VideoRecorderPhase.breathing;
+      _errorMessage = null;
+      _nudgeMessage = null;
+    });
+    _breathTimer = Timer(stageBreathDuration, () {
+      _breathTimer = null;
+      unawaited(_arm());
+    });
+  }
+
+  void _cancelBreath() {
+    _breathTimer?.cancel();
+    _breathTimer = null;
+  }
+
+  Future<void> _arm() async {
+    if (!mounted || _closing || _phase != VideoRecorderPhase.breathing) {
       return;
     }
     final String? deviceId = _deviceId;
@@ -336,6 +356,7 @@ class _VideoComposerConnectorState
     _stopTicker();
     setState(() {
       _phase = VideoRecorderPhase.saving;
+      _asking = false;
       _preview = null;
       _elapsed = _recorder.elapsed;
       _errorMessage = null;
@@ -400,7 +421,11 @@ class _VideoComposerConnectorState
   }
 
   Future<void> _cancel() async {
+    if (_closing) {
+      return;
+    }
     _closing = true;
+    _cancelBreath();
     _cancelTimers();
     _stopTicker();
     if (_phase == VideoRecorderPhase.recording ||
@@ -419,21 +444,38 @@ class _VideoComposerConnectorState
     Navigator.of(context).pop();
   }
 
-  Future<void> _discard() async {
-    if (_phase != VideoRecorderPhase.recording &&
-        _phase != VideoRecorderPhase.paused) {
-      await _cancel();
+  Future<void> _leave() async {
+    if (_closing || _asking) {
       return;
     }
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
-    );
-    if (confirmed != true || !mounted) {
+    switch (_phase) {
+      case VideoRecorderPhase.saving:
+        return;
+      case VideoRecorderPhase.recording || VideoRecorderPhase.paused:
+        final bool pauseFirst =
+            _phase == VideoRecorderPhase.recording && _recorder.supportsPause;
+        setState(() => _asking = true);
+        if (pauseFirst) {
+          await _pause();
+        }
+      case _:
+        await _cancel();
+    }
+  }
+
+  void _keepGoing() {
+    if (!_asking || _closing) {
+      return;
+    }
+    setState(() => _asking = false);
+  }
+
+  Future<void> _letGo() async {
+    if (_closing) {
       return;
     }
     _closing = true;
+    _cancelBreath();
     _cancelTimers();
     _stopTicker();
     try {
@@ -449,18 +491,15 @@ class _VideoComposerConnectorState
     Navigator.of(context).pop();
   }
 
-  void _dismiss() {
-    if (_closing || _phase == VideoRecorderPhase.saving) {
-      return;
-    }
-    unawaited(_discard());
-  }
-
   void _onPopInvoked(bool didPop, Object? result) {
     if (didPop) {
       return;
     }
-    _dismiss();
+    if (_asking) {
+      _keepGoing();
+      return;
+    }
+    unawaited(_leave());
   }
 
   Future<void> _release() async {
@@ -479,6 +518,7 @@ class _VideoComposerConnectorState
 
   @override
   void dispose() {
+    _cancelBreath();
     _cancelTimers();
     _stopTicker();
     unawaited(_release());
@@ -502,108 +542,24 @@ class _VideoComposerConnectorState
         deniedMessage: _deniedMessage ?? cameraPermissionMessage,
         onStart: _start,
         onStop: _stop,
-        onCancel: _cancel,
+        onLeave: _leave,
         onPause: _pause,
         onResume: _resume,
-        onDiscard: _discard,
-        onDismiss: _dismiss,
+        onKeepGoing: _keepGoing,
+        onLetGo: _letGo,
+        asking: _asking,
+        letGoKey: videoDiscardConfirmKey,
         supportsPause: _recorder.supportsPause,
       ),
     );
   }
 }
 
-class _DiscardConfirmDialog extends StatelessWidget {
-  const _DiscardConfirmDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _confirmMaxWidth),
-          child: StickerCard(
-            surface: Palette.cardBright,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  videoDiscardConfirmTitle,
-                  style: TypographyTokens.titleSerif,
-                ),
-                const SizedBox(height: _confirmTitleGap),
-                Text(
-                  videoDiscardConfirmMessage,
-                  style: TypographyTokens.bodySans,
-                ),
-                const SizedBox(height: _confirmActionsGap),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: _confirmActionSpacing,
-                  runSpacing: _confirmActionSpacing,
-                  children: <Widget>[
-                    StickerButton(
-                      label: videoDiscardConfirmCancelLabel,
-                      variant: StickerButtonVariant.secondary,
-                      padTapTarget: true,
-                      autofocus: true,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                    StickerButton(
-                      key: videoDiscardConfirmKey,
-                      label: videoDiscardConfirmLabel,
-                      variant: StickerButtonVariant.danger,
-                      labelStyle: TypographyTokens.captureLabelSans,
-                      padTapTarget: true,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 Future<String?> showVideoComposer(BuildContext context, String date) {
-  return showGeneralDialog<String>(
-    context: context,
-    barrierDismissible: false,
+  return showImmersiveRecorder<String>(
+    context,
     barrierLabel: 'Dismiss video recorder',
-    barrierColor: const Color(0x00000000),
-    transitionDuration: Motion.modalPop,
-    pageBuilder: (
-      BuildContext dialogContext,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-    ) {
-      return DialogHost(
-        child: ComposerShell(child: VideoComposerConnector(date: date)),
-      );
-    },
-    transitionBuilder: (
-      BuildContext dialogContext,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-    ) {
-      final Animation<double> curved = CurvedAnimation(
-        parent: animation,
-        curve: Motion.entranceCurve,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
-          child: child,
-        ),
-      );
-    },
+    builder: (BuildContext context) => VideoComposerConnector(date: date),
   );
 }
 

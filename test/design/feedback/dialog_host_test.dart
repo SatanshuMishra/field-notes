@@ -19,6 +19,7 @@ import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/mood/mood_picker.dart';
 import 'package:field_notes/features/mood/mood_picker_sheet.dart';
 import 'package:field_notes/state/draft_provider.dart';
+import 'package:field_notes/state/settings_providers.dart';
 
 import '../../features/capture/core/capture_test_support.dart';
 import '../../features/day_detail/support/day_detail_harness.dart' show entryOf;
@@ -160,6 +161,7 @@ void main() {
             voiceRecorderProvider.overrideWith((Ref ref) => FakeVoiceRecorder()),
             captureServiceProvider
                 .overrideWith((Ref ref) => FakeCaptureService()),
+            reflectionPromptsEnabledProvider.overrideWithValue(false),
           ],
         ),
       );
@@ -180,6 +182,7 @@ void main() {
             videoRecorderProvider.overrideWith((Ref ref) => FakeVideoRecorder()),
             captureServiceProvider
                 .overrideWith((Ref ref) => FakeCaptureService()),
+            reflectionPromptsEnabledProvider.overrideWithValue(false),
           ],
         ),
       );

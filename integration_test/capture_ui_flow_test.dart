@@ -1,6 +1,8 @@
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
+import 'package:field_notes/features/capture/immersive/stage_phase.dart'
+    show stageRecordingStatus;
 import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
@@ -119,7 +121,9 @@ void main() {
 
     await tester.tap(find.byKey(voiceRecordButtonKey));
     await _settle(tester);
-    expect(find.text('RECORDING'), findsOneWidget);
+    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await _settle(tester);
+    expect(find.text(stageRecordingStatus), findsOneWidget);
 
     await tester.tap(find.byKey(voiceSavePillKey));
     await tester.pump();
@@ -158,9 +162,11 @@ void main() {
 
     await tester.tap(find.byKey(videoShutterKey));
     await _settle(tester);
-    expect(find.text('recording… tap pause or stop'), findsOneWidget);
-
     await tester.tap(find.byKey(videoShutterKey));
+    await _settle(tester);
+    expect(find.text(stageRecordingStatus), findsOneWidget);
+
+    await tester.tap(find.byKey(videoSaveCircleKey));
     await tester.pump();
     expect(find.text('Saving your video…'), findsOneWidget);
 
