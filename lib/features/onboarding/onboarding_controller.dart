@@ -19,6 +19,19 @@ final class OnboardingFlowWelcome extends OnboardingFlow {
   const OnboardingFlowWelcome();
 }
 
+final class OnboardingFlowAppearance extends OnboardingFlow {
+  const OnboardingFlowAppearance({required this.skippedTips});
+
+  final bool skippedTips;
+
+  @override
+  bool operator ==(Object other) =>
+      other is OnboardingFlowAppearance && other.skippedTips == skippedTips;
+
+  @override
+  int get hashCode => skippedTips.hashCode;
+}
+
 final class OnboardingFlowTour extends OnboardingFlow {
   const OnboardingFlowTour({required this.tip, required this.mode});
 
@@ -34,7 +47,16 @@ final class OnboardingFlowTour extends OnboardingFlow {
 }
 
 final class OnboardingFlowSetup extends OnboardingFlow {
-  const OnboardingFlowSetup();
+  const OnboardingFlowSetup({this.skippedTips = false});
+
+  final bool skippedTips;
+
+  @override
+  bool operator ==(Object other) =>
+      other is OnboardingFlowSetup && other.skippedTips == skippedTips;
+
+  @override
+  int get hashCode => skippedTips.hashCode;
 }
 
 @Riverpod(keepAlive: true)
@@ -44,8 +66,19 @@ class OnboardingController extends _$OnboardingController {
 
   void start() => state = const OnboardingFlowWelcome();
 
-  void begin() =>
-      state = const OnboardingFlowTour(tip: 0, mode: TourMode.firstRun);
+  void begin() => state = const OnboardingFlowAppearance(skippedTips: false);
+
+  void skipFromWelcome() =>
+      state = const OnboardingFlowAppearance(skippedTips: true);
+
+  void continueFromAppearance() => state = switch (state) {
+    OnboardingFlowAppearance(skippedTips: true) => const OnboardingFlowSetup(
+      skippedTips: true,
+    ),
+    _ => const OnboardingFlowTour(tip: 0, mode: TourMode.firstRun),
+  };
+
+  void backFromAppearance() => state = const OnboardingFlowWelcome();
 
   void skipTour() => _leaveTour();
 
@@ -55,13 +88,15 @@ class OnboardingController extends _$OnboardingController {
     if (_replaying) {
       return;
     }
-    state = const OnboardingFlowWelcome();
+    state = const OnboardingFlowAppearance(skippedTips: false);
   }
 
-  void backFromSetup() => state = OnboardingFlowTour(
-    tip: tourTips.length - 1,
-    mode: TourMode.firstRun,
-  );
+  void backFromSetup() => state = switch (state) {
+    OnboardingFlowSetup(skippedTips: true) => const OnboardingFlowAppearance(
+      skippedTips: true,
+    ),
+    _ => OnboardingFlowTour(tip: tourTips.length - 1, mode: TourMode.firstRun),
+  };
 
   void finishSetup(SetupOutcome outcome) =>
       state = const OnboardingFlowHidden();

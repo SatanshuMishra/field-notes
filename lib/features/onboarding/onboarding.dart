@@ -1,3 +1,4 @@
+export 'appearance/onboarding_appearance.dart';
 export 'onboarding_controller.dart';
 export 'onboarding_gate.dart';
 export 'onboarding_host.dart';

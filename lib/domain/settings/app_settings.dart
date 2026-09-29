@@ -1,3 +1,4 @@
+import 'appearance.dart';
 import 'onboarding_status.dart';
 import 'reminder_time.dart';
 import 'text_size.dart';
@@ -14,6 +15,7 @@ class AppSettings {
     required this.notificationPermissionAsked,
     required this.reflectionPromptsEnabled,
     required this.onboardingStatus,
+    required this.appearance,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -26,6 +28,7 @@ class AppSettings {
     notificationPermissionAsked: false,
     reflectionPromptsEnabled: false,
     onboardingStatus: null,
+    appearance: Appearance.light,
   );
 
   final bool reminderEnabled;
@@ -37,6 +40,7 @@ class AppSettings {
   final bool notificationPermissionAsked;
   final bool reflectionPromptsEnabled;
   final OnboardingStatus? onboardingStatus;
+  final Appearance appearance;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -48,6 +52,7 @@ class AppSettings {
     bool? notificationPermissionAsked,
     bool? reflectionPromptsEnabled,
     OnboardingStatus? onboardingStatus,
+    Appearance? appearance,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -61,6 +66,7 @@ class AppSettings {
       reflectionPromptsEnabled:
           reflectionPromptsEnabled ?? this.reflectionPromptsEnabled,
       onboardingStatus: onboardingStatus ?? this.onboardingStatus,
+      appearance: appearance ?? this.appearance,
     );
   }
 
@@ -77,7 +83,8 @@ class AppSettings {
           spellCheckEnabled == other.spellCheckEnabled &&
           notificationPermissionAsked == other.notificationPermissionAsked &&
           reflectionPromptsEnabled == other.reflectionPromptsEnabled &&
-          onboardingStatus == other.onboardingStatus;
+          onboardingStatus == other.onboardingStatus &&
+          appearance == other.appearance;
 
   @override
   int get hashCode => Object.hash(
@@ -90,6 +97,7 @@ class AppSettings {
     notificationPermissionAsked,
     reflectionPromptsEnabled,
     onboardingStatus,
+    appearance,
   );
 
   @override
@@ -100,5 +108,5 @@ class AppSettings {
       'spellCheckEnabled: $spellCheckEnabled, '
       'notificationPermissionAsked: $notificationPermissionAsked, '
       'reflectionPromptsEnabled: $reflectionPromptsEnabled, '
-      'onboardingStatus: $onboardingStatus)';
+      'onboardingStatus: $onboardingStatus, appearance: $appearance)';
 }

@@ -131,6 +131,52 @@ void main() {
         );
       },
     );
+
+    test('setAppearance writes through the repository', () async {
+      final FakeSettingsRepository repository = FakeSettingsRepository();
+      final SettingsController controller = SettingsController(
+        repository: repository,
+      );
+      final List<AppSettings> emitted = <AppSettings>[];
+      final subscription = repository.watch().listen(emitted.add);
+      addTearDown(subscription.cancel);
+      await pumpEventQueue();
+
+      final SettingsWriteResult result = await controller.setAppearance(
+        Appearance.dark,
+      );
+      await pumpEventQueue();
+
+      expect(result, isA<SettingsWriteSucceeded>());
+      expect(repository.appearanceWrites, <Appearance>[Appearance.dark]);
+      expect(emitted.last.appearance, Appearance.dark);
+    });
+
+    test('setAppearance reports the appearance failure message', () async {
+      final FakeSettingsRepository repository = FakeSettingsRepository(
+        writeError: StateError('disk full'),
+      );
+      final List<Object> reported = <Object>[];
+      final SettingsController controller = SettingsController(
+        repository: repository,
+        onError: (Object error, StackTrace _) => reported.add(error),
+      );
+
+      final SettingsWriteResult result = await controller.setAppearance(
+        Appearance.system,
+      );
+
+      expect(
+        result,
+        isA<SettingsWriteFailed>().having(
+          (SettingsWriteFailed f) => f.message,
+          'message',
+          'Could not save your appearance.',
+        ),
+      );
+      expect(repository.appearanceWrites, isEmpty);
+      expect(reported, hasLength(1));
+    });
   });
 
   test(

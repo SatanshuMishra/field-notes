@@ -67,6 +67,9 @@ class MainFlutterWindow: NSWindow {
       case "titlebarDoubleClick":
         self?.performTitlebarDoubleClick()
         result(nil)
+      case "setAppearance":
+        NSApp.appearance = MainFlutterWindow.appearance(named: call.arguments as? String)
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -100,6 +103,17 @@ class MainFlutterWindow: NSWindow {
       )
     }
     return nil
+  }
+
+  private static func appearance(named id: String?) -> NSAppearance? {
+    switch id {
+    case "dark":
+      return NSAppearance(named: .darkAqua)
+    case "light":
+      return NSAppearance(named: .aqua)
+    default:
+      return nil
+    }
   }
 
   private func startDrag() {

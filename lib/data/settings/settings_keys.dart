@@ -9,4 +9,5 @@ abstract final class SettingsKeys {
       'notification_permission_asked';
   static const String reflectionPrompts = 'reflection_prompts';
   static const String onboardingStatus = 'onboarding_status';
+  static const String appearance = 'appearance';
 }

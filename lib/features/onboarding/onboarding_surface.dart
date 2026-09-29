@@ -37,6 +37,16 @@ List<BoxShadow> _cardShadow(FieldNotesColors colors) => <BoxShadow>[
   _cardLift,
 ];
 
+BoxDecoration onboardingCardDecoration(
+  FieldNotesColors colors, {
+  double radius = Shapes.radiusSheet,
+}) => BoxDecoration(
+  color: colors.composerPaper,
+  border: Border.all(color: colors.line, width: _cardBorderWidth),
+  borderRadius: BorderRadius.circular(radius),
+  boxShadow: _cardShadow(colors),
+);
+
 LinearGradient _pageGradient(FieldNotesColors colors) => LinearGradient(
   begin: Alignment.topCenter,
   end: Alignment.bottomCenter,
@@ -100,15 +110,7 @@ class OnboardingSurface extends StatelessWidget {
                     maxHeight: math.max(0, constraints.maxHeight - 2 * margin),
                   ),
                   clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: colors.composerPaper,
-                    border: Border.all(
-                      color: colors.line,
-                      width: _cardBorderWidth,
-                    ),
-                    borderRadius: BorderRadius.circular(Shapes.radiusSheet),
-                    boxShadow: _cardShadow(colors),
-                  ),
+                  decoration: onboardingCardDecoration(colors),
                   child: child,
                 ),
               );

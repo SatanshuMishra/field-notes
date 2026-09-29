@@ -14,6 +14,8 @@ import 'keep_focus_in_view.dart';
 import 'shell_destination.dart';
 import 'window_chrome.dart';
 
+const double shellSidebarWidth = 216;
+
 class SidebarShell extends StatelessWidget {
   const SidebarShell({
     super.key,
@@ -107,7 +109,7 @@ class SidebarShell extends StatelessWidget {
 
   Widget _rail(BuildContext context) {
     return SizedBox(
-      width: 216,
+      width: shellSidebarWidth,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
         child: Column(

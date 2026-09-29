@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/features/onboarding/appearance/onboarding_appearance.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_gate.dart';
 import 'package:field_notes/features/onboarding/setup/onboarding_setup.dart';
@@ -121,7 +122,12 @@ class _OnboardingHostState extends ConsumerState<OnboardingHost> {
       OnboardingFlowWelcome() => OnboardingWelcome(
         layout: layout,
         onBegin: controller.begin,
-        onSkip: controller.skipTour,
+        onSkip: controller.skipFromWelcome,
+      ),
+      OnboardingFlowAppearance() => OnboardingAppearance(
+        layout: layout,
+        onContinue: controller.continueFromAppearance,
+        onBack: controller.backFromAppearance,
       ),
       final OnboardingFlowTour tour => OnboardingTour(
         key: ValueKey<OnboardingFlowTour>(tour),
