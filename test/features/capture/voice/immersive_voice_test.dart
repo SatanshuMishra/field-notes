@@ -459,6 +459,7 @@ void main() {
     expect(recording.service.requests.single.date, _date);
     expect(recording.results, <String?>['entry-1']);
     expect(find.byType(VoiceRecorderSheet), findsNothing);
+    await tester.pump();
     expect(find.text(voiceSavedToastMessage), findsOneWidget);
 
     final _Rig paused = await _openVoice(
@@ -537,6 +538,7 @@ void main() {
         expect(rig.service.requests, isEmpty);
         expect(rig.results, <String?>[null]);
         expect(find.byType(VoiceRecorderSheet), findsNothing);
+        await tester.pump();
         expect(find.text(_letGoToast), findsOneWidget);
         expect(find.text('Recording discarded'), findsNothing);
       }

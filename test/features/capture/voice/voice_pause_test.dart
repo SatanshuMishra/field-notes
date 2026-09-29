@@ -144,6 +144,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump();
 
       expect(recorder.stopCalls, 1);
       expect(service.requests, hasLength(1));
@@ -197,6 +198,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
       await tester.pump(const Duration(milliseconds: 700));
+      await tester.pump();
 
       expect(recorder.cancelCalls, 1);
       expect(service.requests, isEmpty);

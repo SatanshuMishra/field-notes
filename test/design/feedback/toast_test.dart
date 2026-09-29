@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -395,5 +397,137 @@ void main() {
 
       await tester.pump(kToastLifetime);
     });
+  });
+
+  group('showTransientToast after a trigger', () {
+    const String deferred = 'Voice memo saved';
+    const String newer = 'Mood planted · Rose';
+
+    Widget app(Future<void> trigger) {
+      return MaterialApp(
+        theme: ThemeData(platform: TargetPlatform.macOS),
+        home: Builder(
+          builder: (BuildContext context) => Column(
+            children: <Widget>[
+              GestureDetector(
+                onTap: () =>
+                    showTransientToast(context, deferred, after: trigger),
+                child: const Text('later'),
+              ),
+              GestureDetector(
+                onTap: () => showTransientToast(context, newer),
+                child: const Text('now'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Future<void> showDeferred(WidgetTester tester, Future<void> trigger) async {
+      tester.view.physicalSize = const Size(1280, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(app(trigger));
+      await tester.tap(find.text('later'));
+      await tester.pump();
+    }
+
+    testWidgets('waits for its trigger, then floats in its usual place for its '
+        'whole lifetime', (WidgetTester tester) async {
+      final Completer<void> trigger = Completer<void>();
+      await showDeferred(tester, trigger.future);
+
+      expect(find.text(deferred), findsNothing);
+
+      await tester.pump(kToastLifetime);
+
+      expect(find.text(deferred), findsNothing);
+
+      trigger.complete();
+      await tester.pumpAndSettle();
+
+      expect(find.text(deferred), findsOneWidget);
+      expect(tester.getRect(find.byType(Toast)).bottom, 800 - 22);
+
+      await tester.pump(kToastLifetime);
+      await tester.pump();
+
+      expect(find.text(deferred), findsNothing);
+    });
+
+    testWidgets('a newer toast before the trigger keeps it from appearing', (
+      WidgetTester tester,
+    ) async {
+      final Completer<void> trigger = Completer<void>();
+      await showDeferred(tester, trigger.future);
+      await tester.tap(find.text('now'));
+      await tester.pump();
+
+      trigger.complete();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(newer), findsOneWidget);
+      expect(find.text(deferred), findsNothing);
+
+      await tester.pump(kToastLifetime);
+      await tester.pump();
+
+      expect(find.text(newer), findsNothing);
+      expect(find.text(deferred), findsNothing);
+    });
+
+    testWidgets('dismissing before the trigger keeps it from appearing', (
+      WidgetTester tester,
+    ) async {
+      final Completer<void> trigger = Completer<void>();
+      await showDeferred(tester, trigger.future);
+      dismissTransientToast();
+
+      trigger.complete();
+      await tester.pump();
+      await tester.pump();
+
+      expect(find.text(deferred), findsNothing);
+    });
+
+    testWidgets('a trigger that fails still shows it', (
+      WidgetTester tester,
+    ) async {
+      final Completer<void> trigger = Completer<void>();
+      await showDeferred(tester, trigger.future);
+
+      trigger.completeError(StateError('route failed'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(deferred), findsOneWidget);
+
+      await tester.pump(kToastLifetime);
+      await tester.pump();
+
+      expect(find.text(deferred), findsNothing);
+    });
+
+    testWidgets(
+      'a trigger that lands after its overlay is gone shows nothing',
+      (WidgetTester tester) async {
+        final Completer<void> trigger = Completer<void>();
+        await showDeferred(tester, trigger.future);
+        await tester.pumpWidget(const SizedBox.shrink());
+
+        trigger.complete();
+        await tester.pump();
+
+        await tester.pumpWidget(app(Completer<void>().future));
+        await tester.tap(find.text('now'));
+        await tester.pump();
+
+        expect(find.text(newer), findsOneWidget);
+        expect(find.text(deferred), findsNothing);
+
+        await tester.pump(kToastLifetime);
+      },
+    );
   });
 }

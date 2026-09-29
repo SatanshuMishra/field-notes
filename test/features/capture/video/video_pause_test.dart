@@ -224,6 +224,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
     await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump();
 
     expect(recorder.cancelCalls, 1);
     expect(service.requests, isEmpty);

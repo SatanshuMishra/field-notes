@@ -1,3 +1,4 @@
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -7,6 +8,7 @@ import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:field_notes/state/settings_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +18,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'voice_test_support.dart';
 
 const Duration _closed = Duration(milliseconds: 700);
+const Duration _midFade = Duration(milliseconds: 300);
+const Duration _frame = Duration(milliseconds: 16);
+
+final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
+  const <TargetPlatform>{TargetPlatform.macOS, TargetPlatform.android},
+);
 
 class _RecorderTrigger extends StatelessWidget {
   const _RecorderTrigger({required this.date, required this.onResult});
@@ -68,6 +76,50 @@ Future<void> _sendSystemBack(WidgetTester tester) async {
 
 VoiceRecorderPhase _phase(WidgetTester tester) =>
     tester.widget<VoiceRecorderSheet>(find.byType(VoiceRecorderSheet)).phase;
+
+void _sizeWindowForLayout(WidgetTester tester) {
+  tester.view.physicalSize = defaultTargetPlatform == TargetPlatform.macOS
+      ? const Size(1280, 800)
+      : const Size(360, 740);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
+double _recorderOpacity(WidgetTester tester) => tester
+    .widget<FadeTransition>(
+      find
+          .ancestor(
+            of: find.byType(VoiceRecorderSheet),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    )
+    .opacity
+    .value;
+
+Future<void> _expectToastOnceFadedOut(
+  WidgetTester tester, {
+  required String toast,
+  required List<String?> results,
+  required List<String?> delivered,
+}) async {
+  await tester.pump();
+  await tester.pump(_midFade);
+
+  expect(find.byType(VoiceRecorderSheet), findsOneWidget);
+  expect(_recorderOpacity(tester), inExclusiveRange(0, 1));
+  expect(results, delivered);
+  expect(find.text(toast), findsNothing);
+
+  await tester.pump(
+    immersiveFadeFor(resolveShellLayout(defaultTargetPlatform)) - _midFade,
+  );
+  await tester.pump(_frame);
+  await tester.pump();
+
+  expect(find.byType(VoiceRecorderSheet), findsNothing);
+  expect(find.text(toast), findsOneWidget);
+}
 
 void main() {
   testWidgets('records then saves a voice entry and closes with its id', (
@@ -334,5 +386,66 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
+
+  testWidgets(
+    'the saved toast waits until the recorder has faded out',
+    (WidgetTester tester) async {
+      _sizeWindowForLayout(tester);
+      final List<String?> results = <String?>[];
+      await tester.pumpWidget(
+        _recorderApp(
+          recorder: FakeVoiceRecorder(),
+          service: FakeCaptureService(),
+          onResult: results.add,
+        ),
+      );
+      await _openComposer(tester);
+      await startVoiceTake(tester);
+
+      await tester.tap(find.byKey(voiceSavePillKey));
+
+      await _expectToastOnceFadedOut(
+        tester,
+        toast: voiceSavedToastMessage,
+        results: results,
+        delivered: <String?>['entry-1'],
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: _bothLayouts,
+  );
+
+  testWidgets(
+    'the let-go toast waits until the recorder has faded out',
+    (WidgetTester tester) async {
+      _sizeWindowForLayout(tester);
+      final List<String?> results = <String?>[];
+      await tester.pumpWidget(
+        _recorderApp(
+          recorder: FakeVoiceRecorder(),
+          service: FakeCaptureService(),
+          onResult: results.add,
+        ),
+      );
+      await _openComposer(tester);
+      await startVoiceTake(tester);
+      await tester.tap(find.byKey(voiceDiscardPillKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.tap(find.byKey(voiceDiscardConfirmKey));
+
+      await _expectToastOnceFadedOut(
+        tester,
+        toast: voiceLetGoToastMessage,
+        results: results,
+        delivered: <String?>[null],
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+    variant: _bothLayouts,
   );
 }

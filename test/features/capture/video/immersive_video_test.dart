@@ -40,6 +40,8 @@ const Color _stage = Color(0xFF1C1713);
 const Color _shutterCore = Color(0xFFD9775E);
 const Duration _fade = Duration(milliseconds: 600);
 const Duration _step = Duration(milliseconds: 50);
+const Duration _midFade = Duration(milliseconds: 300);
+const Duration _frame = Duration(milliseconds: 16);
 
 class _Harness {
   _Harness({required this.layout});
@@ -176,6 +178,46 @@ String _statusText(WidgetTester tester) =>
 
 SemanticsNode _statusNode(WidgetTester tester) =>
     tester.getSemantics(find.byKey(recorderStatusTextKey));
+
+double _recorderOpacity(WidgetTester tester) => tester
+    .widget<FadeTransition>(
+      find
+          .ancestor(
+            of: find.byType(VideoRecorderSheet),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    )
+    .opacity
+    .value;
+
+Future<void> _expectToastOnceFadedOut(
+  WidgetTester tester, {
+  required _Harness harness,
+  required String toast,
+  required List<String?> delivered,
+}) async {
+  final String reason = '${harness.layout}';
+  await tester.pump();
+  await tester.pump(_midFade);
+
+  expect(find.byType(VideoRecorderSheet), findsOneWidget, reason: reason);
+  expect(_recorderOpacity(tester), inExclusiveRange(0, 1), reason: reason);
+  expect(harness.results, delivered, reason: reason);
+  expect(find.text(toast), findsNothing, reason: reason);
+
+  await tester.pump(
+    (harness.layout == _Layout.sidebar
+            ? immersiveSidebarFade
+            : immersiveBottomBarFade) -
+        _midFade,
+  );
+  await tester.pump(_frame);
+  await tester.pump();
+
+  expect(find.byType(VideoRecorderSheet), findsNothing, reason: reason);
+  expect(find.text(toast), findsOneWidget, reason: reason);
+}
 
 class _GatedListRecorder extends FakeVideoRecorder {
   _GatedListRecorder();
@@ -955,6 +997,58 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     },
   );
+
+  testWidgets('the saved toast waits until the video recorder has faded out', (
+    WidgetTester tester,
+  ) async {
+    for (final _Layout layout in _Layout.values) {
+      final _Harness keeping = await _pumpApp(
+        tester,
+        layout: layout,
+        recorder: FakeVideoRecorder(supportsPause: true),
+      );
+      await _open(tester);
+      await _startNow(tester);
+
+      await tester.tap(find.byKey(videoSaveCircleKey));
+
+      await _expectToastOnceFadedOut(
+        tester,
+        harness: keeping,
+        toast: _savedToast,
+        delivered: <String?>['entry-1'],
+      );
+      await _closeAll(tester);
+    }
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('the let-go toast waits until the video recorder has faded out', (
+    WidgetTester tester,
+  ) async {
+    for (final _Layout layout in _Layout.values) {
+      final _Harness letting = await _pumpApp(
+        tester,
+        layout: layout,
+        recorder: FakeVideoRecorder(supportsPause: true),
+      );
+      await _open(tester);
+      await _startNow(tester);
+      await tester.tap(find.byKey(videoDiscardCircleKey));
+      await _settle(tester);
+
+      await tester.tap(find.byKey(videoDiscardConfirmKey));
+
+      await _expectToastOnceFadedOut(
+        tester,
+        harness: letting,
+        toast: _letGoToast,
+        delivered: <String?>[null],
+      );
+      await _closeAll(tester);
+    }
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   testWidgets(
     'video recorder geometry matches the prototype shutter and dark surface',

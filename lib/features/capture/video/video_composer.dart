@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -384,8 +383,11 @@ class _VideoComposerConnectorState
     if (!mounted) {
       return;
     }
-    showTransientToast(context, videoSavedToastMessage);
-    Navigator.of(context).pop(entryId);
+    closeImmersiveRecorder<String>(
+      context,
+      result: entryId,
+      toast: videoSavedToastMessage,
+    );
   }
 
   Future<String> _persist() async {
@@ -487,8 +489,7 @@ class _VideoComposerConnectorState
     if (!mounted) {
       return;
     }
-    showTransientToast(context, videoDiscardedToastMessage);
-    Navigator.of(context).pop();
+    closeImmersiveRecorder<String>(context, toast: videoDiscardedToastMessage);
   }
 
   void _onPopInvoked(bool didPop, Object? result) {
