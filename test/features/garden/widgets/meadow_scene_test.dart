@@ -1,6 +1,7 @@
 import 'package:field_notes/design/flowers/garden_art_colors.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/model/garden_data.dart';
+import 'package:field_notes/features/garden/model/garden_motion.dart';
 import 'package:field_notes/features/garden/model/meadow_layout.dart';
 import 'package:field_notes/features/garden/paint/meadow_painter.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
@@ -179,7 +180,13 @@ void main() {
     expect(tester.binding.hasScheduledFrame, isFalse);
 
     await tester.pumpWidget(
-      _host(MeadowScene(blooms: _blooms(141), sky: _midnight, seed: 2026)),
+      _host(
+        MeadowScene(
+          blooms: _blooms(defaultMaxAnimatedBlooms + 1),
+          sky: _midnight,
+          seed: 2026,
+        ),
+      ),
     );
     await tester.pumpAndSettle();
     expect(_painter(tester).animate, isFalse);

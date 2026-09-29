@@ -56,11 +56,17 @@ String longDateLabel(DateTime moment) {
   return '${headerDateLabel(moment)}, ${moment.toLocal().year}';
 }
 
-String shortDateLabel(DateTime moment) {
+String shortMonthDayLabel(DateTime moment) {
   final DateTime local = moment.toLocal();
-  final String month =
-      _monthNames[local.month - 1].substring(0, _monthAbbreviationLength);
-  return '$month ${local.day}, ${local.year}';
+  final String month = _monthNames[local.month - 1].substring(
+    0,
+    _monthAbbreviationLength,
+  );
+  return '$month ${local.day}';
+}
+
+String shortDateLabel(DateTime moment) {
+  return '${shortMonthDayLabel(moment)}, ${moment.toLocal().year}';
 }
 
 String shortWeekdayLabel(DateTime moment) {

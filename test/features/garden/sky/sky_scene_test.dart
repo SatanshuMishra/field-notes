@@ -77,15 +77,15 @@ void main() {
         -33.8667,
         151.2167,
       );
-      expect(sydney.sunX, closeTo(0.4227, 0.0001));
+      expect(sydney.sunX, closeTo(0.4302, 0.0001));
       expect(sydney.sunY, closeTo(0.08, 0.0001));
     },
   );
 
   test('Edmonton noon, dusk and midnight match the design fixtures', () {
     final SkyScene noon = edmontonAt('2026-09-28T18:00:00Z');
-    expect(noon.sunX, closeTo(0.4011, 0.0001));
-    expect(noon.sunY, closeTo(0.1921, 0.0001));
+    expect(noon.sunX, closeTo(0.3994, 0.0001));
+    expect(noon.sunY, closeTo(0.1931, 0.0001));
     expect(noon.moonX, closeTo(0.95, 0.0001));
     expect(noon.moonY, closeTo(0.3491, 0.0001));
     expect(noon.moonUp, isFalse);
@@ -100,19 +100,19 @@ void main() {
     expect(noon.phaseName, 'waning gibbous');
 
     final SkyScene dusk = edmontonAt('2026-09-29T01:00:00Z');
-    expect(dusk.sunX, closeTo(0.8393, 0.0001));
-    expect(dusk.sunY, closeTo(0.3040, 0.0001));
+    expect(dusk.sunX, closeTo(0.8376, 0.0001));
+    expect(dusk.sunY, closeTo(0.3036, 0.0001));
     expect(dusk.moonX, closeTo(0.05, 0.0001));
     expect(dusk.moonY, closeTo(0.3222, 0.0001));
     expect(dusk.moonUp, isFalse);
-    expect(rgb(dusk.skyTop), (142, 152, 185));
-    expect(rgb(dusk.skyMiddle), (227, 189, 160));
-    expect(rgb(dusk.skyHorizon), (242, 181, 133));
-    expect(dusk.night, closeTo(0.0322, 0.0005));
-    expect(dusk.warm, closeTo(0.9571, 0.0005));
+    expect(rgb(dusk.skyTop), (144, 154, 187));
+    expect(rgb(dusk.skyMiddle), (229, 191, 161));
+    expect(rgb(dusk.skyHorizon), (243, 182, 133));
+    expect(dusk.night, closeTo(0.0238, 0.0005));
+    expect(dusk.warm, closeTo(0.9683, 0.0005));
     expect(rgb(dusk.sunColour), (239, 133, 77));
-    expect(dusk.dayLifeOpacity, closeTo(0.954, 0.0005));
-    expect(dusk.hazeOpacity, closeTo(0.973, 0.0005));
+    expect(dusk.dayLifeOpacity, closeTo(0.9661, 0.0005));
+    expect(dusk.hazeOpacity, closeTo(0.9798, 0.0005));
     expect(dusk.warmGlowX, dusk.sunX);
     expect(dusk.warmGlowY, 0.33);
     expect(dusk.warmGlowAlpha, closeTo(0.55 * dusk.warm, 0.0005));
@@ -123,7 +123,7 @@ void main() {
 
     final SkyScene midnight = edmontonAt('2026-09-29T06:00:00Z');
     expect(midnight.sunX, closeTo(0.95, 0.0001));
-    expect(midnight.sunY, closeTo(0.4434, 0.0001));
+    expect(midnight.sunY, closeTo(0.4436, 0.0001));
     expect(midnight.moonX, closeTo(0.2249, 0.0001));
     expect(midnight.moonY, closeTo(0.1678, 0.0001));
     expect(midnight.moonUp, isTrue);
@@ -133,7 +133,7 @@ void main() {
     expect(midnight.starsOpacity, closeTo(1, 0.0005));
     expect(midnight.firefliesOpacity, closeTo(1, 0.0005));
     expect(midnight.dayLifeOpacity, closeTo(0, 0.0005));
-    expect(rgb(midnight.moonPool), (172, 184, 229));
+    expect(rgb(midnight.moonPool), (172, 184, 230));
     expect(midnight.moonPoolAlpha, closeTo(0.8, 0.0005));
     expect(rgb(midnight.nightEdge), (20, 26, 58));
     expect(midnight.nightEdgeAlpha, closeTo(0.82, 0.0005));

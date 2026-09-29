@@ -65,7 +65,8 @@ void main() {
         (WidgetTester tester) async {
       await _pumpAndroidShell(tester);
 
-      await _tapKey(tester, 'tab-garden');
+      await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
+      await tester.pump(const Duration(milliseconds: 500));
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 

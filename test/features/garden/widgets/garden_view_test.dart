@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:field_notes/design/format/clock_format.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/paint/meadow_painter.dart';
@@ -80,6 +83,21 @@ MeadowPainter _painter(WidgetTester tester) =>
             .painter!
         as MeadowPainter;
 
+double _luminance(Color colour) {
+  double channel(double v) =>
+      v <= 0.03928 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
+  return 0.2126 * channel(colour.r) +
+      0.7152 * channel(colour.g) +
+      0.0722 * channel(colour.b);
+}
+
+double _contrastOver(Color text, Color background) {
+  final Color shown = Color.alphaBlend(text, background);
+  final double a = _luminance(shown) + 0.05;
+  final double b = _luminance(background) + 0.05;
+  return math.max(a, b) / math.min(a, b);
+}
+
 void main() {
   testWidgets(
     'desktop page shows the header, day count, chips, clock, next events and captions',
@@ -102,7 +120,7 @@ void main() {
       );
       expect(find.text(_clock(tester, _noon)), findsOneWidget);
       final String sunset = _clock(tester, DateTime.utc(2026, 9, 29, 1, 17));
-      final String moonrise = _clock(tester, DateTime.utc(2026, 9, 29, 1, 29));
+      final String moonrise = _clock(tester, DateTime.utc(2026, 9, 29, 1, 28));
       expect(find.text('sunset $sunset · moonrise $moonrise'), findsOneWidget);
       expect(find.text('Happy'), findsOneWidget);
       expect(find.text('Calm'), findsOneWidget);
@@ -229,9 +247,8 @@ void main() {
           _edmonton.longitude,
         ).captionColour,
       );
-      expect(_painter(tester).animate, isFalse);
-      await tester.pumpAndSettle();
-      expect(tester.binding.hasScheduledFrame, isFalse);
+      expect(_painter(tester).animate, isTrue);
+      await tester.pump(const Duration(milliseconds: 500));
       final Rect card = tester.getRect(find.byType(MeadowScene));
       expect(card.contains(tester.getCenter(message)), isTrue);
       expect(
@@ -254,5 +271,37 @@ void main() {
 
     expect(_painter(tester).animate, isFalse);
     expect(tester.widget<MeadowScene>(find.byType(MeadowScene)).motion, isNull);
+  });
+
+  testWidgets('an empty meadow sways like any other', (
+    WidgetTester tester,
+  ) async {
+    await _pumpGarden(
+      tester,
+      platform: TargetPlatform.macOS,
+      size: const Size(1140, 766),
+    );
+    expect(_painter(tester).layout.plants, isEmpty);
+    expect(_painter(tester).animate, isTrue);
+  });
+
+  testWidgets('garden captions reach 4.5 to 1 against the soil by day', (
+    WidgetTester tester,
+  ) async {
+    await _pumpGarden(
+      tester,
+      platform: TargetPlatform.macOS,
+      size: const Size(1140, 766),
+      days: _twoBloomsAndASprout,
+    );
+    final Color soil = Color.lerp(Palette.soilLight, Palette.soilDark, 0.5)!;
+    for (final Finder caption in <Finder>[
+      find.textContaining('sky over'),
+      find.textContaining('still growing'),
+    ]) {
+      expect(caption, findsOneWidget);
+      final Color colour = tester.widget<Text>(caption).style!.color!;
+      expect(_contrastOver(colour, soil), greaterThanOrEqualTo(4.5));
+    }
   });
 }

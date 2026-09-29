@@ -43,56 +43,56 @@ const List<PositionFixture> positionFixtures = <PositionFixture>[
   PositionFixture(
     place: edmonton,
     instant: '2026-09-28T18:00:00Z',
-    sunAltitude: 31.777,
-    sunAzimuth: -0.4283,
+    sunAltitude: 31.500,
+    sunAzimuth: -0.4356,
     moonAltitude: -10.529,
     moonAzimuth: 2.3959,
-    fraction: 0.9454,
-    phase: 0.5751,
+    fraction: 0.9471,
+    phase: 0.5738,
     phaseName: 'waning gibbous',
   ),
   PositionFixture(
     place: edmonton,
     instant: '2026-09-29T00:00:00Z',
-    sunAltitude: 10.331,
-    sunAzimuth: 1.2545,
+    sunAltitude: 10.418,
+    sunAzimuth: 1.2466,
     moonAltitude: -9.794,
     moonAzimuth: -2.4250,
-    fraction: 0.9318,
-    phase: 0.5841,
+    fraction: 0.9338,
+    phase: 0.5828,
     phaseName: 'waning gibbous',
   ),
   PositionFixture(
     place: london,
     instant: '2026-06-21T12:00:00Z',
-    sunAltitude: 61.931,
-    sunAzimuth: -0.0031,
+    sunAltitude: 61.928,
+    sunAzimuth: -0.0198,
     moonAltitude: 2.895,
     moonAzimuth: -1.5086,
-    fraction: 0.4637,
-    phase: 0.2384,
+    fraction: 0.4598,
+    phase: 0.2372,
     phaseName: 'first quarter',
   ),
   PositionFixture(
     place: sydney,
     instant: '2026-12-01T02:00:00Z',
-    sunAltitude: 77.215,
-    sunAzimuth: 2.8068,
+    sunAltitude: 77.409,
+    sunAzimuth: 2.8397,
     moonAltitude: -7.150,
     moonAzimuth: 1.6587,
-    fraction: 0.5169,
-    phase: 0.7446,
+    fraction: 0.5209,
+    phase: 0.7433,
     phaseName: 'last quarter',
   ),
   PositionFixture(
     place: oslo,
     instant: '2026-06-21T22:00:00Z',
-    sunAltitude: -5.164,
-    sunAzimuth: 2.8332,
+    sunAltitude: -5.090,
+    sunAzimuth: 2.8254,
     moonAltitude: 7.146,
     moonAzimuth: 1.2624,
-    fraction: 0.5069,
-    phase: 0.2522,
+    fraction: 0.5030,
+    phase: 0.2509,
     phaseName: 'first quarter',
   ),
 ];
@@ -231,49 +231,49 @@ void main() {
       edmonton,
       SkyBody.moon,
       '2026-09-28T18:00:00Z',
-      '2026-09-29T01:29:00Z',
+      '2026-09-29T01:28:00Z',
       true,
     );
     expectEvent(
       london,
       SkyBody.sun,
       '2026-06-21T12:00:00Z',
-      '2026-06-21T20:20:00Z',
+      '2026-06-21T20:22:00Z',
       false,
     );
     expectEvent(
       london,
       SkyBody.moon,
       '2026-06-21T12:00:00Z',
-      '2026-06-21T23:47:00Z',
+      '2026-06-21T23:46:00Z',
       false,
     );
     expectEvent(
       sydney,
       SkyBody.sun,
       '2026-12-01T02:00:00Z',
-      '2026-12-01T08:49:00Z',
+      '2026-12-01T08:51:00Z',
       false,
     );
     expectEvent(
       sydney,
       SkyBody.moon,
       '2026-12-01T02:00:00Z',
-      '2026-12-01T14:25:00Z',
+      '2026-12-01T14:24:00Z',
       true,
     );
     expectEvent(
       oslo,
       SkyBody.sun,
       '2026-06-21T22:00:00Z',
-      '2026-06-22T01:52:00Z',
+      '2026-06-22T01:54:00Z',
       true,
     );
     expectEvent(
       oslo,
       SkyBody.moon,
       '2026-06-21T22:00:00Z',
-      '2026-06-21T22:58:00Z',
+      '2026-06-21T22:57:00Z',
       false,
     );
   });
@@ -285,33 +285,36 @@ void main() {
     );
   });
 
-  test('rise and set times land within 3 minutes of the Naval Observatory', () {
-    for (final PublishedEvent published in publishedEvents) {
-      final DateTime start = published.instant.subtract(
-        const Duration(hours: 6),
-      );
-      SkyEvent? event = nextSkyEvent(
-        published.body,
-        start,
-        published.place.latitude,
-        published.place.longitude,
-      );
-      while (event != null && event.isRise != published.isRise) {
-        event = nextSkyEvent(
+  test(
+    'rise and set times land within one minute of the Naval Observatory',
+    () {
+      for (final PublishedEvent published in publishedEvents) {
+        final DateTime start = published.instant.subtract(
+          const Duration(hours: 6),
+        );
+        SkyEvent? event = nextSkyEvent(
           published.body,
-          event.instant,
+          start,
           published.place.latitude,
           published.place.longitude,
         );
+        while (event != null && event.isRise != published.isRise) {
+          event = nextSkyEvent(
+            published.body,
+            event.instant,
+            published.place.latitude,
+            published.place.longitude,
+          );
+        }
+        expect(event, isNotNull, reason: published.label);
+        final int minutesOff = event!.instant
+            .difference(published.instant)
+            .inMinutes
+            .abs();
+        expect(minutesOff, lessThanOrEqualTo(1), reason: published.label);
       }
-      expect(event, isNotNull, reason: published.label);
-      final int minutesOff = event!.instant
-          .difference(published.instant)
-          .inMinutes
-          .abs();
-      expect(minutesOff, lessThanOrEqualTo(3), reason: published.label);
-    }
-  });
+    },
+  );
 
   test('noon illumination is within 0.01 of the Naval Observatory', () {
     const Map<String, double> noonFractions = <String, double>{

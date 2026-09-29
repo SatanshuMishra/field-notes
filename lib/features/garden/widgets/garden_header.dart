@@ -33,7 +33,12 @@ String gardenClockLabel(BuildContext context, SkyMoment moment) {
     context,
     TimeOfDay.fromDateTime(moment.instant.toLocal()),
   );
-  return moment.shifted ? '${shortWeekdayLabel(moment.instant)} $time' : time;
+  if (!moment.shifted) {
+    return time;
+  }
+  final String weekday = shortWeekdayLabel(moment.instant);
+  final String date = shortMonthDayLabel(moment.instant);
+  return '$weekday $date · $time';
 }
 
 class GardenHeader extends StatelessWidget {

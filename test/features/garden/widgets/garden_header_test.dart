@@ -113,4 +113,25 @@ void main() {
       expect(find.textContaining('planted in'), findsNothing);
     },
   );
+
+  testWidgets('the fast-forward clock shows the date', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (BuildContext context) => Text(
+            gardenClockLabel(
+              context,
+              SkyMoment(
+                instant: DateTime(2026, 10, 7, 21, 7),
+                offset: const Duration(days: 8),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    expect(find.textContaining('Wed Oct 7'), findsOneWidget);
+  });
 }
