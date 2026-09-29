@@ -1,114 +1,113 @@
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
-import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
-import 'package:field_notes/features/entry_cards/util/duration_format.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 
-enum VoiceRecorderPhase { idle, recording, paused, saving }
+enum VoiceRecorderPhase {
+  idle(StagePhase.idle),
+  breathing(StagePhase.breathing),
+  recording(StagePhase.recording),
+  paused(StagePhase.paused),
+  saving(StagePhase.saving);
+
+  const VoiceRecorderPhase(this.stage);
+
+  final StagePhase stage;
+
+  bool get isTaking => stage.isTaking;
+}
 
 const Key voiceCloseKey = ValueKey<String>('voice-close');
 const Key voiceRecordButtonKey = ValueKey<String>('voice-record-button');
 const Key voiceDiscardPillKey = ValueKey<String>('voice-discard-pill');
 const Key voiceSavePillKey = ValueKey<String>('voice-save-pill');
+const Key voiceOrbZoneKey = ValueKey<String>('voice-orb-zone');
+const Key voiceActionsKey = ValueKey<String>('voice-actions');
+const Key voiceKeepGoingKey = ValueKey<String>('voice-keep-going');
+const Key voiceErrorKey = ValueKey<String>('voice-error');
+const Key voiceKeyHintKey = ValueKey<String>('voice-key-hint');
 
-const List<double> voiceWaveHeights = <double>[
-  0.30,
-  0.65,
-  0.95,
-  0.50,
-  0.80,
-  0.40,
-  1.00,
-  0.55,
-  0.85,
-  0.35,
-  0.70,
-  0.45,
-];
+const String voiceSidebarPrivacyLine = 'Private · only you will hear this';
+const String voiceBottomBarPrivacyLine = 'Only you will hear this';
+const String voiceKeyHint = 'space pause · ⌘↩ keep · esc leave';
+const String voiceSavingStatus = 'Saving your recording…';
+const String voiceKeepLabel = 'Keep this';
+const String voiceStartLabel = 'Start recording';
+const String voiceStartNowLabel = 'Start now';
+const String voicePauseLabel = 'Pause recording';
+const String voiceResumeLabel = 'Resume recording';
+const String voiceOrbShortcutHint = 'Shortcut: Space';
+const String voiceKeepShortcutHint = 'Shortcut: Command Return';
 
-const List<Duration> voiceWaveDurations = <Duration>[
-  Duration(milliseconds: 700),
-  Duration(milliseconds: 850),
-  Duration(milliseconds: 1000),
-  Duration(milliseconds: 1150),
-];
+const double voiceSidebarOrbZone = 250;
+const double voiceBottomBarOrbZone = 184;
+const double voiceSidebarOrb = 124;
+const double voiceBottomBarOrb = 100;
+const double voicePausedOrbOpacity = 0.55;
+const double voiceSavingOrbOpacity = 0.35;
+const double voiceActionsHeight = 118;
 
-const double _voiceWaveThreshold = 0.6;
-
-const Duration _haloPulseDuration = Duration(milliseconds: 2400);
-const Duration _statusBlinkDuration = Duration(milliseconds: 1200);
-
-const double _padTop = 40;
-const double _padHorizontal = 22;
-const double _padBottom = 44;
+const Color _orbLight = Color(0xFFE3937A);
+const Color _orbDeep = Color(0xFFA4503D);
+const Color _orbEdge = Color(0x24F3E6D1);
+const Color _orbShadow = Color(0xBFC76A54);
+const Color _orbGlyphInk = Palette.onAccent;
+const Color _keepFill = Color(0xFFF3E6D1);
+const Color _keepInk = Color(0xFF1C1713);
+const Color _keepShadow = Color(0x73F3E6D1);
+const Color _letGoInk = Color(0xFFB7A58C);
+const Color _keyHintInk = Color(0xFF9A8872);
+const Color _errorInk = Color(0xFFE79A80);
 
 const double _minTapTarget = 48;
+const double _sidebarRingInset = 34;
+const double _bottomBarRingInset = 26;
+const double _sidebarOrbGlyph = 42;
+const double _bottomBarOrbGlyph = 36;
+const Alignment _orbHighlight = Alignment(-0.24, -0.36);
+const double _orbGradientRadius = 0.92;
+const List<double> _orbStops = <double>[0, 0.58, 1];
+const double _orbEdgeWidth = 1;
+const Offset _orbShadowOffset = Offset(0, 26);
+const double _orbShadowBlur = 60;
+const double _orbShadowSpread = -18;
+const Duration _orbFade = Duration(milliseconds: 600);
 
-const double _closeInset = 18;
-const double _closeGlyphSize = 22;
-const double _closeTargetInset = (_minTapTarget - _closeGlyphSize) / 2;
-const double _closeStrokeWidth = 2;
-const double _closeViewBox = 24;
+const double _keyHintSize = 11;
+const double _keyHintTracking = 0.02 * _keyHintSize;
 
-const double _headerGap = 4;
-const double _statusGap = 7;
-const double _statusDotSize = 8;
-const double _statusTracking = 0.96;
+const double _errorGap = 8;
 
-const double _stageSize = 150;
-const double _stageGapTop = 14;
-const double _stageGapBottom = 6;
-
-const double _recordButtonSize = 92;
-const double _recordBorderWidth = 2.5;
-const double _recordIconSize = 38;
-const BorderRadius _recordFocusRadius = BorderRadius.all(
-  Radius.circular(_recordButtonSize / 2),
+const double _sidebarActionsGap = 10;
+const double _bottomBarActionsGap = 8;
+const double _sidebarActionSize = 14;
+const double _bottomBarLetGoSize = 13;
+const double _keepSize = 14;
+const double _keepGlyph = 15;
+const double _sidebarKeepGap = 9;
+const double _bottomBarKeepGap = 8;
+const double _bottomBarKeepMaxWidth = 170;
+const EdgeInsets _sidebarLetGoPadding = EdgeInsets.symmetric(
+  horizontal: 20,
+  vertical: 13,
 );
-const double _recordShadowAlpha = 0.7;
-const Offset _recordShadowOffset = Offset(0, 10);
-const double _recordShadowBlur = 24;
-const double _recordShadowSpread = -8;
-
-const double _hintGap = 2;
-
-const double _waveGapTop = 12;
-const double _waveGapBottom = 4;
-const double _waveHeight = 40;
-const double _waveBarWidth = 4;
-const double _waveSpacing = 3;
-
-const double _hairlineWidth = 120;
-const double _hairlineHeight = 2;
-const double _hairlineRadius = 2;
-
-const double _errorGap = 12;
-
-const double _pillRowGapTop = 6;
-const double _pillRowSpacing = 10;
-const double _pillRadius = Shapes.radiusSheet;
-const BorderRadius _pillFocusRadius = BorderRadius.all(
-  Radius.circular(_pillRadius),
+const EdgeInsets _bottomBarLetGoPadding = EdgeInsets.symmetric(horizontal: 16);
+const EdgeInsets _sidebarKeepPadding = EdgeInsets.symmetric(
+  horizontal: 24,
+  vertical: 13,
 );
-const double _pillIconSize = 15;
-const double _discardPillBorderWidth = 1.5;
-const double _discardPillGap = 8;
-const EdgeInsets _discardPillPadding = EdgeInsets.symmetric(
-  horizontal: 18,
-  vertical: 10,
-);
-const double _savePillBorderWidth = 2;
-const double _savePillGap = 9;
-const double _savePillGlyphRadius = 4;
-const EdgeInsets _savePillPadding = EdgeInsets.symmetric(
-  horizontal: 22,
-  vertical: 11,
-);
-const double _pillLabelSize = 13;
+const EdgeInsets _bottomBarKeepPadding = EdgeInsets.symmetric(horizontal: 16);
+const BorderRadius _actionRadius = BorderRadius.all(Radius.circular(24));
+const Offset _keepShadowOffset = Offset(0, 12);
+const double _keepShadowBlur = 30;
+const double _keepShadowSpread = -14;
+const double _disabledActionOpacity = 0.5;
+
+void _ignore() {}
 
 class VoiceRecorderSheet extends StatelessWidget {
   const VoiceRecorderSheet({
@@ -121,17 +120,12 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.onResume,
     this.onDiscard,
     this.onDismiss,
+    this.onKeepGoing,
+    this.onLetGo,
+    this.asking = false,
     this.elapsed = Duration.zero,
     this.errorMessage,
-    this.title = 'New voice memo',
-    this.armedHint = 'tap the mic when you’re ready',
-    this.recordingHint = 'listening… speak freely',
-    this.pausedHint = 'paused · resume when you’re ready',
-    this.savingHint = 'Saving your recording…',
-    this.recordingLabel = 'Recording',
-    this.pausedLabel = 'Paused',
-    this.discardLabel = 'Discard',
-    this.saveLabel = 'Save memo',
+    this.letGoKey,
   });
 
   final VoiceRecorderPhase phase;
@@ -142,453 +136,446 @@ class VoiceRecorderSheet extends StatelessWidget {
   final VoidCallback? onResume;
   final VoidCallback? onDiscard;
   final VoidCallback? onDismiss;
+  final VoidCallback? onKeepGoing;
+  final VoidCallback? onLetGo;
+  final bool asking;
   final Duration elapsed;
   final String? errorMessage;
-  final String title;
-  final String armedHint;
-  final String recordingHint;
-  final String pausedHint;
-  final String savingHint;
-  final String recordingLabel;
-  final String pausedLabel;
-  final String discardLabel;
-  final String saveLabel;
+  final Key? letGoKey;
 
-  bool get _isRecording => phase == VoiceRecorderPhase.recording;
-  bool get _isPaused => phase == VoiceRecorderPhase.paused;
-  bool get _isSaving => phase == VoiceRecorderPhase.saving;
-  bool get _isActive => _isRecording || _isPaused;
+  bool get _saving => phase == VoiceRecorderPhase.saving;
+
+  bool get _canKeep => phase.isTaking && !asking;
+
+  VoidCallback? get _orbTap {
+    if (asking) {
+      return null;
+    }
+    return switch (phase) {
+      VoiceRecorderPhase.idle || VoiceRecorderPhase.breathing => onStart,
+      VoiceRecorderPhase.recording => onPause,
+      VoiceRecorderPhase.paused => onResume,
+      VoiceRecorderPhase.saving => null,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
-    return CallbackShortcuts(
-      bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.escape): ?onDismiss,
-      },
-      child: Focus(
-        autofocus: true,
-        skipTraversal: true,
-        includeSemantics: false,
-        child: _body(),
+    final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
+    return RecorderShortcuts(
+      onPrimary: _orbTap,
+      onKeep: _canKeep ? onStop : null,
+      onLeave: _saving ? null : (onDismiss ?? onCancel),
+      child: RecorderSurface(
+        leaveKey: voiceCloseKey,
+        privacyLine: sidebar
+            ? voiceSidebarPrivacyLine
+            : voiceBottomBarPrivacyLine,
+        onLeave: _saving || asking ? null : onCancel,
+        trailing: sidebar ? const _KeyHint() : null,
+        question: ReflectionPrompt(phase: phase.stage, showKicker: true),
+        centre: _OrbZone(phase: phase, sidebar: sidebar, onTap: _orbTap),
+        status: _status(),
+        actions: _actions(sidebar),
       ),
     );
   }
 
-  Widget _body() {
+  Widget _status() {
     final String? errorMessage = this.errorMessage;
-    return Stack(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              _padHorizontal,
-              _padTop,
-              _padHorizontal,
-              _padBottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const SizedBox(height: _headerGap),
-                _header(),
-                const SizedBox(height: _stageGapTop),
-                _stage(),
-                const SizedBox(height: _stageGapBottom),
-                Text(
-                  formatMediaDuration(elapsed.inMilliseconds),
-                  style: TypographyTokens.timerSerif,
-                ),
-                const SizedBox(height: _hintGap),
-                Text(
-                  _hint,
-                  textAlign: TextAlign.center,
-                  style: TypographyTokens.hintAccent,
-                ),
-                const SizedBox(height: _waveGapTop),
-                _wave(),
-                const SizedBox(height: _waveGapBottom),
-                if (_isActive) ...<Widget>[
-                  const SizedBox(height: _pillRowGapTop),
-                  _pillRow(),
-                ],
-                if (errorMessage != null) ...<Widget>[
-                  const SizedBox(height: _errorGap),
-                  Text(
-                    errorMessage,
-                    textAlign: TextAlign.center,
-                    style: TypographyTokens.captionSans.copyWith(
-                      color: Palette.danger,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+        RecorderStatusLine(
+          phase: phase.stage,
+          elapsed: elapsed,
+          savingText: voiceSavingStatus,
+          inline: false,
         ),
-        Positioned(
-          left: _closeInset - _closeTargetInset,
-          top: _closeInset - _closeTargetInset,
-          child: Semantics(
-            button: true,
-            enabled: !_isSaving,
-            label: 'Close',
-            child: GestureDetector(
-              key: voiceCloseKey,
-              behavior: HitTestBehavior.opaque,
-              onTap: _isSaving ? null : onCancel,
-              child: FocusRing(
-                enabled: !_isSaving,
-                onPressed: onCancel,
-                borderRadius: Shapes.buttonBorderRadius,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: _minTapTarget,
-                    minHeight: _minTapTarget,
-                  ),
-                  child: const Center(
-                    child: SizedBox.square(
-                      dimension: _closeGlyphSize,
-                      child: CustomPaint(painter: _VoiceCloseGlyphPainter()),
-                    ),
-                  ),
-                ),
+        if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: _errorGap),
+            child: Semantics(
+              container: true,
+              liveRegion: true,
+              child: Text(
+                errorMessage,
+                key: voiceErrorKey,
+                textAlign: TextAlign.center,
+                style: TypographyTokens.captionSans.copyWith(color: _errorInk),
               ),
             ),
           ),
-        ),
       ],
     );
   }
 
-  String get _hint {
-    if (_isSaving) {
-      return savingHint;
-    }
-    if (_isRecording) {
-      return recordingHint;
-    }
-    return _isPaused ? pausedHint : armedHint;
-  }
-
-  Widget _header() {
-    if (_isRecording) {
-      return _statusRow(
-        label: recordingLabel,
-        color: Palette.danger,
-        dot: const Blink(
-          stepped: true,
-          minOpacity: 0,
-          duration: _statusBlinkDuration,
-          child: _StatusDot(color: Palette.danger),
-        ),
+  Widget _actions(bool sidebar) {
+    final Widget? content;
+    if (asking) {
+      content = LetGoPanel(
+        onKeepGoing: onKeepGoing ?? _ignore,
+        onLetGo: onLetGo ?? _ignore,
+        compact: !sidebar,
+        keepGoingKey: voiceKeepGoingKey,
+        letGoKey: letGoKey,
       );
-    }
-    if (_isPaused) {
-      return _statusRow(
-        label: pausedLabel,
-        color: Palette.statusAmber,
-        dot: const _StatusDot(color: Palette.statusAmber),
+    } else if (phase.isTaking || _saving) {
+      content = _TakeActions(
+        sidebar: sidebar,
+        onLetGo: _saving ? null : onDiscard,
+        onKeep: _saving ? null : onStop,
       );
+    } else {
+      content = null;
     }
-    return Text(title, style: TypographyTokens.composerTitleAccent);
-  }
-
-  Widget _statusRow({
-    required String label,
-    required Color color,
-    required Widget dot,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        dot,
-        const SizedBox(width: _statusGap),
-        Text(
-          label.toUpperCase(),
-          style: TypographyTokens.captureLabelSans.copyWith(
-            letterSpacing: _statusTracking,
-            color: color,
-          ),
-        ),
-      ],
+    return ConstrainedBox(
+      key: voiceActionsKey,
+      constraints: const BoxConstraints(minHeight: voiceActionsHeight),
+      child: Center(heightFactor: 1, child: content),
     );
   }
+}
 
-  Widget _stage() {
+class _KeyHint extends StatelessWidget {
+  const _KeyHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ExcludeSemantics(
+      child: Text(
+        voiceKeyHint,
+        key: voiceKeyHintKey,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.fade,
+        textAlign: TextAlign.right,
+        style: TextStyle(
+          fontFamily: TypographyTokens.sans,
+          fontSize: _keyHintSize,
+          fontWeight: FontWeight.w500,
+          letterSpacing: _keyHintTracking,
+          color: _keyHintInk,
+        ),
+      ),
+    );
+  }
+}
+
+class _OrbZone extends StatelessWidget {
+  const _OrbZone({
+    required this.phase,
+    required this.sidebar,
+    required this.onTap,
+  });
+
+  final VoiceRecorderPhase phase;
+  final bool sidebar;
+  final VoidCallback? onTap;
+
+  BreathingGlowMode? get _glow => switch (phase) {
+    VoiceRecorderPhase.breathing => BreathingGlowMode.settle,
+    VoiceRecorderPhase.recording => BreathingGlowMode.breathe,
+    _ => null,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final double zone = sidebar ? voiceSidebarOrbZone : voiceBottomBarOrbZone;
+    final BreathingGlowMode? glow = _glow;
     return SizedBox.square(
-      dimension: _stageSize,
+      key: voiceOrbZoneKey,
+      dimension: zone,
       child: Stack(
         alignment: Alignment.center,
         children: <Widget>[
-          if (_isRecording)
-            const GlowPulse(diameter: _stageSize, duration: _haloPulseDuration),
-          _recordButton(),
+          Positioned.fill(
+            child: glow == null
+                ? const SizedBox.shrink()
+                : BreathingGlow(
+                    diameter: zone,
+                    mode: glow,
+                    ringInset: glow == BreathingGlowMode.breathe
+                        ? (sidebar ? _sidebarRingInset : _bottomBarRingInset)
+                        : null,
+                  ),
+          ),
+          _Orb(phase: phase, sidebar: sidebar, onTap: onTap),
         ],
       ),
     );
   }
-
-  VoidCallback? get _recordTap {
-    if (_isSaving) {
-      return null;
-    }
-    if (_isRecording) {
-      return onPause;
-    }
-    return _isPaused ? onResume : onStart;
-  }
-
-  String get _recordSemanticsLabel {
-    if (_isRecording) {
-      return onPause != null ? 'Pause recording' : 'Stop recording';
-    }
-    if (_isPaused) {
-      return onResume != null ? 'Resume recording' : 'Stop recording';
-    }
-    return 'Start recording';
-  }
-
-  Widget _recordButton() {
-    final VoidCallback? tap = _recordTap;
-    return Semantics(
-      button: true,
-      enabled: tap != null,
-      label: _recordSemanticsLabel,
-      child: GestureDetector(
-        key: voiceRecordButtonKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: tap,
-        child: FocusRing(
-          enabled: tap != null,
-          onPressed: tap,
-          borderRadius: _recordFocusRadius,
-          child: Container(
-            width: _recordButtonSize,
-            height: _recordButtonSize,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Palette.coral,
-              shape: BoxShape.circle,
-              border: Border.all(color: Palette.ink, width: _recordBorderWidth),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Palette.coral.withValues(alpha: _recordShadowAlpha),
-                  offset: _recordShadowOffset,
-                  blurRadius: _recordShadowBlur,
-                  spreadRadius: _recordShadowSpread,
-                ),
-              ],
-            ),
-            child: _isRecording
-                ? const IconStickerGlyphIcon(
-                    glyph: IconStickerGlyph.pause,
-                    color: Palette.onAccent,
-                    size: _recordIconSize,
-                  )
-                : const CaptureIcon(
-                    glyph: CaptureGlyph.mic,
-                    color: Palette.onAccent,
-                    size: _recordIconSize,
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _pillRow() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: <Widget>[
-        _discardPill(),
-        const SizedBox(width: _pillRowSpacing),
-        _savePill(),
-      ],
-    );
-  }
-
-  Widget _discardPill() {
-    return Semantics(
-      container: true,
-      button: true,
-      enabled: onDiscard != null,
-      child: GestureDetector(
-        key: voiceDiscardPillKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onDiscard,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            child: FocusRing(
-              enabled: onDiscard != null,
-              onPressed: onDiscard,
-              borderRadius: _pillFocusRadius,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Palette.dangerSurface,
-                  border: Border.all(
-                    color: Palette.danger,
-                    width: _discardPillBorderWidth,
-                  ),
-                  borderRadius: BorderRadius.circular(_pillRadius),
-                ),
-                child: Padding(
-                  padding: _discardPillPadding,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const IconStickerGlyphIcon(
-                        glyph: IconStickerGlyph.trash,
-                        color: Palette.danger,
-                        size: _pillIconSize,
-                      ),
-                      const SizedBox(width: _discardPillGap),
-                      Text(
-                        discardLabel,
-                        style: _pillLabelStyle(Palette.danger),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _savePill() {
-    return Semantics(
-      container: true,
-      button: true,
-      child: GestureDetector(
-        key: voiceSavePillKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onStop,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            child: FocusRing(
-              onPressed: onStop,
-              borderRadius: _pillFocusRadius,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Palette.danger,
-                  border: Border.all(
-                    color: Palette.ink,
-                    width: _savePillBorderWidth,
-                  ),
-                  borderRadius: BorderRadius.circular(_pillRadius),
-                  boxShadow: Shadows.emphasis,
-                ),
-                child: Padding(
-                  padding: _savePillPadding,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const SizedBox.square(
-                        dimension: _pillIconSize,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Palette.onAccent,
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(_savePillGlyphRadius),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: _savePillGap),
-                      Text(saveLabel, style: _pillLabelStyle(Palette.onAccent)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  TextStyle _pillLabelStyle(Color color) => TypographyTokens.labelSans.copyWith(
-    fontSize: _pillLabelSize,
-    fontWeight: FontWeight.w600,
-    color: color,
-  );
-
-  Widget _wave() {
-    return SizedBox(
-      height: _waveHeight,
-      child: Center(
-        child: _isRecording
-            ? const WaveformBars(
-                heights: voiceWaveHeights,
-                perBarDurations: voiceWaveDurations,
-                twoToneThreshold: _voiceWaveThreshold,
-                barWidth: _waveBarWidth,
-                spacing: _waveSpacing,
-                maxHeight: _waveHeight,
-              )
-            : const SizedBox(
-                width: _hairlineWidth,
-                height: _hairlineHeight,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Palette.ink18,
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(_hairlineRadius),
-                    ),
-                  ),
-                ),
-              ),
-      ),
-    );
-  }
 }
 
-class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.color});
+class _Orb extends StatelessWidget {
+  const _Orb({required this.phase, required this.sidebar, required this.onTap});
 
-  final Color color;
+  final VoiceRecorderPhase phase;
+  final bool sidebar;
+  final VoidCallback? onTap;
+
+  String get _label => switch (phase) {
+    VoiceRecorderPhase.breathing => voiceStartNowLabel,
+    VoiceRecorderPhase.recording => voicePauseLabel,
+    VoiceRecorderPhase.paused => voiceResumeLabel,
+    VoiceRecorderPhase.idle || VoiceRecorderPhase.saving => voiceStartLabel,
+  };
+
+  double get _opacity => switch (phase) {
+    VoiceRecorderPhase.paused => voicePausedOrbOpacity,
+    VoiceRecorderPhase.saving => voiceSavingOrbOpacity,
+    _ => 1,
+  };
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: _statusDotSize,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    final VoidCallback? onTap = this.onTap;
+    final bool enabled = onTap != null;
+    final double diameter = sidebar ? voiceSidebarOrb : voiceBottomBarOrb;
+    final double glyph = sidebar ? _sidebarOrbGlyph : _bottomBarOrbGlyph;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: _label,
+      hint: sidebar && enabled ? voiceOrbShortcutHint : null,
+      child: GestureDetector(
+        key: voiceRecordButtonKey,
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: FocusRing(
+          enabled: enabled,
+          onPressed: onTap,
+          surface: FocusRingSurface.dark,
+          borderRadius: BorderRadius.all(Radius.circular(diameter / 2)),
+          child: AnimatedOpacity(
+            opacity: _opacity,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : _orbFade,
+            curve: Curves.ease,
+            child: SizedBox.square(
+              dimension: diameter,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    center: _orbHighlight,
+                    radius: _orbGradientRadius,
+                    colors: <Color>[_orbLight, Palette.coral, _orbDeep],
+                    stops: _orbStops,
+                  ),
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: _orbShadow,
+                      offset: _orbShadowOffset,
+                      blurRadius: _orbShadowBlur,
+                      spreadRadius: _orbShadowSpread,
+                    ),
+                    BoxShadow(color: _orbEdge, spreadRadius: _orbEdgeWidth),
+                  ],
+                ),
+                child: Center(
+                  child: ExcludeSemantics(
+                    child: phase == VoiceRecorderPhase.recording
+                        ? IconStickerGlyphIcon(
+                            glyph: IconStickerGlyph.pause,
+                            color: _orbGlyphInk,
+                            size: glyph,
+                          )
+                        : CaptureIcon(
+                            glyph: CaptureGlyph.mic,
+                            color: _orbGlyphInk,
+                            size: glyph,
+                          ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-class _VoiceCloseGlyphPainter extends CustomPainter {
-  const _VoiceCloseGlyphPainter();
+class _TakeActions extends StatelessWidget {
+  const _TakeActions({
+    required this.sidebar,
+    required this.onLetGo,
+    required this.onKeep,
+  });
+
+  final bool sidebar;
+  final VoidCallback? onLetGo;
+  final VoidCallback? onKeep;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final Paint stroke = Paint()
-      ..color = Palette.ink
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _closeStrokeWidth
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.save();
-    canvas.scale(size.shortestSide / _closeViewBox);
-    canvas.drawLine(const Offset(6, 6), const Offset(18, 18), stroke);
-    canvas.drawLine(const Offset(18, 6), const Offset(6, 18), stroke);
-    canvas.restore();
+  Widget build(BuildContext context) {
+    final double? height = sidebar ? null : _minTapTarget;
+    final Widget letGo = _ActionButton(
+      key: voiceDiscardPillKey,
+      label: letGoConfirmLabel,
+      onPressed: onLetGo,
+      ink: _letGoInk,
+      fontSize: sidebar ? _sidebarActionSize : _bottomBarLetGoSize,
+      fontWeight: FontWeight.w500,
+      padding: sidebar ? _sidebarLetGoPadding : _bottomBarLetGoPadding,
+      height: height,
+    );
+    final Widget keep = _ActionButton(
+      key: voiceSavePillKey,
+      label: voiceKeepLabel,
+      onPressed: onKeep,
+      hint: sidebar ? voiceKeepShortcutHint : null,
+      ink: _keepInk,
+      fill: _keepFill,
+      glyph: IconStickerGlyph.check,
+      glyphGap: sidebar ? _sidebarKeepGap : _bottomBarKeepGap,
+      fontSize: _keepSize,
+      fontWeight: FontWeight.w600,
+      padding: sidebar ? _sidebarKeepPadding : _bottomBarKeepPadding,
+      height: height,
+      expand: !sidebar,
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        letGo,
+        SizedBox(width: sidebar ? _sidebarActionsGap : _bottomBarActionsGap),
+        if (sidebar)
+          keep
+        else
+          Flexible(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: _bottomBarKeepMaxWidth,
+              ),
+              child: keep,
+            ),
+          ),
+      ],
+    );
   }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    required this.ink,
+    required this.fontSize,
+    required this.fontWeight,
+    required this.padding,
+    this.height,
+    this.hint,
+    this.fill,
+    this.glyph,
+    this.glyphGap = 0,
+    this.expand = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final Color ink;
+  final double fontSize;
+  final FontWeight fontWeight;
+  final EdgeInsets padding;
+  final double? height;
+  final String? hint;
+  final Color? fill;
+  final IconStickerGlyph? glyph;
+  final double glyphGap;
+  final bool expand;
 
   @override
-  bool shouldRepaint(_VoiceCloseGlyphPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    final VoidCallback? onPressed = this.onPressed;
+    final bool enabled = onPressed != null;
+    final Color? fill = this.fill;
+    final IconStickerGlyph? glyph = this.glyph;
+    final Widget text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        fontFamily: TypographyTokens.sans,
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: ink,
+      ),
+    );
+    final Widget face = DecoratedBox(
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: _actionRadius,
+        boxShadow: fill == null
+            ? null
+            : const <BoxShadow>[
+                BoxShadow(
+                  color: _keepShadow,
+                  offset: _keepShadowOffset,
+                  blurRadius: _keepShadowBlur,
+                  spreadRadius: _keepShadowSpread,
+                ),
+              ],
+      ),
+      child: SizedBox(
+        height: height,
+        child: Padding(
+          padding: padding,
+          child: Center(
+            widthFactor: expand ? null : 1,
+            heightFactor: height == null ? 1 : null,
+            child: ExcludeSemantics(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (glyph != null) ...<Widget>[
+                    IconStickerGlyphIcon(
+                      glyph: glyph,
+                      color: ink,
+                      size: _keepGlyph,
+                    ),
+                    SizedBox(width: glyphGap),
+                  ],
+                  if (expand) Flexible(child: text) else text,
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: label,
+      hint: enabled ? hint : null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
+          ),
+          child: Center(
+            widthFactor: expand ? null : 1,
+            heightFactor: 1,
+            child: FocusRing(
+              enabled: enabled,
+              onPressed: onPressed,
+              surface: FocusRingSurface.dark,
+              borderRadius: _actionRadius,
+              child: Opacity(
+                opacity: enabled ? 1 : _disabledActionOpacity,
+                child: face,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -4,24 +4,26 @@ import 'package:flutter_test/flutter_test.dart';
 import 'voice_test_support.dart';
 
 void main() {
-  testWidgets('the voice recorder close and mic controls are labelled buttons',
-      (WidgetTester tester) async {
-    final SemanticsHandle handle = tester.ensureSemantics();
+  testWidgets(
+    'the voice recorder leave and orb controls are labelled buttons',
+    (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
 
-    await tester.pumpWidget(
-      voiceHarness(
-        VoiceRecorderSheet(
-          phase: VoiceRecorderPhase.idle,
-          onStart: () {},
-          onStop: () {},
-          onCancel: () {},
+      await tester.pumpWidget(
+        voiceSheetHarness(
+          VoiceRecorderSheet(
+            phase: VoiceRecorderPhase.idle,
+            onStart: () {},
+            onStop: () {},
+            onCancel: () {},
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.bySemanticsLabel('Close'), findsOneWidget);
-    expect(find.bySemanticsLabel('Start recording'), findsOneWidget);
+      expect(find.bySemanticsLabel('Leave'), findsOneWidget);
+      expect(find.bySemanticsLabel('Start recording'), findsOneWidget);
 
-    handle.dispose();
-  });
+      handle.dispose();
+    },
+  );
 }

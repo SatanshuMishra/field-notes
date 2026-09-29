@@ -1,17 +1,14 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/motion/motion.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
-import 'package:field_notes/features/capture/core/composer_shell.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'voice_recorder.dart';
 import 'voice_recorder_provider.dart';
@@ -27,20 +24,11 @@ const Duration voiceSaveTimeout = Duration(seconds: 20);
 
 const Duration voiceElapsedTick = Duration(milliseconds: 250);
 
-const String voiceDiscardConfirmTitle = 'Discard this recording?';
-const String voiceDiscardConfirmMessage =
-    'This take will be thrown away and nothing will be saved.';
-const String voiceDiscardConfirmLabel = 'Discard';
-const String voiceDiscardConfirmCancelLabel = 'Cancel';
-const String voiceDiscardedToastMessage = 'Recording discarded';
+const String voiceLetGoToastMessage = 'Let go · nothing was saved';
 const String voiceSavedToastMessage = 'Voice memo saved';
+const String voiceRecorderBarrierLabel = 'Dismiss voice recorder';
 
 const Key voiceDiscardConfirmKey = ValueKey<String>('voice-discard-confirm');
-
-const double _confirmMaxWidth = 420;
-const double _confirmTitleGap = 8;
-const double _confirmActionsGap = 20;
-const double _confirmActionSpacing = 12;
 
 class VoiceComposerConnector extends ConsumerStatefulWidget {
   const VoiceComposerConnector({
@@ -60,9 +48,12 @@ class VoiceComposerConnector extends ConsumerStatefulWidget {
 class _VoiceComposerConnectorState
     extends ConsumerState<VoiceComposerConnector> {
   VoiceRecorderPhase _phase = VoiceRecorderPhase.idle;
+  bool _asking = false;
   String? _errorMessage;
   Duration _elapsed = Duration.zero;
   Timer? _elapsedTicker;
+  Timer? _breath;
+  bool _pending = false;
   bool _closing = false;
 
   VoiceRecorder get _recorder => ref.read(voiceRecorderProvider);
@@ -70,6 +61,7 @@ class _VoiceComposerConnectorState
   @override
   void dispose() {
     _stopTicker();
+    _cancelBreath();
     super.dispose();
   }
 
@@ -88,46 +80,95 @@ class _VoiceComposerConnectorState
     _elapsedTicker = null;
   }
 
+  void _cancelBreath() {
+    _breath?.cancel();
+    _breath = null;
+  }
+
   Future<void> _start() async {
+    if (_closing || _asking || _pending) {
+      return;
+    }
+    if (_phase == VoiceRecorderPhase.breathing) {
+      await _record();
+      return;
+    }
+    if (_phase != VoiceRecorderPhase.idle) {
+      return;
+    }
     setState(() => _errorMessage = null);
     final VoiceRecorder recorder = _recorder;
+    _pending = true;
     try {
       final bool granted = await recorder.hasPermission();
-      if (!mounted) {
+      if (!mounted || _closing) {
         return;
       }
       if (!granted) {
         setState(() => _errorMessage = micPermissionMessage);
         return;
       }
-      await recorder.start();
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _phase = VoiceRecorderPhase.recording;
-        _elapsed = Duration.zero;
-      });
-      _startTicker();
+      setState(() => _phase = VoiceRecorderPhase.breathing);
+      _breath = Timer(stageBreathDuration, () => unawaited(_record()));
     } on VoiceRecorderException catch (error) {
       if (!mounted) {
         return;
       }
       setState(() => _errorMessage = error.message);
+    } finally {
+      _pending = false;
     }
   }
 
-  Future<void> _pause() async {
+  Future<void> _record() async {
+    if (_closing || _pending || _phase != VoiceRecorderPhase.breathing) {
+      return;
+    }
+    _cancelBreath();
     final VoiceRecorder recorder = _recorder;
+    _pending = true;
+    try {
+      await recorder.start();
+    } on VoiceRecorderException catch (error) {
+      _pending = false;
+      if (!mounted || _closing) {
+        return;
+      }
+      setState(() {
+        _phase = VoiceRecorderPhase.idle;
+        _errorMessage = error.message;
+      });
+      return;
+    }
+    _pending = false;
+    if (!mounted || _closing) {
+      await recorder.cancel();
+      return;
+    }
+    setState(() {
+      _phase = VoiceRecorderPhase.recording;
+      _elapsed = Duration.zero;
+    });
+    _startTicker();
+  }
+
+  Future<void> _pause() async {
+    if (_pending || _phase != VoiceRecorderPhase.recording) {
+      return;
+    }
+    final VoiceRecorder recorder = _recorder;
+    _pending = true;
     try {
       await recorder.pause();
     } on VoiceRecorderException catch (error) {
+      _pending = false;
       if (!mounted) {
         return;
       }
       setState(() => _errorMessage = error.message);
       return;
     }
+    _pending = false;
     _stopTicker();
     if (!mounted) {
       return;
@@ -139,16 +180,22 @@ class _VoiceComposerConnectorState
   }
 
   Future<void> _resume() async {
+    if (_pending || _closing || _phase != VoiceRecorderPhase.paused) {
+      return;
+    }
     final VoiceRecorder recorder = _recorder;
+    _pending = true;
     try {
       await recorder.resume();
     } on VoiceRecorderException catch (error) {
+      _pending = false;
       if (!mounted) {
         return;
       }
       setState(() => _errorMessage = error.message);
       return;
     }
+    _pending = false;
     if (!mounted) {
       return;
     }
@@ -160,8 +207,7 @@ class _VoiceComposerConnectorState
   }
 
   Future<void> _stop() async {
-    if (_phase != VoiceRecorderPhase.recording &&
-        _phase != VoiceRecorderPhase.paused) {
+    if (_pending || _asking || _closing || !_phase.isTaking) {
       return;
     }
     final VoiceRecorderPhase previous = _phase;
@@ -188,6 +234,7 @@ class _VoiceComposerConnectorState
     if (entryId == null || !mounted) {
       return;
     }
+    _closing = true;
     showTransientToast(context, voiceSavedToastMessage);
     Navigator.of(context).pop(entryId);
   }
@@ -195,8 +242,9 @@ class _VoiceComposerConnectorState
   Future<String> _persist() async {
     final VoiceRecorder recorder = _recorder;
     final VoiceRecording recording = await recorder.stop();
-    final CaptureService service =
-        await ref.read(captureServiceProvider.future);
+    final CaptureService service = await ref.read(
+      captureServiceProvider.future,
+    );
     final CaptureResult result = await service.capture(
       VoiceCaptureRequest(
         date: widget.date,
@@ -222,55 +270,65 @@ class _VoiceComposerConnectorState
     });
   }
 
-  Future<void> _cancel() async {
-    _closing = true;
-    _stopTicker();
-    if (_phase == VoiceRecorderPhase.recording ||
-        _phase == VoiceRecorderPhase.paused) {
-      await _recorder.cancel();
-    }
-    if (!mounted) {
+  void _leave() {
+    if (_closing || _asking || _phase == VoiceRecorderPhase.saving) {
       return;
     }
+    if (_phase.isTaking) {
+      unawaited(_askToLetGo());
+      return;
+    }
+    _closing = true;
+    _cancelBreath();
+    _stopTicker();
     Navigator.of(context).pop();
   }
 
-  Future<void> _discard() async {
-    if (_phase != VoiceRecorderPhase.recording &&
-        _phase != VoiceRecorderPhase.paused) {
-      await _cancel();
+  void _escape() {
+    if (_asking) {
+      _keepGoing();
       return;
     }
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
-    );
-    if (confirmed != true || !mounted) {
+    _leave();
+  }
+
+  Future<void> _askToLetGo() async {
+    if (_closing || _asking || !_phase.isTaking) {
+      return;
+    }
+    setState(() => _asking = true);
+    if (_phase == VoiceRecorderPhase.recording) {
+      await _pause();
+    }
+  }
+
+  void _keepGoing() {
+    if (_closing || !_asking) {
+      return;
+    }
+    setState(() => _asking = false);
+  }
+
+  Future<void> _letGo() async {
+    if (_closing) {
       return;
     }
     _closing = true;
+    _cancelBreath();
     _stopTicker();
     await _recorder.cancel();
     if (!mounted) {
       return;
     }
-    showTransientToast(context, voiceDiscardedToastMessage);
+    showTransientToast(context, voiceLetGoToastMessage);
     Navigator.of(context).pop();
-  }
-
-  void _dismiss() {
-    if (_closing || _phase == VoiceRecorderPhase.saving) {
-      return;
-    }
-    unawaited(_discard());
   }
 
   void _onPopInvoked(bool didPop, Object? result) {
     if (didPop) {
       return;
     }
-    _dismiss();
+    _escape();
   }
 
   @override
@@ -280,111 +338,29 @@ class _VoiceComposerConnectorState
       onPopInvokedWithResult: _onPopInvoked,
       child: VoiceRecorderSheet(
         phase: _phase,
+        asking: _asking,
         onStart: _start,
         onStop: _stop,
-        onCancel: _cancel,
+        onCancel: _leave,
         onPause: _pause,
         onResume: _resume,
-        onDiscard: _discard,
-        onDismiss: _dismiss,
+        onDiscard: _askToLetGo,
+        onDismiss: _escape,
+        onKeepGoing: _keepGoing,
+        onLetGo: _letGo,
         elapsed: _elapsed,
         errorMessage: _errorMessage,
-      ),
-    );
-  }
-}
-
-class _DiscardConfirmDialog extends StatelessWidget {
-  const _DiscardConfirmDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Material(
-        type: MaterialType.transparency,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: _confirmMaxWidth),
-          child: StickerCard(
-            surface: Palette.cardBright,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  voiceDiscardConfirmTitle,
-                  style: TypographyTokens.titleSerif,
-                ),
-                const SizedBox(height: _confirmTitleGap),
-                Text(
-                  voiceDiscardConfirmMessage,
-                  style: TypographyTokens.bodySans,
-                ),
-                const SizedBox(height: _confirmActionsGap),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: _confirmActionSpacing,
-                  runSpacing: _confirmActionSpacing,
-                  children: <Widget>[
-                    StickerButton(
-                      label: voiceDiscardConfirmCancelLabel,
-                      variant: StickerButtonVariant.secondary,
-                      padTapTarget: true,
-                      autofocus: true,
-                      onPressed: () => Navigator.of(context).pop(false),
-                    ),
-                    StickerButton(
-                      key: voiceDiscardConfirmKey,
-                      label: voiceDiscardConfirmLabel,
-                      variant: StickerButtonVariant.danger,
-                      labelStyle: TypographyTokens.captureLabelSans,
-                      padTapTarget: true,
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+        letGoKey: voiceDiscardConfirmKey,
       ),
     );
   }
 }
 
 Future<String?> showVoiceComposer(BuildContext context, String date) {
-  return showGeneralDialog<String>(
-    context: context,
-    barrierDismissible: false,
-    barrierLabel: 'Dismiss voice recorder',
-    barrierColor: const Color(0x00000000),
-    transitionDuration: Motion.modalPop,
-    pageBuilder: (
-      BuildContext dialogContext,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-    ) {
-      return DialogHost(
-        child: ComposerShell(child: VoiceComposerConnector(date: date)),
-      );
-    },
-    transitionBuilder: (
-      BuildContext dialogContext,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-    ) {
-      final Animation<double> curved = CurvedAnimation(
-        parent: animation,
-        curve: Motion.entranceCurve,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
-          child: child,
-        ),
-      );
-    },
+  return showImmersiveRecorder<String>(
+    context,
+    barrierLabel: voiceRecorderBarrierLabel,
+    builder: (BuildContext context) => VoiceComposerConnector(date: date),
   );
 }
 
