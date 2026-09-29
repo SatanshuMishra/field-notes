@@ -329,7 +329,9 @@ void main() {
       );
       expect(
         label.text.style,
-        DefaultTextStyle.of(anchor).style.merge(TypographyTokens.toolbarSans),
+        DefaultTextStyle.of(anchor).style.merge(
+          const FieldNotesTextStyles(FieldNotesColors.light).toolbarSans,
+        ),
       );
       expect(label.textScaler, MediaQuery.textScalerOf(anchor));
     },
