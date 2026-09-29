@@ -33,6 +33,18 @@ ThemeData fieldNotesTheme({
     fontFamily: TypographyTokens.sans,
     textTheme: _textTheme(FieldNotesTextStyles(colors)),
     iconTheme: IconThemeData(color: colors.ink),
+    timePickerTheme: TimePickerThemeData(
+      dayPeriodColor: WidgetStateColor.resolveWith(
+        (Set<WidgetState> states) => states.contains(WidgetState.selected)
+            ? Palette.coral
+            : const Color(0x00000000),
+      ),
+      dayPeriodTextColor: WidgetStateColor.resolveWith(
+        (Set<WidgetState> states) => states.contains(WidgetState.selected)
+            ? Palette.onAccent
+            : colors.ink,
+      ),
+    ),
     extensions: <ThemeExtension<dynamic>>[colors],
   );
 }

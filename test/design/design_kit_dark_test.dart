@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
 import '../support/theme_harness.dart';
@@ -146,7 +147,7 @@ void main() {
       find.byType(SettingsSegmented<String>),
     ).first;
     expect(track.color, _panelTop);
-    expect(_fillBehind(tester, 'On this device'), _cardBright);
+    expect(_fillBehind(tester, 'On this device'), Palette.coral);
   });
 
   testWidgets('dark toast and focus ring draw their dark colours', (

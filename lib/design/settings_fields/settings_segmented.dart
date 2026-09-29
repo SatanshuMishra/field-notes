@@ -9,10 +9,7 @@ import '../tokens/tokens.dart';
 const double _minTapTarget = 48;
 
 class SettingsSegment<T> {
-  const SettingsSegment({
-    required this.value,
-    required this.label,
-  });
+  const SettingsSegment({required this.value, required this.label});
 
   final T value;
   final String label;
@@ -87,9 +84,7 @@ class SettingsSegmented<T> extends StatelessWidget {
             borderRadius: Shapes.buttonBorderRadius,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: selected
-                    ? context.colors.cardBright
-                    : const Color(0x00000000),
+                color: selected ? Palette.coral : const Color(0x00000000),
                 border: selected ? shadows.outline : null,
                 borderRadius: Shapes.buttonBorderRadius,
                 boxShadow: selected ? shadows.button : const <BoxShadow>[],
@@ -99,7 +94,12 @@ class SettingsSegmented<T> extends StatelessWidget {
                   horizontal: 14,
                   vertical: 6,
                 ),
-                child: Text(segment.label, style: context.textStyles.labelSans),
+                child: Text(
+                  segment.label,
+                  style: context.textStyles.labelSans.copyWith(
+                    color: selected ? Palette.onAccent : context.colors.inkSoft,
+                  ),
+                ),
               ),
             ),
           ),
@@ -113,8 +113,7 @@ class _SegmentBand extends SingleChildRenderObjectWidget {
   const _SegmentBand({required Widget super.child});
 
   @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderSegmentBand();
+  RenderObject createRenderObject(BuildContext context) => _RenderSegmentBand();
 }
 
 class _RenderSegmentBand extends RenderShiftedBox {
@@ -127,16 +126,12 @@ class _RenderSegmentBand extends RenderShiftedBox {
       Size(child.width, math.max(child.height, _minTapTarget));
 
   @override
-  double computeMinIntrinsicHeight(double width) => math.max(
-    super.computeMinIntrinsicHeight(width),
-    _minTapTarget,
-  );
+  double computeMinIntrinsicHeight(double width) =>
+      math.max(super.computeMinIntrinsicHeight(width), _minTapTarget);
 
   @override
-  double computeMaxIntrinsicHeight(double width) => math.max(
-    super.computeMaxIntrinsicHeight(width),
-    _minTapTarget,
-  );
+  double computeMaxIntrinsicHeight(double width) =>
+      math.max(super.computeMaxIntrinsicHeight(width), _minTapTarget);
 
   @override
   Size computeDryLayout(covariant BoxConstraints constraints) {
