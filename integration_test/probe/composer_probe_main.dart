@@ -11,6 +11,7 @@ import 'package:field_notes/data/database/app_database.dart'
     show AppDatabase, MediaBlobsCompanion;
 import 'package:field_notes/data/drafts/filesystem_draft_store.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
+import 'package:field_notes/data/settings/drift_settings_repository.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/note_tree.dart';
 import 'package:field_notes/domain/notes/markdown/syntax_tree.dart';
@@ -756,6 +757,11 @@ final class _Probe {
     final ProbeStorage storage = await _storage.begin(name, fresh: fresh);
     PathProviderPlatform.instance = SandboxPathProvider(storage.root);
     final AppDatabase database = _openDatabase(storage);
+    if (storage.wiped) {
+      await DriftSettingsRepository(
+        database,
+      ).setOnboardingStatus(OnboardingStatus.done);
+    }
     _storage = storage;
     _database = database;
     _resetSurface();
