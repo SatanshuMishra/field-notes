@@ -15,6 +15,7 @@ import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
 import '../capture/core/capture_test_support.dart' show FakeDraftStore;
+import '../../support/ax_update_checker.dart';
 import '../../support/note_editor_driver.dart';
 import '../entry_cards/support/reading_path.dart';
 import 'support/day_detail_harness.dart';
@@ -533,5 +534,35 @@ void main() {
 
     expect(find.byKey(const ValueKey<String>('entry-0')), findsOneWidget);
     expect(find.byKey(const ValueKey<String>('entry-30')), findsNothing);
+  });
+
+  testWidgets(
+      'scrolling a day of 40 notes sends no accessibility update macOS rejects',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final FakeJournalRepository repository = FakeJournalRepository(
+      entries: <Entry>[
+        for (int i = 0; i < 40; i++)
+          entryOf(
+            id: 'entry-$i',
+            type: EntryType.text,
+            textContent: 'journal note number $i for the day',
+          ),
+      ],
+    );
+    AxUpdateChecker.instance.reset();
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_panelApp(repository));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.drag(find.byType(ListView), const Offset(0, 400));
+    await tester.pumpAndSettle();
+
+    expect(AxUpdateChecker.instance.updates, greaterThan(0));
+    expect(AxUpdateChecker.instance.rejections, isEmpty);
+    semantics.dispose();
   });
 }

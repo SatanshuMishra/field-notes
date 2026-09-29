@@ -77,14 +77,9 @@ double _opacity(WidgetTester tester, [Key revealKey = _revealAKey]) {
 void main() {
   testWidgets('the pill is hidden until the card is hovered',
       (WidgetTester tester) async {
-    int deletes = 0;
-    await tester.pumpWidget(_harness(onEdit: () {}, onDelete: () => deletes++));
+    await tester.pumpWidget(_harness(onEdit: () {}, onDelete: () {}));
 
-    expect(_opacity(tester), 0);
-    await tester.tapAt(tester.getCenter(find.byKey(logActionsDeleteKey)));
-    await _settleReveal(tester);
-    expect(deletes, 0);
-    expect(_opacity(tester), 0);
+    expect(_pillOf(_revealAKey), findsNothing);
 
     final TestGesture mouse =
         await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -99,7 +94,7 @@ void main() {
   testWidgets('keyboard focus inside the card reveals the pill',
       (WidgetTester tester) async {
     await tester.pumpWidget(_harness(onEdit: () {}, onDelete: () {}));
-    expect(_opacity(tester), 0);
+    expect(_pillOf(_revealAKey), findsNothing);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.tab);
     await _settleReveal(tester);
@@ -118,7 +113,7 @@ void main() {
     await tester.tapAt(tester.getTopLeft(find.byKey(_outsideKey)) +
         const Offset(4, 4));
     await _settleReveal(tester);
-    expect(_opacity(tester), 0);
+    expect(_pillOf(_revealAKey), findsNothing);
   });
 
   testWidgets("a tap just below a button's top edge runs its action",
@@ -143,6 +138,9 @@ void main() {
       (WidgetTester tester) async {
     await tester.pumpWidget(_harness(onDelete: () {}));
 
+    await tester.longPress(find.byKey(_cardAKey));
+    await _settleReveal(tester);
+
     expect(find.byKey(logActionsEditKey), findsNothing);
     expect(find.byKey(logActionsDeleteKey), findsOneWidget);
   });
@@ -160,7 +158,7 @@ void main() {
     await _settleReveal(tester);
 
     expect(edits, 1);
-    expect(_opacity(tester), 0);
+    expect(_pillOf(_revealAKey), findsNothing);
   });
 
   testWidgets("revealing one card's pill hides another's",
@@ -172,11 +170,11 @@ void main() {
     await tester.longPress(find.byKey(_cardAKey));
     await _settleReveal(tester);
     expect(_opacity(tester, _revealAKey), 1);
-    expect(_opacity(tester, _revealBKey), 0);
+    expect(_pillOf(_revealBKey), findsNothing);
 
     await tester.longPress(find.byKey(_cardBKey));
     await _settleReveal(tester);
-    expect(_opacity(tester, _revealAKey), 0);
+    expect(_pillOf(_revealAKey), findsNothing);
     expect(_opacity(tester, _revealBKey), 1);
   });
 }

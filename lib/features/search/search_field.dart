@@ -41,7 +41,7 @@ class _SearchFieldState extends ConsumerState<SearchField> {
       borderRadius: BorderRadius.circular(Shapes.radiusSm),
       borderSide: BorderSide(color: colors.line, width: Shapes.outlineWidth),
     );
-    return Semantics(
+    final Widget field = Semantics(
       label: _name,
       child: TextField(
         controller: _controller,
@@ -60,7 +60,9 @@ class _SearchFieldState extends ConsumerState<SearchField> {
             ),
           ),
           prefixIcon: Icon(Icons.search, color: colors.mutedDeep),
-          suffixIcon: query.isEmpty ? null : _ClearButton(onPressed: _clear),
+          suffixIcon: query.isEmpty
+              ? null
+              : const SizedBox.square(dimension: kMinInteractiveDimension),
           filled: true,
           fillColor: colors.cardBright,
           contentPadding: const EdgeInsets.symmetric(
@@ -72,6 +74,13 @@ class _SearchFieldState extends ConsumerState<SearchField> {
           focusedBorder: border,
         ),
       ),
+    );
+    return Stack(
+      alignment: Alignment.centerRight,
+      children: <Widget>[
+        field,
+        if (query.isNotEmpty) _ClearButton(onPressed: _clear),
+      ],
     );
   }
 

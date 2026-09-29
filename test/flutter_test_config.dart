@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:flutter_test/flutter_test.dart';
+
+import 'support/ax_update_checker.dart';
 
 const Map<String, List<String>> _fontFamilies = <String, List<String>>{
   'Newsreader': <String>[
@@ -14,7 +15,7 @@ const Map<String, List<String>> _fontFamilies = <String, List<String>>{
 };
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  AxCheckingBinding.ensureInitialized();
   for (final MapEntry<String, List<String>> family in _fontFamilies.entries) {
     final FontLoader loader = FontLoader(family.key);
     for (final String asset in family.value) {
