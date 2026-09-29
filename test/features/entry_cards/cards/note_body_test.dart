@@ -97,7 +97,9 @@ void main() {
         reader.noteLayout.fragments.first.lineBox.rect.height,
         closeTo(16 * 1.6, 0.01),
       );
-      const TextStyle body = TypographyTokens.noteBody;
+      final TextStyle body = FieldNotesTextStyles(
+        FieldNotesColors.light,
+      ).noteBody;
       final double width = firstNoteLineSize(reader).width;
       expect(width, closeTo(_runWidth('a quiet morning', body), 0.01));
       expect(
@@ -159,9 +161,12 @@ void main() {
       expect(find.text('Empty note'), findsOneWidget);
       final Text text = tester.widget<Text>(find.text('Empty note'));
       expect(text.style!.fontFamily, TypographyTokens.serif);
-      expect(text.style!.fontSize, TypographyTokens.noteBody.fontSize);
+      expect(
+        text.style!.fontSize,
+        FieldNotesTextStyles(FieldNotesColors.light).noteBody.fontSize,
+      );
       expect(text.style!.fontStyle, FontStyle.italic);
-      expect(text.style!.color, Palette.muted);
+      expect(text.style!.color, FieldNotesColors.light.muted);
     });
 
     testWidgets('fills a narrow parent edge to edge', (

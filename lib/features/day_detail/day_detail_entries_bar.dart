@@ -43,16 +43,17 @@ class DayDetailEntriesBar extends StatelessWidget {
               ? const SizedBox.shrink()
               : Text(
                   dayDetailEntryCountLabel(count),
-                  style: TypographyTokens.stampAccent,
+                  style: context.textStyles.stampAccent,
                 ),
         ),
         const SizedBox(width: _rowGap),
-        _addNoteButton(),
+        _addNoteButton(context),
       ],
     );
   }
 
-  Widget _addNoteButton() {
+  Widget _addNoteButton(BuildContext context) {
+    final FieldNotesShadows shadows = context.shadows;
     return Semantics(
       button: true,
       enabled: onAddNote != null,
@@ -77,11 +78,11 @@ class DayDetailEntriesBar extends StatelessWidget {
                   horizontal: _buttonHorizontalPadding,
                   vertical: _buttonVerticalPadding,
                 ),
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   color: Palette.coral,
-                  border: Shapes.outline,
+                  border: shadows.outline,
                   borderRadius: Shapes.buttonBorderRadius,
-                  boxShadow: Shadows.control,
+                  boxShadow: shadows.control,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -93,7 +94,7 @@ class DayDetailEntriesBar extends StatelessWidget {
                     const SizedBox(width: _plusGap),
                     Text(
                       addNoteLabel,
-                      style: TypographyTokens.captureLabelSans.copyWith(
+                      style: context.textStyles.captureLabelSans.copyWith(
                         color: Palette.onAccent,
                       ),
                     ),

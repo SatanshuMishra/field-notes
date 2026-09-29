@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,6 +52,12 @@ const double _cardGap = 9;
 
 const int _focusScanFrames = 32;
 const double _focusAlignment = 0.1;
+
+Color _panelPaperFor(Brightness brightness, FieldNotesColors colors) =>
+    switch (brightness) {
+      Brightness.light => colors.panelTop,
+      Brightness.dark => colors.composerPaper,
+    };
 
 class DayDetailPanel extends ConsumerStatefulWidget {
   const DayDetailPanel({
@@ -215,6 +222,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     );
     final MediaResolver? resolver = resolverAsync.value;
     final List<Entry> listed = resolver == null ? const <Entry>[] : entries;
+    final FieldNotesColors colors = context.colors;
 
     return Center(
       child: ConstrainedBox(
@@ -226,8 +234,8 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
           width: width,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
-            color: Palette.panelTop,
-            border: Border.all(color: Palette.ink, width: _panelBorderWidth),
+            color: _panelPaperFor(Theme.of(context).brightness, colors),
+            border: Border.all(color: colors.line, width: _panelBorderWidth),
             borderRadius: BorderRadius.circular(Shapes.radiusXl),
             boxShadow: Shadows.panelLift,
           ),
@@ -363,7 +371,9 @@ class _DayDetailMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+      style: context.textStyles.captionSans.copyWith(
+        color: context.colors.dangerInk,
+      ),
     );
   }
 }

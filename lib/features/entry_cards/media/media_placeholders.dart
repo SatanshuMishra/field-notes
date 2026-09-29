@@ -8,9 +8,7 @@ const double _retryTarget = 48;
 const double _retryChipHeight = 32;
 const String retryMediaLabel = 'Try again';
 const ValueKey<String> retryMediaKey = ValueKey<String>('media-retry');
-const Border _retryFocusOutline = Border.fromBorderSide(
-  BorderSide(color: Palette.ink, width: 3),
-);
+const double _retryFocusWidth = 3;
 
 class CorruptMediaPlaceholder extends StatelessWidget {
   const CorruptMediaPlaceholder({
@@ -31,11 +29,12 @@ class CorruptMediaPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? retry = onRetry;
+    final FieldNotesColors colors = context.colors;
     return CrossHatchPlaceholder(
       width: width,
       height: height,
       borderRadius: borderRadius,
-      background: Palette.dangerSurface,
+      background: colors.dangerSurface,
       hatchColor: Palette.danger,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -45,8 +44,8 @@ class CorruptMediaPlaceholder extends StatelessWidget {
             Text(
               label,
               textAlign: TextAlign.center,
-              style: TypographyTokens.captionSans.copyWith(
-                color: Palette.danger,
+              style: context.textStyles.captionSans.copyWith(
+                color: colors.dangerInk,
               ),
             ),
             if (retry != null) _MediaRetryButton(onTap: retry),
@@ -83,6 +82,7 @@ class _MediaRetryButtonState extends State<_MediaRetryButton> {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return FocusableActionDetector(
       actions: <Type, Action<Intent>>{
         ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: _activate),
@@ -105,15 +105,22 @@ class _MediaRetryButtonState extends State<_MediaRetryButton> {
                 height: _retryChipHeight,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Palette.cardBright,
-                  border: _focused ? _retryFocusOutline : Shapes.outline,
+                  color: colors.cardBright,
+                  border: _focused
+                      ? Border.fromBorderSide(
+                          BorderSide(
+                            color: colors.ink,
+                            width: _retryFocusWidth,
+                          ),
+                        )
+                      : context.shadows.outline,
                   borderRadius: Shapes.buttonBorderRadius,
                 ),
-                child: const Center(
+                child: Center(
                   child: ExcludeSemantics(
                     child: Text(
                       retryMediaLabel,
-                      style: TypographyTokens.captionSans,
+                      style: context.textStyles.captionSans,
                     ),
                   ),
                 ),

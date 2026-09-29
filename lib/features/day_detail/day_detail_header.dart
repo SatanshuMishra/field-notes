@@ -41,6 +41,8 @@ class DayDetailHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final DayDetailHeading heading = dayDetailHeadingFor(date, today: today);
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -54,7 +56,7 @@ class DayDetailHeader extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              _backButton(),
+              _backButton(context),
               const SizedBox(width: _headerGap - _backReach),
               Expanded(
                 child: Column(
@@ -65,13 +67,13 @@ class DayDetailHeader extends StatelessWidget {
                       dayDetailKickerFor(date, today: today),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TypographyTokens.stampAccent.copyWith(
-                        color: Palette.coral,
+                      style: textStyles.stampAccent.copyWith(
+                        color: colors.accentInk,
                       ),
                     ),
                     Text(
                       heading.title,
-                      style: TypographyTokens.headlineSerif.copyWith(
+                      style: textStyles.headlineSerif.copyWith(
                         height: _titleLineHeight,
                       ),
                     ),
@@ -81,12 +83,13 @@ class DayDetailHeader extends StatelessWidget {
             ],
           ),
         ),
-        const DashedDivider(thickness: _ruleThickness, color: Palette.ink25),
+        DashedDivider(thickness: _ruleThickness, color: colors.ink25),
       ],
     );
   }
 
-  Widget _backButton() {
+  Widget _backButton(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return Semantics(
       button: true,
       label: closeLabel,
@@ -111,14 +114,16 @@ class DayDetailHeader extends StatelessWidget {
                 width: _backExtent,
                 height: _backExtent,
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: Palette.cardWarm,
-                  border: Shapes.outline,
+                decoration: BoxDecoration(
+                  color: colors.cardWarm,
+                  border: context.shadows.outline,
                   borderRadius: _backBorderRadius,
                 ),
-                child: const SizedBox.square(
+                child: SizedBox.square(
                   dimension: _chevronExtent,
-                  child: CustomPaint(painter: _BackChevronPainter()),
+                  child: CustomPaint(
+                    painter: _BackChevronPainter(color: colors.ink),
+                  ),
                 ),
               ),
             ),
@@ -130,12 +135,14 @@ class DayDetailHeader extends StatelessWidget {
 }
 
 class _BackChevronPainter extends CustomPainter {
-  const _BackChevronPainter();
+  const _BackChevronPainter({required this.color});
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint stroke = Paint()
-      ..color = Palette.ink
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = _chevronStrokeWidth
       ..strokeCap = StrokeCap.round
@@ -151,5 +158,6 @@ class _BackChevronPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BackChevronPainter oldDelegate) => false;
+  bool shouldRepaint(_BackChevronPainter oldDelegate) =>
+      color != oldDelegate.color;
 }
