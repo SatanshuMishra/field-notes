@@ -1,7 +1,9 @@
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/widgets/sticker_button.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart'
     as capabilities;
+import 'package:field_notes/features/onboarding/onboarding.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -97,6 +99,17 @@ class JournalSection extends ConsumerWidget {
               ),
             ),
           ),
+        SettingsFieldRow(
+          label: 'Show the tour again',
+          description: 'Six quick tips about the app.',
+          control: StickerButton(
+            label: 'Show tour',
+            variant: StickerButtonVariant.secondary,
+            padTapTarget: true,
+            onPressed: () =>
+                ref.read(onboardingControllerProvider.notifier).replayTour(),
+          ),
+        ),
       ],
     );
   }
