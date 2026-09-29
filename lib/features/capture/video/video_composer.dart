@@ -111,7 +111,7 @@ class _VideoComposerConnectorState
       rememberedId: ref.read(selectedCameraDeviceProvider),
     );
     if (deviceId == null) {
-      _showDenied();
+      _showDenied(message: videoDeviceListMessage);
       return;
     }
     ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
@@ -178,10 +178,6 @@ class _VideoComposerConnectorState
   Future<void> _start() async {
     switch (_phase) {
       case VideoRecorderPhase.denied:
-        setState(() {
-          _phase = VideoRecorderPhase.preparing;
-          _errorMessage = null;
-        });
         await _prepare();
       case VideoRecorderPhase.idle:
         _breathe();

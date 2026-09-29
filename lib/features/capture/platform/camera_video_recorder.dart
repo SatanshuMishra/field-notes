@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:camera_macos/camera_macos.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -420,6 +421,13 @@ class CameraMacosVideoRecorder implements VideoRecorder {
     try {
       devices = await CameraMacOS.instance
           .listDevices(deviceType: CameraMacOSDeviceType.video);
+    } on PlatformException catch (error) {
+      throw VideoRecorderException(
+        error.message == _cameraPermissionRefusal
+            ? cameraPermissionMessage
+            : videoDeviceListMessage,
+        cause: error,
+      );
     } catch (error) {
       throw VideoRecorderException(videoDeviceListMessage, cause: error);
     }
@@ -664,3 +672,4 @@ class CameraMacosVideoRecorder implements VideoRecorder {
 
 const double videoHardCapSeconds = 30 * 60;
 const Duration cameraStartTimeout = Duration(seconds: 12);
+const String _cameraPermissionRefusal = 'Permission not granted';
