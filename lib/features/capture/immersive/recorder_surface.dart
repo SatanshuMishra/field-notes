@@ -434,7 +434,7 @@ class _Stage extends StatelessWidget {
               ? _sidebarQuestionMaxWidth - 2 * _sidebarQuestionGutter
               : double.infinity,
         ),
-        child: _ShrinkToFit(child: question),
+        child: question,
       ),
     );
   }
@@ -533,28 +533,6 @@ class _StageBodyDelegate extends MultiChildLayoutDelegate {
   bool shouldRelayout(_StageBodyDelegate oldDelegate) =>
       oldDelegate.questionGap != questionGap ||
       oldDelegate.reserveCentre != reserveCentre;
-}
-
-class _ShrinkToFit extends StatelessWidget {
-  const _ShrinkToFit({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        if (!constraints.maxWidth.isFinite) {
-          return child;
-        }
-        return FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.topCenter,
-          child: SizedBox(width: constraints.maxWidth, child: child),
-        );
-      },
-    );
-  }
 }
 
 class _EllipseToBox extends GradientTransform {

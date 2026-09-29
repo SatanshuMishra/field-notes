@@ -322,6 +322,7 @@ void showTransientToast(
   IconStickerGlyph glyph = IconStickerGlyph.check,
   ToastAction? action,
   Duration? lifetime,
+  Future<void>? after,
 }) {
   final OverlayState overlay = Overlay.of(context, rootOverlay: true);
   final FocusScopeNode? focusHost = Focus.maybeOf(
@@ -361,8 +362,23 @@ void showTransientToast(
       onFinished: finish,
     ),
   );
+  void reveal() {
+    if (!identical(_activeTransientToast, entry)) {
+      return;
+    }
+    if (!overlay.mounted) {
+      _activeTransientToast = null;
+      return;
+    }
+    overlay.insert(entry);
+  }
+
   _activeTransientToast = entry;
-  overlay.insert(entry);
+  if (after == null) {
+    reveal();
+    return;
+  }
+  unawaited(after.then<void>((_) => reveal(), onError: (Object _) => reveal()));
 }
 
 class _TransientToastLayer extends StatefulWidget {

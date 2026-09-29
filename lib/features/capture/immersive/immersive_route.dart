@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/dialog_host.dart';
+import 'package:field_notes/design/feedback/toast.dart';
 
 import 'stage_phase.dart';
 
@@ -48,4 +49,19 @@ Future<T?> showImmersiveRecorder<T>(
           );
         },
   );
+}
+
+void closeImmersiveRecorder<T extends Object?>(
+  BuildContext context, {
+  T? result,
+  String? toast,
+}) {
+  if (toast != null) {
+    showTransientToast(
+      context,
+      toast,
+      after: ModalRoute.of(context)?.completed,
+    );
+  }
+  Navigator.of(context).pop<T>(result);
 }

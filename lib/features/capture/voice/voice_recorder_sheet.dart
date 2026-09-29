@@ -33,7 +33,6 @@ const Key voiceKeyHintKey = ValueKey<String>('voice-key-hint');
 
 const String voiceSidebarPrivacyLine = 'Private · only you will hear this';
 const String voiceBottomBarPrivacyLine = 'Only you will hear this';
-const String voiceKeyHint = 'space pause · ⌘↩ keep · esc leave';
 const String voiceSavingStatus = 'Saving your recording…';
 const String voiceKeepLabel = 'Keep this';
 const String voiceStartLabel = 'Start recording';
@@ -147,32 +146,61 @@ class VoiceRecorderSheet extends StatelessWidget {
 
   bool get _canKeep => phase.isTaking && !asking;
 
-  VoidCallback? get _orbTap {
+  RecorderPrimaryVerb? get _orbVerb {
     if (asking) {
       return null;
     }
     return switch (phase) {
-      VoiceRecorderPhase.idle || VoiceRecorderPhase.breathing => onStart,
-      VoiceRecorderPhase.recording => onPause,
-      VoiceRecorderPhase.paused => onResume,
+      VoiceRecorderPhase.idle ||
+      VoiceRecorderPhase.breathing => RecorderPrimaryVerb.start,
+      VoiceRecorderPhase.recording => RecorderPrimaryVerb.pause,
+      VoiceRecorderPhase.paused => RecorderPrimaryVerb.resume,
       VoiceRecorderPhase.saving => null,
     };
   }
+
+  VoidCallback? get _orbTap => switch (_orbVerb) {
+    RecorderPrimaryVerb.start => onStart,
+    RecorderPrimaryVerb.pause => onPause,
+    RecorderPrimaryVerb.resume => onResume,
+    RecorderPrimaryVerb.keep => onStop,
+    null => null,
+  };
+
+  VoidCallback? get _keepKey => _canKeep ? onStop : null;
+
+  RecorderLeaveVerb? get _leaveVerb {
+    if (_saving) {
+      return null;
+    }
+    return asking && onDismiss != null
+        ? RecorderLeaveVerb.keepGoing
+        : RecorderLeaveVerb.leave;
+  }
+
+  VoidCallback? get _leaveKey =>
+      _leaveVerb == null ? null : (onDismiss ?? onCancel);
+
+  String get _keyHint => recorderKeyHint(
+    primary: _orbTap == null ? null : _orbVerb,
+    keep: _keepKey != null,
+    leave: _leaveKey == null ? null : _leaveVerb,
+  );
 
   @override
   Widget build(BuildContext context) {
     final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
     return RecorderShortcuts(
       onPrimary: _orbTap,
-      onKeep: _canKeep ? onStop : null,
-      onLeave: _saving ? null : (onDismiss ?? onCancel),
+      onKeep: _keepKey,
+      onLeave: _leaveKey,
       child: RecorderSurface(
         leaveKey: voiceCloseKey,
         privacyLine: sidebar
             ? voiceSidebarPrivacyLine
             : voiceBottomBarPrivacyLine,
         onLeave: _saving || asking ? null : onCancel,
-        trailing: sidebar ? const _KeyHint() : null,
+        trailing: sidebar ? _KeyHint(text: _keyHint) : null,
         question: ReflectionPrompt(phase: phase.stage, showKicker: true),
         centre: _OrbZone(phase: phase, sidebar: sidebar, onTap: _orbTap),
         status: _status(),
@@ -238,19 +266,21 @@ class VoiceRecorderSheet extends StatelessWidget {
 }
 
 class _KeyHint extends StatelessWidget {
-  const _KeyHint();
+  const _KeyHint({required this.text});
+
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return const ExcludeSemantics(
+    return ExcludeSemantics(
       child: Text(
-        voiceKeyHint,
+        text,
         key: voiceKeyHintKey,
         maxLines: 1,
         softWrap: false,
         overflow: TextOverflow.fade,
         textAlign: TextAlign.right,
-        style: TextStyle(
+        style: const TextStyle(
           fontFamily: TypographyTokens.sans,
           fontSize: _keyHintSize,
           fontWeight: FontWeight.w500,

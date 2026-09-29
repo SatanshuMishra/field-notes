@@ -42,8 +42,6 @@ const String videoSkipBreathLabel = 'Skip the breath';
 const String videoPauseLabel = 'Pause recording';
 const String videoResumeLabel = 'Resume recording';
 const String videoStopAndKeepLabel = 'Stop and keep';
-const String videoKeyboardHint = 'space pause · ⌘↩ keep · esc leave';
-const String videoNoPauseKeyboardHint = 'space start · ⌘↩ keep · esc leave';
 
 const Color _hintInk = Color(0xFFB7A58C);
 const Color _errorInk = Color(0xFFE79A80);
@@ -204,34 +202,60 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
 
   void _setSelfView(bool value) => setState(() => _selfView = value);
 
-  VoidCallback? get _shutterTap {
+  RecorderPrimaryVerb? get _shutterVerb {
     if (_isSaving || _isGettingReady || _isAsking) {
       return null;
     }
     if (_isRecording) {
-      return _canPause ? widget.onPause : widget.onStop;
+      return _canPause ? RecorderPrimaryVerb.pause : RecorderPrimaryVerb.keep;
     }
     if (_isPaused) {
-      return widget.onResume ?? widget.onStop;
+      return widget.onResume != null
+          ? RecorderPrimaryVerb.resume
+          : RecorderPrimaryVerb.keep;
     }
-    return widget.onStart;
+    return RecorderPrimaryVerb.start;
   }
 
-  VoidCallback? get _primaryKey {
+  VoidCallback? _primaryAction(RecorderPrimaryVerb? verb) => switch (verb) {
+    RecorderPrimaryVerb.start => widget.onStart,
+    RecorderPrimaryVerb.pause => widget.onPause,
+    RecorderPrimaryVerb.resume => widget.onResume,
+    RecorderPrimaryVerb.keep => widget.onStop,
+    null => null,
+  };
+
+  VoidCallback? get _shutterTap => _primaryAction(_shutterVerb);
+
+  RecorderPrimaryVerb? get _primaryVerb {
     if (_isRecording && !_canPause) {
       return null;
     }
-    return _shutterTap;
+    return _shutterVerb;
   }
+
+  VoidCallback? get _primaryKey => _primaryAction(_primaryVerb);
 
   VoidCallback? get _keepKey => _isTaking ? widget.onStop : null;
 
-  VoidCallback? get _leaveKey {
+  RecorderLeaveVerb? get _leaveVerb {
     if (_isSaving) {
       return null;
     }
-    return _isAsking ? widget.onKeepGoing : widget.onLeave;
+    return _isAsking ? RecorderLeaveVerb.keepGoing : RecorderLeaveVerb.leave;
   }
+
+  VoidCallback? get _leaveKey => switch (_leaveVerb) {
+    RecorderLeaveVerb.keepGoing => widget.onKeepGoing,
+    RecorderLeaveVerb.leave => widget.onLeave,
+    null => null,
+  };
+
+  String get _keyHint => recorderKeyHint(
+    primary: _primaryKey == null ? null : _primaryVerb,
+    keep: _keepKey != null,
+    leave: _leaveKey == null ? null : _leaveVerb,
+  );
 
   String get _shutterLabel {
     if (_phase == VideoRecorderPhase.breathing) {
@@ -655,7 +679,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
 
   Widget _keyboardHint() {
     return Text(
-      widget.supportsPause ? videoKeyboardHint : videoNoPauseKeyboardHint,
+      _keyHint,
       key: videoKeyboardHintKey,
       maxLines: 1,
       softWrap: false,

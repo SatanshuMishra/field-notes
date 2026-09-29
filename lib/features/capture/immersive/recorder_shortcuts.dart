@@ -1,6 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+enum RecorderPrimaryVerb {
+  start('start'),
+  pause('pause'),
+  resume('resume'),
+  keep('keep');
+
+  const RecorderPrimaryVerb(this.word);
+
+  final String word;
+}
+
+enum RecorderLeaveVerb {
+  leave('leave'),
+  keepGoing('keep going');
+
+  const RecorderLeaveVerb(this.word);
+
+  final String word;
+}
+
+String recorderKeyHint({
+  RecorderPrimaryVerb? primary,
+  bool keep = false,
+  RecorderLeaveVerb? leave,
+}) {
+  return <String>[
+    if (primary != null) 'space ${primary.word}',
+    if (keep) '⌘↩ keep',
+    if (leave != null) 'esc ${leave.word}',
+  ].join(' · ');
+}
+
 class RecorderShortcuts extends StatelessWidget {
   const RecorderShortcuts({
     super.key,

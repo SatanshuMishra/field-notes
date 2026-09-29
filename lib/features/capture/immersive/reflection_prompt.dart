@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show precisionErrorTolerance;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -40,6 +41,10 @@ const double _sidebarQuestionLeading = 1.22;
 const double _bottomBarQuestionLeading = 1.26;
 const int _sidebarQuestionLines = 3;
 const int _bottomBarQuestionLines = 4;
+const double _sidebarQuestionFloor = _bottomBarQuestionSize;
+const double _bottomBarQuestionFloor = 18;
+const double _kickerFloor = 12;
+const double _readableQuestion = 12;
 const double _sidebarKickerGap = 10;
 const double _bottomBarKickerGap = 6;
 const double _sidebarShuffleSize = 12;
@@ -51,6 +56,206 @@ const EdgeInsets _shufflePadding = EdgeInsets.symmetric(
 );
 const BorderRadius _shuffleRadius = BorderRadius.all(Radius.circular(14));
 const int _balanceSteps = 16;
+const int _fitSteps = 12;
+
+typedef _FitKey = ({
+  double width,
+  double height,
+  int index,
+  bool sidebar,
+  bool showKicker,
+  TextScaler scaler,
+  TextStyle base,
+  bool bold,
+  TextDirection direction,
+  TextHeightBehavior? heightBehavior,
+  Locale? locale,
+});
+
+typedef _Fit = ({double question, double? kicker, double gap});
+
+typedef _FitMemo = ({_FitKey key, _Fit? fit});
+
+const _Fit _unfitted = (question: 1, kicker: 1, gap: 1);
+
+double _questionSize(bool sidebar) {
+  return sidebar ? _sidebarQuestionSize : _bottomBarQuestionSize;
+}
+
+int _questionLines(bool sidebar) {
+  return sidebar ? _sidebarQuestionLines : _bottomBarQuestionLines;
+}
+
+TextStyle _kickerStyle(double scale) {
+  return TextStyle(
+    fontFamily: TypographyTokens.accent,
+    fontSize: _kickerSize * scale,
+    fontWeight: FontWeight.w600,
+    color: _kickerInk,
+  );
+}
+
+double _kickerGap(bool sidebar, double scale) {
+  return (sidebar ? _sidebarKickerGap : _bottomBarKickerGap) * scale;
+}
+
+TextStyle _questionStyle(bool sidebar, double scale) {
+  return TextStyle(
+    fontFamily: TypographyTokens.serif,
+    fontSize: _questionSize(sidebar) * scale,
+    fontWeight: FontWeight.w400,
+    fontStyle: FontStyle.italic,
+    height: sidebar ? _sidebarQuestionLeading : _bottomBarQuestionLeading,
+    color: _questionInk,
+  );
+}
+
+TextStyle _rendered(TextStyle base, TextStyle style, {required bool bold}) {
+  final TextStyle merged = base.merge(style);
+  return bold
+      ? merged.merge(const TextStyle(fontWeight: FontWeight.bold))
+      : merged;
+}
+
+double _search(double pass, double fail, bool Function(double) passes) {
+  if (passes(fail)) {
+    return fail;
+  }
+  double good = pass;
+  double bad = fail;
+  for (int step = 0; step < _fitSteps; step++) {
+    final double probe = (good + bad) / 2;
+    if (passes(probe)) {
+      good = probe;
+    } else {
+      bad = probe;
+    }
+  }
+  return good;
+}
+
+double _floorFactor(TextScaler scaler, double size, double floor) {
+  final double full = scaler.scale(size);
+  if (full <= floor) {
+    return 1;
+  }
+  final double linear = floor / full;
+  final double atLinear = scaler.scale(size * linear);
+  if ((atLinear - floor).abs() <= precisionErrorTolerance) {
+    return linear;
+  }
+  bool holds(double factor) => scaler.scale(size * factor) >= floor;
+  return atLinear > floor
+      ? _search(linear, 0, holds)
+      : _search(1, linear, holds);
+}
+
+_Fit? _searchFit(_FitKey key) {
+  double measure(String text, TextStyle style, int? maxLines) {
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: _rendered(key.base, style, bold: key.bold),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: key.direction,
+      textScaler: key.scaler,
+      textHeightBehavior: key.heightBehavior,
+      locale: key.locale,
+      maxLines: maxLines,
+    );
+    try {
+      painter.layout(maxWidth: key.width);
+      return painter.height;
+    } finally {
+      painter.dispose();
+    }
+  }
+
+  double heightOf(_Fit fit) {
+    final double question = measure(
+      reflectionQuestions[key.index],
+      _questionStyle(key.sidebar, fit.question),
+      _questionLines(key.sidebar),
+    );
+    final double? kicker = key.showKicker ? fit.kicker : null;
+    if (kicker == null) {
+      return question;
+    }
+    return measure(reflectionKicker, _kickerStyle(kicker), null) +
+        _kickerGap(key.sidebar, fit.gap) +
+        question;
+  }
+
+  bool fits(_Fit fit) => heightOf(fit) <= key.height;
+
+  if (fits(_unfitted)) {
+    return _unfitted;
+  }
+  final double questionFloor = _floorFactor(
+    key.scaler,
+    _questionSize(key.sidebar),
+    key.sidebar ? _sidebarQuestionFloor : _bottomBarQuestionFloor,
+  );
+  final double kickerFloor = _floorFactor(
+    key.scaler,
+    _kickerSize,
+    _kickerFloor,
+  );
+  _Fit proportional(double scale) {
+    return (question: scale, kicker: math.max(scale, kickerFloor), gap: scale);
+  }
+
+  final _Fit floored = proportional(questionFloor);
+  if (fits(floored)) {
+    return proportional(
+      _search(questionFloor, 1, (double scale) => fits(proportional(scale))),
+    );
+  }
+  if (key.showKicker) {
+    _Fit shrunk({required double kicker, required double gap}) {
+      return (question: questionFloor, kicker: kicker, gap: gap);
+    }
+
+    final double kickerCeiling = math.max(questionFloor, kickerFloor);
+    if (fits(shrunk(kicker: kickerFloor, gap: questionFloor))) {
+      return shrunk(
+        kicker: _search(
+          kickerFloor,
+          kickerCeiling,
+          (double kicker) => fits(shrunk(kicker: kicker, gap: questionFloor)),
+        ),
+        gap: questionFloor,
+      );
+    }
+    if (fits(shrunk(kicker: kickerFloor, gap: 0))) {
+      return shrunk(
+        kicker: kickerFloor,
+        gap: _search(
+          0,
+          questionFloor,
+          (double gap) => fits(shrunk(kicker: kickerFloor, gap: gap)),
+        ),
+      );
+    }
+  }
+  _Fit alone(double scale) {
+    return (question: scale, kicker: null, gap: 0);
+  }
+
+  final _Fit last = alone(questionFloor);
+  final double lastHeight = heightOf(last);
+  if (lastHeight <= key.height) {
+    return alone(
+      _search(questionFloor, 1, (double scale) => fits(alone(scale))),
+    );
+  }
+  final double readable =
+      key.scaler.scale(_questionSize(key.sidebar) * questionFloor) *
+      key.height /
+      lastHeight;
+  return readable < _readableQuestion ? null : last;
+}
 
 class ReflectionPrompt extends ConsumerStatefulWidget {
   const ReflectionPrompt({
@@ -70,6 +275,7 @@ class ReflectionPrompt extends ConsumerStatefulWidget {
 
 class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
   late int _index = _startIndex();
+  _FitMemo? _fitMemo;
 
   int _startIndex() {
     final int? initial = widget.initialIndex;
@@ -94,45 +300,103 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
           ? Duration.zero
           : reflectionFadeDuration,
       curve: Curves.ease,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (widget.showKicker) ...<Widget>[
-            const Text(
-              reflectionKicker,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: TypographyTokens.accent,
-                fontSize: _kickerSize,
-                fontWeight: FontWeight.w600,
-                color: _kickerInk,
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          if (constraints.maxHeight < _shuffleBand) {
+            return const SizedBox.shrink();
+          }
+          final _Fit? fit = _fitFor(context, sidebar, constraints);
+          if (fit == null) {
+            return const SizedBox.shrink();
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              _fitted(_words(sidebar, fit), constraints),
+              SizedBox(
+                height: _shuffleBand,
+                child: widget.phase == StagePhase.idle
+                    ? Center(child: _shuffleButton(sidebar))
+                    : null,
               ),
-            ),
-            SizedBox(height: sidebar ? _sidebarKickerGap : _bottomBarKickerGap),
-          ],
-          _BalancedText(
-            key: reflectionQuestionKey,
-            text: reflectionQuestions[_index],
-            maxLines: sidebar ? _sidebarQuestionLines : _bottomBarQuestionLines,
-            style: TextStyle(
-              fontFamily: TypographyTokens.serif,
-              fontSize: sidebar ? _sidebarQuestionSize : _bottomBarQuestionSize,
-              fontWeight: FontWeight.w400,
-              fontStyle: FontStyle.italic,
-              height: sidebar
-                  ? _sidebarQuestionLeading
-                  : _bottomBarQuestionLeading,
-              color: _questionInk,
-            ),
-          ),
-          SizedBox(
-            height: _shuffleBand,
-            child: widget.phase == StagePhase.idle
-                ? Center(child: _shuffleButton(sidebar))
-                : null,
-          ),
-        ],
+            ],
+          );
+        },
       ),
+    );
+  }
+
+  Widget _fitted(Widget words, BoxConstraints constraints) {
+    if (!constraints.maxWidth.isFinite) {
+      return words;
+    }
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: constraints.maxHeight - _shuffleBand,
+      ),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.topCenter,
+        child: SizedBox(width: constraints.maxWidth, child: words),
+      ),
+    );
+  }
+
+  _Fit? _fitFor(
+    BuildContext context,
+    bool sidebar,
+    BoxConstraints constraints,
+  ) {
+    final double width = constraints.maxWidth;
+    final double height = constraints.maxHeight - _shuffleBand;
+    if (!width.isFinite || !height.isFinite) {
+      return _unfitted;
+    }
+    final DefaultTextStyle ambient = DefaultTextStyle.of(context);
+    final _FitKey key = (
+      width: width,
+      height: height,
+      index: _index,
+      sidebar: sidebar,
+      showKicker: widget.showKicker,
+      scaler: MediaQuery.textScalerOf(context),
+      base: ambient.style,
+      bold: MediaQuery.boldTextOf(context),
+      direction: Directionality.of(context),
+      heightBehavior:
+          ambient.textHeightBehavior ??
+          DefaultTextHeightBehavior.maybeOf(context),
+      locale: Localizations.maybeLocaleOf(context),
+    );
+    final _FitMemo? memo = _fitMemo;
+    if (memo != null && memo.key == key) {
+      return memo.fit;
+    }
+    final _Fit? fit = _searchFit(key);
+    _fitMemo = (key: key, fit: fit);
+    return fit;
+  }
+
+  Widget _words(bool sidebar, _Fit fit) {
+    final double? kicker = widget.showKicker ? fit.kicker : null;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (kicker != null) ...<Widget>[
+          Text(
+            reflectionKicker,
+            textAlign: TextAlign.center,
+            style: _kickerStyle(kicker),
+          ),
+          SizedBox(height: _kickerGap(sidebar, fit.gap)),
+        ],
+        _BalancedText(
+          key: reflectionQuestionKey,
+          text: reflectionQuestions[_index],
+          maxLines: _questionLines(sidebar),
+          style: _questionStyle(sidebar, fit.question),
+        ),
+      ],
     );
   }
 
@@ -194,9 +458,18 @@ class _BalancedText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle painted = DefaultTextStyle.of(context).style.merge(style);
+    final DefaultTextStyle ambient = DefaultTextStyle.of(context);
+    final TextStyle painted = _rendered(
+      ambient.style,
+      style,
+      bold: MediaQuery.boldTextOf(context),
+    );
+    final TextHeightBehavior? heightBehavior =
+        ambient.textHeightBehavior ??
+        DefaultTextHeightBehavior.maybeOf(context);
     final TextScaler scaler = MediaQuery.textScalerOf(context);
     final TextDirection direction = Directionality.of(context);
+    final Locale? locale = Localizations.maybeLocaleOf(context);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final Widget label = Text(
@@ -214,6 +487,8 @@ class _BalancedText extends StatelessWidget {
             painted: painted,
             scaler: scaler,
             direction: direction,
+            heightBehavior: heightBehavior,
+            locale: locale,
             maxWidth: constraints.maxWidth,
           ),
           child: label,
@@ -226,6 +501,8 @@ class _BalancedText extends StatelessWidget {
     required TextStyle painted,
     required TextScaler scaler,
     required TextDirection direction,
+    required TextHeightBehavior? heightBehavior,
+    required Locale? locale,
     required double maxWidth,
   }) {
     final TextPainter painter = TextPainter(
@@ -233,6 +510,8 @@ class _BalancedText extends StatelessWidget {
       textAlign: TextAlign.center,
       textDirection: direction,
       textScaler: scaler,
+      textHeightBehavior: heightBehavior,
+      locale: locale,
       maxLines: maxLines,
     );
     try {
