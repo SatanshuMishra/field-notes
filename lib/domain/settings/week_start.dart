@@ -1,6 +1,7 @@
 enum WeekStart {
   sunday(0, 'Sunday'),
-  monday(1, 'Monday');
+  monday(1, 'Monday'),
+  saturday(6, 'Saturday');
 
   const WeekStart(this.value, this.label);
 

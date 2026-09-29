@@ -7,10 +7,12 @@ class FakeSettingsRepository implements SettingsRepository {
     this.initial = AppSettings.defaults,
     this.writeError,
     this.storageMode = StorageMode.onDevice,
+    this.storedValues = true,
   });
 
   final AppSettings initial;
   final Object? writeError;
+  final bool storedValues;
 
   @override
   final StorageMode storageMode;
@@ -24,6 +26,8 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<WeekStart> weekStartWrites = <WeekStart>[];
   final List<bool> spellCheckEnabledWrites = <bool>[];
   final List<bool> notificationPermissionAskedWrites = <bool>[];
+  final List<bool> reflectionPromptsEnabledWrites = <bool>[];
+  final List<OnboardingStatus> onboardingStatusWrites = <OnboardingStatus>[];
 
   void emit(AppSettings settings) => _settings.add(settings);
 
@@ -77,6 +81,21 @@ class FakeSettingsRepository implements SettingsRepository {
     _failIfConfigured();
     notificationPermissionAskedWrites.add(value);
   }
+
+  @override
+  Future<void> setReflectionPromptsEnabled(bool value) async {
+    _failIfConfigured();
+    reflectionPromptsEnabledWrites.add(value);
+  }
+
+  @override
+  Future<void> setOnboardingStatus(OnboardingStatus value) async {
+    _failIfConfigured();
+    onboardingStatusWrites.add(value);
+  }
+
+  @override
+  Future<bool> hasStoredValues() async => storedValues;
 
   void _failIfConfigured() {
     final Object? error = writeError;

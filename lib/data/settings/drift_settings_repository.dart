@@ -51,20 +51,34 @@ class DriftSettingsRepository implements SettingsRepository {
 
   @override
   Future<void> setNotificationPermissionAsked(bool value) => _put(
-        SettingsKeys.notificationPermissionAsked,
-        value ? _trueValue : _falseValue,
-      );
+    SettingsKeys.notificationPermissionAsked,
+    value ? _trueValue : _falseValue,
+  );
+
+  @override
+  Future<void> setReflectionPromptsEnabled(bool value) =>
+      _put(SettingsKeys.reflectionPrompts, value ? _trueValue : _falseValue);
+
+  @override
+  Future<void> setOnboardingStatus(OnboardingStatus value) =>
+      _put(SettingsKeys.onboardingStatus, value.id);
+
+  @override
+  Future<bool> hasStoredValues() async {
+    final rows = await _db.select(_db.settings).get();
+    return rows.isNotEmpty;
+  }
 
   Future<void> _put(String key, String value) async {
-    await _db.into(_db.settings).insertOnConflictUpdate(
+    await _db
+        .into(_db.settings)
+        .insertOnConflictUpdate(
           SettingsCompanion.insert(key: key, value: value),
         );
   }
 
   AppSettings _decode(List<Setting> rows) {
-    final values = <String, String>{
-      for (final row in rows) row.key: row.value,
-    };
+    final values = <String, String>{for (final row in rows) row.key: row.value};
     const defaults = AppSettings.defaults;
     return AppSettings(
       reminderEnabled: _decodeBool(
@@ -76,11 +90,13 @@ class DriftSettingsRepository implements SettingsRepository {
         values[SettingsKeys.soundEnabled],
         defaults.soundEnabled,
       ),
-      textSize: TextSize.fromValue(
+      textSize:
+          TextSize.fromValue(
             int.tryParse(values[SettingsKeys.textSize] ?? ''),
           ) ??
           defaults.textSize,
-      weekStart: WeekStart.fromValue(
+      weekStart:
+          WeekStart.fromValue(
             int.tryParse(values[SettingsKeys.weekStart] ?? ''),
           ) ??
           defaults.weekStart,
@@ -91,6 +107,13 @@ class DriftSettingsRepository implements SettingsRepository {
       notificationPermissionAsked: _decodeBool(
         values[SettingsKeys.notificationPermissionAsked],
         defaults.notificationPermissionAsked,
+      ),
+      reflectionPromptsEnabled: _decodeBool(
+        values[SettingsKeys.reflectionPrompts],
+        defaults.reflectionPromptsEnabled,
+      ),
+      onboardingStatus: OnboardingStatus.fromId(
+        values[SettingsKeys.onboardingStatus],
       ),
     );
   }

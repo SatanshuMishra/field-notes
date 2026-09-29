@@ -31,6 +31,9 @@ void main() {
       'b3-settings-notice',
       'b4-select-open',
       'b5-delete-all-dialog',
+      'b6-settings-reminders',
+      'b7-settings-journal',
+      'b8-settings-data',
     ]);
     expect(_ids(captureStates), <String>[
       'c1-chooser',

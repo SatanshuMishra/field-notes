@@ -13,6 +13,7 @@ import 'package:field_notes/features/calendar/calendar.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/search/search.dart';
 import 'package:field_notes/features/settings/settings.dart';
+import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -29,10 +30,11 @@ List<Override> _loadedSettings() => <Override>[
       ),
     ];
 
-void _expectLoadedSettingsScreen() {
+void _expectLoadedSettingsScreen({required Key tabs}) {
   expect(find.byType(SettingsScreen), findsOneWidget);
   expect(find.byType(CrossHatchPlaceholder), findsNothing);
   expect(find.text('Settings'), findsOneWidget);
+  expect(find.byKey(tabs), findsOneWidget);
   expect(find.byType(SyncStorageSection), findsOneWidget);
 }
 
@@ -86,7 +88,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey<String>('settings-button')));
       await tester.pumpAndSettle();
 
-      _expectLoadedSettingsScreen();
+      _expectLoadedSettingsScreen(tabs: settingsTabRailKey);
     });
 
     testWidgets('surfaces the real streak card in the rail',
@@ -157,7 +159,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey<String>('gear-button')));
       await tester.pumpAndSettle();
 
-      _expectLoadedSettingsScreen();
+      _expectLoadedSettingsScreen(tabs: settingsTabChipsKey);
     });
 
     testWidgets('the center capture invokes the injected callback',

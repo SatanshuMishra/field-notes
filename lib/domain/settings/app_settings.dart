@@ -1,3 +1,4 @@
+import 'onboarding_status.dart';
 import 'reminder_time.dart';
 import 'text_size.dart';
 import 'week_start.dart';
@@ -11,6 +12,8 @@ class AppSettings {
     required this.weekStart,
     required this.spellCheckEnabled,
     required this.notificationPermissionAsked,
+    required this.reflectionPromptsEnabled,
+    required this.onboardingStatus,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -21,6 +24,8 @@ class AppSettings {
     weekStart: WeekStart.sunday,
     spellCheckEnabled: false,
     notificationPermissionAsked: false,
+    reflectionPromptsEnabled: false,
+    onboardingStatus: null,
   );
 
   final bool reminderEnabled;
@@ -30,6 +35,8 @@ class AppSettings {
   final WeekStart weekStart;
   final bool spellCheckEnabled;
   final bool notificationPermissionAsked;
+  final bool reflectionPromptsEnabled;
+  final OnboardingStatus? onboardingStatus;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -39,6 +46,8 @@ class AppSettings {
     WeekStart? weekStart,
     bool? spellCheckEnabled,
     bool? notificationPermissionAsked,
+    bool? reflectionPromptsEnabled,
+    OnboardingStatus? onboardingStatus,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -49,6 +58,9 @@ class AppSettings {
       spellCheckEnabled: spellCheckEnabled ?? this.spellCheckEnabled,
       notificationPermissionAsked:
           notificationPermissionAsked ?? this.notificationPermissionAsked,
+      reflectionPromptsEnabled:
+          reflectionPromptsEnabled ?? this.reflectionPromptsEnabled,
+      onboardingStatus: onboardingStatus ?? this.onboardingStatus,
     );
   }
 
@@ -63,18 +75,22 @@ class AppSettings {
           textSize == other.textSize &&
           weekStart == other.weekStart &&
           spellCheckEnabled == other.spellCheckEnabled &&
-          notificationPermissionAsked == other.notificationPermissionAsked;
+          notificationPermissionAsked == other.notificationPermissionAsked &&
+          reflectionPromptsEnabled == other.reflectionPromptsEnabled &&
+          onboardingStatus == other.onboardingStatus;
 
   @override
   int get hashCode => Object.hash(
-        reminderEnabled,
-        reminderTime,
-        soundEnabled,
-        textSize,
-        weekStart,
-        spellCheckEnabled,
-        notificationPermissionAsked,
-      );
+    reminderEnabled,
+    reminderTime,
+    soundEnabled,
+    textSize,
+    weekStart,
+    spellCheckEnabled,
+    notificationPermissionAsked,
+    reflectionPromptsEnabled,
+    onboardingStatus,
+  );
 
   @override
   String toString() =>
@@ -82,5 +98,7 @@ class AppSettings {
       'reminderTime: $reminderTime, soundEnabled: $soundEnabled, '
       'textSize: $textSize, weekStart: $weekStart, '
       'spellCheckEnabled: $spellCheckEnabled, '
-      'notificationPermissionAsked: $notificationPermissionAsked)';
+      'notificationPermissionAsked: $notificationPermissionAsked, '
+      'reflectionPromptsEnabled: $reflectionPromptsEnabled, '
+      'onboardingStatus: $onboardingStatus)';
 }

@@ -1,9 +1,7 @@
 import 'package:field_notes/domain/settings/settings.dart';
 
-typedef SettingsErrorHandler = void Function(
-  Object error,
-  StackTrace stackTrace,
-);
+typedef SettingsErrorHandler =
+    void Function(Object error, StackTrace stackTrace);
 
 sealed class SettingsWriteResult {
   const SettingsWriteResult();
@@ -20,10 +18,7 @@ class SettingsWriteFailed extends SettingsWriteResult {
 }
 
 class SettingsController {
-  const SettingsController({
-    required this._repository,
-    this._onError,
-  });
+  const SettingsController({required this._repository, this._onError});
 
   final SettingsRepository _repository;
   final SettingsErrorHandler? _onError;
@@ -73,6 +68,13 @@ class SettingsController {
     return _write(
       () => _repository.setSpellCheckEnabled(value),
       'Could not save your spell check setting.',
+    );
+  }
+
+  Future<SettingsWriteResult> setReflectionPromptsEnabled(bool value) {
+    return _write(
+      () => _repository.setReflectionPromptsEnabled(value),
+      'Could not save your reflection question setting.',
     );
   }
 

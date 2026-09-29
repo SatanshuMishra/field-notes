@@ -50,21 +50,35 @@ void main() {
   testWidgets(
     'the settings controls are 48 dp buttons that report their state',
     (WidgetTester tester) async {
-      final List<String> ids = await _idsIn(
+      final List<String> sync = await _idsIn(
         tester,
         settingsStates,
         'b1-settings',
       );
-      _expectNone(ids, 'missing-role', 'b1-settings', <String>[
-        '8:30 PM |',
-        'Sunday |',
-      ]);
-      _expectNone(ids, 'missing-state', 'b1-settings', <String>[
+      _expectNone(sync, 'missing-state', 'b1-settings', <String>[
         'On this device',
       ]);
-      _expectNone(ids, 'small-target', 'b1-settings', <String>[
+      final List<String> reminders = await _idsIn(
+        tester,
+        settingsStates,
+        'b6-settings-reminders',
+      );
+      _expectNone(reminders, 'missing-role', 'b6-settings-reminders', <String>[
+        '8:30 PM |',
+      ]);
+      _expectNone(reminders, 'small-target', 'b6-settings-reminders', <String>[
         'Daily reminder |',
         'Sound effects |',
+      ]);
+      final List<String> journal = await _idsIn(
+        tester,
+        settingsStates,
+        'b7-settings-journal',
+      );
+      _expectNone(journal, 'missing-role', 'b7-settings-journal', <String>[
+        'Sunday |',
+      ]);
+      _expectNone(journal, 'small-target', 'b7-settings-journal', <String>[
         'Spell check |',
       ]);
     },
