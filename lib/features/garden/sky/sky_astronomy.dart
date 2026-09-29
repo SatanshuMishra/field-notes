@@ -6,6 +6,7 @@ const double _sunDistanceKm = 149598000;
 const double _sunHorizonAltitude = -0.833;
 const int _coarseStepMinutes = 5;
 const int _coarseSteps = 432;
+const Duration _crossingPrecision = Duration(milliseconds: 500);
 
 enum SkyBody { sun, moon }
 
@@ -105,13 +106,10 @@ double _sinDegrees(double degrees) => math.sin(_rad * degrees);
 double _cosDegrees(double degrees) => math.cos(_rad * degrees);
 
 _Equatorial _sunCoordinates(double d) {
-  final double m = _rad * (357.5291 + 0.98560028 * d);
-  final double c =
+  final double g = _rad * (357.528 + 0.9856003 * d);
+  final double l =
       _rad *
-      (1.9148 * math.sin(m) +
-          0.02 * math.sin(2 * m) +
-          0.0003 * math.sin(3 * m));
-  final double l = m + c + _rad * 102.9372 + math.pi;
+      (280.460 + 0.9856474 * d + 1.915 * math.sin(g) + 0.020 * math.sin(2 * g));
   return _Equatorial(
     rightAscension: _rightAscension(l, 0),
     declination: _declination(l, 0),
@@ -259,31 +257,63 @@ bool _isUp(SkyBody body, DateTime instant, double latitude, double longitude) {
   };
 }
 
+DateTime _minuteAt(int microseconds, bool isUtc) =>
+    DateTime.fromMicrosecondsSinceEpoch(
+      microseconds - microseconds % Duration.microsecondsPerMinute,
+      isUtc: isUtc,
+    );
+
+DateTime _wholeMinute(DateTime instant) =>
+    _minuteAt(instant.microsecondsSinceEpoch, instant.isUtc);
+
+DateTime _nearestMinute(DateTime instant) => _minuteAt(
+  instant.microsecondsSinceEpoch + Duration.microsecondsPerMinute ~/ 2,
+  instant.isUtc,
+);
+
+DateTime _crossing(
+  bool Function(DateTime instant) isUp,
+  bool upBefore,
+  DateTime before,
+  DateTime after,
+) {
+  final Duration gap = after.difference(before);
+  final DateTime middle = before.add(gap ~/ 2);
+  if (gap <= _crossingPrecision) {
+    return middle;
+  }
+  return isUp(middle) == upBefore
+      ? _crossing(isUp, upBefore, middle, after)
+      : _crossing(isUp, upBefore, before, middle);
+}
+
 SkyEvent? nextSkyEvent(
   SkyBody body,
   DateTime from,
   double latitude,
   double longitude,
 ) {
-  final bool upAtStart = _isUp(body, from, latitude, longitude);
-  DateTime atMinute(int minutes) => from.add(Duration(minutes: minutes));
-  bool flippedAt(int minutes) =>
-      _isUp(body, atMinute(minutes), latitude, longitude) != upAtStart;
+  final DateTime start = _wholeMinute(from);
+  bool isUp(DateTime instant) => _isUp(body, instant, latitude, longitude);
+  DateTime atMinute(int minutes) => start.add(Duration(minutes: minutes));
+  bool up = isUp(start);
   for (int k = 1; k <= _coarseSteps; k++) {
     final int coarse = k * _coarseStepMinutes;
-    if (!flippedAt(coarse)) {
+    if (isUp(atMinute(coarse)) == up) {
       continue;
     }
-    for (
-      int minute = coarse - _coarseStepMinutes + 1;
-      minute < coarse;
-      minute++
-    ) {
-      if (flippedAt(minute)) {
-        return SkyEvent(instant: atMinute(minute), isRise: !upAtStart);
-      }
+    final bool upBefore = up;
+    final int flipped = Iterable<int>.generate(
+      _coarseStepMinutes,
+      (int step) => coarse - _coarseStepMinutes + 1 + step,
+    ).firstWhere((int minute) => isUp(atMinute(minute)) != upBefore);
+    final DateTime event = _nearestMinute(
+      _crossing(isUp, upBefore, atMinute(flipped - 1), atMinute(flipped)),
+    );
+    if (event.isAfter(from)) {
+      return SkyEvent(instant: event, isRise: !upBefore);
     }
-    return SkyEvent(instant: atMinute(coarse), isRise: !upAtStart);
+    up = !upBefore;
   }
   return null;
 }

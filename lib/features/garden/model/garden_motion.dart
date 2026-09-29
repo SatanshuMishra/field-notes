@@ -1,4 +1,4 @@
-const int defaultMaxAnimatedBlooms = 140;
+const int defaultMaxAnimatedBlooms = 366;
 
 enum GardenMotionProfile { full, reduced }
 

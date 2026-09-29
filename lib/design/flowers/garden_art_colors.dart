@@ -16,6 +16,7 @@ abstract final class GardenArtColors {
   static const Color soilClear = Color.fromRGBO(126, 100, 62, 0);
   static const Color soilShade = Color.fromRGBO(60, 44, 26, 0.5);
   static const Color soilShadeClear = Color.fromRGBO(60, 44, 26, 0);
+  static const Color soilCaption = Color(0xFFFBF6EC);
 
   static const Color grassMeadow = Color(0xFF7F9A4F);
   static const Color grassMeadowShade = Color(0xFF6C8A40);

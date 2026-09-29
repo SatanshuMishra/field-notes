@@ -6,6 +6,7 @@ import 'package:field_notes/features/garden/model/garden_data.dart';
 import 'package:field_notes/features/garden/model/garden_insect.dart';
 import 'package:field_notes/features/garden/model/meadow_layout.dart';
 import 'package:field_notes/features/garden/paint/meadow_painter.dart';
+import 'package:field_notes/features/garden/paint/meadow_sprites.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,22 +49,33 @@ MeadowLayout _layout({bool compact = false, Size size = _card}) =>
 final List<SkyStar> _stars = skyStarsFor(2026);
 final List<GardenFirefly> _fireflies = gardenFirefliesFor(2026);
 
+MeadowSprites _spritesFor(MeadowLayout layout) {
+  final MeadowSprites sprites = MeadowSprites.build(layout, 1);
+  addTearDown(sprites.dispose);
+  return sprites;
+}
+
 MeadowPainter _painter({
   required SkyScene sky,
   MeadowLayout? layout,
+  MeadowSprites? sprites,
   bool compact = false,
   bool animate = true,
   ValueListenable<Duration>? clock,
-}) => MeadowPainter(
-  layout: layout ?? _layout(compact: compact),
-  sky: sky,
-  compact: compact,
-  stars: _stars,
-  fireflies: _fireflies,
-  insects: gardenInsectsFor(compact: compact),
-  animate: animate,
-  clock: clock,
-);
+}) {
+  final MeadowLayout laidOut = layout ?? _layout(compact: compact);
+  return MeadowPainter(
+    layout: laidOut,
+    sprites: sprites ?? _spritesFor(laidOut),
+    sky: sky,
+    compact: compact,
+    stars: _stars,
+    fireflies: _fireflies,
+    insects: gardenInsectsFor(compact: compact),
+    animate: animate,
+    clock: clock,
+  );
+}
 
 List<Paint> _paintsOf(TestRecordingCanvas canvas, Symbol method, int index) =>
     <Paint>[
@@ -131,42 +143,53 @@ void main() {
       for (final RecordedInvocation call in canvas.invocations)
         call.invocation.memberName,
     ];
-    final int lastPicture = calls.lastIndexOf(#drawPicture);
+    final int lastBatch = calls.lastIndexOf(#drawAtlas);
     final int multiply = canvas.invocations.indexWhere(
       (RecordedInvocation call) =>
           call.invocation.memberName == #drawRect &&
           (call.invocation.positionalArguments[1] as Paint).blendMode ==
               BlendMode.multiply,
     );
-    expect(lastPicture, greaterThan(0));
-    expect(multiply, greaterThan(lastPicture));
+    expect(lastBatch, greaterThan(0));
+    expect(multiply, greaterThan(lastBatch));
   });
 
   test(
     'repaints for a new sky, motion or layout but not for the same inputs',
     () {
       final MeadowLayout layout = _layout();
+      final MeadowSprites sprites = _spritesFor(layout);
       final ValueNotifier<Duration> clock = ValueNotifier<Duration>(
         Duration.zero,
       );
       final MeadowPainter a = _painter(
         sky: _noon,
         layout: layout,
+        sprites: sprites,
         clock: clock,
       );
       final MeadowPainter same = _painter(
         sky: _noon,
         layout: layout,
+        sprites: sprites,
         clock: clock,
       );
       expect(a.shouldRepaint(same), isFalse);
       expect(
-        a.shouldRepaint(_painter(sky: _dusk, layout: layout, clock: clock)),
+        a.shouldRepaint(
+          _painter(sky: _dusk, layout: layout, sprites: sprites, clock: clock),
+        ),
         isTrue,
       );
       expect(
         a.shouldRepaint(
-          _painter(sky: _noon, layout: layout, clock: clock, animate: false),
+          _painter(
+            sky: _noon,
+            layout: layout,
+            sprites: sprites,
+            clock: clock,
+            animate: false,
+          ),
         ),
         isTrue,
       );

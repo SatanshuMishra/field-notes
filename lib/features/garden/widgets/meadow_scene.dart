@@ -9,6 +9,7 @@ import '../model/garden_insect.dart';
 import '../model/garden_motion.dart';
 import '../model/meadow_layout.dart';
 import '../paint/meadow_painter.dart';
+import '../paint/meadow_sprites.dart';
 
 String _meadowDescription({required int blooms, required int sprouts}) {
   final String bloomPart = blooms == 1 ? '1 bloom' : '$blooms blooms';
@@ -80,6 +81,9 @@ class _MeadowSceneState extends State<MeadowScene>
   GardenMotionProfile _motion = GardenMotionProfile.reduced;
   _LayoutInputs? _laidOut;
   MeadowLayout _layout = MeadowLayout.empty;
+  MeadowSprites? _sprites;
+  MeadowLayout? _spritedLayout;
+  double? _spritedRatio;
   late List<SkyStar> _stars = skyStarsFor(widget.seed);
   late List<GardenFirefly> _fireflies = gardenFirefliesFor(widget.seed);
 
@@ -140,8 +144,24 @@ class _MeadowSceneState extends State<MeadowScene>
     return _layout;
   }
 
+  MeadowSprites _spritesFor(MeadowLayout layout, double devicePixelRatio) {
+    final MeadowSprites? current = _sprites;
+    if (current != null &&
+        identical(layout, _spritedLayout) &&
+        devicePixelRatio == _spritedRatio) {
+      return current;
+    }
+    final MeadowSprites built = MeadowSprites.build(layout, devicePixelRatio);
+    _sprites = built;
+    _spritedLayout = layout;
+    _spritedRatio = devicePixelRatio;
+    current?.dispose();
+    return built;
+  }
+
   @override
   void dispose() {
+    _sprites?.dispose();
     _ticker.dispose();
     _clock.dispose();
     super.dispose();
@@ -150,9 +170,11 @@ class _MeadowSceneState extends State<MeadowScene>
   @override
   Widget build(BuildContext context) {
     final bool animate = _motion == GardenMotionProfile.full;
+    final double devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final Size size = constraints.biggest;
+        final MeadowLayout layout = _layoutFor(size);
         return Semantics(
           container: true,
           label: _meadowDescription(
@@ -163,7 +185,8 @@ class _MeadowSceneState extends State<MeadowScene>
             child: CustomPaint(
               size: size,
               painter: MeadowPainter(
-                layout: _layoutFor(size),
+                layout: layout,
+                sprites: _spritesFor(layout, devicePixelRatio),
                 sky: widget.sky,
                 compact: widget.compact,
                 stars: _stars,

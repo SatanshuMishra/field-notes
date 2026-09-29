@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show SliverConstraints;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/flowers/garden_art_colors.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 import '../model/garden_data.dart';
@@ -208,7 +209,7 @@ class GardenView extends StatelessWidget {
           sky: scene,
           seed: year,
           compact: compact,
-          motion: empty ? GardenMotionProfile.reduced : motionOverride,
+          motion: motionOverride,
         ),
       ),
     );
@@ -240,7 +241,7 @@ class _SkyCard extends StatelessWidget {
     );
     final TextStyle captionStyle = styles.pageEyebrowAccent.copyWith(
       fontSize: compact ? 10 : 12,
-      color: scene.captionColour,
+      color: GardenArtColors.soilCaption,
     );
     final String? month = monthCaption;
     return DecoratedBox(

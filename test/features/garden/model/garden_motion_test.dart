@@ -50,4 +50,12 @@ void main() {
       GardenMotionProfile.full,
     );
   });
+
+  test('a full leap year of 366 plants keeps moving', () {
+    expect(defaultMaxAnimatedBlooms, 366);
+    expect(
+      resolveGardenMotion(reduceMotion: false, bloomCount: 366),
+      GardenMotionProfile.full,
+    );
+  });
 }

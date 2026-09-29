@@ -5,15 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:field_notes/design/flowers/garden_art_colors.dart';
-import 'package:field_notes/design/flowers/garden_plant_painter.dart';
-import 'package:field_notes/design/flowers/garden_plant_spec.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 
 import '../model/garden_insect.dart';
 import '../model/meadow_layout.dart';
-import 'grass_tuft_painter.dart';
+import 'meadow_sprites.dart';
 
 const int skyStarCount = 34;
 const double skyStarBand = 0.34;
@@ -54,46 +51,13 @@ List<SkyStar> skyStarsFor(int seed) {
   ]);
 }
 
-ui.Picture _record(Size size, void Function(Canvas canvas, Size size) draw) {
-  final ui.PictureRecorder recorder = ui.PictureRecorder();
-  draw(Canvas(recorder), size);
-  return recorder.endRecording();
-}
-
-final Map<FlowerKind, ui.Picture> _plantArt =
-    Map<FlowerKind, ui.Picture>.unmodifiable(<FlowerKind, ui.Picture>{
-      for (final FlowerKind kind in FlowerKind.values)
-        kind: _record(
-          Size(
-            GardenPlantSpec.viewBoxWidth,
-            GardenPlantSpec.viewBoxWidth * gardenPlantSpecFor(kind).ratio,
-          ),
-          GardenPlantPainter(gardenPlantSpecFor(kind)).paint,
-        ),
-    });
-
-final ui.Picture _sproutArt = _record(
-  const Size(
-    GardenPlantSpec.viewBoxWidth,
-    GardenPlantSpec.viewBoxWidth * sproutRatio,
-  ),
-  const GardenSproutPainter().paint,
-);
-
-final List<ui.Picture> _tuftArt = List<ui.Picture>.unmodifiable(<ui.Picture>[
-  for (int variant = 0; variant < grassTuftColours.length; variant++)
-    _record(
-      const Size(grassTuftViewBox, grassTuftViewBox * grassTuftRatio),
-      GrassTuftPainter(variant).paint,
-    ),
-]);
-
 Color _faded(Color colour, double opacity) =>
     colour.withValues(alpha: colour.a * opacity.clamp(0.0, 1.0));
 
 class MeadowPainter extends CustomPainter {
   const MeadowPainter({
     required this.layout,
+    required this.sprites,
     required this.sky,
     required this.compact,
     required this.stars,
@@ -104,6 +68,7 @@ class MeadowPainter extends CustomPainter {
   }) : super(repaint: clock);
 
   final MeadowLayout layout;
+  final MeadowSprites sprites;
   final SkyScene sky;
   final bool compact;
   final List<SkyStar> stars;
@@ -407,7 +372,11 @@ class MeadowPainter extends CustomPainter {
   }
 
   void _paintMeadow(Canvas canvas, Size size, double seconds) {
-    for (final MeadowBand band in layout.bands) {
+    final ui.Image? sheet = sprites.image;
+    if (sheet == null) {
+      return;
+    }
+    for (final (int index, MeadowBand band) in layout.bands.indexed) {
       final bool blurred = band.blur > 0.05;
       final bool layered = blurred || band.opacity < 0.999;
       if (layered) {
@@ -424,40 +393,67 @@ class MeadowPainter extends CustomPainter {
                 : null,
         );
       }
-      for (final MeadowItem item in band.items) {
-        _paintItem(canvas, size, item, seconds);
-      }
+      _paintBand(canvas, size, sheet, index, band, seconds);
       if (layered) {
         canvas.restore();
       }
     }
   }
 
-  void _paintItem(Canvas canvas, Size size, MeadowItem item, double seconds) {
+  void _paintBand(
+    Canvas canvas,
+    Size size,
+    ui.Image sheet,
+    int index,
+    MeadowBand band,
+    double seconds,
+  ) {
+    final List<(MeadowItem, MeadowSpriteCell)> placed =
+        <(MeadowItem, MeadowSpriteCell)>[
+          for (final MeadowItem item in band.items)
+            if (sprites.cellFor(index, meadowArtFor(item))
+                case final MeadowSpriteCell cell)
+              (item, cell),
+        ];
+    if (placed.isEmpty) {
+      return;
+    }
+    canvas.drawAtlas(
+      sheet,
+      <RSTransform>[
+        for (final (MeadowItem item, MeadowSpriteCell cell) in placed)
+          _placement(item, cell, size, seconds),
+      ],
+      <Rect>[
+        for (final (MeadowItem _, MeadowSpriteCell cell) in placed) cell.source,
+      ],
+      null,
+      null,
+      null,
+      Paint()..filterQuality = FilterQuality.low,
+    );
+  }
+
+  RSTransform _placement(
+    MeadowItem item,
+    MeadowSpriteCell cell,
+    Size size,
+    double seconds,
+  ) {
     final double sway = animate
         ? -item.swayDegrees *
               math.cos(
                 2 * math.pi * (seconds + item.swayPhase) / item.swayPeriod,
               )
         : 0;
-    canvas.save();
-    canvas.translate(item.dx, size.height - item.bottom);
-    if (sway != 0) {
-      canvas.rotate(sway * math.pi / 180);
-    }
-    canvas.translate(-item.width / 2, -item.height);
-    switch (item) {
-      case MeadowPlant(isSprout: true):
-        canvas.scale(item.width / GardenPlantSpec.viewBoxWidth);
-        canvas.drawPicture(_sproutArt);
-      case MeadowPlant(:final FlowerKind kind):
-        canvas.scale(item.width / GardenPlantSpec.viewBoxWidth);
-        canvas.drawPicture(_plantArt[kind]!);
-      case MeadowTuft(:final int variant):
-        canvas.scale(item.width / grassTuftViewBox);
-        canvas.drawPicture(_tuftArt[variant % _tuftArt.length]);
-    }
-    canvas.restore();
+    return RSTransform.fromComponents(
+      rotation: sway * math.pi / 180,
+      scale: item.width / cell.spriteWidth,
+      anchorX: cell.pad + cell.spriteWidth / 2,
+      anchorY: cell.pad + cell.spriteWidth * item.height / item.width,
+      translateX: item.dx,
+      translateY: size.height - item.bottom,
+    );
   }
 
   void _paintNight(Canvas canvas, Size size) {
@@ -610,6 +606,7 @@ class MeadowPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant MeadowPainter oldDelegate) =>
       oldDelegate.layout != layout ||
+      oldDelegate.sprites != sprites ||
       oldDelegate.sky != sky ||
       oldDelegate.compact != compact ||
       oldDelegate.stars != stars ||
