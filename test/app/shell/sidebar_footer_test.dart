@@ -45,7 +45,7 @@ void main() {
     testWidgets('the settings button fills with coral only while settings is '
         'the selected destination', (WidgetTester tester) async {
       await tester.pumpWidget(appHarness(_shell()));
-      expect(_fillOf(tester, _settingsKey), Palette.cardLight);
+      expect(_fillOf(tester, _settingsKey), FieldNotesColors.light.cardLight);
 
       await tester.pumpWidget(
         appHarness(_shell(selected: ShellDestination.settings)),

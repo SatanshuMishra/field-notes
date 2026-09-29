@@ -57,7 +57,7 @@ class TodayEntryFeed extends ConsumerWidget {
     final AsyncValue<List<Entry>> entriesAsync =
         ref.watch(entriesForDateProvider(date));
     if (entriesAsync.hasError) {
-      return _adapter(_message(todayFeedErrorMessage));
+      return _adapter(_message(context, todayFeedErrorMessage));
     }
     if (!entriesAsync.hasValue) {
       return _adapter(const SizedBox.shrink());
@@ -68,9 +68,9 @@ class TodayEntryFeed extends ConsumerWidget {
         EmptyStatePlaceholder(
           headline: todayFeedEmptyHeadline,
           message: emptyMessage,
-          messageStyle: TypographyTokens.captionSans,
+          messageStyle: context.textStyles.captionSans,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
-          borderColor: Palette.ink40,
+          borderColor: context.colors.ink40,
           borderRadius: Shapes.radiusLg,
         ),
       );
@@ -79,7 +79,7 @@ class TodayEntryFeed extends ConsumerWidget {
     final AsyncValue<MediaResolver> resolverAsync =
         ref.watch(todayMediaResolverProvider);
     if (resolverAsync.hasError) {
-      return _adapter(_message(todayMediaErrorMessage));
+      return _adapter(_message(context, todayMediaErrorMessage));
     }
     final MediaResolver resolver =
         resolverAsync.value ?? const _PendingMediaResolver();
@@ -114,10 +114,12 @@ class TodayEntryFeed extends ConsumerWidget {
 
   static Widget _adapter(Widget child) => SliverToBoxAdapter(child: child);
 
-  static Widget _message(String text) {
+  static Widget _message(BuildContext context, String text) {
     return Text(
       text,
-      style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+      style: context.textStyles.captionSans.copyWith(
+        color: context.colors.dangerInk,
+      ),
     );
   }
 }

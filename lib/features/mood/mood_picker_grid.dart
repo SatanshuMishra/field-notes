@@ -111,6 +111,8 @@ class _MoodTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isSheet = layout == ShellLayout.bottomBar;
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Semantics(
       button: true,
       selected: isSelected,
@@ -123,9 +125,9 @@ class _MoodTile extends StatelessWidget {
           borderRadius: _tileRadius,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: isSelected ? Palette.cardLight : Palette.cardBright,
+              color: isSelected ? colors.cardLight : colors.cardBright,
               border: Border.all(
-                color: isSelected ? Palette.coral : Palette.ink20,
+                color: isSelected ? Palette.coral : colors.ink20,
                 width: isSelected ? _tileBorderWidth : Shapes.outlineWidth,
               ),
               borderRadius: _tileRadius,
@@ -151,19 +153,19 @@ class _MoodTile extends StatelessWidget {
                     Text(
                       mood.label,
                       style: isSheet
-                          ? TypographyTokens.caption9Sans.copyWith(
+                          ? textStyles.caption9Sans.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: Palette.ink,
+                              color: colors.ink,
                             )
-                          : TypographyTokens.caption11Sans.copyWith(
-                              color: Palette.ink,
+                          : textStyles.caption11Sans.copyWith(
+                              color: colors.ink,
                             ),
                       textAlign: TextAlign.center,
                     ),
                     if (!isSheet)
                       Text(
                         mood.flower.label,
-                        style: TypographyTokens.caption9Sans,
+                        style: textStyles.caption9Sans,
                         textAlign: TextAlign.center,
                       ),
                   ],

@@ -103,6 +103,9 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
     final bool interactive = dayAsync.hasValue;
     final VoidCallback? onChangeMood =
         interactive ? () => _changeMood(mood) : null;
+    final TextStyle errorStyle = context.textStyles.captionSans.copyWith(
+      color: context.colors.dangerInk,
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -118,17 +121,11 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
           ),
         if (dayAsync.hasError) ...<Widget>[
           const SizedBox(height: 8),
-          Text(
-            "Couldn't load today's mood.",
-            style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
-          ),
+          Text("Couldn't load today's mood.", style: errorStyle),
         ],
         if (_writeError != null) ...<Widget>[
           const SizedBox(height: 8),
-          Text(
-            _writeError!,
-            style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
-          ),
+          Text(_writeError!, style: errorStyle),
         ],
       ],
     );
@@ -143,20 +140,21 @@ class _MoodChangeConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Center(
       child: Material(
         type: MaterialType.transparency,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _kConfirmMaxWidth),
           child: StickerCard(
-            surface: Palette.cardBright,
+            surface: context.colors.cardBright,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: TypographyTokens.titleSerif),
+                Text(title, style: textStyles.titleSerif),
                 const SizedBox(height: 8),
-                Text(message, style: TypographyTokens.bodySans),
+                Text(message, style: textStyles.bodySans),
                 const SizedBox(height: 20),
                 Wrap(
                   alignment: WrapAlignment.end,

@@ -44,7 +44,7 @@ class TodayFeedEyebrow extends ConsumerWidget {
       child: counted
           ? Text(
               todayFeedEyebrowLabel(entriesAsync.requireValue.length),
-              style: TypographyTokens.sectionHeaderAccent,
+              style: context.textStyles.sectionHeaderAccent,
             )
           : const SizedBox.shrink(),
     );
@@ -77,10 +77,10 @@ class TodayScreen extends ConsumerWidget {
                 padding: _railPagePadding,
               ),
             ),
-            const DashedDivider(
+            DashedDivider(
               axis: Axis.vertical,
               thickness: _railSeamThickness,
-              color: Palette.ink22,
+              color: context.colors.ink22,
             ),
             SizedBox(
               width: todayRailWidth,

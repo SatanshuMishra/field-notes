@@ -31,27 +31,27 @@ class BottomBarShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return KeepFocusInView(
       child: Scaffold(
-        backgroundColor: Palette.panelTop,
+        backgroundColor: context.colors.panelTop,
         body: SafeArea(
           bottom: false,
           child: Column(
             children: <Widget>[
-              FocusTraversalGroup(child: _topBar()),
+              FocusTraversalGroup(child: _topBar(context)),
               Expanded(child: FocusTraversalGroup(child: body)),
             ],
           ),
         ),
-        bottomNavigationBar: FocusTraversalGroup(child: _bottomBar()),
+        bottomNavigationBar: FocusTraversalGroup(child: _bottomBar(context)),
       ),
     );
   }
 
-  Widget _topBar() {
+  Widget _topBar(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
       child: Row(
         children: <Widget>[
-          const Text('field notes', style: TypographyTokens.wordmarkAccent),
+          Text('field notes', style: context.textStyles.wordmarkAccent),
           const Spacer(),
           TourAnchor(
             target: TourTarget.settings,
@@ -73,12 +73,12 @@ class BottomBarShell extends StatelessWidget {
                     child: FocusRing(
                       onPressed: () => onSelect(ShellDestination.settings),
                       borderRadius: _gearRadius,
-                      child: const Padding(
-                        padding: EdgeInsets.all(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
                         child: ExcludeSemantics(
                           child: Icon(
                             Icons.settings_outlined,
-                            color: Palette.ink,
+                            color: context.colors.ink,
                           ),
                         ),
                       ),
@@ -93,12 +93,13 @@ class BottomBarShell extends StatelessWidget {
     );
   }
 
-  Widget _bottomBar() {
+  Widget _bottomBar(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Palette.panelTop,
+      decoration: BoxDecoration(
+        color: colors.panelTop,
         border: Border(
-          top: BorderSide(color: Palette.ink, width: Shapes.outlineWidth),
+          top: BorderSide(color: colors.line, width: Shapes.outlineWidth),
         ),
       ),
       child: SafeArea(
@@ -111,11 +112,11 @@ class BottomBarShell extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                _tab(destinations[0]),
-                _tab(destinations[1]),
-                _captureButton(),
-                _tab(destinations[2]),
-                _tab(destinations[3]),
+                _tab(context, destinations[0]),
+                _tab(context, destinations[1]),
+                _captureButton(context),
+                _tab(context, destinations[2]),
+                _tab(context, destinations[3]),
               ],
             ),
           ),
@@ -124,9 +125,10 @@ class BottomBarShell extends StatelessWidget {
     );
   }
 
-  Widget _tab(ShellDestination d) {
+  Widget _tab(BuildContext context, ShellDestination d) {
+    final FieldNotesColors colors = context.colors;
     final bool isSelected = d == selected;
-    final Color color = isSelected ? Palette.coral : Palette.mutedDeep;
+    final Color color = isSelected ? colors.accentInk : colors.mutedDeep;
     final Widget tab = CalendarTapArea(
       reach: const EdgeInsets.symmetric(
         horizontal: kMinInteractiveDimension / 2,
@@ -152,7 +154,7 @@ class BottomBarShell extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       d.label,
-                      style: TypographyTokens.captionSans.copyWith(
+                      style: context.textStyles.captionSans.copyWith(
                         color: color,
                       ),
                     ),
@@ -170,7 +172,7 @@ class BottomBarShell extends StatelessWidget {
     return TourAnchor(target: TourTarget.calendar, child: tab);
   }
 
-  Widget _captureButton() {
+  Widget _captureButton(BuildContext context) {
     return TourAnchor(
       target: TourTarget.capture,
       child: Semantics(
@@ -190,13 +192,17 @@ class BottomBarShell extends StatelessWidget {
                 color: Palette.coral,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Palette.ink,
+                  color: context.colors.line,
                   width: Shapes.outlineWidth,
                 ),
-                boxShadow: Shadows.button,
+                boxShadow: context.shadows.button,
               ),
-              child: const ExcludeSemantics(
-                child: Icon(Icons.add, color: Palette.cardBright, size: 28),
+              child: ExcludeSemantics(
+                child: Icon(
+                  Icons.add,
+                  color: FieldNotesColors.light.cardBright,
+                  size: 28,
+                ),
               ),
             ),
           ),

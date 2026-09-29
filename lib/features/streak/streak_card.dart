@@ -13,17 +13,19 @@ class StreakCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final StreakSummary summary = ref.watch(streakSummaryProvider);
     final String dayLabel = summary.current == 1 ? 'day' : 'days';
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return StickerCard(
       key: const ValueKey<String>('streak-card'),
-      surface: Palette.cardLight,
+      surface: colors.cardLight,
       borderRadius: const BorderRadius.all(
         Radius.circular(Shapes.radiusMd),
       ),
-      shadow: Shadows.emphasis,
+      shadow: context.shadows.emphasis,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 13),
       child: Row(
         children: <Widget>[
-          const FlameIcon(color: Palette.coral),
+          FlameIcon(color: colors.accentInk),
           const SizedBox(width: 7),
           Expanded(
             child: Column(
@@ -32,12 +34,12 @@ class StreakCard extends ConsumerWidget {
               children: <Widget>[
                 Text(
                   '${summary.current} $dayLabel',
-                  style: TypographyTokens.streakAccent,
+                  style: textStyles.streakAccent,
                 ),
                 const SizedBox(height: 3),
                 Text(
                   'longest streak yet: ${summary.longest}',
-                  style: TypographyTokens.caption10Sans,
+                  style: textStyles.caption10Sans,
                 ),
               ],
             ),

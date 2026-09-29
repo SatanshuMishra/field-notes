@@ -50,6 +50,7 @@ class OnThisDayCard extends StatelessWidget {
     final OnThisDayMemory? current = memory;
     if (current == null) {
       return _shell(
+        context,
         title: title,
         child: Padding(
           padding: _cardInsets,
@@ -59,7 +60,9 @@ class OnThisDayCard extends StatelessWidget {
     }
     final DateTime? moment = parseDateKey(current.day.date);
     final String? previewText = preview;
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return _shell(
+      context,
       title: title,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -70,7 +73,7 @@ class OnThisDayCard extends StatelessWidget {
             borderRadius: _bandRadius,
             child: Text(
               _bandCaption(current.yearsAgo),
-              style: TypographyTokens.monoMicroSans,
+              style: textStyles.monoMicroSans,
             ),
           ),
           Padding(
@@ -80,10 +83,7 @@ class OnThisDayCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 if (previewText != null && previewText.isNotEmpty) ...<Widget>[
-                  Text(
-                    previewText,
-                    style: TypographyTokens.memoryTitleSerif,
-                  ),
+                  Text(previewText, style: textStyles.memoryTitleSerif),
                   const SizedBox(height: _metaGap),
                 ],
                 Text(
@@ -93,7 +93,7 @@ class OnThisDayCard extends StatelessWidget {
                         : shortDateLabel(moment),
                     mood: current.day.mood,
                   ),
-                  style: TypographyTokens.caption9Sans,
+                  style: textStyles.caption9Sans,
                 ),
               ],
             ),
@@ -103,17 +103,21 @@ class OnThisDayCard extends StatelessWidget {
     );
   }
 
-  static Widget _shell({required String title, required Widget child}) {
+  static Widget _shell(
+    BuildContext context, {
+    required String title,
+    required Widget child,
+  }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(title, style: TypographyTokens.sectionHeaderAccent),
+        Text(title, style: context.textStyles.sectionHeaderAccent),
         const SizedBox(height: _titleGap),
         StickerCard(
-          surface: Palette.cardWarm,
+          surface: context.colors.cardWarm,
           borderRadius: _cardRadius,
-          shadow: Shadows.cardDefault,
+          shadow: context.shadows.cardDefault,
           padding: EdgeInsets.zero,
           child: ClipRRect(borderRadius: _cardRadius, child: child),
         ),
@@ -131,12 +135,15 @@ class OnThisDayRailCard extends ConsumerWidget {
         ref.watch(onThisDayMemoryProvider);
     if (memoryAsync.hasError) {
       return OnThisDayCard._shell(
+        context,
         title: onThisDayTitle,
         child: Padding(
           padding: _cardInsets,
           child: Text(
             onThisDayErrorMessage,
-            style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+            style: context.textStyles.captionSans.copyWith(
+              color: context.colors.dangerInk,
+            ),
           ),
         ),
       );

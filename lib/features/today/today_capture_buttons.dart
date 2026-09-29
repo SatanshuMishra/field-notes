@@ -32,10 +32,10 @@ StickerButtonVariant _captureVariantFor(EntryType type) {
       : StickerButtonVariant.secondary;
 }
 
-Color _captureIconColor(StickerButtonVariant variant) {
+Color _captureIconColor(StickerButtonVariant variant, FieldNotesColors colors) {
   return variant == StickerButtonVariant.primary
       ? Palette.onAccent
-      : Palette.ink;
+      : colors.ink;
 }
 
 class TodayCaptureButtons extends ConsumerStatefulWidget {
@@ -86,10 +86,10 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
       variant: variant,
       icon: CaptureIcon(
         glyph: _captureGlyphFor(option.type),
-        color: _captureIconColor(variant),
+        color: _captureIconColor(variant, context.colors),
         size: _iconSize,
       ),
-      labelStyle: TypographyTokens.captureLabelSans,
+      labelStyle: context.textStyles.captureLabelSans,
       onPressed: () => _openRoute(route),
     );
   }
@@ -104,12 +104,13 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
           (option, route),
     ];
     final String? error = _error;
+    final FieldNotesTextStyles textStyles = context.textStyles;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Text(widget.title, style: TypographyTokens.sectionHeaderAccent),
+        Text(widget.title, style: textStyles.sectionHeaderAccent),
         const SizedBox(height: _titleGap),
         for (final (int index, (CaptureOption option, CaptureRoute route))
             in orderedRoutes.indexed) ...<Widget>[
@@ -120,7 +121,9 @@ class _TodayCaptureButtonsState extends ConsumerState<TodayCaptureButtons> {
           const SizedBox(height: 10),
           Text(
             error,
-            style: TypographyTokens.captionSans.copyWith(color: Palette.danger),
+            style: textStyles.captionSans.copyWith(
+              color: context.colors.dangerInk,
+            ),
           ),
         ],
       ],

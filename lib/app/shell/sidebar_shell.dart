@@ -36,25 +36,26 @@ class SidebarShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return KeepFocusInView(
       child: Scaffold(
-        backgroundColor: Palette.panelTop,
+        backgroundColor: colors.panelTop,
         body: Column(
           children: <Widget>[
-            _titleBar(),
+            _titleBar(context),
             Expanded(
               child: DecoratedBox(
-                decoration: _panelWash,
+                decoration: _panelWash(colors),
                 child: DecoratedBox(
                   decoration: _panelGlow,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
-                      FocusTraversalGroup(child: _rail()),
-                      const DashedDivider(
+                      FocusTraversalGroup(child: _rail(context)),
+                      DashedDivider(
                         axis: Axis.vertical,
                         thickness: 1.0,
-                        color: Palette.ink22,
+                        color: colors.ink22,
                       ),
                       Expanded(child: FocusTraversalGroup(child: body)),
                     ],
@@ -68,7 +69,8 @@ class SidebarShell extends StatelessWidget {
     );
   }
 
-  Widget _titleBar() {
+  Widget _titleBar(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return GestureDetector(
       key: windowTitleBarKey,
       behavior: HitTestBehavior.opaque,
@@ -77,13 +79,13 @@ class SidebarShell extends StatelessWidget {
       child: Container(
         height: shellTitleBarHeight,
         padding: const EdgeInsets.symmetric(horizontal: shellTitleBarPadding),
-        decoration: const BoxDecoration(
-          color: Palette.titleBar,
-          border: Border(bottom: BorderSide(color: Palette.ink16, width: 1)),
+        decoration: BoxDecoration(
+          color: colors.titleBar,
+          border: Border(bottom: BorderSide(color: colors.ink16, width: 1)),
         ),
-        child: const Row(
+        child: Row(
           children: <Widget>[
-            SizedBox(
+            const SizedBox(
               key: ValueKey<String>('traffic-lights'),
               width: windowButtonsSlotWidth,
             ),
@@ -93,17 +95,17 @@ class SidebarShell extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TypographyTokens.windowTitleAccent,
+                style: context.textStyles.windowTitleAccent,
               ),
             ),
-            SizedBox(width: windowButtonsSlotWidth),
+            const SizedBox(width: windowButtonsSlotWidth),
           ],
         ),
       ),
     );
   }
 
-  Widget _rail() {
+  Widget _rail(BuildContext context) {
     return SizedBox(
       width: 216,
       child: Padding(
@@ -116,10 +118,7 @@ class SidebarShell extends StatelessWidget {
               children: <Widget>[
                 const FlowerBloom(kind: FlowerKind.peony, size: 32),
                 const SizedBox(width: 9),
-                const Text(
-                  'field\nnotes',
-                  style: TypographyTokens.wordmarkAccent,
-                ),
+                Text('field\nnotes', style: context.textStyles.wordmarkAccent),
               ],
             ),
             const SizedBox(height: 24),
@@ -132,24 +131,25 @@ class SidebarShell extends StatelessWidget {
                     if (d == ShellDestination.calendar)
                       TourAnchor(
                         target: TourTarget.calendar,
-                        child: _railItem(d),
+                        child: _railItem(context, d),
                       )
                     else
-                      _railItem(d),
+                      _railItem(context, d),
                 ],
               ),
             ),
             const Spacer(),
             streak,
             const SizedBox(height: 14),
-            _footer(),
+            _footer(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _footer() {
+  Widget _footer(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final bool settingsSelected = selected == ShellDestination.settings;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -159,8 +159,8 @@ class SidebarShell extends StatelessWidget {
           child: IconStickerButton(
             key: const ValueKey<String>('settings-button'),
             glyph: IconStickerGlyph.gear,
-            glyphColor: settingsSelected ? Palette.onAccent : Palette.ink,
-            background: settingsSelected ? Palette.coral : Palette.cardLight,
+            glyphColor: settingsSelected ? Palette.onAccent : colors.ink,
+            background: settingsSelected ? Palette.coral : colors.cardLight,
             semanticLabel: ShellDestination.settings.label,
             selected: settingsSelected,
             onPressed: () => onSelect(ShellDestination.settings),
@@ -170,18 +170,19 @@ class SidebarShell extends StatelessWidget {
         IconStickerButton(
           key: const ValueKey<String>('sound-button'),
           glyph: soundOn ? IconStickerGlyph.soundOn : IconStickerGlyph.soundOff,
-          glyphColor: Palette.ink,
-          background: soundOn ? Palette.cardLight : Palette.cardWarm,
+          glyphColor: colors.ink,
+          background: soundOn ? colors.cardLight : colors.cardWarm,
           semanticLabel: soundOn ? _soundOnLabel : _soundOffLabel,
           onPressed: onSound,
         ),
         const SizedBox(width: _footerGap),
-        Flexible(child: _syncCaption()),
+        Flexible(child: _syncCaption(context)),
       ],
     );
   }
 
-  Widget _syncCaption() {
+  Widget _syncCaption(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,21 +191,24 @@ class SidebarShell extends StatelessWidget {
           _syncPrimaryCopy,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: _syncPrimaryStyle,
+          style: textStyles.syncPrimarySans.copyWith(height: _syncLineHeight),
         ),
         Text(
           _syncSecondaryCopy,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: _syncSecondaryStyle,
+          style: textStyles.syncSecondarySans.copyWith(height: _syncLineHeight),
         ),
       ],
     );
   }
 
-  Widget _railItem(ShellDestination d) {
+  Widget _railItem(BuildContext context, ShellDestination d) {
+    final FieldNotesShadows shadows = context.shadows;
     final bool isSelected = d == selected;
-    final Color foreground = isSelected ? Palette.onAccent : Palette.inkSoft;
+    final Color foreground = isSelected
+        ? Palette.onAccent
+        : context.colors.inkSoft;
     final NavGlyph? glyph = d.glyph;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -223,9 +227,9 @@ class SidebarShell extends StatelessWidget {
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: isSelected ? Palette.coral : null,
-                  border: isSelected ? Shapes.outline : null,
+                  border: isSelected ? shadows.outline : null,
                   borderRadius: _navItemRadius,
-                  boxShadow: isSelected ? Shadows.emphasis : null,
+                  boxShadow: isSelected ? shadows.emphasis : null,
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -241,7 +245,7 @@ class SidebarShell extends StatelessWidget {
                       const SizedBox(width: 10),
                       Text(
                         d.label,
-                        style: TypographyTokens.navLabelSans.copyWith(
+                        style: context.textStyles.navLabelSans.copyWith(
                           color: foreground,
                         ),
                       ),
@@ -268,13 +272,6 @@ const String _syncSecondaryCopy = 'on this device only';
 const String _soundOnLabel = 'Sound effects on';
 const String _soundOffLabel = 'Sound effects off';
 
-final TextStyle _syncPrimaryStyle = TypographyTokens.syncPrimarySans.copyWith(
-  height: _syncLineHeight,
-);
-
-final TextStyle _syncSecondaryStyle = TypographyTokens.syncSecondarySans
-    .copyWith(height: _syncLineHeight);
-
 const double _panelGlowBaseRadius = 0.5;
 const double _panelGlowExtentX = 1.2;
 const double _panelGlowExtentY = 0.6;
@@ -283,11 +280,11 @@ const double _panelGlowFadeStop = 0.55;
 
 const Color _panelCoralTintFade = Color(0x00C76A54);
 
-const BoxDecoration _panelWash = BoxDecoration(
+BoxDecoration _panelWash(FieldNotesColors colors) => BoxDecoration(
   gradient: LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: <Color>[Palette.panelTop, Palette.panelBottom],
+    colors: <Color>[colors.panelTop, colors.panelBottom],
   ),
 );
 
