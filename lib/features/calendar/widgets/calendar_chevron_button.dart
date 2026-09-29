@@ -42,11 +42,11 @@ class CalendarChevronButton extends StatelessWidget {
       onPressed: onPressed,
       borderRadius: _chevronRadius,
       child: DecoratedBox(
-        decoration: const BoxDecoration(
-          color: Palette.cardWarm,
-          border: Shapes.outline,
+        decoration: BoxDecoration(
+          color: context.colors.cardWarm,
+          border: context.shadows.outline,
           borderRadius: _chevronRadius,
-          boxShadow: Shadows.chip,
+          boxShadow: context.shadows.chip,
         ),
         child: SizedBox.square(
           dimension: size,
@@ -84,19 +84,22 @@ class CalendarChevronGlyph extends StatelessWidget {
     super.key,
     required this.direction,
     required this.size,
-    this.color = Palette.ink,
+    this.color,
   });
 
   final ChevronDirection direction;
   final double size;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
       dimension: size,
       child: CustomPaint(
-        painter: _ChevronPainter(direction: direction, color: color),
+        painter: _ChevronPainter(
+          direction: direction,
+          color: color ?? context.colors.ink,
+        ),
       ),
     );
   }

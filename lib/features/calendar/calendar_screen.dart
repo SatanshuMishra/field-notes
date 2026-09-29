@@ -252,7 +252,7 @@ class _CalendarMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(child: Text(text, style: TypographyTokens.captionSans));
+    return Center(child: Text(text, style: context.textStyles.captionSans));
   }
 }
 
@@ -261,12 +261,12 @@ class _CalendarError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: EmptyStatePlaceholder(
           message: calendarErrorMessage,
-          messageStyle: TypographyTokens.bodySerif,
+          messageStyle: context.textStyles.bodySerif,
         ),
       ),
     );

@@ -197,7 +197,7 @@ void main() {
                 ? (box.decoration as BoxDecoration).color
                 : null,
           );
-      expect(surfaces, contains(Palette.cardWarm));
+      expect(surfaces, contains(FieldNotesColors.light.cardWarm));
     },
   );
 }

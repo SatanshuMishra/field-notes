@@ -33,7 +33,6 @@ const TextStyle _yearStyle = TextStyle(
   fontSize: 18,
   fontWeight: FontWeight.w500,
   height: 1,
-  color: Palette.ink,
 );
 
 const TextStyle _monthStyle = TextStyle(
@@ -41,7 +40,6 @@ const TextStyle _monthStyle = TextStyle(
   fontSize: 12,
   fontWeight: FontWeight.w600,
   height: 1,
-  color: Palette.ink,
 );
 
 class CalendarMonthPicker extends StatelessWidget {
@@ -68,6 +66,7 @@ class CalendarMonthPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
       duration: _popDuration,
@@ -86,12 +85,14 @@ class CalendarMonthPicker extends StatelessWidget {
         child: SizedBox(
           width: width,
           child: DecoratedBox(
-            decoration: const BoxDecoration(
-              color: Palette.cardWarm,
+            decoration: BoxDecoration(
+              color: colors.cardWarm,
               border: Border.fromBorderSide(
-                BorderSide(color: Palette.ink, width: 2),
+                BorderSide(color: colors.line, width: 2),
               ),
-              borderRadius: BorderRadius.all(Radius.circular(Shapes.radiusLg)),
+              borderRadius: const BorderRadius.all(
+                Radius.circular(Shapes.radiusLg),
+              ),
               boxShadow: Shadows.softLift,
             ),
             child: Padding(
@@ -119,7 +120,7 @@ class CalendarMonthPicker extends StatelessWidget {
                         child: Text(
                           '$year',
                           textAlign: TextAlign.center,
-                          style: _yearStyle,
+                          style: _yearStyle.copyWith(color: colors.ink),
                         ),
                       ),
                       CalendarChevronButton(
@@ -153,7 +154,7 @@ class CalendarMonthPicker extends StatelessWidget {
                         ],
                       ],
                     ),
-                  const DashedDivider(color: Palette.dashMuted),
+                  DashedDivider(color: colors.dashMuted),
                   Center(
                     child: _PickerAction(
                       label: 'Back to this week',
@@ -197,6 +198,7 @@ class _MonthTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     final Widget text = Padding(
       padding: const EdgeInsets.all(8),
       child: Text(
@@ -205,18 +207,18 @@ class _MonthTile extends StatelessWidget {
         style: _monthStyle.copyWith(
           color: isDisplayed
               ? Palette.onAccent
-              : (isCurrent ? Palette.coral : Palette.ink),
+              : (isCurrent ? colors.accentInk : colors.ink),
         ),
       ),
     );
     final Widget face;
     if (isDisplayed) {
       face = DecoratedBox(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: Palette.coral,
-          border: Shapes.outline,
+          border: context.shadows.outline,
           borderRadius: _monthBorderRadius,
-          boxShadow: Shadows.control,
+          boxShadow: context.shadows.control,
         ),
         child: text,
       );
@@ -278,7 +280,7 @@ class _PickerAction extends StatelessWidget {
               borderRadius: _actionRadius,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(label, style: TypographyTokens.caption11Sans),
+                child: Text(label, style: context.textStyles.caption11Sans),
               ),
             ),
           ),
