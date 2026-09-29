@@ -60,7 +60,7 @@ class ComposerFooterVeil extends StatelessWidget {
         ),
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Palette.composerPaper.withValues(
+            color: context.colors.composerPaper.withValues(
               alpha: composerFooterVeilOpacity,
             ),
           ),
@@ -79,9 +79,6 @@ const double _plusGap = 7;
 const double _hintsGap = 12;
 const double _busyOpacity = 0.5;
 const double _focusBorderWidth = 3;
-const Border _focusBorder = Border.fromBorderSide(
-  BorderSide(color: Palette.ink, width: _focusBorderWidth),
-);
 
 class ComposerFooter extends StatefulWidget {
   const ComposerFooter({
@@ -177,7 +174,7 @@ class _ComposerFooterState extends State<ComposerFooter> {
   Widget build(BuildContext context) {
     if (widget.compact) {
       return TextFieldTapRegion(
-        child: SizedBox(height: formatBarHeight, child: _addButton()),
+        child: SizedBox(height: formatBarHeight, child: _addButton(context)),
       );
     }
     return TextFieldTapRegion(
@@ -190,10 +187,10 @@ class _ComposerFooterState extends State<ComposerFooter> {
                 constraints.maxWidth >= composerFooterHintsMinWidth;
             return Row(
               children: <Widget>[
-                _addButton(),
+                _addButton(context),
                 if (hints) ...<Widget>[
                   const SizedBox(width: _hintsGap),
-                  Expanded(child: _hints()),
+                  Expanded(child: _hints(context)),
                 ],
               ],
             );
@@ -203,7 +200,9 @@ class _ComposerFooterState extends State<ComposerFooter> {
     );
   }
 
-  Widget _addButton() {
+  Widget _addButton(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     final bool enabled = !_busy;
     return FocusableActionDetector(
       focusNode: _addFocus,
@@ -234,9 +233,16 @@ class _ComposerFooterState extends State<ComposerFooter> {
                   key: _addFocused ? focusRingKey : null,
                   decoration: BoxDecoration(
                     color: Palette.coral,
-                    border: _addFocused ? _focusBorder : Shapes.outline,
+                    border: _addFocused
+                        ? Border.fromBorderSide(
+                            BorderSide(
+                              color: colors.ink,
+                              width: _focusBorderWidth,
+                            ),
+                          )
+                        : shadows.outline,
                     borderRadius: Shapes.buttonBorderRadius,
-                    boxShadow: Shadows.control,
+                    boxShadow: shadows.control,
                   ),
                   child: Opacity(
                     opacity: enabled ? 1 : _busyOpacity,
@@ -248,16 +254,18 @@ class _ComposerFooterState extends State<ComposerFooter> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          const SizedBox.square(
+                          SizedBox.square(
                             dimension: _cameraExtent,
-                            child: CustomPaint(painter: _CameraPainter()),
+                            child: CustomPaint(
+                              painter: _CameraPainter(color: colors.ink),
+                            ),
                           ),
                           const SizedBox(width: _plusGap),
                           Text(
                             enabled
                                 ? composerAddPhotoLabel
                                 : composerAddingLabel,
-                            style: TypographyTokens.captureLabelSans.copyWith(
+                            style: context.textStyles.captureLabelSans.copyWith(
                               color: Palette.onAccent,
                             ),
                           ),
@@ -274,7 +282,8 @@ class _ComposerFooterState extends State<ComposerFooter> {
     );
   }
 
-  Widget _hints() {
+  Widget _hints(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Align(
       alignment: AlignmentDirectional.centerEnd,
       child: Text.rich(
@@ -284,8 +293,8 @@ class _ComposerFooterState extends State<ComposerFooter> {
                 in composerMarkdownHints) ...<InlineSpan>[
               TextSpan(
                 text: marker,
-                style: TypographyTokens.caption10Sans.copyWith(
-                  color: Palette.ink40,
+                style: textStyles.caption10Sans.copyWith(
+                  color: context.colors.ink40,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -297,19 +306,21 @@ class _ComposerFooterState extends State<ComposerFooter> {
         textAlign: TextAlign.end,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TypographyTokens.caption10Sans,
+        style: textStyles.caption10Sans,
       ),
     );
   }
 }
 
 class _CameraPainter extends CustomPainter {
-  const _CameraPainter();
+  const _CameraPainter({required this.color});
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint stroke = Paint()
-      ..color = Palette.ink
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = _cameraStroke
       ..strokeJoin = StrokeJoin.round;
@@ -331,5 +342,5 @@ class _CameraPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CameraPainter oldDelegate) => false;
+  bool shouldRepaint(_CameraPainter oldDelegate) => oldDelegate.color != color;
 }

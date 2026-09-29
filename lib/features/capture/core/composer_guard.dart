@@ -144,19 +144,19 @@ class _DiscardConfirmDialog extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: _confirmMaxWidth),
           child: StickerCard(
-            surface: Palette.cardBright,
+            surface: context.colors.cardBright,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
                   composerDiscardTitle,
-                  style: TypographyTokens.titleSerif,
+                  style: context.textStyles.titleSerif,
                 ),
                 const SizedBox(height: _confirmTitleGap),
                 Text(
                   composerDiscardMessage,
-                  style: TypographyTokens.bodySans,
+                  style: context.textStyles.bodySans,
                 ),
                 const SizedBox(height: _confirmActionsGap),
                 Wrap(
@@ -176,7 +176,7 @@ class _DiscardConfirmDialog extends StatelessWidget {
                       key: composerDiscardKey,
                       label: composerDiscardLabel,
                       variant: StickerButtonVariant.danger,
-                      labelStyle: TypographyTokens.captureLabelSans,
+                      labelStyle: context.textStyles.captureLabelSans,
                       padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),

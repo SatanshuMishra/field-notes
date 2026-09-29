@@ -180,9 +180,9 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               middle: roomy ? _titleBlock() : formatBar,
               below: roomy && sidebar ? formatBar : null,
             ),
-            const DashedDivider(
+            DashedDivider(
               thickness: _headerRuleThickness,
-              color: Palette.ink25,
+              color: context.colors.ink25,
             ),
             Expanded(
               child: _body(
@@ -250,7 +250,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       return true;
     }
     final double line =
-        NoteColumn.emOf(context) * TypographyTokens.noteBody.height!;
+        NoteColumn.emOf(context) * context.textStyles.noteBody.height!;
     return available >=
         _composerChromeHeight +
             composerFooterHeight +
@@ -334,6 +334,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _exitPill() {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
     final bool back = widget.exit == ComposerExit.back;
     return _headerAction(
       onTap: widget.isSaving ? null : widget.onCancel,
@@ -345,11 +347,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           left: _exitPillStartPadding,
           right: _exitPillEndPadding,
         ),
-        decoration: const BoxDecoration(
-          color: Palette.cardWarm,
-          border: Shapes.outline,
+        decoration: BoxDecoration(
+          color: colors.cardWarm,
+          border: shadows.outline,
           borderRadius: _exitPillBorderRadius,
-          boxShadow: Shadows.chip,
+          boxShadow: shadows.chip,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -358,15 +360,15 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               dimension: _exitGlyphSize,
               child: CustomPaint(
                 painter: back
-                    ? const _BackChevronPainter()
-                    : const _CloseGlyphPainter(),
+                    ? _BackChevronPainter(color: colors.ink)
+                    : _CloseGlyphPainter(color: colors.ink),
               ),
             ),
             const SizedBox(width: _exitGlyphGap),
             Text(
               back ? 'Back' : 'Cancel',
-              style: TypographyTokens.captureLabelSans.copyWith(
-                color: Palette.ink,
+              style: context.textStyles.captureLabelSans.copyWith(
+                color: colors.ink,
               ),
             ),
           ],
@@ -376,6 +378,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _titleBlock() {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     final String kicker = widget.kicker;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: _headerGap),
@@ -388,15 +391,15 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
               kicker,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TypographyTokens.stampAccent.copyWith(
-                color: Palette.coral,
+              style: textStyles.stampAccent.copyWith(
+                color: context.colors.accentInk,
               ),
             ),
           Text(
             widget.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TypographyTokens.headlineSerif.copyWith(
+            style: textStyles.headlineSerif.copyWith(
               fontSize: 22,
               height: _titleLineHeight,
             ),
@@ -407,6 +410,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _saveButton(BuildContext context) {
+    final FieldNotesShadows shadows = context.shadows;
     final bool enabled = !widget.isSaving;
     return _headerAction(
       onTap: enabled ? () => _handleSaveTap(context) : null,
@@ -414,11 +418,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
         child: DecoratedBox(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             color: Palette.coral,
-            border: Shapes.outline,
+            border: shadows.outline,
             borderRadius: _saveBorderRadius,
-            boxShadow: Shadows.control,
+            boxShadow: shadows.control,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -427,7 +431,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: Text(
               widget.isSaving ? widget.savingLabel : widget.saveLabel,
-              style: TypographyTokens.captureLabelSans.copyWith(
+              style: context.textStyles.captureLabelSans.copyWith(
                 color: Palette.onAccent,
               ),
             ),
@@ -497,8 +501,8 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
             ),
             child: Text(
               errorMessage,
-              style: TypographyTokens.captionSans.copyWith(
-                color: Palette.danger,
+              style: context.textStyles.captionSans.copyWith(
+                color: context.colors.dangerInk,
               ),
             ),
           ),
@@ -509,15 +513,16 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _writingSurface({required bool footer}) {
+    final FieldNotesColors colors = context.colors;
     return KeyedSubtree(
       key: composerWritingSurfaceKey,
       child: DecoratedBox(
-        decoration: const BoxDecoration(color: Palette.composerPaper),
+        decoration: BoxDecoration(color: colors.composerPaper),
         child: Column(
           children: <Widget>[
-            const DashedDivider(
+            DashedDivider(
               thickness: _surfaceRuleThickness,
-              color: Palette.ink20,
+              color: colors.ink20,
             ),
             Expanded(child: _editor(footer: footer)),
           ],
@@ -532,7 +537,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
         return RawScrollbar(
           controller: _scrollController,
           thickness: _scrollbarThickness,
-          thumbColor: Palette.ink22,
+          thumbColor: context.colors.ink22,
           radius: const Radius.circular(Shapes.radiusXs),
           child: Padding(
             padding: _pageMargins(constraints.maxHeight),
@@ -579,12 +584,14 @@ double _pageEndInset({required bool footer}) =>
     (footer ? composerFooterHeight : 0) + _pageEndGap;
 
 class _CloseGlyphPainter extends CustomPainter {
-  const _CloseGlyphPainter();
+  const _CloseGlyphPainter({required this.color});
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint stroke = Paint()
-      ..color = Palette.ink
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = _exitStrokeWidth
       ..strokeCap = StrokeCap.round
@@ -597,16 +604,19 @@ class _CloseGlyphPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_CloseGlyphPainter oldDelegate) => false;
+  bool shouldRepaint(_CloseGlyphPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _BackChevronPainter extends CustomPainter {
-  const _BackChevronPainter();
+  const _BackChevronPainter({required this.color});
+
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
     final Paint stroke = Paint()
-      ..color = Palette.ink
+      ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = _backChevronStrokeWidth
       ..strokeCap = StrokeCap.round
@@ -621,5 +631,6 @@ class _BackChevronPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BackChevronPainter oldDelegate) => false;
+  bool shouldRepaint(_BackChevronPainter oldDelegate) =>
+      oldDelegate.color != color;
 }

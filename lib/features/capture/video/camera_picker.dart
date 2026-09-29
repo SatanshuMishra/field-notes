@@ -104,7 +104,7 @@ class _CameraPickerState extends State<CameraPicker> {
                                 value: device.id,
                                 child: Text(
                                   device.label,
-                                  style: TypographyTokens.bodySans,
+                                  style: context.textStyles.bodySans,
                                 ),
                               ),
                           ],

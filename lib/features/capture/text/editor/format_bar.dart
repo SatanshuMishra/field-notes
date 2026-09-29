@@ -78,6 +78,7 @@ class FormatBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Color ink = context.colors.ink;
     return TextFieldTapRegion(
       child: SizedBox(
         height: formatBarHeight,
@@ -87,7 +88,7 @@ class FormatBar extends StatelessWidget {
             children: <Widget>[
               Expanded(
                 child: ToolbarScrollFade(
-                  color: Palette.composerPaper,
+                  color: context.colors.composerPaper,
                   startKey: formatBarFadeStartKey,
                   endKey: formatBarFadeEndKey,
                   child: SingleChildScrollView(
@@ -98,9 +99,9 @@ class FormatBar extends StatelessWidget {
                       children: <Widget>[
                         _action(
                           formatBoldKey,
-                          const FormatIcon(
+                          FormatIcon(
                             glyph: FormatGlyph.bold,
-                            color: Palette.ink,
+                            color: ink,
                             size: _glyphExtent,
                           ),
                           'Bold',
@@ -109,9 +110,9 @@ class FormatBar extends StatelessWidget {
                         ),
                         _action(
                           formatItalicKey,
-                          const FormatIcon(
+                          FormatIcon(
                             glyph: FormatGlyph.italic,
-                            color: Palette.ink,
+                            color: ink,
                             size: _glyphExtent,
                           ),
                           'Italic',
@@ -120,9 +121,9 @@ class FormatBar extends StatelessWidget {
                         ),
                         _action(
                           formatHeadingKey,
-                          const FormatIcon(
+                          FormatIcon(
                             glyph: FormatGlyph.heading,
-                            color: Palette.ink,
+                            color: ink,
                             size: _glyphExtent,
                           ),
                           'Heading',
@@ -130,9 +131,9 @@ class FormatBar extends StatelessWidget {
                         ),
                         _action(
                           formatListKey,
-                          const FormatIcon(
+                          FormatIcon(
                             glyph: FormatGlyph.list,
-                            color: Palette.ink,
+                            color: ink,
                             size: _glyphExtent,
                           ),
                           'Bullet list',
@@ -153,9 +154,9 @@ class FormatBar extends StatelessWidget {
                         ),
                         _action(
                           formatQuoteKey,
-                          const FormatIcon(
+                          FormatIcon(
                             glyph: FormatGlyph.quote,
-                            color: Palette.ink,
+                            color: ink,
                             size: _glyphExtent,
                           ),
                           'Quote',
@@ -163,9 +164,9 @@ class FormatBar extends StatelessWidget {
                         ),
                         _action(
                           formatLinkKey,
-                          const FormatIcon(
+                          FormatIcon(
                             glyph: FormatGlyph.link,
-                            color: Palette.ink,
+                            color: ink,
                             size: _glyphExtent,
                           ),
                           'Link',
@@ -192,9 +193,9 @@ class FormatBar extends StatelessWidget {
               ?trailing,
               _historyButton(
                 formatUndoKey,
-                const FormatIcon(
+                FormatIcon(
                   glyph: FormatGlyph.undo,
-                  color: Palette.ink,
+                  color: ink,
                   size: _glyphExtent,
                 ),
                 'Undo',
@@ -438,7 +439,9 @@ class _MoreFormatsState extends State<_MoreFormats> {
                                     child: ExcludeSemantics(
                                       child: Text(
                                         item.label,
-                                        style: TypographyTokens.toolbarSans,
+                                        style: overlayContext
+                                            .textStyles
+                                            .toolbarSans,
                                       ),
                                     ),
                                   ),
@@ -654,7 +657,7 @@ class _BarIcon extends StatelessWidget {
     return SizedBox.square(
       dimension: _glyphExtent,
       child: CustomPaint(
-        painter: _BarGlyphPainter(glyph: glyph, color: Palette.ink),
+        painter: _BarGlyphPainter(glyph: glyph, color: context.colors.ink),
         size: const Size.square(_glyphExtent),
       ),
     );

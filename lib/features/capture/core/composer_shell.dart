@@ -85,7 +85,7 @@ class ComposerShell extends StatelessWidget {
                     ),
                     child: SizedBox(
                       width: math.min(width, constraints.maxWidth),
-                      child: _panel(),
+                      child: _panel(context),
                     ),
                   );
                 },
@@ -111,13 +111,14 @@ class ComposerShell extends StatelessWidget {
 
   Widget _sprig() => _sprigLayerFor(sprig);
 
-  Widget _panel() {
+  Widget _panel(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return Container(
       key: composerPanelKey,
       clipBehavior: Clip.hardEdge,
       decoration: BoxDecoration(
-        color: Palette.composerPaper,
-        border: Border.all(color: Palette.ink, width: composerPanelBorderWidth),
+        color: colors.composerPaper,
+        border: Border.all(color: colors.line, width: composerPanelBorderWidth),
         borderRadius: BorderRadius.circular(Shapes.radiusXl),
         boxShadow: Shadows.panelLift,
       ),

@@ -124,7 +124,10 @@ double _controlExtent(double content, double target) =>
 
 double _labelControlWidth(String label, TextScaler scaler, double target) {
   final TextPainter painter = TextPainter(
-    text: TextSpan(text: label, style: TypographyTokens.toolbarSans),
+    text: TextSpan(
+      text: label,
+      style: const FieldNotesTextStyles(FieldNotesColors.light).toolbarSans,
+    ),
     textDirection: TextDirection.ltr,
     textScaler: scaler,
   )..layout();
@@ -744,7 +747,7 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
   Widget _segmentLabel(String text, {required bool selected}) {
     return Text(
       text,
-      style: TypographyTokens.toolbarSans.copyWith(
+      style: context.textStyles.toolbarSans.copyWith(
         color: selected ? Palette.onAccent : Palette.toolbarLabel,
       ),
     );

@@ -36,7 +36,7 @@ void _expectRingOnEdge(WidgetTester tester, Finder control, double radius) {
         Offset.zero & tester.getSize(ring),
         Radius.circular(radius),
       ),
-      color: Palette.focusRing,
+      color: FieldNotesColors.light.ink,
     ),
   );
 }
@@ -68,7 +68,7 @@ void main() {
         tester.renderObject(find.byKey(focusRingKey)),
         paints..rect(
           rect: (Offset.zero & const Size(120, 48)).deflate(1.5),
-          color: Palette.focusRing,
+          color: FieldNotesColors.light.ink,
           strokeWidth: 3,
           style: PaintingStyle.stroke,
         ),

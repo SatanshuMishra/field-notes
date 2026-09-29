@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/capture/text/editor/note_editor.dart';
 import 'package:field_notes/features/capture/text/editor/photo_caption_field.dart';
 import 'package:field_notes/features/capture/text/editor/photo_toolbar.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
-import 'package:field_notes/features/note_engine/layout/note_typography.dart'
-    show NoteTypography;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show ComposerMediaScope, NoteEditorController;
 import 'package:field_notes/features/note_engine/render/photo_figure.dart'
@@ -155,7 +154,10 @@ void main() {
 
     final Finder field = find.byKey(photoCaptionFieldEditorKey);
     final TextField textField = tester.widget<TextField>(field);
-    expect(textField.style, NoteTypography.caption);
+    expect(
+      textField.style,
+      FieldNotesTextStyles(FieldNotesColors.light).captionSans,
+    );
     expect(textField.textAlign, TextAlign.center);
     expect(textField.controller?.text, 'Harbour');
     expect(tester.getSize(field).width, closeTo(344, 0.5));

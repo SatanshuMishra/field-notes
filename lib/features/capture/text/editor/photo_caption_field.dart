@@ -152,6 +152,7 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
   }
 
   Widget _field() {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Material(
       type: MaterialType.transparency,
       child: Semantics(
@@ -161,9 +162,9 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
           controller: _controller,
           focusNode: _focus,
           maxLines: 1,
-          style: NoteTypography.caption,
+          style: textStyles.captionSans,
           textAlign: TextAlign.center,
-          cursorColor: Palette.coral,
+          cursorColor: context.colors.accentInk,
           keyboardType: TextInputType.text,
           textInputAction: TextInputAction.done,
           textCapitalization: TextCapitalization.sentences,
@@ -176,9 +177,11 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
             hint: ExcludeSemantics(
               child: Text(
                 photoCaptionFieldHint,
-                style: Theme.of(context).textTheme.bodyLarge!
-                    .merge(NoteTypography.caption)
-                    .merge(_hintStyle),
+                style: Theme.of(context).textTheme.bodyLarge!.merge(
+                  textStyles.captionSans.copyWith(
+                    color: context.colors.placeholder,
+                  ),
+                ),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -189,8 +192,4 @@ class _PhotoCaptionFieldState extends State<PhotoCaptionField> {
       ),
     );
   }
-
-  static final TextStyle _hintStyle = NoteTypography.caption.copyWith(
-    color: Palette.placeholder,
-  );
 }
