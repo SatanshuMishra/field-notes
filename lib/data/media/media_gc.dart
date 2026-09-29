@@ -7,6 +7,7 @@ import '../database/app_database.dart';
 import '../drafts/draft_paths.dart';
 import 'blob_paths.dart';
 import 'blob_prefix.dart';
+import 'media_reachability.dart';
 
 class MediaGarbageCollector {
   MediaGarbageCollector({
@@ -28,32 +29,9 @@ class MediaGarbageCollector {
   }
 
   Future<Set<String>> _reachableMediaIds() async {
-    final ids = <String>{};
-
-    final entries = await (_db.select(_db.entries)
-          ..where((t) => t.deletedAt.isNull()))
-        .get();
-    for (final entry in entries) {
-      final media = entry.mediaId;
-      final thumbnail = entry.thumbnailMediaId;
-      if (media != null) {
-        ids.add(media);
-      }
-      if (thumbnail != null) {
-        ids.add(thumbnail);
-      }
-    }
-
-    final photos = await (_db.select(_db.entryPhotos)
-          ..where((t) => t.deletedAt.isNull()))
-        .get();
-    for (final photo in photos) {
-      ids.add(photo.mediaId);
-    }
-
-    ids.addAll(await _draftReferencedMediaIds());
-
-    return ids;
+    final Set<String> live = await liveJournalMediaIds(_db);
+    final Set<String> drafted = await _draftReferencedMediaIds();
+    return <String>{...live, ...drafted};
   }
 
   Future<Set<String>> _draftReferencedMediaIds() async {
