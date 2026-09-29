@@ -8,6 +8,7 @@ class PairingQrPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
     return Semantics(
       label: 'Device pairing code',
       image: true,
@@ -16,13 +17,15 @@ class PairingQrPlaceholder extends StatelessWidget {
         height: size,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: Palette.cardBright,
-            border: Shapes.outline,
+            color: colors.cardBright,
+            border: context.shadows.outline,
             borderRadius: Shapes.buttonBorderRadius,
           ),
-          child: const Padding(
-            padding: EdgeInsets.all(8),
-            child: CustomPaint(painter: PairingQrPainter()),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: CustomPaint(
+              painter: PairingQrPainter(moduleColor: colors.ink),
+            ),
           ),
         ),
       ),
@@ -31,18 +34,17 @@ class PairingQrPlaceholder extends StatelessWidget {
 }
 
 class PairingQrPainter extends CustomPainter {
-  const PairingQrPainter({
-    this.moduleColor = Palette.ink,
-    this.modules = 9,
-  });
+  const PairingQrPainter({this.moduleColor, this.modules = 9});
 
-  final Color moduleColor;
+  final Color? moduleColor;
   final int modules;
+
+  Color get _moduleColor => moduleColor ?? FieldNotesColors.light.ink;
 
   @override
   void paint(Canvas canvas, Size size) {
     final double cell = size.width / modules;
-    final Paint fill = Paint()..color = moduleColor;
+    final Paint fill = Paint()..color = _moduleColor;
     for (int row = 0; row < modules; row++) {
       for (int col = 0; col < modules; col++) {
         if (!_isModuleFilled(row, col)) {
@@ -78,7 +80,7 @@ class PairingQrPainter extends CustomPainter {
 
   void _paintFinder(Canvas canvas, double cell, int row, int col) {
     final Paint stroke = Paint()
-      ..color = moduleColor
+      ..color = _moduleColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = cell * 0.5;
     canvas.drawRect(
@@ -91,13 +93,8 @@ class PairingQrPainter extends CustomPainter {
       stroke,
     );
     canvas.drawRect(
-      Rect.fromLTWH(
-        col * cell + cell,
-        row * cell + cell,
-        cell,
-        cell,
-      ),
-      Paint()..color = moduleColor,
+      Rect.fromLTWH(col * cell + cell, row * cell + cell, cell, cell),
+      Paint()..color = _moduleColor,
     );
   }
 

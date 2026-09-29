@@ -16,23 +16,24 @@ class DeleteAllConfirmDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return Center(
       child: Material(
         type: MaterialType.transparency,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: StickerCard(
-            surface: Palette.cardBright,
+            surface: context.colors.cardBright,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('Delete everything?', style: TypographyTokens.titleSerif),
+                Text('Delete everything?', style: textStyles.titleSerif),
                 const SizedBox(height: 8),
                 Text(
                   'This erases every entry, photo, and mood on this device. '
                   'It cannot be undone.',
-                  style: TypographyTokens.bodySans,
+                  style: textStyles.bodySans,
                 ),
                 const SizedBox(height: 20),
                 Wrap(

@@ -139,9 +139,9 @@ Future<void> _pumpSettings(
           ).copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
-        home: const Scaffold(
-          backgroundColor: Palette.page,
-          body: SettingsScreen(),
+        home: Scaffold(
+          backgroundColor: FieldNotesColors.light.page,
+          body: const SettingsScreen(),
         ),
       ),
     ),

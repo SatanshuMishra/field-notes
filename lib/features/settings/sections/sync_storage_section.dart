@@ -35,8 +35,9 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
 
   @override
   Widget build(BuildContext context) {
-    final SyncStorageChoice choice =
-        SyncStorageChoice.fromStorageMode(widget.storageMode);
+    final SyncStorageChoice choice = SyncStorageChoice.fromStorageMode(
+      widget.storageMode,
+    );
     return SettingsSection(
       title: 'Sync & storage',
       subtitle: 'Syncing arrives in a future update',
@@ -62,7 +63,7 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
           child: Text(
             'Entries are stored only on this device. Nothing is uploaded '
             'and there is no syncing across devices.',
-            style: TypographyTokens.captionSans,
+            style: context.textStyles.captionSans,
           ),
         ),
         SettingsFieldRow(
@@ -126,10 +127,7 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               SettingsStatusPill(label: 'Not connected'),
-              StickerButton(
-                label: 'Test connection',
-                onPressed: null,
-              ),
+              StickerButton(label: 'Test connection', onPressed: null),
             ],
           ),
         ),

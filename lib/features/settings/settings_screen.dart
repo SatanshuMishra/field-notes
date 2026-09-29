@@ -78,7 +78,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final AsyncValue<AppSettings> settings = ref.watch(appSettingsProvider);
     return ColoredBox(
-      color: Palette.page,
+      color: context.colors.page,
       child: settings.when(
         loading: _buildLoading,
         error: (Object error, StackTrace stackTrace) => _buildError(),
@@ -94,13 +94,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildError() {
     return Center(
       child: StickerCard(
-        surface: Palette.cardBright,
+        surface: context.colors.cardBright,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Text(
               'Your settings could not be loaded.',
-              style: TypographyTokens.bodySans,
+              style: context.textStyles.bodySans,
             ),
             const SizedBox(height: 16),
             StickerButton(
@@ -132,7 +132,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          const _SettingsHeader(kicker: TypographyTokens.pageEyebrowAccent),
+          _SettingsHeader(kicker: context.textStyles.pageEyebrowAccent),
           const SizedBox(height: _sidebarHeaderGap - _ringRoom),
           Expanded(
             child: Row(
@@ -185,7 +185,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             0,
           ),
           child: _SettingsHeader(
-            kicker: TypographyTokens.pageEyebrowAccent.copyWith(
+            kicker: context.textStyles.pageEyebrowAccent.copyWith(
               fontSize: _compactKickerSize,
             ),
           ),
@@ -281,7 +281,7 @@ class _SettingsHeader extends StatelessWidget {
         Text('preferences', style: kicker),
         Semantics(
           header: true,
-          child: Text('Settings', style: TypographyTokens.titleSerif),
+          child: Text('Settings', style: context.textStyles.titleSerif),
         ),
       ],
     );
