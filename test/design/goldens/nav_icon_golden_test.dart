@@ -27,7 +27,7 @@ Future<void> _captureGlyph(
 
   await tester.pumpWidget(
     goldenHarness(
-      NavIcon(glyph: glyph, color: Palette.ink, size: _size),
+      NavIcon(glyph: glyph, color: FieldNotesColors.light.ink, size: _size),
     ),
   );
 

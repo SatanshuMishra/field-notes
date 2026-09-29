@@ -10,7 +10,7 @@ import 'package:field_notes/design/widgets/widgets.dart';
 
 import 'harness.dart';
 
-Color _surface(WidgetTester tester) {
+Color? _surface(WidgetTester tester) {
   return tester.widget<StickerCard>(find.byType(StickerCard)).surface;
 }
 
@@ -55,18 +55,18 @@ void main() {
 
       expect(find.text('Recording paused'), findsOneWidget);
       expect(find.byType(StickerCard), findsOneWidget);
-      expect(_surface(tester), Palette.cardBright);
+      expect(_surface(tester), FieldNotesColors.light.cardBright);
     });
 
     testWidgets('honours a custom surface colour',
         (WidgetTester tester) async {
       await tester.pumpWidget(
         feedbackHarness(
-          const Toast(message: 'Saved', surface: Palette.cardWarm),
+          Toast(message: 'Saved', surface: FieldNotesColors.light.cardWarm),
         ),
       );
 
-      expect(_surface(tester), Palette.cardWarm);
+      expect(_surface(tester), FieldNotesColors.light.cardWarm);
     });
 
     testWidgets('carries a trailing action beside the message',
@@ -326,7 +326,10 @@ void main() {
           .text
           .style!;
       expect(drawn.decoration, anyOf(isNull, TextDecoration.none));
-      expect(drawn.fontFamily, TypographyTokens.toastSans.fontFamily);
+      expect(
+        drawn.fontFamily,
+        FieldNotesTextStyles(FieldNotesColors.light).toastSans.fontFamily,
+      );
 
       await tester.pump(kToastLifetime);
     });

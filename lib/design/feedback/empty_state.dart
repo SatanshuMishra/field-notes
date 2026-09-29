@@ -14,7 +14,7 @@ class EmptyStatePlaceholder extends StatelessWidget {
     this.icon,
     this.action,
     this.padding = const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-    this.borderColor = Palette.ink,
+    this.borderColor,
     this.borderRadius = Shapes.radiusMd,
     this.headlineStyle,
     this.messageStyle,
@@ -25,16 +25,17 @@ class EmptyStatePlaceholder extends StatelessWidget {
   final Widget? icon;
   final Widget? action;
   final EdgeInsetsGeometry padding;
-  final Color borderColor;
+  final Color? borderColor;
   final double borderRadius;
   final TextStyle? headlineStyle;
   final TextStyle? messageStyle;
 
   @override
   Widget build(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
     return CustomPaint(
       painter: DashedBorderPainter(
-        color: borderColor,
+        color: borderColor ?? context.colors.line,
         radius: borderRadius,
       ),
       child: Padding(
@@ -51,14 +52,14 @@ class EmptyStatePlaceholder extends StatelessWidget {
               Text(
                 headline!,
                 textAlign: TextAlign.center,
-                style: headlineStyle ?? TypographyTokens.sectionSerif,
+                style: headlineStyle ?? textStyles.sectionSerif,
               ),
               const SizedBox(height: _headlineGap),
             ],
             Text(
               message,
               textAlign: TextAlign.center,
-              style: messageStyle ?? TypographyTokens.bodySans,
+              style: messageStyle ?? textStyles.bodySans,
             ),
             if (action != null) ...<Widget>[
               const SizedBox(height: 16),

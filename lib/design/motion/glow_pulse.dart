@@ -7,7 +7,7 @@ class GlowPulse extends StatefulWidget {
   const GlowPulse({
     super.key,
     this.child,
-    this.color = Palette.coral,
+    this.color,
     this.duration = Motion.pulse,
     this.diameter = 150,
     this.gradientAlpha = 0.4,
@@ -20,7 +20,7 @@ class GlowPulse extends StatefulWidget {
   });
 
   final Widget? child;
-  final Color color;
+  final Color? color;
   final Duration duration;
   final double diameter;
   final double gradientAlpha;
@@ -64,7 +64,7 @@ class _GlowPulseState extends State<GlowPulse>
       children: <Widget>[
         AnimatedBuilder(
           animation: _controller,
-          child: _disc(),
+          child: _disc(widget.color ?? context.colors.accentInk),
           builder: (BuildContext context, Widget? disc) {
             final double t = _progress;
             return Opacity(
@@ -83,14 +83,14 @@ class _GlowPulseState extends State<GlowPulse>
     );
   }
 
-  Widget _disc() {
+  Widget _disc(Color color) {
     return DecoratedBox(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: <Color>[
-            widget.color.withValues(alpha: widget.gradientAlpha),
-            widget.color.withValues(alpha: 0),
+            color.withValues(alpha: widget.gradientAlpha),
+            color.withValues(alpha: 0),
           ],
           stops: <double>[0, widget.gradientStop],
         ),

@@ -35,12 +35,12 @@ void main() {
       );
 
       final BoxDecoration deco = _cardDecoration(tester);
-      expect(deco.color, Palette.cardWarm);
+      expect(deco.color, FieldNotesColors.light.cardWarm);
       expect(deco.borderRadius, Shapes.cardBorderRadius);
-      expect(deco.boxShadow, Shadows.card);
+      expect(deco.boxShadow, FieldNotesShadows(FieldNotesColors.light).card);
 
       final Border border = deco.border! as Border;
-      expect(border.top.color, Palette.ink);
+      expect(border.top.color, FieldNotesColors.light.line);
       expect(border.top.width, Shapes.outlineWidth);
     });
 
@@ -48,11 +48,14 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(
         stickerHarness(
-          const StickerCard(surface: Palette.cardBright, child: Text('x')),
+          StickerCard(
+            surface: FieldNotesColors.light.cardBright,
+            child: const Text('x'),
+          ),
         ),
       );
 
-      expect(_cardDecoration(tester).color, Palette.cardBright);
+      expect(_cardDecoration(tester).color, FieldNotesColors.light.cardBright);
     });
 
     testWidgets('inserts no transform at the default rotation',

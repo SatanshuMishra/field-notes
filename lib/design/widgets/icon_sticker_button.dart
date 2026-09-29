@@ -104,7 +104,7 @@ class IconStickerButton extends StatelessWidget {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: background,
-                border: Shapes.outline,
+                border: context.shadows.outline,
                 borderRadius: _buttonRadius,
               ),
               child: Center(

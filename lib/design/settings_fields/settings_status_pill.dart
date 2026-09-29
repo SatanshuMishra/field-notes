@@ -16,8 +16,8 @@ class SettingsStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Palette.cardBright,
-        border: Shapes.outline,
+        color: context.colors.cardBright,
+        border: context.shadows.outline,
         borderRadius: Shapes.buttonBorderRadius,
       ),
       child: Padding(
@@ -33,7 +33,7 @@ class SettingsStatusPill extends StatelessWidget {
               child: const SizedBox(width: 8, height: 8),
             ),
             const SizedBox(width: 8),
-            Text(label, style: TypographyTokens.captionSans),
+            Text(label, style: context.textStyles.captionSans),
           ],
         ),
       ),

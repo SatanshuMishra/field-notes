@@ -34,7 +34,7 @@ void main() {
           SettingsToggle(value: false, onChanged: (_) {}),
         ),
       );
-      expect(_trackColor(tester), Palette.panelTop);
+      expect(_trackColor(tester), FieldNotesColors.light.panelTop);
     });
 
     testWidgets('toggles the value on tap when enabled',

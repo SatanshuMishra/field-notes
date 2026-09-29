@@ -42,8 +42,8 @@ class SettingsSegmented<T> extends StatelessWidget {
           alignment: Alignment.centerRight,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Palette.panelTop,
-              border: Shapes.outline,
+              color: context.colors.panelTop,
+              border: context.shadows.outline,
               borderRadius: Shapes.buttonBorderRadius,
             ),
             child: Padding(
@@ -52,7 +52,7 @@ class SettingsSegmented<T> extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   for (final SettingsSegment<T> segment in segments)
-                    _segmentTile(segment),
+                    _segmentTile(context, segment),
                 ],
               ),
             ),
@@ -68,7 +68,8 @@ class SettingsSegmented<T> extends StatelessWidget {
     }
   }
 
-  Widget _segmentTile(SettingsSegment<T> segment) {
+  Widget _segmentTile(BuildContext context, SettingsSegment<T> segment) {
+    final FieldNotesShadows shadows = context.shadows;
     final bool selected = segment.value == value;
     final VoidCallback? choose = enabled ? () => _choose(segment.value) : null;
     return _SegmentReach(
@@ -86,17 +87,19 @@ class SettingsSegmented<T> extends StatelessWidget {
             borderRadius: Shapes.buttonBorderRadius,
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: selected ? Palette.cardBright : const Color(0x00000000),
-                border: selected ? Shapes.outline : null,
+                color: selected
+                    ? context.colors.cardBright
+                    : const Color(0x00000000),
+                border: selected ? shadows.outline : null,
                 borderRadius: Shapes.buttonBorderRadius,
-                boxShadow: selected ? Shadows.button : const <BoxShadow>[],
+                boxShadow: selected ? shadows.button : const <BoxShadow>[],
               ),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 6,
                 ),
-                child: Text(segment.label, style: TypographyTokens.labelSans),
+                child: Text(segment.label, style: context.textStyles.labelSans),
               ),
             ),
           ),

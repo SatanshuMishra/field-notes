@@ -32,14 +32,10 @@ class SettingsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text(title, style: TypographyTokens.sectionHeaderAccent),
+          Text(title, style: context.textStyles.sectionHeaderAccent),
           if (subtitle != null) ...<Widget>[
             const SizedBox(height: 2),
-            Text(
-              subtitle!,
-              style: TypographyTokens.captionSans
-                  .copyWith(color: Palette.muted),
-            ),
+            Text(subtitle!, style: context.textStyles.captionSans),
           ],
           const SizedBox(height: 8),
           ...rows,

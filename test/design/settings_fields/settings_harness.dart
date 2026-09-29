@@ -6,7 +6,7 @@ Widget settingsHarness(Widget child) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     home: Scaffold(
-      backgroundColor: Palette.page,
+      backgroundColor: FieldNotesColors.light.page,
       body: Align(
         alignment: Alignment.topLeft,
         child: child,

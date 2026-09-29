@@ -52,11 +52,11 @@ void main() {
   ) async {
     await _capture(
       tester,
-      const ColoredBox(
-        color: Palette.cardWarm,
+      ColoredBox(
+        color: FieldNotesColors.light.cardWarm,
         child: IconStickerGlyphIcon(
           glyph: IconStickerGlyph.edit,
-          color: Palette.ink,
+          color: FieldNotesColors.light.ink,
           size: _reviewGlyphSize,
         ),
       ),

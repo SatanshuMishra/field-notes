@@ -33,7 +33,7 @@ class SettingsFieldRow extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     label,
-                    style: TypographyTokens.labelSans.copyWith(
+                    style: context.textStyles.labelSans.copyWith(
                       color: labelColor,
                     ),
                   ),
@@ -41,8 +41,8 @@ class SettingsFieldRow extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       description!,
-                      style: TypographyTokens.captionSans.copyWith(
-                        color: descriptionColor ?? Palette.muted,
+                      style: context.textStyles.captionSans.copyWith(
+                        color: descriptionColor ?? context.colors.muted,
                       ),
                     ),
                   ],

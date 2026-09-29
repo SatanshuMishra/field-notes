@@ -21,7 +21,7 @@ class NoteColumn extends StatelessWidget {
   static double emOf(BuildContext context) {
     return MediaQuery.textScalerOf(
       context,
-    ).scale(TypographyTokens.noteBody.fontSize!);
+    ).scale(context.textStyles.noteBody.fontSize!);
   }
 
   static double measureOf(BuildContext context) => measureEm * emOf(context);
