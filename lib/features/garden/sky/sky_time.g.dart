@@ -128,7 +128,7 @@ final class SkyTimeProvider extends $NotifierProvider<SkyTime, SkyMoment> {
   }
 }
 
-String _$skyTimeHash() => r'c4a7ae45af9c95ce0a46067cb0529cbfbdbcbf5b';
+String _$skyTimeHash() => r'b482d2a1f3649533271a472cec1ee7e20a8ce1de';
 
 abstract class _$SkyTime extends $Notifier<SkyMoment> {
   SkyMoment build();
