@@ -19,6 +19,18 @@ import 'theme/app_theme.dart';
 
 const Duration _settingsWait = Duration(seconds: 1);
 
+const SystemUiOverlayStyle _lightSystemBars = SystemUiOverlayStyle(
+  statusBarBrightness: Brightness.light,
+  statusBarIconBrightness: Brightness.dark,
+  systemNavigationBarIconBrightness: Brightness.dark,
+);
+
+const SystemUiOverlayStyle _darkSystemBars = SystemUiOverlayStyle(
+  statusBarBrightness: Brightness.dark,
+  statusBarIconBrightness: Brightness.light,
+  systemNavigationBarIconBrightness: Brightness.light,
+);
+
 class FieldNotesApp extends StatelessWidget {
   const FieldNotesApp({super.key});
 
@@ -35,8 +47,8 @@ class FieldNotesApp extends StatelessWidget {
     final Widget scaled = AppTextScale(child: child!);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: switch (Theme.of(context).brightness) {
-        Brightness.dark => SystemUiOverlayStyle.light,
-        Brightness.light => SystemUiOverlayStyle.dark,
+        Brightness.dark => _darkSystemBars,
+        Brightness.light => _lightSystemBars,
       },
       child: defaultTargetPlatform == TargetPlatform.macOS
           ? MacosMenuBar(child: MacosTextShortcuts(child: scaled))

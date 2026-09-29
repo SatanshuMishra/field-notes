@@ -359,27 +359,15 @@ void main() {
           .value;
 
       expect(_theme(tester).brightness, Brightness.light);
-      expect(region(), SystemUiOverlayStyle.dark);
-      expect(SystemChrome.latestStyle, SystemUiOverlayStyle.dark);
-      expect(
-        SystemChrome.latestStyle?.statusBarIconBrightness,
-        Brightness.dark,
-      );
+      _expectSystemBars(region(), Brightness.dark);
+      _expectSystemBars(SystemChrome.latestStyle, Brightness.dark);
 
       await _switchTo(_container(tester), Appearance.dark);
       await _settle(tester);
 
       expect(_theme(tester).brightness, Brightness.dark);
-      expect(region(), SystemUiOverlayStyle.light);
-      expect(SystemChrome.latestStyle, SystemUiOverlayStyle.light);
-      expect(
-        SystemChrome.latestStyle?.statusBarIconBrightness,
-        Brightness.light,
-      );
-      expect(
-        SystemChrome.latestStyle?.systemNavigationBarIconBrightness,
-        Brightness.light,
-      );
+      _expectSystemBars(region(), Brightness.light);
+      _expectSystemBars(SystemChrome.latestStyle, Brightness.light);
     });
   });
 
@@ -421,4 +409,10 @@ void main() {
       });
     },
   );
+}
+
+void _expectSystemBars(SystemUiOverlayStyle? style, Brightness icons) {
+  expect(style?.statusBarIconBrightness, icons);
+  expect(style?.systemNavigationBarIconBrightness, icons);
+  expect(style?.systemNavigationBarColor, isNull);
 }
