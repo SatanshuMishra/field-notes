@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../../data/database/app_database.dart' as db;
 import '../../data/media/blob_paths.dart';
 import '../../data/media/media_exceptions.dart';
+import '../../data/media/media_reachability.dart';
 import '../../domain/services/export_service.dart';
 import '../../domain/services/media_store.dart';
 import 'data_exceptions.dart';
@@ -33,7 +34,11 @@ class JournalExportService implements ExportService {
       final days = await _db.select(_db.days).get();
       final entries = await _db.select(_db.entries).get();
       final photos = await _db.select(_db.entryPhotos).get();
-      final blobs = await _db.select(_db.mediaBlobs).get();
+      final Set<String> inUse = await liveJournalMediaIds(_db);
+      final List<db.MediaBlob> blobs = [
+        for (final blob in await _db.select(_db.mediaBlobs).get())
+          if (inUse.contains(blob.id)) blob,
+      ];
       final settings = await _db.select(_db.settings).get();
 
       final journal = <String, Object?>{

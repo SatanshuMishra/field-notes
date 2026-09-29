@@ -191,6 +191,28 @@ void main() {
             createdAt: 0,
           ),
         );
+    await db.into(db.days).insert(DaysCompanion.insert(
+          id: 'd1',
+          date: '2026-07-14',
+          createdAt: 1,
+          updatedAt: 1,
+        ));
+    await db.into(db.entries).insert(EntriesCompanion.insert(
+          id: 'e1',
+          dayId: 'd1',
+          type: 'text',
+          textContent: const Value('a note with a photo'),
+          createdAt: 2,
+          updatedAt: 2,
+        ));
+    await db.into(db.entryPhotos).insert(EntryPhotosCompanion.insert(
+          id: 'ph1',
+          entryId: 'e1',
+          mediaId: 'a1b2c3',
+          sortOrder: 0,
+          createdAt: 3,
+          updatedAt: 3,
+        ));
 
     final bundle = await service.buildBundle();
 
@@ -218,11 +240,70 @@ void main() {
             createdAt: 0,
           ),
         );
+    await db.into(db.days).insert(DaysCompanion.insert(
+          id: 'd1',
+          date: '2026-07-14',
+          createdAt: 1,
+          updatedAt: 1,
+        ));
+    await db.into(db.entries).insert(EntriesCompanion.insert(
+          id: 'e1',
+          dayId: 'd1',
+          type: 'video',
+          mediaId: Value(id),
+          createdAt: 2,
+          updatedAt: 2,
+        ));
 
     final bundle = await service.buildBundle();
 
     expect(bundle.skippedMediaIds, isEmpty);
     expect(bundle.mediaFiles[migrated], bytes);
     expect(p.extension(bundle.mediaFiles.keys.single), '.mov');
+  });
+
+  test('export leaves out photos that no live note uses', () async {
+    final kept = await seedBlob(db, root, [1, 1, 1], 'image/jpeg', 'photo');
+    final removed = await seedBlob(db, root, [2, 2, 2], 'image/jpeg', 'photo');
+    final discarded =
+        await seedBlob(db, root, [3, 3, 3], 'image/jpeg', 'photo');
+    await db.into(db.days).insert(DaysCompanion.insert(
+          id: 'd1',
+          date: '2026-09-29',
+          createdAt: 1,
+          updatedAt: 1,
+        ));
+    await db.into(db.entries).insert(EntriesCompanion.insert(
+          id: 'e1',
+          dayId: 'd1',
+          type: 'text',
+          textContent: const Value('a note with one photo left'),
+          createdAt: 2,
+          updatedAt: 2,
+        ));
+    await db.into(db.entryPhotos).insert(EntryPhotosCompanion.insert(
+          id: 'ph1',
+          entryId: 'e1',
+          mediaId: kept,
+          sortOrder: 0,
+          createdAt: 3,
+          updatedAt: 3,
+        ));
+
+    final bundle = await service.buildBundle();
+
+    String archived(String id) =>
+        relPathForBlob(id: id, mime: 'image/jpeg', kind: MediaKind.photo);
+    expect(bundle.mediaFiles.keys, [archived(kept)]);
+    expect(bundle.mediaFiles.containsKey(archived(removed)), isFalse);
+    expect(bundle.mediaFiles.containsKey(archived(discarded)), isFalse);
+    expect(bundle.manifest.stats.mediaBlobCount, 1);
+    final journal = jsonDecode(bundle.journalJson) as Map<String, Object?>;
+    expect(
+      (journal['mediaBlobs'] as List)
+          .cast<Map<String, Object?>>()
+          .map((b) => b['id']),
+      [kept],
+    );
   });
 }
