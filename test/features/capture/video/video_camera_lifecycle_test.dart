@@ -249,7 +249,7 @@ void main() {
     );
     await _openComposer(tester);
 
-    expect(find.text(cameraPermissionMessage), findsOneWidget);
+    expect(find.text(videoDeviceListMessage), findsOneWidget);
     expect(find.byType(CameraPicker), findsNothing);
     expect(fakeVideoPreview(), findsNothing);
 

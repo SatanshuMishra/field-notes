@@ -680,7 +680,7 @@ void main() {
     (WidgetTester tester) async {
       for (final _Layout layout in _Layout.values) {
         final FakeVideoRecorder recorder = FakeVideoRecorder(
-          devices: const <VideoCaptureDevice>[],
+          listError: const VideoRecorderException(cameraPermissionMessage),
         );
         final _Harness harness = await _pumpApp(
           tester,

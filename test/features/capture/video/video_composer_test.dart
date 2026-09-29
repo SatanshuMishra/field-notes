@@ -206,7 +206,7 @@ void main() {
 
     await _openComposer(tester);
 
-    expect(find.text(cameraPermissionMessage), findsOneWidget);
+    expect(find.text(videoDeviceListMessage), findsOneWidget);
     expect(find.byKey(videoShutterKey), findsOneWidget);
     expect(find.text(stageIdleStatus), findsNothing);
     expect(recorder.startCalls, 0);
@@ -218,7 +218,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text(cameraPermissionMessage), findsOneWidget);
+    expect(find.text(videoDeviceListMessage), findsOneWidget);
     expect(recorder.startCalls, 0);
   });
 
