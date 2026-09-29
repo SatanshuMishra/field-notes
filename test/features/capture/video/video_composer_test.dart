@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
@@ -41,6 +42,7 @@ Widget _recorderApp({
     overrides: <Override>[
       videoRecorderProvider.overrideWith((Ref ref) => recorder),
       captureServiceProvider.overrideWith((Ref ref) => service),
+      reflectionPromptsOff(),
     ],
     child: videoHarness(
       _RecorderTrigger(date: '2026-07-21', onResult: onResult),
@@ -55,6 +57,8 @@ Future<void> _openComposer(WidgetTester tester) async {
 }
 
 Future<void> _startRecording(WidgetTester tester) async {
+  await tester.tap(find.byKey(videoShutterKey));
+  await tester.pump();
   await tester.tap(find.byKey(videoShutterKey));
   for (int i = 0; i < 4; i++) {
     await tester.pump(const Duration(milliseconds: 50));
@@ -173,13 +177,15 @@ void main() {
 
     expect(recorder.startCalls, 1);
     expect(fakeVideoPreview(), findsOneWidget);
-    expect(find.text('recording… tap pause or stop'), findsOneWidget);
+    expect(find.text(stageRecordingStatus), findsOneWidget);
     expect(find.text(cameraPermissionMessage), findsNothing);
-    expect(find.text('tap the button to start recording'), findsNothing);
+    expect(find.text(stageIdleStatus), findsNothing);
 
     await tester.tap(find.byKey(videoCloseKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(
@@ -202,7 +208,7 @@ void main() {
 
     expect(find.text(cameraPermissionMessage), findsOneWidget);
     expect(find.byKey(videoShutterKey), findsOneWidget);
-    expect(find.text('tap the button to start recording'), findsNothing);
+    expect(find.text(stageIdleStatus), findsNothing);
     expect(recorder.startCalls, 0);
     expect(service.requests, isEmpty);
     expect(fakeVideoPreview(), findsNothing);
@@ -237,8 +243,8 @@ void main() {
 
     expect(recorder.startCalls, 1);
     expect(find.text(videoStartTimeoutMessage), findsOneWidget);
-    expect(find.text('tap the button to start recording'), findsOneWidget);
-    expect(find.text('recording… tap pause or stop'), findsNothing);
+    expect(find.text(stageIdleStatus), findsOneWidget);
+    expect(find.text(stageRecordingStatus), findsNothing);
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
 
     await tester.tap(find.byKey(videoCloseKey));
@@ -297,6 +303,11 @@ void main() {
     await tester.tap(find.byKey(videoCloseKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    expect(recorder.cancelCalls, 0);
+
+    await tester.tap(find.byKey(videoDiscardConfirmKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(recorder.cancelCalls, 1);
     expect(service.requests, isEmpty);
@@ -354,7 +365,7 @@ void main() {
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.byType(VideoRecorderSheet), findsNothing);
     expect(result, isNull);
@@ -380,16 +391,16 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text(videoDiscardConfirmTitle), findsOneWidget);
+    expect(find.text(letGoTitle), findsOneWidget);
     expect(recorder.cancelCalls, 0);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text(videoDiscardConfirmTitle), findsNothing);
+    expect(find.text(letGoTitle), findsNothing);
     expect(find.byType(VideoRecorderSheet), findsOneWidget);
-    expect(find.bySemanticsLabel('Stop recording'), findsOneWidget);
+    expect(find.bySemanticsLabel('Stop and keep'), findsOneWidget);
     expect(recorder.cancelCalls, 0);
     expect(recorder.stopCalls, 0);
     expect(result, 'unset');
@@ -416,7 +427,7 @@ void main() {
 
       await _sendSystemBack(tester);
 
-      expect(find.text(videoDiscardConfirmTitle), findsOneWidget);
+      expect(find.text(letGoTitle), findsOneWidget);
       expect(find.byType(VideoRecorderSheet), findsOneWidget);
       expect(recorder.cancelCalls, 0);
       expect(result, 'unset');

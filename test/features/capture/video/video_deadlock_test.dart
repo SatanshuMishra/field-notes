@@ -1,5 +1,6 @@
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
@@ -34,6 +35,7 @@ Widget _recorderApp({
     overrides: <Override>[
       videoRecorderProvider.overrideWith((Ref ref) => recorder),
       captureServiceProvider.overrideWith((Ref ref) => service),
+      reflectionPromptsOff(),
     ],
     child: videoHarness(const _RecorderTrigger(date: '2026-07-21')),
   );
@@ -46,6 +48,8 @@ Future<void> _openComposer(WidgetTester tester) async {
 }
 
 Future<void> _settleStart(WidgetTester tester) async {
+  await tester.tap(find.byKey(videoShutterKey));
+  await tester.pump();
   await tester.tap(find.byKey(videoShutterKey));
   for (int i = 0; i < 8; i++) {
     await tester.pump(const Duration(milliseconds: 50));
@@ -72,7 +76,7 @@ void main() {
       find.byKey(const ValueKey('deferred-preview')),
       findsOneWidget,
     );
-    expect(find.text('recording… tap pause or stop'), findsOneWidget);
+    expect(find.text(stageRecordingStatus), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

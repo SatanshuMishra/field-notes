@@ -1,24 +1,20 @@
-import 'dart:math' as math;
+import 'package:flutter/material.dart';
 
-import 'package:flutter/foundation.dart' show clampDouble;
-import 'package:flutter/rendering.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
-
-import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
-import 'package:field_notes/features/entry_cards/util/duration_format.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'camera_picker.dart';
+import 'self_view_chip.dart';
 import 'video_recorder.dart';
 
 enum VideoRecorderPhase {
   preparing,
   idle,
+  breathing,
   arming,
   recording,
   paused,
@@ -30,89 +26,113 @@ const Key videoCloseKey = ValueKey<String>('video-close');
 const Key videoShutterKey = ValueKey<String>('video-shutter');
 const Key videoDiscardCircleKey = ValueKey<String>('video-discard-circle');
 const Key videoSaveCircleKey = ValueKey<String>('video-save-circle');
+const Key videoKeepGoingKey = ValueKey<String>('video-keep-going');
+const Key videoSelfViewKey = ValueKey<String>('video-self-view');
+const Key videoKeyboardHintKey = ValueKey<String>('video-keyboard-hint');
 
 const String videoFeedLabel = 'CAMERA FEED';
+const String videoSidebarPrivacyLine = 'Private · only you will see this';
+const String videoBottomBarPrivacyLine = 'Only you';
+const String videoSelfViewOffTitle = 'The camera is still recording.';
+const String videoSelfViewOffMessage = 'You just won’t see yourself.';
+const String videoLetGoLabel = 'Let go';
+const String videoKeepLabel = 'Keep';
+const String videoStartLabel = 'Start recording';
+const String videoSkipBreathLabel = 'Skip the breath';
+const String videoPauseLabel = 'Pause recording';
+const String videoResumeLabel = 'Resume recording';
+const String videoStopAndKeepLabel = 'Stop and keep';
+const String videoKeyboardHint = 'space pause · ⌘↩ keep · esc leave';
+const String videoNoPauseKeyboardHint = 'space start · ⌘↩ keep · esc leave';
 
-const double _viewportHeight = 480;
+const Color _hintInk = Color(0xFFB7A58C);
+const Color _errorInk = Color(0xFFE79A80);
+const Color _selfViewOffInk = Color(0xFFB7A58C);
+const Color _shutterRing = Color(0xEBF3E6D1);
+const Color _shutterCoreInk = Color(0xFFD9775E);
+const Color _shutterPauseInk = Color(0xFFFFFFFF);
+const Color _letGoFill = Color(0x80140F0C);
+const Color _letGoEdge = Color(0x59F3E6D1);
+const Color _letGoGlyphInk = Color(0xD9FFFFFF);
+const Color _letGoCaptionInk = Color(0xCCF3E6D1);
+const Color _keepFill = Color(0xFFF3E6D1);
+const Color _keepGlyphInk = Color(0xFF1C1713);
+const Color _keepCaptionInk = Color(0xFFF3E6D1);
+const Color _deniedFill = Color(0xB81C1713);
+const Color _deniedEdge = Color(0x24F3E6D1);
+const Color _deniedInk = Color(0xFFDCCAB0);
+const Color _questionShadow = Color(0x73000000);
 
-const List<Color> _vignetteColors = <Color>[
-  Palette.viewportScrim,
-  Color(0x000F0D0B),
-  Color(0x000F0D0B),
-  Color(0xB80F0D0B),
-];
-const List<double> _vignetteStops = <double>[0, 0.22, 0.68, 1];
+const double _sidebarShutter = 80;
+const double _bottomBarShutter = 72;
+const double _shutterRingWidth = 3;
+const double _sidebarShutterDot = 30;
+const double _bottomBarShutterDot = 27;
+const double _sidebarStopSquare = 26;
+const double _bottomBarStopSquare = 24;
+const double _stopSquareRadius = 5;
+const double _shutterPauseGlyph = 26;
+const double _disabledOpacity = 0.5;
 
-const double _minTapTarget = 48;
+const double _sidebarSideCircle = 52;
+const double _bottomBarSideCircle = 48;
+const double _sidebarSideSlot = 68;
+const double _bottomBarSideSlot = 64;
+const double _sidebarControlGap = 34;
+const double _bottomBarControlGap = 22;
+const double _sideEdgeWidth = 1.5;
+const double _letGoGlyph = 17;
+const double _keepGlyph = 19;
+const double _sideCaptionGap = 6;
+const double _sidebarCaptionSize = 11;
+const double _bottomBarCaptionSize = 10;
 
-const double _chromeInset = 16;
-const double _closeGlyphSize = 22;
-const double _closeTargetInset = (_minTapTarget - _closeGlyphSize) / 2;
+const double _sidebarGlow = 300;
+const double _bottomBarGlow = 210;
+const double _settleGlowAlpha = 0.4;
+const double _breatheGlowAlpha = 0.3;
+const double _sidebarSelfViewOffSize = 18;
+const double _bottomBarSelfViewOffSize = 14;
+const double _selfViewOffLeading = 1.45;
 
-const double _pillRadius = Shapes.radiusMd;
-const double _pillGap = 7;
-const double _pillDotSize = 8;
-const EdgeInsets _pillPadding = EdgeInsets.symmetric(
-  horizontal: 12,
-  vertical: 5,
-);
-const double _pillTimeSize = 13;
-const Duration _pillBlinkDuration = Duration(milliseconds: 1200);
+const double _noteSize = 12;
+const double _errorSize = 13;
+const double _noteGap = 6;
+const double _errorGap = 8;
+const double _keyboardHintSize = 11;
+const double _keyboardHintTracking = 0.22;
+const double _keyboardHintInset = 20;
+const double _sidebarTrailingGap = 8;
+const double _bottomBarTrailingGap = 6;
 
-const double _pickerWidth = 280;
-
-const double _bandLeft = _chromeInset - _closeTargetInset + _minTapTarget;
-const double _bandGap = 8;
-const String _widestReadout = '00:00';
-
-const double _underPillTop = 54;
-const double _underPillGap = 8;
-
-const double _hintBottom = 100;
-const double _hintSize = 13;
-const double _errorGap = 10;
-const EdgeInsets _errorPadding = EdgeInsets.symmetric(
-  horizontal: 14,
-  vertical: 8,
-);
+const double _sidebarQuestionShadowBlur = 20;
+const double _bottomBarQuestionShadowBlur = 16;
+const Offset _questionShadowOffset = Offset(0, 2);
 
 const double _deniedMaxWidth = 420;
+const double _deniedGutter = 24;
+const double _deniedTextSize = 14;
+const double _deniedLeading = 1.45;
+const double _deniedEdgeWidth = 1;
+const BorderRadius _deniedRadius = BorderRadius.all(Radius.circular(18));
 const EdgeInsets _deniedPadding = EdgeInsets.symmetric(
   horizontal: 22,
   vertical: 20,
 );
 
-const double _controlRowBottom = 22;
-const double _controlRowGap = 30;
-const double _shutterSize = 70;
-const double _shutterBorderWidth = 4;
-const double _shutterCoreSize = 24;
-const double _shutterPauseGlyphSize = 26;
-const BorderRadius _shutterFocusRadius = BorderRadius.all(
-  Radius.circular(_shutterSize / 2),
-);
-
-const double _sideCircleSize = 44;
-const BorderRadius _sideFocusRadius = BorderRadius.all(
-  Radius.circular(_sideCircleSize / 2),
-);
-const double _sideCircleBorderWidth = 1.5;
-const double _sideGlyphSize = 18;
-const double _sideCaptionGap = 3;
-const double _sideCaptionSize = 10;
-const Color _discardCaptionColor = Color(0xBFFFFFFF);
-
-class VideoRecorderSheet extends StatelessWidget {
+class VideoRecorderSheet extends StatefulWidget {
   const VideoRecorderSheet({
     super.key,
     required this.phase,
     required this.onStart,
     required this.onStop,
-    required this.onCancel,
+    required this.onLeave,
     this.onPause,
     this.onResume,
-    this.onDiscard,
-    this.onDismiss,
+    this.onKeepGoing,
+    this.onLetGo,
+    this.asking = false,
+    this.letGoKey,
     this.supportsPause = false,
     this.preview,
     this.devices = const <VideoCaptureDevice>[],
@@ -122,25 +142,22 @@ class VideoRecorderSheet extends StatelessWidget {
     this.nudgeMessage,
     this.errorMessage,
     this.cameraLabel = 'Camera',
-    this.armedHint = 'tap the button to start recording',
     this.armingHint = 'Getting the camera ready…',
-    this.recordingHint = 'recording… tap pause or stop',
-    this.pausedHint = 'paused · resume or save your clip',
     this.savingHint = 'Saving your video…',
     this.capHint = 'Auto-stops at 30:00.',
     this.deniedMessage = cameraPermissionMessage,
-    this.discardLabel = 'Discard',
-    this.saveLabel = 'Save',
   });
 
   final VideoRecorderPhase phase;
   final VoidCallback onStart;
   final VoidCallback onStop;
-  final VoidCallback onCancel;
+  final VoidCallback onLeave;
   final VoidCallback? onPause;
   final VoidCallback? onResume;
-  final VoidCallback? onDiscard;
-  final VoidCallback? onDismiss;
+  final VoidCallback? onKeepGoing;
+  final VoidCallback? onLetGo;
+  final bool asking;
+  final Key? letGoKey;
   final bool supportsPause;
   final Widget? preview;
   final List<VideoCaptureDevice> devices;
@@ -150,86 +167,138 @@ class VideoRecorderSheet extends StatelessWidget {
   final String? nudgeMessage;
   final String? errorMessage;
   final String cameraLabel;
-  final String armedHint;
   final String armingHint;
-  final String recordingHint;
-  final String pausedHint;
   final String savingHint;
   final String capHint;
   final String deniedMessage;
-  final String discardLabel;
-  final String saveLabel;
 
-  bool get _isRecording => phase == VideoRecorderPhase.recording;
-  bool get _isPaused => phase == VideoRecorderPhase.paused;
-  bool get _isActive => _isRecording || _isPaused;
-  bool get _isPreparing =>
-      phase == VideoRecorderPhase.preparing ||
-      phase == VideoRecorderPhase.arming;
-  bool get _isSaving => phase == VideoRecorderPhase.saving;
-  bool get _isDenied => phase == VideoRecorderPhase.denied;
-  bool get _isIdle => phase == VideoRecorderPhase.idle;
-  bool get _showsPicker =>
-      devices.isNotEmpty && !_isDenied && !_isSaving && !_isPaused;
+  @override
+  State<VideoRecorderSheet> createState() => _VideoRecorderSheetState();
+}
+
+class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
+  bool _selfView = true;
+
+  VideoRecorderPhase get _phase => widget.phase;
+  bool get _isRecording => _phase == VideoRecorderPhase.recording;
+  bool get _isPaused => _phase == VideoRecorderPhase.paused;
+  bool get _isTaking => _isRecording || _isPaused;
+  bool get _isAsking => widget.asking && _isTaking;
+  bool get _isGettingReady =>
+      _phase == VideoRecorderPhase.preparing ||
+      _phase == VideoRecorderPhase.arming;
+  bool get _isSaving => _phase == VideoRecorderPhase.saving;
+  bool get _isDenied => _phase == VideoRecorderPhase.denied;
+  bool get _canPause => widget.supportsPause && widget.onPause != null;
+
+  StagePhase get _stagePhase => switch (_phase) {
+    VideoRecorderPhase.preparing ||
+    VideoRecorderPhase.idle ||
+    VideoRecorderPhase.denied => StagePhase.idle,
+    VideoRecorderPhase.breathing ||
+    VideoRecorderPhase.arming => StagePhase.breathing,
+    VideoRecorderPhase.recording => StagePhase.recording,
+    VideoRecorderPhase.paused => StagePhase.paused,
+    VideoRecorderPhase.saving => StagePhase.saving,
+  };
+
+  void _setSelfView(bool value) => setState(() => _selfView = value);
+
+  VoidCallback? get _shutterTap {
+    if (_isSaving || _isGettingReady || _isAsking) {
+      return null;
+    }
+    if (_isRecording) {
+      return _canPause ? widget.onPause : widget.onStop;
+    }
+    if (_isPaused) {
+      return widget.onResume ?? widget.onStop;
+    }
+    return widget.onStart;
+  }
+
+  VoidCallback? get _primaryKey {
+    if (_isRecording && !_canPause) {
+      return null;
+    }
+    return _shutterTap;
+  }
+
+  VoidCallback? get _keepKey => _isTaking ? widget.onStop : null;
+
+  VoidCallback? get _leaveKey {
+    if (_isSaving) {
+      return null;
+    }
+    return _isAsking ? widget.onKeepGoing : widget.onLeave;
+  }
+
+  String get _shutterLabel {
+    if (_phase == VideoRecorderPhase.breathing) {
+      return videoSkipBreathLabel;
+    }
+    if (_isRecording) {
+      return _canPause ? videoPauseLabel : videoStopAndKeepLabel;
+    }
+    if (_isPaused) {
+      return widget.onResume != null ? videoResumeLabel : videoStopAndKeepLabel;
+    }
+    return videoStartLabel;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return CallbackShortcuts(
-      bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.escape): ?onDismiss,
-      },
-      child: Focus(
-        autofocus: true,
-        skipTraversal: true,
-        includeSemantics: false,
-        child: _viewport(),
-      ),
-    );
-  }
-
-  Widget _viewport() {
-    final String? errorMessage = this.errorMessage;
-    final String? hint = _hint;
-    return SizedBox(
-      height: _viewportHeight,
-      width: double.infinity,
+    final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
+    return RecorderShortcuts(
+      onPrimary: _primaryKey,
+      onKeep: _keepKey,
+      onLeave: _leaveKey,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          _feed(),
-          const IgnorePointer(child: _Vignette()),
-          if (_isDenied) _deniedPanel(),
-          _closeButton(),
-          _topBand(),
-          _underPill(),
-          if (errorMessage != null || hint != null)
-            _bottomText(errorMessage, hint),
-          _controlRow(),
+          RecorderSurface(
+            arrangement: RecorderArrangement.video,
+            privacyLine: sidebar
+                ? videoSidebarPrivacyLine
+                : videoBottomBarPrivacyLine,
+            onLeave: _isSaving ? null : widget.onLeave,
+            leaveKey: videoCloseKey,
+            glow: !_selfView && !_isDenied,
+            background: _background(sidebar),
+            trailing: _trailing(sidebar),
+            question: _question(sidebar),
+            centre: _isDenied ? _deniedPanel() : null,
+            status: _status(),
+            actions: _actions(sidebar),
+          ),
+          if (sidebar)
+            Positioned(
+              right: _keyboardHintInset,
+              bottom: _keyboardHintInset,
+              child: _keyboardHint(),
+            ),
         ],
       ),
     );
   }
 
-  String? get _hint {
-    if (_isDenied) {
-      return null;
-    }
-    if (_isSaving) {
-      return savingHint;
-    }
-    if (_isPreparing) {
-      return armingHint;
-    }
-    if (_isRecording) {
-      return recordingHint;
-    }
-    return _isPaused ? pausedHint : armedHint;
+  Widget _background(bool sidebar) {
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Offstage(offstage: !_selfView, child: _feed()),
+        IgnorePointer(child: Center(child: _centrePiece(sidebar))),
+      ],
+    );
   }
 
   Widget _feed() {
-    final Widget? preview = this.preview;
+    final Widget? preview = widget.preview;
     if (preview != null) {
       return preview;
+    }
+    if (_isDenied) {
+      return const SizedBox.shrink();
     }
     return const CrossHatchPlaceholder(
       variant: CrossHatchVariant.viewport,
@@ -238,187 +307,204 @@ class VideoRecorderSheet extends StatelessWidget {
     );
   }
 
-  Widget _closeButton() {
-    return Positioned(
-      left: _chromeInset - _closeTargetInset,
-      top: _chromeInset - _closeTargetInset,
-      child: Semantics(
-        button: true,
-        enabled: !_isSaving,
-        label: 'Close',
-        child: GestureDetector(
-          key: videoCloseKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: _isSaving ? null : onCancel,
-          child: FocusRing(
-            enabled: !_isSaving,
-            onPressed: onCancel,
-            surface: FocusRingSurface.dark,
-            borderRadius: Shapes.buttonBorderRadius,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: _minTapTarget,
-                minHeight: _minTapTarget,
-              ),
-              child: const Center(
-                child: IconStickerGlyphIcon(
-                  glyph: IconStickerGlyph.close,
-                  color: Palette.onAccent,
-                  size: _closeGlyphSize,
-                ),
+  Widget _centrePiece(bool sidebar) {
+    final double diameter = sidebar ? _sidebarGlow : _bottomBarGlow;
+    final bool hidden = !_selfView && !_isDenied;
+    return SizedBox.square(
+      dimension: diameter,
+      child: Stack(
+        alignment: Alignment.center,
+        children: <Widget>[
+          if (_phase == VideoRecorderPhase.breathing)
+            BreathingGlow(
+              diameter: diameter,
+              mode: BreathingGlowMode.settle,
+              alpha: _settleGlowAlpha,
+            ),
+          if (hidden && _isRecording)
+            BreathingGlow(diameter: diameter, alpha: _breatheGlowAlpha),
+          if (hidden) _selfViewOffCopy(sidebar),
+        ],
+      ),
+    );
+  }
+
+  Widget _selfViewOffCopy(bool sidebar) {
+    final TextStyle style = TextStyle(
+      fontFamily: TypographyTokens.serif,
+      fontSize: sidebar ? _sidebarSelfViewOffSize : _bottomBarSelfViewOffSize,
+      fontWeight: FontWeight.w400,
+      fontStyle: FontStyle.italic,
+      height: _selfViewOffLeading,
+      color: _selfViewOffInk,
+    );
+    return MergeSemantics(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text(
+            videoSelfViewOffTitle,
+            textAlign: TextAlign.center,
+            style: style,
+          ),
+          Text(
+            videoSelfViewOffMessage,
+            textAlign: TextAlign.center,
+            style: style,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _trailing(bool sidebar) {
+    final bool picker =
+        _phase == VideoRecorderPhase.idle && widget.devices.length > 1;
+    final bool chip = !_isDenied;
+    if (!picker && !chip) {
+      return null;
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        if (picker)
+          Flexible(
+            child: CameraPicker(
+              devices: widget.devices,
+              selectedDeviceId: widget.selectedDeviceId,
+              onChanged: widget.onDeviceChanged,
+              label: widget.cameraLabel,
+            ),
+          ),
+        if (picker && chip)
+          SizedBox(
+            width: sidebar ? _sidebarTrailingGap : _bottomBarTrailingGap,
+          ),
+        if (chip)
+          SelfViewChip(
+            key: videoSelfViewKey,
+            value: _selfView,
+            onChanged: _setSelfView,
+          ),
+      ],
+    );
+  }
+
+  Widget _question(bool sidebar) {
+    return DefaultTextStyle.merge(
+      style: TextStyle(
+        shadows: <Shadow>[
+          Shadow(
+            color: _questionShadow,
+            offset: _questionShadowOffset,
+            blurRadius: sidebar
+                ? _sidebarQuestionShadowBlur
+                : _bottomBarQuestionShadowBlur,
+          ),
+        ],
+      ),
+      child: ReflectionPrompt(phase: _stagePhase, showKicker: false),
+    );
+  }
+
+  Widget? _status() {
+    final String? nudge = _isRecording ? widget.nudgeMessage : null;
+    final String? error = widget.errorMessage;
+    final Widget? line = _statusLine();
+    final bool capHint = _phase == VideoRecorderPhase.idle;
+    if (line == null && nudge == null && error == null && !capHint) {
+      return null;
+    }
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        ?line,
+        if (nudge != null) _note(nudge),
+        if (capHint) _note(widget.capHint),
+        if (error != null)
+          Padding(
+            padding: const EdgeInsets.only(top: _errorGap),
+            child: Text(
+              error,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: TypographyTokens.sans,
+                fontSize: _errorSize,
+                fontWeight: FontWeight.w500,
+                color: _errorInk,
               ),
             ),
           ),
-        ),
-      ),
+      ],
     );
   }
 
-  Widget _topBand() {
-    return Positioned(
-      top: _chromeInset,
-      left: 0,
-      right: 0,
-      child: _TopBand(
-        reserve: Visibility(
-          visible: false,
-          maintainState: true,
-          maintainAnimation: true,
-          maintainSize: true,
-          child: _timerPill(
-            _widestReadout,
-            const _PillDot(color: Palette.onDark30),
-          ),
+  Widget? _statusLine() {
+    if (_isDenied) {
+      return null;
+    }
+    if (_isGettingReady) {
+      return Semantics(
+        container: true,
+        liveRegion: true,
+        label: widget.armingHint,
+        excludeSemantics: true,
+        child: RecorderStatusLine(
+          phase: StagePhase.saving,
+          elapsed: Duration.zero,
+          savingText: widget.armingHint,
+          inline: true,
         ),
-        pill: _timerPill(
-          formatMediaDuration(elapsed.inMilliseconds),
-          _stateDot(),
-        ),
-        picker: _showsPicker ? _picker() : null,
-      ),
-    );
-  }
-
-  Widget _timerPill(String readout, Widget dot) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Palette.viewportScrim,
-        borderRadius: BorderRadius.circular(_pillRadius),
-      ),
-      child: Padding(
-        padding: _pillPadding,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            dot,
-            const SizedBox(width: _pillGap),
-            Text(
-              readout,
-              style: TypographyTokens.captureLabelSans.copyWith(
-                fontSize: _pillTimeSize,
-                color: Palette.onAccent,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _stateDot() {
-    if (_isRecording) {
-      return const Blink(
-        stepped: true,
-        minOpacity: 0,
-        duration: _pillBlinkDuration,
-        child: _PillDot(color: Palette.recordFill),
       );
     }
-    if (_isPaused) {
-      return const _PillDot(color: Palette.viewportAmber);
-    }
-    return const _PillDot(color: Palette.onDark30);
-  }
-
-  Widget _picker() {
-    return CameraPicker(
-      devices: devices,
-      selectedDeviceId: selectedDeviceId,
-      onChanged: _isIdle ? onDeviceChanged : null,
-      enabled: _isIdle,
-      label: cameraLabel,
+    return RecorderStatusLine(
+      phase: _stagePhase,
+      elapsed: widget.elapsed,
+      savingText: widget.savingHint,
+      inline: true,
     );
   }
 
-  Widget _underPill() {
-    final String? nudgeMessage = this.nudgeMessage;
-    return Positioned(
-      top: _underPillTop,
-      left: 0,
-      right: 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (_isActive) Text(capHint, style: _hintStyle),
-          if (_isActive && nudgeMessage != null) ...<Widget>[
-            const SizedBox(height: _underPillGap),
-            Toast(message: nudgeMessage, variant: ToastVariant.dark),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _bottomText(String? errorMessage, String? hint) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: _hintBottom,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (errorMessage != null) ...<Widget>[
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: Palette.viewportScrim,
-                borderRadius: BorderRadius.circular(_pillRadius),
-              ),
-              child: Padding(
-                padding: _errorPadding,
-                child: Text(
-                  errorMessage,
-                  textAlign: TextAlign.center,
-                  style: TypographyTokens.captionSans.copyWith(
-                    color: Palette.onDark85,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: _errorGap),
-          ],
-          if (hint != null)
-            Text(hint, textAlign: TextAlign.center, style: _hintStyle),
-        ],
+  Widget _note(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: _noteGap),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          fontFamily: TypographyTokens.sans,
+          fontSize: _noteSize,
+          fontWeight: FontWeight.w500,
+          color: _hintInk,
+        ),
       ),
     );
   }
 
   Widget _deniedPanel() {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: _deniedGutter),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: _deniedMaxWidth),
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Palette.viewportScrim,
-            borderRadius: BorderRadius.circular(Shapes.radiusXl),
+          decoration: const BoxDecoration(
+            color: _deniedFill,
+            border: Border.fromBorderSide(
+              BorderSide(color: _deniedEdge, width: _deniedEdgeWidth),
+            ),
+            borderRadius: _deniedRadius,
           ),
           child: Padding(
             padding: _deniedPadding,
             child: Text(
-              deniedMessage,
+              widget.deniedMessage,
               textAlign: TextAlign.center,
-              style: TypographyTokens.bodySans.copyWith(
-                color: Palette.onDark85,
+              style: const TextStyle(
+                fontFamily: TypographyTokens.sans,
+                fontSize: _deniedTextSize,
+                fontWeight: FontWeight.w400,
+                height: _deniedLeading,
+                color: _deniedInk,
               ),
             ),
           ),
@@ -427,56 +513,84 @@ class VideoRecorderSheet extends StatelessWidget {
     );
   }
 
-  Widget _controlRow() {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: _controlRowBottom,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          if (_isActive) ...<Widget>[
-            _discardCircle(),
-            const SizedBox(width: _controlRowGap),
-          ],
-          _shutter(),
-          if (_isActive) ...<Widget>[
-            const SizedBox(width: _controlRowGap),
-            _saveCircle(),
-          ],
-        ],
+  Widget _actions(bool sidebar) {
+    if (_isAsking) {
+      return LetGoPanel(
+        compact: !sidebar,
+        keepGoingKey: videoKeepGoingKey,
+        letGoKey: widget.letGoKey,
+        onKeepGoing: widget.onKeepGoing ?? () {},
+        onLetGo: widget.onLetGo ?? () {},
+      );
+    }
+    final double slot = sidebar ? _sidebarSideSlot : _bottomBarSideSlot;
+    final double gap = sidebar ? _sidebarControlGap : _bottomBarControlGap;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        SizedBox(width: slot, child: _isTaking ? _letGoControl(sidebar) : null),
+        SizedBox(width: gap),
+        _shutter(sidebar),
+        SizedBox(width: gap),
+        SizedBox(width: slot, child: _isTaking ? _keepControl(sidebar) : null),
+      ],
+    );
+  }
+
+  Widget _letGoControl(bool sidebar) {
+    return _SideControl(
+      controlKey: videoDiscardCircleKey,
+      label: videoLetGoLabel,
+      onTap: widget.onLeave,
+      diameter: sidebar ? _sidebarSideCircle : _bottomBarSideCircle,
+      decoration: const BoxDecoration(
+        color: _letGoFill,
+        shape: BoxShape.circle,
+        border: Border.fromBorderSide(
+          BorderSide(color: _letGoEdge, width: _sideEdgeWidth),
+        ),
+      ),
+      glyph: const IconStickerGlyphIcon(
+        glyph: IconStickerGlyph.close,
+        color: _letGoGlyphInk,
+        size: _letGoGlyph,
+      ),
+      caption: TextStyle(
+        fontFamily: TypographyTokens.sans,
+        fontSize: sidebar ? _sidebarCaptionSize : _bottomBarCaptionSize,
+        fontWeight: FontWeight.w500,
+        color: _letGoCaptionInk,
       ),
     );
   }
 
-  Widget _discardCircle() {
-    return _SideControl(
-      controlKey: videoDiscardCircleKey,
-      onTap: onDiscard ?? onCancel,
-      background: Palette.viewportScrim,
-      borderColor: Palette.onDark40,
-      glyph: IconStickerGlyph.trash,
-      label: discardLabel,
-      captionColor: _discardCaptionColor,
-    );
-  }
-
-  Widget _saveCircle() {
+  Widget _keepControl(bool sidebar) {
     return _SideControl(
       controlKey: videoSaveCircleKey,
-      onTap: onStop,
-      background: Palette.coral,
-      borderColor: Palette.onAccent,
-      glyph: IconStickerGlyph.check,
-      label: saveLabel,
-      captionColor: Palette.onDark85,
+      label: videoKeepLabel,
+      onTap: widget.onStop,
+      diameter: sidebar ? _sidebarSideCircle : _bottomBarSideCircle,
+      decoration: const BoxDecoration(color: _keepFill, shape: BoxShape.circle),
+      glyph: const IconStickerGlyphIcon(
+        glyph: IconStickerGlyph.check,
+        color: _keepGlyphInk,
+        size: _keepGlyph,
+      ),
+      caption: TextStyle(
+        fontFamily: TypographyTokens.sans,
+        fontSize: sidebar ? _sidebarCaptionSize : _bottomBarCaptionSize,
+        fontWeight: FontWeight.w600,
+        color: _keepCaptionInk,
+      ),
     );
   }
 
-  Widget _shutter() {
+  Widget _shutter(bool sidebar) {
     final VoidCallback? tap = _shutterTap;
+    final double size = sidebar ? _sidebarShutter : _bottomBarShutter;
     return Semantics(
       button: true,
+      enabled: tap != null,
       label: _shutterLabel,
       child: GestureDetector(
         key: videoShutterKey,
@@ -486,229 +600,73 @@ class VideoRecorderSheet extends StatelessWidget {
           enabled: tap != null,
           onPressed: tap,
           surface: FocusRingSurface.dark,
-          borderRadius: _shutterFocusRadius,
-          child: Container(
-            width: _shutterSize,
-            height: _shutterSize,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Palette.onAccent,
-                width: _shutterBorderWidth,
+          borderRadius: BorderRadius.all(Radius.circular(size / 2)),
+          child: Opacity(
+            opacity: tap == null ? _disabledOpacity : 1.0,
+            child: Container(
+              width: size,
+              height: size,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.fromBorderSide(
+                  BorderSide(color: _shutterRing, width: _shutterRingWidth),
+                ),
               ),
+              child: _shutterCore(sidebar),
             ),
-            child: _showsPauseGlyph
-                ? const IconStickerGlyphIcon(
-                    glyph: IconStickerGlyph.pause,
-                    color: Palette.onAccent,
-                    size: _shutterPauseGlyphSize,
-                  )
-                : const SizedBox.square(
-                    dimension: _shutterCoreSize,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Palette.recordFill,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
           ),
         ),
       ),
     );
   }
 
-  bool get _showsPauseGlyph => _isRecording && supportsPause && onPause != null;
-
-  String get _shutterLabel {
-    if (_isRecording) {
-      return _showsPauseGlyph ? 'Pause recording' : 'Stop recording';
-    }
-    if (_isPaused) {
-      return onResume != null ? 'Resume recording' : 'Stop recording';
-    }
-    return 'Start recording';
-  }
-
-  VoidCallback? get _shutterTap {
-    if (_isSaving || _isPreparing) {
-      return null;
+  Widget _shutterCore(bool sidebar) {
+    if (_isRecording && _canPause) {
+      return const IconStickerGlyphIcon(
+        glyph: IconStickerGlyph.pause,
+        color: _shutterPauseInk,
+        size: _shutterPauseGlyph,
+      );
     }
     if (_isRecording) {
-      return _showsPauseGlyph ? onPause : onStop;
-    }
-    return _isPaused ? (onResume ?? onStop) : onStart;
-  }
-
-  TextStyle get _hintStyle => TypographyTokens.hintAccent.copyWith(
-    fontSize: _hintSize,
-    color: Palette.onDark72,
-  );
-}
-
-enum _TopBandSlot { reserve, pill, picker }
-
-class _TopBand
-    extends SlottedMultiChildRenderObjectWidget<_TopBandSlot, RenderBox> {
-  const _TopBand({required this.reserve, required this.pill, this.picker});
-
-  final Widget reserve;
-  final Widget pill;
-  final Widget? picker;
-
-  @override
-  Iterable<_TopBandSlot> get slots => _TopBandSlot.values;
-
-  @override
-  Widget? childForSlot(_TopBandSlot slot) {
-    return switch (slot) {
-      _TopBandSlot.reserve => reserve,
-      _TopBandSlot.pill => pill,
-      _TopBandSlot.picker => picker,
-    };
-  }
-
-  @override
-  _RenderTopBand createRenderObject(BuildContext context) => _RenderTopBand();
-}
-
-class _RenderTopBand extends RenderBox
-    with SlottedContainerRenderObjectMixin<_TopBandSlot, RenderBox> {
-  RenderBox get _reserve => childForSlot(_TopBandSlot.reserve)!;
-  RenderBox get _pill => childForSlot(_TopBandSlot.pill)!;
-  RenderBox? get _picker => childForSlot(_TopBandSlot.picker);
-
-  Iterable<RenderBox> get _paintOrder =>
-      <RenderBox?>[_reserve, _pill, _picker].nonNulls;
-
-  ({double slotLeft, double pickerWidth}) _geometry(
-    double width,
-    double slotWidth,
-  ) {
-    final double centred = (width - slotWidth) / 2;
-    final RenderBox? picker = _picker;
-    if (picker == null) {
-      return (slotLeft: centred, pickerWidth: 0);
-    }
-    final double right = width - _chromeInset;
-    final double content = math.min(
-      _pickerWidth,
-      picker.getMinIntrinsicWidth(double.infinity),
-    );
-    final double slotLeft = math.max(
-      _bandLeft,
-      math.min(centred, right - content - _bandGap - slotWidth),
-    );
-    return (
-      slotLeft: slotLeft,
-      pickerWidth: clampDouble(
-        right - slotLeft - slotWidth - _bandGap,
-        0,
-        _pickerWidth,
-      ),
-    );
-  }
-
-  @override
-  Size computeDryLayout(covariant BoxConstraints constraints) {
-    final BoxConstraints loose = constraints.loosen();
-    final Size reserve = _reserve.getDryLayout(loose);
-    final Size pill = _pill.getDryLayout(loose);
-    final double slotWidth = math.max(reserve.width, pill.width);
-    final double pickerWidth = _geometry(
-      constraints.maxWidth,
-      slotWidth,
-    ).pickerWidth;
-    final double pickerHeight =
-        _picker
-            ?.getDryLayout(BoxConstraints.tightFor(width: pickerWidth))
-            .height ??
-        0;
-    return constraints.constrain(
-      Size(
-        constraints.maxWidth,
-        math.max(math.max(reserve.height, pill.height), pickerHeight),
-      ),
-    );
-  }
-
-  @override
-  void performLayout() {
-    final BoxConstraints loose = constraints.loosen();
-    final RenderBox reserve = _reserve..layout(loose, parentUsesSize: true);
-    final RenderBox pill = _pill..layout(loose, parentUsesSize: true);
-    final double slotWidth = math.max(reserve.size.width, pill.size.width);
-    final (:double slotLeft, :double pickerWidth) = _geometry(
-      constraints.maxWidth,
-      slotWidth,
-    );
-    _place(reserve, slotLeft + (slotWidth - reserve.size.width) / 2);
-    _place(pill, slotLeft + (slotWidth - pill.size.width) / 2);
-    final RenderBox? picker = _picker;
-    if (picker != null) {
-      picker.layout(
-        BoxConstraints.tightFor(width: pickerWidth),
-        parentUsesSize: true,
-      );
-      _place(picker, constraints.maxWidth - _chromeInset - pickerWidth);
-    }
-    size = constraints.constrain(
-      Size(
-        constraints.maxWidth,
-        _paintOrder
-            .map((RenderBox child) => child.size.height)
-            .reduce(math.max),
-      ),
-    );
-  }
-
-  void _place(RenderBox child, double dx) {
-    (child.parentData! as BoxParentData).offset = Offset(dx, 0);
-  }
-
-  @override
-  void paint(PaintingContext context, Offset offset) {
-    for (final RenderBox child in _paintOrder) {
-      context.paintChild(
-        child,
-        offset + (child.parentData! as BoxParentData).offset,
+      final double side = sidebar ? _sidebarStopSquare : _bottomBarStopSquare;
+      return SizedBox.square(
+        dimension: side,
+        child: const DecoratedBox(
+          decoration: BoxDecoration(
+            color: _shutterCoreInk,
+            borderRadius: BorderRadius.all(Radius.circular(_stopSquareRadius)),
+          ),
+        ),
       );
     }
-  }
-
-  @override
-  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
-    for (final RenderBox child in _paintOrder.toList().reversed) {
-      final bool hit = result.addWithPaintOffset(
-        offset: (child.parentData! as BoxParentData).offset,
-        position: position,
-        hitTest: (BoxHitTestResult result, Offset transformed) =>
-            child.hitTest(result, position: transformed),
-      );
-      if (hit) {
-        return true;
-      }
-    }
-    return false;
-  }
-}
-
-class _Vignette extends StatelessWidget {
-  const _Vignette();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: _vignetteColors,
-          stops: _vignetteStops,
+    final double dot = sidebar ? _sidebarShutterDot : _bottomBarShutterDot;
+    return SizedBox.square(
+      dimension: dot,
+      child: const DecoratedBox(
+        decoration: BoxDecoration(
+          color: _shutterCoreInk,
+          shape: BoxShape.circle,
         ),
       ),
-      child: SizedBox.expand(),
+    );
+  }
+
+  Widget _keyboardHint() {
+    return Text(
+      widget.supportsPause ? videoKeyboardHint : videoNoPauseKeyboardHint,
+      key: videoKeyboardHintKey,
+      maxLines: 1,
+      softWrap: false,
+      textAlign: TextAlign.right,
+      style: const TextStyle(
+        fontFamily: TypographyTokens.sans,
+        fontSize: _keyboardHintSize,
+        fontWeight: FontWeight.w500,
+        letterSpacing: _keyboardHintTracking,
+        color: _hintInk,
+      ),
     );
   }
 }
@@ -716,91 +674,53 @@ class _Vignette extends StatelessWidget {
 class _SideControl extends StatelessWidget {
   const _SideControl({
     required this.controlKey,
-    required this.onTap,
-    required this.background,
-    required this.borderColor,
-    required this.glyph,
     required this.label,
-    required this.captionColor,
+    required this.onTap,
+    required this.diameter,
+    required this.decoration,
+    required this.glyph,
+    required this.caption,
   });
 
   final Key controlKey;
-  final VoidCallback onTap;
-  final Color background;
-  final Color borderColor;
-  final IconStickerGlyph glyph;
   final String label;
-  final Color captionColor;
+  final VoidCallback onTap;
+  final double diameter;
+  final BoxDecoration decoration;
+  final Widget glyph;
+  final TextStyle caption;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       container: true,
       button: true,
+      label: label,
       child: GestureDetector(
         key: controlKey,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                FocusRing(
-                  onPressed: onTap,
-                  surface: FocusRingSurface.dark,
-                  borderRadius: _sideFocusRadius,
-                  child: Container(
-                    width: _sideCircleSize,
-                    height: _sideCircleSize,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: background,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: borderColor,
-                        width: _sideCircleBorderWidth,
-                      ),
-                    ),
-                    child: IconStickerGlyphIcon(
-                      glyph: glyph,
-                      color: Palette.onAccent,
-                      size: _sideGlyphSize,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: _sideCaptionGap),
-                Text(
-                  label,
-                  style: TypographyTokens.labelSans.copyWith(
-                    fontSize: _sideCaptionSize,
-                    color: captionColor,
-                  ),
-                ),
-              ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            FocusRing(
+              onPressed: onTap,
+              surface: FocusRingSurface.dark,
+              borderRadius: BorderRadius.all(Radius.circular(diameter / 2)),
+              child: Container(
+                width: diameter,
+                height: diameter,
+                alignment: Alignment.center,
+                decoration: decoration,
+                child: glyph,
+              ),
             ),
-          ),
+            const SizedBox(height: _sideCaptionGap),
+            ExcludeSemantics(
+              child: Text(label, maxLines: 1, softWrap: false, style: caption),
+            ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _PillDot extends StatelessWidget {
-  const _PillDot({required this.color});
-
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: _pillDotSize,
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }

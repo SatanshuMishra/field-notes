@@ -1,4 +1,5 @@
 import 'package:field_notes/features/capture/core/capture_providers.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
@@ -72,6 +73,7 @@ Widget _app({
     overrides: <Override>[
       videoRecorderProvider.overrideWith((Ref ref) => recorder),
       captureServiceProvider.overrideWith((Ref ref) => service),
+      reflectionPromptsOff(),
     ],
     child: videoHarness(const _Trigger()),
   );
@@ -88,6 +90,12 @@ Future<void> _tapShutter(WidgetTester tester) async {
   for (int i = 0; i < 4; i++) {
     await tester.pump(const Duration(milliseconds: 50));
   }
+}
+
+Future<void> _begin(WidgetTester tester) async {
+  await tester.tap(find.byKey(videoShutterKey));
+  await tester.pump();
+  await _tapShutter(tester);
 }
 
 VideoRecorderSheet _sheet(WidgetTester tester) =>
@@ -117,7 +125,7 @@ void main() {
     expect(find.byKey(videoDiscardCircleKey), findsNothing);
     expect(find.byKey(videoSaveCircleKey), findsNothing);
 
-    await _tapShutter(tester);
+    await _begin(tester);
     expect(_sheet(tester).phase, VideoRecorderPhase.recording);
     expect(find.byKey(videoDiscardCircleKey), findsOneWidget);
     expect(find.byKey(videoSaveCircleKey), findsOneWidget);
@@ -125,7 +133,7 @@ void main() {
     await _tapShutter(tester);
     expect(_sheet(tester).phase, VideoRecorderPhase.paused);
     expect(recorder.pauseCalls, 1);
-    expect(find.text('paused · resume or save your clip'), findsOneWidget);
+    expect(find.text(stagePausedStatus), findsOneWidget);
     expect(find.byKey(videoDiscardCircleKey), findsOneWidget);
     expect(find.byKey(videoSaveCircleKey), findsOneWidget);
 
@@ -144,7 +152,7 @@ void main() {
 
     await tester.pumpWidget(_app(recorder: recorder, service: service));
     await _open(tester);
-    await _tapShutter(tester);
+    await _begin(tester);
 
     await _record(tester, recorder, const Duration(seconds: 8));
     expect(_sheet(tester).elapsed, const Duration(seconds: 8));
@@ -169,7 +177,7 @@ void main() {
 
     await tester.pumpWidget(_app(recorder: recorder, service: service));
     await _open(tester);
-    await _tapShutter(tester);
+    await _begin(tester);
     await _record(tester, recorder, const Duration(seconds: 6));
 
     await _tapShutter(tester);
@@ -191,19 +199,21 @@ void main() {
 
     await tester.pumpWidget(_app(recorder: recorder, service: service));
     await _open(tester);
-    await _tapShutter(tester);
+    await _begin(tester);
     await _tapShutter(tester);
     expect(_sheet(tester).phase, VideoRecorderPhase.paused);
 
     await tester.tap(find.byKey(videoDiscardCircleKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
-    expect(find.text(videoDiscardConfirmTitle), findsOneWidget);
+    expect(find.text(letGoTitle), findsOneWidget);
+    expect(recorder.pauseCalls, 1);
     expect(recorder.cancelCalls, 0);
 
-    await tester.tap(find.text(videoDiscardConfirmCancelLabel));
+    await tester.tap(find.text(letGoKeepGoingLabel));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text(letGoTitle), findsNothing);
     expect(_sheet(tester).phase, VideoRecorderPhase.paused);
     expect(recorder.cancelCalls, 0);
 
@@ -213,7 +223,7 @@ void main() {
     await tester.tap(find.byKey(videoDiscardConfirmKey));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(recorder.cancelCalls, 1);
     expect(service.requests, isEmpty);
@@ -232,7 +242,7 @@ void main() {
 
     await tester.pumpWidget(_app(recorder: recorder, service: service));
     await _open(tester);
-    await _tapShutter(tester);
+    await _begin(tester);
 
     await _record(tester, recorder, const Duration(minutes: 4, seconds: 50));
     expect(find.text(videoNudge5Message), findsNothing);

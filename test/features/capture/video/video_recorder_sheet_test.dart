@@ -1,41 +1,42 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
-import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/features/capture/immersive/immersive.dart';
+import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'video_test_support.dart';
 
 const List<double> _sheetWidths = <double>[636, 408, 356];
+const List<double> _sidebarWidths = <double>[860, 1024, 1280];
 
-const List<(Duration, String)> _readouts = <(Duration, String)>[
-  (Duration.zero, '0:00'),
-  (Duration(minutes: 10), '10:00'),
+const List<VideoRecorderPhase> _bandPhases = <VideoRecorderPhase>[
+  VideoRecorderPhase.idle,
+  VideoRecorderPhase.recording,
 ];
 
 Future<Rect> _pumpTopBand(
   WidgetTester tester, {
   required double width,
-  required Duration elapsed,
+  required VideoRecorderPhase phase,
   List<VideoCaptureDevice> devices = fakeVideoDevices,
 }) async {
   await tester.pumpWidget(
-    videoHarness(
+    videoSheetHarness(
       SizedBox(
         width: width,
         height: 480,
         child: VideoRecorderSheet(
-          phase: elapsed == Duration.zero
-              ? VideoRecorderPhase.idle
-              : VideoRecorderPhase.recording,
+          phase: phase,
           devices: devices,
           selectedDeviceId: devices.isEmpty ? null : devices.first.id,
-          elapsed: elapsed,
+          elapsed: const Duration(minutes: 10),
           onStart: () {},
           onStop: () {},
-          onCancel: () {},
+          onLeave: () {},
         ),
       ),
     ),
@@ -44,45 +45,51 @@ Future<Rect> _pumpTopBand(
   return tester.getRect(find.byType(VideoRecorderSheet));
 }
 
-Rect _pillRect(WidgetTester tester, String readout) {
-  return tester.getRect(
-    find
-        .ancestor(of: find.text(readout), matching: find.byType(DecoratedBox))
-        .first,
-  );
-}
+Rect _chipRect(WidgetTester tester) =>
+    tester.getRect(find.byKey(videoSelfViewKey));
 
 void main() {
-  testWidgets('idle phase offers the shutter and shows no recording indicators',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(
-      videoHarness(
-        VideoRecorderSheet(
-          phase: VideoRecorderPhase.idle,
-          onStart: () {},
-          onStop: () {},
-          onCancel: () {},
+  testWidgets(
+    'idle phase offers the shutter and shows no recording indicators',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        videoSheetHarness(
+          VideoRecorderSheet(
+            phase: VideoRecorderPhase.idle,
+            onStart: () {},
+            onStop: () {},
+            onLeave: () {},
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.byKey(videoShutterKey), findsOneWidget);
-    expect(find.byKey(videoCloseKey), findsOneWidget);
-    expect(find.text('tap the button to start recording'), findsOneWidget);
-    expect(find.byType(Blink), findsNothing);
-    expect(find.byType(Toast), findsNothing);
-  });
+      expect(find.byKey(videoShutterKey), findsOneWidget);
+      expect(find.byKey(videoCloseKey), findsOneWidget);
+      expect(find.text(stageIdleStatus), findsOneWidget);
+      expect(find.text('Auto-stops at 30:00.'), findsOneWidget);
+      expect(find.byType(Blink), findsNothing);
+      expect(find.byKey(recorderTimerKey), findsNothing);
+      expect(find.byType(Toast), findsNothing);
+      expect(find.byKey(videoDiscardCircleKey), findsNothing);
+      expect(find.byKey(videoSaveCircleKey), findsNothing);
+    },
+  );
 
-  testWidgets('recording phase shows the preview, blinking dot, and its hint',
-      (WidgetTester tester) async {
+  testWidgets('recording phase shows the preview, blinking dot, and its hint', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      videoHarness(
+      videoSheetHarness(
         VideoRecorderSheet(
           phase: VideoRecorderPhase.recording,
-          preview: const SizedBox(key: ValueKey('preview'), width: 80, height: 80),
+          preview: const SizedBox(
+            key: ValueKey('preview'),
+            width: 80,
+            height: 80,
+          ),
           onStart: () {},
           onStop: () {},
-          onCancel: () {},
+          onLeave: () {},
         ),
       ),
     );
@@ -90,45 +97,56 @@ void main() {
 
     expect(find.byKey(const ValueKey('preview')), findsOneWidget);
     expect(find.byType(Blink), findsOneWidget);
-    expect(find.text('recording… tap pause or stop'), findsOneWidget);
+    expect(find.text(stageRecordingStatus), findsOneWidget);
+    expect(find.byKey(recorderTimerKey), findsOneWidget);
+    expect(find.text('Auto-stops at 30:00.'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('a nudge message surfaces as a non-blocking Toast while recording',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(
-      videoHarness(
-        VideoRecorderSheet(
-          phase: VideoRecorderPhase.recording,
-          nudgeMessage: '5 minutes in — looking good.',
-          onStart: () {},
-          onStop: () {},
-          onCancel: () {},
+  testWidgets(
+    'a nudge message surfaces as a non-blocking line while recording',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        videoSheetHarness(
+          VideoRecorderSheet(
+            phase: VideoRecorderPhase.recording,
+            nudgeMessage: '5 minutes in — looking good.',
+            onStart: () {},
+            onStop: () {},
+            onLeave: () {},
+          ),
         ),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 50));
+      );
+      await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.byType(Toast), findsOneWidget);
-    expect(find.text('5 minutes in — looking good.'), findsOneWidget);
-    expect(find.text('recording… tap pause or stop'), findsOneWidget);
+      expect(find.text('5 minutes in — looking good.'), findsOneWidget);
+      expect(find.byType(Toast), findsNothing);
+      expect(find.text(stageRecordingStatus), findsOneWidget);
+      expect(
+        tester.getRect(find.text('5 minutes in — looking good.')).top,
+        greaterThanOrEqualTo(
+          tester.getRect(find.byType(RecorderStatusLine)).bottom,
+        ),
+      );
 
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
-  testWidgets('idle and recording taps invoke the matching callbacks',
-      (WidgetTester tester) async {
+  testWidgets('idle and recording taps invoke the matching callbacks', (
+    WidgetTester tester,
+  ) async {
     int starts = 0;
-    int cancels = 0;
+    int leaves = 0;
 
     await tester.pumpWidget(
-      videoHarness(
+      videoSheetHarness(
         VideoRecorderSheet(
           phase: VideoRecorderPhase.idle,
           onStart: () => starts++,
           onStop: () {},
-          onCancel: () => cancels++,
+          onLeave: () => leaves++,
         ),
       ),
     );
@@ -139,20 +157,21 @@ void main() {
     await tester.pump();
 
     expect(starts, 1);
-    expect(cancels, 1);
+    expect(leaves, 1);
   });
 
-  testWidgets('the recording phase shutter invokes onStop',
-      (WidgetTester tester) async {
+  testWidgets('the recording phase shutter invokes onStop', (
+    WidgetTester tester,
+  ) async {
     int stops = 0;
 
     await tester.pumpWidget(
-      videoHarness(
+      videoSheetHarness(
         VideoRecorderSheet(
           phase: VideoRecorderPhase.recording,
           onStart: () {},
           onStop: () => stops++,
-          onCancel: () {},
+          onLeave: () {},
         ),
       ),
     );
@@ -166,152 +185,191 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('an error message renders when provided',
-      (WidgetTester tester) async {
+  testWidgets('an error message renders when provided', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      videoHarness(
+      videoSheetHarness(
         VideoRecorderSheet(
           phase: VideoRecorderPhase.idle,
           onStart: () {},
           onStop: () {},
-          onCancel: () {},
+          onLeave: () {},
           errorMessage: 'Camera is off.',
         ),
       ),
     );
 
     expect(find.text('Camera is off.'), findsOneWidget);
+    expect(
+      tester.widget<Text>(find.text('Camera is off.')).style?.color,
+      const Color(0xFFE79A80),
+    );
   });
 
-  testWidgets('the saving phase disables the primary action',
-      (WidgetTester tester) async {
+  testWidgets('the saving phase disables the primary action', (
+    WidgetTester tester,
+  ) async {
+    int calls = 0;
+
     await tester.pumpWidget(
-      videoHarness(
+      videoSheetHarness(
         VideoRecorderSheet(
           phase: VideoRecorderPhase.saving,
-          onStart: () {},
-          onStop: () {},
-          onCancel: () {},
+          onStart: () => calls++,
+          onStop: () => calls++,
+          onLeave: () => calls++,
         ),
       ),
     );
 
     expect(find.text('Saving your video…'), findsOneWidget);
     expect(find.byType(Blink), findsNothing);
+
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.tap(find.byKey(videoCloseKey));
+    await tester.pump();
+    expect(calls, 0);
   });
 
-  testWidgets('the arming phase shows the live preview and the arming hint',
-      (WidgetTester tester) async {
+  testWidgets('the arming phase shows the live preview and the arming hint', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      videoHarness(
+      videoSheetHarness(
         VideoRecorderSheet(
           phase: VideoRecorderPhase.arming,
-          preview: const SizedBox(key: ValueKey('preview'), width: 80, height: 80),
+          preview: const SizedBox(
+            key: ValueKey('preview'),
+            width: 80,
+            height: 80,
+          ),
           onStart: () {},
           onStop: () {},
-          onCancel: () {},
+          onLeave: () {},
         ),
       ),
     );
 
     expect(find.byKey(const ValueKey('preview')), findsOneWidget);
     expect(find.text('Getting the camera ready…'), findsOneWidget);
-    expect(find.text('recording… tap pause or stop'), findsNothing);
+    expect(find.text(stageRecordingStatus), findsNothing);
     expect(find.byType(Blink), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
   testWidgets(
-      'the denied phase surfaces guidance and the shutter carries the retry',
-      (WidgetTester tester) async {
-    int retries = 0;
+    'the denied phase surfaces guidance and the shutter carries the retry',
+    (WidgetTester tester) async {
+      int retries = 0;
 
-    await tester.pumpWidget(
-      videoHarness(
-        VideoRecorderSheet(
-          phase: VideoRecorderPhase.denied,
-          deniedMessage: 'Enable Camera access in System Settings.',
-          onStart: () => retries++,
-          onStop: () {},
-          onCancel: () {},
+      await tester.pumpWidget(
+        videoSheetHarness(
+          VideoRecorderSheet(
+            phase: VideoRecorderPhase.denied,
+            deniedMessage: 'Enable Camera access in System Settings.',
+            onStart: () => retries++,
+            onStop: () {},
+            onLeave: () {},
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('Enable Camera access in System Settings.'), findsOneWidget);
-    expect(find.byKey(videoShutterKey), findsOneWidget);
-    expect(find.text('tap the button to start recording'), findsNothing);
+      expect(
+        find.text('Enable Camera access in System Settings.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(videoShutterKey), findsOneWidget);
+      expect(find.text(stageIdleStatus), findsNothing);
 
-    await tester.tap(find.byKey(videoShutterKey));
-    await tester.pump();
+      await tester.tap(find.byKey(videoShutterKey));
+      await tester.pump();
 
-    expect(retries, 1);
-  });
+      expect(retries, 1);
+    },
+  );
 
-  testWidgets('the timer pill never overlaps the camera picker',
-      (WidgetTester tester) async {
+  testWidgets('the soft timer never overlaps the camera picker', (
+    WidgetTester tester,
+  ) async {
     for (final double width in _sheetWidths) {
-      for (final (Duration elapsed, String readout) in _readouts) {
-        await _pumpTopBand(tester, width: width, elapsed: elapsed);
+      for (final VideoRecorderPhase phase in _bandPhases) {
+        final String reason = '${width.toInt()} wide while ${phase.name}';
+        await _pumpTopBand(tester, width: width, phase: phase);
+        expect(tester.takeException(), isNull, reason: reason);
 
-        final Rect pill = _pillRect(tester, readout);
-        final String reason = '${width.toInt()} wide at $readout';
-        expect(
-          pill.overlaps(tester.getRect(find.text('Camera'))),
-          isFalse,
-          reason: reason,
-        );
-        expect(
-          pill.overlaps(tester.getRect(find.byType(SettingsSelect<String>))),
-          isFalse,
-          reason: reason,
-        );
-      }
-    }
-
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
-  testWidgets('the top band keeps its painted anchors',
-      (WidgetTester tester) async {
-    for (final double width in _sheetWidths) {
-      for (final (Duration elapsed, String readout) in _readouts) {
-        final String reason = '${width.toInt()} wide at $readout';
-
-        final Rect bare = await _pumpTopBand(
-          tester,
-          width: width,
-          elapsed: elapsed,
-          devices: const <VideoCaptureDevice>[],
-        );
-        final Rect centred = _pillRect(tester, readout);
-        expect(centred.top - bare.top, 16, reason: reason);
-        expect(centred.center.dx, closeTo(bare.center.dx, 0.01),
-            reason: reason);
-
-        final Rect sheet = await _pumpTopBand(
-          tester,
-          width: width,
-          elapsed: elapsed,
-        );
-        final Rect pill = _pillRect(tester, readout);
-        final Rect select =
-            tester.getRect(find.byType(SettingsSelect<String>));
-        final Rect close = tester.getRect(find.byKey(videoCloseKey));
-        expect(pill.top - sheet.top, 16, reason: reason);
-        expect(select.top - sheet.top, 16, reason: reason);
-        expect(sheet.right - select.right, 16, reason: reason);
-        expect(close.shift(-sheet.topLeft), const Rect.fromLTRB(3, 3, 51, 51),
-            reason: reason);
-        expect(pill.left, greaterThanOrEqualTo(close.right), reason: reason);
-        if (width == 636) {
-          expect(pill.center.dx, closeTo(sheet.center.dx, 0.01),
-              reason: reason);
+        final Finder picker = find.byType(CameraPicker);
+        final Finder timer = find.byKey(recorderTimerKey);
+        if (phase == VideoRecorderPhase.idle) {
+          expect(picker, findsOneWidget, reason: reason);
+          expect(timer, findsNothing, reason: reason);
+          expect(
+            tester.getRect(picker).overlaps(_chipRect(tester)),
+            isFalse,
+            reason: reason,
+          );
+        } else {
+          expect(picker, findsNothing, reason: reason);
+          expect(
+            tester.getRect(timer).overlaps(_chipRect(tester)),
+            isFalse,
+            reason: reason,
+          );
         }
       }
     }
 
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('the top band keeps its painted anchors', (
+    WidgetTester tester,
+  ) async {
+    for (final TargetPlatform platform in <TargetPlatform>[
+      TargetPlatform.android,
+      TargetPlatform.macOS,
+    ]) {
+      debugDefaultTargetPlatformOverride = platform;
+      final bool sidebar = platform == TargetPlatform.macOS;
+      final double inset = sidebar ? 18 : 8;
+      final double leaveLeft = sidebar ? recorderTrafficLightsClearance : 8;
+      for (final double width in sidebar ? _sidebarWidths : _sheetWidths) {
+        final String reason = '${platform.name} ${width.toInt()} wide';
+
+        final Rect sheet = await _pumpTopBand(
+          tester,
+          width: width,
+          phase: VideoRecorderPhase.idle,
+        );
+        expect(tester.takeException(), isNull, reason: reason);
+        final Rect close = tester.getRect(find.byKey(videoCloseKey));
+        final Rect chip = _chipRect(tester);
+        final Rect picker = tester.getRect(find.byType(CameraPicker));
+        expect(close.left - sheet.left, leaveLeft, reason: reason);
+        expect(close.height, greaterThanOrEqualTo(48), reason: reason);
+        expect(sheet.right - chip.right, inset, reason: reason);
+        expect(chip.height, greaterThanOrEqualTo(48), reason: reason);
+        expect(picker.right, lessThanOrEqualTo(chip.left), reason: reason);
+        expect(picker.left, greaterThanOrEqualTo(close.right), reason: reason);
+        expect(chip.center.dy, closeTo(close.center.dy, 0.01), reason: reason);
+        expect(
+          picker.center.dy,
+          closeTo(close.center.dy, 0.01),
+          reason: reason,
+        );
+
+        final Rect bare = await _pumpTopBand(
+          tester,
+          width: width,
+          phase: VideoRecorderPhase.idle,
+          devices: const <VideoCaptureDevice>[],
+        );
+        expect(find.byType(CameraPicker), findsNothing, reason: reason);
+        expect(bare.right - _chipRect(tester).right, inset, reason: reason);
+      }
+      await tester.pumpWidget(const SizedBox.shrink());
+    }
+    debugDefaultTargetPlatformOverride = null;
   });
 }
