@@ -1,7 +1,5 @@
 import 'package:flutter/painting.dart';
 
-import 'palette.dart';
-
 abstract final class Shapes {
   static const double outlineWidth = 1.5;
 
@@ -21,10 +19,6 @@ abstract final class Shapes {
   static const BorderRadius cardBorderRadius = BorderRadius.all(cardRadius);
   static const BorderRadius buttonBorderRadius =
       BorderRadius.all(Radius.circular(radiusSm));
-
-  static const Border outline = Border.fromBorderSide(
-    BorderSide(color: Palette.ink, width: outlineWidth),
-  );
 
   static const double dashLength = 6;
   static const double dashGap = 4;

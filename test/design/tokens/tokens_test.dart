@@ -5,6 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
 
+const FieldNotesColors _light = FieldNotesColors.light;
+const FieldNotesTextStyles _styles = FieldNotesTextStyles(_light);
+const FieldNotesShadows _shadows = FieldNotesShadows(_light);
+
 void main() {
   group('typography to pubspec family consistency', () {
     late String pubspec;
@@ -30,7 +34,7 @@ void main() {
       expect(TypographyTokens.noteBody.fontSize, 16);
       expect(TypographyTokens.noteBody.height, 1.6);
       expect(TypographyTokens.noteBody.fontWeight, FontWeight.w400);
-      expect(TypographyTokens.noteBody.color, Palette.ink);
+      expect(_styles.noteBody.color, _light.ink);
       expect(TypographyTokens.labelSans.fontFamily, TypographyTokens.sans);
       expect(TypographyTokens.sectionHeaderAccent.fontFamily,
           TypographyTokens.accent);
@@ -44,61 +48,63 @@ void main() {
           reason: 'monospace is the CSS generic, never a vendored family');
       expect(TypographyTokens.monoMicroSans.fontFamily, TypographyTokens.mono);
       expect(TypographyTokens.monoMicroSans.fontSize, 7);
-      expect(TypographyTokens.monoMicroSans.color, Palette.muted);
+      expect(_styles.monoMicroSans.color, _light.muted);
 
       expect(
           TypographyTokens.viewportMonoLabel.fontFamily, TypographyTokens.mono);
       expect(TypographyTokens.viewportMonoLabel.fontSize, 10);
       expect(TypographyTokens.viewportMonoLabel.fontWeight, FontWeight.w500);
       expect(TypographyTokens.viewportMonoLabel.letterSpacing, 1.0);
-      expect(TypographyTokens.viewportMonoLabel.color, Palette.onDark30);
+      expect(_styles.viewportMonoLabel.color, Palette.onDark30);
       expect(TypographyTokens.monoThumbSans.fontFamily, TypographyTokens.mono);
       expect(TypographyTokens.monoThumbSans.fontSize, 6);
-      expect(TypographyTokens.monoThumbSans.color, Palette.mutedDeep);
+      expect(_styles.monoThumbSans.color, _light.mutedDeep);
     });
   });
 
   group('sticker-cutout surface tokens', () {
     test('card and button shadows are hard non-blurred offsets', () {
-      for (final shadow in <BoxShadow>[...Shadows.card, ...Shadows.button]) {
+      for (final shadow in <BoxShadow>[..._shadows.card, ..._shadows.button]) {
         expect(shadow.blurRadius, 0,
             reason: 'the sticker cutout uses a hard, non-blurred offset shadow');
       }
     });
 
     test('shadow offsets match the spec (3px card, 1.5px button)', () {
-      expect(Shadows.card.single.offset, const Offset(3, 3));
-      expect(Shadows.button.single.offset, const Offset(1.5, 1.5));
+      expect(_shadows.card.single.offset, const Offset(3, 3));
+      expect(_shadows.button.single.offset, const Offset(1.5, 1.5));
     });
 
     test('outline is a 1.5px ink border', () {
       expect(Shapes.outlineWidth, 1.5);
-      expect(Shapes.outline.top.color, Palette.ink);
+      expect(_shadows.outline.top.color, _light.ink);
     });
   });
 
   group('palette alpha ladders', () {
-    test('every ink alpha token is Palette.ink at the documented opacity', () {
+    test('every ink alpha token is the light ink at the documented opacity',
+        () {
       final ladder = <(String, Color, int)>[
-        ('ink08', Palette.ink08, 0x14),
-        ('ink12', Palette.ink12, 0x1F),
-        ('ink16', Palette.ink16, 0x29),
-        ('ink18', Palette.ink18, 0x2E),
-        ('ink20', Palette.ink20, 0x33),
-        ('ink22', Palette.ink22, 0x38),
-        ('ink25', Palette.ink25, 0x40),
-        ('ink30', Palette.ink30, 0x4D),
-        ('ink34', Palette.ink34, 0x57),
-        ('ink35', Palette.ink35, 0x59),
-        ('ink40', Palette.ink40, 0x66),
+        ('ink08', _light.ink08, 0x14),
+        ('ink12', _light.ink12, 0x1F),
+        ('ink16', _light.ink16, 0x29),
+        ('ink18', _light.ink18, 0x2E),
+        ('ink20', _light.ink20, 0x33),
+        ('ink22', _light.ink22, 0x38),
+        ('ink25', _light.ink25, 0x40),
+        ('ink30', _light.ink30, 0x4D),
+        ('ink34', _light.ink34, 0x57),
+        ('ink35', _light.ink35, 0x59),
+        ('ink40', _light.ink40, 0x66),
       ];
 
       for (final (name, color, alpha) in ladder) {
         expect(color.toARGB32() >> 24, alpha,
-            reason: 'Palette.$name carries the wrong alpha');
+            reason: 'FieldNotesColors.light.$name carries the wrong alpha');
         expect(color.toARGB32() & 0x00FFFFFF,
-            Palette.ink.toARGB32() & 0x00FFFFFF,
-            reason: 'Palette.$name must be Palette.ink at a reduced opacity');
+            _light.ink.toARGB32() & 0x00FFFFFF,
+            reason: 'FieldNotesColors.light.$name must be the light ink at a '
+                'reduced opacity');
       }
     });
 
@@ -119,19 +125,19 @@ void main() {
     });
 
     test('prototype named colours match their cited source values', () {
-      expect(Palette.inkSoft, const Color(0xFF6A5C4A));
-      expect(Palette.windowTitle, const Color(0xFFA3866A));
+      expect(_light.inkSoft, const Color(0xFF6A5C4A));
+      expect(_light.windowTitle, const Color(0xFFA3866A));
       expect(Palette.recordFill, const Color(0xFFE0574A));
-      expect(Palette.dashMuted, const Color(0xFFC3B39A));
+      expect(_light.dashMuted, const Color(0xFFC3B39A));
       expect(Palette.onAccent, const Color(0xFFFFFFFF));
-      expect(Palette.hatchLight, const Color(0xFFECDFC8));
-      expect(Palette.hatchMid, const Color(0xFFE2D3BA));
-      expect(Palette.hatchDark, const Color(0xFFD9C9AE));
+      expect(_light.hatchLight, const Color(0xFFECDFC8));
+      expect(_light.hatchMid, const Color(0xFFE2D3BA));
+      expect(_light.hatchDark, const Color(0xFFD9C9AE));
       expect(Palette.viewportDark, const Color(0xFF3A352E));
       expect(Palette.viewportDarkAlt, const Color(0xFF443F37));
-      expect(Palette.composerPaper, const Color(0xFFFBF3E4));
-      expect(Palette.waveMid, const Color(0xFFDCAE9A));
-      expect(Palette.waveLight, const Color(0xFFE3C4B2));
+      expect(_light.composerPaper, const Color(0xFFFBF3E4));
+      expect(_light.waveMid, const Color(0xFFDCAE9A));
+      expect(_light.waveLight, const Color(0xFFE3C4B2));
       expect(Palette.toastInk, const Color(0xFFF6EAD6));
       expect(Palette.viewportAmber, const Color(0xFFF0B34A));
       expect(Palette.viewportAmber, isNot(Palette.statusAmber));
@@ -154,10 +160,10 @@ void main() {
     });
 
     test('pre-existing palette members keep their values', () {
-      expect(Palette.ink, const Color(0xFF4A3B2E));
+      expect(_light.ink, const Color(0xFF4A3B2E));
       expect(Palette.coral, const Color(0xFFC76A54));
-      expect(Palette.cardWarm, const Color(0xFFF8EFE0));
-      expect(Palette.cardBright, const Color(0xFFFFFAF1));
+      expect(_light.cardWarm, const Color(0xFFF8EFE0));
+      expect(_light.cardBright, const Color(0xFFFFFAF1));
       expect(Palette.panelCoralTint, const Color(0x12C76A54));
       expect(Palette.sunGlow, const Color(0x8CF4C960));
     });
@@ -194,16 +200,16 @@ void main() {
 
   group('shadow scale', () {
     final hardScale = <(String, List<BoxShadow>, double, Color)>[
-      ('chip', Shadows.chip, 1.5, Palette.ink16),
-      ('cellFilled', Shadows.cellFilled, 1.5, Palette.ink18),
+      ('chip', _shadows.chip, 1.5, _light.ink16),
+      ('cellFilled', _shadows.cellFilled, 1.5, _light.ink18),
       ('cellToday', Shadows.cellToday, 1.5, Palette.coral30),
-      ('control', Shadows.control, 1.5, Palette.ink),
-      ('cardDefault', Shadows.cardDefault, 2.0, Palette.ink16),
-      ('emphasis', Shadows.emphasis, 2.0, Palette.ink),
+      ('control', _shadows.control, 1.5, _light.ink),
+      ('cardDefault', _shadows.cardDefault, 2.0, _light.ink16),
+      ('emphasis', _shadows.emphasis, 2.0, _light.ink),
       ('tileSelected', Shadows.tileSelected, 2.0, Palette.coral30),
-      ('phoneAction', Shadows.phoneAction, 2.5, Palette.ink),
-      ('hero', Shadows.hero, 3.0, Palette.ink20),
-      ('heroSoft', Shadows.heroSoft, 3.0, const Color(0x244A3B2E)),
+      ('phoneAction', _shadows.phoneAction, 2.5, _light.ink),
+      ('hero', _shadows.hero, 3.0, _light.ink20),
+      ('heroSoft', _shadows.heroSoft, 3.0, const Color(0x244A3B2E)),
     ];
 
     test('every hard shadow is one square zero-blur offset in its cited colour',
@@ -251,15 +257,15 @@ void main() {
     });
 
     test('card and button aliases keep their pre-expansion values', () {
-      expect(Shadows.card.single.color, const Color(0x334A3B2E));
-      expect(Shadows.card.single.offset, const Offset(3, 3));
-      expect(Shadows.card.single.blurRadius, 0);
-      expect(Shadows.card.single.spreadRadius, 0);
+      expect(_shadows.card.single.color, const Color(0x334A3B2E));
+      expect(_shadows.card.single.offset, const Offset(3, 3));
+      expect(_shadows.card.single.blurRadius, 0);
+      expect(_shadows.card.single.spreadRadius, 0);
 
-      expect(Shadows.button.single.color, Palette.ink);
-      expect(Shadows.button.single.offset, const Offset(1.5, 1.5));
-      expect(Shadows.button.single.blurRadius, 0);
-      expect(Shadows.button.single.spreadRadius, 0);
+      expect(_shadows.button.single.color, _light.ink);
+      expect(_shadows.button.single.offset, const Offset(1.5, 1.5));
+      expect(_shadows.button.single.blurRadius, 0);
+      expect(_shadows.button.single.spreadRadius, 0);
     });
   });
 
@@ -269,16 +275,16 @@ void main() {
           TypographyTokens.accent);
       expect(TypographyTokens.pageEyebrowAccent.fontSize, 16);
       expect(TypographyTokens.pageEyebrowAccent.fontWeight, FontWeight.w600);
-      expect(TypographyTokens.pageEyebrowAccent.color, Palette.coral);
+      expect(_styles.pageEyebrowAccent.color, Palette.coral);
 
       expect(TypographyTokens.sectionHeaderAccent.fontFamily,
           TypographyTokens.accent);
       expect(TypographyTokens.sectionHeaderAccent.fontSize, 17);
       expect(TypographyTokens.sectionHeaderAccent.fontWeight, FontWeight.w600);
-      expect(TypographyTokens.sectionHeaderAccent.color, Palette.sage);
+      expect(_styles.sectionHeaderAccent.color, _light.sage);
 
-      expect(TypographyTokens.pageEyebrowAccent.color,
-          isNot(TypographyTokens.sectionHeaderAccent.color),
+      expect(_styles.pageEyebrowAccent.color,
+          isNot(_styles.sectionHeaderAccent.color),
           reason: 'the page eyebrow and the section header are two roles');
       expect(TypographyTokens.pageEyebrowAccent.fontSize,
           isNot(TypographyTokens.sectionHeaderAccent.fontSize));
@@ -295,15 +301,15 @@ void main() {
 
       expect(TypographyTokens.captionSans.fontSize, 12);
       expect(TypographyTokens.captionSans.fontWeight, FontWeight.w400);
-      expect(TypographyTokens.captionSans.color, Palette.muted);
+      expect(_styles.captionSans.color, _light.muted);
 
       expect(TypographyTokens.streakAccent.fontSize, 24);
       expect(TypographyTokens.streakAccent.height, 1.0);
-      expect(TypographyTokens.streakAccent.color, Palette.coral);
+      expect(_styles.streakAccent.color, Palette.coral);
 
       expect(TypographyTokens.wordmarkAccent.fontSize, 23);
       expect(TypographyTokens.wordmarkAccent.height, 0.85);
-      expect(TypographyTokens.wordmarkAccent.color, Palette.coral);
+      expect(_styles.wordmarkAccent.color, Palette.coral);
 
       expect(TypographyTokens.bodySerifItalic.fontSize,
           TypographyTokens.bodySerif.fontSize,
@@ -317,7 +323,7 @@ void main() {
       expect(TypographyTokens.composerBodySerif.fontSize, 16);
       expect(TypographyTokens.composerBodySerif.fontWeight, FontWeight.w400);
       expect(TypographyTokens.composerBodySerif.height, 1.6);
-      expect(TypographyTokens.composerBodySerif.color, Palette.ink);
+      expect(_styles.composerBodySerif.color, _light.ink);
 
       expect(TypographyTokens.composerPlaceholderSerif,
           TypographyTokens.noteBodyPlaceholder);
@@ -328,7 +334,7 @@ void main() {
       expect(
           TypographyTokens.composerPlaceholderSerif.fontStyle,
           FontStyle.italic);
-      expect(TypographyTokens.composerPlaceholderSerif.color, Palette.ink34);
+      expect(_styles.composerPlaceholderSerif.color, _light.ink34);
     });
 
     test('the note body family shares one metric across its three faces', () {
@@ -343,9 +349,9 @@ void main() {
         expect(style.fontWeight, FontWeight.w400);
       }
       expect(TypographyTokens.noteBodyItalic.fontStyle, FontStyle.italic);
-      expect(TypographyTokens.noteBodyItalic.color, Palette.ink);
+      expect(_styles.noteBodyItalic.color, _light.ink);
       expect(TypographyTokens.noteBodyPlaceholder.fontStyle, FontStyle.italic);
-      expect(TypographyTokens.noteBodyPlaceholder.color, Palette.ink34);
+      expect(_styles.noteBodyPlaceholder.color, _light.ink34);
     });
 
     test('the serif ladder descends through every prototype size', () {
@@ -373,12 +379,12 @@ void main() {
       }
 
       expect(TypographyTokens.displaySerifToday.height, 1.0);
-      expect(TypographyTokens.bodySerifSecondary.color, Palette.mutedDeep);
+      expect(_styles.bodySerifSecondary.color, _light.mutedDeep);
 
       expect(TypographyTokens.timerSerif.fontFamily, TypographyTokens.serif);
       expect(TypographyTokens.timerSerif.fontSize, 38);
       expect(TypographyTokens.timerSerif.fontWeight, FontWeight.w400);
-      expect(TypographyTokens.timerSerif.color, Palette.ink);
+      expect(_styles.timerSerif.color, _light.ink);
     });
 
     test('the caption ladder descends and stays on the sans family', () {
@@ -394,9 +400,9 @@ void main() {
         expect(style.fontSize, size);
       }
 
-      expect(TypographyTokens.caption11Sans.color, Palette.coral);
-      expect(TypographyTokens.caption10Sans.color, Palette.muted);
-      expect(TypographyTokens.caption9Sans.color, Palette.muted);
+      expect(_styles.caption11Sans.color, Palette.coral);
+      expect(_styles.caption10Sans.color, _light.muted);
+      expect(_styles.caption9Sans.color, _light.muted);
     });
 
     test('state-coloured tokens leave colour to the call site', () {
@@ -408,24 +414,24 @@ void main() {
     test('the micro chip token carries 0.08em of tracking at 8px', () {
       expect(TypographyTokens.chipMicroSans.fontSize, 8);
       expect(TypographyTokens.chipMicroSans.letterSpacing, 0.64);
-      expect(TypographyTokens.chipMicroSans.color, Palette.coral);
+      expect(_styles.chipMicroSans.color, Palette.coral);
     });
 
     test('the accent roles carry their cited prototype metrics', () {
       expect(TypographyTokens.stampAccent.fontSize, 13);
-      expect(TypographyTokens.stampAccent.color, Palette.sage);
+      expect(_styles.stampAccent.color, _light.sage);
       expect(TypographyTokens.promptAccent.fontSize, 13);
-      expect(TypographyTokens.promptAccent.color, Palette.muted);
+      expect(_styles.promptAccent.color, _light.muted);
       expect(TypographyTokens.subtitleAccent.fontSize, 14);
-      expect(TypographyTokens.subtitleAccent.color, Palette.muted);
+      expect(_styles.subtitleAccent.color, _light.muted);
       expect(TypographyTokens.composerTitleAccent.fontSize, 16);
-      expect(TypographyTokens.composerTitleAccent.color, Palette.coral);
+      expect(_styles.composerTitleAccent.color, Palette.coral);
       expect(TypographyTokens.hintAccent.fontFamily, TypographyTokens.accent);
       expect(TypographyTokens.hintAccent.fontSize, 15);
       expect(TypographyTokens.hintAccent.fontWeight, FontWeight.w600);
-      expect(TypographyTokens.hintAccent.color, Palette.muted);
+      expect(_styles.hintAccent.color, _light.muted);
       expect(TypographyTokens.windowTitleAccent.fontSize, 14);
-      expect(TypographyTokens.windowTitleAccent.color, Palette.windowTitle);
+      expect(_styles.windowTitleAccent.color, _light.windowTitle);
 
       for (final TextStyle style in <TextStyle>[
         TypographyTokens.stampAccent,
@@ -442,11 +448,11 @@ void main() {
     test('the sync pair splits weight and colour by rank', () {
       expect(TypographyTokens.syncPrimarySans.fontSize, 10);
       expect(TypographyTokens.syncPrimarySans.fontWeight, FontWeight.w600);
-      expect(TypographyTokens.syncPrimarySans.color, Palette.ink);
+      expect(_styles.syncPrimarySans.color, _light.ink);
 
       expect(TypographyTokens.syncSecondarySans.fontSize, 8);
       expect(TypographyTokens.syncSecondarySans.fontWeight, FontWeight.w400);
-      expect(TypographyTokens.syncSecondarySans.color, Palette.muted);
+      expect(_styles.syncSecondarySans.color, _light.muted);
     });
   });
 }
