@@ -408,7 +408,7 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   void initState() {
     super.initState();
     _shown.addListener(_onShownChanged);
-    _portal.show();
+    _reveal.addStatusListener(_onRevealStatus);
   }
 
   @override
@@ -445,12 +445,23 @@ class _LogActionsRevealState extends State<LogActionsReveal>
     setState(change);
     if (_visible) {
       _shown.value = this;
+      if (!_portal.isShowing) {
+        _portal.show();
+      }
       _reveal.forward();
     } else {
       if (_shown.value == this) {
         _shown.value = null;
       }
       _reveal.reverse();
+    }
+  }
+
+  void _onRevealStatus(AnimationStatus status) {
+    if (status.isDismissed && !_visible && _portal.isShowing) {
+      _pillHovered = false;
+      _focusInPill = false;
+      _portal.hide();
     }
   }
 

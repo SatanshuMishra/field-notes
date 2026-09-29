@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/ax_update_checker.dart';
 import 'support/today_harness.dart';
 
 CaptureRouteRegistry _allCaptureRoutes() {
@@ -184,6 +185,28 @@ void main() {
       final int built = find.byType(CompactLogCard).evaluate().length;
       expect(built, greaterThan(0), reason: '$layout built nothing');
       expect(built, lessThan(entryCount), reason: '$layout built every card');
+    }
+  });
+
+  testWidgets(
+      'a 50-entry day sends no accessibility update macOS rejects',
+      (WidgetTester tester) async {
+    for (final TodayLayout layout in TodayLayout.values) {
+      AxUpdateChecker.instance.reset();
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await pumpToday(
+        tester,
+        TodayScreen(layout: layout),
+        overrides: _manyEntries(50),
+        surface: layout == TodayLayout.withRail
+            ? todayDesktopSurface
+            : todayPhoneSurface,
+      );
+      await tester.pumpAndSettle();
+      expect(AxUpdateChecker.instance.updates, greaterThan(0), reason: '$layout');
+      expect(AxUpdateChecker.instance.rejections, isEmpty, reason: '$layout');
+      semantics.dispose();
+      await tester.pumpWidget(const SizedBox.shrink());
     }
   });
 }

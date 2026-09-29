@@ -132,7 +132,7 @@ void main() {
     addTearDown(mouse.removePointer);
     await mouse.moveTo(list.topCenter + const Offset(0, 25));
     await _settleReveal(tester);
-    expect(_pillOpacity(tester), 0);
+    expect(find.byKey(logActionsPillKey), findsNothing);
 
     scroll.jumpTo(0);
     await tester.pump();
@@ -142,7 +142,7 @@ void main() {
     scroll.jumpTo(350);
     await tester.pump();
     await tester.pump();
-    expect(_pillOpacity(tester), 0);
+    expect(find.byKey(logActionsPillKey), findsNothing);
   });
 
   testWidgets('a hover caused by scrolling reveals no pill until the pointer '
@@ -179,7 +179,7 @@ void main() {
     await tester.pump();
     await _settleReveal(tester);
     expect(tester.getRect(find.byKey(_cardKey)).contains(parked), isTrue);
-    expect(_pillOpacity(tester), 0);
+    expect(find.byKey(logActionsPillKey), findsNothing);
 
     await mouse.moveBy(const Offset(2, 0));
     await _settleReveal(tester);
@@ -222,7 +222,7 @@ void main() {
     await mouse.moveTo(const Offset(400, 100));
     await _settleReveal(tester);
     expect(tester.getRect(find.byKey(_cardKey)).top, -50);
-    expect(_pillOpacity(tester), 0);
+    expect(find.byKey(logActionsPillKey), findsNothing);
 
     tester.view.physicalSize = const Size(800, 1200);
     await tester.pump();
@@ -280,5 +280,88 @@ void main() {
       );
     }
     semantics.dispose();
+  });
+
+  testWidgets('a pill that vanishes under the pointer stays hidden when its '
+      'card scrolls back', (WidgetTester tester) async {
+    final ScrollController scroll = ScrollController();
+    addTearDown(scroll.dispose);
+    await tester.pumpWidget(
+      _list(scroll, <Widget>[
+        const SizedBox(height: 15),
+        LogActionsReveal(
+          onEdit: () {},
+          onDelete: () {},
+          child: const SizedBox(key: _cardKey, height: 400),
+        ),
+        const SizedBox(height: 800),
+      ]),
+    );
+    final TestGesture mouse = await tester.createGesture(
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.addPointer(location: const Offset(700, 590));
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.byKey(_cardKey)));
+    await _settleReveal(tester);
+    final Rect pill = tester.getRect(find.byKey(logActionsPillKey));
+    await mouse.moveTo(Offset(pill.center.dx, pill.top + 3));
+    await _settleReveal(tester);
+    expect(_pillOpacity(tester), 1);
+
+    scroll.jumpTo(16);
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(logActionsPillKey), findsNothing);
+
+    scroll.jumpTo(0);
+    await tester.pump();
+    await _settleReveal(tester);
+    expect(find.byKey(logActionsPillKey), findsNothing);
+  });
+
+  testWidgets('a pill that vanishes while its button has focus stays hidden '
+      'when its card scrolls back', (WidgetTester tester) async {
+    final ScrollController scroll = ScrollController();
+    addTearDown(scroll.dispose);
+    await tester.pumpWidget(
+      _list(scroll, <Widget>[
+        const SizedBox(height: 15),
+        LogActionsReveal(
+          onEdit: () {},
+          onDelete: () {},
+          child: const SizedBox(key: _cardKey, height: 400),
+        ),
+        const SizedBox(height: 800),
+      ]),
+    );
+    final TestGesture mouse = await tester.createGesture(
+      kind: PointerDeviceKind.mouse,
+    );
+    await mouse.addPointer(location: const Offset(700, 590));
+    addTearDown(mouse.removePointer);
+    await mouse.moveTo(tester.getCenter(find.byKey(_cardKey)));
+    await _settleReveal(tester);
+    Focus.of(
+      tester.element(
+        find.descendant(
+          of: find.byKey(logActionsEditKey),
+          matching: find.byType(GestureDetector),
+        ),
+      ),
+    ).requestFocus();
+    await mouse.moveTo(const Offset(700, 590));
+    await _settleReveal(tester);
+    expect(_pillOpacity(tester), 1);
+
+    scroll.jumpTo(16);
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(logActionsPillKey), findsNothing);
+
+    scroll.jumpTo(0);
+    await tester.pump();
+    await _settleReveal(tester);
+    expect(find.byKey(logActionsPillKey), findsNothing);
   });
 }
