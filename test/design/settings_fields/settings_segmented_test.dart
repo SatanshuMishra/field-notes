@@ -1,9 +1,10 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
+import '../../support/theme_harness.dart';
 import 'settings_harness.dart';
 
 Color _fillBehind(WidgetTester tester, String label) {
@@ -16,6 +17,12 @@ Color _fillBehind(WidgetTester tester, String label) {
 const List<SettingsSegment<String>> _segments = <SettingsSegment<String>>[
   SettingsSegment<String>(value: 'device', label: 'On this device'),
   SettingsSegment<String>(value: 'server', label: 'Sync to server'),
+];
+
+const List<SettingsSegment<String>> _appearance = <SettingsSegment<String>>[
+  SettingsSegment<String>(value: 'light', label: 'Light'),
+  SettingsSegment<String>(value: 'dark', label: 'Dark'),
+  SettingsSegment<String>(value: 'system', label: 'System'),
 ];
 
 void main() {
@@ -50,7 +57,7 @@ void main() {
 
       expect(
         _fillBehind(tester, 'On this device'),
-        FieldNotesColors.light.cardBright,
+        Palette.coral,
       );
       expect(_fillBehind(tester, 'Sync to server'), const Color(0x00000000));
     });
@@ -100,4 +107,28 @@ void main() {
       expect(picked, isNull);
     });
   });
+
+  for (final Brightness brightness in Brightness.values) {
+    testWidgets(
+      'the ${brightness.name} selected segment is coral with white text',
+      (WidgetTester tester) async {
+        await pumpThemed(
+          tester,
+          SettingsSegmented<String>(
+            segments: _appearance,
+            value: 'dark',
+            onChanged: (_) {},
+          ),
+          brightness: brightness,
+        );
+        final FieldNotesColors colors = brightness == Brightness.dark
+            ? FieldNotesColors.dark
+            : FieldNotesColors.light;
+        expect(_fillBehind(tester, 'Dark'), Palette.coral);
+        expect(tester.widget<Text>(find.text('Dark')).style?.color, Palette.onAccent);
+        expect(_fillBehind(tester, 'Light'), const Color(0x00000000));
+        expect(tester.widget<Text>(find.text('Light')).style?.color, colors.inkSoft);
+      },
+    );
+  }
 }
