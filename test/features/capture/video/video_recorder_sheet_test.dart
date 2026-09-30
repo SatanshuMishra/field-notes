@@ -1,3 +1,4 @@
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
@@ -333,7 +334,7 @@ void main() {
       debugDefaultTargetPlatformOverride = platform;
       final bool sidebar = platform == TargetPlatform.macOS;
       final double inset = sidebar ? 18 : 8;
-      final double leaveLeft = sidebar ? recorderTrafficLightsClearance : 8;
+      final double leaveLeft = sidebar ? windowButtonsClearance : 8;
       for (final double width in sidebar ? _sidebarWidths : _sheetWidths) {
         final String reason = '${platform.name} ${width.toInt()} wide';
 

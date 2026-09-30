@@ -63,7 +63,7 @@ List<MeadowLandmark> meadowLandmarks(
         title: 'The old spruce',
         text:
             'The tallest tree at the forest edge marks the ${run.length} days '
-            'in a row you kept writing. The bees keep their hive in it.',
+            'in a row your meadow grew. The bees keep their hive in it.',
         range: MeadowRange(first: run.first, last: run.last, key: 'l0'),
       ),
     if (heaviest != null)

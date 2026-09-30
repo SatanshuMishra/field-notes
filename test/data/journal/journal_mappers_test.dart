@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/data/database/app_database.dart' as db;
 import 'package:field_notes/data/journal/journal_exceptions.dart';
@@ -26,21 +27,57 @@ void main() {
     });
 
     test('maps a null mood id to a null mood', () {
-      final row = db.Day(id: 'd2', date: '2026-07-12', createdAt: 0, updatedAt: 0);
-
-      expect(toDomainDay(row).mood, isNull);
-    });
-
-    test('throws MalformedRowException on an unknown mood id', () {
       final row = db.Day(
-        id: 'd3',
+        id: 'd2',
         date: '2026-07-12',
-        moodId: 'euphoric',
         createdAt: 0,
         updatedAt: 0,
       );
 
-      expect(() => toDomainDay(row), throwsA(isA<MalformedRowException>()));
+      expect(toDomainDay(row).mood, isNull);
+    });
+
+    test('an unknown mood id reads as a day with no mood', () {
+      final row = db.Day(
+        id: 'd3',
+        date: '2026-07-12',
+        moodId: 'euphoric',
+        createdAt: 11,
+        updatedAt: 22,
+      );
+
+      final day = toDomainDay(row);
+
+      expect(day.mood, isNull);
+      expect(day.id, 'd3');
+      expect(day.date, '2026-07-12');
+      expect(day.createdAt, 11);
+      expect(day.updatedAt, 22);
+    });
+
+    test('an unknown mood id is logged once', () {
+      final DebugPrintCallback original = debugPrint;
+      final List<String> lines = <String>[];
+      debugPrint = (String? message, {int? wrapWidth}) {
+        lines.add(message ?? '');
+      };
+      addTearDown(() => debugPrint = original);
+
+      db.Day row(String id, String moodId) => db.Day(
+        id: id,
+        date: '2026-07-12',
+        moodId: moodId,
+        createdAt: 0,
+        updatedAt: 0,
+      );
+
+      toDomainDay(row('d4', 'loved'));
+      toDomainDay(row('d5', 'loved'));
+      toDomainDay(row('d6', 'ecstatic'));
+
+      expect(lines, hasLength(2));
+      expect(lines.where((String l) => l.contains('"loved"')), hasLength(1));
+      expect(lines.where((String l) => l.contains('"ecstatic"')), hasLength(1));
     });
   });
 

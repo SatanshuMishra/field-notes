@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/typography.dart';
@@ -28,6 +29,9 @@ const ValueKey<String> meadowFullScreenCloseKey = ValueKey<String>(
 const ValueKey<String> meadowFullScreenPlayKey = ValueKey<String>(
   'meadow-full-screen-play',
 );
+const Key meadowFullScreenTitleKey = ValueKey<String>(
+  'meadow-full-screen-title',
+);
 const Color meadowFullScreenBackdrop = Color(0xFF1C1713);
 
 const Color _glassFill = Color.fromRGBO(28, 22, 16, 0.45);
@@ -47,7 +51,7 @@ const double _labelGap = 10;
 const double _buttonGap = 8;
 const double _targetSlack = (_minTapTarget - _closeSize) / 2;
 const EdgeInsets _sidebarBarPadding = EdgeInsets.fromLTRB(
-  18,
+  windowButtonsClearance,
   16 - _targetSlack,
   18 - _targetSlack,
   0,
@@ -138,13 +142,12 @@ Future<void> openMeadowFullScreen(
             compact: compact,
             isCurrentYear: isCurrentYear,
           ),
-      transitionsBuilder:
-          (
-            BuildContext routeContext,
-            Animation<double> animation,
-            Animation<double> secondaryAnimation,
-            Widget child,
-          ) => FadeTransition(opacity: animation, child: child),
+      transitionsBuilder: (
+        BuildContext routeContext,
+        Animation<double> animation,
+        Animation<double> secondaryAnimation,
+        Widget child,
+      ) => FadeTransition(opacity: animation, child: child),
     ),
   );
 }
@@ -298,6 +301,7 @@ class _MeadowFullScreenState extends ConsumerState<_MeadowFullScreen>
                         Expanded(
                           child: IgnorePointer(
                             child: Text(
+                              key: meadowFullScreenTitleKey,
                               label,
                               maxLines: 1,
                               softWrap: false,
