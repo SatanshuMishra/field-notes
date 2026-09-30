@@ -23,10 +23,13 @@ void main() {
       }
     });
 
+    test('the fourth destination is called Meadow', () {
+      expect(ShellDestination.garden.label, 'Meadow');
+    });
+
     test('labels match the locked nav names', () {
       expect(ShellDestination.today.label, 'Today');
       expect(ShellDestination.calendar.label, 'Calendar');
-      expect(ShellDestination.garden.label, 'Garden');
       expect(ShellDestination.search.label, 'Search');
       expect(ShellDestination.settings.label, 'Settings');
     });

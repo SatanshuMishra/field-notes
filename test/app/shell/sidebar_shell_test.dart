@@ -189,7 +189,7 @@ void main() {
             find.byKey(const ValueKey<String>('rail-garden')),
           ),
           isSemantics(
-            label: 'Garden',
+            label: 'Meadow',
             isButton: true,
             isSelected: false,
             hasTapAction: true,

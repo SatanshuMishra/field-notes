@@ -5,7 +5,7 @@ import '../../design/icons/nav_icons.dart';
 enum ShellDestination {
   today('Today', Icons.wb_sunny_outlined, NavGlyph.home),
   calendar('Calendar', Icons.calendar_today_outlined, NavGlyph.calendar),
-  garden('Garden', Icons.local_florist_outlined, NavGlyph.garden),
+  garden('Meadow', Icons.local_florist_outlined, NavGlyph.garden),
   search('Search', Icons.search, NavGlyph.search),
   settings('Settings', Icons.settings_outlined, null);
 
