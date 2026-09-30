@@ -214,15 +214,20 @@ class MeadowLandMask {
   final ColorFilter filter;
 
   void apply(Canvas canvas) {
-    canvas.drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      rect,
-      Paint()
-        ..blendMode = BlendMode.dstIn
-        ..colorFilter = filter
-        ..filterQuality = FilterQuality.low,
-    );
+    canvas
+      ..save()
+      ..clipRect(rect)
+      ..saveLayer(rect, Paint()..blendMode = BlendMode.dstIn)
+      ..drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        rect,
+        Paint()
+          ..colorFilter = filter
+          ..filterQuality = FilterQuality.low,
+      )
+      ..restore()
+      ..restore();
     canvas.drawRect(
       Rect.fromLTRB(
         rect.left - meadowWorldWidth,
@@ -1167,13 +1172,14 @@ class MeadowLayers {
       canvas
         ..saveLayer(all, Paint())
         ..drawImage(base, Offset.zero, Paint()..colorFilter = _unpremultiply)
+        ..saveLayer(all, Paint()..blendMode = BlendMode.plus)
         ..drawImage(
           near,
           Offset.zero,
           Paint()
-            ..blendMode = BlendMode.plus
             ..colorFilter = _channel(_horizonChannel, palette.skyHorizon, 1),
         )
+        ..restore()
         ..drawImage(base, Offset.zero, Paint()..blendMode = BlendMode.dstIn)
         ..restore();
       _composeFog(canvas, 0, bands[0], palette);
@@ -1322,24 +1328,26 @@ class MeadowLayers {
             ),
         )
         ..saveLayer(all, Paint())
+        ..saveLayer(all, Paint()..blendMode = BlendMode.plus)
         ..drawImage(
           _waterPacks[index]!,
           Offset.zero,
           Paint()
-            ..blendMode = BlendMode.plus
             ..colorFilter = _channel(_deepChannel, palette.wDeep, _deepOpacity),
         )
+        ..restore()
+        ..saveLayer(all, Paint()..blendMode = BlendMode.plus)
         ..drawImage(
           _waterPacks[index]!,
           Offset.zero,
           Paint()
-            ..blendMode = BlendMode.plus
             ..colorFilter = _channel(
               _shallowChannel,
               palette.wSh,
               _shallowOpacity,
             ),
         )
+        ..restore()
         ..restore()
         ..drawImage(
           _waterPacks[index]!,
@@ -1445,20 +1453,20 @@ class _FallParts {
     final Image nextBody = layers._keep(
       _rasterise(frames.body, (Canvas canvas) {
         canvas
+          ..saveLayer(frames.body.pixels, Paint()..blendMode = BlendMode.plus)
           ..drawImage(
             bodyPack,
             Offset.zero,
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..colorFilter = _channel(_sheetChannel, palette.wf, 1),
+            Paint()..colorFilter = _channel(_sheetChannel, palette.wf, 1),
           )
+          ..restore()
+          ..saveLayer(frames.body.pixels, Paint()..blendMode = BlendMode.plus)
           ..drawImage(
             bodyPack,
             Offset.zero,
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..colorFilter = _channel(_glossChannel, palette.wfHi, 1),
-          );
+            Paint()..colorFilter = _channel(_glossChannel, palette.wfHi, 1),
+          )
+          ..restore();
       }),
     );
     final Image nextPool = layers._keep(

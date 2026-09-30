@@ -8,6 +8,7 @@ import 'package:field_notes/features/garden/render/meadow_creature_art.dart';
 import 'package:field_notes/features/garden/render/meadow_layers.dart';
 import 'package:field_notes/features/garden/render/meadow_motion.dart';
 import 'package:field_notes/features/garden/render/meadow_plant_atlas.dart';
+import 'package:field_notes/features/garden/render/meadow_rays.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
@@ -45,10 +46,6 @@ const Rect _shootingTrail = Rect.fromLTWH(-45, -1, 90, 2);
 const double _spotReach = meadowSpotRadius * math.sqrt2;
 const Offset _vignetteCentre = Offset(700, 268.8);
 const Size _vignetteRadii = Size(1120, 576);
-const double _raysInner = 120;
-const double _raysOuter = 547.2;
-const double _raysGlowRadius = 294;
-const int _raysSegments = 120;
 const double _pocketStop = 0.68;
 const double _fallStop = 0.7;
 const Offset _lakeMistCentre = Offset(0.5, 0.55);
@@ -88,6 +85,7 @@ class MeadowStagePainter extends CustomPainter {
     required this.layers,
     required this.atlas,
     required this.creatures,
+    required this.rays,
     required this.terrain,
     required this.plants,
     required this.palette,
@@ -113,6 +111,7 @@ class MeadowStagePainter extends CustomPainter {
   final MeadowLayers layers;
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
+  final MeadowRays rays;
   final MeadowTerrain terrain;
   final MeadowPlants plants;
   final MeadowPalette palette;
@@ -161,7 +160,7 @@ class MeadowStagePainter extends CustomPainter {
       opacity: palette.dayLife,
     );
     _paintOverlay(canvas, shaders);
-    _paintRays(canvas, shaders);
+    _paintRays(canvas);
     creatures.paintFireflies(canvas, fireflies);
     _paintSpot(canvas);
     _paintVignette(canvas);
@@ -366,34 +365,31 @@ class MeadowStagePainter extends CustomPainter {
         );
       }
     }
-    if (marks.isEmpty) {
+    final List<MeadowImage> water = layers.water;
+    if (marks.isEmpty || water.isEmpty) {
       return;
     }
-    final ColorFilter glintColour = ColorFilter.mode(
-      palette.glintC,
-      BlendMode.srcIn,
+    canvas.saveLayer(
+      water
+          .map((MeadowImage tile) => tile.rect)
+          .reduce((Rect a, Rect b) => a.expandToInclude(b)),
+      Paint(),
     );
-    final ColorFilter flowColour = ColorFilter.mode(
-      palette.flowC,
-      BlendMode.srcIn,
-    );
-    final Paint paint = Paint()..filterQuality = FilterQuality.low;
-    for (final MeadowImage tile in layers.water) {
-      final ImageShader mask = _waterMask(tile);
-      for (final _WaterMark mark in marks) {
-        if (!mark.bounds.overlaps(tile.rect)) {
-          continue;
-        }
-        final double? stroke = mark.stroke;
-        paint
-          ..shader = mask
-          ..colorFilter = mark.glint ? glintColour : flowColour
-          ..color = _opacity(mark.opacity)
+    for (final _WaterMark mark in marks) {
+      final double? stroke = mark.stroke;
+      canvas.drawOval(
+        mark.oval,
+        Paint()
+          ..color = _faded(
+            mark.glint ? palette.glintC : palette.flowC,
+            mark.opacity,
+          )
           ..style = stroke == null ? PaintingStyle.fill : PaintingStyle.stroke
-          ..strokeWidth = stroke ?? 0;
-        canvas.drawOval(mark.oval, paint);
-      }
+          ..strokeWidth = stroke ?? 0,
+      );
     }
+    layers.maskToWater(canvas);
+    canvas.restore();
   }
 
   void _paintMist(Canvas canvas, _PaletteShaders shaders) {
@@ -641,35 +637,17 @@ class MeadowStagePainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _paintRays(Canvas canvas, _PaletteShaders shaders) {
+  void _paintRays(Canvas canvas) {
     if (palette.raysOpacity <= 0) {
       return;
     }
-    final Color opacity = _opacity(
-      palette.raysOpacity * meadowRaysBreath(_now),
+    final ui.Image image = rays.image;
+    canvas.drawImageRect(
+      image,
+      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+      Rect.fromCircle(center: palette.sunPosition, radius: meadowRaysReach),
+      _imagePaint(palette.raysOpacity * meadowRaysBreath(_now)),
     );
-    final Offset sun = palette.sunPosition;
-    canvas
-      ..save()
-      ..translate(sun.dx, sun.dy)
-      ..save()
-      ..rotate(-math.pi / 2)
-      ..drawVertices(
-        _raysMesh,
-        BlendMode.modulate,
-        Paint()
-          ..shader = shaders.beams
-          ..color = opacity,
-      )
-      ..restore()
-      ..drawCircle(
-        Offset.zero,
-        _raysGlowRadius,
-        Paint()
-          ..shader = shaders.raysGlow
-          ..color = opacity,
-      )
-      ..restore();
   }
 
   void _paintSpot(Canvas canvas) {
@@ -724,6 +702,7 @@ class MeadowStagePainter extends CustomPainter {
       !identical(oldDelegate.layers, layers) ||
       !identical(oldDelegate.atlas, atlas) ||
       !identical(oldDelegate.creatures, creatures) ||
+      !identical(oldDelegate.rays, rays) ||
       !identical(oldDelegate.terrain, terrain) ||
       !identical(oldDelegate.plants, plants) ||
       !identical(oldDelegate.bees, bees) ||
@@ -798,31 +777,6 @@ Rect _ovalOf(
   height: ellipse.radiusY * 2 * scale,
 );
 
-final Expando<ImageShader> _waterMasks = Expando<ImageShader>();
-
-ImageShader _waterMask(MeadowImage tile) {
-  final ImageShader? cached = _waterMasks[tile.image];
-  if (cached != null) {
-    return cached;
-  }
-  final Float64List matrix = Float64List(16)
-    ..[0] = tile.rect.width / tile.image.width
-    ..[5] = tile.rect.height / tile.image.height
-    ..[10] = 1
-    ..[12] = tile.rect.left
-    ..[13] = tile.rect.top
-    ..[15] = 1;
-  final ImageShader shader = ImageShader(
-    tile.image,
-    TileMode.decal,
-    TileMode.decal,
-    matrix,
-    filterQuality: FilterQuality.low,
-  );
-  _waterMasks[tile.image] = shader;
-  return shader;
-}
-
 class _WaterMark {
   const _WaterMark({
     required this.oval,
@@ -835,8 +789,6 @@ class _WaterMark {
   final double opacity;
   final bool glint;
   final double? stroke;
-
-  Rect get bounds => oval.inflate((stroke ?? 0) / 2);
 }
 
 Color _clear(Color colour) => colour.withValues(alpha: 0);
@@ -888,109 +840,6 @@ final ui.Gradient _vignette = ui.Gradient.radial(
   <Color>[_clear(_vignetteShade), _clear(_vignetteShade), _vignetteShade],
   <double>[0, 0.62, 1],
 );
-
-double _raysMask(double radius) => radius <= _raysInner
-    ? radius / _raysInner
-    : math.max(0.0, (_raysOuter - radius) / (_raysOuter - _raysInner));
-
-final ui.Vertices _raysMesh = _buildRaysMesh();
-
-ui.Vertices _buildRaysMesh() {
-  final List<Offset> positions = <Offset>[Offset.zero];
-  final List<Color> colours = <Color>[const Color(0x00FFFFFF)];
-  for (final (double radius, Color colour) in <(double, Color)>[
-    (_raysInner, const Color(0xFFFFFFFF)),
-    (_raysOuter, const Color(0x00FFFFFF)),
-  ]) {
-    for (int i = 0; i < _raysSegments; i++) {
-      final double angle = i / _raysSegments * math.pi * 2;
-      positions.add(Offset(math.cos(angle), math.sin(angle)) * radius);
-      colours.add(colour);
-    }
-  }
-  final List<int> indices = <int>[];
-  for (int i = 0; i < _raysSegments; i++) {
-    final int next = (i + 1) % _raysSegments;
-    final int inner = 1 + i;
-    final int innerNext = 1 + next;
-    final int outer = 1 + _raysSegments + i;
-    final int outerNext = 1 + _raysSegments + next;
-    indices.addAll(<int>[
-      0,
-      inner,
-      innerNext,
-      inner,
-      outer,
-      innerNext,
-      innerNext,
-      outer,
-      outerNext,
-    ]);
-  }
-  return ui.Vertices(
-    VertexMode.triangles,
-    positions,
-    colors: colours,
-    indices: indices,
-  );
-}
-
-double _conic(double degrees, double from, List<(double, double)> stops) {
-  final double period = stops.last.$1;
-  final double local = (degrees - from) % period;
-  for (int i = 0; i < stops.length - 1; i++) {
-    final (double at, double alpha) = stops[i];
-    final (double next, double nextAlpha) = stops[i + 1];
-    if (local <= next) {
-      return alpha + (nextAlpha - alpha) * (local - at) / (next - at);
-    }
-  }
-  return stops.last.$2;
-}
-
-const List<(double, double)> _beamStops = <(double, double)>[
-  (0, 0),
-  (3, 0.16),
-  (6.5, 0),
-  (17, 0),
-];
-const double _beamFrom = 3;
-const List<(double, double)> _fineBeamStops = <(double, double)>[
-  (0, 0),
-  (4, 0.12),
-  (9, 0),
-  (23, 0),
-];
-
-double _beamAlpha(double degrees) {
-  final double wide = _conic(degrees, _beamFrom, _beamStops);
-  final double fine = _conic(degrees, 0, _fineBeamStops);
-  return 1 - (1 - wide) * (1 - fine);
-}
-
-List<double> _beamAngles() {
-  final Set<double> breaks = <double>{0, 360};
-  for (double at = _beamFrom - 17; at < 360; at += 17) {
-    for (final (double offset, double _) in _beamStops) {
-      breaks.add(at + offset);
-    }
-  }
-  for (double at = 0; at < 360; at += 23) {
-    for (final (double offset, double _) in _fineBeamStops) {
-      breaks.add(at + offset);
-    }
-  }
-  final List<double> sorted =
-      breaks.where((double at) => at >= 0 && at <= 360).toList()..sort();
-  return <double>[
-    for (int i = 0; i < sorted.length; i++) ...<double>[
-      sorted[i],
-      if (i + 1 < sorted.length) (sorted[i] + sorted[i + 1]) / 2,
-    ],
-  ];
-}
-
-final List<double> _beamSamples = _beamAngles();
 
 double _normal(double x) {
   final double t = 1 / (1 + 0.3275911 * x.abs() / math.sqrt2);
@@ -1071,20 +920,6 @@ class _PaletteShaders {
     palette.overlayColour.withValues(alpha: palette.overlayCentreAlpha),
     palette.overlayColour.withValues(alpha: palette.overlayAlpha),
   ]);
-
-  late final ui.Gradient raysGlow = _raysGlowGradient(
-    palette.sunColour,
-    palette.raysGlowAlpha,
-  );
-
-  late final ui.Gradient beams = ui.Gradient.sweep(
-    Offset.zero,
-    <Color>[
-      for (final double at in _beamSamples)
-        palette.sunColour.withValues(alpha: _beamAlpha(at)),
-    ],
-    <double>[for (final double at in _beamSamples) at / 360],
-  );
 }
 
 ui.Gradient _moonGlowGradient(Color colour) {
@@ -1107,24 +942,6 @@ ui.Gradient _moonGlowGradient(Color colour) {
       _moonRadius / _moonGlowReach,
       for (final double radius in radii) radius / _moonGlowReach,
     ],
-  );
-}
-
-ui.Gradient _raysGlowGradient(Color colour, double alpha) {
-  final List<double> radii = <double>[
-    for (double radius = 0; radius < _raysGlowRadius; radius += 14) radius,
-    _raysGlowRadius,
-  ];
-  return ui.Gradient.radial(
-    Offset.zero,
-    _raysGlowRadius,
-    <Color>[
-      for (final double radius in radii)
-        colour.withValues(
-          alpha: alpha * (1 - radius / _raysGlowRadius) * _raysMask(radius),
-        ),
-    ],
-    <double>[for (final double radius in radii) radius / _raysGlowRadius],
   );
 }
 
