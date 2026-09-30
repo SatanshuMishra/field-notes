@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
-import 'package:field_notes/design/format/plural.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/today/today_date.dart';
@@ -11,9 +10,6 @@ import '../sky/sky_astronomy.dart';
 import '../sky/sky_time.dart';
 
 const double _minTapTarget = 48;
-
-String gardenDayCountLabel(int days, int year) =>
-    '${pluralize(days, 'day')} planted in $year';
 
 String _eventTime(BuildContext context, SkyEvent event) =>
     formatClock(context, TimeOfDay.fromDateTime(event.instant.toLocal()));
@@ -39,85 +35,6 @@ String gardenClockLabel(BuildContext context, SkyMoment moment) {
   final String weekday = shortWeekdayLabel(moment.instant);
   final String date = shortMonthDayLabel(moment.instant);
   return '$weekday $date · $time';
-}
-
-class GardenHeader extends StatelessWidget {
-  const GardenHeader({
-    super.key,
-    required this.compact,
-    this.dayCount,
-    this.year,
-    this.clock,
-  });
-
-  final bool compact;
-  final int? dayCount;
-  final int? year;
-  final Widget? clock;
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesTextStyles styles = context.textStyles;
-    final int? days = dayCount;
-    final int? plantedIn = year;
-    final String? count = days == null || plantedIn == null
-        ? null
-        : gardenDayCountLabel(days, plantedIn);
-    if (compact) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(2, 4, 2, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'your garden',
-              style: styles.pageEyebrowAccent.copyWith(fontSize: 14),
-            ),
-            Text(
-              'Every day, a bloom',
-              style: styles.headlineSerif.copyWith(height: 1),
-            ),
-            if (count != null) ...<Widget>[
-              const SizedBox(height: 3),
-              Text(count, style: styles.caption9Sans),
-            ],
-          ],
-        ),
-      );
-    }
-    final Widget? trailing = clock;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text('your garden', style: styles.pageEyebrowAccent),
-                  Text('Every day, a bloom', style: styles.displaySerif),
-                ],
-              ),
-            ),
-            if (trailing != null) ...<Widget>[
-              const SizedBox(width: 16),
-              trailing,
-            ],
-          ],
-        ),
-        const SizedBox(height: 4),
-        if (count != null) ...<Widget>[
-          Text(
-            '$count · quietly filling in as the year goes',
-            style: styles.captionSans,
-          ),
-          const SizedBox(height: 16),
-        ],
-      ],
-    );
-  }
 }
 
 class GardenSkyClock extends StatelessWidget {
