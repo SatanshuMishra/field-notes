@@ -8,6 +8,7 @@ import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/garden/model/garden_motion.dart';
 import 'package:field_notes/features/garden/model/meadow_random.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
+import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage_tooltip.dart';
@@ -36,6 +37,12 @@ const Size _macWindow = Size(1100, 700);
 
 final SkyScene _noon = skySceneAt(
   DateTime.utc(2025, 6, 30, 19),
+  _latitude,
+  _longitude,
+);
+
+final SkyScene _midnight = skySceneAt(
+  DateTime.utc(2025, 7, 1, 6),
   _latitude,
   _longitude,
 );
@@ -162,6 +169,7 @@ Future<MeadowStageState> _pumpStage(
   int? growthPoint,
   Brightness brightness = Brightness.light,
   Key? stageKey,
+  SkyScene? sky,
 }) async {
   final MeadowYear shown = year ?? _sampleYear();
   tester.view.physicalSize =
@@ -191,7 +199,7 @@ Future<MeadowStageState> _pumpStage(
                     key: stageKey ?? UniqueKey(),
                     year: shown,
                     seed: meadowSeed(_meadowKey, shown.year),
-                    sky: _noon,
+                    sky: sky ?? _noon,
                     morning: false,
                     mode: mode,
                     compact: compact,
@@ -235,6 +243,18 @@ double _opacity(WidgetTester tester) => tester
     )
     .opacity
     .value;
+
+MeadowStagePainter _stagePainter(WidgetTester tester) =>
+    tester
+            .widget<CustomPaint>(
+              find.byWidgetPredicate(
+                (Widget widget) =>
+                    widget is CustomPaint &&
+                    widget.painter is MeadowStagePainter,
+              ),
+            )
+            .painter!
+        as MeadowStagePainter;
 
 BoxDecoration _tooltipDecoration(WidgetTester tester) =>
     tester
@@ -764,17 +784,131 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('the scene takes several build steps per frame while it opens', (
-    WidgetTester tester,
-  ) async {
-    final MeadowStageState state = await _pumpStage(tester, year: _leapYear());
-    await _grow(tester, state);
-    expect(state.debugBuildFrames, greaterThan(0));
-    expect(
-      state.debugBuildFrames,
-      lessThanOrEqualTo((state.debugBuildSteps / 4).ceil() + 1),
-    );
-  });
+  testWidgets(
+    'the scene opens with up to four build steps per frame and every recolour piece in a frame of its own',
+    (WidgetTester tester) async {
+      final MeadowStageState state = await _pumpStage(
+        tester,
+        year: _leapYear(),
+      );
+      int pieceFrames = 0;
+      for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+        );
+        final int steps = state.debugBuildSteps;
+        final int pieces = state.debugRecolourPieces;
+        await tester.pump();
+        final int stepped = state.debugBuildSteps - steps;
+        final int drawn = state.debugRecolourPieces - pieces;
+        expect(drawn, lessThanOrEqualTo(1), reason: 'frame $i');
+        expect(stepped, lessThanOrEqualTo(4), reason: 'frame $i');
+        if (drawn == 1) {
+          expect(stepped, 1, reason: 'frame $i drew a piece');
+          pieceFrames++;
+        }
+      }
+      expect(state.debugIsReady, isTrue);
+      expect(pieceFrames, greaterThan(1));
+      expect(state.debugRecolourFrames, state.debugRecolourPieces);
+    },
+  );
+
+  testWidgets(
+    'a sky change on an open meadow draws one piece per frame, repaints it and finishes with motion off',
+    (WidgetTester tester) async {
+      const Key key = ValueKey<String>('recolour stage');
+      MeadowStageState state = await _pumpStage(
+        tester,
+        tickers: false,
+        stageKey: key,
+      );
+      await _grow(tester, state);
+      expect(state.debugIsRecolouring, isFalse);
+      final int before = state.debugRecolourPieces;
+
+      state = await _pumpStage(
+        tester,
+        tickers: false,
+        stageKey: key,
+        sky: _midnight,
+      );
+
+      expect(state.debugIsRecolouring, isTrue);
+      int frames = 0;
+      while (state.debugIsRecolouring && frames < 64) {
+        final int drawn = state.debugRecolourPieces;
+        final MeadowStagePainter painted = _stagePainter(tester);
+        await tester.pump();
+        frames++;
+        expect(
+          state.debugRecolourPieces - drawn,
+          lessThanOrEqualTo(1),
+          reason: 'frame $frames',
+        );
+        if (state.debugRecolourPieces > drawn) {
+          expect(
+            _stagePainter(tester).shouldRepaint(painted),
+            isTrue,
+            reason: 'repaint after frame $frames',
+          );
+        }
+      }
+      expect(state.debugIsRecolouring, isFalse);
+      expect(state.debugRecolourPieces - before, greaterThan(1));
+      expect(state.debugRecolourPieces - before, frames);
+    },
+  );
+
+  testWidgets(
+    'a sky change while the meadow opens is finished once it appears',
+    (WidgetTester tester) async {
+      const Key key = ValueKey<String>('opening stage');
+      final MeadowYear leap = _leapYear();
+      MeadowStageState state = await _pumpStage(
+        tester,
+        year: leap,
+        tickers: false,
+        stageKey: key,
+      );
+      int last = -1;
+      int still = 0;
+      for (
+        int i = 0;
+        i < _buildFrames && !state.debugIsReady && still < 2;
+        i++
+      ) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+        );
+        await tester.pump();
+        final int pieces = state.debugRecolourPieces;
+        still = pieces > 0 && pieces == last ? still + 1 : 0;
+        last = pieces;
+      }
+      expect(
+        state.debugIsReady,
+        isFalse,
+        reason: 'first colours done, still opening',
+      );
+
+      state = await _pumpStage(
+        tester,
+        year: leap,
+        tickers: false,
+        stageKey: key,
+        sky: _midnight,
+      );
+      await _grow(tester, state);
+      int frames = 0;
+      while (state.debugIsRecolouring && frames < 64) {
+        await tester.pump();
+        frames++;
+      }
+      expect(state.debugIsRecolouring, isFalse);
+      expect(state.debugRecolourPieces, greaterThan(last));
+    },
+  );
 
   testWidgets('the whole scene fits the memory ceiling', (
     WidgetTester tester,

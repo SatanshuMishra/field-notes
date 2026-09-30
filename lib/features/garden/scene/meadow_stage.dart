@@ -113,6 +113,8 @@ class MeadowStageState extends State<MeadowStage>
   _Build? _build;
   int _buildSteps = 0;
   int _buildFrames = 0;
+  int _recolourPieces = 0;
+  int _recolourFrames = 0;
   int? _stepCallback;
   Size? _box;
   double _ratio = 1;
@@ -148,6 +150,15 @@ class MeadowStageState extends State<MeadowStage>
 
   @visibleForTesting
   int get debugBuildFrames => _buildFrames;
+
+  @visibleForTesting
+  int get debugRecolourPieces => _recolourPieces;
+
+  @visibleForTesting
+  int get debugRecolourFrames => _recolourFrames;
+
+  @visibleForTesting
+  bool get debugIsRecolouring => _scene?.layers.isRecolouring ?? false;
 
   @visibleForTesting
   bool get debugIsTicking => _ticker.isTicking;
@@ -285,6 +296,15 @@ class MeadowStageState extends State<MeadowStage>
     if (!mounted) {
       return;
     }
+    final MeadowLayers? shown = _scene?.layers;
+    if (shown != null && shown.isRecolouring) {
+      shown.step();
+      _recolourPieces++;
+      _recolourFrames++;
+      _frame.value++;
+      _scheduleStep();
+      return;
+    }
     final _Build? running = _build;
     if (running == null) {
       final _ImageKey? wanted = _wanted();
@@ -297,19 +317,27 @@ class MeadowStageState extends State<MeadowStage>
       return;
     }
     _buildFrames++;
-    bool finished = false;
-    for (int i = 0; i < _buildStepsPerFrame && !finished; i++) {
+    final int pieces = _recolourPieces;
+    _Advance advanced = _Advance.step;
+    for (int i = 0; i < _buildStepsPerFrame && advanced == _Advance.step; i++) {
       _buildSteps++;
-      finished = running.advance(_palette);
+      advanced = running.advance(_palette);
+      if (advanced == _Advance.piece) {
+        _recolourPieces++;
+      }
     }
-    if (!finished) {
+    if (_recolourPieces > pieces) {
+      _recolourFrames++;
+    }
+    if (advanced != _Advance.finished) {
       _scheduleStep();
       return;
     }
     _build = null;
-    _show(running.finish());
+    final _SceneImages next = running.finish();
+    _show(next);
     final _ImageKey? wanted = _wanted();
-    if (wanted != null && _scene?.key != wanted) {
+    if (next.layers.isRecolouring || (wanted != null && next.key != wanted)) {
       _scheduleStep();
     }
   }
@@ -383,6 +411,9 @@ class MeadowStageState extends State<MeadowStage>
     _scene?.layers.recolour(next);
     _scene?.rays.recolour(next);
     _build?.recolour(next);
+    if (_scene?.layers.isRecolouring ?? false) {
+      _scheduleStep();
+    }
     if (!_animate) {
       _ambience?.step(
         0,
@@ -720,6 +751,7 @@ class MeadowStageState extends State<MeadowStage>
     final int growthPoint = widget.resolvedGrowthPoint;
     return MeadowStagePainter(
       layers: scene.layers,
+      layersRevision: scene.layers.revision,
       atlas: scene.atlas,
       creatures: scene.creatures,
       rays: scene.rays,
@@ -1004,6 +1036,8 @@ class _SceneImages {
   }
 }
 
+enum _Advance { step, layersBuilt, piece, finished }
+
 class _Build {
   _Build(this.key);
 
@@ -1019,7 +1053,7 @@ class _Build {
       (_creatures?.imageBytes ?? 0) +
       (_rays?.imageBytes ?? 0);
 
-  bool advance(MeadowPalette palette) {
+  _Advance advance(MeadowPalette palette) {
     final _Geometry geometry = key.geometry;
     final MeadowLayers? layers = _layers;
     if (layers == null) {
@@ -1032,16 +1066,16 @@ class _Build {
           density: key.density,
           maxBytes: key.layerBudget,
         ),
-      );
-      return false;
+      )..recolour(palette);
+      return _Advance.step;
     }
     if (!layers.isBuilt) {
       layers.step();
-      return false;
+      return layers.isBuilt ? _Advance.layersBuilt : _Advance.step;
     }
     if (!layers.isReady) {
-      layers.recolour(palette);
-      return false;
+      layers.step();
+      return _Advance.piece;
     }
     final MeadowPlantAtlas? atlas = _atlas;
     if (atlas == null) {
@@ -1050,15 +1084,15 @@ class _Build {
         density: key.density,
         maxBytes: key.plantBudget,
       );
-      return false;
+      return _Advance.step;
     }
     if (!atlas.isReady) {
       atlas.step();
-      return false;
+      return _Advance.step;
     }
     _creatures ??= MeadowCreatureArt.build(density: key.density);
     _rays ??= MeadowRays(palette);
-    return true;
+    return _Advance.finished;
   }
 
   void recolour(MeadowPalette palette) {

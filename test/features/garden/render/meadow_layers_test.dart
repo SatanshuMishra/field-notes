@@ -37,6 +37,18 @@ double _viewportDensity(
   required double ratio,
 }) => MeadowViewport.resolve(box: box, cover: cover, focusX: 700).scale * ratio;
 
+List<Image> _pieces(MeadowLayers layers) => <Image>[
+  layers.mountains.image,
+  for (final MeadowImage tile in layers.water) tile.image,
+  for (final MeadowFallLayer fall in layers.falls) fall.body.image,
+  for (final MeadowCloudImage cloud in layers.clouds) cloud.image.image,
+];
+
+List<int> _redrawn(List<Image> before, List<Image> after) => <int>[
+  for (int i = 0; i < before.length; i++)
+    if (!identical(before[i], after[i])) i,
+];
+
 void main() {
   final MeadowYear year = meadowPixelsLeapYear();
   final int seed = meadowSeed(20280229, meadowPixelsYear);
@@ -58,14 +70,16 @@ void main() {
     );
     addTearDown(layers.dispose);
     layers
-      ..buildAll()
-      ..recolour(noon);
+      ..recolour(noon)
+      ..buildAll();
     expect(layers.isReady, isTrue);
     final int recorded = layers.geometryRecordings;
     expect(recorded, greaterThan(0));
     final Uint8List day = await rgbaOf(layers.mountains.image);
 
-    layers.recolour(midnight);
+    layers
+      ..recolour(midnight)
+      ..buildAll();
 
     expect(layers.geometryRecordings, recorded);
     final Uint8List night = await rgbaOf(layers.mountains.image);
@@ -104,8 +118,8 @@ void main() {
         density: density,
       );
       layers
-        ..buildAll()
-        ..recolour(noon);
+        ..recolour(noon)
+        ..buildAll();
 
       expect(layers.imageBytes, lessThanOrEqualTo(budget), reason: name);
       expect(
@@ -136,7 +150,9 @@ void main() {
         midnight,
         noon,
       ]) {
-        layers.recolour(palette);
+        layers
+          ..recolour(palette)
+          ..buildAll();
         final Uint8List recoloured = await rgbaOf(layers.mountains.image);
         final Image direct = layers.drawMountainsDirectly(palette);
         final Uint8List drawn = await rgbaOf(direct);
@@ -146,6 +162,156 @@ void main() {
         final int nearlyAll = percentileOf(worst, 0.995);
         expect(median, lessThanOrEqualTo(1));
         expect(nearlyAll, lessThanOrEqualTo(4));
+      }
+    },
+  );
+
+  test(
+    'a recolour redraws one piece per step, the mountains first and the lake straight after',
+    () {
+      final MeadowLayers layers = MeadowLayers(
+        terrain: terrain,
+        grass: grass,
+        density: 0.5,
+      );
+      addTearDown(layers.dispose);
+      layers
+        ..recolour(noon)
+        ..buildAll();
+      expect(layers.isReady, isTrue);
+      final List<Image> before = _pieces(layers);
+
+      layers.recolour(midnight);
+
+      expect(
+        _redrawn(before, _pieces(layers)),
+        isEmpty,
+        reason: 'the recolour call itself redraws nothing',
+      );
+      final List<int> order = <int>[];
+      List<Image> previous = before;
+      bool more = true;
+      while (more && order.length <= before.length) {
+        more = layers.step();
+        final List<Image> now = _pieces(layers);
+        final List<int> redrawn = _redrawn(previous, now);
+        expect(redrawn, hasLength(1), reason: 'step ${order.length + 1}');
+        order.add(redrawn.single);
+        previous = now;
+      }
+      expect(order, <int>[for (int i = 0; i < before.length; i++) i]);
+      expect(layers.step(), isFalse);
+      expect(_redrawn(previous, _pieces(layers)), isEmpty);
+    },
+  );
+
+  test('the layers are not ready until every piece has its first colours', () {
+    final MeadowLayers layers = MeadowLayers(
+      terrain: terrain,
+      grass: grass,
+      density: 0.5,
+    );
+    addTearDown(layers.dispose);
+    layers.recolour(noon);
+    while (!layers.isBuilt) {
+      layers.step();
+    }
+
+    expect(layers.isReady, isFalse, reason: 'built but not yet coloured');
+    int pieces = 0;
+    while (!layers.isReady && pieces < 100) {
+      layers.step();
+      pieces++;
+    }
+    expect(layers.isReady, isTrue);
+    expect(pieces, _pieces(layers).length);
+  });
+
+  test(
+    'while the sky keeps changing every piece keeps up and the lake follows the mountains',
+    () async {
+      final MeadowLayers layers = MeadowLayers(
+        terrain: terrain,
+        grass: grass,
+        density: 0.5,
+      );
+      addTearDown(layers.dispose);
+      layers
+        ..recolour(noon)
+        ..buildAll();
+      final int count = _pieces(layers).length;
+      final int lakeTiles = layers.water.length;
+      final List<MeadowPalette> sweep = <MeadowPalette>[dusk, midnight, noon];
+      final List<int> lastDrawn = List<int>.filled(count, 0);
+      final List<int> order = <int>[];
+      List<Image> previous = _pieces(layers);
+      for (int step = 1; step <= 3 * count; step++) {
+        layers.recolour(sweep[step % sweep.length]);
+        expect(
+          _redrawn(previous, _pieces(layers)),
+          isEmpty,
+          reason: 'the recolour call at step $step',
+        );
+        layers.step();
+        final List<Image> now = _pieces(layers);
+        final List<int> redrawn = _redrawn(previous, now);
+        expect(redrawn, hasLength(1), reason: 'step $step');
+        lastDrawn[redrawn.single] = step;
+        order.add(redrawn.single);
+        if (step >= count) {
+          for (int i = 0; i < count; i++) {
+            expect(
+              step - lastDrawn[i],
+              lessThan(count),
+              reason: 'piece $i at step $step',
+            );
+          }
+        }
+        previous = now;
+      }
+      for (int i = 0; i < order.length; i++) {
+        if (order[i] == 0) {
+          for (
+            int tile = 1;
+            tile <= lakeTiles && i + tile < order.length;
+            tile++
+          ) {
+            expect(
+              order[i + tile],
+              tile,
+              reason: 'after the mountains at ${i + 1}',
+            );
+          }
+        }
+      }
+
+      layers.recolour(midnight);
+      int calls = 0;
+      bool more = true;
+      while (more && calls <= count + lakeTiles) {
+        more = layers.step();
+        calls++;
+      }
+      expect(more, isFalse);
+      expect(calls, lessThanOrEqualTo(count + lakeTiles));
+
+      final MeadowLayers fresh = MeadowLayers(
+        terrain: terrain,
+        grass: grass,
+        density: 0.5,
+      );
+      addTearDown(fresh.dispose);
+      fresh
+        ..recolour(midnight)
+        ..buildAll();
+      final List<Image> settled = _pieces(layers);
+      final List<Image> direct = _pieces(fresh);
+      for (int i = 0; i < count; i++) {
+        expect(
+          await rgbaOf(settled[i]),
+          await rgbaOf(direct[i]),
+          reason: 'piece $i',
+        );
       }
     },
   );

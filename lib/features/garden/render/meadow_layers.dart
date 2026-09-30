@@ -275,6 +275,14 @@ class MeadowLayers {
     _grassImages = List<MeadowGrassImage?>.filled(_plan.grass.length, null);
     _slabImages = List<MeadowTreeSlab?>.filled(_plan.slabs.length, null);
     _cloudImages = List<Image?>.filled(terrain.sky.clouds.length, null);
+    _pieces = List<(_Piece, int)>.unmodifiable(<(_Piece, int)>[
+      (_Piece.mountains, 0),
+      for (int i = 0; i < _waterImages.length; i++) (_Piece.water, i),
+      for (int i = 0; i < _fallParts.length; i++) (_Piece.fall, i),
+      for (int i = 0; i < _cloudImages.length; i++) (_Piece.cloud, i),
+    ]);
+    _drawn = List<List<Object>?>.filled(_pieces.length, null);
+    _stale = List<bool>.filled(_pieces.length, false);
   }
 
   static int bytesAt({
@@ -317,12 +325,12 @@ class MeadowLayers {
   int _next = 0;
   int _geometryRecordings = 0;
   bool _disposed = false;
-  MeadowPalette? _pending;
-  MeadowPalette? _applied;
-  List<Object>? _mountainKey;
-  List<Object>? _waterKey;
-  List<Object>? _fallKey;
-  List<Object>? _cloudKey;
+  MeadowPalette? _palette;
+  late final List<(_Piece, int)> _pieces;
+  late final List<List<Object>?> _drawn;
+  late final List<bool> _stale;
+  int _last = -1;
+  int _revision = 0;
 
   Image? _mountainBase;
   Image? _nearPack;
@@ -351,7 +359,11 @@ class MeadowLayers {
 
   bool get isBuilt => _next >= _steps.length;
 
-  bool get isReady => !_disposed && isBuilt && _applied != null;
+  bool get isReady => !_disposed && isBuilt && !_drawn.contains(null);
+
+  bool get isRecolouring => !_disposed && isBuilt && _nextPiece() != null;
+
+  int get revision => _revision;
 
   MeadowImage get mountains =>
       MeadowImage(image: _mountainImage!, rect: _frames.mountain.rect);
@@ -425,19 +437,19 @@ class MeadowLayers {
   }
 
   bool step() {
-    if (_disposed || isBuilt) {
+    if (_disposed) {
       return false;
     }
-    _steps[_next]();
-    _next++;
     if (isBuilt) {
-      _paths.clear();
-      final MeadowPalette? pending = _pending;
-      if (pending != null) {
-        _apply(pending);
+      _drawNext();
+    } else {
+      _steps[_next]();
+      _next++;
+      if (isBuilt) {
+        _paths.clear();
       }
     }
-    return !isBuilt;
+    return !isBuilt || isRecolouring;
   }
 
   void buildAll() {
@@ -448,9 +460,13 @@ class MeadowLayers {
     if (_disposed) {
       return;
     }
-    _pending = palette;
-    if (isBuilt) {
-      _apply(palette);
+    _palette = palette;
+    for (int i = 0; i < _pieces.length; i++) {
+      final List<Object>? drawn = _drawn[i];
+      if (drawn != null &&
+          !listEquals(drawn, _colours(_pieces[i].$1, palette))) {
+        _stale[i] = true;
+      }
     }
   }
 
@@ -1083,8 +1099,21 @@ class MeadowLayers {
     );
   }
 
-  void _apply(MeadowPalette palette) {
-    final List<Object> mountainKey = <Object>[
+  int? _nextPiece() {
+    if (_palette == null) {
+      return null;
+    }
+    for (int offset = 1; offset <= _pieces.length; offset++) {
+      final int piece = (_last + offset) % _pieces.length;
+      if (_drawn[piece] == null || _stale[piece]) {
+        return piece;
+      }
+    }
+    return null;
+  }
+
+  List<Object> _colours(_Piece kind, MeadowPalette palette) => switch (kind) {
+    _Piece.mountains => <Object>[
       palette.skyHorizon,
       palette.fog,
       palette.fogV,
@@ -1094,69 +1123,82 @@ class MeadowLayers {
       palette.litR,
       palette.shL,
       palette.shR,
-    ];
-    final bool mountainsChanged = !listEquals(mountainKey, _mountainKey);
-    if (mountainsChanged) {
-      final Image previous = _mountainImage ?? _mountainBase!;
-      final Image next = _keep(_composeMountains(palette));
-      if (previous != _mountainBase) {
-        _release(previous);
-      }
-      _mountainImage = next;
-      _mountainKey = mountainKey;
-    }
-    final List<Object> waterKey = <Object>[
+    ],
+    _Piece.water => <Object>[
       palette.lk1,
       palette.lk2,
       palette.st2,
       palette.wDeep,
       palette.wSh,
       palette.lkHi,
-    ];
-    if (mountainsChanged || !listEquals(waterKey, _waterKey)) {
-      for (int i = 0; i < _waterImages.length; i++) {
-        final Image previous = _waterImages[i]!;
-        _waterImages[i] = _keep(_composeWater(i, palette, previous));
-        _release(previous);
-      }
-      _waterKey = waterKey;
+    ],
+    _Piece.fall => <Object>[palette.wf, palette.wfHi],
+    _Piece.cloud => <Object>[palette.cloudTop, palette.cloudBottom],
+  };
+
+  void _drawNext() {
+    final MeadowPalette? palette = _palette;
+    final int? piece = _nextPiece();
+    if (palette == null || piece == null) {
+      return;
     }
-    final List<Object> fallKey = <Object>[palette.wf, palette.wfHi];
-    if (!listEquals(fallKey, _fallKey)) {
-      for (int i = 0; i < _fallParts.length; i++) {
-        _fallParts[i] = _fallParts[i]!.recoloured(
+    final (_Piece kind, int index) = _pieces[piece];
+    switch (kind) {
+      case _Piece.mountains:
+        _drawMountains(palette);
+      case _Piece.water:
+        _drawWater(index, palette);
+      case _Piece.fall:
+        _fallParts[index] = _fallParts[index]!.recoloured(
           this,
           palette,
-          _frames.falls[i],
+          _frames.falls[index],
         );
-      }
-      _fallKey = fallKey;
+      case _Piece.cloud:
+        _drawCloud(index, palette);
     }
-    final List<Object> cloudKey = <Object>[
-      palette.cloudTop,
-      palette.cloudBottom,
-    ];
-    if (!listEquals(cloudKey, _cloudKey)) {
-      final List<MeadowCloud> clouds = _terrain.sky.clouds;
-      for (int i = 0; i < _cloudImages.length; i++) {
-        final Image previous = _cloudImages[i]!;
-        final _Frame frame = _frames.clouds[i];
-        _cloudImages[i] = _keep(
-          _repaint(
-            previous,
-            Paint()
-              ..shader = Gradient.linear(
-                Offset(0, frame.row(clouds[i].gradientTop)),
-                Offset(0, frame.row(clouds[i].gradientBottom)),
-                <Color>[palette.cloudTop, palette.cloudBottom],
-              ),
+    _revision++;
+    _drawn[piece] = _colours(kind, palette);
+    _stale[piece] = false;
+    _last = piece;
+  }
+
+  void _drawMountains(MeadowPalette palette) {
+    final Image previous = _mountainImage ?? _mountainBase!;
+    final Image next = _keep(_composeMountains(palette));
+    if (previous != _mountainBase) {
+      _release(previous);
+    }
+    _mountainImage = next;
+    for (int i = 0; i < _pieces.length; i++) {
+      if (_pieces[i].$1 == _Piece.water) {
+        _stale[i] = true;
+      }
+    }
+  }
+
+  void _drawWater(int index, MeadowPalette palette) {
+    final Image previous = _waterImages[index]!;
+    _waterImages[index] = _keep(_composeWater(index, palette, previous));
+    _release(previous);
+  }
+
+  void _drawCloud(int index, MeadowPalette palette) {
+    final Image previous = _cloudImages[index]!;
+    final _Frame frame = _frames.clouds[index];
+    final MeadowCloud cloud = _terrain.sky.clouds[index];
+    _cloudImages[index] = _keep(
+      _repaint(
+        previous,
+        Paint()
+          ..shader = Gradient.linear(
+            Offset(0, frame.row(cloud.gradientTop)),
+            Offset(0, frame.row(cloud.gradientBottom)),
+            <Color>[palette.cloudTop, palette.cloudBottom],
           ),
-        );
-        _release(previous);
-      }
-      _cloudKey = cloudKey;
-    }
-    _applied = palette;
+      ),
+    );
+    _release(previous);
   }
 
   Image _composeMountains(MeadowPalette palette) {
@@ -2139,6 +2181,8 @@ class _SlabPlan {
 }
 
 enum _SpriteKind { glare, glint, flow, ripple }
+
+enum _Piece { mountains, water, fall, cloud }
 
 class _SpritePlan {
   const _SpritePlan({
