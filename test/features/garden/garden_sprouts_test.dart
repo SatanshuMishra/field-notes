@@ -1,14 +1,50 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/garden_data.dart';
-import 'package:field_notes/features/garden/model/meadow_layout.dart';
+import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
+import 'package:field_notes/features/garden/model/meadow_year.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage.dart';
+import 'package:field_notes/features/garden/sky/sky_location.dart';
+import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
+import 'package:field_notes/features/garden/sky/sky_time.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/garden_harness.dart';
+
+const String _sproutDate = '2026-09-23';
+
+final DateTime _now = DateTime(2026, 9, 28, 12);
+
+Future<void> _pumpSprout(WidgetTester tester) async {
+  await tester.pumpWidget(
+    gardenHarness(
+      const GardenScreen(),
+      overrides: <Override>[
+        allDaysProvider.overrideWith(
+          (Ref ref) => Stream<List<Day>>.value(<Day>[dayOf(_sproutDate)]),
+        ),
+        journalEntryCountsProvider.overrideWith(
+          (Ref ref) => Stream<Map<String, int>>.value(const <String, int>{
+            _sproutDate: 1,
+          }),
+        ),
+        meadowKeyProvider.overrideWith((Ref ref) async => 24601),
+        skyClockProvider.overrideWithValue(() => _now),
+        skyLocationProvider.overrideWith(
+          (Ref ref) async =>
+              resolveSkyLocation('America/Edmonton', const Duration(hours: -6)),
+        ),
+      ],
+    ),
+  );
+  await tester.pump();
+  await tester.pump();
+}
 
 void main() {
   test('a journaled day without a mood grows a sprout', () {
@@ -26,48 +62,38 @@ void main() {
       const GardenBloomData(date: '2026-09-24', mood: Mood.grateful),
     ]);
 
-    final List<MeadowPlant> planted = layoutMeadowByDepth(
-      blooms: blooms,
-      sprouts: sprouts,
-      size: const Size(400, 300),
-      seed: 2026,
-    ).plants;
-    final List<MeadowPlant> plantedSprouts = planted
-        .where((MeadowPlant p) => p.isSprout)
-        .toList();
-    expect(plantedSprouts, hasLength(1));
-    expect(plantedSprouts.single.date, '2026-09-23');
+    final MeadowYear year = MeadowYear.build(
+      days: days,
+      entryCounts: const <String, int>{'2026-09-23': 1, '2026-09-24': 2},
+      year: 2026,
+      today: _now,
+    );
+    final List<MeadowDay> grown = year.days.nonNulls.toList();
+    expect(year.blooms, 1);
+    expect(year.sprouts, 1);
+    expect(
+      grown.where((MeadowDay day) => day.isSprout).single.date,
+      '2026-09-23',
+    );
   });
 
   testWidgets('the garden shows a sprout instead of the empty state', (
     WidgetTester tester,
   ) async {
-    final int year = DateTime.now().year;
-    final String date = '$year-09-23';
-    await tester.pumpWidget(
-      gardenHarness(
-        const GardenScreen(),
-        overrides: <Override>[
-          allDaysProvider.overrideWith(
-            (_) => Stream<List<Day>>.value(<Day>[dayOf(date)]),
-          ),
-          journaledDatesProvider.overrideWith(
-            (_) => Stream<List<String>>.value(<String>[date]),
-          ),
-        ],
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
+    await _pumpSprout(tester);
 
     expect(find.textContaining('Your meadow is waiting'), findsNothing);
-    final Finder chip = find.ancestor(
-      of: find.text('1 Sprout'),
-      matching: find.byType(DecoratedBox),
+    final MeadowStage stage = tester.widget<MeadowStage>(
+      find.byType(MeadowStage),
     );
-    expect(chip, findsOneWidget);
+    expect(stage.year.sprouts, 1);
+    expect(stage.year.blooms, 0);
+    expect(find.text('Sprout'), findsOneWidget);
     expect(
-      find.descendant(of: chip, matching: find.text('1 Sprout')),
+      find.text(
+        '0 blooms and 1 sprout so far in 2026 · '
+        'quietly filling in as the year goes',
+      ),
       findsOneWidget,
     );
 
@@ -76,33 +102,9 @@ void main() {
 
   testWidgets('one sprout reads 1 Sprout', (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
-    final int year = DateTime.now().year;
-    final String date = '$year-09-23';
-    await tester.pumpWidget(
-      gardenHarness(
-        const GardenScreen(),
-        overrides: <Override>[
-          allDaysProvider.overrideWith(
-            (_) => Stream<List<Day>>.value(<Day>[dayOf(date)]),
-          ),
-          journaledDatesProvider.overrideWith(
-            (_) => Stream<List<String>>.value(<String>[date]),
-          ),
-        ],
-      ),
-    );
-    await tester.pump();
-    await tester.pump();
+    await _pumpSprout(tester);
 
-    final Finder chip = find.ancestor(
-      of: find.text('1 Sprout'),
-      matching: find.byType(DecoratedBox),
-    );
-    expect(chip, findsOneWidget);
-    expect(
-      find.descendant(of: chip, matching: find.text('1 Sprout')),
-      findsOneWidget,
-    );
+    expect(find.text('Sprout'), findsOneWidget);
     expect(find.bySemanticsLabel('1 Sprout'), findsOneWidget);
 
     handle.dispose();

@@ -12,6 +12,7 @@ import 'package:field_notes/features/calendar/widgets/calendar_day_cell.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_month_picker.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/garden/garden.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
@@ -35,6 +36,7 @@ import '../../features/entry_cards/support/fake_audio_player.dart';
 import '../../features/garden/support/garden_harness.dart' show dayOf;
 import '../../features/notes/support/notes_harness.dart'
     show FakeNoteMediaResolver, availablePhoto, photoIdA, prefixOf;
+import '../../features/settings/support/fake_settings_repository.dart';
 import '../../features/search/support/search_harness.dart' show entryOf;
 import '../../features/today/support/today_harness.dart';
 import '../../support/photo_line_fixture.dart';
@@ -198,6 +200,12 @@ List<Override> _gardenOverrides({
   journaledDatesProvider.overrideWith(
     (Ref ref) => Stream<List<String>>.value(journaled),
   ),
+  journalEntryCountsProvider.overrideWith(
+    (Ref ref) => Stream<Map<String, int>>.value(<String, int>{
+      for (final String date in journaled) date: 1,
+    }),
+  ),
+  settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
   allDaysProvider.overrideWith((Ref ref) => Stream<List<Day>>.value(days)),
   ..._skyOverrides(),
 ];
@@ -290,7 +298,7 @@ Future<void> _pumpGarden(
 }) async {
   await _pumpApp(
     tester,
-    const Scaffold(body: GardenScreen(year: 2026)),
+    const Scaffold(body: GardenScreen()),
     overrides: _gardenOverrides(days: days, journaled: journaled),
   );
   await tester.pump();
@@ -385,7 +393,10 @@ final List<A11yState> shellStates = <A11yState>[
       ],
       journaled: const <String>['2026-09-23', '2026-09-24'],
     ),
-    proof: <A11yProof>[A11yProof(find.byType(MoodTallyChips))],
+    proof: <A11yProof>[
+      A11yProof(find.byType(MeadowStage)),
+      A11yProof(find.text('Grateful')),
+    ],
   ),
   A11yState(
     id: 'a8-garden-phone',

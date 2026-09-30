@@ -1,11 +1,12 @@
 import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/garden.dart';
+import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
-import 'package:field_notes/features/garden/widgets/meadow_scene.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/state/journal_providers.dart';
@@ -75,7 +76,7 @@ Future<_SkyHarness> _pumpGarden(
           valueListenable: sky.shown,
           builder: (BuildContext context, bool shown, Widget? child) =>
               TickerMode(enabled: shown, child: child!),
-          child: const GardenScreen(year: 2026),
+          child: const GardenScreen(),
         ),
       ),
       platform: TargetPlatform.macOS,
@@ -86,9 +87,10 @@ Future<_SkyHarness> _pumpGarden(
             dayOf('2026-03-02', mood: Mood.calm),
           ]),
         ),
-        journaledDatesProvider.overrideWith(
-          (_) => Stream<List<String>>.value(const <String>[]),
+        journalEntryCountsProvider.overrideWith(
+          (_) => Stream<Map<String, int>>.value(const <String, int>{}),
         ),
+        meadowKeyProvider.overrideWith((_) async => 24601),
         skyClockProvider.overrideWithValue(() => sky.now),
         localTimezoneIdentifierProvider.overrideWith((_) async => sky.zone),
         localUtcOffsetProvider.overrideWith((_) => _edmontonOffset),
@@ -114,7 +116,7 @@ Future<void> _lifecycle(
 }
 
 SkyScene _painted(WidgetTester tester) =>
-    tester.widget<MeadowScene>(find.byType(MeadowScene)).sky;
+    tester.widget<MeadowStage>(find.byType(MeadowStage)).sky;
 
 SkyScene _sceneAt(DateTime instant) =>
     skySceneAt(instant, _edmonton.latitude, _edmonton.longitude);
@@ -199,7 +201,7 @@ void main() {
     WidgetTester tester,
   ) async {
     final _SkyHarness sky = await _pumpGarden(tester, overrideLocation: false);
-    expect(find.textContaining('sky over Edmonton · '), findsOneWidget);
+    expect(_painted(tester), _sceneAt(sky.now));
 
     await _lifecycle(tester, _toPaused);
     sky.zone = 'Europe/London';
@@ -207,8 +209,6 @@ void main() {
     await tester.pump();
     await tester.pump();
 
-    expect(find.textContaining('sky over Edmonton'), findsNothing);
-    expect(find.textContaining('sky over London · '), findsOneWidget);
     final SkyLocation london = resolveSkyLocation(
       'Europe/London',
       _edmontonOffset,
@@ -217,6 +217,7 @@ void main() {
       _painted(tester),
       skySceneAt(sky.now, london.latitude, london.longitude),
     );
+    expect(_painted(tester), isNot(_sceneAt(sky.now)));
   });
 
   testWidgets(

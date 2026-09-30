@@ -373,7 +373,7 @@ void main() {
         await _settle(tester);
 
         await _navigate(tester, layout, 'garden');
-        _expectDark(tester, find.byType(GardenScreen), 'Garden');
+        _expectDark(tester, find.byType(MeadowPage), 'Meadow');
 
         await _navigate(tester, layout, 'search');
         _expectDark(tester, find.byType(SearchScreen), 'Search');
