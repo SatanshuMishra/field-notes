@@ -185,6 +185,13 @@ Set<Rect> _paintedRects(WidgetTester tester) => <Rect>{
         ),
 };
 
+List<double> _scrollOffsets(WidgetTester tester) => <double>[
+  for (final ScrollableState state in tester.stateList<ScrollableState>(
+    find.byType(Scrollable),
+  ))
+    if (state.position.hasPixels) state.position.pixels,
+];
+
 class _Screen {
   const _Screen(this.name, this.pump, {this.macOS = false});
 
@@ -193,15 +200,9 @@ class _Screen {
   final bool macOS;
 }
 
-const Set<String> _statesWithoutControls = <String>{
-  'a6-garden-empty',
-  'a7-garden-blooms',
-};
-
 final List<_Screen> _screens = <_Screen>[
   for (final String id in _stateIds)
-    if (!_statesWithoutControls.contains(id))
-      _Screen(id, (WidgetTester tester) => _pumpState(tester, id)),
+    _Screen(id, (WidgetTester tester) => _pumpState(tester, id)),
   const _Screen('macOS sidebar', _pumpMacSidebar, macOS: true),
   const _Screen('macOS Today', _pumpMacToday, macOS: true),
 ];
@@ -289,15 +290,31 @@ void main() {
           await tester.pump();
           _useKeyboardHighlight();
           final Set<Rect> unfocused = _paintedRects(tester);
+          final List<double> resting = _scrollOffsets(tester);
           int ringed = 0;
           for (int press = 0; press < _guardTabPresses; press++) {
             await tester.sendKeyEvent(LogicalKeyboardKey.tab);
             await tester.pump();
             ringed += find.byKey(focusRingKey).evaluate().length;
+            if (listEquals(_scrollOffsets(tester), resting)) {
+              expect(
+                unfocused.difference(_paintedRects(tester)),
+                isEmpty,
+                reason: 'Tab $press',
+              );
+              continue;
+            }
+            final Set<Rect> focused = _paintedRects(tester);
+            final FocusNode? node = FocusManager.instance.primaryFocus;
+            node?.unfocus();
+            await tester.pump();
+            final Set<Rect> scrolled = _paintedRects(tester);
+            node?.requestFocus();
+            await tester.pump();
             expect(
-              unfocused.difference(_paintedRects(tester)),
+              scrolled.difference(focused),
               isEmpty,
-              reason: 'Tab $press',
+              reason: 'Tab $press after the page scrolled',
             );
           }
           expect(ringed, greaterThan(0));
