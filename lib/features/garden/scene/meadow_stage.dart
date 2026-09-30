@@ -14,6 +14,7 @@ import 'package:field_notes/features/garden/render/meadow_creature_art.dart';
 import 'package:field_notes/features/garden/render/meadow_layers.dart';
 import 'package:field_notes/features/garden/render/meadow_motion.dart';
 import 'package:field_notes/features/garden/render/meadow_plant_atlas.dart';
+import 'package:field_notes/features/garden/render/meadow_rays.dart';
 import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 import 'package:field_notes/features/garden/scene/meadow_grass.dart';
@@ -380,6 +381,7 @@ class MeadowStageState extends State<MeadowStage>
     }
     _palette = next;
     _scene?.layers.recolour(next);
+    _scene?.rays.recolour(next);
     _build?.recolour(next);
     if (!_animate) {
       _ambience?.step(
@@ -720,6 +722,7 @@ class MeadowStageState extends State<MeadowStage>
       layers: scene.layers,
       atlas: scene.atlas,
       creatures: scene.creatures,
+      rays: scene.rays,
       terrain: geometry.terrain,
       plants: geometry.plants,
       palette: _palette,
@@ -978,20 +981,26 @@ class _SceneImages {
     required this.layers,
     required this.atlas,
     required this.creatures,
+    required this.rays,
   });
 
   final _ImageKey key;
   final MeadowLayers layers;
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
+  final MeadowRays rays;
 
   int get imageBytes =>
-      layers.imageBytes + atlas.imageBytes + creatures.imageBytes;
+      layers.imageBytes +
+      atlas.imageBytes +
+      creatures.imageBytes +
+      rays.imageBytes;
 
   void dispose() {
     layers.dispose();
     atlas.dispose();
     creatures.dispose();
+    rays.dispose();
   }
 }
 
@@ -1002,11 +1011,13 @@ class _Build {
   MeadowLayers? _layers;
   MeadowPlantAtlas? _atlas;
   MeadowCreatureArt? _creatures;
+  MeadowRays? _rays;
 
   int get imageBytes =>
       (_layers?.imageBytes ?? 0) +
       (_atlas?.imageBytes ?? 0) +
-      (_creatures?.imageBytes ?? 0);
+      (_creatures?.imageBytes ?? 0) +
+      (_rays?.imageBytes ?? 0);
 
   bool advance(MeadowPalette palette) {
     final _Geometry geometry = key.geometry;
@@ -1046,11 +1057,13 @@ class _Build {
       return false;
     }
     _creatures ??= MeadowCreatureArt.build(density: key.density);
+    _rays ??= MeadowRays(palette);
     return true;
   }
 
   void recolour(MeadowPalette palette) {
     _layers?.recolour(palette);
+    _rays?.recolour(palette);
   }
 
   _SceneImages finish() => _SceneImages(
@@ -1058,11 +1071,13 @@ class _Build {
     layers: _layers!,
     atlas: _atlas!,
     creatures: _creatures!,
+    rays: _rays!,
   );
 
   void dispose() {
     _layers?.dispose();
     _atlas?.dispose();
     _creatures?.dispose();
+    _rays?.dispose();
   }
 }

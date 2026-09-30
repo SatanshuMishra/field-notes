@@ -9,6 +9,7 @@ import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/render/meadow_creature_art.dart';
 import 'package:field_notes/features/garden/render/meadow_layers.dart';
 import 'package:field_notes/features/garden/render/meadow_plant_atlas.dart';
+import 'package:field_notes/features/garden/render/meadow_rays.dart';
 import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 import 'package:field_notes/features/garden/scene/meadow_grass.dart';
@@ -193,6 +194,7 @@ class _Scene {
     required this.layers,
     required this.atlas,
     required this.creatures,
+    required this.rays,
     required this.viewport,
     required this.noon,
     required this.midnight,
@@ -275,6 +277,7 @@ class _Scene {
       layers: layers,
       atlas: atlas,
       creatures: MeadowCreatureArt.build(density: density),
+      rays: MeadowRays(noon),
       viewport: viewport,
       noon: noon,
       midnight: midnight,
@@ -289,6 +292,7 @@ class _Scene {
   final MeadowLayers layers;
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
+  final MeadowRays rays;
   final MeadowViewport viewport;
   final MeadowPalette noon;
   final MeadowPalette midnight;
@@ -322,11 +326,13 @@ class _Scene {
     final _Poses creaturePoses = poses ?? dayPoses;
     final int point = growthPoint ?? year.limit;
     layers.recolour(light);
+    rays.recolour(light);
     final _RecordingCanvas canvas = _RecordingCanvas();
     MeadowStagePainter(
       layers: layers,
       atlas: atlas,
       creatures: creatures,
+      rays: rays,
       terrain: terrain,
       plants: plants,
       heaviest: year.heaviest,
@@ -373,6 +379,7 @@ class _Scene {
     layers.dispose();
     atlas.dispose();
     creatures.dispose();
+    rays.dispose();
   }
 }
 
@@ -486,6 +493,34 @@ void main() {
       }
     },
   );
+
+  test('the sun rays draw as one baked image', () {
+    expect(scene.noon.raysOpacity, greaterThan(0));
+    final _RecordingCanvas frame = scene.paint(time: 42.5);
+
+    expect(
+      frame
+          .named(const <String>{'drawVertices'})
+          .where((_Call call) => call.arguments[1] == BlendMode.modulate),
+      isEmpty,
+    );
+    final Image baked = scene.rays.image;
+    final List<_Call> rays = <_Call>[
+      for (final _Call call in frame.named(const <String>{'drawImageRect'}))
+        if (identical(call.arguments[0], baked)) call,
+    ];
+    expect(rays, hasLength(1));
+    expect(
+      rays.single.arguments[1],
+      Rect.fromLTWH(0, 0, baked.width.toDouble(), baked.height.toDouble()),
+    );
+    final Rect into = rays.single.arguments[2]! as Rect;
+    final Offset sun = scene.noon.sunPosition;
+    expect(into.center.dx, closeTo(sun.dx, 1e-9));
+    expect(into.center.dy, closeTo(sun.dy, 1e-9));
+    expect(into.width / 2, closeTo(meadowRaysReach, 1e-9));
+    expect(into.height / 2, closeTo(meadowRaysReach, 1e-9));
+  });
 
   test('days past the growth point are hidden and new days grow in', () {
     final _RecordingCanvas held = scene.paint(time: 12, growthPoint: 100);
