@@ -6,16 +6,25 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'journaled_dates_provider.g.dart';
 
 @riverpod
-Stream<List<String>> journaledDates(Ref ref) {
+Stream<Map<String, int>> journalEntryCounts(Ref ref) {
   final AppDatabase db = ref.watch(databaseProvider);
   final query = db.select(db.days).join([
     innerJoin(db.entries, db.entries.dayId.equalsExp(db.days.id)),
   ])..where(db.days.deletedAt.isNull() & db.entries.deletedAt.isNull());
   return query.watch().map((rows) {
-    final dates = <String>{};
+    final counts = <String, int>{};
     for (final row in rows) {
-      dates.add(row.readTable(db.days).date);
+      final String date = row.readTable(db.days).date;
+      counts[date] = (counts[date] ?? 0) + 1;
     }
-    return dates.toList();
+    return Map<String, int>.unmodifiable(counts);
   });
+}
+
+@riverpod
+Stream<List<String>> journaledDates(Ref ref) async* {
+  final Map<String, int> counts = await ref.watch(
+    journalEntryCountsProvider.future,
+  );
+  yield counts.keys.toList();
 }
