@@ -5,6 +5,7 @@
 //  Created by riccardo on 14/11/22.
 //
 
+import AppKit
 import Foundation
 
 func showInFinder(url: URL?) {

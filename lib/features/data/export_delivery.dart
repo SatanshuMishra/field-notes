@@ -35,15 +35,15 @@ class SaveFileExportDelivery implements ExportDelivery {
     required List<int> zipBytes,
     required String fileName,
   }) async {
-    final path = await FilePicker.saveFile(
+    final Uri? saved = await FilePicker.saveFile(
       dialogTitle: 'Export Field Notes',
       fileName: fileName,
+      bytes: Uint8List.fromList(zipBytes),
     );
-    if (path == null) {
+    if (saved == null) {
       return const ExportDismissed();
     }
-    await File(path).writeAsBytes(Uint8List.fromList(zipBytes), flush: true);
-    return ExportDelivered(path);
+    return ExportDelivered(saved.toFilePath());
   }
 }
 
