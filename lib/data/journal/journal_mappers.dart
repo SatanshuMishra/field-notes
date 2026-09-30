@@ -1,12 +1,18 @@
+import 'package:flutter/foundation.dart';
+
 import '../../domain/models/models.dart';
 import '../database/app_database.dart' as db;
 import 'journal_exceptions.dart';
 
+final Set<String> _reportedUnknownMoodIds = <String>{};
+
 Day toDomainDay(db.Day row) {
   final moodId = row.moodId;
   final mood = moodId == null ? null : Mood.fromId(moodId);
-  if (moodId != null && mood == null) {
-    throw MalformedRowException('unknown mood id "$moodId" for day ${row.id}');
+  if (moodId != null && mood == null && _reportedUnknownMoodIds.add(moodId)) {
+    debugPrint(
+      'Unknown mood id "$moodId" on day ${row.id}; showing the day without a mood.',
+    );
   }
   return Day(
     id: row.id,
