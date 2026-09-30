@@ -324,6 +324,16 @@ Future<void> _measureCase(
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('meadow warm-up before measuring', (WidgetTester tester) async {
+    useLiveFrames(tester);
+    _adoptSurface(tester, _Layout.sidebar);
+    final ProviderContainer container = _containerFor(_Hour.noon, _View.page);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(_app(container, _Layout.sidebar));
+    await _awaitScene(tester, Stopwatch()..start(), known: 0);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   for (final _View view in _View.values) {
     for (final _Layout layout in _Layout.values) {
       for (final _Hour hour in _Hour.values) {
