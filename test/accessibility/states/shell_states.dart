@@ -379,8 +379,22 @@ final List<A11yState> shellStates = <A11yState>[
   ),
   A11yState(
     id: 'a6-garden-empty',
-    pump: (WidgetTester tester) =>
-        _pumpGarden(tester, days: const <Day>[], journaled: const <String>[]),
+    pump: (WidgetTester tester) async {
+      await _pumpGarden(
+        tester,
+        days: const <Day>[],
+        journaled: const <String>[],
+      );
+      final MeadowStageState stage = tester.state<MeadowStageState>(
+        find.byType(MeadowStage),
+      );
+      for (int i = 0; i < 6000 && !stage.debugIsReady; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+        );
+        await tester.pump();
+      }
+    },
     proof: <A11yProof>[A11yProof(find.text(_gardenEmptyMessage))],
   ),
   A11yState(

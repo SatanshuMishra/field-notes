@@ -2298,32 +2298,30 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   ];
 }
 
-typedef $$MediaBlobsTableCreateCompanionBuilder =
-    MediaBlobsCompanion Function({
-      required String id,
-      required String relPath,
-      required String mime,
-      required String kind,
-      required int bytes,
-      Value<int?> width,
-      Value<int?> height,
-      Value<int?> durationMs,
-      required int createdAt,
-      Value<int> rowid,
-    });
-typedef $$MediaBlobsTableUpdateCompanionBuilder =
-    MediaBlobsCompanion Function({
-      Value<String> id,
-      Value<String> relPath,
-      Value<String> mime,
-      Value<String> kind,
-      Value<int> bytes,
-      Value<int?> width,
-      Value<int?> height,
-      Value<int?> durationMs,
-      Value<int> createdAt,
-      Value<int> rowid,
-    });
+typedef $$MediaBlobsTableCreateCompanionBuilder = MediaBlobsCompanion Function({
+  required String id,
+  required String relPath,
+  required String mime,
+  required String kind,
+  required int bytes,
+  Value<int?> width,
+  Value<int?> height,
+  Value<int?> durationMs,
+  required int createdAt,
+  Value<int> rowid,
+});
+typedef $$MediaBlobsTableUpdateCompanionBuilder = MediaBlobsCompanion Function({
+  Value<String> id,
+  Value<String> relPath,
+  Value<String> mime,
+  Value<String> kind,
+  Value<int> bytes,
+  Value<int?> width,
+  Value<int?> height,
+  Value<int?> durationMs,
+  Value<int> createdAt,
+  Value<int> rowid,
+});
 
 final class $$MediaBlobsTableReferences
     extends BaseReferences<_$AppDatabase, $MediaBlobsTable, MediaBlob> {
@@ -2624,7 +2622,7 @@ class $$MediaBlobsTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$MediaBlobsTable, MediaBlob>(table),
                   $$MediaBlobsTableReferences(db, table, e),
                 ),
               )
@@ -2677,26 +2675,24 @@ typedef $$MediaBlobsTableProcessedTableManager =
       MediaBlob,
       PrefetchHooks Function({bool entryPhotosRefs})
     >;
-typedef $$DaysTableCreateCompanionBuilder =
-    DaysCompanion Function({
-      required String id,
-      required String date,
-      Value<String?> moodId,
-      required int createdAt,
-      required int updatedAt,
-      Value<int?> deletedAt,
-      Value<int> rowid,
-    });
-typedef $$DaysTableUpdateCompanionBuilder =
-    DaysCompanion Function({
-      Value<String> id,
-      Value<String> date,
-      Value<String?> moodId,
-      Value<int> createdAt,
-      Value<int> updatedAt,
-      Value<int?> deletedAt,
-      Value<int> rowid,
-    });
+typedef $$DaysTableCreateCompanionBuilder = DaysCompanion Function({
+  required String id,
+  required String date,
+  Value<String?> moodId,
+  required int createdAt,
+  required int updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$DaysTableUpdateCompanionBuilder = DaysCompanion Function({
+  Value<String> id,
+  Value<String> date,
+  Value<String?> moodId,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
 
 final class $$DaysTableReferences
     extends BaseReferences<_$AppDatabase, $DaysTable, Day> {
@@ -2942,8 +2938,10 @@ class $$DaysTableTableManager
               ),
           withReferenceMapper: (p0) => p0
               .map(
-                (e) =>
-                    (e.readTable(table), $$DaysTableReferences(db, table, e)),
+                (e) => (
+                  e.readTable<$DaysTable, Day>(table),
+                  $$DaysTableReferences(db, table, e),
+                ),
               )
               .toList(),
           prefetchHooksCallback: ({entriesRefs = false}) {
@@ -2987,34 +2985,32 @@ typedef $$DaysTableProcessedTableManager =
       Day,
       PrefetchHooks Function({bool entriesRefs})
     >;
-typedef $$EntriesTableCreateCompanionBuilder =
-    EntriesCompanion Function({
-      required String id,
-      required String dayId,
-      required String type,
-      Value<String?> textContent,
-      Value<String?> mediaId,
-      Value<String?> thumbnailMediaId,
-      Value<int?> durationMs,
-      required int createdAt,
-      required int updatedAt,
-      Value<int?> deletedAt,
-      Value<int> rowid,
-    });
-typedef $$EntriesTableUpdateCompanionBuilder =
-    EntriesCompanion Function({
-      Value<String> id,
-      Value<String> dayId,
-      Value<String> type,
-      Value<String?> textContent,
-      Value<String?> mediaId,
-      Value<String?> thumbnailMediaId,
-      Value<int?> durationMs,
-      Value<int> createdAt,
-      Value<int> updatedAt,
-      Value<int?> deletedAt,
-      Value<int> rowid,
-    });
+typedef $$EntriesTableCreateCompanionBuilder = EntriesCompanion Function({
+  required String id,
+  required String dayId,
+  required String type,
+  Value<String?> textContent,
+  Value<String?> mediaId,
+  Value<String?> thumbnailMediaId,
+  Value<int?> durationMs,
+  required int createdAt,
+  required int updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
+typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
+  Value<String> id,
+  Value<String> dayId,
+  Value<String> type,
+  Value<String?> textContent,
+  Value<String?> mediaId,
+  Value<String?> thumbnailMediaId,
+  Value<int?> durationMs,
+  Value<int> createdAt,
+  Value<int> updatedAt,
+  Value<int?> deletedAt,
+  Value<int> rowid,
+});
 
 final class $$EntriesTableReferences
     extends BaseReferences<_$AppDatabase, $EntriesTable, Entry> {
@@ -3558,7 +3554,7 @@ class $$EntriesTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$EntriesTable, Entry>(table),
                   $$EntriesTableReferences(db, table, e),
                 ),
               )
@@ -3592,43 +3588,37 @@ class $$EntriesTableTableManager
                         >
                       >(state) {
                         if (dayId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.dayId,
-                                    referencedTable: $$EntriesTableReferences
-                                        ._dayIdTable(db),
-                                    referencedColumn: $$EntriesTableReferences
-                                        ._dayIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.dayId,
+                            referencedTable: $$EntriesTableReferences
+                                ._dayIdTable(db),
+                            referencedColumn: $$EntriesTableReferences
+                                ._dayIdTable(db)
+                                .id,
+                          ) as T;
                         }
                         if (mediaId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.mediaId,
-                                    referencedTable: $$EntriesTableReferences
-                                        ._mediaIdTable(db),
-                                    referencedColumn: $$EntriesTableReferences
-                                        ._mediaIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.mediaId,
+                            referencedTable: $$EntriesTableReferences
+                                ._mediaIdTable(db),
+                            referencedColumn: $$EntriesTableReferences
+                                ._mediaIdTable(db)
+                                .id,
+                          ) as T;
                         }
                         if (thumbnailMediaId) {
-                          state =
-                              state.withJoin(
-                                    currentTable: table,
-                                    currentColumn: table.thumbnailMediaId,
-                                    referencedTable: $$EntriesTableReferences
-                                        ._thumbnailMediaIdTable(db),
-                                    referencedColumn: $$EntriesTableReferences
-                                        ._thumbnailMediaIdTable(db)
-                                        .id,
-                                  )
-                                  as T;
+                          state = state.withJoin(
+                            currentTable: table,
+                            currentColumn: table.thumbnailMediaId,
+                            referencedTable: $$EntriesTableReferences
+                                ._thumbnailMediaIdTable(db),
+                            referencedColumn: $$EntriesTableReferences
+                                ._thumbnailMediaIdTable(db)
+                                .id,
+                          ) as T;
                         }
 
                         return state;
@@ -4047,7 +4037,7 @@ class $$EntryPhotosTableTableManager
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
-                  e.readTable(table),
+                  e.readTable<$EntryPhotosTable, EntryPhoto>(table),
                   $$EntryPhotosTableReferences(db, table, e),
                 ),
               )
@@ -4073,30 +4063,26 @@ class $$EntryPhotosTableTableManager
                     >
                   >(state) {
                     if (entryId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.entryId,
-                                referencedTable: $$EntryPhotosTableReferences
-                                    ._entryIdTable(db),
-                                referencedColumn: $$EntryPhotosTableReferences
-                                    ._entryIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.entryId,
+                        referencedTable: $$EntryPhotosTableReferences
+                            ._entryIdTable(db),
+                        referencedColumn: $$EntryPhotosTableReferences
+                            ._entryIdTable(db)
+                            .id,
+                      ) as T;
                     }
                     if (mediaId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.mediaId,
-                                referencedTable: $$EntryPhotosTableReferences
-                                    ._mediaIdTable(db),
-                                referencedColumn: $$EntryPhotosTableReferences
-                                    ._mediaIdTable(db)
-                                    .id,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.mediaId,
+                        referencedTable: $$EntryPhotosTableReferences
+                            ._mediaIdTable(db),
+                        referencedColumn: $$EntryPhotosTableReferences
+                            ._mediaIdTable(db)
+                            .id,
+                      ) as T;
                     }
 
                     return state;
@@ -4124,18 +4110,16 @@ typedef $$EntryPhotosTableProcessedTableManager =
       EntryPhoto,
       PrefetchHooks Function({bool entryId, bool mediaId})
     >;
-typedef $$SettingsTableCreateCompanionBuilder =
-    SettingsCompanion Function({
-      required String key,
-      required String value,
-      Value<int> rowid,
-    });
-typedef $$SettingsTableUpdateCompanionBuilder =
-    SettingsCompanion Function({
-      Value<String> key,
-      Value<String> value,
-      Value<int> rowid,
-    });
+typedef $$SettingsTableCreateCompanionBuilder = SettingsCompanion Function({
+  required String key,
+  required String value,
+  Value<int> rowid,
+});
+typedef $$SettingsTableUpdateCompanionBuilder = SettingsCompanion Function({
+  Value<String> key,
+  Value<String> value,
+  Value<int> rowid,
+});
 
 class $$SettingsTableFilterComposer
     extends Composer<_$AppDatabase, $SettingsTable> {
@@ -4219,24 +4203,27 @@ class $$SettingsTableTableManager
               $$SettingsTableOrderingComposer($db: db, $table: table),
           createComputedFieldComposer: () =>
               $$SettingsTableAnnotationComposer($db: db, $table: table),
-          updateCompanionCallback:
-              ({
-                Value<String> key = const Value.absent(),
-                Value<String> value = const Value.absent(),
-                Value<int> rowid = const Value.absent(),
-              }) => SettingsCompanion(key: key, value: value, rowid: rowid),
-          createCompanionCallback:
-              ({
-                required String key,
-                required String value,
-                Value<int> rowid = const Value.absent(),
-              }) => SettingsCompanion.insert(
-                key: key,
-                value: value,
-                rowid: rowid,
-              ),
+          updateCompanionCallback: ({
+            Value<String> key = const Value.absent(),
+            Value<String> value = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) => SettingsCompanion(key: key, value: value, rowid: rowid),
+          createCompanionCallback: ({
+            required String key,
+            required String value,
+            Value<int> rowid = const Value.absent(),
+          }) => SettingsCompanion.insert(key: key, value: value, rowid: rowid),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map(
+                (e) => (
+                  e.readTable<$SettingsTable, Setting>(table),
+                  BaseReferences<_$AppDatabase, $SettingsTable, Setting>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
               .toList(),
           prefetchHooksCallback: null,
         ),

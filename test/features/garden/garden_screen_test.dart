@@ -146,6 +146,16 @@ void main() {
       ),
       findsOneWidget,
     );
+    final MeadowStageState state = tester.state<MeadowStageState>(
+      find.byType(MeadowStage),
+    );
+    for (int i = 0; i < 6000 && !state.debugIsReady; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      );
+      await tester.pump();
+    }
+    expect(state.debugIsReady, isTrue);
     final Finder message = find.text(_waiting);
     expect(message, findsOneWidget);
     expect(

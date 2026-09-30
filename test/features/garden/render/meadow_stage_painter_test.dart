@@ -9,6 +9,7 @@ import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/render/meadow_creature_art.dart';
 import 'package:field_notes/features/garden/render/meadow_layers.dart';
 import 'package:field_notes/features/garden/render/meadow_plant_atlas.dart';
+import 'package:field_notes/features/garden/render/meadow_rays.dart';
 import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 import 'package:field_notes/features/garden/scene/meadow_grass.dart';
@@ -44,6 +45,7 @@ const Set<String> _imageAndGradientDraws = <String>{
   'drawRawAtlas',
   'drawVertices',
   'drawParagraph',
+  'drawPaint',
 };
 
 String _dateOf(int index) => captureDateKey(DateTime(_leapYear, 1, 1 + index));
@@ -104,7 +106,30 @@ class _RecordingCanvas implements Canvas {
     for (final _Call call in calls)
       if (call.name.startsWith('draw')) call,
   ];
+
+  List<(int, int)> get layers {
+    final List<(int, bool)> open = <(int, bool)>[];
+    final List<(int, int)> spans = <(int, int)>[];
+    for (int i = 0; i < calls.length; i++) {
+      switch (calls[i].name) {
+        case 'save':
+          open.add((i, false));
+        case 'saveLayer':
+          open.add((i, true));
+        case 'restore':
+          final (int start, bool layer) = open.removeLast();
+          if (layer) {
+            spans.add((start, i));
+          }
+      }
+    }
+    return spans;
+  }
 }
+
+bool _masksWithDstIn(_Call call) =>
+    call.name == 'drawImageRect' &&
+    (call.arguments[3]! as Paint).blendMode == BlendMode.dstIn;
 
 class _Sprite {
   const _Sprite({
@@ -169,6 +194,7 @@ class _Scene {
     required this.layers,
     required this.atlas,
     required this.creatures,
+    required this.rays,
     required this.viewport,
     required this.noon,
     required this.midnight,
@@ -251,6 +277,7 @@ class _Scene {
       layers: layers,
       atlas: atlas,
       creatures: MeadowCreatureArt.build(density: density),
+      rays: MeadowRays(noon),
       viewport: viewport,
       noon: noon,
       midnight: midnight,
@@ -265,6 +292,7 @@ class _Scene {
   final MeadowLayers layers;
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
+  final MeadowRays rays;
   final MeadowViewport viewport;
   final MeadowPalette noon;
   final MeadowPalette midnight;
@@ -298,11 +326,13 @@ class _Scene {
     final _Poses creaturePoses = poses ?? dayPoses;
     final int point = growthPoint ?? year.limit;
     layers.recolour(light);
+    rays.recolour(light);
     final _RecordingCanvas canvas = _RecordingCanvas();
     MeadowStagePainter(
       layers: layers,
       atlas: atlas,
       creatures: creatures,
+      rays: rays,
       terrain: terrain,
       plants: plants,
       heaviest: year.heaviest,
@@ -349,6 +379,7 @@ class _Scene {
     layers.dispose();
     atlas.dispose();
     creatures.dispose();
+    rays.dispose();
   }
 }
 
@@ -405,7 +436,7 @@ void main() {
         );
         expect(frame.count('clipPath'), 0);
         expect(frame.count('clipRRect'), 0);
-        expect(frame.count('saveLayer'), lessThanOrEqualTo(1));
+        expect(frame.count('saveLayer'), lessThanOrEqualTo(3));
 
         final int atlasCalls = frame.named(_atlasCalls).length;
         expect(atlasCalls, greaterThan(0));
@@ -417,6 +448,79 @@ void main() {
       }
     },
   );
+
+  test(
+    'the water marks draw in one layer masked to the water without colour filters',
+    () {
+      for (final (MeadowPalette palette, _Poses poses, bool glints)
+          in <(MeadowPalette, _Poses, bool)>[
+            (scene.noon, scene.dayPoses, true),
+            (scene.midnight, scene.nightPoses, false),
+          ]) {
+        final _RecordingCanvas frame = scene.paint(
+          time: 42.5,
+          palette: palette,
+          poses: poses,
+        );
+        final List<int> marks = <int>[
+          for (int i = 0; i < frame.calls.length; i++)
+            if (frame.calls[i].name == 'drawOval') i,
+        ];
+        for (final int mark in marks) {
+          final Paint paint = frame.calls[mark].arguments[1]! as Paint;
+          expect(paint.colorFilter, isNull, reason: 'drawOval $mark');
+          expect(paint.shader, isNull, reason: 'drawOval $mark');
+        }
+        if (!glints) {
+          continue;
+        }
+        expect(palette.glintO, greaterThan(0));
+        expect(marks, isNotEmpty);
+        final List<(int, int)> masked = <(int, int)>[
+          for (final (int start, int end) in frame.layers)
+            if (frame.calls.sublist(start, end).any(_masksWithDstIn))
+              (start, end),
+        ];
+        for (final int mark in marks) {
+          expect(
+            masked.any(
+              ((int, int) layer) => layer.$1 < mark && mark < layer.$2,
+            ),
+            isTrue,
+            reason: 'drawOval $mark',
+          );
+        }
+      }
+    },
+  );
+
+  test('the sun rays draw as one baked image', () {
+    expect(scene.noon.raysOpacity, greaterThan(0));
+    final _RecordingCanvas frame = scene.paint(time: 42.5);
+
+    expect(
+      frame
+          .named(const <String>{'drawVertices'})
+          .where((_Call call) => call.arguments[1] == BlendMode.modulate),
+      isEmpty,
+    );
+    final Image baked = scene.rays.image;
+    final List<_Call> rays = <_Call>[
+      for (final _Call call in frame.named(const <String>{'drawImageRect'}))
+        if (identical(call.arguments[0], baked)) call,
+    ];
+    expect(rays, hasLength(1));
+    expect(
+      rays.single.arguments[1],
+      Rect.fromLTWH(0, 0, baked.width.toDouble(), baked.height.toDouble()),
+    );
+    final Rect into = rays.single.arguments[2]! as Rect;
+    final Offset sun = scene.noon.sunPosition;
+    expect(into.center.dx, closeTo(sun.dx, 1e-9));
+    expect(into.center.dy, closeTo(sun.dy, 1e-9));
+    expect(into.width / 2, closeTo(meadowRaysReach, 1e-9));
+    expect(into.height / 2, closeTo(meadowRaysReach, 1e-9));
+  });
 
   test('days past the growth point are hidden and new days grow in', () {
     final _RecordingCanvas held = scene.paint(time: 12, growthPoint: 100);

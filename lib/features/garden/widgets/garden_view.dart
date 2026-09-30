@@ -211,30 +211,26 @@ class _MeadowPageState extends State<MeadowPage> {
               debugControls: widget.debugControls,
               onNow: widget.onNow,
             ),
-      scene: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          MeadowStage(
-            year: year,
-            seed: widget.seed,
-            sky: sky,
-            morning: morning,
-            mode: mode,
-            compact: compact,
-            growthPoint: current ? null : growthPoint,
-            growAnimated: _growAnimated,
-            highlight: _highlight,
-            motion: widget.motion,
-          ),
-          if (empty)
-            _WaitingMessage(
-              colour: MeadowPalette.from(
-                sky: sky,
-                morning: morning,
-                heavyShare: year.heavyShare,
-              ).captionColour,
-            ),
-        ],
+      scene: MeadowStage(
+        year: year,
+        seed: widget.seed,
+        sky: sky,
+        morning: morning,
+        mode: mode,
+        compact: compact,
+        growthPoint: current ? null : growthPoint,
+        growAnimated: _growAnimated,
+        highlight: _highlight,
+        motion: widget.motion,
+        readyOverlay: empty
+            ? _WaitingMessage(
+                colour: MeadowPalette.from(
+                  sky: sky,
+                  morning: morning,
+                  heavyShare: year.heavyShare,
+                ).captionColour,
+              )
+            : null,
       ),
       tabs: MeadowTabs(
         year: year,

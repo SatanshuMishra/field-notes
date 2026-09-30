@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
+import 'package:flutter/foundation.dart';
 
 const int meadowPlantSheetLimit = 4096;
 const int meadowPlantSpritePadding = 2;
@@ -9,7 +10,7 @@ const int meadowPlantSpriteBudget = 50000000;
 const int meadowPlantSpritePageBudget = 22000000;
 
 const int _bytesPerPixel = 4;
-const int _plantsPerStep = 48;
+const int _plantsPerBake = 24;
 const int _fitSteps = 32;
 const double _minimumDensity = 0.05;
 
@@ -57,9 +58,13 @@ class MeadowPlantAtlas {
         for (final MeadowPlantSprite sprite in _sprites)
           sprite.dayIndex: sprite,
       });
+  late final List<List<_Batch>> _batches = <List<_Batch>>[
+    for (final _Sheet sheet in _layout.sheets) _batchesOf(sheet.cells),
+  ];
+  final List<_Chunk> _chunks = <_Chunk>[];
   int _sheet = 0;
   int _next = 0;
-  (PictureRecorder, Canvas)? _recording;
+  int _largestBake = 0;
   bool _disposed = false;
 
   List<MeadowPlantSprite> get sprites => _sprites;
@@ -68,11 +73,18 @@ class MeadowPlantAtlas {
 
   bool get isReady => !_disposed && _sheet >= _layout.sheets.length;
 
-  int get imageBytes => _images.nonNulls.fold<int>(
-    0,
-    (int total, Image image) =>
-        total + image.width * image.height * _bytesPerPixel,
-  );
+  int get imageBytes =>
+      <Image>[
+        ..._images.nonNulls,
+        for (final _Chunk chunk in _chunks) chunk.image,
+      ].fold<int>(
+        0,
+        (int total, Image image) =>
+            total + image.width * image.height * _bytesPerPixel,
+      );
+
+  @visibleForTesting
+  int get debugLargestBake => _largestBake;
 
   MeadowPlantSprite? spriteOf(int dayIndex) => _byDay[dayIndex];
 
@@ -95,21 +107,14 @@ class MeadowPlantAtlas {
     if (_disposed || _sheet >= _layout.sheets.length) {
       return false;
     }
-    final _Sheet sheet = _layout.sheets[_sheet];
-    final (PictureRecorder, Canvas) recording = _recording ?? _record();
-    final int end = math.min(_next + _plantsPerStep, sheet.cells.length);
-    for (int i = _next; i < end; i++) {
-      _paintCell(recording.$2, sheet.cells[i]);
-    }
-    if (end < sheet.cells.length) {
-      _recording = recording;
-      _next = end;
+    final List<_Batch> batches = _batches[_sheet];
+    if (_next < batches.length) {
+      _chunks.add(_bake(batches[_next]));
+      _next++;
       return true;
     }
-    final Picture picture = recording.$1.endRecording();
-    _images[_sheet] = picture.toImageSync(sheet.width, sheet.height);
-    picture.dispose();
-    _recording = null;
+    _images[_sheet] = _compose(_layout.sheets[_sheet]);
+    _releaseChunks();
     _next = 0;
     _sheet++;
     return _sheet < _layout.sheets.length;
@@ -124,18 +129,89 @@ class MeadowPlantAtlas {
       return;
     }
     _disposed = true;
-    _recording?.$1.endRecording().dispose();
-    _recording = null;
+    _releaseChunks();
     for (int i = 0; i < _images.length; i++) {
       _images[i]?.dispose();
       _images[i] = null;
     }
   }
 
-  (PictureRecorder, Canvas) _record() {
+  _Chunk _bake(_Batch batch) {
+    final Rect bounds = batch.bounds;
     final PictureRecorder recorder = PictureRecorder();
-    return (recorder, Canvas(recorder));
+    final Canvas canvas = Canvas(recorder)
+      ..translate(-bounds.left, -bounds.top);
+    for (final _Placed placed in batch.cells) {
+      _paintCell(canvas, placed);
+    }
+    final Picture picture = recorder.endRecording();
+    final Image image = picture.toImageSync(
+      bounds.width.toInt(),
+      bounds.height.toInt(),
+    );
+    picture.dispose();
+    _largestBake = math.max(_largestBake, batch.cells.length);
+    return _Chunk(image: image, offset: bounds.topLeft);
   }
+
+  Image _compose(_Sheet sheet) {
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
+    final Paint paint = Paint();
+    for (final _Chunk chunk in _chunks) {
+      canvas.drawImage(chunk.image, chunk.offset, paint);
+    }
+    final Picture picture = recorder.endRecording();
+    final Image image = picture.toImageSync(sheet.width, sheet.height);
+    picture.dispose();
+    return image;
+  }
+
+  void _releaseChunks() {
+    for (final _Chunk chunk in _chunks) {
+      chunk.image.dispose();
+    }
+    _chunks.clear();
+  }
+}
+
+class _Batch {
+  _Batch(this.cells)
+    : bounds = cells
+          .map((_Placed placed) => placed.source)
+          .reduce((Rect a, Rect b) => a.expandToInclude(b));
+
+  final List<_Placed> cells;
+  final Rect bounds;
+}
+
+List<_Batch> _batchesOf(List<_Placed> cells) {
+  final List<_Batch> batches = <_Batch>[];
+  int start = 0;
+  for (int i = 1; i <= cells.length; i++) {
+    if (i == cells.length || cells[i].top != cells[start].top) {
+      final int parts = (i - start + _plantsPerBake - 1) ~/ _plantsPerBake;
+      for (int part = 0; part < parts; part++) {
+        batches.add(
+          _Batch(
+            cells.sublist(
+              start + (i - start) * part ~/ parts,
+              start + (i - start) * (part + 1) ~/ parts,
+            ),
+          ),
+        );
+      }
+      start = i;
+    }
+  }
+  return List<_Batch>.unmodifiable(batches);
+}
+
+class _Chunk {
+  const _Chunk({required this.image, required this.offset});
+
+  final Image image;
+  final Offset offset;
 }
 
 void _paintCell(Canvas canvas, _Placed placed) {

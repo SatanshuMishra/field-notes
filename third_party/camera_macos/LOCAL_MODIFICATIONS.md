@@ -9,7 +9,7 @@ macOS camera will regress. Verify each item is still present after any upstream 
 
 ## Delta
 
-All changes are in `macos/Classes/CameraMacosPlugin.swift` unless noted.
+All changes are in `macos/camera_macos/Sources/camera_macos/CameraMacosPlugin.swift` unless noted.
 
 1. videoRotationAngle crash fix — the capture-connection rotation setter path that
    crashed on real hardware was corrected during the original capture-finalize work
@@ -37,3 +37,11 @@ All changes are in `macos/Classes/CameraMacosPlugin.swift` unless noted.
    `imageStreamHandler.eventSink != nil`. The app never attaches an image-stream
    listener, so this is a no-op in practice; upstream runs the conversion on every
    frame regardless.
+
+6. Swift Package Manager support: the sources live in
+   `macos/camera_macos/Sources/camera_macos/`, described by
+   `macos/camera_macos/Package.swift`, and the podspec's `source_files` points there
+   so CocoaPods still builds the plugin. Swift Package Manager compiles each file with
+   only its own imports, so `macos/camera_macos/Sources/camera_macos/URL+Extension.swift`
+   imports AppKit for `NSWorkspace`. Upstream has no `Package.swift` and imports only
+   Foundation there, which fails with "cannot find 'NSWorkspace' in scope".

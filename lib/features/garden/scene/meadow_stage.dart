@@ -14,6 +14,7 @@ import 'package:field_notes/features/garden/render/meadow_creature_art.dart';
 import 'package:field_notes/features/garden/render/meadow_layers.dart';
 import 'package:field_notes/features/garden/render/meadow_motion.dart';
 import 'package:field_notes/features/garden/render/meadow_plant_atlas.dart';
+import 'package:field_notes/features/garden/render/meadow_rays.dart';
 import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 import 'package:field_notes/features/garden/scene/meadow_grass.dart';
@@ -30,6 +31,7 @@ const String meadowLoadingMessage = 'Growing your meadow…';
 const String meadowStageHint = 'Drag to look around · tap a flower';
 
 const Duration _fadeIn = Duration(milliseconds: 300);
+const int _buildStepsPerFrame = 4;
 const double _dragSlop = 5;
 const double _headReach = 5;
 const double _headSpread = 24;
@@ -72,6 +74,7 @@ class MeadowStage extends StatefulWidget {
     this.growAnimated = false,
     this.highlight,
     this.motion,
+    this.readyOverlay,
   });
 
   final MeadowYear year;
@@ -84,6 +87,7 @@ class MeadowStage extends StatefulWidget {
   final bool growAnimated;
   final MeadowRange? highlight;
   final GardenMotionProfile? motion;
+  final Widget? readyOverlay;
 
   int get resolvedGrowthPoint => growthPoint ?? year.limit;
 
@@ -107,6 +111,8 @@ class MeadowStageState extends State<MeadowStage>
   _Geometry? _geometry;
   _SceneImages? _scene;
   _Build? _build;
+  int _buildSteps = 0;
+  int _buildFrames = 0;
   int? _stepCallback;
   Size? _box;
   double _ratio = 1;
@@ -136,6 +142,12 @@ class MeadowStageState extends State<MeadowStage>
 
   @visibleForTesting
   bool get debugIsReady => _scene != null;
+
+  @visibleForTesting
+  int get debugBuildSteps => _buildSteps;
+
+  @visibleForTesting
+  int get debugBuildFrames => _buildFrames;
 
   @visibleForTesting
   bool get debugIsTicking => _ticker.isTicking;
@@ -278,11 +290,19 @@ class MeadowStageState extends State<MeadowStage>
       final _ImageKey? wanted = _wanted();
       if (wanted != null && _scene?.key != wanted) {
         _build = _Build(wanted);
+        _buildSteps = 0;
+        _buildFrames = 0;
         _scheduleStep();
       }
       return;
     }
-    if (!running.advance(_palette)) {
+    _buildFrames++;
+    bool finished = false;
+    for (int i = 0; i < _buildStepsPerFrame && !finished; i++) {
+      _buildSteps++;
+      finished = running.advance(_palette);
+    }
+    if (!finished) {
       _scheduleStep();
       return;
     }
@@ -361,6 +381,7 @@ class MeadowStageState extends State<MeadowStage>
     }
     _palette = next;
     _scene?.layers.recolour(next);
+    _scene?.rays.recolour(next);
     _build?.recolour(next);
     if (!_animate) {
       _ambience?.step(
@@ -576,12 +597,20 @@ class MeadowStageState extends State<MeadowStage>
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      image: true,
-      label: meadowStageLabel(widget.year),
-      excludeSemantics: true,
-      child: LayoutBuilder(builder: _layout),
+    final Widget? overlay = widget.readyOverlay;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Semantics(
+          container: true,
+          image: true,
+          label: meadowStageLabel(widget.year),
+          excludeSemantics: true,
+          child: LayoutBuilder(builder: _layout),
+        ),
+        if (overlay != null && _scene != null)
+          FadeTransition(opacity: _fade, child: overlay),
+      ],
     );
   }
 
@@ -693,6 +722,7 @@ class MeadowStageState extends State<MeadowStage>
       layers: scene.layers,
       atlas: scene.atlas,
       creatures: scene.creatures,
+      rays: scene.rays,
       terrain: geometry.terrain,
       plants: geometry.plants,
       palette: _palette,
@@ -951,20 +981,26 @@ class _SceneImages {
     required this.layers,
     required this.atlas,
     required this.creatures,
+    required this.rays,
   });
 
   final _ImageKey key;
   final MeadowLayers layers;
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
+  final MeadowRays rays;
 
   int get imageBytes =>
-      layers.imageBytes + atlas.imageBytes + creatures.imageBytes;
+      layers.imageBytes +
+      atlas.imageBytes +
+      creatures.imageBytes +
+      rays.imageBytes;
 
   void dispose() {
     layers.dispose();
     atlas.dispose();
     creatures.dispose();
+    rays.dispose();
   }
 }
 
@@ -975,11 +1011,13 @@ class _Build {
   MeadowLayers? _layers;
   MeadowPlantAtlas? _atlas;
   MeadowCreatureArt? _creatures;
+  MeadowRays? _rays;
 
   int get imageBytes =>
       (_layers?.imageBytes ?? 0) +
       (_atlas?.imageBytes ?? 0) +
-      (_creatures?.imageBytes ?? 0);
+      (_creatures?.imageBytes ?? 0) +
+      (_rays?.imageBytes ?? 0);
 
   bool advance(MeadowPalette palette) {
     final _Geometry geometry = key.geometry;
@@ -1019,11 +1057,13 @@ class _Build {
       return false;
     }
     _creatures ??= MeadowCreatureArt.build(density: key.density);
+    _rays ??= MeadowRays(palette);
     return true;
   }
 
   void recolour(MeadowPalette palette) {
     _layers?.recolour(palette);
+    _rays?.recolour(palette);
   }
 
   _SceneImages finish() => _SceneImages(
@@ -1031,11 +1071,13 @@ class _Build {
     layers: _layers!,
     atlas: _atlas!,
     creatures: _creatures!,
+    rays: _rays!,
   );
 
   void dispose() {
     _layers?.dispose();
     _atlas?.dispose();
     _creatures?.dispose();
+    _rays?.dispose();
   }
 }
