@@ -177,5 +177,39 @@ void main() {
 
       expect(await repository.hasStoredValues(), isTrue);
     });
+
+    test('the meadow key is made once and kept', () async {
+      final int first = await repository.meadowKey();
+
+      final List<Setting> rows = await db.select(db.settings).get();
+      expect(
+        rows.where((Setting row) => row.key == 'meadow_key').single.value,
+        '$first',
+      );
+      expect(first, inInclusiveRange(0, 4294967295));
+      expect(await repository.meadowKey(), first);
+      expect(await DriftSettingsRepository(db).meadowKey(), first);
+    });
+
+    test('a meadow key alone does not count as stored settings', () async {
+      await repository.meadowKey();
+
+      expect(await repository.hasStoredValues(), isFalse);
+    });
+
+    test('a stored meadow key at the top of the range is kept', () async {
+      await db
+          .into(db.settings)
+          .insert(
+            SettingsCompanion.insert(key: 'meadow_key', value: '4294967295'),
+          );
+
+      expect(await repository.meadowKey(), 4294967295);
+      final List<Setting> rows = await db.select(db.settings).get();
+      expect(
+        rows.where((Setting row) => row.key == 'meadow_key').single.value,
+        '4294967295',
+      );
+    });
   });
 }

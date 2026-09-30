@@ -8,11 +8,15 @@ class FakeSettingsRepository implements SettingsRepository {
     this.writeError,
     this.storageMode = StorageMode.onDevice,
     this.storedValues = true,
+    this._meadowKey = 24601,
+    this.failMeadowKey = false,
   });
 
   final AppSettings initial;
   final Object? writeError;
   final bool storedValues;
+  final bool failMeadowKey;
+  final int _meadowKey;
 
   @override
   final StorageMode storageMode;
@@ -108,6 +112,14 @@ class FakeSettingsRepository implements SettingsRepository {
 
   @override
   Future<bool> hasStoredValues() async => storedValues;
+
+  @override
+  Future<int> meadowKey() async {
+    if (failMeadowKey) {
+      throw StateError('The meadow key could not be saved.');
+    }
+    return _meadowKey;
+  }
 
   void _failIfConfigured() {
     final Object? error = writeError;
