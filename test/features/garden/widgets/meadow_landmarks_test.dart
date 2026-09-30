@@ -13,8 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/garden_harness.dart';
 
 const String _spruceText =
-    'The tallest tree at the forest edge marks the 20 days in a row you kept '
-    'writing. The bees keep their hive in it.';
+    'The tallest tree at the forest edge marks the 20 days in a row your '
+    'meadow grew. The bees keep their hive in it.';
 
 const Color _coral = Color(0xFFC76A54);
 
@@ -150,6 +150,25 @@ Future<void> _focusAndPress(
 }
 
 void main() {
+  testWidgets('the spruce card counts the days in a row the meadow grew', (
+    WidgetTester tester,
+  ) async {
+    await _pumpLandmarks(
+      tester,
+      _thisYear(_twentyInARow(2026)),
+      compact: false,
+    );
+    final Text text = tester.widget<Text>(
+      find.textContaining('The tallest tree at the forest edge'),
+    );
+    expect(
+      text.data,
+      'The tallest tree at the forest edge marks the 20 days in a row your '
+      'meadow grew. The bees keep their hive in it.',
+    );
+    expect(text.data, isNot(contains('writing')));
+  });
+
   testWidgets('this year so far lists only the landmarks the data supports', (
     WidgetTester tester,
   ) async {
