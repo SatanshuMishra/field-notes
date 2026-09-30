@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/painting.dart';
 
+import 'package:field_notes/domain/mood/flower_kind.dart';
+
 import 'bloom_part.dart';
 import 'flower_palette.dart';
 
@@ -108,6 +110,10 @@ final List<BloomPart> sunflowerPlantParts = <BloomPart>[
     BloomMoveTo(52, 118),
     BloomQuadTo(72, 128, 86, 138),
   ], stroke: FlowerColors.gardenLeafStroke, width: 1.3),
+  ..._sunflowerHeadParts,
+];
+
+final List<BloomPart> _sunflowerHeadParts = <BloomPart>[
   const BloomOvalRing(
     count: 15,
     cx: 50,
@@ -130,7 +136,7 @@ final List<BloomPart> sunflowerPlantParts = <BloomPart>[
     ),
 ];
 
-List<BloomPart> _asterDaisy(
+List<BloomPart> asterDaisy(
   double cx,
   double cy,
   double petalLength,
@@ -204,9 +210,9 @@ final List<BloomPart> asterPlantParts = <BloomPart>[
       stroke: FlowerColors.gardenLeafStroke,
       width: 1.4,
       close: true),
-  ..._asterDaisy(30, 90, 8.5, 4.4),
-  ..._asterDaisy(72, 84, 8.5, 4.4),
-  ..._asterDaisy(50, 54, 11, 5.5),
+  ...asterDaisy(30, 90, 8.5, 4.4),
+  ...asterDaisy(72, 84, 8.5, 4.4),
+  ...asterDaisy(50, 54, 11, 5.5),
 ];
 
 const List<List<double>> _bleedingHeartPendants = <List<double>>[
@@ -217,7 +223,7 @@ const List<List<double>> _bleedingHeartPendants = <List<double>>[
   <double>[85, 80],
 ];
 
-List<BloomPart> _pendantHeart(double cx, double cy, double s) {
+List<BloomPart> pendantHeart(double cx, double cy, double s) {
   double px(double a) => cx + a * s;
   double py(double b) => cy + b * s;
   return <BloomPart>[
@@ -276,7 +282,7 @@ final List<BloomPart> bleedingHeartPlantParts = <BloomPart>[
       BloomQuadTo(p[0], p[1] + 6, p[0], p[1] + 9),
     ], stroke: FlowerColors.gardenStemMid, width: 1.6),
   for (final List<double> p in _bleedingHeartPendants)
-    ..._pendantHeart(p[0], p[1] + 9, 8),
+    ...pendantHeart(p[0], p[1] + 9, 8),
 ];
 
 List<BloomPart> _spiderLilyBloom() {
@@ -318,6 +324,10 @@ final List<BloomPart> spiderLilyPlantParts = <BloomPart>[
     BloomMoveTo(50, 214),
     BloomCubicTo(49, 164, 51, 112, 50, 66),
   ], stroke: FlowerColors.gardenScape, width: 3.2),
+  ..._spiderLilyHeadParts,
+];
+
+final List<BloomPart> _spiderLilyHeadParts = <BloomPart>[
   ..._spiderLilyBloom(),
   const BloomDisc(
     cx: 50,
@@ -351,6 +361,10 @@ final List<BloomPart> daffodilPlantParts = <BloomPart>[
       stroke: FlowerColors.gardenLeafStroke,
       width: 1.6,
       close: true),
+  ..._daffodilHeadParts,
+];
+
+final List<BloomPart> _daffodilHeadParts = <BloomPart>[
   const BloomOvalRing(
     count: 6,
     cx: 50,
@@ -414,6 +428,10 @@ final List<BloomPart> chrysanthemumPlantParts = <BloomPart>[
       stroke: FlowerColors.gardenLeafStroke,
       width: 2,
       close: true),
+  ..._chrysanthemumHeadParts,
+];
+
+final List<BloomPart> _chrysanthemumHeadParts = <BloomPart>[
   const BloomOvalRing(
     count: 18,
     cx: 50,
@@ -519,6 +537,10 @@ final List<BloomPart> rosePlantParts = <BloomPart>[
       stroke: FlowerColors.gardenLeafStroke,
       width: 1.9,
       close: true),
+  ..._roseHeadParts,
+];
+
+final List<BloomPart> _roseHeadParts = <BloomPart>[
   const BloomDisc(cx: 50, cy: 74, r: 16, fill: FlowerColors.roseDisc),
   const BloomShape(commands: <BloomCmd>[
     BloomMoveTo(50, 60),
@@ -673,6 +695,10 @@ final List<BloomPart> poppyPlantParts = <BloomPart>[
     BloomMoveTo(50, 181),
     BloomQuadTo(62, 185, 71, 184),
   ], stroke: FlowerColors.gardenLeafDeep, width: 1.8),
+  ..._poppyHeadParts,
+];
+
+final List<BloomPart> _poppyHeadParts = <BloomPart>[
   const BloomOval(cx: 50, cy: 56, rx: 15, ry: 13, fill: FlowerColors.poppyLobe),
   const BloomOval(
       cx: 38, cy: 65, rx: 12, ry: 11, fill: FlowerColors.poppyLobeShade),
@@ -725,6 +751,10 @@ final List<BloomPart> peonyPlantParts = <BloomPart>[
     BloomMoveTo(50, 126),
     BloomQuadTo(70, 128, 88, 129),
   ], stroke: FlowerColors.gardenLeafStroke, width: 1.3),
+  ..._peonyHeadParts,
+];
+
+final List<BloomPart> _peonyHeadParts = <BloomPart>[
   const BloomDisc(cx: 50, cy: 64, r: 15, fill: FlowerColors.peonyPetalLight),
   const BloomDisc(cx: 34, cy: 74, r: 14, fill: FlowerColors.peonyPetalMid),
   const BloomDisc(cx: 66, cy: 74, r: 14, fill: FlowerColors.peonyPetalMid),
@@ -736,3 +766,19 @@ final List<BloomPart> peonyPlantParts = <BloomPart>[
     BloomQuadTo(50, 71, 56, 78),
   ], stroke: FlowerColors.peonyCrease, width: 1.5),
 ];
+
+List<BloomPart> gardenBloomHeadParts(FlowerKind kind) => switch (kind) {
+      FlowerKind.peony => _peonyHeadParts,
+      FlowerKind.sunflower => _sunflowerHeadParts,
+      FlowerKind.rose => _roseHeadParts,
+      FlowerKind.daffodil => _daffodilHeadParts,
+      FlowerKind.chrysanthemum => _chrysanthemumHeadParts,
+      FlowerKind.redSpiderLily => _spiderLilyHeadParts,
+      FlowerKind.poppy => _poppyHeadParts,
+      FlowerKind.lavender ||
+      FlowerKind.aster ||
+      FlowerKind.bleedingHeart ||
+      FlowerKind.wiltingRose ||
+      FlowerKind.thistle =>
+        const <BloomPart>[],
+    };
