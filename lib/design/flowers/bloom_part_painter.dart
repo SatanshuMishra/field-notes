@@ -8,10 +8,12 @@ class BloomPartPainter {
   const BloomPartPainter({
     required this.strokeColor,
     required this.strokeWidth,
+    this.recolour,
   });
 
   final Color strokeColor;
   final double strokeWidth;
+  final Color Function(Color)? recolour;
 
   void paintAll(Canvas canvas, List<BloomPart> parts) {
     for (final BloomPart part in parts) {
@@ -21,12 +23,12 @@ class BloomPartPainter {
 
   void paintOne(Canvas canvas, BloomPart part) {
     final Color? fillColor = part.fill;
-    final Paint? fill = fillColor == null ? null : _fill(fillColor);
+    final Paint? fill = fillColor == null ? null : _fill(_tint(fillColor));
     final double width = part.strokeWidth ?? strokeWidth;
     final Paint? stroke = width == 0
         ? null
         : (Paint()
-          ..color = part.strokeColor ?? strokeColor
+          ..color = _tint(part.strokeColor ?? strokeColor)
           ..style = PaintingStyle.stroke
           ..strokeWidth = width
           ..strokeCap = part.strokeCap
@@ -118,6 +120,11 @@ class BloomPartPainter {
       path.close();
     }
     return path;
+  }
+
+  Color _tint(Color color) {
+    final Color Function(Color)? map = recolour;
+    return map == null ? color : map(color);
   }
 
   Paint _fill(Color color) => Paint()
