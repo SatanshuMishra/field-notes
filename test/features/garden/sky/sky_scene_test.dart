@@ -26,17 +26,46 @@ void main() {
     expect(skyGradientAt(-14), belowFirst);
 
     final SkyGradient aboveLast = skyGradientAt(30);
-    expect(rgb(aboveLast.top), (238, 230, 210));
-    expect(rgb(aboveLast.middle), (235, 225, 201));
-    expect(rgb(aboveLast.horizon), (231, 227, 198));
+    expect(rgb(aboveLast.top), (190, 210, 222));
+    expect(rgb(aboveLast.middle), (224, 228, 218));
+    expect(rgb(aboveLast.horizon), (238, 232, 210));
 
     expect(skyGradientAt(20), aboveLast);
 
     final SkyGradient midway = skyGradientAt(6);
-    expect(rgb(midway.top), (188, 191, 201));
-    expect(rgb(midway.middle), (236, 211, 183));
-    expect(rgb(midway.horizon), (240, 204, 165));
+    expect(rgb(midway.top), (177, 187, 204));
+    expect(rgb(midway.middle), (233, 211, 185));
+    expect(rgb(midway.horizon), (242, 205, 165));
     expect(midway.top.a, 1);
+  });
+
+  test("the day sky is the prototype's bluer sky", () {
+    final SkyGradient low = skyGradientAt(10);
+    expect(rgb(low.top), (204, 214, 216));
+    expect(rgb(low.middle), (232, 226, 208));
+    expect(rgb(low.horizon), (240, 226, 196));
+
+    final SkyGradient high = skyGradientAt(20);
+    expect(rgb(high.top), (190, 210, 222));
+    expect(rgb(high.middle), (224, 228, 218));
+    expect(rgb(high.horizon), (238, 232, 210));
+
+    final SkyGradient between = skyGradientAt(15);
+    expect(rgb(between.top), (197, 212, 219));
+    expect(rgb(between.middle), (228, 227, 213));
+    expect(rgb(between.horizon), (239, 229, 203));
+
+    final SkyGradient dawn = skyGradientAt(2);
+    expect(rgb(dawn.top), (150, 160, 192));
+    expect(rgb(dawn.middle), (234, 196, 162));
+    expect(rgb(dawn.horizon), (244, 184, 134));
+
+    final SkyGradient twilight = skyGradientAt(-3);
+    expect(rgb(twilight.top), (46, 58, 106));
+    expect(rgb(twilight.middle), (138, 110, 142));
+    expect(rgb(twilight.horizon), (222, 148, 122));
+
+    expect(rgb(edmontonAt('2026-09-28T18:00:00Z').skyTop), (190, 210, 222));
   });
 
   test('night, warm and low weights follow the sun', () {
@@ -89,7 +118,7 @@ void main() {
     expect(noon.moonX, closeTo(0.95, 0.0001));
     expect(noon.moonY, closeTo(0.3491, 0.0001));
     expect(noon.moonUp, isFalse);
-    expect(rgb(noon.skyTop), (238, 230, 210));
+    expect(rgb(noon.skyTop), (190, 210, 222));
     expect(noon.night, closeTo(0, 0.0005));
     expect(noon.warm, closeTo(0, 0.0005));
     expect(noon.starsOpacity, closeTo(0, 0.0005));

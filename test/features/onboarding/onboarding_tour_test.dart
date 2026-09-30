@@ -221,7 +221,7 @@ void _expectContent(
         'this day',
         'Calendar',
         'past days',
-        'Garden',
+        'Meadow',
         'your year',
         'Search',
         'find anything',
@@ -448,6 +448,19 @@ List<String> _semanticsLabels(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets('the tour names the Meadow tab', (WidgetTester tester) async {
+    await _onPlatform(TargetPlatform.macOS, () async {
+      await _pumpTour(
+        tester,
+        platform: TargetPlatform.macOS,
+        surface: _sidebarSurface,
+      );
+      expect(_inCard(find.text('Meadow')), findsOneWidget);
+      expect(_inCard(find.text('your year')), findsOneWidget);
+      expect(_inCard(find.text('Garden')), findsNothing);
+    });
+  });
+
   testWidgets('the six tips show their titles, visuals and lines in order', (
     WidgetTester tester,
   ) async {

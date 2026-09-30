@@ -222,7 +222,7 @@ class TourTipVisual extends StatelessWidget {
       TourVisual.pages => _tiles(<Widget>[
         _tile(_nav(NavGlyph.home, ink), 'Today', 'this day'),
         _tile(_nav(NavGlyph.calendar, ink), 'Calendar', 'past days'),
-        _tile(_nav(NavGlyph.garden, ink), 'Garden', 'your year'),
+        _tile(_nav(NavGlyph.garden, ink), 'Meadow', 'your year'),
         _tile(_nav(NavGlyph.search, ink), 'Search', 'find anything'),
       ]),
       TourVisual.moods => _tiles(<Widget>[

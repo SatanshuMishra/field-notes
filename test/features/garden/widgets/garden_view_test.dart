@@ -1,41 +1,64 @@
-import 'dart:math' as math;
-
 import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/garden.dart';
-import 'package:field_notes/features/garden/paint/meadow_painter.dart';
+import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
+import 'package:field_notes/features/garden/model/meadow_view_state.dart';
+import 'package:field_notes/features/garden/scene/meadow_palette.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage.dart';
+import 'package:field_notes/features/garden/scene/meadow_view.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
-import 'package:field_notes/features/garden/widgets/meadow_scene.dart';
+import 'package:field_notes/features/garden/widgets/meadow_full_screen.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
+import 'package:field_notes/features/garden/widgets/meadow_ribbon.dart';
+import 'package:field_notes/features/garden/widgets/meadow_study_controls.dart';
+import 'package:field_notes/features/garden/widgets/meadow_tabs.dart';
+import 'package:field_notes/features/garden/widgets/meadow_year_picker.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/garden_harness.dart';
 
+const int _buildFrames = 6000;
+const Size _desk = Size(1140, 900);
+const Size _phone = Size(393, 852);
+const Duration _frame = Duration(milliseconds: 16);
+
 final DateTime _noon = DateTime.utc(2026, 9, 28, 18);
+final DateTime _midnight = DateTime.utc(2026, 9, 29, 6);
 final SkyLocation _edmonton = resolveSkyLocation(
   'America/Edmonton',
   const Duration(hours: -6),
 );
 
-final List<Day> _twoBloomsAndASprout = <Day>[
+final List<Day> _days = <Day>[
+  dayOf('2024-08-08', mood: Mood.hopeful),
+  for (int day = 1; day <= 12; day++)
+    dayOf(
+      '2025-03-${day.toString().padLeft(2, '0')}',
+      mood: moodOrder[day % moodOrder.length],
+    ),
   dayOf('2026-03-01', mood: Mood.happy),
   dayOf('2026-03-02', mood: Mood.calm),
   dayOf('2026-03-03'),
 ];
 
-Future<void> _pumpGarden(
+const Map<String, int> _counts = <String, int>{'2026-03-03': 1};
+
+Future<ProviderContainer> _pumpPage(
   WidgetTester tester, {
   required TargetPlatform platform,
   required Size size,
-  List<Day> days = const <Day>[],
-  List<String> journaled = const <String>[],
+  List<Day>? days,
+  Map<String, int> counts = _counts,
+  DateTime? now,
   bool disableAnimations = false,
 }) async {
   tester.view.physicalSize = size;
@@ -48,260 +71,338 @@ Future<void> _pumpGarden(
           data: MediaQuery.of(
             context,
           ).copyWith(disableAnimations: disableAnimations),
-          child: const GardenScreen(year: 2026),
+          child: const GardenScreen(),
         ),
       ),
       platform: platform,
       overrides: <Override>[
-        allDaysProvider.overrideWith((_) => Stream<List<Day>>.value(days)),
-        journaledDatesProvider.overrideWith(
-          (_) => Stream<List<String>>.value(journaled),
+        allDaysProvider.overrideWith(
+          (Ref ref) => Stream<List<Day>>.value(days ?? _days),
         ),
-        skyClockProvider.overrideWithValue(() => _noon),
-        skyLocationProvider.overrideWith((_) async => _edmonton),
+        journalEntryCountsProvider.overrideWith(
+          (Ref ref) => Stream<Map<String, int>>.value(counts),
+        ),
+        meadowKeyProvider.overrideWith((Ref ref) async => 24601),
+        skyClockProvider.overrideWithValue(() => now ?? _noon),
+        skyLocationProvider.overrideWith((Ref ref) async => _edmonton),
         skyDebugControlsProvider.overrideWithValue(false),
       ],
     ),
   );
   await tester.pump();
   await tester.pump();
+  return ProviderScope.containerOf(tester.element(find.byType(GardenScreen)));
+}
+
+Future<MeadowStageState> _grow(WidgetTester tester) async {
+  final MeadowStageState state = tester.state<MeadowStageState>(
+    find.byType(MeadowStage),
+  );
+  for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 2)),
+    );
+    await tester.pump();
+  }
+  expect(state.debugIsReady, isTrue, reason: 'the meadow never finished');
+  return state;
 }
 
 String _clock(WidgetTester tester, DateTime instant) => formatClock(
-  tester.element(find.byType(GardenView)),
+  tester.element(find.byType(GardenScreen)),
   TimeOfDay.fromDateTime(instant.toLocal()),
 );
 
-MeadowPainter _painter(WidgetTester tester) =>
+MeadowStage _stage(WidgetTester tester) =>
+    tester.widget<MeadowStage>(find.byType(MeadowStage));
+
+Finder _semanticsLabelled(String label) => find.byWidgetPredicate(
+  (Widget widget) => widget is Semantics && widget.properties.label == label,
+);
+
+BorderRadiusGeometry? _cardRadius(WidgetTester tester) => tester
+    .widget<ClipRRect>(
+      find
+          .ancestor(
+            of: find.byType(MeadowStage),
+            matching: find.byType(ClipRRect),
+          )
+          .first,
+    )
+    .borderRadius;
+
+BoxDecoration _cardEdge(WidgetTester tester) =>
     tester
-            .widget<CustomPaint>(
-              find.descendant(
-                of: find.byType(MeadowScene),
-                matching: find.byType(CustomPaint),
+            .widgetList<DecoratedBox>(
+              find.ancestor(
+                of: find.byType(MeadowStage),
+                matching: find.byType(DecoratedBox),
               ),
             )
-            .painter!
-        as MeadowPainter;
+            .firstWhere(
+              (DecoratedBox box) =>
+                  box.position == DecorationPosition.foreground,
+            )
+            .decoration
+        as BoxDecoration;
 
-double _luminance(Color colour) {
-  double channel(double v) =>
-      v <= 0.03928 ? v / 12.92 : math.pow((v + 0.055) / 1.055, 2.4).toDouble();
-  return 0.2126 * channel(colour.r) +
-      0.7152 * channel(colour.g) +
-      0.0722 * channel(colour.b);
-}
+bool _hasInsetShadow(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(
+      find.ancestor(
+        of: find.byType(MeadowStage),
+        matching: find.byType(CustomPaint),
+      ),
+    )
+    .any(
+      (CustomPaint paint) =>
+          paint.painter.runtimeType.toString() == '_InsetShadowPainter',
+    );
 
-double _contrastOver(Color text, Color background) {
-  final Color shown = Color.alphaBlend(text, background);
-  final double a = _luminance(shown) + 0.05;
-  final double b = _luminance(background) + 0.05;
-  return math.max(a, b) / math.min(a, b);
+Future<void> _pickYear(WidgetTester tester, int year) async {
+  await tester.tap(find.byKey(meadowYearPickerButtonKey));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(meadowYearRowKey(year)));
+  await tester.pumpAndSettle();
 }
 
 void main() {
   testWidgets(
-    'desktop page shows the header, day count, chips, clock, next events and captions',
+    'the sidebar page has the header with clock, picker and full screen, the '
+    'fitted scene card and the tabs 16 below it',
     (WidgetTester tester) async {
-      await _pumpGarden(
+      final ProviderContainer container = await _pumpPage(
         tester,
         platform: TargetPlatform.macOS,
-        size: const Size(1140, 766),
-        days: _twoBloomsAndASprout,
-        journaled: const <String>['2026-03-03'],
+        size: _desk,
       );
 
-      expect(find.text('your garden'), findsOneWidget);
+      expect(find.text('your meadow'), findsOneWidget);
       expect(find.text('Every day, a bloom'), findsOneWidget);
       expect(
         find.text(
-          '3 days planted in 2026 · quietly filling in as the year goes',
+          '2 blooms and 1 sprout so far in 2026 · '
+          'quietly filling in as the year goes',
         ),
         findsOneWidget,
       );
+      expect(tester.getTopLeft(find.text('your meadow')).dy, closeTo(26, 1));
+      expect(tester.getTopLeft(find.text('your meadow')).dx, closeTo(34, 1));
       expect(find.text(_clock(tester, _noon)), findsOneWidget);
       final String sunset = _clock(tester, DateTime.utc(2026, 9, 29, 1, 17));
       final String moonrise = _clock(tester, DateTime.utc(2026, 9, 29, 1, 28));
       expect(find.text('sunset $sunset · moonrise $moonrise'), findsOneWidget);
-      expect(find.text('Happy'), findsOneWidget);
-      expect(find.text('Calm'), findsOneWidget);
-      expect(find.text('1 Sprout'), findsOneWidget);
+      expect(find.byType(GardenSkyClock), findsOneWidget);
+      expect(find.byKey(meadowYearPickerButtonKey), findsOneWidget);
+      expect(find.byType(MeadowStudyControls), findsNothing);
+
+      final MeadowStage stage = _stage(tester);
+      expect(stage.mode, MeadowSceneMode.page);
+      expect(stage.compact, isFalse);
+      expect(stage.growthPoint, isNull);
+      expect(stage.highlight, isNull);
       expect(
-        tester.getBottomLeft(find.byType(MoodTallyChips)).dy,
-        lessThan(tester.getTopLeft(find.byType(MeadowScene)).dy),
-      );
-      expect(
-        tester.getTopLeft(find.text('Every day, a bloom')).dy,
-        lessThan(tester.getTopLeft(find.byType(MoodTallyChips)).dy),
+        stage.sky,
+        skySceneAt(_noon, _edmonton.latitude, _edmonton.longitude),
       );
 
-      expect(find.text('Sep 2026 · still growing'), findsOneWidget);
-      expect(find.text('sky over Edmonton · waning gibbous'), findsOneWidget);
-      final Rect card = tester.getRect(find.byType(MeadowScene));
-      expect(card.height, greaterThanOrEqualTo(452));
-      expect(
-        tester.getBottomLeft(find.text('Sep 2026 · still growing')).dy,
-        closeTo(card.bottom - 12, 1),
+      final Rect scene = tester.getRect(find.byType(MeadowStage));
+      expect(scene.left, closeTo(34, 0.5));
+      expect(scene.width, closeTo(_desk.width - 68, 0.5));
+      expect(scene.height, closeTo(scene.width * 640 / 1400, 0.5));
+      expect(_cardRadius(tester), const BorderRadius.all(Radius.circular(20)));
+      final Border edge = _cardEdge(tester).border! as Border;
+      expect(edge.top.color, FieldNotesColors.light.ink22);
+      expect(edge.top.width, 1.5);
+      expect(_hasInsetShadow(tester), isTrue);
+
+      final Rect tabs = tester.getRect(find.byType(MeadowTabs));
+      expect(tabs.top, closeTo(scene.bottom + 16, 0.5));
+      expect(tabs.width, closeTo(scene.width, 0.5));
+      expect(find.text('The year, day by day'), findsOneWidget);
+      expect(find.text('This year so far'), findsOneWidget);
+
+      final Rect button = tester.getRect(
+        _semanticsLabelled(meadowFullScreenLabel),
       );
+      expect(button.width, greaterThanOrEqualTo(48));
+      expect(button.height, greaterThanOrEqualTo(48));
+      await tester.tap(_semanticsLabelled(meadowFullScreenLabel));
+      await tester.pump();
+      await tester.pump(meadowFullScreenFade + _frame);
+      expect(
+        container.read(meadowViewStateProvider).fullScreen,
+        MeadowFullScreenRequest(
+          year: 2026,
+          hourMinutes: null,
+          growthPoint: stage.year.limit,
+        ),
+      );
+      expect(_stage(tester).mode, MeadowSceneMode.full);
+      expect(_stage(tester).compact, isFalse);
+
+      await tester.tap(find.byKey(meadowFullScreenCloseKey));
+      await tester.pump();
+      await tester.pump(meadowFullScreenFade + _frame);
+      expect(container.read(meadowViewStateProvider).fullScreen, isNull);
+    },
+  );
+
+  testWidgets(
+    'the bottom-bar page has the compact header, a 300-tall scene card and '
+    'the tabs',
+    (WidgetTester tester) async {
+      await _pumpPage(tester, platform: TargetPlatform.android, size: _phone);
+
+      expect(find.text('your meadow'), findsOneWidget);
+      expect(find.text('Every day, a bloom'), findsOneWidget);
+      expect(tester.getTopLeft(find.text('your meadow')).dx, closeTo(18, 1));
+      expect(find.text(_clock(tester, _noon)), findsOneWidget);
+      final String sunset = _clock(tester, DateTime.utc(2026, 9, 29, 1, 17));
+      expect(find.text('sunset $sunset'), findsOneWidget);
+      expect(find.textContaining('moonrise'), findsNothing);
+
+      final MeadowStage stage = _stage(tester);
+      expect(stage.compact, isTrue);
+      expect(stage.mode, MeadowSceneMode.page);
+      final Rect scene = tester.getRect(find.byType(MeadowStage));
+      expect(scene.left, closeTo(16, 0.5));
+      expect(scene.width, closeTo(_phone.width - 32, 0.5));
+      expect(scene.height, closeTo(300, 0.5));
+      expect(_cardRadius(tester), const BorderRadius.all(Radius.circular(16)));
+      expect(
+        (_cardEdge(tester).border! as Border).top.color,
+        FieldNotesColors.light.ink22,
+      );
+      expect(_hasInsetShadow(tester), isFalse);
+      expect(
+        tester.getTopLeft(find.byType(MeadowTabs)).dy,
+        closeTo(scene.bottom + 16, 0.5),
+      );
+      expect(find.text('Day by day'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'the study keeps its hour, growth point and highlight until the year '
+    'changes',
+    (WidgetTester tester) async {
+      await _pumpPage(tester, platform: TargetPlatform.android, size: _phone);
+
+      await _pickYear(tester, 2025);
+      expect(find.byType(MeadowStudyControls), findsOneWidget);
+      expect(find.text(meadowBackCompactLabel), findsOneWidget);
+      expect(find.byType(GardenSkyClock), findsNothing);
+      expect(find.text('Landmarks'), findsOneWidget);
+
+      await tester.drag(find.byKey(meadowHourSliderKey), const Offset(-400, 0));
+      await tester.pump();
+      final MeadowStudyControls controls = tester.widget<MeadowStudyControls>(
+        find.byType(MeadowStudyControls),
+      );
+      expect(controls.hourMinutes, 0);
+      final DateTime today = _noon.toLocal();
+      expect(
+        _stage(tester).sky,
+        skySceneAt(
+          DateTime(today.year, today.month, today.day),
+          _edmonton.latitude,
+          _edmonton.longitude,
+        ),
+      );
+
+      await tester.drag(
+        find.byKey(meadowGrowthSliderKey),
+        const Offset(-400, 0),
+      );
+      await tester.pump();
+      expect(_stage(tester).growthPoint, 1);
+
+      await tester.ensureVisible(find.text('Mar'));
+      await tester.tap(find.text('Mar'));
+      await tester.pump();
+      final MeadowRange march = meadowMonthRange(_stage(tester).year.months[2]);
+      expect(_stage(tester).highlight, march);
+
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, 600),
+      );
+      await tester.pumpAndSettle();
+      await _pickYear(tester, 2024);
+      final MeadowStage reset = _stage(tester);
+      expect(reset.year.year, 2024);
+      expect(reset.mode, MeadowSceneMode.study);
+      expect(reset.growthPoint, reset.year.limit);
+      expect(reset.growAnimated, isFalse);
+      expect(reset.highlight, isNull);
       expect(
         tester
-            .getBottomRight(find.text('sky over Edmonton · waning gibbous'))
-            .dx,
-        closeTo(card.right - 16, 1),
+            .widget<MeadowStudyControls>(find.byType(MeadowStudyControls))
+            .hourMinutes,
+        isNull,
       );
       expect(
-        tester.widget<ClipRRect>(find.byType(ClipRRect).first).borderRadius,
-        const BorderRadius.all(Radius.circular(20)),
-      );
-      expect(
-        tester.widget<MeadowScene>(find.byType(MeadowScene)).compact,
-        false,
-      );
-      expect(
-        tester.widget<MeadowScene>(find.byType(MeadowScene)).sky,
+        reset.sky,
         skySceneAt(_noon, _edmonton.latitude, _edmonton.longitude),
       );
     },
   );
 
   testWidgets(
-    'phone page shows the compact header, the next sun event and the right caption',
+    "the waiting message takes the caption colour of the scene's sky",
     (WidgetTester tester) async {
-      await _pumpGarden(
-        tester,
-        platform: TargetPlatform.android,
-        size: const Size(393, 700),
-        days: _twoBloomsAndASprout,
-        journaled: const <String>['2026-03-03'],
-      );
-
-      expect(find.text('your garden'), findsOneWidget);
-      expect(find.text('Every day, a bloom'), findsOneWidget);
-      expect(find.text('3 days planted in 2026'), findsOneWidget);
-      expect(find.textContaining('quietly filling in'), findsNothing);
-      expect(find.text(_clock(tester, _noon)), findsOneWidget);
-      final String sunset = _clock(tester, DateTime.utc(2026, 9, 29, 1, 17));
-      expect(find.text('sunset $sunset'), findsOneWidget);
-      expect(find.textContaining('moonrise'), findsNothing);
-      expect(
-        tester.getBottomLeft(find.byType(MoodTallyChips)).dy,
-        lessThanOrEqualTo(tester.getTopLeft(find.text('sunset $sunset')).dy),
-      );
-
-      expect(find.text('sky over Edmonton · waning gibbous'), findsOneWidget);
-      expect(find.textContaining('still growing'), findsNothing);
-      final Rect card = tester.getRect(find.byType(MeadowScene));
-      expect(card.height, greaterThanOrEqualTo(320));
-      expect(
-        tester.getBottomRight(find.text('sky over Edmonton · waning gibbous')),
-        offsetMoreOrLessEquals(
-          Offset(card.right - 12, card.bottom - 9),
-          epsilon: 1,
-        ),
-      );
-      expect(
-        tester.widget<ClipRRect>(find.byType(ClipRRect).first).borderRadius,
-        const BorderRadius.all(Radius.circular(16)),
-      );
-      expect(
-        tester.widget<MeadowScene>(find.byType(MeadowScene)).compact,
-        true,
-      );
-    },
-  );
-
-  testWidgets(
-    'an empty garden shows the header, the sky over grass and the waiting message',
-    (WidgetTester tester) async {
-      await _pumpGarden(
+      await _pumpPage(
         tester,
         platform: TargetPlatform.macOS,
-        size: const Size(1140, 766),
+        size: _desk,
+        days: const <Day>[],
+        counts: const <String, int>{},
+        now: _midnight,
       );
 
-      expect(find.text('your garden'), findsOneWidget);
-      expect(find.text('Every day, a bloom'), findsOneWidget);
-      expect(
-        find.text(
-          '0 days planted in 2026 · quietly filling in as the year goes',
-        ),
-        findsOneWidget,
-      );
-      expect(find.byType(MoodTallyChips), findsNothing);
-      expect(find.byType(MeadowScene), findsOneWidget);
-      expect(_painter(tester).layout.plants, isEmpty);
-      expect(_painter(tester).layout.tufts, isNotEmpty);
-
+      final MeadowStage stage = _stage(tester);
       final Finder message = find.text(
         'Your meadow is waiting. Every day you journal plants a bloom here.',
       );
-      expect(message, findsOneWidget);
+      final Color? colour = tester.widget<Text>(message).style?.color;
       expect(
-        tester.widget<Text>(message).style?.color,
-        const Color.fromRGBO(60, 48, 36, 0.72),
-      );
-      expect(
-        tester.widget<Text>(message).style?.color,
-        skySceneAt(
-          _noon,
-          _edmonton.latitude,
-          _edmonton.longitude,
+        colour,
+        MeadowPalette.from(
+          sky: stage.sky,
+          morning: stage.morning,
+          heavyShare: 0,
         ).captionColour,
       );
-      expect(_painter(tester).animate, isTrue);
-      await tester.pump(const Duration(milliseconds: 500));
-      final Rect card = tester.getRect(find.byType(MeadowScene));
-      expect(card.contains(tester.getCenter(message)), isTrue);
+      expect(colour, const Color.fromRGBO(236, 230, 214, 0.85));
+      final Rect scene = tester.getRect(find.byType(MeadowStage));
+      final Offset centre = tester.getCenter(message);
+      expect(scene.contains(centre), isTrue);
+      expect(centre.dx, closeTo(scene.center.dx, 1));
       expect(
-        tester.getCenter(message).dy,
-        greaterThan(card.top + card.height * 0.29),
+        tester.getTopLeft(message).dy,
+        greaterThan(tester.getBottomLeft(find.text(meadowLoadingMessage)).dy),
       );
     },
   );
 
-  testWidgets('degrades the scene when the platform disables animations', (
+  testWidgets('the page leaves motion to the platform setting', (
     WidgetTester tester,
   ) async {
-    await _pumpGarden(
+    await _pumpPage(
       tester,
       platform: TargetPlatform.macOS,
-      size: const Size(1140, 766),
-      days: _twoBloomsAndASprout,
+      size: _desk,
       disableAnimations: true,
     );
+    expect(_stage(tester).motion, isNull);
+    MeadowStageState state = await _grow(tester);
+    expect(state.debugIsTicking, isFalse);
+    await tester.pumpWidget(const SizedBox());
 
-    expect(_painter(tester).animate, isFalse);
-    expect(tester.widget<MeadowScene>(find.byType(MeadowScene)).motion, isNull);
-  });
-
-  testWidgets('an empty meadow sways like any other', (
-    WidgetTester tester,
-  ) async {
-    await _pumpGarden(
-      tester,
-      platform: TargetPlatform.macOS,
-      size: const Size(1140, 766),
-    );
-    expect(_painter(tester).layout.plants, isEmpty);
-    expect(_painter(tester).animate, isTrue);
-  });
-
-  testWidgets('garden captions reach 4.5 to 1 against the soil by day', (
-    WidgetTester tester,
-  ) async {
-    await _pumpGarden(
-      tester,
-      platform: TargetPlatform.macOS,
-      size: const Size(1140, 766),
-      days: _twoBloomsAndASprout,
-    );
-    final Color soil = Color.lerp(Palette.soilLight, Palette.soilDark, 0.5)!;
-    for (final Finder caption in <Finder>[
-      find.textContaining('sky over'),
-      find.textContaining('still growing'),
-    ]) {
-      expect(caption, findsOneWidget);
-      final Color colour = tester.widget<Text>(caption).style!.color!;
-      expect(_contrastOver(colour, soil), greaterThanOrEqualTo(4.5));
-    }
+    await _pumpPage(tester, platform: TargetPlatform.macOS, size: _desk);
+    expect(_stage(tester).motion, isNull);
+    state = await _grow(tester);
+    expect(state.debugIsTicking, isTrue);
+    await tester.pumpWidget(const SizedBox());
   });
 }

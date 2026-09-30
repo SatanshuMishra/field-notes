@@ -1,6 +1,7 @@
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
+import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
 import 'package:field_notes/features/settings/spell_check_availability.dart';
@@ -13,6 +14,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../features/settings/support/fake_settings_repository.dart';
 import '../../features/settings/support/recording_reminder_scheduler.dart';
+
+const List<String> _journaledDates = <String>[];
+const int _meadowKey = 24601;
 
 class FakeJournalRepository implements JournalRepository {
   @override
@@ -52,8 +56,14 @@ List<Override> shellOverrides() => <Override>[
       journalRepositoryProvider.overrideWithValue(FakeJournalRepository()),
       settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
       journaledDatesProvider.overrideWith(
-        (_) => Stream<List<String>>.value(const <String>[]),
+        (_) => Stream<List<String>>.value(_journaledDates),
       ),
+      journalEntryCountsProvider.overrideWith(
+        (_) => Stream<Map<String, int>>.value(<String, int>{
+          for (final String date in _journaledDates) date: 1,
+        }),
+      ),
+      meadowKeyProvider.overrideWith((_) async => _meadowKey),
       searchAllEntriesProvider.overrideWith(
         (_) => Stream<List<Entry>>.value(const <Entry>[]),
       ),

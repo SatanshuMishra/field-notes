@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -66,19 +66,21 @@ void main() {
     await _idsIn(tester, shellStates, 'a7-garden-blooms');
     final SemanticsHandle handle = tester.ensureSemantics();
     expect(
-      _nodes(tester, (SemanticsNode node) => node.label == 'Grateful').length,
-      lessThan(2),
+      _nodes(tester, (SemanticsNode node) => node.label == '1 Grateful'),
+      hasLength(1),
     );
-    final Size meadow = tester.getSize(
-      find.byWidgetPredicate(
-        (Widget widget) => widget.runtimeType.toString() == 'MeadowScene',
-      ),
+    expect(
+      _nodes(tester, (SemanticsNode node) => node.label == 'Grateful'),
+      isEmpty,
     );
+    final Finder stage = find.byType(MeadowStage);
+    final Size meadow = tester.getSize(stage);
     expect(
       _nodes(
         tester,
         (SemanticsNode node) =>
-            node.label.trim().isNotEmpty &&
+            node.label ==
+                meadowStageLabel(tester.widget<MeadowStage>(stage).year) &&
             (node.rect.width - meadow.width).abs() < 1 &&
             (node.rect.height - meadow.height).abs() < 1,
       ),
