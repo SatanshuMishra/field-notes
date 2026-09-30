@@ -10,4 +10,5 @@ abstract final class SettingsKeys {
   static const String reflectionPrompts = 'reflection_prompts';
   static const String onboardingStatus = 'onboarding_status';
   static const String appearance = 'appearance';
+  static const String meadowKey = 'meadow_key';
 }

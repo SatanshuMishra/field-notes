@@ -33,5 +33,7 @@ abstract interface class SettingsRepository {
 
   Future<bool> hasStoredValues();
 
+  Future<int> meadowKey();
+
   StorageMode get storageMode;
 }

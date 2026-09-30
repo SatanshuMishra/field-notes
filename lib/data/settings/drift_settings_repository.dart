@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:drift/drift.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 
@@ -5,6 +8,7 @@ import 'settings_keys.dart';
 
 const String _trueValue = 'true';
 const String _falseValue = 'false';
+const int _meadowKeyLimit = 1 << 32;
 
 class DriftSettingsRepository implements SettingsRepository {
   DriftSettingsRepository(this._db);
@@ -69,8 +73,49 @@ class DriftSettingsRepository implements SettingsRepository {
 
   @override
   Future<bool> hasStoredValues() async {
-    final rows = await _db.select(_db.settings).get();
+    final List<Setting> rows = await (_db.select(
+      _db.settings,
+    )..where((t) => t.key.isNotValue(SettingsKeys.meadowKey))).get();
     return rows.isNotEmpty;
+  }
+
+  @override
+  Future<int> meadowKey() async {
+    final int? stored = _decodeMeadowKey(await _readMeadowKey());
+    if (stored != null) {
+      return stored;
+    }
+    await _db
+        .into(_db.settings)
+        .insert(
+          SettingsCompanion.insert(
+            key: SettingsKeys.meadowKey,
+            value: Random.secure().nextInt(_meadowKeyLimit).toString(),
+          ),
+          mode: InsertMode.insertOrIgnore,
+        );
+    final int? kept = _decodeMeadowKey(await _readMeadowKey());
+    if (kept == null) {
+      throw StateError(
+        'The stored meadow key is not a whole number from 0 to 4294967295.',
+      );
+    }
+    return kept;
+  }
+
+  Future<String?> _readMeadowKey() async {
+    final Setting? row = await (_db.select(
+      _db.settings,
+    )..where((t) => t.key.equals(SettingsKeys.meadowKey))).getSingleOrNull();
+    return row?.value;
+  }
+
+  int? _decodeMeadowKey(String? raw) {
+    final int? key = int.tryParse(raw ?? '');
+    if (key == null || key < 0 || key >= _meadowKeyLimit) {
+      return null;
+    }
+    return key;
   }
 
   Future<void> _put(String key, String value) async {

@@ -59,9 +59,65 @@ void main() {
 
       await pumpEventQueue();
 
-      final dates = container.read(journaledDatesProvider).value ??
-          const <String>[];
+      final dates =
+          container.read(journaledDatesProvider).value ?? const <String>[];
       expect(dates.toSet(), <String>{'2026-07-15', '2026-07-12'});
+    });
+  });
+
+  group('journalEntryCountsProvider', () {
+    test('entry counts count live entries per date', () async {
+      final db = newTestDatabase();
+      addTearDown(db.close);
+      final container = newTestContainer(db);
+      final repo = container.read(journalRepositoryProvider);
+
+      final dayA = await repo.createDay(date: '2026-07-15');
+      await repo.createEntry(
+        dayId: dayA.id,
+        type: EntryType.text,
+        textContent: 'a1',
+      );
+      await repo.createEntry(
+        dayId: dayA.id,
+        type: EntryType.text,
+        textContent: 'a2',
+      );
+      final goneEntry = await repo.createEntry(
+        dayId: dayA.id,
+        type: EntryType.text,
+        textContent: 'gone',
+      );
+      await repo.softDeleteEntry(goneEntry.id);
+
+      final dayB = await repo.createDay(date: '2026-07-14');
+      await repo.createEntry(
+        dayId: dayB.id,
+        type: EntryType.text,
+        textContent: 'b',
+      );
+
+      final dayC = await repo.createDay(date: '2026-07-13');
+      await repo.createEntry(
+        dayId: dayC.id,
+        type: EntryType.text,
+        textContent: 'c',
+      );
+      await repo.softDeleteDay(dayC.id);
+
+      final sub = container.listen(
+        journalEntryCountsProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      addTearDown(sub.close);
+
+      await pumpEventQueue();
+
+      expect(container.read(journalEntryCountsProvider).value, <String, int>{
+        '2026-07-15': 2,
+        '2026-07-14': 1,
+      });
     });
   });
 }
