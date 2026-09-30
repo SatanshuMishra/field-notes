@@ -126,7 +126,9 @@ Widget _app(ProviderContainer container, _Layout layout) {
 
 MeadowStageState? _newestStage(WidgetTester tester, int known) {
   final List<MeadowStageState> stages = tester
-      .stateList<MeadowStageState>(find.byType(MeadowStage))
+      .stateList<MeadowStageState>(
+        find.byType(MeadowStage, skipOffstage: false),
+      )
       .toList();
   return stages.length > known ? stages.last : null;
 }
