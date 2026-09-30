@@ -715,7 +715,14 @@ void main() {
   testWidgets('the scene reads as one summary', (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     void expectSummary(String label) {
-      final SemanticsNode node = tester.getSemantics(find.byType(MeadowStage));
+      final SemanticsNode node = tester.getSemantics(
+        find
+            .descendant(
+              of: find.byType(MeadowStage),
+              matching: find.byType(Semantics),
+            )
+            .first,
+      );
       expect(node.label, label);
       expect(node.childrenCount, 0);
       expect(node.getSemanticsData().flagsCollection.isImage, isTrue);
@@ -755,6 +762,18 @@ void main() {
     expect(find.text('Mon, Jun 30'), findsOneWidget);
     expectSummary('Meadow, 2025: 16 blooms and 1 sprout');
     handle.dispose();
+  });
+
+  testWidgets('the scene takes several build steps per frame while it opens', (
+    WidgetTester tester,
+  ) async {
+    final MeadowStageState state = await _pumpStage(tester, year: _leapYear());
+    await _grow(tester, state);
+    expect(state.debugBuildFrames, greaterThan(0));
+    expect(
+      state.debugBuildFrames,
+      lessThanOrEqualTo((state.debugBuildSteps / 4).ceil() + 1),
+    );
   });
 
   testWidgets('the whole scene fits the memory ceiling', (

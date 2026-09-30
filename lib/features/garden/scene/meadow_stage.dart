@@ -30,6 +30,7 @@ const String meadowLoadingMessage = 'Growing your meadow…';
 const String meadowStageHint = 'Drag to look around · tap a flower';
 
 const Duration _fadeIn = Duration(milliseconds: 300);
+const int _buildStepsPerFrame = 4;
 const double _dragSlop = 5;
 const double _headReach = 5;
 const double _headSpread = 24;
@@ -72,6 +73,7 @@ class MeadowStage extends StatefulWidget {
     this.growAnimated = false,
     this.highlight,
     this.motion,
+    this.readyOverlay,
   });
 
   final MeadowYear year;
@@ -84,6 +86,7 @@ class MeadowStage extends StatefulWidget {
   final bool growAnimated;
   final MeadowRange? highlight;
   final GardenMotionProfile? motion;
+  final Widget? readyOverlay;
 
   int get resolvedGrowthPoint => growthPoint ?? year.limit;
 
@@ -107,6 +110,8 @@ class MeadowStageState extends State<MeadowStage>
   _Geometry? _geometry;
   _SceneImages? _scene;
   _Build? _build;
+  int _buildSteps = 0;
+  int _buildFrames = 0;
   int? _stepCallback;
   Size? _box;
   double _ratio = 1;
@@ -136,6 +141,12 @@ class MeadowStageState extends State<MeadowStage>
 
   @visibleForTesting
   bool get debugIsReady => _scene != null;
+
+  @visibleForTesting
+  int get debugBuildSteps => _buildSteps;
+
+  @visibleForTesting
+  int get debugBuildFrames => _buildFrames;
 
   @visibleForTesting
   bool get debugIsTicking => _ticker.isTicking;
@@ -278,11 +289,19 @@ class MeadowStageState extends State<MeadowStage>
       final _ImageKey? wanted = _wanted();
       if (wanted != null && _scene?.key != wanted) {
         _build = _Build(wanted);
+        _buildSteps = 0;
+        _buildFrames = 0;
         _scheduleStep();
       }
       return;
     }
-    if (!running.advance(_palette)) {
+    _buildFrames++;
+    bool finished = false;
+    for (int i = 0; i < _buildStepsPerFrame && !finished; i++) {
+      _buildSteps++;
+      finished = running.advance(_palette);
+    }
+    if (!finished) {
       _scheduleStep();
       return;
     }
@@ -576,12 +595,20 @@ class MeadowStageState extends State<MeadowStage>
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      image: true,
-      label: meadowStageLabel(widget.year),
-      excludeSemantics: true,
-      child: LayoutBuilder(builder: _layout),
+    final Widget? overlay = widget.readyOverlay;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Semantics(
+          container: true,
+          image: true,
+          label: meadowStageLabel(widget.year),
+          excludeSemantics: true,
+          child: LayoutBuilder(builder: _layout),
+        ),
+        if (overlay != null && _scene != null)
+          FadeTransition(opacity: _fade, child: overlay),
+      ],
     );
   }
 

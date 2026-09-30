@@ -336,6 +336,23 @@ void main() {
     expect(atlas.isReady, isTrue);
   });
 
+  test(
+    'no bake draws more than 24 plants and each sheet is still one image',
+    () {
+      final MeadowPlantAtlas atlas = _built(
+        _plantsFor(_openKey),
+        density: _fullScreen,
+        maxBytes: 1 << 40,
+      );
+      expect(atlas.debugLargestBake, greaterThan(0));
+      expect(atlas.debugLargestBake, lessThanOrEqualTo(24));
+      expect(<Image?>[
+        for (int sheet = 0; sheet < atlas.sheetCount; sheet++)
+          atlas.imageOf(sheet),
+      ], everyElement(isNotNull));
+    },
+  );
+
   test('dispose releases every sheet', () {
     final MeadowPlantAtlas atlas = MeadowPlantAtlas(
       _plantsFor(_openKey),

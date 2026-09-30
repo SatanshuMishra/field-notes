@@ -359,6 +359,7 @@ void main() {
         counts: const <String, int>{},
         now: _midnight,
       );
+      await _grow(tester);
 
       final MeadowStage stage = _stage(tester);
       final Finder message = find.text(
@@ -378,10 +379,25 @@ void main() {
       final Offset centre = tester.getCenter(message);
       expect(scene.contains(centre), isTrue);
       expect(centre.dx, closeTo(scene.center.dx, 1));
-      expect(
-        tester.getTopLeft(message).dy,
-        greaterThan(tester.getBottomLeft(find.text(meadowLoadingMessage)).dy),
+    },
+  );
+
+  testWidgets(
+    'an empty meadow shows its waiting line only once the scene is ready',
+    (WidgetTester tester) async {
+      await _pumpPage(
+        tester,
+        platform: TargetPlatform.macOS,
+        size: _desk,
+        days: const <Day>[],
+        counts: const <String, int>{},
       );
+      expect(find.text(meadowLoadingMessage), findsOneWidget);
+      expect(find.text(meadowWaitingMessage), findsNothing);
+
+      await _grow(tester);
+      expect(find.text(meadowWaitingMessage), findsOneWidget);
+      expect(find.text(meadowLoadingMessage), findsNothing);
     },
   );
 
