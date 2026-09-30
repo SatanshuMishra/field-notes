@@ -21,9 +21,6 @@ const String recorderLeaveLabel = 'Leave';
 
 const Color recorderStageColor = Color(0xFF1C1713);
 
-const double recorderTrafficLightsClearance =
-    shellTitleBarPadding + windowButtonsSlotWidth;
-
 const Color _chromeInk = Color(0xFFB7A58C);
 const Color _leaveGlyphInk = Color(0xCCFFFFFF);
 const Color _leaveGlyphInkBottomBar = Color(0xBFFFFFFF);
@@ -204,7 +201,7 @@ class _Stage extends StatelessWidget {
                 child: Padding(
                   padding: EdgeInsets.only(
                     left: sidebar
-                        ? recorderTrafficLightsClearance - _sidebarBandInset
+                        ? windowButtonsClearance - _sidebarBandInset
                         : 0,
                   ),
                   child: _leave(),

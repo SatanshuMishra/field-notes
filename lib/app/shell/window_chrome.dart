@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 const double shellTitleBarHeight = 42;
 const double shellTitleBarPadding = 16;
 const double windowButtonsSlotWidth = 62;
+const double windowButtonsClearance =
+    shellTitleBarPadding + windowButtonsSlotWidth;
 
 const Key windowTitleBarKey = ValueKey<String>('window-titlebar');
 

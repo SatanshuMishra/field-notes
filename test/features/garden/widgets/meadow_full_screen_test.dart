@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:field_notes/app/shell/shell_destination.dart';
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
@@ -170,6 +171,51 @@ double _routeOpacity(WidgetTester tester) => tester
     .value;
 
 void main() {
+  testWidgets('on the sidebar layout the full-screen title starts clear of the '
+      'window buttons', (WidgetTester tester) async {
+    final MeadowYear year = _yearOf(2025, today: DateTime(2025, 6, 30));
+    final MeadowFullScreenRequest request = MeadowFullScreenRequest(
+      year: 2025,
+      hourMinutes: null,
+      growthPoint: year.limit,
+    );
+
+    final ProviderContainer mac = await _pumpPage(
+      tester,
+      size: _macWindow,
+      platform: TargetPlatform.macOS,
+    );
+    await _open(
+      tester,
+      mac,
+      request: request,
+      year: year,
+      compact: false,
+      isCurrentYear: true,
+    );
+    expect(
+      tester.getRect(find.byKey(meadowFullScreenTitleKey)).left,
+      greaterThanOrEqualTo(windowButtonsClearance),
+    );
+    await tester.tap(find.byKey(meadowFullScreenCloseKey));
+    await _settleClose(tester);
+
+    final ProviderContainer phone = await _pumpPage(
+      tester,
+      size: _phoneScreen,
+      platform: TargetPlatform.android,
+    );
+    await _open(
+      tester,
+      phone,
+      request: request,
+      year: year,
+      compact: true,
+      isCurrentYear: true,
+    );
+    expect(tester.getRect(find.byKey(meadowFullScreenTitleKey)).left, 14);
+  });
+
   testWidgets("full screen opens with the page's year and growth point", (
     WidgetTester tester,
   ) async {
