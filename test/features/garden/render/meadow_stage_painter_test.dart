@@ -44,6 +44,7 @@ const Set<String> _imageAndGradientDraws = <String>{
   'drawRawAtlas',
   'drawVertices',
   'drawParagraph',
+  'drawPaint',
 };
 
 String _dateOf(int index) => captureDateKey(DateTime(_leapYear, 1, 1 + index));
@@ -104,7 +105,30 @@ class _RecordingCanvas implements Canvas {
     for (final _Call call in calls)
       if (call.name.startsWith('draw')) call,
   ];
+
+  List<(int, int)> get layers {
+    final List<(int, bool)> open = <(int, bool)>[];
+    final List<(int, int)> spans = <(int, int)>[];
+    for (int i = 0; i < calls.length; i++) {
+      switch (calls[i].name) {
+        case 'save':
+          open.add((i, false));
+        case 'saveLayer':
+          open.add((i, true));
+        case 'restore':
+          final (int start, bool layer) = open.removeLast();
+          if (layer) {
+            spans.add((start, i));
+          }
+      }
+    }
+    return spans;
+  }
 }
+
+bool _masksWithDstIn(_Call call) =>
+    call.name == 'drawImageRect' &&
+    (call.arguments[3]! as Paint).blendMode == BlendMode.dstIn;
 
 class _Sprite {
   const _Sprite({
@@ -405,7 +429,7 @@ void main() {
         );
         expect(frame.count('clipPath'), 0);
         expect(frame.count('clipRRect'), 0);
-        expect(frame.count('saveLayer'), lessThanOrEqualTo(1));
+        expect(frame.count('saveLayer'), lessThanOrEqualTo(3));
 
         final int atlasCalls = frame.named(_atlasCalls).length;
         expect(atlasCalls, greaterThan(0));
@@ -414,6 +438,51 @@ void main() {
           scene.flowers(frame).keys.toList()..sort(),
           scene.visibleDays(scene.year.limit),
         );
+      }
+    },
+  );
+
+  test(
+    'the water marks draw in one layer masked to the water without colour filters',
+    () {
+      for (final (MeadowPalette palette, _Poses poses, bool glints)
+          in <(MeadowPalette, _Poses, bool)>[
+            (scene.noon, scene.dayPoses, true),
+            (scene.midnight, scene.nightPoses, false),
+          ]) {
+        final _RecordingCanvas frame = scene.paint(
+          time: 42.5,
+          palette: palette,
+          poses: poses,
+        );
+        final List<int> marks = <int>[
+          for (int i = 0; i < frame.calls.length; i++)
+            if (frame.calls[i].name == 'drawOval') i,
+        ];
+        for (final int mark in marks) {
+          final Paint paint = frame.calls[mark].arguments[1]! as Paint;
+          expect(paint.colorFilter, isNull, reason: 'drawOval $mark');
+          expect(paint.shader, isNull, reason: 'drawOval $mark');
+        }
+        if (!glints) {
+          continue;
+        }
+        expect(palette.glintO, greaterThan(0));
+        expect(marks, isNotEmpty);
+        final List<(int, int)> masked = <(int, int)>[
+          for (final (int start, int end) in frame.layers)
+            if (frame.calls.sublist(start, end).any(_masksWithDstIn))
+              (start, end),
+        ];
+        for (final int mark in marks) {
+          expect(
+            masked.any(
+              ((int, int) layer) => layer.$1 < mark && mark < layer.$2,
+            ),
+            isTrue,
+            reason: 'drawOval $mark',
+          );
+        }
       }
     },
   );

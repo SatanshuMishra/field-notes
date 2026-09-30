@@ -366,34 +366,31 @@ class MeadowStagePainter extends CustomPainter {
         );
       }
     }
-    if (marks.isEmpty) {
+    final List<MeadowImage> water = layers.water;
+    if (marks.isEmpty || water.isEmpty) {
       return;
     }
-    final ColorFilter glintColour = ColorFilter.mode(
-      palette.glintC,
-      BlendMode.srcIn,
+    canvas.saveLayer(
+      water
+          .map((MeadowImage tile) => tile.rect)
+          .reduce((Rect a, Rect b) => a.expandToInclude(b)),
+      Paint(),
     );
-    final ColorFilter flowColour = ColorFilter.mode(
-      palette.flowC,
-      BlendMode.srcIn,
-    );
-    final Paint paint = Paint()..filterQuality = FilterQuality.low;
-    for (final MeadowImage tile in layers.water) {
-      final ImageShader mask = _waterMask(tile);
-      for (final _WaterMark mark in marks) {
-        if (!mark.bounds.overlaps(tile.rect)) {
-          continue;
-        }
-        final double? stroke = mark.stroke;
-        paint
-          ..shader = mask
-          ..colorFilter = mark.glint ? glintColour : flowColour
-          ..color = _opacity(mark.opacity)
+    for (final _WaterMark mark in marks) {
+      final double? stroke = mark.stroke;
+      canvas.drawOval(
+        mark.oval,
+        Paint()
+          ..color = _faded(
+            mark.glint ? palette.glintC : palette.flowC,
+            mark.opacity,
+          )
           ..style = stroke == null ? PaintingStyle.fill : PaintingStyle.stroke
-          ..strokeWidth = stroke ?? 0;
-        canvas.drawOval(mark.oval, paint);
-      }
+          ..strokeWidth = stroke ?? 0,
+      );
     }
+    layers.maskToWater(canvas);
+    canvas.restore();
   }
 
   void _paintMist(Canvas canvas, _PaletteShaders shaders) {
@@ -798,31 +795,6 @@ Rect _ovalOf(
   height: ellipse.radiusY * 2 * scale,
 );
 
-final Expando<ImageShader> _waterMasks = Expando<ImageShader>();
-
-ImageShader _waterMask(MeadowImage tile) {
-  final ImageShader? cached = _waterMasks[tile.image];
-  if (cached != null) {
-    return cached;
-  }
-  final Float64List matrix = Float64List(16)
-    ..[0] = tile.rect.width / tile.image.width
-    ..[5] = tile.rect.height / tile.image.height
-    ..[10] = 1
-    ..[12] = tile.rect.left
-    ..[13] = tile.rect.top
-    ..[15] = 1;
-  final ImageShader shader = ImageShader(
-    tile.image,
-    TileMode.decal,
-    TileMode.decal,
-    matrix,
-    filterQuality: FilterQuality.low,
-  );
-  _waterMasks[tile.image] = shader;
-  return shader;
-}
-
 class _WaterMark {
   const _WaterMark({
     required this.oval,
@@ -835,8 +807,6 @@ class _WaterMark {
   final double opacity;
   final bool glint;
   final double? stroke;
-
-  Rect get bounds => oval.inflate((stroke ?? 0) / 2);
 }
 
 Color _clear(Color colour) => colour.withValues(alpha: 0);
