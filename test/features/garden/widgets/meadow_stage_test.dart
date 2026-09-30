@@ -1,0 +1,793 @@
+import 'dart:math' as math;
+
+import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/tokens/field_notes_colors.dart';
+import 'package:field_notes/design/tokens/typography.dart';
+import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/core/capture_date.dart';
+import 'package:field_notes/features/garden/model/garden_motion.dart';
+import 'package:field_notes/features/garden/model/meadow_random.dart';
+import 'package:field_notes/features/garden/model/meadow_year.dart';
+import 'package:field_notes/features/garden/scene/meadow_plants.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage.dart';
+import 'package:field_notes/features/garden/scene/meadow_stage_tooltip.dart';
+import 'package:field_notes/features/garden/scene/meadow_terrain.dart'
+    hide MeadowRange;
+import 'package:field_notes/features/garden/scene/meadow_view.dart';
+import 'package:field_notes/features/garden/scene/meadow_world.dart';
+import 'package:field_notes/features/garden/sky/sky_scene.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import '../support/garden_harness.dart';
+
+const int _meadowKey = 20250630;
+const double _latitude = 53.55;
+const double _longitude = -113.4667;
+const double _margin = 20;
+const int _buildFrames = 6000;
+const int _megabyte = 1000 * 1000;
+const Size _sidebarCard = Size(1100, 502.9);
+const Size _bottomBarCard = Size(400, 300);
+const Size _phoneScreen = Size(411.4, 868.6);
+const Size _macWindow = Size(1100, 700);
+
+final SkyScene _noon = skySceneAt(
+  DateTime.utc(2025, 6, 30, 19),
+  _latitude,
+  _longitude,
+);
+
+String _dateKey(int year, int month, int day) =>
+    captureDateKey(DateTime(year, month, day));
+
+int _indexOf(int year, int month, int day) =>
+    DateTime.utc(year, month, day).difference(DateTime.utc(year)).inDays;
+
+MeadowYear _sampleYear() => MeadowYear.build(
+  days: <Day>[
+    for (int day = 13; day <= 23; day++)
+      dayOf(_dateKey(2025, 1, day), mood: Mood.calm),
+    dayOf(_dateKey(2025, 3, 5), mood: Mood.happy),
+    dayOf(_dateKey(2025, 4, 20), mood: Mood.hopeful),
+    dayOf(_dateKey(2025, 6, 30), mood: Mood.warm),
+    dayOf(_dateKey(2025, 8, 8), mood: Mood.sad),
+    dayOf(_dateKey(2025, 11, 11), mood: Mood.grateful),
+  ],
+  entryCounts: <String, int>{
+    _dateKey(2025, 6, 30): 1,
+    _dateKey(2025, 9, 15): 2,
+  },
+  year: 2025,
+  today: DateTime(2026, 3, 1),
+);
+
+MeadowYear _countedYear({
+  required int year,
+  required int blooms,
+  required int sprouts,
+  required DateTime today,
+}) {
+  String dateAt(int index) => captureDateKey(DateTime(year, 1, 1 + index));
+  return MeadowYear.build(
+    days: <Day>[
+      for (int i = 0; i < blooms; i++)
+        dayOf(dateAt(i), mood: moodOrder[i % moodOrder.length]),
+    ],
+    entryCounts: <String, int>{
+      for (int i = 0; i < sprouts; i++) dateAt(blooms + 3 + i): 1,
+    },
+    year: year,
+    today: today,
+  );
+}
+
+MeadowYear _leapYear() => MeadowYear.build(
+  days: <Day>[
+    for (int i = 0; i < 366; i++)
+      dayOf(
+        captureDateKey(DateTime(2028, 1, 1 + i)),
+        mood: moodOrder[(i ~/ 5) % moodOrder.length],
+      ),
+  ],
+  entryCounts: <String, int>{
+    for (int i = 0; i < 366; i++)
+      captureDateKey(DateTime(2028, 1, 1 + i)): 1 + i % 4,
+  },
+  year: 2028,
+  today: DateTime(2029, 3, 1),
+);
+
+class _Expected {
+  factory _Expected(MeadowYear year) {
+    final int seed = meadowSeed(_meadowKey, year.year);
+    final MeadowTerrain terrain = buildMeadowTerrain(seed: seed, year: year);
+    return _Expected._(
+      year: year,
+      terrain: terrain,
+      plants: buildMeadowPlants(seed: seed, year: year, terrain: terrain),
+    );
+  }
+
+  const _Expected._({
+    required this.year,
+    required this.terrain,
+    required this.plants,
+  });
+
+  final MeadowYear year;
+  final MeadowTerrain terrain;
+  final MeadowPlants plants;
+
+  MeadowOldSpruce get spruce => terrain.forest.oldSpruce!;
+
+  Offset get insideSpruce =>
+      Offset(spruce.x, spruce.top + spruce.height * 0.55);
+
+  MeadowPlant plantOn(int month, int day) => plants.plants.singleWhere(
+    (MeadowPlant plant) => plant.dayIndex == _indexOf(year.year, month, day),
+  );
+
+  Offset tipOf(MeadowPlant plant) {
+    final Offset head = plant.heads.last;
+    return Offset(head.dx, head.dy - 14 * plant.scale / meadowNearScale);
+  }
+
+  List<MeadowPlant> reaching(Offset world, {MeadowPlant? besides}) =>
+      <MeadowPlant>[
+        for (final MeadowPlant plant in plants.plants)
+          if (!identical(plant, besides) &&
+              !plant.hidden &&
+              plant.heads.any(
+                (Offset head) =>
+                    (head - world).distance <
+                    5 + 24 * plant.scale / meadowNearScale,
+              ))
+            plant,
+      ];
+}
+
+Future<MeadowStageState> _pumpStage(
+  WidgetTester tester, {
+  MeadowYear? year,
+  Size box = _sidebarCard,
+  double ratio = 1,
+  bool compact = false,
+  MeadowSceneMode mode = MeadowSceneMode.page,
+  GardenMotionProfile? motion = GardenMotionProfile.reduced,
+  bool reduceMotion = false,
+  bool tickers = true,
+  int? growthPoint,
+  Brightness brightness = Brightness.light,
+  Key? stageKey,
+}) async {
+  final MeadowYear shown = year ?? _sampleYear();
+  tester.view.physicalSize =
+      Size(box.width + 2 * _margin, box.height + 2 * _margin) * ratio;
+  tester.view.devicePixelRatio = ratio;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      key: ValueKey<Brightness>(brightness),
+      debugShowCheckedModeBanner: false,
+      theme: fieldNotesTheme(
+        platform: compact ? TargetPlatform.android : TargetPlatform.macOS,
+        brightness: brightness,
+      ),
+      home: Builder(
+        builder: (BuildContext context) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(disableAnimations: reduceMotion),
+          child: Scaffold(
+            body: Center(
+              child: SizedBox.fromSize(
+                size: box,
+                child: TickerMode(
+                  enabled: tickers,
+                  child: MeadowStage(
+                    key: stageKey ?? UniqueKey(),
+                    year: shown,
+                    seed: meadowSeed(_meadowKey, shown.year),
+                    sky: _noon,
+                    morning: false,
+                    mode: mode,
+                    compact: compact,
+                    growthPoint: growthPoint,
+                    motion: motion,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  return tester.state<MeadowStageState>(find.byType(MeadowStage));
+}
+
+Future<void> _grow(WidgetTester tester, MeadowStageState state) async {
+  for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 2)),
+    );
+    await tester.pump();
+  }
+  expect(state.debugIsReady, isTrue, reason: 'the meadow never finished');
+}
+
+Offset _global(WidgetTester tester, MeadowStageState state, Offset world) =>
+    tester.getTopLeft(find.byType(MeadowStage)) +
+    state.debugViewport!.toLocal(world);
+
+Rect _stageRect(WidgetTester tester) =>
+    tester.getRect(find.byType(MeadowStage));
+
+double _opacity(WidgetTester tester) => tester
+    .widget<FadeTransition>(
+      find.descendant(
+        of: find.byType(MeadowStage),
+        matching: find.byType(FadeTransition),
+      ),
+    )
+    .opacity
+    .value;
+
+BoxDecoration _tooltipDecoration(WidgetTester tester) =>
+    tester
+            .widget<DecoratedBox>(
+              find.descendant(
+                of: find.byType(MeadowStageTooltip),
+                matching: find.byType(DecoratedBox),
+              ),
+            )
+            .decoration
+        as BoxDecoration;
+
+TextStyle _styleOf(WidgetTester tester, String text) =>
+    tester.widget<Text>(find.text(text)).style!;
+
+Future<TestGesture> _mouse(WidgetTester tester) async {
+  final TestGesture mouse = await tester.createGesture(
+    kind: PointerDeviceKind.mouse,
+  );
+  await mouse.addPointer(location: Offset.zero);
+  addTearDown(mouse.removePointer);
+  return mouse;
+}
+
+void _moveLifecycle(WidgetTester tester, List<AppLifecycleState> states) {
+  for (final AppLifecycleState state in states) {
+    tester.binding.handleAppLifecycleStateChanged(state);
+  }
+}
+
+void _expectBubble(
+  WidgetTester tester,
+  Offset anchor, {
+  required FieldNotesColors colors,
+  required String title,
+  required String subtitle,
+}) {
+  final Rect bubble = tester.getRect(find.byType(MeadowStageTooltip));
+  expect(bubble.center.dx, closeTo(anchor.dx, 0.5));
+  expect(bubble.bottom, closeTo(anchor.dy, 0.5));
+  final BoxDecoration decoration = _tooltipDecoration(tester);
+  expect(decoration.color, colors.cardBright);
+  expect(decoration.border, Border.all(color: colors.line, width: 1.5));
+  expect(decoration.borderRadius, BorderRadius.circular(12));
+  expect(decoration.boxShadow, <BoxShadow>[
+    BoxShadow(color: colors.shadowTint(0x33), offset: const Offset(2, 2)),
+  ]);
+  final TextStyle titleStyle = _styleOf(tester, title);
+  expect(titleStyle.fontFamily, TypographyTokens.serif);
+  expect(titleStyle.fontSize, 16);
+  expect(titleStyle.color, colors.ink);
+  final TextStyle subtitleStyle = _styleOf(tester, subtitle);
+  expect(subtitleStyle.fontSize, 12);
+  expect(subtitleStyle.color, colors.mutedDeep);
+}
+
+void main() {
+  testWidgets('hovering a flower shows its date, mood, flower and entries', (
+    WidgetTester tester,
+  ) async {
+    final _Expected expected = _Expected(_sampleYear());
+    final MeadowPlant june = expected.plantOn(6, 30);
+    final MeadowPlant sprout = expected.plantOn(9, 15);
+    expect(june.mood, Mood.warm);
+    expect(sprout.isSprout, isTrue);
+    for (final MeadowPlant plant in <MeadowPlant>[june, sprout]) {
+      expect(
+        expected
+            .reaching(plant.heads.last, besides: plant)
+            .where((MeadowPlant rival) => rival.y >= plant.y),
+        isEmpty,
+      );
+    }
+
+    final TestGesture mouse = await _mouse(tester);
+    for (final (MeadowSceneMode mode, Size box) in <(MeadowSceneMode, Size)>[
+      (MeadowSceneMode.page, _sidebarCard),
+      (MeadowSceneMode.study, _sidebarCard),
+      (MeadowSceneMode.full, _macWindow),
+    ]) {
+      final MeadowStageState state = await _pumpStage(
+        tester,
+        box: box,
+        mode: mode,
+      );
+      await _grow(tester, state);
+
+      await mouse.moveTo(_global(tester, state, june.heads.last));
+      await tester.pump();
+      expect(find.text('Mon, Jun 30'), findsOneWidget, reason: '$mode');
+      expect(find.text('Warm · Sunflower · 1 entry'), findsOneWidget);
+      _expectBubble(
+        tester,
+        _global(tester, state, expected.tipOf(june)),
+        colors: FieldNotesColors.light,
+        title: 'Mon, Jun 30',
+        subtitle: 'Warm · Sunflower · 1 entry',
+      );
+
+      await mouse.down(_global(tester, state, june.heads.last));
+      await tester.pump();
+      await mouse.up();
+      await tester.pump();
+      expect(find.text('Mon, Jun 30'), findsOneWidget);
+
+      if (mode != MeadowSceneMode.full) {
+        await mouse.moveTo(_global(tester, state, sprout.heads.last));
+        await tester.pump();
+        expect(find.text('Mon, Sep 15'), findsOneWidget);
+        expect(
+          find.text('Wrote, no mood · Sprout · 2 entries'),
+          findsOneWidget,
+        );
+      }
+
+      await mouse.moveTo(Offset.zero);
+      await tester.pump();
+      expect(find.byType(MeadowStageTooltip), findsNothing);
+
+      await tester.tapAt(_global(tester, state, june.heads.last));
+      await tester.pump();
+      expect(find.byType(MeadowStageTooltip), findsNothing);
+    }
+  });
+
+  testWidgets('hovering the old spruce shows its run', (
+    WidgetTester tester,
+  ) async {
+    final _Expected expected = _Expected(_sampleYear());
+    final MeadowOldSpruce spruce = expected.spruce;
+    expect(spruce.day, _indexOf(2025, 1, 23));
+    expect(expected.reaching(expected.insideSpruce), isEmpty);
+    final GlobalKey key = GlobalKey();
+
+    MeadowStageState state = await _pumpStage(
+      tester,
+      mode: MeadowSceneMode.study,
+      growthPoint: spruce.day,
+      stageKey: key,
+    );
+    await _grow(tester, state);
+    final TestGesture mouse = await _mouse(tester);
+    await mouse.moveTo(_global(tester, state, expected.insideSpruce));
+    await tester.pump();
+    expect(find.byType(MeadowStageTooltip), findsNothing);
+
+    state = await _pumpStage(
+      tester,
+      mode: MeadowSceneMode.study,
+      growthPoint: spruce.day + 1,
+      stageKey: key,
+    );
+    await mouse.moveTo(_global(tester, state, expected.insideSpruce));
+    await mouse.moveTo(
+      _global(tester, state, expected.insideSpruce + const Offset(1, 0)),
+    );
+    await tester.pump();
+    final Offset tip = Offset(spruce.x, spruce.top + spruce.height * 0.15);
+    _expectBubble(
+      tester,
+      _global(tester, state, tip),
+      colors: FieldNotesColors.light,
+      title: 'The old spruce',
+      subtitle: '11 days in a row · Jan 13 – Jan 23',
+    );
+
+    await mouse.moveTo(
+      _global(tester, state, Offset(spruce.x + spruce.width, spruce.top + 4)),
+    );
+    await tester.pump();
+    expect(find.byType(MeadowStageTooltip), findsNothing);
+
+    state = await _pumpStage(tester, brightness: Brightness.dark);
+    await _grow(tester, state);
+    await mouse.moveTo(_global(tester, state, expected.insideSpruce));
+    await tester.pump();
+    _expectBubble(
+      tester,
+      _global(tester, state, tip),
+      colors: FieldNotesColors.dark,
+      title: 'The old spruce',
+      subtitle: '11 days in a row · Jan 13 – Jan 23',
+    );
+  });
+
+  testWidgets('a tap on the phone shows the day card and a tap on the ground '
+      'clears it', (WidgetTester tester) async {
+    final _Expected expected = _Expected(_sampleYear());
+    final MeadowPlant june = expected.plantOn(6, 30);
+    final MeadowPlant april = expected.plantOn(4, 20);
+    const Offset ground = Offset(400, 560);
+    expect(expected.reaching(ground), isEmpty);
+    expect(
+      expected
+          .reaching(june.heads.last, besides: june)
+          .where((MeadowPlant rival) => rival.y >= june.y),
+      isEmpty,
+    );
+
+    MeadowStageState state = await _pumpStage(
+      tester,
+      box: _bottomBarCard,
+      compact: true,
+    );
+    await _grow(tester, state);
+    Rect stage = _stageRect(tester);
+    expect(find.text(meadowStageHint), findsOneWidget);
+    Rect hint = tester.getRect(
+      find.ancestor(
+        of: find.text(meadowStageHint),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    expect(hint.top, closeTo(stage.top + 8, 0.01));
+    expect(hint.center.dx, closeTo(stage.center.dx, 0.01));
+
+    final TestGesture mouse = await _mouse(tester);
+    await mouse.moveTo(_global(tester, state, june.heads.last));
+    await tester.pump();
+    expect(find.byType(MeadowStageTooltip), findsNothing);
+    await mouse.moveTo(Offset.zero);
+
+    await tester.tapAt(_global(tester, state, june.heads.last));
+    await tester.pump();
+    expect(find.text('Mon, Jun 30'), findsOneWidget);
+    expect(find.text('Warm · Sunflower · 1 entry'), findsOneWidget);
+    expect(find.text(meadowStageHint), findsNothing);
+    Rect card = tester.getRect(find.byType(MeadowStageTooltip));
+    expect(card.left, closeTo(stage.left + 8, 0.01));
+    expect(card.right, closeTo(stage.right - 8, 0.01));
+    expect(card.bottom, closeTo(stage.bottom - 8, 0.01));
+    final BoxDecoration decoration = _tooltipDecoration(tester);
+    expect(decoration.color, FieldNotesColors.light.cardBright);
+    expect(decoration.borderRadius, BorderRadius.circular(11));
+    expect(_styleOf(tester, 'Mon, Jun 30').fontSize, 14);
+    expect(_styleOf(tester, 'Warm · Sunflower · 1 entry').fontSize, 10);
+
+    await tester.tapAt(_global(tester, state, expected.insideSpruce));
+    await tester.pump();
+    expect(find.text('The old spruce'), findsOneWidget);
+
+    await tester.tapAt(_global(tester, state, ground));
+    await tester.pump();
+    expect(find.byType(MeadowStageTooltip), findsNothing);
+
+    state = await _pumpStage(
+      tester,
+      box: _phoneScreen,
+      compact: true,
+      mode: MeadowSceneMode.full,
+    );
+    await _grow(tester, state);
+    stage = _stageRect(tester);
+    hint = tester.getRect(
+      find.ancestor(
+        of: find.text(meadowStageHint),
+        matching: find.byType(DecoratedBox),
+      ),
+    );
+    expect(hint.bottom, closeTo(stage.bottom - 18, 0.01));
+    final Offset aprilAt = _global(tester, state, april.heads.last);
+    expect(stage.contains(aprilAt), isTrue);
+    await tester.tapAt(aprilAt);
+    await tester.pump();
+    expect(find.text('Sun, Apr 20'), findsOneWidget);
+    expect(find.text('Hopeful · Daffodil'), findsOneWidget);
+    card = tester.getRect(find.byType(MeadowStageTooltip));
+    expect(card.bottom, closeTo(stage.bottom - 54, 0.01));
+    expect(find.text(meadowStageHint), findsNothing);
+
+    await tester.tapAt(_global(tester, state, ground));
+    await tester.pump();
+    expect(find.byType(MeadowStageTooltip), findsNothing);
+  });
+
+  testWidgets(
+    'the sidebar page fits the meadow and the phone and full screen cover '
+    'and pan',
+    (WidgetTester tester) async {
+      final _Expected expected = _Expected(_sampleYear());
+      final double focusX = expected.terrain.sky.focusX;
+      MeadowStageState state = await _pumpStage(tester);
+      await _grow(tester, state);
+      expect(state.debugViewport!.scale, closeTo(1100 / 1400, 1e-9));
+      expect(state.debugViewport!.offset, Offset.zero);
+      expect(state.debugViewport!.pan, 0);
+      await tester.drag(
+        find.byType(MeadowStage),
+        const Offset(-200, 0),
+        kind: PointerDeviceKind.mouse,
+      );
+      await tester.pump();
+      expect(state.debugViewport!.pan, 0);
+      expect(state.debugViewport!.offset, Offset.zero);
+
+      for (final (
+            Size box,
+            bool compact,
+            MeadowSceneMode mode,
+            PointerDeviceKind kind,
+          )
+          in <(Size, bool, MeadowSceneMode, PointerDeviceKind)>[
+            (
+              _bottomBarCard,
+              true,
+              MeadowSceneMode.page,
+              PointerDeviceKind.touch,
+            ),
+            (_phoneScreen, true, MeadowSceneMode.full, PointerDeviceKind.touch),
+            (_macWindow, false, MeadowSceneMode.full, PointerDeviceKind.mouse),
+          ]) {
+        state = await _pumpStage(
+          tester,
+          box: box,
+          compact: compact,
+          mode: mode,
+        );
+        await _grow(tester, state);
+        final double scale = math.max(
+          box.width / meadowWorldWidth,
+          box.height / meadowWorldHeight,
+        );
+        final double visible = box.width / scale;
+        final double edge = meadowWorldWidth - visible;
+        final double start = (focusX - visible / 2).clamp(0.0, edge);
+        final String reason = '$box $mode';
+        expect(state.debugViewport!.scale, closeTo(scale, 1e-9));
+        expect(state.debugViewport!.pan, closeTo(start, 1e-9), reason: reason);
+        expect(
+          state.debugViewport!.offset,
+          offsetMoreOrLessEquals(
+            Offset(
+              -start * scale,
+              (box.height - meadowWorldHeight * scale) / 2,
+            ),
+          ),
+        );
+
+        await tester.drag(
+          find.byType(MeadowStage),
+          const Offset(-120, 0),
+          kind: kind,
+        );
+        await tester.pump();
+        expect(
+          state.debugViewport!.pan,
+          closeTo(math.min(edge, start + 120 / scale), 1e-6),
+          reason: reason,
+        );
+        if (kind == PointerDeviceKind.touch) {
+          expect(find.byType(MeadowStageTooltip), findsNothing);
+          expect(find.text(meadowStageHint), findsNothing);
+        }
+
+        await tester.drag(
+          find.byType(MeadowStage),
+          const Offset(-5000, 0),
+          kind: kind,
+        );
+        await tester.pump();
+        expect(state.debugViewport!.pan, closeTo(edge, 1e-6), reason: reason);
+
+        await tester.drag(
+          find.byType(MeadowStage),
+          const Offset(5000, 0),
+          kind: kind,
+        );
+        await tester.pump();
+        expect(state.debugViewport!.pan, 0, reason: reason);
+      }
+    },
+  );
+
+  testWidgets('the card shows at once and the scene fades in when ready', (
+    WidgetTester tester,
+  ) async {
+    final GlobalKey key = GlobalKey();
+    final MeadowStageState state = await _pumpStage(tester, stageKey: key);
+    expect(find.text(meadowLoadingMessage), findsOneWidget);
+    expect(state.debugIsReady, isFalse);
+    expect(state.debugImageBytes, 0);
+    expect(
+      tester.getCenter(find.text(meadowLoadingMessage)),
+      offsetMoreOrLessEquals(tester.getCenter(find.byType(MeadowStage))),
+    );
+    final TextStyle caption = _styleOf(tester, meadowLoadingMessage);
+    expect(caption.fontSize, 12);
+    expect(caption.fontFamily, TypographyTokens.sans);
+    expect(caption.color, FieldNotesColors.light.muted);
+
+    await _grow(tester, state);
+    expect(find.text(meadowLoadingMessage), findsNothing);
+    expect(state.debugImageBytes, greaterThan(0));
+    expect(_opacity(tester), lessThan(0.05));
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(_opacity(tester), inExclusiveRange(0.05, 1));
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(_opacity(tester), 1);
+
+    final double before = state.debugSceneDensity!;
+    await _pumpStage(tester, box: const Size(800, 365.7), stageKey: key);
+    final double after = 800 / meadowWorldWidth;
+    expect(state.debugViewport!.scale, closeTo(after, 1e-9));
+    int frames = 0;
+    while (state.debugSceneDensity != after && frames < _buildFrames) {
+      expect(find.text(meadowLoadingMessage), findsNothing);
+      expect(state.debugSceneDensity, before);
+      expect(_opacity(tester), 1);
+      await tester.pump();
+      frames++;
+    }
+    expect(frames, greaterThan(1));
+    expect(state.debugSceneDensity, after);
+    expect(_opacity(tester), 1);
+  });
+
+  testWidgets('reduce motion holds still and a hidden meadow stops ticking', (
+    WidgetTester tester,
+  ) async {
+    final MeadowStageState still = await _pumpStage(
+      tester,
+      motion: null,
+      reduceMotion: true,
+    );
+    await _grow(tester, still);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(still.debugIsTicking, isFalse);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    await tester.pump(const Duration(seconds: 2));
+    expect(still.debugTime, 0);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+
+    final MeadowStageState live = await _pumpStage(tester, motion: null);
+    await _grow(tester, live);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(live.debugIsTicking, isTrue);
+    expect(tester.binding.hasScheduledFrame, isTrue);
+    final double running = live.debugTime;
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(live.debugTime, greaterThan(running));
+
+    _moveLifecycle(tester, const <AppLifecycleState>[
+      AppLifecycleState.inactive,
+    ]);
+    await tester.pump();
+    expect(live.debugIsTicking, isFalse);
+    _moveLifecycle(tester, const <AppLifecycleState>[
+      AppLifecycleState.hidden,
+      AppLifecycleState.paused,
+    ]);
+    await tester.pump();
+    expect(live.debugIsTicking, isFalse);
+    final double paused = live.debugTime;
+    await tester.pump(const Duration(seconds: 1));
+    expect(live.debugTime, paused);
+    _moveLifecycle(tester, const <AppLifecycleState>[
+      AppLifecycleState.hidden,
+      AppLifecycleState.inactive,
+      AppLifecycleState.resumed,
+    ]);
+    await tester.pump();
+    expect(live.debugIsTicking, isTrue);
+
+    final MeadowStageState hidden = await _pumpStage(
+      tester,
+      motion: null,
+      tickers: false,
+    );
+    await _grow(tester, hidden);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(hidden.debugIsTicking, isFalse);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+    await tester.pump(const Duration(seconds: 1));
+    expect(hidden.debugTime, 0);
+    expect(tester.binding.hasScheduledFrame, isFalse);
+  });
+
+  testWidgets('the scene reads as one summary', (WidgetTester tester) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    void expectSummary(String label) {
+      final SemanticsNode node = tester.getSemantics(find.byType(MeadowStage));
+      expect(node.label, label);
+      expect(node.childrenCount, 0);
+      expect(node.getSemanticsData().flagsCollection.isImage, isTrue);
+    }
+
+    await _pumpStage(
+      tester,
+      year: _countedYear(
+        year: 2025,
+        blooms: 129,
+        sprouts: 6,
+        today: DateTime(2025, 7, 4),
+      ),
+    );
+    expectSummary('Meadow, 2025: 129 blooms and 6 sprouts so far');
+
+    await _pumpStage(
+      tester,
+      year: _countedYear(
+        year: 2024,
+        blooms: 205,
+        sprouts: 6,
+        today: DateTime(2026, 3, 1),
+      ),
+    );
+    expectSummary('Meadow, 2024: 205 blooms and 6 sprouts');
+
+    final _Expected expected = _Expected(_sampleYear());
+    final MeadowStageState state = await _pumpStage(tester);
+    expectSummary('Meadow, 2025: 16 blooms and 1 sprout');
+    await _grow(tester, state);
+    final TestGesture mouse = await _mouse(tester);
+    await mouse.moveTo(
+      _global(tester, state, expected.plantOn(6, 30).heads.last),
+    );
+    await tester.pump();
+    expect(find.text('Mon, Jun 30'), findsOneWidget);
+    expectSummary('Meadow, 2025: 16 blooms and 1 sprout');
+    handle.dispose();
+  });
+
+  testWidgets('the whole scene fits the memory ceiling', (
+    WidgetTester tester,
+  ) async {
+    final MeadowYear leap = _leapYear();
+    expect(leap.blooms + leap.sprouts, 366);
+    for (final (
+          Size box,
+          double ratio,
+          bool compact,
+          MeadowSceneMode mode,
+          int ceiling,
+        )
+        in <(Size, double, bool, MeadowSceneMode, int)>[
+          (_phoneScreen, 2.625, true, MeadowSceneMode.full, 96 * _megabyte),
+          (_sidebarCard, 2, false, MeadowSceneMode.page, 48 * _megabyte),
+          (_bottomBarCard, 2.625, true, MeadowSceneMode.page, 48 * _megabyte),
+        ]) {
+      final MeadowStageState state = await _pumpStage(
+        tester,
+        year: leap,
+        box: box,
+        ratio: ratio,
+        compact: compact,
+        mode: mode,
+      );
+      await _grow(tester, state);
+      expect(
+        state.debugImageBytes,
+        allOf(greaterThan(0), lessThanOrEqualTo(ceiling)),
+        reason: '$box at $ratio',
+      );
+    }
+  });
+}
