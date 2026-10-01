@@ -46,8 +46,8 @@ void main() {
       );
       addTearDown(layers.dispose);
       layers
-        ..buildAll()
-        ..recolour(meadowPixelsPalettes(year)['midnight']!);
+        ..recolour(meadowPixelsPalettes(year)['midnight']!)
+        ..buildAll();
       final MeadowLandMask mask = layers.nightMask;
 
       final Uint8List masked = await _render((Canvas canvas) {

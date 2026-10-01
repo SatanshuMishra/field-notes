@@ -170,6 +170,21 @@ Future<void> _record({
   ),
 );
 
+String _millis(Duration duration) =>
+    (duration.inMicroseconds / Duration.microsecondsPerMillisecond)
+        .toStringAsFixed(1);
+
+void _printPacing(WidgetTester tester, MeadowStageState stage, String name) {
+  debugPrint(
+    'NOTE-PERF-PACER meadow.$name '
+    'refreshHz=${tester.view.display.refreshRate.toStringAsFixed(1)} '
+    'batches=${stage.debugOpeningBatches} '
+    'waited=${stage.debugOpeningWaited} '
+    'gpuMs=${_millis(stage.debugOpeningGpu)} '
+    'largestBatchMs=${_millis(stage.debugOpeningLargestBatch)}',
+  );
+}
+
 void _openFullScreen(
   WidgetTester tester,
   ProviderContainer container, {
@@ -245,6 +260,8 @@ Future<void> _measureCase(
   );
   await tester.binding.delayed(_timingsSettle);
   final int stageBytes = landing.stage.debugImageBytes;
+  final String name = '${view.name}.${layout.name}.${hour.name}';
+  _printPacing(tester, landing.stage, name);
 
   sink = steady;
   await tester.binding.delayed(_animateFor);
@@ -266,7 +283,6 @@ Future<void> _measureCase(
         ? timing.totalSpan.inMicroseconds
         : longest,
   );
-  final String name = '${view.name}.${layout.name}.${hour.name}';
   final Map<String, Object?> extra = <String, Object?>{
     'view': view.name,
     'layout': layout.name,
@@ -324,6 +340,16 @@ Future<void> _measureCase(
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('meadow warm-up before measuring', (WidgetTester tester) async {
+    useLiveFrames(tester);
+    _adoptSurface(tester, _Layout.sidebar);
+    final ProviderContainer container = _containerFor(_Hour.noon, _View.page);
+    addTearDown(container.dispose);
+    await tester.pumpWidget(_app(container, _Layout.sidebar));
+    await _awaitScene(tester, Stopwatch()..start(), known: 0);
+    await tester.pumpWidget(const SizedBox());
+  }, semanticsEnabled: false);
+
   for (final _View view in _View.values) {
     for (final _Layout layout in _Layout.values) {
       for (final _Hour hour in _Hour.values) {
@@ -331,6 +357,7 @@ void main() {
           'meadow ${view.name} on the ${layout.name} layout at ${hour.name}',
           (WidgetTester tester) =>
               _measureCase(tester, view: view, layout: layout, hour: hour),
+          semanticsEnabled: false,
         );
       }
     }

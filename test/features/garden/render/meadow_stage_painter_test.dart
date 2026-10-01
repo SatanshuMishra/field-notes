@@ -240,8 +240,8 @@ class _Scene {
               maxBytes: meadowLayerBudget,
             ),
           )
-          ..buildAll()
-          ..recolour(noon);
+          ..recolour(noon)
+          ..buildAll();
     final MeadowPlantAtlas atlas = MeadowPlantAtlas(plants, density: density)
       ..buildAll();
     List<MeadowPlant> targets() => <MeadowPlant>[
@@ -325,11 +325,14 @@ class _Scene {
     final MeadowPalette light = palette ?? noon;
     final _Poses creaturePoses = poses ?? dayPoses;
     final int point = growthPoint ?? year.limit;
-    layers.recolour(light);
+    layers
+      ..recolour(light)
+      ..buildAll();
     rays.recolour(light);
     final _RecordingCanvas canvas = _RecordingCanvas();
     MeadowStagePainter(
       layers: layers,
+      layersRevision: layers.revision,
       atlas: atlas,
       creatures: creatures,
       rays: rays,

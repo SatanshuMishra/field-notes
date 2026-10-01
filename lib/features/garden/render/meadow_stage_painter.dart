@@ -83,6 +83,7 @@ String? meadowStageCaption({
 class MeadowStagePainter extends CustomPainter {
   MeadowStagePainter({
     required this.layers,
+    required this.layersRevision,
     required this.atlas,
     required this.creatures,
     required this.rays,
@@ -109,6 +110,7 @@ class MeadowStagePainter extends CustomPainter {
   });
 
   final MeadowLayers layers;
+  final int layersRevision;
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
   final MeadowRays rays;
@@ -700,6 +702,7 @@ class MeadowStagePainter extends CustomPainter {
       oldDelegate.viewport.scale != viewport.scale ||
       oldDelegate.viewport.offset != viewport.offset ||
       !identical(oldDelegate.layers, layers) ||
+      oldDelegate.layersRevision != layersRevision ||
       !identical(oldDelegate.atlas, atlas) ||
       !identical(oldDelegate.creatures, creatures) ||
       !identical(oldDelegate.rays, rays) ||

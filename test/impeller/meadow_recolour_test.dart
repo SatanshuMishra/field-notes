@@ -28,7 +28,9 @@ void main() {
       for (final MapEntry<String, MeadowPalette> entry in meadowPixelsPalettes(
         year,
       ).entries) {
-        layers.recolour(entry.value);
+        layers
+          ..recolour(entry.value)
+          ..buildAll();
         final Uint8List recoloured = await rgbaOf(layers.mountains.image);
         final Image direct = layers.drawMountainsDirectly(entry.value);
         final Uint8List drawn = await rgbaOf(direct);

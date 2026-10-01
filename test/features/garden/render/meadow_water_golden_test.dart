@@ -28,7 +28,9 @@ void main() {
     for (final MapEntry<String, MeadowPalette> entry in meadowPixelsPalettes(
       year,
     ).entries) {
-      layers.recolour(entry.value);
+      layers
+        ..recolour(entry.value)
+        ..buildAll();
       final Image lake = layers.water.first.image;
       final Image fall = layers.falls.first.body.image;
       await expectLater(

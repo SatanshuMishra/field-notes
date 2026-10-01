@@ -42,7 +42,9 @@ void main() {
       for (final MapEntry<String, MeadowPalette> entry in meadowPixelsPalettes(
         year,
       ).entries) {
-        layers.recolour(entry.value);
+        layers
+          ..recolour(entry.value)
+          ..buildAll();
         final List<int> lake = sortedPixelDifferences(
           await rgbaOf(layers.water.first.image),
           await _reference('meadow_lake_${entry.key}'),
