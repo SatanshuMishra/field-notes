@@ -31,7 +31,6 @@ const String meadowLoadingMessage = 'Growing your meadow…';
 const String meadowStageHint = 'Drag to look around · tap a flower';
 
 const Duration _fadeIn = Duration(milliseconds: 300);
-const int _buildStepsPerFrame = 4;
 const double _dragSlop = 5;
 const double _headReach = 5;
 const double _headSpread = 24;
@@ -54,6 +53,13 @@ const TextStyle _hintStyle = TextStyle(
   fontWeight: FontWeight.w600,
   color: _hintInk,
 );
+
+@visibleForTesting
+Duration meadowBuildBudget = const Duration(milliseconds: 8);
+
+@visibleForTesting
+bool meadowKeepBuilding({required Duration spent, required int advanced}) =>
+    advanced == 0 || spent < meadowBuildBudget;
 
 String meadowStageLabel(MeadowYear year) {
   final String counts = meadowCountPhrase(year.blooms, year.sprouts);
@@ -116,6 +122,7 @@ class MeadowStageState extends State<MeadowStage>
   int _recolourPieces = 0;
   int _recolourFrames = 0;
   int? _stepCallback;
+  bool _covered = false;
   Size? _box;
   double _ratio = 1;
   late MeadowPalette _palette;
@@ -191,6 +198,7 @@ class MeadowStageState extends State<MeadowStage>
       _ratio = ratio;
       _scheduleStep();
     }
+    _syncCover();
     _syncMotion();
   }
 
@@ -225,6 +233,7 @@ class MeadowStageState extends State<MeadowStage>
     if (callback != null) {
       SchedulerBinding.instance.cancelFrameCallbackWithId(callback);
     }
+    _recolourAllowance.leave(this);
     _lifecycle.dispose();
     _ticker.dispose();
     _fade.dispose();
@@ -296,12 +305,12 @@ class MeadowStageState extends State<MeadowStage>
     if (!mounted) {
       return;
     }
-    final MeadowLayers? shown = _scene?.layers;
-    if (shown != null && shown.isRecolouring) {
-      shown.step();
-      _recolourPieces++;
-      _recolourFrames++;
-      _frame.value++;
+    if (_hasPiece) {
+      if (_covered) {
+        _recolourAllowance.wait(this);
+      } else if (_recolourAllowance.take()) {
+        _drawPiece();
+      }
       _scheduleStep();
       return;
     }
@@ -317,17 +326,15 @@ class MeadowStageState extends State<MeadowStage>
       return;
     }
     _buildFrames++;
-    final int pieces = _recolourPieces;
+    final Stopwatch watch = Stopwatch()..start();
+    int advances = 0;
     _Advance advanced = _Advance.step;
-    for (int i = 0; i < _buildStepsPerFrame && advanced == _Advance.step; i++) {
+    while (advanced == _Advance.step &&
+        !running.drawsPiece &&
+        meadowKeepBuilding(spent: watch.elapsed, advanced: advances)) {
       _buildSteps++;
+      advances++;
       advanced = running.advance(_palette);
-      if (advanced == _Advance.piece) {
-        _recolourPieces++;
-      }
-    }
-    if (_recolourPieces > pieces) {
-      _recolourFrames++;
     }
     if (advanced != _Advance.finished) {
       _scheduleStep();
@@ -338,6 +345,51 @@ class MeadowStageState extends State<MeadowStage>
     _show(next);
     final _ImageKey? wanted = _wanted();
     if (next.layers.isRecolouring || (wanted != null && next.key != wanted)) {
+      _scheduleStep();
+    }
+  }
+
+  bool get _hasPiece {
+    final MeadowLayers? shown = _scene?.layers;
+    if (shown != null && shown.isRecolouring) {
+      return true;
+    }
+    return _build?.drawsPiece ?? false;
+  }
+
+  bool _drawPiece() {
+    final MeadowLayers? shown = _scene?.layers;
+    final _Build? running = _build;
+    if (shown != null && shown.isRecolouring) {
+      shown.step();
+    } else if (running != null && running.drawsPiece) {
+      _buildFrames++;
+      _buildSteps++;
+      running.advance(_palette);
+    } else {
+      return false;
+    }
+    _recolourPieces++;
+    _recolourFrames++;
+    _frame.value++;
+    return true;
+  }
+
+  bool _takeTurn() {
+    if (!_drawPiece()) {
+      return false;
+    }
+    _scheduleStep();
+    return true;
+  }
+
+  void _syncCover() {
+    final bool covered = ModalRoute.of(context)?.isCurrent == false;
+    if (covered == _covered) {
+      return;
+    }
+    _covered = covered;
+    if (!covered && _hasPiece) {
       _scheduleStep();
     }
   }
@@ -836,6 +888,64 @@ class _Hint extends StatelessWidget {
   }
 }
 
+final _RecolourAllowance _recolourAllowance = _RecolourAllowance();
+
+class _RecolourAllowance {
+  bool _used = false;
+  bool _closing = false;
+  List<MeadowStageState> _waiting = const <MeadowStageState>[];
+
+  bool take() {
+    if (_used) {
+      return false;
+    }
+    _used = true;
+    _closeFrame();
+    return true;
+  }
+
+  void wait(MeadowStageState stage) {
+    if (!_waiting.contains(stage)) {
+      _waiting = List<MeadowStageState>.unmodifiable(<MeadowStageState>[
+        ..._waiting,
+        stage,
+      ]);
+    }
+    _closeFrame();
+  }
+
+  void leave(MeadowStageState stage) {
+    if (!_waiting.contains(stage)) {
+      return;
+    }
+    _waiting = List<MeadowStageState>.unmodifiable(<MeadowStageState>[
+      for (final MeadowStageState waiting in _waiting)
+        if (!identical(waiting, stage)) waiting,
+    ]);
+  }
+
+  void _closeFrame() {
+    if (_closing) {
+      return;
+    }
+    _closing = true;
+    SchedulerBinding.instance.addPostFrameCallback(_frameEnded);
+  }
+
+  void _frameEnded(Duration timeStamp) {
+    if (!_used) {
+      for (final MeadowStageState stage in _waiting) {
+        if (stage.mounted && stage._takeTurn()) {
+          break;
+        }
+      }
+    }
+    _used = false;
+    _waiting = const <MeadowStageState>[];
+    _closing = false;
+  }
+}
+
 bool _isResumed(AppLifecycleState? state) =>
     state == null || state == AppLifecycleState.resumed;
 
@@ -1052,6 +1162,11 @@ class _Build {
       (_atlas?.imageBytes ?? 0) +
       (_creatures?.imageBytes ?? 0) +
       (_rays?.imageBytes ?? 0);
+
+  bool get drawsPiece {
+    final MeadowLayers? layers = _layers;
+    return layers != null && layers.isBuilt && !layers.isReady;
+  }
 
   _Advance advance(MeadowPalette palette) {
     final _Geometry geometry = key.geometry;

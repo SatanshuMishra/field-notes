@@ -186,9 +186,8 @@ Future<MeadowStageState> _pumpStage(
       ),
       home: Builder(
         builder: (BuildContext context) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(disableAnimations: reduceMotion),
+          data: MediaQuery.of(context)
+              .copyWith(disableAnimations: reduceMotion),
           child: Scaffold(
             body: Center(
               child: SizedBox.fromSize(
@@ -784,14 +783,36 @@ void main() {
     handle.dispose();
   });
 
+  test('the build keeps advancing until its frame budget is spent and always advances once', () {
+    expect(meadowBuildBudget, const Duration(milliseconds: 8));
+    expect(meadowKeepBuilding(spent: Duration.zero, advanced: 0), isTrue);
+    expect(
+      meadowKeepBuilding(spent: const Duration(milliseconds: 50), advanced: 0),
+      isTrue,
+    );
+    expect(
+      meadowKeepBuilding(spent: const Duration(milliseconds: 2), advanced: 3),
+      isTrue,
+    );
+    expect(meadowKeepBuilding(spent: meadowBuildBudget, advanced: 1), isFalse);
+    expect(
+      meadowKeepBuilding(spent: const Duration(milliseconds: 20), advanced: 1),
+      isFalse,
+    );
+  });
+
   testWidgets(
-    'the scene opens with up to four build steps per frame and every recolour piece in a frame of its own',
+    'the scene opens with build advances paced by time and every recolour piece in a frame of its own',
     (WidgetTester tester) async {
+      final Duration budget = meadowBuildBudget;
+      meadowBuildBudget = const Duration(seconds: 10);
+      addTearDown(() => meadowBuildBudget = budget);
       final MeadowStageState state = await _pumpStage(
         tester,
         year: _leapYear(),
       );
       int pieceFrames = 0;
+      int most = 0;
       for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
         await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 2)),
@@ -802,15 +823,18 @@ void main() {
         final int stepped = state.debugBuildSteps - steps;
         final int drawn = state.debugRecolourPieces - pieces;
         expect(drawn, lessThanOrEqualTo(1), reason: 'frame $i');
-        expect(stepped, lessThanOrEqualTo(4), reason: 'frame $i');
         if (drawn == 1) {
           expect(stepped, 1, reason: 'frame $i drew a piece');
           pieceFrames++;
+        }
+        if (stepped > most) {
+          most = stepped;
         }
       }
       expect(state.debugIsReady, isTrue);
       expect(pieceFrames, greaterThan(1));
       expect(state.debugRecolourFrames, state.debugRecolourPieces);
+      expect(most, greaterThan(4));
     },
   );
 
@@ -863,6 +887,9 @@ void main() {
   testWidgets(
     'a sky change while the meadow opens is finished once it appears',
     (WidgetTester tester) async {
+      final Duration budget = meadowBuildBudget;
+      meadowBuildBudget = Duration.zero;
+      addTearDown(() => meadowBuildBudget = budget);
       const Key key = ValueKey<String>('opening stage');
       final MeadowYear leap = _leapYear();
       MeadowStageState state = await _pumpStage(
@@ -900,6 +927,16 @@ void main() {
         sky: _midnight,
       );
       await _grow(tester, state);
+      expect(
+        state.debugIsRecolouring,
+        isTrue,
+        reason: 'the scene appeared with pieces still to redraw',
+      );
+      expect(
+        state.debugRecolourPieces,
+        last,
+        reason: 'the build drew only the first colours',
+      );
       int frames = 0;
       while (state.debugIsRecolouring && frames < 64) {
         await tester.pump();
@@ -907,6 +944,109 @@ void main() {
       }
       expect(state.debugIsRecolouring, isFalse);
       expect(state.debugRecolourPieces, greaterThan(last));
+    },
+  );
+
+  testWidgets(
+    'two meadows share one recolour piece per frame and the covered one waits for the visible one',
+    (WidgetTester tester) async {
+      final ValueNotifier<SkyScene> sky = ValueNotifier<SkyScene>(_noon);
+      addTearDown(sky.dispose);
+      final MeadowYear shown = _sampleYear();
+      final GlobalKey<NavigatorState> navigator = GlobalKey<NavigatorState>();
+      const Key coveredKey = ValueKey<String>('covered meadow');
+      const Key visibleKey = ValueKey<String>('visible meadow');
+      Widget meadow(Key key) => Scaffold(
+        body: Center(
+          child: SizedBox.fromSize(
+            size: _sidebarCard,
+            child: ValueListenableBuilder<SkyScene>(
+              valueListenable: sky,
+              builder: (BuildContext context, SkyScene value, Widget? child) =>
+                  MeadowStage(
+                    key: key,
+                    year: shown,
+                    seed: meadowSeed(_meadowKey, shown.year),
+                    sky: value,
+                    morning: false,
+                    mode: MeadowSceneMode.page,
+                    compact: false,
+                    motion: GardenMotionProfile.reduced,
+                  ),
+            ),
+          ),
+        ),
+      );
+      tester.view.physicalSize = Size(
+        _sidebarCard.width + 2 * _margin,
+        _sidebarCard.height + 2 * _margin,
+      );
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigator,
+          debugShowCheckedModeBanner: false,
+          theme: fieldNotesTheme(
+            platform: TargetPlatform.macOS,
+            brightness: Brightness.light,
+          ),
+          home: meadow(coveredKey),
+        ),
+      );
+      final MeadowStageState covered = tester.state<MeadowStageState>(
+        find.byKey(coveredKey),
+      );
+      await _grow(tester, covered);
+      navigator.currentState!.push(
+        PageRouteBuilder<void>(
+          pageBuilder: (
+            BuildContext context,
+            Animation<double> animation,
+            Animation<double> secondary,
+          ) => meadow(visibleKey),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
+      );
+      await tester.pump();
+      final MeadowStageState visible = tester.state<MeadowStageState>(
+        find.byKey(visibleKey),
+      );
+      await _grow(tester, visible);
+      final int coveredBefore = covered.debugRecolourPieces;
+      final int visibleBefore = visible.debugRecolourPieces;
+
+      sky.value = _midnight;
+
+      int frames = 0;
+      bool visibleWaiting = false;
+      do {
+        final int coveredDrawn = covered.debugRecolourPieces;
+        final int visibleDrawn = visible.debugRecolourPieces;
+        await tester.pump();
+        frames++;
+        final int byCovered = covered.debugRecolourPieces - coveredDrawn;
+        final int byVisible = visible.debugRecolourPieces - visibleDrawn;
+        expect(
+          byCovered + byVisible,
+          lessThanOrEqualTo(1),
+          reason: 'frame $frames',
+        );
+        if (visibleWaiting) {
+          expect(
+            byCovered,
+            0,
+            reason: 'frame $frames, the visible meadow still had pieces',
+          );
+        }
+        visibleWaiting = visible.debugIsRecolouring;
+      } while ((visible.debugIsRecolouring || covered.debugIsRecolouring) &&
+          frames < 96);
+      expect(visible.debugIsRecolouring, isFalse);
+      expect(covered.debugIsRecolouring, isFalse);
+      expect(visible.debugRecolourPieces, greaterThan(visibleBefore));
+      expect(covered.debugRecolourPieces, greaterThan(coveredBefore));
     },
   );
 
