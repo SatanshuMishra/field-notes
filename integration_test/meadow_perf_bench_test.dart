@@ -170,6 +170,21 @@ Future<void> _record({
   ),
 );
 
+String _millis(Duration duration) =>
+    (duration.inMicroseconds / Duration.microsecondsPerMillisecond)
+        .toStringAsFixed(1);
+
+void _printPacing(WidgetTester tester, MeadowStageState stage, String name) {
+  debugPrint(
+    'NOTE-PERF-PACER meadow.$name '
+    'refreshHz=${tester.view.display.refreshRate.toStringAsFixed(1)} '
+    'batches=${stage.debugOpeningBatches} '
+    'waited=${stage.debugOpeningWaited} '
+    'gpuMs=${_millis(stage.debugOpeningGpu)} '
+    'largestBatchMs=${_millis(stage.debugOpeningLargestBatch)}',
+  );
+}
+
 void _openFullScreen(
   WidgetTester tester,
   ProviderContainer container, {
@@ -245,6 +260,8 @@ Future<void> _measureCase(
   );
   await tester.binding.delayed(_timingsSettle);
   final int stageBytes = landing.stage.debugImageBytes;
+  final String name = '${view.name}.${layout.name}.${hour.name}';
+  _printPacing(tester, landing.stage, name);
 
   sink = steady;
   await tester.binding.delayed(_animateFor);
@@ -266,7 +283,6 @@ Future<void> _measureCase(
         ? timing.totalSpan.inMicroseconds
         : longest,
   );
-  final String name = '${view.name}.${layout.name}.${hour.name}';
   final Map<String, Object?> extra = <String, Object?>{
     'view': view.name,
     'layout': layout.name,

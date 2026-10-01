@@ -9,6 +9,7 @@ import 'package:field_notes/features/garden/model/garden_motion.dart';
 import 'package:field_notes/features/garden/model/meadow_random.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage_tooltip.dart';
@@ -154,6 +155,55 @@ class _Expected {
               ))
             plant,
       ];
+}
+
+class _GpuTime {
+  int clock = 0;
+  int pending = 0;
+}
+
+class _FakeGpu extends MeadowPacer {
+  _FakeGpu._(this._time, this._stepMicros)
+    : super(
+        nowMicros: () => _time.clock,
+        marker: () {
+          final int taken = _time.pending;
+          _time.pending = 0;
+          return Future<void>.microtask(() => _time.clock += taken);
+        },
+      );
+
+  factory _FakeGpu({required double stepMs}) =>
+      _FakeGpu._(_GpuTime(), (stepMs * 1000).round());
+
+  final _GpuTime _time;
+  final int _stepMicros;
+  MeadowStageState? busyStage;
+
+  @override
+  int nowMicros() {
+    final MeadowStageState? stage = busyStage;
+    return super.nowMicros() +
+        (stage == null ? 0 : 3000 * stage.debugBuildSteps);
+  }
+
+  @override
+  void end(
+    MeadowBatch batch, {
+    required int steps,
+    void Function(Duration? cost)? answered,
+  }) {
+    _time.pending = steps * _stepMicros;
+    super.end(batch, steps: steps, answered: answered);
+  }
+}
+
+_FakeGpu _useGpu({required double stepMs}) {
+  final MeadowPacer original = meadowPacer;
+  final _FakeGpu gpu = _FakeGpu(stepMs: stepMs);
+  meadowPacer = gpu;
+  addTearDown(() => meadowPacer = original);
+  return gpu;
 }
 
 Future<MeadowStageState> _pumpStage(
@@ -783,64 +833,130 @@ void main() {
     handle.dispose();
   });
 
-  test('the build keeps advancing until its frame budget is spent and always advances once', () {
-    expect(meadowBuildBudget, const Duration(milliseconds: 8));
-    expect(meadowKeepBuilding(spent: Duration.zero, advanced: 0), isTrue);
-    expect(
-      meadowKeepBuilding(spent: const Duration(milliseconds: 50), advanced: 0),
-      isTrue,
-    );
-    expect(
-      meadowKeepBuilding(spent: const Duration(milliseconds: 2), advanced: 3),
-      isTrue,
-    );
-    expect(meadowKeepBuilding(spent: meadowBuildBudget, advanced: 1), isFalse);
-    expect(
-      meadowKeepBuilding(spent: const Duration(milliseconds: 20), advanced: 1),
-      isFalse,
-    );
-  });
-
   testWidgets(
-    'the scene opens with build advances paced by time and every recolour piece in a frame of its own',
+    'the scene opens in batches the pacer sizes, one kind of step per batch',
     (WidgetTester tester) async {
-      final Duration budget = meadowBuildBudget;
-      meadowBuildBudget = const Duration(seconds: 10);
-      addTearDown(() => meadowBuildBudget = budget);
-      final MeadowStageState state = await _pumpStage(
-        tester,
-        year: _leapYear(),
-      );
-      int pieceFrames = 0;
-      int most = 0;
-      for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
-        await tester.runAsync(
-          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      for (final double stepMs in <double>[0.1, 40]) {
+        _useGpu(stepMs: stepMs);
+        final MeadowStageState state = await _pumpStage(
+          tester,
+          year: _leapYear(),
         );
-        final int steps = state.debugBuildSteps;
-        final int pieces = state.debugRecolourPieces;
-        await tester.pump();
-        final int stepped = state.debugBuildSteps - steps;
-        final int drawn = state.debugRecolourPieces - pieces;
-        expect(drawn, lessThanOrEqualTo(1), reason: 'frame $i');
-        if (drawn == 1) {
-          expect(stepped, 1, reason: 'frame $i drew a piece');
-          pieceFrames++;
+        int most = 0;
+        for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
+          await tester.runAsync(
+            () => Future<void>.delayed(const Duration(milliseconds: 2)),
+          );
+          final int steps = state.debugBuildSteps;
+          final int pieces = state.debugRecolourPieces;
+          await tester.pump();
+          final int stepped = state.debugBuildSteps - steps;
+          final int drawn = state.debugRecolourPieces - pieces;
+          final String reason = '$stepMs ms a step, frame $i';
+          if (drawn > 0) {
+            expect(stepped, drawn, reason: '$reason drew a piece');
+          }
+          if (stepMs == 40) {
+            expect(stepped, lessThanOrEqualTo(1), reason: reason);
+          }
+          most = math.max(most, stepped);
         }
-        if (stepped > most) {
-          most = stepped;
+        expect(state.debugIsReady, isTrue, reason: '$stepMs ms a step');
+        expect(state.debugRecolourPieces, greaterThan(1));
+        if (stepMs == 40) {
+          expect(most, 1);
+        } else {
+          expect(most, greaterThan(4));
         }
       }
-      expect(state.debugIsReady, isTrue);
-      expect(pieceFrames, greaterThan(1));
-      expect(state.debugRecolourFrames, state.debugRecolourPieces);
-      expect(most, greaterThan(4));
     },
   );
 
   testWidgets(
-    'a sky change on an open meadow draws one piece per frame, repaints it and finishes with motion off',
+    'pieces get a full frame while the scene loads and half a frame once it '
+    'is open',
     (WidgetTester tester) async {
+      _useGpu(stepMs: 6);
+      const Key key = ValueKey<String>('shared stage');
+      MeadowStageState state = await _pumpStage(
+        tester,
+        tickers: false,
+        stageKey: key,
+      );
+      final List<int> opening = <int>[];
+      for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 2)),
+        );
+        final int pieces = state.debugRecolourPieces;
+        await tester.pump();
+        final int drawn = state.debugRecolourPieces - pieces;
+        if (drawn > 0) {
+          opening.add(drawn);
+        }
+      }
+      expect(state.debugIsReady, isTrue);
+      expect(opening.length, greaterThan(2), reason: '$opening');
+      expect(opening.first, 1, reason: '$opening');
+      expect(
+        opening.sublist(1, opening.length - 1),
+        everyElement(2),
+        reason: '$opening',
+      );
+      expect(opening.last, inInclusiveRange(1, 2), reason: '$opening');
+
+      state = await _pumpStage(
+        tester,
+        tickers: false,
+        stageKey: key,
+        sky: _midnight,
+      );
+      expect(state.debugIsRecolouring, isTrue);
+      final int before = state.debugRecolourPieces;
+      int frames = 0;
+      while (state.debugIsRecolouring && frames < 64) {
+        final int pieces = state.debugRecolourPieces;
+        await tester.pump();
+        frames++;
+        expect(
+          state.debugRecolourPieces - pieces,
+          lessThanOrEqualTo(1),
+          reason: 'frame $frames',
+        );
+      }
+      expect(state.debugIsRecolouring, isFalse);
+      expect(state.debugRecolourPieces - before, greaterThan(1));
+    },
+  );
+
+  testWidgets("a frame's build work stops at half the frame interval", (
+    WidgetTester tester,
+  ) async {
+    final _FakeGpu gpu = _useGpu(stepMs: 0.1);
+    final MeadowStageState state = await _pumpStage(tester, year: _leapYear());
+    gpu.busyStage = state;
+    int threes = 0;
+    for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      );
+      final int steps = state.debugBuildSteps;
+      await tester.pump();
+      final int stepped = state.debugBuildSteps - steps;
+      expect(stepped, lessThanOrEqualTo(3), reason: 'frame $i');
+      if (stepped == 3) {
+        threes++;
+      }
+    }
+    expect(state.debugIsReady, isTrue);
+    expect(threes, greaterThan(0));
+  });
+
+  testWidgets(
+    'a sky change on an open meadow is paced, repaints each frame it draws '
+    'and finishes with motion off',
+    (WidgetTester tester) async {
+      _useGpu(stepMs: 12);
       const Key key = ValueKey<String>('recolour stage');
       MeadowStageState state = await _pumpStage(
         tester,
@@ -880,16 +996,37 @@ void main() {
       }
       expect(state.debugIsRecolouring, isFalse);
       expect(state.debugRecolourPieces - before, greaterThan(1));
-      expect(state.debugRecolourPieces - before, frames);
+
+      _useGpu(stepMs: 0.1);
+      final int midnight = state.debugRecolourPieces;
+      state = await _pumpStage(tester, tickers: false, stageKey: key);
+      expect(state.debugIsRecolouring, isTrue);
+      int most = 0;
+      frames = 0;
+      while (state.debugIsRecolouring && frames < 64) {
+        final int drawn = state.debugRecolourPieces;
+        final MeadowStagePainter painted = _stagePainter(tester);
+        await tester.pump();
+        frames++;
+        most = math.max(most, state.debugRecolourPieces - drawn);
+        if (state.debugRecolourPieces > drawn) {
+          expect(
+            _stagePainter(tester).shouldRepaint(painted),
+            isTrue,
+            reason: 'repaint after frame $frames back to noon',
+          );
+        }
+      }
+      expect(state.debugIsRecolouring, isFalse);
+      expect(state.debugRecolourPieces, greaterThan(midnight));
+      expect(most, greaterThan(1));
     },
   );
 
   testWidgets(
     'a sky change while the meadow opens is finished once it appears',
     (WidgetTester tester) async {
-      final Duration budget = meadowBuildBudget;
-      meadowBuildBudget = Duration.zero;
-      addTearDown(() => meadowBuildBudget = budget);
+      _useGpu(stepMs: 40);
       const Key key = ValueKey<String>('opening stage');
       final MeadowYear leap = _leapYear();
       MeadowStageState state = await _pumpStage(
@@ -948,15 +1085,18 @@ void main() {
   );
 
   testWidgets(
-    'two meadows share one recolour piece per frame and the covered one waits for the visible one',
+    'two meadows share one pacer and the covered one waits for the visible one',
     (WidgetTester tester) async {
-      final ValueNotifier<SkyScene> sky = ValueNotifier<SkyScene>(_noon);
-      addTearDown(sky.dispose);
+      _useGpu(stepMs: 12);
+      final ValueNotifier<SkyScene> coveredSky = ValueNotifier<SkyScene>(_noon);
+      addTearDown(coveredSky.dispose);
+      final ValueNotifier<SkyScene> visibleSky = ValueNotifier<SkyScene>(_noon);
+      addTearDown(visibleSky.dispose);
       final MeadowYear shown = _sampleYear();
       final GlobalKey<NavigatorState> navigator = GlobalKey<NavigatorState>();
       const Key coveredKey = ValueKey<String>('covered meadow');
       const Key visibleKey = ValueKey<String>('visible meadow');
-      Widget meadow(Key key) => Scaffold(
+      Widget meadow(Key key, ValueNotifier<SkyScene> sky) => Scaffold(
         body: Center(
           child: SizedBox.fromSize(
             size: _sidebarCard,
@@ -991,7 +1131,7 @@ void main() {
             platform: TargetPlatform.macOS,
             brightness: Brightness.light,
           ),
-          home: meadow(coveredKey),
+          home: meadow(coveredKey, coveredSky),
         ),
       );
       final MeadowStageState covered = tester.state<MeadowStageState>(
@@ -1004,7 +1144,7 @@ void main() {
             BuildContext context,
             Animation<double> animation,
             Animation<double> secondary,
-          ) => meadow(visibleKey),
+          ) => meadow(visibleKey, visibleSky),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),
@@ -1017,7 +1157,10 @@ void main() {
       final int coveredBefore = covered.debugRecolourPieces;
       final int visibleBefore = visible.debugRecolourPieces;
 
-      sky.value = _midnight;
+      coveredSky.value = _midnight;
+      await tester.pump();
+      expect(covered.debugIsRecolouring, isTrue);
+      visibleSky.value = _midnight;
 
       int frames = 0;
       bool visibleWaiting = false;
@@ -1028,11 +1171,13 @@ void main() {
         frames++;
         final int byCovered = covered.debugRecolourPieces - coveredDrawn;
         final int byVisible = visible.debugRecolourPieces - visibleDrawn;
-        expect(
-          byCovered + byVisible,
-          lessThanOrEqualTo(1),
-          reason: 'frame $frames',
-        );
+        if (byVisible > 0) {
+          expect(
+            byCovered,
+            0,
+            reason: 'frame $frames, the visible meadow sent the batch',
+          );
+        }
         if (visibleWaiting) {
           expect(
             byCovered,

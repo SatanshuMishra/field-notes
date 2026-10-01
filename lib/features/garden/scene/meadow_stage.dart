@@ -18,6 +18,7 @@ import 'package:field_notes/features/garden/render/meadow_rays.dart';
 import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 import 'package:field_notes/features/garden/scene/meadow_grass.dart';
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage_tooltip.dart';
@@ -53,13 +54,6 @@ const TextStyle _hintStyle = TextStyle(
   fontWeight: FontWeight.w600,
   color: _hintInk,
 );
-
-@visibleForTesting
-Duration meadowBuildBudget = const Duration(milliseconds: 8);
-
-@visibleForTesting
-bool meadowKeepBuilding({required Duration spent, required int advanced}) =>
-    advanced == 0 || spent < meadowBuildBudget;
 
 String meadowStageLabel(MeadowYear year) {
   final String counts = meadowCountPhrase(year.blooms, year.sprouts);
@@ -121,6 +115,11 @@ class MeadowStageState extends State<MeadowStage>
   int _buildFrames = 0;
   int _recolourPieces = 0;
   int _recolourFrames = 0;
+  int _opening = 0;
+  int _openingBatches = 0;
+  int _openingWaited = 0;
+  Duration _openingGpu = Duration.zero;
+  Duration _openingLargestBatch = Duration.zero;
   int? _stepCallback;
   bool _covered = false;
   Size? _box;
@@ -166,6 +165,18 @@ class MeadowStageState extends State<MeadowStage>
 
   @visibleForTesting
   bool get debugIsRecolouring => _scene?.layers.isRecolouring ?? false;
+
+  @visibleForTesting
+  int get debugOpeningBatches => _openingBatches;
+
+  @visibleForTesting
+  int get debugOpeningWaited => _openingWaited;
+
+  @visibleForTesting
+  Duration get debugOpeningGpu => _openingGpu;
+
+  @visibleForTesting
+  Duration get debugOpeningLargestBatch => _openingLargestBatch;
 
   @visibleForTesting
   bool get debugIsTicking => _ticker.isTicking;
@@ -233,7 +244,7 @@ class MeadowStageState extends State<MeadowStage>
     if (callback != null) {
       SchedulerBinding.instance.cancelFrameCallbackWithId(callback);
     }
-    _recolourAllowance.leave(this);
+    _pacer.leave(this);
     _lifecycle.dispose();
     _ticker.dispose();
     _fade.dispose();
@@ -305,13 +316,21 @@ class MeadowStageState extends State<MeadowStage>
     if (!mounted) {
       return;
     }
-    if (_hasPiece) {
+    final Duration frame = _frameInterval;
+    final MeadowLayers? shown = _scene?.layers;
+    if (shown != null && shown.isRecolouring) {
       if (_covered) {
-        _recolourAllowance.wait(this);
-      } else if (_recolourAllowance.take()) {
-        _drawPiece();
+        _pacer.waitTurn(this, _takeTurn);
+        _scheduleStep();
+        return;
       }
-      _scheduleStep();
+      final MeadowPacer pacer = _pacer;
+      if (!pacer.isBehind && pacer.takeFrame()) {
+        _sendPieces(shown, frame);
+      }
+      if (shown.isRecolouring || _build != null || _wantsBuild) {
+        _scheduleStep();
+      }
       return;
     }
     final _Build? running = _build;
@@ -321,20 +340,105 @@ class MeadowStageState extends State<MeadowStage>
         _build = _Build(wanted);
         _buildSteps = 0;
         _buildFrames = 0;
+        _opening++;
+        _openingBatches = 0;
+        _openingWaited = 0;
+        _openingGpu = Duration.zero;
+        _openingLargestBatch = Duration.zero;
         _scheduleStep();
       }
       return;
     }
+    if (_covered) {
+      _pacer.waitTurn(this, _takeTurn);
+      _scheduleStep();
+      return;
+    }
+    final MeadowPacer pacer = _pacer;
+    if (pacer.isBehind || !pacer.takeFrame()) {
+      _openingWaited++;
+      _scheduleStep();
+      return;
+    }
+    _sendBuild(running, frame);
+  }
+
+  Duration get _frameInterval => MeadowPacer.frameInterval(
+    View.maybeOf(context)?.display.refreshRate ?? 0,
+  );
+
+  bool get _wantsBuild {
+    final _ImageKey? wanted = _wanted();
+    return wanted != null && _scene?.key != wanted;
+  }
+
+  bool get _hasWork =>
+      (_scene?.layers.isRecolouring ?? false) || _build != null;
+
+  void _sendPieces(MeadowLayers shown, Duration frame) {
+    final MeadowPacer pacer = _pacer;
+    final int allowed = pacer.allowance(MeadowWork.piece, share: frame ~/ 2);
+    final int started = pacer.nowMicros();
+    final MeadowBatch batch = pacer.begin(MeadowWork.piece, frame: frame);
+    int drawn = 0;
+    try {
+      while (drawn < allowed &&
+          shown.isRecolouring &&
+          MeadowPacer.keepBuilding(
+            spent: Duration(microseconds: pacer.nowMicros() - started),
+            advanced: drawn,
+            frame: frame,
+          )) {
+        shown.step();
+        drawn++;
+      }
+    } finally {
+      pacer.end(batch, steps: drawn);
+    }
+    _recolourPieces += drawn;
+    _recolourFrames++;
+    _frame.value++;
+  }
+
+  void _sendBuild(_Build running, Duration frame) {
+    final MeadowPacer pacer = _pacer;
+    final MeadowWork kind = running.nextWork;
+    final int allowed = pacer.allowance(kind, share: frame);
+    final int started = pacer.nowMicros();
+    final MeadowBatch batch = pacer.begin(kind, frame: frame);
+    final int opening = _opening;
+    _openingBatches++;
     _buildFrames++;
-    final Stopwatch watch = Stopwatch()..start();
-    int advances = 0;
+    int steps = 0;
+    int pieces = 0;
     _Advance advanced = _Advance.step;
-    while (advanced == _Advance.step &&
-        !running.drawsPiece &&
-        meadowKeepBuilding(spent: watch.elapsed, advanced: advances)) {
-      _buildSteps++;
-      advances++;
-      advanced = running.advance(_palette);
+    try {
+      do {
+        _buildSteps++;
+        steps++;
+        advanced = running.advance(_palette);
+        if (advanced == _Advance.piece) {
+          pieces++;
+        }
+      } while (advanced != _Advance.finished &&
+          advanced != _Advance.layersBuilt &&
+          steps < allowed &&
+          running.nextWork == kind &&
+          MeadowPacer.keepBuilding(
+            spent: Duration(microseconds: pacer.nowMicros() - started),
+            advanced: steps,
+            frame: frame,
+          ));
+    } finally {
+      pacer.end(
+        batch,
+        steps: steps,
+        answered: (Duration? cost) => _openingAnswered(opening, cost),
+      );
+    }
+    if (pieces > 0) {
+      _recolourPieces += pieces;
+      _recolourFrames++;
     }
     if (advanced != _Advance.finished) {
       _scheduleStep();
@@ -343,40 +447,36 @@ class MeadowStageState extends State<MeadowStage>
     _build = null;
     final _SceneImages next = running.finish();
     _show(next);
-    final _ImageKey? wanted = _wanted();
-    if (next.layers.isRecolouring || (wanted != null && next.key != wanted)) {
+    if (next.layers.isRecolouring || _wantsBuild) {
       _scheduleStep();
     }
   }
 
-  bool get _hasPiece {
-    final MeadowLayers? shown = _scene?.layers;
-    if (shown != null && shown.isRecolouring) {
-      return true;
+  void _openingAnswered(int opening, Duration? cost) {
+    if (!mounted || opening != _opening || cost == null) {
+      return;
     }
-    return _build?.drawsPiece ?? false;
-  }
-
-  bool _drawPiece() {
-    final MeadowLayers? shown = _scene?.layers;
-    final _Build? running = _build;
-    if (shown != null && shown.isRecolouring) {
-      shown.step();
-    } else if (running != null && running.drawsPiece) {
-      _buildFrames++;
-      _buildSteps++;
-      running.advance(_palette);
-    } else {
-      return false;
+    if (cost <= Duration.zero) {
+      return;
     }
-    _recolourPieces++;
-    _recolourFrames++;
-    _frame.value++;
-    return true;
+    _openingGpu += cost;
+    if (cost > _openingLargestBatch) {
+      _openingLargestBatch = cost;
+    }
   }
 
   bool _takeTurn() {
-    if (!_drawPiece()) {
+    if (!mounted) {
+      return false;
+    }
+    final Duration frame = _frameInterval;
+    final MeadowLayers? shown = _scene?.layers;
+    final _Build? running = _build;
+    if (shown != null && shown.isRecolouring) {
+      _sendPieces(shown, frame);
+    } else if (running != null) {
+      _sendBuild(running, frame);
+    } else {
       return false;
     }
     _scheduleStep();
@@ -389,7 +489,7 @@ class MeadowStageState extends State<MeadowStage>
       return;
     }
     _covered = covered;
-    if (!covered && _hasPiece) {
+    if (!covered && _hasWork) {
       _scheduleStep();
     }
   }
@@ -888,63 +988,8 @@ class _Hint extends StatelessWidget {
   }
 }
 
-final _RecolourAllowance _recolourAllowance = _RecolourAllowance();
-
-class _RecolourAllowance {
-  bool _used = false;
-  bool _closing = false;
-  List<MeadowStageState> _waiting = const <MeadowStageState>[];
-
-  bool take() {
-    if (_used) {
-      return false;
-    }
-    _used = true;
-    _closeFrame();
-    return true;
-  }
-
-  void wait(MeadowStageState stage) {
-    if (!_waiting.contains(stage)) {
-      _waiting = List<MeadowStageState>.unmodifiable(<MeadowStageState>[
-        ..._waiting,
-        stage,
-      ]);
-    }
-    _closeFrame();
-  }
-
-  void leave(MeadowStageState stage) {
-    if (!_waiting.contains(stage)) {
-      return;
-    }
-    _waiting = List<MeadowStageState>.unmodifiable(<MeadowStageState>[
-      for (final MeadowStageState waiting in _waiting)
-        if (!identical(waiting, stage)) waiting,
-    ]);
-  }
-
-  void _closeFrame() {
-    if (_closing) {
-      return;
-    }
-    _closing = true;
-    SchedulerBinding.instance.addPostFrameCallback(_frameEnded);
-  }
-
-  void _frameEnded(Duration timeStamp) {
-    if (!_used) {
-      for (final MeadowStageState stage in _waiting) {
-        if (stage.mounted && stage._takeTurn()) {
-          break;
-        }
-      }
-    }
-    _used = false;
-    _waiting = const <MeadowStageState>[];
-    _closing = false;
-  }
-}
+// ignore: invalid_use_of_visible_for_testing_member
+MeadowPacer get _pacer => meadowPacer;
 
 bool _isResumed(AppLifecycleState? state) =>
     state == null || state == AppLifecycleState.resumed;
@@ -1163,9 +1208,19 @@ class _Build {
       (_creatures?.imageBytes ?? 0) +
       (_rays?.imageBytes ?? 0);
 
-  bool get drawsPiece {
+  MeadowWork get nextWork {
     final MeadowLayers? layers = _layers;
-    return layers != null && layers.isBuilt && !layers.isReady;
+    if (layers == null || !layers.isBuilt) {
+      return MeadowWork.layers;
+    }
+    if (!layers.isReady) {
+      return MeadowWork.piece;
+    }
+    final MeadowPlantAtlas? atlas = _atlas;
+    if (atlas == null || !atlas.isReady) {
+      return MeadowWork.plants;
+    }
+    return MeadowWork.finish;
   }
 
   _Advance advance(MeadowPalette palette) {
