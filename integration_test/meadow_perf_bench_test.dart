@@ -332,7 +332,7 @@ void main() {
     await tester.pumpWidget(_app(container, _Layout.sidebar));
     await _awaitScene(tester, Stopwatch()..start(), known: 0);
     await tester.pumpWidget(const SizedBox());
-  });
+  }, semanticsEnabled: false);
 
   for (final _View view in _View.values) {
     for (final _Layout layout in _Layout.values) {
@@ -341,6 +341,7 @@ void main() {
           'meadow ${view.name} on the ${layout.name} layout at ${hour.name}',
           (WidgetTester tester) =>
               _measureCase(tester, view: view, layout: layout, hour: hour),
+          semanticsEnabled: false,
         );
       }
     }
