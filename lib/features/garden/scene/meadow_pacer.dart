@@ -9,10 +9,10 @@ enum MeadowWork { layers, piece, plants, finish }
 typedef MeadowGpuMarker = Future<void> Function();
 
 const int _valveFrames = 30;
+const int _forgetFrames = 300;
 const double _leastEstimate = 1;
 const double _fallbackRate = 60;
 
-@visibleForTesting
 MeadowPacer meadowPacer = MeadowPacer();
 
 @immutable
@@ -70,26 +70,18 @@ class MeadowPacer {
   }
 
   bool get isBehind {
-    final int now = nowMicros();
-    final Map<int, _Pending> kept = <int, _Pending>{
-      for (final MapEntry<int, _Pending> entry in _pending.entries)
-        if (!entry.value.lostBy(now)) entry.key: entry.value,
-    };
-    if (kept.length != _pending.length) {
-      _pending = Map<int, _Pending>.unmodifiable(kept);
-    }
-    return kept.values.where((_Pending pending) => pending.waiting).length >= 2;
+    _sweep(nowMicros());
+    return _pending.values
+            .where((_Pending pending) => pending.waiting)
+            .length >=
+        2;
   }
 
   MeadowBatch begin(MeadowWork kind, {required Duration frame}) {
     final int id = _nextBatch++;
     _store(
       id,
-      _Pending(
-        kind: kind,
-        began: nowMicros(),
-        valve: frame.inMicroseconds * _valveFrames,
-      ),
+      _Pending(kind: kind, began: nowMicros(), interval: frame.inMicroseconds),
     );
     _send(id, after: false);
     return MeadowBatch._(id);
@@ -205,6 +197,19 @@ class MeadowPacer {
     });
   }
 
+  void _sweep(int now) {
+    if (!_pending.values.any((_Pending pending) => pending.staleBy(now))) {
+      return;
+    }
+    _pending = Map<int, _Pending>.unmodifiable(<int, _Pending>{
+      for (final MapEntry<int, _Pending> entry in _pending.entries)
+        if (!entry.value.forgottenBy(now))
+          entry.key: entry.value.lapsedBy(now)
+              ? entry.value.lapse()
+              : entry.value,
+    });
+  }
+
   void _store(int id, _Pending pending) {
     _pending = Map<int, _Pending>.unmodifiable(<int, _Pending>{
       ..._pending,
@@ -230,16 +235,24 @@ class MeadowPacer {
       return;
     }
     for (final _Turn waiter in waiting) {
-      bool took = false;
+      final bool took;
       try {
         took = waiter.turn();
       } catch (error, stack) {
+        _claimFrame();
         _report(error, stack, 'while giving a meadow its turn');
+        return;
       }
       if (took) {
+        _claimFrame();
         return;
       }
     }
+  }
+
+  void _claimFrame() {
+    _used = true;
+    _closeFrame();
   }
 }
 
@@ -250,8 +263,9 @@ class _Pending {
   const _Pending({
     required this.kind,
     required this.began,
-    required this.valve,
+    required this.interval,
     this.ended = false,
+    this.lapsed = false,
     this.steps = 0,
     this.answered,
     this.beforeAt,
@@ -261,15 +275,16 @@ class _Pending {
 
   final MeadowWork kind;
   final int began;
-  final int valve;
+  final int interval;
   final bool ended;
+  final bool lapsed;
   final int steps;
   final void Function(Duration? cost)? answered;
   final int? beforeAt;
   final int? afterAt;
   final bool failed;
 
-  bool get waiting => ended && !failed && afterAt == null;
+  bool get waiting => ended && !lapsed && !failed && afterAt == null;
 
   int? get cost {
     final int? before = beforeAt;
@@ -280,7 +295,12 @@ class _Pending {
     return after - before;
   }
 
-  bool lostBy(int now) => ended && now - began > valve;
+  bool lapsedBy(int now) =>
+      ended && !lapsed && now - began > interval * _valveFrames;
+
+  bool forgottenBy(int now) => now - began > interval * _forgetFrames;
+
+  bool staleBy(int now) => lapsedBy(now) || forgottenBy(now);
 
   _Pending end({
     required int steps,
@@ -288,8 +308,22 @@ class _Pending {
   }) => _Pending(
     kind: kind,
     began: began,
-    valve: valve,
+    interval: interval,
     ended: true,
+    lapsed: lapsed,
+    steps: steps,
+    answered: answered,
+    beforeAt: beforeAt,
+    afterAt: afterAt,
+    failed: failed,
+  );
+
+  _Pending lapse() => _Pending(
+    kind: kind,
+    began: began,
+    interval: interval,
+    ended: ended,
+    lapsed: true,
     steps: steps,
     answered: answered,
     beforeAt: beforeAt,
@@ -300,8 +334,9 @@ class _Pending {
   _Pending settle({required bool after, required int? at}) => _Pending(
     kind: kind,
     began: began,
-    valve: valve,
+    interval: interval,
     ended: ended,
+    lapsed: lapsed,
     steps: steps,
     answered: answered,
     beforeAt: after ? beforeAt : at,

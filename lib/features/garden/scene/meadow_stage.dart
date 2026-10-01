@@ -391,11 +391,11 @@ class MeadowStageState extends State<MeadowStage>
           )) {
         shown.step();
         drawn++;
+        _recolourPieces++;
       }
     } finally {
       pacer.end(batch, steps: drawn);
     }
-    _recolourPieces += drawn;
     _recolourFrames++;
     _frame.value++;
   }
@@ -409,14 +409,18 @@ class MeadowStageState extends State<MeadowStage>
     final int opening = _opening;
     _openingBatches++;
     _buildFrames++;
+    int advances = 0;
     int steps = 0;
     int pieces = 0;
     _Advance advanced = _Advance.step;
     try {
       do {
         _buildSteps++;
-        steps++;
+        advances++;
         advanced = running.advance(_palette);
+        if (advanced != _Advance.created) {
+          steps++;
+        }
         if (advanced == _Advance.piece) {
           pieces++;
         }
@@ -426,7 +430,7 @@ class MeadowStageState extends State<MeadowStage>
           running.nextWork == kind &&
           MeadowPacer.keepBuilding(
             spent: Duration(microseconds: pacer.nowMicros() - started),
-            advanced: steps,
+            advanced: advances,
             frame: frame,
           ));
     } finally {
@@ -988,7 +992,6 @@ class _Hint extends StatelessWidget {
   }
 }
 
-// ignore: invalid_use_of_visible_for_testing_member
 MeadowPacer get _pacer => meadowPacer;
 
 bool _isResumed(AppLifecycleState? state) =>
@@ -1191,7 +1194,7 @@ class _SceneImages {
   }
 }
 
-enum _Advance { step, layersBuilt, piece, finished }
+enum _Advance { created, step, layersBuilt, piece, finished }
 
 class _Build {
   _Build(this.key);
@@ -1237,7 +1240,7 @@ class _Build {
           maxBytes: key.layerBudget,
         ),
       )..recolour(palette);
-      return _Advance.step;
+      return _Advance.created;
     }
     if (!layers.isBuilt) {
       layers.step();
@@ -1254,7 +1257,7 @@ class _Build {
         density: key.density,
         maxBytes: key.plantBudget,
       );
-      return _Advance.step;
+      return _Advance.created;
     }
     if (!atlas.isReady) {
       atlas.step();

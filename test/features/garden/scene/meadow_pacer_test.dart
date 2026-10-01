@@ -221,6 +221,28 @@ void main() {
     },
   );
 
+  test('estimates keep fractions of a microsecond', () async {
+    final _FakeGpu gpu = _FakeGpu();
+    final MeadowPacer pacer = gpu.pacer();
+    await _measure(
+      gpu,
+      pacer,
+      MeadowWork.plants,
+      steps: 2,
+      before: 1000,
+      after: 1005,
+    );
+    expect(
+      pacer.allowance(MeadowWork.plants, share: MeadowPacer.frameInterval(60)),
+      6666,
+      reason: '2.5 us a step',
+    );
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 3),
+    );
+  });
+
   test('a slower GPU gets smaller batches than a faster one', () async {
     final _FakeGpu fastGpu = _FakeGpu();
     final MeadowPacer fast = fastGpu.pacer();
@@ -311,6 +333,53 @@ void main() {
     expect(turns, 1, reason: 'an owner that left gets no turn');
   });
 
+  testWidgets('a turn that sends work claims the next frame', (
+    WidgetTester tester,
+  ) async {
+    final MeadowPacer pacer = _FakeGpu().pacer();
+    final Object owner = Object();
+    int sent = 0;
+    int idled = 0;
+    bool send() {
+      sent++;
+      return true;
+    }
+
+    bool idle() {
+      idled++;
+      return false;
+    }
+
+    pacer.waitTurn(owner, send);
+    _scheduleFrame(tester);
+    await tester.pump();
+    expect(sent, 1, reason: 'the turn ran at the end of an unused frame');
+
+    final List<bool> claimed = <bool>[pacer.takeFrame()];
+    tester.binding.scheduleFrameCallback(
+      (Duration timeStamp) => claimed.add(pacer.takeFrame()),
+    );
+    await tester.pump();
+    expect(claimed, <bool>[
+      false,
+      false,
+    ], reason: 'the turn that sent work claimed the whole next frame');
+    expect(pacer.takeFrame(), isTrue, reason: 'the frame after it is free');
+
+    _scheduleFrame(tester);
+    await tester.pump();
+    pacer.waitTurn(owner, idle);
+    _scheduleFrame(tester);
+    await tester.pump();
+    expect(idled, 1, reason: 'the turn ran at the end of an unused frame');
+    expect(sent, 1);
+    expect(
+      pacer.takeFrame(),
+      isTrue,
+      reason: 'a turn that sent nothing leaves the next frame free',
+    );
+  });
+
   test('a failed or lost marker never stalls the pacer', () async {
     final Duration frame = MeadowPacer.frameInterval(60);
     final _FakeGpu gpu = _FakeGpu();
@@ -381,6 +450,73 @@ void main() {
     expect(late.isBehind, isFalse);
   });
 
+  test('a batch past the valve still learns from its late answer', () async {
+    final Duration frame = MeadowPacer.frameInterval(120);
+    final int valve = 30 * MeadowPacer.frameInterval(120).inMicroseconds;
+    final int forget = 300 * MeadowPacer.frameInterval(120).inMicroseconds;
+    expect(valve, 249990);
+    final _FakeGpu gpu = _FakeGpu();
+    final MeadowPacer pacer = gpu.pacer();
+    final List<Duration?> heard = <Duration?>[];
+    final List<Duration?> lost = <Duration?>[];
+
+    final MeadowBatch late = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(late, steps: 60, answered: heard.add);
+    final MeadowBatch forgotten = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(forgotten, steps: 4, answered: lost.add);
+    expect(pacer.isBehind, isTrue);
+
+    await gpu.answer(0, at: 200000, settle: _settle);
+    expect(pacer.isBehind, isTrue, reason: 'only the before-marker answered');
+    gpu.clock = valve;
+    expect(pacer.isBehind, isTrue, reason: 'not yet past 30 frame intervals');
+    gpu.clock = valve + 1;
+    expect(
+      pacer.isBehind,
+      isFalse,
+      reason: 'past 30 frame intervals the batches stop counting',
+    );
+    expect(pacer.estimateOf(MeadowWork.plants), isNull);
+    expect(heard, isEmpty);
+
+    await gpu.answer(1, at: 260000, settle: _settle);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(milliseconds: 1),
+      reason: 'the late answer still teaches its cost',
+    );
+    expect(heard, <Duration?>[const Duration(milliseconds: 60)]);
+    expect(pacer.allowance(MeadowWork.plants, share: frame), 8);
+    expect(pacer.isBehind, isFalse);
+
+    gpu.clock = forget + 1;
+    expect(pacer.isBehind, isFalse);
+    await gpu.answer(2, at: forget + 2, settle: _settle);
+    await gpu.answer(3, at: forget + 40002, settle: _settle);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(milliseconds: 1),
+      reason: 'a batch forgotten after 300 frame intervals teaches nothing',
+    );
+    expect(lost, isEmpty);
+
+    final int start = gpu.clock;
+    final List<Duration?> kept = <Duration?>[];
+    final MeadowBatch slow = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(slow, steps: 2, answered: kept.add);
+    gpu.clock = start + forget;
+    expect(pacer.isBehind, isFalse);
+    await gpu.answer(4, at: start + forget, settle: _settle);
+    await gpu.answer(5, at: start + forget + 6000, settle: _settle);
+    expect(kept, <Duration?>[
+      const Duration(milliseconds: 6),
+    ], reason: 'a batch is kept until 300 frame intervals have passed');
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(milliseconds: 2),
+    );
+  });
+
   testWidgets('an error in a callback leaves the pacer usable', (
     WidgetTester tester,
   ) async {
@@ -423,19 +559,29 @@ void main() {
     expect(pacer.allowance(MeadowWork.plants, share: frame), 16);
     expect(pacer.isBehind, isFalse);
 
-    pacer.waitTurn(Object(), () => throw StateError('the turn broke'));
-    _scheduleFrame(tester);
-    await tester.pump();
-    expect(tester.takeException(), isStateError);
-    expect(pacer.takeFrame(), isTrue, reason: 'the next frame is free');
-    expect(pacer.takeFrame(), isFalse, reason: 'one batch per frame');
-
     final Object second = Object();
     int ran = 0;
     bool turn() {
       ran++;
       return true;
     }
+
+    pacer
+      ..waitTurn(Object(), () => throw StateError('the turn broke'))
+      ..waitTurn(second, turn);
+    _scheduleFrame(tester);
+    await tester.pump();
+    expect(tester.takeException(), isStateError);
+    expect(ran, 0, reason: "a turn that throws ends that frame's turns");
+    expect(
+      pacer.takeFrame(),
+      isFalse,
+      reason: 'the turn that threw claimed the next frame',
+    );
+    _scheduleFrame(tester);
+    await tester.pump();
+    expect(pacer.takeFrame(), isTrue, reason: 'the frame after it is free');
+    expect(pacer.takeFrame(), isFalse, reason: 'one batch per frame');
 
     pacer.waitTurn(second, turn);
     _scheduleFrame(tester);

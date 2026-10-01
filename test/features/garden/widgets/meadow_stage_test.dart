@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:field_notes/app/theme/app_theme.dart';
@@ -162,6 +163,8 @@ class _GpuTime {
   int pending = 0;
 }
 
+typedef _Sent = ({MeadowWork kind, int steps});
+
 class _FakeGpu extends MeadowPacer {
   _FakeGpu._(this._time, this._stepMicros)
     : super(
@@ -178,13 +181,24 @@ class _FakeGpu extends MeadowPacer {
 
   final _GpuTime _time;
   final int _stepMicros;
+  final Map<MeadowBatch, MeadowWork> _kinds = <MeadowBatch, MeadowWork>{};
+  final List<_Sent> sent = <_Sent>[];
   MeadowStageState? busyStage;
 
   @override
   int nowMicros() {
     final MeadowStageState? stage = busyStage;
     return super.nowMicros() +
-        (stage == null ? 0 : 3000 * stage.debugBuildSteps);
+        (stage == null
+            ? 0
+            : 3000 * (stage.debugBuildSteps + stage.debugRecolourPieces));
+  }
+
+  @override
+  MeadowBatch begin(MeadowWork kind, {required Duration frame}) {
+    final MeadowBatch batch = super.begin(kind, frame: frame);
+    _kinds[batch] = kind;
+    return batch;
   }
 
   @override
@@ -194,17 +208,39 @@ class _FakeGpu extends MeadowPacer {
     void Function(Duration? cost)? answered,
   }) {
     _time.pending = steps * _stepMicros;
+    sent.add((kind: _kinds.remove(batch)!, steps: steps));
     super.end(batch, steps: steps, answered: answered);
   }
 }
 
-_FakeGpu _useGpu({required double stepMs}) {
-  final MeadowPacer original = meadowPacer;
-  final _FakeGpu gpu = _FakeGpu(stepMs: stepMs);
-  meadowPacer = gpu;
-  addTearDown(() => meadowPacer = original);
-  return gpu;
+class _HeldGpu extends MeadowPacer {
+  _HeldGpu._(this.answers)
+    : super(
+        nowMicros: () => 0,
+        marker: () {
+          final Completer<void> answer = Completer<void>();
+          answers.add(answer);
+          return answer.future;
+        },
+      );
+
+  factory _HeldGpu() => _HeldGpu._(<Completer<void>>[]);
+
+  final List<Completer<void>> answers;
 }
+
+T _install<T extends MeadowPacer>(T pacer) {
+  final MeadowPacer original = meadowPacer;
+  meadowPacer = pacer;
+  addTearDown(() => meadowPacer = original);
+  return pacer;
+}
+
+_FakeGpu _useGpu({required double stepMs}) =>
+    _install(_FakeGpu(stepMs: stepMs));
+
+int _countedSteps(Iterable<_Sent> sent) =>
+    sent.fold<int>(0, (int total, _Sent batch) => total + batch.steps);
 
 Future<MeadowStageState> _pumpStage(
   WidgetTester tester, {
@@ -837,34 +873,54 @@ void main() {
     'the scene opens in batches the pacer sizes, one kind of step per batch',
     (WidgetTester tester) async {
       for (final double stepMs in <double>[0.1, 40]) {
-        _useGpu(stepMs: stepMs);
+        final _FakeGpu gpu = _useGpu(stepMs: stepMs);
         final MeadowStageState state = await _pumpStage(
           tester,
           year: _leapYear(),
         );
         int most = 0;
+        int creations = 0;
         for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
           await tester.runAsync(
             () => Future<void>.delayed(const Duration(milliseconds: 2)),
           );
           final int steps = state.debugBuildSteps;
           final int pieces = state.debugRecolourPieces;
+          final int batches = gpu.sent.length;
           await tester.pump();
           final int stepped = state.debugBuildSteps - steps;
           final int drawn = state.debugRecolourPieces - pieces;
+          final List<_Sent> sent = gpu.sent.sublist(batches);
           final String reason = '$stepMs ms a step, frame $i';
           if (drawn > 0) {
             expect(stepped, drawn, reason: '$reason drew a piece');
           }
           if (stepMs == 40) {
-            expect(stepped, lessThanOrEqualTo(1), reason: reason);
+            final bool creates = sent.any(
+              (_Sent batch) =>
+                  (batch.kind == MeadowWork.layers ||
+                      batch.kind == MeadowWork.plants) &&
+                  gpu.sent
+                      .take(batches)
+                      .every((_Sent earlier) => earlier.kind != batch.kind),
+            );
+            expect(_countedSteps(sent), lessThanOrEqualTo(1), reason: reason);
+            expect(stepped, creates ? 2 : lessThanOrEqualTo(1), reason: reason);
+            if (creates) {
+              creations++;
+            }
           }
           most = math.max(most, stepped);
         }
         expect(state.debugIsReady, isTrue, reason: '$stepMs ms a step');
         expect(state.debugRecolourPieces, greaterThan(1));
         if (stepMs == 40) {
-          expect(most, 1);
+          expect(
+            creations,
+            2,
+            reason: 'the terrain layers and the plant atlas are created',
+          );
+          expect(most, 2);
         } else {
           expect(most, greaterThan(4));
         }
@@ -950,6 +1006,119 @@ void main() {
     }
     expect(state.debugIsReady, isTrue);
     expect(threes, greaterThan(0));
+  });
+
+  testWidgets(
+    'a build step that sends no GPU work never sizes the next batch',
+    (WidgetTester tester) async {
+      final _FakeGpu gpu = _useGpu(stepMs: 0.1);
+      final MeadowStageState state = await _pumpStage(tester);
+      await _grow(tester, state);
+      expect(
+        _countedSteps(gpu.sent),
+        state.debugBuildSteps - 2,
+        reason:
+            'creating the terrain layers and the plant atlas counts nothing',
+      );
+      expect(
+        gpu.sent
+            .firstWhere((_Sent batch) => batch.kind == MeadowWork.layers)
+            .steps,
+        1,
+      );
+      expect(
+        gpu.sent
+            .firstWhere((_Sent batch) => batch.kind == MeadowWork.plants)
+            .steps,
+        1,
+      );
+    },
+  );
+
+  testWidgets("an open meadow's recolour work stops at half the frame "
+      'interval', (WidgetTester tester) async {
+    final _FakeGpu gpu = _useGpu(stepMs: 0.1);
+    const Key key = ValueKey<String>('busy recolour stage');
+    MeadowStageState state = await _pumpStage(
+      tester,
+      tickers: false,
+      stageKey: key,
+    );
+    await _grow(tester, state);
+    gpu.busyStage = state;
+    final int before = state.debugRecolourPieces;
+
+    state = await _pumpStage(
+      tester,
+      tickers: false,
+      stageKey: key,
+      sky: _midnight,
+    );
+    expect(state.debugIsRecolouring, isTrue);
+    int threes = 0;
+    int frames = 0;
+    while (state.debugIsRecolouring && frames < 64) {
+      final int drawn = state.debugRecolourPieces;
+      await tester.pump();
+      frames++;
+      final int pieces = state.debugRecolourPieces - drawn;
+      expect(pieces, lessThanOrEqualTo(3), reason: 'frame $frames');
+      if (pieces == 3) {
+        threes++;
+      }
+    }
+    expect(state.debugIsRecolouring, isFalse);
+    expect(threes, greaterThan(0));
+    expect(state.debugRecolourPieces - before, greaterThan(3));
+  });
+
+  testWidgets('a meadow sends nothing while the GPU is two batches behind', (
+    WidgetTester tester,
+  ) async {
+    final _HeldGpu gpu = _install(_HeldGpu());
+    final MeadowStageState state = await _pumpStage(tester);
+    for (int i = 0; i < _buildFrames && gpu.answers.length < 4; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 2)),
+      );
+      await tester.pump();
+    }
+    expect(gpu.answers, hasLength(4), reason: 'two batches sent');
+    expect(gpu.isBehind, isTrue);
+    final int steps = state.debugBuildSteps;
+    final int pieces = state.debugRecolourPieces;
+    final int waited = state.debugOpeningWaited;
+    expect(steps, greaterThan(0));
+    for (int i = 0; i < 8; i++) {
+      await tester.pump();
+      expect(state.debugBuildSteps, steps, reason: 'frame $i while behind');
+      expect(state.debugRecolourPieces, pieces, reason: 'frame $i');
+    }
+    expect(
+      state.debugOpeningWaited,
+      waited + 8,
+      reason: 'it waited each frame',
+    );
+    expect(gpu.answers, hasLength(4), reason: 'no batch began while behind');
+
+    gpu.answers[0].complete();
+    gpu.answers[1].complete();
+    await tester.pump();
+    expect(
+      state.debugBuildSteps,
+      greaterThan(steps),
+      reason: 'one batch answered, so the next frame builds',
+    );
+
+    for (int i = 0; i < _buildFrames && !state.debugIsReady; i++) {
+      for (final Completer<void> answer in gpu.answers) {
+        if (!answer.isCompleted) {
+          answer.complete();
+        }
+      }
+      await tester.pump();
+    }
+    expect(state.debugIsReady, isTrue);
   });
 
   testWidgets(
