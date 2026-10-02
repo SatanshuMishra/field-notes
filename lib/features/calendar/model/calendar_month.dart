@@ -114,6 +114,8 @@ CalendarCell _cellFor(DateTime date, MonthRef month) {
   );
 }
 
+String monthName(int month) => _monthNames[month - 1];
+
 String monthAbbreviation(int month) => _monthNames[month - 1].substring(0, 3);
 
 List<String> weekdayHeaders({int firstWeekday = DateTime.sunday}) =>
