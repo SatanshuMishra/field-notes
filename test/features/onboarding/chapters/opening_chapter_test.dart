@@ -17,11 +17,16 @@ import '../../../app/support/app_shell_harness.dart';
 const Size _sidebarArea = Size(1280, 758);
 const Size _bottomBarArea = Size(360, 740);
 
+const Size _smallestSidebarArea = Size(873, 558);
+const Size _smallestBottomBarArea = Size(360, 640);
+const double _tallHeight = 1000;
+
 const String _kicker = 'field notes';
 const String _title = "Most days won't feel like a story.";
 const String _subtitle =
     "Write them down anyway. Each one becomes a flower, and they're yours "
     'to keep.';
+const List<String> _headingTexts = <String>[_kicker, _title, _subtitle];
 const String _plantLabel = 'Plant your first seed';
 const String _clickHint = 'click anywhere to plant your first seed';
 const String _tapHint = 'tap anywhere to plant your first seed';
@@ -35,6 +40,18 @@ const OnboardingFlowRunning _opening = OnboardingFlowRunning(
     week: WeekStart.sunday,
   ),
 );
+
+final class _PaintOrderContext extends TestRecordingPaintingContext {
+  _PaintOrderContext() : super(TestRecordingCanvas());
+
+  final List<RenderObject> painted = <RenderObject>[];
+
+  @override
+  void paintChild(RenderObject child, Offset offset) {
+    painted.add(child);
+    super.paintChild(child, offset);
+  }
+}
 
 Future<void> _onLayout(ShellLayout layout, Future<void> Function() body) async {
   debugDefaultTargetPlatformOverride = switch (layout) {
@@ -52,11 +69,14 @@ Future<void> _pumpOpening(
   WidgetTester tester,
   ShellLayout layout, {
   bool reduceMotion = false,
+  Size? area,
 }) async {
-  tester.view.physicalSize = switch (layout) {
-    ShellLayout.sidebar => _sidebarArea,
-    ShellLayout.bottomBar => _bottomBarArea,
-  };
+  tester.view.physicalSize =
+      area ??
+      switch (layout) {
+        ShellLayout.sidebar => _sidebarArea,
+        ShellLayout.bottomBar => _bottomBarArea,
+      };
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -96,7 +116,7 @@ double _shown(WidgetTester tester, String text) => tester
     );
 
 void _expectHeading(WidgetTester tester, {required double shown}) {
-  for (final String text in <String>[_kicker, _title, _subtitle]) {
+  for (final String text in _headingTexts) {
     expect(find.text(text), findsOneWidget);
     expect(_shown(tester, text), shown, reason: text);
   }
@@ -155,6 +175,63 @@ Future<void> _expectGrowth(WidgetTester tester) async {
   _expectHeading(tester, shown: 1);
 }
 
+Future<Map<String, Rect>> _growPeonyIn(
+  WidgetTester tester,
+  ShellLayout layout,
+  Size area,
+) async {
+  await _pumpOpening(tester, layout, area: area);
+  await tester.pump(const Duration(seconds: 2));
+  await tester.tap(find.byType(OpeningChapter));
+  await tester.pump();
+  await tester.pump(const Duration(seconds: 4));
+  await tester.pump();
+  expect(_draft(tester).grown, isTrue);
+  _expectHeading(tester, shown: 1);
+  return <String, Rect>{
+    for (final String text in _headingTexts)
+      text: tester.getRect(find.text(text)),
+  };
+}
+
+List<RenderObject> _paintOrder(WidgetTester tester) {
+  final _PaintOrderContext context = _PaintOrderContext();
+  tester.renderObject(find.byType(OpeningChapter)).paint(context, Offset.zero);
+  context.dispose();
+  return List<RenderObject>.unmodifiable(context.painted);
+}
+
+void _expectHeadingInFrontOfArt(WidgetTester tester) {
+  final Finder chapter = find.byType(OpeningChapter);
+  final Finder art = find.descendant(
+    of: chapter,
+    matching: find.byType(CustomPaint),
+  );
+  expect(art, findsNWidgets(2));
+  final Rect area = tester.getRect(chapter);
+  final List<Rect> artRects = <Rect>[
+    for (int index = 0; index < 2; index++) tester.getRect(art.at(index)),
+  ];
+  expect(artRects, contains(area));
+  expect(
+    artRects.where(
+      (Rect rect) => rect.bottom == area.bottom && rect.top > area.top,
+    ),
+    hasLength(1),
+  );
+
+  final List<RenderObject> painted = _paintOrder(tester);
+  final List<int> artOrder = <int>[
+    for (int index = 0; index < 2; index++)
+      painted.indexOf(tester.renderObject(art.at(index))),
+  ];
+  expect(artOrder, everyElement(isNonNegative));
+  for (final String text in _headingTexts) {
+    final int order = painted.indexOf(tester.renderObject(find.text(text)));
+    expect(artOrder, everyElement(lessThan(order)), reason: text);
+  }
+}
+
 void main() {
   testWidgets('the opening plants on a tap or Enter and grows the peony', (
     WidgetTester tester,
@@ -198,4 +275,30 @@ void main() {
       });
     }
   });
+
+  testWidgets(
+    'the heading paints in front of the peony at the smallest window',
+    (WidgetTester tester) async {
+      for (final (ShellLayout layout, Size smallest) in <(ShellLayout, Size)>[
+        (ShellLayout.sidebar, _smallestSidebarArea),
+        (ShellLayout.bottomBar, _smallestBottomBarArea),
+      ]) {
+        await _onLayout(layout, () async {
+          final Map<String, Rect> tall = await _growPeonyIn(
+            tester,
+            layout,
+            Size(smallest.width, _tallHeight),
+          );
+          final Map<String, Rect> short = await _growPeonyIn(
+            tester,
+            layout,
+            smallest,
+          );
+
+          _expectHeadingInFrontOfArt(tester);
+          expect(short, tall);
+        });
+      }
+    },
+  );
 }
