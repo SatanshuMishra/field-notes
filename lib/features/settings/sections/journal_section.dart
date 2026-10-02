@@ -125,13 +125,13 @@ class JournalSection extends ConsumerWidget {
           ),
         SettingsFieldRow(
           label: 'Show the tour again',
-          description: 'Six quick tips about the app.',
+          description: 'A map of where everything lives.',
           control: StickerButton(
             label: 'Show tour',
             variant: StickerButtonVariant.secondary,
             padTapTarget: true,
             onPressed: () =>
-                ref.read(onboardingControllerProvider.notifier).replayTour(),
+                ref.read(onboardingControllerProvider.notifier).showMap(),
           ),
         ),
       ],

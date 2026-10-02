@@ -1,64 +1,11 @@
-import 'dart:math' as math;
-import 'dart:ui' as ui;
-
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/widgets.dart';
 
-const Key onboardingCardKey = ValueKey<String>('onboarding-card');
-const Key onboardingPageKey = ValueKey<String>('onboarding-page');
-
-const double onboardingCardWidth = 520;
-
-const double _cardBorderWidth = 2;
-const double _cardMargin = 28;
-const double _cardRoomyHeight = 560;
-const double _cardSideInset = 16;
-const double _scrimBlurSigma = 3.5;
 const double _minTapTarget = 48;
 const double _disabledOpacity = 0.45;
-
-const RadialGradient _scrimGradient = RadialGradient(
-  center: Alignment(0, -0.36),
-  radius: 1.2,
-  colors: <Color>[Color(0x5C2A2016), Color(0x9E1C140C)],
-);
-
-const BoxShadow _cardLift = BoxShadow(
-  color: Color(0xB3140C06),
-  offset: Offset(0, 30),
-  blurRadius: 70,
-  spreadRadius: -24,
-);
-
-List<BoxShadow> _cardShadow(FieldNotesColors colors) => <BoxShadow>[
-  BoxShadow(color: colors.shadowTint(0x59), offset: const Offset(5, 5)),
-  _cardLift,
-];
-
-BoxDecoration onboardingCardDecoration(
-  FieldNotesColors colors, {
-  double radius = Shapes.radiusSheet,
-}) => BoxDecoration(
-  color: colors.composerPaper,
-  border: Border.all(color: colors.line, width: _cardBorderWidth),
-  borderRadius: BorderRadius.circular(radius),
-  boxShadow: _cardShadow(colors),
-);
-
-LinearGradient _pageGradient(FieldNotesColors colors) => LinearGradient(
-  begin: Alignment.topCenter,
-  end: Alignment.bottomCenter,
-  colors: <Color>[colors.paperShade, colors.hatchLight],
-);
-
-const RadialGradient _pageGlow = RadialGradient(
-  center: Alignment(0.64, -1),
-  radius: 1.2,
-  colors: <Color>[Color(0x29C76A54), Color(0x00C76A54)],
-  stops: <double>[0, 0.6],
-);
+const double _trailingGap = 8;
 
 const TextStyle _primaryLabel = TextStyle(
   fontFamily: TypographyTokens.sans,
@@ -67,89 +14,59 @@ const TextStyle _primaryLabel = TextStyle(
   color: Palette.onAccent,
 );
 
-class OnboardingSurface extends StatelessWidget {
-  const OnboardingSurface({
+const EdgeInsets _sidebarHeadingPadding = EdgeInsets.fromLTRB(40, 36, 40, 0);
+const EdgeInsets _bottomBarHeadingPadding = EdgeInsets.fromLTRB(18, 16, 18, 0);
+
+class OnboardingHeading extends StatelessWidget {
+  const OnboardingHeading({
     super.key,
     required this.layout,
-    required this.child,
+    required this.kicker,
+    required this.title,
   });
 
   final ShellLayout layout;
-  final Widget child;
+  final String kicker;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return BlockSemantics(
-      child: switch (layout) {
-        ShellLayout.sidebar => _card(colors),
-        ShellLayout.bottomBar => _page(colors),
-      },
-    );
-  }
-
-  Widget _card(FieldNotesColors colors) {
-    return Stack(
-      children: <Widget>[
-        const Positioned.fill(child: _OnboardingScrim()),
-        Positioned.fill(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              final double margin = constraints.maxHeight < _cardRoomyHeight
-                  ? 0
-                  : _cardMargin;
-              final double width = math.min(
-                onboardingCardWidth,
-                math.max(0, constraints.maxWidth - 2 * _cardSideInset),
-              );
-              return Center(
-                child: Container(
-                  key: onboardingCardKey,
-                  width: width,
-                  constraints: BoxConstraints(
-                    maxHeight: math.max(0, constraints.maxHeight - 2 * margin),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  decoration: onboardingCardDecoration(colors),
-                  child: child,
-                ),
-              );
-            },
+    final bool sidebar = layout == ShellLayout.sidebar;
+    final TextAlign align = sidebar ? TextAlign.center : TextAlign.start;
+    return Padding(
+      padding: sidebar ? _sidebarHeadingPadding : _bottomBarHeadingPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: sidebar
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            kicker,
+            textAlign: align,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? 21 : 18,
+              fontWeight: FontWeight.w600,
+              color: colors.accentInk,
+            ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _page(FieldNotesColors colors) {
-    return SizedBox.expand(
-      child: DecoratedBox(
-        key: onboardingPageKey,
-        decoration: BoxDecoration(gradient: _pageGradient(colors)),
-        child: DecoratedBox(
-          decoration: const BoxDecoration(gradient: _pageGlow),
-          child: SafeArea(child: child),
-        ),
-      ),
-    );
-  }
-}
-
-class _OnboardingScrim extends StatelessWidget {
-  const _OnboardingScrim();
-
-  @override
-  Widget build(BuildContext context) {
-    return AbsorbPointer(
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(
-          sigmaX: _scrimBlurSigma,
-          sigmaY: _scrimBlurSigma,
-        ),
-        child: const DecoratedBox(
-          decoration: BoxDecoration(gradient: _scrimGradient),
-          child: SizedBox.expand(),
-        ),
+          Semantics(
+            header: true,
+            child: Text(
+              title,
+              textAlign: align,
+              style: TextStyle(
+                fontFamily: TypographyTokens.serif,
+                fontSize: sidebar ? 44 : 26,
+                fontWeight: FontWeight.w500,
+                height: sidebar ? 1.05 : 1.08,
+                color: colors.ink,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -167,6 +84,7 @@ class OnboardingPrimaryButton extends StatelessWidget {
     this.expand = false,
     this.autofocus = false,
     this.focusNode,
+    this.trailing,
   });
 
   final String label;
@@ -178,11 +96,19 @@ class OnboardingPrimaryButton extends StatelessWidget {
   final bool expand;
   final bool autofocus;
   final FocusNode? focusNode;
+  final String? trailing;
 
   @override
   Widget build(BuildContext context) {
     final bool enabled = onPressed != null;
     final FieldNotesShadows shadows = context.shadows;
+    final String? trailingGlyph = trailing;
+    final Widget text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: labelStyle,
+    );
     final Widget face = SizedBox(
       height: height,
       width: expand ? double.infinity : null,
@@ -198,12 +124,16 @@ class OnboardingPrimaryButton extends StatelessWidget {
           child: Center(
             widthFactor: expand ? null : 1,
             child: ExcludeSemantics(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: labelStyle,
-              ),
+              child: trailingGlyph == null
+                  ? text
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Flexible(child: text),
+                        const SizedBox(width: _trailingGap),
+                        Text(trailingGlyph, maxLines: 1, style: labelStyle),
+                      ],
+                    ),
             ),
           ),
         ),

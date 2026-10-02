@@ -1,14 +1,17 @@
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
-import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
-import 'package:field_notes/app/shell/sidebar_shell.dart';
-import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/onboarding/chapters/day_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/month_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/opening_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/reminder_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/theme_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/week_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/year_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
-import 'package:field_notes/features/onboarding/setup/setup_reminder_step.dart';
-import 'package:field_notes/features/onboarding/setup/setup_storage_step.dart';
-import 'package:field_notes/features/onboarding/setup/setup_week_step.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -28,34 +31,29 @@ const List<ShellLayout> _layouts = <ShellLayout>[
   ShellLayout.bottomBar,
 ];
 
-const String _beginLabel = 'Let’s begin';
-const String _skipTourLabel = 'Skip how it works';
-const String _appearanceTitle = 'Light or dark?';
-const String _reminderTitle = 'A gentle daily nudge?';
-const String _weekTitle = 'Your week starts on';
-const String _storageTitle = 'Where should entries live?';
-const String _summaryTitle = 'You’re all set';
-const String _saveError = 'Couldn’t save your choices. Try again.';
-const String _setUpLabel = 'Set up';
-const String _doneLabel = 'Done';
+const Map<OnboardingChapter, Type> _chapterTypes = <OnboardingChapter, Type>{
+  OnboardingChapter.opening: OpeningChapter,
+  OnboardingChapter.day: DayChapter,
+  OnboardingChapter.moment: MomentChapter,
+  OnboardingChapter.month: MonthChapter,
+  OnboardingChapter.year: YearChapter,
+  OnboardingChapter.theme: ThemeChapter,
+  OnboardingChapter.reminder: ReminderChapter,
+  OnboardingChapter.week: WeekChapter,
+  OnboardingChapter.tour: TourChapter,
+};
 
-const List<String> _tipTitles = <String>[
-  'Four pages, one journal',
-  'Plant a bloom each day',
-  'Capture a moment',
-  'What a note can hold',
-  'Past days stay open',
-  'Settings live here',
-];
-
-class _FailingSetupWrites extends FakeSettingsRepository {
-  _FailingSetupWrites() : super(storedValues: false);
-
-  @override
-  Future<void> setReminderEnabled(bool value) async {
-    throw StateError('disk full');
-  }
-}
+const Map<OnboardingChapter, String> _titles = <OnboardingChapter, String>{
+  OnboardingChapter.opening: "Most days won't feel like a story.",
+  OnboardingChapter.day: 'How was today, honestly?',
+  OnboardingChapter.moment: 'Write a little about today.',
+  OnboardingChapter.month: 'Give it a few weeks.',
+  OnboardingChapter.year: 'This is roughly what a year of you looks like.',
+  OnboardingChapter.theme: 'Daylight or lamplight?',
+  OnboardingChapter.reminder: 'When should we check in?',
+  OnboardingChapter.week: 'Your week starts on…',
+  OnboardingChapter.tour: "Here's where everything lives.",
+};
 
 FakeSettingsRepository _freshInstall() =>
     FakeSettingsRepository(storedValues: false);
@@ -63,6 +61,7 @@ FakeSettingsRepository _freshInstall() =>
 FakeSettingsRepository _onboarded() => FakeSettingsRepository(
   initial: AppSettings.defaults.copyWith(
     onboardingStatus: OnboardingStatus.done,
+    notificationPermissionAsked: true,
   ),
 );
 
@@ -71,14 +70,12 @@ class _Screen {
     this.name, {
     required this.reach,
     required this.proof,
-    this.stateful = const <A11yStatefulControl>[],
     this.settings = _freshInstall,
   });
 
   final String name;
-  final Future<void> Function(WidgetTester tester) reach;
+  final void Function(OnboardingController controller) reach;
   final List<A11yProof> Function(ShellLayout layout) proof;
-  final List<A11yStatefulControl> stateful;
   final FakeSettingsRepository Function() settings;
 }
 
@@ -91,6 +88,7 @@ List<Override> _overrides(FakeSettingsRepository settings) => <Override>[
   for (final Override override in shellOverrides())
     if (override.origin != settingsRepositoryProvider) override,
   settingsRepositoryProvider.overrideWithValue(settings),
+  onboardingCountryCodeProvider.overrideWithValue('US'),
 ];
 
 Future<void> _settle(WidgetTester tester) async {
@@ -101,12 +99,40 @@ Future<void> _settle(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 300));
 }
 
-Future<void> _tap(WidgetTester tester, Finder finder) async {
-  await tester.ensureVisible(finder);
-  await tester.pump();
-  await tester.tap(finder);
-  await _settle(tester);
+void _doTask(OnboardingController controller, OnboardingChapter chapter) {
+  switch (chapter) {
+    case OnboardingChapter.opening:
+      controller
+        ..plant()
+        ..markGrown();
+    case OnboardingChapter.moment:
+      controller.setNote('A first line about today');
+    case OnboardingChapter.month:
+      controller.setMonthFill(1);
+    case OnboardingChapter.year:
+      controller.setYearDay(365, scrubbed: false);
+    case OnboardingChapter.day ||
+        OnboardingChapter.theme ||
+        OnboardingChapter.reminder ||
+        OnboardingChapter.week ||
+        OnboardingChapter.tour:
+      return;
+  }
 }
+
+void Function(OnboardingController controller) _walkTo(
+  OnboardingChapter target,
+) => (OnboardingController controller) {
+  for (final OnboardingChapter chapter in OnboardingChapter.values) {
+    if (chapter == target) {
+      return;
+    }
+    _doTask(controller, chapter);
+    controller.next();
+  }
+};
+
+void _openMap(OnboardingController controller) => controller.showMap();
 
 Future<void> _pumpScreen(
   WidgetTester tester,
@@ -131,232 +157,50 @@ Future<void> _pumpScreen(
       ),
     );
     await _settle(tester);
-    await screen.reach(tester);
+    screen.reach(
+      ProviderScope.containerOf(tester.element(find.byType(AppShell)))
+          .read(onboardingControllerProvider.notifier),
+    );
+    await _settle(tester);
   } finally {
     debugDefaultTargetPlatformOverride = null;
   }
 }
 
-Future<void> _stay(WidgetTester tester) async {}
-
-Future<void> _walkTips(WidgetTester tester, int tip) async {
-  for (int step = 0; step < tip; step++) {
-    await _tap(tester, find.byKey(tourNextKey));
-  }
-}
-
-Future<void> _toAppearance(WidgetTester tester) =>
-    _tap(tester, find.text(_beginLabel));
-
-Future<void> _continueFromAppearance(WidgetTester tester) =>
-    _tap(tester, find.byKey(onboardingAppearanceContinueKey));
-
-Future<void> _toTip(WidgetTester tester, int tip) async {
-  await _toAppearance(tester);
-  await _continueFromAppearance(tester);
-  await _walkTips(tester, tip);
-}
-
-Future<void> _toReplayLastTip(WidgetTester tester) async {
-  ProviderScope.containerOf(
-    tester.element(find.byType(AppShell)),
-  ).read(onboardingControllerProvider.notifier).replayTour();
-  await _settle(tester);
-  await _walkTips(tester, _tipTitles.length - 1);
-}
-
-Future<void> _toReminder(WidgetTester tester) async {
-  await _tap(tester, find.text(_skipTourLabel));
-  await _continueFromAppearance(tester);
-}
-
-Future<void> _toOther(WidgetTester tester) async {
-  await _toReminder(tester);
-  await _tap(tester, find.byKey(setupReminderPresetKey(ReminderPreset.other)));
-  await tester.ensureVisible(find.byType(SettingsTimeField));
-  await _settle(tester);
-}
-
-Future<void> _toWeek(WidgetTester tester) async {
-  await _toReminder(tester);
-  await _tap(tester, find.byKey(setupPrimaryKey));
-}
-
-Future<void> _toStorage(WidgetTester tester) async {
-  await _toWeek(tester);
-  await _tap(tester, find.byKey(setupPrimaryKey));
-}
-
-Future<void> _toSummary(WidgetTester tester) async {
-  await _toStorage(tester);
-  await _tap(tester, find.byKey(setupPrimaryKey));
-}
-
-Future<void> _toSaveError(WidgetTester tester) async {
-  await _toSummary(tester);
-  await _tap(tester, find.byKey(setupPrimaryKey));
-}
-
-A11yProof _shellProof(ShellLayout layout) => switch (layout) {
-  ShellLayout.sidebar => A11yProof(find.byType(SidebarShell)),
-  ShellLayout.bottomBar => A11yProof(find.byType(BottomBarShell)),
-};
-
-A11yProof _surfaceProof(ShellLayout layout) => switch (layout) {
-  ShellLayout.sidebar => A11yProof(find.byKey(onboardingCardKey)),
-  ShellLayout.bottomBar => A11yProof(find.byKey(onboardingPageKey)),
-};
-
-final Finder _shownTourCard = find.ancestor(
-  of: find.byKey(tourCardKey),
-  matching: find.byWidgetPredicate(
-    (Widget widget) => widget is AnimatedOpacity && widget.opacity == 1,
-    description: 'a fully shown tour card',
-  ),
-);
-
-List<A11yProof> Function(ShellLayout layout) _tipProof(
-  int tip, {
-  String? next,
-}) =>
+List<A11yProof> Function(ShellLayout layout) _chapterProof(
+  OnboardingChapter chapter,
+) =>
     (ShellLayout layout) => <A11yProof>[
-      _shellProof(layout),
-      A11yProof(_shownTourCard),
-      A11yProof(
-        find.descendant(
-          of: find.byKey(tourCardKey),
-          matching: find.text(_tipTitles[tip]),
-        ),
-      ),
-      if (next != null)
-        A11yProof(
-          find.descendant(
-            of: find.byKey(tourNextKey),
-            matching: find.text(next),
-          ),
-        ),
+      A11yProof(find.byType(OnboardingFrame)),
+      A11yProof(find.byType(_chapterTypes[chapter]!)),
+      A11yProof(find.text(_titles[chapter]!)),
+      A11yProof(find.byKey(onboardingProgressKey)),
     ];
 
-List<A11yProof> Function(ShellLayout layout) _setupProof(String text) =>
-    (ShellLayout layout) => <A11yProof>[
-      _shellProof(layout),
-      _surfaceProof(layout),
-      A11yProof(find.byType(OnboardingSetup)),
-      A11yProof(find.text(text)),
-    ];
-
-final List<A11yStatefulControl> _reminderStateful = <A11yStatefulControl>[
-  A11yStatefulControl.finder(
-    find.byType(SettingsToggle),
-    A11yStateKind.toggled,
-  ),
-  for (final ReminderPreset preset in ReminderPreset.values)
-    A11yStatefulControl.finder(
-      find.byKey(setupReminderPresetKey(preset)),
-      A11yStateKind.selected,
+List<A11yProof> _mapProof(ShellLayout layout) => <A11yProof>[
+  A11yProof(find.byType(OnboardingFrame)),
+  A11yProof(find.byType(TourChapter)),
+  A11yProof(find.text(_titles[OnboardingChapter.tour]!)),
+  A11yProof(
+    find.descendant(
+      of: find.byKey(onboardingPrimaryKey),
+      matching: find.text('Done'),
     ),
-];
-
-final List<A11yStatefulControl> _appearanceStateful = <A11yStatefulControl>[
-  for (final Appearance appearance in Appearance.values)
-    A11yStatefulControl.finder(
-      find.byKey(onboardingAppearanceOptionKey(appearance)),
-      A11yStateKind.selected,
-    ),
-];
-
-final List<A11yStatefulControl> _weekStateful = <A11yStatefulControl>[
-  for (final WeekStart start in WeekStart.values)
-    A11yStatefulControl.finder(
-      find.byKey(setupWeekOptionKey(start)),
-      A11yStateKind.checked,
-    ),
-];
-
-final List<A11yStatefulControl> _storageStateful = <A11yStatefulControl>[
-  A11yStatefulControl.finder(
-    find.byKey(setupStorageDeviceKey),
-    A11yStateKind.checked,
-  ),
-  A11yStatefulControl.finder(
-    find.byKey(setupStorageServerKey),
-    A11yStateKind.checked,
   ),
 ];
 
 final List<_Screen> _screens = <_Screen>[
-  _Screen(
-    'welcome',
-    reach: _stay,
-    proof: (ShellLayout layout) => <A11yProof>[
-      _shellProof(layout),
-      _surfaceProof(layout),
-      A11yProof(find.byType(OnboardingWelcome)),
-      A11yProof(find.text(_beginLabel)),
-    ],
-  ),
-  for (int tip = 0; tip < _tipTitles.length; tip++)
+  for (final OnboardingChapter chapter in OnboardingChapter.values)
     _Screen(
-      'tip-${tip + 1}',
-      reach: (WidgetTester tester) => _toTip(tester, tip),
-      proof: _tipProof(
-        tip,
-        next: tip == _tipTitles.length - 1 ? _setUpLabel : null,
-      ),
+      chapter.name,
+      reach: _walkTo(chapter),
+      proof: _chapterProof(chapter),
     ),
-  _Screen(
-    'reminder-on',
-    reach: _toReminder,
-    proof: _setupProof(_reminderTitle),
-    stateful: _reminderStateful,
-  ),
-  _Screen(
-    'reminder-other',
-    reach: _toOther,
-    proof: (ShellLayout layout) => <A11yProof>[
-      ..._setupProof(_reminderTitle)(layout),
-      A11yProof(find.byType(SettingsTimeField)),
-    ],
-    stateful: _reminderStateful,
-  ),
-  _Screen(
-    'week',
-    reach: _toWeek,
-    proof: _setupProof(_weekTitle),
-    stateful: _weekStateful,
-  ),
-  _Screen(
-    'storage',
-    reach: _toStorage,
-    proof: _setupProof(_storageTitle),
-    stateful: _storageStateful,
-  ),
-  _Screen('summary', reach: _toSummary, proof: _setupProof(_summaryTitle)),
-  _Screen(
-    'summary-save-error',
-    reach: _toSaveError,
-    proof: (ShellLayout layout) => <A11yProof>[
-      ..._setupProof(_summaryTitle)(layout),
-      A11yProof(find.text(_saveError)),
-    ],
-    settings: _FailingSetupWrites.new,
-  ),
-  _Screen(
-    'replay-last-tip',
-    reach: _toReplayLastTip,
-    proof: _tipProof(_tipTitles.length - 1, next: _doneLabel),
+  const _Screen(
+    'map-replay',
+    reach: _openMap,
+    proof: _mapProof,
     settings: _onboarded,
-  ),
-  _Screen(
-    'appearance',
-    reach: _toAppearance,
-    proof: (ShellLayout layout) => <A11yProof>[
-      _shellProof(layout),
-      A11yProof(find.byKey(onboardingAppearanceKey)),
-      A11yProof(find.byType(OnboardingAppearance)),
-      A11yProof(find.text(_appearanceTitle)),
-    ],
-    stateful: _appearanceStateful,
   ),
 ];
 
@@ -369,6 +213,5 @@ final List<A11yState> onboardingStates = <A11yState>[
             '${screen.name}-${_layoutName(layout)}',
         pump: (WidgetTester tester) => _pumpScreen(tester, layout, screen),
         proof: screen.proof(layout),
-        stateful: screen.stateful,
       ),
 ];
