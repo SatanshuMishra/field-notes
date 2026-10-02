@@ -6,6 +6,10 @@ import 'package:timezone/timezone.dart' as tz;
 
 import 'reminder_scheduler.dart';
 
+const String reminderNotificationTitle = 'Field Notes';
+const String reminderNotificationBody =
+    "You haven't written today's field note yet.";
+
 class LocalNotificationsReminderScheduler implements ReminderScheduler {
   LocalNotificationsReminderScheduler({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
@@ -14,8 +18,6 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   static const String _channelName = 'Daily reminder';
   static const String _channelDescription =
       'Reminds you to write your field note for the day.';
-  static const String _title = 'Field Notes';
-  static const String _body = "You haven't written today's field note yet.";
   static const String _androidIcon = '@mipmap/ic_launcher';
 
   static const NotificationDetails _details = NotificationDetails(
@@ -118,8 +120,8 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
     for (final ReminderBooking booking in bookings) {
       await _plugin.zonedSchedule(
         id: booking.id,
-        title: _title,
-        body: _body,
+        title: reminderNotificationTitle,
+        body: reminderNotificationBody,
         scheduledDate: tz.TZDateTime.from(booking.at, tz.local),
         notificationDetails: _details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
