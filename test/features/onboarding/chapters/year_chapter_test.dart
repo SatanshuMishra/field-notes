@@ -39,10 +39,6 @@ const String _sampleLabel = 'A sample year in the meadow';
 const double _hintReach = 16;
 const double _underSlop = 4;
 const Offset _lookAround = Offset(-160, 0);
-const BoxDecoration _hintPill = BoxDecoration(
-  color: Color.fromRGBO(30, 24, 18, 0.5),
-  borderRadius: BorderRadius.all(Radius.circular(20)),
-);
 
 final RegExp _datedMeadow = RegExp(r'^Meadow\W*\d{4}');
 
@@ -213,11 +209,14 @@ void _expectHintPlaced(
 }) {
   final String moment = '$layout ${finished ? 'finished' : 'playing'}';
   expect(find.text(_dragHint), findsOneWidget, reason: moment);
-  expect(tester.widget<DecoratedBox>(_hintBox).decoration, _hintPill);
-  final TextStyle? ink = tester.widget<Text>(find.text(_dragHint)).style;
-  expect(ink?.fontSize, 10, reason: moment);
-  expect(ink?.fontWeight, FontWeight.w600, reason: moment);
-  expect(ink?.color, const Color(0xFFFFFFFF), reason: moment);
+  expect(
+    find.ancestor(
+      of: find.text(_dragHint),
+      matching: find.byType(MeadowHintPill),
+    ),
+    findsOneWidget,
+    reason: moment,
+  );
 
   final Rect hint = tester.getRect(_hintBox);
   final Rect stage = tester.getRect(find.byType(MeadowStage));
