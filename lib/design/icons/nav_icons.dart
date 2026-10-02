@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-enum NavGlyph { home, calendar, garden, search }
+enum NavGlyph { home, calendar, garden, search, plus }
 
 class NavIcon extends StatelessWidget {
   const NavIcon({
@@ -8,18 +8,24 @@ class NavIcon extends StatelessWidget {
     required this.glyph,
     required this.color,
     this.size = 18,
+    this.strokeWidth = NavIconPainter.defaultStrokeWidth,
   });
 
   final NavGlyph glyph;
   final Color color;
   final double size;
+  final double strokeWidth;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox.square(
       dimension: size,
       child: CustomPaint(
-        painter: NavIconPainter(glyph: glyph, color: color),
+        painter: NavIconPainter(
+          glyph: glyph,
+          color: color,
+          strokeWidth: strokeWidth,
+        ),
         size: Size.square(size),
       ),
     );
@@ -27,13 +33,18 @@ class NavIcon extends StatelessWidget {
 }
 
 class NavIconPainter extends CustomPainter {
-  const NavIconPainter({required this.glyph, required this.color});
+  const NavIconPainter({
+    required this.glyph,
+    required this.color,
+    this.strokeWidth = defaultStrokeWidth,
+  });
 
   final NavGlyph glyph;
   final Color color;
+  final double strokeWidth;
 
   static const double viewBox = 24;
-  static const double strokeWidth = 2;
+  static const double defaultStrokeWidth = 2;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -48,6 +59,8 @@ class NavIconPainter extends CustomPainter {
         canvas.drawPath(_garden(), _stroke());
       case NavGlyph.search:
         canvas.drawPath(_search(), _stroke());
+      case NavGlyph.plus:
+        canvas.drawPath(_plus(), _stroke());
     }
     canvas.restore();
   }
@@ -113,7 +126,15 @@ class NavIconPainter extends CustomPainter {
     ..moveTo(21, 21)
     ..lineTo(17, 17);
 
+  Path _plus() => Path()
+    ..moveTo(12, 5)
+    ..lineTo(12, 19)
+    ..moveTo(5, 12)
+    ..lineTo(19, 12);
+
   @override
   bool shouldRepaint(covariant NavIconPainter oldDelegate) =>
-      oldDelegate.glyph != glyph || oldDelegate.color != color;
+      oldDelegate.glyph != glyph ||
+      oldDelegate.color != color ||
+      oldDelegate.strokeWidth != strokeWidth;
 }

@@ -1,8 +1,11 @@
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
+import 'package:field_notes/app/shell/phone_bottom_bar.dart';
+import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/onboarding/chapters/opening_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
@@ -72,9 +75,12 @@ const Map<int, NavGlyph> _sidebarGlyphs = <int, NavGlyph>{
 const Map<int, NavGlyph> _bottomBarGlyphs = <int, NavGlyph>{
   1: NavGlyph.home,
   2: NavGlyph.calendar,
+  3: NavGlyph.plus,
   4: NavGlyph.garden,
   5: NavGlyph.search,
 };
+
+const double _phoneBarHeight = 64;
 
 List<_Place> _placesFor(ShellLayout layout) => switch (layout) {
   ShellLayout.sidebar => _sidebarPlaces,
@@ -205,6 +211,18 @@ Finder _badge(int number) => find.byKey(tourBadgeKey(number));
 
 Finder _target(int number) => find.byKey(tourTargetKey(number));
 
+final Finder _miniatureBar = find.descendant(
+  of: find.byType(TourChapter),
+  matching: find.byType(PhoneBottomBar),
+);
+
+Finder _barIcon(NavGlyph glyph) => find.descendant(
+  of: _miniatureBar,
+  matching: find.byWidgetPredicate(
+    (Widget widget) => widget is NavIcon && widget.glyph == glyph,
+  ),
+);
+
 Iterable<double> _opacitiesAbove(WidgetTester tester, Finder finder) => tester
     .widgetList<Opacity>(
       find.ancestor(of: finder, matching: find.byType(Opacity)),
@@ -230,16 +248,33 @@ void _expectPlaces(WidgetTester tester, ShellLayout layout) {
       findsOneWidget,
     );
     expect(_target(number), findsOneWidget);
-    final Finder icon = find.descendant(
-      of: _target(number),
-      matching: find.byType(NavIcon),
-    );
     final NavGlyph? glyph = glyphs[number];
-    if (glyph != null) {
-      expect(tester.widget<NavIcon>(icon).glyph, glyph);
-    } else {
-      expect(icon, findsNothing);
+    switch (layout) {
+      case ShellLayout.sidebar:
+        final Finder icon = find.descendant(
+          of: _target(number),
+          matching: find.byType(NavIcon),
+        );
+        if (glyph != null) {
+          expect(tester.widget<NavIcon>(icon).glyph, glyph);
+        } else {
+          expect(icon, findsNothing);
+        }
+      case ShellLayout.bottomBar:
+        if (glyph != null) {
+          expect(_barIcon(glyph), findsOneWidget);
+          expect(
+            tester
+                .getRect(_target(number))
+                .contains(tester.getCenter(_barIcon(glyph))),
+            isTrue,
+            reason: 'target $number holds the ${glyph.name} item',
+          );
+        }
     }
+  }
+  if (layout == ShellLayout.bottomBar) {
+    expect(_miniatureBar, findsOneWidget);
   }
   final int gear = places.length;
   expect(
@@ -284,6 +319,21 @@ void _expectHighlighted(
         isFocusable: true,
         isSelected: on,
       ),
+    );
+  }
+}
+
+void _expectBarSelection(WidgetTester tester, ShellDestination? selected) {
+  expect(tester.widget<PhoneBottomBar>(_miniatureBar).selected, selected);
+  final FieldNotesColors colors = FieldNotesColors.of(
+    tester.element(_miniatureBar),
+  );
+  for (final ShellDestination destination in ShellDestination.primary) {
+    expect(
+      tester.widget<NavIcon>(_barIcon(destination.glyph!)).color.toARGB32(),
+      (destination == selected ? colors.accentInk : colors.mutedDeep)
+          .toARGB32(),
+      reason: '${destination.name} with ${selected?.name} selected',
     );
   }
 }
@@ -346,6 +396,105 @@ void main() {
       }
     },
   );
+
+  testWidgets("the map's miniature is the real bar drawing with its badges", (
+    WidgetTester tester,
+  ) async {
+    await _onLayout(ShellLayout.bottomBar, () async {
+      await _openTour(tester, ShellLayout.bottomBar);
+
+      expect(_miniatureBar, findsOneWidget);
+      final PhoneBottomBar bar = tester.widget<PhoneBottomBar>(_miniatureBar);
+      expect(bar.destinations, ShellDestination.primary);
+      expect(bar.onSelect, isNull);
+      expect(bar.onCapture, isNull);
+      expect(
+        find.descendant(
+          of: _miniatureBar,
+          matching: find.byType(GestureDetector),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: _miniatureBar,
+          matching: find.byKey(const ValueKey<String>('capture-button')),
+        ),
+        findsNothing,
+      );
+
+      final Rect barRect = tester.getRect(_miniatureBar);
+      final Rect firstLine = tester.getRect(_line(1));
+      final Rect lastLine = tester.getRect(_line(6));
+      expect(barRect.left, moreOrLessEquals(firstLine.left, epsilon: 0.01));
+      expect(barRect.right, moreOrLessEquals(firstLine.right, epsilon: 0.01));
+      expect(barRect.height, moreOrLessEquals(_phoneBarHeight, epsilon: 0.01));
+      expect(barRect.top, greaterThan(lastLine.bottom));
+
+      final double column = barRect.width / 5;
+      for (final MapEntry<int, NavGlyph> entry in _bottomBarGlyphs.entries) {
+        final int number = entry.key;
+        final String reason = 'badge $number';
+        final Rect item = tester.getRect(_barIcon(entry.value));
+        final Rect badge = tester.getRect(_badge(number));
+        expect(
+          item.center.dx,
+          moreOrLessEquals(
+            barRect.left + column * (number - 0.5),
+            epsilon: 0.01,
+          ),
+          reason: reason,
+        );
+        expect(
+          badge.center.dx,
+          moreOrLessEquals(item.center.dx, epsilon: 0.01),
+          reason: reason,
+        );
+        expect(badge.center.dy, lessThan(item.top), reason: reason);
+        expect(badge.bottom, greaterThan(barRect.top), reason: reason);
+      }
+
+      final Rect gear = tester.getRect(
+        find.descendant(
+          of: _target(6),
+          matching: find.byType(IconStickerGlyphIcon),
+        ),
+      );
+      final Rect gearBadge = tester.getRect(_badge(6));
+      expect(gear.bottom, lessThanOrEqualTo(barRect.top));
+      expect(gear.right, moreOrLessEquals(barRect.right, epsilon: 0.01));
+      expect(gearBadge.overlaps(gear), isTrue);
+      expect(
+        gearBadge.center.dx,
+        moreOrLessEquals(gear.center.dx, epsilon: 0.01),
+      );
+      expect(gearBadge.top, greaterThan(lastLine.bottom));
+
+      _expectBarSelection(tester, null);
+      final TestGesture mouse = await tester.createGesture(
+        kind: PointerDeviceKind.mouse,
+      );
+      await mouse.addPointer(location: Offset.zero);
+      await _hover(mouse, tester, 2);
+      _expectBarSelection(tester, ShellDestination.calendar);
+      await _hover(mouse, tester, 3);
+      _expectBarSelection(tester, null);
+      await _hover(mouse, tester, 4);
+      _expectBarSelection(tester, ShellDestination.garden);
+      await _hover(mouse, tester, 6);
+      _expectBarSelection(tester, null);
+      await mouse.removePointer();
+      await tester.pump();
+
+      await _focus(tester, ShellLayout.bottomBar, 2);
+      _expectBarSelection(tester, ShellDestination.calendar);
+      await _focus(tester, ShellLayout.bottomBar, 1);
+      _expectBarSelection(tester, ShellDestination.today);
+      await _focus(tester, ShellLayout.bottomBar, 5);
+      _expectBarSelection(tester, ShellDestination.search);
+      await _unmount(tester);
+    });
+  });
 
   testWidgets('the map skips every entrance with reduce motion', (
     WidgetTester tester,
