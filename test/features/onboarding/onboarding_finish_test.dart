@@ -27,6 +27,7 @@ import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, newTestDatabase;
 import '../notes/support/notes_harness.dart'
     show FakeNoteMediaResolver, FakeNoteMediaStore;
+import '../reminders/support/fake_reminder_scheduler.dart';
 import '../settings/support/fake_settings_repository.dart';
 import '../settings/support/recording_reminder_scheduler.dart';
 import '../sound/support/fake_sound_player.dart';
@@ -38,6 +39,7 @@ const String _firstLine = 'The fog lifted over the harbour';
 const String _finalLine = 'The fog lifted over the harbour before noon';
 
 const Duration _pause = Duration(milliseconds: 600);
+const Duration _afterwards = Duration(seconds: 2);
 
 const ReminderTime _morning = ReminderTime(hour: 8, minute: 0);
 const ReminderTime _midday = ReminderTime(hour: 12, minute: 30);
@@ -51,6 +53,42 @@ typedef _Layout = ({
   Size surface,
   String start,
 });
+
+typedef _Passing = ({
+  String name,
+  ReminderChoice reminder,
+  bool grantOnRequest,
+  int requests,
+  bool remind,
+  ReminderTime time,
+});
+
+const List<_Passing> _passings = <_Passing>[
+  (
+    name: 'granted',
+    reminder: ReminderChoice.morning,
+    grantOnRequest: true,
+    requests: 1,
+    remind: true,
+    time: _morning,
+  ),
+  (
+    name: 'refused',
+    reminder: ReminderChoice.evening,
+    grantOnRequest: false,
+    requests: 1,
+    remind: false,
+    time: _evening,
+  ),
+  (
+    name: 'no reminder',
+    reminder: ReminderChoice.off,
+    grantOnRequest: false,
+    requests: 0,
+    remind: false,
+    time: ReminderTime.defaultTime,
+  ),
+];
 
 const List<_Layout> _layouts = <_Layout>[
   (
@@ -194,6 +232,44 @@ Future<ProviderContainer> _launch(
   return ProviderScope.containerOf(tester.element(find.byType(AppShell)));
 }
 
+Future<ProviderContainer> _relaunch(
+  WidgetTester tester,
+  _Layout layout, {
+  required FakeSettingsRepository settings,
+  required ReminderScheduler scheduler,
+}) async {
+  final Set<Object> replaced = <Object>{
+    settingsRepositoryProvider,
+    reminderSchedulerProvider,
+  };
+  await tester.pumpWidget(
+    ProviderScope(
+      key: UniqueKey(),
+      overrides: <Override>[
+        for (final Override override in shellOverrides())
+          if (!replaced.contains(override.origin)) override,
+        settingsRepositoryProvider.overrideWithValue(settings),
+        reminderSchedulerProvider.overrideWithValue(scheduler),
+        onboardingCountryCodeProvider.overrideWithValue('US'),
+        todayClockProvider.overrideWithValue(() => _now),
+        draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
+        mediaStoreProvider.overrideWith(
+          (Ref ref) async => FakeNoteMediaStore(),
+        ),
+        todayMediaResolverProvider.overrideWith(
+          (Ref ref) async => FakeNoteMediaResolver(),
+        ),
+        soundPlayerProvider.overrideWithValue(FakeSoundPlayer()),
+      ],
+      child: const FieldNotesApp(),
+    ),
+  );
+  await _until(tester, () => find.byType(TodayScreen).evaluate().isNotEmpty);
+  await tester.pump(_afterwards);
+  await _settle(tester);
+  return ProviderScope.containerOf(tester.element(find.byType(AppShell)));
+}
+
 Future<void> _close(WidgetTester tester, db.AppDatabase? database) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(const Duration(milliseconds: 1));
@@ -203,17 +279,32 @@ Future<void> _close(WidgetTester tester, db.AppDatabase? database) async {
 OnboardingController _controller(ProviderContainer container) =>
     container.read(onboardingControllerProvider.notifier);
 
+OnboardingChapter _chapterOf(ProviderContainer container) => (container.read(
+  onboardingControllerProvider,
+) as OnboardingFlowRunning).chapter;
+
 Future<void> _walkToTour(
   WidgetTester tester,
   ProviderContainer container, {
   required ReminderChoice reminder,
   required WeekStart week,
 }) async {
-  _controller(container)
+  final OnboardingController controller = _controller(container);
+  controller
     ..skipToSetup()
     ..next()
-    ..chooseReminder(reminder)
-    ..next()
+    ..chooseReminder(reminder);
+  await _settle(tester);
+  expect(_chapterOf(container), OnboardingChapter.reminder);
+  controller.next();
+  await _settle(tester);
+  if (_chapterOf(container) == OnboardingChapter.reminder) {
+    expect(find.text('Notifications are off for Field Notes.'), findsOneWidget);
+    controller.next();
+    await _settle(tester);
+  }
+  expect(_chapterOf(container), OnboardingChapter.week);
+  controller
     ..chooseWeek(week)
     ..next();
   await _settle(tester);
@@ -303,107 +394,96 @@ List<Mood?> _bannerMoods(WidgetTester tester) => <Mood?>[
 ];
 
 void main() {
-  testWidgets(
-    'start asks for permission once, saves the choices and lands on Today',
-    (WidgetTester tester) async {
-      for (final _Layout layout in _layouts) {
-        await _onLayout(layout, () async {
-          for (final ReminderPermission permission
-              in ReminderPermission.values) {
-            final String reason = '${layout.name} ${permission.name}';
-            final bool granted = permission == ReminderPermission.granted;
-            final _StoredSettings settings = _StoredSettings();
-            final RecordingReminderScheduler scheduler =
-                RecordingReminderScheduler(permission: permission);
-            final ProviderContainer container = await _launch(
-              tester,
-              layout,
-              settings: settings,
-              scheduler: scheduler,
-            );
-            await _walkToTour(
-              tester,
-              container,
-              reminder: ReminderChoice.morning,
-              week: WeekStart.monday,
-            );
-            container
-                .read(shellNavigationProvider.notifier)
-                .select(ShellDestination.calendar);
-            await _settle(tester);
-
-            await _pressStart(tester, layout);
-
-            expect(settings.reminderEnabledWrites, <bool>[
-              granted,
-            ], reason: reason);
-            expect(settings.reminderTimeWrites, <ReminderTime>[
-              _morning,
-            ], reason: reason);
-            expect(settings.weekStartWrites, <WeekStart>[
-              WeekStart.monday,
-            ], reason: reason);
-            expect(settings.onboardingStatusWrites, <OnboardingStatus>[
-              OnboardingStatus.pending,
-              OnboardingStatus.done,
-            ], reason: reason);
-            expect(settings.appearanceWrites, isEmpty, reason: reason);
-            expect(scheduler.permissionRequests, 1, reason: reason);
-            expect(settings.notificationPermissionAskedWrites, <bool>[
-              true,
-            ], reason: reason);
-            _expectToday(tester, container, reason: reason);
-            await _close(tester, null);
-          }
-        });
-      }
-    },
-  );
-
-  testWidgets('start with no reminder never asks for permission', (
+  testWidgets('start saves the choices without asking for permission', (
     WidgetTester tester,
   ) async {
     for (final _Layout layout in _layouts) {
       await _onLayout(layout, () async {
-        final String reason = layout.name;
-        final _StoredSettings settings = _StoredSettings();
-        final RecordingReminderScheduler scheduler = RecordingReminderScheduler(
-          permission: ReminderPermission.unknown,
-        );
-        final ProviderContainer container = await _launch(
-          tester,
-          layout,
-          settings: settings,
-          scheduler: scheduler,
-        );
-        await _walkToTour(
-          tester,
-          container,
-          reminder: ReminderChoice.off,
-          week: WeekStart.sunday,
-        );
+        for (final _Passing passing in _passings) {
+          final String reason = '${layout.name} ${passing.name}';
+          final _StoredSettings settings = _StoredSettings();
+          final FakeReminderScheduler scheduler = FakeReminderScheduler(
+            permissionGranted: false,
+            grantOnRequest: passing.grantOnRequest,
+          );
+          final ProviderContainer container = await _launch(
+            tester,
+            layout,
+            settings: settings,
+            scheduler: scheduler,
+          );
+          await _walkToTour(
+            tester,
+            container,
+            reminder: passing.reminder,
+            week: WeekStart.monday,
+          );
+          expect(
+            scheduler.permissionRequests,
+            passing.requests,
+            reason: '$reason passing Reminder',
+          );
+          expect(
+            settings.notificationPermissionAskedWrites,
+            isNotEmpty,
+            reason: reason,
+          );
+          expect(
+            settings.notificationPermissionAskedWrites,
+            everyElement(isTrue),
+            reason: reason,
+          );
+          container
+              .read(shellNavigationProvider.notifier)
+              .select(ShellDestination.calendar);
+          await _settle(tester);
 
-        await _pressStart(tester, layout);
+          await _pressStart(tester, layout);
+          _expectToday(tester, container, reason: reason);
+          await tester.pump(_afterwards);
+          await _settle(tester);
 
-        expect(scheduler.permissionRequests, 0, reason: reason);
-        expect(
-          settings.notificationPermissionAskedWrites,
-          isEmpty,
-          reason: reason,
-        );
-        expect(settings.reminderEnabledWrites, <bool>[false], reason: reason);
-        expect(settings.reminderTimeWrites, <ReminderTime>[
-          ReminderTime.defaultTime,
-        ], reason: reason);
-        expect(settings.weekStartWrites, <WeekStart>[
-          WeekStart.sunday,
-        ], reason: reason);
-        expect(settings.onboardingStatusWrites, <OnboardingStatus>[
-          OnboardingStatus.pending,
-          OnboardingStatus.done,
-        ], reason: reason);
-        _expectToday(tester, container, reason: reason);
-        await _close(tester, null);
+          expect(
+            scheduler.permissionRequests,
+            passing.requests,
+            reason: '$reason at start',
+          );
+          expect(settings.reminderEnabledWrites, <bool>[
+            passing.remind,
+          ], reason: reason);
+          expect(settings.reminderTimeWrites, <ReminderTime>[
+            passing.time,
+          ], reason: reason);
+          expect(settings.weekStartWrites, <WeekStart>[
+            WeekStart.monday,
+          ], reason: reason);
+          expect(settings.onboardingStatusWrites, <OnboardingStatus>[
+            OnboardingStatus.pending,
+            OnboardingStatus.done,
+          ], reason: reason);
+          expect(settings.appearanceWrites, isEmpty, reason: reason);
+          expect(find.byType(TodayScreen), findsOneWidget, reason: reason);
+          await _close(tester, null);
+
+          final ProviderContainer relaunched = await _relaunch(
+            tester,
+            layout,
+            settings: settings,
+            scheduler: scheduler,
+          );
+          expect(
+            relaunched.read(onboardingControllerProvider),
+            const OnboardingFlowHidden(),
+            reason: '$reason relaunch',
+          );
+          expect(find.byType(TodayScreen), findsOneWidget, reason: reason);
+          expect(
+            scheduler.permissionRequests,
+            passing.requests,
+            reason: '$reason relaunch',
+          );
+          await _close(tester, null);
+        }
       });
     }
   });
@@ -539,9 +619,17 @@ void main() {
             ..next()
             ..next()
             ..next()
-            ..next()
-            ..next()
             ..next();
+          await _settle(tester);
+          expect(
+            _chapterOf(container),
+            OnboardingChapter.reminder,
+            reason: reason,
+          );
+          controller.next();
+          await _settle(tester);
+          expect(_chapterOf(container), OnboardingChapter.week, reason: reason);
+          controller.next();
           await tester.pump();
           expect(find.byType(TourChapter), findsOneWidget, reason: reason);
 

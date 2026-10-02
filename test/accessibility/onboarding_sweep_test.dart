@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/domain/mood/mood.dart';
+import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'states/onboarding_states.dart';
+import 'support/a11y_rules.dart';
 import 'support/a11y_state.dart';
 import 'support/reading_order.dart';
 
@@ -18,6 +22,14 @@ const Size _smallestBottomBar = Size(360, 640);
 const List<double> _textScales = <double>[1, 1.3];
 const int _maxPresses = 60;
 const String _sidebarSuffix = '-sidebar';
+const String _baselinePath = 'test/accessibility/baselines/onboarding.txt';
+const String _notificationsOffState = 'reminder-notifications-off';
+const List<String> _notificationsOffIds = <String>[
+  'o35-reminder-notifications-off-sidebar',
+  'o36-reminder-notifications-off-bottom-bar',
+];
+const String _openSystemSettings = 'Open System Settings';
+const double _minimumTarget = 48;
 
 const List<String> _layoutNames = <String>['sidebar', 'bottom-bar'];
 
@@ -97,6 +109,12 @@ final Map<String, bool Function(OnboardingFlow flow)> _v7States =
       'map-end': (OnboardingFlow flow) =>
           _running(flow, OnboardingChapter.tour, (OnboardingDraft _) => true),
       'map-replay': (OnboardingFlow flow) => flow is OnboardingFlowMap,
+      _notificationsOffState: (OnboardingFlow flow) => _running(
+        flow,
+        OnboardingChapter.reminder,
+        (OnboardingDraft draft) =>
+            draft.notificationsOff && draft.reminder.time != null,
+      ),
     };
 
 bool _running(
@@ -168,10 +186,31 @@ String _name(SemanticsNode node) {
 }
 
 final class _Stop {
-  const _Stop({required this.node, required this.ringed});
+  const _Stop({required this.node, required this.ringed, required this.note});
 
   final SemanticsNode node;
   final bool ringed;
+  final bool note;
+}
+
+Set<String> _baselineLines() => <String>{
+  for (final String line in File(_baselinePath).readAsLinesSync())
+    if (line.trim() case final String trimmed when trimmed.isNotEmpty) trimmed,
+};
+
+Rect _globalRect(SemanticsNode node) {
+  Rect rect = node.rect;
+  for (
+    SemanticsNode? current = node;
+    current != null;
+    current = current.parent
+  ) {
+    final Matrix4? transform = current.transform;
+    if (transform != null) {
+      rect = MatrixUtils.transformRect(transform, rect);
+    }
+  }
+  return rect;
 }
 
 SemanticsNode _semanticsOf(WidgetTester tester, FocusNode focus) {
@@ -202,12 +241,32 @@ bool _showsRing(FocusNode focus) {
       .isNotEmpty;
 }
 
+bool _isNoteField(FocusNode focus) {
+  final BuildContext? context = focus.context;
+  if (context == null) {
+    return false;
+  }
+  return find
+      .ancestor(
+        of: find.byElementPredicate(
+          (Element element) => identical(element, context),
+        ),
+        matching: find.byKey(momentFieldKey),
+      )
+      .evaluate()
+      .isNotEmpty;
+}
+
 Future<_Stop> _tab(WidgetTester tester) async {
   await tester.sendKeyEvent(LogicalKeyboardKey.tab);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
   final FocusNode focus = FocusManager.instance.primaryFocus!;
-  return _Stop(node: _semanticsOf(tester, focus), ringed: _showsRing(focus));
+  return _Stop(
+    node: _semanticsOf(tester, focus),
+    ringed: _showsRing(focus),
+    note: _isNoteField(focus),
+  );
 }
 
 Future<List<_Stop>> _lap(WidgetTester tester) async {
@@ -253,10 +312,26 @@ void _expectLapInReadingOrder(WidgetTester tester, List<_Stop> lap) {
   expect(
     <String>[
       for (final _Stop stop in lap)
-        if (!stop.ringed) _name(stop.node),
+        if (!stop.note && !stop.ringed) _name(stop.node),
     ],
     isEmpty,
     reason: 'these controls show no FocusRing while focused',
+  );
+  expect(
+    <String>[
+      for (final _Stop stop in lap)
+        if (stop.note) _name(stop.node),
+    ],
+    hasLength(find.byKey(momentFieldKey).evaluate().length),
+    reason: 'Tab does not focus the note field once',
+  );
+  expect(
+    <String>[
+      for (final _Stop stop in lap)
+        if (stop.note && stop.ringed) _name(stop.node),
+    ],
+    isEmpty,
+    reason: 'the note field shows a FocusRing while focused',
   );
   final List<SemanticsNode> readingOrder = <SemanticsNode>[
     for (final SemanticsNode node in order)
@@ -342,6 +417,76 @@ void main() {
       }
     }
   });
+
+  testWidgets(
+    "the Reminder page's notifications-off state passes the sweep on both "
+    'layouts',
+    (WidgetTester tester) async {
+      final List<A11yState> appended = onboardingStates.sublist(
+        onboardingStates.length - _notificationsOffIds.length,
+      );
+      expect(<String>[
+        for (final A11yState state in appended) state.id,
+      ], _notificationsOffIds);
+      final Set<String> baseline = _baselineLines();
+      for (final A11yState state in appended) {
+        final A11yStateResult result = await runA11yState(tester, state);
+        if (result case A11yNotLoaded(:final String message)) {
+          fail(message);
+        }
+        final List<String> found = <String>[
+          for (final A11yFinding finding in (result as A11yLoaded).findings)
+            finding.id,
+        ];
+        final List<String> expected = <String>[
+          if (state.id.endsWith(_sidebarSuffix))
+            'small-target | ${state.id} | Switch to dark | <root>',
+        ];
+        expect(found, expected, reason: state.id);
+        expect(
+          <String>[
+            for (final String line in baseline)
+              if (line.contains(' | ${state.id} | ')) line,
+          ],
+          expected,
+          reason: '${state.id} baseline',
+        );
+
+        final SemanticsHandle handle = tester.ensureSemantics();
+        await tester.pump();
+        expect(
+          readingOrderOrphans(tester),
+          isEmpty,
+          reason: '${state.id}: nodes outside reading order',
+        );
+        final Finder button = find.bySemanticsLabel(_openSystemSettings);
+        expect(button, findsOneWidget, reason: state.id);
+        expect(
+          tester.getSemantics(button),
+          isSemantics(
+            label: _openSystemSettings,
+            isButton: true,
+            hasTapAction: true,
+          ),
+          reason: state.id,
+        );
+        final Rect target = _globalRect(tester.getSemantics(button));
+        expect(
+          target.width,
+          greaterThanOrEqualTo(_minimumTarget),
+          reason: state.id,
+        );
+        expect(
+          target.height,
+          greaterThanOrEqualTo(_minimumTarget),
+          reason: state.id,
+        );
+        handle.dispose();
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+    },
+  );
 
   group('every onboarding chapter fits the smallest windows', () {
     final List<A11yState> smallest = onboardingStatesAt(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
@@ -240,9 +241,9 @@ class DayChapter extends ConsumerWidget {
       return const SizedBox.expand();
     }
     final Mood mood = flow.draft.mood;
-    final ValueChanged<Mood> onChoose = ref
-        .read(onboardingControllerProvider.notifier)
-        .chooseMood;
+    final OnboardingController controller = ref.read(
+      onboardingControllerProvider.notifier,
+    );
     final _DayMetrics metrics = _DayMetrics.of(layout);
     return SizedBox.expand(
       child: Column(
@@ -257,11 +258,20 @@ class DayChapter extends ConsumerWidget {
             ),
           ),
           SizedBox(height: metrics.headingGap),
-          _MoodRow(metrics: metrics, selected: mood, onChoose: onChoose),
+          _MoodRow(
+            metrics: metrics,
+            selected: mood,
+            onChoose: controller.chooseMood,
+          ),
           SizedBox(height: metrics.captionGap),
           _Caption(text: _caption(layout, mood), metrics: metrics),
           Expanded(
-            child: _Stage(metrics: metrics, mood: mood, soil: _soilFor(layout)),
+            child: _Stage(
+              metrics: metrics,
+              mood: mood,
+              soil: _soilFor(layout),
+              onGrown: () => controller.markPlantGrown(mood),
+            ),
           ),
         ],
       ),
@@ -447,11 +457,17 @@ class _Caption extends StatelessWidget {
 }
 
 class _Stage extends StatelessWidget {
-  const _Stage({required this.metrics, required this.mood, required this.soil});
+  const _Stage({
+    required this.metrics,
+    required this.mood,
+    required this.soil,
+    required this.onGrown,
+  });
 
   final _DayMetrics metrics;
   final Mood mood;
   final _SoilArt soil;
+  final VoidCallback onGrown;
 
   @override
   Widget build(BuildContext context) {
@@ -499,6 +515,7 @@ class _Stage extends StatelessWidget {
                       child: _Grow(
                         spec: spec,
                         size: Size(plantHeight / spec.ratio, plantHeight),
+                        onGrown: onGrown,
                       ),
                     ),
                   ),
@@ -618,10 +635,11 @@ class DayPlantPainter extends CustomPainter {
 }
 
 class _Grow extends StatefulWidget {
-  const _Grow({required this.spec, required this.size});
+  const _Grow({required this.spec, required this.size, required this.onGrown});
 
   final GardenPlantSpec spec;
   final Size size;
+  final VoidCallback onGrown;
 
   @override
   State<_Grow> createState() => _GrowState();
@@ -631,7 +649,19 @@ class _GrowState extends State<_Grow> with SingleTickerProviderStateMixin {
   late final AnimationController _clock = AnimationController(
     vsync: this,
     duration: _plantGrow,
-  );
+  )..addStatusListener(_onGrowth);
+
+  void _onGrowth(AnimationStatus status) {
+    if (status == AnimationStatus.completed) {
+      scheduleMicrotask(_reportGrown);
+    }
+  }
+
+  void _reportGrown() {
+    if (mounted) {
+      widget.onGrown();
+    }
+  }
 
   @override
   void didChangeDependencies() {

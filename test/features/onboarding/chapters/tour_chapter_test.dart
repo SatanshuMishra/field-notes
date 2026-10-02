@@ -153,6 +153,7 @@ Future<void> _openTour(WidgetTester tester, ShellLayout layout) async {
   controller.skipToSetup();
   while (_chapter(tester) != OnboardingChapter.tour) {
     controller.next();
+    await tester.pump();
   }
   await _settle(tester);
   expect(find.byType(TourChapter), findsOneWidget);

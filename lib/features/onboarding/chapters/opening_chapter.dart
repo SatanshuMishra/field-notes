@@ -1237,12 +1237,6 @@ class _OpeningChapterState extends ConsumerState<OpeningChapter>
               fit: StackFit.expand,
               children: <Widget>[
                 Positioned(
-                  left: 0,
-                  right: 0,
-                  top: metrics.headingTop,
-                  child: _heading(metrics, colors, planted: planted),
-                ),
-                Positioned(
                   left: metrics.hintSide,
                   right: metrics.hintSide,
                   bottom: metrics.hintBottom,
@@ -1275,6 +1269,12 @@ class _OpeningChapterState extends ConsumerState<OpeningChapter>
                       ),
                     ),
                   ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: metrics.headingTop,
+                  child: _heading(metrics, colors, planted: planted),
+                ),
               ],
             ),
           ),

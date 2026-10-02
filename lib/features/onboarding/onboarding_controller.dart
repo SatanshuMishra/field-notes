@@ -12,6 +12,7 @@ import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/today/today_providers.dart';
+import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -45,9 +46,12 @@ class OnboardingDraft {
     this.noteSave = NoteSaveState.idle,
     this.noteError,
     this.monthFill = 0,
+    this.monthReached = false,
     this.yearDay = 0,
     this.yearScrubbed = false,
     this.reminder = ReminderChoice.evening,
+    this.notificationsOff = false,
+    this.petalFlower,
     this.finishError,
   });
 
@@ -60,9 +64,12 @@ class OnboardingDraft {
   final NoteSaveState noteSave;
   final String? noteError;
   final double monthFill;
+  final bool monthReached;
   final int yearDay;
   final bool yearScrubbed;
   final ReminderChoice reminder;
+  final bool notificationsOff;
+  final FlowerKind? petalFlower;
   final WeekStart regionWeek;
   final WeekStart week;
   final String? finishError;
@@ -77,9 +84,12 @@ class OnboardingDraft {
     NoteSaveState? noteSave,
     ValueGetter<String?>? noteError,
     double? monthFill,
+    bool? monthReached,
     int? yearDay,
     bool? yearScrubbed,
     ReminderChoice? reminder,
+    bool? notificationsOff,
+    ValueGetter<FlowerKind?>? petalFlower,
     WeekStart? regionWeek,
     WeekStart? week,
     ValueGetter<String?>? finishError,
@@ -93,9 +103,12 @@ class OnboardingDraft {
     noteSave: noteSave ?? this.noteSave,
     noteError: noteError == null ? this.noteError : noteError(),
     monthFill: monthFill ?? this.monthFill,
+    monthReached: monthReached ?? this.monthReached,
     yearDay: yearDay ?? this.yearDay,
     yearScrubbed: yearScrubbed ?? this.yearScrubbed,
     reminder: reminder ?? this.reminder,
+    notificationsOff: notificationsOff ?? this.notificationsOff,
+    petalFlower: petalFlower == null ? this.petalFlower : petalFlower(),
     regionWeek: regionWeek ?? this.regionWeek,
     week: week ?? this.week,
     finishError: finishError == null ? this.finishError : finishError(),
@@ -114,9 +127,12 @@ class OnboardingDraft {
           other.noteSave == noteSave &&
           other.noteError == noteError &&
           other.monthFill == monthFill &&
+          other.monthReached == monthReached &&
           other.yearDay == yearDay &&
           other.yearScrubbed == yearScrubbed &&
           other.reminder == reminder &&
+          other.notificationsOff == notificationsOff &&
+          other.petalFlower == petalFlower &&
           other.regionWeek == regionWeek &&
           other.week == week &&
           other.finishError == finishError;
@@ -132,9 +148,12 @@ class OnboardingDraft {
     noteSave,
     noteError,
     monthFill,
+    monthReached,
     yearDay,
     yearScrubbed,
     reminder,
+    notificationsOff,
+    petalFlower,
     regionWeek,
     week,
     finishError,
@@ -145,8 +164,10 @@ class OnboardingDraft {
       'OnboardingDraft(entryDate: $entryDate, planted: $planted, '
       'grown: $grown, mood: $mood, noteText: $noteText, '
       'noteEntryId: $noteEntryId, noteSave: $noteSave, '
-      'noteError: $noteError, monthFill: $monthFill, yearDay: $yearDay, '
+      'noteError: $noteError, monthFill: $monthFill, '
+      'monthReached: $monthReached, yearDay: $yearDay, '
       'yearScrubbed: $yearScrubbed, reminder: $reminder, '
+      'notificationsOff: $notificationsOff, petalFlower: $petalFlower, '
       'regionWeek: $regionWeek, week: $week, finishError: $finishError)';
 }
 
@@ -211,7 +232,8 @@ bool _taskDone(OnboardingChapter chapter, OnboardingDraft draft) =>
       OnboardingChapter.day => true,
       OnboardingChapter.moment =>
         draft.noteText.trim().length >= _minimumNoteCharacters,
-      OnboardingChapter.month => draft.monthFill >= _minimumMonthFill,
+      OnboardingChapter.month =>
+        draft.monthFill >= _minimumMonthFill || draft.monthReached,
       OnboardingChapter.year =>
         draft.yearDay >= _daysInYear || draft.yearScrubbed,
       OnboardingChapter.theme ||
@@ -229,7 +251,7 @@ class OnboardingController extends _$OnboardingController {
   String? _lineEntryId;
   Future<void> _moodSaving = Future<void>.value();
   bool _moodChosen = false;
-  bool? _reminderPermitted;
+  bool _asking = false;
   bool _finishing = false;
 
   @override
@@ -250,7 +272,6 @@ class OnboardingController extends _$OnboardingController {
     _lineQueued = null;
     _lineEntryId = null;
     _moodChosen = false;
-    _reminderPermitted = null;
     final WeekStart region = suggestWeekStart(
       ref.read(onboardingCountryCodeProvider),
     );
@@ -265,8 +286,14 @@ class OnboardingController extends _$OnboardingController {
   void plant() =>
       _edit((OnboardingDraft draft) => draft.copyWith(planted: true));
 
-  void markGrown() =>
-      _edit((OnboardingDraft draft) => draft.copyWith(grown: true));
+  void markGrown() => _edit(
+    (OnboardingDraft draft) =>
+        draft.copyWith(grown: true, petalFlower: () => FlowerKind.peony),
+  );
+
+  void markPlantGrown(Mood mood) => _edit(
+    (OnboardingDraft draft) => draft.copyWith(petalFlower: () => mood.flower),
+  );
 
   void chooseMood(Mood mood) {
     if (state is OnboardingFlowRunning) {
@@ -284,10 +311,13 @@ class OnboardingController extends _$OnboardingController {
     _pause = Timer(_linePause, _onPause);
   }
 
-  void setMonthFill(double fill) => _edit(
-    (OnboardingDraft draft) =>
-        draft.copyWith(monthFill: fill.clamp(0, 1).toDouble()),
-  );
+  void setMonthFill(double fill) => _edit((OnboardingDraft draft) {
+    final double clamped = fill.clamp(0, 1).toDouble();
+    return draft.copyWith(
+      monthFill: clamped,
+      monthReached: draft.monthReached || clamped >= _minimumMonthFill,
+    );
+  });
 
   void setYearDay(int day, {required bool scrubbed}) => _edit(
     (OnboardingDraft draft) => draft.copyWith(
@@ -309,7 +339,7 @@ class OnboardingController extends _$OnboardingController {
     OnboardingFlowHidden() => false,
   };
 
-  void next() {
+  Future<void> next() async {
     switch (state) {
       case OnboardingFlowMap():
         closeMap();
@@ -319,12 +349,17 @@ class OnboardingController extends _$OnboardingController {
       ):
         plant();
       case OnboardingFlowRunning(
+        chapter: OnboardingChapter.reminder,
+        :final OnboardingDraft draft,
+      ):
+        await _leaveReminder(_run, draft);
+      case OnboardingFlowRunning(
             :final OnboardingChapter chapter,
             :final OnboardingDraft draft,
           )
           when canAdvance:
         if (chapter == OnboardingChapter.day) {
-          _saveMood(draft);
+          _leaveDay(draft);
         }
         if (chapter == OnboardingChapter.tour) {
           unawaited(finish());
@@ -363,7 +398,7 @@ class OnboardingController extends _$OnboardingController {
         )
         when chapter.isStory) {
       if (chapter == OnboardingChapter.day) {
-        _saveMood(draft);
+        _leaveDay(draft);
       }
       _open(OnboardingChapter.theme);
     }
@@ -401,7 +436,7 @@ class OnboardingController extends _$OnboardingController {
       return;
     }
     final bool remind =
-        draft.reminder != ReminderChoice.off && await _reminderAllowed();
+        draft.reminder != ReminderChoice.off && await _notificationsGranted();
     if (!await _saveChoices(draft, remind: remind)) {
       _failFinish(run);
       return;
@@ -423,25 +458,62 @@ class OnboardingController extends _$OnboardingController {
     (OnboardingDraft draft) => draft.copyWith(finishError: () => _finishError),
   );
 
-  Future<bool> _reminderAllowed() async {
-    final bool? known = _reminderPermitted;
-    if (known != null) {
-      return known;
+  Future<void> _leaveReminder(int run, OnboardingDraft draft) async {
+    if (_asking) {
+      return;
     }
-    bool allowed;
+    _asking = true;
+    try {
+      if (draft.reminder != ReminderChoice.off &&
+          !draft.notificationsOff &&
+          !await _askForNotifications()) {
+        _editRun(
+          run,
+          (OnboardingDraft current) => current.copyWith(notificationsOff: true),
+        );
+        return;
+      }
+      await _recordPromptAsked();
+    } finally {
+      _asking = false;
+    }
+    if (run != _run) {
+      return;
+    }
+    if (state case OnboardingFlowRunning(chapter: OnboardingChapter.reminder)) {
+      _open(OnboardingChapter.week);
+    }
+  }
+
+  Future<bool> _askForNotifications() async {
     try {
       await ref
           .read(reminderPermissionStatusProvider.notifier)
           .requestUnlessGranted();
-      allowed =
-          await ref.read(reminderPermissionStatusProvider.future) ==
-          ReminderPermission.granted;
     } catch (error) {
       debugPrint('Could not ask for notification permission: $error');
-      allowed = false;
     }
-    _reminderPermitted = allowed;
-    return allowed;
+    return _notificationsGranted();
+  }
+
+  Future<bool> _notificationsGranted() async {
+    try {
+      return await ref.read(reminderPermissionStatusProvider.future) ==
+          ReminderPermission.granted;
+    } catch (error) {
+      debugPrint('Could not read the notification permission: $error');
+      return false;
+    }
+  }
+
+  Future<void> _recordPromptAsked() async {
+    try {
+      await ref
+          .read(settingsRepositoryProvider)
+          .setNotificationPermissionAsked(true);
+    } catch (error) {
+      debugPrint('Could not record the notification prompt: $error');
+    }
   }
 
   Future<bool> _saveChoices(
@@ -506,6 +578,14 @@ class OnboardingController extends _$OnboardingController {
               noteError: () => null,
             );
     });
+  }
+
+  void _leaveDay(OnboardingDraft draft) {
+    _saveMood(draft);
+    _edit(
+      (OnboardingDraft current) =>
+          current.copyWith(petalFlower: () => current.mood.flower),
+    );
   }
 
   void _saveMood(OnboardingDraft draft) {

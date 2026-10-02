@@ -1,6 +1,7 @@
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
+import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../app/support/app_shell_harness.dart' show FakeJournalRepository;
+import '../reminders/support/fake_reminder_scheduler.dart';
 import '../settings/support/fake_settings_repository.dart';
 
 const String _today = '2026-10-01';
@@ -24,6 +26,7 @@ ProviderContainer _container({
         settings ?? FakeSettingsRepository(storedValues: false),
       ),
       journalRepositoryProvider.overrideWithValue(FakeJournalRepository()),
+      reminderSchedulerProvider.overrideWithValue(FakeReminderScheduler()),
     ],
   );
   addTearDown(container.dispose);
@@ -68,16 +71,24 @@ void _doTask(OnboardingController controller, OnboardingChapter chapter) {
 
 ProviderContainer _startedAt(OnboardingChapter target) {
   final ProviderContainer container = _container();
-  final OnboardingController controller = _controller(container)..start();
+  _walkTo(_controller(container)..start(), target);
+  expect(_chapter(container), target);
+  return container;
+}
+
+void _walkTo(OnboardingController controller, OnboardingChapter target) {
   for (final OnboardingChapter chapter in OnboardingChapter.values) {
     if (chapter == target) {
-      break;
+      return;
     }
     _doTask(controller, chapter);
     controller.next();
   }
-  expect(_chapter(container), target);
-  return container;
+}
+
+Future<void> _nextAndWait(OnboardingController controller) async {
+  controller.next();
+  await pumpEventQueue();
 }
 
 void main() {
@@ -114,7 +125,7 @@ void main() {
     );
   });
 
-  test('the reminder choices map to their preset times and clocks', () {
+  test('the reminder choices map to their preset times', () {
     expect(
       <ReminderTime?>[
         for (final ReminderChoice choice in ReminderChoice.values) choice.time,
@@ -125,12 +136,6 @@ void main() {
         const ReminderTime(hour: 20, minute: 30),
         null,
       ],
-    );
-    expect(
-      <String>[
-        for (final ReminderChoice choice in ReminderChoice.values) choice.clock,
-      ],
-      <String>['08:00', '12:30', '20:30', 'Off'],
     );
   });
 
@@ -164,7 +169,7 @@ void main() {
     expect(_draft(germany).regionWeek, WeekStart.monday);
   });
 
-  test("next is offered only once each chapter's task is done", () {
+  test("next is offered only once each chapter's task is done", () async {
     final ProviderContainer container = _container();
     final OnboardingController controller = _controller(container)..start();
 
@@ -230,9 +235,35 @@ void main() {
       expect(_chapter(container), chapter);
       expect(controller.canAdvance, isTrue, reason: chapter.name);
       if (chapter != OnboardingChapter.tour) {
-        controller.next();
+        await _nextAndWait(controller);
       }
     }
+  });
+
+  test('a month keeps Next once the slider has reached 20 percent', () {
+    final ProviderContainer container = _startedAt(OnboardingChapter.month);
+    final OnboardingController controller = _controller(container);
+
+    expect(controller.canAdvance, isFalse);
+    controller.setMonthFill(0.19);
+    expect(controller.canAdvance, isFalse);
+    controller.setMonthFill(0.2);
+    expect(controller.canAdvance, isTrue);
+    controller.setMonthFill(0);
+    expect(controller.canAdvance, isTrue);
+    controller.setMonthFill(0.1);
+    expect(controller.canAdvance, isTrue);
+
+    controller.back();
+    expect(_chapter(container), OnboardingChapter.moment);
+    controller.next();
+    expect(_chapter(container), OnboardingChapter.month);
+    expect(controller.canAdvance, isTrue);
+
+    controller.start();
+    _walkTo(controller, OnboardingChapter.month);
+    expect(_chapter(container), OnboardingChapter.month);
+    expect(controller.canAdvance, isFalse);
   });
 
   test('next plants on the Opening and waits for the task elsewhere', () {
@@ -255,7 +286,7 @@ void main() {
     expect(_chapter(container), OnboardingChapter.moment);
   });
 
-  test('back, goTo and skipToSetup only move where they are allowed', () {
+  test('back, goTo and skipToSetup only move where they are allowed', () async {
     final ProviderContainer container = _startedAt(OnboardingChapter.month);
     final OnboardingController controller = _controller(container);
 
@@ -277,7 +308,7 @@ void main() {
     expect(_chapter(container), OnboardingChapter.theme);
 
     controller.next();
-    controller.next();
+    await _nextAndWait(controller);
     controller.next();
     expect(_chapter(container), OnboardingChapter.tour);
     controller.skipToSetup();
@@ -326,7 +357,7 @@ void main() {
     for (final OnboardingChapter chapter in OnboardingChapter.values) {
       _doTask(controller, chapter);
       if (chapter != OnboardingChapter.tour) {
-        controller.next();
+        await _nextAndWait(controller);
       }
     }
     expect(_chapter(container), OnboardingChapter.tour);
@@ -349,11 +380,11 @@ void main() {
       ),
     );
     final OnboardingController controller = _controller(container)..start();
-    controller.skipToSetup();
     controller
-      ..next()
-      ..next()
+      ..skipToSetup()
       ..next();
+    await _nextAndWait(controller);
+    controller.next();
     expect(_chapter(container), OnboardingChapter.tour);
 
     await controller.finish();
@@ -376,9 +407,18 @@ void main() {
       noteError: () => 'failed',
       finishError: () => 'not saved',
       noteSave: NoteSaveState.failed,
+      petalFlower: () => FlowerKind.aster,
+      monthReached: true,
+      notificationsOff: true,
     );
     expect(saved == base, isFalse);
     expect(saved.noteEntryId, 'entry-1');
+    expect(saved.petalFlower, FlowerKind.aster);
+    expect(saved.monthReached, isTrue);
+    expect(saved.notificationsOff, isTrue);
+    expect(saved.toString(), contains('petalFlower: FlowerKind.aster'));
+    expect(saved.toString(), contains('monthReached: true'));
+    expect(saved.toString(), contains('notificationsOff: true'));
     expect(
       saved.copyWith(mood: Mood.sad),
       base.copyWith(
@@ -387,15 +427,61 @@ void main() {
         noteError: () => 'failed',
         finishError: () => 'not saved',
         noteSave: NoteSaveState.failed,
+        petalFlower: () => FlowerKind.aster,
+        monthReached: true,
+        notificationsOff: true,
       ),
+    );
+    expect(
+      saved.copyWith(petalFlower: () => FlowerKind.peony) == saved,
+      isFalse,
     );
     final OnboardingDraft cleared = saved.copyWith(
       noteEntryId: () => null,
       noteError: () => null,
       finishError: () => null,
       noteSave: NoteSaveState.idle,
+      petalFlower: () => null,
+      monthReached: false,
+      notificationsOff: false,
     );
     expect(cleared, base);
     expect(cleared.hashCode, base.hashCode);
+  });
+
+  test('the petal flower follows the grown flower through the run', () {
+    final ProviderContainer container = _container();
+    final OnboardingController controller = _controller(container)..start();
+
+    expect(_draft(container).petalFlower, isNull);
+    controller.plant();
+    expect(_draft(container).petalFlower, isNull);
+    controller.markGrown();
+    expect(_draft(container).petalFlower, FlowerKind.peony);
+    controller.next();
+    expect(_chapter(container), OnboardingChapter.day);
+
+    controller.chooseMood(Mood.anxious);
+    expect(_draft(container).petalFlower, FlowerKind.peony);
+    controller.markPlantGrown(Mood.anxious);
+    expect(_draft(container).petalFlower, FlowerKind.aster);
+
+    controller.chooseMood(Mood.angry);
+    expect(_draft(container).petalFlower, FlowerKind.aster);
+    controller.next();
+    expect(_chapter(container), OnboardingChapter.moment);
+    expect(_draft(container).petalFlower, FlowerKind.redSpiderLily);
+
+    controller.goTo(OnboardingChapter.day);
+    controller.chooseMood(Mood.calm);
+    controller.skipToSetup();
+    expect(_chapter(container), OnboardingChapter.theme);
+    expect(_draft(container).petalFlower, FlowerKind.lavender);
+
+    controller.start();
+    expect(_chapter(container), OnboardingChapter.opening);
+    expect(_draft(container).petalFlower, isNull);
+    controller.skipToSetup();
+    expect(_draft(container).petalFlower, isNull);
   });
 }

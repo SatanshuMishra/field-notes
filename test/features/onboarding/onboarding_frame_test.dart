@@ -8,6 +8,7 @@ import 'package:field_notes/features/onboarding/chapters/month_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/opening_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/theme_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/year_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
@@ -125,6 +126,7 @@ Future<void> _walkTo(WidgetTester tester, OnboardingChapter target) async {
   while (_chapter(tester) != target) {
     _doTask(controller, _chapter(tester));
     controller.next();
+    await tester.pump();
   }
   await _settle(tester);
 }
@@ -159,6 +161,93 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 Future<void> _key(WidgetTester tester, LogicalKeyboardKey key) async {
   await tester.sendKeyEvent(key);
   await _settle(tester);
+}
+
+Type _skipPillType(WidgetTester tester) {
+  Type? pill;
+  tester.element(_skip).visitAncestorElements((Element element) {
+    pill = element.widget.runtimeType;
+    return false;
+  });
+  return pill!;
+}
+
+BoxDecoration _skipPill(WidgetTester tester) => tester
+    .widgetList<DecoratedBox>(
+      find.descendant(of: _skip, matching: find.byType(DecoratedBox)),
+    )
+    .map((DecoratedBox box) => box.decoration)
+    .whereType<BoxDecoration>()
+    .singleWhere(
+      (BoxDecoration box) => box.color != null && box.border != null,
+    );
+
+void _expectPillLook(WidgetTester tester, {required String reason}) {
+  final FieldNotesColors colors = tester.element(_skip).colors;
+  final BoxDecoration pill = _skipPill(tester);
+  final Border border = pill.border! as Border;
+  expect(
+    pill.color!.toARGB32(),
+    colors.composerPaper.withValues(alpha: 0.85).toARGB32(),
+    reason: '$reason pill fill',
+  );
+  expect(
+    border.top.color.toARGB32(),
+    colors.ink16.toARGB32(),
+    reason: '$reason pill border',
+  );
+  expect(border.top.width, 1.5, reason: '$reason pill border width');
+}
+
+void _expectMacPill(
+  WidgetTester tester, {
+  required Type pill,
+  required String reason,
+}) {
+  expect(_skip, findsOneWidget, reason: reason);
+  expect(_primary, findsNothing, reason: reason);
+  expect(_skipPillType(tester), pill, reason: '$reason pill widget');
+  _expectPillLook(tester, reason: reason);
+  expect(
+    find.descendant(of: _skip, matching: find.text('Skip')),
+    findsOneWidget,
+    reason: reason,
+  );
+  expect(
+    tester.getSemantics(_skip),
+    isSemantics(label: 'Skip', isButton: true, hasTapAction: true),
+    reason: reason,
+  );
+  final Size target = tester.getSize(_skip);
+  expect(target.width, greaterThanOrEqualTo(48), reason: reason);
+  expect(target.height, greaterThanOrEqualTo(48), reason: reason);
+  final Rect placed = tester.getRect(_skip);
+  expect(
+    placed.right,
+    greaterThan(_bottomBarSurface.width - 48),
+    reason: reason,
+  );
+  expect(
+    placed.bottom,
+    greaterThan(_bottomBarSurface.height - 80),
+    reason: reason,
+  );
+}
+
+Future<void> _expectInNextsPlace(
+  WidgetTester tester,
+  Rect pill, {
+  required String reason,
+}) async {
+  await _finishTask(tester);
+  expect(_skip, findsNothing, reason: '$reason done');
+  final Rect next = tester.getRect(_primary);
+  expect(pill.right, moreOrLessEquals(next.right), reason: '$reason right');
+  expect(
+    pill.center.dy,
+    moreOrLessEquals(next.center.dy),
+    reason: '$reason middle',
+  );
 }
 
 int Function() _countSystemPops(WidgetTester tester) {
@@ -281,6 +370,67 @@ void main() {
       await _pumpApp(tester, ShellLayout.bottomBar);
       await _walkTo(tester, OnboardingChapter.month);
       expect(_skip, findsOneWidget);
+      await _tap(tester, _skip);
+      expect(find.byType(ThemeChapter), findsOneWidget);
+      expect(_skip, findsNothing);
+    });
+  });
+
+  testWidgets('android skip is the mac pill at the bottom right', (
+    WidgetTester tester,
+  ) async {
+    late Type pill;
+    await _onLayout(ShellLayout.sidebar, () async {
+      await _pumpApp(tester, ShellLayout.sidebar);
+      expect(
+        find.descendant(of: _skip, matching: find.text('Skip to setup')),
+        findsOneWidget,
+      );
+      pill = _skipPillType(tester);
+      _expectPillLook(tester, reason: 'mac');
+    });
+
+    await _onLayout(ShellLayout.bottomBar, () async {
+      await _pumpApp(tester, ShellLayout.bottomBar);
+      final OnboardingController controller = _controller(tester);
+
+      _expectMacPill(tester, pill: pill, reason: 'opening');
+      await _expectInNextsPlace(
+        tester,
+        tester.getRect(_skip),
+        reason: 'opening',
+      );
+
+      controller.next();
+      await _settle(tester);
+      controller.next();
+      await _settle(tester);
+      expect(_chapter(tester), OnboardingChapter.moment);
+      _expectMacPill(tester, pill: pill, reason: 'moment');
+      await _expectInNextsPlace(
+        tester,
+        tester.getRect(_skip),
+        reason: 'moment',
+      );
+
+      controller.next();
+      await _settle(tester);
+      expect(_chapter(tester), OnboardingChapter.month);
+      expect(
+        (_container(tester).read(
+          onboardingControllerProvider,
+        ) as OnboardingFlowRunning).draft.monthFill,
+        0,
+      );
+      _expectMacPill(tester, pill: pill, reason: 'month');
+      await _expectInNextsPlace(tester, tester.getRect(_skip), reason: 'month');
+
+      controller.next();
+      await _settle(tester);
+      expect(find.byType(YearChapter), findsOneWidget);
+      expect(_controller(tester).canAdvance, isFalse);
+      _expectMacPill(tester, pill: pill, reason: 'year');
+
       await _tap(tester, _skip);
       expect(find.byType(ThemeChapter), findsOneWidget);
       expect(_skip, findsNothing);

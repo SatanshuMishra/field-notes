@@ -28,6 +28,9 @@ class MainFlutterWindow: NSWindow {
   private var spellCheckBridge: SpellCheckBridge?
   private var imagePasteboardBridge: ImagePasteboardBridge?
   private var fileDropBridge: FileDropBridge?
+  private var appearanceObservation: NSKeyValueObservation?
+  private var windowButtonPitch: CGFloat = 0
+  private var isLayingOutWindowButtons = false
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
@@ -151,10 +154,44 @@ class MainFlutterWindow: NSWindow {
         object: self
       )
     }
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(self.titlebarFrameDidChange(_:)),
+      name: NSView.frameDidChangeNotification,
+      object: nil
+    )
+    self.appearanceObservation = self.observe(\.effectiveAppearance) { window, _ in
+      DispatchQueue.main.async {
+        window.layoutWindowButtons()
+      }
+    }
+  }
+
+  @objc private func titlebarFrameDidChange(_ notification: Notification) {
+    guard let view = notification.object as? NSView,
+      view.window === self,
+      let close = self.standardWindowButton(.closeButton),
+      let miniaturize = self.standardWindowButton(.miniaturizeButton),
+      let zoom = self.standardWindowButton(.zoomButton)
+    else {
+      return
+    }
+    let titlebarViews: [NSView?] = [
+      close.superview?.superview,
+      close.superview,
+      close,
+      miniaturize,
+      zoom,
+    ]
+    guard titlebarViews.contains(where: { $0 === view }) else {
+      return
+    }
+    self.layoutWindowButtons()
   }
 
   @objc private func layoutWindowButtons() {
-    guard !self.styleMask.contains(.fullScreen),
+    guard !self.isLayingOutWindowButtons,
+      !self.styleMask.contains(.fullScreen),
       let close = self.standardWindowButton(.closeButton),
       let miniaturize = self.standardWindowButton(.miniaturizeButton),
       let zoom = self.standardWindowButton(.zoomButton),
@@ -162,7 +199,18 @@ class MainFlutterWindow: NSWindow {
     else {
       return
     }
-    let pitch = miniaturize.frame.minX - close.frame.minX
+    let spacing = miniaturize.frame.minX - close.frame.minX
+    if spacing > 0, spacing == zoom.frame.minX - miniaturize.frame.minX {
+      self.windowButtonPitch = spacing
+    }
+    let pitch = self.windowButtonPitch > 0 ? self.windowButtonPitch : spacing
+    guard pitch > 0 else {
+      return
+    }
+    self.isLayingOutWindowButtons = true
+    defer {
+      self.isLayingOutWindowButtons = false
+    }
     container.frame = NSRect(
       x: container.frame.minX,
       y: self.frame.height - titleBarHeight,

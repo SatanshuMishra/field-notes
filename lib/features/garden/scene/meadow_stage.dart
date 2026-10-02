@@ -75,6 +75,8 @@ class MeadowStage extends StatefulWidget {
     this.highlight,
     this.motion,
     this.readyOverlay,
+    this.semanticLabel,
+    this.onDragged,
   });
 
   final MeadowYear year;
@@ -88,6 +90,8 @@ class MeadowStage extends StatefulWidget {
   final MeadowRange? highlight;
   final GardenMotionProfile? motion;
   final Widget? readyOverlay;
+  final String? semanticLabel;
+  final VoidCallback? onDragged;
 
   int get resolvedGrowthPoint => growthPoint ?? year.limit;
 
@@ -762,6 +766,9 @@ class MeadowStageState extends State<MeadowStage>
     }
     final bool starting = !_dragging;
     _dragging = true;
+    if (starting) {
+      widget.onDragged?.call();
+    }
     final double pan = MeadowViewport.resolve(
       box: box,
       cover: widget.covers,
@@ -794,7 +801,7 @@ class MeadowStageState extends State<MeadowStage>
         Semantics(
           container: true,
           image: true,
-          label: meadowStageLabel(widget.year),
+          label: widget.semanticLabel ?? meadowStageLabel(widget.year),
           excludeSemantics: true,
           child: LayoutBuilder(builder: _layout),
         ),
@@ -857,7 +864,11 @@ class MeadowStageState extends State<MeadowStage>
                     right: 0,
                     top: full ? null : _hintTop,
                     bottom: full ? _fullHintBottom : null,
-                    child: const IgnorePointer(child: Center(child: _Hint())),
+                    child: const IgnorePointer(
+                      child: Center(
+                        child: MeadowHintPill(text: meadowStageHint),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -972,24 +983,21 @@ class MeadowStageState extends State<MeadowStage>
   }
 }
 
-class _Hint extends StatelessWidget {
-  const _Hint();
+class MeadowHintPill extends StatelessWidget {
+  const MeadowHintPill({super.key, required this.text});
+
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
+    return DecoratedBox(
+      decoration: const BoxDecoration(
         color: _hintFill,
         borderRadius: BorderRadius.all(Radius.circular(20)),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Text(
-          meadowStageHint,
-          maxLines: 1,
-          softWrap: false,
-          style: _hintStyle,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        child: Text(text, maxLines: 1, softWrap: false, style: _hintStyle),
       ),
     );
   }

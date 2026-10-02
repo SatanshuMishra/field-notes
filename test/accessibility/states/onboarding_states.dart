@@ -16,6 +16,8 @@ import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/week_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/year_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
+import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -27,6 +29,7 @@ import '../../app/support/app_shell_harness.dart' show shellOverrides;
 import '../../features/capture/core/capture_test_support.dart'
     show FakeNoteWriter;
 import '../../features/settings/support/fake_settings_repository.dart';
+import '../../features/settings/support/recording_reminder_scheduler.dart';
 import '../support/a11y_state.dart';
 
 const Size onboardingSidebarSurface = Size(1280, 800);
@@ -49,6 +52,10 @@ const String _savedHint = 'saved to today ✓';
 const String _emptyHint = 'write anything at all to keep going';
 const String _lookAhead = 'drag to look ahead →';
 const String _reminderOff = 'No nudges. Your meadow waits quietly.';
+const String _notificationsOff = 'Notifications are off for Field Notes.';
+const String _openSystemSettings = 'Open System Settings';
+const String _goOnWithout =
+    'You can still go on. Reminders stay off until notifications are on.';
 
 const Map<OnboardingChapter, Type> _chapterTypes = <OnboardingChapter, Type>{
   OnboardingChapter.opening: OpeningChapter,
@@ -78,6 +85,8 @@ enum _Line { saves, fails }
 
 enum _Year { untouched, playing, finished }
 
+enum _Notifications { allowed, refused }
+
 FakeSettingsRepository _freshInstall() =>
     FakeSettingsRepository(storedValues: false);
 
@@ -100,6 +109,7 @@ class _Screen {
     this.shows = _nothingMore,
     this.line = _Line.saves,
     this.year = _Year.untouched,
+    this.notifications = _Notifications.allowed,
     this.replay = false,
   });
 
@@ -109,6 +119,7 @@ class _Screen {
   final List<Finder> Function(ShellLayout layout) shows;
   final _Line line;
   final _Year year;
+  final _Notifications notifications;
   final bool replay;
 }
 
@@ -122,12 +133,23 @@ FakeNoteWriter _writer(_Line line) => switch (line) {
   _Line.fails => FakeNoteWriter(failure: const NoteWriteException('disk full')),
 };
 
+RecordingReminderScheduler _scheduler(_Notifications notifications) =>
+    switch (notifications) {
+      _Notifications.allowed => RecordingReminderScheduler(),
+      _Notifications.refused => RecordingReminderScheduler(
+        permission: ReminderPermission.denied,
+      ),
+    };
+
 List<Override> _overrides(_Screen screen) => <Override>[
   for (final Override override in shellOverrides())
-    if (override.origin != settingsRepositoryProvider) override,
+    if (override.origin != settingsRepositoryProvider &&
+        override.origin != reminderSchedulerProvider)
+      override,
   settingsRepositoryProvider.overrideWithValue(
     screen.replay ? _onboarded() : _freshInstall(),
   ),
+  reminderSchedulerProvider.overrideWithValue(_scheduler(screen.notifications)),
   onboardingCountryCodeProvider.overrideWithValue('US'),
   noteWriterProvider.overrideWith((Ref ref) => _writer(screen.line)),
 ];
@@ -161,13 +183,20 @@ void _doTask(OnboardingController controller, OnboardingChapter chapter) {
   }
 }
 
-void _walkTo(OnboardingController controller, OnboardingChapter target) {
+Future<void> _walkTo(
+  WidgetTester tester,
+  OnboardingController controller,
+  OnboardingChapter target,
+) async {
   for (final OnboardingChapter chapter in OnboardingChapter.values) {
     if (chapter == target) {
       return;
     }
     _doTask(controller, chapter);
     controller.next();
+    if (chapter == OnboardingChapter.reminder) {
+      await tester.pump();
+    }
   }
 }
 
@@ -220,7 +249,7 @@ Future<void> _pumpScreen(
     if (screen.replay) {
       controller.showMap();
     } else {
-      _walkTo(controller, screen.chapter);
+      await _walkTo(tester, controller, screen.chapter);
       screen.setUp(controller);
     }
     await _settle(tester);
@@ -396,6 +425,18 @@ final List<_Screen> _screens = <_Screen>[
     replay: true,
     shows: (ShellLayout layout) => <Finder>[
       _primaryLabelled(onboardingDoneLabel),
+    ],
+  ),
+  _Screen(
+    'reminder-notifications-off',
+    chapter: OnboardingChapter.reminder,
+    notifications: _Notifications.refused,
+    setUp: (OnboardingController controller) => controller.next(),
+    shows: (ShellLayout layout) => <Finder>[
+      find.text(_notificationsOff),
+      find.text(_openSystemSettings),
+      find.text(_goOnWithout),
+      _primaryLabelled(onboardingNextLabel),
     ],
   ),
 ];

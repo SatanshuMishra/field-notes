@@ -1,6 +1,6 @@
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/reminders/notifications_off_notice.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:flutter/material.dart';
@@ -50,16 +50,7 @@ class RemindersSoundSection extends ConsumerWidget {
             onChanged: (bool value) => _setReminderEnabled(ref, value),
           ),
         ),
-        if (notificationsOff)
-          SettingsFieldRow(
-            label: 'Notifications are off for Field Notes.',
-            control: StickerButton(
-              label: 'Open System Settings',
-              variant: StickerButtonVariant.secondary,
-              padTapTarget: true,
-              onPressed: () => _openNotificationSettings(ref),
-            ),
-          ),
+        if (notificationsOff) NotificationsOffNotice(onFeedback: onFeedback),
         SettingsFieldRow(
           label: 'Reflection question',
           description: 'Show a gentle prompt when recording voice or video.',
@@ -132,15 +123,6 @@ class RemindersSoundSection extends ConsumerWidget {
     );
     if (saved && value) {
       await permission.requestUnlessGranted();
-    }
-  }
-
-  Future<void> _openNotificationSettings(WidgetRef ref) async {
-    try {
-      await ref.read(notificationSettingsOpenerProvider).open();
-    } catch (error) {
-      debugPrint('Could not open notification settings: $error');
-      onFeedback('Could not open System Settings.');
     }
   }
 
