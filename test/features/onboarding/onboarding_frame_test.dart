@@ -172,23 +172,42 @@ Type _skipPillType(WidgetTester tester) {
   return pill!;
 }
 
-List<Decoration> _skipDecorations(WidgetTester tester) => <Decoration>[
-  for (final DecoratedBox box in tester.widgetList<DecoratedBox>(
-    find.descendant(of: _skip, matching: find.byType(DecoratedBox)),
-  ))
-    box.decoration,
-];
+BoxDecoration _skipPill(WidgetTester tester) => tester
+    .widgetList<DecoratedBox>(
+      find.descendant(of: _skip, matching: find.byType(DecoratedBox)),
+    )
+    .map((DecoratedBox box) => box.decoration)
+    .whereType<BoxDecoration>()
+    .singleWhere(
+      (BoxDecoration box) => box.color != null && box.border != null,
+    );
+
+void _expectPillLook(WidgetTester tester, {required String reason}) {
+  final FieldNotesColors colors = tester.element(_skip).colors;
+  final BoxDecoration pill = _skipPill(tester);
+  final Border border = pill.border! as Border;
+  expect(
+    pill.color!.toARGB32(),
+    colors.composerPaper.withValues(alpha: 0.85).toARGB32(),
+    reason: '$reason pill fill',
+  );
+  expect(
+    border.top.color.toARGB32(),
+    colors.ink16.toARGB32(),
+    reason: '$reason pill border',
+  );
+  expect(border.top.width, 1.5, reason: '$reason pill border width');
+}
 
 void _expectMacPill(
   WidgetTester tester, {
   required Type pill,
-  required List<Decoration> decorations,
   required String reason,
 }) {
   expect(_skip, findsOneWidget, reason: reason);
   expect(_primary, findsNothing, reason: reason);
   expect(_skipPillType(tester), pill, reason: '$reason pill widget');
-  expect(_skipDecorations(tester), decorations, reason: '$reason pill look');
+  _expectPillLook(tester, reason: reason);
   expect(
     find.descendant(of: _skip, matching: find.text('Skip')),
     findsOneWidget,
@@ -361,7 +380,6 @@ void main() {
     WidgetTester tester,
   ) async {
     late Type pill;
-    late List<Decoration> decorations;
     await _onLayout(ShellLayout.sidebar, () async {
       await _pumpApp(tester, ShellLayout.sidebar);
       expect(
@@ -369,25 +387,14 @@ void main() {
         findsOneWidget,
       );
       pill = _skipPillType(tester);
-      decorations = _skipDecorations(tester);
-      expect(
-        decorations.whereType<BoxDecoration>().where(
-          (BoxDecoration box) => box.color != null && box.border != null,
-        ),
-        hasLength(1),
-      );
+      _expectPillLook(tester, reason: 'mac');
     });
 
     await _onLayout(ShellLayout.bottomBar, () async {
       await _pumpApp(tester, ShellLayout.bottomBar);
       final OnboardingController controller = _controller(tester);
 
-      _expectMacPill(
-        tester,
-        pill: pill,
-        decorations: decorations,
-        reason: 'opening',
-      );
+      _expectMacPill(tester, pill: pill, reason: 'opening');
       await _expectInNextsPlace(
         tester,
         tester.getRect(_skip),
@@ -399,12 +406,7 @@ void main() {
       controller.next();
       await _settle(tester);
       expect(_chapter(tester), OnboardingChapter.moment);
-      _expectMacPill(
-        tester,
-        pill: pill,
-        decorations: decorations,
-        reason: 'moment',
-      );
+      _expectMacPill(tester, pill: pill, reason: 'moment');
       await _expectInNextsPlace(
         tester,
         tester.getRect(_skip),
@@ -420,24 +422,14 @@ void main() {
         ) as OnboardingFlowRunning).draft.monthFill,
         0,
       );
-      _expectMacPill(
-        tester,
-        pill: pill,
-        decorations: decorations,
-        reason: 'month',
-      );
+      _expectMacPill(tester, pill: pill, reason: 'month');
       await _expectInNextsPlace(tester, tester.getRect(_skip), reason: 'month');
 
       controller.next();
       await _settle(tester);
       expect(find.byType(YearChapter), findsOneWidget);
       expect(_controller(tester).canAdvance, isFalse);
-      _expectMacPill(
-        tester,
-        pill: pill,
-        decorations: decorations,
-        reason: 'year',
-      );
+      _expectMacPill(tester, pill: pill, reason: 'year');
 
       await _tap(tester, _skip);
       expect(find.byType(ThemeChapter), findsOneWidget);

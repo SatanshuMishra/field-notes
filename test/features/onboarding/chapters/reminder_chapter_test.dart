@@ -660,6 +660,38 @@ void main() {
     },
   );
 
+  testWidgets('next with permission already granted moves on without asking', (
+    WidgetTester tester,
+  ) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        final String name = layout.name;
+        final FakeSettingsRepository settings = FakeSettingsRepository(
+          storedValues: false,
+        );
+        final FakeReminderScheduler granted = FakeReminderScheduler();
+        final ProviderContainer container = await _pumpOnboarding(
+          tester,
+          layout,
+          settings: settings,
+          scheduler: granted,
+        );
+        expect(_held(tester), ReminderChoice.evening, reason: name);
+        _expectHelp(tester, shown: false, reason: '$name before Next');
+
+        await _pressPrimary(tester);
+        expect(granted.permissionRequests, 0, reason: name);
+        expect(_chapterOf(container), OnboardingChapter.week, reason: name);
+        expect(find.byType(WeekChapter), findsOneWidget, reason: name);
+        _expectHelp(tester, shown: false, reason: '$name after Next');
+        expect(settings.notificationPermissionAskedWrites, <bool>[
+          true,
+        ], reason: name);
+        await _unmount(tester);
+      });
+    }
+  });
+
   testWidgets(
     'a refusal keeps the Reminder page with the help text and Open System '
     'Settings',

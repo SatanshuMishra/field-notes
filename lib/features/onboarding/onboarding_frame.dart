@@ -186,6 +186,12 @@ Mood _markMood(OnboardingChapter chapter, Mood chosen) => switch (chapter) {
   _ => _laterMarkMoods[chapter.index - OnboardingChapter.moment.index],
 };
 
+FlowerKind? _shedFlower(OnboardingChapter chapter, OnboardingDraft draft) =>
+    switch (chapter) {
+      OnboardingChapter.opening => draft.grown ? FlowerKind.peony : null,
+      _ => draft.petalFlower,
+    };
+
 BoxDecoration _paper(FieldNotesColors colors, ShellLayout layout) =>
     switch (layout) {
       ShellLayout.sidebar => BoxDecoration(
@@ -379,7 +385,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             child: _chapter(chapter),
           ),
         ),
-        if (draft.petalFlower case final FlowerKind flower)
+        if (_shedFlower(chapter, draft) case final FlowerKind flower)
           _PetalVeil(
             key: _petalsKey,
             flower: flower,
