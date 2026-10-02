@@ -199,9 +199,9 @@ void main() {
     expect(find.byType(VideoRecorderSheet), findsOneWidget);
 
     await tester.tap(find.text('Built-in Camera'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await tester.tap(find.text('USB Camera'));
-    await tester.pumpAndSettle();
+    await _settle(tester);
     await _settle(tester);
 
     expect(videoRecorder.previewDeviceId, 'usb-id');

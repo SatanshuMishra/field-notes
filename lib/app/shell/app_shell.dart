@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/design/motion/petal_drift.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
+import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/reminders/reminder_lifecycle.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
@@ -10,6 +12,7 @@ import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 
+import 'appearance_toggle.dart';
 import 'bottom_bar_shell.dart';
 import 'shell_content.dart';
 import 'shell_destination.dart';
@@ -43,8 +46,9 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   Future<void> _toggleSound() async {
     final bool next = !ref.read(soundEnabledProvider);
-    final SettingsWriteResult result =
-        await ref.read(settingsControllerProvider).setSoundEnabled(next);
+    final SettingsWriteResult result = await ref
+        .read(settingsControllerProvider)
+        .setSoundEnabled(next);
     if (result is SettingsWriteFailed) {
       debugPrint('Sound toggle failed: ${result.message}');
     }
@@ -54,32 +58,45 @@ class _AppShellState extends ConsumerState<AppShell> {
   Widget build(BuildContext context) {
     final ShellLayout layout = resolveShellLayout(Theme.of(context).platform);
     final ShellDestination selected = ref.watch(shellNavigationProvider);
-    final Widget body = ShellContent(destination: selected);
     final VoidCallback onCapture = widget.onCapturePressed ?? _openCapture;
     final VoidCallback onSound = widget.onSoundPressed ?? _toggleSound;
+    final bool obscured =
+        ref.watch(onboardingControllerProvider) is! OnboardingFlowHidden;
+    final Widget body = Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        ShellContent(destination: selected),
+        if (!obscured && selected != ShellDestination.garden)
+          const PetalDrift(),
+      ],
+    );
 
     return ReminderLifecycle(
       child: switch (layout) {
         ShellLayout.sidebar => SidebarShell(
+          destinations: ShellDestination.primary,
+          selected: selected,
+          onSelect: _select,
+          onSound: onSound,
+          soundOn: ref.watch(soundEnabledProvider),
+          streak: const StreakCard(),
+          body: body,
+          obscured: obscured,
+          appearanceToggle: const AppearanceToggle(),
+        ),
+        ShellLayout.bottomBar => PopScope<Object?>(
+          canPop: obscured || selected == ShellDestination.today,
+          onPopInvokedWithResult: obscured ? null : _onBottomBarPop,
+          child: BottomBarShell(
             destinations: ShellDestination.primary,
             selected: selected,
             onSelect: _select,
-            onSound: onSound,
-            soundOn: ref.watch(soundEnabledProvider),
-            streak: const StreakCard(),
+            onCapture: onCapture,
             body: body,
+            obscured: obscured,
+            appearanceToggle: const AppearanceToggle(),
           ),
-        ShellLayout.bottomBar => PopScope<Object?>(
-            canPop: selected == ShellDestination.today,
-            onPopInvokedWithResult: _onBottomBarPop,
-            child: BottomBarShell(
-              destinations: ShellDestination.primary,
-              selected: selected,
-              onSelect: _select,
-              onCapture: onCapture,
-              body: body,
-            ),
-          ),
+        ),
       },
     );
   }

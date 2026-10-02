@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
-import 'package:field_notes/features/onboarding/tour_anchor.dart';
 
 import '../../design/tokens/tokens.dart';
 import 'keep_focus_in_view.dart';
@@ -16,6 +15,8 @@ class BottomBarShell extends StatelessWidget {
     required this.onSelect,
     required this.onCapture,
     required this.body,
+    this.obscured = false,
+    this.appearanceToggle,
   }) : assert(
          destinations.length == 4,
          'BottomBarShell requires four destinations',
@@ -26,22 +27,35 @@ class BottomBarShell extends StatelessWidget {
   final ValueChanged<ShellDestination> onSelect;
   final VoidCallback onCapture;
   final Widget body;
+  final bool obscured;
+  final Widget? appearanceToggle;
 
   @override
   Widget build(BuildContext context) {
     return KeepFocusInView(
-      child: Scaffold(
-        backgroundColor: context.colors.panelTop,
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            children: <Widget>[
-              FocusTraversalGroup(child: _topBar(context)),
-              Expanded(child: FocusTraversalGroup(child: body)),
-            ],
+      child: ExcludeSemantics(
+        excluding: obscured,
+        child: ExcludeFocus(
+          excluding: obscured,
+          child: AbsorbPointer(
+            absorbing: obscured,
+            child: Scaffold(
+              backgroundColor: context.colors.panelTop,
+              body: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: <Widget>[
+                    FocusTraversalGroup(child: _topBar(context)),
+                    Expanded(child: FocusTraversalGroup(child: body)),
+                  ],
+                ),
+              ),
+              bottomNavigationBar: FocusTraversalGroup(
+                child: _bottomBar(context),
+              ),
+            ),
           ),
         ),
-        bottomNavigationBar: FocusTraversalGroup(child: _bottomBar(context)),
       ),
     );
   }
@@ -53,33 +67,31 @@ class BottomBarShell extends StatelessWidget {
         children: <Widget>[
           Text('field notes', style: context.textStyles.wordmarkAccent),
           const Spacer(),
-          TourAnchor(
-            target: TourTarget.settings,
-            child: Semantics(
-              button: true,
-              label: 'Settings',
-              child: GestureDetector(
-                key: const ValueKey<String>('gear-button'),
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onSelect(ShellDestination.settings),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minWidth: kMinInteractiveDimension,
-                    minHeight: kMinInteractiveDimension,
-                  ),
-                  child: Center(
-                    widthFactor: 1,
-                    heightFactor: 1,
-                    child: FocusRing(
-                      onPressed: () => onSelect(ShellDestination.settings),
-                      borderRadius: _gearRadius,
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: ExcludeSemantics(
-                          child: Icon(
-                            Icons.settings_outlined,
-                            color: context.colors.ink,
-                          ),
+          ?appearanceToggle,
+          Semantics(
+            button: true,
+            label: 'Settings',
+            child: GestureDetector(
+              key: const ValueKey<String>('gear-button'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onSelect(ShellDestination.settings),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: kMinInteractiveDimension,
+                  minHeight: kMinInteractiveDimension,
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: FocusRing(
+                    onPressed: () => onSelect(ShellDestination.settings),
+                    borderRadius: _gearRadius,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: ExcludeSemantics(
+                        child: Icon(
+                          Icons.settings_outlined,
+                          color: context.colors.ink,
                         ),
                       ),
                     ),
@@ -106,19 +118,16 @@ class BottomBarShell extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: TourAnchor(
-            target: TourTarget.nav,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                _tab(context, destinations[0]),
-                _tab(context, destinations[1]),
-                _captureButton(context),
-                _tab(context, destinations[2]),
-                _tab(context, destinations[3]),
-              ],
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              _tab(context, destinations[0]),
+              _tab(context, destinations[1]),
+              _captureButton(context),
+              _tab(context, destinations[2]),
+              _tab(context, destinations[3]),
+            ],
           ),
         ),
       ),
@@ -129,7 +138,7 @@ class BottomBarShell extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final bool isSelected = d == selected;
     final Color color = isSelected ? colors.accentInk : colors.mutedDeep;
-    final Widget tab = CalendarTapArea(
+    return CalendarTapArea(
       reach: const EdgeInsets.symmetric(
         horizontal: kMinInteractiveDimension / 2,
       ),
@@ -166,43 +175,36 @@ class BottomBarShell extends StatelessWidget {
         ),
       ),
     );
-    if (d != ShellDestination.calendar) {
-      return tab;
-    }
-    return TourAnchor(target: TourTarget.calendar, child: tab);
   }
 
   Widget _captureButton(BuildContext context) {
-    return TourAnchor(
-      target: TourTarget.capture,
-      child: Semantics(
-        button: true,
-        label: 'New entry',
-        child: GestureDetector(
-          key: const ValueKey<String>('capture-button'),
-          behavior: HitTestBehavior.opaque,
-          onTap: onCapture,
-          child: FocusRing(
-            onPressed: onCapture,
-            borderRadius: _captureRadius,
-            child: Container(
-              width: _captureExtent,
-              height: _captureExtent,
-              decoration: BoxDecoration(
-                color: Palette.coral,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: context.colors.line,
-                  width: Shapes.outlineWidth,
-                ),
-                boxShadow: context.shadows.button,
+    return Semantics(
+      button: true,
+      label: 'New entry',
+      child: GestureDetector(
+        key: const ValueKey<String>('capture-button'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onCapture,
+        child: FocusRing(
+          onPressed: onCapture,
+          borderRadius: _captureRadius,
+          child: Container(
+            width: _captureExtent,
+            height: _captureExtent,
+            decoration: BoxDecoration(
+              color: Palette.coral,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: context.colors.line,
+                width: Shapes.outlineWidth,
               ),
-              child: ExcludeSemantics(
-                child: Icon(
-                  Icons.add,
-                  color: FieldNotesColors.light.cardBright,
-                  size: 28,
-                ),
+              boxShadow: context.shadows.button,
+            ),
+            child: ExcludeSemantics(
+              child: Icon(
+                Icons.add,
+                color: FieldNotesColors.light.cardBright,
+                size: 28,
               ),
             ),
           ),

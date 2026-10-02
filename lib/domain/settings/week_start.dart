@@ -8,6 +8,12 @@ enum WeekStart {
   final int value;
   final String label;
 
+  int get weekday => switch (this) {
+    WeekStart.sunday => DateTime.sunday,
+    WeekStart.monday => DateTime.monday,
+    WeekStart.saturday => DateTime.saturday,
+  };
+
   static WeekStart? fromValue(int? value) {
     if (value == null) {
       return null;

@@ -190,6 +190,9 @@ class MeadowStageState extends State<MeadowStage>
   @visibleForTesting
   double get debugTime => _time;
 
+  @visibleForTesting
+  int get debugGenerations => _generation;
+
   bool get _animate => _motion == GardenMotionProfile.full;
 
   @override

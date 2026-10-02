@@ -1,5 +1,4 @@
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:field_notes/features/onboarding/tour_anchor.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -35,10 +34,7 @@ class TodayRightRail extends ConsumerWidget {
           const SizedBox(height: _railGap),
           const TodayRailRule(),
           const SizedBox(height: _railGap),
-          TourAnchor(
-            target: TourTarget.capture,
-            child: TodayCaptureButtons(date: date),
-          ),
+          TodayCaptureButtons(date: date),
           const SizedBox(height: _railGap),
           const TodayRailRule(),
           const SizedBox(height: _railGap),

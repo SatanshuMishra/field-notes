@@ -9,7 +9,6 @@ import '../../design/tokens/tokens.dart';
 import '../../design/widgets/icon_sticker_button.dart';
 import '../../design/widgets/widgets.dart';
 import '../../domain/mood/flower_kind.dart';
-import '../../features/onboarding/tour_anchor.dart';
 import 'keep_focus_in_view.dart';
 import 'shell_destination.dart';
 import 'window_chrome.dart';
@@ -26,6 +25,8 @@ class SidebarShell extends StatelessWidget {
     required this.streak,
     required this.body,
     this.soundOn = true,
+    this.obscured = false,
+    this.appearanceToggle,
   });
 
   final List<ShellDestination> destinations;
@@ -35,6 +36,8 @@ class SidebarShell extends StatelessWidget {
   final Widget streak;
   final Widget body;
   final bool soundOn;
+  final bool obscured;
+  final Widget? appearanceToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -46,21 +49,30 @@ class SidebarShell extends StatelessWidget {
           children: <Widget>[
             _titleBar(context),
             Expanded(
-              child: DecoratedBox(
-                decoration: _panelWash(colors),
-                child: DecoratedBox(
-                  decoration: _panelGlow,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      FocusTraversalGroup(child: _rail(context)),
-                      DashedDivider(
-                        axis: Axis.vertical,
-                        thickness: 1.0,
-                        color: colors.ink22,
+              child: ExcludeSemantics(
+                excluding: obscured,
+                child: ExcludeFocus(
+                  excluding: obscured,
+                  child: AbsorbPointer(
+                    absorbing: obscured,
+                    child: DecoratedBox(
+                      decoration: _panelWash(colors),
+                      child: DecoratedBox(
+                        decoration: _panelGlow,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            FocusTraversalGroup(child: _rail(context)),
+                            DashedDivider(
+                              axis: Axis.vertical,
+                              thickness: 1.0,
+                              color: colors.ink22,
+                            ),
+                            Expanded(child: FocusTraversalGroup(child: body)),
+                          ],
+                        ),
                       ),
-                      Expanded(child: FocusTraversalGroup(child: body)),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -72,6 +84,26 @@ class SidebarShell extends StatelessWidget {
   }
 
   Widget _titleBar(BuildContext context) {
+    final Widget bar = _dragBar(context);
+    final Widget? toggle = appearanceToggle;
+    if (toggle == null) {
+      return bar;
+    }
+    return Stack(
+      children: <Widget>[
+        bar,
+        Positioned(
+          top: 0,
+          bottom: 0,
+          right: shellTitleBarPadding,
+          width: windowButtonsSlotWidth,
+          child: Align(alignment: Alignment.centerRight, child: toggle),
+        ),
+      ],
+    );
+  }
+
+  Widget _dragBar(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return GestureDetector(
       key: windowTitleBarKey,
@@ -124,21 +156,12 @@ class SidebarShell extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
-            TourAnchor(
-              target: TourTarget.nav,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  for (final ShellDestination d in destinations)
-                    if (d == ShellDestination.calendar)
-                      TourAnchor(
-                        target: TourTarget.calendar,
-                        child: _railItem(context, d),
-                      )
-                    else
-                      _railItem(context, d),
-                ],
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (final ShellDestination d in destinations)
+                  _railItem(context, d),
+              ],
             ),
             const Spacer(),
             streak,
@@ -156,17 +179,14 @@ class SidebarShell extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        TourAnchor(
-          target: TourTarget.settings,
-          child: IconStickerButton(
-            key: const ValueKey<String>('settings-button'),
-            glyph: IconStickerGlyph.gear,
-            glyphColor: settingsSelected ? Palette.onAccent : colors.ink,
-            background: settingsSelected ? Palette.coral : colors.cardLight,
-            semanticLabel: ShellDestination.settings.label,
-            selected: settingsSelected,
-            onPressed: () => onSelect(ShellDestination.settings),
-          ),
+        IconStickerButton(
+          key: const ValueKey<String>('settings-button'),
+          glyph: IconStickerGlyph.gear,
+          glyphColor: settingsSelected ? Palette.onAccent : colors.ink,
+          background: settingsSelected ? Palette.coral : colors.cardLight,
+          semanticLabel: ShellDestination.settings.label,
+          selected: settingsSelected,
+          onPressed: () => onSelect(ShellDestination.settings),
         ),
         const SizedBox(width: _footerGap),
         IconStickerButton(

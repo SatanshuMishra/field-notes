@@ -39,6 +39,12 @@ Map<int, DateTime> _eveningsOn(Map<int, int> julyDayById) => <int, DateTime>{
         booking.key: DateTime(2026, 7, booking.value, 20, 30),
     };
 
+void _holdStill(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
 Future<RecordingReminderScheduler> _launch(
   WidgetTester tester, {
   required DateTime Function() clock,
@@ -48,6 +54,7 @@ Future<RecordingReminderScheduler> _launch(
 }) async {
   final RecordingReminderScheduler scheduler =
       recorder ?? RecordingReminderScheduler();
+  _holdStill(tester);
   tester.view.physicalSize = const Size(1200, 900);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);

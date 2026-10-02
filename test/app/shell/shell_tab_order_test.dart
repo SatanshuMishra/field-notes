@@ -32,6 +32,12 @@ String _label(FocusNode node) {
   return label;
 }
 
+void _holdStill(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
 void _useKeyboardHighlight() {
   final FocusHighlightStrategy previous =
       FocusManager.instance.highlightStrategy;
@@ -158,6 +164,7 @@ void main() {
   testWidgets(
     'on a phone one Tab lap walks all of Settings, then the bottom bar',
     (WidgetTester tester) async {
+      _holdStill(tester);
       await pumpShell(
         tester,
         const AppShell(),
@@ -179,6 +186,7 @@ void main() {
   testWidgets('on a Mac one Tab lap walks the sidebar, then all of Settings', (
     WidgetTester tester,
   ) async {
+    _holdStill(tester);
     await pumpShell(tester, const AppShell(), surface: const Size(1280, 860));
     _useKeyboardHighlight();
     await tester.tap(find.bySemanticsLabel('Settings').first);
@@ -194,6 +202,7 @@ void main() {
   testWidgets(
     'on a phone one Shift+Tab lap walks all of Settings, then the top bar',
     (WidgetTester tester) async {
+      _holdStill(tester);
       await pumpShell(
         tester,
         const AppShell(),
@@ -215,6 +224,7 @@ void main() {
   testWidgets(
     'on a Mac one Shift+Tab lap walks all of Settings, then the sidebar',
     (WidgetTester tester) async {
+      _holdStill(tester);
       await pumpShell(tester, const AppShell(), surface: const Size(1280, 860));
       _useKeyboardHighlight();
       await tester.tap(find.bySemanticsLabel('Settings').first);

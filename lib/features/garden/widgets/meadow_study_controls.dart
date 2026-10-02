@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/features/garden/model/meadow_year_replay.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
 import 'package:field_notes/features/garden/widgets/garden_header.dart';
 import 'package:field_notes/features/today/today_date.dart';
@@ -140,15 +141,18 @@ class MeadowStudyControls extends StatefulWidget {
 class _MeadowStudyControlsState extends State<MeadowStudyControls>
     with TickerProviderStateMixin {
   late final MeadowDayPlayer _player;
-  late final Ticker _replay;
+  late final MeadowYearReplay _replay;
   bool _planting = false;
-  int _replayPoint = 0;
 
   @override
   void initState() {
     super.initState();
     _player = MeadowDayPlayer(vsync: this, onHour: _reportHour);
-    _replay = createTicker(_replayTick);
+    _replay = MeadowYearReplay(
+      vsync: this,
+      duration: meadowReplayDuration,
+      onGrowth: _reportReplay,
+    );
   }
 
   @override
@@ -204,33 +208,17 @@ class _MeadowStudyControlsState extends State<MeadowStudyControls>
     _planting = false;
   }
 
-  void _startReplay() {
-    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
-      setState(_stopReplay);
-      widget.onGrowth(widget.limit, false);
-      return;
-    }
-    _replay.stop();
-    _replayPoint = 0;
-    setState(() => _planting = true);
-    widget.onGrowth(0, true);
-    _replay.start();
-  }
+  void _startReplay() => _replay.start(
+    limit: widget.limit,
+    reduceMotion: MediaQuery.maybeDisableAnimationsOf(context) ?? false,
+  );
 
-  void _replayTick(Duration elapsed) {
-    final int limit = widget.limit;
-    if (elapsed >= meadowReplayDuration) {
-      setState(_stopReplay);
-      widget.onGrowth(limit, true);
-      return;
+  void _reportReplay(int point, bool animated) {
+    final bool planting = _replay.playing;
+    if (planting != _planting) {
+      setState(() => _planting = planting);
     }
-    final int point =
-        limit * elapsed.inMicroseconds ~/ meadowReplayDuration.inMicroseconds;
-    if (point == _replayPoint) {
-      return;
-    }
-    _replayPoint = point;
-    widget.onGrowth(point, true);
+    widget.onGrowth(point, animated);
   }
 
   String _describeMinutes(int minutes) => formatClock(
