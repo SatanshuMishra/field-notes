@@ -1,3 +1,5 @@
+import 'package:field_notes/app/shell/phone_bottom_bar.dart';
+import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/empty_state.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
@@ -61,17 +63,13 @@ const int _sidebarGearNumber = 5;
 const int _bottomBarAddNumber = 3;
 const int _bottomBarGearNumber = 6;
 
-const Map<int, NavGlyph> _bottomBarNav = <int, NavGlyph>{
-  1: NavGlyph.home,
-  2: NavGlyph.calendar,
-  4: NavGlyph.garden,
-  5: NavGlyph.search,
+const Map<int, ShellDestination> _bottomBarSelection = <int, ShellDestination>{
+  1: ShellDestination.today,
+  2: ShellDestination.calendar,
+  4: ShellDestination.garden,
+  5: ShellDestination.search,
 };
 
-const Color _navLit = Color(0xFFF2C14E);
-const Color _navIdle = Color(0xFFC9B79C);
-const Color _navLitWash = Color(0x2EF2C14E);
-const Color _addGlow = Color(0x59C76A54);
 const Color _miniatureDrop = Color(0x66281C12);
 
 const double _outline = 1.5;
@@ -151,19 +149,10 @@ const double _miniatureCardLinesGap = 6;
 const double _miniatureBoxHeight = 44;
 const double _miniatureBoxRadius = 10;
 
-const double _navBarHeight = 52;
-const BorderRadius _navBarRadius = BorderRadius.all(Radius.circular(26));
-const double _navSlot = 38;
-const double _navSlotIcon = 18;
-const double _navAdd = 42;
-const double _navAddRing = 3;
-const double _navAddLift = 7;
-const double _navAddGlow = 4;
-const double _navAddGlyph = 18;
-const double _navAddStroke = 2.6;
-const double _navBadgeTop = -15;
-const double _navAddBadgeTop = -18;
-const double _navGearGap = 8;
+const double _navBadgeTop = -_badgeBottomBar / 2;
+const double _navAddBadgeTop = _navBadgeTop - phoneBottomBarCaptureRise;
+const double _navGearGlyph = 22;
+const double _navGearGap = 10;
 
 const Duration _headingRise = Duration(milliseconds: 500);
 const Duration _bodyRise = Duration(milliseconds: 600);
@@ -858,42 +847,48 @@ class _BottomBarMiniature extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
     return ExcludeSemantics(
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Expanded(
-            child: Container(
-              height: _navBarHeight,
-              decoration: BoxDecoration(
-                color: colors.pill,
-                borderRadius: _navBarRadius,
-              ),
-              child: Row(
-                children: <Widget>[
-                  for (int number = 1; number <= 5; number++)
-                    Expanded(
-                      child: _NavSlot(
-                        number: number,
-                        highlighted: highlighted == number,
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: _navGearGap),
-          Container(
-            width: _navBarHeight,
-            height: _navBarHeight,
-            decoration: BoxDecoration(
-              color: colors.pill,
-              shape: BoxShape.circle,
-            ),
-            child: _NavSlot(
-              number: _bottomBarGearNumber,
+          Align(
+            alignment: Alignment.centerRight,
+            child: _MiniatureGear(
               highlighted: highlighted == _bottomBarGearNumber,
             ),
+          ),
+          const SizedBox(height: _navGearGap),
+          Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              MediaQuery.removePadding(
+                context: context,
+                removeLeft: true,
+                removeRight: true,
+                removeBottom: true,
+                child: PhoneBottomBar(
+                  destinations: ShellDestination.primary,
+                  selected: _bottomBarSelection[highlighted],
+                ),
+              ),
+              Positioned.fill(
+                child: Row(
+                  children: <Widget>[
+                    for (
+                      int number = 1;
+                      number < _bottomBarGearNumber;
+                      number++
+                    )
+                      Expanded(
+                        child: _NavSlot(
+                          number: number,
+                          highlighted: highlighted == number,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -909,20 +904,14 @@ class _NavSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool add = number == _bottomBarAddNumber;
-    return SizedBox(
-      height: _navBarHeight,
+    return MapPlaceHighlight(
+      key: tourTargetKey(number),
+      highlighted: highlighted,
       child: Stack(
         clipBehavior: Clip.none,
-        alignment: Alignment.center,
         children: <Widget>[
-          MapPlaceHighlight(
-            key: tourTargetKey(number),
-            highlighted: highlighted,
-            child: add ? _addArt(context) : _slotArt(context),
-          ),
           Positioned(
-            top: add ? _navAddBadgeTop : _navBadgeTop,
+            top: number == _bottomBarAddNumber ? _navAddBadgeTop : _navBadgeTop,
             left: 0,
             right: 0,
             child: Align(
@@ -940,84 +929,48 @@ class _NavSlot extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _slotArt(BuildContext context) {
-    final Color ink = highlighted ? _navLit : _navIdle;
-    final NavGlyph? glyph = _bottomBarNav[number];
-    return AnimatedContainer(
-      duration: _fade(context),
-      width: _navSlot,
-      height: _navSlot,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: highlighted ? _navLitWash : _navLitWash.withAlpha(0),
-        shape: BoxShape.circle,
-      ),
-      child: glyph == null
-          ? IconStickerGlyphIcon(
+class _MiniatureGear extends StatelessWidget {
+  const _MiniatureGear({required this.highlighted});
+
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return MapPlaceHighlight(
+      key: tourTargetKey(_bottomBarGearNumber),
+      highlighted: highlighted,
+      child: SizedBox.square(
+        dimension: _navGearGlyph,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            IconStickerGlyphIcon(
               glyph: IconStickerGlyph.gear,
-              color: ink,
-              size: _navSlotIcon,
-            )
-          : NavIcon(glyph: glyph, color: ink, size: _navSlotIcon),
-    );
-  }
-
-  Widget _addArt(BuildContext context) {
-    return Transform.translate(
-      offset: const Offset(0, -_navAddLift),
-      child: AnimatedContainer(
-        duration: _fade(context),
-        width: _navAdd,
-        height: _navAdd,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Palette.coral,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: context.colors.panelTop,
-            width: _navAddRing,
-          ),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: highlighted ? _addGlow : _addGlow.withAlpha(0),
-              spreadRadius: _navAddGlow,
+              color: context.colors.ink,
+              size: _navGearGlyph,
+            ),
+            Positioned(
+              top: _navBadgeTop,
+              left: 0,
+              right: 0,
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: TourBadge(
+                  key: tourBadgeKey(_bottomBarGearNumber),
+                  number: _bottomBarGearNumber,
+                  highlighted: highlighted,
+                  inMiniature: true,
+                  layout: ShellLayout.bottomBar,
+                ),
+              ),
             ),
           ],
         ),
-        child: const SizedBox.square(
-          dimension: _navAddGlyph,
-          child: CustomPaint(painter: _PlusPainter(color: Palette.onAccent)),
-        ),
       ),
     );
   }
-}
-
-class _PlusPainter extends CustomPainter {
-  const _PlusPainter({required this.color});
-
-  final Color color;
-
-  static const double _viewBox = 24;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint stroke = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _navAddStroke
-      ..strokeCap = StrokeCap.round
-      ..isAntiAlias = true;
-    canvas.save();
-    canvas.scale(size.shortestSide / _viewBox);
-    canvas.drawLine(const Offset(12, 5), const Offset(12, 19), stroke);
-    canvas.drawLine(const Offset(5, 12), const Offset(19, 12), stroke);
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_PlusPainter oldDelegate) => oldDelegate.color != color;
 }
 
 typedef _EntranceFrame = Widget Function(double progress, Widget child);
