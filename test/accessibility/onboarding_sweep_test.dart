@@ -1,6 +1,7 @@
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/domain/mood/mood.dart';
+import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -168,10 +169,11 @@ String _name(SemanticsNode node) {
 }
 
 final class _Stop {
-  const _Stop({required this.node, required this.ringed});
+  const _Stop({required this.node, required this.ringed, required this.note});
 
   final SemanticsNode node;
   final bool ringed;
+  final bool note;
 }
 
 SemanticsNode _semanticsOf(WidgetTester tester, FocusNode focus) {
@@ -202,12 +204,32 @@ bool _showsRing(FocusNode focus) {
       .isNotEmpty;
 }
 
+bool _isNoteField(FocusNode focus) {
+  final BuildContext? context = focus.context;
+  if (context == null) {
+    return false;
+  }
+  return find
+      .ancestor(
+        of: find.byElementPredicate(
+          (Element element) => identical(element, context),
+        ),
+        matching: find.byKey(momentFieldKey),
+      )
+      .evaluate()
+      .isNotEmpty;
+}
+
 Future<_Stop> _tab(WidgetTester tester) async {
   await tester.sendKeyEvent(LogicalKeyboardKey.tab);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
   final FocusNode focus = FocusManager.instance.primaryFocus!;
-  return _Stop(node: _semanticsOf(tester, focus), ringed: _showsRing(focus));
+  return _Stop(
+    node: _semanticsOf(tester, focus),
+    ringed: _showsRing(focus),
+    note: _isNoteField(focus),
+  );
 }
 
 Future<List<_Stop>> _lap(WidgetTester tester) async {
@@ -253,10 +275,26 @@ void _expectLapInReadingOrder(WidgetTester tester, List<_Stop> lap) {
   expect(
     <String>[
       for (final _Stop stop in lap)
-        if (!stop.ringed) _name(stop.node),
+        if (!stop.note && !stop.ringed) _name(stop.node),
     ],
     isEmpty,
     reason: 'these controls show no FocusRing while focused',
+  );
+  expect(
+    <String>[
+      for (final _Stop stop in lap)
+        if (stop.note) _name(stop.node),
+    ],
+    hasLength(find.byKey(momentFieldKey).evaluate().length),
+    reason: 'Tab does not focus the note field once',
+  );
+  expect(
+    <String>[
+      for (final _Stop stop in lap)
+        if (stop.note && stop.ringed) _name(stop.node),
+    ],
+    isEmpty,
+    reason: 'the note field shows a FocusRing while focused',
   );
   final List<SemanticsNode> readingOrder = <SemanticsNode>[
     for (final SemanticsNode node in order)

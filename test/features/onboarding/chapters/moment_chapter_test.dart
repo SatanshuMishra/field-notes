@@ -1,5 +1,6 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
@@ -10,7 +11,9 @@ import 'package:field_notes/features/onboarding/onboarding_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,6 +36,8 @@ const String _bottomBarLead = 'More than one way to keep a memory:';
 
 const Duration _pause = Duration(milliseconds: 600);
 const Duration _slowSave = Duration(seconds: 2);
+const Duration _focusSettle = Duration(milliseconds: 50);
+const int _maxTabs = 10;
 
 final DateTime _openedAt = DateTime(2026, 10, 14, 9, 41);
 
@@ -52,6 +57,7 @@ const List<Key> _mediaKeys = <Key>[
 typedef _Layout = ({
   ShellLayout layout,
   TargetPlatform platform,
+  PointerDeviceKind pointer,
   Size surface,
   String lead,
   String otherLead,
@@ -62,6 +68,7 @@ typedef _Layout = ({
 const _Layout _sidebar = (
   layout: ShellLayout.sidebar,
   platform: TargetPlatform.macOS,
+  pointer: PointerDeviceKind.mouse,
   surface: Size(1280, 758),
   lead: _sidebarLead,
   otherLead: _bottomBarLead,
@@ -76,6 +83,7 @@ const _Layout _sidebar = (
 const _Layout _bottomBar = (
   layout: ShellLayout.bottomBar,
   platform: TargetPlatform.android,
+  pointer: PointerDeviceKind.touch,
   surface: Size(360, 740),
   lead: _bottomBarLead,
   otherLead: _sidebarLead,
@@ -148,6 +156,19 @@ Future<void> _run(WidgetTester tester, Duration total) async {
   }
 }
 
+void _traditionalHighlight() {
+  final FocusHighlightStrategy previous =
+      FocusManager.instance.highlightStrategy;
+  FocusManager.instance.highlightStrategy =
+      FocusHighlightStrategy.alwaysTraditional;
+  addTearDown(() => FocusManager.instance.highlightStrategy = previous);
+}
+
+Future<void> _settleFocus(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(_focusSettle);
+}
+
 OnboardingFlow _flow(WidgetTester tester) =>
     ProviderScope.containerOf(tester.element(find.byType(MomentChapter)))
         .read(onboardingControllerProvider);
@@ -168,6 +189,29 @@ Finder get _field => find.descendant(
 
 String _fieldText(WidgetTester tester) =>
     tester.widget<EditableText>(_field).controller.text;
+
+EditableTextState _editable(WidgetTester tester) =>
+    tester.state<EditableTextState>(_field);
+
+Future<void> _tabToField(WidgetTester tester, String route) async {
+  for (int press = 0; press < _maxTabs; press++) {
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await _settleFocus(tester);
+    if (_editable(tester).widget.focusNode.hasPrimaryFocus) {
+      return;
+    }
+  }
+  fail('$route: Tab never focuses the note field');
+}
+
+void _expectCaretWithoutRing(WidgetTester tester, String route) {
+  final EditableTextState editable = _editable(tester);
+  expect(editable.widget.focusNode.hasPrimaryFocus, isTrue, reason: route);
+  expect(find.byKey(focusRingKey), findsNothing, reason: route);
+  expect(editable.renderEditable.selection?.isCollapsed, isTrue, reason: route);
+  expect(editable.renderEditable.showCursor.value, isTrue, reason: route);
+  expect(editable.cursorCurrentlyVisible, isTrue, reason: route);
+}
 
 BoxShadow _cardShadow(WidgetTester tester) =>
     (tester
@@ -392,6 +436,30 @@ void main() {
       }
     },
   );
+
+  testWidgets('the note field shows no outline when it has focus', (
+    WidgetTester tester,
+  ) async {
+    _traditionalHighlight();
+    for (final _Layout layout in _layouts) {
+      await _onLayout(layout, () async {
+        final String pressed = '${layout.layout} by ${layout.pointer.name}';
+        await _pumpMoment(tester, layout, writer: FakeNoteWriter());
+        await _run(tester, const Duration(seconds: 1));
+        await tester.tap(_field, kind: layout.pointer);
+        await _settleFocus(tester);
+        _expectCaretWithoutRing(tester, pressed);
+        await _unmount(tester);
+
+        final String tabbed = '${layout.layout} by Tab';
+        await _pumpMoment(tester, layout, writer: FakeNoteWriter());
+        await _run(tester, const Duration(seconds: 1));
+        await _tabToField(tester, tabbed);
+        _expectCaretWithoutRing(tester, tabbed);
+        await _unmount(tester);
+      });
+    }
+  });
 
   testWidgets('the empty card glows softly unless animations are disabled', (
     WidgetTester tester,
