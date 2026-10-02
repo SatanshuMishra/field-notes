@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:field_notes/app/shell/appearance_toggle.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/motion/petal_drift.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/onboarding/chapters/day_chapter.dart';
@@ -33,6 +35,11 @@ const String onboardingSkipLabel = 'Skip';
 const Key onboardingProgressKey = ValueKey<String>('onboarding-progress');
 const Key onboardingPrimaryKey = ValueKey<String>('onboarding-primary');
 const Key onboardingSkipKey = ValueKey<String>('onboarding-skip');
+
+const Key _petalsKey = ValueKey<String>('onboarding-petals');
+const Key _toggleSlotKey = ValueKey<String>('onboarding-appearance-toggle');
+
+const Duration _petalFade = Duration(milliseconds: 1200);
 
 const String _arrow = '→';
 const double _target = 48;
@@ -165,6 +172,8 @@ const double _sidebarSkipRadius = 11;
 const double _sidebarSkipPadding = 14;
 const double _bottomBarSkipRight = 10;
 const double _bottomBarProgressLeft = 12;
+const double _bottomBarToggleTop = 0;
+const double _bottomBarToggleRight = 4;
 
 _FrameMetrics _metricsFor(ShellLayout layout) => switch (layout) {
   ShellLayout.sidebar => _sidebarMetrics,
@@ -364,6 +373,8 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
           key: ValueKey<OnboardingChapter>(chapter),
           child: _chapter(chapter),
         ),
+        if (draft.planted)
+          _PetalVeil(key: _petalsKey, shown: chapter != OnboardingChapter.year),
         switch (layout) {
           ShellLayout.sidebar => Positioned(
             left: 0,
@@ -409,6 +420,8 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
               ),
             ),
           ),
+        if (layout == ShellLayout.bottomBar)
+          _appearanceToggle(overMeadow: chapter == OnboardingChapter.year),
       ],
     );
   }
@@ -420,7 +433,20 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
       children: <Widget>[
         TourChapter(layout: widget.layout),
         _primary(metrics, onboardingDoneLabel, _controller.closeMap),
+        if (widget.layout == ShellLayout.bottomBar)
+          _appearanceToggle(overMeadow: false),
       ],
+    );
+  }
+
+  Widget _appearanceToggle({required bool overMeadow}) {
+    return Positioned(
+      key: _toggleSlotKey,
+      top: _bottomBarToggleTop,
+      right: _bottomBarToggleRight,
+      child: AppearanceToggle(
+        ink: overMeadow ? FieldNotesColors.light.composerPaper : null,
+      ),
     );
   }
 
@@ -443,6 +469,62 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
           color: Palette.onAccent,
         ),
       ),
+    );
+  }
+}
+
+class _PetalVeil extends StatefulWidget {
+  const _PetalVeil({super.key, required this.shown});
+
+  final bool shown;
+
+  @override
+  State<_PetalVeil> createState() => _PetalVeilState();
+}
+
+class _PetalVeilState extends State<_PetalVeil>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fade = AnimationController(
+    vsync: this,
+    duration: _petalFade,
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _follow();
+  }
+
+  @override
+  void didUpdateWidget(_PetalVeil oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _follow();
+  }
+
+  void _follow() {
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _fade.value = widget.shown ? 1 : 0;
+    } else if (widget.shown) {
+      _fade.forward();
+    } else {
+      _fade.reverse();
+    }
+  }
+
+  @override
+  void dispose() {
+    _fade.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _fade,
+      child: const PetalDrift(),
+      builder: (BuildContext context, Widget? petals) => _fade.isDismissed
+          ? const SizedBox.shrink()
+          : Opacity(opacity: Curves.ease.transform(_fade.value), child: petals),
     );
   }
 }

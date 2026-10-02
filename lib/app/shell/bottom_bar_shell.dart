@@ -16,6 +16,7 @@ class BottomBarShell extends StatelessWidget {
     required this.onCapture,
     required this.body,
     this.obscured = false,
+    this.appearanceToggle,
   }) : assert(
          destinations.length == 4,
          'BottomBarShell requires four destinations',
@@ -27,6 +28,7 @@ class BottomBarShell extends StatelessWidget {
   final VoidCallback onCapture;
   final Widget body;
   final bool obscured;
+  final Widget? appearanceToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +67,7 @@ class BottomBarShell extends StatelessWidget {
         children: <Widget>[
           Text('field notes', style: context.textStyles.wordmarkAccent),
           const Spacer(),
+          ?appearanceToggle,
           Semantics(
             button: true,
             label: 'Settings',

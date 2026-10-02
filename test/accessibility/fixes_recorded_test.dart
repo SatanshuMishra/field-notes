@@ -16,6 +16,11 @@ const Set<String> _sweepTodos = <String>{
   'pack the tide tables',
 };
 
+const Set<String> _titleBarToggle = <String>{
+  'Switch to dark',
+  'Switch to light',
+};
+
 bool _accepted(String line) {
   final List<String> parts = line.split(' | ');
   final String rule = parts[0];
@@ -23,7 +28,9 @@ bool _accepted(String line) {
   return switch (rule) {
     'missing-role' => label.startsWith('Dismiss'),
     'small-target' =>
-      _frameworkMenuItems.contains(label) || _sweepTodos.contains(label),
+      _frameworkMenuItems.contains(label) ||
+          _sweepTodos.contains(label) ||
+          _titleBarToggle.contains(label),
     _ => false,
   };
 }

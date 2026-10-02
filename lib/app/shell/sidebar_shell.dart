@@ -26,6 +26,7 @@ class SidebarShell extends StatelessWidget {
     required this.body,
     this.soundOn = true,
     this.obscured = false,
+    this.appearanceToggle,
   });
 
   final List<ShellDestination> destinations;
@@ -36,6 +37,7 @@ class SidebarShell extends StatelessWidget {
   final Widget body;
   final bool soundOn;
   final bool obscured;
+  final Widget? appearanceToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +84,26 @@ class SidebarShell extends StatelessWidget {
   }
 
   Widget _titleBar(BuildContext context) {
+    final Widget bar = _dragBar(context);
+    final Widget? toggle = appearanceToggle;
+    if (toggle == null) {
+      return bar;
+    }
+    return Stack(
+      children: <Widget>[
+        bar,
+        Positioned(
+          top: 0,
+          bottom: 0,
+          right: shellTitleBarPadding,
+          width: windowButtonsSlotWidth,
+          child: Align(alignment: Alignment.centerRight, child: toggle),
+        ),
+      ],
+    );
+  }
+
+  Widget _dragBar(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return GestureDetector(
       key: windowTitleBarKey,

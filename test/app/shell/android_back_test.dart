@@ -11,12 +11,21 @@ import '../support/app_shell_harness.dart';
 
 const Size _phoneSurface = Size(440, 900);
 
-Future<void> _pumpAndroidShell(WidgetTester tester) => pumpShell(
-      tester,
-      const AppShell(),
-      platform: TargetPlatform.android,
-      surface: _phoneSurface,
-    );
+void _holdStill(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
+Future<void> _pumpAndroidShell(WidgetTester tester) {
+  _holdStill(tester);
+  return pumpShell(
+    tester,
+    const AppShell(),
+    platform: TargetPlatform.android,
+    surface: _phoneSurface,
+  );
+}
 
 ShellDestination _selected(WidgetTester tester) =>
     ProviderScope.containerOf(tester.element(find.byType(AppShell)))

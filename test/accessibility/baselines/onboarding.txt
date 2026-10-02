@@ -1,0 +1,10 @@
+small-target | o1-opening-sidebar | Switch to dark | <root>
+small-target | o11-theme-sidebar | Switch to dark | <root>
+small-target | o13-reminder-sidebar | Switch to dark | <root>
+small-target | o15-week-sidebar | Switch to dark | <root>
+small-target | o17-tour-sidebar | Switch to dark | <root>
+small-target | o19-map-replay-sidebar | Switch to dark | <root>
+small-target | o3-day-sidebar | Switch to dark | <root>
+small-target | o5-moment-sidebar | Switch to dark | <root>
+small-target | o7-month-sidebar | Switch to dark | <root>
+small-target | o9-year-sidebar | Switch to dark | <root>

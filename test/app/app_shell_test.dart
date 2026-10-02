@@ -30,6 +30,12 @@ List<Override> _loadedSettings() => <Override>[
       ),
     ];
 
+void _holdStill(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
 void _expectLoadedSettingsScreen({required Key tabs}) {
   expect(find.byType(SettingsScreen), findsOneWidget);
   expect(find.byType(CrossHatchPlaceholder), findsNothing);
@@ -83,6 +89,7 @@ void main() {
 
     testWidgets('the settings button renders the loaded settings screen',
         (WidgetTester tester) async {
+      _holdStill(tester);
       await pumpShell(tester, const AppShell(), overrides: _loadedSettings());
 
       await tester.tap(find.byKey(const ValueKey<String>('settings-button')));
@@ -148,6 +155,7 @@ void main() {
 
     testWidgets('the gear renders the loaded settings screen',
         (WidgetTester tester) async {
+      _holdStill(tester);
       await pumpShell(
         tester,
         const AppShell(),
