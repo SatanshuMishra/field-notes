@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
+import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:field_notes/features/onboarding/onboarding_gate.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+const String _finishedToast = 'Your meadow starts today.';
 
 class OnboardingHost extends ConsumerStatefulWidget {
   const OnboardingHost({super.key, required this.child});
@@ -33,6 +36,11 @@ class _OnboardingHostState extends ConsumerState<OnboardingHost> {
       ) => _onGate(gate),
       fireImmediately: true,
     );
+    ref.listenManual<OnboardingFlow>(
+      onboardingControllerProvider,
+      (OnboardingFlow? previous, OnboardingFlow flow) =>
+          _onFlow(previous, flow),
+    );
   }
 
   OnboardingController get _controller =>
@@ -52,6 +60,16 @@ class _OnboardingHostState extends ConsumerState<OnboardingHost> {
     }
     ref.read(shellNavigationProvider.notifier).select(ShellDestination.today);
     _controller.start();
+  }
+
+  void _onFlow(OnboardingFlow? previous, OnboardingFlow flow) {
+    if (previous is! OnboardingFlowRunning ||
+        flow is! OnboardingFlowHidden ||
+        !mounted) {
+      return;
+    }
+    ref.read(shellNavigationProvider.notifier).select(ShellDestination.today);
+    showTransientToast(context, _finishedToast);
   }
 
   void _onPop(bool didPop, Object? result) {
