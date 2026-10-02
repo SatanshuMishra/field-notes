@@ -784,8 +784,11 @@ class _Radio extends StatelessWidget {
 class _NotificationsHelp extends StatelessWidget {
   const _NotificationsHelp();
 
-  void _report(BuildContext context, String message) =>
+  void _report(BuildContext context, String message) {
+    if (context.mounted) {
       showTransientToast(context, message, glyph: IconStickerGlyph.close);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

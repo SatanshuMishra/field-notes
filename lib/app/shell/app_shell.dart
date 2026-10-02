@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/motion/petal_drift.dart';
+import 'package:field_notes/domain/models/day.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
@@ -58,7 +59,10 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   FlowerKind? _todayFlower() {
     final String today = ref.watch(todayDateProvider);
-    return ref.watch(dayForDateProvider(today)).value?.mood?.flower;
+    return ref.watch(
+      dayForDateProvider(today)
+          .select((AsyncValue<Day?> day) => day.value?.mood?.flower),
+    );
   }
 
   @override

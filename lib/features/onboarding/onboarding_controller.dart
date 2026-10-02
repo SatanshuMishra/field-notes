@@ -477,8 +477,10 @@ class OnboardingController extends _$OnboardingController {
     } finally {
       _asking = false;
     }
-    if (state case OnboardingFlowRunning(chapter: OnboardingChapter.reminder)
-        when run == _run) {
+    if (run != _run) {
+      return;
+    }
+    if (state case OnboardingFlowRunning(chapter: OnboardingChapter.reminder)) {
       _open(OnboardingChapter.week);
     }
   }

@@ -319,6 +319,36 @@ Future<void> _expectChosenFlowerSheds(
   await _unmount(tester);
 }
 
+Future<void> _expectOpeningShedsPeonyAgain(
+  WidgetTester tester,
+  ShellLayout layout,
+) async {
+  final String name = layout.name;
+  final ProviderContainer container = await _pumpApp(tester, layout);
+  await _openDay(tester, container, reason: name);
+  await _expectSwitchOnceGrown(
+    tester,
+    container,
+    Mood.anxious,
+    before: FlowerKind.peony,
+    reason: '$name anxious',
+  );
+
+  _controller(container).back();
+  await _settle(tester);
+  expect(find.byType(OpeningChapter), findsOneWidget, reason: name);
+  expect(_shedding(tester), FlowerKind.peony, reason: '$name back on Opening');
+  await tester.pump(_pastLongestLoop);
+  await tester.pump();
+  _expectShedding(tester, FlowerKind.peony, reason: '$name Opening');
+
+  await tester.tap(find.byKey(onboardingPrimaryKey));
+  await _settle(tester);
+  expect(find.byType(DayChapter), findsOneWidget, reason: name);
+  expect(_shedding(tester), FlowerKind.aster, reason: '$name A day again');
+  await _unmount(tester);
+}
+
 Future<void> _expectSkipKeepsWhatGrew(
   WidgetTester tester,
   ShellLayout layout,
@@ -377,6 +407,16 @@ void main() {
       await _onLayout(layout, () async {
         await _expectChosenFlowerSheds(tester, layout);
         await _expectSkipKeepsWhatGrew(tester, layout);
+      });
+    }
+  });
+
+  testWidgets('the Opening sheds peony petals after going back', (
+    WidgetTester tester,
+  ) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        await _expectOpeningShedsPeonyAgain(tester, layout);
       });
     }
   });
