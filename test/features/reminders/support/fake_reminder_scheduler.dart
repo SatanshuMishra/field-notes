@@ -6,11 +6,13 @@ import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 class FakeReminderScheduler implements ReminderScheduler {
   FakeReminderScheduler({
     this.permissionGranted = true,
+    this.grantOnRequest = false,
     this.scheduleError,
     this.scheduleGate,
   });
 
-  final bool permissionGranted;
+  bool permissionGranted;
+  final bool grantOnRequest;
   final Object? scheduleError;
   final Completer<void>? scheduleGate;
   final List<ReminderBooking> scheduled = <ReminderBooking>[];
@@ -32,6 +34,9 @@ class FakeReminderScheduler implements ReminderScheduler {
   Future<bool> requestPermission() async {
     permissionRequests++;
     calls.add('request');
+    if (grantOnRequest) {
+      permissionGranted = true;
+    }
     return permissionGranted;
   }
 

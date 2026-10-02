@@ -1,11 +1,18 @@
+import 'package:field_notes/app/app.dart';
+import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/domain/settings/reminder_time.dart';
 import 'package:field_notes/domain/settings/week_start.dart';
 import 'package:field_notes/features/onboarding/chapters/reminder_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/week_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:field_notes/features/onboarding/reminder_choice.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
+import 'package:field_notes/features/reminders/notification_settings_opener.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
@@ -15,6 +22,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../app/support/app_shell_harness.dart';
+import '../../reminders/support/fake_reminder_scheduler.dart';
 import '../../settings/support/fake_settings_repository.dart';
 import '../../settings/support/recording_reminder_scheduler.dart';
 
@@ -22,8 +30,22 @@ const String _liveTitle = 'Field Notes';
 const String _liveBody = "You haven't written today's field note yet.";
 const String _quietBody = 'No nudges. Your meadow waits quietly.';
 
+const String _notificationsOff = 'Notifications are off for Field Notes.';
+const String _openSettings = 'Open System Settings';
+const String _goOn =
+    'You can still go on. Reminders stay off until notifications are on.';
+const List<String> _helpTexts = <String>[
+  _notificationsOff,
+  _openSettings,
+  _goOn,
+];
+
 const Size _sidebarArea = Size(1280, 758);
 const Size _bottomBarArea = Size(360, 740);
+const Size _sidebarSurface = Size(1280, 800);
+const Size _bottomBarSurface = Size(360, 740);
+
+const ReminderTime _evening = ReminderTime(hour: 20, minute: 30);
 
 typedef _Option = ({
   ReminderChoice choice,
@@ -35,6 +57,13 @@ typedef _Option = ({
 typedef _Spies = ({
   FakeSettingsRepository settings,
   RecordingReminderScheduler scheduler,
+});
+
+typedef _Clock = ({
+  bool use24Hour,
+  List<String> choices,
+  String big,
+  String preview,
 });
 
 const List<_Option> _sidebarOptions = <_Option>[
@@ -91,6 +120,36 @@ const List<_Option> _bottomBarOptions = <_Option>[
   ),
 ];
 
+const List<ReminderChoice> _timedChoices = <ReminderChoice>[
+  ReminderChoice.morning,
+  ReminderChoice.midday,
+  ReminderChoice.evening,
+];
+
+const List<_Clock> _clocks = <_Clock>[
+  (
+    use24Hour: false,
+    choices: <String>['8:00 AM', '12:30 PM', '8:30 PM'],
+    big: '8:30 PM',
+    preview: '8:30 PM',
+  ),
+  (
+    use24Hour: true,
+    choices: <String>['08:00', '12:30', '20:30'],
+    big: '20:30',
+    preview: '20:30',
+  ),
+];
+
+class _RecordingOpener implements NotificationSettingsOpener {
+  int opens = 0;
+
+  @override
+  Future<void> open() async {
+    opens++;
+  }
+}
+
 List<_Option> _optionsFor(ShellLayout layout) => switch (layout) {
   ShellLayout.sidebar => _sidebarOptions,
   ShellLayout.bottomBar => _bottomBarOptions,
@@ -112,6 +171,7 @@ Future<_Spies> _pumpReminder(
   WidgetTester tester,
   ShellLayout layout, {
   bool reduceMotion = false,
+  bool use24Hour = true,
 }) async {
   tester.view.physicalSize = switch (layout) {
     ShellLayout.sidebar => _sidebarArea,
@@ -146,8 +206,10 @@ Future<_Spies> _pumpReminder(
       child: MaterialApp(
         theme: fieldNotesTheme(platform: defaultTargetPlatform),
         builder: (BuildContext context, Widget? child) => MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(disableAnimations: reduceMotion),
+          data: MediaQuery.of(context).copyWith(
+            disableAnimations: reduceMotion,
+            alwaysUse24HourFormat: use24Hour,
+          ),
           child: child!,
         ),
         home: Material(child: ReminderChapter(layout: layout)),
@@ -160,6 +222,113 @@ Future<_Spies> _pumpReminder(
 Future<void> _unmount(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(const Duration(milliseconds: 1));
+}
+
+Future<void> _settle(WidgetTester tester) async {
+  for (int frame = 0; frame < 4; frame++) {
+    await tester.pump();
+  }
+  await tester.pump(const Duration(milliseconds: 500));
+  await tester.pump(const Duration(milliseconds: 300));
+}
+
+Future<ProviderContainer> _pumpOnboarding(
+  WidgetTester tester,
+  ShellLayout layout, {
+  required FakeSettingsRepository settings,
+  required FakeReminderScheduler scheduler,
+  _RecordingOpener? opener,
+}) async {
+  tester.view.physicalSize = switch (layout) {
+    ShellLayout.sidebar => _sidebarSurface,
+    ShellLayout.bottomBar => _bottomBarSurface,
+  };
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final Set<Object> replaced = <Object>{
+    settingsRepositoryProvider,
+    reminderSchedulerProvider,
+  };
+  await tester.pumpWidget(
+    ProviderScope(
+      key: UniqueKey(),
+      overrides: <Override>[
+        for (final Override override in shellOverrides())
+          if (!replaced.contains(override.origin)) override,
+        settingsRepositoryProvider.overrideWithValue(settings),
+        reminderSchedulerProvider.overrideWithValue(scheduler),
+        if (opener != null)
+          notificationSettingsOpenerProvider.overrideWithValue(opener),
+        onboardingCountryCodeProvider.overrideWithValue('US'),
+      ],
+      child: const FieldNotesApp(),
+    ),
+  );
+  await _settle(tester);
+  final ProviderContainer container = ProviderScope.containerOf(
+    tester.element(find.byType(AppShell)),
+  );
+  final OnboardingController controller = container.read(
+    onboardingControllerProvider.notifier,
+  );
+  controller.skipToSetup();
+  controller.next();
+  await _settle(tester);
+  expect(find.byType(ReminderChapter), findsOneWidget);
+  return container;
+}
+
+OnboardingChapter _chapterOf(ProviderContainer container) => (container.read(
+  onboardingControllerProvider,
+) as OnboardingFlowRunning).chapter;
+
+Future<void> _pressPrimary(WidgetTester tester) async {
+  await tester.tap(find.byKey(onboardingPrimaryKey));
+  await _settle(tester);
+}
+
+Future<void> _finish(WidgetTester tester, ShellLayout layout) async {
+  await _pressPrimary(tester);
+  expect(find.byType(TourChapter), findsOneWidget);
+  await tester.tap(
+    find.descendant(
+      of: find.byKey(onboardingPrimaryKey),
+      matching: find.text(switch (layout) {
+        ShellLayout.sidebar => 'Start journaling',
+        ShellLayout.bottomBar => 'Start',
+      }),
+    ),
+  );
+  await _settle(tester);
+  expect(find.byType(OnboardingFrame), findsNothing);
+}
+
+void _expectHelp(WidgetTester tester, {required bool shown, String? reason}) {
+  for (final String text in _helpTexts) {
+    expect(
+      find.text(text),
+      shown ? findsOneWidget : findsNothing,
+      reason: '$reason $text',
+    );
+  }
+}
+
+Future<void> _refuse(
+  WidgetTester tester,
+  ProviderContainer container,
+  FakeReminderScheduler scheduler, {
+  required String reason,
+}) async {
+  _expectHelp(tester, shown: false, reason: '$reason before Next');
+  await _pressPrimary(tester);
+  expect(scheduler.permissionRequests, 1, reason: reason);
+  expect(
+    _chapterOf(container),
+    OnboardingChapter.reminder,
+    reason: '$reason stays',
+  );
+  expect(find.byType(ReminderChapter), findsOneWidget, reason: reason);
+  _expectHelp(tester, shown: true, reason: reason);
 }
 
 ReminderChoice? _held(WidgetTester tester) => switch (ProviderScope.containerOf(
@@ -363,6 +532,234 @@ void main() {
 
         await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
         await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await _unmount(tester);
+      });
+    }
+  });
+
+  testWidgets("reminder times follow the device's 12-hour or 24-hour clock", (
+    WidgetTester tester,
+  ) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        for (final _Clock clock in _clocks) {
+          final String reason =
+              '${layout.name} ${clock.use24Hour ? '24-hour' : '12-hour'}';
+          await _pumpReminder(tester, layout, use24Hour: clock.use24Hour);
+          await tester.pump(const Duration(seconds: 1));
+
+          for (final (int index, ReminderChoice choice)
+              in _timedChoices.indexed) {
+            expect(
+              find.descendant(
+                of: find.byKey(reminderChoiceKey(choice)),
+                matching: find.text(clock.choices[index]),
+              ),
+              findsOneWidget,
+              reason: '$reason ${choice.name}',
+            );
+          }
+          expect(
+            tester.widget<Text>(find.byKey(reminderTimeKey)).data,
+            clock.big,
+            reason: reason,
+          );
+          expect(_inPreview(clock.preview), findsOneWidget, reason: reason);
+          expect(
+            find.descendant(
+              of: find.byKey(reminderChoiceKey(ReminderChoice.off)),
+              matching: find.text(_optionsFor(layout).last.time),
+            ),
+            findsOneWidget,
+            reason: reason,
+          );
+
+          await _choose(tester, ReminderChoice.off);
+          expect(
+            tester.widget<Text>(find.byKey(reminderTimeKey)).data,
+            '—',
+            reason: reason,
+          );
+          expect(_inPreview('off'), findsOneWidget, reason: reason);
+          await _unmount(tester);
+        }
+      });
+    }
+  });
+
+  testWidgets(
+    'next with a time asks for permission once and moves on when allowed',
+    (WidgetTester tester) async {
+      for (final ShellLayout layout in ShellLayout.values) {
+        await _onLayout(layout, () async {
+          final String name = layout.name;
+          final FakeSettingsRepository settings = FakeSettingsRepository(
+            storedValues: false,
+          );
+          final FakeReminderScheduler asking = FakeReminderScheduler(
+            permissionGranted: false,
+            grantOnRequest: true,
+          );
+          final ProviderContainer container = await _pumpOnboarding(
+            tester,
+            layout,
+            settings: settings,
+            scheduler: asking,
+          );
+          expect(_held(tester), ReminderChoice.evening, reason: name);
+          expect(asking.permissionRequests, 0, reason: name);
+
+          await _pressPrimary(tester);
+          expect(asking.permissionRequests, 1, reason: '$name 20:30');
+          expect(
+            _chapterOf(container),
+            OnboardingChapter.week,
+            reason: '$name 20:30',
+          );
+          expect(find.byType(WeekChapter), findsOneWidget, reason: name);
+          expect(find.text(_notificationsOff), findsNothing, reason: name);
+          expect(
+            settings.notificationPermissionAskedWrites,
+            everyElement(isTrue),
+            reason: name,
+          );
+          expect(
+            settings.notificationPermissionAskedWrites,
+            isNotEmpty,
+            reason: name,
+          );
+
+          final FakeSettingsRepository quietSettings = FakeSettingsRepository(
+            storedValues: false,
+          );
+          final FakeReminderScheduler quiet = FakeReminderScheduler(
+            permissionGranted: false,
+          );
+          final ProviderContainer off = await _pumpOnboarding(
+            tester,
+            layout,
+            settings: quietSettings,
+            scheduler: quiet,
+          );
+          await _choose(tester, ReminderChoice.off);
+          expect(_held(tester), ReminderChoice.off, reason: name);
+          await _pressPrimary(tester);
+          expect(quiet.permissionRequests, 0, reason: '$name no reminder');
+          expect(
+            _chapterOf(off),
+            OnboardingChapter.week,
+            reason: '$name no reminder',
+          );
+          expect(find.byType(WeekChapter), findsOneWidget, reason: name);
+          expect(quietSettings.notificationPermissionAskedWrites, <bool>[
+            true,
+          ], reason: '$name no reminder');
+          await _unmount(tester);
+        });
+      }
+    },
+  );
+
+  testWidgets(
+    'a refusal keeps the Reminder page with the help text and Open System '
+    'Settings',
+    (WidgetTester tester) async {
+      for (final ShellLayout layout in ShellLayout.values) {
+        await _onLayout(layout, () async {
+          final String name = layout.name;
+          final FakeSettingsRepository settings = FakeSettingsRepository(
+            storedValues: false,
+          );
+          final FakeReminderScheduler refusing = FakeReminderScheduler(
+            permissionGranted: false,
+          );
+          final _RecordingOpener opener = _RecordingOpener();
+          final ProviderContainer container = await _pumpOnboarding(
+            tester,
+            layout,
+            settings: settings,
+            scheduler: refusing,
+            opener: opener,
+          );
+
+          await _refuse(tester, container, refusing, reason: name);
+          final Finder button = find.text(_openSettings);
+          expect(
+            tester.getSemantics(button),
+            isSemantics(
+              label: _openSettings,
+              isButton: true,
+              hasTapAction: true,
+            ),
+            reason: name,
+          );
+          await tester.tap(button);
+          await _settle(tester);
+          expect(opener.opens, 1, reason: name);
+          expect(
+            _chapterOf(container),
+            OnboardingChapter.reminder,
+            reason: name,
+          );
+
+          await _pressPrimary(tester);
+          expect(refusing.permissionRequests, 1, reason: '$name second Next');
+          expect(
+            _chapterOf(container),
+            OnboardingChapter.week,
+            reason: '$name second Next',
+          );
+          expect(find.byType(WeekChapter), findsOneWidget, reason: name);
+
+          await _finish(tester, layout);
+          expect(settings.reminderEnabledWrites, <bool>[false], reason: name);
+          expect(settings.reminderTimeWrites, <ReminderTime>[
+            _evening,
+          ], reason: name);
+          await _unmount(tester);
+        });
+      }
+    },
+  );
+
+  testWidgets('returning with notifications on clears the help text', (
+    WidgetTester tester,
+  ) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        final String name = layout.name;
+        final FakeSettingsRepository settings = FakeSettingsRepository(
+          storedValues: false,
+        );
+        final FakeReminderScheduler refusing = FakeReminderScheduler(
+          permissionGranted: false,
+        );
+        final ProviderContainer container = await _pumpOnboarding(
+          tester,
+          layout,
+          settings: settings,
+          scheduler: refusing,
+        );
+        await _refuse(tester, container, refusing, reason: name);
+
+        refusing.permissionGranted = true;
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.inactive,
+        );
+        tester.binding.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await _settle(tester);
+        expect(_chapterOf(container), OnboardingChapter.reminder, reason: name);
+        _expectHelp(tester, shown: false, reason: '$name resumed');
+
+        await _pressPrimary(tester);
+        expect(find.byType(WeekChapter), findsOneWidget, reason: name);
+        await _finish(tester, layout);
+        expect(settings.reminderEnabledWrites, <bool>[true], reason: name);
+        expect(settings.reminderTimeWrites, <ReminderTime>[
+          _evening,
+        ], reason: name);
         await _unmount(tester);
       });
     }

@@ -1,22 +1,33 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
+import 'package:field_notes/domain/settings/reminder_time.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/onboarding/reminder_choice.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
+import 'package:field_notes/features/reminders/notifications_off_notice.dart';
+import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/reminders/reminder_scheduler.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const String _kicker = 'and you';
 const String _title = 'When should we check in?';
 const String _noTime = '—';
+const String _offLabel = 'Off';
 const String _offClock = 'off';
 const String _offBody = 'No nudges. Your meadow waits quietly.';
+const String _goOnHelp =
+    'You can still go on. Reminders stay off until notifications are on.';
 
 const Key reminderTimeKey = ValueKey<String>('reminder-time');
 const Key reminderPreviewKey = ValueKey<String>('reminder-preview');
@@ -38,6 +49,7 @@ const double _sidebarChoicesGap = 30;
 const double _sidebarChoiceWidth = 104;
 const double _sidebarChoiceHeight = 58;
 const double _sidebarChoiceGap = 8;
+const double _sidebarHelpGap = 16;
 
 const double _bottomBarSide = 18;
 const double _bottomBarBottom = 76;
@@ -45,6 +57,7 @@ const double _bottomBarMiddlePadding = 10;
 const double _bottomBarTimeSize = 46;
 const double _bottomBarTimeGap = 10;
 const double _bottomBarPreviewHeight = 56;
+const double _bottomBarHelpGap = 12;
 const double _rowHeight = 56;
 const EdgeInsets _rowPadding = EdgeInsets.symmetric(
   horizontal: 14,
@@ -81,6 +94,7 @@ const double _previewShadowBlur = 26;
 const double _previewShadowSpread = -12;
 const double _offOpacity = 0.35;
 const double _onAccentCaption = 0.88;
+const double _helpLineGap = 8;
 
 const ColorFilter _quiet = ColorFilter.matrix(<double>[
   0.2126,
@@ -111,6 +125,7 @@ const Duration _rowsDelay = Duration(milliseconds: 200);
 const Duration _previewDrop = Duration(milliseconds: 450);
 const Duration _selectFade = Duration(milliseconds: 150);
 const Duration _dotPop = Duration(milliseconds: 200);
+const Duration _helpRise = Duration(milliseconds: 300);
 
 const double _travel = 14;
 const Cubic _dropCurve = Cubic(0.2, 0.9, 0.3, 1.2);
@@ -118,11 +133,20 @@ const Cubic _dotCurve = Cubic(0.2, 0.9, 0.3, 1.3);
 
 const List<FontFeature> _tabular = <FontFeature>[FontFeature.tabularFigures()];
 
-String _bigTime(ReminderChoice choice) =>
-    choice.time == null ? _noTime : choice.clock;
+String _clock(BuildContext context, ReminderChoice choice) =>
+    switch (choice.time) {
+      final ReminderTime time => formatClock(
+        context,
+        TimeOfDay(hour: time.hour, minute: time.minute),
+      ),
+      null => _offLabel,
+    };
 
-String _previewClock(ReminderChoice choice) =>
-    choice.time == null ? _offClock : choice.clock;
+String _bigTime(BuildContext context, ReminderChoice choice) =>
+    choice.time == null ? _noTime : _clock(context, choice);
+
+String _previewClock(BuildContext context, ReminderChoice choice) =>
+    choice.time == null ? _offClock : _clock(context, choice);
 
 String _previewBody(ReminderChoice choice) =>
     choice.time == null ? _offBody : reminderNotificationBody;
@@ -134,12 +158,13 @@ String _sidebarCaption(ReminderChoice choice) => switch (choice) {
   ReminderChoice.off => 'no nudge',
 };
 
-String _rowLabel(ReminderChoice choice) => switch (choice) {
-  ReminderChoice.morning ||
-  ReminderChoice.midday ||
-  ReminderChoice.evening => choice.clock,
-  ReminderChoice.off => 'No reminder',
-};
+String _rowLabel(BuildContext context, ReminderChoice choice) =>
+    switch (choice) {
+      ReminderChoice.morning ||
+      ReminderChoice.midday ||
+      ReminderChoice.evening => _clock(context, choice),
+      ReminderChoice.off => 'No reminder',
+    };
 
 String _rowCaption(ReminderChoice choice) => switch (choice) {
   ReminderChoice.morning => 'Morning · start the day',
@@ -163,15 +188,22 @@ class ReminderChapter extends ConsumerWidget {
     final ValueChanged<ReminderChoice> onChoose = ref
         .read(onboardingControllerProvider.notifier)
         .chooseReminder;
+    final bool notificationsOff =
+        flow.draft.notificationsOff &&
+        choice.time != null &&
+        ref.watch(reminderPermissionStatusProvider).value !=
+            ReminderPermission.granted;
     return SizedBox.expand(
       child: switch (layout) {
         ShellLayout.sidebar => _SidebarReminder(
           choice: choice,
           onChoose: onChoose,
+          notificationsOff: notificationsOff,
         ),
         ShellLayout.bottomBar => _BottomBarReminder(
           choice: choice,
           onChoose: onChoose,
+          notificationsOff: notificationsOff,
         ),
       },
     );
@@ -179,10 +211,15 @@ class ReminderChapter extends ConsumerWidget {
 }
 
 class _SidebarReminder extends StatelessWidget {
-  const _SidebarReminder({required this.choice, required this.onChoose});
+  const _SidebarReminder({
+    required this.choice,
+    required this.onChoose,
+    required this.notificationsOff,
+  });
 
   final ReminderChoice choice;
   final ValueChanged<ReminderChoice> onChoose;
+  final bool notificationsOff;
 
   @override
   Widget build(BuildContext context) {
@@ -250,6 +287,10 @@ class _SidebarReminder extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (notificationsOff) ...<Widget>[
+                  const SizedBox(height: _sidebarHelpGap),
+                  const _NotificationsHelp(),
+                ],
               ],
             ),
           ),
@@ -260,10 +301,15 @@ class _SidebarReminder extends StatelessWidget {
 }
 
 class _BottomBarReminder extends StatelessWidget {
-  const _BottomBarReminder({required this.choice, required this.onChoose});
+  const _BottomBarReminder({
+    required this.choice,
+    required this.onChoose,
+    required this.notificationsOff,
+  });
 
   final ReminderChoice choice;
   final ValueChanged<ReminderChoice> onChoose;
+  final bool notificationsOff;
 
   @override
   Widget build(BuildContext context) {
@@ -335,6 +381,10 @@ class _BottomBarReminder extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (notificationsOff) ...<Widget>[
+                    const SizedBox(height: _bottomBarHelpGap),
+                    SizedBox(width: width, child: const _NotificationsHelp()),
+                  ],
                 ],
               );
             },
@@ -356,7 +406,7 @@ class _BigTime extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      _bigTime(choice),
+      _bigTime(context, choice),
       key: reminderTimeKey,
       textAlign: TextAlign.center,
       maxLines: 1,
@@ -441,7 +491,7 @@ class _Preview extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      _previewClock(choice),
+                      _previewClock(context, choice),
                       maxLines: 1,
                       style: TextStyle(
                         fontFamily: TypographyTokens.sans,
@@ -498,11 +548,12 @@ class _ChoiceButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
+    final String clock = _clock(context, choice);
     final String caption = _sidebarCaption(choice);
     return Semantics(
       button: true,
       selected: selected,
-      label: '${choice.clock}, $caption',
+      label: '$clock, $caption',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onPressed,
@@ -532,7 +583,7 @@ class _ChoiceButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Text(
-                    choice.clock,
+                    clock,
                     maxLines: 1,
                     style: TextStyle(
                       fontFamily: TypographyTokens.sans,
@@ -619,7 +670,7 @@ class _ChoiceRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final bool still = MediaQuery.disableAnimationsOf(context);
-    final String label = _rowLabel(choice);
+    final String label = _rowLabel(context, choice);
     final String caption = _rowCaption(choice);
     return Semantics(
       checked: selected,
@@ -724,6 +775,47 @@ class _Radio extends StatelessWidget {
               shape: BoxShape.circle,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationsHelp extends StatelessWidget {
+  const _NotificationsHelp();
+
+  void _report(BuildContext context, String message) =>
+      showTransientToast(context, message, glyph: IconStickerGlyph.close);
+
+  @override
+  Widget build(BuildContext context) {
+    return _Rise(
+      duration: _helpRise,
+      child: Semantics(
+        container: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            NotificationsOffNotice(
+              layout: NotificationsOffLayout.centred,
+              onFeedback: (String message) => _report(context, message),
+            ),
+            const SizedBox(height: _helpLineGap),
+            Semantics(
+              container: true,
+              child: Text(
+                _goOnHelp,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontFamily: TypographyTokens.sans,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: context.colors.muted,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

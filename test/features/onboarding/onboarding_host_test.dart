@@ -339,8 +339,9 @@ void main() {
       controller
         ..skipToSetup()
         ..next()
-        ..next()
         ..next();
+      await _settle(tester);
+      controller.next();
       await _settle(tester);
       expect(find.byType(TourChapter), findsOneWidget);
 

@@ -171,7 +171,6 @@ const double _sidebarSkipRight = 18;
 const double _sidebarSkipHeight = 36;
 const double _sidebarSkipRadius = 11;
 const double _sidebarSkipPadding = 14;
-const double _bottomBarSkipRight = 10;
 const double _bottomBarProgressLeft = 12;
 const double _bottomBarToggleTop = 0;
 const double _bottomBarToggleRight = 4;
@@ -380,8 +379,12 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             child: _chapter(chapter),
           ),
         ),
-        if (draft.planted)
-          _PetalVeil(key: _petalsKey, shown: chapter != OnboardingChapter.year),
+        if (draft.petalFlower case final FlowerKind flower)
+          _PetalVeil(
+            key: _petalsKey,
+            flower: flower,
+            shown: chapter != OnboardingChapter.year,
+          ),
         switch (layout) {
           ShellLayout.sidebar => Positioned(
             left: 0,
@@ -401,7 +404,10 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             right: _sidebarSkipRight,
             child: _InOrder(
               _Region.skip,
-              child: _SkipPill(onPressed: controller.skipToSetup),
+              child: _SkipPill(
+                label: onboardingSkipToSetupLabel,
+                onPressed: controller.skipToSetup,
+              ),
             ),
           ),
         if (finishError != null)
@@ -417,22 +423,13 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
           _primary(metrics, _primaryLabel(chapter), controller.next)
         else if (layout == ShellLayout.bottomBar && chapter.isStory)
           Positioned(
-            right: _bottomBarSkipRight,
+            right: metrics.buttonRight,
             bottom: metrics.buttonTargetBottom,
             child: _InOrder(
               _Region.action,
-              child: OnboardingTextButton(
-                key: onboardingSkipKey,
+              child: _SkipPill(
                 label: onboardingSkipLabel,
                 onPressed: controller.skipToSetup,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.sans,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: chapter == OnboardingChapter.year
-                      ? FieldNotesColors.light.composerPaper
-                      : context.colors.ink,
-                ),
               ),
             ),
           ),
@@ -520,8 +517,9 @@ class _InOrder extends StatelessWidget {
 }
 
 class _PetalVeil extends StatefulWidget {
-  const _PetalVeil({super.key, required this.shown});
+  const _PetalVeil({super.key, required this.flower, required this.shown});
 
+  final FlowerKind flower;
   final bool shown;
 
   @override
@@ -567,7 +565,7 @@ class _PetalVeilState extends State<_PetalVeil>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _fade,
-      child: const PetalDrift(),
+      child: PetalDrift(flower: widget.flower),
       builder: (BuildContext context, Widget? petals) => _fade.isDismissed
           ? const SizedBox.shrink()
           : Opacity(opacity: Curves.ease.transform(_fade.value), child: petals),
@@ -602,8 +600,9 @@ class _FinishError extends StatelessWidget {
 }
 
 class _SkipPill extends StatelessWidget {
-  const _SkipPill({required this.onPressed});
+  const _SkipPill({required this.label, required this.onPressed});
 
+  final String label;
   final VoidCallback onPressed;
 
   @override
@@ -615,7 +614,7 @@ class _SkipPill extends StatelessWidget {
     return Semantics(
       key: onboardingSkipKey,
       button: true,
-      label: onboardingSkipToSetupLabel,
+      label: label,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onPressed,
@@ -646,7 +645,7 @@ class _SkipPill extends StatelessWidget {
                       widthFactor: 1,
                       child: ExcludeSemantics(
                         child: Text(
-                          onboardingSkipToSetupLabel,
+                          label,
                           maxLines: 1,
                           style: TextStyle(
                             fontFamily: TypographyTokens.sans,
