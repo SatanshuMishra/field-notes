@@ -74,6 +74,7 @@ Future<db.AppDatabase> _pumpYear(
   ShellLayout layout, {
   bool reduceMotion = false,
   bool framed = false,
+  ValueListenable<bool>? shown,
 }) async {
   tester.view.physicalSize = switch (layout) {
     ShellLayout.sidebar => _sidebarArea,
@@ -111,9 +112,16 @@ Future<db.AppDatabase> _pumpYear(
           child: child!,
         ),
         home: Material(
-          child: framed
-              ? OnboardingFrame(layout: layout)
-              : YearChapter(layout: layout),
+          child: switch ((framed, shown)) {
+            (true, _) => OnboardingFrame(layout: layout),
+            (false, null) => YearChapter(layout: layout),
+            (false, final ValueListenable<bool> visible) =>
+              ValueListenableBuilder<bool>(
+                valueListenable: visible,
+                builder: (BuildContext context, bool on, Widget? child) =>
+                    on ? YearChapter(layout: layout) : const SizedBox.shrink(),
+              ),
+          },
         ),
       ),
     ),
@@ -542,6 +550,40 @@ void main() {
         await tester.pump();
         expect(_growthPoint(tester), _wholeYear);
         expect(find.text(_dragHint), findsNothing, reason: '$layout stays');
+
+        await _expectNothingSaved(database);
+        await _unmount(tester, database);
+      });
+    }
+  });
+
+  testWidgets('the drag hint stays gone when a year is shown again', (
+    WidgetTester tester,
+  ) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        final ValueNotifier<bool> shown = ValueNotifier<bool>(true);
+        addTearDown(shown.dispose);
+        final db.AppDatabase database = await _pumpYear(
+          tester,
+          layout,
+          shown: shown,
+        );
+        await _untilReady(tester);
+        expect(find.text(_dragHint), findsOneWidget, reason: '$layout first');
+
+        await tester.dragFrom(_meadowSpot(tester), _lookAround);
+        await tester.pump();
+        expect(find.text(_dragHint), findsNothing, reason: '$layout dragged');
+
+        shown.value = false;
+        await tester.pump();
+        expect(find.byType(YearChapter), findsNothing, reason: '$layout left');
+
+        shown.value = true;
+        await tester.pump();
+        await _untilReady(tester);
+        expect(find.text(_dragHint), findsNothing, reason: '$layout back');
 
         await _expectNothingSaved(database);
         await _unmount(tester, database);
