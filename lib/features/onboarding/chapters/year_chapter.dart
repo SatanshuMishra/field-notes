@@ -30,6 +30,8 @@ const String yearCaptionSidebar =
     'every flower is a day · drag back through it';
 const String yearCaptionBottomBar = 'every flower is a day · drag through it';
 const String yearSliderLabel = 'The sample year';
+const String yearDragHint = 'Drag to look around';
+const String yearMeadowLabel = 'A sample year in the meadow';
 const Duration yearReplayDuration = Duration(seconds: 11);
 
 const Key yearSliderKey = ValueKey<String>('year-slider');
@@ -179,6 +181,7 @@ class _YearChapterState extends ConsumerState<YearChapter>
   late final MeadowYearReplay _replay;
   bool _started = false;
   bool _growAnimated = false;
+  bool _dragged = false;
 
   @override
   void initState() {
@@ -227,6 +230,12 @@ class _YearChapterState extends ConsumerState<YearChapter>
     _controller.setYearDay(day, scrubbed: true);
   }
 
+  void _meadowDragged() {
+    if (!_dragged) {
+      setState(() => _dragged = true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final int? yearDay = ref.watch(
@@ -267,6 +276,8 @@ class _YearChapterState extends ConsumerState<YearChapter>
               compact: false,
               growthPoint: yearDay,
               growAnimated: _growAnimated,
+              semanticLabel: yearMeadowLabel,
+              onDragged: _meadowDragged,
               readyOverlay: _ReadySignal(
                 onShown: _shown,
                 child: _Controls(
@@ -274,6 +285,7 @@ class _YearChapterState extends ConsumerState<YearChapter>
                   layout: layout,
                   metrics: metrics,
                   day: yearDay,
+                  hinted: !_dragged,
                   onScrub: _scrub,
                   onReplay: _play,
                 ),
@@ -408,6 +420,7 @@ class _Controls extends StatelessWidget {
     required this.layout,
     required this.metrics,
     required this.day,
+    required this.hinted,
     required this.onScrub,
     required this.onReplay,
   });
@@ -415,6 +428,7 @@ class _Controls extends StatelessWidget {
   final ShellLayout layout;
   final _YearMetrics metrics;
   final int day;
+  final bool hinted;
   final ValueChanged<int> onScrub;
   final VoidCallback onReplay;
 
@@ -471,6 +485,16 @@ class _Controls extends StatelessWidget {
     final Widget? shownCaption = _whole
         ? _Caption(text: caption, size: metrics.captionSize, layout: layout)
         : null;
+    final List<Widget> hint = hinted
+        ? const <Widget>[
+            IgnorePointer(
+              child: ExcludeSemantics(
+                child: Center(child: MeadowHintPill(text: yearDragHint)),
+              ),
+            ),
+            SizedBox(height: _stackGap),
+          ]
+        : const <Widget>[];
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
@@ -479,30 +503,39 @@ class _Controls extends StatelessWidget {
           right: metrics.controls.right,
           bottom: metrics.controls.bottom,
           child: switch (layout) {
-            ShellLayout.sidebar => Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            ShellLayout.sidebar => Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Flexible(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: _boxMaxWidth),
-                    child: box,
-                  ),
-                ),
-                const SizedBox(width: _rowGap),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: _captionLift),
-                    child: Align(
-                      alignment: Alignment.bottomRight,
-                      child: shownCaption ?? const SizedBox.shrink(),
+                ...hint,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: <Widget>[
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: _boxMaxWidth,
+                        ),
+                        child: box,
+                      ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: _rowGap),
-                _ReplayButton(
-                  key: yearReplayKey,
-                  layout: layout,
-                  onPressed: onReplay,
+                    const SizedBox(width: _rowGap),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: _captionLift),
+                        child: Align(
+                          alignment: Alignment.bottomRight,
+                          child: shownCaption ?? const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: _rowGap),
+                    _ReplayButton(
+                      key: yearReplayKey,
+                      layout: layout,
+                      onPressed: onReplay,
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -514,6 +547,7 @@ class _Controls extends StatelessWidget {
                   Center(child: shownCaption),
                   const SizedBox(height: _stackGap),
                 ],
+                ...hint,
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: <Widget>[

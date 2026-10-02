@@ -12,9 +12,11 @@ import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:field_notes/features/onboarding/chapters/year_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,6 +33,18 @@ const int _framesToTen = 100;
 
 const Size _sidebarArea = Size(1280, 758);
 const Size _bottomBarArea = Size(360, 740);
+
+const String _dragHint = 'Drag to look around';
+const String _sampleLabel = 'A sample year in the meadow';
+const double _hintReach = 16;
+const double _underSlop = 4;
+const Offset _lookAround = Offset(-160, 0);
+const BoxDecoration _hintPill = BoxDecoration(
+  color: Color.fromRGBO(30, 24, 18, 0.5),
+  borderRadius: BorderRadius.all(Radius.circular(20)),
+);
+
+final RegExp _datedMeadow = RegExp(r'^Meadow\W*\d{4}');
 
 final List<String> _yearLabels = <String>[
   for (int month = 1; month <= 12; month++) monthName(month),
@@ -63,6 +77,7 @@ Future<db.AppDatabase> _pumpYear(
   WidgetTester tester,
   ShellLayout layout, {
   bool reduceMotion = false,
+  bool framed = false,
 }) async {
   tester.view.physicalSize = switch (layout) {
     ShellLayout.sidebar => _sidebarArea,
@@ -99,7 +114,11 @@ Future<db.AppDatabase> _pumpYear(
               .copyWith(disableAnimations: reduceMotion),
           child: child!,
         ),
-        home: Material(child: YearChapter(layout: layout)),
+        home: Material(
+          child: framed
+              ? OnboardingFrame(layout: layout)
+              : YearChapter(layout: layout),
+        ),
       ),
     ),
   );
@@ -168,6 +187,131 @@ Future<void> _scrubToMiddle(WidgetTester tester) async {
   await tester.pump();
   await gesture.up();
   await tester.pump();
+}
+
+Finder get _hintBox => find
+    .ancestor(of: find.text(_dragHint), matching: find.byType(DecoratedBox))
+    .first;
+
+Offset _meadowSpot(WidgetTester tester) =>
+    tester.getCenter(find.byType(MeadowStage));
+
+void _expectApart(WidgetTester tester, Rect hint, Finder other, String what) {
+  expect(other, findsOneWidget, reason: what);
+  final Rect rect = tester.getRect(other);
+  expect(
+    hint.overlaps(rect),
+    isFalse,
+    reason: 'the hint $hint overlaps $what $rect',
+  );
+}
+
+void _expectHintPlaced(
+  WidgetTester tester,
+  ShellLayout layout, {
+  required bool finished,
+}) {
+  final String moment = '$layout ${finished ? 'finished' : 'playing'}';
+  expect(find.text(_dragHint), findsOneWidget, reason: moment);
+  expect(tester.widget<DecoratedBox>(_hintBox).decoration, _hintPill);
+  final TextStyle? ink = tester.widget<Text>(find.text(_dragHint)).style;
+  expect(ink?.fontSize, 10, reason: moment);
+  expect(ink?.fontWeight, FontWeight.w600, reason: moment);
+  expect(ink?.color, const Color(0xFFFFFFFF), reason: moment);
+
+  final Rect hint = tester.getRect(_hintBox);
+  final Rect stage = tester.getRect(find.byType(MeadowStage));
+  expect(hint.center.dx, closeTo(stage.center.dx, 0.5), reason: moment);
+
+  final Finder glass = find
+      .ancestor(
+        of: find.byKey(yearSliderKey),
+        matching: find.byType(BackdropFilter),
+      )
+      .first;
+  final Rect box = tester.getRect(glass);
+  final Rect replay = tester.getRect(find.byKey(yearReplayKey));
+  final double controlsTop = box.top < replay.top ? box.top : replay.top;
+  expect(hint.bottom, lessThan(controlsTop), reason: '$moment above');
+  expect(
+    controlsTop - hint.bottom,
+    lessThanOrEqualTo(_hintReach),
+    reason: '$moment just above the controls',
+  );
+
+  _expectApart(tester, hint, glass, '$moment the year box');
+  _expectApart(tester, hint, find.byKey(yearSliderKey), '$moment the slider');
+  _expectApart(tester, hint, find.byKey(yearReplayKey), '$moment Replay');
+  _expectApart(
+    tester,
+    hint,
+    find.text(_shownLabel(tester)),
+    '$moment the month',
+  );
+  _expectApart(
+    tester,
+    hint,
+    find.textContaining(' of $_wholeYear days'),
+    '$moment the day count',
+  );
+  _expectApart(
+    tester,
+    hint,
+    find.byKey(onboardingProgressKey),
+    '$moment the progress row',
+  );
+  if (finished) {
+    _expectApart(
+      tester,
+      hint,
+      find.byKey(onboardingPrimaryKey),
+      '$moment Next',
+    );
+    _expectApart(
+      tester,
+      hint,
+      find.text(_caption(layout)),
+      '$moment the caption',
+    );
+  } else {
+    _expectApart(tester, hint, find.byKey(onboardingSkipKey), '$moment Skip');
+  }
+}
+
+List<String> _semanticLabels(WidgetTester tester) {
+  final List<String> labels = <String>[];
+  bool visit(SemanticsNode node) {
+    labels.add(node.label);
+    node.visitChildren(visit);
+    return true;
+  }
+
+  for (final RenderView view in tester.binding.renderViews) {
+    final SemanticsNode? root = view.owner?.semanticsOwner?.rootSemanticsNode;
+    if (root != null) {
+      visit(root);
+    }
+  }
+  return labels;
+}
+
+void _expectAnnouncedAsSample(WidgetTester tester, String moment) {
+  final List<String> labels = _semanticLabels(tester);
+  expect(
+    labels.where((String label) => label == _sampleLabel),
+    hasLength(1),
+    reason: '$moment: $labels',
+  );
+  expect(
+    labels.where(_datedMeadow.hasMatch),
+    isEmpty,
+    reason: '$moment announces a dated meadow',
+  );
+  expect(
+    labels.where((String label) => label.contains('bloom')),
+    isEmpty,
+    reason: '$moment announces counts',
+  );
 }
 
 void main() {
@@ -342,5 +486,96 @@ void main() {
         await _unmount(tester, database);
       });
     }
+  });
+
+  testWidgets('a year shows the drag hint until the meadow is first dragged', (
+    WidgetTester tester,
+  ) async {
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        final db.AppDatabase database = await _pumpYear(
+          tester,
+          layout,
+          framed: true,
+        );
+        await tester.pump(const Duration(seconds: 2));
+        expect(_stageState(tester).debugIsReady, isFalse);
+        expect(find.text(meadowLoadingMessage), findsOneWidget);
+        expect(find.text(_dragHint), findsNothing, reason: '$layout loading');
+
+        await _untilReady(tester);
+        expect(_draft(tester).yearDay, lessThan(_wholeYear));
+        _expectHintPlaced(tester, layout, finished: false);
+
+        await tester.tapAt(_meadowSpot(tester));
+        await tester.pump();
+        expect(find.text(_dragHint), findsOneWidget, reason: '$layout tap');
+        final TestGesture nudge = await tester.startGesture(
+          _meadowSpot(tester),
+        );
+        await tester.pump();
+        await nudge.moveBy(const Offset(_underSlop, 0));
+        await tester.pump();
+        await nudge.up();
+        await tester.pump();
+        expect(find.text(_dragHint), findsOneWidget, reason: '$layout nudge');
+
+        await _scrubToMiddle(tester);
+        expect(_draft(tester).yearScrubbed, isTrue);
+        expect(find.text(_dragHint), findsOneWidget, reason: '$layout slider');
+
+        await tester.tap(find.byKey(yearReplayKey));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 12));
+        await tester.pump();
+        expect(_growthPoint(tester), _wholeYear);
+        _expectHintPlaced(tester, layout, finished: true);
+
+        await tester.dragFrom(_meadowSpot(tester), _lookAround);
+        await tester.pump();
+        expect(find.text(_dragHint), findsNothing, reason: '$layout dragged');
+
+        await tester.tap(find.byKey(yearReplayKey));
+        await tester.pump();
+        expect(_growthPoint(tester), 0, reason: '$layout replays');
+        expect(find.text(_dragHint), findsNothing, reason: '$layout replay');
+        await tester.pump(const Duration(seconds: 12));
+        await tester.pump();
+        expect(_growthPoint(tester), _wholeYear);
+        expect(find.text(_dragHint), findsNothing, reason: '$layout stays');
+
+        await _expectNothingSaved(database);
+        await _unmount(tester, database);
+      });
+    }
+  });
+
+  testWidgets('the sample meadow is announced as a sample, not a dated year', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    for (final ShellLayout layout in ShellLayout.values) {
+      await _onLayout(layout, () async {
+        final db.AppDatabase database = await _pumpYear(
+          tester,
+          layout,
+          framed: true,
+        );
+        await tester.pump(const Duration(seconds: 2));
+        _expectAnnouncedAsSample(tester, '$layout loading');
+
+        await _untilReady(tester);
+        _expectAnnouncedAsSample(tester, '$layout playing');
+
+        await tester.pump(const Duration(seconds: 12));
+        await tester.pump();
+        expect(_growthPoint(tester), _wholeYear);
+        _expectAnnouncedAsSample(tester, '$layout whole year');
+
+        await _expectNothingSaved(database);
+        await _unmount(tester, database);
+      });
+    }
+    semantics.dispose();
   });
 }
