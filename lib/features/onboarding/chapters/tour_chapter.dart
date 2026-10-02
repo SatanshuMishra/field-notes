@@ -68,7 +68,6 @@ const Map<int, NavGlyph> _bottomBarNav = <int, NavGlyph>{
   5: NavGlyph.search,
 };
 
-const Color _olive = Color(0xFF7D8450);
 const Color _navLit = Color(0xFFF2C14E);
 const Color _navIdle = Color(0xFFC9B79C);
 const Color _navLitWash = Color(0x2EF2C14E);
@@ -509,7 +508,7 @@ class TourBadge extends StatelessWidget {
     final double size = sidebar ? _badgeSidebar : _badgeBottomBar;
     final Color fill = switch ((inMiniature, highlighted)) {
       (true, false) || (false, true) => Palette.coral,
-      (true, true) || (false, false) => _olive,
+      (true, true) || (false, false) => context.colors.sage,
     };
     return AnimatedContainer(
       duration: _fade(context),
@@ -536,8 +535,12 @@ class TourBadge extends StatelessWidget {
   }
 }
 
-class TourTarget extends StatelessWidget {
-  const TourTarget({super.key, required this.highlighted, required this.child});
+class MapPlaceHighlight extends StatelessWidget {
+  const MapPlaceHighlight({
+    super.key,
+    required this.highlighted,
+    required this.child,
+  });
 
   final bool highlighted;
   final Widget child;
@@ -641,7 +644,7 @@ class _MiniatureSidebar extends StatelessWidget {
           const Spacer(),
           Row(
             children: <Widget>[
-              TourTarget(
+              MapPlaceHighlight(
                 key: tourTargetKey(_sidebarGearNumber),
                 highlighted: gearOn,
                 child: AnimatedContainer(
@@ -692,7 +695,7 @@ class _MiniatureNavRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final Color ink = highlighted ? Palette.onAccent : colors.ink;
-    return TourTarget(
+    return MapPlaceHighlight(
       key: tourTargetKey(number),
       highlighted: highlighted,
       child: AnimatedContainer(
@@ -913,7 +916,7 @@ class _NavSlot extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.center,
         children: <Widget>[
-          TourTarget(
+          MapPlaceHighlight(
             key: tourTargetKey(number),
             highlighted: highlighted,
             child: add ? _addArt(context) : _slotArt(context),

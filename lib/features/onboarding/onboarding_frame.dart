@@ -21,6 +21,7 @@ import 'package:field_notes/features/onboarding/onboarding_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -310,17 +311,20 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
         _running(chapter, draft),
       OnboardingFlowMap() => _map(),
     };
-    return Focus(
-      focusNode: _focus,
-      onKeyEvent: _onKey,
-      child: DecoratedBox(
-        decoration: _paper(context.colors, widget.layout),
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Focus(
+        focusNode: _focus,
+        onKeyEvent: _onKey,
         child: DecoratedBox(
-          decoration: widget.layout == ShellLayout.sidebar
-              ? _glow
-              : const BoxDecoration(),
-          child: SafeArea(
-            child: Material(type: MaterialType.transparency, child: content),
+          decoration: _paper(context.colors, widget.layout),
+          child: DecoratedBox(
+            decoration: widget.layout == ShellLayout.sidebar
+                ? _glow
+                : const BoxDecoration(),
+            child: SafeArea(
+              child: Material(type: MaterialType.transparency, child: content),
+            ),
           ),
         ),
       ),
@@ -369,9 +373,12 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        KeyedSubtree(
-          key: ValueKey<OnboardingChapter>(chapter),
-          child: _chapter(chapter),
+        _InOrder(
+          _Region.chapter,
+          child: KeyedSubtree(
+            key: ValueKey<OnboardingChapter>(chapter),
+            child: _chapter(chapter),
+          ),
         ),
         if (draft.planted)
           _PetalVeil(key: _petalsKey, shown: chapter != OnboardingChapter.year),
@@ -380,25 +387,31 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             left: 0,
             right: 0,
             bottom: metrics.rowBottom,
-            child: Center(child: progress),
+            child: Center(child: _InOrder(_Region.progress, child: progress)),
           ),
           ShellLayout.bottomBar => Positioned(
             left: _bottomBarProgressLeft - metrics.overhang,
             bottom: metrics.rowBottom,
-            child: progress,
+            child: _InOrder(_Region.progress, child: progress),
           ),
         },
         if (layout == ShellLayout.sidebar && chapter.isStory)
           Positioned(
             top: _sidebarSkipTop,
             right: _sidebarSkipRight,
-            child: _SkipPill(onPressed: controller.skipToSetup),
+            child: _InOrder(
+              _Region.skip,
+              child: _SkipPill(onPressed: controller.skipToSetup),
+            ),
           ),
         if (finishError != null)
           Positioned(
             right: metrics.buttonRight,
             bottom: metrics.buttonTargetBottom + _target + _errorGap,
-            child: _FinishError(message: finishError),
+            child: _InOrder(
+              _Region.problem,
+              child: _FinishError(message: finishError),
+            ),
           ),
         if (ready)
           _primary(metrics, _primaryLabel(chapter), controller.next)
@@ -406,17 +419,20 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
           Positioned(
             right: _bottomBarSkipRight,
             bottom: metrics.buttonTargetBottom,
-            child: OnboardingTextButton(
-              key: onboardingSkipKey,
-              label: onboardingSkipLabel,
-              onPressed: controller.skipToSetup,
-              style: TextStyle(
-                fontFamily: TypographyTokens.sans,
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: chapter == OnboardingChapter.year
-                    ? FieldNotesColors.light.composerPaper
-                    : context.colors.ink,
+            child: _InOrder(
+              _Region.action,
+              child: OnboardingTextButton(
+                key: onboardingSkipKey,
+                label: onboardingSkipLabel,
+                onPressed: controller.skipToSetup,
+                style: TextStyle(
+                  fontFamily: TypographyTokens.sans,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: chapter == OnboardingChapter.year
+                      ? FieldNotesColors.light.composerPaper
+                      : context.colors.ink,
+                ),
               ),
             ),
           ),
@@ -431,7 +447,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        TourChapter(layout: widget.layout),
+        _InOrder(_Region.chapter, child: TourChapter(layout: widget.layout)),
         _primary(metrics, onboardingDoneLabel, _controller.closeMap),
         if (widget.layout == ShellLayout.bottomBar)
           _appearanceToggle(overMeadow: false),
@@ -444,8 +460,11 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
       key: _toggleSlotKey,
       top: _bottomBarToggleTop,
       right: _bottomBarToggleRight,
-      child: AppearanceToggle(
-        ink: overMeadow ? FieldNotesColors.light.composerPaper : null,
+      child: _InOrder(
+        _Region.toggle,
+        child: AppearanceToggle(
+          ink: overMeadow ? FieldNotesColors.light.composerPaper : null,
+        ),
       ),
     );
   }
@@ -454,19 +473,46 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
     return Positioned(
       right: metrics.buttonRight,
       bottom: metrics.buttonTargetBottom,
-      child: OnboardingPrimaryButton(
-        key: onboardingPrimaryKey,
-        label: label,
-        onPressed: onPressed,
-        height: metrics.buttonHeight,
-        borderRadius: BorderRadius.all(Radius.circular(metrics.buttonRadius)),
-        padding: EdgeInsets.symmetric(horizontal: metrics.buttonPadding),
-        trailing: _arrow,
-        labelStyle: TextStyle(
-          fontFamily: TypographyTokens.sans,
-          fontSize: metrics.buttonLabelSize,
-          fontWeight: FontWeight.w600,
-          color: Palette.onAccent,
+      child: _InOrder(
+        _Region.action,
+        child: OnboardingPrimaryButton(
+          key: onboardingPrimaryKey,
+          label: label,
+          onPressed: onPressed,
+          height: metrics.buttonHeight,
+          borderRadius: BorderRadius.all(Radius.circular(metrics.buttonRadius)),
+          padding: EdgeInsets.symmetric(horizontal: metrics.buttonPadding),
+          trailing: _arrow,
+          labelStyle: TextStyle(
+            fontFamily: TypographyTokens.sans,
+            fontSize: metrics.buttonLabelSize,
+            fontWeight: FontWeight.w600,
+            color: Palette.onAccent,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _Region { toggle, skip, chapter, progress, problem, action }
+
+class _InOrder extends StatelessWidget {
+  const _InOrder(this.region, {required this.child});
+
+  final _Region region;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final double order = region.index.toDouble();
+    return FocusTraversalOrder(
+      order: NumericFocusOrder(order),
+      child: FocusTraversalGroup(
+        child: Semantics(
+          container: true,
+          sortKey: OrdinalSortKey(order),
+          child: child,
         ),
       ),
     );

@@ -9,6 +9,7 @@ import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/onboarding/chapters/month_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
+import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +27,22 @@ const int _lastDay = 31;
 
 const Size _sidebarArea = Size(1280, 758);
 const Size _bottomBarArea = Size(360, 740);
+
+const Size _smallestSidebarArea = Size(873, 558);
+const Size _smallestBottomBarArea = Size(360, 640);
+const List<double> _textScales = <double>[1, 1.3];
+const List<double> _fills = <double>[0, 1];
+const int _sixWeekRows = 6;
+const double _legibleCell = 24;
+const double _sliderTarget = 48;
+const double _edge = 0.5;
+
+const int _sixRowYear = 2026;
+const List<(WeekStart, int)> _sixRowMonths = <(WeekStart, int)>[
+  (WeekStart.sunday, DateTime.august),
+  (WeekStart.monday, DateTime.march),
+  (WeekStart.saturday, DateTime.may),
+];
 
 const String _longLine =
     'Walked down to the lake after work and the water was so still it '
@@ -162,6 +179,91 @@ Future<db.AppDatabase> _pumpMonth(
     ),
   );
   return database;
+}
+
+Future<List<String>> _pumpSmallestMonth(
+  WidgetTester tester, {
+  required ShellLayout layout,
+  required DateTime today,
+  required WeekStart week,
+  required double fill,
+}) async {
+  tester.view.physicalSize = switch (layout) {
+    ShellLayout.sidebar => _smallestSidebarArea,
+    ShellLayout.bottomBar => _smallestBottomBarArea,
+  };
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final List<String> problems = <String>[];
+  final FlutterExceptionHandler? report = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) =>
+      problems.add(details.exceptionAsString().split('\n').first);
+  try {
+    await tester.pumpWidget(
+      ProviderScope(
+        key: UniqueKey(),
+        overrides: <Override>[
+          ...shellOverrides(),
+          todayClockProvider.overrideWithValue(() => today),
+          onboardingControllerProvider.overrideWithBuild(
+            (Ref ref, OnboardingController controller) => OnboardingFlowRunning(
+              chapter: OnboardingChapter.month,
+              draft: OnboardingDraft(
+                entryDate: ref.read(todayDateProvider),
+                regionWeek: week,
+                week: week,
+                mood: Mood.calm,
+                noteText: _longLine,
+                monthFill: fill,
+              ),
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: fieldNotesTheme(platform: defaultTargetPlatform),
+          home: Material(child: MonthChapter(layout: layout)),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 3));
+  } finally {
+    FlutterError.onError = report;
+  }
+  return problems;
+}
+
+bool _within(Rect outer, Rect inner) =>
+    inner.left >= outer.left - _edge &&
+    inner.top >= outer.top - _edge &&
+    inner.right <= outer.right + _edge &&
+    inner.bottom <= outer.bottom + _edge;
+
+void _expectFits(WidgetTester tester, String shape, int today) {
+  final Rect area = tester.getRect(find.byType(MonthChapter));
+  final List<Rect> days = <Rect>[
+    for (int day = 1; day <= _lastDay; day++) tester.getRect(_day(day)),
+  ];
+  expect(
+    days.map((Rect day) => day.top.round()).toSet(),
+    hasLength(_sixWeekRows),
+    reason: shape,
+  );
+  for (final (int index, Rect day) in days.indexed) {
+    expect(_within(area, day), isTrue, reason: '$shape: day ${index + 1}');
+    expect(
+      day.height,
+      greaterThanOrEqualTo(_legibleCell),
+      reason: '$shape: day ${index + 1}',
+    );
+  }
+  expect(_flowerIn(today), findsOneWidget, reason: shape);
+  final Rect slider = tester.getRect(find.byKey(monthSliderKey));
+  expect(_within(area, slider), isTrue, reason: '$shape: slider');
+  expect(slider.height, greaterThanOrEqualTo(_sliderTarget), reason: shape);
+  final Finder card = find.byKey(monthNoteCardKey);
+  if (card.evaluate().isNotEmpty) {
+    expect(_within(area, tester.getRect(card)), isTrue, reason: '$shape: card');
+  }
 }
 
 Future<void> _expectNothingSaved(db.AppDatabase database) async {
@@ -458,6 +560,40 @@ void main() {
         await _expectNothingSaved(database);
         await _unmount(tester, database);
       });
+    }
+  });
+
+  testWidgets('a month fits the smallest windows even with six week rows', (
+    WidgetTester tester,
+  ) async {
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    for (final (WeekStart week, int month) in _sixRowMonths) {
+      for (final int day in <int>[1, _lastDay]) {
+        final DateTime today = DateTime(_sixRowYear, month, day, 9);
+        for (final ShellLayout layout in ShellLayout.values) {
+          for (final double scale in _textScales) {
+            for (final double fill in _fills) {
+              final String shape =
+                  '${layout.name}, ${week.name} week, '
+                  '${today.year}-${today.month}-${today.day}, '
+                  'text scale $scale, fill $fill';
+              tester.platformDispatcher.textScaleFactorTestValue = scale;
+              await _onLayout(layout, () async {
+                final List<String> problems = await _pumpSmallestMonth(
+                  tester,
+                  layout: layout,
+                  today: today,
+                  week: week,
+                  fill: fill,
+                );
+                expect(problems, isEmpty, reason: shape);
+                expect(tester.takeException(), isNull, reason: shape);
+                _expectFits(tester, shape, day);
+              });
+            }
+          }
+        }
+      }
     }
   });
 

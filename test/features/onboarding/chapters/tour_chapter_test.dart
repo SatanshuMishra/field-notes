@@ -275,7 +275,7 @@ void _expectHighlighted(
     final bool on = number == highlighted;
     expect(tester.widget<TourBadge>(_lineBadge(number)).highlighted, on);
     expect(tester.widget<TourBadge>(_badge(number)).highlighted, on);
-    expect(tester.widget<TourTarget>(_target(number)).highlighted, on);
+    expect(tester.widget<MapPlaceHighlight>(_target(number)).highlighted, on);
     expect(
       tester.getSemantics(_line(number)),
       isSemantics(

@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -91,8 +92,9 @@ const Color _artScrim = Color(0x73140E08);
 const Color _recordDot = Color(0xFFFF4A3D);
 const Color _videoGround = Color(0xFF2A221B);
 const Color _printPaper = Color(0xFFFBF8F2);
-const Color _printEdge = Color(0x4D4A3B2E);
 const Color _printShadow = Color(0x80281C12);
+
+const BorderRadius _fieldFocusRadius = BorderRadius.all(Radius.circular(8));
 
 @immutable
 class _SidebarArt {
@@ -268,10 +270,15 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
   late NoteSaveState _settled = _settledOf(
     ref.read(onboardingControllerProvider),
   );
+  final FocusNode _fieldRing = FocusNode(
+    debugLabel: 'moment-field-ring',
+    skipTraversal: true,
+  );
 
   @override
   void dispose() {
     _note.dispose();
+    _fieldRing.dispose();
     super.dispose();
   }
 
@@ -330,6 +337,7 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
             field: _NoteField(
               metrics: metrics,
               controller: _note,
+              ring: _fieldRing,
               onChanged: onChanged,
             ),
           ),
@@ -550,11 +558,13 @@ class _NoteField extends StatelessWidget {
   const _NoteField({
     required this.metrics,
     required this.controller,
+    required this.ring,
     required this.onChanged,
   });
 
   final _MomentMetrics metrics;
   final TextEditingController controller;
+  final FocusNode ring;
   final ValueChanged<String> onChanged;
 
   @override
@@ -571,7 +581,7 @@ class _NoteField extends StatelessWidget {
       leadingDistribution: TextLeadingDistribution.even,
       color: colors.ink,
     );
-    return CustomPaint(
+    final Widget field = CustomPaint(
       painter: _RulePainter(pitch: pitch, color: colors.ink14),
       child: TextField(
         key: momentFieldKey,
@@ -598,6 +608,13 @@ class _NoteField extends StatelessWidget {
           hintStyle: style.copyWith(color: colors.placeholder),
         ),
       ),
+    );
+    return FocusRing(
+      onPressed: null,
+      focusNode: ring,
+      includeFocusSemantics: false,
+      borderRadius: _fieldFocusRadius,
+      child: field,
     );
   }
 }
@@ -1010,7 +1027,7 @@ class _PhotoArt extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(6, 6, 6, 5),
           decoration: BoxDecoration(
             color: _printPaper,
-            border: Border.all(color: _printEdge, width: 1),
+            border: Border.all(color: context.colors.ink30, width: 1),
             boxShadow: const <BoxShadow>[
               BoxShadow(
                 color: _printShadow,

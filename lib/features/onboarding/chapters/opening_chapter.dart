@@ -8,6 +8,7 @@ import 'package:field_notes/design/flowers/bloom_part_painter.dart';
 import 'package:field_notes/design/flowers/flower_palette.dart';
 import 'package:field_notes/design/flowers/garden_plant_geometry.dart';
 import 'package:field_notes/design/flowers/garden_plant_spec.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
@@ -1228,47 +1229,54 @@ class _OpeningChapterState extends ConsumerState<OpeningChapter>
           behavior: HitTestBehavior.opaque,
           excludeFromSemantics: true,
           onTap: planted ? null : _plant,
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              Positioned(
-                left: 0,
-                right: 0,
-                top: metrics.headingTop,
-                child: _heading(metrics, colors, planted: planted),
-              ),
-              Positioned(
-                left: metrics.hintSide,
-                right: metrics.hintSide,
-                bottom: metrics.hintBottom,
-                child: _hint(metrics, colors),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                height: metrics.soilHeight,
-                child: ExcludeSemantics(
-                  child: RepaintBoundary(
-                    child: CustomPaint(painter: _SoilPainter(_soilOf(layout))),
-                  ),
+          child: FocusRing(
+            enabled: !planted,
+            onPressed: planted ? null : _plant,
+            placement: FocusRingPlacement.edge,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: metrics.headingTop,
+                  child: _heading(metrics, colors, planted: planted),
                 ),
-              ),
-              if (planted)
-                Positioned.fill(
+                Positioned(
+                  left: metrics.hintSide,
+                  right: metrics.hintSide,
+                  bottom: metrics.hintBottom,
+                  child: _hint(metrics, colors),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: metrics.soilHeight,
                   child: ExcludeSemantics(
                     child: RepaintBoundary(
                       child: CustomPaint(
-                        painter: _GrowthPainter(
-                          metrics: metrics,
-                          growth: _growth,
-                          loop: _looped,
-                        ),
+                        painter: _SoilPainter(_soilOf(layout)),
                       ),
                     ),
                   ),
                 ),
-            ],
+                if (planted)
+                  Positioned.fill(
+                    child: ExcludeSemantics(
+                      child: RepaintBoundary(
+                        child: CustomPaint(
+                          painter: _GrowthPainter(
+                            metrics: metrics,
+                            growth: _growth,
+                            loop: _looped,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

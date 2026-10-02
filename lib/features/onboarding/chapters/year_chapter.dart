@@ -322,7 +322,7 @@ class _Heading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool centred = metrics.headingAlign == TextAlign.center;
-    return Padding(
+    final Widget heading = Padding(
       padding: metrics.headingPadding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -373,6 +373,7 @@ class _Heading extends StatelessWidget {
         ],
       ),
     );
+    return Semantics(container: true, child: heading);
   }
 }
 
@@ -581,24 +582,27 @@ class _Caption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _FadeIn(
-      child: Text(
-        text,
-        textAlign: layout == ShellLayout.sidebar
-            ? TextAlign.end
-            : TextAlign.center,
-        style: TextStyle(
-          fontFamily: TypographyTokens.accent,
-          fontSize: size,
-          fontWeight: FontWeight.w600,
-          color: FieldNotesColors.light.composerPaper,
-          shadows: <Shadow>[
-            Shadow(
-              color: _textShadow.withValues(alpha: 0.5),
-              offset: const Offset(0, 1),
-              blurRadius: 10,
-            ),
-          ],
+    return Semantics(
+      container: true,
+      child: _FadeIn(
+        child: Text(
+          text,
+          textAlign: layout == ShellLayout.sidebar
+              ? TextAlign.end
+              : TextAlign.center,
+          style: TextStyle(
+            fontFamily: TypographyTokens.accent,
+            fontSize: size,
+            fontWeight: FontWeight.w600,
+            color: FieldNotesColors.light.composerPaper,
+            shadows: <Shadow>[
+              Shadow(
+                color: _textShadow.withValues(alpha: 0.5),
+                offset: const Offset(0, 1),
+                blurRadius: 10,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -651,6 +655,7 @@ class _ReplayButton extends StatelessWidget {
             child: Center(child: _ReplayGlyph(size: 16)),
           );
     return Semantics(
+      container: true,
       button: true,
       label: meadowReplayLabel,
       child: GestureDetector(

@@ -51,6 +51,7 @@ const double _sidebarHeaderGap = 8;
 const double _sidebarLettersHeight = 22;
 const double _sidebarLettersGap = 6;
 const double _sidebarSideGap = 22;
+const double _sidebarSideTightGap = 10;
 
 const double _bottomBarBottom = 76;
 const double _bottomBarSide = 12;
@@ -335,7 +336,7 @@ class MonthChapter extends ConsumerWidget {
   }
 }
 
-enum _Part { header, letters, grid, side }
+enum _Part { header, letters, grid, card, fill, caption }
 
 class _SidebarMonth extends StatelessWidget {
   const _SidebarMonth({
@@ -371,7 +372,9 @@ class _SidebarMonth extends StatelessWidget {
             ),
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                const double sideRoom = _sidebarColumnGap + _sidebarSideWidth;
+                final double sideWidth = MediaQuery.textScalerOf(context)
+                    .scale(_sidebarSideWidth);
+                final double sideRoom = _sidebarColumnGap + sideWidth;
                 final double calendarWidth = math.min(
                   _sidebarCalendarWidth,
                   math.max(0.0, constraints.maxWidth - sideRoom),
@@ -383,6 +386,7 @@ class _SidebarMonth extends StatelessWidget {
                     child: CustomMultiChildLayout(
                       delegate: _SidebarBody(
                         calendarWidth: calendarWidth,
+                        sideWidth: sideWidth,
                         rows: plan.rows,
                         todayRow: plan.todayRow,
                       ),
@@ -425,16 +429,32 @@ class _SidebarMonth extends StatelessWidget {
                           child: LayoutBuilder(builder: _grid(calendarWidth)),
                         ),
                         LayoutId(
-                          id: _Part.side,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.topLeft,
-                            child: SizedBox(
-                              width: _sidebarSideWidth,
-                              child: _SideColumn(
-                                plan: plan,
-                                line: line,
-                                onFill: onFill,
+                          id: _Part.card,
+                          child: _ShrinkToFit(
+                            width: sideWidth,
+                            child: _Rise(
+                              duration: _cardRise,
+                              delay: _cardDelay,
+                              child: _NoteCard(mood: plan.mood, line: line),
+                            ),
+                          ),
+                        ),
+                        LayoutId(
+                          id: _Part.fill,
+                          child: _SideFill(plan: plan, onFill: onFill),
+                        ),
+                        LayoutId(
+                          id: _Part.caption,
+                          child: _ShrinkToFit(
+                            width: sideWidth,
+                            child: Text(
+                              _caption,
+                              style: TextStyle(
+                                fontFamily: TypographyTokens.accent,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                                height: 1.2,
+                                color: colors.sage,
                               ),
                             ),
                           ),
@@ -475,11 +495,13 @@ class _SidebarMonth extends StatelessWidget {
 class _SidebarBody extends MultiChildLayoutDelegate {
   _SidebarBody({
     required this.calendarWidth,
+    required this.sideWidth,
     required this.rows,
     required this.todayRow,
   });
 
   final double calendarWidth;
+  final double sideWidth;
   final int rows;
   final int todayRow;
 
@@ -500,111 +522,125 @@ class _SidebarBody extends MultiChildLayoutDelegate {
         maxHeight: math.max(0.0, size.height - gridTop),
       ),
     );
-    final Size side = layoutChild(
-      _Part.side,
-      BoxConstraints.loose(Size(_sidebarSideWidth, size.height)),
+    final Size fill = layoutChild(
+      _Part.fill,
+      BoxConstraints.tightFor(width: sideWidth),
     );
+    final double room = math.max(
+      0.0,
+      size.height - fill.height - 2 * _sidebarSideTightGap,
+    );
+    final Size card = layoutChild(
+      _Part.card,
+      BoxConstraints(maxWidth: sideWidth, maxHeight: room),
+    );
+    final Size caption = layoutChild(
+      _Part.caption,
+      BoxConstraints(
+        maxWidth: sideWidth,
+        maxHeight: math.max(0.0, room - card.height),
+      ),
+    );
+    final double content = card.height + fill.height + caption.height;
+    final double gap = ((size.height - content) / 2).clamp(
+      _sidebarSideTightGap,
+      _sidebarSideGap,
+    );
+    final double side = content + 2 * gap;
     final double rowStep = (grid.height + _sidebarCellGap) / math.max(1, rows);
     final double besideToday = gridTop + todayRow * rowStep;
+    final double sideLeft = calendarWidth + _sidebarColumnGap;
+    final double sideTop = besideToday.clamp(
+      0.0,
+      math.max(0.0, size.height - side),
+    );
     positionChild(_Part.header, const Offset(0, _sidebarBodyGap));
     positionChild(_Part.letters, Offset(0, lettersTop));
     positionChild(_Part.grid, Offset(0, gridTop));
+    positionChild(_Part.card, Offset(sideLeft, sideTop));
+    positionChild(_Part.fill, Offset(sideLeft, sideTop + card.height + gap));
     positionChild(
-      _Part.side,
-      Offset(
-        calendarWidth + _sidebarColumnGap,
-        besideToday.clamp(0.0, math.max(0.0, size.height - side.height)),
-      ),
+      _Part.caption,
+      Offset(sideLeft, sideTop + card.height + gap + fill.height + gap),
     );
   }
 
   @override
   bool shouldRelayout(_SidebarBody oldDelegate) =>
       oldDelegate.calendarWidth != calendarWidth ||
+      oldDelegate.sideWidth != sideWidth ||
       oldDelegate.rows != rows ||
       oldDelegate.todayRow != todayRow;
 }
 
-class _SideColumn extends StatelessWidget {
-  const _SideColumn({
-    required this.plan,
-    required this.line,
-    required this.onFill,
-  });
+class _ShrinkToFit extends StatelessWidget {
+  const _ShrinkToFit({required this.width, required this.child});
+
+  final double width;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.topLeft,
+      child: SizedBox(width: width, child: child),
+    );
+  }
+}
+
+class _SideFill extends StatelessWidget {
+  const _SideFill({required this.plan, required this.onFill});
 
   final _MonthPlan plan;
-  final String line;
   final ValueChanged<double> onFill;
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _Rise(
-          duration: _cardRise,
-          delay: _cardDelay,
-          child: _NoteCard(mood: plan.mood, line: line),
+    return _FillBox(
+      plan: plan,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      onFill: onFill,
+      label: monthSliderLabelSidebar,
+      top: Text(
+        monthSliderLabelSidebar,
+        style: TextStyle(
+          fontFamily: TypographyTokens.accent,
+          fontSize: 21,
+          fontWeight: FontWeight.w600,
+          height: 1.1,
+          color: colors.ink,
         ),
-        const SizedBox(height: _sidebarSideGap),
-        _FillBox(
-          plan: plan,
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
-          onFill: onFill,
-          label: monthSliderLabelSidebar,
-          top: Text(
-            monthSliderLabelSidebar,
+      ),
+      bottom: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: <Widget>[
+          Text(
+            _todayEnd,
             style: TextStyle(
               fontFamily: TypographyTokens.accent,
-              fontSize: 21,
+              fontSize: 15,
               fontWeight: FontWeight.w600,
-              height: 1.1,
-              color: colors.ink,
+              color: colors.mutedDeep,
             ),
           ),
-          bottom: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: <Widget>[
-              Text(
-                _todayEnd,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.accent,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: colors.mutedDeep,
-                ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              plan.fillLabel,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                fontFamily: TypographyTokens.accent,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: colors.accentInk,
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  plan.fillLabel,
-                  textAlign: TextAlign.end,
-                  style: TextStyle(
-                    fontFamily: TypographyTokens.accent,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: colors.accentInk,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        const SizedBox(height: _sidebarSideGap),
-        Text(
-          _caption,
-          style: TextStyle(
-            fontFamily: TypographyTokens.accent,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
-            color: colors.sage,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
