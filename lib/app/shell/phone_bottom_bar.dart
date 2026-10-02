@@ -12,7 +12,7 @@ const double _barHeight = 64;
 const double _iconSize = 22;
 const double _iconTop = 13;
 const double _labelGap = 3;
-const EdgeInsets _tabInset = EdgeInsets.symmetric(vertical: 6);
+const EdgeInsets _tabInset = EdgeInsets.symmetric(vertical: 6, horizontal: 4);
 
 const double _captureExtent = 52;
 const double _plusSize = 22;
@@ -103,14 +103,18 @@ class PhoneBottomBar extends StatelessWidget {
           else
             NavIcon(glyph: glyph, color: color, size: _iconSize),
           const SizedBox(height: _labelGap),
-          Text(
-            destination.label,
-            maxLines: 1,
-            softWrap: false,
-            overflow: TextOverflow.visible,
-            style: context.textStyles.captionSans.copyWith(
-              fontWeight: FontWeight.w500,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              destination.label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.visible,
+              style: context.textStyles.captionSans.copyWith(
+                inherit: false,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -131,7 +135,7 @@ class PhoneBottomBar extends StatelessWidget {
       ),
     );
     if (onSelect == null) {
-      return placed;
+      return ExcludeSemantics(child: placed);
     }
     return Semantics(
       button: true,
@@ -174,14 +178,17 @@ class PhoneBottomBar extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'New entry',
-      child: GestureDetector(
-        key: const ValueKey<String>('capture-button'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onCapture,
-        child: FocusRing(
-          onPressed: onCapture,
-          borderRadius: _captureRadius,
-          child: circle,
+      child: ClipOval(
+        clipBehavior: Clip.none,
+        child: GestureDetector(
+          key: const ValueKey<String>('capture-button'),
+          behavior: HitTestBehavior.opaque,
+          onTap: onCapture,
+          child: FocusRing(
+            onPressed: onCapture,
+            borderRadius: _captureRadius,
+            child: circle,
+          ),
         ),
       ),
     );

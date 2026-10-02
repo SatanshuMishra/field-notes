@@ -5,8 +5,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
+import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
@@ -247,6 +249,18 @@ void main() {
         await tester.tapAt(Offset(capture.center.dx - 40, bar.top - 2));
         expect(pageTaps, 1);
         expect(captures, onCircle.length);
+
+        final Offset besideTheCircle = Offset(
+          capture.center.dx - 20,
+          bar.top - 1,
+        );
+        expect(
+          (besideTheCircle - capture.center).distance,
+          greaterThan(_captureExtent / 2),
+        );
+        await tester.tapAt(besideTheCircle);
+        expect(pageTaps, 2);
+        expect(captures, onCircle.length);
       },
     );
 
@@ -349,6 +363,7 @@ void main() {
 
       final Rect bar = tester.getRect(_bar);
       expect(bar.width, 360);
+      expect(bar.height, moreOrLessEquals(_barHeight, epsilon: 0.01));
       final double column = bar.width / 5;
       for (final ShellDestination d in ShellDestination.primary) {
         final Finder label = _labelOf(d);
@@ -363,6 +378,16 @@ void main() {
         expect(style.fontFamily, TypographyTokens.sans, reason: d.name);
         expect(style.fontSize, 12, reason: d.name);
         expect(style.fontWeight, FontWeight.w500, reason: d.name);
+        expect(style.height, isNull, reason: d.name);
+        final Rect ring = tester.getRect(
+          find.descendant(of: _tab(d), matching: find.byType(FocusRing)),
+        );
+        expect(
+          ring.width,
+          greaterThanOrEqualTo(tester.getRect(label).width + 8 - 0.01),
+          reason: d.name,
+        );
+        expect(ring.right - ring.left, lessThanOrEqualTo(column + 0.01));
         expect(
           style.color!.toARGB32(),
           tester.widget<NavIcon>(_iconOf(d)).color.toARGB32(),
@@ -396,7 +421,11 @@ void main() {
           moreOrLessEquals(oneLine.width, epsilon: 0.01),
           reason: d.name,
         );
-        expect(oneLine.width, lessThanOrEqualTo(column), reason: d.name);
+        expect(
+          tester.getRect(label).width,
+          lessThanOrEqualTo(column - 8 + 0.01),
+          reason: d.name,
+        );
         final int index = ShellDestination.primary.indexOf(d);
         final double centre =
             bar.left + column * (index < 2 ? index + 0.5 : index + 1.5);
@@ -406,6 +435,46 @@ void main() {
           reason: d.name,
         );
       }
+    });
+
+    testWidgets('an inert bar takes no taps, focus or screen reader nodes', (
+      WidgetTester tester,
+    ) async {
+      _phone(tester);
+      final SemanticsHandle handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _themed(
+          Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: PhoneBottomBar(
+                destinations: ShellDestination.primary,
+                selected: ShellDestination.calendar,
+              ),
+            ),
+          ),
+          Brightness.light,
+        ),
+      );
+
+      final Finder inert = find.byType(PhoneBottomBar);
+      expect(
+        find.descendant(of: inert, matching: find.byType(GestureDetector)),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: inert, matching: find.byType(FocusRing)),
+        findsNothing,
+      );
+      for (final ShellDestination d in ShellDestination.primary) {
+        expect(
+          find.descendant(of: inert, matching: find.text(d.label)),
+          findsOneWidget,
+          reason: d.name,
+        );
+        expect(find.bySemanticsLabel(d.label), findsNothing, reason: d.name);
+      }
+      handle.dispose();
     });
 
     testWidgets('the five items sit centred in five equal columns', (
