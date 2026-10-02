@@ -164,6 +164,10 @@ class _Shed {
     <_Fall>[for (final _Petal petal in petals) _Fall(loop: petal.loopAt(0))],
   );
 
+  bool get bare =>
+      wide.every((_Fall fall) => fall.art == null) &&
+      narrow.every((_Fall fall) => fall.art == null);
+
   _Shed at(double now, PetalArt? current) => _Shed(
     seconds: now,
     wide: _falling(_widePetals, wide, now, current),
@@ -194,17 +198,26 @@ class _PetalDriftState extends State<PetalDrift>
     with SingleTickerProviderStateMixin {
   final ValueNotifier<_Shed> _shed = ValueNotifier<_Shed>(_Shed.start(null));
   late final Ticker _ticker = createTicker(_tick);
+  Duration? _origin;
 
   PetalArt? get _current {
     final FlowerKind? flower = widget.flower;
     return flower == null ? null : petalArtFor(flower);
   }
 
-  void _tick(Duration elapsed) {
-    _shed.value = _shed.value.at(
-      elapsed.inMicroseconds / Duration.microsecondsPerSecond,
-      _current,
-    );
+  double get _now {
+    final Duration stamp = SchedulerBinding.instance.currentFrameTimeStamp;
+    final Duration origin = _origin ??= stamp;
+    return (stamp - origin).inMicroseconds / Duration.microsecondsPerSecond;
+  }
+
+  void _tick(Duration _) {
+    final PetalArt? current = _current;
+    final _Shed shed = _shed.value.at(_now, current);
+    _shed.value = shed;
+    if (current == null && shed.bare) {
+      _ticker.stop();
+    }
   }
 
   @override
@@ -214,8 +227,12 @@ class _PetalDriftState extends State<PetalDrift>
     if (still && _ticker.isActive) {
       _ticker.stop();
     } else if (!still && !_ticker.isActive) {
-      _shed.value = _Shed.start(_current);
-      _ticker.start();
+      final PetalArt? current = _current;
+      _origin = null;
+      _shed.value = _Shed.start(current);
+      if (current != null) {
+        _ticker.start();
+      }
     }
   }
 
@@ -223,8 +240,14 @@ class _PetalDriftState extends State<PetalDrift>
   void didUpdateWidget(PetalDrift oldWidget) {
     super.didUpdateWidget(oldWidget);
     final PetalArt? current = _current;
-    if (current != null && widget.flower != oldWidget.flower) {
-      _shed.value = _shed.value.shownWith(current);
+    if (current == null ||
+        widget.flower == oldWidget.flower ||
+        MediaQuery.disableAnimationsOf(context)) {
+      return;
+    }
+    _shed.value = _shed.value.at(_now, null).shownWith(current);
+    if (!_ticker.isActive) {
+      _ticker.start();
     }
   }
 

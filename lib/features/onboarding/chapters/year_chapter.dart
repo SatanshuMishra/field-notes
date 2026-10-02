@@ -33,6 +33,7 @@ const String yearSliderLabel = 'The sample year';
 const String yearDragHint = 'Drag to look around';
 const String yearMeadowLabel = 'A sample year in the meadow';
 const Duration yearReplayDuration = Duration(seconds: 11);
+const String _dragHintGone = 'year-drag-hint-gone';
 
 const Key yearSliderKey = ValueKey<String>('year-slider');
 const Key yearReplayKey = ValueKey<String>('year-replay');
@@ -181,7 +182,10 @@ class _YearChapterState extends ConsumerState<YearChapter>
   late final MeadowYearReplay _replay;
   bool _started = false;
   bool _growAnimated = false;
-  bool _dragged = false;
+  late bool _dragged =
+      PageStorage.maybeOf(context)
+          ?.readState(context, identifier: _dragHintGone) ==
+      true;
 
   @override
   void initState() {
@@ -232,6 +236,8 @@ class _YearChapterState extends ConsumerState<YearChapter>
 
   void _meadowDragged() {
     if (!_dragged) {
+      PageStorage.maybeOf(context)
+          ?.writeState(context, true, identifier: _dragHintGone);
       setState(() => _dragged = true);
     }
   }

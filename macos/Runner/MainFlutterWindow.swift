@@ -169,6 +169,7 @@ class MainFlutterWindow: NSWindow {
 
   @objc private func titlebarFrameDidChange(_ notification: Notification) {
     guard let view = notification.object as? NSView,
+      view.window === self,
       let close = self.standardWindowButton(.closeButton),
       let miniaturize = self.standardWindowButton(.miniaturizeButton),
       let zoom = self.standardWindowButton(.zoomButton)

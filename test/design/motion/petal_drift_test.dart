@@ -18,6 +18,13 @@ const Duration _pastLongestLoop = Duration(seconds: 30);
 const Duration _halfAppear = Duration(milliseconds: 300);
 const double _alphaTolerance = 1e-3;
 
+const double _entryCentre = -15;
+const double _exitReach = 60;
+const double _midLoopStart = 0.07;
+const double _midLoopEnd = 0.93;
+const double _midLoopLowest = 0.85;
+const double _midLoopHighest = 0.9;
+
 const List<FlowerKind> _shownFlowers = <FlowerKind>[
   FlowerKind.peony,
   FlowerKind.aster,
@@ -173,6 +180,40 @@ List<Offset> _centres(List<_Seen> seen) => <Offset>[
   for (final _Seen petal in seen) petal.centre,
 ];
 
+double _inkAlpha(FlowerKind kind) {
+  final PetalPiece first = petalArtFor(kind)!.pieces.first;
+  return (first.fill ?? first.outline)!.a;
+}
+
+List<double> _midLoopAlphas(List<_Seen> seen, Size size) => <double>[
+  for (final _Seen petal in seen)
+    if ((petal.centre.dx - _entryCentre) / (size.width + _exitReach)
+        case final double progress
+        when progress > _midLoopStart && progress < _midLoopEnd)
+      petal.alpha,
+];
+
+void _expectMidLoopShown(
+  List<_Seen> seen,
+  Size size,
+  double share,
+  String reason,
+) {
+  final double ink = _inkAlpha(FlowerKind.lavender) * share;
+  final List<double> alphas = _midLoopAlphas(seen, size);
+  expect(alphas, isNotEmpty, reason: reason);
+  expect(
+    alphas,
+    everyElement(
+      inInclusiveRange(
+        _midLoopLowest * ink - _alphaTolerance,
+        _midLoopHighest * ink + _alphaTolerance,
+      ),
+    ),
+    reason: reason,
+  );
+}
+
 List<bool> _restartedSince(
   List<bool> restarted,
   List<_Seen> before,
@@ -325,6 +366,11 @@ Future<void> _expectNoFlowerStopsNewPetals(
   }
   expect(finished, everyElement(isTrue), reason: area.name);
   expect(find.byKey(_subjectKey), paintsNothing, reason: area.name);
+  expect(
+    tester.binding.transientCallbackCount,
+    1,
+    reason: '${area.name}, only the steady layer still asks for frames',
+  );
 
   await _pumpPair(
     tester,
@@ -385,8 +431,20 @@ Future<void> _expectNoFlowerStopsNewPetals(
   _expectAppearing(tester, area, 'as it mounts with a flower');
   await tester.pump();
   await tester.pump(_halfAppear);
+  _expectMidLoopShown(
+    _seen(tester, _subjectKey),
+    area.size,
+    0.5,
+    '${area.name}, halfway through appearing after mounting',
+  );
   await tester.pump(_halfAppear);
   final List<_Seen> mounted = _seen(tester, _subjectKey);
+  _expectMidLoopShown(
+    mounted,
+    area.size,
+    1,
+    '${area.name}, 0.6 seconds after mounting',
+  );
   expect(mounted, hasLength(area.petals), reason: area.name);
   expect(
     _flowers(mounted),
@@ -482,5 +540,71 @@ void main() {
         () => _expectNoFlowerStopsNewPetals(tester, area),
       );
     }
+  });
+
+  testWidgets('a layer with nothing falling asks for no frames', (
+    WidgetTester tester,
+  ) async {
+    final _Area area = _areas.last;
+    _pinView(tester, area.size);
+    Future<void> pumpAlone(FlowerKind? flower) => tester.pumpWidget(
+      MediaQuery(
+        data: MediaQueryData(size: area.size),
+        child: Directionality(
+          textDirection: TextDirection.ltr,
+          child: PetalDrift(key: _subjectKey, flower: flower),
+        ),
+      ),
+    );
+
+    await pumpAlone(null);
+    await tester.pump(_settled);
+    expect(tester.hasRunningAnimations, isFalse, reason: 'mounted bare');
+    expect(find.byKey(_subjectKey), paintsNothing, reason: 'mounted bare');
+
+    await pumpAlone(FlowerKind.lavender);
+    expect(tester.hasRunningAnimations, isTrue, reason: 'given a flower');
+    await tester.pump(_settled);
+    expect(
+      _seen(tester, _subjectKey),
+      hasLength(area.petals),
+      reason: 'given a flower',
+    );
+
+    await pumpAlone(null);
+    await tester.pump(_pastLongestLoop);
+    await tester.pump();
+    expect(tester.hasRunningAnimations, isFalse, reason: 'after the last fall');
+    expect(
+      find.byKey(_subjectKey),
+      paintsNothing,
+      reason: 'after the last fall',
+    );
+
+    await pumpAlone(FlowerKind.lavender);
+    expect(tester.hasRunningAnimations, isTrue, reason: 'given it again');
+    final List<_Seen> again = _seen(tester, _subjectKey);
+    expect(again, hasLength(area.petals), reason: 'given it again');
+    expect(
+      again.map((_Seen petal) => petal.alpha),
+      everyElement(0),
+      reason: 'given it again',
+    );
+    await tester.pump();
+    await tester.pump(_halfAppear);
+    _expectMidLoopShown(
+      _seen(tester, _subjectKey),
+      area.size,
+      0.5,
+      'halfway through appearing again',
+    );
+    await tester.pump(_halfAppear);
+    _expectMidLoopShown(
+      _seen(tester, _subjectKey),
+      area.size,
+      1,
+      '0.6 seconds after appearing again',
+    );
+    await _unmount(tester);
   });
 }
