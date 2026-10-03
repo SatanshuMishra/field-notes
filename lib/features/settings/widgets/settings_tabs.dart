@@ -1,4 +1,5 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/widgets.dart';
 
@@ -39,26 +40,32 @@ ValueKey<String> settingsTabKey(SettingsTab tab) =>
 
 const double settingsTabRailWidth = 176;
 
+const double settingsTabChipsOverhang = _segmentGlassInset;
+
 const double _railGap = 6;
-const double _chipGap = 6;
 const double _sublabelGap = 1;
 const double _minTapTarget = 48;
+
+const double _segmentHeight = 40;
+const double _segmentGap = 2;
+const double _segmentBarPadding = 3;
+const double _segmentFontSize = 12.5;
+const double _segmentGlassInset =
+    (_minTapTarget - _segmentHeight) / 2 - _segmentBarPadding;
+
+const Duration _segmentFade = Duration(milliseconds: 200);
 
 const EdgeInsets _railItemPadding = EdgeInsets.symmetric(
   horizontal: 13,
   vertical: 10,
 );
-const EdgeInsets _chipPadding = EdgeInsets.symmetric(
-  horizontal: 12,
-  vertical: 7,
-);
+const EdgeInsets _segmentPadding = EdgeInsets.symmetric(horizontal: 15);
 
 const BorderRadius _railItemRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
 );
-const BorderRadius _chipRadius = BorderRadius.all(
-  Radius.circular(Shapes.radiusMd),
-);
+const BorderRadius _segmentBarRadius = BorderRadius.all(Radius.circular(22));
+const BorderRadius _segmentRadius = BorderRadius.all(Radius.circular(19));
 
 const Color _clear = Color(0x00000000);
 
@@ -112,32 +119,46 @@ class SettingsTabChips extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onSelected,
-    this.padding = EdgeInsets.zero,
   });
 
   final SettingsTab selected;
   final ValueChanged<SettingsTab> onSelected;
-  final EdgeInsets padding;
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: padding,
-      child: Row(
+    return IntrinsicWidth(
+      child: Stack(
         children: <Widget>[
-          for (final SettingsTab tab in SettingsTab.values) ...<Widget>[
-            if (tab != SettingsTab.values.first)
-              const SizedBox(width: _chipGap),
-            _TabButton(
-              tab: tab,
-              selected: tab == selected,
-              onPressed: () => onSelected(tab),
-              borderRadius: _chipRadius,
-              padTapTarget: true,
-              child: _ChipFace(tab: tab, selected: tab == selected),
+          const Positioned.fill(
+            top: _segmentGlassInset,
+            bottom: _segmentGlassInset,
+            child: GlassSurface(
+              tone: GlassTone.paper,
+              borderRadius: _segmentBarRadius,
+              child: SizedBox.expand(),
             ),
-          ],
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: _segmentBarPadding),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (final SettingsTab tab in SettingsTab.values) ...<Widget>[
+                  if (tab != SettingsTab.values.first)
+                    const SizedBox(width: _segmentGap),
+                  _TabButton(
+                    tab: tab,
+                    selected: tab == selected,
+                    onPressed: () => onSelected(tab),
+                    borderRadius: _segmentRadius,
+                    padTapTarget: true,
+                    child: _SegmentFace(tab: tab, selected: tab == selected),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -233,8 +254,8 @@ class _RailFace extends StatelessWidget {
   }
 }
 
-class _ChipFace extends StatelessWidget {
-  const _ChipFace({required this.tab, required this.selected});
+class _SegmentFace extends StatelessWidget {
+  const _SegmentFace({required this.tab, required this.selected});
 
   final SettingsTab tab;
   final bool selected;
@@ -242,25 +263,25 @@ class _ChipFace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return DecoratedBox(
+    return AnimatedContainer(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : _segmentFade,
+      height: _segmentHeight,
+      padding: _segmentPadding,
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: selected ? Palette.coral : colors.cardWarm,
-        border: selected
-            ? context.shadows.outline
-            : Border.fromBorderSide(
-                BorderSide(color: colors.ink30, width: Shapes.outlineWidth),
-              ),
-        borderRadius: _chipRadius,
+        color: selected ? Palette.coral : _clear,
+        border: selected ? context.shadows.outline : _clearOutline,
+        borderRadius: _segmentRadius,
       ),
-      child: Padding(
-        padding: _chipPadding,
-        child: Text(
-          tab.chipLabel,
-          maxLines: 1,
-          softWrap: false,
-          style: context.textStyles.caption11Sans.copyWith(
-            color: selected ? Palette.onAccent : colors.ink,
-          ),
+      child: Text(
+        tab.chipLabel,
+        maxLines: 1,
+        softWrap: false,
+        style: context.textStyles.toastSans.copyWith(
+          fontSize: _segmentFontSize,
+          color: selected ? Palette.onAccent : colors.ink,
         ),
       ),
     );

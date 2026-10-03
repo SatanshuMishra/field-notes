@@ -1,8 +1,9 @@
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import '../sync/pairing_qr_placeholder.dart';
 import '../sync/sync_shell_options.dart';
@@ -38,6 +39,9 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
     final SyncStorageChoice choice = SyncStorageChoice.fromStorageMode(
       widget.storageMode,
     );
+    final bool serverRows =
+        choice != SyncStorageChoice.onDevice ||
+        resolveShellLayout(Theme.of(context).platform) == ShellLayout.sidebar;
     return SettingsSection(
       title: 'Sync & storage',
       subtitle: 'Syncing arrives in a future update',
@@ -66,71 +70,73 @@ class _SyncStorageSectionState extends State<SyncStorageSection> {
             style: context.textStyles.captionSans,
           ),
         ),
-        SettingsFieldRow(
-          label: _serverUrlTitle,
-          description: 'Where your entries would sync.',
-          control: SettingsTextField(
-            controller: _serverUrl,
-            hintText: 'https://journal.example.com',
-            enabled: false,
-            semanticLabel: _serverUrlTitle,
+        if (serverRows) ...<Widget>[
+          SettingsFieldRow(
+            label: _serverUrlTitle,
+            description: 'Where your entries would sync.',
+            control: SettingsTextField(
+              controller: _serverUrl,
+              hintText: 'https://journal.example.com',
+              enabled: false,
+              semanticLabel: _serverUrlTitle,
+            ),
           ),
-        ),
-        SettingsFieldRow(
-          label: _accessTokenTitle,
-          description: 'Authorises this device with your server.',
-          control: SettingsSecretField(
-            controller: _accessToken,
-            hintText: 'Paste your access token',
-            enabled: false,
-            semanticLabel: _accessTokenTitle,
+          SettingsFieldRow(
+            label: _accessTokenTitle,
+            description: 'Authorises this device with your server.',
+            control: SettingsSecretField(
+              controller: _accessToken,
+              hintText: 'Paste your access token',
+              enabled: false,
+              semanticLabel: _accessTokenTitle,
+            ),
           ),
-        ),
-        SettingsFieldRow(
-          label: 'Sync frequency',
-          description: 'How often changes would travel.',
-          control: SettingsSelect<SyncFrequency>(
-            options: <SettingsSelectOption<SyncFrequency>>[
-              for (final SyncFrequency option in SyncFrequency.values)
-                SettingsSelectOption<SyncFrequency>(
-                  value: option,
-                  label: option.label,
-                ),
-            ],
-            value: SyncFrequency.automatic,
-            onChanged: null,
-            enabled: false,
+          SettingsFieldRow(
+            label: 'Sync frequency',
+            description: 'How often changes would travel.',
+            control: SettingsSelect<SyncFrequency>(
+              options: <SettingsSelectOption<SyncFrequency>>[
+                for (final SyncFrequency option in SyncFrequency.values)
+                  SettingsSelectOption<SyncFrequency>(
+                    value: option,
+                    label: option.label,
+                  ),
+              ],
+              value: SyncFrequency.automatic,
+              onChanged: null,
+              enabled: false,
+            ),
           ),
-        ),
-        SettingsFieldRow(
-          label: _recoveryPassphraseTitle,
-          description: 'Would unlock your encrypted journal elsewhere.',
-          control: SettingsSecretField(
-            controller: _recoveryPassphrase,
-            hintText: 'Enter a recovery passphrase',
-            enabled: false,
-            semanticLabel: _recoveryPassphraseTitle,
+          SettingsFieldRow(
+            label: _recoveryPassphraseTitle,
+            description: 'Would unlock your encrypted journal elsewhere.',
+            control: SettingsSecretField(
+              controller: _recoveryPassphrase,
+              hintText: 'Enter a recovery passphrase',
+              enabled: false,
+              semanticLabel: _recoveryPassphraseTitle,
+            ),
           ),
-        ),
-        const SettingsFieldRow(
-          label: 'Pair a device',
-          description: 'Would be scanned by your second device.',
-          control: PairingQrPlaceholder(),
-        ),
-        const SettingsFieldRow(
-          label: 'Connection',
-          description: 'Sync is not available yet.',
-          control: Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              SettingsStatusPill(label: 'Not connected'),
-              StickerButton(label: 'Test connection', onPressed: null),
-            ],
+          const SettingsFieldRow(
+            label: 'Pair a device',
+            description: 'Would be scanned by your second device.',
+            control: PairingQrPlaceholder(),
           ),
-        ),
+          const SettingsFieldRow(
+            label: 'Connection',
+            description: 'Sync is not available yet.',
+            control: Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                SettingsStatusPill(label: 'Not connected'),
+                StickerButton(label: 'Test connection', onPressed: null),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
