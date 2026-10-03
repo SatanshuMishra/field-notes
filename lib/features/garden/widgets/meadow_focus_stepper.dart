@@ -86,6 +86,7 @@ class _MeadowFocusStepperState extends State<MeadowFocusStepper> {
       padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
           Text(
             focus.title,
