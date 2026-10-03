@@ -271,7 +271,7 @@ class MonthYearBackButton extends StatelessWidget {
                     child: Text(
                       monthYearBackLabel,
                       style: _backStyle.copyWith(
-                        color: context.colors.accentInk,
+                        color: phoneCalendarSmallAccentInk(context),
                       ),
                     ),
                   ),
