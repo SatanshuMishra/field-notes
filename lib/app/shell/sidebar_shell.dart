@@ -74,7 +74,6 @@ class SidebarShell extends StatefulWidget {
     this.streak,
     this.soundOn = true,
     this.obscured = false,
-    this.appearanceToggle,
     this.collapsed = false,
     this.onCollapsedChanged,
   });
@@ -87,7 +86,6 @@ class SidebarShell extends StatefulWidget {
   final Widget? streak;
   final bool soundOn;
   final bool obscured;
-  final Widget? appearanceToggle;
   final bool collapsed;
   final ValueChanged<bool>? onCollapsedChanged;
 
@@ -167,7 +165,7 @@ class _SidebarShellState extends State<SidebarShell> {
         backgroundColor: colors.panelTop,
         body: Column(
           children: <Widget>[
-            _titleBar(context),
+            _dragBar(context),
             Expanded(
               child: ExcludeSemantics(
                 excluding: obscured,
@@ -248,26 +246,6 @@ class _SidebarShellState extends State<SidebarShell> {
             ),
         ],
       ),
-    );
-  }
-
-  Widget _titleBar(BuildContext context) {
-    final Widget bar = _dragBar(context);
-    final Widget? toggle = widget.appearanceToggle;
-    if (toggle == null) {
-      return bar;
-    }
-    return Stack(
-      children: <Widget>[
-        bar,
-        Positioned(
-          top: 0,
-          bottom: 0,
-          right: shellTitleBarPadding,
-          width: windowButtonsSlotWidth,
-          child: Align(alignment: Alignment.centerRight, child: toggle),
-        ),
-      ],
     );
   }
 

@@ -1,6 +1,8 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/week_start.dart';
+import 'package:field_notes/features/onboarding/chapters/garden_scene.dart';
 import 'package:field_notes/features/onboarding/chapters/opening_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
@@ -134,7 +136,7 @@ void _expectUnplanted(WidgetTester tester, ShellLayout layout) {
   expect(_draft(tester).grown, isFalse);
 }
 
-Future<void> _expectGrowth(WidgetTester tester) async {
+Future<void> _expectGrowth(WidgetTester tester, ShellLayout layout) async {
   await tester.pump();
   final OnboardingDraft planted = _draft(tester);
   expect(planted.planted, isTrue);
@@ -165,7 +167,14 @@ Future<void> _expectGrowth(WidgetTester tester) async {
       of: find.byKey(onboardingPrimaryKey),
       matching: find.text('Begin'),
     ),
-    findsOneWidget,
+    layout == ShellLayout.sidebar ? findsOneWidget : findsNothing,
+  );
+  expect(
+    find.descendant(
+      of: find.byKey(onboardingCueKey),
+      matching: find.text('swipe to continue'),
+    ),
+    layout == ShellLayout.sidebar ? findsNothing : findsOneWidget,
   );
 
   final OnboardingDraft grown = _draft(tester);
@@ -196,34 +205,35 @@ Future<Map<String, Rect>> _growPeonyIn(
 
 List<RenderObject> _paintOrder(WidgetTester tester) {
   final _PaintOrderContext context = _PaintOrderContext();
-  tester.renderObject(find.byType(OpeningChapter)).paint(context, Offset.zero);
+  tester
+      .renderObject(
+        find
+            .ancestor(
+              of: find.byType(GardenScene),
+              matching: find.byType(Stack),
+            )
+            .first,
+      )
+      .paint(context, Offset.zero);
   context.dispose();
   return List<RenderObject>.unmodifiable(context.painted);
 }
 
 void _expectHeadingInFrontOfArt(WidgetTester tester) {
-  final Finder chapter = find.byType(OpeningChapter);
-  final Finder art = find.descendant(
-    of: chapter,
-    matching: find.byType(CustomPaint),
-  );
-  expect(art, findsNWidgets(2));
-  final Rect area = tester.getRect(chapter);
-  final List<Rect> artRects = <Rect>[
-    for (int index = 0; index < 2; index++) tester.getRect(art.at(index)),
+  final List<Finder> art = <Finder>[
+    find.byKey(gardenSoilKey),
+    find.byKey(gardenFlowerKey(FlowerKind.peony)),
   ];
-  expect(artRects, contains(area));
-  expect(
-    artRects.where(
-      (Rect rect) => rect.bottom == area.bottom && rect.top > area.top,
-    ),
-    hasLength(1),
-  );
+  final Rect area = tester.getRect(find.byType(OpeningChapter));
+  for (final Finder piece in art) {
+    expect(piece, findsOneWidget);
+    expect(tester.getRect(piece).overlaps(area), isTrue);
+  }
+  expect(tester.getRect(art.first).bottom, greaterThan(area.bottom));
 
   final List<RenderObject> painted = _paintOrder(tester);
   final List<int> artOrder = <int>[
-    for (int index = 0; index < 2; index++)
-      painted.indexOf(tester.renderObject(art.at(index))),
+    for (final Finder piece in art) painted.indexOf(tester.renderObject(piece)),
   ];
   expect(artOrder, everyElement(isNonNegative));
   for (final String text in _headingTexts) {
@@ -243,7 +253,7 @@ void main() {
         _expectUnplanted(tester, layout);
 
         await tester.tap(find.byType(OpeningChapter));
-        await _expectGrowth(tester);
+        await _expectGrowth(tester, layout);
       });
     }
 
@@ -253,7 +263,7 @@ void main() {
       _expectUnplanted(tester, ShellLayout.sidebar);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await _expectGrowth(tester);
+      await _expectGrowth(tester, ShellLayout.sidebar);
     });
 
     for (final ShellLayout layout in ShellLayout.values) {

@@ -3,6 +3,7 @@ import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/appearance_toggle.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -52,8 +53,17 @@ AppSettings _onboardedWith(Appearance appearance) =>
 FakeSettingsRepository _onboarded(Appearance appearance) =>
     FakeSettingsRepository(initial: _onboardedWith(appearance));
 
-FakeSettingsRepository _freshInstall() =>
-    FakeSettingsRepository(storedValues: false);
+FakeSettingsRepository _freshInstall({Object? writeError}) =>
+    FakeSettingsRepository(storedValues: false, writeError: writeError);
+
+FakeSettingsRepository _midOnboarding(Appearance appearance) =>
+    FakeSettingsRepository(
+      initial: AppSettings.defaults.copyWith(
+        onboardingStatus: OnboardingStatus.pending,
+        notificationPermissionAsked: true,
+        appearance: appearance,
+      ),
+    );
 
 Future<void> _onLayout(_Layout layout, Future<void> Function() body) async {
   debugDefaultTargetPlatformOverride = layout.platform;
@@ -145,10 +155,12 @@ Finder get _frameToggle => find.descendant(
   matching: find.byKey(appearanceToggleKey),
 );
 
-Finder _onboardingToggle(ShellLayout layout) => switch (layout) {
-  ShellLayout.sidebar => _anyToggle,
-  ShellLayout.bottomBar => _frameToggle,
-};
+Finder _onboardingToggle(ShellLayout layout) => _frameToggle;
+
+Finder get _titleBarToggle => find.descendant(
+  of: find.byKey(windowTitleBarKey),
+  matching: find.byType(AppearanceToggle),
+);
 
 MaterialApp _app(WidgetTester tester) =>
     tester.widget<MaterialApp>(find.byType(MaterialApp));
@@ -249,28 +261,36 @@ void _expectReachableDuringOnboarding(
 }) {
   final Finder toggle = _onboardingToggle(layout.layout);
   expect(toggle, findsOneWidget, reason: reason);
+  expect(_anyToggle, findsOneWidget, reason: reason);
   expect(_hitTestable(tester, toggle), isTrue, reason: reason);
+  expect(_titleBarToggle, findsNothing, reason: reason);
+  final Rect target = tester.getRect(toggle);
+  final Finder glass = find.descendant(
+    of: find.byKey(onboardingToggleKey),
+    matching: find.byType(GlassSurface),
+  );
+  expect(glass, findsOneWidget, reason: reason);
   switch (layout.layout) {
     case ShellLayout.sidebar:
-      expect(_frameToggle, findsNothing, reason: reason);
       expect(
-        tester.getRect(toggle).bottom,
-        lessThanOrEqualTo(shellTitleBarHeight),
+        target.top,
+        greaterThanOrEqualTo(shellTitleBarHeight),
+        reason: reason,
+      );
+      expect(target.width, greaterThanOrEqualTo(44), reason: reason);
+      expect(target.height, greaterThanOrEqualTo(44), reason: reason);
+      expect(
+        tester.getRect(glass),
+        const Rect.fromLTWH(18, shellTitleBarHeight + 8, 36, 36),
         reason: reason,
       );
     case ShellLayout.bottomBar:
-      final Rect target = tester.getRect(toggle);
-      expect(target.top, greaterThanOrEqualTo(_statusBar), reason: reason);
       expect(
-        target.right,
-        greaterThan(layout.surface.width - kMinInteractiveDimension),
+        target,
+        const Rect.fromLTWH(8, _statusBar + 2, 44, 44),
         reason: reason,
       );
-      expect(
-        target.size,
-        const Size.square(kMinInteractiveDimension),
-        reason: reason,
-      );
+      expect(tester.getRect(glass), target, reason: reason);
   }
 }
 
@@ -294,19 +314,17 @@ Future<void> _absentAfterOnboarding(WidgetTester tester, _Layout layout) async {
   await _unmount(tester);
 }
 
-Future<void> _flipsSystemOnTheMapOnADarkDevice(
+Future<void> _flipsSystemDuringOnboardingOnADarkDevice(
   WidgetTester tester,
   _Layout layout,
 ) async {
   final String name = '${layout.layout.name} system';
   tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
-  final FakeSettingsRepository settings = _onboarded(Appearance.system);
-  final ProviderContainer container = await _pumpApp(tester, layout, settings);
+  final FakeSettingsRepository settings = _midOnboarding(Appearance.system);
+  await _pumpApp(tester, layout, settings);
   expect(_app(tester).themeMode, ThemeMode.system, reason: name);
-  expect(_anyToggle, findsNothing, reason: name);
-  container.read(onboardingControllerProvider.notifier).showMap();
-  await _settle(tester);
   final Finder toggle = _onboardingToggle(layout.layout);
+  _expectReachableDuringOnboarding(tester, layout, reason: name);
   _expectShowing(tester, toggle, Brightness.dark, reason: name);
 
   await _tapToggle(tester, toggle);
@@ -382,25 +400,20 @@ Future<void> _worksThroughOnboarding(
     );
     _expectReachableDuringOnboarding(tester, layout, reason: reason);
     _expectShowing(tester, toggle, Brightness.dark, reason: reason);
-    if (layout.layout == ShellLayout.bottomBar) {
-      final Color ink = chapter == OnboardingChapter.year
-          ? FieldNotesColors.light.composerPaper
-          : FieldNotesColors.of(tester.element(toggle)).ink;
-      expect(
-        find.descendant(
-          of: toggle,
-          matching: find.byKey(appearanceToggleSunKey),
-        ),
-        paints..circle(color: ink),
-        reason: reason,
-      );
-    }
+    final Color ink = chapter == OnboardingChapter.year
+        ? FieldNotesColors.light.composerPaper
+        : FieldNotesColors.of(tester.element(toggle)).ink;
+    expect(
+      find.descendant(of: toggle, matching: find.byKey(appearanceToggleSunKey)),
+      paints..circle(color: ink),
+      reason: reason,
+    );
   }
   expect(settings.appearanceWrites, <Appearance>[Appearance.dark]);
   await _unmount(tester);
 }
 
-Future<void> _worksOnTheMap(WidgetTester tester, _Layout layout) async {
+Future<void> _absentOnTheMap(WidgetTester tester, _Layout layout) async {
   final String name = '${layout.layout.name} map';
   final FakeSettingsRepository settings = _onboarded(Appearance.light);
   final ProviderContainer container = await _pumpApp(tester, layout, settings);
@@ -410,16 +423,21 @@ Future<void> _worksOnTheMap(WidgetTester tester, _Layout layout) async {
     container.read(onboardingControllerProvider),
     const OnboardingFlowMap(),
   );
-  _expectReachableDuringOnboarding(tester, layout, reason: name);
-  final Finder toggle = _onboardingToggle(layout.layout);
-  _expectShowing(tester, toggle, Brightness.light, reason: name);
-
-  await _tapToggle(tester, toggle);
-  expect(settings.appearanceWrites, <Appearance>[Appearance.dark]);
-  _expectShowing(tester, toggle, Brightness.dark, reason: name);
+  expect(find.byType(OnboardingFrame), findsOneWidget, reason: name);
   expect(
-    container.read(onboardingControllerProvider),
-    const OnboardingFlowMap(),
+    find.descendant(
+      of: find.byKey(onboardingPrimaryKey),
+      matching: find.text('Done'),
+    ),
+    findsOneWidget,
+    reason: name,
+  );
+  expect(_anyToggle, findsNothing, reason: name);
+  expect(find.byType(AppearanceToggle), findsNothing, reason: name);
+  expect(find.byKey(onboardingToggleKey), findsNothing, reason: name);
+  expect(
+    find.bySemanticsLabel(appearanceToggleDarkLabel),
+    findsNothing,
     reason: name,
   );
 
@@ -427,6 +445,7 @@ Future<void> _worksOnTheMap(WidgetTester tester, _Layout layout) async {
   await _settle(tester);
   expect(find.byType(OnboardingFrame), findsNothing, reason: name);
   expect(_anyToggle, findsNothing, reason: '$name closed');
+  expect(settings.appearanceWrites, isEmpty, reason: name);
   await _unmount(tester);
 }
 
@@ -440,9 +459,9 @@ void main() {
       for (final _Layout layout in _layouts) {
         await _onLayout(layout, () async {
           await _absentAfterOnboarding(tester, layout);
-          await _flipsSystemOnTheMapOnADarkDevice(tester, layout);
+          await _flipsSystemDuringOnboardingOnADarkDevice(tester, layout);
           await _worksThroughOnboarding(tester, layout);
-          await _worksOnTheMap(tester, layout);
+          await _absentOnTheMap(tester, layout);
         });
       }
       handle.dispose();
@@ -455,17 +474,11 @@ void main() {
     for (final _Layout layout in _layouts) {
       await _onLayout(layout, () async {
         final String name = layout.layout.name;
-        final FakeSettingsRepository settings = FakeSettingsRepository(
-          initial: _onboardedWith(Appearance.light),
+        final FakeSettingsRepository settings = _freshInstall(
           writeError: StateError('The appearance could not be saved.'),
         );
-        final ProviderContainer container = await _pumpApp(
-          tester,
-          layout,
-          settings,
-        );
-        container.read(onboardingControllerProvider.notifier).showMap();
-        await _settle(tester);
+        await _pumpApp(tester, layout, settings);
+        expect(find.byType(OnboardingFrame), findsOneWidget, reason: name);
         expect(find.text(_failure), findsNothing, reason: name);
 
         await _tapToggle(tester, _onboardingToggle(layout.layout));

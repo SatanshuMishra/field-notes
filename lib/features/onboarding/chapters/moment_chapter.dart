@@ -6,7 +6,8 @@ import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -23,7 +24,6 @@ const String _sidebarMediaLead =
     "And there's more than one way to keep a memory.";
 const String _sidebarMediaFoot =
     "You'll find these on every log, once you're set up.";
-const String _bottomBarMediaLead = 'More than one way to keep a memory:';
 const String _videoLength = '0:10';
 const int _noteLimit = 280;
 const double _sidebarCardWidth = 640;
@@ -47,9 +47,6 @@ const List<Duration> _cardDelays = <Duration>[
   Duration(milliseconds: 500),
   Duration(milliseconds: 650),
 ];
-const Duration _tilePop = Duration(milliseconds: 450);
-const Duration _tileDelay = Duration(milliseconds: 350);
-const int _tileStaggerMs = 120;
 
 const double _glowDelay = 1.2;
 const double _glowPeriod = 2.6;
@@ -71,10 +68,10 @@ const double _birdsPeriod = 9;
 const double _stillWave = 1.3;
 
 const double _riseDistance = 14;
-const double _popPeak = 0.6;
-const double _popFrom = 0.2;
-const double _popOver = 1.08;
-const Cubic _popCurve = Cubic(0.2, 0.9, 0.3, 1.2);
+const double _sidebarHeadingSide = 40;
+const double _bottomBarHeadingSide = 20;
+const double _bottomBarCardGap = 14;
+const double _bottomBarCardClearance = 12;
 
 const int _barCount = 22;
 const double _barWidth = 4;
@@ -154,7 +151,7 @@ class _MomentMetrics {
 
   static const _MomentMetrics sidebarCompact = _MomentMetrics(
     side: 40,
-    headingGap: 16,
+    headingGap: 12,
     cardWidth: _sidebarCardWidth,
     cardRadius: 18,
     cardShadow: Offset(3, 3),
@@ -171,30 +168,32 @@ class _MomentMetrics {
     hintSize: 16,
     mediaGap: 12,
     reserve: 60,
-    art: _SidebarArt(gap: 8, cardHeight: 96, photoHeight: 72),
+    art: _SidebarArt(gap: 4, cardHeight: 96, photoHeight: 72),
   );
 
   static const _MomentMetrics bottomBar = _MomentMetrics(
     side: 16,
-    headingGap: 12,
+    headingGap: _bottomBarCardGap,
     cardWidth: double.infinity,
     cardRadius: 16,
     cardShadow: Offset(2, 2),
     cardPadding: EdgeInsets.fromLTRB(14, 11, 14, 8),
-    flowerSize: 20,
+    flowerSize: 22,
     headerGap: 7,
-    headerSize: 11,
+    headerSize: 12,
     showsNote: false,
     fieldTop: 8,
-    fieldSize: 17,
-    fieldLine: 30,
-    fieldRows: 5,
-    hintTop: 2,
-    hintSize: 14,
-    mediaGap: 14,
-    reserve: 76,
+    fieldSize: 18,
+    fieldLine: 32,
+    fieldRows: 1,
+    hintTop: 4,
+    hintSize: 15,
+    mediaGap: 0,
+    reserve: 0,
     art: null,
   );
+
+  static const double bottomBarSide = 16;
 
   static _MomentMetrics of(ShellLayout layout, double height) =>
       switch (layout) {
@@ -310,6 +309,25 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
     final ValueChanged<String> onChanged = ref
         .read(onboardingControllerProvider.notifier)
         .setNote;
+    if (layout == ShellLayout.bottomBar) {
+      const _MomentMetrics metrics = _MomentMetrics.bottomBar;
+      return _phoneBody(
+        card: _NoteCard(
+          metrics: metrics,
+          draft: draft,
+          clock: clock,
+          saved: saved,
+          error: error,
+          fills: true,
+          field: _NoteField(
+            metrics: metrics,
+            controller: _note,
+            onChanged: onChanged,
+            fills: true,
+          ),
+        ),
+      );
+    }
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final _MomentMetrics metrics = _MomentMetrics.of(
@@ -337,6 +355,47 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
     );
   }
 
+  Widget _phoneBody({required Widget card}) {
+    final MediaQueryData media = MediaQuery.of(context);
+    final double gesture = math.max(
+      media.padding.bottom,
+      media.viewPadding.bottom,
+    );
+    final double bottom = math.max(
+      gesture + onboardingControlBarReserve,
+      media.viewInsets.bottom,
+    );
+    return Padding(
+      padding: EdgeInsets.only(
+        top: media.padding.top + onboardingPhoneTitleTop,
+        bottom: bottom + _bottomBarCardClearance,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const _Enter.rise(
+            duration: _headingRise,
+            delay: Duration.zero,
+            child: _MomentHeading(layout: ShellLayout.bottomBar),
+          ),
+          const SizedBox(height: _bottomBarCardGap),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: _MomentMetrics.bottomBarSide,
+              ),
+              child: _Enter.rise(
+                duration: _cardRise,
+                delay: _cardDelay,
+                child: card,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _body({
     required ShellLayout layout,
     required _MomentMetrics metrics,
@@ -353,11 +412,7 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
             _Enter.rise(
               duration: _headingRise,
               delay: Duration.zero,
-              child: OnboardingHeading(
-                layout: layout,
-                kicker: _kicker,
-                title: _title,
-              ),
+              child: _MomentHeading(layout: layout),
             ),
             SizedBox(height: metrics.headingGap),
             Padding(
@@ -383,13 +438,68 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
                   duration: _mediaRise,
                   delay: _mediaDelay,
                   child: art == null
-                      ? const _BottomBarMedia()
+                      ? const SizedBox.shrink()
                       : _SidebarMedia(art: art),
                 ),
               ),
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MomentHeading extends StatelessWidget {
+  const _MomentHeading({required this.layout});
+
+  final ShellLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool sidebar = layout == ShellLayout.sidebar;
+    final TextAlign align = sidebar ? TextAlign.center : TextAlign.start;
+    return Padding(
+      padding: sidebar
+          ? const EdgeInsets.fromLTRB(
+              _sidebarHeadingSide,
+              onboardingTitleTop,
+              _sidebarHeadingSide,
+              0,
+            )
+          : const EdgeInsets.symmetric(horizontal: _bottomBarHeadingSide),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: sidebar
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            _kicker,
+            textAlign: align,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? 21 : 18,
+              fontWeight: FontWeight.w600,
+              color: colors.accentInk,
+            ),
+          ),
+          Semantics(
+            header: true,
+            child: Text(
+              _title,
+              textAlign: align,
+              style: TextStyle(
+                fontFamily: TypographyTokens.serif,
+                fontSize: sidebar ? 44 : 28,
+                fontWeight: FontWeight.w500,
+                height: sidebar ? 1.05 : 1.08,
+                color: colors.ink,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -403,6 +513,7 @@ class _NoteCard extends StatelessWidget {
     required this.saved,
     required this.error,
     required this.field,
+    this.fills = false,
   });
 
   final _MomentMetrics metrics;
@@ -411,6 +522,7 @@ class _NoteCard extends StatelessWidget {
   final bool saved;
   final String? error;
   final Widget field;
+  final bool fills;
 
   @override
   Widget build(BuildContext context) {
@@ -446,12 +558,12 @@ class _NoteCard extends StatelessWidget {
         child: Padding(
           padding: metrics.cardPadding,
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize: fills ? MainAxisSize.max : MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               _CardHeader(metrics: metrics, draft: draft, clock: clock),
               SizedBox(height: metrics.fieldTop),
-              field,
+              if (fills) Expanded(child: field) else field,
               SizedBox(height: metrics.hintTop),
               Text(
                 saved ? _savedHint : _waitingHint,
@@ -550,11 +662,13 @@ class _NoteField extends StatelessWidget {
     required this.metrics,
     required this.controller,
     required this.onChanged,
+    this.fills = false,
   });
 
   final _MomentMetrics metrics;
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final bool fills;
 
   @override
   Widget build(BuildContext context) {
@@ -570,31 +684,35 @@ class _NoteField extends StatelessWidget {
       leadingDistribution: TextLeadingDistribution.even,
       color: colors.ink,
     );
-    return CustomPaint(
-      painter: _RulePainter(pitch: pitch, color: colors.ink14),
-      child: TextField(
-        key: momentFieldKey,
-        controller: controller,
-        onChanged: onChanged,
-        inputFormatters: <TextInputFormatter>[
-          LengthLimitingTextInputFormatter(_noteLimit),
-        ],
-        keyboardType: TextInputType.multiline,
-        textCapitalization: TextCapitalization.sentences,
-        minLines: metrics.fieldRows,
-        maxLines: metrics.fieldRows,
-        cursorColor: colors.accentInk,
-        style: style,
-        strutStyle: StrutStyle(
-          fontFamily: TypographyTokens.serif,
-          fontSize: metrics.fieldSize,
-          height: ratio,
-          leadingDistribution: TextLeadingDistribution.even,
-          forceStrutHeight: true,
-        ),
-        decoration: InputDecoration.collapsed(
-          hintText: _placeholder,
-          hintStyle: style.copyWith(color: colors.placeholder),
+    return NoSwipe(
+      child: CustomPaint(
+        painter: _RulePainter(pitch: pitch, color: colors.ink14),
+        child: TextField(
+          key: momentFieldKey,
+          controller: controller,
+          onChanged: onChanged,
+          inputFormatters: <TextInputFormatter>[
+            LengthLimitingTextInputFormatter(_noteLimit),
+          ],
+          keyboardType: TextInputType.multiline,
+          textCapitalization: TextCapitalization.sentences,
+          minLines: fills ? null : metrics.fieldRows,
+          maxLines: fills ? null : metrics.fieldRows,
+          expands: fills,
+          textAlignVertical: TextAlignVertical.top,
+          cursorColor: colors.accentInk,
+          style: style,
+          strutStyle: StrutStyle(
+            fontFamily: TypographyTokens.serif,
+            fontSize: metrics.fieldSize,
+            height: ratio,
+            leadingDistribution: TextLeadingDistribution.even,
+            forceStrutHeight: true,
+          ),
+          decoration: InputDecoration.collapsed(
+            hintText: _placeholder,
+            hintStyle: style.copyWith(color: colors.placeholder),
+          ),
         ),
       ),
     );
@@ -917,7 +1035,7 @@ class _VideoArt extends StatelessWidget {
               children: <Widget>[
                 Transform.scale(
                   scale: zoom,
-                  child: CustomPaint(painter: _DuskPainter(seconds ?? 0)),
+                  child: CustomPaint(painter: MomentDuskPainter(seconds ?? 0)),
                 ),
                 Positioned(left: 8, top: 8, child: _Badge(lit: lit)),
                 Positioned(
@@ -1026,7 +1144,7 @@ class _PhotoArt extends StatelessWidget {
                 builder:
                     (BuildContext context, Duration? elapsed, Widget? child) =>
                         CustomPaint(
-                          painter: _JettyPainter(
+                          painter: MomentJettyPainter(
                             elapsed == null ? 0 : _seconds(elapsed),
                           ),
                         ),
@@ -1039,143 +1157,7 @@ class _PhotoArt extends StatelessWidget {
   }
 }
 
-class _BottomBarMedia extends StatelessWidget {
-  const _BottomBarMedia();
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Text(
-          _bottomBarMediaLead,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: TypographyTokens.accent,
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            height: 1.15,
-            color: colors.sage,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _Enter.pop(
-                duration: _tilePop,
-                delay: _tileDelay,
-                child: _MediumTile(
-                  key: momentVoiceKey,
-                  label: 'your voice',
-                  icon: CaptureIcon(
-                    glyph: CaptureGlyph.mic,
-                    color: colors.ink,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _Enter.pop(
-                duration: _tilePop,
-                delay:
-                    _tileDelay + const Duration(milliseconds: _tileStaggerMs),
-                child: _MediumTile(
-                  key: momentVideoKey,
-                  label: 'a video',
-                  icon: CaptureIcon(
-                    glyph: CaptureGlyph.video,
-                    color: colors.ink,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _Enter.pop(
-                duration: _tilePop,
-                delay:
-                    _tileDelay +
-                    const Duration(milliseconds: 2 * _tileStaggerMs),
-                child: _MediumTile(
-                  key: momentPhotosKey,
-                  label: 'photos',
-                  icon: _Glyph(
-                    kind: _GlyphKind.photo,
-                    color: colors.ink,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _MediumTile extends StatelessWidget {
-  const _MediumTile({super.key, required this.label, required this.icon});
-
-  final String label;
-  final Widget icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.cardWarm,
-        border: Border.all(color: colors.ink20, width: Shapes.outlineWidth),
-        borderRadius: const BorderRadius.all(Radius.circular(12)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(4, 10, 4, 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ExcludeSemantics(
-              child: Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: colors.cardWarm,
-                  border: Border.all(
-                    color: colors.line,
-                    width: Shapes.outlineWidth,
-                  ),
-                ),
-                child: icon,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: TypographyTokens.accent,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                height: 1.05,
-                color: colors.mutedDeep,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-enum _GlyphKind { pencil, photo, flip }
+enum _GlyphKind { pencil, flip }
 
 class _Glyph extends StatelessWidget {
   const _Glyph({required this.kind, required this.color, required this.size});
@@ -1217,19 +1199,6 @@ class _GlyphPainter extends CustomPainter {
         ..close()
         ..moveTo(14, 8)
         ..lineTo(17, 11),
-    _GlyphKind.photo =>
-      Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(
-            const Rect.fromLTWH(3, 6, 18, 14),
-            const Radius.circular(2),
-          ),
-        )
-        ..addOval(Rect.fromCircle(center: const Offset(12, 13), radius: 3.5))
-        ..moveTo(8, 6)
-        ..lineTo(9.5, 4)
-        ..lineTo(14.5, 4)
-        ..lineTo(16, 6),
     _GlyphKind.flip =>
       Path()
         ..moveTo(4, 9)
@@ -1308,8 +1277,8 @@ Path _bird(double x, double y, double half) => Path()
   ..relativeQuadraticBezierTo(half / 2, -half / 2, half, 0)
   ..relativeQuadraticBezierTo(half / 2, -half / 2, half, 0);
 
-class _DuskPainter extends CustomPainter {
-  const _DuskPainter(this.seconds);
+class MomentDuskPainter extends CustomPainter {
+  const MomentDuskPainter(this.seconds);
 
   final double seconds;
 
@@ -1426,12 +1395,12 @@ class _DuskPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DuskPainter oldDelegate) =>
+  bool shouldRepaint(MomentDuskPainter oldDelegate) =>
       oldDelegate.seconds != seconds;
 }
 
-class _JettyPainter extends CustomPainter {
-  const _JettyPainter(this.seconds);
+class MomentJettyPainter extends CustomPainter {
+  const MomentJettyPainter(this.seconds);
 
   final double seconds;
 
@@ -1568,7 +1537,7 @@ class _JettyPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_JettyPainter oldDelegate) =>
+  bool shouldRepaint(MomentJettyPainter oldDelegate) =>
       oldDelegate.seconds != seconds;
 }
 
@@ -1633,23 +1602,14 @@ class _LoopState extends State<_Loop> with SingleTickerProviderStateMixin {
       widget.builder(context, _moving ? _elapsed : null, widget.child);
 }
 
-enum _EnterKind { rise, pop }
-
 class _Enter extends StatefulWidget {
   const _Enter.rise({
     super.key,
     required this.duration,
     required this.delay,
     required this.child,
-  }) : kind = _EnterKind.rise;
+  });
 
-  const _Enter.pop({
-    required this.duration,
-    required this.delay,
-    required this.child,
-  }) : kind = _EnterKind.pop;
-
-  final _EnterKind kind;
   final Duration duration;
   final Duration delay;
   final Widget child;
@@ -1688,31 +1648,15 @@ class _EnterState extends State<_Enter> with SingleTickerProviderStateMixin {
   }
 
   Widget _frame(double progress, Widget child) {
-    switch (widget.kind) {
-      case _EnterKind.rise:
-        final double eased = Curves.ease.transform(progress);
-        return Opacity(
-          opacity: eased,
-          alwaysIncludeSemantics: true,
-          child: Transform.translate(
-            offset: Offset(0, _riseDistance * (1 - eased)),
-            child: child,
-          ),
-        );
-      case _EnterKind.pop:
-        final bool rising = progress < _popPeak;
-        final double eased = rising
-            ? _popCurve.transform(progress / _popPeak)
-            : _popCurve.transform((progress - _popPeak) / (1 - _popPeak));
-        final double scale = rising
-            ? _popFrom + (_popOver - _popFrom) * eased
-            : _popOver + (1 - _popOver) * eased;
-        return Opacity(
-          opacity: rising ? eased.clamp(0.0, 1.0) : 1,
-          alwaysIncludeSemantics: true,
-          child: Transform.scale(scale: scale, child: child),
-        );
-    }
+    final double eased = Curves.ease.transform(progress);
+    return Opacity(
+      opacity: eased,
+      alwaysIncludeSemantics: true,
+      child: Transform.translate(
+        offset: Offset(0, _riseDistance * (1 - eased)),
+        child: child,
+      ),
+    );
   }
 
   @override

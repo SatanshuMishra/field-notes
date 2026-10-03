@@ -484,4 +484,105 @@ void main() {
     controller.skipToSetup();
     expect(_draft(container).petalFlower, isNull);
   });
+
+  test('a pick is remembered for the run and a fresh run starts unpicked', () {
+    final ProviderContainer container = _startedAt(OnboardingChapter.day);
+    final OnboardingController controller = _controller(container);
+    expect(_draft(container).mood, Mood.happy);
+    expect(_draft(container).picked, isFalse);
+
+    controller.chooseMood(Mood.calm);
+    expect(_draft(container).mood, Mood.calm);
+    expect(_draft(container).picked, isTrue);
+    controller
+      ..back()
+      ..next();
+    expect(_chapter(container), OnboardingChapter.day);
+    expect(_draft(container).mood, Mood.calm);
+    expect(_draft(container).picked, isTrue);
+    controller
+      ..next()
+      ..goTo(OnboardingChapter.day);
+    expect(_draft(container).picked, isTrue);
+
+    controller.start();
+    expect(_draft(container).mood, Mood.happy);
+    expect(_draft(container).picked, isFalse);
+    expect(_draft(container).planted, isFalse);
+
+    const OnboardingDraft base = OnboardingDraft(
+      entryDate: _today,
+      regionWeek: WeekStart.monday,
+      week: WeekStart.monday,
+    );
+    final OnboardingDraft picked = base.copyWith(picked: true);
+    expect(picked == base, isFalse);
+    expect(picked.toString(), contains('picked: true'));
+    expect(picked.copyWith(picked: false), base);
+    expect(picked.copyWith(picked: false).hashCode, base.hashCode);
+  });
+
+  test(
+    'other ways opens only on a written Capture and closes on any move',
+    () async {
+      final ProviderContainer container = _startedAt(OnboardingChapter.moment);
+      final OnboardingController controller = _controller(container);
+      expect(_draft(container).showingOtherWays, isFalse);
+
+      controller.openOtherWays();
+      expect(_draft(container).showingOtherWays, isFalse);
+      controller.setNote('A');
+      controller.openOtherWays();
+      expect(_draft(container).showingOtherWays, isFalse);
+
+      controller.setNote('A first line');
+      controller.openOtherWays();
+      expect(_chapter(container), OnboardingChapter.moment);
+      expect(_draft(container).showingOtherWays, isTrue);
+      controller.closeOtherWays();
+      expect(_chapter(container), OnboardingChapter.moment);
+      expect(_draft(container).showingOtherWays, isFalse);
+
+      controller.openOtherWays();
+      await _nextAndWait(controller);
+      expect(_chapter(container), OnboardingChapter.month);
+      expect(_draft(container).showingOtherWays, isFalse);
+
+      controller.back();
+      expect(_chapter(container), OnboardingChapter.moment);
+      expect(_draft(container).showingOtherWays, isFalse);
+      controller.openOtherWays();
+      expect(_draft(container).showingOtherWays, isTrue);
+      controller.back();
+      expect(_chapter(container), OnboardingChapter.day);
+      expect(_draft(container).showingOtherWays, isFalse);
+
+      controller.openOtherWays();
+      expect(_draft(container).showingOtherWays, isFalse);
+      await _nextAndWait(controller);
+      controller.openOtherWays();
+      expect(_draft(container).showingOtherWays, isTrue);
+      controller.goTo(OnboardingChapter.day);
+      expect(_chapter(container), OnboardingChapter.day);
+      expect(_draft(container).showingOtherWays, isFalse);
+
+      await _nextAndWait(controller);
+      controller.openOtherWays();
+      controller.skipToSetup();
+      expect(_chapter(container), OnboardingChapter.theme);
+      expect(_draft(container).showingOtherWays, isFalse);
+      controller.openOtherWays();
+      expect(_draft(container).showingOtherWays, isFalse);
+
+      const OnboardingDraft base = OnboardingDraft(
+        entryDate: _today,
+        regionWeek: WeekStart.monday,
+        week: WeekStart.monday,
+      );
+      final OnboardingDraft shown = base.copyWith(showingOtherWays: true);
+      expect(shown == base, isFalse);
+      expect(shown.toString(), contains('showingOtherWays: true'));
+      expect(shown.copyWith(showingOtherWays: false), base);
+    },
+  );
 }

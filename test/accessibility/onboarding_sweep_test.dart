@@ -439,16 +439,20 @@ void main() {
             finding.id,
         ];
         final List<String> expected = <String>[
-          if (state.id.endsWith(_sidebarSuffix))
+          if (!state.id.endsWith(_sidebarSuffix)) ...<String>[
+            for (final OnboardingChapter past in OnboardingChapter.values)
+              if (past.index < OnboardingChapter.reminder.index)
+                'small-target | ${state.id} | ${past.progressName} | <root>',
             'small-target | ${state.id} | Switch to dark | <root>',
+          ],
         ];
-        expect(found, expected, reason: state.id);
+        expect(found, unorderedEquals(expected), reason: state.id);
         expect(
           <String>[
             for (final String line in baseline)
               if (line.contains(' | ${state.id} | ')) line,
           ],
-          expected,
+          unorderedEquals(expected),
           reason: '${state.id} baseline',
         );
 

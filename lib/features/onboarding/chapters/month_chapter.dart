@@ -8,7 +8,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,16 +54,21 @@ const double _sidebarLettersGap = 6;
 const double _sidebarSideGap = 22;
 const double _sidebarSideTightGap = 10;
 
-const double _bottomBarBottom = 76;
-const double _bottomBarSide = 12;
-const double _bottomBarMaxWidth = 500;
-const double _bottomBarCellGap = 4;
+const double _sidebarHeadingSide = 40;
+const double _bottomBarHeadingSide = 20;
+const double _bottomBarSide = 14;
+const double _bottomBarClearance = 12;
+const double _bottomBarCellGap = 5;
 const double _bottomBarLettersHeight = 18;
-const double _bottomBarLettersGap = 4;
-const double _bottomBarFillGap = 10;
-const EdgeInsets _bottomBarHeaderPadding = EdgeInsets.fromLTRB(6, 12, 6, 4);
+const double _bottomBarLettersGap = 5;
+const double _bottomBarValueGap = 8;
+const EdgeInsets _bottomBarHeaderPadding = EdgeInsets.fromLTRB(4, 0, 4, 8);
+const EdgeInsets _bottomBarFillPadding = EdgeInsets.fromLTRB(10, 8, 10, 0);
+const double _bottomBarSliderHeight = 36;
+const double _bottomBarSliderReach = 4;
 
 const double _target = 48;
+const double _numberFloor = 7.5;
 const double _thumbRadius = 8;
 const double _trackHeight = 4;
 const BorderRadius _sliderFocusRadius = BorderRadius.all(Radius.circular(9));
@@ -261,13 +267,13 @@ class _CellMetrics {
   );
 
   static const _CellMetrics bottomBar = _CellMetrics(
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 50,
     radius: 8,
     numberLeft: 3,
     numberTop: 2,
-    numberSize: 7.5,
-    art: 22,
+    numberSize: 9,
+    art: 30,
     artLift: 5,
     ring: 10,
     petal: Size(7, 5),
@@ -294,10 +300,7 @@ class _CellMetrics {
       radius: radius,
       numberLeft: numberLeft * factor,
       numberTop: numberTop * factor,
-      numberSize: math.max(
-        _CellMetrics.bottomBar.numberSize,
-        numberSize * factor,
-      ),
+      numberSize: math.max(_numberFloor, numberSize * factor),
       art: art * factor,
       artLift: artLift * factor,
       ring: ring * factor,
@@ -356,11 +359,7 @@ class _SidebarMonth extends StatelessWidget {
       children: <Widget>[
         const _Rise(
           duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.sidebar,
-            kicker: _kicker,
-            title: _title,
-          ),
+          child: _Heading(layout: ShellLayout.sidebar),
         ),
         Expanded(
           child: Padding(
@@ -601,6 +600,8 @@ class _SideFill extends StatelessWidget {
     return _FillBox(
       plan: plan,
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+      sliderHeight: _target,
+      sliderReach: 0,
       onFill: onFill,
       label: monthSliderLabelSidebar,
       top: Text(
@@ -721,95 +722,62 @@ class _BottomBarMonth extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const _Rise(
-          duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.bottomBar,
-            kicker: _kicker,
-            title: _title,
+    final EdgeInsets insets = MediaQuery.paddingOf(context);
+    final double gesture = math.max(
+      insets.bottom,
+      MediaQuery.viewPaddingOf(context).bottom,
+    );
+    return Padding(
+      padding: EdgeInsets.only(
+        top: insets.top + onboardingPhoneTitleTop,
+        bottom: gesture + onboardingControlBarReserve + _bottomBarClearance,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const _Rise(
+            duration: _headingRise,
+            child: _Heading(layout: ShellLayout.bottomBar),
           ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              _bottomBarSide,
-              0,
-              _bottomBarSide,
-              _bottomBarBottom,
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _bottomBarSide),
+              child: LayoutBuilder(builder: _calendar),
             ),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: _bottomBarMaxWidth),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _bottomBarSide),
+            child: NoSwipe(
+              child: _FillBox(
+                plan: plan,
+                padding: _bottomBarFillPadding,
+                sliderHeight: _bottomBarSliderHeight,
+                sliderReach: _bottomBarSliderReach,
+                onFill: onFill,
+                label: monthSliderLabelBottomBar,
+                top: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: <Widget>[
-                    Padding(
-                      padding: _bottomBarHeaderPadding,
-                      child: _MonthHeader(
-                        plan: plan,
-                        nameStyle: TextStyle(
-                          fontFamily: TypographyTokens.serif,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: Text(
+                        monthSliderLabelBottomBar,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.accent,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
                           color: colors.ink,
                         ),
-                        countStyle: TextStyle(
-                          fontFamily: TypographyTokens.sans,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: colors.muted,
-                        ),
                       ),
                     ),
-                    _Letters(
-                      letters: plan.letters,
-                      gap: _bottomBarCellGap,
-                      height: _bottomBarLettersHeight,
+                    const SizedBox(width: _bottomBarValueGap),
+                    Text(
+                      plan.fillLabel,
                       style: TextStyle(
-                        fontFamily: TypographyTokens.sans,
-                        fontSize: 9,
+                        fontFamily: TypographyTokens.accent,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: colors.muted,
-                      ),
-                    ),
-                    const SizedBox(height: _bottomBarLettersGap),
-                    Flexible(child: LayoutBuilder(builder: _grid)),
-                    const SizedBox(height: _bottomBarFillGap),
-                    _FillBox(
-                      plan: plan,
-                      padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
-                      onFill: onFill,
-                      label: monthSliderLabelBottomBar,
-                      top: Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: <Widget>[
-                          Expanded(
-                            child: Text(
-                              monthSliderLabelBottomBar,
-                              style: TextStyle(
-                                fontFamily: TypographyTokens.accent,
-                                fontSize: 17,
-                                fontWeight: FontWeight.w600,
-                                color: colors.ink,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            plan.fillLabel,
-                            style: TextStyle(
-                              fontFamily: TypographyTokens.accent,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: colors.accentInk,
-                            ),
-                          ),
-                        ],
+                        color: colors.accentInk,
                       ),
                     ),
                   ],
@@ -817,8 +785,59 @@ class _BottomBarMonth extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _calendar(BuildContext context, BoxConstraints area) {
+    final FieldNotesColors colors = context.colors;
+    final double width = math.min(
+      area.maxWidth,
+      _CellMetrics.bottomBar.width * _daysPerWeek +
+          _bottomBarCellGap * (_daysPerWeek - 1),
+    );
+    return Center(
+      child: SizedBox(
+        width: width,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Padding(
+              padding: _bottomBarHeaderPadding,
+              child: _MonthHeader(
+                plan: plan,
+                nameStyle: TextStyle(
+                  fontFamily: TypographyTokens.serif,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: colors.ink,
+                ),
+                countStyle: TextStyle(
+                  fontFamily: TypographyTokens.sans,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: colors.muted,
+                ),
+              ),
+            ),
+            _Letters(
+              letters: plan.letters,
+              gap: _bottomBarCellGap,
+              height: _bottomBarLettersHeight,
+              style: TextStyle(
+                fontFamily: TypographyTokens.sans,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: colors.muted,
+              ),
+            ),
+            const SizedBox(height: _bottomBarLettersGap),
+            Flexible(child: LayoutBuilder(builder: _grid)),
+          ],
         ),
-      ],
+      ),
     );
   }
 
@@ -829,7 +848,7 @@ class _BottomBarMonth extends StatelessWidget {
     final double cellHeight = math.max(
       0.0,
       math.min(
-        cellWidth,
+        _CellMetrics.bottomBar.height,
         (area.maxHeight - (rows - 1) * _bottomBarCellGap) / rows,
       ),
     );
@@ -837,6 +856,61 @@ class _BottomBarMonth extends StatelessWidget {
       plan: plan,
       gap: _bottomBarCellGap,
       metrics: _CellMetrics.bottomBar.fit(width: cellWidth, height: cellHeight),
+    );
+  }
+}
+
+class _Heading extends StatelessWidget {
+  const _Heading({required this.layout});
+
+  final ShellLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool sidebar = layout == ShellLayout.sidebar;
+    final TextAlign align = sidebar ? TextAlign.center : TextAlign.start;
+    return Padding(
+      padding: sidebar
+          ? const EdgeInsets.fromLTRB(
+              _sidebarHeadingSide,
+              onboardingTitleTop,
+              _sidebarHeadingSide,
+              0,
+            )
+          : const EdgeInsets.symmetric(horizontal: _bottomBarHeadingSide),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: sidebar
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            _kicker,
+            textAlign: align,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? 21 : 18,
+              fontWeight: FontWeight.w600,
+              color: colors.accentInk,
+            ),
+          ),
+          Semantics(
+            header: true,
+            child: Text(
+              _title,
+              textAlign: align,
+              style: TextStyle(
+                fontFamily: TypographyTokens.serif,
+                fontSize: sidebar ? 44 : 28,
+                fontWeight: FontWeight.w500,
+                height: sidebar ? 1.05 : 1.08,
+                color: colors.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1146,6 +1220,8 @@ class _FillBox extends StatelessWidget {
   const _FillBox({
     required this.plan,
     required this.padding,
+    required this.sliderHeight,
+    required this.sliderReach,
     required this.onFill,
     required this.label,
     required this.top,
@@ -1154,6 +1230,8 @@ class _FillBox extends StatelessWidget {
 
   final _MonthPlan plan;
   final EdgeInsets padding;
+  final double sliderHeight;
+  final double sliderReach;
   final ValueChanged<double> onFill;
   final String label;
   final Widget top;
@@ -1185,9 +1263,10 @@ class _FillBox extends StatelessWidget {
             children: <Widget>[
               ExcludeSemantics(child: top),
               _LookAhead(
-                key: monthSliderKey,
                 plan: plan,
                 label: label,
+                height: sliderHeight,
+                reach: sliderReach,
                 onFill: onFill,
               ),
               if (end != null) ExcludeSemantics(child: end),
@@ -1222,14 +1301,17 @@ const Map<ShortcutActivator, Intent> _sliderKeys = <ShortcutActivator, Intent>{
 
 class _LookAhead extends StatelessWidget {
   const _LookAhead({
-    super.key,
     required this.plan,
     required this.label,
+    required this.height,
+    required this.reach,
     required this.onFill,
   });
 
   final _MonthPlan plan;
   final String label;
+  final double height;
+  final double reach;
   final ValueChanged<double> onFill;
 
   void _seek(double dx, double width) {
@@ -1287,16 +1369,20 @@ class _LookAhead extends StatelessWidget {
                     _seek(details.localPosition.dx, width),
                 onHorizontalDragUpdate: (DragUpdateDetails details) =>
                     _seek(details.localPosition.dx, width),
-                child: FocusRing(
-                  onPressed: null,
-                  borderRadius: _sliderFocusRadius,
-                  child: SizedBox(
-                    width: width,
-                    height: _target,
-                    child: CustomPaint(
-                      painter: _TrackPainter(
-                        fraction: plan.fill,
-                        track: colors.ink16,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: reach),
+                  child: FocusRing(
+                    onPressed: null,
+                    borderRadius: _sliderFocusRadius,
+                    child: SizedBox(
+                      key: monthSliderKey,
+                      width: width,
+                      height: height,
+                      child: CustomPaint(
+                        painter: _TrackPainter(
+                          fraction: plan.fill,
+                          track: colors.ink16,
+                        ),
                       ),
                     ),
                   ),

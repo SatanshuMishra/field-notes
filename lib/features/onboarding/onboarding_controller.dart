@@ -41,6 +41,7 @@ class OnboardingDraft {
     this.planted = false,
     this.grown = false,
     this.mood = Mood.happy,
+    this.picked = false,
     this.noteText = '',
     this.noteEntryId,
     this.noteSave = NoteSaveState.idle,
@@ -49,6 +50,7 @@ class OnboardingDraft {
     this.monthReached = false,
     this.yearDay = 0,
     this.yearScrubbed = false,
+    this.showingOtherWays = false,
     this.reminder = ReminderChoice.evening,
     this.notificationsOff = false,
     this.petalFlower,
@@ -59,6 +61,7 @@ class OnboardingDraft {
   final bool planted;
   final bool grown;
   final Mood mood;
+  final bool picked;
   final String noteText;
   final String? noteEntryId;
   final NoteSaveState noteSave;
@@ -67,6 +70,7 @@ class OnboardingDraft {
   final bool monthReached;
   final int yearDay;
   final bool yearScrubbed;
+  final bool showingOtherWays;
   final ReminderChoice reminder;
   final bool notificationsOff;
   final FlowerKind? petalFlower;
@@ -79,6 +83,7 @@ class OnboardingDraft {
     bool? planted,
     bool? grown,
     Mood? mood,
+    bool? picked,
     String? noteText,
     ValueGetter<String?>? noteEntryId,
     NoteSaveState? noteSave,
@@ -87,6 +92,7 @@ class OnboardingDraft {
     bool? monthReached,
     int? yearDay,
     bool? yearScrubbed,
+    bool? showingOtherWays,
     ReminderChoice? reminder,
     bool? notificationsOff,
     ValueGetter<FlowerKind?>? petalFlower,
@@ -98,6 +104,7 @@ class OnboardingDraft {
     planted: planted ?? this.planted,
     grown: grown ?? this.grown,
     mood: mood ?? this.mood,
+    picked: picked ?? this.picked,
     noteText: noteText ?? this.noteText,
     noteEntryId: noteEntryId == null ? this.noteEntryId : noteEntryId(),
     noteSave: noteSave ?? this.noteSave,
@@ -106,6 +113,7 @@ class OnboardingDraft {
     monthReached: monthReached ?? this.monthReached,
     yearDay: yearDay ?? this.yearDay,
     yearScrubbed: yearScrubbed ?? this.yearScrubbed,
+    showingOtherWays: showingOtherWays ?? this.showingOtherWays,
     reminder: reminder ?? this.reminder,
     notificationsOff: notificationsOff ?? this.notificationsOff,
     petalFlower: petalFlower == null ? this.petalFlower : petalFlower(),
@@ -122,6 +130,7 @@ class OnboardingDraft {
           other.planted == planted &&
           other.grown == grown &&
           other.mood == mood &&
+          other.picked == picked &&
           other.noteText == noteText &&
           other.noteEntryId == noteEntryId &&
           other.noteSave == noteSave &&
@@ -130,6 +139,7 @@ class OnboardingDraft {
           other.monthReached == monthReached &&
           other.yearDay == yearDay &&
           other.yearScrubbed == yearScrubbed &&
+          other.showingOtherWays == showingOtherWays &&
           other.reminder == reminder &&
           other.notificationsOff == notificationsOff &&
           other.petalFlower == petalFlower &&
@@ -138,11 +148,12 @@ class OnboardingDraft {
           other.finishError == finishError;
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll(<Object?>[
     entryDate,
     planted,
     grown,
     mood,
+    picked,
     noteText,
     noteEntryId,
     noteSave,
@@ -151,22 +162,24 @@ class OnboardingDraft {
     monthReached,
     yearDay,
     yearScrubbed,
+    showingOtherWays,
     reminder,
     notificationsOff,
     petalFlower,
     regionWeek,
     week,
     finishError,
-  );
+  ]);
 
   @override
   String toString() =>
       'OnboardingDraft(entryDate: $entryDate, planted: $planted, '
-      'grown: $grown, mood: $mood, noteText: $noteText, '
+      'grown: $grown, mood: $mood, picked: $picked, noteText: $noteText, '
       'noteEntryId: $noteEntryId, noteSave: $noteSave, '
       'noteError: $noteError, monthFill: $monthFill, '
       'monthReached: $monthReached, yearDay: $yearDay, '
-      'yearScrubbed: $yearScrubbed, reminder: $reminder, '
+      'yearScrubbed: $yearScrubbed, showingOtherWays: $showingOtherWays, '
+      'reminder: $reminder, '
       'notificationsOff: $notificationsOff, petalFlower: $petalFlower, '
       'regionWeek: $regionWeek, week: $week, finishError: $finishError)';
 }
@@ -250,7 +263,6 @@ class OnboardingController extends _$OnboardingController {
   Future<void>? _lineSaving;
   String? _lineEntryId;
   Future<void> _moodSaving = Future<void>.value();
-  bool _moodChosen = false;
   bool _asking = false;
   bool _finishing = false;
 
@@ -271,7 +283,6 @@ class OnboardingController extends _$OnboardingController {
     _pause = null;
     _lineQueued = null;
     _lineEntryId = null;
-    _moodChosen = false;
     final WeekStart region = suggestWeekStart(
       ref.read(onboardingCountryCodeProvider),
     );
@@ -295,12 +306,9 @@ class OnboardingController extends _$OnboardingController {
     (OnboardingDraft draft) => draft.copyWith(petalFlower: () => mood.flower),
   );
 
-  void chooseMood(Mood mood) {
-    if (state is OnboardingFlowRunning) {
-      _moodChosen = true;
-    }
-    _edit((OnboardingDraft draft) => draft.copyWith(mood: mood));
-  }
+  void chooseMood(Mood mood) => _edit(
+    (OnboardingDraft draft) => draft.copyWith(mood: mood, picked: true),
+  );
 
   void setNote(String text) {
     if (state is! OnboardingFlowRunning) {
@@ -389,6 +397,20 @@ class OnboardingController extends _$OnboardingController {
       _open(target);
     }
   }
+
+  void openOtherWays() {
+    if (state
+        case OnboardingFlowRunning(
+          chapter: OnboardingChapter.moment,
+          :final OnboardingDraft draft,
+        )
+        when _taskDone(OnboardingChapter.moment, draft)) {
+      _edit((OnboardingDraft draft) => draft.copyWith(showingOtherWays: true));
+    }
+  }
+
+  void closeOtherWays() =>
+      _edit((OnboardingDraft draft) => draft.copyWith(showingOtherWays: false));
 
   void skipToSetup() {
     if (state
@@ -555,7 +577,7 @@ class OnboardingController extends _$OnboardingController {
     if (draft == null) {
       return;
     }
-    final Mood? mood = _moodChosen ? null : saved.mood;
+    final Mood? mood = draft.picked ? null : saved.mood;
     final Entry? note = _lineEntryId == null && draft.noteText.isEmpty
         ? saved.note
         : null;
@@ -710,7 +732,10 @@ class OnboardingController extends _$OnboardingController {
 
   void _open(OnboardingChapter chapter) {
     if (state case final OnboardingFlowRunning running) {
-      state = running.copyWith(chapter: chapter);
+      state = running.copyWith(
+        chapter: chapter,
+        draft: running.draft.copyWith(showingOtherWays: false),
+      );
     }
   }
 

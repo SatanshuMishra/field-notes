@@ -20,6 +20,16 @@ import '../../../app/support/app_shell_harness.dart';
 import '../../capture/core/capture_test_support.dart' show newTestDatabase;
 
 const String _entryDate = '2026-10-14';
+const String _kicker = 'a day';
+const String _title = 'Every feeling grows its own flower.';
+const String _subtitle = 'There are ten. Pick the one that fits today.';
+const List<String> _gone = <String>[
+  'How was today, honestly?',
+  "that's your peony from earlier · pick another if today felt different",
+  'your peony · swipe for nine more →',
+  'one flower a day · nobody else sees this',
+  'one flower a day · swipe for more →',
+];
 
 const Size _sidebarArea = Size(1280, 758);
 const Size _bottomBarArea = Size(360, 740);
@@ -27,17 +37,6 @@ const Size _bottomBarArea = Size(360, 740);
 Size _areaFor(ShellLayout layout) => switch (layout) {
   ShellLayout.sidebar => _sidebarArea,
   ShellLayout.bottomBar => _bottomBarArea,
-};
-
-String _happyCaption(ShellLayout layout) => switch (layout) {
-  ShellLayout.sidebar =>
-    "that's your peony from earlier · pick another if today felt different",
-  ShellLayout.bottomBar => 'your peony · swipe for nine more →',
-};
-
-String _otherCaption(ShellLayout layout) => switch (layout) {
-  ShellLayout.sidebar => 'one flower a day · nobody else sees this',
-  ShellLayout.bottomBar => 'one flower a day · swipe for more →',
 };
 
 Future<void> _onLayout(ShellLayout layout, Future<void> Function() body) async {
@@ -115,34 +114,17 @@ Future<void> _run(WidgetTester tester, Duration total) async {
   }
 }
 
-Mood _draftMood(WidgetTester tester) =>
+OnboardingDraft _draft(WidgetTester tester) =>
     switch (ProviderScope.containerOf(tester.element(find.byType(DayChapter)))
         .read(onboardingControllerProvider)) {
-      OnboardingFlowRunning(:final OnboardingDraft draft) => draft.mood,
+      OnboardingFlowRunning(:final OnboardingDraft draft) => draft,
       OnboardingFlowHidden() ||
       OnboardingFlowMap() => throw StateError('onboarding is not running'),
     };
 
 Finder _tile(Mood mood) => find.byKey(dayMoodKey(mood));
 
-Finder get _row => find.byKey(dayMoodRowKey);
-
-Finder _plantPaint(FlowerKind kind) => find.descendant(
-  of: find.byKey(dayPlantKey(kind)),
-  matching: find.byType(CustomPaint),
-);
-
-Finder _inCard(String text) =>
-    find.descendant(of: find.byKey(dayCardKey), matching: find.text(text));
-
-DayPlantPainter _plant(WidgetTester tester, FlowerKind kind) =>
-    tester.widget<CustomPaint>(_plantPaint(kind)).painter! as DayPlantPainter;
-
-ScrollPosition _rowPosition(WidgetTester tester) => tester
-    .state<ScrollableState>(
-      find.descendant(of: _row, matching: find.byType(Scrollable)),
-    )
-    .position;
+Finder get _grid => find.byKey(dayMoodGridKey);
 
 bool _isSelectedFace(Widget widget) {
   if (widget is! AnimatedContainer) {
@@ -154,61 +136,90 @@ bool _isSelectedFace(Widget widget) {
       decoration.border == Border.all(color: Palette.coral, width: 2);
 }
 
-double _faceOpacity(WidgetTester tester, Mood mood) => tester
+double _opacityAbove(WidgetTester tester, Finder finder) => tester
     .widgetList<Opacity>(
-      find.ancestor(
-        of: find.descendant(
-          of: _tile(mood),
-          matching: find.byType(FlowerBloom),
-        ),
-        matching: find.byType(Opacity),
-      ),
+      find.ancestor(of: finder, matching: find.byType(Opacity)),
     )
     .fold(1, (double total, Opacity opacity) => total * opacity.opacity);
 
-void _expectTiles(WidgetTester tester) {
+double _faceOpacity(WidgetTester tester, Mood mood) => _opacityAbove(
+  tester,
+  find.descendant(of: _tile(mood), matching: find.byType(FlowerBloom)),
+);
+
+void _expectCopy() {
+  expect(find.text(_kicker), findsOneWidget);
+  expect(find.text(_title), findsOneWidget);
+  expect(find.text(_subtitle), findsOneWidget);
+  for (final String text in _gone) {
+    expect(find.text(text), findsNothing, reason: text);
+  }
+}
+
+void _expectTiles(WidgetTester tester, ShellLayout layout) {
   expect(
-    find.descendant(of: _row, matching: find.byType(FlowerBloom)),
+    find.descendant(of: _grid, matching: find.byType(FlowerBloom)),
     findsNWidgets(moodOrder.length),
   );
-  double? lastX;
-  for (final Mood mood in moodOrder) {
-    expect(_tile(mood), findsOneWidget);
+  final List<Rect> tiles = <Rect>[
+    for (final Mood mood in moodOrder) tester.getRect(_tile(mood)),
+  ];
+  for (final (int index, Mood mood) in moodOrder.indexed) {
     expect(
       find.descendant(of: _tile(mood), matching: find.text(mood.label)),
       findsOneWidget,
     );
-    expect(
-      tester
-          .widget<FlowerBloom>(
-            find.descendant(
-              of: _tile(mood),
-              matching: find.byType(FlowerBloom),
-            ),
-          )
-          .kind,
-      mood.flower,
+    final FlowerBloom bloom = tester.widget<FlowerBloom>(
+      find.descendant(of: _tile(mood), matching: find.byType(FlowerBloom)),
     );
-    final Offset centre = tester.getCenter(_tile(mood));
-    if (lastX != null) {
-      expect(centre.dx, greaterThan(lastX));
-    }
-    expect(
-      centre.dy,
-      moreOrLessEquals(tester.getCenter(_tile(Mood.happy)).dy, epsilon: 0.5),
-    );
-    final Size size = tester.getSize(_tile(mood));
-    expect(size.width, greaterThanOrEqualTo(48));
-    expect(size.height, greaterThanOrEqualTo(48));
-    lastX = centre.dx;
+    expect(bloom.kind, mood.flower);
+    expect(tiles[index].width, greaterThanOrEqualTo(48), reason: mood.label);
+    expect(tiles[index].height, greaterThanOrEqualTo(48), reason: mood.label);
+  }
+  switch (layout) {
+    case ShellLayout.sidebar:
+      for (int index = 1; index < tiles.length; index++) {
+        expect(tiles[index].center.dy, tiles.first.center.dy);
+        expect(tiles[index].left - tiles[index - 1].right, 8);
+      }
+      expect(tiles.first.size, const Size(76, 88));
+      expect(
+        (tiles.first.left + tiles.last.right) / 2,
+        moreOrLessEquals(_sidebarArea.width / 2),
+      );
+      expect(tiles.first.bottom, _sidebarArea.height - 74);
+    case ShellLayout.bottomBar:
+      for (int index = 0; index < tiles.length; index++) {
+        final int column = index % 5;
+        final int row = index ~/ 5;
+        expect(tiles[index].height, 72);
+        expect(
+          tiles[index].center.dx,
+          moreOrLessEquals(tiles[column].center.dx),
+        );
+        expect(
+          tiles[index].center.dy,
+          moreOrLessEquals(tiles[row * 5].center.dy),
+        );
+        if (column > 0) {
+          expect(
+            tiles[index].left - tiles[index - 1].right,
+            moreOrLessEquals(7),
+          );
+        }
+      }
+      expect(tiles[5].top - tiles[0].bottom, moreOrLessEquals(7));
+      expect(tiles.first.left, 12);
+      expect(tiles[4].right, moreOrLessEquals(_bottomBarArea.width - 12));
+      expect(tiles.last.bottom, moreOrLessEquals(_bottomBarArea.height - 80));
   }
 }
 
 void _expectSelected(WidgetTester tester, Mood chosen) {
-  expect(_draftMood(tester), chosen);
+  expect(_draft(tester).mood, chosen);
   expect(
     find.descendant(
-      of: _row,
+      of: _grid,
       matching: find.byWidgetPredicate(_isSelectedFace),
     ),
     findsOneWidget,
@@ -231,33 +242,9 @@ void _expectSelected(WidgetTester tester, Mood chosen) {
   );
 }
 
-void _expectPlant(WidgetTester tester, Mood mood, {required double growth}) {
-  for (final Mood other in moodOrder) {
-    expect(
-      find.byKey(dayPlantKey(other.flower)),
-      other == mood ? findsOneWidget : findsNothing,
-    );
-  }
-  final DayPlantPainter painter = _plant(tester, mood.flower);
-  expect(painter.spec.kind, mood.flower);
-  expect(painter.growth, growth);
-  expect(_inCard(mood.label), findsOneWidget);
-  expect(_inCard(mood.flower.label.toLowerCase()), findsOneWidget);
-  final Rect plant = tester.getRect(_plantPaint(mood.flower));
-  final Rect soil = tester.getRect(find.byKey(daySoilKey));
-  expect(plant.bottom, greaterThan(soil.top));
-  expect(plant.bottom, lessThan(soil.bottom));
-  expect(tester.getRect(find.byKey(dayCardKey)).left, greaterThan(plant.right));
-}
-
-Future<void> _bringIntoView(WidgetTester tester, Mood mood) async {
-  await tester.ensureVisible(_tile(mood));
-  await _run(tester, const Duration(seconds: 1));
-}
-
 void main() {
   testWidgets(
-    'a day lists ten moods, starts on happy and grows the chosen plant',
+    'a day lists ten moods on the soil, starts on happy and picks without saving',
     (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       try {
@@ -266,10 +253,10 @@ void main() {
             final db.AppDatabase database = await _pumpDay(tester, layout);
             await _run(tester, const Duration(seconds: 3));
 
-            expect(find.text('a day'), findsOneWidget);
-            expect(find.text('How was today, honestly?'), findsOneWidget);
-            _expectTiles(tester);
+            _expectCopy();
+            _expectTiles(tester, layout);
             _expectSelected(tester, Mood.happy);
+            expect(_draft(tester).picked, isFalse);
             expect(
               tester.getSemantics(_tile(Mood.love)),
               isSemantics(
@@ -278,52 +265,16 @@ void main() {
                 isSelected: false,
               ),
             );
-            expect(find.text(_happyCaption(layout)), findsOneWidget);
-            expect(find.text(_otherCaption(layout)), findsNothing);
-            _expectPlant(tester, Mood.happy, growth: 1);
-            expect(_inCard('Happy'), findsOneWidget);
-            expect(_inCard('peony'), findsOneWidget);
-
-            if (layout == ShellLayout.bottomBar) {
-              final ScrollPosition row = _rowPosition(tester);
-              expect(row.pixels, 0);
-              expect(row.maxScrollExtent, greaterThan(0));
-              expect(
-                tester.getRect(_tile(Mood.angry)).left,
-                greaterThan(_bottomBarArea.width),
-              );
-              await tester.fling(_row, const Offset(-160, 0), 600);
-              await _run(tester, const Duration(seconds: 2));
-              expect(row.pixels, greaterThan(0));
-              final double middle = _bottomBarArea.width / 2;
-              expect(
-                row.pixels == row.maxScrollExtent ||
-                    moodOrder.any(
-                      (Mood mood) =>
-                          (tester.getCenter(_tile(mood)).dx - middle).abs() <
-                          0.5,
-                    ),
-                isTrue,
-              );
-              await _bringIntoView(tester, Mood.calm);
-            }
 
             await tester.tap(_tile(Mood.calm));
             await tester.pump();
-
             _expectSelected(tester, Mood.calm);
-            expect(find.text(_otherCaption(layout)), findsOneWidget);
-            expect(find.text(_happyCaption(layout)), findsNothing);
-            expect(_plant(tester, FlowerKind.lavender).growth, lessThan(1));
-            await tester.pump(const Duration(milliseconds: 300));
-            expect(_plant(tester, FlowerKind.lavender).growth, greaterThan(0));
-            expect(_plant(tester, FlowerKind.lavender).growth, lessThan(1));
-            await _run(tester, const Duration(seconds: 1));
-            _expectPlant(tester, Mood.calm, growth: 1);
-            expect(_inCard('Calm'), findsOneWidget);
-            expect(_inCard('lavender'), findsOneWidget);
-            expect(_inCard('Happy'), findsNothing);
-            expect(_inCard('peony'), findsNothing);
+            expect(_draft(tester).picked, isTrue);
+
+            await tester.tap(_tile(Mood.happy));
+            await tester.pump();
+            _expectSelected(tester, Mood.happy);
+            expect(_draft(tester).picked, isTrue);
 
             await _expectNothingSaved(database);
             await _unmount(tester, database);
@@ -336,7 +287,7 @@ void main() {
   );
 
   testWidgets(
-    'a day pops its tiles in turn and skips every entrance with reduce motion',
+    'a day rises its words then its tiles and skips every entrance with reduce motion',
     (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       try {
@@ -344,13 +295,15 @@ void main() {
           await _onLayout(layout, () async {
             final db.AppDatabase database = await _pumpDay(tester, layout);
             await tester.pump();
-            await tester.pump(const Duration(milliseconds: 520));
+            await tester.pump(const Duration(milliseconds: 550));
+            expect(_opacityAbove(tester, find.text(_title)), 0);
+            expect(_faceOpacity(tester, Mood.happy), 0);
+            await tester.pump(const Duration(milliseconds: 500));
+            expect(_opacityAbove(tester, find.text(_title)), greaterThan(0));
             expect(_faceOpacity(tester, Mood.happy), greaterThan(0));
-            expect(_faceOpacity(tester, Mood.angry), 0);
-            expect(_plant(tester, FlowerKind.peony).growth, greaterThan(0));
-            expect(_plant(tester, FlowerKind.peony).growth, lessThan(1));
-            await _run(tester, const Duration(seconds: 2));
-            expect(_plant(tester, FlowerKind.peony).growth, 1);
+            expect(_faceOpacity(tester, Mood.happy), lessThan(1));
+            await _run(tester, const Duration(seconds: 1));
+            expect(_opacityAbove(tester, find.text(_title)), 1);
             for (final Mood mood in moodOrder) {
               expect(_faceOpacity(tester, mood), 1);
             }
@@ -367,44 +320,18 @@ void main() {
             await tester.pump();
 
             expect(tester.hasRunningAnimations, isFalse);
+            expect(_opacityAbove(tester, find.text(_title)), 1);
+            expect(_opacityAbove(tester, find.text(_subtitle)), 1);
             for (final Mood mood in moodOrder) {
               expect(_faceOpacity(tester, mood), 1);
             }
-            expect(
-              tester
-                  .widgetList<Opacity>(
-                    find.ancestor(
-                      of: find.text('How was today, honestly?'),
-                      matching: find.byType(Opacity),
-                    ),
-                  )
-                  .map((Opacity opacity) => opacity.opacity),
-              everyElement(1),
-            );
-            expect(
-              tester
-                  .widgetList<Opacity>(
-                    find.ancestor(
-                      of: find.byKey(dayCardKey),
-                      matching: find.byType(Opacity),
-                    ),
-                  )
-                  .map((Opacity opacity) => opacity.opacity),
-              everyElement(1),
-            );
             _expectSelected(tester, Mood.warm);
-            expect(find.text(_otherCaption(layout)), findsOneWidget);
-            _expectPlant(tester, Mood.warm, growth: 1);
 
-            if (layout == ShellLayout.bottomBar) {
-              await _bringIntoView(tester, Mood.angry);
-            }
             await tester.tap(_tile(Mood.angry));
             await tester.pump();
 
             expect(tester.hasRunningAnimations, isFalse);
             _expectSelected(tester, Mood.angry);
-            _expectPlant(tester, Mood.angry, growth: 1);
             await _expectNothingSaved(database);
             await _unmount(tester, database);
           });

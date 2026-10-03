@@ -1,21 +1,29 @@
+import 'dart:math' as math;
+
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/empty_state.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/icons/flame_icon.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/streak/streak.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart' show Icons;
 import 'package:flutter/widgets.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 const String _kicker = 'one last thing';
 const String _title = "Here's where everything lives.";
+const String _subtitle = 'Tap a row to see it in the app.';
+const String _headerTitle = 'Today';
+
+const int _streakCount = 4;
 
 Key tourLineKey(int number) => ValueKey<String>('tour-line-$number');
 Key tourBadgeKey(int number) => ValueKey<String>('tour-badge-$number');
@@ -36,18 +44,51 @@ const List<_Place> _sidebarPlaces = <_Place>[
   (title: 'Meadow', line: 'Your year in bloom. Each flower is a day.'),
   (title: 'Search', line: 'Find any memory by a word, a mood or a date.'),
   (
+    title: 'Streak',
+    line: 'Days in a row, in the sidebar. Miss one and it waits for you.',
+  ),
+  (
     title: 'Settings',
-    line: 'Theme, reminders and your week. Change them anytime.',
+    line: 'The gear at the foot of the sidebar: theme, reminders, your week.',
   ),
 ];
 
-const List<_Place> _bottomBarPlaces = <_Place>[
-  (title: 'Today', line: 'Your day, its mood and its logs.'),
-  (title: 'Calendar', line: "Every day you've kept."),
-  (title: 'New log', line: 'Write, speak, film or add a photo.'),
-  (title: 'Meadow', line: 'Your year in bloom.'),
-  (title: 'Search', line: 'Find any memory.'),
-  (title: 'Settings', line: 'The gear on Today: theme, reminders, week.'),
+enum _Mark { home, calendar, add, meadow, search, streak, gear }
+
+typedef _PhonePlace = ({String title, String line, _Mark mark});
+
+const List<_PhonePlace> _bottomBarPlaces = <_PhonePlace>[
+  (title: 'Today', line: 'Your day, its mood and its logs.', mark: _Mark.home),
+  (
+    title: 'Calendar',
+    line: 'A month of flowers. Swipe to change month.',
+    mark: _Mark.calendar,
+  ),
+  (
+    title: 'New log',
+    line: 'Write, speak, film or add a photo.',
+    mark: _Mark.add,
+  ),
+  (
+    title: 'Meadow',
+    line: 'Your year in bloom, full screen.',
+    mark: _Mark.meadow,
+  ),
+  (
+    title: 'Search',
+    line: 'The field sits at the bottom, by your thumb.',
+    mark: _Mark.search,
+  ),
+  (
+    title: 'Streak',
+    line: 'Days in a row, top right of every page.',
+    mark: _Mark.streak,
+  ),
+  (
+    title: 'Settings',
+    line: 'The gear beside it: theme, reminders, week.',
+    mark: _Mark.gear,
+  ),
 ];
 
 typedef _NavPlace = ({String label, NavGlyph glyph});
@@ -59,9 +100,13 @@ const List<_NavPlace> _sidebarNav = <_NavPlace>[
   (label: 'Search', glyph: NavGlyph.search),
 ];
 
-const int _sidebarGearNumber = 5;
+const int _sidebarStreakNumber = 5;
+const int _sidebarGearNumber = 6;
+const int _bottomBarFirstNumber = 1;
 const int _bottomBarAddNumber = 3;
-const int _bottomBarGearNumber = 6;
+const int _bottomBarSlots = 5;
+const int _bottomBarStreakNumber = 6;
+const int _bottomBarGearNumber = 7;
 
 const Map<int, ShellDestination> _bottomBarSelection = <int, ShellDestination>{
   1: ShellDestination.today,
@@ -71,6 +116,8 @@ const Map<int, ShellDestination> _bottomBarSelection = <int, ShellDestination>{
 };
 
 const Color _miniatureDrop = Color(0x66281C12);
+const Color _streakFlame = Color(0xFFE0863C);
+const Color _ring = Color.fromRGBO(199, 106, 84, 0.25);
 
 const double _outline = 1.5;
 const double _badgeSidebar = 20;
@@ -78,32 +125,50 @@ const double _badgeBottomBar = 18;
 const double _badgeFontSidebar = 11;
 const double _badgeFontBottomBar = 10;
 
+const double _sidebarHeadingSide = 40;
 const double _sidebarMargin = 40;
-const double _sidebarBodyGap = 52;
+const double _sidebarBodyGap = 36;
 const double _sidebarBottom = 72;
 const double _sidebarColumnsGap = 40;
 const double _sidebarListWidth = 340;
 const double _sidebarLineGap = 6;
 
-const double _bottomBarSide = 16;
-const double _bottomBarListTop = 12;
-const double _bottomBarBottom = 76;
-const double _bottomBarLineGap = 4;
-const double _bottomBarNavGap = 16;
-
-const double _lineMinHeight = 48;
-const BorderRadius _lineRadius = BorderRadius.all(Radius.circular(12));
+const double _sidebarLineMinHeight = 48;
+const BorderRadius _sidebarLineRadius = BorderRadius.all(Radius.circular(12));
 const EdgeInsets _sidebarLinePadding = EdgeInsets.symmetric(
   horizontal: 12,
-  vertical: 10,
-);
-const EdgeInsets _bottomBarLinePadding = EdgeInsets.symmetric(
-  horizontal: 9,
-  vertical: 7,
+  vertical: 9,
 );
 const double _sidebarLineInnerGap = 12;
-const double _bottomBarLineInnerGap = 10;
 const double _sidebarLineTextGap = 2;
+
+const double _bottomBarHeadingSide = 20;
+const double _bottomBarSubtitleGap = 4;
+const double _bottomBarSectionGap = 10;
+const double _bottomBarBottomGap = 10;
+const double _bottomBarSide = 12;
+
+const double _headerHeight = 52;
+const EdgeInsets _headerPadding = EdgeInsets.fromLTRB(14, 0, 6, 0);
+const BorderRadius _headerRadius = BorderRadius.all(Radius.circular(14));
+const double _headerTrailingGap = 4;
+const double _headerGear = 36;
+const double _headerGearGlyph = 20;
+const double _ringSpread = 4;
+
+const double _rowGap = 2;
+const double _rowMinHeight = 50;
+const EdgeInsets _rowPadding = EdgeInsets.symmetric(
+  horizontal: 10,
+  vertical: 5,
+);
+const BorderRadius _rowRadius = BorderRadius.all(Radius.circular(14));
+const double _rowIconBox = 36;
+const double _rowIconGlyph = 17;
+const double _rowInnerGap = 12;
+
+const double _captureExtent = 46;
+const double _captureRing = 4;
 
 const double _miniatureWidth = 540;
 const double _miniatureHeight = 400;
@@ -132,6 +197,8 @@ const EdgeInsets _navRowPadding = EdgeInsets.symmetric(
 const BorderRadius _navRowRadius = BorderRadius.all(Radius.circular(10));
 const double _navRowIcon = 15;
 const double _navRowInnerGap = 9;
+const double _streakBadgeInset = 10;
+const double _streakGearGap = 10;
 const double _gearBox = 30;
 const double _gearBoxGlyph = 14;
 const BorderRadius _gearBoxRadius = BorderRadius.all(Radius.circular(8));
@@ -149,15 +216,11 @@ const double _miniatureCardLinesGap = 6;
 const double _miniatureBoxHeight = 44;
 const double _miniatureBoxRadius = 10;
 
-const double _navBadgeTop = -_badgeBottomBar / 2;
-const double _navAddBadgeTop = _navBadgeTop - phoneBottomBarCaptureRise;
-const double _navGearGlyph = 22;
-const double _navGearGap = 10;
-
 const Duration _headingRise = Duration(milliseconds: 500);
 const Duration _bodyRise = Duration(milliseconds: 600);
 const Duration _miniatureDelay = Duration(milliseconds: 150);
 const Duration _sidebarListDelay = Duration(milliseconds: 300);
+const Duration _headerDelay = Duration(milliseconds: 150);
 const Duration _bottomBarListDelay = Duration(milliseconds: 200);
 const Duration _navBarDelay = Duration(milliseconds: 400);
 const Duration _highlightFade = Duration(milliseconds: 200);
@@ -168,17 +231,20 @@ const double _liftTravel = 40;
 Duration _fade(BuildContext context) =>
     MediaQuery.disableAnimationsOf(context) ? Duration.zero : _highlightFade;
 
-class TourChapter extends ConsumerStatefulWidget {
+class TourChapter extends StatefulWidget {
   const TourChapter({super.key, required this.layout});
 
   final ShellLayout layout;
 
   @override
-  ConsumerState<TourChapter> createState() => _TourChapterState();
+  State<TourChapter> createState() => _TourChapterState();
 }
 
-class _TourChapterState extends ConsumerState<TourChapter> {
-  int? _highlighted;
+class _TourChapterState extends State<TourChapter> {
+  late int? _highlighted = switch (widget.layout) {
+    ShellLayout.sidebar => null,
+    ShellLayout.bottomBar => _bottomBarFirstNumber,
+  };
 
   void _highlight(int number) {
     if (_highlighted != number) {
@@ -203,6 +269,74 @@ class _TourChapterState extends ConsumerState<TourChapter> {
   }
 }
 
+class _Heading extends StatelessWidget {
+  const _Heading({required this.layout});
+
+  final ShellLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool sidebar = layout == ShellLayout.sidebar;
+    final TextAlign align = sidebar ? TextAlign.center : TextAlign.start;
+    return Padding(
+      padding: sidebar
+          ? const EdgeInsets.fromLTRB(
+              _sidebarHeadingSide,
+              onboardingTitleTop,
+              _sidebarHeadingSide,
+              0,
+            )
+          : const EdgeInsets.symmetric(horizontal: _bottomBarHeadingSide),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: sidebar
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            _kicker,
+            textAlign: align,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? 21 : 18,
+              fontWeight: FontWeight.w600,
+              color: colors.accentInk,
+            ),
+          ),
+          Semantics(
+            header: true,
+            child: Text(
+              _title,
+              textAlign: align,
+              style: TextStyle(
+                fontFamily: TypographyTokens.serif,
+                fontSize: sidebar ? 44 : 28,
+                fontWeight: FontWeight.w500,
+                height: sidebar ? 1.05 : 1.08,
+                color: colors.ink,
+              ),
+            ),
+          ),
+          if (!sidebar) ...<Widget>[
+            const SizedBox(height: _bottomBarSubtitleGap),
+            Text(
+              _subtitle,
+              style: TextStyle(
+                fontFamily: TypographyTokens.sans,
+                fontSize: 13,
+                fontWeight: FontWeight.w400,
+                height: 1.45,
+                color: colors.mutedDeep,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _SidebarTour extends StatelessWidget {
   const _SidebarTour({required this.highlighted, required this.onHighlight});
 
@@ -215,11 +349,7 @@ class _SidebarTour extends StatelessWidget {
       children: <Widget>[
         const _Rise(
           duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.sidebar,
-            kicker: _kicker,
-            title: _title,
-          ),
+          child: _Heading(layout: ShellLayout.sidebar),
         ),
         Expanded(
           child: Padding(
@@ -249,12 +379,23 @@ class _SidebarTour extends StatelessWidget {
                       delay: _sidebarListDelay,
                       child: SizedBox(
                         width: _sidebarListWidth,
-                        child: _TourLines(
-                          layout: ShellLayout.sidebar,
-                          places: _sidebarPlaces,
-                          gap: _sidebarLineGap,
-                          highlighted: highlighted,
-                          onHighlight: onHighlight,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            for (final (int index, _Place place)
+                                in _sidebarPlaces.indexed) ...<Widget>[
+                              if (index > 0)
+                                const SizedBox(height: _sidebarLineGap),
+                              _SidebarLine(
+                                key: tourLineKey(index + 1),
+                                number: index + 1,
+                                place: place,
+                                highlighted: highlighted == index + 1,
+                                onHighlight: () => onHighlight(index + 1),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ),
@@ -277,116 +418,108 @@ class _BottomBarTour extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const _Rise(
-          duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.bottomBar,
-            kicker: _kicker,
-            title: _title,
-          ),
-        ),
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              _bottomBarSide,
-              _bottomBarListTop,
-              _bottomBarSide,
-              _bottomBarBottom,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                _Rise(
-                  duration: _bodyRise,
-                  delay: _bottomBarListDelay,
-                  child: _TourLines(
-                    layout: ShellLayout.bottomBar,
-                    places: _bottomBarPlaces,
-                    gap: _bottomBarLineGap,
-                    highlighted: highlighted,
-                    onHighlight: onHighlight,
-                  ),
-                ),
-                const SizedBox(height: _bottomBarNavGap),
-                _Rise(
-                  duration: _bodyRise,
-                  delay: _navBarDelay,
-                  travel: _liftTravel,
-                  child: _BottomBarMiniature(highlighted: highlighted),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+    final EdgeInsets insets = MediaQuery.paddingOf(context);
+    final double gesture = math.max(
+      insets.bottom,
+      MediaQuery.viewPaddingOf(context).bottom,
     );
-  }
-}
-
-class _TourLines extends StatelessWidget {
-  const _TourLines({
-    required this.layout,
-    required this.places,
-    required this.gap,
-    required this.highlighted,
-    required this.onHighlight,
-  });
-
-  final ShellLayout layout;
-  final List<_Place> places;
-  final double gap;
-  final int? highlighted;
-  final ValueChanged<int> onHighlight;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        for (final (int index, _Place place) in places.indexed) ...<Widget>[
-          if (index > 0) SizedBox(height: gap),
-          _TourLine(
-            key: tourLineKey(index + 1),
-            layout: layout,
-            number: index + 1,
-            place: place,
-            highlighted: highlighted == index + 1,
-            onHighlight: () => onHighlight(index + 1),
+    return Padding(
+      padding: EdgeInsets.only(
+        top: insets.top + onboardingPhoneTitleTop,
+        bottom: gesture + onboardingControlBarReserve + _bottomBarBottomGap,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const _Rise(
+            duration: _headingRise,
+            child: _Heading(layout: ShellLayout.bottomBar),
+          ),
+          const SizedBox(height: _bottomBarSectionGap),
+          _Rise(
+            duration: _bodyRise,
+            delay: _headerDelay,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _bottomBarSide),
+              child: _HeaderReplica(highlighted: highlighted),
+            ),
+          ),
+          const SizedBox(height: _bottomBarSectionGap),
+          Expanded(
+            child: _Rise(
+              duration: _bodyRise,
+              delay: _bottomBarListDelay,
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints area) {
+                  final double width = math.max(
+                    0.0,
+                    area.maxWidth - 2 * _bottomBarSide,
+                  );
+                  return Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: SizedBox(
+                        width: width,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            for (final (int index, _PhonePlace place)
+                                in _bottomBarPlaces.indexed) ...<Widget>[
+                              if (index > 0) const SizedBox(height: _rowGap),
+                              _PhoneLine(
+                                key: tourLineKey(index + 1),
+                                place: place,
+                                highlighted: highlighted == index + 1,
+                                onHighlight: () => onHighlight(index + 1),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: _bottomBarSectionGap),
+          _Rise(
+            duration: _bodyRise,
+            delay: _navBarDelay,
+            travel: _liftTravel,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _bottomBarSide),
+              child: _BarReplica(highlighted: highlighted),
+            ),
           ),
         ],
-      ],
+      ),
     );
   }
 }
 
-class _TourLine extends StatelessWidget {
-  const _TourLine({
-    super.key,
-    required this.layout,
-    required this.number,
-    required this.place,
+class _LineTarget extends StatelessWidget {
+  const _LineTarget({
+    required this.label,
     required this.highlighted,
     required this.onHighlight,
+    required this.borderRadius,
+    required this.child,
   });
 
-  final ShellLayout layout;
-  final int number;
-  final _Place place;
+  final String label;
   final bool highlighted;
   final VoidCallback onHighlight;
+  final BorderRadius borderRadius;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final bool sidebar = layout == ShellLayout.sidebar;
     return Semantics(
       container: true,
       selected: highlighted,
-      label: '$number, ${place.title}, ${place.line}',
+      label: label,
       child: Focus(
         canRequestFocus: false,
         skipTraversal: true,
@@ -404,72 +537,352 @@ class _TourLine extends StatelessWidget {
             onTap: onHighlight,
             child: FocusRing(
               onPressed: null,
-              borderRadius: _lineRadius,
-              child: AnimatedContainer(
-                duration: _fade(context),
-                constraints: const BoxConstraints(minHeight: _lineMinHeight),
-                padding: sidebar ? _sidebarLinePadding : _bottomBarLinePadding,
-                decoration: BoxDecoration(
-                  color: highlighted
-                      ? colors.cardLight
-                      : colors.cardLight.withAlpha(0),
-                  borderRadius: _lineRadius,
-                  border: Border.all(
-                    color: highlighted
-                        ? colors.ink30
-                        : colors.ink30.withAlpha(0),
-                    width: _outline,
+              borderRadius: borderRadius,
+              child: ExcludeSemantics(child: child),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+BoxDecoration _lineDecoration(
+  FieldNotesColors colors,
+  BorderRadius radius, {
+  required bool highlighted,
+}) => BoxDecoration(
+  color: highlighted ? colors.cardLight : colors.cardLight.withAlpha(0),
+  borderRadius: radius,
+  border: Border.all(
+    color: highlighted ? colors.ink30 : colors.ink30.withAlpha(0),
+    width: _outline,
+  ),
+);
+
+class _SidebarLine extends StatelessWidget {
+  const _SidebarLine({
+    super.key,
+    required this.number,
+    required this.place,
+    required this.highlighted,
+    required this.onHighlight,
+  });
+
+  final int number;
+  final _Place place;
+  final bool highlighted;
+  final VoidCallback onHighlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return _LineTarget(
+      label: '$number, ${place.title}, ${place.line}',
+      highlighted: highlighted,
+      onHighlight: onHighlight,
+      borderRadius: _sidebarLineRadius,
+      child: AnimatedContainer(
+        duration: _fade(context),
+        constraints: const BoxConstraints(minHeight: _sidebarLineMinHeight),
+        padding: _sidebarLinePadding,
+        decoration: _lineDecoration(
+          colors,
+          _sidebarLineRadius,
+          highlighted: highlighted,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TourBadge(
+              number: number,
+              highlighted: highlighted,
+              inMiniature: false,
+              layout: ShellLayout.sidebar,
+            ),
+            const SizedBox(width: _sidebarLineInnerGap),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    place.title,
+                    style: TextStyle(
+                      fontFamily: TypographyTokens.serif,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      height: 1.15,
+                      color: colors.ink,
+                    ),
                   ),
-                ),
-                child: ExcludeSemantics(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      TourBadge(
-                        number: number,
-                        highlighted: highlighted,
-                        inMiniature: false,
-                        layout: layout,
-                      ),
-                      SizedBox(
-                        width: sidebar
-                            ? _sidebarLineInnerGap
-                            : _bottomBarLineInnerGap,
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              place.title,
-                              style: TextStyle(
-                                fontFamily: TypographyTokens.serif,
-                                fontSize: sidebar ? 18 : 15,
-                                fontWeight: FontWeight.w500,
-                                height: 1.15,
-                                color: colors.ink,
-                              ),
-                            ),
-                            if (sidebar)
-                              const SizedBox(height: _sidebarLineTextGap),
-                            Text(
-                              place.line,
-                              style: TextStyle(
-                                fontFamily: TypographyTokens.sans,
-                                fontSize: sidebar ? 13 : 11.5,
-                                fontWeight: FontWeight.w400,
-                                height: sidebar ? 1.4 : 1.35,
-                                color: colors.inkSoft,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: _sidebarLineTextGap),
+                  Text(
+                    place.line,
+                    style: TextStyle(
+                      fontFamily: TypographyTokens.sans,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      height: 1.4,
+                      color: colors.inkSoft,
+                    ),
                   ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhoneLine extends StatelessWidget {
+  const _PhoneLine({
+    super.key,
+    required this.place,
+    required this.highlighted,
+    required this.onHighlight,
+  });
+
+  final _PhonePlace place;
+  final bool highlighted;
+  final VoidCallback onHighlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    return _LineTarget(
+      label: '${place.title}, ${place.line}',
+      highlighted: highlighted,
+      onHighlight: onHighlight,
+      borderRadius: _rowRadius,
+      child: AnimatedContainer(
+        duration: _fade(context),
+        constraints: const BoxConstraints(minHeight: _rowMinHeight),
+        padding: _rowPadding,
+        decoration: _lineDecoration(
+          colors,
+          _rowRadius,
+          highlighted: highlighted,
+        ),
+        child: Row(
+          children: <Widget>[
+            AnimatedContainer(
+              duration: _fade(context),
+              width: _rowIconBox,
+              height: _rowIconBox,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: highlighted ? Palette.coral : colors.cardWarm,
+                shape: BoxShape.circle,
+                border: Border.all(color: colors.line, width: _outline),
+              ),
+              child: _PlaceMark(mark: place.mark, highlighted: highlighted),
+            ),
+            const SizedBox(width: _rowInnerGap),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    place.title,
+                    style: TextStyle(
+                      fontFamily: TypographyTokens.serif,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w500,
+                      height: 1.15,
+                      color: colors.ink,
+                    ),
+                  ),
+                  Text(
+                    place.line,
+                    style: TextStyle(
+                      fontFamily: TypographyTokens.sans,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w400,
+                      height: 1.35,
+                      color: colors.inkSoft,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PlaceMark extends StatelessWidget {
+  const _PlaceMark({required this.mark, required this.highlighted});
+
+  final _Mark mark;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color ink = highlighted ? Palette.onAccent : context.colors.ink;
+    NavIcon nav(NavGlyph glyph) =>
+        NavIcon(glyph: glyph, color: ink, size: _rowIconGlyph);
+    return switch (mark) {
+      _Mark.home => nav(NavGlyph.home),
+      _Mark.calendar => nav(NavGlyph.calendar),
+      _Mark.add => nav(NavGlyph.plus),
+      _Mark.meadow => nav(NavGlyph.garden),
+      _Mark.search => nav(NavGlyph.search),
+      _Mark.streak => FlameIcon(
+        color: highlighted ? Palette.onAccent : _streakFlame,
+        size: _rowIconGlyph,
+      ),
+      _Mark.gear => Icon(
+        Icons.settings_outlined,
+        size: _rowIconGlyph,
+        color: ink,
+      ),
+    };
+  }
+}
+
+class _HeaderReplica extends StatelessWidget {
+  const _HeaderReplica({required this.highlighted});
+
+  final int? highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool streakOn = highlighted == _bottomBarStreakNumber;
+    final bool gearOn = highlighted == _bottomBarGearNumber;
+    return ExcludeSemantics(
+      child: Container(
+        height: _headerHeight,
+        padding: _headerPadding,
+        decoration: BoxDecoration(
+          color: colors.panelTop,
+          borderRadius: _headerRadius,
+          border: Border.all(color: colors.ink20, width: _outline),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                _headerTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontFamily: TypographyTokens.serif,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: colors.ink,
                 ),
               ),
             ),
+            MapPlaceHighlight(
+              key: tourTargetKey(_bottomBarStreakNumber),
+              highlighted: streakOn,
+              child: StreakPill(
+                count: _streakCount,
+                numberOnly: true,
+                highlighted: streakOn,
+              ),
+            ),
+            const SizedBox(width: _headerTrailingGap),
+            MapPlaceHighlight(
+              key: tourTargetKey(_bottomBarGearNumber),
+              highlighted: gearOn,
+              child: AnimatedContainer(
+                duration: _fade(context),
+                width: _headerGear,
+                height: _headerGear,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: gearOn ? Palette.coral : Palette.coral.withAlpha(0),
+                  shape: BoxShape.circle,
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: gearOn ? _ring : _ring.withAlpha(0),
+                      spreadRadius: _ringSpread,
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.settings_outlined,
+                  size: _headerGearGlyph,
+                  color: gearOn ? Palette.onAccent : colors.ink,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BarReplica extends StatelessWidget {
+  const _BarReplica({required this.highlighted});
+
+  final int? highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          MediaQuery.removePadding(
+            context: context,
+            removeLeft: true,
+            removeRight: true,
+            removeBottom: true,
+            child: PhoneBottomBar(
+              destinations: ShellDestination.primary,
+              selected: _bottomBarSelection[highlighted],
+            ),
+          ),
+          Positioned.fill(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (int number = 1; number <= _bottomBarSlots; number++)
+                  Expanded(
+                    child: MapPlaceHighlight(
+                      key: tourTargetKey(number),
+                      highlighted: highlighted == number,
+                      child: number == _bottomBarAddNumber
+                          ? Center(
+                              child: _CaptureRing(shown: highlighted == number),
+                            )
+                          : const SizedBox.expand(),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CaptureRing extends StatelessWidget {
+  const _CaptureRing({required this.shown});
+
+  final bool shown;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: AnimatedContainer(
+        duration: _fade(context),
+        width: _captureExtent + 2 * _captureRing,
+        height: _captureExtent + 2 * _captureRing,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: shown ? Palette.coral30 : Palette.coral30.withAlpha(0),
+            width: _captureRing,
           ),
         ),
       ),
@@ -598,6 +1011,7 @@ class _MiniatureSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
+    final bool streakOn = highlighted == _sidebarStreakNumber;
     final bool gearOn = highlighted == _sidebarGearNumber;
     return Padding(
       padding: _miniatureSidePadding,
@@ -631,6 +1045,34 @@ class _MiniatureSidebar extends StatelessWidget {
             ),
           ],
           const Spacer(),
+          MapPlaceHighlight(
+            key: tourTargetKey(_sidebarStreakNumber),
+            highlighted: streakOn,
+            child: Stack(
+              children: <Widget>[
+                StreakPill(
+                  form: StreakPillForm.sidebar,
+                  count: _streakCount,
+                  highlighted: streakOn,
+                ),
+                Positioned(
+                  top: 0,
+                  bottom: 0,
+                  right: _streakBadgeInset,
+                  child: Center(
+                    child: TourBadge(
+                      key: tourBadgeKey(_sidebarStreakNumber),
+                      number: _sidebarStreakNumber,
+                      highlighted: streakOn,
+                      inMiniature: true,
+                      layout: ShellLayout.sidebar,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: _streakGearGap),
           Row(
             children: <Widget>[
               MapPlaceHighlight(
@@ -834,139 +1276,6 @@ class _PlaceholderBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.all(Radius.circular(height < 9 ? 4 : 5)),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomBarMiniature extends StatelessWidget {
-  const _BottomBarMiniature({required this.highlighted});
-
-  final int? highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Align(
-            alignment: Alignment.centerRight,
-            child: _MiniatureGear(
-              highlighted: highlighted == _bottomBarGearNumber,
-            ),
-          ),
-          const SizedBox(height: _navGearGap),
-          Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              MediaQuery.removePadding(
-                context: context,
-                removeLeft: true,
-                removeRight: true,
-                removeBottom: true,
-                child: PhoneBottomBar(
-                  destinations: ShellDestination.primary,
-                  selected: _bottomBarSelection[highlighted],
-                ),
-              ),
-              Positioned.fill(
-                child: Row(
-                  children: <Widget>[
-                    for (
-                      int number = 1;
-                      number < _bottomBarGearNumber;
-                      number++
-                    )
-                      Expanded(
-                        child: _NavSlot(
-                          number: number,
-                          highlighted: highlighted == number,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavSlot extends StatelessWidget {
-  const _NavSlot({required this.number, required this.highlighted});
-
-  final int number;
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return MapPlaceHighlight(
-      key: tourTargetKey(number),
-      highlighted: highlighted,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Positioned(
-            top: number == _bottomBarAddNumber ? _navAddBadgeTop : _navBadgeTop,
-            left: 0,
-            right: 0,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: TourBadge(
-                key: tourBadgeKey(number),
-                number: number,
-                highlighted: highlighted,
-                inMiniature: true,
-                layout: ShellLayout.bottomBar,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniatureGear extends StatelessWidget {
-  const _MiniatureGear({required this.highlighted});
-
-  final bool highlighted;
-
-  @override
-  Widget build(BuildContext context) {
-    return MapPlaceHighlight(
-      key: tourTargetKey(_bottomBarGearNumber),
-      highlighted: highlighted,
-      child: SizedBox.square(
-        dimension: _navGearGlyph,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            IconStickerGlyphIcon(
-              glyph: IconStickerGlyph.gear,
-              color: context.colors.ink,
-              size: _navGearGlyph,
-            ),
-            Positioned(
-              top: _navBadgeTop,
-              left: 0,
-              right: 0,
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: TourBadge(
-                  key: tourBadgeKey(_bottomBarGearNumber),
-                  number: _bottomBarGearNumber,
-                  highlighted: highlighted,
-                  inMiniature: true,
-                  layout: ShellLayout.bottomBar,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

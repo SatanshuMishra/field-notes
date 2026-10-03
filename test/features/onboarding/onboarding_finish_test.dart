@@ -52,7 +52,7 @@ typedef _Layout = ({
   String name,
   TargetPlatform platform,
   Size surface,
-  String start,
+  String? start,
 });
 
 typedef _Passing = ({
@@ -102,7 +102,7 @@ const List<_Layout> _layouts = <_Layout>[
     name: 'bottom bar',
     platform: TargetPlatform.android,
     surface: Size(412, 1400),
-    start: 'Start',
+    start: null,
   ),
 ];
 
@@ -312,14 +312,30 @@ Future<void> _walkToTour(
   expect(find.byType(TourChapter), findsOneWidget);
 }
 
-Finder _start(_Layout layout) => find.descendant(
-  of: find.byKey(onboardingPrimaryKey),
-  matching: find.text(layout.start),
-);
+Finder _start(_Layout layout) => switch (layout.start) {
+  final String label => find.descendant(
+    of: find.byKey(onboardingPrimaryKey),
+    matching: find.text(label),
+  ),
+  null => find.descendant(
+    of: find.byKey(onboardingCueKey),
+    matching: find.text('swipe to start journaling'),
+  ),
+};
 
 Future<void> _pressStart(WidgetTester tester, _Layout layout) async {
   expect(_start(layout), findsOneWidget, reason: layout.name);
-  await tester.tap(_start(layout));
+  if (layout.start == null) {
+    expect(find.byKey(onboardingPrimaryKey), findsNothing, reason: layout.name);
+    final Rect frame = tester.getRect(find.byType(OnboardingFrame));
+    await tester.flingFrom(
+      Offset(frame.center.dx, frame.top + frame.height * 0.45),
+      const Offset(-120, 0),
+      800,
+    );
+  } else {
+    await tester.tap(_start(layout));
+  }
   await _settle(tester);
 }
 
@@ -369,7 +385,17 @@ void _expectStillOnTour(
   expect(error, findsOneWidget, reason: reason);
   expect(
     tester.getRect(error).bottom,
-    lessThanOrEqualTo(tester.getRect(find.byKey(onboardingPrimaryKey)).top),
+    lessThanOrEqualTo(
+      tester
+          .getRect(
+            find.byKey(
+              layout.start == null
+                  ? onboardingControlBarKey
+                  : onboardingPrimaryKey,
+            ),
+          )
+          .top,
+    ),
     reason: reason,
   );
   expect(_start(layout), findsOneWidget, reason: reason);

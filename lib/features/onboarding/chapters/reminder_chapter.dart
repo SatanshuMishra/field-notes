@@ -10,7 +10,7 @@ import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/reminder_time.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:field_notes/features/onboarding/reminder_choice.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
 import 'package:field_notes/features/reminders/notifications_off_notice.dart';
@@ -51,12 +51,13 @@ const double _sidebarChoiceHeight = 58;
 const double _sidebarChoiceGap = 8;
 const double _sidebarHelpGap = 16;
 
-const double _bottomBarSide = 18;
-const double _bottomBarBottom = 76;
-const double _bottomBarMiddlePadding = 10;
-const double _bottomBarTimeSize = 46;
-const double _bottomBarTimeGap = 10;
-const double _bottomBarPreviewHeight = 56;
+const double _sidebarHeadingSide = 40;
+const double _bottomBarHeadingSide = 20;
+const double _bottomBarSide = 16;
+const double _bottomBarClearance = 14;
+const double _bottomBarTimeSize = 72;
+const double _bottomBarTimeGap = 18;
+const double _bottomBarPreviewHeight = 64;
 const double _bottomBarHelpGap = 12;
 const double _rowHeight = 56;
 const EdgeInsets _rowPadding = EdgeInsets.symmetric(
@@ -227,11 +228,7 @@ class _SidebarReminder extends StatelessWidget {
       children: <Widget>[
         const _Rise(
           duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.sidebar,
-            kicker: _kicker,
-            title: _title,
-          ),
+          child: _Heading(layout: ShellLayout.sidebar),
         ),
         Expanded(
           child: Padding(
@@ -313,31 +310,33 @@ class _BottomBarReminder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const _Rise(
-          duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.bottomBar,
-            kicker: _kicker,
-            title: _title,
+    final EdgeInsets insets = MediaQuery.paddingOf(context);
+    final double gesture = math.max(
+      insets.bottom,
+      MediaQuery.viewPaddingOf(context).bottom,
+    );
+    return Padding(
+      padding: EdgeInsets.only(
+        top: insets.top + onboardingPhoneTitleTop,
+        bottom: gesture + onboardingControlBarReserve + _bottomBarClearance,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const _Rise(
+            duration: _headingRise,
+            child: _Heading(layout: ShellLayout.bottomBar),
           ),
-        ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints area) {
-              final double width = math.max(
-                0.0,
-                area.maxWidth - 2 * _bottomBarSide,
-              );
-              return Column(
-                children: <Widget>[
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: _bottomBarMiddlePadding,
-                      ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints area) {
+                final double width = math.max(
+                  0.0,
+                  area.maxWidth - 2 * _bottomBarSide,
+                );
+                return Column(
+                  children: <Widget>[
+                    Expanded(
                       child: Center(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
@@ -363,35 +362,95 @@ class _BottomBarReminder extends StatelessWidget {
                         ),
                       ),
                     ),
-                  ),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: area.maxHeight),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: SizedBox(
-                        width: width,
-                        child: _Rise(
-                          duration: _rowsRise,
-                          delay: _rowsDelay,
-                          child: _ChoiceRows(
-                            choice: choice,
-                            onChoose: onChoose,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: area.maxHeight),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: SizedBox(
+                          width: width,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              if (notificationsOff) ...<Widget>[
+                                const _NotificationsHelp(),
+                                const SizedBox(height: _bottomBarHelpGap),
+                              ],
+                              _Rise(
+                                duration: _rowsRise,
+                                delay: _rowsDelay,
+                                child: _ChoiceRows(
+                                  choice: choice,
+                                  onChoose: onChoose,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  if (notificationsOff) ...<Widget>[
-                    const SizedBox(height: _bottomBarHelpGap),
-                    SizedBox(width: width, child: const _NotificationsHelp()),
                   ],
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: _bottomBarBottom),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Heading extends StatelessWidget {
+  const _Heading({required this.layout});
+
+  final ShellLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool sidebar = layout == ShellLayout.sidebar;
+    final TextAlign align = sidebar ? TextAlign.center : TextAlign.start;
+    return Padding(
+      padding: sidebar
+          ? const EdgeInsets.fromLTRB(
+              _sidebarHeadingSide,
+              onboardingTitleTop,
+              _sidebarHeadingSide,
+              0,
+            )
+          : const EdgeInsets.symmetric(horizontal: _bottomBarHeadingSide),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: sidebar
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            _kicker,
+            textAlign: align,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? 21 : 18,
+              fontWeight: FontWeight.w600,
+              color: colors.accentInk,
+            ),
+          ),
+          Semantics(
+            header: true,
+            child: Text(
+              _title,
+              textAlign: align,
+              style: TextStyle(
+                fontFamily: TypographyTokens.serif,
+                fontSize: sidebar ? 44 : 28,
+                fontWeight: FontWeight.w500,
+                height: sidebar ? 1.05 : 1.08,
+                color: colors.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

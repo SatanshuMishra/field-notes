@@ -32,7 +32,7 @@ const String _lineError = "Couldn't save this line. Keep typing to try again.";
 const String _sidebarLead = "And there's more than one way to keep a memory.";
 const String _sidebarFoot =
     "You'll find these on every log, once you're set up.";
-const String _bottomBarLead = 'More than one way to keep a memory:';
+const String _phoneTilesLead = 'More than one way to keep a memory';
 
 const Duration _pause = Duration(milliseconds: 600);
 const Duration _slowSave = Duration(seconds: 2);
@@ -59,10 +59,7 @@ typedef _Layout = ({
   TargetPlatform platform,
   PointerDeviceKind pointer,
   Size surface,
-  String lead,
-  String otherLead,
   List<String> media,
-  String? foot,
 });
 
 const _Layout _sidebar = (
@@ -70,14 +67,11 @@ const _Layout _sidebar = (
   platform: TargetPlatform.macOS,
   pointer: PointerDeviceKind.mouse,
   surface: Size(1280, 758),
-  lead: _sidebarLead,
-  otherLead: _bottomBarLead,
   media: <String>[
     'your voice',
     'a video, of you or the view',
     'photos from the day',
   ],
-  foot: _sidebarFoot,
 );
 
 const _Layout _bottomBar = (
@@ -85,10 +79,7 @@ const _Layout _bottomBar = (
   platform: TargetPlatform.android,
   pointer: PointerDeviceKind.touch,
   surface: Size(360, 740),
-  lead: _bottomBarLead,
-  otherLead: _sidebarLead,
-  media: <String>['your voice', 'a video', 'photos'],
-  foot: null,
+  media: <String>[],
 );
 
 const List<_Layout> _layouts = <_Layout>[_sidebar, _bottomBar];
@@ -262,15 +253,25 @@ void _expectEmptyCard(WidgetTester tester, _Layout layout) {
   expect(_inCard(_waitingHint), findsOneWidget);
   expect(find.text(_savedHint), findsNothing);
   expect(find.byKey(momentMediaKey), findsNothing);
-  expect(find.text(layout.lead), findsNothing);
+  expect(find.text(_sidebarLead), findsNothing);
+  expect(find.textContaining(_phoneTilesLead), findsNothing);
 }
 
 void _expectMediaRow(WidgetTester tester, _Layout layout) {
   expect(_inCard(_savedHint), findsOneWidget);
   expect(_inCard(_waitingHint), findsNothing);
+  expect(find.textContaining(_phoneTilesLead), findsNothing);
+  if (layout.layout == ShellLayout.bottomBar) {
+    expect(find.byKey(momentMediaKey), findsNothing);
+    for (final Key key in _mediaKeys) {
+      expect(find.byKey(key), findsNothing);
+    }
+    expect(find.text(_sidebarLead), findsNothing);
+    expect(find.text(_sidebarFoot), findsNothing);
+    return;
+  }
   expect(find.byKey(momentMediaKey), findsOneWidget);
-  expect(find.text(layout.lead), findsOneWidget);
-  expect(find.text(layout.otherLead), findsNothing);
+  expect(find.text(_sidebarLead), findsOneWidget);
   for (final String label in layout.media) {
     expect(
       find.descendant(
@@ -281,15 +282,12 @@ void _expectMediaRow(WidgetTester tester, _Layout layout) {
       reason: label,
     );
   }
-  expect(
-    find.text(_sidebarFoot),
-    layout.foot == null ? findsNothing : findsOneWidget,
-  );
+  expect(find.text(_sidebarFoot), findsOneWidget);
 }
 
 void main() {
   testWidgets(
-    'a moment shows the empty card, caps at 280 and reveals the media row once saved',
+    'a moment shows the empty card, caps at 280 and reveals the mac media row once saved',
     (WidgetTester tester) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
       for (final _Layout layout in _layouts) {
@@ -320,10 +318,12 @@ void main() {
           _expectMediaRow(tester, layout);
 
           final OnboardingFlow before = _flow(tester);
-          for (final Key key in _mediaKeys) {
-            expect(find.byKey(key), findsOneWidget);
-            await tester.tap(find.byKey(key));
-            await _run(tester, const Duration(milliseconds: 700));
+          if (layout.layout == ShellLayout.sidebar) {
+            for (final Key key in _mediaKeys) {
+              expect(find.byKey(key), findsOneWidget);
+              await tester.tap(find.byKey(key));
+              await _run(tester, const Duration(milliseconds: 700));
+            }
           }
           for (final String label in layout.media) {
             expect(
@@ -414,7 +414,7 @@ void main() {
   });
 
   testWidgets(
-    'the saved line and its media row fit the smallest windows unscrolled',
+    'the saved line, and the mac media row, fit the smallest windows unscrolled',
     (WidgetTester tester) async {
       for (final (_Layout layout, Size surface) in _smallest) {
         await _onLayout(layout, () async {
@@ -430,7 +430,23 @@ void main() {
           await _run(tester, const Duration(seconds: 2));
           _expectMediaRow(tester, layout);
           expect(tester.takeException(), isNull);
-          expect(_scroll(tester).maxScrollExtent, 0, reason: '$surface');
+          if (layout.layout == ShellLayout.sidebar) {
+            expect(_scroll(tester).maxScrollExtent, 0, reason: '$surface');
+          } else {
+            expect(
+              find.ancestor(
+                of: find.byKey(momentCardKey),
+                matching: find.byType(Scrollable),
+              ),
+              findsNothing,
+            );
+            final Rect card = tester.getRect(find.byKey(momentCardKey));
+            expect(card.bottom, lessThanOrEqualTo(surface.height - 72 - 12));
+            expect(
+              tester.getRect(find.byKey(momentFieldKey)).height,
+              greaterThan(32 * 3),
+            );
+          }
           await _unmount(tester);
         });
       }

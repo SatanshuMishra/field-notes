@@ -282,24 +282,38 @@ OnboardingChapter _chapterOf(ProviderContainer container) => (container.read(
   onboardingControllerProvider,
 ) as OnboardingFlowRunning).chapter;
 
-Future<void> _pressPrimary(WidgetTester tester) async {
-  await tester.tap(find.byKey(onboardingPrimaryKey));
+Future<void> _moveOn(WidgetTester tester, ShellLayout layout) async {
+  switch (layout) {
+    case ShellLayout.sidebar:
+      await tester.tap(find.byKey(onboardingPrimaryKey));
+    case ShellLayout.bottomBar:
+      expect(find.byKey(onboardingPrimaryKey), findsNothing);
+      await tester.flingFrom(
+        tester.getCenter(find.byType(OnboardingFrame)),
+        const Offset(-120, 0),
+        800,
+      );
+  }
   await _settle(tester);
 }
 
 Future<void> _finish(WidgetTester tester, ShellLayout layout) async {
-  await _pressPrimary(tester);
+  await _moveOn(tester, layout);
   expect(find.byType(TourChapter), findsOneWidget);
-  await tester.tap(
+  expect(
     find.descendant(
-      of: find.byKey(onboardingPrimaryKey),
+      of: find.byKey(switch (layout) {
+        ShellLayout.sidebar => onboardingPrimaryKey,
+        ShellLayout.bottomBar => onboardingCueKey,
+      }),
       matching: find.text(switch (layout) {
         ShellLayout.sidebar => 'Start journaling',
-        ShellLayout.bottomBar => 'Start',
+        ShellLayout.bottomBar => 'swipe to start journaling',
       }),
     ),
+    findsOneWidget,
   );
-  await _settle(tester);
+  await _moveOn(tester, layout);
   expect(find.byType(OnboardingFrame), findsNothing);
 }
 
@@ -315,12 +329,13 @@ void _expectHelp(WidgetTester tester, {required bool shown, String? reason}) {
 
 Future<void> _refuse(
   WidgetTester tester,
+  ShellLayout layout,
   ProviderContainer container,
   FakeReminderScheduler scheduler, {
   required String reason,
 }) async {
   _expectHelp(tester, shown: false, reason: '$reason before Next');
-  await _pressPrimary(tester);
+  await _moveOn(tester, layout);
   expect(scheduler.permissionRequests, 1, reason: reason);
   expect(
     _chapterOf(container),
@@ -609,7 +624,7 @@ void main() {
           expect(_held(tester), ReminderChoice.evening, reason: name);
           expect(asking.permissionRequests, 0, reason: name);
 
-          await _pressPrimary(tester);
+          await _moveOn(tester, layout);
           expect(asking.permissionRequests, 1, reason: '$name 20:30');
           expect(
             _chapterOf(container),
@@ -643,7 +658,7 @@ void main() {
           );
           await _choose(tester, ReminderChoice.off);
           expect(_held(tester), ReminderChoice.off, reason: name);
-          await _pressPrimary(tester);
+          await _moveOn(tester, layout);
           expect(quiet.permissionRequests, 0, reason: '$name no reminder');
           expect(
             _chapterOf(off),
@@ -679,7 +694,7 @@ void main() {
         expect(_held(tester), ReminderChoice.evening, reason: name);
         _expectHelp(tester, shown: false, reason: '$name before Next');
 
-        await _pressPrimary(tester);
+        await _moveOn(tester, layout);
         expect(granted.permissionRequests, 0, reason: name);
         expect(_chapterOf(container), OnboardingChapter.week, reason: name);
         expect(find.byType(WeekChapter), findsOneWidget, reason: name);
@@ -714,7 +729,7 @@ void main() {
             opener: opener,
           );
 
-          await _refuse(tester, container, refusing, reason: name);
+          await _refuse(tester, layout, container, refusing, reason: name);
           final Finder button = find.text(_openSettings);
           expect(
             tester.getSemantics(button),
@@ -734,7 +749,7 @@ void main() {
             reason: name,
           );
 
-          await _pressPrimary(tester);
+          await _moveOn(tester, layout);
           expect(refusing.permissionRequests, 1, reason: '$name second Next');
           expect(
             _chapterOf(container),
@@ -772,7 +787,7 @@ void main() {
           settings: settings,
           scheduler: refusing,
         );
-        await _refuse(tester, container, refusing, reason: name);
+        await _refuse(tester, layout, container, refusing, reason: name);
 
         refusing.permissionGranted = true;
         tester.binding.handleAppLifecycleStateChanged(
@@ -785,7 +800,7 @@ void main() {
         expect(_chapterOf(container), OnboardingChapter.reminder, reason: name);
         _expectHelp(tester, shown: false, reason: '$name resumed');
 
-        await _pressPrimary(tester);
+        await _moveOn(tester, layout);
         expect(find.byType(WeekChapter), findsOneWidget, reason: name);
         await _finish(tester, layout);
         expect(settings.reminderEnabledWrites, <bool>[true], reason: name);

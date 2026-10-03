@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
@@ -19,6 +20,8 @@ import 'package:field_notes/features/garden/widgets/meadow_study_controls.dart'
     show meadowReplayLabel;
 import 'package:field_notes/features/onboarding/chapters/sample_year.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +31,8 @@ const String _title = 'This is roughly what a year of you looks like.';
 const String yearWholeLabel = 'A whole year';
 const String yearCaptionSidebar =
     'every flower is a day · drag back through it';
-const String yearCaptionBottomBar = 'every flower is a day · drag through it';
+const String yearCaptionBottomBar =
+    'every flower is a day · drag the meadow to look around';
 const String yearSliderLabel = 'The sample year';
 const String yearDragHint = 'Drag to look around';
 const String yearMeadowLabel = 'A sample year in the meadow';
@@ -55,8 +59,10 @@ const Color _shadeTop = Color.fromRGBO(20, 14, 8, 1);
 const Color _textShadow = Color.fromRGBO(0, 0, 0, 1);
 
 const double _target = 48;
-const double _shadeHeight = 200;
 const double _glassBorder = 1.5;
+const double _phoneReplay = 52;
+const double _phoneReplayGlyph = 18;
+const int _balanceSteps = 12;
 const double _boxBlurSigma = 4;
 const double _buttonBlurSigma = 3;
 const double _boxMaxWidth = 460;
@@ -102,10 +108,13 @@ class _YearMetrics {
   const _YearMetrics({
     required this.headingPadding,
     required this.headingAlign,
+    required this.balanced,
     required this.kickerSize,
     required this.titleSize,
+    required this.titleHeight,
     required this.titleShadowBlur,
     required this.titleShadowAlpha,
+    required this.shadeHeight,
     required this.shadeAlpha,
     required this.controls,
     required this.boxRadius,
@@ -113,15 +122,20 @@ class _YearMetrics {
     required this.monthSize,
     required this.daysSize,
     required this.captionSize,
+    required this.sliderHeight,
+    required this.sliderReach,
   });
 
   static const _YearMetrics sidebar = _YearMetrics(
-    headingPadding: EdgeInsets.fromLTRB(40, 36, 40, 0),
+    headingPadding: EdgeInsets.fromLTRB(40, onboardingTitleTop, 40, 0),
     headingAlign: TextAlign.center,
+    balanced: false,
     kickerSize: 21,
     titleSize: 44,
+    titleHeight: 1.05,
     titleShadowBlur: 16,
     titleShadowAlpha: 0.4,
+    shadeHeight: 200,
     shadeAlpha: 0.42,
     controls: EdgeInsets.fromLTRB(56, 0, 56, 84),
     boxRadius: 14,
@@ -129,30 +143,40 @@ class _YearMetrics {
     monthSize: 22,
     daysSize: 11,
     captionSize: 19,
+    sliderHeight: _target,
+    sliderReach: EdgeInsets.zero,
   );
 
   static const _YearMetrics bottomBar = _YearMetrics(
-    headingPadding: EdgeInsets.fromLTRB(18, 22, 18, 0),
+    headingPadding: EdgeInsets.fromLTRB(20, onboardingPhoneTitleTop, 20, 0),
     headingAlign: TextAlign.start,
+    balanced: true,
     kickerSize: 18,
     titleSize: 28,
+    titleHeight: 1.08,
     titleShadowBlur: 14,
     titleShadowAlpha: 0.45,
+    shadeHeight: 220,
     shadeAlpha: 0.55,
-    controls: EdgeInsets.fromLTRB(14, 0, 14, 74),
-    boxRadius: 13,
-    boxPadding: EdgeInsets.fromLTRB(12, 9, 12, 0),
-    monthSize: 19,
-    daysSize: 10,
-    captionSize: 16,
+    controls: EdgeInsets.fromLTRB(12, 0, 12, onboardingControlBarReserve + 12),
+    boxRadius: 20,
+    boxPadding: EdgeInsets.fromLTRB(14, 9, 14, 0),
+    monthSize: 20,
+    daysSize: 11,
+    captionSize: 17,
+    sliderHeight: 32,
+    sliderReach: EdgeInsets.only(top: 4, bottom: 8),
   );
 
   final EdgeInsets headingPadding;
   final TextAlign headingAlign;
+  final bool balanced;
   final double kickerSize;
   final double titleSize;
+  final double titleHeight;
   final double titleShadowBlur;
   final double titleShadowAlpha;
+  final double shadeHeight;
   final double shadeAlpha;
   final EdgeInsets controls;
   final double boxRadius;
@@ -160,6 +184,8 @@ class _YearMetrics {
   final double monthSize;
   final double daysSize;
   final double captionSize;
+  final double sliderHeight;
+  final EdgeInsets sliderReach;
 
   static _YearMetrics of(ShellLayout layout) => switch (layout) {
     ShellLayout.sidebar => sidebar,
@@ -267,33 +293,35 @@ class _YearChapterState extends ConsumerState<YearChapter>
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            MeadowStage(
-              year: _year,
-              seed: sampleMeadowSeed,
-              sky: skySceneAt(instant, location.latitude, location.longitude),
-              morning:
-                  sunPosition(
-                    instant,
-                    location.latitude,
-                    location.longitude,
-                  ).azimuth <
-                  0,
-              mode: MeadowSceneMode.full,
-              compact: false,
-              growthPoint: yearDay,
-              growAnimated: _growAnimated,
-              semanticLabel: yearMeadowLabel,
-              onDragged: _meadowDragged,
-              readyOverlay: _ReadySignal(
-                onShown: _shown,
-                child: _Controls(
-                  key: yearControlsKey,
-                  layout: layout,
-                  metrics: metrics,
-                  day: yearDay,
-                  hinted: !_dragged,
-                  onScrub: _scrub,
-                  onReplay: _play,
+            NoSwipe(
+              child: MeadowStage(
+                year: _year,
+                seed: sampleMeadowSeed,
+                sky: skySceneAt(instant, location.latitude, location.longitude),
+                morning:
+                    sunPosition(
+                      instant,
+                      location.latitude,
+                      location.longitude,
+                    ).azimuth <
+                    0,
+                mode: MeadowSceneMode.full,
+                compact: false,
+                growthPoint: yearDay,
+                growAnimated: _growAnimated,
+                semanticLabel: yearMeadowLabel,
+                onDragged: _meadowDragged,
+                readyOverlay: _ReadySignal(
+                  onShown: _shown,
+                  child: _Controls(
+                    key: yearControlsKey,
+                    layout: layout,
+                    metrics: metrics,
+                    day: yearDay,
+                    hinted: !_dragged,
+                    onScrub: _scrub,
+                    onReplay: _play,
+                  ),
                 ),
               ),
             ),
@@ -301,7 +329,7 @@ class _YearChapterState extends ConsumerState<YearChapter>
               left: 0,
               top: 0,
               right: 0,
-              height: _shadeHeight,
+              height: metrics.shadeHeight,
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -321,7 +349,7 @@ class _YearChapterState extends ConsumerState<YearChapter>
               left: 0,
               top: 0,
               right: 0,
-              child: IgnorePointer(
+              child: OnboardingSwipeLayer(
                 child: _Rise(child: _Heading(metrics: metrics)),
               ),
             ),
@@ -340,8 +368,24 @@ class _Heading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool centred = metrics.headingAlign == TextAlign.center;
+    final TextStyle titleStyle = TextStyle(
+      fontFamily: TypographyTokens.serif,
+      fontSize: metrics.titleSize,
+      fontWeight: FontWeight.w500,
+      height: metrics.titleHeight,
+      color: FieldNotesColors.light.composerPaper,
+      shadows: <Shadow>[
+        Shadow(
+          color: _textShadow.withValues(alpha: metrics.titleShadowAlpha),
+          offset: const Offset(0, 2),
+          blurRadius: metrics.titleShadowBlur,
+        ),
+      ],
+    );
     final Widget heading = Padding(
-      padding: metrics.headingPadding,
+      padding:
+          metrics.headingPadding +
+          EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: centred
@@ -367,31 +411,82 @@ class _Heading extends StatelessWidget {
           ),
           Semantics(
             header: true,
-            child: Text(
-              _title,
-              textAlign: metrics.headingAlign,
-              style: TextStyle(
-                fontFamily: TypographyTokens.serif,
-                fontSize: metrics.titleSize,
-                fontWeight: FontWeight.w500,
-                height: 1.05,
-                color: FieldNotesColors.light.composerPaper,
-                shadows: <Shadow>[
-                  Shadow(
-                    color: _textShadow.withValues(
-                      alpha: metrics.titleShadowAlpha,
-                    ),
-                    offset: const Offset(0, 2),
-                    blurRadius: metrics.titleShadowBlur,
+            child: metrics.balanced
+                ? _BalancedTitle(
+                    text: _title,
+                    style: titleStyle,
+                    align: metrics.headingAlign,
+                  )
+                : Text(
+                    _title,
+                    textAlign: metrics.headingAlign,
+                    style: titleStyle,
                   ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
     );
     return Semantics(container: true, child: heading);
+  }
+}
+
+class _BalancedTitle extends StatelessWidget {
+  const _BalancedTitle({
+    required this.text,
+    required this.style,
+    required this.align,
+  });
+
+  final String text;
+  final TextStyle style;
+  final TextAlign align;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double room = constraints.maxWidth;
+        final TextScaler scaler = MediaQuery.textScalerOf(context);
+        final TextDirection direction = Directionality.of(context);
+        final TextStyle effective = DefaultTextStyle.of(context).style
+            .merge(style);
+        int linesAt(double width) {
+          final TextPainter painter = TextPainter(
+            text: TextSpan(text: text, style: effective),
+            textAlign: align,
+            textDirection: direction,
+            textScaler: scaler,
+          )..layout(maxWidth: width);
+          final int lines = painter.computeLineMetrics().length;
+          painter.dispose();
+          return lines;
+        }
+
+        final double width = room.isFinite ? _narrowest(room, linesAt) : room;
+        return SizedBox(
+          width: width.isFinite ? width : null,
+          child: Text(text, textAlign: align, style: style),
+        );
+      },
+    );
+  }
+
+  static double _narrowest(double room, int Function(double width) linesAt) {
+    final int lines = linesAt(room);
+    if (lines <= 1) {
+      return room;
+    }
+    double low = room / lines;
+    double high = room;
+    for (int step = 0; step < _balanceSteps; step++) {
+      final double middle = (low + high) / 2;
+      if (linesAt(middle) > lines) {
+        low = middle;
+      } else {
+        high = middle;
+      }
+    }
+    return math.min(room, high.ceilToDouble());
   }
 }
 
@@ -442,47 +537,49 @@ class _Controls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget box = _GlassBox(
-      metrics: metrics,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          ExcludeSemantics(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    yearMonthLabel(day),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontFamily: TypographyTokens.accent,
-                      fontSize: metrics.monthSize,
-                      fontWeight: FontWeight.w700,
-                      height: 1,
-                      color: FieldNotesColors.light.composerPaper,
-                    ),
-                  ),
-                ),
-                Text(
-                  yearDaysLabel(day),
+    final Widget scene = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        ExcludeSemantics(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  yearMonthLabel(day),
                   maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontFamily: TypographyTokens.sans,
-                    fontSize: metrics.daysSize,
-                    fontWeight: FontWeight.w600,
-                    color: _daysInk,
+                    fontFamily: TypographyTokens.accent,
+                    fontSize: metrics.monthSize,
+                    fontWeight: FontWeight.w700,
+                    height: 1,
+                    color: FieldNotesColors.light.composerPaper,
                   ),
                 ),
-              ],
-            ),
+              ),
+              Text(
+                yearDaysLabel(day),
+                maxLines: 1,
+                style: TextStyle(
+                  fontFamily: TypographyTokens.sans,
+                  fontSize: metrics.daysSize,
+                  fontWeight: FontWeight.w600,
+                  color: _daysInk,
+                ),
+              ),
+            ],
           ),
-          _YearSlider(key: yearSliderKey, day: day, onChanged: onScrub),
-        ],
-      ),
+        ),
+        _YearSlider(
+          day: day,
+          height: metrics.sliderHeight,
+          reach: metrics.sliderReach,
+          onChanged: onScrub,
+        ),
+      ],
     );
     final String caption = switch (layout) {
       ShellLayout.sidebar => yearCaptionSidebar,
@@ -501,74 +598,91 @@ class _Controls extends StatelessWidget {
             SizedBox(height: _stackGap),
           ]
         : const <Widget>[];
+    final double gesture = math.max(
+      MediaQuery.paddingOf(context).bottom,
+      MediaQuery.viewPaddingOf(context).bottom,
+    );
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
         Positioned(
           left: metrics.controls.left,
           right: metrics.controls.right,
-          bottom: metrics.controls.bottom,
-          child: switch (layout) {
-            ShellLayout.sidebar => Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                ...hint,
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: <Widget>[
-                    Flexible(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          maxWidth: _boxMaxWidth,
-                        ),
-                        child: box,
-                      ),
-                    ),
-                    const SizedBox(width: _rowGap),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: _captionLift),
-                        child: Align(
-                          alignment: Alignment.bottomRight,
-                          child: shownCaption ?? const SizedBox.shrink(),
+          bottom: gesture + metrics.controls.bottom,
+          child: OnboardingSwipeLayer(
+            child: switch (layout) {
+              ShellLayout.sidebar => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  ...hint,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: <Widget>[
+                      Flexible(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            maxWidth: _boxMaxWidth,
+                          ),
+                          child: _GlassBox(metrics: metrics, child: scene),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: _rowGap),
-                    _ReplayButton(
-                      key: yearReplayKey,
-                      layout: layout,
-                      onPressed: onReplay,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            ShellLayout.bottomBar => Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                if (shownCaption != null) ...<Widget>[
-                  Center(child: shownCaption),
-                  const SizedBox(height: _stackGap),
+                      const SizedBox(width: _rowGap),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: _captionLift),
+                          child: Align(
+                            alignment: Alignment.bottomRight,
+                            child: shownCaption ?? const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: _rowGap),
+                      _ReplayButton(
+                        key: yearReplayKey,
+                        layout: layout,
+                        onPressed: onReplay,
+                      ),
+                    ],
+                  ),
                 ],
-                ...hint,
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    Expanded(child: box),
-                    const SizedBox(width: _stackGap),
-                    _ReplayButton(
-                      key: yearReplayKey,
-                      layout: layout,
-                      onPressed: onReplay,
-                    ),
+              ),
+              ShellLayout.bottomBar => Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (shownCaption != null) ...<Widget>[
+                    Center(child: shownCaption),
+                    const SizedBox(height: _stackGap),
                   ],
-                ),
-              ],
-            ),
-          },
+                  ...hint,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: <Widget>[
+                      Expanded(
+                        child: GlassSurface(
+                          tone: GlassTone.scene,
+                          borderRadius: BorderRadius.all(
+                            Radius.circular(metrics.boxRadius),
+                          ),
+                          padding:
+                              metrics.boxPadding +
+                              const EdgeInsets.all(glassBorderWidth),
+                          child: scene,
+                        ),
+                      ),
+                      const SizedBox(width: _stackGap),
+                      _ReplayButton(
+                        key: yearReplayKey,
+                        layout: layout,
+                        onPressed: onReplay,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            },
+          ),
         ),
       ],
     );
@@ -661,39 +775,6 @@ class _ReplayButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool sidebar = layout == ShellLayout.sidebar;
-    final BorderRadius radius = BorderRadius.all(
-      Radius.circular(sidebar ? 11 : 13),
-    );
-    final Widget face = sidebar
-        ? Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 13 + _glassBorder,
-              vertical: 9 + _glassBorder,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const _ReplayGlyph(size: 12),
-                const SizedBox(width: 7),
-                Text(
-                  meadowReplayLabel,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: TextStyle(
-                    fontFamily: TypographyTokens.sans,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: FieldNotesColors.light.composerPaper,
-                  ),
-                ),
-              ],
-            ),
-          )
-        : const SizedBox.square(
-            dimension: _target,
-            child: Center(child: _ReplayGlyph(size: 16)),
-          );
     return Semantics(
       container: true,
       button: true,
@@ -701,39 +782,87 @@ class _ReplayButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _target,
-            minHeight: _target,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: FocusRing(
-              onPressed: onPressed,
-              surface: FocusRingSurface.dark,
-              borderRadius: radius,
-              child: ClipRRect(
-                borderRadius: radius,
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(
-                    sigmaX: _buttonBlurSigma,
-                    sigmaY: _buttonBlurSigma,
-                  ),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: _glassFill,
-                      border: Border.all(
-                        color: _buttonEdge,
-                        width: _glassBorder,
-                      ),
-                      borderRadius: radius,
+        child: switch (layout) {
+          ShellLayout.sidebar => _sidebarFace(),
+          ShellLayout.bottomBar => _bottomBarFace(),
+        },
+      ),
+    );
+  }
+
+  Widget _sidebarFace() {
+    const BorderRadius radius = BorderRadius.all(Radius.circular(11));
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: _target, minHeight: _target),
+      child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
+        child: FocusRing(
+          onPressed: onPressed,
+          surface: FocusRingSurface.dark,
+          borderRadius: radius,
+          child: ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(
+                sigmaX: _buttonBlurSigma,
+                sigmaY: _buttonBlurSigma,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: _glassFill,
+                  border: Border.all(color: _buttonEdge, width: _glassBorder),
+                  borderRadius: radius,
+                ),
+                child: ExcludeSemantics(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13 + _glassBorder,
+                      vertical: 9 + _glassBorder,
                     ),
-                    child: ExcludeSemantics(child: face),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const _ReplayGlyph(size: 12),
+                        const SizedBox(width: 7),
+                        Text(
+                          meadowReplayLabel,
+                          maxLines: 1,
+                          softWrap: false,
+                          style: TextStyle(
+                            fontFamily: TypographyTokens.sans,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: FieldNotesColors.light.composerPaper,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _bottomBarFace() {
+    const BorderRadius round = BorderRadius.all(
+      Radius.circular(_phoneReplay / 2),
+    );
+    return FocusRing(
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      borderRadius: round,
+      child: const GlassSurface(
+        tone: GlassTone.scene,
+        borderRadius: round,
+        child: SizedBox.square(
+          dimension: _phoneReplay,
+          child: ExcludeSemantics(
+            child: Center(child: _ReplayGlyph(size: _phoneReplayGlyph)),
           ),
         ),
       ),
@@ -819,9 +948,16 @@ const Map<ShortcutActivator, Intent> _sliderKeys = <ShortcutActivator, Intent>{
 String _describe(int day) => '${yearMonthLabel(day)}, ${yearDaysLabel(day)}';
 
 class _YearSlider extends StatelessWidget {
-  const _YearSlider({super.key, required this.day, required this.onChanged});
+  const _YearSlider({
+    required this.day,
+    required this.height,
+    required this.reach,
+    required this.onChanged,
+  });
 
   final int day;
+  final double height;
+  final EdgeInsets reach;
   final ValueChanged<int> onChanged;
 
   int get _current => day.clamp(0, sampleYearDays);
@@ -885,16 +1021,20 @@ class _YearSlider extends StatelessWidget {
                     _seek(details.localPosition.dx, width),
                 onHorizontalDragUpdate: (DragUpdateDetails details) =>
                     _seek(details.localPosition.dx, width),
-                child: FocusRing(
-                  onPressed: null,
-                  surface: FocusRingSurface.dark,
-                  borderRadius: _sliderFocusRadius,
-                  child: SizedBox(
-                    width: width,
-                    height: _target,
-                    child: CustomPaint(
-                      painter: _TrackPainter(
-                        fraction: current / sampleYearDays,
+                child: Padding(
+                  padding: reach,
+                  child: FocusRing(
+                    onPressed: null,
+                    surface: FocusRingSurface.dark,
+                    borderRadius: _sliderFocusRadius,
+                    child: SizedBox(
+                      key: yearSliderKey,
+                      width: width,
+                      height: height,
+                      child: CustomPaint(
+                        painter: _TrackPainter(
+                          fraction: current / sampleYearDays,
+                        ),
                       ),
                     ),
                   ),

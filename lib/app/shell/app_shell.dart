@@ -14,7 +14,6 @@ import 'package:field_notes/features/today/today.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 
-import 'appearance_toggle.dart';
 import 'bottom_bar_shell.dart';
 import 'shell_content.dart';
 import 'shell_destination.dart';
@@ -106,7 +105,6 @@ class _AppShellState extends ConsumerState<AppShell> {
         onCollapsedChanged: _setSidebarCollapsed,
         body: body,
         obscured: obscured,
-        appearanceToggle: obscured ? const AppearanceToggle() : null,
       ),
       ShellLayout.bottomBar => PopScope<Object?>(
         canPop: obscured || selected == ShellDestination.today,
