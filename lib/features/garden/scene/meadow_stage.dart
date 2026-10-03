@@ -1,11 +1,14 @@
 import 'dart:isolate';
 import 'dart:math' as math;
 
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/theme_context.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/model/garden_motion.dart';
@@ -31,6 +34,9 @@ import 'package:field_notes/features/garden/sky/sky_scene.dart';
 const String meadowLoadingMessage = 'Growing your meadow…';
 const String meadowStageHint = 'Drag to look around · tap a flower';
 
+const Duration meadowFocusPanDuration = Duration(milliseconds: 600);
+const Cubic meadowFocusPanCurve = Cubic(0.33, 0, 0.2, 1);
+
 const Duration _fadeIn = Duration(milliseconds: 300);
 const double _dragSlop = 5;
 const double _headReach = 5;
@@ -48,12 +54,22 @@ const double _settleStep = 1 / 20;
 const double _revealWindow = meadowRevealSeconds;
 const Color _hintFill = Color.fromRGBO(30, 24, 18, 0.5);
 const Color _hintInk = Color(0xFFFFFFFF);
-const TextStyle _hintStyle = TextStyle(
-  fontFamily: TypographyTokens.sans,
-  fontSize: 10,
-  fontWeight: FontWeight.w600,
-  color: _hintInk,
-);
+const Color _glassTipFill = Color.fromRGBO(28, 22, 16, 0.5);
+const Color _glassTipEdge = Color.fromRGBO(255, 250, 240, 0.24);
+const Color _glassTipHighlight = Color.fromRGBO(255, 255, 255, 0.14);
+const Color _glassTipInk = Color.fromRGBO(251, 243, 228, 1);
+const Color _glassTipSubInk = Color.fromRGBO(251, 243, 228, 0.8);
+const double _glassTipBlur = 16;
+const double _glassTipInset = 12;
+const BorderRadius _glassTipRadius = BorderRadius.all(Radius.circular(14));
+const List<BoxShadow> _glassTipShadows = <BoxShadow>[
+  BoxShadow(
+    color: Color.fromRGBO(0, 0, 0, 0.6),
+    offset: Offset(0, 12),
+    blurRadius: 28,
+    spreadRadius: -12,
+  ),
+];
 
 String meadowStageLabel(MeadowYear year) {
   final String counts = meadowCountPhrase(year.blooms, year.sprouts);
@@ -77,6 +93,11 @@ class MeadowStage extends StatefulWidget {
     this.readyOverlay,
     this.semanticLabel,
     this.onDragged,
+    this.onDragEnd,
+    this.cover,
+    this.glassTips = false,
+    this.overlayBottom,
+    this.panTo,
   });
 
   final MeadowYear year;
@@ -92,10 +113,15 @@ class MeadowStage extends StatefulWidget {
   final Widget? readyOverlay;
   final String? semanticLabel;
   final VoidCallback? onDragged;
+  final VoidCallback? onDragEnd;
+  final bool? cover;
+  final bool glassTips;
+  final double? overlayBottom;
+  final MeadowRange? panTo;
 
   int get resolvedGrowthPoint => growthPoint ?? year.limit;
 
-  bool get covers => compact || mode == MeadowSceneMode.full;
+  bool get covers => cover ?? (compact || mode == MeadowSceneMode.full);
 
   @override
   State<MeadowStage> createState() => MeadowStageState();
@@ -108,6 +134,7 @@ class MeadowStageState extends State<MeadowStage>
     vsync: this,
     duration: _fadeIn,
   );
+  late final AnimationController _panMotion;
   late final AppLifecycleListener _lifecycle;
   final ValueNotifier<int> _frame = ValueNotifier<int>(0);
 
@@ -147,6 +174,9 @@ class MeadowStageState extends State<MeadowStage>
   double _pressTravel = 0;
   _Hit? _hit;
   bool _hintDismissed = false;
+  MeadowRange? _pendingPan;
+  double _panFrom = 0;
+  double _panTarget = 0;
 
   @visibleForTesting
   int get debugImageBytes =>
@@ -197,6 +227,9 @@ class MeadowStageState extends State<MeadowStage>
   @visibleForTesting
   int get debugGenerations => _generation;
 
+  @visibleForTesting
+  bool get debugIsPanning => _panMotion.isAnimating;
+
   bool get _animate => _motion == GardenMotionProfile.full;
 
   @override
@@ -205,6 +238,11 @@ class MeadowStageState extends State<MeadowStage>
     _palette = _paletteOf(widget);
     _resumed = _isResumed(WidgetsBinding.instance.lifecycleState);
     _lifecycle = AppLifecycleListener(onStateChange: _lifecycleChanged);
+    _pendingPan = widget.panTo;
+    _panMotion = AnimationController(
+      vsync: this,
+      duration: meadowFocusPanDuration,
+    )..addListener(_panStep);
     _generate();
   }
 
@@ -241,6 +279,14 @@ class MeadowStageState extends State<MeadowStage>
     if (oldWidget.compact != widget.compact) {
       _hit = null;
     }
+    final MeadowRange? panTo = widget.panTo;
+    if (panTo != oldWidget.panTo) {
+      _pendingPan = panTo;
+      if (panTo != null) {
+        _hit = null;
+        _schedulePan();
+      }
+    }
     _syncMotion();
   }
 
@@ -254,6 +300,7 @@ class MeadowStageState extends State<MeadowStage>
     _pacer.leave(this);
     _lifecycle.dispose();
     _ticker.dispose();
+    _panMotion.dispose();
     _fade.dispose();
     _frame.dispose();
     _build?.dispose();
@@ -748,7 +795,79 @@ class MeadowStageState extends State<MeadowStage>
     });
   }
 
+  void _schedulePan() {
+    if (_pendingPan == null) {
+      return;
+    }
+    SchedulerBinding.instance.addPostFrameCallback((Duration _) {
+      if (mounted) {
+        _startPan();
+      }
+    });
+    SchedulerBinding.instance.ensureVisualUpdate();
+  }
+
+  void _startPan() {
+    final MeadowRange? range = _pendingPan;
+    final _SceneImages? scene = _scene;
+    final Size? box = _box;
+    if (range == null || scene == null || box == null || !widget.covers) {
+      return;
+    }
+    _pendingPan = null;
+    final _Geometry geometry = scene.key.geometry;
+    final double target = _panTargetFor(range, geometry, box);
+    final double from = _viewport?.pan ?? _pan ?? target;
+    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (still || (target - from).abs() < 0.5) {
+      _panMotion.stop();
+      setState(() => _pan = target);
+      return;
+    }
+    _panFrom = from;
+    _panTarget = target;
+    _panMotion.forward(from: 0);
+  }
+
+  double _panTargetFor(MeadowRange range, _Geometry geometry, Size box) {
+    final MeadowViewport cover = MeadowViewport.resolve(
+      box: box,
+      cover: true,
+      focusX: geometry.terrain.sky.focusX,
+    );
+    final double visible = box.width / cover.scale;
+    final int growthPoint = widget.resolvedGrowthPoint;
+    final List<double> xs = <double>[
+      for (final MeadowPlant plant in geometry.plants.plants)
+        if (plant.dayIndex >= range.first &&
+            plant.dayIndex <= range.last &&
+            plant.dayIndex < growthPoint)
+          plant.x,
+    ];
+    final double centre = xs.isEmpty
+        ? (range.first + range.last) /
+              2 /
+              geometry.year.daysInYear *
+              meadowWorldWidth
+        : xs.reduce((double a, double b) => a + b) / xs.length;
+    return (centre - visible / 2).clamp(
+      0.0,
+      math.max(0.0, meadowWorldWidth - visible),
+    );
+  }
+
+  void _panStep() {
+    final double t = meadowFocusPanCurve.transform(_panMotion.value);
+    final double pan = _panFrom + (_panTarget - _panFrom) * t;
+    if (pan != _pan) {
+      setState(() => _pan = pan);
+    }
+  }
+
   void _dragStarted(DragStartDetails details) {
+    if (_panMotion.isAnimating) {
+      _panMotion.stop();
+    }
     _dragFrom = _viewport?.pan ?? 0;
     _dragTravel = 0;
   }
@@ -789,7 +908,11 @@ class MeadowStageState extends State<MeadowStage>
   }
 
   void _dragEnded() {
+    final bool was = _dragging;
     _dragging = false;
+    if (was) {
+      widget.onDragEnd?.call();
+    }
   }
 
   @override
@@ -828,9 +951,13 @@ class MeadowStageState extends State<MeadowStage>
       );
     }
     final _Geometry geometry = scene.key.geometry;
+    if (_pendingPan != null) {
+      _schedulePan();
+    }
     final MeadowViewport viewport = _viewportOf(box, geometry);
     final _Hit? hit = _hit;
     final bool full = widget.mode == MeadowSceneMode.full;
+    final double? lift = widget.overlayBottom;
     return MouseRegion(
       onHover: _hover,
       onExit: _exit,
@@ -862,11 +989,14 @@ class MeadowStageState extends State<MeadowStage>
                   Positioned(
                     left: 0,
                     right: 0,
-                    top: full ? null : _hintTop,
-                    bottom: full ? _fullHintBottom : null,
-                    child: const IgnorePointer(
+                    top: lift != null || full ? null : _hintTop,
+                    bottom: lift ?? (full ? _fullHintBottom : null),
+                    child: IgnorePointer(
                       child: Center(
-                        child: MeadowHintPill(text: meadowStageHint),
+                        child: MeadowHintPill(
+                          text: meadowStageHint,
+                          fontSize: widget.glassTips ? 11 : 10,
+                        ),
                       ),
                     ),
                   ),
@@ -959,13 +1089,17 @@ class MeadowStageState extends State<MeadowStage>
     bool full,
   ) {
     final MeadowTip tip = hit.tip(geometry.year);
+    final bool glass = widget.glassTips;
     if (widget.compact) {
+      final double inset = glass ? _glassTipInset : _tipInset;
       return Positioned(
-        left: _tipInset,
-        right: _tipInset,
-        bottom: full ? _fullTipBottom : _tipInset,
+        left: inset,
+        right: inset,
+        bottom: widget.overlayBottom ?? (full ? _fullTipBottom : _tipInset),
         child: IgnorePointer(
-          child: MeadowStageTooltip(tip: tip, compact: true),
+          child: glass
+              ? MeadowGlassTip(tip: tip, compact: true)
+              : MeadowStageTooltip(tip: tip, compact: true),
         ),
       );
     }
@@ -976,7 +1110,9 @@ class MeadowStageState extends State<MeadowStage>
       child: IgnorePointer(
         child: FractionalTranslation(
           translation: const Offset(-0.5, -1),
-          child: MeadowStageTooltip(tip: tip, compact: false),
+          child: glass
+              ? MeadowGlassTip(tip: tip, compact: false)
+              : MeadowStageTooltip(tip: tip, compact: false),
         ),
       ),
     );
@@ -984,9 +1120,10 @@ class MeadowStageState extends State<MeadowStage>
 }
 
 class MeadowHintPill extends StatelessWidget {
-  const MeadowHintPill({super.key, required this.text});
+  const MeadowHintPill({super.key, required this.text, this.fontSize = 10});
 
   final String text;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
@@ -997,7 +1134,99 @@ class MeadowHintPill extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        child: Text(text, maxLines: 1, softWrap: false, style: _hintStyle),
+        child: Text(
+          text,
+          maxLines: 1,
+          softWrap: false,
+          style: TextStyle(
+            fontFamily: TypographyTokens.sans,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            color: _hintInk,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MeadowGlassTip extends StatelessWidget {
+  const MeadowGlassTip({super.key, required this.tip, required this.compact});
+
+  final MeadowTip tip;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final Border edge = Border.all(color: _glassTipEdge);
+    return CustomPaint(
+      foregroundPainter: const GlassShadowPainter(
+        shadows: _glassTipShadows,
+        borderRadius: _glassTipRadius,
+      ),
+      child: ClipRRect(
+        borderRadius: _glassTipRadius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: _glassTipBlur,
+            sigmaY: _glassTipBlur,
+          ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: _glassTipFill,
+              border: edge,
+              borderRadius: _glassTipRadius,
+            ),
+            child: CustomPaint(
+              painter: GlassHighlightPainter(
+                color: _glassTipHighlight,
+                borderRadius: _glassTipRadius,
+                insets: edge.dimensions as EdgeInsets,
+              ),
+              child: Padding(
+                padding: compact
+                    ? const EdgeInsets.symmetric(horizontal: 14, vertical: 10)
+                    : const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      tip.title,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: compact
+                          ? TextOverflow.ellipsis
+                          : TextOverflow.visible,
+                      style: TextStyle(
+                        fontFamily: TypographyTokens.serif,
+                        fontSize: compact ? 15 : 16,
+                        fontWeight: FontWeight.w500,
+                        height: compact ? 1.15 : 1.1,
+                        color: _glassTipInk,
+                      ),
+                    ),
+                    SizedBox(height: compact ? 2 : 3),
+                    Text(
+                      tip.subtitle,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: compact
+                          ? TextOverflow.ellipsis
+                          : TextOverflow.visible,
+                      style: TextStyle(
+                        fontFamily: TypographyTokens.sans,
+                        fontSize: compact ? 11.5 : 12,
+                        fontWeight: FontWeight.w500,
+                        color: _glassTipSubInk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

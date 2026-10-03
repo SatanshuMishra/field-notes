@@ -66,7 +66,6 @@ Future<void> _pump(
         ),
         skyClockProvider.overrideWithValue(() => _noon),
         skyLocationProvider.overrideWith((Ref ref) async => _edmonton),
-        skyDebugControlsProvider.overrideWithValue(false),
       ],
     ),
   );
@@ -309,7 +308,8 @@ void main() {
     expect(full.seed, meadowSeed(_meadowKey, 2025));
     expect(full.sky, _skyAt(morning));
 
-    await tester.tap(find.byKey(meadowFullScreenCloseKey));
+    expect(find.byTooltip('Exit full screen (F)'), findsOneWidget);
+    await tester.tap(find.byKey(meadowFullScreenButtonKey));
     await tester.pump();
     await tester.pump(meadowFullScreenFade + _frame);
 

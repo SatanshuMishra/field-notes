@@ -1,25 +1,39 @@
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_landmarks.dart';
 import 'package:field_notes/features/garden/widgets/meadow_ribbon.dart';
 
-const double _minTapTarget = 48;
-const Color _clear = Color(0x00000000);
-const BorderRadius _panelRadius = BorderRadius.all(
-  Radius.circular(Shapes.radiusMd),
-);
-const BorderRadius _switchRadius = BorderRadius.all(
-  Radius.circular(Shapes.radiusSm),
+const String meadowDetailsCloseLabel = 'Close';
+const String meadowDetailsCloseTooltip = 'Close (Esc)';
+const ValueKey<String> meadowDetailsCloseKey = ValueKey<String>(
+  'meadow-details-close',
 );
 
-enum _MeadowTab { days, landmarks }
+const double _minTapTarget = 48;
+const int _panelColumns = 4;
+const Color _clear = Color(0x00000000);
+const BorderRadius _trackRadius = BorderRadius.all(Radius.circular(12));
+const BorderRadius _tabRadius = BorderRadius.all(Radius.circular(9));
+
+enum MeadowDetailsTab { days, landmarks }
+
+String meadowTabNote(MeadowDetailsTab tab, {required bool compact}) =>
+    switch ((tab, compact)) {
+      (MeadowDetailsTab.days, false) => 'Hover a month to find its flowers',
+      (MeadowDetailsTab.days, true) => 'Tap a month to find its flowers',
+      (MeadowDetailsTab.landmarks, false) =>
+        'Hover one to find those days in the meadow',
+      (MeadowDetailsTab.landmarks, true) => 'Tap one to find those days',
+    };
 
 class MeadowTabs extends StatefulWidget {
   const MeadowTabs({
@@ -30,6 +44,11 @@ class MeadowTabs extends StatefulWidget {
     required this.growthPoint,
     required this.highlight,
     required this.onHighlight,
+    this.tab,
+    this.onTab,
+    this.onClose,
+    this.onFocusMonth,
+    this.onFocusLandmark,
   });
 
   final MeadowYear year;
@@ -38,119 +57,134 @@ class MeadowTabs extends StatefulWidget {
   final int growthPoint;
   final MeadowRange? highlight;
   final ValueChanged<MeadowRange?> onHighlight;
+  final MeadowDetailsTab? tab;
+  final ValueChanged<MeadowDetailsTab>? onTab;
+  final VoidCallback? onClose;
+  final ValueChanged<int>? onFocusMonth;
+  final ValueChanged<int>? onFocusLandmark;
 
   @override
   State<MeadowTabs> createState() => _MeadowTabsState();
 }
 
 class _MeadowTabsState extends State<MeadowTabs> {
-  _MeadowTab _tab = _MeadowTab.days;
+  MeadowDetailsTab _own = MeadowDetailsTab.days;
 
-  void _choose(_MeadowTab tab) {
+  MeadowDetailsTab get _tab => widget.tab ?? _own;
+
+  void _choose(MeadowDetailsTab tab) {
     if (tab == _tab) {
       return;
     }
-    setState(() => _tab = tab);
+    setState(() => _own = tab);
+    widget.onTab?.call(tab);
     widget.onHighlight(null);
   }
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
     final bool compact = widget.compact;
-    final bool days = _tab == _MeadowTab.days;
-    final String note = switch ((days, compact)) {
-      (true, false) => 'Hover a month to find its flowers',
-      (true, true) => 'Tap a month to find its flowers',
-      (false, false) => 'Hover one to find those days in the meadow',
-      (false, true) => 'Tap one to find those days',
-    };
-    const double edge = Shapes.outlineWidth;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.cardWarm,
-        border: context.shadows.outline,
-        borderRadius: _panelRadius,
-        boxShadow: context.shadows.cardDefault,
+    final MeadowDetailsTab tab = _tab;
+    final bool days = tab == MeadowDetailsTab.days;
+    final VoidCallback? close = widget.onClose;
+    final Widget header = Padding(
+      padding: compact
+          ? const EdgeInsets.fromLTRB(14, 12, 12, 8)
+          : const EdgeInsets.fromLTRB(16, 14, 12, 8),
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: _TabHeader(
+              child: _TabSwitch(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: context.colors.ink.withAlpha(0x0F),
+                    borderRadius: _trackRadius,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: _TabButton(
+                            label: compact ? 'Day by day' : meadowDetailsLabel,
+                            selected: days,
+                            onPressed: () => _choose(MeadowDetailsTab.days),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: _TabButton(
+                            label: widget.isCurrentYear
+                                ? 'This year so far'
+                                : 'Landmarks',
+                            selected: !days,
+                            onPressed: () =>
+                                _choose(MeadowDetailsTab.landmarks),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (close != null) ...<Widget>[
+            const SizedBox(width: 8),
+            _CloseButton(compact: compact, onPressed: close),
+          ],
+        ],
       ),
-      child: Padding(
-        padding: compact
-            ? const EdgeInsets.fromLTRB(10 + edge, edge, 10 + edge, 11 + edge)
-            : const EdgeInsets.fromLTRB(14 + edge, edge, 14 + edge, 14 + edge),
-        child: Column(
+    );
+    final Widget note = Padding(
+      padding: compact
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 8)
+          : const EdgeInsets.fromLTRB(18, 0, 18, 10),
+      child: Text(
+        meadowTabNote(tab, compact: compact),
+        style: context.textStyles.captionSans.copyWith(fontSize: 11),
+      ),
+    );
+    final Widget body = days
+        ? MeadowRibbon(
+            year: widget.year,
+            compact: compact,
+            growthPoint: widget.growthPoint,
+            highlight: widget.highlight,
+            onHighlight: widget.onHighlight,
+            columns: _panelColumns,
+            onFocus: widget.onFocusMonth,
+          )
+        : MeadowLandmarks(
+            year: widget.year,
+            isCurrentYear: widget.isCurrentYear,
+            compact: compact,
+            highlight: widget.highlight,
+            onHighlight: widget.onHighlight,
+            onFocus: widget.onFocusLandmark,
+          );
+    final EdgeInsets bodyPadding = compact
+        ? const EdgeInsets.fromLTRB(14, 0, 14, 14)
+        : const EdgeInsets.fromLTRB(16, 0, 16, 16);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool bounded = constraints.hasBoundedHeight;
+        return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            _TabHeader(
-              before: compact ? 8 : 10,
-              after: compact ? 9 : 12,
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 10,
-                runSpacing: 10,
-                children: <Widget>[
-                  _TabSwitch(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: colors.ink.withAlpha(0x0F),
-                        borderRadius: _switchRadius,
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(3),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            _TabButton(
-                              label: compact
-                                  ? 'Day by day'
-                                  : 'The year, day by day',
-                              selected: days,
-                              compact: compact,
-                              onPressed: () => _choose(_MeadowTab.days),
-                            ),
-                            const SizedBox(width: 4),
-                            _TabButton(
-                              label: widget.isCurrentYear
-                                  ? 'This year so far'
-                                  : 'Landmarks',
-                              selected: !days,
-                              compact: compact,
-                              onPressed: () => _choose(_MeadowTab.landmarks),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Text(
-                    note,
-                    style: compact
-                        ? context.textStyles.caption9Sans
-                        : context.textStyles.captionSans.copyWith(fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            if (days)
-              MeadowRibbon(
-                year: widget.year,
-                compact: compact,
-                growthPoint: widget.growthPoint,
-                highlight: widget.highlight,
-                onHighlight: widget.onHighlight,
+            header,
+            note,
+            if (bounded)
+              Flexible(
+                child: SingleChildScrollView(padding: bodyPadding, child: body),
               )
             else
-              MeadowLandmarks(
-                year: widget.year,
-                isCurrentYear: widget.isCurrentYear,
-                compact: compact,
-                highlight: widget.highlight,
-                onHighlight: widget.onHighlight,
-              ),
+              Padding(padding: bodyPadding, child: body),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -159,21 +193,16 @@ class _TabButton extends StatelessWidget {
   const _TabButton({
     required this.label,
     required this.selected,
-    required this.compact,
     required this.onPressed,
   });
 
   final String label;
   final bool selected;
-  final bool compact;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final BorderRadius radius = BorderRadius.all(
-      Radius.circular(compact ? Shapes.radiusIconButton : Shapes.radiusThumb),
-    );
     return _TabReach(
       child: Semantics(
         button: true,
@@ -186,11 +215,11 @@ class _TabButton extends StatelessWidget {
             onTap: onPressed,
             child: FocusRing(
               onPressed: onPressed,
-              borderRadius: radius,
+              borderRadius: _tabRadius,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: selected ? Palette.coral : _clear,
-                  borderRadius: radius,
+                  borderRadius: _tabRadius,
                   boxShadow: selected
                       ? <BoxShadow>[
                           BoxShadow(
@@ -201,16 +230,19 @@ class _TabButton extends StatelessWidget {
                       : const <BoxShadow>[],
                 ),
                 child: Padding(
-                  padding: compact
-                      ? const EdgeInsets.symmetric(horizontal: 8, vertical: 5)
-                      : const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 10,
+                  ),
                   child: Text(
                     label,
                     maxLines: 1,
                     softWrap: false,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
                     style: context.textStyles.captureLabelSans.copyWith(
                       color: selected ? Palette.onAccent : colors.inkSoft,
-                      fontSize: compact ? 10 : 12,
+                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -223,56 +255,100 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-class _TabHeader extends SingleChildRenderObjectWidget {
-  const _TabHeader({
-    required this.before,
-    required this.after,
-    required Widget super.child,
-  });
+class _CloseButton extends StatefulWidget {
+  const _CloseButton({required this.compact, required this.onPressed});
 
-  final double before;
-  final double after;
+  final bool compact;
+  final VoidCallback onPressed;
 
   @override
-  RenderObject createRenderObject(BuildContext context) =>
-      _RenderTabHeader(before, after);
+  State<_CloseButton> createState() => _CloseButtonState();
+}
+
+class _CloseButtonState extends State<_CloseButton> {
+  bool _hovered = false;
+
+  void _hover(bool hovered) {
+    if (hovered != _hovered) {
+      setState(() => _hovered = hovered);
+    }
+  }
 
   @override
-  void updateRenderObject(BuildContext context, _RenderTabHeader renderObject) {
-    renderObject
-      ..before = before
-      ..after = after;
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool compact = widget.compact;
+    final double extent = compact ? 44 : 34;
+    final BorderRadius radius = BorderRadius.all(
+      Radius.circular(compact ? 12 : 10),
+    );
+    final Widget face = DecoratedBox(
+      decoration: BoxDecoration(
+        color: _hovered ? colors.ink08 : _clear,
+        borderRadius: radius,
+      ),
+      child: SizedBox.square(
+        dimension: extent,
+        child: Center(
+          child: MeadowGlyph(
+            path: meadowCross,
+            size: compact ? 16 : 14,
+            color: colors.ink,
+            stroke: 2.4,
+          ),
+        ),
+      ),
+    );
+    return Semantics(
+      key: meadowDetailsCloseKey,
+      button: true,
+      label: meadowDetailsCloseLabel,
+      onTap: widget.onPressed,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (PointerEnterEvent event) => _hover(true),
+        onExit: (PointerExitEvent event) => _hover(false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
+          onTap: widget.onPressed,
+          child: FocusRing(
+            onPressed: widget.onPressed,
+            borderRadius: radius,
+            child: ExcludeSemantics(
+              child: compact
+                  ? face
+                  : Tooltip(
+                      message: meadowDetailsCloseTooltip,
+                      excludeFromSemantics: true,
+                      child: face,
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
-class _RenderTabHeader extends RenderShiftedBox {
-  _RenderTabHeader(this._before, this._after) : super(null);
+class _TabHeader extends SingleChildRenderObjectWidget {
+  const _TabHeader({required Widget super.child});
 
-  double _before;
-  double _after;
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderTabHeader();
+}
+
+class _RenderTabHeader extends RenderShiftedBox {
+  _RenderTabHeader() : super(null);
+
   Rect _reach = Rect.zero;
 
   Rect get reach => _reach;
 
-  set before(double value) {
-    if (value != _before) {
-      _before = value;
-      markNeedsLayout();
-    }
-  }
-
-  set after(double value) {
-    if (value != _after) {
-      _after = value;
-      markNeedsLayout();
-    }
-  }
-
   static BoxConstraints _childConstraints(BoxConstraints constraints) =>
       constraints.copyWith(minHeight: 0, maxHeight: double.infinity);
 
-  double _around(double child) =>
-      math.max(_before + child + _after, _minTapTarget);
+  double _around(double child) => math.max(child, _minTapTarget);
 
   @override
   double computeMinIntrinsicHeight(double width) =>
@@ -301,17 +377,13 @@ class _RenderTabHeader extends RenderShiftedBox {
       return;
     }
     child.layout(_childConstraints(constraints), parentUsesSize: true);
-    final Rect target = _switchIn(child);
+    final double height = _around(child.size.height);
+    final double top = (height - child.size.height) / 2;
+    (child.parentData! as BoxParentData).offset = Offset(0, top);
+    size = constraints.constrain(Size(child.size.width, height));
+    final Rect target = _switchIn(child).shift(Offset(0, top));
     final double half = math.max(_minTapTarget / 2, target.height / 2);
-    final double shift = math.max(0, half - (_before + target.center.dy));
-    final double centre = _before + shift + target.center.dy;
-    (child.parentData! as BoxParentData).offset = Offset(0, _before + shift);
-    size = constraints.constrain(
-      Size(
-        child.size.width,
-        math.max(_before + shift + child.size.height + _after, centre + half),
-      ),
-    );
+    final double centre = target.isEmpty ? height / 2 : target.center.dy;
     _reach = Rect.fromLTRB(
       target.left,
       centre - half,
@@ -349,11 +421,12 @@ class _RenderTabHeader extends RenderShiftedBox {
       return false;
     }
     final Offset offset = (child.parentData! as BoxParentData).offset;
+    final Offset probe = _reach.contains(position)
+        ? Offset(position.dx, _reach.center.dy)
+        : position;
     return result.addWithPaintOffset(
       offset: offset,
-      position: _reach.contains(position)
-          ? Offset(position.dx, _reach.center.dy)
-          : position,
+      position: probe,
       hitTest: (BoxHitTestResult result, Offset transformed) =>
           child.hitTest(result, position: transformed),
     );

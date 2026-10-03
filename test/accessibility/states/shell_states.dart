@@ -17,6 +17,7 @@ import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/search/search_day_tile.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
 import 'package:field_notes/features/search/search_field.dart';
@@ -460,7 +461,8 @@ final List<A11yState> shellStates = <A11yState>[
     ),
     proof: <A11yProof>[
       A11yProof(find.byType(MeadowStage)),
-      A11yProof(find.text('Grateful')),
+      A11yProof(find.byKey(meadowTimeButtonKey)),
+      A11yProof(find.byKey(meadowDetailsButtonKey)),
     ],
   ),
   A11yState(

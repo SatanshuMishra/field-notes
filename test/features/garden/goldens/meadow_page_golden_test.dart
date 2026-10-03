@@ -11,6 +11,8 @@ import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
+import 'package:field_notes/features/garden/widgets/meadow_focus_stepper.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
@@ -79,6 +81,7 @@ typedef _Reference = ({
   Brightness brightness,
   DateTime instant,
   int? studyYear,
+  String? focusMonth,
 });
 
 final List<_Reference> _references = <_Reference>[
@@ -89,6 +92,7 @@ final List<_Reference> _references = <_Reference>[
     brightness: Brightness.light,
     instant: _noon,
     studyYear: null,
+    focusMonth: null,
   ),
   (
     name: 'meadow_page_desktop_noon_dark',
@@ -97,6 +101,7 @@ final List<_Reference> _references = <_Reference>[
     brightness: Brightness.dark,
     instant: _noon,
     studyYear: null,
+    focusMonth: null,
   ),
   (
     name: 'meadow_page_desktop_midnight_dark',
@@ -105,6 +110,7 @@ final List<_Reference> _references = <_Reference>[
     brightness: Brightness.dark,
     instant: _midnight,
     studyYear: null,
+    focusMonth: null,
   ),
   (
     name: 'meadow_page_phone_noon_light',
@@ -113,6 +119,7 @@ final List<_Reference> _references = <_Reference>[
     brightness: Brightness.light,
     instant: _noon,
     studyYear: null,
+    focusMonth: null,
   ),
   (
     name: 'meadow_page_phone_midnight_dark',
@@ -121,6 +128,7 @@ final List<_Reference> _references = <_Reference>[
     brightness: Brightness.dark,
     instant: _midnight,
     studyYear: null,
+    focusMonth: null,
   ),
   (
     name: 'meadow_study_desktop_dusk_light',
@@ -129,6 +137,16 @@ final List<_Reference> _references = <_Reference>[
     brightness: Brightness.light,
     instant: _dusk,
     studyYear: 2025,
+    focusMonth: null,
+  ),
+  (
+    name: 'meadow_focus_phone_noon_light',
+    size: _phone,
+    platform: TargetPlatform.android,
+    brightness: Brightness.light,
+    instant: _noon,
+    studyYear: null,
+    focusMonth: 'Feb',
   ),
 ];
 
@@ -148,7 +166,6 @@ Future<void> _pumpReference(WidgetTester tester, _Reference reference) async {
         meadowKeyProvider.overrideWith((Ref ref) async => _meadowKey),
         skyClockProvider.overrideWithValue(() => reference.instant),
         skyLocationProvider.overrideWith((Ref ref) async => _edmonton),
-        skyDebugControlsProvider.overrideWithValue(false),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -188,10 +205,19 @@ Future<void> _pumpReference(WidgetTester tester, _Reference reference) async {
   }
   expect(stage.debugIsReady, isTrue, reason: '${reference.name} never grew');
   await tester.pumpAndSettle();
+  final String? month = reference.focusMonth;
+  if (month != null) {
+    await tester.tap(find.byKey(meadowDetailsButtonKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(month));
+    await tester.pumpAndSettle();
+    expect(find.byKey(meadowFocusStepperKey), findsOneWidget);
+    expect(find.text('February'), findsOneWidget);
+  }
 }
 
 void main() {
-  testWidgets('meadow pages match their references in light and dark', (
+  testWidgets('the full-bleed meadow pages match their goldens', (
     WidgetTester tester,
   ) async {
     tester.view.devicePixelRatio = 1;

@@ -56,47 +56,6 @@ final class SkyClockProvider
 
 String _$skyClockHash() => r'61e7ebf98be9ec48ffdf40e510495897b06b644d';
 
-@ProviderFor(skyDebugControls)
-final skyDebugControlsProvider = SkyDebugControlsProvider._();
-
-final class SkyDebugControlsProvider
-    extends $FunctionalProvider<bool, bool, bool>
-    with $Provider<bool> {
-  SkyDebugControlsProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'skyDebugControlsProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$skyDebugControlsHash();
-
-  @$internal
-  @override
-  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
-
-  @override
-  bool create(Ref ref) {
-    return skyDebugControls(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
-    );
-  }
-}
-
-String _$skyDebugControlsHash() => r'41f9acd86470371edcda62de85a6e719dab9b3c9';
-
 @ProviderFor(SkyTime)
 final skyTimeProvider = SkyTimeProvider._();
 

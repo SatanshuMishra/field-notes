@@ -7,6 +7,7 @@ import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
@@ -44,6 +45,12 @@ Future<void> _pumpSprout(WidgetTester tester) async {
   );
   await tester.pump();
   await tester.pump();
+}
+
+Future<void> _openDetails(WidgetTester tester) async {
+  await tester.tap(find.byKey(meadowDetailsButtonKey));
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
 }
 
 void main() {
@@ -88,14 +95,10 @@ void main() {
     );
     expect(stage.year.sprouts, 1);
     expect(stage.year.blooms, 0);
+    expect(find.text('0 blooms and 1 sprout so far in 2026'), findsOneWidget);
+
+    await _openDetails(tester);
     expect(find.text('Sprout'), findsOneWidget);
-    expect(
-      find.text(
-        '0 blooms and 1 sprout so far in 2026 · '
-        'quietly filling in as the year goes',
-      ),
-      findsOneWidget,
-    );
 
     await tester.pumpWidget(const SizedBox());
   });
@@ -103,6 +106,7 @@ void main() {
   testWidgets('one sprout reads 1 Sprout', (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     await _pumpSprout(tester);
+    await _openDetails(tester);
 
     expect(find.text('Sprout'), findsOneWidget);
     expect(find.bySemanticsLabel('1 Sprout'), findsOneWidget);
