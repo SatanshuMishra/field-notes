@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:field_notes/data/drafts/draft_paths.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/format/clock_format.dart';
-import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart'
     show CaptureMedia;
@@ -225,44 +224,10 @@ Future<String?> showTextComposer(
   String date, {
   ComposerExit exit = ComposerExit.cancel,
 }) {
-  return showGeneralDialog<String>(
-    context: context,
-    barrierDismissible: false,
+  return showComposerRoute<String>(
+    context,
     barrierLabel: 'Dismiss note composer',
-    barrierColor: const Color(0x00000000),
-    transitionDuration: Motion.modalPop,
-    pageBuilder: (
-      BuildContext dialogContext,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-    ) {
-      return DialogHost(
-        child: ComposerShell(
-          closeOnScrimTap: true,
-          responsive: true,
-          sprig: ComposerSprigPlacement.rightEdge,
-          child: TextComposerConnector(date: date, exit: exit),
-        ),
-      );
-    },
-    transitionBuilder: (
-      BuildContext dialogContext,
-      Animation<double> animation,
-      Animation<double> secondaryAnimation,
-      Widget child,
-    ) {
-      final Animation<double> curved = CurvedAnimation(
-        parent: animation,
-        curve: Motion.entranceCurve,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.92, end: 1.0).animate(curved),
-          child: child,
-        ),
-      );
-    },
+    child: TextComposerConnector(date: date, exit: exit),
   );
 }
 

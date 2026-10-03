@@ -397,7 +397,8 @@ void main() {
     expect(find.text(_afternoonTitle), findsNothing);
   });
 
-  testWidgets('a scrim tap on a dirty editor asks first and keeps the edit',
+  testWidgets(
+      'on macOS a scrim tap on a dirty editor asks first and keeps the edit',
       (WidgetTester tester) async {
     final NoteEditorDriver driver = NoteEditorDriver(tester);
     final Entry entry = _noteEntry();
@@ -440,7 +441,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(composerDiscardKey));
     await tester.pumpAndSettle();
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets(
       'the android system back button on a dirty editor routes through the '

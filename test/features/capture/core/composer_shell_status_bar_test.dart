@@ -35,19 +35,25 @@ Future<void> _pumpComposer(
   await tester.pump();
 }
 
+Rect _sheet(WidgetTester tester) =>
+    tester.getRect(find.byType(TextComposerSheet));
+
 void main() {
   testWidgets('the sheet stays below the status bar with the keyboard up', (
     WidgetTester tester,
   ) async {
     await _pumpComposer(tester, keyboardInset: _keyboard);
 
-    final Rect panel = tester.getRect(find.byKey(composerPanelKey));
-    expect(panel.top, greaterThanOrEqualTo(_statusBar));
+    expect(
+      tester.getRect(find.byKey(composerPanelKey)),
+      Offset.zero & _phoneSurface,
+    );
+    expect(_sheet(tester).top, _statusBar);
     expect(
       tester.getRect(find.text('Cancel')).top,
       greaterThanOrEqualTo(_statusBar),
     );
-    expect(panel.bottom, lessThanOrEqualTo(_phoneSurface.height - _keyboard));
+    expect(_sheet(tester).bottom, _phoneSurface.height - _keyboard);
     expect(tester.takeException(), isNull);
   });
 
@@ -57,9 +63,11 @@ void main() {
     await _pumpComposer(tester, keyboardInset: 0);
 
     expect(
-      tester.getRect(find.byKey(composerPanelKey)).top,
-      greaterThanOrEqualTo(_statusBar),
+      tester.getRect(find.byKey(composerPanelKey)),
+      Offset.zero & _phoneSurface,
     );
+    expect(_sheet(tester).top, _statusBar);
+    expect(_sheet(tester).bottom, _phoneSurface.height);
     expect(tester.takeException(), isNull);
   });
 }

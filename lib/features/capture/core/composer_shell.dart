@@ -2,10 +2,16 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show clampDouble;
+import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/art/art.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/widgets.dart'
+    show phoneSheetCurve, phoneSheetEntrance;
 
 const double composerPanelWidth = 640;
 const double composerPanelMaxWidth = 1000;
@@ -41,6 +47,81 @@ double composerPanelWidthFor(double window) => clampDouble(
       composerPanelMaxWidth,
     );
 
+const Color composerFullScreenBarrierColor = Color(0x612A241D);
+const Duration composerSlideDuration = phoneSheetEntrance;
+const Cubic composerSlideCurve = phoneSheetCurve;
+const double _popInScale = 0.92;
+
+bool composerFillsScreen(BuildContext context) =>
+    resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
+
+Future<T?> showComposerRoute<T>(
+  BuildContext context, {
+  required String barrierLabel,
+  required Widget child,
+}) {
+  final bool fullScreen = composerFillsScreen(context);
+  final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+  return showGeneralDialog<T>(
+    context: context,
+    barrierDismissible: false,
+    barrierLabel: barrierLabel,
+    barrierColor: fullScreen
+        ? composerFullScreenBarrierColor
+        : const Color(0x00000000),
+    transitionDuration: fullScreen
+        ? (still ? Duration.zero : composerSlideDuration)
+        : Motion.modalPop,
+    pageBuilder: (
+      BuildContext dialogContext,
+      Animation<double> animation,
+      Animation<double> secondaryAnimation,
+    ) {
+      return DialogHost(
+        child: ComposerShell(
+          closeOnScrimTap: true,
+          responsive: true,
+          sprig: ComposerSprigPlacement.rightEdge,
+          child: child,
+        ),
+      );
+    },
+    transitionBuilder: fullScreen ? _slideUp : _popIn,
+  );
+}
+
+Widget _slideUp(
+  BuildContext context,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  Widget child,
+) {
+  return SlideTransition(
+    position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+        .animate(CurvedAnimation(parent: animation, curve: composerSlideCurve)),
+    child: child,
+  );
+}
+
+Widget _popIn(
+  BuildContext context,
+  Animation<double> animation,
+  Animation<double> secondaryAnimation,
+  Widget child,
+) {
+  final Animation<double> curved = CurvedAnimation(
+    parent: animation,
+    curve: Motion.entranceCurve,
+  );
+  return FadeTransition(
+    opacity: curved,
+    child: ScaleTransition(
+      scale: Tween<double>(begin: _popInScale, end: 1.0).animate(curved),
+      child: child,
+    ),
+  );
+}
+
 enum ComposerSprigPlacement { headerCorner, rightEdge }
 
 class ComposerShell extends StatelessWidget {
@@ -61,6 +142,9 @@ class ComposerShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (responsive && composerFillsScreen(context)) {
+      return _fullScreen(context);
+    }
     return Stack(
       children: <Widget>[
         Positioned.fill(child: _scrim(context)),
@@ -110,6 +194,30 @@ class ComposerShell extends StatelessWidget {
   }
 
   Widget _sprig() => _sprigLayerFor(sprig);
+
+  Widget _fullScreen(BuildContext context) {
+    final MediaQueryData media = MediaQuery.of(context);
+    return Container(
+      key: composerPanelKey,
+      clipBehavior: Clip.hardEdge,
+      decoration: BoxDecoration(color: context.colors.composerPaper),
+      padding: EdgeInsets.only(
+        top: math.max(media.padding.top, media.viewPadding.top),
+        bottom: math.max(
+          math.max(media.padding.bottom, media.viewPadding.bottom),
+          media.viewInsets.bottom,
+        ),
+      ),
+      child: MediaQuery(
+        data: media
+            .removeViewInsets(removeBottom: true)
+            .removeViewPadding(removeTop: true, removeBottom: true),
+        child: Stack(
+          children: <Widget>[_sprig(), child],
+        ),
+      ),
+    );
+  }
 
   Widget _panel(BuildContext context) {
     final FieldNotesColors colors = context.colors;
