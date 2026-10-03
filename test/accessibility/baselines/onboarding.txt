@@ -1,39 +1,58 @@
 small-target | o10-moment-empty-bottom-bar | A day | <root>
 small-target | o10-moment-empty-bottom-bar | Opening | <root>
+small-target | o10-moment-empty-bottom-bar | Skip | <root>
+small-target | o10-moment-empty-bottom-bar | Switch to dark | <root>
 small-target | o12-moment-saved-bottom-bar | A day | <root>
 small-target | o12-moment-saved-bottom-bar | Opening | <root>
+small-target | o12-moment-saved-bottom-bar | Skip | <root>
+small-target | o12-moment-saved-bottom-bar | Switch to dark | <root>
 small-target | o14-moment-failed-bottom-bar | A day | <root>
 small-target | o14-moment-failed-bottom-bar | Opening | <root>
+small-target | o14-moment-failed-bottom-bar | Skip | <root>
+small-target | o14-moment-failed-bottom-bar | Switch to dark | <root>
 small-target | o16-month-empty-bottom-bar | A day | <root>
 small-target | o16-month-empty-bottom-bar | A moment | <root>
 small-target | o16-month-empty-bottom-bar | Opening | <root>
+small-target | o16-month-empty-bottom-bar | Skip | <root>
+small-target | o16-month-empty-bottom-bar | Switch to dark | <root>
 small-target | o18-month-full-bottom-bar | A day | <root>
 small-target | o18-month-full-bottom-bar | A moment | <root>
 small-target | o18-month-full-bottom-bar | Opening | <root>
+small-target | o18-month-full-bottom-bar | Skip | <root>
+small-target | o18-month-full-bottom-bar | Switch to dark | <root>
+small-target | o2-opening-unplanted-bottom-bar | Skip | <root>
+small-target | o2-opening-unplanted-bottom-bar | Switch to dark | <root>
 small-target | o20-year-playing-bottom-bar | A day | <root>
 small-target | o20-year-playing-bottom-bar | A moment | <root>
 small-target | o20-year-playing-bottom-bar | A month | <root>
 small-target | o20-year-playing-bottom-bar | Opening | <root>
+small-target | o20-year-playing-bottom-bar | Skip | <root>
+small-target | o20-year-playing-bottom-bar | Switch to dark | <root>
 small-target | o22-year-finished-bottom-bar | A day | <root>
 small-target | o22-year-finished-bottom-bar | A moment | <root>
 small-target | o22-year-finished-bottom-bar | A month | <root>
 small-target | o22-year-finished-bottom-bar | Opening | <root>
+small-target | o22-year-finished-bottom-bar | Skip | <root>
+small-target | o22-year-finished-bottom-bar | Switch to dark | <root>
 small-target | o24-theme-bottom-bar | A day | <root>
 small-target | o24-theme-bottom-bar | A moment | <root>
 small-target | o24-theme-bottom-bar | A month | <root>
 small-target | o24-theme-bottom-bar | A year | <root>
 small-target | o24-theme-bottom-bar | Opening | <root>
+small-target | o24-theme-bottom-bar | Switch to dark | <root>
 small-target | o26-reminder-time-bottom-bar | A day | <root>
 small-target | o26-reminder-time-bottom-bar | A moment | <root>
 small-target | o26-reminder-time-bottom-bar | A month | <root>
 small-target | o26-reminder-time-bottom-bar | A year | <root>
 small-target | o26-reminder-time-bottom-bar | Opening | <root>
+small-target | o26-reminder-time-bottom-bar | Switch to dark | <root>
 small-target | o26-reminder-time-bottom-bar | Theme | <root>
 small-target | o28-reminder-off-bottom-bar | A day | <root>
 small-target | o28-reminder-off-bottom-bar | A moment | <root>
 small-target | o28-reminder-off-bottom-bar | A month | <root>
 small-target | o28-reminder-off-bottom-bar | A year | <root>
 small-target | o28-reminder-off-bottom-bar | Opening | <root>
+small-target | o28-reminder-off-bottom-bar | Switch to dark | <root>
 small-target | o28-reminder-off-bottom-bar | Theme | <root>
 small-target | o30-week-bottom-bar | A day | <root>
 small-target | o30-week-bottom-bar | A moment | <root>
@@ -41,6 +60,7 @@ small-target | o30-week-bottom-bar | A month | <root>
 small-target | o30-week-bottom-bar | A year | <root>
 small-target | o30-week-bottom-bar | Opening | <root>
 small-target | o30-week-bottom-bar | Reminder | <root>
+small-target | o30-week-bottom-bar | Switch to dark | <root>
 small-target | o30-week-bottom-bar | Theme | <root>
 small-target | o32-map-end-bottom-bar | A day | <root>
 small-target | o32-map-end-bottom-bar | A moment | <root>
@@ -48,6 +68,7 @@ small-target | o32-map-end-bottom-bar | A month | <root>
 small-target | o32-map-end-bottom-bar | A year | <root>
 small-target | o32-map-end-bottom-bar | Opening | <root>
 small-target | o32-map-end-bottom-bar | Reminder | <root>
+small-target | o32-map-end-bottom-bar | Switch to dark | <root>
 small-target | o32-map-end-bottom-bar | Theme | <root>
 small-target | o32-map-end-bottom-bar | Week | <root>
 small-target | o36-reminder-notifications-off-bottom-bar | A day | <root>
@@ -55,6 +76,13 @@ small-target | o36-reminder-notifications-off-bottom-bar | A moment | <root>
 small-target | o36-reminder-notifications-off-bottom-bar | A month | <root>
 small-target | o36-reminder-notifications-off-bottom-bar | A year | <root>
 small-target | o36-reminder-notifications-off-bottom-bar | Opening | <root>
+small-target | o36-reminder-notifications-off-bottom-bar | Switch to dark | <root>
 small-target | o36-reminder-notifications-off-bottom-bar | Theme | <root>
+small-target | o4-opening-grown-bottom-bar | Skip | <root>
+small-target | o4-opening-grown-bottom-bar | Switch to dark | <root>
 small-target | o6-day-happy-bottom-bar | Opening | <root>
+small-target | o6-day-happy-bottom-bar | Skip | <root>
+small-target | o6-day-happy-bottom-bar | Switch to dark | <root>
 small-target | o8-day-calm-bottom-bar | Opening | <root>
+small-target | o8-day-calm-bottom-bar | Skip | <root>
+small-target | o8-day-calm-bottom-bar | Switch to dark | <root>
