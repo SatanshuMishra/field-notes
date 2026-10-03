@@ -11,6 +11,7 @@ import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -196,6 +197,18 @@ void _expectSwipeWrappersAtRest(WidgetTester tester, {required String reason}) {
       reason: '$reason wrapper shift',
     );
   }
+}
+
+bool _fadedFromOutside(RenderObject backdrop) {
+  for (RenderObject? node = backdrop.parent; node != null; node = node.parent) {
+    if (node is RenderOpacity && node.opacity < 1) {
+      return true;
+    }
+    if (node is RenderAnimatedOpacity && node.opacity.value < 1) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void main() {
@@ -444,6 +457,40 @@ void main() {
       );
       await _settle(tester);
       expect(field, findsNothing);
+    });
+  });
+
+  testWidgets('the blocked toast fades its glass in place instead of inside an '
+      'opacity layer', (WidgetTester tester) async {
+    await _onAndroid(() async {
+      final ProviderContainer container = await _pumpApp(tester);
+      _controller(container)
+        ..plant()
+        ..markGrown()
+        ..next()
+        ..next();
+      await _rest(tester);
+      expect(_chapter(container), OnboardingChapter.moment);
+
+      final TestGesture gesture = await tester.startGesture(
+        tester.getCenter(find.text(_momentTitle)),
+      );
+      await gesture.moveBy(const Offset(-20, 0));
+      await tester.pump();
+      await gesture.moveBy(const Offset(-80, 0));
+      await tester.pump();
+      await gesture.up();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text(_writeFirst), findsOneWidget);
+      final RenderObject backdrop = tester.renderObject(
+        find.descendant(
+          of: find.byKey(onboardingToastKey),
+          matching: find.byType(BackdropFilter),
+        ),
+      );
+      expect(_fadedFromOutside(backdrop), isFalse);
+      await tester.pump(const Duration(milliseconds: 2300));
     });
   });
 }

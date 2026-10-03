@@ -983,43 +983,38 @@ class _ToastSlotState extends State<_ToastSlot>
             animation: _rise,
             builder: (BuildContext context, Widget? child) {
               final double shown = Curves.easeOut.transform(_rise.value);
-              return Opacity(
-                opacity: shown,
-                alwaysIncludeSemantics: true,
-                child: Transform.translate(
-                  offset: Offset(0, 10 * (1 - shown)),
-                  child: child,
-                ),
+              return Transform.translate(
+                offset: Offset(0, 10 * (1 - shown)),
+                child: _toast(shown),
               );
             },
-            child: SizedBox(
-              key: onboardingToastKey,
-              width: _toastWidth,
-              child: Semantics(
-                liveRegion: true,
-                container: true,
-                child: GlassSurface(
-                  tone: GlassTone.toast,
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(_toastRadius),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  child: Text(
-                    widget.message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: TypographyTokens.sans,
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.35,
-                      color: _cream,
-                    ),
-                  ),
-                ),
-              ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _toast(double shown) {
+    return SizedBox(
+      key: onboardingToastKey,
+      width: _toastWidth,
+      child: Semantics(
+        liveRegion: true,
+        container: true,
+        child: GlassSurface(
+          tone: GlassTone.toast,
+          opacity: shown,
+          borderRadius: const BorderRadius.all(Radius.circular(_toastRadius)),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Text(
+            widget.message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: TypographyTokens.sans,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              height: 1.35,
+              color: _cream,
             ),
           ),
         ),

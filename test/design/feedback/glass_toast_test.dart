@@ -3,6 +3,7 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const String _message = 'Saved to Today';
@@ -14,6 +15,7 @@ Future<void> _show(
   required Size surface,
   double statusBar = 0,
   double gestureBar = 0,
+  Duration rise = const Duration(milliseconds: 400),
 }) async {
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1;
@@ -39,7 +41,19 @@ Future<void> _show(
   );
   await tester.tap(find.text('show'));
   await tester.pump();
-  await tester.pump(const Duration(milliseconds: 400));
+  await tester.pump(rise);
+}
+
+bool _fadedFromOutside(RenderObject backdrop) {
+  for (RenderObject? node = backdrop.parent; node != null; node = node.parent) {
+    if (node is RenderOpacity && node.opacity < 1) {
+      return true;
+    }
+    if (node is RenderAnimatedOpacity && node.opacity.value < 1) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void main() {
@@ -140,5 +154,24 @@ void main() {
       await tester.pump();
       expect(find.text(_message), findsNothing, reason: reason);
     }
+  });
+
+  testWidgets('a toast fades its glass in place instead of inside an '
+      'opacity layer', (WidgetTester tester) async {
+    await _show(
+      tester,
+      platform: TargetPlatform.android,
+      surface: const Size(384, 832),
+      rise: const Duration(milliseconds: 100),
+    );
+    final RenderObject backdrop = tester.renderObject(
+      find.descendant(
+        of: find.byType(Toast),
+        matching: find.byType(BackdropFilter),
+      ),
+    );
+    expect(_fadedFromOutside(backdrop), isFalse);
+    await tester.pump(kToastLifetime);
+    await tester.pump();
   });
 }
