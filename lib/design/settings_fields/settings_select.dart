@@ -128,6 +128,7 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
         container: true,
         button: true,
         enabled: _canOpen,
+        onTap: _usesSheet && _canOpen ? _open : null,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           excludeFromSemantics: true,
@@ -233,6 +234,7 @@ class _SettingsSelectSheetRow extends StatelessWidget {
       selected: selected,
       inMutuallyExclusiveGroup: true,
       label: label,
+      onTap: onTap,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         excludeFromSemantics: true,

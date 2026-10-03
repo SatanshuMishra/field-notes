@@ -239,6 +239,7 @@ class _DockButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
+      onTap: onPressed,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         excludeFromSemantics: true,

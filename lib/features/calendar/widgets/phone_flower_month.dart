@@ -583,6 +583,7 @@ class _PhoneDayCell extends StatelessWidget {
       onPressed: onTap,
       borderRadius: const BorderRadius.all(Radius.circular(_cellRadius)),
       child: Semantics(
+        container: true,
         button: onTap != null,
         label: _semanticLabel,
         onTap: onTap,
