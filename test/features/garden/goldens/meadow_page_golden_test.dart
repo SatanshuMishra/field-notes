@@ -7,6 +7,7 @@ import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/garden/model/meadow_view_state.dart';
+import 'package:field_notes/features/garden/render/meadow_night_overlay.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
@@ -222,6 +223,7 @@ void main() {
   ) async {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
+    await tester.runAsync(loadMeadowNightOverlay);
 
     for (final _Reference reference in _references) {
       await _pumpReference(tester, reference);

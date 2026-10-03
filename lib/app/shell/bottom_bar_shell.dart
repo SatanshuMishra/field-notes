@@ -72,6 +72,7 @@ class BottomBarShell extends StatefulWidget {
 }
 
 class _BottomBarShellState extends State<BottomBarShell> {
+  final BackdropKey _glassGroup = BackdropKey();
   bool _scrolled = false;
 
   bool get _overScene => widget.selected == ShellDestination.garden;
@@ -116,57 +117,61 @@ class _BottomBarShellState extends State<BottomBarShell> {
               resizeToAvoidBottomInset: false,
               body: FocusTraversalGroup(
                 policy: OrderedTraversalPolicy(),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    Padding(
-                      padding: EdgeInsets.only(bottom: keyboard),
-                      child: MediaQuery(
-                        data: _bodyMedia(
-                          media,
-                          headerHeight: headerHeight,
-                          gestureBar: gestureBar,
-                        ),
-                        child: NotificationListener<ScrollNotification>(
-                          onNotification: _onScroll,
-                          child: FocusTraversalOrder(
-                            order: const NumericFocusOrder(1),
-                            child: FocusTraversalGroup(child: widget.body),
+                child: BackdropGroup(
+                  backdropKey: _glassGroup,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      Padding(
+                        padding: EdgeInsets.only(bottom: keyboard),
+                        child: MediaQuery(
+                          data: _bodyMedia(
+                            media,
+                            headerHeight: headerHeight,
+                            gestureBar: gestureBar,
+                          ),
+                          child: NotificationListener<ScrollNotification>(
+                            onNotification: _onScroll,
+                            child: FocusTraversalOrder(
+                              order: const NumericFocusOrder(1),
+                              child: FocusTraversalGroup(child: widget.body),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: headerHeight,
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(0),
-                        child: FocusTraversalGroup(
-                          child: _header(context, statusBar: statusBar),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: phoneBottomBarSideInset,
-                      right: phoneBottomBarSideInset,
-                      bottom: gestureBar + phoneBottomBarGap,
-                      height: phoneBottomBarHeight,
-                      child: FocusTraversalOrder(
-                        order: const NumericFocusOrder(2),
-                        child: FocusTraversalGroup(
-                          child: PhoneBottomBar(
-                            destinations: widget.destinations,
-                            selected: widget.selected,
-                            onSelect: widget.onSelect,
-                            onCapture: widget.onCapture,
-                            overScene: _overScene,
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: headerHeight,
+                        child: FocusTraversalOrder(
+                          order: const NumericFocusOrder(0),
+                          child: FocusTraversalGroup(
+                            child: _header(context, statusBar: statusBar),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      Positioned(
+                        left: phoneBottomBarSideInset,
+                        right: phoneBottomBarSideInset,
+                        bottom: gestureBar + phoneBottomBarGap,
+                        height: phoneBottomBarHeight,
+                        child: FocusTraversalOrder(
+                          order: const NumericFocusOrder(2),
+                          child: FocusTraversalGroup(
+                            child: PhoneBottomBar(
+                              destinations: widget.destinations,
+                              selected: widget.selected,
+                              onSelect: widget.onSelect,
+                              onCapture: widget.onCapture,
+                              overScene: _overScene,
+                              grouped: true,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -249,6 +254,7 @@ class _BottomBarShellState extends State<BottomBarShell> {
       key: ValueKey<String>('phone-header-glass'),
       tone: GlassTone.scene,
       borderRadius: BorderRadius.zero,
+      grouped: true,
       tint: _sceneHeaderTint,
       border: Border(
         bottom: BorderSide(color: _sceneHeaderEdge, width: _headerEdgeWidth),
@@ -272,6 +278,7 @@ class _BottomBarShellState extends State<BottomBarShell> {
       key: const ValueKey<String>('phone-header-glass'),
       tone: GlassTone.paper,
       borderRadius: BorderRadius.zero,
+      grouped: true,
       tint: brightness == Brightness.dark
           ? _paperHeaderTintDark
           : _paperHeaderTintLight,

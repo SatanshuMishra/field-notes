@@ -100,6 +100,7 @@ class MeadowPhonePage extends StatelessWidget {
       if (study)
         MeadowGlassButton(
           key: meadowThisYearButtonKey,
+          grouped: true,
           label: meadowBackCompactLabel,
           onPressed: chrome.onBack,
           padding: const EdgeInsets.fromLTRB(10, 0, 13, 0),
@@ -119,6 +120,7 @@ class MeadowPhonePage extends StatelessWidget {
         ),
       MeadowGlassButton(
         key: meadowYearPickerButtonKey,
+        grouped: true,
         label: meadowYearPickerLabel,
         value: '${chrome.year.year}',
         selected: chrome.popover == MeadowPopover.year,
@@ -147,6 +149,7 @@ class MeadowPhonePage extends StatelessWidget {
         child: parts == null
             ? MeadowGlassButton(
                 key: meadowTimeButtonKey,
+                grouped: true,
                 label: meadowTimeButtonLabel,
                 value: chrome.timeLabel,
                 selected: chrome.popover == MeadowPopover.time,
@@ -178,6 +181,7 @@ class MeadowPhonePage extends StatelessWidget {
       ),
       MeadowGlassButton(
         key: meadowDetailsButtonKey,
+        grouped: true,
         label: meadowDetailsLabel,
         tooltip: meadowDetailsLabel,
         selected: chrome.detailsOpen,
@@ -187,6 +191,7 @@ class MeadowPhonePage extends StatelessWidget {
       ),
       MeadowGlassButton(
         key: meadowFullScreenButtonKey,
+        grouped: true,
         label: meadowFullScreenLabel,
         tooltip: meadowFullScreenLabel,
         width: meadowPhoneControlHeight,
@@ -195,14 +200,16 @@ class MeadowPhonePage extends StatelessWidget {
       ),
     ];
     return MeadowChromeBlock(
-      child: Row(
-        key: meadowDockKey,
-        children: <Widget>[
-          for (int index = 0; index < buttons.length; index++) ...<Widget>[
-            if (index > 0) const SizedBox(width: meadowPhoneDockGap),
-            buttons[index],
+      child: _MeadowDockGroup(
+        child: Row(
+          key: meadowDockKey,
+          children: <Widget>[
+            for (int index = 0; index < buttons.length; index++) ...<Widget>[
+              if (index > 0) const SizedBox(width: meadowPhoneDockGap),
+              buttons[index],
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -248,6 +255,27 @@ class MeadowPhonePage extends StatelessWidget {
             onPressed: () => chrome.onTime(time),
           ),
       ],
+    );
+  }
+}
+
+class _MeadowDockGroup extends StatefulWidget {
+  const _MeadowDockGroup({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_MeadowDockGroup> createState() => _MeadowDockGroupState();
+}
+
+class _MeadowDockGroupState extends State<_MeadowDockGroup> {
+  final BackdropKey _backdropKey = BackdropKey();
+
+  @override
+  Widget build(BuildContext context) {
+    return BackdropGroup(
+      backdropKey: _backdropKey,
+      child: MeadowDockShadows(child: widget.child),
     );
   }
 }

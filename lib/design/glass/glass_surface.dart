@@ -171,6 +171,8 @@ class GlassSurface extends StatelessWidget {
     this.border,
     this.shadows,
     this.opacity = 1,
+    this.grouped = false,
+    this.castsShadow = true,
   });
 
   final GlassTone tone;
@@ -181,6 +183,8 @@ class GlassSurface extends StatelessWidget {
   final BoxBorder? border;
   final List<BoxShadow>? shadows;
   final double opacity;
+  final bool grouped;
+  final bool castsShadow;
 
   @override
   Widget build(BuildContext context) {
@@ -191,38 +195,46 @@ class GlassSurface extends StatelessWidget {
     final BoxBorder edge =
         border ?? Border.all(color: colors.border, width: glassBorderWidth);
 
+    final ui.ImageFilter filter = shown < 1
+        ? glassBackdropFilterAt(shown)
+        : glassBackdropFilter;
+    final Widget face = Opacity(
+      opacity: shown,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: tint ?? colors.tint,
+          border: edge,
+          borderRadius: borderRadius,
+        ),
+        child: CustomPaint(
+          painter: GlassHighlightPainter(
+            color: colors.highlight,
+            borderRadius: borderRadius,
+            insets: edge.dimensions.resolve(direction),
+          ),
+          child: Padding(padding: padding, child: child),
+        ),
+      ),
+    );
+    final Widget glass = ClipRRect(
+      borderRadius: borderRadius,
+      child: grouped
+          ? BackdropFilter.grouped(
+              enabled: shown > 0,
+              filter: filter,
+              child: face,
+            )
+          : BackdropFilter(enabled: shown > 0, filter: filter, child: face),
+    );
+    if (!castsShadow) {
+      return glass;
+    }
     return CustomPaint(
       foregroundPainter: GlassShadowPainter(
         shadows: _fadedShadows(shadows ?? colors.shadows, shown),
         borderRadius: borderRadius,
       ),
-      child: ClipRRect(
-        borderRadius: borderRadius,
-        child: BackdropFilter(
-          enabled: shown > 0,
-          filter: shown < 1
-              ? glassBackdropFilterAt(shown)
-              : glassBackdropFilter,
-          child: Opacity(
-            opacity: shown,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: tint ?? colors.tint,
-                border: edge,
-                borderRadius: borderRadius,
-              ),
-              child: CustomPaint(
-                painter: GlassHighlightPainter(
-                  color: colors.highlight,
-                  borderRadius: borderRadius,
-                  insets: edge.dimensions.resolve(direction),
-                ),
-                child: Padding(padding: padding, child: child),
-              ),
-            ),
-          ),
-        ),
-      ),
+      child: glass,
     );
   }
 }

@@ -14,6 +14,7 @@ import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +79,15 @@ Future<void> _enter(WidgetTester tester) async {
   await tester.pump();
   await tester.pump();
   await tester.pump(meadowFullScreenFade + _frame);
+}
+
+bool _isAncestor(RenderObject ancestor, RenderObject node) {
+  for (RenderObject? walk = node.parent; walk != null; walk = walk.parent) {
+    if (identical(walk, ancestor)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void main() {
@@ -189,6 +199,55 @@ void main() {
       await tester.pump(meadowFullScreenFade + _frame);
       expect(mac.read(meadowViewStateProvider).fullScreen, isNull);
       expect(find.byTooltip('Full screen (F)'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+  testWidgets(
+    'the full-screen buttons keep their own blur and their own shadow',
+    (WidgetTester tester) async {
+      await _pump(tester, platform: TargetPlatform.android);
+      await _enter(tester);
+      expect(find.byType(MeadowGlassButton), findsNWidgets(2));
+      expect(find.byType(MeadowDockShadows), findsNothing);
+      for (final Key key in <Key>[
+        meadowFullScreenPlayKey,
+        meadowFullScreenCloseKey,
+      ]) {
+        expect(
+          tester.widget<MeadowGlassButton>(find.byKey(key)).grouped,
+          isFalse,
+          reason: '$key',
+        );
+        final RenderBackdropFilter blur = tester
+            .renderObject<RenderBackdropFilter>(
+              find.descendant(
+                of: find.byKey(key),
+                matching: find.byType(BackdropFilter),
+              ),
+            );
+        expect(blur.backdropKey, isNull, reason: '$key');
+        final List<RenderCustomPaint> shadows = <RenderCustomPaint>[
+          for (final RenderCustomPaint paint
+              in tester.renderObjectList<RenderCustomPaint>(
+                find.descendant(
+                  of: find.byKey(key),
+                  matching: find.byType(CustomPaint),
+                ),
+              ))
+            if (paint.foregroundPainter is GlassShadowPainter) paint,
+        ];
+        expect(shadows, hasLength(1), reason: '$key');
+        final RenderCustomPaint shadow = shadows.single;
+        expect(_isAncestor(shadow, blur), isTrue, reason: '$key');
+        final GlassShadowPainter painter =
+            shadow.foregroundPainter! as GlassShadowPainter;
+        expect(painter.shadows, GlassColors.scene.shadows, reason: '$key');
+        expect(
+          painter.borderRadius,
+          const BorderRadius.all(Radius.circular(meadowPhoneDockRadius)),
+          reason: '$key',
+        );
+      }
       await tester.pumpWidget(const SizedBox());
     },
   );

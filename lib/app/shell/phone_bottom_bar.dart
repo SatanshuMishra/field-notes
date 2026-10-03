@@ -54,6 +54,7 @@ class PhoneBottomBar extends StatelessWidget {
     this.onSelect,
     this.onCapture,
     this.overScene = false,
+    this.grouped = false,
   }) : assert(
          destinations.length == 4,
          'PhoneBottomBar requires four destinations',
@@ -64,6 +65,7 @@ class PhoneBottomBar extends StatelessWidget {
   final ValueChanged<ShellDestination>? onSelect;
   final VoidCallback? onCapture;
   final bool overScene;
+  final bool grouped;
 
   GlassTone get tone => overScene ? GlassTone.scene : GlassTone.paper;
 
@@ -74,6 +76,7 @@ class PhoneBottomBar extends StatelessWidget {
       child: GlassSurface(
         tone: tone,
         borderRadius: _barBorderRadius,
+        grouped: grouped,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[

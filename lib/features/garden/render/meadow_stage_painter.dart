@@ -7,8 +7,11 @@ import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/render/meadow_creature_art.dart';
 import 'package:field_notes/features/garden/render/meadow_layers.dart';
 import 'package:field_notes/features/garden/render/meadow_motion.dart';
+import 'package:field_notes/features/garden/render/meadow_night_overlay.dart';
+import 'package:field_notes/features/garden/render/meadow_paint_units.dart';
 import 'package:field_notes/features/garden/render/meadow_plant_atlas.dart';
 import 'package:field_notes/features/garden/render/meadow_rays.dart';
+import 'package:field_notes/features/garden/render/meadow_water_marks.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
@@ -106,6 +109,7 @@ class MeadowStagePainter extends CustomPainter {
     this.highlightSince = double.negativeInfinity,
     this.spot,
     this.caption,
+    this.nightOverlay,
     super.repaint,
   });
 
@@ -133,6 +137,7 @@ class MeadowStagePainter extends CustomPainter {
   final double highlightSince;
   final Offset? spot;
   final String? caption;
+  final ui.FragmentProgram? nightOverlay;
 
   double get _now => animate ? time : 0;
 
@@ -173,7 +178,7 @@ class MeadowStagePainter extends CustomPainter {
   void _paintSky(Canvas canvas, _PaletteShaders shaders) {
     canvas.drawRect(_world, Paint()..shader = shaders.sky);
     if (palette.warmGlowColour.a > 0) {
-      _drawUnit(
+      meadowDrawUnit(
         canvas,
         box: _world,
         centre: palette.warmGlowCentre,
@@ -307,15 +312,15 @@ class MeadowStagePainter extends CustomPainter {
 
   void _paintLivingWater(Canvas canvas) {
     final MeadowGroundDressing ground = terrain.ground;
-    final List<_WaterMark> marks = <_WaterMark>[];
+    final List<MeadowWaterMark> marks = <MeadowWaterMark>[];
     final double glintOpacity = palette.glintO;
     if (glintOpacity > _faint) {
       final Offset shift = Offset(palette.glintX, 0);
       marks.add(
-        _WaterMark(
+        MeadowWaterMark(
           oval: _ovalOf(ground.glare, shift: shift),
+          colour: palette.glintC,
           opacity: glintOpacity * MeadowGroundDressing.glareOpacity,
-          glint: true,
         ),
       );
       for (final MeadowGlint glint in ground.glints) {
@@ -324,10 +329,10 @@ class MeadowStagePainter extends CustomPainter {
             meadowGlint(_now, period: glint.period, phase: _phase(glint.phase));
         if (opacity > _faint) {
           marks.add(
-            _WaterMark(
+            MeadowWaterMark(
               oval: _ovalOf(glint.ellipse, shift: shift),
+              colour: palette.glintC,
               opacity: opacity,
-              glint: true,
             ),
           );
         }
@@ -341,10 +346,10 @@ class MeadowStagePainter extends CustomPainter {
       );
       if (pose.opacity > _faint) {
         marks.add(
-          _WaterMark(
+          MeadowWaterMark(
             oval: _ovalOf(ripple.ellipse, scale: pose.scale),
+            colour: palette.flowC,
             opacity: pose.opacity,
-            glint: false,
             stroke: MeadowRipple.strokeWidth * pose.scale,
           ),
         );
@@ -359,46 +364,22 @@ class MeadowStagePainter extends CustomPainter {
       final double opacity = palette.flowO * pose.opacity;
       if (opacity > _faint) {
         marks.add(
-          _WaterMark(
+          MeadowWaterMark(
             oval: _ovalOf(flow.ellipse, shift: Offset(0, pose.shift)),
+            colour: palette.flowC,
             opacity: opacity,
-            glint: false,
           ),
         );
       }
     }
-    final List<MeadowImage> water = layers.water;
-    if (marks.isEmpty || water.isEmpty) {
-      return;
-    }
-    canvas.saveLayer(
-      water
-          .map((MeadowImage tile) => tile.rect)
-          .reduce((Rect a, Rect b) => a.expandToInclude(b)),
-      Paint(),
-    );
-    for (final _WaterMark mark in marks) {
-      final double? stroke = mark.stroke;
-      canvas.drawOval(
-        mark.oval,
-        Paint()
-          ..color = _faded(
-            mark.glint ? palette.glintC : palette.flowC,
-            mark.opacity,
-          )
-          ..style = stroke == null ? PaintingStyle.fill : PaintingStyle.stroke
-          ..strokeWidth = stroke ?? 0,
-      );
-    }
-    layers.maskToWater(canvas);
-    canvas.restore();
+    paintMeadowWaterMarks(canvas, marks: marks, water: layers.water);
   }
 
   void _paintMist(Canvas canvas, _PaletteShaders shaders) {
     final Rect lake = terrain.sky.lakeMist.shift(
       Offset(meadowMistDrift(_now, period: meadowLakeMistPeriod), 0),
     );
-    _drawUnit(
+    meadowDrawUnit(
       canvas,
       box: lake,
       centre: _pointIn(lake, _lakeMistCentre),
@@ -420,7 +401,7 @@ class MeadowStagePainter extends CustomPainter {
     for (final MeadowFallLayer layer in layers.falls) {
       final Rect box = layer.fall.mist.shift(Offset(fallDrift, 0));
       final Offset centre = _pointIn(box, _fallMistCentre);
-      _drawUnit(
+      meadowDrawUnit(
         canvas,
         box: box,
         centre: centre,
@@ -593,7 +574,7 @@ class MeadowStagePainter extends CustomPainter {
         0,
       ),
     );
-    _drawUnit(
+    meadowDrawUnit(
       canvas,
       box: box,
       centre: box.center,
@@ -627,16 +608,23 @@ class MeadowStagePainter extends CustomPainter {
     if (palette.overlayAlpha <= _faint) {
       return;
     }
-    canvas.saveLayer(_world, Paint());
-    _drawUnit(
+    final ui.FragmentProgram? program = nightOverlay ?? _loadedNightOverlay();
+    if (program == null) {
+      paintMeadowNightOverlayLayered(
+        canvas,
+        layers: layers,
+        palette: palette,
+        gradient: shaders.overlay,
+      );
+      return;
+    }
+    paintMeadowNightOverlay(
       canvas,
-      box: _world,
-      centre: palette.overlayCentre,
-      radii: meadowOverlayRadii,
-      paint: Paint()..shader = shaders.overlay,
+      program: program,
+      layers: layers,
+      palette: palette,
+      gradient: shaders.overlay,
     );
-    layers.nightMask.apply(canvas);
-    canvas.restore();
   }
 
   void _paintRays(Canvas canvas) {
@@ -665,7 +653,7 @@ class MeadowStagePainter extends CustomPainter {
   }
 
   void _paintVignette(Canvas canvas) {
-    _drawUnit(
+    meadowDrawUnit(
       canvas,
       box: _world,
       centre: _vignetteCentre,
@@ -747,27 +735,12 @@ Size _farthestCorner(Rect box, Offset centre) => Size(
   math.max(centre.dy - box.top, box.bottom - centre.dy) * math.sqrt2,
 );
 
-void _drawUnit(
-  Canvas canvas, {
-  required Rect box,
-  required Offset centre,
-  required Size radii,
-  required Paint paint,
-}) {
-  canvas
-    ..save()
-    ..translate(centre.dx, centre.dy)
-    ..scale(radii.width, radii.height)
-    ..drawRect(
-      Rect.fromLTRB(
-        (box.left - centre.dx) / radii.width,
-        (box.top - centre.dy) / radii.height,
-        (box.right - centre.dx) / radii.width,
-        (box.bottom - centre.dy) / radii.height,
-      ),
-      paint,
-    )
-    ..restore();
+ui.FragmentProgram? _loadedNightOverlay() {
+  final ui.FragmentProgram? program = meadowNightOverlayProgram;
+  if (program == null) {
+    loadMeadowNightOverlay().ignore();
+  }
+  return program;
 }
 
 Rect _ovalOf(
@@ -779,20 +752,6 @@ Rect _ovalOf(
   width: ellipse.radiusX * 2 * scale,
   height: ellipse.radiusY * 2 * scale,
 );
-
-class _WaterMark {
-  const _WaterMark({
-    required this.oval,
-    required this.opacity,
-    required this.glint,
-    this.stroke,
-  });
-
-  final Rect oval;
-  final double opacity;
-  final bool glint;
-  final double? stroke;
-}
 
 Color _clear(Color colour) => colour.withValues(alpha: 0);
 
@@ -919,10 +878,7 @@ class _PaletteShaders {
 
   late final ui.Gradient fallFog = _unitFog(palette.fog, _fallStop);
 
-  late final ui.Gradient overlay = ui.Gradient.radial(Offset.zero, 1, <Color>[
-    palette.overlayColour.withValues(alpha: palette.overlayCentreAlpha),
-    palette.overlayColour.withValues(alpha: palette.overlayAlpha),
-  ]);
+  late final ui.Gradient overlay = meadowOverlayShader(palette);
 }
 
 ui.Gradient _moonGlowGradient(Color colour) {
