@@ -43,11 +43,6 @@ const Key phoneMonthDotKey = ValueKey<String>('phone-month-dot');
 const Key phoneMonthRingKey = ValueKey<String>('phone-month-ring');
 const Key phoneMonthTodayPillKey = ValueKey<String>('phone-month-today-pill');
 
-Color phoneCalendarSmallAccentInk(BuildContext context) =>
-    Theme.of(context).brightness == Brightness.light
-    ? context.colors.coralHover
-    : context.colors.accentInk;
-
 Key phoneMonthWeekKey(int index) => ValueKey<String>('phone-month-week-$index');
 
 const EdgeInsets _monthPadding = EdgeInsets.fromLTRB(14, 4, 14, 6);
@@ -695,7 +690,7 @@ class _ThisMonthPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color ink = phoneCalendarSmallAccentInk(context);
+    final Color ink = context.colors.accentInkStrong;
     return Semantics(
       button: true,
       label: phoneThisMonthLabel,

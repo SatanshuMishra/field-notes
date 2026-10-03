@@ -331,7 +331,7 @@ void _expectBarSelection(WidgetTester tester, ShellDestination? selected) {
   for (final ShellDestination destination in ShellDestination.primary) {
     expect(
       tester.widget<NavIcon>(_barIcon(destination.glyph!)).color.toARGB32(),
-      (destination == selected ? colors.accentInk : colors.mutedDeep)
+      (destination == selected ? colors.accentInkStrong : colors.mutedInkStrong)
           .toARGB32(),
       reason: '${destination.name} with ${selected?.name} selected',
     );

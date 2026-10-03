@@ -148,8 +148,8 @@ Color _expectedInk(
   return switch ((overScene, on)) {
     (true, true) => _sceneSelectedInk,
     (true, false) => _sceneInk,
-    (false, true) => colors.accentInk,
-    (false, false) => colors.mutedDeep,
+    (false, true) => colors.accentInkStrong,
+    (false, false) => colors.mutedInkStrong,
   };
 }
 
