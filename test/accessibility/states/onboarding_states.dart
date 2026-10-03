@@ -1,15 +1,18 @@
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:field_notes/features/onboarding/chapters/day_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/garden_scene.dart';
 import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/month_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/opening_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/other_ways_panel.dart';
 import 'package:field_notes/features/onboarding/chapters/reminder_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/theme_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
@@ -33,7 +36,9 @@ import '../../features/settings/support/recording_reminder_scheduler.dart';
 import '../support/a11y_state.dart';
 
 const Size onboardingSidebarSurface = Size(1280, 800);
-const Size onboardingBottomBarSurface = Size(360, 740);
+const Size onboardingBottomBarSurface = Size(384, 832);
+const double onboardingStatusBar = 34;
+const double onboardingGestureBar = 24;
 
 const List<ShellLayout> _layouts = <ShellLayout>[
   ShellLayout.sidebar,
@@ -44,6 +49,9 @@ const int _meadowFrames = 6000;
 const Duration _meadowWait = Duration(milliseconds: 2);
 const Duration _yearMidPlay = Duration(seconds: 4);
 const Duration _yearToEnd = Duration(seconds: 12);
+
+const double _swipe = 120;
+const double _swipeSpeed = 800;
 
 const String _firstLine = 'A first line about today';
 const String _lineFailure =
@@ -56,6 +64,7 @@ const String _notificationsOff = 'Notifications are off for Field Notes.';
 const String _openSystemSettings = 'Open System Settings';
 const String _goOnWithout =
     'You can still go on. Reminders stay off until notifications are on.';
+const String _otherWaysTitle = 'Some days are easier said.';
 
 const Map<OnboardingChapter, Type> _chapterTypes = <OnboardingChapter, Type>{
   OnboardingChapter.opening: OpeningChapter,
@@ -71,7 +80,7 @@ const Map<OnboardingChapter, Type> _chapterTypes = <OnboardingChapter, Type>{
 
 const Map<OnboardingChapter, String> _titles = <OnboardingChapter, String>{
   OnboardingChapter.opening: "Most days won't feel like a story.",
-  OnboardingChapter.day: 'How was today, honestly?',
+  OnboardingChapter.day: 'Every feeling grows its own flower.',
   OnboardingChapter.moment: 'Write a little about today.',
   OnboardingChapter.month: 'Give it a few weeks.',
   OnboardingChapter.year: 'This is roughly what a year of you looks like.',
@@ -80,6 +89,10 @@ const Map<OnboardingChapter, String> _titles = <OnboardingChapter, String>{
   OnboardingChapter.week: 'Your week starts on…',
   OnboardingChapter.tour: "Here's where everything lives.",
 };
+
+typedef _Page = ({Type widget, String title});
+
+const _Page _otherWaysPage = (widget: OtherWaysPanel, title: _otherWaysTitle);
 
 enum _Line { saves, fails }
 
@@ -99,6 +112,20 @@ FakeSettingsRepository _onboarded() => FakeSettingsRepository(
 
 void _stay(OnboardingController controller) {}
 
+Future<void> _still(WidgetTester tester, OnboardingChapter chapter) async {}
+
+Future<void> _swipeForward(
+  WidgetTester tester,
+  OnboardingChapter chapter,
+) async {
+  await tester.flingFrom(
+    tester.getCenter(find.text(_titles[chapter]!)),
+    const Offset(-_swipe, 0),
+    _swipeSpeed,
+  );
+  await _settle(tester);
+}
+
 List<Finder> _nothingMore(ShellLayout layout) => const <Finder>[];
 
 class _Screen {
@@ -107,6 +134,8 @@ class _Screen {
     required this.chapter,
     this.setUp = _stay,
     this.shows = _nothingMore,
+    this.phoneAct = _still,
+    this.phonePage,
     this.line = _Line.saves,
     this.year = _Year.untouched,
     this.notifications = _Notifications.allowed,
@@ -117,10 +146,18 @@ class _Screen {
   final OnboardingChapter chapter;
   final void Function(OnboardingController controller) setUp;
   final List<Finder> Function(ShellLayout layout) shows;
+  final Future<void> Function(WidgetTester tester, OnboardingChapter chapter)
+  phoneAct;
+  final _Page? phonePage;
   final _Line line;
   final _Year year;
   final _Notifications notifications;
   final bool replay;
+
+  _Page pageOn(ShellLayout layout) => switch ((layout, phonePage)) {
+    (ShellLayout.bottomBar, final _Page page?) => page,
+    _ => (widget: _chapterTypes[chapter]!, title: _titles[chapter]!),
+  };
 }
 
 String _layoutName(ShellLayout layout) => switch (layout) {
@@ -222,15 +259,31 @@ Future<void> _growYear(WidgetTester tester, _Year year) async {
   await _settle(tester);
 }
 
+void _placeOn(WidgetTester tester, ShellLayout layout, Size surface) {
+  tester.view.physicalSize = surface;
+  tester.view.devicePixelRatio = 1;
+  switch (layout) {
+    case ShellLayout.sidebar:
+      tester.view.resetPadding();
+      tester.view.resetViewPadding();
+    case ShellLayout.bottomBar:
+      const FakeViewPadding insets = FakeViewPadding(
+        top: onboardingStatusBar,
+        bottom: onboardingGestureBar,
+      );
+      tester.view.padding = insets;
+      tester.view.viewPadding = insets;
+  }
+  addTearDown(tester.view.reset);
+}
+
 Future<void> _pumpScreen(
   WidgetTester tester,
   ShellLayout layout,
   Size surface,
   _Screen screen,
 ) async {
-  tester.view.physicalSize = surface;
-  tester.view.devicePixelRatio = 1;
-  addTearDown(tester.view.reset);
+  _placeOn(tester, layout, surface);
   debugDefaultTargetPlatformOverride = switch (layout) {
     ShellLayout.sidebar => TargetPlatform.macOS,
     ShellLayout.bottomBar => TargetPlatform.android,
@@ -253,6 +306,9 @@ Future<void> _pumpScreen(
       screen.setUp(controller);
     }
     await _settle(tester);
+    if (layout == ShellLayout.bottomBar) {
+      await screen.phoneAct(tester, screen.chapter);
+    }
     await _growYear(tester, screen.year);
   } finally {
     debugDefaultTargetPlatformOverride = null;
@@ -264,19 +320,54 @@ Finder _primaryLabelled(String label) => find.descendant(
   matching: find.text(label),
 );
 
-List<A11yProof> _proof(_Screen screen, ShellLayout layout) => <A11yProof>[
-  A11yProof(find.byType(OnboardingFrame)),
-  A11yProof(find.byType(_chapterTypes[screen.chapter]!)),
-  A11yProof(find.text(_titles[screen.chapter]!)),
-  if (!screen.replay) A11yProof(find.byKey(onboardingProgressKey)),
-  for (final Finder finder in screen.shows(layout)) A11yProof(finder),
+Finder _cueReading(String label) => find.descendant(
+  of: find.byKey(onboardingCueKey),
+  matching: find.text(label),
+);
+
+List<Finder> _planted(Mood mood) => <Finder>[
+  find.byKey(gardenSceneKey),
+  find.byKey(gardenFlowerKey(mood.flower)),
+  find.byKey(gardenRootsKey(mood.flower)),
+  find.descendant(
+    of: find.byKey(gardenStakeKey),
+    matching: find.text(mood.flower.label.toLowerCase()),
+  ),
 ];
+
+List<Finder> _chrome(_Screen screen, ShellLayout layout) => <Finder>[
+  find.byKey(onboardingProgressKey),
+  find.byKey(onboardingToggleKey),
+  if (screen.chapter.isStory) find.byKey(onboardingSkipKey),
+  if (screen.chapter != OnboardingChapter.opening)
+    switch (layout) {
+      ShellLayout.sidebar => find.descendant(
+        of: find.byKey(onboardingBackKey),
+        matching: find.byType(GlassSurface),
+      ),
+      ShellLayout.bottomBar => find.byKey(onboardingBackKey),
+    },
+  if (layout == ShellLayout.bottomBar) find.byKey(onboardingCueKey),
+];
+
+List<A11yProof> _proof(_Screen screen, ShellLayout layout) {
+  final _Page page = screen.pageOn(layout);
+  return <A11yProof>[
+    A11yProof(find.byType(OnboardingFrame)),
+    A11yProof(find.byType(page.widget)),
+    A11yProof(find.text(page.title)),
+    if (!screen.replay)
+      for (final Finder finder in _chrome(screen, layout)) A11yProof(finder),
+    for (final Finder finder in screen.shows(layout)) A11yProof(finder),
+  ];
+}
 
 final List<_Screen> _screens = <_Screen>[
   _Screen(
     'opening-unplanted',
     chapter: OnboardingChapter.opening,
     shows: (ShellLayout layout) => <Finder>[
+      find.byKey(gardenSceneKey),
       find.byWidgetPredicate(
         (Widget widget) =>
             widget is Semantics &&
@@ -295,17 +386,20 @@ final List<_Screen> _screens = <_Screen>[
       ..plant()
       ..markGrown(),
     shows: (ShellLayout layout) => <Finder>[
-      _primaryLabelled(onboardingBeginLabel),
+      find.byKey(gardenSceneKey),
+      switch (layout) {
+        ShellLayout.sidebar => _primaryLabelled(onboardingBeginLabel),
+        ShellLayout.bottomBar => _cueReading(onboardingSwipeOnLabel),
+      },
     ],
   ),
   _Screen(
     'day-happy',
     chapter: OnboardingChapter.day,
     shows: (ShellLayout layout) => <Finder>[
-      find.descendant(
-        of: find.byKey(dayCardKey),
-        matching: find.text(Mood.happy.label),
-      ),
+      find.byKey(dayMoodGridKey),
+      find.byKey(dayMoodKey(Mood.happy)),
+      ..._planted(Mood.happy),
     ],
   ),
   _Screen(
@@ -314,35 +408,53 @@ final List<_Screen> _screens = <_Screen>[
     setUp: (OnboardingController controller) =>
         controller.chooseMood(Mood.calm),
     shows: (ShellLayout layout) => <Finder>[
-      find.descendant(
-        of: find.byKey(dayCardKey),
-        matching: find.text(Mood.calm.label),
-      ),
+      find.byKey(dayMoodGridKey),
+      find.byKey(dayMoodKey(Mood.calm)),
+      ..._planted(Mood.calm),
     ],
   ),
   _Screen(
     'moment-empty',
     chapter: OnboardingChapter.moment,
+    phoneAct: _swipeForward,
     shows: (ShellLayout layout) => <Finder>[
       find.byKey(momentFieldKey),
       find.text(_emptyHint),
+      if (layout == ShellLayout.bottomBar) ...<Finder>[
+        _cueReading(onboardingMomentCue),
+        find.byKey(onboardingToastKey),
+        find.text(onboardingMomentFirst),
+      ],
     ],
   ),
   _Screen(
     'moment-saved',
     chapter: OnboardingChapter.moment,
     setUp: (OnboardingController controller) => controller.setNote(_firstLine),
-    shows: (ShellLayout layout) => <Finder>[
-      find.text(_savedHint),
-      find.byKey(momentMediaKey),
-    ],
+    phoneAct: _swipeForward,
+    phonePage: _otherWaysPage,
+    shows: (ShellLayout layout) => switch (layout) {
+      ShellLayout.sidebar => <Finder>[
+        find.text(_savedHint),
+        find.byKey(momentMediaKey),
+      ],
+      ShellLayout.bottomBar => <Finder>[
+        find.byKey(otherWaysSpeakKey),
+        find.byKey(otherWaysFilmKey),
+        find.byKey(otherWaysSnapKey),
+        _cueReading(onboardingSwipeOnLabel),
+      ],
+    },
   ),
   _Screen(
     'moment-failed',
     chapter: OnboardingChapter.moment,
     line: _Line.fails,
     setUp: (OnboardingController controller) => controller.setNote(_firstLine),
-    shows: (ShellLayout layout) => <Finder>[find.text(_lineFailure)],
+    shows: (ShellLayout layout) => <Finder>[
+      find.byKey(momentFieldKey),
+      find.text(_lineFailure),
+    ],
   ),
   _Screen(
     'month-empty',
@@ -350,6 +462,7 @@ final List<_Screen> _screens = <_Screen>[
     shows: (ShellLayout layout) => <Finder>[
       find.byKey(monthSliderKey),
       find.text(_lookAhead),
+      if (layout == ShellLayout.bottomBar) _cueReading(onboardingMonthCue),
     ],
   ),
   _Screen(
@@ -359,6 +472,7 @@ final List<_Screen> _screens = <_Screen>[
     shows: (ShellLayout layout) => <Finder>[
       find.byKey(monthSliderKey),
       find.textContaining('by the end of'),
+      if (layout == ShellLayout.bottomBar) _cueReading(onboardingSwipeOnLabel),
     ],
   ),
   _Screen(
@@ -369,6 +483,7 @@ final List<_Screen> _screens = <_Screen>[
       find.byKey(yearSliderKey),
       find.byKey(yearReplayKey),
       find.textContaining(' of 365 days'),
+      if (layout == ShellLayout.bottomBar) _cueReading(onboardingYearCue),
     ],
   ),
   _Screen(
@@ -379,6 +494,11 @@ final List<_Screen> _screens = <_Screen>[
       find.byKey(yearSliderKey),
       find.byKey(yearReplayKey),
       find.text(yearWholeLabel),
+      find.text(switch (layout) {
+        ShellLayout.sidebar => yearCaptionSidebar,
+        ShellLayout.bottomBar => yearCaptionBottomBar,
+      }),
+      if (layout == ShellLayout.bottomBar) _cueReading(onboardingSwipeOnLabel),
     ],
   ),
   _Screen(
@@ -387,6 +507,10 @@ final List<_Screen> _screens = <_Screen>[
     shows: (ShellLayout layout) => <Finder>[
       for (final Appearance appearance in Appearance.values)
         find.byKey(themeChoiceKey(appearance)),
+      if (layout == ShellLayout.bottomBar) ...<Finder>[
+        find.byKey(themePreviewKey),
+        _cueReading(onboardingSwipeOnLabel),
+      ],
     ],
   ),
   _Screen(
@@ -395,6 +519,7 @@ final List<_Screen> _screens = <_Screen>[
     shows: (ShellLayout layout) => <Finder>[
       find.byKey(reminderPreviewKey),
       find.byKey(reminderChoiceKey(ReminderChoice.evening)),
+      if (layout == ShellLayout.bottomBar) _cueReading(onboardingSwipeOnLabel),
     ],
   ),
   _Screen(
@@ -402,21 +527,27 @@ final List<_Screen> _screens = <_Screen>[
     chapter: OnboardingChapter.reminder,
     setUp: (OnboardingController controller) =>
         controller.chooseReminder(ReminderChoice.off),
-    shows: (ShellLayout layout) => <Finder>[find.text(_reminderOff)],
+    shows: (ShellLayout layout) => <Finder>[
+      find.text(_reminderOff),
+      if (layout == ShellLayout.bottomBar) _cueReading(onboardingSwipeOnLabel),
+    ],
   ),
   _Screen(
     'week',
     chapter: OnboardingChapter.week,
-    shows: (ShellLayout layout) => <Finder>[find.byKey(weekStripKey)],
+    shows: (ShellLayout layout) => <Finder>[
+      find.byKey(weekStripKey),
+      if (layout == ShellLayout.bottomBar) _cueReading(onboardingSwipeOnLabel),
+    ],
   ),
   _Screen(
     'map-end',
     chapter: OnboardingChapter.tour,
     shows: (ShellLayout layout) => <Finder>[
-      _primaryLabelled(switch (layout) {
-        ShellLayout.sidebar => onboardingStartLabelSidebar,
-        ShellLayout.bottomBar => onboardingStartLabelBottomBar,
-      }),
+      switch (layout) {
+        ShellLayout.sidebar => _primaryLabelled(onboardingStartLabelSidebar),
+        ShellLayout.bottomBar => _cueReading(onboardingSwipeLastLabel),
+      },
     ],
   ),
   _Screen(
@@ -436,7 +567,10 @@ final List<_Screen> _screens = <_Screen>[
       find.text(_notificationsOff),
       find.text(_openSystemSettings),
       find.text(_goOnWithout),
-      _primaryLabelled(onboardingNextLabel),
+      switch (layout) {
+        ShellLayout.sidebar => _primaryLabelled(onboardingNextLabel),
+        ShellLayout.bottomBar => _cueReading(onboardingSwipeOnLabel),
+      },
     ],
   ),
 ];
