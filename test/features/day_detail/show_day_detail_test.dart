@@ -12,6 +12,10 @@ import 'package:field_notes/state/state.dart';
 
 import 'support/day_detail_harness.dart';
 
+final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
+
 class _DayTrigger extends StatelessWidget {
   const _DayTrigger({required this.date, this.focusEntryId, this.onError});
 
@@ -56,15 +60,14 @@ Widget _dayApp({
 
 FakeJournalRepository _repositoryWithOneNote() {
   return FakeJournalRepository(
-    entries: <Entry>[
-      entryOf(type: EntryType.text, textContent: 'a good day'),
-    ],
+    entries: <Entry>[entryOf(type: EntryType.text, textContent: 'a good day')],
   );
 }
 
 void main() {
-  testWidgets('opens the day modal for the given date',
-      (WidgetTester tester) async {
+  testWidgets('opens the day modal for the given date', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_dayApp(repository: _repositoryWithOneNote()));
 
     await tester.tap(find.text('open day'));
@@ -78,10 +81,11 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Add a note'), findsOneWidget);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('the android system back button dismisses the modal',
-      (WidgetTester tester) async {
+  testWidgets('the android system back button dismisses the modal', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_dayApp(repository: _repositoryWithOneNote()));
 
     await tester.tap(find.text('open day'));
@@ -94,8 +98,9 @@ void main() {
     expect(find.text('open day'), findsOneWidget);
   });
 
-  testWidgets('tapping the barrier dismisses the modal',
-      (WidgetTester tester) async {
+  testWidgets('tapping the barrier dismisses the modal', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_dayApp(repository: _repositoryWithOneNote()));
 
     await tester.tap(find.text('open day'));
@@ -105,10 +110,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sunday, July 19'), findsNothing);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('the close button dismisses the modal',
-      (WidgetTester tester) async {
+  testWidgets('the close button dismisses the modal', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_dayApp(repository: _repositoryWithOneNote()));
 
     await tester.tap(find.text('open day'));
@@ -119,7 +125,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sunday, July 19'), findsNothing);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('rejects a malformed date key', (WidgetTester tester) async {
     Object? captured;
@@ -139,33 +145,34 @@ void main() {
     expect(find.text('Sunday, July 19'), findsNothing);
   });
 
-  testWidgets('forwards focusEntryId to the panel',
-      (WidgetTester tester) async {
+  testWidgets('forwards focusEntryId to the panel', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
-      _dayApp(
-        repository: _repositoryWithOneNote(),
-        focusEntryId: 'entry-1',
-      ),
+      _dayApp(repository: _repositoryWithOneNote(), focusEntryId: 'entry-1'),
     );
 
     await tester.tap(find.text('open day'));
     await tester.pumpAndSettle();
 
-    final DayDetailPanel panel =
-        tester.widget<DayDetailPanel>(find.byType(DayDetailPanel));
+    final DayDetailPanel panel = tester.widget<DayDetailPanel>(
+      find.byType(DayDetailPanel),
+    );
     expect(panel.date, '2026-07-19');
     expect(panel.focusEntryId, 'entry-1');
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('omitting focusEntryId leaves the panel unfocused',
-      (WidgetTester tester) async {
+  testWidgets('omitting focusEntryId leaves the panel unfocused', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_dayApp(repository: _repositoryWithOneNote()));
 
     await tester.tap(find.text('open day'));
     await tester.pumpAndSettle();
 
-    final DayDetailPanel panel =
-        tester.widget<DayDetailPanel>(find.byType(DayDetailPanel));
+    final DayDetailPanel panel = tester.widget<DayDetailPanel>(
+      find.byType(DayDetailPanel),
+    );
     expect(panel.focusEntryId, isNull);
     expect(
       find.byWidgetPredicate(
@@ -173,5 +180,5 @@ void main() {
       ),
       findsOneWidget,
     );
-  });
+  }, variant: _bothLayouts);
 }

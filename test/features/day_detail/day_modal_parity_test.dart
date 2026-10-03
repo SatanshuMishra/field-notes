@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_header.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
@@ -81,8 +82,9 @@ Future<FakeJournalRepository> _openDay(
   WidgetTester tester, {
   required List<Entry> entries,
 }) async {
-  final FakeJournalRepository repository =
-      FakeJournalRepository(entries: entries);
+  final FakeJournalRepository repository = FakeJournalRepository(
+    entries: entries,
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -114,22 +116,31 @@ void _useWindow(WidgetTester tester, Size size) {
 }
 
 Finder _dayTitleInPanel() => find.descendant(
-      of: find.byType(DayDetailPanel),
-      matching: find.text(_dayTitle),
-    );
+  of: find.byType(DayDetailPanel),
+  matching: find.text(_dayTitle),
+);
 
 Finder _panel() => find.byKey(dayDetailPanelKey);
 
+final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
+
+final TargetPlatformVariant _macOS = TargetPlatformVariant.only(
+  TargetPlatform.macOS,
+);
+
 void main() {
-  testWidgets('the day modal carries no fallback underline',
-      (WidgetTester tester) async {
+  testWidgets('the day modal carries no fallback underline', (
+    WidgetTester tester,
+  ) async {
     await _openDay(tester, entries: _threeNotes());
 
     final Finder title = _dayTitleInPanel();
     expect(title, findsOneWidget);
     final TextStyle style = DefaultTextStyle.of(tester.element(title)).style;
     expect(style.decoration ?? TextDecoration.none, TextDecoration.none);
-  });
+  }, variant: _bothLayouts);
 
   testWidgets('a long day stays inside 86 percent of the window under a '
       'fixed header', (WidgetTester tester) async {
@@ -146,15 +157,12 @@ void main() {
     expect(find.byType(CompactLogCard), findsWidgets);
 
     final double headerTop = tester.getTopLeft(find.byType(DayDetailHeader)).dy;
-    await tester.drag(
-      find.byType(CompactLogCard).first,
-      const Offset(0, -300),
-    );
+    await tester.drag(find.byType(CompactLogCard).first, const Offset(0, -300));
     await tester.pumpAndSettle();
 
     expect(tester.getTopLeft(find.byType(DayDetailHeader)).dy, headerTop);
     expect(tester.getSize(_panel()).height, lessThanOrEqualTo(688));
-  });
+  }, variant: _macOS);
 
   testWidgets('every card stays inside the panel at a narrow window and '
       'doubled text', (WidgetTester tester) async {
@@ -168,7 +176,8 @@ void main() {
         _entry(
           id: 'entry-2',
           hour: 12,
-          textContent: 'Pruned the climbing rose back to the trellis and tied '
+          textContent:
+              'Pruned the climbing rose back to the trellis and tied '
               'the new canes in before the rain came through the valley.',
         ),
         _entry(id: 'entry-3', hour: 18, textContent: _longNote(3)),
@@ -214,7 +223,58 @@ void main() {
     }
     expect(tester.getRect(_panel()), panel);
     expect(tester.takeException(), isNull);
-  });
+  }, variant: _macOS);
+
+  testWidgets('on the phone every card and its actions stay inside the sheet '
+      'at a narrow window and doubled text', (WidgetTester tester) async {
+    _useWindow(tester, const Size(360, 740));
+    tester.platformDispatcher.textScaleFactorTestValue = 2.0;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await _openDay(
+      tester,
+      entries: <Entry>[
+        _entry(id: 'entry-1', hour: 8, textContent: 'Watered the roses.'),
+        _entry(
+          id: 'entry-2',
+          hour: 12,
+          textContent:
+              'Pruned the climbing rose back to the trellis and tied '
+              'the new canes in before the rain came through the valley.',
+        ),
+        _entry(id: 'entry-3', hour: 18, textContent: _longNote(3)),
+        _entry(
+          id: 'entry-4',
+          hour: 20,
+          type: EntryType.voice,
+          mediaId: 'voice-that-is-gone',
+        ),
+      ],
+    );
+
+    final Rect sheet = tester.getRect(find.byType(PhoneSheet));
+    expect(sheet.width, 360);
+    for (final String id in <String>[
+      'entry-1',
+      'entry-2',
+      'entry-3',
+      'entry-4',
+    ]) {
+      final Finder card = find.descendant(
+        of: find.byKey(ValueKey<String>(id)),
+        matching: find.byType(CompactLogCard),
+      );
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      final Rect rect = tester.getRect(card);
+      expect(rect.left, greaterThanOrEqualTo(sheet.left), reason: id);
+      expect(rect.right, lessThanOrEqualTo(sheet.right), reason: id);
+      final Rect delete = tester.getRect(find.byKey(daySheetDeleteKeyFor(id)));
+      expect(delete.right, lessThanOrEqualTo(rect.right), reason: id);
+      expect(delete.top, lessThan(rect.top), reason: id);
+      expect(delete.bottom, greaterThan(rect.top), reason: id);
+    }
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('the day modal lists compact cards', (WidgetTester tester) async {
     await _openDay(tester, entries: _threeNotes());
@@ -235,10 +295,11 @@ void main() {
         findsOneWidget,
       );
     }
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('a card hands over to view mode and Back returns to the day',
-      (WidgetTester tester) async {
+  testWidgets('a card hands over to view mode and Back returns to the day', (
+    WidgetTester tester,
+  ) async {
     await _openDay(tester, entries: _threeNotes());
 
     await tester.tap(find.text('8:12 AM · morning · note'));
@@ -253,10 +314,11 @@ void main() {
 
     expect(find.text('Morning note'), findsNothing);
     expect(_dayTitleInPanel(), findsOneWidget);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('a scrim tap in view mode closes the day modal too',
-      (WidgetTester tester) async {
+  testWidgets('a scrim tap in view mode closes the day modal too', (
+    WidgetTester tester,
+  ) async {
     await _openDay(tester, entries: _threeNotes());
 
     await tester.tap(find.text('8:12 AM · morning · note'));
@@ -269,12 +331,15 @@ void main() {
     expect(find.text('Morning note'), findsNothing);
     expect(find.byType(DayDetailPanel, skipOffstage: false), findsNothing);
     expect(find.text('open day'), findsOneWidget);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('deleting from a pill asks first, then deletes and toasts',
-      (WidgetTester tester) async {
-    final FakeJournalRepository repository =
-        await _openDay(tester, entries: _threeNotes());
+  testWidgets('deleting from a pill asks first, then deletes and toasts', (
+    WidgetTester tester,
+  ) async {
+    final FakeJournalRepository repository = await _openDay(
+      tester,
+      entries: _threeNotes(),
+    );
 
     await tester.longPress(find.byType(CompactLogCard).first);
     await tester.pumpAndSettle();
@@ -297,10 +362,11 @@ void main() {
 
     await tester.pump(kToastLifetime);
     await tester.pumpAndSettle();
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('Add a note opens edit mode with Back and returns to the day',
-      (WidgetTester tester) async {
+  testWidgets('Add a note opens edit mode with Back and returns to the day', (
+    WidgetTester tester,
+  ) async {
     await _openDay(tester, entries: _threeNotes());
 
     await tester.tap(find.text('Add a note'));
@@ -314,5 +380,5 @@ void main() {
 
     expect(find.text('Back'), findsNothing);
     expect(_dayTitleInPanel(), findsOneWidget);
-  });
+  }, variant: _bothLayouts);
 }
