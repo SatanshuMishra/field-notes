@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -17,6 +18,19 @@ const Map<String, int> _legacyLauncherSizes = <String, int>{
   'xxhdpi': 144,
   'xxxhdpi': 192,
 };
+
+const Map<String, int> _notificationSizes = <String, int>{
+  'mdpi': 24,
+  'hdpi': 36,
+  'xhdpi': 48,
+  'xxhdpi': 72,
+  'xxxhdpi': 96,
+};
+
+const String _notificationIcon = 'ic_stat_peony';
+const double _notificationCanvas = 24;
+const double _notificationArt = 20;
+const ui.Color _notificationInk = ui.Color(0xFFFFFFFF);
 
 const double _appleCanvas = 1024;
 const double _appleBody = 824;
@@ -665,6 +679,50 @@ Future<Uint8List> _renderLegacyLauncher(_IconArt art, int size) => _renderPng(
       _paint(canvas, _place(art.shapes, _fit(art.viewBox, size.toDouble(), 0))),
 );
 
+Future<Uint8List> _renderNotificationIcon(_IconArt art, int size) {
+  final ui.Rect bounds = art.flower
+      .where((_Shape shape) => shape.style.fill != null)
+      .map((_Shape shape) => shape.toPath().getBounds())
+      .reduce((ui.Rect a, ui.Rect b) => a.expandToInclude(b));
+  final double scale =
+      _notificationArt *
+      size /
+      _notificationCanvas /
+      math.max(bounds.width, bounds.height);
+  final _Affine placement = _Affine(
+    scale,
+    scale,
+    size / 2 - bounds.center.dx * scale,
+    size / 2 - bounds.center.dy * scale,
+  );
+  return _renderPng(
+    size,
+    (ui.Canvas canvas) =>
+        _paintSilhouette(canvas, _place(art.flower, placement)),
+  );
+}
+
+void _paintSilhouette(ui.Canvas canvas, List<_Shape> shapes) {
+  canvas.saveLayer(null, ui.Paint());
+  for (final _Shape shape in shapes) {
+    final ui.Path path = shape.toPath();
+    if (shape.style.fill != null) {
+      canvas.drawPath(path, ui.Paint()..color = _notificationInk);
+    }
+    if (shape.style.stroke != null && shape.style.strokeWidth > 0) {
+      canvas.drawPath(
+        path,
+        ui.Paint()
+          ..blendMode = ui.BlendMode.clear
+          ..style = ui.PaintingStyle.stroke
+          ..strokeWidth = shape.style.strokeWidth
+          ..strokeJoin = shape.style.strokeJoin,
+      );
+    }
+  }
+  canvas.restore();
+}
+
 String _format(double value) {
   final String trimmed = value
       .toStringAsFixed(3)
@@ -746,6 +804,11 @@ String _adaptiveBackground(_IconArt art) =>
     '    <color name="ic_launcher_background">${_hex(art.tileColour)}</color>\n'
     '</resources>\n';
 
+const String _keepResources =
+    '<?xml version="1.0" encoding="utf-8"?>\n'
+    '<resources xmlns:tools="http://schemas.android.com/tools"\n'
+    '    tools:keep="@drawable/$_notificationIcon" />\n';
+
 const String _adaptiveIcon =
     '<?xml version="1.0" encoding="utf-8"?>\n'
     '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
@@ -789,5 +852,12 @@ void main() {
       '$_androidRes/drawable/ic_launcher_foreground.xml',
       _adaptiveForeground(art),
     );
+    for (final MapEntry<String, int> density in _notificationSizes.entries) {
+      _writeBytes(
+        '$_androidRes/drawable-${density.key}/$_notificationIcon.png',
+        await _renderNotificationIcon(art, density.value),
+      );
+    }
+    _writeText('$_androidRes/raw/keep.xml', _keepResources);
   });
 }
