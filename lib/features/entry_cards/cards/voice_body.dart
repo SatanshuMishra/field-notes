@@ -1,46 +1,16 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:flutter/widgets.dart';
 
-import '../../../design/motion/motion.dart';
 import '../../../design/tokens/tokens.dart';
 import '../../../domain/models/models.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/audio_playback.dart';
 import '../util/duration_format.dart';
-
-const List<double> _entryWaveHeights = <double>[
-  0.40,
-  0.75,
-  1.00,
-  0.55,
-  0.85,
-  0.35,
-  0.70,
-  0.50,
-  0.90,
-  0.45,
-  0.65,
-  0.80,
-  0.38,
-  0.60,
-];
-
-const List<Duration> _entryWaveDurations = <Duration>[
-  Duration(milliseconds: 700),
-  Duration(milliseconds: 850),
-  Duration(milliseconds: 1000),
-  Duration(milliseconds: 1150),
-];
-
-const double _waveCoralThreshold = 0.62;
-const double _waveMidThreshold = 0.42;
-const double _waveHeight = 24;
-const double _waveBarWidth = 3;
-const double _waveSpacing = 2.5;
-const double _waveBarRadius = 2;
+import 'voice_waveform.dart';
 
 const double _unavailableMinHeight = 64;
 
@@ -53,12 +23,10 @@ const BorderRadius _toggleRadius = BorderRadius.all(
   Radius.circular(_toggleSize / 2),
 );
 
-Color _entryWaveTint(double height, FieldNotesColors colors) {
-  if (height > _waveCoralThreshold) {
-    return Palette.coral;
-  }
-  return height > _waveMidThreshold ? colors.waveMid : colors.waveLight;
-}
+const double _labelGap = 12;
+const double _labelMinWidth = 62;
+const Duration _seekStep = Duration(seconds: 5);
+const String _positionLabel = 'Playback position';
 
 class VoiceBody extends StatefulWidget {
   const VoiceBody({
@@ -213,6 +181,66 @@ class _VoiceBodyState extends State<VoiceBody> {
 
   bool get _isPlaying => _state == AudioPlaybackState.playing;
 
+  bool get _isActive => switch (_state) {
+    AudioPlaybackState.playing => true,
+    AudioPlaybackState.paused ||
+    AudioPlaybackState.loading => _position > Duration.zero,
+    AudioPlaybackState.idle ||
+    AudioPlaybackState.completed ||
+    AudioPlaybackState.error => false,
+  };
+
+  Duration get _total =>
+      Duration(milliseconds: math.max(0, widget.entry.durationMs ?? 0));
+
+  double get _progress {
+    final int total = _total.inMilliseconds;
+    if (total <= 0) {
+      return 0;
+    }
+    return (_position.inMilliseconds / total).clamp(0.0, 1.0);
+  }
+
+  Duration _stepped(Duration delta) {
+    final Duration target = _position + delta;
+    if (target <= Duration.zero) {
+      return Duration.zero;
+    }
+    return target >= _total ? _total : target;
+  }
+
+  String _positionPhrase(Duration position) =>
+      '${formatMediaDuration(position.inMilliseconds)}'
+      ' of ${formatMediaDuration(_total.inMilliseconds)}';
+
+  void _seekToFraction(double fraction) {
+    final Duration target = Duration(
+      milliseconds: (fraction.clamp(0.0, 1.0) * _total.inMilliseconds).round(),
+    );
+    unawaited(_seek(target, play: !_isActive));
+  }
+
+  void _seekBy(Duration delta) {
+    unawaited(_seek(_stepped(delta), play: false));
+  }
+
+  Future<void> _seek(Duration target, {required bool play}) async {
+    final EntryAudioPlayer? player = _player;
+    if (player == null) {
+      return;
+    }
+    setState(() => _position = target);
+    try {
+      await player.seek(target);
+      if (play) {
+        await player.play();
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Voice playback seek failed: $error\n$stackTrace');
+      _markUnavailable();
+    }
+  }
+
   Future<void> _toggle() async {
     final EntryAudioPlayer? player = _player;
     if (player == null) {
@@ -256,33 +284,36 @@ class _VoiceBodyState extends State<VoiceBody> {
         _PlayToggle(isPlaying: _isPlaying, onTap: _ready ? _toggle : null),
         const SizedBox(width: _toggleSize + _toggleGap - _toggleTarget),
         Expanded(
-          child: SizedBox(
-            height: _waveHeight,
-            child: ClipRect(
-              child: OverflowBox(
-                alignment: Alignment.centerLeft,
-                minWidth: 0,
-                maxWidth: double.infinity,
-                child: WaveformBars(
-                  key: ValueKey<bool>(_isPlaying),
-                  animate: _isPlaying,
-                  heights: _entryWaveHeights,
-                  perBarDurations: _isPlaying ? _entryWaveDurations : null,
-                  colorFor: (double height) => _entryWaveTint(height, colors),
-                  barWidth: _waveBarWidth,
-                  spacing: _waveSpacing,
-                  maxHeight: _waveHeight,
-                  barRadius: _waveBarRadius,
-                ),
-              ),
+          child: Semantics(
+            container: true,
+            slider: true,
+            enabled: _ready,
+            label: _positionLabel,
+            value: _positionPhrase(_position),
+            increasedValue: _positionPhrase(_stepped(_seekStep)),
+            decreasedValue: _positionPhrase(_stepped(-_seekStep)),
+            onIncrease: _ready ? () => _seekBy(_seekStep) : null,
+            onDecrease: _ready ? () => _seekBy(-_seekStep) : null,
+            child: VoiceWaveform(
+              seed: voiceWaveformSeed(widget.entry.id),
+              active: _isActive,
+              progress: _progress,
+              onSeek: _ready ? _seekToFraction : null,
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        Text(
-          '${formatMediaDuration(_position.inMilliseconds)}'
-          ' / ${formatMediaDuration(widget.entry.durationMs)}',
-          style: context.textStyles.caption11Sans.copyWith(color: colors.muted),
+        const SizedBox(width: _labelGap),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: _labelMinWidth),
+          child: Text(
+            '${formatMediaDuration(_position.inMilliseconds)}'
+            ' / ${formatMediaDuration(widget.entry.durationMs)}',
+            textAlign: TextAlign.right,
+            style: context.textStyles.caption11Sans.copyWith(
+              color: colors.muted,
+              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+            ),
+          ),
         ),
       ],
     );
