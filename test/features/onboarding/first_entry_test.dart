@@ -160,6 +160,25 @@ Future<void> _key(WidgetTester tester, LogicalKeyboardKey key) async {
 Future<void> _next(WidgetTester tester, OnboardingController controller) =>
     _tap(tester, _primary);
 
+Future<void> _fling(WidgetTester tester) async {
+  final Rect frame = tester.getRect(find.byType(OnboardingFrame));
+  await tester.flingFrom(
+    Offset(frame.center.dx, frame.top + frame.height * 0.45),
+    const Offset(-120, 0),
+    800,
+  );
+  await _flush(tester);
+}
+
+Future<void> _swipe(WidgetTester tester, OnboardingController controller) =>
+    _fling(tester);
+
+Future<void> _advance(WidgetTester tester, _Layout layout) =>
+    switch (layout.layout) {
+      ShellLayout.sidebar => _tap(tester, _primary),
+      ShellLayout.bottomBar => _fling(tester),
+    };
+
 Future<void> _enter(WidgetTester tester, OnboardingController controller) =>
     _key(tester, LogicalKeyboardKey.enter);
 
@@ -187,8 +206,8 @@ List<_Forward> _forwardsFor(ShellLayout layout) => switch (layout) {
     (name: 'Skip to setup', move: _skipPill, lands: OnboardingChapter.theme),
   ],
   ShellLayout.bottomBar => <_Forward>[
-    (name: 'Next', move: _next, lands: OnboardingChapter.moment),
-    (name: 'Next again', move: _next, lands: OnboardingChapter.moment),
+    (name: 'swipe', move: _swipe, lands: OnboardingChapter.moment),
+    (name: 'swipe again', move: _swipe, lands: OnboardingChapter.moment),
     (name: 'skip to setup', move: _skipToSetup, lands: OnboardingChapter.theme),
   ],
 };
@@ -278,13 +297,13 @@ void main() {
 
         controller.goTo(OnboardingChapter.opening);
         await _growOpening(tester, container);
-        await _tap(tester, _primary);
+        await _advance(tester, layout);
         expect(_chapter(container), OnboardingChapter.day, reason: name);
         controller.chooseMood(Mood.anxious);
         await _back(tester, layout, controller);
         expect(_chapter(container), OnboardingChapter.opening, reason: name);
         expect(await _days(database), isEmpty, reason: '$name back from A day');
-        await _tap(tester, _primary);
+        await _advance(tester, layout);
 
         final List<_Forward> forwards = _forwardsFor(layout.layout);
         for (int index = 0; index < forwards.length; index++) {
@@ -311,7 +330,7 @@ void main() {
             reason: reason,
           );
           await _expectOneDay(database, mood, reason: '$reason, then back');
-          await _tap(tester, _primary);
+          await _advance(tester, layout);
         }
         await _close(tester, database);
 
@@ -326,9 +345,9 @@ void main() {
         );
         final OnboardingController retrying = _controller(broken);
         await _growOpening(tester, broken);
-        await _tap(tester, _primary);
+        await _advance(tester, layout);
         retrying.chooseMood(Mood.love);
-        await _tap(tester, _primary);
+        await _advance(tester, layout);
 
         expect(_chapter(broken), OnboardingChapter.moment, reason: name);
         expect(failing.moodWrites, isEmpty, reason: name);
@@ -339,7 +358,7 @@ void main() {
         failing.setMoodError = null;
         retrying.goTo(OnboardingChapter.day);
         await _flush(tester);
-        await _tap(tester, _primary);
+        await _advance(tester, layout);
 
         expect(_chapter(broken), OnboardingChapter.moment, reason: name);
         expect(failing.moodWrites, <({String date, Mood? mood})>[

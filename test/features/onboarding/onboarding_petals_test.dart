@@ -6,6 +6,7 @@ import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/onboarding/chapters/day_chapter.dart';
+import 'package:field_notes/features/onboarding/chapters/garden_scene.dart';
 import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/opening_chapter.dart';
 import 'package:field_notes/features/onboarding/chapters/theme_chapter.dart';
@@ -164,12 +165,23 @@ void _expectShedding(
 
 double _plantGrowthOf(WidgetTester tester, FlowerKind kind) {
   final CustomPaint plant = tester.widget<CustomPaint>(
-    find.descendant(
-      of: find.byKey(dayPlantKey(kind)),
-      matching: find.byType(CustomPaint),
-    ),
+    find.byKey(gardenFlowerKey(kind)),
   );
-  return (plant.painter! as DayPlantPainter).growth;
+  return (plant.painter! as GardenBloomPainter).growth;
+}
+
+Future<void> _advance(WidgetTester tester, ShellLayout layout) async {
+  if (layout == ShellLayout.sidebar) {
+    await tester.tap(find.byKey(onboardingPrimaryKey));
+    return;
+  }
+  expect(find.byKey(onboardingPrimaryKey), findsNothing);
+  final Rect frame = tester.getRect(find.byType(OnboardingFrame));
+  await tester.flingFrom(
+    Offset(frame.center.dx, frame.top + frame.height * 0.45),
+    const Offset(-120, 0),
+    800,
+  );
 }
 
 Future<Duration> _growPeony(
@@ -234,14 +246,15 @@ Future<void> _expectNoPetalsWithReduceMotion(
 
 Future<void> _openDay(
   WidgetTester tester,
-  ProviderContainer container, {
+  ProviderContainer container,
+  ShellLayout layout, {
   required String reason,
 }) async {
   _controller(container)
     ..plant()
     ..markGrown();
   await _settle(tester);
-  await tester.tap(find.byKey(onboardingPrimaryKey));
+  await _advance(tester, layout);
   await _settle(tester);
   expect(find.byType(DayChapter), findsOneWidget, reason: reason);
   await tester.pump(_plantGrowth);
@@ -284,7 +297,7 @@ Future<void> _expectChosenFlowerSheds(
 ) async {
   final String name = layout.name;
   final ProviderContainer container = await _pumpApp(tester, layout);
-  await _openDay(tester, container, reason: name);
+  await _openDay(tester, container, layout, reason: name);
 
   await _expectSwitchOnceGrown(
     tester,
@@ -303,7 +316,7 @@ Future<void> _expectChosenFlowerSheds(
     reason: '$name angry',
   );
   expect(_shedding(tester), FlowerKind.aster, reason: '$name angry growing');
-  await tester.tap(find.byKey(onboardingPrimaryKey));
+  await _advance(tester, layout);
   await tester.pump();
   expect(find.byType(MomentChapter), findsOneWidget, reason: name);
   expect(
@@ -325,7 +338,7 @@ Future<void> _expectOpeningShedsPeonyAgain(
 ) async {
   final String name = layout.name;
   final ProviderContainer container = await _pumpApp(tester, layout);
-  await _openDay(tester, container, reason: name);
+  await _openDay(tester, container, layout, reason: name);
   await _expectSwitchOnceGrown(
     tester,
     container,
@@ -342,7 +355,7 @@ Future<void> _expectOpeningShedsPeonyAgain(
   await tester.pump();
   _expectShedding(tester, FlowerKind.peony, reason: '$name Opening');
 
-  await tester.tap(find.byKey(onboardingPrimaryKey));
+  await _advance(tester, layout);
   await _settle(tester);
   expect(find.byType(DayChapter), findsOneWidget, reason: name);
   expect(_shedding(tester), FlowerKind.aster, reason: '$name A day again');
