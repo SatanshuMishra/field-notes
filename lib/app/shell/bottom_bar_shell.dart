@@ -218,7 +218,9 @@ class _BottomBarShellState extends State<BottomBarShell> {
                     ? context.textStyles.wordmarkAccent.copyWith(
                         color: _sceneWordmark,
                       )
-                    : context.textStyles.wordmarkAccent,
+                    : context.textStyles.wordmarkAccent.copyWith(
+                        color: colors.accentInkStrong,
+                      ),
               ),
               const Spacer(),
               StreakPill(

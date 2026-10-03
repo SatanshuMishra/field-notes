@@ -36,6 +36,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     required this.sage,
     required this.accentInk,
     required this.coralLink,
+    required this.accentInkStrong,
+    required this.mutedInkStrong,
     required this.coralHover,
     required this.dangerInk,
     required this.waveMid,
@@ -75,6 +77,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     sage: Color(0xFF7D8450),
     accentInk: Color(0xFFC76A54),
     coralLink: Color(0xFFB45C44),
+    accentInkStrong: Color(0xFF9A4832),
+    mutedInkStrong: Color(0xFF6A5C4A),
     coralHover: Color(0xFF9A4832),
     dangerInk: Color(0xFFC0392B),
     waveMid: Color(0xFFDCAE9A),
@@ -114,6 +118,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     sage: Color(0xFFADB670),
     accentInk: Color(0xFFE8927A),
     coralLink: Color(0xFFE5907A),
+    accentInkStrong: Color(0xFFE8927A),
+    mutedInkStrong: Color(0xFFBFAA8E),
     coralHover: Color(0xFFF0A58E),
     dangerInk: Color(0xFFEF7466),
     waveMid: Color(0xFF8A5C4B),
@@ -155,6 +161,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
   final Color sage;
   final Color accentInk;
   final Color coralLink;
+  final Color accentInkStrong;
+  final Color mutedInkStrong;
   final Color coralHover;
   final Color dangerInk;
   final Color waveMid;
@@ -211,6 +219,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     Color? sage,
     Color? accentInk,
     Color? coralLink,
+    Color? accentInkStrong,
+    Color? mutedInkStrong,
     Color? coralHover,
     Color? dangerInk,
     Color? waveMid,
@@ -249,6 +259,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       sage: sage ?? this.sage,
       accentInk: accentInk ?? this.accentInk,
       coralLink: coralLink ?? this.coralLink,
+      accentInkStrong: accentInkStrong ?? this.accentInkStrong,
+      mutedInkStrong: mutedInkStrong ?? this.mutedInkStrong,
       coralHover: coralHover ?? this.coralHover,
       dangerInk: dangerInk ?? this.dangerInk,
       waveMid: waveMid ?? this.waveMid,
@@ -305,6 +317,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       sage: Color.lerp(sage, other.sage, t)!,
       accentInk: Color.lerp(accentInk, other.accentInk, t)!,
       coralLink: Color.lerp(coralLink, other.coralLink, t)!,
+      accentInkStrong: Color.lerp(accentInkStrong, other.accentInkStrong, t)!,
+      mutedInkStrong: Color.lerp(mutedInkStrong, other.mutedInkStrong, t)!,
       coralHover: Color.lerp(coralHover, other.coralHover, t)!,
       dangerInk: Color.lerp(dangerInk, other.dangerInk, t)!,
       waveMid: Color.lerp(waveMid, other.waveMid, t)!,
@@ -345,6 +359,8 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     sage,
     accentInk,
     coralLink,
+    accentInkStrong,
+    mutedInkStrong,
     coralHover,
     dangerInk,
     waveMid,
