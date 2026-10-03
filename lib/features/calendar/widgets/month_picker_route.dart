@@ -1,8 +1,13 @@
+import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
+
 import '../model/calendar_month.dart';
 import 'calendar_month_picker.dart';
+import 'month_year_sheet.dart';
 
 const String _dismissLabel = 'Dismiss month picker';
 
@@ -17,6 +22,28 @@ Future<MonthRef?> showCalendarMonthPicker(
   required MonthRef currentMonth,
   Key? pickerKey,
 }) {
+  if (resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar) {
+    return showPhoneSheet<MonthRef>(
+      context,
+      barrierLabel: _dismissLabel,
+      builder: (BuildContext sheetContext) {
+        void pick(MonthRef month) => Navigator.of(sheetContext).pop(month);
+        return PhoneSheet(
+          actions: <Widget>[
+            Expanded(
+              child: MonthYearBackButton(onPressed: () => pick(currentMonth)),
+            ),
+          ],
+          child: MonthYearSheet(
+            key: pickerKey,
+            displayedMonth: displayedMonth,
+            currentMonth: currentMonth,
+            onPick: pick,
+          ),
+        );
+      },
+    );
+  }
   return showGeneralDialog<MonthRef>(
     context: context,
     barrierColor: _clearBarrier,

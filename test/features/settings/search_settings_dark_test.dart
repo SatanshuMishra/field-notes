@@ -1,3 +1,4 @@
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/search/search_day_tile.dart';
@@ -113,6 +114,56 @@ void main() {
       }
       expect(_textColour(tester, find.text(tab.label)), _ink);
       expect(_textColour(tester, find.text(tab.sublabel)), _muted);
+    }
+  });
+
+  testWidgets('phone settings segments draw their dark colours', (
+    WidgetTester tester,
+  ) async {
+    await _pumpDark(
+      tester,
+      Center(
+        child: SettingsTabChips(
+          selected: SettingsTab.syncStorage,
+          onSelected: (SettingsTab tab) {},
+        ),
+      ),
+    );
+    final BoxDecoration glass =
+        tester
+                .widget<DecoratedBox>(
+                  find
+                      .descendant(
+                        of: find.byType(GlassSurface),
+                        matching: find.byType(DecoratedBox),
+                      )
+                      .first,
+                )
+                .decoration
+            as BoxDecoration;
+    expect(glass.color!.toARGB32(), GlassColors.paperDark.tint.toARGB32());
+    final BoxDecoration selected = _decorationAbove(
+      tester,
+      SettingsTab.syncStorage.chipLabel,
+    );
+    expect(selected.color!.toARGB32(), _coral.toARGB32());
+    expect((selected.border! as Border).top.color.toARGB32(), _line.toARGB32());
+    expect(
+      _textColour(
+        tester,
+        find.text(SettingsTab.syncStorage.chipLabel),
+      )!.toARGB32(),
+      const Color(0xFFFFFFFF).toARGB32(),
+    );
+    for (final SettingsTab tab in SettingsTab.values) {
+      if (tab == SettingsTab.syncStorage) {
+        continue;
+      }
+      expect(_decorationAbove(tester, tab.chipLabel).color!.a, 0);
+      expect(
+        _textColour(tester, find.text(tab.chipLabel))!.toARGB32(),
+        _ink.toARGB32(),
+      );
     }
   });
 }

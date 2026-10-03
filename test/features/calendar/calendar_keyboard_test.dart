@@ -141,7 +141,7 @@ void main() {
   testWidgets(
     'the calendar keeps its arrow and T keys while a day cell has focus',
     (WidgetTester tester) async {
-      await _pumpState(tester, 'a4-calendar-month');
+      await pumpMacCalendar(tester);
       _useKeyboardHighlight();
 
       await _tabTo(tester, _dayCell('2026-09-14'));
@@ -184,7 +184,7 @@ void main() {
   testWidgets(
     'the month picker opened from the focused title returns focus to the title',
     (WidgetTester tester) async {
-      await _pumpState(tester, 'a4-calendar-month');
+      await pumpMacCalendar(tester);
       _useKeyboardHighlight();
       final Finder title = find.byKey(calendarTitleKey);
 
@@ -215,7 +215,7 @@ void main() {
   testWidgets('a month picked with the mouse leaves no focus ring', (
     WidgetTester tester,
   ) async {
-    await _pumpState(tester, 'a4-calendar-month');
+    await pumpMacCalendar(tester);
 
     await tester.tap(
       find.byKey(calendarTitleKey),

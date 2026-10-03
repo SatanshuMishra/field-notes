@@ -1,4 +1,7 @@
+missing-role | a5-calendar-picker | Dismiss month picker | <root>
+small-target | a1-today-empty | Settings | <root>
 small-target | a2-today-feed | buy seed packets | 9:30 AM · morning / NOTE
 small-target | a2-today-feed | water the peonies | 9:30 AM · morning / NOTE
 small-target | a3-card-actions | buy seed packets | 9:30 AM · morning / NOTE
 small-target | a3-card-actions | water the peonies | 9:30 AM · morning / NOTE
+small-target | a8-garden-phone | Settings | <root>

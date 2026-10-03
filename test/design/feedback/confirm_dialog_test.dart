@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+final TargetPlatformVariant _bothPlatforms = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
+
 class _Harness extends StatefulWidget {
   const _Harness({this.danger = false});
 
@@ -70,7 +74,7 @@ void main() {
     await tester.tap(find.byKey(confirmDialogCancelKey));
     await tester.pumpAndSettle();
     expect(confirmedFalse, isFalse);
-  });
+  }, variant: _bothPlatforms);
 
   testWidgets('cancel, a scrim tap and Escape all resolve false',
       (WidgetTester tester) async {
@@ -94,7 +98,7 @@ void main() {
     await openAndClose(() => tester.tap(find.byKey(confirmDialogCancelKey)));
     await openAndClose(() => tester.tapAt(const Offset(10, 10)));
     await openAndClose(() => tester.sendKeyEvent(LogicalKeyboardKey.escape));
-  });
+  }, variant: _bothPlatforms);
 
   testWidgets('a destructive confirm paints its button in the danger colour',
       (WidgetTester tester) async {
@@ -124,7 +128,7 @@ void main() {
       ),
     );
     expect((coralBox.decoration as BoxDecoration).color, Palette.coral);
-  });
+  }, variant: _bothPlatforms);
 
   testWidgets('the dialog focuses its safe button first',
       (WidgetTester tester) async {
@@ -153,7 +157,7 @@ void main() {
       ),
       findsNothing,
     );
-  });
+  }, variant: _bothPlatforms);
 
   testWidgets('dialog text carries no fallback underline',
       (WidgetTester tester) async {
@@ -183,5 +187,5 @@ void main() {
     final TextDecoration? decoration =
         DefaultTextStyle.of(titleContext).style.decoration;
     expect(decoration == null || decoration == TextDecoration.none, isTrue);
-  });
+  }, variant: _bothPlatforms);
 }

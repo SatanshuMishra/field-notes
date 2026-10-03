@@ -76,7 +76,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Today · 14:30'), findsOneWidget);
-      expect(tester.getSize(find.byKey(composerCloseKey)).height, 34);
+      expect(tester.getSize(find.byKey(composerCloseKey)).height, 40);
 
       final double pillRight = tester
           .getTopRight(find.byKey(composerCloseKey))

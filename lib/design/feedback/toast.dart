@@ -3,8 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../focus/focus_ring.dart';
+import '../glass/glass.dart';
 import '../motion/motion_tokens.dart';
 import '../tokens/tokens.dart';
 import '../widgets/icon_sticker_button.dart';
@@ -56,6 +58,8 @@ _DarkMetrics _metricsFor(ToastScale scale) =>
 
 ToastScale toastScaleFor(TargetPlatform platform) =>
     platform == TargetPlatform.macOS ? ToastScale.desktop : ToastScale.phone;
+
+const Color _glassToastInk = Color.fromRGBO(251, 243, 228, 1);
 
 const double _transientKeyboardGap = 16;
 const double _riseOffset = 10;
@@ -136,44 +140,39 @@ class Toast extends StatelessWidget {
     final Widget? icon = this.icon;
     final ToastAction? action = this.action;
     final _DarkMetrics metrics = _metricsFor(scale);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.colors.pill,
-        borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
-        boxShadow: Shadows.toastLift,
-      ),
-      child: Padding(
-        padding: action == null
-            ? EdgeInsets.symmetric(
-                horizontal: metrics.padHorizontal,
-                vertical: metrics.padVertical,
-              )
-            : EdgeInsets.only(
-                left: metrics.padHorizontal,
-                right: _darkActionInset,
-                top: _darkActionInset,
-                bottom: _darkActionInset,
-              ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (icon != null) ...<Widget>[icon, SizedBox(width: metrics.gap)],
-            Flexible(
-              child: Text(
-                message,
-                style: metrics.style.copyWith(color: Palette.toastInk),
-              ),
+    return GlassSurface(
+      tone: GlassTone.toast,
+      borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
+      padding: action == null
+          ? EdgeInsets.symmetric(
+              horizontal: metrics.padHorizontal,
+              vertical: metrics.padVertical,
+            )
+          : EdgeInsets.only(
+              left: metrics.padHorizontal,
+              right: _darkActionInset,
+              top: _darkActionInset,
+              bottom: _darkActionInset,
             ),
-            if (action != null) ...<Widget>[
-              const SizedBox(width: _actionGap),
-              _ToastActionButton(
-                action: action,
-                color: FieldNotesColors.light.waveLight,
-                focusSurface: FocusRingSurface.dark,
-              ),
-            ],
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (icon != null) ...<Widget>[icon, SizedBox(width: metrics.gap)],
+          Flexible(
+            child: Text(
+              message,
+              style: metrics.style.copyWith(color: _glassToastInk),
+            ),
+          ),
+          if (action != null) ...<Widget>[
+            const SizedBox(width: _actionGap),
+            _ToastActionButton(
+              action: action,
+              color: FieldNotesColors.light.waveLight,
+              focusSurface: FocusRingSurface.dark,
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -310,6 +309,33 @@ class _ToastClearanceScope extends InheritedWidget {
       bottom != oldWidget.bottom;
 }
 
+final class ToastLift {
+  ToastLift._(this.extra);
+
+  final double extra;
+
+  void remove() {
+    _toastLifts.value = <ToastLift>[
+      for (final ToastLift lift in _toastLifts.value)
+        if (!identical(lift, this)) lift,
+    ];
+  }
+}
+
+final ValueNotifier<List<ToastLift>> _toastLifts =
+    ValueNotifier<List<ToastLift>>(const <ToastLift>[]);
+
+ToastLift registerToastLift(double extra) {
+  final ToastLift lift = ToastLift._(extra);
+  _toastLifts.value = <ToastLift>[..._toastLifts.value, lift];
+  return lift;
+}
+
+double get activeToastLift => _toastLifts.value.fold<double>(
+  0,
+  (double highest, ToastLift lift) => math.max(highest, lift.extra),
+);
+
 OverlayEntry? _activeTransientToast;
 
 void dismissTransientToast() {
@@ -426,14 +452,42 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
   void initState() {
     super.initState();
     _lifetime = Timer(widget.lifetime, widget.onFinished);
+    _toastLifts.addListener(_liftChanged);
     _controller.forward();
   }
 
   @override
   void dispose() {
+    _toastLifts.removeListener(_liftChanged);
     _lifetime.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  void _liftChanged() {
+    if (SchedulerBinding.instance.schedulerPhase !=
+        SchedulerPhase.persistentCallbacks) {
+      setState(() {});
+      return;
+    }
+    SchedulerBinding.instance.addPostFrameCallback((Duration _) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  double _restingInset(BuildContext context) {
+    final _DarkMetrics metrics = _metricsFor(widget.scale);
+    if (widget.scale == ToastScale.desktop) {
+      return metrics.bottomInset;
+    }
+    final MediaQueryData media = MediaQuery.of(context);
+    final double gestureBar = math.max(
+      media.padding.bottom,
+      media.viewPadding.bottom,
+    );
+    return gestureBar + metrics.bottomInset + activeToastLift;
   }
 
   @override
@@ -465,7 +519,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
       child: CustomSingleChildLayout(
         delegate: _ToastPlacement(
           bottom: math.max(
-            _metricsFor(widget.scale).bottomInset,
+            _restingInset(context),
             math.max(keyboard, clearance) + _transientKeyboardGap,
           ),
         ),
@@ -507,7 +561,7 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
                   action: widget.action,
                   icon: IconStickerGlyphIcon(
                     glyph: widget.glyph,
-                    color: Palette.toastInk,
+                    color: _glassToastInk,
                     size: metrics.iconSize,
                   ),
                 ),

@@ -1,15 +1,16 @@
 import 'dart:io';
 
 import 'package:field_notes/app/shell/app_shell.dart';
+import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdPhotoSize;
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
-import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
-import 'package:field_notes/features/calendar/widgets/calendar_day_cell.dart';
-import 'package:field_notes/features/calendar/widgets/calendar_month_picker.dart';
+import 'package:field_notes/features/calendar/widgets/month_year_sheet.dart';
+import 'package:field_notes/features/calendar/widgets/phone_flower_month.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
@@ -18,10 +19,11 @@ import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
 import 'package:field_notes/features/search/search_day_tile.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
+import 'package:field_notes/features/search/search_field.dart';
 import 'package:field_notes/features/search/search_screen.dart';
-import 'package:field_notes/features/streak/journaled_dates_provider.dart';
-import 'package:field_notes/features/streak/streak_providers.dart';
+import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
+import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 import 'package:flutter/material.dart';
@@ -83,10 +85,33 @@ final Set<String> _monthLabels = <String>{
 };
 
 final Finder _monthCells = find.descendant(
-  of: find.byType(CalendarMonthPicker),
+  of: find.byType(MonthYearSheet),
   matching: find.byWidgetPredicate(
     (Widget widget) => widget is Text && _monthLabels.contains(widget.data),
   ),
+);
+
+final Finder _headerStreakPill = find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is StreakPill && widget.form == StreakPillForm.header,
+  description: 'the header streak pill',
+);
+
+final Finder _sceneStreakPill = find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is StreakPill && widget.form == StreakPillForm.headerOverScene,
+  description: 'the header streak pill over the Meadow',
+);
+
+final Finder _sceneTabBar = find.byWidgetPredicate(
+  (Widget widget) => widget is PhoneBottomBar && widget.overScene,
+  description: 'the floating tab bar over the Meadow',
+);
+
+final Finder _phoneSearchField = find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is SearchField && widget.variant == SearchFieldVariant.phone,
+  description: 'the phone search field',
 );
 
 final List<Day> _septemberDays = <Day>[
@@ -239,6 +264,7 @@ Future<void> _pumpApp(
   WidgetTester tester,
   Widget home, {
   required List<Override> overrides,
+  TargetPlatform platform = TargetPlatform.android,
 }) async {
   tester.view.physicalSize = _noteTenPlusSize;
   tester.view.devicePixelRatio = _noteTenPlusRatio;
@@ -249,7 +275,7 @@ Future<void> _pumpApp(
       overrides: overrides,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: TargetPlatform.android),
+        theme: fieldNotesTheme(platform: platform),
         home: home,
       ),
     ),
@@ -291,6 +317,16 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
   await tester.pump();
 }
 
+Future<void> pumpMacCalendar(WidgetTester tester) async {
+  await _pumpApp(
+    tester,
+    Scaffold(body: CalendarScreen(today: _now)),
+    overrides: _calendarOverrides(),
+    platform: TargetPlatform.macOS,
+  );
+  await tester.pump();
+}
+
 Future<void> _pumpGarden(
   WidgetTester tester, {
   required List<Day> days,
@@ -326,11 +362,14 @@ final Finder _revealedPill = find.descendant(
   ),
 );
 
-final Finder _journaledCell = find.byWidgetPredicate(
-  (Widget widget) =>
-      widget is CalendarDayCell &&
-      widget.key == const ValueKey<String>('day-2026-09-14') &&
-      widget.hasEntries,
+final Finder _journaledCell = find.descendant(
+  of: find.byKey(const ValueKey<String>('day-2026-09-21')),
+  matching: find.byKey(phoneMonthDotKey),
+);
+
+final Finder _todayCell = find.descendant(
+  of: find.byKey(const ValueKey<String>('day-$_today')),
+  matching: find.byKey(phoneMonthTodayPillKey),
 );
 
 final List<A11yState> shellStates = <A11yState>[
@@ -339,6 +378,9 @@ final List<A11yState> shellStates = <A11yState>[
     pump: _pumpShell,
     proof: <A11yProof>[
       A11yProof(find.byKey(const ValueKey<String>('capture-button'))),
+      A11yProof(find.byType(PhoneBottomBar)),
+      A11yProof(_headerStreakPill),
+      A11yProof(find.text(todayMoodDockChooseLabel)),
     ],
     stateful: _tabs,
   ),
@@ -361,18 +403,27 @@ final List<A11yState> shellStates = <A11yState>[
     id: 'a4-calendar-month',
     pump: _pumpCalendar,
     proof: <A11yProof>[
-      A11yProof(find.byType(CalendarScreen)),
+      A11yProof(find.byType(PhoneFlowerMonth)),
       A11yProof(_journaledCell),
+      A11yProof(_todayCell),
     ],
   ),
   A11yState(
     id: 'a5-calendar-picker',
     pump: (WidgetTester tester) async {
       await _pumpCalendar(tester);
-      await tester.tap(find.byKey(calendarTitleKey));
+      await tester.tap(find.byKey(phoneMonthPickerButtonKey));
       await tester.pumpAndSettle();
     },
-    proof: <A11yProof>[A11yProof(find.byType(CalendarMonthPicker))],
+    proof: <A11yProof>[
+      A11yProof(
+        find.descendant(
+          of: find.byType(PhoneSheet),
+          matching: find.byType(MonthYearSheet),
+        ),
+      ),
+      A11yProof(find.byKey(monthYearBackKey)),
+    ],
     stateful: <A11yStatefulControl>[
       A11yStatefulControl.finder(_monthCells, A11yStateKind.selected),
     ],
@@ -419,37 +470,35 @@ final List<A11yState> shellStates = <A11yState>[
       await tester.tap(find.byKey(const ValueKey<String>('tab-garden')));
       await tester.pump();
     },
-    proof: <A11yProof>[
-      A11yProof(find.byKey(const ValueKey<String>('streak-card'))),
-    ],
+    proof: <A11yProof>[A11yProof(_sceneStreakPill), A11yProof(_sceneTabBar)],
     stateful: _tabs,
   ),
   A11yState(
     id: 'a9-search-results',
     pump: (WidgetTester tester) => _pumpSearch(tester, 'peonies'),
-    proof: <A11yProof>[A11yProof(find.byType(SearchDayTile))],
+    proof: <A11yProof>[
+      A11yProof(find.byType(SearchDayTile)),
+      A11yProof(_phoneSearchField),
+    ],
   ),
   A11yState(
     id: 'a10-search-no-match',
     pump: (WidgetTester tester) => _pumpSearch(tester, 'zzz'),
-    proof: <A11yProof>[A11yProof(find.textContaining('No days match'))],
+    proof: <A11yProof>[
+      A11yProof(find.textContaining('No days match')),
+      A11yProof(_phoneSearchField),
+    ],
   ),
   A11yState(
     id: 'a11-calendar-next-month',
     pump: (WidgetTester tester) async {
       await _pumpCalendar(tester);
-      await tester.tap(
-        find.byWidgetPredicate(
-          (Widget widget) =>
-              widget is CalendarChevronButton &&
-              widget.semanticLabel == 'Next month',
-        ),
-      );
+      await tester.tap(find.byKey(phoneMonthNextKey));
       await tester.pumpAndSettle();
     },
     proof: <A11yProof>[
-      A11yProof(find.byType(CalendarScreen)),
-      A11yProof(find.byKey(calendarThisWeekKey)),
+      A11yProof(find.byType(PhoneFlowerMonth)),
+      A11yProof(find.byKey(phoneThisMonthKey)),
     ],
   ),
 ];

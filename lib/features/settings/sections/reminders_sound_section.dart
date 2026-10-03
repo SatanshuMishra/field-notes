@@ -1,3 +1,4 @@
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/notifications_off_notice.dart';
@@ -9,14 +10,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../settings_controller.dart';
 import '../settings_feedback.dart';
 import '../settings_providers.dart';
+import '../widgets/reminder_time_sheet.dart';
 
-typedef TimeOfDayPicker =
-    Future<TimeOfDay?> Function(BuildContext context, TimeOfDay initial);
+typedef TimeOfDayPicker = Future<TimeOfDay?> Function(
+  BuildContext context,
+  TimeOfDay initial,
+);
 
 Future<TimeOfDay?> showSettingsTimePicker(
   BuildContext context,
   TimeOfDay initial,
 ) {
+  if (resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar) {
+    return showReminderTimeSheet(context, initial);
+  }
   return showTimePicker(context: context, initialTime: initial);
 }
 

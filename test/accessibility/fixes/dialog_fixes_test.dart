@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../states/capture_states.dart';
@@ -39,7 +40,14 @@ void _expectNone(
   }
 }
 
-Future<void> _expectDialogButtons(
+List<SemanticsNode> _nodes(
+  WidgetTester tester,
+  bool Function(SemanticsNode node) test,
+) => find.semantics.byPredicate(test).evaluate().toList();
+
+bool _atLeast48(Size size) => size.width >= 47.99 && size.height >= 47.99;
+
+Future<void> _expectConfirmButtons(
   WidgetTester tester,
   List<A11yState> states,
   String state,
@@ -49,12 +57,31 @@ Future<void> _expectDialogButtons(
   _expectNone(ids, 'small-target', state, <String>[
     for (final String label in labels) '$label |',
   ]);
+  final SemanticsHandle handle = tester.ensureSemantics();
+  for (final String label in labels) {
+    final List<SemanticsNode> nodes = _nodes(
+      tester,
+      (SemanticsNode node) => node.label == label,
+    );
+    expect(nodes, hasLength(1), reason: label);
+    expect(
+      nodes.single.getSemanticsData().hasAction(SemanticsAction.tap),
+      isTrue,
+      reason: label,
+    );
+    expect(
+      _atLeast48(nodes.single.rect.size),
+      isTrue,
+      reason: '$label ${nodes.single.rect.size}',
+    );
+  }
+  handle.dispose();
 }
 
 void main() {
   testWidgets(
-    'the discard-note dialog buttons are 48 dp',
-    (WidgetTester tester) => _expectDialogButtons(
+    'the discard-note confirm sheet buttons are 48 dp',
+    (WidgetTester tester) => _expectConfirmButtons(
       tester,
       captureStates,
       'c10-discard-dialog',
@@ -64,7 +91,7 @@ void main() {
 
   testWidgets(
     'the recording let-go panel buttons are 48 dp',
-    (WidgetTester tester) => _expectDialogButtons(
+    (WidgetTester tester) => _expectConfirmButtons(
       tester,
       captureStates,
       'c18-discard-recording',
@@ -73,8 +100,8 @@ void main() {
   );
 
   testWidgets(
-    'the change-mood dialog buttons are 48 dp',
-    (WidgetTester tester) => _expectDialogButtons(
+    'the change-mood confirm sheet buttons are 48 dp',
+    (WidgetTester tester) => _expectConfirmButtons(
       tester,
       viewerStates,
       'd13-change-mood-dialog',
@@ -83,8 +110,8 @@ void main() {
   );
 
   testWidgets(
-    'the delete-entry dialog buttons are 48 dp',
-    (WidgetTester tester) => _expectDialogButtons(
+    'the delete-entry confirm sheet buttons are 48 dp',
+    (WidgetTester tester) => _expectConfirmButtons(
       tester,
       viewerStates,
       'd14-delete-entry-dialog',
@@ -93,8 +120,8 @@ void main() {
   );
 
   testWidgets(
-    'the delete-all dialog buttons are 48 dp',
-    (WidgetTester tester) => _expectDialogButtons(
+    'the delete-all confirm sheet buttons are 48 dp',
+    (WidgetTester tester) => _expectConfirmButtons(
       tester,
       settingsStates,
       'b5-delete-all-dialog',

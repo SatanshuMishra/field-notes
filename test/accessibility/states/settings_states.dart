@@ -71,6 +71,21 @@ final List<A11yStatefulControl> _journalStateful = <A11yStatefulControl>[
   _segments,
 ];
 
+bool get _onPhone =>
+    resolveShellLayout(defaultTargetPlatform) == ShellLayout.bottomBar;
+
+final Finder _weekStartChoices = find.byWidgetPredicate(
+  (Widget widget) =>
+      _onPhone ? widget is PhoneSheet : widget is PopupMenuItem<WeekStart>,
+  description: 'the week start sheet on the phone, its menu on macOS',
+);
+
+final Finder _deleteAllConfirm = find.byWidgetPredicate(
+  (Widget widget) =>
+      _onPhone ? widget is PhoneSheet : widget is DeleteAllConfirmDialog,
+  description: 'the delete-all confirm sheet on the phone, dialog on macOS',
+);
+
 void _useTallSurface(WidgetTester tester) {
   final bool sidebar =
       resolveShellLayout(defaultTargetPlatform) == ShellLayout.sidebar;
@@ -159,18 +174,29 @@ final List<A11yState> settingsStates = <A11yState>[
     id: 'b4-select-open',
     pump: (WidgetTester tester) async {
       await _pumpSettings(tester, tab: SettingsTab.journal);
-      await tester.tap(find.byType(PopupMenuButton<WeekStart>));
+      await tester.tap(find.byType(SettingsSelect<WeekStart>));
       await tester.pumpAndSettle();
     },
     proof: <A11yProof>[
-      A11yProof(find.widgetWithText(PopupMenuItem<WeekStart>, 'Monday')),
+      A11yProof(_weekStartChoices),
+      A11yProof(
+        find.descendant(of: _weekStartChoices, matching: find.text('Monday')),
+      ),
     ],
     stateful: _journalStateful,
   ),
   A11yState(
     id: 'b5-delete-all-dialog',
     pump: _openDeleteAll,
-    proof: <A11yProof>[A11yProof(find.byType(DeleteAllConfirmDialog))],
+    proof: <A11yProof>[
+      A11yProof(_deleteAllConfirm),
+      A11yProof(
+        find.descendant(
+          of: _deleteAllConfirm,
+          matching: find.text('Delete everything'),
+        ),
+      ),
+    ],
     stateful: _tabStateful,
   ),
   A11yState(

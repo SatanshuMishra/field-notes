@@ -26,6 +26,7 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        theme: ThemeData(platform: TargetPlatform.macOS),
         home: CalendarScreen(
           initialMonth: const MonthRef(2026, 7),
           today: DateTime(2026, 7, 15),

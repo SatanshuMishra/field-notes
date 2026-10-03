@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -17,6 +18,86 @@ import 'mood_banner.dart';
 import 'mood_picker.dart';
 
 const double _kConfirmMaxWidth = 420;
+
+const String moodSaveFailedMessage =
+    "Couldn't save your mood. Please try again.";
+
+const String _changeMoodLabel = 'Change mood';
+
+enum MoodChangeOutcome { unchanged, planted, failed }
+
+Future<MoodChangeOutcome> changeMoodForDate(
+  BuildContext context,
+  WidgetRef ref, {
+  required String date,
+  required Mood? current,
+}) async {
+  final Mood? chosen = await showMoodPicker(context, selected: current);
+  if (chosen == null || !context.mounted) {
+    return MoodChangeOutcome.unchanged;
+  }
+  if (current != null) {
+    final bool confirmed = await _confirmMoodChange(
+      context,
+      isToday: date == ref.read(todayDateProvider),
+      date: date,
+      chosen: chosen,
+    );
+    if (!confirmed || !context.mounted) {
+      return MoodChangeOutcome.unchanged;
+    }
+  }
+  try {
+    await ref.read(soundServiceProvider).play(SoundCue.pencil);
+    await ref
+        .read(journalRepositoryProvider)
+        .setMoodForDate(date: date, mood: chosen);
+  } catch (_) {
+    return MoodChangeOutcome.failed;
+  }
+  if (context.mounted) {
+    showTransientToast(context, 'Mood planted · ${chosen.flower.label}');
+  }
+  return MoodChangeOutcome.planted;
+}
+
+String _dayLabel(String date, {required bool isToday}) {
+  if (isToday) {
+    return 'today';
+  }
+  final DateTime? parsed = parseDateKey(date);
+  return parsed == null ? date : headerDateLabel(parsed);
+}
+
+Future<bool> _confirmMoodChange(
+  BuildContext context, {
+  required bool isToday,
+  required String date,
+  required Mood chosen,
+}) async {
+  final String title = isToday
+      ? "Change today's bloom?"
+      : "Change this day's bloom?";
+  final String message =
+      'Set ${_dayLabel(date, isToday: isToday)} to '
+      '${chosen.flower.label} · ${chosen.label}? '
+      'Your current bloom will be replaced.';
+  if (resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar) {
+    return showConfirmDialog(
+      context,
+      title: title,
+      message: message,
+      confirmLabel: _changeMoodLabel,
+    );
+  }
+  final bool? confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: true,
+    builder: (BuildContext dialogContext) =>
+        _MoodChangeConfirmDialog(title: title, message: message),
+  );
+  return confirmed ?? false;
+}
 
 class MoodBannerForDate extends ConsumerStatefulWidget {
   const MoodBannerForDate({
@@ -37,72 +118,36 @@ class _MoodBannerForDateState extends ConsumerState<MoodBannerForDate> {
 
   bool get _isToday => widget.date == ref.read(todayDateProvider);
 
-  String get _dayLabel {
-    if (_isToday) {
-      return 'today';
-    }
-    final DateTime? parsed = parseDateKey(widget.date);
-    return parsed == null ? widget.date : headerDateLabel(parsed);
-  }
-
-  Future<bool> _confirmMoodChange(Mood chosen) async {
-    final bool? confirmed = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) => _MoodChangeConfirmDialog(
-        title: _isToday
-            ? "Change today's bloom?"
-            : "Change this day's bloom?",
-        message: 'Set $_dayLabel to ${chosen.flower.label} · ${chosen.label}? '
-            'Your current bloom will be replaced.',
-      ),
-    );
-    return confirmed ?? false;
-  }
-
-  void _showPlantedToast(Mood chosen) {
-    setState(() => _writeError = null);
-    showTransientToast(context, 'Mood planted · ${chosen.flower.label}');
-  }
-
   Future<void> _changeMood(Mood? current) async {
-    final Mood? chosen = await showMoodPicker(context, selected: current);
-    if (chosen == null || !mounted) {
+    final MoodChangeOutcome outcome = await changeMoodForDate(
+      context,
+      ref,
+      date: widget.date,
+      current: current,
+    );
+    if (!mounted) {
       return;
     }
-    if (current != null) {
-      final bool confirmed = await _confirmMoodChange(chosen);
-      if (!confirmed || !mounted) {
+    switch (outcome) {
+      case MoodChangeOutcome.unchanged:
         return;
-      }
-    }
-    try {
-      await ref.read(soundServiceProvider).play(SoundCue.pencil);
-      await ref
-          .read(journalRepositoryProvider)
-          .setMoodForDate(date: widget.date, mood: chosen);
-      if (!mounted) {
-        return;
-      }
-      _showPlantedToast(chosen);
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-      setState(
-        () => _writeError = "Couldn't save your mood. Please try again.",
-      );
+      case MoodChangeOutcome.planted:
+        setState(() => _writeError = null);
+      case MoodChangeOutcome.failed:
+        setState(() => _writeError = moodSaveFailedMessage);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<Day?> dayAsync =
-        ref.watch(dayForDateProvider(widget.date));
+    final AsyncValue<Day?> dayAsync = ref.watch(
+      dayForDateProvider(widget.date),
+    );
     final Mood? mood = dayAsync.value?.mood;
     final bool interactive = dayAsync.hasValue;
-    final VoidCallback? onChangeMood =
-        interactive ? () => _changeMood(mood) : null;
+    final VoidCallback? onChangeMood = interactive
+        ? () => _changeMood(mood)
+        : null;
     final TextStyle errorStyle = context.textStyles.captionSans.copyWith(
       color: context.colors.dangerInk,
     );
@@ -169,7 +214,7 @@ class _MoodChangeConfirmDialog extends StatelessWidget {
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
-                      label: 'Change mood',
+                      label: _changeMoodLabel,
                       variant: StickerButtonVariant.primary,
                       padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),

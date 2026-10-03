@@ -10,7 +10,6 @@ import 'package:field_notes/features/reminders/reminder_lifecycle.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
-import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -33,6 +32,8 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
+  bool? _pendingSidebarCollapsed;
+
   void _select(ShellDestination destination) {
     ref.read(shellNavigationProvider.notifier).select(destination);
   }
@@ -55,6 +56,25 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (result is SettingsWriteFailed) {
       debugPrint('Sound toggle failed: ${result.message}');
     }
+  }
+
+  Future<void> _setSidebarCollapsed(bool collapsed) async {
+    setState(() => _pendingSidebarCollapsed = collapsed);
+    final SettingsWriteResult result = await ref
+        .read(settingsControllerProvider)
+        .setSidebarCollapsed(collapsed);
+    if (result is SettingsWriteFailed) {
+      debugPrint('Sidebar setting failed: ${result.message}');
+    }
+  }
+
+  bool _sidebarCollapsed() {
+    ref.listen<bool>(sidebarCollapsedProvider, (bool? _, bool stored) {
+      if (stored == _pendingSidebarCollapsed) {
+        setState(() => _pendingSidebarCollapsed = null);
+      }
+    });
+    return _pendingSidebarCollapsed ?? ref.watch(sidebarCollapsedProvider);
   }
 
   FlowerKind? _todayFlower() {
@@ -82,10 +102,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         onSelect: _select,
         onSound: onSound,
         soundOn: ref.watch(soundEnabledProvider),
-        streak: const StreakCard(),
+        collapsed: _sidebarCollapsed(),
+        onCollapsedChanged: _setSidebarCollapsed,
         body: body,
         obscured: obscured,
-        appearanceToggle: const AppearanceToggle(),
+        appearanceToggle: obscured ? const AppearanceToggle() : null,
       ),
       ShellLayout.bottomBar => PopScope<Object?>(
         canPop: obscured || selected == ShellDestination.today,
@@ -97,7 +118,6 @@ class _AppShellState extends ConsumerState<AppShell> {
           onCapture: onCapture,
           body: body,
           obscured: obscured,
-          appearanceToggle: const AppearanceToggle(),
         ),
       ),
     };

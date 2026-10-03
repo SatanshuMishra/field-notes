@@ -95,11 +95,13 @@ void _expectClearRightEdgeSprig(WidgetTester tester, String reason) {
     expect(painted.overlaps(control), isFalse, reason: '$reason $control');
   }
   expect(sprig.center.dy, closeTo(panel.center.dy, 1), reason: reason);
-  expect(
-    sprig.right,
-    closeTo(panel.right - composerPanelBorderWidth + 8, 0.5),
-    reason: reason,
-  );
+  final BoxDecoration decoration =
+      tester.widget<Container>(find.byKey(composerPanelKey)).decoration!
+          as BoxDecoration;
+  final double border = decoration.border == null
+      ? 0
+      : composerPanelBorderWidth;
+  expect(sprig.right, closeTo(panel.right - border + 8, 0.5), reason: reason);
 }
 
 List<Override> _composerOverrides() => <Override>[

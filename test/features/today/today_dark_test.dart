@@ -8,7 +8,7 @@ import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/domain/services/streak_service.dart';
 import 'package:field_notes/features/mood/mood_banner.dart';
 import 'package:field_notes/features/mood/mood_prompt_border.dart';
-import 'package:field_notes/features/streak/streak_card.dart';
+import 'package:field_notes/features/streak/streak_pill.dart';
 import 'package:field_notes/features/streak/streak_providers.dart';
 import 'package:field_notes/features/today/today_header.dart';
 
@@ -111,7 +111,7 @@ void main() {
     expect(active.boxShadow!.single.offset, const Offset(2, 2));
   });
 
-  testWidgets('streak card and Today header draw their dark colours', (
+  testWidgets('streak pill and Today header draw their dark colours', (
     WidgetTester tester,
   ) async {
     await _pumpDark(
@@ -122,15 +122,17 @@ void main() {
             const StreakSummary(current: 3, longest: 5),
           ),
         ],
-        child: const StreakCard(),
+        child: const Center(child: StreakPill(form: StreakPillForm.sidebar)),
       ),
     );
 
-    final BoxDecoration card = _decorationsIn(
+    final BoxDecoration pill = _decorationsIn(
       tester,
-      find.byKey(const ValueKey<String>('streak-card')),
+      find.byType(StreakPill),
     ).first;
-    expect(card.color, _cardLight);
+    expect(pill.color, _cardLight);
+    expect((pill.border! as Border).top.color, _line);
+    expect(pill.boxShadow!.single.color, _shadow);
     expect(_textColour(tester, '3 days'), _accentInk);
 
     await _pumpDark(

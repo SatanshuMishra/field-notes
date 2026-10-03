@@ -44,7 +44,8 @@ class _Stop {
 
   bool reaches(_Target target) => switch (rect) {
     final Rect rect when control && identical(view, target.view) =>
-      target.rect.contains(rect.center),
+      target.rect.contains(rect.center) ||
+          (!editable && rect.contains(target.rect.center)),
     _ => false,
   };
 }

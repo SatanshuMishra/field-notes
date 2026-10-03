@@ -7,11 +7,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart';
@@ -30,6 +32,7 @@ import 'log_viewer.dart';
 const Key logViewerPanelKey = ValueKey<String>('log-viewer-panel');
 const Key logViewerEarlierKey = ValueKey<String>('log-viewer-earlier');
 const Key logViewerLaterKey = ValueKey<String>('log-viewer-later');
+const Key logViewerBackKey = ValueKey<String>('log-viewer-back');
 
 const String logViewerDeleteTitle = 'Delete this entry?';
 const String logViewerDeleteLabel = 'Delete';
@@ -38,6 +41,8 @@ const String logViewerDeleteFailedMessage =
     "Couldn't delete that entry. Please try again.";
 const String logViewerEarlierLabel = 'Earlier log';
 const String logViewerLaterLabel = 'Later log';
+const String logViewerBackLabel = 'Back';
+const String logViewerCloseLabel = 'Close';
 
 String logViewerDeleteMessageFor(String place) =>
     'This log will be removed from $place. This can’t be undone.';
@@ -70,6 +75,17 @@ const double _chevronStrokeWidth = 2;
 const double _chevronArm = 5;
 const double _minTapTarget = 48;
 const double _exitPillReach = (_minTapTarget - _exitPillHeight) / 2;
+const EdgeInsets _sheetHeaderPadding = EdgeInsets.fromLTRB(18, 6, 18, 10);
+const double _sheetTitleSize = 21;
+const double _sheetTitleLineHeight = 1.1;
+const EdgeInsets _sheetBodyPadding = EdgeInsets.fromLTRB(18, 12, 18, 16);
+const BorderRadius _sheetButtonRadius = BorderRadius.all(Radius.circular(14));
+const double _sheetLabelSize = 13;
+const double _sheetBackGlyphSize = 14;
+const double _sheetBackGlyphGap = 6;
+const double _sheetBackHorizontalPadding = 12;
+const double _sheetActionGlyphSize = 17;
+const double _sheetButtonHeight = 48;
 
 class LogViewerPanel extends ConsumerStatefulWidget {
   const LogViewerPanel({
@@ -77,11 +93,13 @@ class LogViewerPanel extends ConsumerStatefulWidget {
     required this.date,
     required this.entryId,
     required this.exit,
+    this.layout = ShellLayout.sidebar,
   });
 
   final String date;
   final String entryId;
   final LogViewerExit exit;
+  final ShellLayout layout;
 
   @override
   ConsumerState<LogViewerPanel> createState() => _LogViewerPanelState();
@@ -94,6 +112,12 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   bool _deleting = false;
   bool _left = false;
   int? _scrimPointer;
+
+  bool get _sheet => widget.layout == ShellLayout.bottomBar;
+
+  String get _exitLabel => widget.exit == LogViewerExit.back
+      ? logViewerBackLabel
+      : logViewerCloseLabel;
 
   @override
   void initState() {
@@ -192,6 +216,20 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     setState(() => _editing = true);
   }
 
+  Future<void> _editInComposer(Entry entry) async {
+    if (_editing || _left) {
+      return;
+    }
+    setState(() => _editing = true);
+    final bool? saved = await showEditNote(
+      context,
+      entry: entry,
+      date: widget.date,
+      exit: ComposerExit.back,
+    );
+    _onEditDone(saved ?? false);
+  }
+
   void _onEditDone(bool saved) {
     if (!mounted) {
       return;
@@ -275,21 +313,23 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
           autofocus: true,
           skipTraversal: true,
           onKeyEvent: _onKey,
-          child: AnimatedSize(
-            key: logViewerPanelKey,
-            duration: Motion.modalPop,
-            curve: Motion.entranceCurve,
-            alignment: Alignment.topCenter,
-            child: _editing && entry != null
-                ? EditNoteConnector(
-                    key: ValueKey<String>('log-viewer-edit-${entry.id}'),
-                    entry: entry,
-                    date: widget.date,
-                    exit: ComposerExit.back,
-                    onDone: _onEditDone,
-                  )
-                : _viewMode(entries ?? const <Entry>[], index, entry),
-          ),
+          child: _sheet
+              ? _phoneSheet(entries ?? const <Entry>[], index, entry)
+              : AnimatedSize(
+                  key: logViewerPanelKey,
+                  duration: Motion.modalPop,
+                  curve: Motion.entranceCurve,
+                  alignment: Alignment.topCenter,
+                  child: _editing && entry != null
+                      ? EditNoteConnector(
+                          key: ValueKey<String>('log-viewer-edit-${entry.id}'),
+                          entry: entry,
+                          date: widget.date,
+                          exit: ComposerExit.back,
+                          onDone: _onEditDone,
+                        )
+                      : _viewMode(entries ?? const <Entry>[], index, entry),
+                ),
         ),
       ),
     );
@@ -359,7 +399,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   }
 
   Widget _exitPill() {
-    final String label = widget.exit == LogViewerExit.back ? 'Back' : 'Close';
+    final String label = _exitLabel;
     final FieldNotesColors colors = context.colors;
     final FieldNotesShadows shadows = context.shadows;
     return Padding(
@@ -422,11 +462,95 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
     );
   }
 
-  Widget _titleBlock(Entry? entry, {required double endGap}) {
+  String _dayTitle() {
     final DateTime? day = parseDateKey(widget.date);
-    final String kicker = day == null
+    return day == null
         ? widget.date
         : dayTitleFor(day, today: ref.watch(todayClockProvider)());
+  }
+
+  Widget _phoneSheet(List<Entry> entries, int index, Entry? entry) {
+    final FieldNotesColors colors = context.colors;
+    return PhoneSheet(
+      key: logViewerPanelKey,
+      color: colors.composerPaper,
+      header: _sheetHeader(entry),
+      aboveFooter: entry != null && entries.length > 1
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                DashedDivider(thickness: _ruleThickness, color: colors.ink25),
+                _footer(entries, index),
+              ],
+            )
+          : null,
+      actions: <Widget>[
+        Expanded(
+          child: _SheetBackButton(
+            key: logViewerBackKey,
+            label: _exitLabel,
+            onPressed: () => _leave(LogViewerOutcome.returned),
+          ),
+        ),
+        if (entry != null && entry.type == EntryType.text)
+          _SheetActionSquare(
+            key: logActionsEditKey,
+            glyph: IconStickerGlyph.edit,
+            label: logActionsEditLabel,
+            onPressed: () => _editInComposer(entry),
+          ),
+        if (entry != null)
+          _SheetActionSquare(
+            key: logActionsDeleteKey,
+            glyph: IconStickerGlyph.trash,
+            label: logActionsDeleteLabel,
+            onPressed: () => _delete(entry),
+          ),
+      ],
+      child: Padding(
+        padding: _sheetBodyPadding,
+        child: entry == null ? const SizedBox.shrink() : _body(entry),
+      ),
+    );
+  }
+
+  Widget _sheetHeader(Entry? entry) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: _sheetHeaderPadding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                _dayTitle(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textStyles.stampAccent.copyWith(color: colors.accentInk),
+              ),
+              Text(
+                entry == null ? '' : logPreviewOf(entry).heading,
+                style: textStyles.headlineSerif.copyWith(
+                  fontSize: _sheetTitleSize,
+                  height: _sheetTitleLineHeight,
+                ),
+              ),
+            ],
+          ),
+        ),
+        DashedDivider(thickness: _ruleThickness, color: colors.ink25),
+      ],
+    );
+  }
+
+  Widget _titleBlock(Entry? entry, {required double endGap}) {
+    final String kicker = _dayTitle();
     final FieldNotesTextStyles textStyles = context.textStyles;
     return Padding(
       padding: EdgeInsetsDirectional.fromSTEB(
@@ -659,6 +783,118 @@ class _StepControl extends StatelessWidget {
                   ),
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetBackButton extends StatelessWidget {
+  const _SheetBackButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesShadows shadows = context.shadows;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: FocusRing(
+          onPressed: onPressed,
+          borderRadius: _sheetButtonRadius,
+          child: Container(
+            height: _sheetButtonHeight,
+            padding: const EdgeInsets.symmetric(
+              horizontal: _sheetBackHorizontalPadding,
+            ),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: colors.cardWarm,
+              border: shadows.outline,
+              borderRadius: _sheetButtonRadius,
+              boxShadow: shadows.chip,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                SizedBox.square(
+                  dimension: _sheetBackGlyphSize,
+                  child: CustomPaint(
+                    painter: _ChevronPainter(
+                      pointsBack: true,
+                      color: colors.ink,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: _sheetBackGlyphGap),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textStyles.captureLabelSans.copyWith(
+                      fontSize: _sheetLabelSize,
+                      color: colors.ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetActionSquare extends StatelessWidget {
+  const _SheetActionSquare({
+    super.key,
+    required this.glyph,
+    required this.label,
+    required this.onPressed,
+  });
+
+  final IconStickerGlyph glyph;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      onTap: onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onPressed,
+        child: FocusRing(
+          onPressed: onPressed,
+          borderRadius: _sheetButtonRadius,
+          child: Container(
+            width: _sheetButtonHeight,
+            height: _sheetButtonHeight,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Palette.toolbarInk,
+              borderRadius: _sheetButtonRadius,
+            ),
+            child: IconStickerGlyphIcon(
+              glyph: glyph,
+              color: Palette.onAccent,
+              size: _sheetActionGlyphSize,
             ),
           ),
         ),

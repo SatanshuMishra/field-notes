@@ -45,6 +45,9 @@ List<SemanticsNode> _nodes(
 
 bool _atLeast48(Size size) => size.width >= 47.99 && size.height >= 47.99;
 
+const String _logSheetScrim =
+    'missing-role | d4-viewer-video | Dismiss log viewer | <root>';
+
 void main() {
   testWidgets('the viewer steps can be pressed and are 48 dp', (
     WidgetTester tester,
@@ -71,7 +74,7 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('the viewer header buttons are 48 dp', (
+  testWidgets('the log sheet footer buttons can be pressed and are 48 dp', (
     WidgetTester tester,
   ) async {
     final List<String> ids = await _idsIn(
@@ -84,6 +87,25 @@ void main() {
       'Edit note |',
       'Delete entry |',
     ]);
+    final SemanticsHandle handle = tester.ensureSemantics();
+    for (final String label in <String>['Close', 'Edit note', 'Delete entry']) {
+      final List<SemanticsNode> nodes = _nodes(
+        tester,
+        (SemanticsNode node) => node.label == label,
+      );
+      expect(nodes, hasLength(1), reason: label);
+      expect(
+        nodes.single.getSemanticsData().hasAction(SemanticsAction.tap),
+        isTrue,
+        reason: label,
+      );
+      expect(
+        _atLeast48(nodes.single.rect.size),
+        isTrue,
+        reason: '$label ${nodes.single.rect.size}',
+      );
+    }
+    handle.dispose();
   });
 
   testWidgets('the video surface is a named button or silent', (
@@ -97,11 +119,13 @@ void main() {
     expect(
       ids.where(
         (String id) =>
-            id.startsWith('missing-role | ') ||
-            id.startsWith('unlabelled-tap | '),
+            (id.startsWith('missing-role | ') ||
+                id.startsWith('unlabelled-tap | ')) &&
+            id != _logSheetScrim,
       ),
       isEmpty,
       reason: '$ids',
     );
+    expect(ids, contains(_logSheetScrim));
   });
 }

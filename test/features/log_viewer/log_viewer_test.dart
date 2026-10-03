@@ -30,6 +30,10 @@ import '../day_detail/support/day_detail_harness.dart';
 const String _date = '2026-07-19';
 const String _lastWord = 'finale';
 
+final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
+
 String _longNote() {
   final StringBuffer buffer = StringBuffer('An afternoon by the pond');
   int word = 0;
@@ -90,8 +94,8 @@ List<Entry> _dayEntries() {
 
 class _DayRepository extends FakeJournalRepository {
   _DayRepository(List<Entry> entries)
-      : _current = List<Entry>.unmodifiable(entries),
-        super(entries: entries);
+    : _current = List<Entry>.unmodifiable(entries),
+      super(entries: entries);
 
   List<Entry> _current;
   final StreamController<List<Entry>> _changes =
@@ -233,22 +237,24 @@ Future<void> _drainToast(WidgetTester tester) async {
 }
 
 Finder _noteText(String text) => find.byWidgetPredicate(
-      (Widget w) => w is NoteBody && w.text.contains(text),
-    );
+  (Widget w) => w is NoteBody && w.text.contains(text),
+);
 
 void main() {
-  testWidgets('view mode text carries no fallback underline',
-      (WidgetTester tester) async {
+  testWidgets('view mode text carries no fallback underline', (
+    WidgetTester tester,
+  ) async {
     await _open(tester, entryId: 'entry-2');
 
     final Finder title = find.text('Afternoon note');
     expect(title, findsOneWidget);
     final TextStyle style = DefaultTextStyle.of(tester.element(title)).style;
     expect(style.decoration ?? TextDecoration.none, TextDecoration.none);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('view mode shows the heading, the meta and the whole note',
-      (WidgetTester tester) async {
+  testWidgets('view mode shows the heading, the meta and the whole note', (
+    WidgetTester tester,
+  ) async {
     await _open(tester, entryId: 'entry-2');
 
     expect(find.text('Afternoon note'), findsOneWidget);
@@ -261,10 +267,11 @@ void main() {
       findsOneWidget,
     );
     expect(_noteText(_lastWord), findsOneWidget);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets("Earlier and Later step through the day's logs",
-      (WidgetTester tester) async {
+  testWidgets("Earlier and Later step through the day's logs", (
+    WidgetTester tester,
+  ) async {
     await _open(tester);
 
     expect(find.text('Morning note'), findsOneWidget);
@@ -280,10 +287,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Morning note'), findsOneWidget);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('Edit switches to edit mode without moving the panel',
-      (WidgetTester tester) async {
+  testWidgets('Edit switches to edit mode without moving the panel', (
+    WidgetTester tester,
+  ) async {
     final NoteEditorDriver driver = NoteEditorDriver(tester);
     await _open(tester, entryId: 'entry-2');
     final Rect before = tester.getRect(find.byKey(logViewerPanelKey));
@@ -297,29 +305,31 @@ void main() {
     expect(after.left, before.left);
     expect(after.right, before.right);
     expect(after.center.dx, before.center.dx);
-  });
+  }, variant: _bothLayouts);
 
   testWidgets(
-      'Back from edit mode returns to view mode showing the saved text',
-      (WidgetTester tester) async {
-    final NoteEditorDriver driver = NoteEditorDriver(tester);
-    final _Session session = await _open(tester, entryId: 'entry-2');
+    'Back from edit mode returns to view mode showing the saved text',
+    (WidgetTester tester) async {
+      final NoteEditorDriver driver = NoteEditorDriver(tester);
+      final _Session session = await _open(tester, entryId: 'entry-2');
 
-    await tester.tap(find.byKey(logActionsEditKey));
-    await tester.pumpAndSettle();
-    await driver.enterText('a better day');
-    await tester.pump(draftIdleDebounceForTest);
-    await tester.tap(find.text(editNoteSaveLabel));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(logActionsEditKey));
+      await tester.pumpAndSettle();
+      await driver.enterText('a better day');
+      await tester.pump(draftIdleDebounceForTest);
+      await tester.tap(find.text(editNoteSaveLabel));
+      await tester.pumpAndSettle();
 
-    expect(session.repository.noteSaves, hasLength(1));
-    expect(driver.find, findsNothing);
-    expect(find.text('Afternoon note'), findsOneWidget);
-    expect(_noteText('a better day'), findsOneWidget);
-    expect(find.byKey(logViewerPanelKey), findsOneWidget);
-    expect(session.outcomes, isEmpty);
-    await _drainToast(tester);
-  });
+      expect(session.repository.noteSaves, hasLength(1));
+      expect(driver.find, findsNothing);
+      expect(find.text('Afternoon note'), findsOneWidget);
+      expect(_noteText('a better day'), findsOneWidget);
+      expect(find.byKey(logViewerPanelKey), findsOneWidget);
+      expect(session.outcomes, isEmpty);
+      await _drainToast(tester);
+    },
+    variant: _bothLayouts,
+  );
 
   testWidgets(
     'on macOS Keep editing after Back in an inline edit returns focus to the editor',
@@ -366,8 +376,9 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );
 
-  testWidgets('Delete asks first, then deletes the log and leaves',
-      (WidgetTester tester) async {
+  testWidgets('Delete asks first, then deletes the log and leaves', (
+    WidgetTester tester,
+  ) async {
     final _Session session = await _open(tester, entryId: 'entry-2');
 
     await tester.tap(find.byKey(logActionsDeleteKey));
@@ -375,9 +386,7 @@ void main() {
 
     expect(find.text('Delete this entry?'), findsOneWidget);
     expect(
-      find.text(
-        'This log will be removed from July 19. This can’t be undone.',
-      ),
+      find.text('This log will be removed from July 19. This can’t be undone.'),
       findsOneWidget,
     );
     expect(session.repository.deletedEntryIds, isEmpty);
@@ -390,10 +399,11 @@ void main() {
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.deleted]);
     expect(find.byKey(logViewerPanelKey), findsNothing);
     await _drainToast(tester);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('Escape leaves and the arrow keys step',
-      (WidgetTester tester) async {
+  testWidgets('Escape leaves and the arrow keys step', (
+    WidgetTester tester,
+  ) async {
     final _Session session = await _open(tester);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
@@ -412,10 +422,11 @@ void main() {
 
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
     expect(find.byKey(logViewerPanelKey), findsNothing);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('a scrim tap closes view mode and reports closing everything',
-      (WidgetTester tester) async {
+  testWidgets('a scrim tap closes view mode and reports closing everything', (
+    WidgetTester tester,
+  ) async {
     final _Session session = await _open(tester);
 
     await tester.tapAt(const Offset(4, 4));
@@ -423,10 +434,11 @@ void main() {
 
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.closedAll]);
     expect(find.byKey(logViewerPanelKey), findsNothing);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('a voice log shows the voice player and no Edit',
-      (WidgetTester tester) async {
+  testWidgets('a voice log shows the voice player and no Edit', (
+    WidgetTester tester,
+  ) async {
     await _open(tester, entryId: 'entry-3', exit: LogViewerExit.close);
 
     expect(find.text('Evening voice log'), findsOneWidget);
@@ -434,10 +446,11 @@ void main() {
     expect(find.byType(VoiceBody), findsOneWidget);
     expect(find.byKey(logActionsDeleteKey), findsOneWidget);
     expect(find.byKey(logActionsEditKey), findsNothing);
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('view mode plays voice and video through the injected players',
-      (WidgetTester tester) async {
+  testWidgets('view mode plays voice and video through the injected players', (
+    WidgetTester tester,
+  ) async {
     EntryAudioPlayer audio() => throw UnimplementedError();
     EntryVideoPlayer video() => throw UnimplementedError();
     await _open(
@@ -454,10 +467,11 @@ void main() {
       tester.widget<VoiceBody>(find.byType(VoiceBody)).playerFactory,
       same(audio),
     );
-  });
+  }, variant: _bothLayouts);
 
-  testWidgets('the viewer header time follows the system setting',
-      (WidgetTester tester) async {
+  testWidgets('the viewer header time follows the system setting', (
+    WidgetTester tester,
+  ) async {
     _useClockFormat(tester, twentyFourHour: false);
     await _open(tester, entryId: 'entry-2');
 
@@ -469,5 +483,5 @@ void main() {
 
     expect(find.text('14:30'), findsOneWidget);
     expect(find.text('08:12 · note'), findsOneWidget);
-  });
+  }, variant: _bothLayouts);
 }

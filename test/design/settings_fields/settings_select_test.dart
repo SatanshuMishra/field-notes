@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
@@ -8,6 +9,10 @@ const List<SettingsSelectOption<int>> _options = <SettingsSelectOption<int>>[
   SettingsSelectOption<int>(value: 0, label: 'Sunday'),
   SettingsSelectOption<int>(value: 1, label: 'Monday'),
 ];
+
+final TargetPlatformVariant _bothPlatforms = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
+);
 
 void main() {
   group('SettingsSelect', () {
@@ -24,7 +29,7 @@ void main() {
       );
 
       expect(find.text('Sunday'), findsOneWidget);
-    });
+    }, variant: _bothPlatforms);
 
     testWidgets('opens the menu and fires onChanged on selection',
         (WidgetTester tester) async {
@@ -45,7 +50,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(picked, 1);
-    });
+    }, variant: _bothPlatforms);
 
     testWidgets('does not open when disabled',
         (WidgetTester tester) async {
@@ -66,6 +71,6 @@ void main() {
 
       expect(find.text('Monday'), findsNothing);
       expect(picked, isNull);
-    });
+    }, variant: _bothPlatforms);
   });
 }

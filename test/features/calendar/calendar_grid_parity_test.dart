@@ -40,6 +40,7 @@ Future<void> _pumpCalendar(
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        theme: ThemeData(platform: TargetPlatform.macOS),
         home: Scaffold(
           body: CalendarScreen(
             initialMonth: const MonthRef(2026, 7),

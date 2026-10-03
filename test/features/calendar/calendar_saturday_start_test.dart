@@ -24,6 +24,7 @@ Widget _host(Widget child, {required List<Override> overrides}) {
     ],
     child: MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(platform: TargetPlatform.macOS),
       home: Scaffold(body: child),
     ),
   );

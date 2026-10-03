@@ -220,6 +220,7 @@ void main() {
           tester,
           surface: Size(size.window, 900),
           responsive: true,
+          platform: TargetPlatform.macOS,
         );
 
         expect(tester.takeException(), isNull);
@@ -236,6 +237,7 @@ void main() {
           tester,
           surface: Size(1280, window),
           responsive: true,
+          platform: TargetPlatform.macOS,
           onAddPhoto: _noPhotos,
         );
 

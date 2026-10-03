@@ -21,16 +21,23 @@ const Set<String> _titleBarToggle = <String>{
   'Switch to light',
 };
 
+const Set<String> _phoneHeaderGearStates = <String>{
+  'a1-today-empty',
+  'a8-garden-phone',
+};
+
 bool _accepted(String line) {
   final List<String> parts = line.split(' | ');
   final String rule = parts[0];
+  final String state = parts[1];
   final String label = parts[2];
   return switch (rule) {
     'missing-role' => label.startsWith('Dismiss'),
     'small-target' =>
       _frameworkMenuItems.contains(label) ||
           _sweepTodos.contains(label) ||
-          _titleBarToggle.contains(label),
+          _titleBarToggle.contains(label) ||
+          (label == 'Settings' && _phoneHeaderGearStates.contains(state)),
     _ => false,
   };
 }

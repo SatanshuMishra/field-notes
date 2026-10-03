@@ -10,6 +10,8 @@ import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/calendar/calendar.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_chevron_button.dart';
 import 'package:field_notes/features/calendar/widgets/calendar_month_picker.dart';
+import 'package:field_notes/features/calendar/widgets/month_year_sheet.dart';
+import 'package:field_notes/features/calendar/widgets/phone_flower_month.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser_sheet.dart';
 import 'package:field_notes/features/capture/chooser/capture_routes_provider.dart';
@@ -29,6 +31,7 @@ import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/streak/streak_providers.dart';
+import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
@@ -363,13 +366,16 @@ void main() {
         await _navigate(tester, layout, 'calendar');
         _expectDark(tester, find.byType(CalendarScreen), 'Calendar');
 
-        await _tap(tester, find.byKey(calendarTitleKey));
-        _expectDark(
+        final bool phone = layout.platform == TargetPlatform.android;
+        await _tap(
           tester,
-          find.byType(CalendarMonthPicker),
-          'the calendar month picker',
+          find.byKey(phone ? phoneMonthPickerButtonKey : calendarTitleKey),
         );
-        Navigator.of(tester.element(find.byType(CalendarMonthPicker))).pop();
+        final Finder picker = find.byType(
+          phone ? MonthYearSheet : CalendarMonthPicker,
+        );
+        _expectDark(tester, picker, 'the calendar month picker');
+        Navigator.of(tester.element(picker)).pop();
         await _settle(tester);
 
         await _navigate(tester, layout, 'garden');
@@ -408,11 +414,13 @@ void main() {
           await _navigate(tester, layout, 'calendar');
           await _tap(
             tester,
-            find.byWidgetPredicate(
-              (Widget widget) =>
-                  widget is CalendarChevronButton &&
-                  widget.semanticLabel == 'Previous month',
-            ),
+            layout.platform == TargetPlatform.android
+                ? find.byKey(phoneMonthPreviousKey)
+                : find.byWidgetPredicate(
+                    (Widget widget) =>
+                        widget is CalendarChevronButton &&
+                        widget.semanticLabel == 'Previous month',
+                  ),
           );
           final MonthRef previous = MonthRef.forDate(DateTime.now()).previous;
           await _tap(
@@ -452,7 +460,14 @@ void main() {
         'the mood picker draws dark',
         (WidgetTester tester) async {
           await _pumpDarkShell(tester, layout);
-          await _tap(tester, find.text(_moodQuestion));
+          await _tap(
+            tester,
+            find.text(
+              layout.platform == TargetPlatform.android
+                  ? todayMoodDockPrompt
+                  : _moodQuestion,
+            ),
+          );
 
           _expectDark(tester, find.text('Grateful'), 'the mood picker');
         },

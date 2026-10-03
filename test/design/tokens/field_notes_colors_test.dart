@@ -40,6 +40,8 @@ Map<String, Color> _roles(FieldNotesColors colors) => <String, Color>{
   'sage': colors.sage,
   'accentInk': colors.accentInk,
   'coralLink': colors.coralLink,
+  'accentInkStrong': colors.accentInkStrong,
+  'mutedInkStrong': colors.mutedInkStrong,
   'coralHover': colors.coralHover,
   'dangerInk': colors.dangerInk,
   'waveMid': colors.waveMid,
@@ -122,6 +124,8 @@ void main() {
         'sage': Color(0xFF7D8450),
         'accentInk': Color(0xFFC76A54),
         'coralLink': Color(0xFFB45C44),
+        'accentInkStrong': Color(0xFF9A4832),
+        'mutedInkStrong': Color(0xFF6A5C4A),
         'coralHover': Color(0xFF9A4832),
         'dangerInk': Color(0xFFC0392B),
         'waveMid': Color(0xFFDCAE9A),
@@ -182,6 +186,8 @@ void main() {
         'sage': Color(0xFFADB670),
         'accentInk': Color(0xFFE8927A),
         'coralLink': Color(0xFFE5907A),
+        'accentInkStrong': Color(0xFFE8927A),
+        'mutedInkStrong': Color(0xFFBFAA8E),
         'coralHover': Color(0xFFF0A58E),
         'dangerInk': Color(0xFFEF7466),
         'waveMid': Color(0xFF8A5C4B),
@@ -189,6 +195,33 @@ void main() {
       });
       expect(colors.ink25, const Color(0x40EFE3CE));
       expect(colors.shadowTint(0x29), const Color(0x29000000));
+    });
+
+    test('the strong light inks reach 4.5 to 1 on every panel and card', () {
+      const FieldNotesColors colors = FieldNotesColors.light;
+      final Map<String, Color> textRoles = <String, Color>{
+        'accentInkStrong': colors.accentInkStrong,
+        'mutedInkStrong': colors.mutedInkStrong,
+      };
+      final Map<String, Color> surfaces = <String, Color>{
+        'panelTop': colors.panelTop,
+        'panelBottom': colors.panelBottom,
+        'cardWarm': colors.cardWarm,
+        'cardLight': colors.cardLight,
+        'cardBright': colors.cardBright,
+        'cardAlt': colors.cardAlt,
+        'composerPaper': colors.composerPaper,
+      };
+
+      final List<String> failures = <String>[
+        for (final MapEntry<String, Color> text in textRoles.entries)
+          for (final MapEntry<String, Color> surface in surfaces.entries)
+            if (_contrast(text.value, surface.value) < 4.5)
+              '${text.key} on ${surface.key}: '
+                  '${_contrast(text.value, surface.value).toStringAsFixed(2)}',
+      ];
+
+      expect(failures, isEmpty);
     });
 
     test('dark text roles reach 4.5 to 1 on every dark surface', () {
@@ -200,6 +233,8 @@ void main() {
         'mutedDeep': colors.mutedDeep,
         'accentInk': colors.accentInk,
         'coralLink': colors.coralLink,
+        'accentInkStrong': colors.accentInkStrong,
+        'mutedInkStrong': colors.mutedInkStrong,
         'dangerInk': colors.dangerInk,
         'sage': colors.sage,
       };

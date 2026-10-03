@@ -1,3 +1,4 @@
+import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,8 +45,35 @@ List<SemanticsNode> _nodes(
   bool Function(SemanticsNode node) test,
 ) => find.semantics.byPredicate(test).evaluate().toList();
 
+final List<String> _tabLabels = <String>[
+  ShellDestination.today.label,
+  ShellDestination.calendar.label,
+  'New entry',
+  ShellDestination.garden.label,
+  ShellDestination.search.label,
+];
+
+void _expectPressable(WidgetTester tester, String label, double minimum) {
+  final List<SemanticsNode> nodes = _nodes(
+    tester,
+    (SemanticsNode node) => node.label == label,
+  );
+  expect(nodes, hasLength(1), reason: label);
+  expect(
+    nodes.single.getSemanticsData().hasAction(SemanticsAction.tap),
+    isTrue,
+    reason: label,
+  );
+  final Size size = nodes.single.rect.size;
+  expect(
+    size.width >= minimum - 0.01 && size.height >= minimum - 0.01,
+    isTrue,
+    reason: '$label $size',
+  );
+}
+
 void main() {
-  testWidgets('the tabs and the settings button are 48 dp', (
+  testWidgets('the tabs and + are 48 dp and the settings gear is 44', (
     WidgetTester tester,
   ) async {
     final List<String> ids = await _idsIn(
@@ -54,10 +82,14 @@ void main() {
       'a1-today-empty',
     );
     _expectNone(ids, 'small-target', 'a1-today-empty', <String>[
-      'Today |',
-      'Search |',
-      'Settings |',
+      for (final String label in _tabLabels) '$label |',
     ]);
+    final SemanticsHandle handle = tester.ensureSemantics();
+    for (final String label in _tabLabels) {
+      _expectPressable(tester, label, 48);
+    }
+    _expectPressable(tester, ShellDestination.settings.label, 44);
+    handle.dispose();
   });
 
   testWidgets('the garden describes its plot and reads each tally once', (

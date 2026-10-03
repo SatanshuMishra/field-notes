@@ -1,3 +1,4 @@
+import 'package:field_notes/features/calendar/widgets/phone_flower_month.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -45,26 +46,31 @@ List<SemanticsNode> _nodes(
 
 bool _atLeast48(Size size) => size.width >= 47.99 && size.height >= 47.99;
 
+void _expectPressable48(WidgetTester tester, String label) {
+  final List<SemanticsNode> nodes = _nodes(
+    tester,
+    (SemanticsNode node) => node.label == label,
+  );
+  expect(nodes, hasLength(1), reason: label);
+  expect(
+    nodes.single.getSemanticsData().hasAction(SemanticsAction.tap),
+    isTrue,
+    reason: label,
+  );
+  expect(
+    _atLeast48(nodes.single.rect.size),
+    isTrue,
+    reason: '$label ${nodes.single.rect.size}',
+  );
+}
+
 void main() {
-  testWidgets('This week can be pressed and is 48 dp', (
+  testWidgets('This month can be pressed and is 48 dp', (
     WidgetTester tester,
   ) async {
     await _idsIn(tester, shellStates, 'a11-calendar-next-month');
     final SemanticsHandle handle = tester.ensureSemantics();
-    final List<SemanticsNode> nodes = _nodes(
-      tester,
-      (SemanticsNode node) => node.label == 'This week',
-    );
-    expect(nodes, hasLength(1));
-    expect(
-      nodes.single.getSemanticsData().hasAction(SemanticsAction.tap),
-      isTrue,
-    );
-    expect(
-      _atLeast48(nodes.single.rect.size),
-      isTrue,
-      reason: '${nodes.single.rect.size}',
-    );
+    _expectPressable48(tester, phoneThisMonthLabel);
     handle.dispose();
   });
 
@@ -108,9 +114,18 @@ void main() {
       isEmpty,
       reason: '$ids',
     );
+    final SemanticsHandle handle = tester.ensureSemantics();
+    for (final String label in <String>[
+      phoneMonthPreviousLabel,
+      phoneMonthPickerLabel,
+      phoneMonthNextLabel,
+    ]) {
+      _expectPressable48(tester, label);
+    }
+    handle.dispose();
   });
 
-  testWidgets('the month picker hides the calendar and names its scrim', (
+  testWidgets('the month sheet hides the calendar and names its scrim', (
     WidgetTester tester,
   ) async {
     final List<String> ids = await _idsIn(
@@ -131,6 +146,15 @@ void main() {
     expect(
       _nodes(tester, (SemanticsNode node) => node.label.startsWith('Day 10')),
       isEmpty,
+    );
+    final List<SemanticsNode> scrims = _nodes(
+      tester,
+      (SemanticsNode node) => node.label == 'Dismiss month picker',
+    );
+    expect(scrims, hasLength(1));
+    expect(
+      scrims.single.getSemanticsData().hasAction(SemanticsAction.tap),
+      isTrue,
     );
     handle.dispose();
   });

@@ -42,9 +42,7 @@ Future<void> _pumpScreen(
         entriesForDateProvider.overrideWith(
           (Ref ref, String date) => Stream<List<Entry>>.value(const <Entry>[]),
         ),
-        reminderClockProvider.overrideWithValue(
-          () => DateTime(2026, 7, 20, 9),
-        ),
+        reminderClockProvider.overrideWithValue(() => DateTime(2026, 7, 20, 9)),
         reminderSchedulerProvider.overrideWithValue(
           RecordingReminderScheduler(),
         ),
@@ -55,8 +53,9 @@ Future<void> _pumpScreen(
 }
 
 void main() {
-  testWidgets('shows every settings section once loaded',
-      (WidgetTester tester) async {
+  testWidgets('shows every settings section once loaded', (
+    WidgetTester tester,
+  ) async {
     await _pumpScreen(tester, repository: FakeSettingsRepository());
 
     expect(find.byType(SyncStorageSection), findsOneWidget);
@@ -66,11 +65,19 @@ void main() {
     );
     expect(find.byType(JournalSection, skipOffstage: false), findsOneWidget);
     expect(find.byType(DataSection, skipOffstage: false), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('preferences'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(SettingsScreen),
+        matching: find.text('Sync & storage'),
+      ),
+      findsNWidgets(2),
+    );
   });
 
-  testWidgets('shows the placeholder while settings are still loading',
-      (WidgetTester tester) async {
+  testWidgets('shows the placeholder while settings are still loading', (
+    WidgetTester tester,
+  ) async {
     final StreamController<AppSettings> pending =
         StreamController<AppSettings>();
     addTearDown(pending.close);
@@ -83,11 +90,12 @@ void main() {
 
     expect(find.byType(CrossHatchPlaceholder), findsOneWidget);
     expect(find.byType(SyncStorageSection), findsNothing);
-    expect(find.text('Settings'), findsNothing);
+    expect(find.text('preferences'), findsNothing);
   });
 
-  testWidgets('shows a recoverable message when settings cannot load',
-      (WidgetTester tester) async {
+  testWidgets('shows a recoverable message when settings cannot load', (
+    WidgetTester tester,
+  ) async {
     await _pumpScreen(
       tester,
       repository: FakeSettingsRepository(),
@@ -99,8 +107,9 @@ void main() {
     expect(find.byType(SyncStorageSection), findsNothing);
   });
 
-  testWidgets('surfaces a failed write as a dismissible notice',
-      (WidgetTester tester) async {
+  testWidgets('surfaces a failed write as a dismissible notice', (
+    WidgetTester tester,
+  ) async {
     await _pumpScreen(
       tester,
       repository: FakeSettingsRepository(writeError: StateError('disk full')),

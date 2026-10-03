@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+
+import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -23,9 +26,18 @@ const double _ringRoom = 6;
 const double _pagePadding = 20;
 const double _sectionGap = 16;
 const double _sidebarHeaderGap = 18;
-const double _bottomBarHeaderGap = 10;
-const double _chipsContentGap = 6;
-const double _compactKickerSize = 14;
+
+const double _phoneSideInset = 14;
+const double _phoneHeaderGap = 6;
+const double _phoneTabsRoom = 56;
+const double _phoneTabsLift = 2;
+const double _phoneTabsSideInset = 12;
+const double _phoneTitleGap = 12;
+const double _phoneEyebrowSize = 15;
+const double _phoneTitleSize = 30;
+const double _phoneTitleHeight = 1.05;
+
+const EdgeInsets _phoneHeadingPadding = EdgeInsets.symmetric(horizontal: 2);
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -174,39 +186,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildBottomBar(AppSettings settings) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    final double barZone =
+        MediaQuery.viewPaddingOf(context).bottom + phoneBottomBarZone;
+    return Stack(
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            _pagePadding,
-            _pagePadding,
-            _pagePadding,
-            0,
-          ),
-          child: _SettingsHeader(
-            kicker: context.textStyles.pageEyebrowAccent.copyWith(
-              fontSize: _compactKickerSize,
+        Positioned.fill(
+          child: _buildPhoneContent(
+            settings,
+            EdgeInsets.fromLTRB(
+              _phoneSideInset,
+              MediaQuery.paddingOf(context).top + _phoneHeaderGap,
+              _phoneSideInset,
+              barZone + _phoneTabsRoom,
             ),
           ),
         ),
-        const SizedBox(height: _bottomBarHeaderGap),
-        FocusTraversalGroup(
-          child: SettingsTabChips(
-            key: settingsTabChipsKey,
-            selected: _tab,
-            onSelected: _selectTab,
-            padding: const EdgeInsets.symmetric(horizontal: _pagePadding),
-          ),
-        ),
-        Expanded(
-          child: _buildTabContent(
-            settings,
-            const EdgeInsets.fromLTRB(
-              _pagePadding,
-              _chipsContentGap,
-              _pagePadding,
-              _pagePadding,
+        Positioned(
+          left: _phoneTabsSideInset,
+          right: _phoneTabsSideInset,
+          bottom: barZone + _phoneTabsLift - settingsTabChipsOverhang,
+          child: Center(
+            child: FocusTraversalGroup(
+              child: SettingsTabChips(
+                key: settingsTabChipsKey,
+                selected: _tab,
+                onSelected: _selectTab,
+              ),
             ),
           ),
         ),
@@ -214,33 +219,67 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Widget _buildPhoneContent(AppSettings settings, EdgeInsets padding) {
+    return FocusTraversalGroup(
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) {
+          return SingleChildScrollView(
+            controller: _scrollController,
+            padding: padding,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: math.max(
+                  0,
+                  constraints.maxHeight - padding.vertical,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  _PhoneSettingsHeading(tab: _tab),
+                  const SizedBox(height: _phoneTitleGap),
+                  _buildTabColumn(settings),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildTabContent(AppSettings settings, EdgeInsets padding) {
-    final String? notice = _notice;
-    final SpellCheckAvailability spellCheckAvailability =
-        ref.watch(spellCheckAvailabilityProvider).value ??
-        SpellCheckAvailability.available;
     return FocusTraversalGroup(
       child: SingleChildScrollView(
         controller: _scrollController,
         padding: padding,
-        child: Column(
-          key: settingsTabContentKey,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            if (notice != null) ...<Widget>[
-              SettingsNotice(message: notice, onDismiss: _dismissNotice),
-              const SizedBox(height: _sectionGap),
-            ],
-            for (final SettingsTab tab in SettingsTab.values)
-              Visibility(
-                key: ValueKey<SettingsTab>(tab),
-                visible: tab == _tab,
-                maintainState: true,
-                child: _buildTabBody(tab, settings, spellCheckAvailability),
-              ),
-          ],
-        ),
+        child: _buildTabColumn(settings),
       ),
+    );
+  }
+
+  Widget _buildTabColumn(AppSettings settings) {
+    final String? notice = _notice;
+    final SpellCheckAvailability spellCheckAvailability =
+        ref.watch(spellCheckAvailabilityProvider).value ??
+        SpellCheckAvailability.available;
+    return Column(
+      key: settingsTabContentKey,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        if (notice != null) ...<Widget>[
+          SettingsNotice(message: notice, onDismiss: _dismissNotice),
+          const SizedBox(height: _sectionGap),
+        ],
+        for (final SettingsTab tab in SettingsTab.values)
+          Visibility(
+            key: ValueKey<SettingsTab>(tab),
+            visible: tab == _tab,
+            maintainState: true,
+            child: _buildTabBody(tab, settings, spellCheckAvailability),
+          ),
+      ],
     );
   }
 
@@ -284,6 +323,42 @@ class _SettingsHeader extends StatelessWidget {
           child: Text('Settings', style: context.textStyles.titleSerif),
         ),
       ],
+    );
+  }
+}
+
+class _PhoneSettingsHeading extends StatelessWidget {
+  const _PhoneSettingsHeading({required this.tab});
+
+  final SettingsTab tab;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    return Padding(
+      padding: _phoneHeadingPadding,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'preferences',
+            style: textStyles.pageEyebrowAccent.copyWith(
+              fontSize: _phoneEyebrowSize,
+            ),
+          ),
+          Semantics(
+            header: true,
+            child: Text(
+              tab.label,
+              style: textStyles.displaySerif.copyWith(
+                fontSize: _phoneTitleSize,
+                height: _phoneTitleHeight,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -23,6 +23,59 @@ const double _chevronExtent = 16;
 const double _chevronArm = 4.5;
 const double _chevronStrokeWidth = 2;
 const double _titleLineHeight = 1;
+const EdgeInsets _sheetHeaderPadding = EdgeInsets.fromLTRB(18, 6, 18, 10);
+const double _sheetTitleSize = 22;
+const double _sheetTitleLineHeight = 1.05;
+
+class DayDetailSheetHeader extends StatelessWidget {
+  const DayDetailSheetHeader({
+    super.key,
+    required this.date,
+    required this.today,
+  });
+
+  final String date;
+  final DateTime today;
+
+  @override
+  Widget build(BuildContext context) {
+    final DayDetailHeading heading = dayDetailHeadingFor(date, today: today);
+    final FieldNotesColors colors = context.colors;
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: _sheetHeaderPadding,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                dayDetailKickerFor(date, today: today),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: textStyles.stampAccent.copyWith(color: colors.accentInk),
+              ),
+              Text(
+                heading.title,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                style: textStyles.headlineSerif.copyWith(
+                  fontSize: _sheetTitleSize,
+                  height: _sheetTitleLineHeight,
+                ),
+              ),
+            ],
+          ),
+        ),
+        DashedDivider(thickness: _ruleThickness, color: colors.ink22),
+      ],
+    );
+  }
+}
 
 class DayDetailHeader extends StatelessWidget {
   const DayDetailHeader({

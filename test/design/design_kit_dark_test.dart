@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -16,8 +17,7 @@ const Color _cardWarm = Color(0xFF29221B);
 const Color _ink = Color(0xFFEFE3CE);
 const Color _panelTop = Color(0xFF1E1914);
 const Color _cardBright = Color(0xFF211B16);
-const Color _pill = Color(0xFF3D3229);
-const Color _toastInk = Color(0xFFF6EAD6);
+const Color _toastInk = Color(0xFFFBF3E4);
 const Color _ringOnDark = Color(0xFFE9DCC6);
 
 const Key _lightRingKey = ValueKey<String>('light-ring');
@@ -157,12 +157,14 @@ void main() {
       tester,
       const Toast(message: 'Saved', variant: ToastVariant.dark),
     );
-    final BoxDecoration pill = _decorationsIn(
-      tester,
-      find.byType(Toast),
-    ).single;
-    expect(pill.color, _pill);
-    expect(_textColour(tester, 'Saved'), _toastInk);
+    final GlassSurface glass = tester.widget<GlassSurface>(
+      find.descendant(
+        of: find.byType(Toast),
+        matching: find.byType(GlassSurface),
+      ),
+    );
+    expect(glass.tone, GlassTone.toast);
+    expect(_textColour(tester, 'Saved')!.toARGB32(), _toastInk.toARGB32());
 
     _useKeyboardHighlight();
     final FocusNode lightNode = _focusNode('light');

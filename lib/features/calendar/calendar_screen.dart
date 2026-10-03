@@ -1,8 +1,10 @@
+import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_destination.dart';
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -19,9 +21,12 @@ import 'model/calendar_month.dart';
 import 'widgets/calendar_grid.dart';
 import 'widgets/calendar_header.dart';
 import 'widgets/month_picker_route.dart';
+import 'widgets/phone_flower_month.dart';
 
-typedef OpenDayDetail =
-    Future<void> Function(BuildContext context, {required String date});
+typedef OpenDayDetail = Future<void> Function(
+  BuildContext context, {
+  required String date,
+});
 
 const String calendarLoadingMessage = 'Opening your calendar…';
 const String calendarErrorMessage =
@@ -53,6 +58,7 @@ class CalendarScreen extends ConsumerStatefulWidget {
 
 class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   late MonthRef _month = widget.initialMonth ?? MonthRef.forDate(_today);
+  bool _hasBrowsed = false;
   final FocusNode _focusNode = FocusNode(debugLabel: 'calendar');
   final FocusNode _titleFocusNode = FocusNode(debugLabel: 'calendar title');
   final LayerLink _pickerLink = LayerLink();
@@ -79,7 +85,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   }
 
   void _showMonth(MonthRef month) {
-    setState(() => _month = month);
+    setState(() {
+      _month = month;
+      _hasBrowsed = true;
+    });
   }
 
   void _showPreviousMonth() => _showMonth(_month.previous);
@@ -187,59 +196,117 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final DateTime today = _today;
     final String todayKey = MonthRef.forDate(today).dateKey(today.day);
     final int firstWeekday = _firstWeekday();
+    final bool phone =
+        resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
     return Focus(
       focusNode: _focusNode,
       skipTraversal: true,
       onKeyEvent: _handleKey,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          20,
-          20,
-          20 - calendarHeaderTrailingReach,
-          20,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            CalendarHeader(
-              month: _month,
-              currentMonth: _currentMonth,
-              onPreviousMonth: _showPreviousMonth,
-              onNextMonth: _showNextMonth,
-              onShowCurrentMonth: _showCurrentMonth,
-              onOpenPicker: _openPicker,
-              titleKey: calendarTitleKey,
-              thisWeekKey: calendarThisWeekKey,
-              pickerLink: _pickerLink,
-              titleFocusNode: _titleFocusNode,
+      child: phone
+          ? _phoneMonth(
+              daysAsync,
+              journaledDates: journaledDates,
+              todayKey: todayKey,
+              firstWeekday: firstWeekday,
+            )
+          : _desktopMonth(
+              daysAsync,
+              journaledDates: journaledDates,
+              todayKey: todayKey,
+              firstWeekday: firstWeekday,
             ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(
-                  right: calendarHeaderTrailingReach,
+    );
+  }
+
+  Widget _phoneMonth(
+    AsyncValue<List<Day>> daysAsync, {
+    required Set<String> journaledDates,
+    required String todayKey,
+    required int firstWeekday,
+  }) {
+    final Widget? placeholder = daysAsync.when(
+      data: (List<Day> days) => null,
+      loading: () => _hasBrowsed
+          ? null
+          : const _CalendarMessage(text: calendarLoadingMessage),
+      error: (Object error, StackTrace stackTrace) => const _CalendarError(),
+    );
+    return PhoneFlowerMonth(
+      month: _month,
+      currentMonth: _currentMonth,
+      daysByDate: daysAsync.when(
+        data: (List<Day> days) => <String, Day>{
+          for (final Day day in days) day.date: day,
+        },
+        loading: () => null,
+        error: (Object error, StackTrace stackTrace) => null,
+      ),
+      journaledDates: journaledDates,
+      firstWeekday: firstWeekday,
+      todayKey: todayKey,
+      onSelectDay: (String date) => _selectDay(date, todayKey: todayKey),
+      onPreviousMonth: _showPreviousMonth,
+      onNextMonth: _showNextMonth,
+      onShowCurrentMonth: _showCurrentMonth,
+      onOpenPicker: _openPicker,
+      placeholder: placeholder,
+    );
+  }
+
+  Widget _desktopMonth(
+    AsyncValue<List<Day>> daysAsync, {
+    required Set<String> journaledDates,
+    required String todayKey,
+    required int firstWeekday,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        20,
+        20 - calendarHeaderTrailingReach,
+        20,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          CalendarHeader(
+            month: _month,
+            currentMonth: _currentMonth,
+            onPreviousMonth: _showPreviousMonth,
+            onNextMonth: _showNextMonth,
+            onShowCurrentMonth: _showCurrentMonth,
+            onOpenPicker: _openPicker,
+            titleKey: calendarTitleKey,
+            thisWeekKey: calendarThisWeekKey,
+            pickerLink: _pickerLink,
+            titleFocusNode: _titleFocusNode,
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(
+                right: calendarHeaderTrailingReach,
+              ),
+              child: daysAsync.when(
+                data: (List<Day> days) => CalendarGrid(
+                  month: _month,
+                  daysByDate: <String, Day>{
+                    for (final Day day in days) day.date: day,
+                  },
+                  firstWeekday: firstWeekday,
+                  todayKey: todayKey,
+                  journaledDates: journaledDates,
+                  onSelectDay: (String date) =>
+                      _selectDay(date, todayKey: todayKey),
                 ),
-                child: daysAsync.when(
-                  data: (List<Day> days) => CalendarGrid(
-                    month: _month,
-                    daysByDate: <String, Day>{
-                      for (final Day day in days) day.date: day,
-                    },
-                    firstWeekday: firstWeekday,
-                    todayKey: todayKey,
-                    journaledDates: journaledDates,
-                    onSelectDay: (String date) =>
-                        _selectDay(date, todayKey: todayKey),
-                  ),
-                  loading: () =>
-                      const _CalendarMessage(text: calendarLoadingMessage),
-                  error: (Object error, StackTrace stackTrace) =>
-                      const _CalendarError(),
-                ),
+                loading: () =>
+                    const _CalendarMessage(text: calendarLoadingMessage),
+                error: (Object error, StackTrace stackTrace) =>
+                    const _CalendarError(),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

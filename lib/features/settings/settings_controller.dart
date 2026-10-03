@@ -85,6 +85,13 @@ class SettingsController {
     );
   }
 
+  Future<SettingsWriteResult> setSidebarCollapsed(bool value) {
+    return _write(
+      () => _repository.setSidebarCollapsed(value),
+      'Could not save your sidebar setting.',
+    );
+  }
+
   Future<SettingsWriteResult> _write(
     Future<void> Function() action,
     String failureMessage,

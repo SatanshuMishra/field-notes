@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -64,6 +65,15 @@ const List<String> _chipLabels = <String>[
   'Journal',
   'Data',
 ];
+
+const Set<String> _phoneHiddenSyncRows = <String>{
+  'Server URL',
+  'Access token',
+  'Sync frequency',
+  'Recovery passphrase',
+  'Pair a device',
+  'Connection',
+};
 
 const Map<String, List<String>> _rowsByTab = <String, List<String>>{
   _syncStorage: <String>[
@@ -139,9 +149,8 @@ Future<void> _pumpSettings(
         debugShowCheckedModeBanner: false,
         theme: fieldNotesTheme(platform: platform),
         builder: (BuildContext context, Widget? child) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(textScale)),
           child: child!,
         ),
         home: Scaffold(
@@ -311,7 +320,7 @@ void main() {
   );
 
   testWidgets(
-    'bottom-bar settings shows four scrolling chips Sync, Reminders, Journal, Data',
+    'bottom-bar settings shows a glass bar of four segments Sync, Reminders, Journal, Data below the rows',
     (WidgetTester tester) async {
       await _onPlatform(TargetPlatform.android, () async {
         await _pumpSettings(
@@ -323,6 +332,14 @@ void main() {
         final Finder chips = find.byKey(_chipsKey);
         expect(chips, findsOneWidget);
         expect(find.byKey(_railKey), findsNothing);
+        expect(
+          find.descendant(of: chips, matching: find.byType(GlassSurface)),
+          findsOneWidget,
+        );
+        expect(
+          tester.getRect(chips).top,
+          greaterThan(tester.getRect(find.byKey(_contentKey)).bottom),
+        );
         final List<Scrollable> rows = tester
             .widgetList<Scrollable>(
               find.descendant(of: chips, matching: find.byType(Scrollable)),
@@ -380,9 +397,14 @@ void main() {
         }
         for (final MapEntry<String, List<String>> tab in _rowsByTab.entries) {
           for (final String row in tab.value) {
-            expect(foundOn[row], <String>[
-              tab.key,
-            ], reason: '$row on ${platform.name}');
+            final bool hidden =
+                platform == TargetPlatform.android &&
+                _phoneHiddenSyncRows.contains(row);
+            expect(
+              foundOn[row],
+              hidden ? <String>[] : <String>[tab.key],
+              reason: '$row on ${platform.name}',
+            );
           }
         }
       });
