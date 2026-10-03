@@ -43,5 +43,7 @@ abstract final class Palette {
   static const Color gardenDeep = Color(0xFF96AA69);
   static const Color soilLight = Color(0xFF8A6C44);
   static const Color soilDark = Color(0xFF775A37);
+  static const Color creamOnSoil = Color(0xFFFBF3E4);
+  static const Color snapSage = Color(0xFF7D8450);
   static const Color sunGlow = Color(0x8CF4C960);
 }

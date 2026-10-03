@@ -120,7 +120,7 @@ const double _macToggle = 36;
 const double _macToggleTarget = _target;
 const double _macToggleLeft = 18;
 
-const Color _cream = Color(0xFFFBF3E4);
+const Color _cream = Palette.creamOnSoil;
 const Color _barScene = Color.fromRGBO(28, 22, 16, 0.38);
 const Cubic _cueCurve = Cubic(0.5, 0, 0.3, 1);
 const double _cueArrive = 0.7;

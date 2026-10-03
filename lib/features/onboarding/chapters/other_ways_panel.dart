@@ -66,9 +66,9 @@ const List<Duration> _waveBeats = <Duration>[
 
 const Color _speakFill = Color(0xFFC76A54);
 const Color _filmFill = Color(0xFF2F2A25);
-const Color _snapFill = Color(0xFF7D8450);
+const Color _snapFill = Palette.snapSage;
 const Color _white = Color(0xFFFFFFFF);
-const Color _cream = Color(0xFFFBF3E4);
+const Color _cream = Palette.creamOnSoil;
 const Color _filmKicker = Color(0xFFE79A80);
 const Color _filmBody = Color(0xFFCBB99F);
 const Color _stripeDark = Color(0xFF3A352E);
