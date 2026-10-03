@@ -1,25 +1,52 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/format/plural.dart';
+import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
-import 'package:flutter/widgets.dart';
+import 'package:field_notes/features/garden/widgets/garden_header.dart';
+import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
+import 'package:flutter/material.dart';
 
 const String meadowBackLabel = 'Your meadow this year';
 const String meadowBackCompactLabel = 'This year';
 const String meadowFullScreenLabel = 'Full screen';
+const String meadowExitFullScreenLabel = 'Exit full screen';
+const String meadowDetailsLabel = 'The year, day by day';
+const String meadowTimeButtonLabel = 'Time of day';
+const ValueKey<String> meadowTitleKey = ValueKey<String>('meadow-title');
+const ValueKey<String> meadowTitleBlockKey = ValueKey<String>(
+  'meadow-title-block',
+);
+const ValueKey<String> meadowDockKey = ValueKey<String>('meadow-dock');
+const ValueKey<String> meadowTimeButtonKey = ValueKey<String>(
+  'meadow-time-button',
+);
+const ValueKey<String> meadowDetailsButtonKey = ValueKey<String>(
+  'meadow-details-button',
+);
+const ValueKey<String> meadowFullScreenButtonKey = ValueKey<String>(
+  'meadow-full-screen-button',
+);
+const ValueKey<String> meadowThisYearButtonKey = ValueKey<String>(
+  'meadow-this-year-button',
+);
 
-const double _minTapTarget = 48;
-const EdgeInsets _compactClockBalance = EdgeInsets.only(top: 8);
-const Offset _buttonShadow = Offset(1.5, 1.5);
-const int _buttonShadowAlpha = 0x33;
+const Color _kickerShadow = Color.fromRGBO(0, 0, 0, 0.4);
+const Color _titleShadow = Color.fromRGBO(0, 0, 0, 0.45);
+const Color _summaryShadow = Color.fromRGBO(0, 0, 0, 0.5);
 const BorderRadius _linkRadius = BorderRadius.all(Radius.circular(6));
 
-final Path _backChevron = Path()
+final Path meadowBackChevron = Path()
   ..moveTo(15, 5)
   ..lineTo(8, 12)
   ..lineTo(15, 19);
 
-final Path _expandCorners = Path()
+final Path meadowNextChevron = Path()
+  ..moveTo(9, 5)
+  ..lineTo(16, 12)
+  ..lineTo(9, 19);
+
+final Path meadowExpandCorners = Path()
   ..moveTo(4, 9)
   ..lineTo(4, 4)
   ..lineTo(9, 4)
@@ -33,6 +60,80 @@ final Path _expandCorners = Path()
   ..lineTo(20, 20)
   ..lineTo(15, 20);
 
+final Path meadowCollapseCorners = Path()
+  ..moveTo(9, 4)
+  ..lineTo(9, 9)
+  ..lineTo(4, 9)
+  ..moveTo(15, 4)
+  ..lineTo(15, 9)
+  ..lineTo(20, 9)
+  ..moveTo(9, 20)
+  ..lineTo(9, 15)
+  ..lineTo(4, 15)
+  ..moveTo(15, 20)
+  ..lineTo(15, 15)
+  ..lineTo(20, 15);
+
+final Path meadowFourSquares = Path()
+  ..addRRect(RRect.fromLTRBR(3.5, 4, 10.5, 11, const Radius.circular(1.5)))
+  ..addRRect(RRect.fromLTRBR(13.5, 4, 20.5, 11, const Radius.circular(1.5)))
+  ..addRRect(RRect.fromLTRBR(3.5, 14, 10.5, 21, const Radius.circular(1.5)))
+  ..addRRect(RRect.fromLTRBR(13.5, 14, 20.5, 21, const Radius.circular(1.5)));
+
+final Path meadowCross = Path()
+  ..moveTo(6, 6)
+  ..lineTo(18, 18)
+  ..moveTo(18, 6)
+  ..lineTo(6, 18);
+
+class MeadowGlyph extends StatelessWidget {
+  const MeadowGlyph({
+    super.key,
+    required this.path,
+    required this.size,
+    this.color = meadowCream,
+    this.stroke = 2,
+  });
+
+  final Path path;
+  final double size;
+  final Color color;
+  final double stroke;
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size.square(size),
+      painter: MeadowStrokePainter(path: path, color: color, stroke: stroke),
+    );
+  }
+}
+
+String meadowKickerOf({required bool study}) =>
+    study ? 'meadow study' : 'your meadow';
+
+String meadowTitleOf({required bool study, required int year}) =>
+    study ? 'Your meadow, $year' : 'Every day, a bloom';
+
+String meadowSummaryOf({
+  required bool study,
+  required bool compact,
+  required int year,
+  required int blooms,
+  required int sprouts,
+  required String weather,
+}) {
+  final String counts = meadowCountPhrase(blooms, sprouts);
+  if (compact) {
+    return study
+        ? '$weather · ${pluralize(blooms, 'bloom')}'
+        : '$counts so far in $year';
+  }
+  return study
+      ? '$weather · $counts across $year'
+      : '$counts so far in $year · quietly filling in as the year goes';
+}
+
 class MeadowHeader extends StatelessWidget {
   const MeadowHeader({
     super.key,
@@ -43,7 +144,6 @@ class MeadowHeader extends StatelessWidget {
     required this.sprouts,
     required this.weather,
     this.onBack,
-    this.controls,
   });
 
   final bool compact;
@@ -53,163 +153,71 @@ class MeadowHeader extends StatelessWidget {
   final int sprouts;
   final String weather;
   final VoidCallback? onBack;
-  final Widget? controls;
 
   bool get _study => mode == MeadowSceneMode.study;
 
-  String get _kicker => _study ? 'meadow study' : 'your meadow';
-
-  String get _title => _study ? 'Your meadow, $year' : 'Every day, a bloom';
-
-  String get _subtitle {
-    final String counts = meadowCountPhrase(blooms, sprouts);
-    return _study
-        ? '$weather · $counts across $year'
-        : '$counts so far in $year · quietly filling in as the year goes';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final FieldNotesTextStyles styles = context.textStyles;
-    final Widget? back = _study
-        ? Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: _BackLink(compact: compact, onPressed: onBack),
-          )
-        : null;
-    final Widget? trailing = controls;
-    if (compact) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ?back,
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 4, 2, 9),
-            child: _TitleBlock(
-              kicker: _kicker,
-              title: _title,
-              subtitle: _subtitle,
-              kickerStyle: styles.pageEyebrowAccent.copyWith(fontSize: 14),
-              titleStyle: styles.headlineSerif.copyWith(height: 1.05),
-              subtitleStyle: styles.caption10Sans.copyWith(height: 1.35),
-              subtitleGap: 3,
-            ),
-          ),
-          if (trailing != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(2, 0, 2, 9),
-              child: trailing,
-            ),
-        ],
-      );
-    }
-    final Widget title = _TitleBlock(
-      kicker: _kicker,
-      title: _title,
-      subtitle: _subtitle,
-      kickerStyle: styles.pageEyebrowAccent,
-      titleStyle: styles.displaySerif,
-      subtitleStyle: styles.captionSans,
-      subtitleGap: 7,
-    );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          ?back,
-          if (trailing == null)
-            title
-          else
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              crossAxisAlignment: WrapCrossAlignment.end,
-              spacing: 16,
-              runSpacing: 12,
-              children: <Widget>[title, trailing],
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class MeadowHeaderControls extends StatelessWidget {
-  const MeadowHeaderControls({
-    super.key,
-    required this.compact,
-    required this.picker,
-    this.clock,
-    this.onFullScreen,
-  });
-
-  final bool compact;
-  final Widget picker;
-  final Widget? clock;
-  final VoidCallback? onFullScreen;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget? time = clock;
-    final Widget fullScreen = _FullScreenButton(
+    final bool study = _study;
+    final VoidCallback? back = onBack;
+    final String summary = meadowSummaryOf(
+      study: study,
       compact: compact,
-      onPressed: onFullScreen,
+      year: year,
+      blooms: blooms,
+      sprouts: sprouts,
+      weather: weather,
     );
-    if (compact) {
-      return Row(
-        children: <Widget>[
-          picker,
-          const SizedBox(width: 6),
-          if (time == null)
-            const Spacer()
-          else
-            Expanded(
-              child: Align(
-                alignment: AlignmentDirectional.centerEnd,
-                heightFactor: 1,
-                child: Padding(
-                  padding: _compactClockBalance,
-                  child: IntrinsicWidth(child: time),
-                ),
-              ),
-            ),
-          const SizedBox(width: 8),
-          fullScreen,
-        ],
-      );
-    }
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        if (time != null) ...<Widget>[time, const SizedBox(width: 12)],
-        picker,
-        const SizedBox(width: 8),
-        fullScreen,
+        if (!compact && study && back != null) ...<Widget>[
+          MeadowBackLink(onPressed: back),
+          const SizedBox(height: 6),
+        ],
+        IgnorePointer(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              MeadowTitle(compact: compact, study: study, year: year),
+              SizedBox(height: compact ? 4 : 6),
+              Text(
+                summary,
+                maxLines: compact ? 2 : null,
+                overflow: compact ? TextOverflow.ellipsis : null,
+                style:
+                    meadowSans(
+                      compact ? 11.5 : 12.5,
+                      opacity: compact ? 0.9 : 0.88,
+                      weight: FontWeight.w500,
+                    ).copyWith(
+                      height: 1.4,
+                      shadows: const <Shadow>[
+                        Shadow(color: _summaryShadow, blurRadius: 8),
+                      ],
+                    ),
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }
 }
 
-class _TitleBlock extends StatelessWidget {
-  const _TitleBlock({
-    required this.kicker,
-    required this.title,
-    required this.subtitle,
-    required this.kickerStyle,
-    required this.titleStyle,
-    required this.subtitleStyle,
-    required this.subtitleGap,
+class MeadowTitle extends StatelessWidget {
+  const MeadowTitle({
+    super.key,
+    required this.compact,
+    required this.study,
+    required this.year,
   });
 
-  final String kicker;
-  final String title;
-  final String subtitle;
-  final TextStyle kickerStyle;
-  final TextStyle titleStyle;
-  final TextStyle subtitleStyle;
-  final double subtitleGap;
+  final bool compact;
+  final bool study;
+  final int year;
 
   @override
   Widget build(BuildContext context) {
@@ -217,184 +225,86 @@ class _TitleBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Text(kicker, style: kickerStyle),
-        Semantics(header: true, child: Text(title, style: titleStyle)),
-        SizedBox(height: subtitleGap),
-        Text(subtitle, style: subtitleStyle),
+        Text(
+          meadowKickerOf(study: study),
+          style: meadowHandStyle(compact ? 16 : 17).copyWith(
+            shadows: const <Shadow>[
+              Shadow(color: _kickerShadow, blurRadius: 8),
+            ],
+          ),
+        ),
+        Semantics(
+          header: true,
+          child: Text(
+            meadowTitleOf(study: study, year: year),
+            key: meadowTitleKey,
+            style: TextStyle(
+              fontFamily: TypographyTokens.serif,
+              fontSize: compact ? 26 : 34,
+              fontWeight: FontWeight.w500,
+              height: compact ? 1.05 : 1.02,
+              color: meadowCream,
+              shadows: const <Shadow>[
+                Shadow(
+                  color: _titleShadow,
+                  offset: Offset(0, 2),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
 }
 
-class _BackLink extends StatelessWidget {
-  const _BackLink({required this.compact, required this.onPressed});
+class MeadowBackLink extends StatelessWidget {
+  const MeadowBackLink({super.key, required this.onPressed});
 
-  final bool compact;
-  final VoidCallback? onPressed;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final String label = compact ? meadowBackCompactLabel : meadowBackLabel;
-    final double glyphSize = compact ? 11 : 12;
     final Widget face = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          CustomPaint(
-            size: Size.square(glyphSize),
-            painter: _GlyphPainter(
-              path: _backChevron,
-              color: colors.mutedDeep,
-              stroke: 2.4,
-            ),
+          MeadowGlyph(
+            path: meadowBackChevron,
+            size: 12,
+            color: meadowCreamAt(0.9),
+            stroke: 2.4,
           ),
-          SizedBox(width: compact ? 4 : 5),
+          const SizedBox(width: 5),
           Text(
-            label,
+            meadowBackLabel,
             maxLines: 1,
             softWrap: false,
-            style: context.textStyles.captureLabelSans.copyWith(
-              color: colors.mutedDeep,
-              fontSize: compact ? 11 : 12,
-            ),
+            style: meadowSans(12, opacity: 0.9),
           ),
         ],
       ),
     );
     return Semantics(
       button: true,
-      enabled: onPressed != null,
-      label: label,
+      label: meadowBackLabel,
+      onTap: onPressed,
       child: MouseRegion(
         cursor: SystemMouseCursors.click,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
+          excludeFromSemantics: true,
           onTap: onPressed,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _minTapTarget,
-              minHeight: _minTapTarget,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: FocusRing(
-                enabled: onPressed != null,
-                onPressed: onPressed,
-                borderRadius: _linkRadius,
-                child: ExcludeSemantics(child: face),
-              ),
-            ),
+          child: FocusRing(
+            onPressed: onPressed,
+            surface: FocusRingSurface.dark,
+            borderRadius: _linkRadius,
+            child: ExcludeSemantics(child: face),
           ),
         ),
       ),
     );
   }
-}
-
-class _FullScreenButton extends StatelessWidget {
-  const _FullScreenButton({required this.compact, required this.onPressed});
-
-  final bool compact;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final BorderRadius radius = BorderRadius.all(
-      Radius.circular(compact ? 9 : 11),
-    );
-    final double glyphSize = compact ? 12 : 14;
-    final Widget face = DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.cardBright,
-        border: context.shadows.outline,
-        borderRadius: radius,
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: colors.shadowTint(_buttonShadowAlpha),
-            offset: _buttonShadow,
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: compact
-            ? const EdgeInsets.symmetric(horizontal: 9.5, vertical: 7.5)
-            : const EdgeInsets.symmetric(horizontal: 11.5, vertical: 9.5),
-        child: CustomPaint(
-          size: Size.square(glyphSize),
-          painter: _GlyphPainter(
-            path: _expandCorners,
-            color: colors.ink,
-            stroke: 2,
-          ),
-        ),
-      ),
-    );
-    return Semantics(
-      button: true,
-      enabled: onPressed != null,
-      label: meadowFullScreenLabel,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _minTapTarget,
-              minHeight: _minTapTarget,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: FocusRing(
-                enabled: onPressed != null,
-                onPressed: onPressed,
-                borderRadius: radius,
-                child: face,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlyphPainter extends CustomPainter {
-  const _GlyphPainter({
-    required this.path,
-    required this.color,
-    required this.stroke,
-  });
-
-  final Path path;
-  final Color color;
-  final double stroke;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double scale = size.shortestSide / 24;
-    canvas.save();
-    canvas.scale(scale);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_GlyphPainter oldDelegate) =>
-      !identical(oldDelegate.path, path) ||
-      oldDelegate.color != color ||
-      oldDelegate.stroke != stroke;
 }

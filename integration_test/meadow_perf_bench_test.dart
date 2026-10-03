@@ -12,6 +12,7 @@ import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
 import 'package:field_notes/features/garden/widgets/meadow_full_screen.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
@@ -41,7 +42,7 @@ final SkyLocation _edmonton = resolveSkyLocation(
   const Duration(hours: -7),
 );
 
-enum _View { page, study, fullScreen }
+enum _View { page, study, fullScreen, popover }
 
 enum _Layout { sidebar, bottomBar }
 
@@ -98,7 +99,6 @@ ProviderContainer _containerFor(_Hour hour, _View view) {
       ),
       skyClockProvider.overrideWithValue(() => instant),
       skyLocationProvider.overrideWith((Ref ref) async => _edmonton),
-      skyDebugControlsProvider.overrideWithValue(false),
     ],
   );
   if (view == _View.study) {
@@ -209,7 +209,6 @@ void _openFullScreen(
     year: year,
     seed: meadowSeed(_meadowKey, _currentYear),
     compact: layout == _Layout.bottomBar,
-    isCurrentYear: true,
   );
 }
 
@@ -258,6 +257,10 @@ Future<void> _measureCase(
     mounted,
     known: underneath,
   );
+  if (view == _View.popover) {
+    await tester.tap(find.byKey(meadowTimeButtonKey));
+    await tester.pump();
+  }
   await tester.binding.delayed(_timingsSettle);
   final int stageBytes = landing.stage.debugImageBytes;
   final String name = '${view.name}.${layout.name}.${hour.name}';

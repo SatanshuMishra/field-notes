@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -14,9 +13,6 @@ const Duration skyFastForwardStep = Duration(milliseconds: 270000);
 
 @riverpod
 DateTime Function() skyClock(Ref ref) => DateTime.now;
-
-@riverpod
-bool skyDebugControls(Ref ref) => kDebugMode;
 
 @immutable
 class SkyMoment {

@@ -163,7 +163,7 @@ const _RibbonMetrics _sidebar = _RibbonMetrics(
 
 const _RibbonMetrics _bottomBar = _RibbonMetrics(
   columns: 4,
-  gap: 6,
+  gap: 7,
   padding: 4,
   cellGap: 1.5,
   labelGap: 3,
@@ -184,6 +184,8 @@ class MeadowRibbon extends StatelessWidget {
     required this.growthPoint,
     required this.highlight,
     required this.onHighlight,
+    this.columns,
+    this.onFocus,
   });
 
   final MeadowYear year;
@@ -191,6 +193,8 @@ class MeadowRibbon extends StatelessWidget {
   final int growthPoint;
   final MeadowRange? highlight;
   final ValueChanged<MeadowRange?> onHighlight;
+  final int? columns;
+  final ValueChanged<int>? onFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -220,7 +224,7 @@ class MeadowRibbon extends StatelessWidget {
   }
 
   Widget _months(_RibbonMetrics metrics, double width) {
-    final int columns = metrics.columns;
+    final int columns = this.columns ?? metrics.columns;
     final double monthWidth = math.max(
       0,
       (width - metrics.gap * (columns - 1)) / columns,
@@ -250,6 +254,7 @@ class MeadowRibbon extends StatelessWidget {
                           compact: compact,
                           highlight: highlight,
                           onHighlight: onHighlight,
+                          onFocus: onFocus,
                         )
                       : const SizedBox.shrink(),
                 ),
@@ -272,6 +277,7 @@ class _MonthButton extends StatelessWidget {
     required this.compact,
     required this.highlight,
     required this.onHighlight,
+    required this.onFocus,
   });
 
   final MeadowYear year;
@@ -282,12 +288,17 @@ class _MonthButton extends StatelessWidget {
   final bool compact;
   final MeadowRange? highlight;
   final ValueChanged<MeadowRange?> onHighlight;
+  final ValueChanged<int>? onFocus;
 
   @override
   Widget build(BuildContext context) {
     final MeadowRange range = meadowMonthRange(month);
     final bool highlighted = highlight?.key == range.key;
+    final ValueChanged<int>? focus = onFocus;
     void toggle() => onHighlight(highlighted ? null : range);
+    final VoidCallback press = focus == null
+        ? toggle
+        : () => focus(month.month - 1);
     final Widget face = AnimatedContainer(
       duration: _tintDuration,
       constraints: const BoxConstraints(minHeight: _minTapTarget),
@@ -333,8 +344,9 @@ class _MonthButton extends StatelessWidget {
       button: true,
       selected: highlighted,
       label: month.summary,
-      onTap: toggle,
+      onTap: press,
       child: MouseRegion(
+        cursor: focus == null ? MouseCursor.defer : SystemMouseCursors.click,
         onEnter: compact
             ? null
             : (PointerEnterEvent event) => onHighlight(range),
@@ -342,9 +354,9 @@ class _MonthButton extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           excludeFromSemantics: true,
-          onTap: compact ? toggle : null,
+          onTap: compact || focus != null ? press : null,
           child: FocusRing(
-            onPressed: toggle,
+            onPressed: press,
             borderRadius: _monthRadius,
             child: face,
           ),

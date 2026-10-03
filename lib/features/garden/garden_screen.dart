@@ -23,7 +23,9 @@ import 'widgets/meadow_full_screen.dart';
 const String meadowErrorMessage = 'Your meadow could not be loaded right now.';
 
 class GardenScreen extends ConsumerStatefulWidget {
-  const GardenScreen({super.key});
+  const GardenScreen({super.key, this.fullScreen});
+
+  final MeadowFullScreenRequest? fullScreen;
 
   @override
   ConsumerState<GardenScreen> createState() => _GardenScreenState();
@@ -54,7 +56,6 @@ class _GardenScreenState extends ConsumerState<GardenScreen> {
     MeadowFullScreenRequest request, {
     required MeadowYear year,
     required int seed,
-    required bool isCurrentYear,
   }) {
     ref.read(meadowViewStateProvider.notifier).openFullScreen(request);
     unawaited(
@@ -64,9 +65,14 @@ class _GardenScreenState extends ConsumerState<GardenScreen> {
         year: year,
         seed: seed,
         compact: meadowIsCompact(context),
-        isCurrentYear: isCurrentYear,
       ),
     );
+  }
+
+  void _leaveFullScreen(MeadowFullScreenRequest request) {
+    if (ModalRoute.isCurrentOf(context) ?? false) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -84,7 +90,6 @@ class _GardenScreenState extends ConsumerState<GardenScreen> {
     final SkyLocation location =
         ref.watch(skyLocationProvider).value ??
         resolveSkyLocation(null, DateTime.now().timeZoneOffset);
-    final bool debugControls = ref.watch(skyDebugControlsProvider);
     final bool study = studyYear != null;
     if (days.hasError || counts.hasError || key.hasError) {
       return MeadowPageNotice(
@@ -110,7 +115,7 @@ class _GardenScreenState extends ConsumerState<GardenScreen> {
     );
     final MeadowYear shown = years.of(shownYear);
     final int seed = meadowSeed(meadowKey, shown.year);
-    final bool isCurrentYear = shown.year == currentYear;
+    final MeadowFullScreenRequest? fullScreen = widget.fullScreen;
     final SkyTime sky = ref.read(skyTimeProvider.notifier);
     final MeadowViewState view = ref.read(meadowViewStateProvider.notifier);
     return MeadowPage(
@@ -121,17 +126,15 @@ class _GardenScreenState extends ConsumerState<GardenScreen> {
       moment: moment,
       today: today,
       location: location,
-      debugControls: debugControls,
+      fullScreen: fullScreen,
       onNow: sky.now,
       onFastForward: sky.toggleFastForward,
       onPickYear: (int year) => view.openYear(year, currentYear: currentYear),
       onBack: view.backToThisYear,
-      onFullScreen: (MeadowFullScreenRequest request) => _openFullScreen(
-        request,
-        year: shown,
-        seed: seed,
-        isCurrentYear: isCurrentYear,
-      ),
+      onFullScreen: fullScreen == null
+          ? (MeadowFullScreenRequest request) =>
+                _openFullScreen(request, year: shown, seed: seed)
+          : _leaveFullScreen,
     );
   }
 }

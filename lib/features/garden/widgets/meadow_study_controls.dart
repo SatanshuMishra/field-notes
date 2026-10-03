@@ -6,10 +6,12 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year_replay.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
 import 'package:field_notes/features/garden/widgets/garden_header.dart';
+import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
 import 'package:field_notes/features/today/today_date.dart';
 
 const int meadowDayMinutes = 24 * 60;
@@ -25,24 +27,22 @@ const ValueKey<String> meadowHourSliderKey = ValueKey<String>(
 const ValueKey<String> meadowGrowthSliderKey = ValueKey<String>(
   'meadow-growth-slider',
 );
+const ValueKey<String> meadowStudyPanelKey = ValueKey<String>(
+  'meadow-study-panel',
+);
+const ValueKey<String> meadowReplayKey = ValueKey<String>('meadow-replay');
+const ValueKey<String> meadowStudyPlayKey = ValueKey<String>(
+  'meadow-study-play',
+);
 
-const double _minTapTarget = 48;
-const double _boxBasis = 360;
-const double _boxGap = 10;
-const double _sidebarGap = 10;
-const double _compactGap = 8;
-const double _compactButtonGap = 6;
-const double _compactLabelWidth = 74;
-const double _sidebarSliderMinWidth = 50;
-const double _sidebarClockMinWidth = 60;
-const double _sidebarGrowthMinWidth = 48;
-const double _compactValueMinWidth = 50;
-const double _trackHeight = 6;
-const double _trackRadius = _trackHeight / 2;
-const double _handleRadius = 7;
-const EdgeInsets _sidebarBoxPadding = EdgeInsets.fromLTRB(13, 0, 10, 0);
-const EdgeInsets _compactBoxPadding = EdgeInsets.symmetric(horizontal: 10);
+const double _phoneSliderReach = 48;
+const double _phoneTrack = 32;
+const double _deskTrack = 22;
+const double _trackThickness = 4;
+const double _phoneHandleRadius = 8;
+const double _deskHandleRadius = 7;
 const BorderRadius _sliderFocusRadius = BorderRadius.all(Radius.circular(9));
+const Color _handleEdge = Color.fromRGBO(20, 14, 8, 0.35);
 
 String _growthLabel(int year, int daysInYear, int growthPoint) {
   if (growthPoint >= daysInYear) {
@@ -104,6 +104,23 @@ class MeadowDayPlayer {
   void dispose() => _ticker.dispose();
 }
 
+@immutable
+class MeadowStudyParts {
+  const MeadowStudyParts({
+    required this.panel,
+    required this.play,
+    required this.replay,
+    required this.playing,
+    required this.planting,
+  });
+
+  final Widget panel;
+  final Widget play;
+  final Widget replay;
+  final bool playing;
+  final bool planting;
+}
+
 class MeadowStudyControls extends StatefulWidget {
   const MeadowStudyControls({
     super.key,
@@ -116,9 +133,7 @@ class MeadowStudyControls extends StatefulWidget {
     required this.growthPoint,
     required this.onGrowth,
     required this.moment,
-    this.debugControls = false,
-    this.onNow,
-    this.onFastForward,
+    required this.builder,
   });
 
   final bool compact;
@@ -129,10 +144,8 @@ class MeadowStudyControls extends StatefulWidget {
   final int year;
   final int growthPoint;
   final void Function(int growthPoint, bool growAnimated) onGrowth;
-  final bool debugControls;
   final SkyMoment moment;
-  final VoidCallback? onNow;
-  final VoidCallback? onFastForward;
+  final Widget Function(BuildContext context, MeadowStudyParts parts) builder;
 
   @override
   State<MeadowStudyControls> createState() => _MeadowStudyControlsState();
@@ -158,11 +171,8 @@ class _MeadowStudyControlsState extends State<MeadowStudyControls>
   @override
   void didUpdateWidget(MeadowStudyControls oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final bool otherYear = oldWidget.year != widget.year;
-    if (otherYear) {
+    if (oldWidget.year != widget.year) {
       _stopReplay();
-    }
-    if (otherYear || !widget.debugControls) {
       _player.pause();
     }
   }
@@ -188,12 +198,6 @@ class _MeadowStudyControlsState extends State<MeadowStudyControls>
 
   void _togglePlay() {
     setState(() => _player.toggle(_shownMinutes));
-    widget.onFastForward?.call();
-  }
-
-  void _backToNow() {
-    setState(_player.now);
-    widget.onNow?.call();
   }
 
   void _onGrowthSlider(int point) {
@@ -229,18 +233,11 @@ class _MeadowStudyControlsState extends State<MeadowStudyControls>
   @override
   Widget build(BuildContext context) {
     final bool compact = widget.compact;
-    final FieldNotesTextStyles styles = context.textStyles;
-    final FieldNotesColors colors = context.colors;
-    final TextStyle labelStyle = styles.captureLabelSans.copyWith(
-      color: colors.mutedDeep,
-      fontSize: compact ? 10 : 12,
-    );
-    final TextStyle valueStyle = styles.labelSans.copyWith(
-      fontWeight: FontWeight.w600,
-      fontSize: compact ? 11 : 13,
-    );
     final int limit = math.max(1, widget.limit);
-    final String clock = gardenClockLabel(context, widget.moment);
+    final String clock = gardenClockLabel(
+      context,
+      SkyMoment(instant: widget.moment.instant),
+    );
     final String grown = _growthLabel(
       widget.year,
       widget.daysInYear,
@@ -249,6 +246,7 @@ class _MeadowStudyControlsState extends State<MeadowStudyControls>
     final Widget hourSlider = _MeadowSlider(
       key: meadowHourSliderKey,
       label: 'Time of day',
+      compact: compact,
       value: _shownMinutes,
       min: 0,
       max: meadowLatestHourMinutes,
@@ -259,6 +257,7 @@ class _MeadowStudyControlsState extends State<MeadowStudyControls>
     final Widget growthSlider = _MeadowSlider(
       key: meadowGrowthSliderKey,
       label: 'Grown through',
+      compact: compact,
       value: widget.growthPoint,
       min: 1,
       max: limit,
@@ -268,140 +267,118 @@ class _MeadowStudyControlsState extends State<MeadowStudyControls>
       onChanged: _onGrowthSlider,
     );
     final bool playing = _player.playing;
-    final _StudyButton? play = widget.debugControls
-        ? _StudyButton(
-            label: playing ? 'Pause' : 'Play the day',
+    final String replayText = _planting
+        ? meadowPlantingLabel
+        : meadowReplayLabel;
+    final Widget panel = GlassSurface(
+      key: meadowStudyPanelKey,
+      tone: GlassTone.scene,
+      borderRadius: BorderRadius.all(Radius.circular(compact ? 14 : 20)),
+      padding: compact
+          ? const EdgeInsets.symmetric(horizontal: 12, vertical: 2)
+          : const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _SliderRow(
             compact: compact,
-            filled: playing,
-            glyph: playing ? _PlayGlyph.pause : _PlayGlyph.fastForward,
-            onPressed: _togglePlay,
-          )
-        : null;
-    final _StudyButton? now = widget.debugControls && widget.hourMinutes != null
-        ? _StudyButton(label: 'Now', compact: compact, onPressed: _backToNow)
-        : null;
-    final _StudyButton replay = _StudyButton(
-      label: _planting ? meadowPlantingLabel : meadowReplayLabel,
-      compact: compact,
-      filled: true,
-      onPressed: _startReplay,
-    );
-    if (compact) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 9),
-        child: _ControlBox(
-          compact: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _CompactSliderRow(
-                label: 'Time of day',
-                labelStyle: labelStyle,
-                slider: hourSlider,
-                value: clock,
-                valueStyle: valueStyle,
-              ),
-              _CompactSliderRow(
-                label: 'Grown through',
-                labelStyle: labelStyle,
-                slider: growthSlider,
-                value: grown,
-                valueStyle: valueStyle,
-              ),
-              Wrap(
-                alignment: WrapAlignment.end,
-                spacing: _compactButtonGap,
-                children: <Widget>[?now, ?play, replay],
-              ),
-            ],
+            label: 'Time of day',
+            slider: hourSlider,
+            value: clock,
           ),
-        ),
-      );
-    }
-    final List<_StudyButton> debugButtons = <_StudyButton>[?play, ?now];
-    final double inlineWidth = debugButtons.isEmpty
-        ? 0
-        : _sidebarBoxPadding.horizontal +
-              _measureText(context, 'Time of day', labelStyle) +
-              _sidebarGap +
-              _sidebarSliderMinWidth +
-              _sidebarGap +
-              math.max(
-                _sidebarClockMinWidth,
-                _measureText(context, clock, valueStyle),
-              ) +
-              debugButtons.fold<double>(
-                0,
-                (double sum, _StudyButton button) =>
-                    sum + _sidebarGap + button.measure(context),
-              );
-    final Widget timeBox = LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final bool inline = inlineWidth <= constraints.maxWidth;
-        return _ControlBox(
-          compact: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _SidebarSliderRow(
-                label: 'Time of day',
-                labelStyle: labelStyle,
-                slider: hourSlider,
-                value: clock,
-                valueStyle: valueStyle,
-                valueMinWidth: _sidebarClockMinWidth,
-                trailing: inline ? debugButtons : const <Widget>[],
-              ),
-              if (!inline && debugButtons.isNotEmpty)
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: _sidebarGap,
-                  children: debugButtons,
-                ),
-            ],
+          if (!compact) const SizedBox(height: 8),
+          _SliderRow(
+            compact: compact,
+            label: 'Grown through',
+            slider: growthSlider,
+            value: grown,
           ),
-        );
-      },
-    );
-    final Widget growthBox = _ControlBox(
-      compact: false,
-      child: _SidebarSliderRow(
-        label: 'Grown through',
-        labelStyle: labelStyle,
-        slider: growthSlider,
-        value: grown,
-        valueStyle: valueStyle,
-        valueMinWidth: _sidebarGrowthMinWidth,
-        trailing: <Widget>[replay],
+        ],
       ),
     );
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          if (constraints.maxWidth >= _boxBasis * 2 + _boxGap) {
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Expanded(child: timeBox),
-                const SizedBox(width: _boxGap),
-                Expanded(child: growthBox),
-              ],
-            );
-          }
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              timeBox,
-              const SizedBox(height: _boxGap),
-              growthBox,
-            ],
+    final Widget play = MeadowDockPill(
+      key: meadowStudyPlayKey,
+      label: playing ? meadowPauseLabel : meadowPlayTheDayLabel,
+      glyph: playing ? MeadowPlayGlyph.pause : MeadowPlayGlyph.play,
+      onPressed: _togglePlay,
+    );
+    final Widget replay = compact
+        ? _PhoneReplayButton(label: replayText, onPressed: _startReplay)
+        : MeadowDockPill(
+            key: meadowReplayKey,
+            label: replayText,
+            filled: true,
+            onPressed: _startReplay,
           );
-        },
+    return widget.builder(
+      context,
+      MeadowStudyParts(
+        panel: MeadowChromeBlock(child: panel),
+        play: play,
+        replay: replay,
+        playing: playing,
+        planting: _planting,
       ),
     );
   }
 }
+
+class _SliderRow extends StatelessWidget {
+  const _SliderRow({
+    required this.compact,
+    required this.label,
+    required this.slider,
+    required this.value,
+  });
+
+  final bool compact;
+  final String label;
+  final Widget slider;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final double gap = compact ? 10 : 12;
+    return Row(
+      children: <Widget>[
+        SizedBox(
+          width: compact ? 84 : 96,
+          child: ExcludeSemantics(
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: meadowSans(compact ? 11 : 12, opacity: 0.85),
+            ),
+          ),
+        ),
+        SizedBox(width: gap),
+        Expanded(child: slider),
+        SizedBox(width: gap),
+        ConstrainedBox(
+          constraints: BoxConstraints(minWidth: compact ? 54 : 64),
+          child: ExcludeSemantics(
+            child: Text(
+              value,
+              maxLines: 1,
+              softWrap: false,
+              textAlign: TextAlign.right,
+              style: meadowSans(compact ? 12 : 13),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+const double _replayPadding = 12;
+const String _replayShortLabel = 'Replay';
+
+String _shortReplay(String label) =>
+    label == meadowReplayLabel ? _replayShortLabel : label;
 
 double _measureText(BuildContext context, String text, TextStyle style) {
   final TextPainter painter = TextPainter(
@@ -415,126 +392,74 @@ double _measureText(BuildContext context, String text, TextStyle style) {
   return width;
 }
 
-class _ControlBox extends StatelessWidget {
-  const _ControlBox({required this.compact, required this.child});
-
-  final bool compact;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: context.colors.cardWarm,
-        border: context.shadows.outline,
-        borderRadius: BorderRadius.all(Radius.circular(compact ? 12 : 13)),
-        boxShadow: context.shadows.cardDefault,
-      ),
-      child: Padding(
-        padding: compact ? _compactBoxPadding : _sidebarBoxPadding,
-        child: child,
-      ),
-    );
-  }
-}
-
-class _SidebarSliderRow extends StatelessWidget {
-  const _SidebarSliderRow({
-    required this.label,
-    required this.labelStyle,
-    required this.slider,
-    required this.value,
-    required this.valueStyle,
-    required this.valueMinWidth,
-    required this.trailing,
-  });
+class _PhoneReplayButton extends StatelessWidget {
+  const _PhoneReplayButton({required this.label, required this.onPressed});
 
   final String label;
-  final TextStyle labelStyle;
-  final Widget slider;
-  final String value;
-  final TextStyle valueStyle;
-  final double valueMinWidth;
-  final List<Widget> trailing;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        ExcludeSemantics(
-          child: Text(label, maxLines: 1, softWrap: false, style: labelStyle),
-        ),
-        const SizedBox(width: _sidebarGap),
-        Expanded(child: slider),
-        const SizedBox(width: _sidebarGap),
-        ConstrainedBox(
-          constraints: BoxConstraints(minWidth: valueMinWidth),
-          child: ExcludeSemantics(
-            child: Text(
-              value,
-              maxLines: 1,
-              softWrap: false,
-              textAlign: TextAlign.right,
-              style: valueStyle,
-            ),
-          ),
-        ),
-        for (final Widget control in trailing) ...<Widget>[
-          const SizedBox(width: _sidebarGap),
-          control,
-        ],
-      ],
+    const BorderRadius radius = BorderRadius.all(
+      Radius.circular(meadowPhoneDockRadius),
     );
-  }
-}
-
-class _CompactSliderRow extends StatelessWidget {
-  const _CompactSliderRow({
-    required this.label,
-    required this.labelStyle,
-    required this.slider,
-    required this.value,
-    required this.valueStyle,
-  });
-
-  final String label;
-  final TextStyle labelStyle;
-  final Widget slider;
-  final String value;
-  final TextStyle valueStyle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        SizedBox(
-          width: _compactLabelWidth,
+    return Semantics(
+      key: meadowReplayKey,
+      button: true,
+      label: label,
+      onTap: onPressed,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onPressed,
+        child: FocusRing(
+          onPressed: onPressed,
+          surface: FocusRingSurface.dark,
+          borderRadius: radius,
           child: ExcludeSemantics(
-            child: Text(
-              label,
-              maxLines: 1,
-              softWrap: false,
-              overflow: TextOverflow.ellipsis,
-              style: labelStyle,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Palette.coral,
+                borderRadius: radius,
+                border: Border.all(
+                  color: context.colors.line,
+                  width: Shapes.outlineWidth,
+                ),
+              ),
+              child: SizedBox(
+                height: meadowPhoneControlHeight,
+                child: LayoutBuilder(
+                  builder: (BuildContext context, BoxConstraints constraints) {
+                    final TextStyle style = meadowSans(13)
+                        .copyWith(color: Palette.onAccent);
+                    final double room = constraints.maxWidth - _replayPadding;
+                    final String shown =
+                        _measureText(context, label, style) <= room
+                        ? label
+                        : _shortReplay(label);
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: _replayPadding / 2,
+                      ),
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            shown,
+                            maxLines: 1,
+                            softWrap: false,
+                            style: style,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
           ),
         ),
-        const SizedBox(width: _compactGap),
-        Expanded(child: slider),
-        const SizedBox(width: _compactGap),
-        ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: _compactValueMinWidth),
-          child: ExcludeSemantics(
-            child: Text(
-              value,
-              maxLines: 1,
-              softWrap: false,
-              textAlign: TextAlign.right,
-              style: valueStyle,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -565,6 +490,7 @@ class _MeadowSlider extends StatelessWidget {
   const _MeadowSlider({
     super.key,
     required this.label,
+    required this.compact,
     required this.value,
     required this.min,
     required this.max,
@@ -574,6 +500,7 @@ class _MeadowSlider extends StatelessWidget {
   });
 
   final String label;
+  final bool compact;
   final int value;
   final int min;
   final int max;
@@ -584,6 +511,8 @@ class _MeadowSlider extends StatelessWidget {
   int get _current => value.clamp(min, max);
 
   double get _fraction => max <= min ? 0 : (_current - min) / (max - min);
+
+  double get _handle => compact ? _phoneHandleRadius : _deskHandleRadius;
 
   void _set(int next) {
     final int snapped = (min + ((next - min) / step).round() * step).clamp(
@@ -596,17 +525,16 @@ class _MeadowSlider extends StatelessWidget {
   }
 
   void _seek(double dx, double width) {
-    final double span = width - _handleRadius * 2;
+    final double span = width - _handle * 2;
     if (!span.isFinite || span <= 0) {
       return;
     }
-    final double fraction = ((dx - _handleRadius) / span).clamp(0.0, 1.0);
+    final double fraction = ((dx - _handle) / span).clamp(0.0, 1.0);
     _set(min + ((max - min) * fraction).round());
   }
 
   @override
   Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
     final int current = _current;
     final int up = math.min(max, current + step);
     final int down = math.max(min, current - step);
@@ -649,15 +577,21 @@ class _MeadowSlider extends StatelessWidget {
                     _seek(details.localPosition.dx, width),
                 child: FocusRing(
                   onPressed: null,
+                  surface: FocusRingSurface.dark,
                   borderRadius: _sliderFocusRadius,
                   child: SizedBox(
-                    height: _minTapTarget,
+                    height: compact ? _phoneSliderReach : _deskTrack,
                     width: width,
-                    child: CustomPaint(
-                      painter: _SliderPainter(
-                        fraction: _fraction,
-                        trackColor: colors.cardBright,
-                        lineColor: colors.line,
+                    child: Center(
+                      child: SizedBox(
+                        height: compact ? _phoneTrack : _deskTrack,
+                        width: width,
+                        child: CustomPaint(
+                          painter: _SliderPainter(
+                            fraction: _fraction,
+                            handleRadius: _handle,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -672,220 +606,49 @@ class _MeadowSlider extends StatelessWidget {
 }
 
 class _SliderPainter extends CustomPainter {
-  const _SliderPainter({
-    required this.fraction,
-    required this.trackColor,
-    required this.lineColor,
-  });
+  const _SliderPainter({required this.fraction, required this.handleRadius});
 
   final double fraction;
-  final Color trackColor;
-  final Color lineColor;
+  final double handleRadius;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final double left = _handleRadius;
-    final double right = size.width - _handleRadius;
+    final double left = handleRadius;
+    final double right = size.width - handleRadius;
     if (right <= left) {
       return;
     }
     final double centerY = size.height / 2;
+    const Radius round = Radius.circular(_trackThickness / 2);
     final RRect track = RRect.fromLTRBR(
       left,
-      centerY - _trackRadius,
+      centerY - _trackThickness / 2,
       right,
-      centerY + _trackRadius,
-      const Radius.circular(_trackRadius),
+      centerY + _trackThickness / 2,
+      round,
     );
-    canvas.drawRRect(track, Paint()..color = trackColor);
+    canvas.drawRRect(track, Paint()..color = meadowCreamAt(0.3));
     final double filled = (right - left) * fraction.clamp(0.0, 1.0);
     if (filled > 0) {
       canvas.drawRRect(
-        RRect.fromLTRBR(
-          left,
-          track.top,
-          left + filled,
-          track.bottom,
-          const Radius.circular(_trackRadius),
-        ),
-        Paint()..color = Palette.coral,
+        RRect.fromLTRBR(left, track.top, left + filled, track.bottom, round),
+        Paint()..color = meadowGold,
       );
     }
-    final Paint outline = Paint()
-      ..color = lineColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = Shapes.outlineWidth;
-    canvas.drawRRect(track, outline);
     final Offset handle = Offset(left + filled, centerY);
-    canvas.drawCircle(handle, _handleRadius, Paint()..color = Palette.coral);
-    canvas.drawCircle(handle, _handleRadius, outline);
+    canvas.drawCircle(handle, handleRadius, Paint()..color = meadowGold);
+    canvas.drawCircle(
+      handle,
+      handleRadius,
+      Paint()
+        ..color = _handleEdge
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
+    );
   }
 
   @override
   bool shouldRepaint(_SliderPainter oldDelegate) =>
       fraction != oldDelegate.fraction ||
-      trackColor != oldDelegate.trackColor ||
-      lineColor != oldDelegate.lineColor;
-}
-
-enum _PlayGlyph { fastForward, pause }
-
-class _StudyButton extends StatelessWidget {
-  const _StudyButton({
-    required this.label,
-    required this.compact,
-    required this.onPressed,
-    this.filled = false,
-    this.glyph,
-  });
-
-  final String label;
-  final bool compact;
-  final VoidCallback onPressed;
-  final bool filled;
-  final _PlayGlyph? glyph;
-
-  double get _glyphSize => compact ? 10 : 11;
-
-  double get _glyphGap => compact ? 5 : 7;
-
-  EdgeInsets get _padding {
-    if (compact) {
-      return EdgeInsets.symmetric(
-        horizontal: glyph == null && filled ? 9 : 8,
-        vertical: 6,
-      );
-    }
-    if (glyph != null) {
-      return const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
-    }
-    return EdgeInsets.symmetric(horizontal: filled ? 11 : 10, vertical: 7);
-  }
-
-  TextStyle _textStyle(BuildContext context) =>
-      context.textStyles.captureLabelSans.copyWith(
-        color: filled ? Palette.onAccent : context.colors.ink,
-        fontSize: compact ? 10 : 12,
-      );
-
-  double measure(BuildContext context) => math.max(
-    _minTapTarget,
-    Shapes.outlineWidth * 2 +
-        _padding.horizontal +
-        (glyph == null ? 0 : _glyphSize + _glyphGap) +
-        _measureText(context, label, _textStyle(context)),
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    final Color foreground = filled ? Palette.onAccent : colors.ink;
-    final BorderRadius radius = BorderRadius.all(
-      Radius.circular(compact ? 9 : 11),
-    );
-    final _PlayGlyph? shape = glyph;
-    final Widget face = DecoratedBox(
-      decoration: BoxDecoration(
-        color: filled ? Palette.coral : colors.cardBright,
-        border: context.shadows.outline,
-        borderRadius: radius,
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: filled ? colors.shadow : colors.shadowTint(0x33),
-            offset: const Offset(1.5, 1.5),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: _padding,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (shape != null) ...<Widget>[
-              CustomPaint(
-                size: Size.square(_glyphSize),
-                painter: _PlayGlyphPainter(glyph: shape, color: foreground),
-              ),
-              SizedBox(width: _glyphGap),
-            ],
-            ExcludeSemantics(
-              child: Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                style: _textStyle(context),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    return Semantics(
-      button: true,
-      label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: FocusRing(
-              onPressed: onPressed,
-              borderRadius: radius,
-              child: face,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PlayGlyphPainter extends CustomPainter {
-  const _PlayGlyphPainter({required this.glyph, required this.color});
-
-  final _PlayGlyph glyph;
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double scale = size.shortestSide / 24;
-    final Paint fill = Paint()..color = color;
-    canvas.save();
-    canvas.scale(scale);
-    switch (glyph) {
-      case _PlayGlyph.fastForward:
-        canvas.drawPath(
-          Path()
-            ..moveTo(3, 5.5)
-            ..lineTo(12, 12)
-            ..lineTo(3, 18.5)
-            ..close()
-            ..moveTo(12, 5.5)
-            ..lineTo(21, 12)
-            ..lineTo(12, 18.5)
-            ..close(),
-          fill,
-        );
-      case _PlayGlyph.pause:
-        canvas.drawRRect(
-          RRect.fromLTRBR(6, 5, 10, 19, const Radius.circular(1)),
-          fill,
-        );
-        canvas.drawRRect(
-          RRect.fromLTRBR(14, 5, 18, 19, const Radius.circular(1)),
-          fill,
-        );
-    }
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_PlayGlyphPainter oldDelegate) =>
-      glyph != oldDelegate.glyph || color != oldDelegate.color;
+      handleRadius != oldDelegate.handleRadius;
 }

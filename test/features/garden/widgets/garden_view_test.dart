@@ -1,5 +1,4 @@
 import 'package:field_notes/design/format/clock_format.dart';
-import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
@@ -11,11 +10,11 @@ import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
+import 'package:field_notes/features/garden/widgets/meadow_focus_stepper.dart';
 import 'package:field_notes/features/garden/widgets/meadow_full_screen.dart';
 import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_ribbon.dart';
 import 'package:field_notes/features/garden/widgets/meadow_study_controls.dart';
-import 'package:field_notes/features/garden/widgets/meadow_tabs.dart';
 import 'package:field_notes/features/garden/widgets/meadow_year_picker.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
@@ -28,7 +27,7 @@ import '../support/garden_harness.dart';
 
 const int _buildFrames = 6000;
 const Size _desk = Size(1140, 900);
-const Size _phone = Size(393, 852);
+const Size _phone = Size(384, 832);
 const Duration _frame = Duration(milliseconds: 16);
 
 final DateTime _noon = DateTime.utc(2026, 9, 28, 18);
@@ -63,14 +62,17 @@ Future<ProviderContainer> _pumpPage(
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
+  if (platform == TargetPlatform.android) {
+    tester.view.padding = const FakeViewPadding(top: 34, bottom: 24);
+    tester.view.viewPadding = const FakeViewPadding(top: 34, bottom: 24);
+  }
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     gardenHarness(
       Builder(
         builder: (BuildContext context) => MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(disableAnimations: disableAnimations),
+          data: MediaQuery.of(context)
+              .copyWith(disableAnimations: disableAnimations),
           child: const GardenScreen(),
         ),
       ),
@@ -85,7 +87,6 @@ Future<ProviderContainer> _pumpPage(
         meadowKeyProvider.overrideWith((Ref ref) async => 24601),
         skyClockProvider.overrideWithValue(() => now ?? _noon),
         skyLocationProvider.overrideWith((Ref ref) async => _edmonton),
-        skyDebugControlsProvider.overrideWithValue(false),
       ],
     ),
   );
@@ -116,59 +117,22 @@ String _clock(WidgetTester tester, DateTime instant) => formatClock(
 MeadowStage _stage(WidgetTester tester) =>
     tester.widget<MeadowStage>(find.byType(MeadowStage));
 
-Finder _semanticsLabelled(String label) => find.byWidgetPredicate(
-  (Widget widget) => widget is Semantics && widget.properties.label == label,
-);
-
-BorderRadiusGeometry? _cardRadius(WidgetTester tester) => tester
-    .widget<ClipRRect>(
-      find
-          .ancestor(
-            of: find.byType(MeadowStage),
-            matching: find.byType(ClipRRect),
-          )
-          .first,
-    )
-    .borderRadius;
-
-BoxDecoration _cardEdge(WidgetTester tester) =>
-    tester
-            .widgetList<DecoratedBox>(
-              find.ancestor(
-                of: find.byType(MeadowStage),
-                matching: find.byType(DecoratedBox),
-              ),
-            )
-            .firstWhere(
-              (DecoratedBox box) =>
-                  box.position == DecorationPosition.foreground,
-            )
-            .decoration
-        as BoxDecoration;
-
-bool _hasInsetShadow(WidgetTester tester) => tester
-    .widgetList<CustomPaint>(
-      find.ancestor(
-        of: find.byType(MeadowStage),
-        matching: find.byType(CustomPaint),
-      ),
-    )
-    .any(
-      (CustomPaint paint) =>
-          paint.painter.runtimeType.toString() == '_InsetShadowPainter',
-    );
+Future<void> _settle(WidgetTester tester) async {
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 400));
+}
 
 Future<void> _pickYear(WidgetTester tester, int year) async {
   await tester.tap(find.byKey(meadowYearPickerButtonKey));
-  await tester.pumpAndSettle();
+  await _settle(tester);
   await tester.tap(find.byKey(meadowYearRowKey(year)));
-  await tester.pumpAndSettle();
+  await _settle(tester);
 }
 
 void main() {
   testWidgets(
-    'the sidebar page has the header with clock, picker and full screen, the '
-    'fitted scene card and the tabs 16 below it',
+    'the sidebar page fills the content area with the title over the scene '
+    'and the glass dock at the bottom centre',
     (WidgetTester tester) async {
       final ProviderContainer container = await _pumpPage(
         tester,
@@ -185,12 +149,12 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(tester.getTopLeft(find.text('your meadow')).dy, closeTo(26, 1));
-      expect(tester.getTopLeft(find.text('your meadow')).dx, closeTo(34, 1));
+      expect(tester.getTopLeft(find.text('your meadow')).dy, closeTo(22, 1));
+      expect(tester.getTopLeft(find.text('your meadow')).dx, closeTo(26, 1));
       expect(find.text(_clock(tester, _noon)), findsOneWidget);
       final String sunset = _clock(tester, DateTime.utc(2026, 9, 29, 1, 17));
-      final String moonrise = _clock(tester, DateTime.utc(2026, 9, 29, 1, 28));
-      expect(find.text('sunset $sunset · moonrise $moonrise'), findsOneWidget);
+      expect(find.text('sunset $sunset'), findsOneWidget);
+      expect(find.textContaining('moonrise'), findsNothing);
       expect(find.byType(GardenSkyClock), findsOneWidget);
       expect(find.byKey(meadowYearPickerButtonKey), findsOneWidget);
       expect(find.byType(MeadowStudyControls), findsNothing);
@@ -198,35 +162,26 @@ void main() {
       final MeadowStage stage = _stage(tester);
       expect(stage.mode, MeadowSceneMode.page);
       expect(stage.compact, isFalse);
+      expect(stage.covers, isTrue);
       expect(stage.growthPoint, isNull);
       expect(stage.highlight, isNull);
       expect(
         stage.sky,
         skySceneAt(_noon, _edmonton.latitude, _edmonton.longitude),
       );
-
-      final Rect scene = tester.getRect(find.byType(MeadowStage));
-      expect(scene.left, closeTo(34, 0.5));
-      expect(scene.width, closeTo(_desk.width - 68, 0.5));
-      expect(scene.height, closeTo(scene.width * 640 / 1400, 0.5));
-      expect(_cardRadius(tester), const BorderRadius.all(Radius.circular(20)));
-      final Border edge = _cardEdge(tester).border! as Border;
-      expect(edge.top.color, FieldNotesColors.light.ink22);
-      expect(edge.top.width, 1.5);
-      expect(_hasInsetShadow(tester), isTrue);
-
-      final Rect tabs = tester.getRect(find.byType(MeadowTabs));
-      expect(tabs.top, closeTo(scene.bottom + 16, 0.5));
-      expect(tabs.width, closeTo(scene.width, 0.5));
-      expect(find.text('The year, day by day'), findsOneWidget);
-      expect(find.text('This year so far'), findsOneWidget);
-
-      final Rect button = tester.getRect(
-        _semanticsLabelled(meadowFullScreenLabel),
+      expect(tester.getRect(find.byType(MeadowStage)), Offset.zero & _desk);
+      expect(
+        find.ancestor(
+          of: find.byType(MeadowStage),
+          matching: find.byType(ClipRRect),
+        ),
+        findsNothing,
       );
-      expect(button.width, greaterThanOrEqualTo(48));
-      expect(button.height, greaterThanOrEqualTo(48));
-      await tester.tap(_semanticsLabelled(meadowFullScreenLabel));
+      final Rect dock = tester.getRect(find.byKey(meadowDockKey));
+      expect(dock.center.dx, closeTo(_desk.width / 2, 0.5));
+      expect(dock.bottom, closeTo(_desk.height - 20, 0.5));
+
+      await tester.tap(find.byKey(meadowFullScreenButtonKey));
       await tester.pump();
       await tester.pump(meadowFullScreenFade + _frame);
       expect(
@@ -240,45 +195,43 @@ void main() {
       expect(_stage(tester).mode, MeadowSceneMode.full);
       expect(_stage(tester).compact, isFalse);
 
-      await tester.tap(find.byKey(meadowFullScreenCloseKey));
+      await tester.tap(find.byKey(meadowFullScreenButtonKey));
       await tester.pump();
       await tester.pump(meadowFullScreenFade + _frame);
       expect(container.read(meadowViewStateProvider).fullScreen, isNull);
+      expect(_stage(tester).mode, MeadowSceneMode.page);
     },
   );
 
   testWidgets(
-    'the bottom-bar page has the compact header, a 300-tall scene card and '
-    'the tabs',
+    'the bottom-bar page is full-bleed with the compact title and the dock '
+    'above the bar zone',
     (WidgetTester tester) async {
       await _pumpPage(tester, platform: TargetPlatform.android, size: _phone);
 
       expect(find.text('your meadow'), findsOneWidget);
       expect(find.text('Every day, a bloom'), findsOneWidget);
+      expect(find.text('2 blooms and 1 sprout so far in 2026'), findsOneWidget);
       expect(tester.getTopLeft(find.text('your meadow')).dx, closeTo(18, 1));
-      expect(find.text(_clock(tester, _noon)), findsOneWidget);
-      final String sunset = _clock(tester, DateTime.utc(2026, 9, 29, 1, 17));
-      expect(find.text('sunset $sunset'), findsOneWidget);
-      expect(find.textContaining('moonrise'), findsNothing);
+      expect(tester.getTopLeft(find.text('your meadow')).dy, closeTo(46, 1));
+      expect(find.byType(GardenSkyClock), findsNothing);
+      expect(find.textContaining('sunset'), findsNothing);
 
       final MeadowStage stage = _stage(tester);
       expect(stage.compact, isTrue);
       expect(stage.mode, MeadowSceneMode.page);
-      final Rect scene = tester.getRect(find.byType(MeadowStage));
-      expect(scene.left, closeTo(16, 0.5));
-      expect(scene.width, closeTo(_phone.width - 32, 0.5));
-      expect(scene.height, closeTo(300, 0.5));
-      expect(_cardRadius(tester), const BorderRadius.all(Radius.circular(16)));
-      expect(
-        (_cardEdge(tester).border! as Border).top.color,
-        FieldNotesColors.light.ink22,
-      );
-      expect(_hasInsetShadow(tester), isFalse);
-      expect(
-        tester.getTopLeft(find.byType(MeadowTabs)).dy,
-        closeTo(scene.bottom + 16, 0.5),
-      );
+      expect(stage.covers, isTrue);
+      expect(tester.getRect(find.byType(MeadowStage)), Offset.zero & _phone);
+      final Rect dock = tester.getRect(find.byKey(meadowDockKey));
+      expect(dock.left, 12);
+      expect(dock.right, _phone.width - 12);
+      expect(dock.bottom, _phone.height - 24 - 80 - 12);
+      expect(find.text('Day by day'), findsNothing);
+
+      await tester.tap(find.byKey(meadowDetailsButtonKey));
+      await _settle(tester);
       expect(find.text('Day by day'), findsOneWidget);
+      expect(find.text('This year so far'), findsOneWidget);
     },
   );
 
@@ -286,13 +239,16 @@ void main() {
     'the study keeps its hour, growth point and highlight until the year '
     'changes',
     (WidgetTester tester) async {
-      await _pumpPage(tester, platform: TargetPlatform.android, size: _phone);
+      final ProviderContainer container = await _pumpPage(
+        tester,
+        platform: TargetPlatform.android,
+        size: _phone,
+      );
 
       await _pickYear(tester, 2025);
       expect(find.byType(MeadowStudyControls), findsOneWidget);
       expect(find.text(meadowBackCompactLabel), findsOneWidget);
       expect(find.byType(GardenSkyClock), findsNothing);
-      expect(find.text('Landmarks'), findsOneWidget);
 
       await tester.drag(find.byKey(meadowHourSliderKey), const Offset(-400, 0));
       await tester.pump();
@@ -317,24 +273,33 @@ void main() {
       await tester.pump();
       expect(_stage(tester).growthPoint, 1);
 
-      await tester.ensureVisible(find.text('Mar'));
+      await tester.tap(find.byKey(meadowDetailsButtonKey));
+      await _settle(tester);
+      expect(find.text('Landmarks'), findsOneWidget);
       await tester.tap(find.text('Mar'));
-      await tester.pump();
+      await _settle(tester);
       final MeadowRange march = meadowMonthRange(_stage(tester).year.months[2]);
       expect(_stage(tester).highlight, march);
-
-      await tester.drag(
-        find.byType(SingleChildScrollView),
-        const Offset(0, 600),
+      expect(find.byKey(meadowFocusStepperKey), findsOneWidget);
+      expect(_stage(tester).growthPoint, 1);
+      expect(
+        tester
+            .widget<MeadowStudyControls>(find.byType(MeadowStudyControls))
+            .hourMinutes,
+        0,
       );
-      await tester.pumpAndSettle();
-      await _pickYear(tester, 2024);
+
+      container
+          .read(meadowViewStateProvider.notifier)
+          .openYear(2024, currentYear: 2026);
+      await _settle(tester);
       final MeadowStage reset = _stage(tester);
       expect(reset.year.year, 2024);
       expect(reset.mode, MeadowSceneMode.study);
       expect(reset.growthPoint, reset.year.limit);
       expect(reset.growAnimated, isFalse);
       expect(reset.highlight, isNull);
+      expect(find.byKey(meadowFocusStepperKey), findsNothing);
       expect(
         tester
             .widget<MeadowStudyControls>(find.byType(MeadowStudyControls))

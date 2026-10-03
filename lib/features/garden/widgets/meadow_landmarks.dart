@@ -10,7 +10,7 @@ import 'package:field_notes/features/garden/scene/meadow_view.dart';
 
 const double _minColumn = 190;
 const double _sidebarGap = 10;
-const double _bottomBarGap = 7;
+const double _bottomBarGap = 8;
 const double _edge = Shapes.outlineWidth;
 const Color _pillTint = Color(0x1AC76A54);
 const Duration _borderDuration = Duration(milliseconds: 200);
@@ -110,6 +110,7 @@ class MeadowLandmarks extends StatelessWidget {
     required this.compact,
     required this.highlight,
     required this.onHighlight,
+    this.onFocus,
   });
 
   final MeadowYear year;
@@ -117,20 +118,30 @@ class MeadowLandmarks extends StatelessWidget {
   final bool compact;
   final MeadowRange? highlight;
   final ValueChanged<MeadowRange?> onHighlight;
+  final ValueChanged<int>? onFocus;
 
   @override
   Widget build(BuildContext context) {
+    final List<MeadowLandmark> landmarks = meadowLandmarks(
+      year,
+      isCurrentYear: isCurrentYear,
+    );
+    final List<MeadowLandmark> ranged = <MeadowLandmark>[
+      for (final MeadowLandmark landmark in landmarks)
+        if (landmark.range != null) landmark,
+    ];
+    final ValueChanged<int>? focus = onFocus;
     final List<Widget> cards = <Widget>[
-      for (final MeadowLandmark landmark in meadowLandmarks(
-        year,
-        isCurrentYear: isCurrentYear,
-      ))
+      for (final MeadowLandmark landmark in landmarks)
         _LandmarkCard(
           year: year.year,
           landmark: landmark,
           compact: compact,
           highlight: highlight,
           onHighlight: onHighlight,
+          onFocus: focus == null || landmark.range == null
+              ? null
+              : () => focus(ranged.indexOf(landmark)),
         ),
     ];
     if (compact) {
@@ -192,6 +203,7 @@ class _LandmarkCard extends StatelessWidget {
     required this.compact,
     required this.highlight,
     required this.onHighlight,
+    required this.onFocus,
   });
 
   final int year;
@@ -199,6 +211,7 @@ class _LandmarkCard extends StatelessWidget {
   final bool compact;
   final MeadowRange? highlight;
   final ValueChanged<MeadowRange?> onHighlight;
+  final VoidCallback? onFocus;
 
   @override
   Widget build(BuildContext context) {
@@ -280,12 +293,14 @@ class _LandmarkCard extends StatelessWidget {
       return Semantics(container: true, child: face);
     }
     void toggle() => onHighlight(highlighted ? null : range);
+    final VoidCallback press = onFocus ?? toggle;
     return Semantics(
       container: true,
       button: true,
       selected: highlighted,
-      onTap: toggle,
+      onTap: press,
       child: MouseRegion(
+        cursor: onFocus == null ? MouseCursor.defer : SystemMouseCursors.click,
         onEnter: compact
             ? null
             : (PointerEnterEvent event) => onHighlight(range),
@@ -293,9 +308,9 @@ class _LandmarkCard extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           excludeFromSemantics: true,
-          onTap: compact ? toggle : null,
+          onTap: compact || onFocus != null ? press : null,
           child: FocusRing(
-            onPressed: toggle,
+            onPressed: press,
             borderRadius: _cardRadius,
             child: face,
           ),

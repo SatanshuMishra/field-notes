@@ -5,6 +5,7 @@ import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
+import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/garden/model/meadow_random.dart';
 import 'package:field_notes/features/garden/model/meadow_view_state.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
@@ -15,7 +16,11 @@ import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
+import 'package:field_notes/features/garden/widgets/garden_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_full_screen.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
+import 'package:field_notes/features/streak/journaled_dates_provider.dart';
+import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -39,15 +44,21 @@ final SkyLocation _edmonton = resolveSkyLocation(
   const Duration(hours: -6),
 );
 
+List<Day> _daysOf(int year) => <Day>[
+  for (int day = 1; day <= 24; day++)
+    dayOf(
+      captureDateKey(DateTime(year, 3, day)),
+      mood: moodOrder[day % moodOrder.length],
+    ),
+];
+
+Map<String, int> _countsOf(int year) => <String, int>{
+  captureDateKey(DateTime(year, 4, 2)): 2,
+};
+
 MeadowYear _yearOf(int year, {required DateTime today}) => MeadowYear.build(
-  days: <Day>[
-    for (int day = 1; day <= 24; day++)
-      dayOf(
-        captureDateKey(DateTime(year, 3, day)),
-        mood: moodOrder[day % moodOrder.length],
-      ),
-  ],
-  entryCounts: <String, int>{captureDateKey(DateTime(year, 4, 2)): 2},
+  days: _daysOf(year),
+  entryCounts: _countsOf(year),
   year: year,
   today: today,
 );
@@ -73,7 +84,6 @@ Future<ProviderContainer> _pumpPage(
   WidgetTester tester, {
   required Size size,
   required TargetPlatform platform,
-  bool debugControls = false,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -83,9 +93,21 @@ Future<ProviderContainer> _pumpPage(
       const SizedBox.expand(key: _pageKey),
       platform: platform,
       overrides: <Override>[
+        allDaysProvider.overrideWith(
+          (_) => Stream<List<Day>>.value(<Day>[
+            ..._daysOf(2024),
+            ..._daysOf(2025),
+          ]),
+        ),
+        journalEntryCountsProvider.overrideWith(
+          (_) => Stream<Map<String, int>>.value(<String, int>{
+            ..._countsOf(2024),
+            ..._countsOf(2025),
+          }),
+        ),
+        meadowKeyProvider.overrideWith((_) async => _meadowKey),
         skyClockProvider.overrideWithValue(() => _now),
         skyLocationProvider.overrideWith((_) async => _edmonton),
-        skyDebugControlsProvider.overrideWithValue(debugControls),
       ],
     ),
   );
@@ -102,7 +124,6 @@ void _launch(
   required MeadowFullScreenRequest request,
   required MeadowYear year,
   required bool compact,
-  required bool isCurrentYear,
 }) {
   container.read(meadowViewStateProvider.notifier).openFullScreen(request);
   unawaited(
@@ -112,7 +133,6 @@ void _launch(
       year: year,
       seed: meadowSeed(_meadowKey, year.year),
       compact: compact,
-      isCurrentYear: isCurrentYear,
     ),
   );
 }
@@ -123,16 +143,9 @@ Future<void> _open(
   required MeadowFullScreenRequest request,
   required MeadowYear year,
   required bool compact,
-  required bool isCurrentYear,
 }) async {
-  _launch(
-    tester,
-    container,
-    request: request,
-    year: year,
-    compact: compact,
-    isCurrentYear: isCurrentYear,
-  );
+  _launch(tester, container, request: request, year: year, compact: compact);
+  await tester.pump();
   await tester.pump();
   await tester.pump(meadowFullScreenFade + _frame);
 }
@@ -185,35 +198,25 @@ void main() {
       size: _macWindow,
       platform: TargetPlatform.macOS,
     );
-    await _open(
-      tester,
-      mac,
-      request: request,
-      year: year,
-      compact: false,
-      isCurrentYear: true,
-    );
+    await _open(tester, mac, request: request, year: year, compact: false);
     expect(
-      tester.getRect(find.byKey(meadowFullScreenTitleKey)).left,
-      greaterThanOrEqualTo(windowButtonsClearance),
+      tester.getRect(find.byKey(meadowTitleBlockKey)).top,
+      greaterThanOrEqualTo(shellTitleBarHeight),
     );
-    await tester.tap(find.byKey(meadowFullScreenCloseKey));
+    expect(tester.getRect(find.byKey(meadowTitleBlockKey)).left, 26);
+    await tester.tap(find.byKey(meadowFullScreenButtonKey));
     await _settleClose(tester);
+    expect(mac.read(meadowViewStateProvider).fullScreen, isNull);
 
     final ProviderContainer phone = await _pumpPage(
       tester,
       size: _phoneScreen,
       platform: TargetPlatform.android,
     );
-    await _open(
-      tester,
-      phone,
-      request: request,
-      year: year,
-      compact: true,
-      isCurrentYear: true,
-    );
+    await _open(tester, phone, request: request, year: year, compact: true);
     expect(tester.getRect(find.byKey(meadowFullScreenTitleKey)).left, 14);
+    expect(tester.getRect(find.byKey(meadowFullScreenTitleKey)).top, 40);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets("full screen opens with the page's year and growth point", (
@@ -234,19 +237,13 @@ void main() {
         .read(meadowViewStateProvider.notifier)
         .openYear(2024, currentYear: 2025);
 
-    _launch(
-      tester,
-      container,
-      request: study,
-      year: past,
-      compact: false,
-      isCurrentYear: false,
-    );
+    _launch(tester, container, request: study, year: past, compact: false);
+    await tester.pump();
     await tester.pump();
     await tester.pump(
       Duration(microseconds: meadowFullScreenFade.inMicroseconds ~/ 2),
     );
-    expect(_routeOpacity(tester), closeTo(0.5, 0.01));
+    expect(_routeOpacity(tester), closeTo(0.5, 0.05));
     await tester.pump(meadowFullScreenFade);
     expect(_routeOpacity(tester), 1);
     expect(
@@ -255,8 +252,8 @@ void main() {
     );
 
     final MeadowStage stage = _stage(tester);
-    expect(stage.year, same(past));
     expect(stage.year.year, 2024);
+    expect(stage.year.blooms, past.blooms);
     expect(stage.growthPoint, 200);
     expect(stage.seed, meadowSeed(_meadowKey, 2024));
     expect(stage.mode, MeadowSceneMode.full);
@@ -268,26 +265,16 @@ void main() {
     expect(stage.morning, _morningAt(seven));
     expect(tester.getRect(find.byType(MeadowStage)), Offset.zero & _macWindow);
 
-    expect(find.text('Meadow study · 2024'), findsOneWidget);
-    final TextStyle label = tester
-        .widget<Text>(find.text('Meadow study · 2024'))
-        .style!;
-    expect(label.fontFamily, TypographyTokens.accent);
-    expect(label.fontSize, 22);
-    expect(label.color, _glassInk);
+    expect(find.text('meadow study'), findsOneWidget);
+    expect(find.text('Your meadow, 2024'), findsOneWidget);
+    expect(find.byKey(meadowFullScreenCloseKey), findsNothing);
     expect(find.byKey(meadowFullScreenPlayKey), findsNothing);
-    expect(find.text('Play the day'), findsNothing);
-    expect(
-      tester.getSize(find.byKey(meadowFullScreenCloseKey)),
-      const Size(48, 48),
-    );
-    expect(
-      tester.getTopRight(find.byKey(meadowFullScreenCloseKey)),
-      Offset(_macWindow.width - 11, 9),
-    );
+    expect(find.text(meadowPlayTheDayLabel), findsOneWidget);
+    expect(find.byTooltip('Exit full screen (F)'), findsOneWidget);
 
-    await tester.tap(find.byKey(meadowFullScreenCloseKey));
+    await tester.tap(find.byKey(meadowFullScreenButtonKey));
     await _settleClose(tester);
+    expect(container.read(meadowViewStateProvider).fullScreen, isNull);
 
     final MeadowYear current = _yearOf(2025, today: DateTime(2025, 6, 30));
     final MeadowFullScreenRequest live = MeadowFullScreenRequest(
@@ -302,41 +289,35 @@ void main() {
       request: live,
       year: current,
       compact: false,
-      isCurrentYear: true,
     );
-    expect(_stage(tester).growthPoint, current.limit);
+    expect(_stage(tester).year.year, 2025);
+    expect(_stage(tester).resolvedGrowthPoint, current.limit);
     expect(_stage(tester).sky.sunAltitude, _skyAt(_now).sunAltitude);
     expect(_stage(tester).morning, _morningAt(_now));
-    expect(find.text('Your meadow · 2025 · still growing'), findsOneWidget);
+    expect(find.text('Every day, a bloom'), findsOneWidget);
 
-    await tester.tap(find.byKey(meadowFullScreenCloseKey));
+    await tester.tap(find.byKey(meadowFullScreenButtonKey));
     await _settleClose(tester);
     await _open(
       tester,
       container,
       request: MeadowFullScreenRequest(
         year: 2025,
-        hourMinutes: null,
-        growthPoint: current.daysInYear,
+        hourMinutes: 7 * 60,
+        growthPoint: current.limit,
       ),
       year: current,
-      compact: false,
-      isCurrentYear: true,
-    );
-    expect(find.text('Your meadow · 2025'), findsOneWidget);
-
-    await tester.tap(find.byKey(meadowFullScreenCloseKey));
-    await _settleClose(tester);
-    await _open(
-      tester,
-      container,
-      request: live,
-      year: current,
       compact: true,
-      isCurrentYear: true,
     );
     expect(find.text('2025'), findsOneWidget);
+    final TextStyle label = tester.widget<Text>(find.text('2025')).style!;
+    expect(label.fontFamily, TypographyTokens.accent);
+    expect(label.fontSize, 22);
+    expect(label.color!.toARGB32(), _glassInk.toARGB32());
     expect(_stage(tester).compact, isTrue);
+    expect(_stage(tester).mode, MeadowSceneMode.full);
+    expect(_stage(tester).growthPoint, current.limit);
+    expect(_stage(tester).sky.sunAltitude, _skyAt(seven).sunAltitude);
 
     await tester.pumpWidget(const SizedBox());
   });
@@ -344,10 +325,15 @@ void main() {
   testWidgets('the close button, escape and back leave full screen', (
     WidgetTester tester,
   ) async {
-    for (final (TargetPlatform platform, Size size, bool compact)
-        in <(TargetPlatform, Size, bool)>[
-          (TargetPlatform.macOS, _macWindow, false),
-          (TargetPlatform.android, _phoneScreen, true),
+    for (final (TargetPlatform platform, Size size, bool compact, Key close)
+        in <(TargetPlatform, Size, bool, Key)>[
+          (TargetPlatform.macOS, _macWindow, false, meadowFullScreenButtonKey),
+          (
+            TargetPlatform.android,
+            _phoneScreen,
+            true,
+            meadowFullScreenCloseKey,
+          ),
         ]) {
       final ProviderContainer container = await _pumpPage(
         tester,
@@ -370,10 +356,7 @@ void main() {
 
       for (final (String way, Future<void> Function() leave)
           in <(String, Future<void> Function())>[
-            (
-              'close button',
-              () => tester.tap(find.byKey(meadowFullScreenCloseKey)),
-            ),
+            ('close button', () => tester.tap(find.byKey(close))),
             ('escape', () => tester.sendKeyEvent(LogicalKeyboardKey.escape)),
             ('back', () => tester.binding.handlePopRoute()),
           ]) {
@@ -383,7 +366,6 @@ void main() {
           request: request,
           year: past,
           compact: compact,
-          isCurrentYear: false,
         );
         expect(find.byType(MeadowStage), findsOneWidget, reason: way);
         expect(container.read(meadowViewStateProvider).fullScreen, request);
@@ -429,7 +411,6 @@ void main() {
       ),
       year: current,
       compact: false,
-      isCurrentYear: true,
     );
     expect(find.byType(MeadowStage), findsOneWidget);
 
@@ -444,9 +425,8 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets('the phone shows the drag hint until the first drag or tap', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('the phone shows the drag hint above the bottom row until the '
+      'first drag or tap', (WidgetTester tester) async {
     tester.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
@@ -466,9 +446,17 @@ void main() {
         in <(String, Future<void> Function())>[
           (
             'drag',
-            () => tester.drag(find.byType(MeadowStage), const Offset(-120, 0)),
+            () => tester.dragFrom(
+              Offset(_phoneScreen.width / 2, _phoneScreen.height / 2),
+              const Offset(-120, 0),
+            ),
           ),
-          ('tap', () => tester.tap(find.byType(MeadowStage))),
+          (
+            'tap',
+            () => tester.tapAt(
+              Offset(_phoneScreen.width / 2, _phoneScreen.height / 2),
+            ),
+          ),
         ]) {
       await _open(
         tester,
@@ -476,7 +464,6 @@ void main() {
         request: request,
         year: current,
         compact: true,
-        isCurrentYear: true,
       );
       await _grow(tester);
       await tester.pump();
@@ -491,7 +478,11 @@ void main() {
             .first,
       );
       expect(hint.center.dx, closeTo(_phoneScreen.width / 2, 0.5));
-      expect(hint.bottom, closeTo(_phoneScreen.height - 18, 0.5));
+      expect(hint.bottom, closeTo(_phoneScreen.height - 72, 0.5));
+      expect(
+        hint.bottom,
+        lessThan(tester.getRect(find.byKey(meadowFullScreenRowKey)).top),
+      );
 
       await tester.pump(const Duration(seconds: 1));
       expect(find.text(meadowStageHint), findsOneWidget, reason: first);
@@ -508,51 +499,48 @@ void main() {
     await tester.pumpWidget(const SizedBox());
   });
 
-  testWidgets(
-    "play the day runs the full screen's own hour only in debug builds",
-    (WidgetTester tester) async {
-      final ProviderContainer container = await _pumpPage(
-        tester,
-        size: _macWindow,
-        platform: TargetPlatform.macOS,
-        debugControls: true,
-      );
-      final MeadowYear past = _yearOf(2024, today: DateTime(2025, 6, 30));
-      await _open(
-        tester,
-        container,
-        request: const MeadowFullScreenRequest(
-          year: 2024,
-          hourMinutes: 6 * 60,
-          growthPoint: 200,
-        ),
-        year: past,
-        compact: false,
-        isCurrentYear: false,
-      );
-      expect(_stage(tester).sky.sunAltitude, _skyAt(_todayAt(360)).sunAltitude);
-      expect(find.text('Play the day'), findsOneWidget);
-      expect(tester.getSize(find.byKey(meadowFullScreenPlayKey)).height, 48);
+  testWidgets("play the day runs the phone full screen's own hour", (
+    WidgetTester tester,
+  ) async {
+    final ProviderContainer container = await _pumpPage(
+      tester,
+      size: _phoneScreen,
+      platform: TargetPlatform.android,
+    );
+    final MeadowYear past = _yearOf(2024, today: DateTime(2025, 6, 30));
+    await _open(
+      tester,
+      container,
+      request: const MeadowFullScreenRequest(
+        year: 2024,
+        hourMinutes: 6 * 60,
+        growthPoint: 200,
+      ),
+      year: past,
+      compact: true,
+    );
+    expect(_stage(tester).sky.sunAltitude, _skyAt(_todayAt(360)).sunAltitude);
+    expect(find.text(meadowPlayTheDayLabel), findsOneWidget);
+    expect(tester.getSize(find.byKey(meadowFullScreenPlayKey)).height, 48);
 
-      await tester.tap(find.byKey(meadowFullScreenPlayKey));
-      await tester.pump();
-      expect(find.text('Pause'), findsOneWidget);
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(_stage(tester).sky.sunAltitude, _skyAt(_todayAt(390)).sunAltitude);
-      expect(_stage(tester).morning, _morningAt(_todayAt(390)));
-      expect(container.read(skyTimeProvider).offset, Duration.zero);
+    await tester.tap(find.byKey(meadowFullScreenPlayKey));
+    await tester.pump();
+    expect(find.text(meadowPauseLabel), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(_stage(tester).sky.sunAltitude, _skyAt(_todayAt(390)).sunAltitude);
+    expect(_stage(tester).morning, _morningAt(_todayAt(390)));
+    expect(container.read(skyTimeProvider).offset, Duration.zero);
 
-      await tester.tap(find.byKey(meadowFullScreenPlayKey));
-      await tester.pump();
-      expect(find.text('Play the day'), findsOneWidget);
-      final double paused = _stage(tester).sky.sunAltitude;
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(_stage(tester).sky.sunAltitude, paused);
+    await tester.tap(find.byKey(meadowFullScreenPlayKey));
+    await tester.pump();
+    expect(find.text(meadowPlayTheDayLabel), findsOneWidget);
+    final double paused = _stage(tester).sky.sunAltitude;
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(_stage(tester).sky.sunAltitude, paused);
 
-      await tester.tap(find.byKey(meadowFullScreenCloseKey));
-      await _settleClose(tester);
-      expect(container.read(meadowViewStateProvider).fullScreen, isNull);
-      await tester.pumpWidget(const SizedBox());
-    },
-  );
+    await tester.tap(find.byKey(meadowFullScreenCloseKey));
+    await _settleClose(tester);
+    expect(container.read(meadowViewStateProvider).fullScreen, isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
 }

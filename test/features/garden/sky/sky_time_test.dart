@@ -7,6 +7,7 @@ import 'package:field_notes/features/garden/sky/sky_location.dart';
 import 'package:field_notes/features/garden/sky/sky_location_provider.dart';
 import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
+import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/state/journal_providers.dart';
@@ -57,7 +58,6 @@ class _SkyHarness {
 
 Future<_SkyHarness> _pumpGarden(
   WidgetTester tester, {
-  bool debugControls = false,
   bool overrideLocation = true,
 }) async {
   final _SkyHarness sky = _SkyHarness(_start);
@@ -96,7 +96,6 @@ Future<_SkyHarness> _pumpGarden(
         localUtcOffsetProvider.overrideWith((_) => _edmontonOffset),
         if (overrideLocation)
           skyLocationProvider.overrideWith((_) async => _edmonton),
-        skyDebugControlsProvider.overrideWithValue(debugControls),
       ],
     ),
   );
@@ -221,20 +220,16 @@ void main() {
   });
 
   testWidgets(
-    'debug Fast-forward moves the painted sun 30 minutes a second and Now returns',
+    'Play the day moves the painted sun 30 minutes a second and the time '
+    "picker's Now returns",
     (WidgetTester tester) async {
-      final _SkyHarness sky = await _pumpGarden(tester, debugControls: true);
+      final _SkyHarness sky = await _pumpGarden(tester);
+      final ProviderContainer container = _container(tester);
       final SkyScene before = _painted(tester);
-      expect(find.text('Fast-forward'), findsOneWidget);
-      expect(find.text('Now'), findsNothing);
-      expect(
-        tester.getSize(find.bySemanticsLabel('Fast-forward')).height,
-        greaterThanOrEqualTo(48),
-      );
 
-      await tester.tap(find.text('Fast-forward'));
+      container.read(skyTimeProvider.notifier).toggleFastForward();
       await tester.pump();
-      expect(find.text('Pause'), findsOneWidget);
+      expect(container.read(skyTimeProvider).fastForwarding, isTrue);
 
       await tester.pump(const Duration(seconds: 3));
       final DateTime shifted = sky.now.add(const Duration(minutes: 90));
@@ -249,34 +244,23 @@ void main() {
       expect(_painted(tester), _sceneAt(shifted));
       expect(_painted(tester).sunX, isNot(before.sunX));
       expect(_painted(tester).sunY, isNot(before.sunY));
-      expect(find.text('Now'), findsOneWidget);
-      expect(
-        tester.getSize(find.bySemanticsLabel('Now')).height,
-        greaterThanOrEqualTo(48),
-      );
 
-      await tester.tap(find.text('Pause'));
+      container.read(skyTimeProvider.notifier).toggleFastForward();
       await tester.pump();
-      expect(find.text('Fast-forward'), findsOneWidget);
+      expect(container.read(skyTimeProvider).fastForwarding, isFalse);
       await tester.pump(const Duration(seconds: 1));
       expect(_painted(tester), _sceneAt(shifted));
 
-      await tester.tap(find.text('Now'));
+      await tester.tap(find.byKey(meadowTimeButtonKey));
       await tester.pump();
-      expect(find.text('Now'), findsNothing);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.tap(find.text('Now').last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(container.read(skyTimeProvider).offset, Duration.zero);
       expect(find.text(_clock(tester, sky.now)), findsOneWidget);
       expect(_painted(tester), _sceneAt(sky.now));
       expect(_painted(tester), before);
     },
   );
-
-  testWidgets('without the debug flag there is no Fast-forward or Now', (
-    WidgetTester tester,
-  ) async {
-    await _pumpGarden(tester);
-    expect(find.text('Fast-forward'), findsNothing);
-    expect(find.text('Pause'), findsNothing);
-    expect(find.text('Now'), findsNothing);
-    expect(find.bySemanticsLabel('Fast-forward'), findsNothing);
-  });
 }
