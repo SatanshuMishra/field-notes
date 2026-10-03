@@ -20,6 +20,8 @@ import 'editor/note_editor.dart';
 
 const Key composerCloseKey = ValueKey<String>('composer-close');
 
+const Key composerSaveKey = ValueKey<String>('composer-save');
+
 const double composerMeasureEm = 45;
 
 const Key composerWritingSurfaceKey = ValueKey<String>(
@@ -36,6 +38,7 @@ const double _headerGap = 14;
 const double _headerRuleThickness = 1.5;
 const double _titleLineHeight = 1.05;
 const double _exitPillHeight = 34;
+const double _phoneHeaderButtonHeight = 40;
 const double _headerTargetInset =
     (kMinInteractiveDimension - _exitPillHeight) / 2;
 const double _exitPillStartPadding = 8;
@@ -54,6 +57,10 @@ const double _saveHorizontalPadding = 15;
 const double _disabledOpacity = 0.5;
 const BorderRadius _saveBorderRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusPill),
+);
+const double _phoneSaveHorizontalPadding = 14;
+const BorderRadius _phoneSaveBorderRadius = BorderRadius.all(
+  Radius.circular(12),
 );
 const double _bodyHorizontalPadding = 18;
 const double _bodyBottomPadding = 14;
@@ -342,7 +349,7 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       focusRadius: _exitPillBorderRadius,
       child: Container(
         key: composerCloseKey,
-        height: _exitPillHeight,
+        height: _onPhone(context) ? _phoneHeaderButtonHeight : _exitPillHeight,
         padding: const EdgeInsets.only(
           left: _exitPillStartPadding,
           right: _exitPillEndPadding,
@@ -412,34 +419,53 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   Widget _saveButton(BuildContext context) {
     final FieldNotesShadows shadows = context.shadows;
     final bool enabled = !widget.isSaving;
+    final bool phone = _onPhone(context);
+    final BorderRadius radius = phone
+        ? _phoneSaveBorderRadius
+        : _saveBorderRadius;
+    final Widget label = Text(
+      widget.isSaving ? widget.savingLabel : widget.saveLabel,
+      style: context.textStyles.captureLabelSans.copyWith(
+        color: Palette.onAccent,
+      ),
+    );
     return _headerAction(
       onTap: enabled ? () => _handleSaveTap(context) : null,
-      focusRadius: _saveBorderRadius,
+      focusRadius: radius,
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
         child: DecoratedBox(
+          key: composerSaveKey,
           decoration: BoxDecoration(
             color: Palette.coral,
             border: shadows.outline,
-            borderRadius: _saveBorderRadius,
+            borderRadius: radius,
             boxShadow: shadows.control,
           ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: _saveHorizontalPadding,
-              vertical: _saveVerticalPadding,
-            ),
-            child: Text(
-              widget.isSaving ? widget.savingLabel : widget.saveLabel,
-              style: context.textStyles.captureLabelSans.copyWith(
-                color: Palette.onAccent,
-              ),
-            ),
-          ),
+          child: phone
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _phoneSaveHorizontalPadding,
+                  ),
+                  child: SizedBox(
+                    height: _phoneHeaderButtonHeight,
+                    child: Center(widthFactor: 1, child: label),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _saveHorizontalPadding,
+                    vertical: _saveVerticalPadding,
+                  ),
+                  child: label,
+                ),
         ),
       ),
     );
   }
+
+  bool _onPhone(BuildContext context) =>
+      resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
 
   void _handleSaveTap(BuildContext context) {
     final String text = _controller.text;

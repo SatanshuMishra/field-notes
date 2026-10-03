@@ -29,6 +29,9 @@ const Size _desktop = Size(1280, 900);
 const double _desktopPanelWidth = 768;
 const double _desktopPanelMargin = 28;
 const double _minimumHitHeight = 44;
+const double _phoneHeaderButtonHeight = 40;
+const double _desktopExitPillHeight = 34;
+const double _phoneSavePadding = 14;
 const Duration _phoneSlide = Duration(milliseconds: 260);
 const Cubic _phoneSlideCurve = Cubic(0.2, 0.8, 0.2, 1);
 const Duration _desktopPop = Duration(milliseconds: 220);
@@ -200,6 +203,82 @@ void main() {
       }
     },
   );
+
+  testWidgets('the phone composer header Back and Save are 40 points tall', (
+    WidgetTester tester,
+  ) async {
+    final Finder save = find.byKey(composerSaveKey);
+    final Finder saveLabel = find.descendant(
+      of: save,
+      matching: find.byType(Text),
+    );
+    BorderRadiusGeometry? saveRadius() =>
+        (tester.widget<DecoratedBox>(save).decoration as BoxDecoration)
+            .borderRadius;
+    for (final MapEntry<String, _Opener> composer in _composers.entries) {
+      final String reason = 'the ${composer.key} composer';
+
+      _usePhone(tester);
+      await _open(tester, TargetPlatform.android, composer.value);
+      await tester.pump(_settled);
+
+      expect(tester.takeException(), isNull, reason: reason);
+      expect(
+        tester.getSize(find.byKey(composerCloseKey)).height,
+        _phoneHeaderButtonHeight,
+        reason: reason,
+      );
+      expect(
+        tester.getSize(save).height,
+        _phoneHeaderButtonHeight,
+        reason: reason,
+      );
+      expect(
+        saveRadius(),
+        const BorderRadius.all(Radius.circular(12)),
+        reason: reason,
+      );
+      expect(
+        tester.widget<Text>(saveLabel).style!.fontSize,
+        12,
+        reason: reason,
+      );
+      final Rect saveRect = tester.getRect(save);
+      final Rect labelRect = tester.getRect(saveLabel);
+      expect(labelRect.left - saveRect.left, _phoneSavePadding, reason: reason);
+      expect(
+        saveRect.right - labelRect.right,
+        _phoneSavePadding,
+        reason: reason,
+      );
+      expect(
+        _hitHeight(tester, find.byKey(composerCloseKey)),
+        greaterThanOrEqualTo(_minimumHitHeight),
+        reason: reason,
+      );
+      expect(
+        _hitHeight(tester, save),
+        greaterThanOrEqualTo(_minimumHitHeight),
+        reason: reason,
+      );
+
+      _useDesktop(tester);
+      await _open(tester, TargetPlatform.macOS, composer.value);
+      await tester.pump(_settled);
+
+      expect(tester.takeException(), isNull, reason: reason);
+      expect(
+        tester.getSize(find.byKey(composerCloseKey)).height,
+        _desktopExitPillHeight,
+        reason: reason,
+      );
+      expect(
+        saveRadius(),
+        const BorderRadius.all(Radius.circular(Shapes.radiusPill)),
+        reason: reason,
+      );
+    }
+  });
 
   testWidgets(
     'the phone composer slides up from the bottom while macOS pops in',
