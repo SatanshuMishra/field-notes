@@ -7,7 +7,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/settings.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -72,9 +72,11 @@ const double _miniatureFlowerGap = 6;
 const double _dash = 3;
 const List<Mood> _miniatureFlowers = <Mood>[Mood.happy, Mood.calm, Mood.warm];
 
-const double _bottomBarSide = 18;
-const double _bottomBarBottom = 76;
-const double _bottomBarMiddlePadding = 14;
+const double _sidebarHeadingSide = 40;
+const double _bottomBarHeadingSide = 20;
+const double _bottomBarSide = 16;
+const double _bottomBarClearance = 14;
+const double _previewScale = 1.4;
 const double _rowHeight = 56;
 const EdgeInsets _rowPadding = EdgeInsets.symmetric(
   horizontal: 14,
@@ -228,11 +230,7 @@ class _SidebarTheme extends StatelessWidget {
       children: <Widget>[
         const _Rise(
           duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.sidebar,
-            kicker: _kicker,
-            title: _title,
-          ),
+          child: _Heading(layout: ShellLayout.sidebar),
         ),
         Expanded(
           child: Padding(
@@ -315,80 +313,143 @@ class _BottomBarTheme extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? message = failure;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const _Rise(
-          duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.bottomBar,
-            kicker: _kicker,
-            title: _title,
+    final EdgeInsets insets = MediaQuery.paddingOf(context);
+    final double gesture = math.max(
+      insets.bottom,
+      MediaQuery.viewPaddingOf(context).bottom,
+    );
+    return Padding(
+      padding: EdgeInsets.only(
+        top: insets.top + onboardingPhoneTitleTop,
+        bottom: gesture + onboardingControlBarReserve + _bottomBarClearance,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const _Rise(
+            duration: _headingRise,
+            child: _Heading(layout: ShellLayout.bottomBar),
           ),
-        ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints area) {
-              final double width = math.max(
-                0.0,
-                area.maxWidth - 2 * _bottomBarSide,
-              );
-              return Column(
-                children: <Widget>[
-                  const Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: _bottomBarMiddlePadding,
-                      ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints area) {
+                final double width = math.max(
+                  0.0,
+                  area.maxWidth - 2 * _bottomBarSide,
+                );
+                return Column(
+                  children: <Widget>[
+                    Expanded(
                       child: Center(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
                           child: _Rise(
                             duration: _phoneRise,
                             delay: _phoneDelay,
-                            child: _PhonePreview(),
+                            child: SizedBox(
+                              width: _phoneWidth * _previewScale,
+                              height: _phoneHeight * _previewScale,
+                              child: Transform.scale(
+                                scale: _previewScale,
+                                child: const Center(child: _PhonePreview()),
+                              ),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: area.maxHeight),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: SizedBox(
-                        width: width,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            _Rise(
-                              duration: _rowsRise,
-                              delay: _rowsDelay,
-                              child: _ThemeRows(
-                                selected: selected,
-                                onChoose: onChoose,
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: area.maxHeight),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: SizedBox(
+                          width: width,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              _Rise(
+                                duration: _rowsRise,
+                                delay: _rowsDelay,
+                                child: _ThemeRows(
+                                  selected: selected,
+                                  onChoose: onChoose,
+                                ),
                               ),
-                            ),
-                            if (message != null) ...<Widget>[
-                              const SizedBox(height: _failureGap),
-                              _FailureText(
-                                message: message,
-                                align: TextAlign.start,
-                              ),
+                              if (message != null) ...<Widget>[
+                                const SizedBox(height: _failureGap),
+                                _FailureText(
+                                  message: message,
+                                  align: TextAlign.start,
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                  ],
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: _bottomBarBottom),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Heading extends StatelessWidget {
+  const _Heading({required this.layout});
+
+  final ShellLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool sidebar = layout == ShellLayout.sidebar;
+    final TextAlign align = sidebar ? TextAlign.center : TextAlign.start;
+    return Padding(
+      padding: sidebar
+          ? const EdgeInsets.fromLTRB(
+              _sidebarHeadingSide,
+              onboardingTitleTop,
+              _sidebarHeadingSide,
+              0,
+            )
+          : const EdgeInsets.symmetric(horizontal: _bottomBarHeadingSide),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: sidebar
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            _kicker,
+            textAlign: align,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? 21 : 18,
+              fontWeight: FontWeight.w600,
+              color: colors.accentInk,
+            ),
+          ),
+          Semantics(
+            header: true,
+            child: Text(
+              _title,
+              textAlign: align,
+              style: TextStyle(
+                fontFamily: TypographyTokens.serif,
+                fontSize: sidebar ? 44 : 28,
+                fontWeight: FontWeight.w500,
+                height: sidebar ? 1.05 : 1.08,
+                color: colors.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

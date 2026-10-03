@@ -8,7 +8,7 @@ import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/week_start.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
+import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -52,10 +52,12 @@ const double _sidebarChoiceGap = 10;
 const double _sidebarButtonPadding = 22;
 const double _sidebarPrivacyGap = 56;
 
-const double _bottomBarSide = 18;
-const double _bottomBarBottom = 76;
-const double _bottomBarMiddlePadding = 10;
+const double _sidebarHeadingSide = 40;
+const double _bottomBarHeadingSide = 20;
+const double _bottomBarSide = 16;
+const double _bottomBarClearance = 12;
 const double _bottomBarPrivacyGap = 12;
+const double _stripScale = 1.3;
 
 const double _target = 48;
 const double _rowHeight = 56;
@@ -202,11 +204,7 @@ class _SidebarWeek extends StatelessWidget {
       children: <Widget>[
         const _Rise(
           duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.sidebar,
-            kicker: _kicker,
-            title: _title,
-          ),
+          child: _Heading(layout: ShellLayout.sidebar),
         ),
         Expanded(
           child: Padding(
@@ -277,73 +275,141 @@ class _BottomBarWeek extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        const _Rise(
-          duration: _headingRise,
-          child: OnboardingHeading(
-            layout: ShellLayout.bottomBar,
-            kicker: _kicker,
-            title: _title,
+    final EdgeInsets insets = MediaQuery.paddingOf(context);
+    final double gesture = math.max(
+      insets.bottom,
+      MediaQuery.viewPaddingOf(context).bottom,
+    );
+    return Padding(
+      padding: EdgeInsets.only(
+        top: insets.top + onboardingPhoneTitleTop,
+        bottom: gesture + onboardingControlBarReserve + _bottomBarClearance,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const _Rise(
+            duration: _headingRise,
+            child: _Heading(layout: ShellLayout.bottomBar),
           ),
-        ),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints area) {
-              final double width = math.max(
-                0.0,
-                area.maxWidth - 2 * _bottomBarSide,
-              );
-              return Column(
-                children: <Widget>[
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: _bottomBarMiddlePadding,
-                      ),
+          Expanded(
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints area) {
+                final double width = math.max(
+                  0.0,
+                  area.maxWidth - 2 * _bottomBarSide,
+                );
+                return Column(
+                  children: <Widget>[
+                    Expanded(
                       child: Center(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
-                          child: _WeekStrip(week: week, size: _bottomBarStrip),
-                        ),
-                      ),
-                    ),
-                  ),
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxHeight: area.maxHeight),
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: SizedBox(
-                        width: width,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            _Rise(
-                              duration: _rowsRise,
-                              delay: _rowsDelay,
-                              child: _ChoiceRows(
-                                week: week,
-                                region: region,
-                                choices: choices,
-                                onChoose: onChoose,
+                          child: SizedBox(
+                            width: _bottomBarStrip.width * _stripScale,
+                            height: _bottomBarStrip.height * _stripScale,
+                            child: Transform.scale(
+                              scale: _stripScale,
+                              child: Center(
+                                child: _WeekStrip(
+                                  week: week,
+                                  size: _bottomBarStrip,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: _bottomBarPrivacyGap),
-                            const _Privacy(icon: 13, gap: 7, fontSize: 11.5),
-                          ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              );
-            },
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxHeight: area.maxHeight),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: SizedBox(
+                          width: width,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              _Rise(
+                                duration: _rowsRise,
+                                delay: _rowsDelay,
+                                child: _ChoiceRows(
+                                  week: week,
+                                  region: region,
+                                  choices: choices,
+                                  onChoose: onChoose,
+                                ),
+                              ),
+                              const SizedBox(height: _bottomBarPrivacyGap),
+                              const _Privacy(icon: 13, gap: 7, fontSize: 12),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
-        ),
-        const SizedBox(height: _bottomBarBottom),
-      ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Heading extends StatelessWidget {
+  const _Heading({required this.layout});
+
+  final ShellLayout layout;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool sidebar = layout == ShellLayout.sidebar;
+    final TextAlign align = sidebar ? TextAlign.center : TextAlign.start;
+    return Padding(
+      padding: sidebar
+          ? const EdgeInsets.fromLTRB(
+              _sidebarHeadingSide,
+              onboardingTitleTop,
+              _sidebarHeadingSide,
+              0,
+            )
+          : const EdgeInsets.symmetric(horizontal: _bottomBarHeadingSide),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: sidebar
+            ? CrossAxisAlignment.center
+            : CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            _kicker,
+            textAlign: align,
+            style: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: sidebar ? 21 : 18,
+              fontWeight: FontWeight.w600,
+              color: colors.accentInk,
+            ),
+          ),
+          Semantics(
+            header: true,
+            child: Text(
+              _title,
+              textAlign: align,
+              style: TextStyle(
+                fontFamily: TypographyTokens.serif,
+                fontSize: sidebar ? 44 : 28,
+                fontWeight: FontWeight.w500,
+                height: sidebar ? 1.05 : 1.08,
+                color: colors.ink,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

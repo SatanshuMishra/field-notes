@@ -35,6 +35,7 @@ const List<double> _fills = <double>[0, 1];
 const int _sixWeekRows = 6;
 const double _legibleCell = 24;
 const double _sliderTarget = 48;
+const double _phoneSlider = 36;
 const double _edge = 0.5;
 
 const int _sixRowYear = 2026;
@@ -238,7 +239,12 @@ bool _within(Rect outer, Rect inner) =>
     inner.right <= outer.right + _edge &&
     inner.bottom <= outer.bottom + _edge;
 
-void _expectFits(WidgetTester tester, String shape, int today) {
+void _expectFits(
+  WidgetTester tester,
+  ShellLayout layout,
+  String shape,
+  int today,
+) {
   final Rect area = tester.getRect(find.byType(MonthChapter));
   final List<Rect> days = <Rect>[
     for (int day = 1; day <= _lastDay; day++) tester.getRect(_day(day)),
@@ -259,7 +265,10 @@ void _expectFits(WidgetTester tester, String shape, int today) {
   expect(_flowerIn(today), findsOneWidget, reason: shape);
   final Rect slider = tester.getRect(find.byKey(monthSliderKey));
   expect(_within(area, slider), isTrue, reason: '$shape: slider');
-  expect(slider.height, greaterThanOrEqualTo(_sliderTarget), reason: shape);
+  expect(slider.height, switch (layout) {
+    ShellLayout.sidebar => greaterThanOrEqualTo(_sliderTarget),
+    ShellLayout.bottomBar => moreOrLessEquals(_phoneSlider),
+  }, reason: shape);
   final Finder card = find.byKey(monthNoteCardKey);
   if (card.evaluate().isNotEmpty) {
     expect(_within(area, tester.getRect(card)), isTrue, reason: '$shape: card');
@@ -588,7 +597,7 @@ void main() {
                 );
                 expect(problems, isEmpty, reason: shape);
                 expect(tester.takeException(), isNull, reason: shape);
-                _expectFits(tester, shape, day);
+                _expectFits(tester, layout, shape, day);
               });
             }
           }

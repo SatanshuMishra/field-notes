@@ -66,7 +66,8 @@ Future<void> _onLayout(ShellLayout layout, Future<void> Function() body) async {
 
 String _caption(ShellLayout layout) => switch (layout) {
   ShellLayout.sidebar => 'every flower is a day · drag back through it',
-  ShellLayout.bottomBar => 'every flower is a day · drag through it',
+  ShellLayout.bottomBar =>
+    'every flower is a day · drag the meadow to look around',
 };
 
 Future<db.AppDatabase> _pumpYear(
@@ -271,8 +272,11 @@ void _expectHintPlaced(
     _expectApart(
       tester,
       hint,
-      find.byKey(onboardingPrimaryKey),
-      '$moment Next',
+      find.byKey(switch (layout) {
+        ShellLayout.sidebar => onboardingPrimaryKey,
+        ShellLayout.bottomBar => onboardingControlBarKey,
+      }),
+      '$moment the way on',
     );
     _expectApart(
       tester,
