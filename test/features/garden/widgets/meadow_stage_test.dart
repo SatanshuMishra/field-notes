@@ -9,7 +9,9 @@ import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/garden/model/garden_motion.dart';
 import 'package:field_notes/features/garden/model/meadow_random.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
+import 'package:field_notes/features/garden/render/meadow_layers.dart';
 import 'package:field_notes/features/garden/render/meadow_stage_painter.dart';
+import 'package:field_notes/features/garden/scene/meadow_grass.dart';
 import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
@@ -321,25 +323,50 @@ Rect _stageRect(WidgetTester tester) =>
 
 double _opacity(WidgetTester tester) => tester
     .widget<FadeTransition>(
-      find.descendant(
-        of: find.byType(MeadowStage),
-        matching: find.byType(FadeTransition),
-      ),
+      find
+          .descendant(
+            of: find.byType(MeadowStage),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
     )
     .opacity
     .value;
 
+final Finder _stagePaints = find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is CustomPaint && widget.painter is MeadowStagePainter,
+);
+
 MeadowStagePainter _stagePainter(WidgetTester tester) =>
-    tester
-            .widget<CustomPaint>(
-              find.byWidgetPredicate(
-                (Widget widget) =>
-                    widget is CustomPaint &&
-                    widget.painter is MeadowStagePainter,
-              ),
-            )
-            .painter!
-        as MeadowStagePainter;
+    tester.widget<CustomPaint>(_stagePaints).painter! as MeadowStagePainter;
+
+int _sceneBytes(MeadowStagePainter painter) =>
+    painter.layers.imageBytes +
+    painter.atlas.imageBytes +
+    painter.creatures.imageBytes +
+    painter.rays.imageBytes;
+
+Future<MeadowStagePainter> _sharpen(WidgetTester tester, double screen) async {
+  bool sharp() {
+    final Iterable<CustomPaint> paints = tester.widgetList<CustomPaint>(
+      _stagePaints,
+    );
+    return paints.length == 1 &&
+        ((paints.single.painter! as MeadowStagePainter).layers.density - screen)
+                .abs() <
+            1e-9;
+  }
+
+  for (int i = 0; i < _buildFrames && !sharp(); i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 2)),
+    );
+    await tester.pump(const Duration(milliseconds: 16));
+  }
+  expect(sharp(), isTrue, reason: 'the meadow never sharpened');
+  return _stagePainter(tester);
+}
 
 BoxDecoration _tooltipDecoration(WidgetTester tester) =>
     tester
@@ -1265,7 +1292,9 @@ void main() {
       final GlobalKey<NavigatorState> navigator = GlobalKey<NavigatorState>();
       const Key coveredKey = ValueKey<String>('covered meadow');
       const Key visibleKey = ValueKey<String>('visible meadow');
-      Widget meadow(Key key, ValueNotifier<SkyScene> sky) => Scaffold(
+      final int coveredSeed = meadowSeed(_meadowKey, shown.year);
+      final int visibleSeed = meadowSeed(_meadowKey + 1, shown.year);
+      Widget meadow(Key key, ValueNotifier<SkyScene> sky, int seed) => Scaffold(
         body: Center(
           child: SizedBox.fromSize(
             size: _sidebarCard,
@@ -1275,7 +1304,7 @@ void main() {
                   MeadowStage(
                     key: key,
                     year: shown,
-                    seed: meadowSeed(_meadowKey, shown.year),
+                    seed: seed,
                     sky: value,
                     morning: false,
                     mode: MeadowSceneMode.page,
@@ -1300,7 +1329,7 @@ void main() {
             platform: TargetPlatform.macOS,
             brightness: Brightness.light,
           ),
-          home: meadow(coveredKey, coveredSky),
+          home: meadow(coveredKey, coveredSky, coveredSeed),
         ),
       );
       final MeadowStageState covered = tester.state<MeadowStageState>(
@@ -1313,7 +1342,7 @@ void main() {
             BuildContext context,
             Animation<double> animation,
             Animation<double> secondary,
-          ) => meadow(visibleKey, visibleSky),
+          ) => meadow(visibleKey, visibleSky, visibleSeed),
           transitionDuration: Duration.zero,
           reverseTransitionDuration: Duration.zero,
         ),
@@ -1369,6 +1398,12 @@ void main() {
   ) async {
     final MeadowYear leap = _leapYear();
     expect(leap.blooms + leap.sprouts, 366);
+    final int seed = meadowSeed(_meadowKey, leap.year);
+    final MeadowTerrain terrain = buildMeadowTerrain(seed: seed, year: leap);
+    final List<MeadowGrassBand> grass = buildMeadowGrass(
+      seed: seed,
+      terrain: terrain,
+    );
     for (final (
           Size box,
           double ratio,
@@ -1381,6 +1416,14 @@ void main() {
           (_sidebarCard, 2, false, MeadowSceneMode.page, 48 * _megabyte),
           (_bottomBarCard, 2.625, true, MeadowSceneMode.page, 48 * _megabyte),
         ]) {
+      final String reason = '$box at $ratio';
+      final double screen =
+          MeadowViewport.resolve(
+            box: box,
+            cover: compact || mode == MeadowSceneMode.full,
+            focusX: 0,
+          ).scale *
+          ratio;
       final MeadowStageState state = await _pumpStage(
         tester,
         year: leap,
@@ -1388,12 +1431,27 @@ void main() {
         ratio: ratio,
         compact: compact,
         mode: mode,
+        stageKey: ValueKey<String>(reason),
       );
       await _grow(tester, state);
+      final MeadowStagePainter quick = _stagePainter(tester);
+      expect(quick.layers.density, lessThan(screen), reason: reason);
+      expect(state.debugImageBytes, _sceneBytes(quick), reason: reason);
       expect(
         state.debugImageBytes,
         allOf(greaterThan(0), lessThanOrEqualTo(ceiling)),
-        reason: '$box at $ratio',
+        reason: reason,
+      );
+
+      final MeadowStagePainter sharp = await _sharpen(tester, screen);
+      expect(sharp.atlas.density, closeTo(screen, 1e-9), reason: reason);
+      expect(
+        state.debugImageBytes,
+        MeadowLayers.bytesAt(terrain: terrain, grass: grass, density: screen) +
+            sharp.atlas.imageBytes +
+            sharp.creatures.imageBytes +
+            sharp.rays.imageBytes,
+        reason: reason,
       );
     }
   });

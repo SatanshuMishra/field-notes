@@ -5,6 +5,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
@@ -24,6 +25,8 @@ import 'package:field_notes/features/garden/scene/meadow_grass.dart';
 import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
+import 'package:field_notes/features/garden/scene/meadow_scene_cache.dart';
+import 'package:field_notes/features/garden/scene/meadow_scene_density.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage_tooltip.dart';
 import 'package:field_notes/features/garden/scene/meadow_terrain.dart'
     hide MeadowRange;
@@ -38,6 +41,8 @@ const Duration meadowFocusPanDuration = Duration(milliseconds: 600);
 const Cubic meadowFocusPanCurve = Cubic(0.33, 0, 0.2, 1);
 
 const Duration _fadeIn = Duration(milliseconds: 300);
+const Duration _sharpenIn = Duration(milliseconds: 300);
+const int _unlimitedPlantBytes = 9007199254740991;
 const double _dragSlop = 5;
 const double _headReach = 5;
 const double _headSpread = 24;
@@ -135,12 +140,14 @@ class MeadowStageState extends State<MeadowStage>
     duration: _fadeIn,
   );
   late final AnimationController _panMotion;
+  late final AnimationController _sharpen;
   late final AppLifecycleListener _lifecycle;
   final ValueNotifier<int> _frame = ValueNotifier<int>(0);
 
   int _generation = 0;
   _Geometry? _geometry;
   _SceneImages? _scene;
+  _SceneImages? _leaving;
   _Build? _build;
   int _buildSteps = 0;
   int _buildFrames = 0;
@@ -155,6 +162,7 @@ class MeadowStageState extends State<MeadowStage>
   bool _covered = false;
   Size? _box;
   double _ratio = 1;
+  TargetPlatform? _platform;
   late MeadowPalette _palette;
   GardenMotionProfile _motion = GardenMotionProfile.reduced;
   bool _resumed = true;
@@ -180,7 +188,9 @@ class MeadowStageState extends State<MeadowStage>
 
   @visibleForTesting
   int get debugImageBytes =>
-      (_scene?.imageBytes ?? 0) + (_build?.imageBytes ?? 0);
+      (_scene?.imageBytes ?? 0) +
+      (_leaving?.imageBytes ?? 0) +
+      (_build?.imageBytes ?? 0);
 
   @visibleForTesting
   bool get debugIsReady => _scene != null;
@@ -243,6 +253,8 @@ class MeadowStageState extends State<MeadowStage>
       vsync: this,
       duration: meadowFocusPanDuration,
     )..addListener(_panStep);
+    _sharpen = AnimationController(vsync: this, duration: _sharpenIn)
+      ..addStatusListener(_sharpened);
     _generate();
   }
 
@@ -250,8 +262,10 @@ class MeadowStageState extends State<MeadowStage>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final double ratio = MediaQuery.devicePixelRatioOf(context);
-    if (ratio != _ratio) {
+    final TargetPlatform platform = Theme.of(context).platform;
+    if (ratio != _ratio || platform != _platform) {
       _ratio = ratio;
+      _platform = platform;
       _scheduleStep();
     }
     _syncCover();
@@ -301,10 +315,19 @@ class MeadowStageState extends State<MeadowStage>
     _lifecycle.dispose();
     _ticker.dispose();
     _panMotion.dispose();
+    _sharpen.dispose();
     _fade.dispose();
     _frame.dispose();
     _build?.dispose();
-    _scene?.dispose();
+    _releaseGeometry();
+    final _SceneImages? leaving = _leaving;
+    if (leaving != null) {
+      _drop(leaving);
+    }
+    final _SceneImages? scene = _scene;
+    if (scene != null) {
+      _drop(scene);
+    }
     super.dispose();
   }
 
@@ -312,17 +335,27 @@ class MeadowStageState extends State<MeadowStage>
     final int generation = ++_generation;
     final MeadowYear year = widget.year;
     final int seed = widget.seed;
+    final MeadowSceneKey key = MeadowSceneKey(seed: seed, year: year);
+    final _Geometry? shared = _geometries.acquire(key);
+    if (shared != null) {
+      _geometry = shared;
+      _scheduleStep();
+      return;
+    }
     _generateGeometry(seed, year).then(
       (_Parts parts) {
         if (!mounted || generation != _generation) {
           return;
         }
-        _geometry = _Geometry(
-          seed: seed,
-          year: year,
-          terrain: parts.terrain,
-          plants: parts.plants,
-          grass: parts.grass,
+        _geometry = _geometries.share(
+          key,
+          _Geometry(
+            seed: seed,
+            year: year,
+            terrain: parts.terrain,
+            plants: parts.plants,
+            grass: parts.grass,
+          ),
         );
         _scheduleStep();
       },
@@ -342,9 +375,17 @@ class MeadowStageState extends State<MeadowStage>
   void _regenerate({required bool dropScene}) {
     _build?.dispose();
     _build = null;
-    _geometry = null;
+    _releaseGeometry();
     if (dropScene) {
-      _scene?.dispose();
+      final _SceneImages? leaving = _leaving;
+      if (leaving != null) {
+        _drop(leaving);
+      }
+      final _SceneImages? scene = _scene;
+      if (scene != null) {
+        _drop(scene);
+      }
+      _leaving = null;
       _scene = null;
       _ambience = null;
       _targets = const <MeadowPlant>[];
@@ -356,6 +397,14 @@ class MeadowStageState extends State<MeadowStage>
       _syncTicker();
     }
     _generate();
+  }
+
+  void _releaseGeometry() {
+    final _Geometry? geometry = _geometry;
+    if (geometry != null) {
+      _geometries.release(geometry.cacheKey, geometry);
+    }
+    _geometry = null;
   }
 
   void _scheduleStep() {
@@ -387,11 +436,20 @@ class MeadowStageState extends State<MeadowStage>
       }
       return;
     }
-    final _Build? running = _build;
-    if (running == null) {
-      final _ImageKey? wanted = _wanted();
-      if (wanted != null && _scene?.key != wanted) {
-        _build = _Build(wanted);
+    final _ImageKey? wanted = _wanted();
+    if (wanted != null && _leaving == null && _scene?.key != wanted) {
+      final _SceneImages? shared = _scenes.acquire(wanted);
+      if (shared != null) {
+        _build?.dispose();
+        _build = null;
+        _show(shared);
+        if (_hasWork) {
+          _scheduleStep();
+        }
+        return;
+      }
+      if (_build == null) {
+        _build = _Build(_scene == null ? wanted.within(_budget) : wanted);
         _buildSteps = 0;
         _buildFrames = 0;
         _opening++;
@@ -400,7 +458,11 @@ class MeadowStageState extends State<MeadowStage>
         _openingGpu = Duration.zero;
         _openingLargestBatch = Duration.zero;
         _scheduleStep();
+        return;
       }
+    }
+    final _Build? running = _build;
+    if (running == null) {
       return;
     }
     if (_covered) {
@@ -423,7 +485,7 @@ class MeadowStageState extends State<MeadowStage>
 
   bool get _wantsBuild {
     final _ImageKey? wanted = _wanted();
-    return wanted != null && _scene?.key != wanted;
+    return wanted != null && _leaving == null && _scene?.key != wanted;
   }
 
   bool get _hasWork =>
@@ -503,7 +565,7 @@ class MeadowStageState extends State<MeadowStage>
       return;
     }
     _build = null;
-    final _SceneImages next = running.finish();
+    final _SceneImages next = _share(running.finish());
     _show(next);
     if (next.layers.isRecolouring || _wantsBuild) {
       _scheduleStep();
@@ -547,7 +609,12 @@ class MeadowStageState extends State<MeadowStage>
       return;
     }
     _covered = covered;
-    if (!covered && _hasWork) {
+    if (covered) {
+      return;
+    }
+    _scene?.layers.recolour(_palette);
+    _scene?.rays.recolour(_palette);
+    if (_hasWork) {
       _scheduleStep();
     }
   }
@@ -555,22 +622,38 @@ class MeadowStageState extends State<MeadowStage>
   _ImageKey? _wanted() {
     final _Geometry? geometry = _geometry;
     final Size? box = _box;
-    if (geometry == null || box == null) {
+    final TargetPlatform? platform = _platform;
+    if (geometry == null || box == null || platform == null) {
       return null;
     }
     return _ImageKey(
       geometry: geometry,
-      density: _densityOf(box),
-      full: widget.mode == MeadowSceneMode.full,
+      density: meadowSceneDensity(
+        box: box,
+        devicePixelRatio: _ratio,
+        cover: widget.covers,
+        platform: platform,
+      ),
     );
   }
 
+  _Budget get _budget => widget.mode == MeadowSceneMode.full
+      ? (layers: meadowLayerBudget, plants: meadowPlantSpriteBudget)
+      : (layers: meadowLayerPageBudget, plants: meadowPlantSpritePageBudget);
+
   void _show(_SceneImages next) {
     final _SceneImages? previous = _scene;
+    final _SceneImages? leaving = _leaving;
     final bool sameGeometry =
         previous != null && identical(previous.key.geometry, next.key.geometry);
+    final bool crossfade = sameGeometry && !_ticker.muted;
+    if (next.shared && !_covered) {
+      next.layers.recolour(_palette);
+      next.rays.recolour(_palette);
+    }
     setState(() {
       _scene = next;
+      _leaving = crossfade ? previous : null;
       if (!sameGeometry) {
         final _Geometry geometry = next.key.geometry;
         _ambience = MeadowAmbience(
@@ -586,11 +669,47 @@ class MeadowStageState extends State<MeadowStage>
         }
       }
     });
-    previous?.dispose();
+    if (leaving != null) {
+      _drop(leaving);
+    }
+    if (!crossfade && previous != null) {
+      _drop(previous);
+    }
     if (previous == null) {
       _fade.forward(from: 0);
     }
+    if (crossfade) {
+      _sharpen.forward(from: 0);
+    }
     _syncTicker();
+  }
+
+  void _sharpened(AnimationStatus status) {
+    final _SceneImages? leaving = _leaving;
+    if (status != AnimationStatus.completed || leaving == null) {
+      return;
+    }
+    setState(() {
+      _leaving = null;
+    });
+    _drop(leaving);
+    if (_wantsBuild) {
+      _scheduleStep();
+    }
+  }
+
+  _SceneImages _share(_SceneImages scene) =>
+      scene.shared ? _scenes.share(scene.key, scene) : scene;
+
+  bool _heldElsewhere(_SceneImages scene) =>
+      scene.shared && _scenes.holdersOf(scene.key) > 1;
+
+  void _drop(_SceneImages scene) {
+    if (scene.shared) {
+      _scenes.release(scene.key, scene);
+    } else {
+      scene.dispose();
+    }
   }
 
   void _settleAmbience() {
@@ -608,18 +727,17 @@ class MeadowStageState extends State<MeadowStage>
     }
   }
 
-  double _densityOf(Size box) =>
-      MeadowViewport.resolve(box: box, cover: widget.covers, focusX: 0).scale *
-      _ratio;
-
   void _syncPalette() {
     final MeadowPalette next = _paletteOf(widget);
     if (next == _palette) {
       return;
     }
     _palette = next;
-    _scene?.layers.recolour(next);
-    _scene?.rays.recolour(next);
+    final _SceneImages? scene = _scene;
+    if (scene != null && !(_covered && _heldElsewhere(scene))) {
+      scene.layers.recolour(next);
+      scene.rays.recolour(next);
+    }
     _build?.recolour(next);
     if (_scene?.layers.isRecolouring ?? false) {
       _scheduleStep();
@@ -956,6 +1074,7 @@ class MeadowStageState extends State<MeadowStage>
     }
     final MeadowViewport viewport = _viewportOf(box, geometry);
     final _Hit? hit = _hit;
+    final _SceneImages? leaving = _leaving;
     final bool full = widget.mode == MeadowSceneMode.full;
     final double? lift = widget.overlayBottom;
     return MouseRegion(
@@ -976,11 +1095,25 @@ class MeadowStageState extends State<MeadowStage>
                   child: RepaintBoundary(
                     child: ListenableBuilder(
                       listenable: _frame,
-                      builder: (BuildContext context, Widget? child) =>
-                          CustomPaint(
-                            size: box,
-                            painter: _painter(scene, viewport, hit),
-                          ),
+                      builder: (BuildContext context, Widget? child) {
+                        final Widget shown = CustomPaint(
+                          size: box,
+                          painter: _painter(scene, viewport, hit),
+                        );
+                        if (leaving == null) {
+                          return shown;
+                        }
+                        return Stack(
+                          fit: StackFit.expand,
+                          children: <Widget>[
+                            CustomPaint(
+                              size: box,
+                              painter: _painter(leaving, viewport, hit),
+                            ),
+                            FadeTransition(opacity: _sharpen, child: shown),
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -1234,6 +1367,14 @@ class MeadowGlassTip extends StatelessWidget {
 
 MeadowPacer get _pacer => meadowPacer;
 
+final MeadowSceneCache<MeadowSceneKey, _Geometry> _geometries =
+    MeadowSceneCache<MeadowSceneKey, _Geometry>();
+
+final MeadowSceneCache<_ImageKey, _SceneImages> _scenes =
+    MeadowSceneCache<_ImageKey, _SceneImages>(
+      onRelease: (_SceneImages scene) => scene.dispose(),
+    );
+
 bool _isResumed(AppLifecycleState? state) =>
     state == null || state == AppLifecycleState.resumed;
 
@@ -1376,33 +1517,33 @@ class _Geometry {
   final MeadowTerrain terrain;
   final MeadowPlants plants;
   final List<MeadowGrassBand> grass;
+
+  MeadowSceneKey get cacheKey => MeadowSceneKey(seed: seed, year: year);
 }
 
+typedef _Budget = ({int layers, int plants});
+
 class _ImageKey {
-  const _ImageKey({
-    required this.geometry,
-    required this.density,
-    required this.full,
-  });
+  const _ImageKey({required this.geometry, required this.density, this.budget});
 
   final _Geometry geometry;
   final double density;
-  final bool full;
+  final _Budget? budget;
 
-  int get layerBudget => full ? meadowLayerBudget : meadowLayerPageBudget;
+  _ImageKey get sharp => _ImageKey(geometry: geometry, density: density);
 
-  int get plantBudget =>
-      full ? meadowPlantSpriteBudget : meadowPlantSpritePageBudget;
+  _ImageKey within(_Budget budget) =>
+      _ImageKey(geometry: geometry, density: density, budget: budget);
 
   @override
   bool operator ==(Object other) =>
       other is _ImageKey &&
       identical(other.geometry, geometry) &&
       other.density == density &&
-      other.full == full;
+      other.budget == budget;
 
   @override
-  int get hashCode => Object.hash(identityHashCode(geometry), density, full);
+  int get hashCode => Object.hash(identityHashCode(geometry), density, budget);
 }
 
 class _SceneImages {
@@ -1419,6 +1560,8 @@ class _SceneImages {
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
   final MeadowRays rays;
+
+  bool get shared => key.budget == null;
 
   int get imageBytes =>
       layers.imageBytes +
@@ -1468,17 +1611,20 @@ class _Build {
 
   _Advance advance(MeadowPalette palette) {
     final _Geometry geometry = key.geometry;
+    final _Budget? budget = key.budget;
     final MeadowLayers? layers = _layers;
     if (layers == null) {
       _layers = MeadowLayers(
         terrain: geometry.terrain,
         grass: geometry.grass,
-        density: MeadowLayers.fitDensity(
-          terrain: geometry.terrain,
-          grass: geometry.grass,
-          density: key.density,
-          maxBytes: key.layerBudget,
-        ),
+        density: budget == null
+            ? key.density
+            : MeadowLayers.fitDensity(
+                terrain: geometry.terrain,
+                grass: geometry.grass,
+                density: key.density,
+                maxBytes: budget.layers,
+              ),
       )..recolour(palette);
       return _Advance.created;
     }
@@ -1495,7 +1641,7 @@ class _Build {
       _atlas = MeadowPlantAtlas(
         geometry.plants,
         density: key.density,
-        maxBytes: key.plantBudget,
+        maxBytes: budget?.plants ?? _unlimitedPlantBytes,
       );
       return _Advance.created;
     }
@@ -1513,13 +1659,19 @@ class _Build {
     _rays?.recolour(palette);
   }
 
-  _SceneImages finish() => _SceneImages(
-    key: key,
-    layers: _layers!,
-    atlas: _atlas!,
-    creatures: _creatures!,
-    rays: _rays!,
-  );
+  _SceneImages finish() {
+    final MeadowLayers layers = _layers!;
+    final MeadowPlantAtlas atlas = _atlas!;
+    final bool sharp =
+        layers.density == key.density && atlas.density == key.density;
+    return _SceneImages(
+      key: sharp ? key.sharp : key,
+      layers: layers,
+      atlas: atlas,
+      creatures: _creatures!,
+      rays: _rays!,
+    );
+  }
 
   void dispose() {
     _layers?.dispose();
