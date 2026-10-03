@@ -543,4 +543,42 @@ void main() {
     expect(container.read(meadowViewStateProvider).fullScreen, isNull);
     await tester.pumpWidget(const SizedBox());
   });
+
+  for (final (String moment, int hour, Brightness icons)
+      in <(String, int, Brightness)>[
+        ('at night', 23 * 60, Brightness.light),
+        ('in the afternoon', 13 * 60, Brightness.dark),
+      ]) {
+    testWidgets('phone full screen sets status bar icons that read against '
+        'the sky $moment', (WidgetTester tester) async {
+      final ProviderContainer phone = await _pumpPage(
+        tester,
+        size: _phoneScreen,
+        platform: TargetPlatform.android,
+      );
+      SystemChrome.setSystemUIOverlayStyle(
+        SystemUiOverlayStyle(
+          statusBarIconBrightness: icons == Brightness.light
+              ? Brightness.dark
+              : Brightness.light,
+        ),
+      );
+      await tester.pump();
+      final MeadowYear year = _yearOf(2025, today: DateTime(2025, 6, 30));
+      await _open(
+        tester,
+        phone,
+        request: MeadowFullScreenRequest(
+          year: 2025,
+          hourMinutes: hour,
+          growthPoint: year.limit,
+        ),
+        year: year,
+        compact: true,
+      );
+      await tester.pump();
+      expect(SystemChrome.latestStyle?.statusBarIconBrightness, icons);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
 }
