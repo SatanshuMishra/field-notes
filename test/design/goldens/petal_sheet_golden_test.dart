@@ -10,29 +10,54 @@ import 'package:field_notes/domain/mood/mood.dart';
 
 import 'golden_harness.dart';
 
-const double _bloomSize = 88;
-const double _enlargement = 10;
-const double _petalCell = 100;
-const double _gap = 16;
-const int _columns = 2;
-const EdgeInsets _cellPadding = EdgeInsets.all(8);
+const double _enlargement = 3;
+const double _columnWidth = 76;
+const double _enlargedHeight = 90;
+const double _actualHeight = 30;
+const double _gap = 6;
+const EdgeInsets _bandPadding = EdgeInsets.all(8);
 
-Widget _pair(Mood mood) {
+const List<FieldNotesColors> _papers = <FieldNotesColors>[
+  FieldNotesColors.light,
+  FieldNotesColors.dark,
+];
+
+typedef _Shown = ({FlowerKind kind, bool alternate, Size size});
+
+Widget _petal(PetalArt art, Size size, {bool alternate = false}) => CustomPaint(
+  painter: PetalPainter(art, alternate: alternate),
+  size: size,
+);
+
+Widget _column(Mood mood) {
   final PetalArt art = petalArtFor(mood.flower)!;
-  return Padding(
-    padding: _cellPadding,
-    child: Row(
+  final Size wide = art.sizeOn(PetalScreen.wide);
+  return SizedBox(
+    width: _columnWidth,
+    child: Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        FlowerBloom(kind: mood.flower, size: _bloomSize),
-        const SizedBox(width: _gap),
-        SizedBox.square(
-          dimension: _petalCell,
+        SizedBox(
+          height: _enlargedHeight,
+          child: Center(child: _petal(art, wide * _enlargement)),
+        ),
+        const SizedBox(height: _gap),
+        SizedBox(
+          height: _enlargedHeight,
           child: Center(
-            child: CustomPaint(
-              painter: PetalPainter(art),
-              size: art.size * _enlargement,
-            ),
+            child: _petal(art, wide * _enlargement, alternate: true),
+          ),
+        ),
+        const SizedBox(height: _gap),
+        SizedBox(
+          height: _actualHeight,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              _petal(art, wide),
+              const SizedBox(width: _gap),
+              _petal(art, wide, alternate: true),
+            ],
           ),
         ),
       ],
@@ -40,44 +65,69 @@ Widget _pair(Mood mood) {
   );
 }
 
-Widget _sheet() => ColoredBox(
-  color: FieldNotesColors.light.cardLight,
-  child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: <Widget>[
-      for (int row = 0; row < moodOrder.length; row += _columns)
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            for (final Mood mood in moodOrder.skip(row).take(_columns))
-              _pair(mood),
-          ],
-        ),
-    ],
+Widget _band(FieldNotesColors paper) => ColoredBox(
+  color: paper.page,
+  child: Padding(
+    padding: _bandPadding,
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[for (final Mood mood in moodOrder) _column(mood)],
+    ),
   ),
 );
 
+Widget _sheet() => Column(
+  mainAxisSize: MainAxisSize.min,
+  children: <Widget>[
+    for (final FieldNotesColors paper in _papers) _band(paper),
+  ],
+);
+
+List<_Shown> _shownFor(Mood mood) {
+  final Size wide = petalArtFor(mood.flower)!.sizeOn(PetalScreen.wide);
+  return <_Shown>[
+    (kind: mood.flower, alternate: false, size: wide * _enlargement),
+    (kind: mood.flower, alternate: true, size: wide * _enlargement),
+    (kind: mood.flower, alternate: false, size: wide),
+    (kind: mood.flower, alternate: true, size: wide),
+  ];
+}
+
+List<_Shown> _expected() => <_Shown>[
+  for (final FieldNotesColors _ in _papers)
+    for (final Mood mood in moodOrder) ..._shownFor(mood),
+];
+
 void main() {
-  testWidgets('the petal sheet shows each flower beside its petal', (
+  testWidgets('the petal sheet matches its golden', (
     WidgetTester tester,
   ) async {
     pinGoldenSurface(tester);
 
     await tester.pumpWidget(goldenHarness(_sheet()));
 
+    expect(tester.takeException(), isNull);
+    expect(<_Shown>[
+      for (final CustomPaint paint in tester.widgetList<CustomPaint>(
+        find.byType(CustomPaint),
+      ))
+        if (paint.painter case final PetalPainter painter)
+          (
+            kind: painter.art.kind,
+            alternate: painter.alternate,
+            size: paint.size,
+          ),
+    ], _expected());
     expect(
-      tester
-          .widgetList<FlowerBloom>(find.byType(FlowerBloom))
-          .map((FlowerBloom bloom) => bloom.kind),
-      <FlowerKind>[for (final Mood mood in moodOrder) mood.flower],
-    );
-    expect(
-      tester
-          .widgetList<CustomPaint>(find.byType(CustomPaint))
-          .map((CustomPaint paint) => paint.painter)
-          .whereType<PetalPainter>()
-          .map((PetalPainter painter) => painter.art.kind),
-      <FlowerKind>[for (final Mood mood in moodOrder) mood.flower],
+      tester.getSize(find.byType(RepaintBoundary)),
+      Size(
+        _columnWidth * moodOrder.length + _bandPadding.horizontal,
+        (_enlargedHeight * 2 +
+                _gap * 2 +
+                _actualHeight +
+                _bandPadding.vertical) *
+            _papers.length,
+      ),
     );
     await expectLater(
       find.byType(RepaintBoundary),
