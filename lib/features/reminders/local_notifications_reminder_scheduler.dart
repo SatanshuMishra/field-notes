@@ -9,6 +9,7 @@ import 'reminder_scheduler.dart';
 const String reminderNotificationTitle = 'Field Notes';
 const String reminderNotificationBody =
     "You haven't written today's field note yet.";
+const String reminderNotificationIcon = '@drawable/ic_stat_peony';
 
 class LocalNotificationsReminderScheduler implements ReminderScheduler {
   LocalNotificationsReminderScheduler({FlutterLocalNotificationsPlugin? plugin})
@@ -18,7 +19,6 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   static const String _channelName = 'Daily reminder';
   static const String _channelDescription =
       'Reminds you to write your field note for the day.';
-  static const String _androidIcon = '@mipmap/ic_launcher';
 
   static const NotificationDetails _details = NotificationDetails(
     android: AndroidNotificationDetails(
@@ -52,7 +52,7 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
     tz.setLocalLocation(tz.getLocation(info.identifier));
     await _plugin.initialize(
       settings: const InitializationSettings(
-        android: AndroidInitializationSettings(_androidIcon),
+        android: AndroidInitializationSettings(reminderNotificationIcon),
         macOS: DarwinInitializationSettings(
           requestAlertPermission: false,
           requestSoundPermission: false,

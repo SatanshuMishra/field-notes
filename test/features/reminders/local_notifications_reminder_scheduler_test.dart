@@ -93,4 +93,26 @@ void main() {
     expect(macOS.calls, <Symbol>[#checkPermissions]);
     expect(status, ReminderPermission.denied);
   });
+
+  test('reminders use the white peony as their Android small icon', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    final TestDefaultBinaryMessenger messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    messenger.setMockMethodCallHandler(
+      _timezoneChannel,
+      (MethodCall call) async => 'Europe/London',
+    );
+    addTearDown(() => messenger.setMockMethodCallHandler(_timezoneChannel, null));
+    final _RecordingPlugin plugin = _RecordingPlugin(_RecordingMacOSPlugin());
+    final LocalNotificationsReminderScheduler scheduler =
+        LocalNotificationsReminderScheduler(plugin: plugin);
+
+    await scheduler.permissionStatus();
+
+    expect(
+      plugin.initializations.single.android?.defaultIcon,
+      '@drawable/ic_stat_peony',
+    );
+  });
 }
