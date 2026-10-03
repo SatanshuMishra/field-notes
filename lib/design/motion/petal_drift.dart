@@ -7,17 +7,12 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/flowers/petal_art.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
 
-const double _petalWidth = 10;
-const double _petalHeight = 7;
-
 const double _entryLeft = -20;
 const double _exitReach = 60;
 const double _topInset = 50;
 const double _topReserve = 200;
 const double _fallMin = 60;
 const double _fallRange = 150;
-const double _loopMinSeconds = 17;
-const double _loopRangeSeconds = 12;
 
 const double _midway = 0.5;
 const double _midwayFall = 0.35;
@@ -29,10 +24,37 @@ const double _lateOpacity = 0.85;
 const double _appearSeconds = 0.6;
 
 const double _wideArea = 600;
-const int _wideCount = 6;
-const int _narrowCount = 3;
-const int _wideSeed = 13;
-const int _narrowSeed = 29;
+
+class _Pace {
+  const _Pace({
+    required this.screen,
+    required this.count,
+    required this.seed,
+    required this.shortestSeconds,
+    required this.spreadSeconds,
+  });
+
+  final PetalScreen screen;
+  final int count;
+  final int seed;
+  final double shortestSeconds;
+  final double spreadSeconds;
+}
+
+const _Pace _widePace = _Pace(
+  screen: PetalScreen.wide,
+  count: 6,
+  seed: 13,
+  shortestSeconds: 17,
+  spreadSeconds: 12,
+);
+const _Pace _narrowPace = _Pace(
+  screen: PetalScreen.narrow,
+  count: 4,
+  seed: 29,
+  shortestSeconds: 11,
+  spreadSeconds: 7,
+);
 
 class _Petal {
   const _Petal({
@@ -54,9 +76,9 @@ class _Petal {
   double progressAt(double seconds) => _turnsAt(seconds) % 1;
 }
 
-_Petal _petal(math.Random random) {
+_Petal _petal(math.Random random, _Pace pace) {
   final double loopSeconds =
-      _loopMinSeconds + random.nextDouble() * _loopRangeSeconds;
+      pace.shortestSeconds + random.nextDouble() * pace.spreadSeconds;
   final double top = random.nextDouble();
   final double fall = _fallMin + random.nextDouble() * _fallRange;
   return _Petal(
@@ -67,15 +89,15 @@ _Petal _petal(math.Random random) {
   );
 }
 
-List<_Petal> _scatter(int count, int seed) {
-  final math.Random random = math.Random(seed);
+List<_Petal> _scatter(_Pace pace) {
+  final math.Random random = math.Random(pace.seed);
   return List<_Petal>.unmodifiable(<_Petal>[
-    for (int index = 0; index < count; index++) _petal(random),
+    for (int index = 0; index < pace.count; index++) _petal(random, pace),
   ]);
 }
 
-final List<_Petal> _widePetals = _scatter(_wideCount, _wideSeed);
-final List<_Petal> _narrowPetals = _scatter(_narrowCount, _narrowSeed);
+final List<_Petal> _widePetals = _scatter(_widePace);
+final List<_Petal> _narrowPetals = _scatter(_narrowPace);
 
 double _fallAt(double progress, double fall) => progress < _midway
     ? fall * _midwayFall * progress / _midway
@@ -283,6 +305,7 @@ class _PetalPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final bool wide = size.width >= _wideArea;
+    final PetalScreen screen = (wide ? _widePace : _narrowPace).screen;
     final List<_Petal> petals = wide ? _widePetals : _narrowPetals;
     final _Shed now = shed.value;
     final List<_Fall> falls = wide ? now.wide : now.narrow;
@@ -300,11 +323,12 @@ class _PetalPainter extends CustomPainter {
         continue;
       }
       final double progress = petal.progressAt(now.seconds);
+      final Size box = art.sizeOn(screen);
       final Offset centre = Offset(
-        _entryLeft + _petalWidth / 2 + travel * progress,
+        _entryLeft + box.width / 2 + travel * progress,
         _topInset +
             petal.top * span +
-            _petalHeight / 2 +
+            box.height / 2 +
             _fallAt(progress, petal.fall),
       );
       canvas
@@ -314,6 +338,8 @@ class _PetalPainter extends CustomPainter {
       art.paint(
         canvas,
         opacity: _opacityAt(progress) * fall.revealAt(now.seconds),
+        size: box,
+        alternate: index.isOdd,
       );
       canvas.restore();
     }
