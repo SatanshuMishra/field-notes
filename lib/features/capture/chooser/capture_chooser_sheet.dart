@@ -11,19 +11,14 @@ import 'package:field_notes/features/capture/core/capture_route.dart';
 const String captureChooserSubtitle = 'how do you want to plant today?';
 
 const double _panelPadding = 20;
-const double _panelBorderWidth = 2;
 const double _subtitleSize = 12;
 const double _subtitleGap = 1;
 const double _rowsGap = 15;
 const double _rowGap = 9;
 
-const double _sheetPaddingTop = 16;
+const double _sheetPaddingTop = 10;
 const double _sheetPaddingHorizontal = 16;
 const double _sheetPaddingBottom = 22;
-const double _grabHandleWidth = 38;
-const double _grabHandleHeight = 4;
-const double _grabHandleRadius = 3;
-const double _grabHandleGap = 12;
 
 const double _rowBorderWidth = 1.5;
 const double _rowIconGap = 12;
@@ -86,50 +81,16 @@ class CaptureChooserSheet extends StatelessWidget {
   }
 
   Widget _buildSheet(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: SizedBox(
-        width: double.infinity,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.panelTop,
-            border: Border(
-              top: BorderSide(color: colors.line, width: _panelBorderWidth),
-            ),
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(Shapes.radiusSheet),
-            ),
-            boxShadow: Shadows.chooserSheetLift,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              _sheetPaddingHorizontal,
-              _sheetPaddingTop,
-              _sheetPaddingHorizontal,
-              _sheetPaddingBottom,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                SizedBox(
-                  width: _grabHandleWidth,
-                  height: _grabHandleHeight,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: colors.ink30,
-                      borderRadius: const BorderRadius.all(
-                        Radius.circular(_grabHandleRadius),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: _grabHandleGap),
-                _buildBody(context),
-              ],
-            ),
-          ),
+    return PhoneSheet(
+      color: context.colors.panelTop,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          _sheetPaddingHorizontal,
+          _sheetPaddingTop,
+          _sheetPaddingHorizontal,
+          _sheetPaddingBottom,
         ),
+        child: _buildBody(context),
       ),
     );
   }
