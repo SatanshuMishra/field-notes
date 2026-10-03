@@ -1516,6 +1516,7 @@ class _GardenSceneState extends ConsumerState<GardenScene>
           final double holeX = width / 2;
           final Widget scene = Stack(
             fit: StackFit.expand,
+            clipBehavior: Clip.none,
             children: <Widget>[
               Positioned(
                 left: 0,
