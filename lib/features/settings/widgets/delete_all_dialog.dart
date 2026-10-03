@@ -1,8 +1,27 @@
+import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 
+const String _deleteAllTitle = 'Delete everything?';
+const String _deleteAllMessage =
+    'This erases every entry, photo, and mood on this device. '
+    'It cannot be undone.';
+const String _keepLabel = 'Keep my journal';
+const String _deleteLabel = 'Delete everything';
+
 Future<bool> confirmDeleteAll(BuildContext context) async {
+  if (resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar) {
+    return showConfirmDialog(
+      context,
+      title: _deleteAllTitle,
+      message: _deleteAllMessage,
+      confirmLabel: _deleteLabel,
+      cancelLabel: _keepLabel,
+      danger: true,
+    );
+  }
   final bool? confirmed = await showDialog<bool>(
     context: context,
     barrierDismissible: true,
@@ -28,13 +47,9 @@ class DeleteAllConfirmDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('Delete everything?', style: textStyles.titleSerif),
+                Text(_deleteAllTitle, style: textStyles.titleSerif),
                 const SizedBox(height: 8),
-                Text(
-                  'This erases every entry, photo, and mood on this device. '
-                  'It cannot be undone.',
-                  style: textStyles.bodySans,
-                ),
+                Text(_deleteAllMessage, style: textStyles.bodySans),
                 const SizedBox(height: 20),
                 Wrap(
                   alignment: WrapAlignment.end,
@@ -42,14 +57,14 @@ class DeleteAllConfirmDialog extends StatelessWidget {
                   runSpacing: 12,
                   children: <Widget>[
                     StickerButton(
-                      label: 'Keep my journal',
+                      label: _keepLabel,
                       variant: StickerButtonVariant.secondary,
                       padTapTarget: true,
                       autofocus: true,
                       onPressed: () => Navigator.of(context).pop(false),
                     ),
                     StickerButton(
-                      label: 'Delete everything',
+                      label: _deleteLabel,
                       variant: StickerButtonVariant.danger,
                       padTapTarget: true,
                       onPressed: () => Navigator.of(context).pop(true),

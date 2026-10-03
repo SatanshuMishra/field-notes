@@ -3,9 +3,11 @@ import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
+import 'package:field_notes/features/mood/mood_banner_for_date.dart';
 import 'package:field_notes/features/today/this_week_garden.dart';
 import 'package:field_notes/features/today/today_layout.dart';
 import 'package:field_notes/features/today/today_memory.dart';
+import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
@@ -84,8 +86,9 @@ CustomScrollView _feedScrollView(WidgetTester tester) =>
     tester.widget<CustomScrollView>(find.byType(CustomScrollView).first);
 
 void main() {
-  testWidgets('stacked layout shows greeting, date, mood banner and feed',
-      (WidgetTester tester) async {
+  testWidgets(
+      'stacked layout shows greeting, date and feed with the mood card '
+      'floating outside the feed', (WidgetTester tester) async {
     await pumpToday(
       tester,
       const TodayScreen(layout: TodayLayout.stacked),
@@ -94,8 +97,25 @@ void main() {
 
     expect(find.text('Good evening'), findsOneWidget);
     expect(find.text('Sunday, July 19'), findsOneWidget);
-    expect(find.text('Feeling Calm today'), findsOneWidget);
-    expect(find.text('change'), findsOneWidget);
+    expect(find.byType(MoodBannerForDate), findsNothing);
+    expect(find.text('Feeling Calm today'), findsNothing);
+    final Finder dock = find.byType(TodayMoodDock);
+    expect(dock, findsOneWidget);
+    expect(
+      find.descendant(of: dock, matching: find.text('Feeling Calm')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: dock, matching: find.text('Change')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: dock,
+      ),
+      findsNothing,
+    );
     expect(
       find.byWidgetPredicate(
         (Widget w) => w is NoteBody && w.text == 'morning walk',
@@ -124,6 +144,9 @@ void main() {
       ),
       findsOneWidget,
     );
+    expect(find.byType(MoodBannerForDate), findsOneWidget);
+    expect(find.text('Feeling Calm today'), findsOneWidget);
+    expect(find.byType(TodayMoodDock), findsNothing);
 
     expect(find.byType(ThisWeekGarden), findsOneWidget);
     expect(find.text("this week's garden"), findsOneWidget);
@@ -134,6 +157,39 @@ void main() {
     expect(find.text('Record video'), findsOneWidget);
     expect(find.text('on this day'), findsOneWidget);
     expect(find.text('memory · 1 year ago'), findsOneWidget);
+  });
+
+  testWidgets('the last stacked entry scrolls clear of the floating mood card',
+      (WidgetTester tester) async {
+    await pumpToday(
+      tester,
+      const TodayScreen(layout: TodayLayout.stacked),
+      overrides: _manyEntries(12),
+      surface: todayPhoneSurface,
+    );
+
+    final ScrollableState feed = tester.state<ScrollableState>(
+      find
+          .descendant(
+            of: find.byType(CustomScrollView),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
+    feed.position.jumpTo(feed.position.maxScrollExtent);
+    await tester.pumpAndSettle();
+
+    final Finder last = find.byWidgetPredicate(
+      (Widget w) => w is NoteBody && w.text == 'log number 11',
+    );
+    expect(last, findsOneWidget);
+    final Rect lastCard = tester.getRect(
+      find.ancestor(of: last, matching: find.byType(CompactLogCard)),
+    );
+    expect(
+      lastCard.bottom,
+      lessThanOrEqualTo(tester.getRect(find.byType(TodayMoodDock)).top),
+    );
   });
 
   testWidgets('the stacked layout scrolls as a cached CustomScrollView',

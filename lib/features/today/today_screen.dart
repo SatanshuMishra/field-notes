@@ -12,6 +12,7 @@ import 'today_date.dart';
 import 'today_entry_feed.dart';
 import 'today_header.dart';
 import 'today_layout.dart';
+import 'today_mood_dock.dart';
 import 'today_providers.dart';
 import 'today_right_rail.dart';
 
@@ -64,7 +65,28 @@ class TodayScreen extends ConsumerWidget {
 
     switch (resolved) {
       case TodayLayout.stacked:
-        return _scrollView(now: now, date: date, padding: _stackedPagePadding);
+        final double gestureBar = MediaQuery.viewPaddingOf(context).bottom;
+        return Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            _scrollView(
+              now: now,
+              date: date,
+              padding: _stackedPagePadding.copyWith(
+                top:
+                    _stackedPagePadding.top + MediaQuery.paddingOf(context).top,
+                bottom: gestureBar + todayMoodDockFeedClearance,
+              ),
+              inlineMood: false,
+            ),
+            Positioned(
+              left: todayMoodDockSideInset,
+              right: todayMoodDockSideInset,
+              bottom: gestureBar + todayMoodDockLift,
+              child: const TodayMoodDock(),
+            ),
+          ],
+        );
       case TodayLayout.withRail:
         return Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -74,6 +96,7 @@ class TodayScreen extends ConsumerWidget {
                 now: now,
                 date: date,
                 padding: _railPagePadding,
+                inlineMood: true,
               ),
             ),
             DashedDivider(
@@ -94,6 +117,7 @@ class TodayScreen extends ConsumerWidget {
     required DateTime now,
     required String date,
     required EdgeInsets padding,
+    required bool inlineMood,
   }) {
     return CustomScrollView(
       scrollCacheExtent: const ScrollCacheExtent.pixels(todayFeedCacheExtent),
@@ -109,7 +133,8 @@ class TodayScreen extends ConsumerWidget {
                 ),
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
-              SliverToBoxAdapter(child: MoodBannerForDate(date: date)),
+              if (inlineMood)
+                SliverToBoxAdapter(child: MoodBannerForDate(date: date)),
               SliverToBoxAdapter(child: TodayFeedEyebrow(date: date)),
               TodayEntryFeed(date: date),
             ],

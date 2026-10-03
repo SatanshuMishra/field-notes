@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
 const String composerDiscardTitle = 'Discard this note?';
-const String composerDiscardMessage =
-    'Your unsaved changes will be lost.';
+const String composerDiscardMessage = 'Your unsaved changes will be lost.';
 const String composerKeepEditingLabel = 'Keep editing';
 const String composerDiscardLabel = 'Discard';
 const Key composerKeepEditingKey = ValueKey<String>('composer-keep-editing');
@@ -65,8 +66,8 @@ class _ComposerGuardState extends State<ComposerGuard> {
     if (focusedContext == null || !focusedContext.mounted) {
       return;
     }
-    final _ComposerGuardState? owner =
-        focusedContext.findAncestorStateOfType<_ComposerGuardState>();
+    final _ComposerGuardState? owner = focusedContext
+        .findAncestorStateOfType<_ComposerGuardState>();
     if (identical(owner, this)) {
       _lastFocus = focused;
     }
@@ -89,20 +90,38 @@ class _ComposerGuardState extends State<ComposerGuard> {
       return;
     }
     _confirming = true;
+    final bool discard = await _confirmDiscard();
+    _confirming = false;
+    if (!mounted) {
+      return;
+    }
+    if (!discard) {
+      _resumeEditing();
+      return;
+    }
+    await _discardAndPop();
+  }
+
+  Future<bool> _confirmDiscard() async {
+    if (resolveShellLayout(Theme.of(context).platform) ==
+        ShellLayout.bottomBar) {
+      return showConfirmDialog(
+        context,
+        title: composerDiscardTitle,
+        message: composerDiscardMessage,
+        confirmLabel: composerDiscardLabel,
+        cancelLabel: composerKeepEditingLabel,
+        danger: true,
+        confirmKey: composerDiscardKey,
+        cancelKey: composerKeepEditingKey,
+      );
+    }
     final bool? discard = await showDialog<bool>(
       context: context,
       barrierDismissible: true,
       builder: (BuildContext dialogContext) => const _DiscardConfirmDialog(),
     );
-    _confirming = false;
-    if (!mounted) {
-      return;
-    }
-    if (discard != true) {
-      _resumeEditing();
-      return;
-    }
-    await _discardAndPop();
+    return discard ?? false;
   }
 
   Future<void> _discardAndPop() async {
