@@ -36,10 +36,13 @@ void _holdStill(WidgetTester tester) {
   addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 }
 
-void _expectLoadedSettingsScreen({required Key tabs}) {
+void _expectLoadedSettingsScreen({
+  required Key tabs,
+  String heading = 'Settings',
+}) {
   expect(find.byType(SettingsScreen), findsOneWidget);
   expect(find.byType(CrossHatchPlaceholder), findsNothing);
-  expect(find.text('Settings'), findsOneWidget);
+  expect(find.text(heading), findsOneWidget);
   expect(find.byKey(tabs), findsOneWidget);
   expect(find.byType(SyncStorageSection), findsOneWidget);
 }
@@ -187,7 +190,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey<String>('gear-button')));
       await tester.pumpAndSettle();
 
-      _expectLoadedSettingsScreen(tabs: settingsTabChipsKey);
+      _expectLoadedSettingsScreen(
+        tabs: settingsTabChipsKey,
+        heading: 'preferences',
+      );
     });
 
     testWidgets('the center capture invokes the injected callback', (
