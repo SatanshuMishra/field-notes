@@ -1,6 +1,7 @@
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/shell/shell_content.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
@@ -23,6 +24,7 @@ import 'package:field_notes/features/garden/widgets/meadow_year_picker.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -143,6 +145,81 @@ Color? _fillOf(WidgetTester tester, Finder of) => tester
     .whereType<BoxDecoration>()
     .map((BoxDecoration decoration) => decoration.color)
     .firstWhere((Color? colour) => colour != null, orElse: () => null);
+
+bool _isAncestor(RenderObject ancestor, RenderObject node) {
+  for (RenderObject? walk = node.parent; walk != null; walk = walk.parent) {
+    if (identical(walk, ancestor)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+List<RenderCustomPaint> _customPaintsBelow(RenderObject root) {
+  final List<RenderCustomPaint> found = <RenderCustomPaint>[];
+  void visit(RenderObject node) {
+    if (node is RenderCustomPaint) {
+      found.add(node);
+    }
+    node.visitChildren(visit);
+  }
+
+  root.visitChildren(visit);
+  return found;
+}
+
+void _expectGroupedDock(
+  WidgetTester tester, {
+  required BackdropKey shell,
+  required int glassButtons,
+}) {
+  final Finder dock = find.byKey(meadowDockKey);
+  final List<MeadowGlassButton> buttons = tester
+      .widgetList<MeadowGlassButton>(
+        find.descendant(of: dock, matching: find.byType(MeadowGlassButton)),
+      )
+      .toList();
+  expect(buttons, hasLength(glassButtons));
+  for (final MeadowGlassButton button in buttons) {
+    expect(button.grouped, isTrue, reason: '${button.key}');
+  }
+
+  final List<RenderBackdropFilter> blurs = tester
+      .renderObjectList<RenderBackdropFilter>(
+        find.descendant(of: dock, matching: find.byType(BackdropFilter)),
+      )
+      .toList();
+  expect(blurs, hasLength(glassButtons));
+  final BackdropKey? group = blurs.first.backdropKey;
+  expect(group, isNotNull);
+  expect(group, isNot(shell));
+  for (final RenderBackdropFilter blur in blurs) {
+    expect(blur.backdropKey, group);
+  }
+
+  final RenderMeadowDockShadows shadows = tester
+      .renderObject<RenderMeadowDockShadows>(
+        find.ancestor(of: dock, matching: find.byType(MeadowDockShadows)),
+      );
+  for (final RenderBackdropFilter blur in blurs) {
+    expect(_isAncestor(shadows, blur), isTrue);
+  }
+  expect(shadows.shadows, hasLength(glassButtons));
+  for (final GlassShadowPainter shadow in shadows.shadows) {
+    expect(shadow.shadows, GlassColors.scene.shadows);
+    expect(
+      shadow.borderRadius,
+      const BorderRadius.all(Radius.circular(meadowPhoneDockRadius)),
+    );
+  }
+
+  final List<RenderCustomPaint> below = _customPaintsBelow(shadows);
+  expect(below, isNotEmpty);
+  for (final RenderCustomPaint paint in below) {
+    expect(paint.painter, isNot(isA<GlassShadowPainter>()));
+    expect(paint.foregroundPainter, isNot(isA<GlassShadowPainter>()));
+  }
+}
 
 void main() {
   testWidgets(
@@ -462,6 +539,44 @@ void main() {
     expect(tip.right, _phone.width - 12);
     expect(tip.bottom, _dockBottom - 60);
   });
+  testWidgets(
+    'the Meadow dock buttons blur from one shared backdrop of their own, '
+    'after all their shadows',
+    (WidgetTester tester) async {
+      final ProviderContainer container = await _pumpShellMeadow(tester);
+      final BackdropKey? shell = tester
+          .renderObject<RenderBackdropFilter>(
+            find.descendant(
+              of: find.byKey(const ValueKey<String>('phone-header-glass')),
+              matching: find.byType(BackdropFilter),
+            ),
+          )
+          .backdropKey;
+      expect(shell, isNotNull);
+      expect(find.byKey(meadowReplayKey), findsNothing);
+      _expectGroupedDock(tester, shell: shell!, glassButtons: 4);
+
+      container
+          .read(meadowViewStateProvider.notifier)
+          .openYear(2025, currentYear: 2026);
+      await _settle(tester);
+      expect(
+        find.descendant(
+          of: find.byKey(meadowDockKey),
+          matching: find.byKey(meadowReplayKey),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(meadowDockKey),
+          matching: find.byKey(meadowThisYearButtonKey),
+        ),
+        findsOneWidget,
+      );
+      _expectGroupedDock(tester, shell: shell, glassButtons: 4);
+    },
+  );
 }
 
 MeadowStage _stage(WidgetTester tester) =>

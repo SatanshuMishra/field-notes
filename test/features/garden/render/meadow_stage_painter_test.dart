@@ -131,6 +131,29 @@ bool _masksWithDstIn(_Call call) =>
     call.name == 'drawImageRect' &&
     (call.arguments[3]! as Paint).blendMode == BlendMode.dstIn;
 
+bool _holds(Rect outer, Rect inner) =>
+    inner.left >= outer.left &&
+    inner.top >= outer.top &&
+    inner.right <= outer.right &&
+    inner.bottom <= outer.bottom;
+
+Rect? _innermostClip(_RecordingCanvas frame, int index) {
+  final List<List<Rect>> scopes = <List<Rect>>[<Rect>[]];
+  for (int i = 0; i < index; i++) {
+    final _Call call = frame.calls[i];
+    switch (call.name) {
+      case 'save' || 'saveLayer':
+        scopes.add(<Rect>[]);
+      case 'restore':
+        scopes.removeLast();
+      case 'clipRect':
+        scopes.last.add(call.arguments[0]! as Rect);
+    }
+  }
+  final List<Rect> innermost = scopes.last;
+  return innermost.isEmpty ? null : innermost.first;
+}
+
 class _Sprite {
   const _Sprite({
     required this.image,
@@ -409,52 +432,54 @@ void main() {
     scene.dispose();
   });
 
-  test(
-    'a 366-flower frame stays within the draw budget and draws no vector shapes',
-    () {
-      expect(scene.year.daysInYear, 366);
-      expect(scene.plants.plants, hasLength(366));
-      final Offset head = scene.plants.plants
-          .firstWhere((MeadowPlant plant) => !plant.hidden)
-          .heads
-          .last;
-      for (final (MeadowPalette palette, _Poses poses)
-          in <(MeadowPalette, _Poses)>[
-            (scene.noon, scene.dayPoses),
-            (scene.midnight, scene.nightPoses),
-          ]) {
-        final _RecordingCanvas frame = scene.paint(
-          time: 42.5,
-          palette: palette,
-          poses: poses,
-          spot: head,
-        );
+  test('a 366-flower frame stays within the draw budget and draws no vector shapes', () {
+    expect(scene.year.daysInYear, 366);
+    expect(scene.plants.plants, hasLength(366));
+    final Offset head = scene.plants.plants
+        .firstWhere((MeadowPlant plant) => !plant.hidden)
+        .heads
+        .last;
+    for (final (MeadowPalette palette, _Poses poses)
+        in <(MeadowPalette, _Poses)>[
+          (scene.noon, scene.dayPoses),
+          (scene.midnight, scene.nightPoses),
+        ]) {
+      final _RecordingCanvas frame = scene.paint(
+        time: 42.5,
+        palette: palette,
+        poses: poses,
+        spot: head,
+      );
 
-        expect(frame.draws.length, lessThanOrEqualTo(_drawBudget));
-        expect(frame.count('drawPath'), 0);
-        expect(frame.count('drawPicture'), 0);
-        expect(
-          frame.draws.map((_Call call) => call.name).toSet(),
-          everyElement(isIn(_imageAndGradientDraws)),
-        );
-        expect(frame.count('clipPath'), 0);
-        expect(frame.count('clipRRect'), 0);
-        expect(frame.count('saveLayer'), lessThanOrEqualTo(3));
+      expect(frame.draws.length, lessThanOrEqualTo(_drawBudget));
+      expect(frame.count('drawPath'), 0);
+      expect(frame.count('drawPicture'), 0);
+      expect(
+        frame.draws.map((_Call call) => call.name).toSet(),
+        everyElement(isIn(_imageAndGradientDraws)),
+      );
+      expect(frame.count('clipPath'), 0);
+      expect(frame.count('clipRRect'), 0);
+      expect(frame.count('saveLayer'), lessThanOrEqualTo(3));
 
-        final int atlasCalls = frame.named(_atlasCalls).length;
-        expect(atlasCalls, greaterThan(0));
-        expect(atlasCalls, lessThanOrEqualTo(_atlasBudget));
-        expect(
-          scene.flowers(frame).keys.toList()..sort(),
-          scene.visibleDays(scene.year.limit),
-        );
-      }
-    },
-  );
+      final int atlasCalls = frame.named(_atlasCalls).length;
+      expect(atlasCalls, greaterThan(0));
+      expect(atlasCalls, lessThanOrEqualTo(_atlasBudget));
+      expect(
+        scene.flowers(frame).keys.toList()..sort(),
+        scene.visibleDays(scene.year.limit),
+      );
+    }
+  });
 
   test(
-    'the water marks draw in one layer masked to the water without colour filters',
+    'the water marks draw only within the water tiles, each masked by its tile '
+    'without a layer',
     () {
+      final List<Rect> tiles = <Rect>[
+        for (final MeadowImage tile in scene.layers.water) tile.rect,
+      ];
+      expect(tiles, isNotEmpty);
       for (final (MeadowPalette palette, _Poses poses, bool glints)
           in <(MeadowPalette, _Poses, bool)>[
             (scene.noon, scene.dayPoses, true),
@@ -465,34 +490,44 @@ void main() {
           palette: palette,
           poses: poses,
         );
+        expect(frame.calls.where(_masksWithDstIn), isEmpty);
         final List<int> marks = <int>[
           for (int i = 0; i < frame.calls.length; i++)
             if (frame.calls[i].name == 'drawOval') i,
         ];
         for (final int mark in marks) {
+          final Rect oval = frame.calls[mark].arguments[0]! as Rect;
           final Paint paint = frame.calls[mark].arguments[1]! as Paint;
-          expect(paint.colorFilter, isNull, reason: 'drawOval $mark');
-          expect(paint.shader, isNull, reason: 'drawOval $mark');
+          expect(paint.shader, isA<ImageShader>(), reason: 'drawOval $mark');
+          expect(paint.colorFilter, isNotNull, reason: 'drawOval $mark');
+          expect(paint.blendMode, BlendMode.srcOver, reason: 'drawOval $mark');
+          expect(
+            frame.layers.any(
+              ((int, int) layer) => layer.$1 < mark && mark < layer.$2,
+            ),
+            isFalse,
+            reason: 'drawOval $mark',
+          );
+          final Rect bounds = paint.style == PaintingStyle.stroke
+              ? oval.inflate(paint.strokeWidth / 2)
+              : oval;
+          final Rect? clip = _innermostClip(frame, mark);
+          final bool heldByTile = tiles.any(
+            (Rect tile) => _holds(tile, bounds),
+          );
+          final bool clippedToTile =
+              clip != null && tiles.contains(clip) && clip.overlaps(bounds);
+          expect(
+            heldByTile || clippedToTile,
+            isTrue,
+            reason: 'drawOval $mark $bounds',
+          );
         }
         if (!glints) {
           continue;
         }
         expect(palette.glintO, greaterThan(0));
         expect(marks, isNotEmpty);
-        final List<(int, int)> masked = <(int, int)>[
-          for (final (int start, int end) in frame.layers)
-            if (frame.calls.sublist(start, end).any(_masksWithDstIn))
-              (start, end),
-        ];
-        for (final int mark in marks) {
-          expect(
-            masked.any(
-              ((int, int) layer) => layer.$1 < mark && mark < layer.$2,
-            ),
-            isTrue,
-            reason: 'drawOval $mark',
-          );
-        }
       }
     },
   );

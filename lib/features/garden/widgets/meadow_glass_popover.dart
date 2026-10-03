@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
@@ -158,6 +159,7 @@ class MeadowGlassButton extends StatelessWidget {
     this.padding = EdgeInsets.zero,
     this.selected,
     this.value,
+    this.grouped = false,
   });
 
   final String label;
@@ -168,21 +170,35 @@ class MeadowGlassButton extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final bool? selected;
   final String? value;
+  final bool grouped;
 
   @override
   Widget build(BuildContext context) {
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(meadowPhoneDockRadius),
     );
+    final Widget glass = GlassSurface(
+      tone: GlassTone.scene,
+      borderRadius: radius,
+      padding: padding,
+      grouped: grouped,
+      castsShadow: !grouped,
+      child: Center(widthFactor: width == null ? 1 : null, child: child),
+    );
     final Widget face = SizedBox(
       width: width,
       height: meadowPhoneControlHeight,
-      child: GlassSurface(
-        tone: GlassTone.scene,
-        borderRadius: radius,
-        padding: padding,
-        child: Center(widthFactor: width == null ? 1 : null, child: child),
-      ),
+      child: grouped
+          ? _MeadowDockGlass(
+              shadow: GlassShadowPainter(
+                shadows: GlassTone.scene
+                    .colorsFor(Theme.of(context).brightness)
+                    .shadows,
+                borderRadius: radius,
+              ),
+              child: glass,
+            )
+          : glass,
     );
     final String? hint = tooltip;
     return Semantics(
@@ -216,6 +232,85 @@ class MeadowGlassButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class MeadowDockShadows extends SingleChildRenderObjectWidget {
+  const MeadowDockShadows({super.key, required Widget super.child});
+
+  @override
+  RenderMeadowDockShadows createRenderObject(BuildContext context) =>
+      RenderMeadowDockShadows();
+}
+
+class RenderMeadowDockShadows extends RenderProxyBox {
+  RenderMeadowDockShadows({RenderBox? child}) : super(child);
+
+  List<GlassShadowPainter> get shadows => <GlassShadowPainter>[
+    for (final _RenderMeadowDockGlass glass in _glass()) glass.shadow,
+  ];
+
+  List<_RenderMeadowDockGlass> _glass() {
+    final List<_RenderMeadowDockGlass> found = <_RenderMeadowDockGlass>[];
+    void visit(RenderObject node) {
+      if (node is _RenderMeadowDockGlass) {
+        found.add(node);
+        return;
+      }
+      node.visitChildren(visit);
+    }
+
+    visitChildren(visit);
+    return found;
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final Canvas canvas = context.canvas;
+    for (final _RenderMeadowDockGlass glass in _glass()) {
+      final Rect box = MatrixUtils.transformRect(
+        glass.getTransformTo(this),
+        Offset.zero & glass.size,
+      );
+      canvas
+        ..save()
+        ..translate(offset.dx + box.left, offset.dy + box.top);
+      glass.shadow.paint(canvas, box.size);
+      canvas.restore();
+    }
+    super.paint(context, offset);
+  }
+}
+
+class _MeadowDockGlass extends SingleChildRenderObjectWidget {
+  const _MeadowDockGlass({required this.shadow, required Widget super.child});
+
+  final GlassShadowPainter shadow;
+
+  @override
+  _RenderMeadowDockGlass createRenderObject(BuildContext context) =>
+      _RenderMeadowDockGlass(shadow);
+
+  @override
+  void updateRenderObject(
+    BuildContext context,
+    _RenderMeadowDockGlass renderObject,
+  ) {
+    renderObject.shadow = shadow;
+  }
+}
+
+class _RenderMeadowDockGlass extends RenderProxyBox {
+  _RenderMeadowDockGlass(this._shadow);
+
+  GlassShadowPainter get shadow => _shadow;
+  GlassShadowPainter _shadow;
+  set shadow(GlassShadowPainter value) {
+    if (!value.shouldRepaint(_shadow)) {
+      return;
+    }
+    _shadow = value;
+    markNeedsPaint();
   }
 }
 

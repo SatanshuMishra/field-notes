@@ -91,6 +91,9 @@ flutter:
   assets:
     - assets/sounds/
 
+  shaders:
+    - shaders/meadow_night_overlay.frag
+
   fonts:
     - family: Newsreader
       fonts:

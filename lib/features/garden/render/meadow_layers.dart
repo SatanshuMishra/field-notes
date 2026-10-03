@@ -418,7 +418,7 @@ class MeadowLayers {
   MeadowLandMask get nightMask => MeadowLandMask(
     image: _farPack!,
     rect: _frames.mountain.rect,
-    filter: _channel(_nightChannel, _white, 1),
+    filter: _channel(meadowNightChannel, _white, 1),
   );
 
   void maskToWater(Canvas canvas) {
@@ -589,7 +589,7 @@ class MeadowLayers {
       _intoChannel(canvas, frame.rect, _massifRightChannel, () {
         _drawOverlayMask(canvas, frame, facets, left: false);
       });
-      _intoChannel(canvas, frame.rect, _nightChannel, () {
+      _intoChannel(canvas, frame.rect, meadowNightChannel, () {
         final Path land = Path();
         for (final List<Offset> outline in _terrain.sky.nightClip) {
           land.addPolygon(outline, true);
@@ -1562,7 +1562,7 @@ const int _highLeftChannel = 1;
 const int _highRightChannel = 2;
 const int _massifLeftChannel = 0;
 const int _massifRightChannel = 1;
-const int _nightChannel = 2;
+const int meadowNightChannel = 2;
 const int _fogChannels = 2;
 const int _deepChannel = 0;
 const int _shallowChannel = 1;
@@ -2222,10 +2222,8 @@ class _Plan {
       math.min(_mountainFloor + _edge, groundTop + _edge),
     );
     final List<MeadowFogBand> fogBands = mountains.fogBands;
-    final Rect fog = _union(<Rect>[
-      fogBands[0].rect,
-      fogBands[1].rect,
-    ]).intersect(mountain);
+    final Rect fog = _union(<Rect>[fogBands[0].rect, fogBands[1].rect])
+        .intersect(mountain);
 
     final List<Offset> bands = <Offset>[
       ...water.outerLeft,
