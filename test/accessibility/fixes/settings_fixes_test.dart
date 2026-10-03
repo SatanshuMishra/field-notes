@@ -1,5 +1,6 @@
 import 'dart:ui' show Tristate;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -106,7 +107,36 @@ void main() {
       expect(data.hasAction(SemanticsAction.tap), isFalse, reason: name);
     }
     handle.dispose();
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets(
+    'the phone leaves the unusable sync fields out instead of greying them',
+    (WidgetTester tester) async {
+      await _idsIn(tester, settingsStates, 'b1-settings');
+      final SemanticsHandle handle = tester.ensureSemantics();
+      for (final String name in <String>[
+        'Server URL',
+        'Access token',
+        'Recovery passphrase',
+      ]) {
+        expect(
+          _nodes(tester, (SemanticsNode node) => node.label.contains(name)),
+          isEmpty,
+          reason: name,
+        );
+      }
+      expect(
+        _nodes(
+          tester,
+          (SemanticsNode node) =>
+              node.getSemanticsData().flagsCollection.isTextField,
+        ),
+        isEmpty,
+      );
+      handle.dispose();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.android),
+  );
 
   testWidgets('the camera switch is a button', (WidgetTester tester) async {
     final List<String> ids = await _idsIn(

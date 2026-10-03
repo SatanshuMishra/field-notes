@@ -1,2 +1,2 @@
-missing-role | b4-select-open | Dismiss menu | <root>
+missing-role | b4-select-open | Dismiss | <root>
 missing-role | b5-delete-all-dialog | Dismiss | <root>

@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart' show MdRange;
 import 'package:field_notes/domain/settings/settings.dart';
@@ -19,11 +20,13 @@ import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/mood/mood_banner.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
+import 'package:field_notes/features/mood/mood_picker_sheet.dart';
 import 'package:field_notes/features/note_engine/reader/note_reader_view.dart';
 import 'package:field_notes/features/note_engine/render/render_note_view.dart';
 import 'package:field_notes/features/notes/notes.dart'
     show notesMediaResolverProvider;
 import 'package:field_notes/features/sound/sound_providers.dart';
+import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -273,6 +276,60 @@ Future<void> _pumpMood(
   await tester.pumpAndSettle();
 }
 
+class _TodayDockPage extends StatelessWidget {
+  const _TodayDockPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Positioned(
+          left: todayMoodDockSideInset,
+          right: todayMoodDockSideInset,
+          bottom: MediaQuery.viewPaddingOf(context).bottom + todayMoodDockLift,
+          child: const TodayMoodDock(),
+        ),
+      ],
+    );
+  }
+}
+
+Future<void> _pumpDock(WidgetTester tester, {Mood? mood}) async {
+  _useNote10Surface(tester);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: <Override>[
+        journalRepositoryProvider.overrideWithValue(
+          mood_support.FakeJournalRepository(
+            initialDay: mood_support.testDay(date: _today, mood: mood),
+          ),
+        ),
+        appSettingsProvider.overrideWith(
+          (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+        ),
+        soundPlayerProvider.overrideWithValue(FakeSoundPlayer()),
+        todayClockProvider.overrideWithValue(() => _now),
+      ],
+      child: const MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(body: _TodayDockPage()),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+final Finder _logSheet = find.descendant(
+  of: find.byType(LogViewerPanel),
+  matching: find.byType(PhoneSheet),
+);
+
+final Finder _daySheet = find.descendant(
+  of: find.byType(DayDetailPanel),
+  matching: find.byType(PhoneSheet),
+);
+
 Future<void> _tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text));
   await tester.pumpAndSettle();
@@ -282,7 +339,7 @@ final List<A11yState> viewerStates = <A11yState>[
   A11yState(
     id: 'd1-viewer-todos',
     pump: (WidgetTester tester) => _openViewer(tester, entry: _note(_todoNote)),
-    proof: <A11yProof>[A11yProof(find.byType(LogViewerPanel))],
+    proof: <A11yProof>[A11yProof(_logSheet)],
     stateful: const <A11yStatefulControl>[
       A11yStatefulControl.label(_firstTodo, A11yStateKind.checked),
       A11yStatefulControl.label(_secondTodo, A11yStateKind.checked),
@@ -297,7 +354,7 @@ final List<A11yState> viewerStates = <A11yState>[
         prefixOf(photoIdA): availablePhoto(photoIdA),
       }),
     ),
-    proof: <A11yProof>[A11yProof(find.byType(LogViewerPanel))],
+    proof: <A11yProof>[A11yProof(_logSheet)],
   ),
   A11yState(
     id: 'd3-viewer-voice',
@@ -317,7 +374,7 @@ final List<A11yState> viewerStates = <A11yState>[
         ),
       }),
     ),
-    proof: <A11yProof>[A11yProof(find.byType(VoiceBody))],
+    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.byType(VoiceBody))],
   ),
   A11yState(
     id: 'd4-viewer-video',
@@ -337,7 +394,7 @@ final List<A11yState> viewerStates = <A11yState>[
         ),
       }),
     ),
-    proof: <A11yProof>[A11yProof(find.byType(VideoBody))],
+    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.byType(VideoBody))],
   ),
   A11yState(
     id: 'd5-reader-menu',
@@ -345,7 +402,10 @@ final List<A11yState> viewerStates = <A11yState>[
       await _openViewer(tester, entry: _note(_plainNote));
       await _longPressText(tester, _plainNote.indexOf('harbour') + 2);
     },
-    proof: <A11yProof>[A11yProof(find.text('Select all'))],
+    proof: <A11yProof>[
+      A11yProof(_logSheet),
+      A11yProof(find.text('Select all')),
+    ],
   ),
   A11yState(
     id: 'd6-task-toast',
@@ -353,7 +413,10 @@ final List<A11yState> viewerStates = <A11yState>[
       await _openViewer(tester, entry: _note(_todoNote));
       await _tickTask(tester, 2);
     },
-    proof: <A11yProof>[A11yProof(find.text('Task ticked'))],
+    proof: <A11yProof>[
+      A11yProof(_logSheet),
+      A11yProof(find.text('Task ticked')),
+    ],
   ),
   A11yState(
     id: 'd7-day-with-entries',
@@ -371,18 +434,23 @@ final List<A11yState> viewerStates = <A11yState>[
         textContent: 'and a walk',
       ),
     ]),
-    proof: <A11yProof>[A11yProof(find.byType(DayDetailPanel))],
+    proof: <A11yProof>[A11yProof(_daySheet)],
   ),
   A11yState(
     id: 'd8-day-empty',
     pump: (WidgetTester tester) => _openDay(tester, const <Entry>[]),
-    proof: <A11yProof>[A11yProof(find.text(dayDetailEmptyMessage))],
+    proof: <A11yProof>[
+      A11yProof(_daySheet),
+      A11yProof(find.text(dayDetailEmptyMessage)),
+    ],
   ),
   A11yState(
     id: 'd9-mood-prompt-today',
-    pump: (WidgetTester tester) =>
-        _pumpMood(tester, const MoodBannerForDate(date: _today)),
-    proof: <A11yProof>[A11yProof(find.text('How are you feeling today?'))],
+    pump: _pumpDock,
+    proof: <A11yProof>[
+      A11yProof(find.text(todayMoodDockPrompt)),
+      A11yProof(find.text(todayMoodDockChooseLabel)),
+    ],
   ),
   A11yState(
     id: 'd10-mood-prompt-past',
@@ -395,32 +463,43 @@ final List<A11yState> viewerStates = <A11yState>[
   A11yState(
     id: 'd11-mood-picker',
     pump: (WidgetTester tester) async {
-      await _pumpMood(tester, const MoodBannerForDate(date: _today));
-      await _tapText(tester, 'How are you feeling today?');
+      await _pumpDock(tester);
+      await _tapText(tester, todayMoodDockChooseLabel);
     },
-    proof: <A11yProof>[A11yProof(find.text('Grateful'))],
+    proof: <A11yProof>[
+      A11yProof(
+        find.descendant(
+          of: find.byType(MoodPickerSheet),
+          matching: find.byType(PhoneSheet),
+        ),
+      ),
+      A11yProof(find.text('Grateful')),
+    ],
   ),
   A11yState(
     id: 'd12-mood-set',
-    pump: (WidgetTester tester) => _pumpMood(
-      tester,
-      const MoodBannerForDate(date: _today),
-      mood: Mood.calm,
-    ),
-    proof: <A11yProof>[A11yProof(find.text('change'))],
+    pump: (WidgetTester tester) => _pumpDock(tester, mood: Mood.calm),
+    proof: <A11yProof>[
+      A11yProof(find.text('Feeling ${Mood.calm.label}')),
+      A11yProof(find.text(todayMoodDockChangeLabel)),
+    ],
   ),
   A11yState(
     id: 'd13-change-mood-dialog',
     pump: (WidgetTester tester) async {
-      await _pumpMood(
-        tester,
-        const MoodBannerForDate(date: _today),
-        mood: Mood.calm,
-      );
-      await _tapText(tester, 'change');
+      await _pumpDock(tester, mood: Mood.calm);
+      await _tapText(tester, todayMoodDockChangeLabel);
       await _tapText(tester, 'Happy');
     },
-    proof: <A11yProof>[A11yProof(find.text('Change mood'))],
+    proof: <A11yProof>[
+      A11yProof(
+        find.descendant(
+          of: find.byType(PhoneSheet),
+          matching: find.byKey(confirmDialogConfirmKey),
+        ),
+      ),
+      A11yProof(find.text('Change mood')),
+    ],
   ),
   A11yState(
     id: 'd14-delete-entry-dialog',
@@ -429,7 +508,14 @@ final List<A11yState> viewerStates = <A11yState>[
       await tester.tap(find.byKey(logActionsDeleteKey));
       await tester.pumpAndSettle();
     },
-    proof: <A11yProof>[A11yProof(find.byKey(confirmDialogConfirmKey))],
+    proof: <A11yProof>[
+      A11yProof(
+        find.descendant(
+          of: find.byType(PhoneSheet),
+          matching: find.byKey(confirmDialogConfirmKey),
+        ),
+      ),
+    ],
   ),
   A11yState(
     id: 'd15-viewer-middle-entry',
@@ -457,10 +543,7 @@ final List<A11yState> viewerStates = <A11yState>[
       ],
       entryId: 'n2',
     ),
-    proof: <A11yProof>[
-      A11yProof(find.byType(LogViewerPanel)),
-      A11yProof(find.text('2 of 3')),
-    ],
+    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('2 of 3'))],
   ),
   A11yState(
     id: 'd16-day-past-mood',
@@ -482,6 +565,9 @@ final List<A11yState> viewerStates = <A11yState>[
         updatedAt: 0,
       ),
     ),
-    proof: <A11yProof>[A11yProof(find.byType(DayMoodCard))],
+    proof: <A11yProof>[
+      A11yProof(_daySheet),
+      A11yProof(find.byType(DayMoodCard)),
+    ],
   ),
 ];

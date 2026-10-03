@@ -1,11 +1,14 @@
 import 'package:camera/camera.dart' show CameraDescription, CameraLensDirection;
 import 'package:field_notes/app/capture/app_capture_routes.dart';
+import 'package:field_notes/design/widgets/widgets.dart' show PhoneSheet;
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser.dart';
 import 'package:field_notes/features/capture/chooser/capture_chooser_sheet.dart';
 import 'package:field_notes/features/capture/chooser/capture_routes_provider.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
+import 'package:field_notes/features/capture/core/composer_shell.dart'
+    show composerPanelKey;
 import 'package:field_notes/features/capture/core/draft_restored_chip.dart';
 import 'package:field_notes/features/capture/immersive/stage_phase.dart'
     show stagePausedStatus;
@@ -89,19 +92,20 @@ const int _shutterSteps = 4;
 
 DateTime _clock() => DateTime(2026, 9, 18, 9, 30);
 
-final List<VideoCaptureDevice> _phoneCameras =
-    cameraDeviceLabels(const <CameraDescription>[
-      CameraDescription(
-        name: '0',
-        lensDirection: CameraLensDirection.back,
-        sensorOrientation: 90,
-      ),
-      CameraDescription(
-        name: '1',
-        lensDirection: CameraLensDirection.front,
-        sensorOrientation: 270,
-      ),
-    ]);
+final List<VideoCaptureDevice> _phoneCameras = cameraDeviceLabels(
+  const <CameraDescription>[
+    CameraDescription(
+      name: '0',
+      lensDirection: CameraLensDirection.back,
+      sensorOrientation: 90,
+    ),
+    CameraDescription(
+      name: '1',
+      lensDirection: CameraLensDirection.front,
+      sensorOrientation: 270,
+    ),
+  ],
+);
 
 typedef _Open = Future<Object?> Function(BuildContext context, WidgetRef ref);
 
@@ -266,25 +270,22 @@ Future<void> _pumpPhotoSelected(WidgetTester tester) async {
 
 Future<void> _pumpPhotoCaption(WidgetTester tester) async {
   await _pumpPhotoSelected(tester);
-  await NoteEditorDriver(
-    tester,
-  ).press(find.byKey(photoToolbarCaptionKey), _photoHold);
+  await NoteEditorDriver(tester)
+      .press(find.byKey(photoToolbarCaptionKey), _photoHold);
   await tester.pump();
 }
 
 Future<void> _pumpPhotoRemoved(WidgetTester tester) async {
   await _pumpPhotoSelected(tester);
-  await NoteEditorDriver(
-    tester,
-  ).press(find.byKey(photoToolbarRemoveKey), _photoHold);
+  await NoteEditorDriver(tester)
+      .press(find.byKey(photoToolbarRemoveKey), _photoHold);
   await tester.pumpAndSettle();
 }
 
 Future<void> _pumpTableToolbar(WidgetTester tester) async {
   await _composeNote(tester, _tableNote);
-  await NoteEditorDriver(
-    tester,
-  ).setSelection(const TextSelection.collapsed(offset: _insideTable));
+  await NoteEditorDriver(tester)
+      .setSelection(const TextSelection.collapsed(offset: _insideTable));
   await tester.pumpAndSettle();
   await tester.ensureVisible(find.byKey(tableToolbarAlignLeftKey));
   await tester.pumpAndSettle();
@@ -452,6 +453,17 @@ Future<void> _pumpVideoPaused(WidgetTester tester) async {
   _requireVideoPhase(tester, VideoRecorderPhase.paused);
 }
 
+final Finder _fullScreenComposer = find.byElementPredicate(
+  (Element element) =>
+      element.widget.key == composerPanelKey &&
+      switch (element.renderObject) {
+        final RenderBox box when box.hasSize =>
+          box.size == MediaQuery.sizeOf(element),
+        _ => false,
+      },
+  description: 'the composer filling the phone screen',
+);
+
 List<A11yStatefulControl> _selectedControls(Iterable<Key> keys) =>
     <A11yStatefulControl>[
       for (final Key key in keys)
@@ -462,17 +474,30 @@ final List<A11yState> captureStates = <A11yState>[
   A11yState(
     id: 'c1-chooser',
     pump: _pumpChooser,
-    proof: <A11yProof>[A11yProof(find.byType(CaptureChooserSheet))],
+    proof: <A11yProof>[
+      A11yProof(
+        find.descendant(
+          of: find.byType(CaptureChooserSheet),
+          matching: find.byType(PhoneSheet),
+        ),
+      ),
+    ],
   ),
   A11yState(
     id: 'c2-composer-new',
     pump: _pumpNewComposer,
-    proof: <A11yProof>[A11yProof(find.byType(TextComposerSheet))],
+    proof: <A11yProof>[
+      A11yProof(find.byType(TextComposerSheet)),
+      A11yProof(_fullScreenComposer),
+    ],
   ),
   A11yState(
     id: 'c3-composer-keyboard',
     pump: _pumpComposerWithKeyboard,
-    proof: <A11yProof>[A11yProof(find.byType(TextComposerSheet))],
+    proof: <A11yProof>[
+      A11yProof(find.byType(TextComposerSheet)),
+      A11yProof(_fullScreenComposer),
+    ],
   ),
   A11yState(
     id: 'c4-more-formats',
@@ -482,7 +507,10 @@ final List<A11yState> captureStates = <A11yState>[
   A11yState(
     id: 'c5-edit-note',
     pump: _pumpEditNote,
-    proof: <A11yProof>[A11yProof(find.text(editNoteSaveLabel))],
+    proof: <A11yProof>[
+      A11yProof(find.text(editNoteSaveLabel)),
+      A11yProof(_fullScreenComposer),
+    ],
   ),
   A11yState(
     id: 'c6-photo-selected',
@@ -512,7 +540,14 @@ final List<A11yState> captureStates = <A11yState>[
   A11yState(
     id: 'c10-discard-dialog',
     pump: _pumpDiscardNote,
-    proof: <A11yProof>[A11yProof(find.byKey(composerDiscardKey))],
+    proof: <A11yProof>[
+      A11yProof(
+        find.descendant(
+          of: find.byType(PhoneSheet),
+          matching: find.byKey(composerDiscardKey),
+        ),
+      ),
+    ],
   ),
   A11yState(
     id: 'c11-draft-chip',

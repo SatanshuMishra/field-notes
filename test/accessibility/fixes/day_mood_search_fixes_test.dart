@@ -1,3 +1,5 @@
+import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -73,15 +75,30 @@ void main() {
     handle.dispose();
   });
 
-  testWidgets('the mood banner names the mood once', (
+  testWidgets('the Today mood card names the mood once', (
     WidgetTester tester,
   ) async {
     final List<String> ids = await _idsIn(tester, viewerStates, 'd12-mood-set');
-    _expectNone(ids, 'small-target', 'd12-mood-set', <String>['change |']);
+    _expectNone(ids, 'small-target', 'd12-mood-set', <String>[
+      '$todayMoodDockChangeLabel |',
+    ]);
     final SemanticsHandle handle = tester.ensureSemantics();
     expect(
-      _nodes(tester, (SemanticsNode node) => node.label.contains('Calm')),
+      _nodes(
+        tester,
+        (SemanticsNode node) => node.label.contains(Mood.calm.label),
+      ),
       hasLength(1),
+    );
+    final List<SemanticsNode> change = _nodes(
+      tester,
+      (SemanticsNode node) => node.label == todayMoodDockChangeLabel,
+    );
+    expect(change, hasLength(1));
+    expect(
+      _atLeast48(change.single.rect.size),
+      isTrue,
+      reason: '${change.single.rect.size}',
     );
     handle.dispose();
   });
