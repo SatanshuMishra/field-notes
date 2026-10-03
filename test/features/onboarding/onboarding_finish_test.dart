@@ -13,6 +13,7 @@ import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/reminders/reminder_scheduler.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
+import 'package:field_notes/features/today/today_mood_dock.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/features/today/today_screen.dart';
 import 'package:field_notes/state/state.dart';
@@ -393,6 +394,16 @@ List<Mood?> _bannerMoods(WidgetTester tester) => <Mood?>[
     banner.mood,
 ];
 
+Finder _dockFeeling(Mood mood) => find.descendant(
+  of: find.byType(TodayMoodDock),
+  matching: find.text('Feeling ${mood.label}'),
+);
+
+bool _showsMood(WidgetTester tester, _Layout layout, Mood mood) =>
+    layout.platform == TargetPlatform.macOS
+    ? _bannerMoods(tester).contains(mood)
+    : _dockFeeling(mood).evaluate().isNotEmpty;
+
 void main() {
   testWidgets('start saves the choices without asking for permission', (
     WidgetTester tester,
@@ -639,16 +650,23 @@ void main() {
           await _until(
             tester,
             () =>
-                _bannerMoods(tester).contains(Mood.grateful) &&
+                _showsMood(tester, layout, Mood.grateful) &&
                 _tiles(tester).length == 1 &&
                 _tiles(tester).single.entry.textContent == _finalLine,
           );
-          expect(_bannerMoods(tester), <Mood?>[Mood.grateful], reason: reason);
-          expect(
-            find.text('Feeling ${Mood.grateful.label} today'),
-            findsOneWidget,
-            reason: reason,
-          );
+          if (layout.platform == TargetPlatform.macOS) {
+            expect(_bannerMoods(tester), <Mood?>[
+              Mood.grateful,
+            ], reason: reason);
+            expect(
+              find.text('Feeling ${Mood.grateful.label} today'),
+              findsOneWidget,
+              reason: reason,
+            );
+          } else {
+            expect(find.byType(MoodBanner), findsNothing, reason: reason);
+            expect(_dockFeeling(Mood.grateful), findsOneWidget, reason: reason);
+          }
           final List<TodayEntryTile> tiles = _tiles(tester);
           expect(tiles, hasLength(1), reason: reason);
           expect(tiles.single.entry.type, EntryType.text, reason: reason);

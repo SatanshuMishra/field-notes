@@ -77,5 +77,6 @@ void main() {
       expect(list.top, lessThanOrEqualTo(ring.top));
       expect(list.bottom, greaterThanOrEqualTo(ring.bottom));
     },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
   );
 }

@@ -8,6 +8,7 @@ Future<void> _openDialog(
 ) async {
   await tester.pumpWidget(
     MaterialApp(
+      theme: ThemeData(platform: TargetPlatform.macOS),
       home: Scaffold(
         body: Builder(
           builder: (BuildContext context) => TextButton(
