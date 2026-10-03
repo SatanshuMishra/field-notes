@@ -551,7 +551,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(composerDiscardKey));
     await tester.pumpAndSettle();
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('a scrim tap on a clean composer closes it',
       (WidgetTester tester) async {
@@ -571,7 +571,7 @@ void main() {
     expect(find.text(composerDiscardTitle), findsNothing);
     expect(result, isNull);
     expect(writer.saves, isEmpty);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   group('photos in the new-note composer', () {
     List<Override> mediaOverrides(

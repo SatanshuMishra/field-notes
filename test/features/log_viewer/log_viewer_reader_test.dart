@@ -110,7 +110,7 @@ void main() {
 
     expect(tester.getSize(find.byKey(composerPanelKey)).width, 768);
     expect(tester.getSize(_readerColumn()).width, 688);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the note viewer caps its column at 45 em in a 1920 window', (
     WidgetTester tester,
@@ -153,7 +153,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.getSize(find.byType(NoteEditorView)).width, 688);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('an arrow key in the edit composer moves the caret, not the '
       'viewer', (WidgetTester tester) async {

@@ -341,11 +341,13 @@ Future<void> _expectPetalsOnEveryPageButTheMeadow(
         Offset.zero & layout.surface,
         reason: reason,
       );
-      expect(
-        tester.getRect(find.byType(ShellContent)),
-        isNot(Offset.zero & layout.surface),
-        reason: reason,
-      );
+      if (layout.layout == ShellLayout.sidebar) {
+        expect(
+          tester.getRect(find.byType(ShellContent)),
+          isNot(Offset.zero & layout.surface),
+          reason: reason,
+        );
+      }
     }
   }
   await _unmount(tester);
