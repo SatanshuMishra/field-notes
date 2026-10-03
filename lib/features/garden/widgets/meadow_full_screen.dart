@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/app/shell/system_bars.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/garden_screen.dart';
@@ -215,95 +216,98 @@ class _PhoneFullScreenState extends ConsumerState<_PhoneFullScreen>
         : meadowFullScreenPlayLabel;
     final double gesture = MediaQuery.viewPaddingOf(context).bottom;
     final double rowBottom = gesture + _rowLift;
-    return Focus(
-      autofocus: true,
-      skipTraversal: true,
-      includeSemantics: false,
-      onKeyEvent: _handleKey,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          MeadowStage(
-            year: widget.year,
-            seed: widget.seed,
-            sky: sky,
-            morning: morning,
-            mode: MeadowSceneMode.full,
-            compact: true,
-            growthPoint: widget.request.growthPoint,
-            overlayBottom: rowBottom + meadowPhoneControlHeight + _overlayGap,
-          ),
-          Positioned(
-            left: _labelLeft,
-            top: _labelTop,
-            right: _labelLeft,
-            child: IgnorePointer(
-              child: Text(
-                key: meadowFullScreenTitleKey,
-                '${widget.year.year}',
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                style: _labelStyle,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemBarsOverColor(sky.skyTop),
+      child: Focus(
+        autofocus: true,
+        skipTraversal: true,
+        includeSemantics: false,
+        onKeyEvent: _handleKey,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            MeadowStage(
+              year: widget.year,
+              seed: widget.seed,
+              sky: sky,
+              morning: morning,
+              mode: MeadowSceneMode.full,
+              compact: true,
+              growthPoint: widget.request.growthPoint,
+              overlayBottom: rowBottom + meadowPhoneControlHeight + _overlayGap,
+            ),
+            Positioned(
+              left: _labelLeft,
+              top: _labelTop,
+              right: _labelLeft,
+              child: IgnorePointer(
+                child: Text(
+                  key: meadowFullScreenTitleKey,
+                  '${widget.year.year}',
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: _labelStyle,
+                ),
               ),
             ),
-          ),
-          Positioned(
-            left: _rowInset,
-            right: _rowInset,
-            bottom: rowBottom,
-            child: MeadowChromeBlock(
-              child: Row(
-                key: meadowFullScreenRowKey,
-                children: <Widget>[
-                  Expanded(
-                    child: MeadowGlassButton(
-                      key: meadowFullScreenPlayKey,
-                      label: playLabel,
-                      tooltip: meadowFullScreenPlayLabel,
-                      onPressed: () =>
-                          _togglePlay(hour ?? _minutesOf(moment.instant)),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          CustomPaint(
-                            size: const Size.square(12),
-                            painter: MeadowPlayGlyphPainter(
-                              glyph: playing
-                                  ? MeadowPlayGlyph.pause
-                                  : MeadowPlayGlyph.play,
-                              color: meadowCream,
+            Positioned(
+              left: _rowInset,
+              right: _rowInset,
+              bottom: rowBottom,
+              child: MeadowChromeBlock(
+                child: Row(
+                  key: meadowFullScreenRowKey,
+                  children: <Widget>[
+                    Expanded(
+                      child: MeadowGlassButton(
+                        key: meadowFullScreenPlayKey,
+                        label: playLabel,
+                        tooltip: meadowFullScreenPlayLabel,
+                        onPressed: () =>
+                            _togglePlay(hour ?? _minutesOf(moment.instant)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            CustomPaint(
+                              size: const Size.square(12),
+                              painter: MeadowPlayGlyphPainter(
+                                glyph: playing
+                                    ? MeadowPlayGlyph.pause
+                                    : MeadowPlayGlyph.play,
+                                color: meadowCream,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            playLabel,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: meadowSans(13),
-                          ),
-                        ],
+                            const SizedBox(width: 8),
+                            Text(
+                              playLabel,
+                              maxLines: 1,
+                              softWrap: false,
+                              style: meadowSans(13),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: _rowGap),
-                  MeadowGlassButton(
-                    key: meadowFullScreenCloseKey,
-                    label: meadowFullScreenCloseLabel,
-                    tooltip: meadowFullScreenCloseLabel,
-                    width: meadowPhoneControlHeight,
-                    onPressed: _close,
-                    child: MeadowGlyph(
-                      path: meadowCross,
-                      size: 16,
-                      stroke: 2.4,
+                    const SizedBox(width: _rowGap),
+                    MeadowGlassButton(
+                      key: meadowFullScreenCloseKey,
+                      label: meadowFullScreenCloseLabel,
+                      tooltip: meadowFullScreenCloseLabel,
+                      width: meadowPhoneControlHeight,
+                      onPressed: _close,
+                      child: MeadowGlyph(
+                        path: meadowCross,
+                        size: 16,
+                        stroke: 2.4,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

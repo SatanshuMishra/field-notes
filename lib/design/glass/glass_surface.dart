@@ -125,20 +125,20 @@ const double glassSaturation = 1.6;
 const double glassBorderWidth = 1;
 const double glassHighlightWidth = 1;
 
-const List<double> _glassSaturationMatrix = <double>[
-  0.213 + 0.787 * glassSaturation,
-  0.715 - 0.715 * glassSaturation,
-  0.072 - 0.072 * glassSaturation,
+List<double> _saturationMatrix(double saturation) => <double>[
+  0.213 + 0.787 * saturation,
+  0.715 - 0.715 * saturation,
+  0.072 - 0.072 * saturation,
   0,
   0,
-  0.213 - 0.213 * glassSaturation,
-  0.715 + 0.285 * glassSaturation,
-  0.072 - 0.072 * glassSaturation,
+  0.213 - 0.213 * saturation,
+  0.715 + 0.285 * saturation,
+  0.072 - 0.072 * saturation,
   0,
   0,
-  0.213 - 0.213 * glassSaturation,
-  0.715 - 0.715 * glassSaturation,
-  0.072 + 0.928 * glassSaturation,
+  0.213 - 0.213 * saturation,
+  0.715 - 0.715 * saturation,
+  0.072 + 0.928 * saturation,
   0,
   0,
   0,
@@ -148,10 +148,17 @@ const List<double> _glassSaturationMatrix = <double>[
   0,
 ];
 
-final ui.ImageFilter glassBackdropFilter = ui.ImageFilter.compose(
-  outer: const ColorFilter.matrix(_glassSaturationMatrix),
-  inner: ui.ImageFilter.blur(sigmaX: glassBlurSigma, sigmaY: glassBlurSigma),
-);
+ui.ImageFilter glassBackdropFilterAt(double strength) {
+  final double sigma = glassBlurSigma * strength;
+  return ui.ImageFilter.compose(
+    outer: ColorFilter.matrix(
+      _saturationMatrix(1 + (glassSaturation - 1) * strength),
+    ),
+    inner: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+  );
+}
+
+final ui.ImageFilter glassBackdropFilter = glassBackdropFilterAt(1);
 
 class GlassSurface extends StatelessWidget {
   const GlassSurface({
@@ -163,6 +170,7 @@ class GlassSurface extends StatelessWidget {
     this.tint,
     this.border,
     this.shadows,
+    this.opacity = 1,
   });
 
   final GlassTone tone;
@@ -172,10 +180,12 @@ class GlassSurface extends StatelessWidget {
   final Color? tint;
   final BoxBorder? border;
   final List<BoxShadow>? shadows;
+  final double opacity;
 
   @override
   Widget build(BuildContext context) {
     final GlassColors colors = tone.colorsFor(Theme.of(context).brightness);
+    final double shown = opacity.clamp(0.0, 1.0);
     final TextDirection direction =
         Directionality.maybeOf(context) ?? TextDirection.ltr;
     final BoxBorder edge =
@@ -183,26 +193,32 @@ class GlassSurface extends StatelessWidget {
 
     return CustomPaint(
       foregroundPainter: GlassShadowPainter(
-        shadows: shadows ?? colors.shadows,
+        shadows: _fadedShadows(shadows ?? colors.shadows, shown),
         borderRadius: borderRadius,
       ),
       child: ClipRRect(
         borderRadius: borderRadius,
         child: BackdropFilter(
-          filter: glassBackdropFilter,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: tint ?? colors.tint,
-              border: edge,
-              borderRadius: borderRadius,
-            ),
-            child: CustomPaint(
-              painter: GlassHighlightPainter(
-                color: colors.highlight,
+          enabled: shown > 0,
+          filter: shown < 1
+              ? glassBackdropFilterAt(shown)
+              : glassBackdropFilter,
+          child: Opacity(
+            opacity: shown,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: tint ?? colors.tint,
+                border: edge,
                 borderRadius: borderRadius,
-                insets: edge.dimensions.resolve(direction),
               ),
-              child: Padding(padding: padding, child: child),
+              child: CustomPaint(
+                painter: GlassHighlightPainter(
+                  color: colors.highlight,
+                  borderRadius: borderRadius,
+                  insets: edge.dimensions.resolve(direction),
+                ),
+                child: Padding(padding: padding, child: child),
+              ),
             ),
           ),
         ),
@@ -210,6 +226,16 @@ class GlassSurface extends StatelessWidget {
     );
   }
 }
+
+List<BoxShadow> _fadedShadows(List<BoxShadow> shadows, double shown) =>
+    shown < 1
+    ? <BoxShadow>[
+        for (final BoxShadow shadow in shadows)
+          shadow.copyWith(
+            color: shadow.color.withValues(alpha: shadow.color.a * shown),
+          ),
+      ]
+    : shadows;
 
 class GlassShadowPainter extends CustomPainter {
   const GlassShadowPainter({required this.shadows, required this.borderRadius});

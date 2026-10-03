@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
@@ -10,6 +11,7 @@ import '../../design/tokens/tokens.dart';
 import 'keep_focus_in_view.dart';
 import 'phone_bottom_bar.dart';
 import 'shell_destination.dart';
+import 'system_bars.dart';
 
 const double phoneHeaderBarHeight = 44;
 const double phoneHeaderGearExtent = 44;
@@ -200,40 +202,45 @@ class _BottomBarShellState extends State<BottomBarShell> {
         : _scrolled
         ? _paperGlass(context)
         : null;
-    return Stack(
-      fit: StackFit.expand,
-      children: <Widget>[
-        ?glass,
-        Padding(
-          padding: EdgeInsets.only(
-            top: statusBar,
-            left: _headerLeftPadding,
-            right: _headerRightPadding,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemBarsOver(
+        overScene ? Brightness.dark : Theme.of(context).brightness,
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          ?glass,
+          Padding(
+            padding: EdgeInsets.only(
+              top: statusBar,
+              left: _headerLeftPadding,
+              right: _headerRightPadding,
+            ),
+            child: Row(
+              children: <Widget>[
+                Text(
+                  'field notes',
+                  style: overScene
+                      ? context.textStyles.wordmarkAccent.copyWith(
+                          color: _sceneWordmark,
+                        )
+                      : context.textStyles.wordmarkAccent.copyWith(
+                          color: colors.accentInkStrong,
+                        ),
+                ),
+                const Spacer(),
+                StreakPill(
+                  form: overScene
+                      ? StreakPillForm.headerOverScene
+                      : StreakPillForm.header,
+                ),
+                const SizedBox(width: _headerTrailingGap),
+                _gear(overScene ? _sceneGear : colors.ink),
+              ],
+            ),
           ),
-          child: Row(
-            children: <Widget>[
-              Text(
-                'field notes',
-                style: overScene
-                    ? context.textStyles.wordmarkAccent.copyWith(
-                        color: _sceneWordmark,
-                      )
-                    : context.textStyles.wordmarkAccent.copyWith(
-                        color: colors.accentInkStrong,
-                      ),
-              ),
-              const Spacer(),
-              StreakPill(
-                form: overScene
-                    ? StreakPillForm.headerOverScene
-                    : StreakPillForm.header,
-              ),
-              const SizedBox(width: _headerTrailingGap),
-              _gear(overScene ? _sceneGear : colors.ink),
-            ],
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

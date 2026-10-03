@@ -103,6 +103,7 @@ class Toast extends StatelessWidget {
     this.variant = ToastVariant.light,
     this.scale = ToastScale.phone,
     this.action,
+    this.opacity = 1,
   });
 
   final String message;
@@ -111,6 +112,7 @@ class Toast extends StatelessWidget {
   final ToastVariant variant;
   final ToastScale scale;
   final ToastAction? action;
+  final double opacity;
 
   @override
   Widget build(BuildContext context) {
@@ -118,20 +120,23 @@ class Toast extends StatelessWidget {
       return _dark(context);
     }
     final ToastAction? action = this.action;
-    return StickerCard(
-      surface: surface ?? context.colors.cardBright,
-      padding: action == null ? _lightPadding : _lightPaddingWithAction,
-      borderRadius: Shapes.buttonBorderRadius,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (icon != null) ...<Widget>[icon!, const SizedBox(width: 8)],
-          Flexible(child: Text(message, style: context.textStyles.bodySans)),
-          if (action != null) ...<Widget>[
-            const SizedBox(width: _actionGap),
-            _ToastActionButton(action: action),
+    return Opacity(
+      opacity: opacity,
+      child: StickerCard(
+        surface: surface ?? context.colors.cardBright,
+        padding: action == null ? _lightPadding : _lightPaddingWithAction,
+        borderRadius: Shapes.buttonBorderRadius,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (icon != null) ...<Widget>[icon!, const SizedBox(width: 8)],
+            Flexible(child: Text(message, style: context.textStyles.bodySans)),
+            if (action != null) ...<Widget>[
+              const SizedBox(width: _actionGap),
+              _ToastActionButton(action: action),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -142,6 +147,7 @@ class Toast extends StatelessWidget {
     final _DarkMetrics metrics = _metricsFor(scale);
     return GlassSurface(
       tone: GlassTone.toast,
+      opacity: opacity,
       borderRadius: BorderRadius.all(Radius.circular(metrics.radius)),
       padding: action == null
           ? EdgeInsets.symmetric(
@@ -545,27 +551,27 @@ class _TransientToastLayerState extends State<_TransientToastLayer>
         child: Material(
           type: MaterialType.transparency,
           child: Center(
-            child: FadeTransition(
-              opacity: _rise,
-              child: AnimatedBuilder(
-                animation: _rise,
-                builder: (BuildContext context, Widget? child) =>
-                    Transform.translate(
+            child: AnimatedBuilder(
+              animation: _rise,
+              builder: (BuildContext context, Widget? child) =>
+                  ExcludeSemantics(
+                    excluding: _rise.value == 0,
+                    child: Transform.translate(
                       offset: Offset(0, _riseOffset * (1 - _rise.value)),
-                      child: child,
+                      child: Toast(
+                        message: widget.message,
+                        variant: ToastVariant.dark,
+                        scale: widget.scale,
+                        action: widget.action,
+                        opacity: _rise.value,
+                        icon: IconStickerGlyphIcon(
+                          glyph: widget.glyph,
+                          color: _glassToastInk,
+                          size: metrics.iconSize,
+                        ),
+                      ),
                     ),
-                child: Toast(
-                  message: widget.message,
-                  variant: ToastVariant.dark,
-                  scale: widget.scale,
-                  action: widget.action,
-                  icon: IconStickerGlyphIcon(
-                    glyph: widget.glyph,
-                    color: _glassToastInk,
-                    size: metrics.iconSize,
                   ),
-                ),
-              ),
             ),
           ),
         ),
