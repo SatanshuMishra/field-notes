@@ -62,10 +62,30 @@ void main() {
       expect(_constant(swift, 'minimumContentHeight'), greaterThan(0));
     });
 
-    test('the initial frame is grown to the minimum before it is applied', () {
-      expect(swift, contains('frameAtLeastMinimum(windowFrame)'));
-      expect(swift, contains('max(frame.width, minimumFrame.width)'));
-      expect(swift, contains('max(frame.height, minimumFrame.height)'));
+  });
+
+  group('macOS window opening size', () {
+    final String swift = File(
+      'macos/Runner/MainFlutterWindow.swift',
+    ).readAsStringSync();
+
+    test('the window opens at 1200 by 800 points', () {
+      expect(_constant(swift, 'openingWindowWidth'), 1200);
+      expect(_constant(swift, 'openingWindowHeight'), 800);
+      expect(swift, contains('self.setFrame(self.openingFrame(), display: true)'));
+    });
+
+    test('the opening frame fits the visible screen and never drops below '
+        'the minimum', () {
+      expect(swift, contains('min(openingWindowWidth, visible.width)'));
+      expect(swift, contains('min(openingWindowHeight, visible.height)'));
+      expect(swift, contains('minimumFrame.width'));
+      expect(swift, contains('minimumFrame.height'));
+    });
+
+    test('the opening frame is centred on the visible screen', () {
+      expect(swift, contains('visible.midX - width / 2'));
+      expect(swift, contains('visible.midY - height / 2'));
     });
   });
 }

@@ -16,6 +16,8 @@ private let minimumContentWidth: CGFloat =
   + entryCardPadding + todayPanePadding
   + seamWidth + todayRailWidth
 private let minimumContentHeight: CGFloat = 600
+private let openingWindowWidth: CGFloat = 1200
+private let openingWindowHeight: CGFloat = 800
 
 private let titleBarHeight: CGFloat = 42
 private let windowButtonsLeading: CGFloat = 16
@@ -34,7 +36,6 @@ class MainFlutterWindow: NSWindow {
 
   override func awakeFromNib() {
     let flutterViewController = FlutterViewController()
-    let windowFrame = self.frame
     self.contentViewController = flutterViewController
     self.contentMinSize = NSSize(
       width: minimumContentWidth,
@@ -43,7 +44,7 @@ class MainFlutterWindow: NSWindow {
     self.titleVisibility = .hidden
     self.titlebarAppearsTransparent = true
     self.styleMask.insert(.fullSizeContentView)
-    self.setFrame(self.frameAtLeastMinimum(windowFrame), display: true)
+    self.setFrame(self.openingFrame(), display: true)
 
     RegisterGeneratedPlugins(registry: flutterViewController)
     self.registerWindowChannel(flutterViewController.engine.binaryMessenger)
@@ -225,15 +226,19 @@ class MainFlutterWindow: NSWindow {
     }
   }
 
-  private func frameAtLeastMinimum(_ frame: NSRect) -> NSRect {
+  private func openingFrame() -> NSRect {
     let minimumFrame = self.frameRect(
-      forContentRect: NSRect(origin: frame.origin, size: self.contentMinSize)
+      forContentRect: NSRect(origin: .zero, size: self.contentMinSize)
     )
+    let visible = (self.screen ?? NSScreen.main)?.visibleFrame
+      ?? NSRect(x: 0, y: 0, width: openingWindowWidth, height: openingWindowHeight)
+    let width = max(min(openingWindowWidth, visible.width), minimumFrame.width)
+    let height = max(min(openingWindowHeight, visible.height), minimumFrame.height)
     return NSRect(
-      x: frame.origin.x,
-      y: frame.origin.y,
-      width: max(frame.width, minimumFrame.width),
-      height: max(frame.height, minimumFrame.height)
+      x: visible.midX - width / 2,
+      y: visible.midY - height / 2,
+      width: width,
+      height: height
     )
   }
 }
