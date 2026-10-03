@@ -11,4 +11,5 @@ abstract final class SettingsKeys {
   static const String onboardingStatus = 'onboarding_status';
   static const String appearance = 'appearance';
   static const String meadowKey = 'meadow_key';
+  static const String sidebarCollapsed = 'sidebar_collapsed';
 }

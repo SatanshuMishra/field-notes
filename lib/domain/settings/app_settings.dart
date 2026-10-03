@@ -16,6 +16,7 @@ class AppSettings {
     required this.reflectionPromptsEnabled,
     required this.onboardingStatus,
     required this.appearance,
+    this.sidebarCollapsed = false,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -29,6 +30,7 @@ class AppSettings {
     reflectionPromptsEnabled: false,
     onboardingStatus: null,
     appearance: Appearance.light,
+    sidebarCollapsed: false,
   );
 
   final bool reminderEnabled;
@@ -41,6 +43,7 @@ class AppSettings {
   final bool reflectionPromptsEnabled;
   final OnboardingStatus? onboardingStatus;
   final Appearance appearance;
+  final bool sidebarCollapsed;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -53,6 +56,7 @@ class AppSettings {
     bool? reflectionPromptsEnabled,
     OnboardingStatus? onboardingStatus,
     Appearance? appearance,
+    bool? sidebarCollapsed,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -67,6 +71,7 @@ class AppSettings {
           reflectionPromptsEnabled ?? this.reflectionPromptsEnabled,
       onboardingStatus: onboardingStatus ?? this.onboardingStatus,
       appearance: appearance ?? this.appearance,
+      sidebarCollapsed: sidebarCollapsed ?? this.sidebarCollapsed,
     );
   }
 
@@ -84,7 +89,8 @@ class AppSettings {
           notificationPermissionAsked == other.notificationPermissionAsked &&
           reflectionPromptsEnabled == other.reflectionPromptsEnabled &&
           onboardingStatus == other.onboardingStatus &&
-          appearance == other.appearance;
+          appearance == other.appearance &&
+          sidebarCollapsed == other.sidebarCollapsed;
 
   @override
   int get hashCode => Object.hash(
@@ -98,6 +104,7 @@ class AppSettings {
     reflectionPromptsEnabled,
     onboardingStatus,
     appearance,
+    sidebarCollapsed,
   );
 
   @override
@@ -108,5 +115,6 @@ class AppSettings {
       'spellCheckEnabled: $spellCheckEnabled, '
       'notificationPermissionAsked: $notificationPermissionAsked, '
       'reflectionPromptsEnabled: $reflectionPromptsEnabled, '
-      'onboardingStatus: $onboardingStatus, appearance: $appearance)';
+      'onboardingStatus: $onboardingStatus, appearance: $appearance, '
+      'sidebarCollapsed: $sidebarCollapsed)';
 }

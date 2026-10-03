@@ -31,6 +31,8 @@ abstract interface class SettingsRepository {
 
   Future<void> setAppearance(Appearance value);
 
+  Future<void> setSidebarCollapsed(bool value);
+
   Future<bool> hasStoredValues();
 
   Future<int> meadowKey();

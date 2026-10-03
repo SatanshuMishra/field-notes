@@ -1,3 +1,4 @@
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/data/export_delivery.dart';
 import 'package:field_notes/features/data/export_runner.dart';
 import 'package:field_notes/features/data/journal_delete_all_service.dart';
@@ -5,7 +6,9 @@ import 'package:field_notes/features/data/journal_export_service.dart';
 import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -23,6 +26,12 @@ SettingsController settingsController(Ref ref) {
         debugPrint('Settings write failed: $error'),
   );
 }
+
+final Provider<bool> sidebarCollapsedProvider = Provider<bool>((Ref ref) {
+  final AppSettings settings =
+      ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+  return settings.sidebarCollapsed;
+});
 
 @Riverpod(keepAlive: true)
 Future<SettingsDataController> settingsDataController(Ref ref) async {

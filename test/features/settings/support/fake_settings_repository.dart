@@ -33,6 +33,7 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<bool> reflectionPromptsEnabledWrites = <bool>[];
   final List<OnboardingStatus> onboardingStatusWrites = <OnboardingStatus>[];
   final List<Appearance> appearanceWrites = <Appearance>[];
+  final List<bool> sidebarCollapsedWrites = <bool>[];
   late AppSettings _latest = initial;
 
   void emit(AppSettings settings) {
@@ -108,6 +109,13 @@ class FakeSettingsRepository implements SettingsRepository {
     _failIfConfigured();
     appearanceWrites.add(value);
     emit(_latest.copyWith(appearance: value));
+  }
+
+  @override
+  Future<void> setSidebarCollapsed(bool value) async {
+    _failIfConfigured();
+    sidebarCollapsedWrites.add(value);
+    emit(_latest.copyWith(sidebarCollapsed: value));
   }
 
   @override

@@ -72,6 +72,10 @@ class DriftSettingsRepository implements SettingsRepository {
       _put(SettingsKeys.appearance, value.id);
 
   @override
+  Future<void> setSidebarCollapsed(bool value) =>
+      _put(SettingsKeys.sidebarCollapsed, value ? _trueValue : _falseValue);
+
+  @override
   Future<bool> hasStoredValues() async {
     final List<Setting> rows = await (_db.select(
       _db.settings,
@@ -167,6 +171,10 @@ class DriftSettingsRepository implements SettingsRepository {
       appearance:
           Appearance.fromId(values[SettingsKeys.appearance]) ??
           defaults.appearance,
+      sidebarCollapsed: _decodeBool(
+        values[SettingsKeys.sidebarCollapsed],
+        defaults.sidebarCollapsed,
+      ),
     );
   }
 
