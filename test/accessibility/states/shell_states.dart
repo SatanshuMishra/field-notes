@@ -264,6 +264,7 @@ Future<void> _pumpApp(
   WidgetTester tester,
   Widget home, {
   required List<Override> overrides,
+  TargetPlatform platform = TargetPlatform.android,
 }) async {
   tester.view.physicalSize = _noteTenPlusSize;
   tester.view.devicePixelRatio = _noteTenPlusRatio;
@@ -274,7 +275,7 @@ Future<void> _pumpApp(
       overrides: overrides,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: TargetPlatform.android),
+        theme: fieldNotesTheme(platform: platform),
         home: home,
       ),
     ),
@@ -312,6 +313,16 @@ Future<void> _pumpCalendar(WidgetTester tester) async {
     tester,
     Scaffold(body: CalendarScreen(today: _now)),
     overrides: _calendarOverrides(),
+  );
+  await tester.pump();
+}
+
+Future<void> pumpMacCalendar(WidgetTester tester) async {
+  await _pumpApp(
+    tester,
+    Scaffold(body: CalendarScreen(today: _now)),
+    overrides: _calendarOverrides(),
+    platform: TargetPlatform.macOS,
   );
   await tester.pump();
 }

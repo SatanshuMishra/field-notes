@@ -41,8 +41,8 @@ void main() {
       await tester.pump();
       final List<String> labels = labelsInReadingOrder(tester);
       expect(labels, contains('Dismiss month picker'));
-      expect(labels, contains('Back to this week'));
-      expect(labels, contains('Jan'));
+      expect(labels, contains('Back to this month'));
+      expect(labels, contains('January 2026'));
       expect(labels, contains('Previous year'));
       expect(
         labels.where((String label) => label.startsWith('Day 10')),
