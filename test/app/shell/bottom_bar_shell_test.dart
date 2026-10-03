@@ -2,6 +2,7 @@ import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
@@ -9,21 +10,21 @@ import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-
-import '../app_harness.dart';
+import 'package:field_notes/features/streak/streak.dart';
 
 const Key _pageKey = ValueKey<String>('page');
 
 const double _barHeight = 64;
-const double _captureExtent = 52;
-const double _captureRise = 4.25;
-const double _captureCentreDrop = 21.75;
+const double _captureExtent = 46;
 const double _iconSize = 22;
-const double _iconTop = 13;
-const double _labelGap = 3;
+const double _labelGap = 2;
 const double _plusStroke = 2.6;
+
+const Color _sceneInk = Color.fromRGBO(251, 243, 228, 0.82);
+const Color _sceneSelectedInk = Color(0xFFFFD9C9);
 
 BottomBarShell _shell({
   ShellDestination selected = ShellDestination.today,
@@ -40,33 +41,33 @@ BottomBarShell _shell({
   );
 }
 
-Widget _themed(Widget child, Brightness brightness) => MaterialApp(
-  debugShowCheckedModeBanner: false,
-  theme: fieldNotesTheme(
-    platform: TargetPlatform.android,
-    brightness: brightness,
-  ),
-  home: child,
-);
+Widget _app(Widget child, {Brightness brightness = Brightness.light}) =>
+    ProviderScope(
+      key: UniqueKey(),
+      overrides: [
+        streakSummaryProvider.overrideWithValue(
+          const StreakSummary(current: 3, longest: 3),
+        ),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: fieldNotesTheme(
+          platform: TargetPlatform.android,
+          brightness: brightness,
+        ),
+        home: child,
+      ),
+    );
 
 void _phone(WidgetTester tester, {double bottomInset = 0}) {
   tester.view.physicalSize = const Size(1080, 2220);
   tester.view.devicePixelRatio = 3;
   tester.view.padding = FakeViewPadding(bottom: bottomInset * 3);
+  tester.view.viewPadding = FakeViewPadding(bottom: bottomInset * 3);
   addTearDown(tester.view.reset);
 }
 
-bool _isBar(Widget widget) => switch (widget) {
-  DecoratedBox(
-    decoration: BoxDecoration(
-      border: Border(:final BorderSide top, :final BorderSide bottom),
-    ),
-  ) =>
-    top.width == Shapes.outlineWidth && bottom == BorderSide.none,
-  _ => false,
-};
-
-final Finder _bar = find.byWidgetPredicate(_isBar);
+final Finder _bar = find.byType(PhoneBottomBar);
 
 final Finder _capture = find.byKey(const ValueKey<String>('capture-button'));
 
@@ -89,6 +90,16 @@ Finder _iconOf(ShellDestination d) =>
 
 Finder _labelOf(ShellDestination d) =>
     find.descendant(of: _tab(d), matching: find.text(d.label));
+
+Finder get _circle => find.descendant(
+  of: _capture,
+  matching: find.byWidgetPredicate(
+    (Widget widget) =>
+        widget is DecoratedBox &&
+        widget.decoration is BoxDecoration &&
+        (widget.decoration as BoxDecoration).shape == BoxShape.circle,
+  ),
+);
 
 bool _near(Offset a, Offset b) => (a - b).distance < 0.01;
 
@@ -127,22 +138,32 @@ bool _drawsThePlus(Symbol method, List<dynamic> arguments) {
   return true;
 }
 
+Color _expectedInk(
+  FieldNotesColors colors, {
+  required ShellDestination selected,
+  required ShellDestination d,
+}) {
+  final bool overScene = selected == ShellDestination.garden;
+  final bool on = d == selected;
+  return switch ((overScene, on)) {
+    (true, true) => _sceneSelectedInk,
+    (true, false) => _sceneInk,
+    (false, true) => colors.accentInk,
+    (false, false) => colors.mutedDeep,
+  };
+}
+
 void main() {
   group('BottomBarShell', () {
     testWidgets('renders four tabs and the center capture', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        appHarness(_shell(), platform: TargetPlatform.android),
-      );
+      await tester.pumpWidget(_app(_shell()));
 
       for (final ShellDestination d in ShellDestination.primary) {
         expect(find.byKey(ValueKey<String>('tab-${d.name}')), findsOneWidget);
       }
-      expect(
-        find.byKey(const ValueKey<String>('capture-button')),
-        findsOneWidget,
-      );
+      expect(_capture, findsOneWidget);
     });
 
     testWidgets('a tab reports its destination on tap', (
@@ -150,10 +171,7 @@ void main() {
     ) async {
       ShellDestination? picked;
       await tester.pumpWidget(
-        appHarness(
-          _shell(onSelect: (ShellDestination d) => picked = d),
-          platform: TargetPlatform.android,
-        ),
+        _app(_shell(onSelect: (ShellDestination d) => picked = d)),
       );
 
       await tester.tap(find.byKey(const ValueKey<String>('tab-search')));
@@ -164,14 +182,9 @@ void main() {
       WidgetTester tester,
     ) async {
       int captures = 0;
-      await tester.pumpWidget(
-        appHarness(
-          _shell(onCapture: () => captures++),
-          platform: TargetPlatform.android,
-        ),
-      );
+      await tester.pumpWidget(_app(_shell(onCapture: () => captures++)));
 
-      await tester.tap(find.byKey(const ValueKey<String>('capture-button')));
+      await tester.tap(_capture);
       expect(captures, 1);
     });
 
@@ -180,10 +193,7 @@ void main() {
     ) async {
       ShellDestination? picked;
       await tester.pumpWidget(
-        appHarness(
-          _shell(onSelect: (ShellDestination d) => picked = d),
-          platform: TargetPlatform.android,
-        ),
+        _app(_shell(onSelect: (ShellDestination d) => picked = d)),
       );
 
       await tester.tap(find.byKey(const ValueKey<String>('gear-button')));
@@ -191,14 +201,13 @@ void main() {
     });
 
     testWidgets(
-      'the capture button sits 4.25 points above the bar and is tappable '
-      'across its whole circle',
+      'the capture circle sits inside the bar and its whole cell takes the tap',
       (WidgetTester tester) async {
         _phone(tester);
         int captures = 0;
         int pageTaps = 0;
         await tester.pumpWidget(
-          appHarness(
+          _app(
             _shell(
               onCapture: () => captures++,
               body: GestureDetector(
@@ -208,59 +217,40 @@ void main() {
                 child: const SizedBox.expand(),
               ),
             ),
-            platform: TargetPlatform.android,
           ),
         );
 
         final Rect bar = tester.getRect(_bar);
-        final Rect capture = tester.getRect(_capture);
-        expect(capture.size, const Size.square(_captureExtent));
+        final Rect circle = tester.getRect(_circle);
+        expect(circle.size, const Size.square(_captureExtent));
         expect(
-          capture.top,
-          moreOrLessEquals(bar.top - _captureRise, epsilon: 0.01),
+          circle.center.dx,
+          moreOrLessEquals(bar.center.dx, epsilon: 0.01),
         );
         expect(
-          capture.center.dy,
-          moreOrLessEquals(bar.top + _captureCentreDrop, epsilon: 0.01),
+          circle.center.dy,
+          moreOrLessEquals(bar.center.dy, epsilon: 0.01),
         );
-        expect(
-          capture.center.dx,
-          moreOrLessEquals(bar.left + bar.width / 2, epsilon: 0.01),
-        );
-        expect(
-          tester.getRect(find.byKey(_pageKey)).bottom,
-          moreOrLessEquals(bar.top, epsilon: 0.01),
-        );
+        expect(circle.top, greaterThan(bar.top));
+        expect(circle.bottom, lessThan(bar.bottom));
+        expect(tester.getRect(find.byKey(_pageKey)).bottom, 740);
 
-        final double reach = _captureExtent / 2 - 2;
-        final List<Offset> onCircle = <Offset>[
-          capture.center + Offset(0, -reach),
-          capture.center + Offset(-reach, 0),
-          capture.center + Offset(reach, 0),
-          capture.center + Offset(0, reach),
-        ];
-        expect(onCircle.first.dy, lessThan(bar.top));
-        for (final Offset point in onCircle) {
+        final Rect cell = tester.getRect(_capture);
+        expect(cell.top, bar.top);
+        expect(cell.bottom, bar.bottom);
+        for (final Offset point in <Offset>[
+          circle.center,
+          Offset(cell.left + 2, bar.top + 2),
+          Offset(cell.right - 2, bar.bottom - 2),
+        ]) {
           await tester.tapAt(point);
         }
-        expect(captures, onCircle.length);
+        expect(captures, 3);
         expect(pageTaps, 0);
 
-        await tester.tapAt(Offset(capture.center.dx - 40, bar.top - 2));
+        await tester.tapAt(Offset(circle.center.dx, bar.top - 2));
         expect(pageTaps, 1);
-        expect(captures, onCircle.length);
-
-        final Offset besideTheCircle = Offset(
-          capture.center.dx - 20,
-          bar.top - 1,
-        );
-        expect(
-          (besideTheCircle - capture.center).distance,
-          greaterThan(_captureExtent / 2),
-        );
-        await tester.tapAt(besideTheCircle);
-        expect(pageTaps, 2);
-        expect(captures, onCircle.length);
+        expect(captures, 3);
       },
     );
 
@@ -268,9 +258,7 @@ void main() {
       WidgetTester tester,
     ) async {
       _phone(tester);
-      await tester.pumpWidget(
-        appHarness(_shell(), platform: TargetPlatform.android),
-      );
+      await tester.pumpWidget(_app(_shell()));
 
       final Finder plus = find.descendant(
         of: _capture,
@@ -282,7 +270,7 @@ void main() {
       expect(icon.color.toARGB32(), Palette.onAccent.toARGB32());
       expect(tester.getSize(plus), const Size.square(_iconSize));
       expect(
-        (tester.getCenter(plus) - tester.getCenter(_capture)).distance,
+        (tester.getCenter(plus) - tester.getCenter(_circle)).distance,
         lessThan(0.01),
       );
       expect(plus, paints..something(_drawsThePlus));
@@ -300,7 +288,7 @@ void main() {
         for (final Brightness brightness in Brightness.values) {
           for (final ShellDestination selected in ShellDestination.primary) {
             await tester.pumpWidget(
-              _themed(_shell(selected: selected), brightness),
+              _app(_shell(selected: selected), brightness: brightness),
             );
             final FieldNotesColors colors = _colors(tester);
             final Rect bar = tester.getRect(_bar);
@@ -318,15 +306,16 @@ void main() {
                 const Size.square(_iconSize),
                 reason: reason,
               );
+              final Rect iconRect = tester.getRect(icon);
+              final Rect label = tester.getRect(_labelOf(d));
               expect(
-                tester.getRect(icon).top,
-                moreOrLessEquals(bar.top + _iconTop, epsilon: 0.01),
+                iconRect.top - bar.top,
+                moreOrLessEquals(bar.bottom - label.bottom, epsilon: 0.5),
                 reason: reason,
               );
               expect(
                 drawn.color.toARGB32(),
-                (d == selected ? colors.accentInk : colors.mutedDeep)
-                    .toARGB32(),
+                _expectedInk(colors, selected: selected, d: d).toARGB32(),
                 reason: reason,
               );
             }
@@ -346,7 +335,7 @@ void main() {
       },
     );
 
-    testWidgets('tab labels are twelve-point medium on one line', (
+    testWidgets('tab labels are eleven-point semibold on one line', (
       WidgetTester tester,
     ) async {
       tester.view.physicalSize = const Size(360, 640);
@@ -355,15 +344,12 @@ void main() {
       tester.platformDispatcher.textScaleFactorTestValue = 1.3;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
       await tester.pumpWidget(
-        appHarness(
-          _shell(selected: ShellDestination.calendar),
-          platform: TargetPlatform.android,
-        ),
+        _app(_shell(selected: ShellDestination.calendar)),
       );
 
       final Rect bar = tester.getRect(_bar);
-      expect(bar.width, 360);
-      expect(bar.height, moreOrLessEquals(_barHeight, epsilon: 0.01));
+      expect(bar.width, 360 - 24);
+      expect(bar.height, _barHeight);
       final double column = bar.width / 5;
       for (final ShellDestination d in ShellDestination.primary) {
         final Finder label = _labelOf(d);
@@ -376,18 +362,9 @@ void main() {
         );
         final TextStyle style = paragraph.text.style!;
         expect(style.fontFamily, TypographyTokens.sans, reason: d.name);
-        expect(style.fontSize, 12, reason: d.name);
-        expect(style.fontWeight, FontWeight.w500, reason: d.name);
-        expect(style.height, isNull, reason: d.name);
-        final Rect ring = tester.getRect(
-          find.descendant(of: _tab(d), matching: find.byType(FocusRing)),
-        );
-        expect(
-          ring.width,
-          greaterThanOrEqualTo(tester.getRect(label).width + 8 - 0.01),
-          reason: d.name,
-        );
-        expect(ring.right - ring.left, lessThanOrEqualTo(column + 0.01));
+        expect(style.fontSize, 11, reason: d.name);
+        expect(style.fontWeight, FontWeight.w600, reason: d.name);
+        expect(paragraph.didExceedMaxLines, isFalse, reason: d.name);
         expect(
           style.color!.toARGB32(),
           tester.widget<NavIcon>(_iconOf(d)).color.toARGB32(),
@@ -401,29 +378,14 @@ void main() {
           ),
           reason: d.name,
         );
-
-        final TextPainter oneLine = TextPainter(
-          text: TextSpan(text: d.label, style: style),
-          textScaler: paragraph.textScaler,
-          textDirection: TextDirection.ltr,
-          maxLines: 1,
-        )..layout();
-        addTearDown(oneLine.dispose);
-        expect(paragraph.textScaler.scale(12), moreOrLessEquals(15.6));
-        expect(paragraph.didExceedMaxLines, isFalse, reason: d.name);
         expect(
-          tester.getSize(label).height,
-          moreOrLessEquals(oneLine.height, epsilon: 0.01),
-          reason: d.name,
-        );
-        expect(
-          tester.getSize(label).width,
-          moreOrLessEquals(oneLine.width, epsilon: 0.01),
+          tester.getRect(label).bottom,
+          lessThanOrEqualTo(bar.bottom),
           reason: d.name,
         );
         expect(
           tester.getRect(label).width,
-          lessThanOrEqualTo(column - 8 + 0.01),
+          lessThanOrEqualTo(column + 0.01),
           reason: d.name,
         );
         final int index = ShellDestination.primary.indexOf(d);
@@ -443,8 +405,10 @@ void main() {
       _phone(tester);
       final SemanticsHandle handle = tester.ensureSemantics();
       await tester.pumpWidget(
-        _themed(
-          Scaffold(
+        MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: fieldNotesTheme(platform: TargetPlatform.android),
+          home: Scaffold(
             body: Align(
               alignment: Alignment.bottomCenter,
               child: PhoneBottomBar(
@@ -453,7 +417,6 @@ void main() {
               ),
             ),
           ),
-          Brightness.light,
         ),
       );
 
@@ -474,10 +437,11 @@ void main() {
         );
         expect(find.bySemanticsLabel(d.label), findsNothing, reason: d.name);
       }
+      expect(find.bySemanticsLabel('New entry'), findsNothing);
       handle.dispose();
     });
 
-    testWidgets('the five items sit centred in five equal columns', (
+    testWidgets('the five cells sit centred in five equal columns', (
       WidgetTester tester,
     ) async {
       const double inset = 24;
@@ -485,24 +449,14 @@ void main() {
       final SemanticsHandle handle = tester.ensureSemantics();
       ShellDestination? picked;
       await tester.pumpWidget(
-        appHarness(
-          _shell(onSelect: (ShellDestination d) => picked = d),
-          platform: TargetPlatform.android,
-        ),
+        _app(_shell(onSelect: (ShellDestination d) => picked = d)),
       );
 
-      final FieldNotesColors colors = _colors(tester);
       final Rect bar = tester.getRect(_bar);
-      expect(bar.left, 0);
-      expect(bar.width, 360);
-      expect(bar.bottom, 740);
-      expect(bar.height, moreOrLessEquals(_barHeight + inset, epsilon: 0.01));
-      final BoxDecoration decoration =
-          tester.widget<DecoratedBox>(_bar).decoration as BoxDecoration;
-      expect(decoration.color!.toARGB32(), colors.panelTop.toARGB32());
-      final BorderSide top = (decoration.border! as Border).top;
-      expect(top.width, Shapes.outlineWidth);
-      expect(top.color.toARGB32(), colors.line.toARGB32());
+      expect(bar.left, 12);
+      expect(bar.right, 348);
+      expect(bar.bottom, 740 - inset - 8);
+      expect(bar.height, _barHeight);
 
       final double column = bar.width / 5;
       for (final (int index, Finder item) in _items.indexed) {
@@ -512,6 +466,9 @@ void main() {
           moreOrLessEquals(centre, epsilon: 0.01),
           reason: 'item ${index + 1}',
         );
+        final Rect area = _semanticRect(tester, item);
+        expect(area.height, greaterThanOrEqualTo(48), reason: 'item $index');
+        expect(area.width, greaterThanOrEqualTo(44), reason: 'item $index');
       }
       for (final (int index, ShellDestination d)
           in ShellDestination.primary.indexed) {
@@ -522,9 +479,6 @@ void main() {
           moreOrLessEquals(left + column / 2, epsilon: 0.01),
           reason: d.name,
         );
-        final Rect area = _semanticRect(tester, _tab(d));
-        expect(area.width, greaterThanOrEqualTo(47.99), reason: d.name);
-        expect(area.height, greaterThanOrEqualTo(47.99), reason: d.name);
         for (final double x in <double>[left + 1, left + column - 1]) {
           picked = null;
           await tester.tapAt(Offset(x, bar.top + _barHeight / 2));
@@ -534,46 +488,74 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('the capture button casts the two-point hard shadow', (
+    testWidgets('the selected tab sits on the soft glass pill', (
       WidgetTester tester,
     ) async {
       _phone(tester);
       for (final Brightness brightness in Brightness.values) {
-        await tester.pumpWidget(_themed(_shell(), brightness));
+        for (final ShellDestination selected in ShellDestination.primary) {
+          await tester.pumpWidget(
+            _app(_shell(selected: selected), brightness: brightness),
+          );
+          final GlassTone tone = selected == ShellDestination.garden
+              ? GlassTone.scene
+              : GlassTone.paper;
+          final GlassSurface glass = tester.widget<GlassSurface>(
+            find.descendant(of: _bar, matching: find.byType(GlassSurface)),
+          );
+          expect(glass.tone, tone, reason: selected.name);
+          final Color pill = tone.pillFor(brightness);
+          for (final ShellDestination d in ShellDestination.primary) {
+            final Iterable<BoxDecoration> fills = tester
+                .widgetList<DecoratedBox>(
+                  find.descendant(
+                    of: _tab(d),
+                    matching: find.byType(DecoratedBox),
+                  ),
+                )
+                .map((DecoratedBox box) => box.decoration)
+                .whereType<BoxDecoration>()
+                .where((BoxDecoration decoration) => decoration.color != null);
+            expect(
+              fills.map((BoxDecoration fill) => fill.color!.toARGB32()),
+              d == selected ? <int>[pill.toARGB32()] : isEmpty,
+              reason: '${brightness.name} ${selected.name}: ${d.name}',
+            );
+            if (d == selected) {
+              expect(
+                fills.single.borderRadius,
+                const BorderRadius.all(Radius.circular(26)),
+              );
+            }
+          }
+        }
+      }
+    });
+
+    testWidgets('the capture button casts the soft terracotta shadow', (
+      WidgetTester tester,
+    ) async {
+      _phone(tester);
+      for (final Brightness brightness in Brightness.values) {
+        await tester.pumpWidget(_app(_shell(), brightness: brightness));
 
         final FieldNotesColors colors = _colors(tester);
-        final BoxDecoration circle = tester
-            .widgetList<DecoratedBox>(
-              find.descendant(
-                of: _capture,
-                matching: find.byType(DecoratedBox),
-              ),
-            )
-            .map((DecoratedBox box) => box.decoration)
-            .whereType<BoxDecoration>()
-            .singleWhere(
-              (BoxDecoration decoration) => decoration.shape == BoxShape.circle,
-            );
+        final BoxDecoration circle =
+            tester.widget<DecoratedBox>(_circle).decoration as BoxDecoration;
         expect(circle.color!.toARGB32(), Palette.coral.toARGB32());
         final BorderSide outline = (circle.border! as Border).top;
         expect(outline.width, Shapes.outlineWidth);
         expect(outline.color.toARGB32(), colors.line.toARGB32());
 
-        final List<BoxShadow> emphasis = tester
-            .element(_capture)
-            .shadows
-            .emphasis;
         final BoxShadow shadow = circle.boxShadow!.single;
-        expect(shadow.offset, const Offset(2, 2), reason: brightness.name);
-        expect(shadow.blurRadius, 0, reason: brightness.name);
-        expect(shadow.spreadRadius, 0, reason: brightness.name);
+        expect(shadow.offset, const Offset(0, 4), reason: brightness.name);
+        expect(shadow.blurRadius, 12, reason: brightness.name);
+        expect(shadow.spreadRadius, -4, reason: brightness.name);
         expect(
           shadow.color.toARGB32(),
-          colors.shadow.toARGB32(),
+          const Color.fromRGBO(120, 50, 30, 0.55).toARGB32(),
           reason: brightness.name,
         );
-        expect(shadow.offset, emphasis.single.offset);
-        expect(shadow.color.toARGB32(), emphasis.single.color.toARGB32());
       }
     });
   });

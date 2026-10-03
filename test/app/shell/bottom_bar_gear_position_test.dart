@@ -17,8 +17,11 @@ void main() {
     final double width =
         tester.view.physicalSize.width / tester.view.devicePixelRatio;
     final Rect gear = tester.getRect(find.byIcon(Icons.settings_outlined));
-    expect(gear.top, 16);
-    expect(width - gear.right, moreOrLessEquals(16, epsilon: 0.01));
-    expect(tester.getRect(find.text('field notes')).top, 18);
+    expect(gear.size, const Size.square(22));
+    expect(gear.center.dy, moreOrLessEquals(22, epsilon: 0.01));
+    expect(width - gear.right, moreOrLessEquals(19, epsilon: 0.01));
+    final Rect wordmark = tester.getRect(find.text('field notes'));
+    expect(wordmark.left, 18);
+    expect(wordmark.center.dy, moreOrLessEquals(22, epsilon: 0.01));
   });
 }

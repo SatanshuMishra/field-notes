@@ -1,7 +1,9 @@
 import 'dart:async';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/features/streak/streak.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../design/flowers/flowers.dart';
 import '../../design/icons/nav_icons.dart';
@@ -13,36 +15,154 @@ import 'keep_focus_in_view.dart';
 import 'shell_destination.dart';
 import 'window_chrome.dart';
 
-const double shellSidebarWidth = 216;
+const double shellSidebarOpenWidth = 176;
+const double shellSidebarCollapsedWidth = 68;
+const Duration shellSidebarResize = Duration(milliseconds: 250);
+const Cubic shellSidebarCurve = Cubic(0.2, 0.8, 0.2, 1);
 
-class SidebarShell extends StatelessWidget {
+const String sidebarCollapseLabel = 'Collapse sidebar (⌘\\)';
+const String sidebarExpandLabel = 'Expand sidebar (⌘\\)';
+
+const Key sidebarRailKey = ValueKey<String>('sidebar-rail');
+const Key sidebarToggleKey = ValueKey<String>('sidebar-toggle');
+
+const double _railPaddingVertical = 18;
+const double _railPaddingHorizontal = 12;
+const double _headHeight = 34;
+const double _headGap = 20;
+const double _headFlower = 30;
+const double _headWordmarkGap = 8;
+const double _headWordmarkInset = 4;
+const double _headWordmarkSize = 22;
+const double _navItemHeight = 40;
+const double _navItemGap = 6;
+const double _navIconSize = 18;
+const double _navLabelGap = 10;
+const double _streakGap = 12;
+const double _footerGap = 8;
+
+const double _toggleExtent = 26;
+const double _toggleTop = 22;
+const double _toggleOpenInset = 10;
+const double _toggleOverhang = 13;
+const double _toggleIconExtent = 16;
+const double _toggleIconStroke = 2.2;
+const double _toggleEdgeWidth = 1;
+
+const BorderRadius _navItemRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
+const BorderRadius _toggleRadius = BorderRadius.all(
+  Radius.circular(_toggleExtent / 2),
+);
+
+const String _soundOnLabel = 'Sound effects on';
+const String _soundOffLabel = 'Sound effects off';
+
+double _toggleLeft({required bool collapsed}) => collapsed
+    ? shellSidebarCollapsedWidth + _toggleOverhang - _toggleExtent
+    : shellSidebarOpenWidth - _toggleOpenInset - _toggleExtent;
+
+class SidebarShell extends StatefulWidget {
   const SidebarShell({
     super.key,
     required this.destinations,
     required this.selected,
     required this.onSelect,
     required this.onSound,
-    required this.streak,
     required this.body,
+    this.streak,
     this.soundOn = true,
     this.obscured = false,
     this.appearanceToggle,
+    this.collapsed = false,
+    this.onCollapsedChanged,
   });
 
   final List<ShellDestination> destinations;
   final ShellDestination selected;
   final ValueChanged<ShellDestination> onSelect;
   final VoidCallback onSound;
-  final Widget streak;
   final Widget body;
+  final Widget? streak;
   final bool soundOn;
   final bool obscured;
   final Widget? appearanceToggle;
+  final bool collapsed;
+  final ValueChanged<bool>? onCollapsedChanged;
+
+  @override
+  State<SidebarShell> createState() => _SidebarShellState();
+}
+
+class _SidebarShellState extends State<SidebarShell> {
+  final FocusNode _keys = FocusNode(
+    debugLabel: 'sidebar-shortcuts',
+    skipTraversal: true,
+  );
+
+  late final Map<Type, Action<Intent>> _actions = <Type, Action<Intent>>{
+    _ToggleSidebarIntent: CallbackAction<_ToggleSidebarIntent>(
+      onInvoke: (_ToggleSidebarIntent _) {
+        _toggle();
+        return null;
+      },
+    ),
+  };
+
+  bool get _toggles => widget.onCollapsedChanged != null;
+
+  @override
+  void initState() {
+    super.initState();
+    FocusManager.instance.addListener(_onFocusChanged);
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) => _reclaim());
+  }
+
+  @override
+  void didUpdateWidget(SidebarShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.obscured && !widget.obscured) {
+      WidgetsBinding.instance.addPostFrameCallback((Duration _) => _reclaim());
+    }
+  }
+
+  @override
+  void dispose() {
+    FocusManager.instance.removeListener(_onFocusChanged);
+    _keys.dispose();
+    super.dispose();
+  }
+
+  bool get _focusFellToScope {
+    final FocusNode? focused = FocusManager.instance.primaryFocus;
+    return focused == null || identical(focused, _keys.enclosingScope);
+  }
+
+  bool get _mayReclaim =>
+      mounted && _toggles && !widget.obscured && _focusFellToScope;
+
+  void _reclaim() {
+    if (_mayReclaim) {
+      _keys.requestFocus();
+    }
+  }
+
+  void _onFocusChanged() {
+    if (_mayReclaim) {
+      scheduleMicrotask(_reclaim);
+    }
+  }
+
+  void _toggle() {
+    widget.onCollapsedChanged?.call(!widget.collapsed);
+  }
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return KeepFocusInView(
+    final bool obscured = widget.obscured;
+    final Widget shell = KeepFocusInView(
       child: Scaffold(
         backgroundColor: colors.panelTop,
         body: Column(
@@ -59,18 +179,7 @@ class SidebarShell extends StatelessWidget {
                       decoration: _panelWash(colors),
                       child: DecoratedBox(
                         decoration: _panelGlow,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            FocusTraversalGroup(child: _rail(context)),
-                            DashedDivider(
-                              axis: Axis.vertical,
-                              thickness: 1.0,
-                              color: colors.ink22,
-                            ),
-                            Expanded(child: FocusTraversalGroup(child: body)),
-                          ],
-                        ),
+                        child: _panel(context),
                       ),
                     ),
                   ),
@@ -81,11 +190,70 @@ class SidebarShell extends StatelessWidget {
         ),
       ),
     );
+    if (!_toggles) {
+      return shell;
+    }
+    return Shortcuts(
+      includeSemantics: false,
+      shortcuts: <ShortcutActivator, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.backslash):
+            const _ToggleSidebarIntent(),
+      },
+      child: Actions(
+        actions: _actions,
+        child: Focus(focusNode: _keys, includeSemantics: false, child: shell),
+      ),
+    );
+  }
+
+  Widget _panel(BuildContext context) {
+    final bool collapsed = widget.collapsed;
+    return FocusTraversalGroup(
+      policy: OrderedTraversalPolicy(),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              FocusTraversalOrder(
+                order: const NumericFocusOrder(0),
+                child: FocusTraversalGroup(child: _rail(context)),
+              ),
+              DashedDivider(
+                axis: Axis.vertical,
+                thickness: 1.0,
+                color: context.colors.ink22,
+              ),
+              Expanded(
+                child: FocusTraversalOrder(
+                  order: const NumericFocusOrder(2),
+                  child: FocusTraversalGroup(child: widget.body),
+                ),
+              ),
+            ],
+          ),
+          if (_toggles)
+            AnimatedPositioned(
+              duration: shellSidebarResize,
+              curve: shellSidebarCurve,
+              top: _toggleTop,
+              left: _toggleLeft(collapsed: collapsed),
+              width: _toggleExtent,
+              height: _toggleExtent,
+              child: FocusTraversalOrder(
+                order: const NumericFocusOrder(1),
+                child: _SidebarToggle(collapsed: collapsed, onPressed: _toggle),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _titleBar(BuildContext context) {
     final Widget bar = _dragBar(context);
-    final Widget? toggle = appearanceToggle;
+    final Widget? toggle = widget.appearanceToggle;
     if (toggle == null) {
       return bar;
     }
@@ -140,33 +308,76 @@ class SidebarShell extends StatelessWidget {
   }
 
   Widget _rail(BuildContext context) {
-    return SizedBox(
-      width: shellSidebarWidth,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                const FlowerBloom(kind: FlowerKind.peony, size: 32),
-                const SizedBox(width: 9),
-                Text('field\nnotes', style: context.textStyles.wordmarkAccent),
-              ],
+    final bool collapsed = widget.collapsed;
+    final double width = collapsed
+        ? shellSidebarCollapsedWidth
+        : shellSidebarOpenWidth;
+    return AnimatedContainer(
+      key: sidebarRailKey,
+      duration: shellSidebarResize,
+      curve: shellSidebarCurve,
+      width: width,
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: AlignmentDirectional.topStart,
+          minWidth: width,
+          maxWidth: width,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: _railPaddingVertical,
+              horizontal: _railPaddingHorizontal,
             ),
-            const SizedBox(height: 24),
-            Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                for (final ShellDestination d in destinations)
+                _head(context),
+                const SizedBox(height: _headGap),
+                for (final (int index, ShellDestination d)
+                    in widget.destinations.indexed) ...<Widget>[
+                  if (index > 0) const SizedBox(height: _navItemGap),
                   _railItem(context, d),
+                ],
+                const Spacer(),
+                widget.streak ??
+                    StreakPill(
+                      form: collapsed
+                          ? StreakPillForm.rail
+                          : StreakPillForm.sidebar,
+                    ),
+                const SizedBox(height: _streakGap),
+                _footer(context),
               ],
             ),
-            const Spacer(),
-            streak,
-            const SizedBox(height: 14),
-            _footer(context),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _head(BuildContext context) {
+    final bool collapsed = widget.collapsed;
+    return SizedBox(
+      height: _headHeight,
+      child: Padding(
+        padding: EdgeInsets.only(left: collapsed ? 0 : _headWordmarkInset),
+        child: Row(
+          mainAxisAlignment: collapsed
+              ? MainAxisAlignment.center
+              : MainAxisAlignment.start,
+          children: <Widget>[
+            const FlowerBloom(kind: FlowerKind.peony, size: _headFlower),
+            if (!collapsed) ...<Widget>[
+              const SizedBox(width: _headWordmarkGap),
+              Expanded(
+                child: Text(
+                  'field\nnotes',
+                  overflow: TextOverflow.visible,
+                  style: context.textStyles.wordmarkAccent.copyWith(
+                    fontSize: _headWordmarkSize,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -175,77 +386,69 @@ class SidebarShell extends StatelessWidget {
 
   Widget _footer(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final bool settingsSelected = selected == ShellDestination.settings;
+    final bool settingsSelected = widget.selected == ShellDestination.settings;
+    final bool soundOn = widget.soundOn;
+    final List<Widget> buttons = <Widget>[
+      IconStickerButton(
+        key: const ValueKey<String>('settings-button'),
+        glyph: IconStickerGlyph.gear,
+        glyphColor: settingsSelected ? Palette.onAccent : colors.ink,
+        background: settingsSelected ? Palette.coral : colors.cardLight,
+        semanticLabel: ShellDestination.settings.label,
+        selected: settingsSelected,
+        onPressed: () => widget.onSelect(ShellDestination.settings),
+      ),
+      IconStickerButton(
+        key: const ValueKey<String>('sound-button'),
+        glyph: soundOn ? IconStickerGlyph.soundOn : IconStickerGlyph.soundOff,
+        glyphColor: colors.ink,
+        background: soundOn ? colors.cardLight : colors.cardWarm,
+        semanticLabel: soundOn ? _soundOnLabel : _soundOffLabel,
+        onPressed: widget.onSound,
+      ),
+    ];
+    if (widget.collapsed) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          buttons.first,
+          const SizedBox(height: _footerGap),
+          buttons.last,
+        ],
+      );
+    }
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        IconStickerButton(
-          key: const ValueKey<String>('settings-button'),
-          glyph: IconStickerGlyph.gear,
-          glyphColor: settingsSelected ? Palette.onAccent : colors.ink,
-          background: settingsSelected ? Palette.coral : colors.cardLight,
-          semanticLabel: ShellDestination.settings.label,
-          selected: settingsSelected,
-          onPressed: () => onSelect(ShellDestination.settings),
-        ),
+        buttons.first,
         const SizedBox(width: _footerGap),
-        IconStickerButton(
-          key: const ValueKey<String>('sound-button'),
-          glyph: soundOn ? IconStickerGlyph.soundOn : IconStickerGlyph.soundOff,
-          glyphColor: colors.ink,
-          background: soundOn ? colors.cardLight : colors.cardWarm,
-          semanticLabel: soundOn ? _soundOnLabel : _soundOffLabel,
-          onPressed: onSound,
-        ),
-        const SizedBox(width: _footerGap),
-        Flexible(child: _syncCaption(context)),
-      ],
-    );
-  }
-
-  Widget _syncCaption(BuildContext context) {
-    final FieldNotesTextStyles textStyles = context.textStyles;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          _syncPrimaryCopy,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: textStyles.syncPrimarySans.copyWith(height: _syncLineHeight),
-        ),
-        Text(
-          _syncSecondaryCopy,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: textStyles.syncSecondarySans.copyWith(height: _syncLineHeight),
-        ),
+        buttons.last,
       ],
     );
   }
 
   Widget _railItem(BuildContext context, ShellDestination d) {
     final FieldNotesShadows shadows = context.shadows;
-    final bool isSelected = d == selected;
+    final bool collapsed = widget.collapsed;
+    final bool isSelected = d == widget.selected;
     final Color foreground = isSelected
         ? Palette.onAccent
         : context.colors.inkSoft;
     final NavGlyph? glyph = d.glyph;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Semantics(
-        button: true,
-        selected: isSelected,
-        label: d.label,
-        child: GestureDetector(
-          key: ValueKey<String>('rail-${d.name}'),
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onSelect(d),
-          child: FocusRing(
-            onPressed: () => onSelect(d),
-            borderRadius: _navItemRadius,
-            child: ExcludeSemantics(
+    void select() => widget.onSelect(d);
+    final Widget item = Semantics(
+      button: true,
+      selected: isSelected,
+      label: d.label,
+      child: GestureDetector(
+        key: ValueKey<String>('rail-${d.name}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: select,
+        child: FocusRing(
+          onPressed: select,
+          borderRadius: _navItemRadius,
+          child: ExcludeSemantics(
+            child: SizedBox(
+              height: _navItemHeight,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: isSelected ? Palette.coral : null,
@@ -254,24 +457,123 @@ class SidebarShell extends StatelessWidget {
                   boxShadow: isSelected ? shadows.emphasis : null,
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 9,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: collapsed ? 0 : _railPaddingHorizontal,
                   ),
                   child: Row(
+                    mainAxisAlignment: collapsed
+                        ? MainAxisAlignment.center
+                        : MainAxisAlignment.start,
                     children: <Widget>[
                       if (glyph == null)
-                        Icon(d.icon, size: 18, color: foreground)
+                        Icon(d.icon, size: _navIconSize, color: foreground)
                       else
-                        NavIcon(glyph: glyph, color: foreground, size: 18),
-                      const SizedBox(width: 10),
-                      Text(
-                        d.label,
-                        style: context.textStyles.navLabelSans.copyWith(
+                        NavIcon(
+                          glyph: glyph,
                           color: foreground,
+                          size: _navIconSize,
+                        ),
+                      if (!collapsed) ...<Widget>[
+                        const SizedBox(width: _navLabelGap),
+                        Flexible(
+                          child: Text(
+                            d.label,
+                            maxLines: 1,
+                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.navLabelSans.copyWith(
+                              color: foreground,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (!collapsed) {
+      return item;
+    }
+    return Tooltip(message: d.label, excludeFromSemantics: true, child: item);
+  }
+}
+
+class _ToggleSidebarIntent extends Intent {
+  const _ToggleSidebarIntent();
+}
+
+class _SidebarToggle extends StatefulWidget {
+  const _SidebarToggle({required this.collapsed, required this.onPressed});
+
+  final bool collapsed;
+  final VoidCallback onPressed;
+
+  @override
+  State<_SidebarToggle> createState() => _SidebarToggleState();
+}
+
+class _SidebarToggleState extends State<_SidebarToggle> {
+  bool _hovered = false;
+
+  void _hover(bool hovered) {
+    if (hovered != _hovered) {
+      setState(() => _hovered = hovered);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesColors colors = context.colors;
+    final bool collapsed = widget.collapsed;
+    final String label = collapsed ? sidebarExpandLabel : sidebarCollapseLabel;
+    final Color fill = _hovered
+        ? colors.ink08
+        : collapsed
+        ? colors.cardWarm
+        : Colors.transparent;
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (PointerEnterEvent _) => _hover(true),
+          onExit: (PointerExitEvent _) => _hover(false),
+          child: GestureDetector(
+            key: sidebarToggleKey,
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onPressed,
+            child: FocusRing(
+              onPressed: widget.onPressed,
+              borderRadius: _toggleRadius,
+              child: ExcludeSemantics(
+                child: SizedBox.square(
+                  dimension: _toggleExtent,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: fill,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: collapsed ? colors.ink25 : Colors.transparent,
+                        width: _toggleEdgeWidth,
+                      ),
+                    ),
+                    child: Center(
+                      child: CustomPaint(
+                        size: const Size.square(_toggleIconExtent),
+                        painter: SidebarChevronPainter(
+                          pointsBack: !collapsed,
+                          color: colors.mutedDeep,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -283,16 +585,44 @@ class SidebarShell extends StatelessWidget {
   }
 }
 
-const BorderRadius _navItemRadius = BorderRadius.all(
-  Radius.circular(Shapes.radiusControl),
-);
+class SidebarChevronPainter extends CustomPainter {
+  const SidebarChevronPainter({required this.pointsBack, required this.color});
 
-const double _footerGap = 9;
-const double _syncLineHeight = 1.15;
-const String _syncPrimaryCopy = 'Stored locally';
-const String _syncSecondaryCopy = 'on this device only';
-const String _soundOnLabel = 'Sound effects on';
-const String _soundOffLabel = 'Sound effects off';
+  final bool pointsBack;
+  final Color color;
+
+  static const double viewBox = 24;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.shortestSide / viewBox);
+    final Path chevron = pointsBack
+        ? (Path()
+            ..moveTo(15, 5)
+            ..lineTo(8, 12)
+            ..lineTo(15, 19))
+        : (Path()
+            ..moveTo(9, 5)
+            ..lineTo(16, 12)
+            ..lineTo(9, 19));
+    canvas.drawPath(
+      chevron,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = _toggleIconStroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round
+        ..isAntiAlias = true,
+    );
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(SidebarChevronPainter oldDelegate) =>
+      oldDelegate.pointsBack != pointsBack || oldDelegate.color != color;
+}
 
 const double _panelGlowBaseRadius = 0.5;
 const double _panelGlowExtentX = 1.2;

@@ -14,6 +14,61 @@ Color? _surface(WidgetTester tester) {
   return tester.widget<StickerCard>(find.byType(StickerCard)).surface;
 }
 
+class _Lifting extends StatefulWidget {
+  const _Lifting({required this.extra});
+
+  final double extra;
+
+  @override
+  State<_Lifting> createState() => _LiftingState();
+}
+
+class _LiftingState extends State<_Lifting> {
+  late final ToastLift _lift;
+
+  @override
+  void initState() {
+    super.initState();
+    _lift = registerToastLift(widget.extra);
+  }
+
+  @override
+  void dispose() {
+    _lift.remove();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
+Widget _composeApp({required TargetPlatform platform, required Widget home}) {
+  return MaterialApp(
+    theme: ThemeData(platform: platform),
+    home: Column(
+      children: <Widget>[
+        home,
+        Builder(
+          builder: (BuildContext context) => GestureDetector(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (BuildContext routeContext) => Center(
+                  child: GestureDetector(
+                    onTap: () =>
+                        showTransientToast(routeContext, 'Saved to Today'),
+                    child: const Text('save'),
+                  ),
+                ),
+              ),
+            ),
+            child: const Text('compose'),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 class _AnchoredBand extends StatelessWidget {
   const _AnchoredBand({
     required this.anchor,
@@ -47,8 +102,9 @@ class _AnchoredBand extends StatelessWidget {
 
 void main() {
   group('Toast', () {
-    testWidgets('renders its message on a sticker surface',
-        (WidgetTester tester) async {
+    testWidgets('renders its message on a sticker surface', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         feedbackHarness(const Toast(message: 'Recording paused')),
       );
@@ -58,8 +114,7 @@ void main() {
       expect(_surface(tester), FieldNotesColors.light.cardBright);
     });
 
-    testWidgets('honours a custom surface colour',
-        (WidgetTester tester) async {
+    testWidgets('honours a custom surface colour', (WidgetTester tester) async {
       await tester.pumpWidget(
         feedbackHarness(
           Toast(message: 'Saved', surface: FieldNotesColors.light.cardWarm),
@@ -69,8 +124,9 @@ void main() {
       expect(_surface(tester), FieldNotesColors.light.cardWarm);
     });
 
-    testWidgets('carries a trailing action beside the message',
-        (WidgetTester tester) async {
+    testWidgets('carries a trailing action beside the message', (
+      WidgetTester tester,
+    ) async {
       int undos = 0;
       await tester.pumpWidget(
         feedbackHarness(
@@ -92,8 +148,9 @@ void main() {
       expect(undos, 1);
     });
 
-    testWidgets('the action is a 48dp target announced as a button',
-        (WidgetTester tester) async {
+    testWidgets('the action is a 48dp target announced as a button', (
+      WidgetTester tester,
+    ) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
       await tester.pumpWidget(
         feedbackHarness(
@@ -117,11 +174,10 @@ void main() {
       semantics.dispose();
     });
 
-    testWidgets('without an action it renders no action target',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        feedbackHarness(const Toast(message: 'Saved')),
-      );
+    testWidgets('without an action it renders no action target', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(feedbackHarness(const Toast(message: 'Saved')));
 
       expect(find.byType(GestureDetector), findsNothing);
     });
@@ -173,20 +229,24 @@ void main() {
     });
 
     testWidgets(
-        'sits just above the keyboard without stacking the navigation inset '
-        'on it', (WidgetTester tester) async {
-      await showOnLandscapePhone(
-        tester,
-        surface: const Size(844, 320),
-        statusBar: 24,
-      );
+      'sits just above the keyboard without stacking the navigation inset '
+      'on it',
+      (WidgetTester tester) async {
+        await showOnLandscapePhone(
+          tester,
+          surface: const Size(844, 320),
+          statusBar: 24,
+        );
 
-      final Rect toast = tester.getRect(find.text('Could not add that photo'));
-      expect(toast.bottom, lessThanOrEqualTo(320 - 200 - 16));
-      expect(toast.top, greaterThanOrEqualTo(24));
+        final Rect toast = tester.getRect(
+          find.text('Could not add that photo'),
+        );
+        expect(toast.bottom, lessThanOrEqualTo(320 - 200 - 16));
+        expect(toast.top, greaterThanOrEqualTo(24));
 
-      await tester.pump(kToastLifetime);
-    });
+        await tester.pump(kToastLifetime);
+      },
+    );
 
     Future<void> showOn(
       WidgetTester tester, {
@@ -211,17 +271,16 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    double messageSize(WidgetTester tester) => tester
-        .widget<Text>(find.text('Mood planted · Rose'))
-        .style!
-        .fontSize!;
+    double messageSize(WidgetTester tester) =>
+        tester.widget<Text>(find.text('Mood planted · Rose')).style!.fontSize!;
 
     double glyphSize(WidgetTester tester) => tester
         .widget<IconStickerGlyphIcon>(find.byType(IconStickerGlyphIcon))
         .size;
 
-    testWidgets('on macOS it floats 22 above the window bottom, desktop size',
-        (WidgetTester tester) async {
+    testWidgets('on macOS it floats 22 above the window bottom, desktop size', (
+      WidgetTester tester,
+    ) async {
       await showOn(
         tester,
         surface: const Size(1280, 800),
@@ -237,8 +296,9 @@ void main() {
       await tester.pump(kToastLifetime);
     });
 
-    testWidgets('on a phone it floats 84 above the screen bottom, phone size',
-        (WidgetTester tester) async {
+    testWidgets('on a phone it floats 84 above the screen bottom, phone size', (
+      WidgetTester tester,
+    ) async {
       await showOn(tester, surface: const Size(390, 844));
 
       final Rect toast = tester.getRect(find.byType(Toast));
@@ -308,8 +368,9 @@ void main() {
       await tester.pump(kToastLifetime);
     });
 
-    testWidgets('its message carries no fallback text decoration',
-        (WidgetTester tester) async {
+    testWidgets('its message carries no fallback text decoration', (
+      WidgetTester tester,
+    ) async {
       await showOn(
         tester,
         surface: const Size(1280, 800),
@@ -334,8 +395,9 @@ void main() {
       await tester.pump(kToastLifetime);
     });
 
-    testWidgets('once risen it stays up for its whole lifetime, then goes',
-        (WidgetTester tester) async {
+    testWidgets('once risen it stays up for its whole lifetime, then goes', (
+      WidgetTester tester,
+    ) async {
       await showOn(tester, surface: const Size(390, 844));
 
       expect(find.text('Mood planted · Rose'), findsOneWidget);
@@ -346,8 +408,9 @@ void main() {
       expect(find.text('Mood planted · Rose'), findsNothing);
     });
 
-    testWidgets('a toast with an action keeps its action until it is pressed',
-        (WidgetTester tester) async {
+    testWidgets('a toast with an action keeps its action until it is pressed', (
+      WidgetTester tester,
+    ) async {
       int undos = 0;
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1;
@@ -359,10 +422,7 @@ void main() {
               onTap: () => showTransientToast(
                 context,
                 'Photo removed',
-                action: ToastAction(
-                  label: 'Undo',
-                  onPressed: () => undos++,
-                ),
+                action: ToastAction(label: 'Undo', onPressed: () => undos++),
               ),
               child: const Text('show'),
             ),
@@ -387,8 +447,9 @@ void main() {
       expect(find.text('Photo removed'), findsNothing);
     });
 
-    testWidgets('an error toast carries a close glyph instead of a check',
-        (WidgetTester tester) async {
+    testWidgets('an error toast carries a close glyph instead of a check', (
+      WidgetTester tester,
+    ) async {
       await showOnLandscapePhone(tester, glyph: IconStickerGlyph.close);
 
       expect(
@@ -532,5 +593,100 @@ void main() {
         await tester.pump(kToastLifetime);
       },
     );
+  });
+
+  group('toast lift', () {
+    Future<void> saveFromComposer(
+      WidgetTester tester, {
+      required Widget home,
+      required double gestureBar,
+      TargetPlatform platform = TargetPlatform.android,
+      Size surface = const Size(390, 844),
+    }) async {
+      tester.view.physicalSize = surface;
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = FakeViewPadding(bottom: gestureBar);
+      tester.view.viewPadding = FakeViewPadding(bottom: gestureBar);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(_composeApp(platform: platform, home: home));
+      await tester.tap(find.text('compose'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('save'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets(
+      'a registered lift raises a phone toast shown from another route and '
+      'drops it when the lift goes',
+      (WidgetTester tester) async {
+        await saveFromComposer(
+          tester,
+          home: const _Lifting(extra: 80),
+          gestureBar: 24,
+        );
+
+        expect(tester.getRect(find.byType(Toast)).bottom, 844 - 24 - 84 - 80);
+
+        await tester.pumpWidget(
+          _composeApp(
+            platform: TargetPlatform.android,
+            home: const SizedBox.shrink(),
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.byType(_Lifting), findsNothing);
+        expect(tester.getRect(find.byType(Toast)).bottom, 844 - 24 - 84);
+
+        await tester.pump(kToastLifetime);
+      },
+    );
+
+    testWidgets('the largest active lift wins until each is removed', (
+      WidgetTester tester,
+    ) async {
+      final ToastLift low = registerToastLift(40);
+      final ToastLift high = registerToastLift(80);
+      addTearDown(low.remove);
+      addTearDown(high.remove);
+      await saveFromComposer(
+        tester,
+        home: const SizedBox.shrink(),
+        gestureBar: 0,
+      );
+
+      expect(tester.getRect(find.byType(Toast)).bottom, 844 - 84 - 80);
+
+      high.remove();
+      await tester.pump();
+
+      expect(tester.getRect(find.byType(Toast)).bottom, 844 - 84 - 40);
+
+      low.remove();
+      await tester.pump();
+
+      expect(tester.getRect(find.byType(Toast)).bottom, 844 - 84);
+
+      await tester.pump(kToastLifetime);
+    });
+
+    testWidgets('a macOS toast ignores the phone lift', (
+      WidgetTester tester,
+    ) async {
+      final ToastLift lift = registerToastLift(80);
+      addTearDown(lift.remove);
+      await saveFromComposer(
+        tester,
+        home: const SizedBox.shrink(),
+        gestureBar: 0,
+        platform: TargetPlatform.macOS,
+        surface: const Size(1280, 800),
+      );
+
+      expect(tester.getRect(find.byType(Toast)).bottom, 800 - 22);
+
+      await tester.pump(kToastLifetime);
+    });
   });
 }

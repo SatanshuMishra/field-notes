@@ -25,10 +25,10 @@ Finder _body(ShellDestination d) => find.byKey(ValueKey<ShellDestination>(d));
 const Size _phoneSurface = Size(440, 900);
 
 List<Override> _loadedSettings() => <Override>[
-      appSettingsProvider.overrideWith(
-        (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
-      ),
-    ];
+  appSettingsProvider.overrideWith(
+    (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+  ),
+];
 
 void _holdStill(WidgetTester tester) {
   tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -46,8 +46,9 @@ void _expectLoadedSettingsScreen({required Key tabs}) {
 
 void main() {
   group('AppShell on macOS', () {
-    testWidgets('mounts the sidebar shell with the Today screen',
-        (WidgetTester tester) async {
+    testWidgets('mounts the sidebar shell with the Today screen', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(tester, const AppShell());
 
       expect(find.byType(SidebarShell), findsOneWidget);
@@ -56,8 +57,9 @@ void main() {
       expect(find.byType(TodayScreen), findsOneWidget);
     });
 
-    testWidgets('selecting the calendar rail renders the calendar screen',
-        (WidgetTester tester) async {
+    testWidgets('selecting the calendar rail renders the calendar screen', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(tester, const AppShell());
 
       await tester.tap(find.byKey(const ValueKey<String>('rail-calendar')));
@@ -67,8 +69,9 @@ void main() {
       expect(find.byType(TodayScreen), findsNothing);
     });
 
-    testWidgets('selecting the garden rail renders the garden screen',
-        (WidgetTester tester) async {
+    testWidgets('selecting the garden rail renders the garden screen', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(tester, const AppShell());
 
       await tester.tap(find.byKey(const ValueKey<String>('rail-garden')));
@@ -77,8 +80,9 @@ void main() {
       expect(find.byType(GardenScreen), findsOneWidget);
     });
 
-    testWidgets('selecting the search rail renders the search screen',
-        (WidgetTester tester) async {
+    testWidgets('selecting the search rail renders the search screen', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(tester, const AppShell());
 
       await tester.tap(find.byKey(const ValueKey<String>('rail-search')));
@@ -87,8 +91,9 @@ void main() {
       expect(find.byType(SearchScreen), findsOneWidget);
     });
 
-    testWidgets('the settings button renders the loaded settings screen',
-        (WidgetTester tester) async {
+    testWidgets('the settings button renders the loaded settings screen', (
+      WidgetTester tester,
+    ) async {
       _holdStill(tester);
       await pumpShell(tester, const AppShell(), overrides: _loadedSettings());
 
@@ -98,18 +103,30 @@ void main() {
       _expectLoadedSettingsScreen(tabs: settingsTabRailKey);
     });
 
-    testWidgets('surfaces the real streak card in the rail',
-        (WidgetTester tester) async {
+    testWidgets('surfaces the real streak pill in the sidebar', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(tester, const AppShell());
 
-      expect(find.byType(StreakCard), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SidebarShell),
+          matching: find.byType(StreakPill),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.widget<StreakPill>(find.byType(StreakPill)).form,
+        StreakPillForm.sidebar,
+      );
       expect(find.text('0 days'), findsOneWidget);
     });
   });
 
   group('AppShell on Android', () {
-    testWidgets('mounts the bottom bar shell with the Today screen',
-        (WidgetTester tester) async {
+    testWidgets('mounts the bottom bar shell with the Today screen', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(
         tester,
         const AppShell(),
@@ -122,8 +139,9 @@ void main() {
       expect(find.byType(TodayScreen), findsOneWidget);
     });
 
-    testWidgets('selecting the garden tab renders the garden screen',
-        (WidgetTester tester) async {
+    testWidgets('selecting the garden tab renders the garden screen', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(
         tester,
         const AppShell(),
@@ -138,8 +156,9 @@ void main() {
       expect(find.byType(TodayScreen), findsNothing);
     });
 
-    testWidgets('selecting the search tab renders the search screen',
-        (WidgetTester tester) async {
+    testWidgets('selecting the search tab renders the search screen', (
+      WidgetTester tester,
+    ) async {
       await pumpShell(
         tester,
         const AppShell(),
@@ -153,8 +172,9 @@ void main() {
       expect(find.byType(SearchScreen), findsOneWidget);
     });
 
-    testWidgets('the gear renders the loaded settings screen',
-        (WidgetTester tester) async {
+    testWidgets('the gear renders the loaded settings screen', (
+      WidgetTester tester,
+    ) async {
       _holdStill(tester);
       await pumpShell(
         tester,
@@ -170,8 +190,9 @@ void main() {
       _expectLoadedSettingsScreen(tabs: settingsTabChipsKey);
     });
 
-    testWidgets('the center capture invokes the injected callback',
-        (WidgetTester tester) async {
+    testWidgets('the center capture invokes the injected callback', (
+      WidgetTester tester,
+    ) async {
       int captures = 0;
       await pumpShell(
         tester,

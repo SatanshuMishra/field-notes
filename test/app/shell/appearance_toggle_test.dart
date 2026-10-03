@@ -1,10 +1,8 @@
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/appearance_toggle.dart';
-import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -27,9 +25,7 @@ import '../../features/settings/support/recording_reminder_scheduler.dart';
 import '../support/app_shell_harness.dart';
 
 const double _statusBar = 24;
-const int _maxTabs = 80;
 const String _failure = 'Could not save your appearance.';
-const Key _gearKey = ValueKey<String>('gear-button');
 
 typedef _Layout = ({ShellLayout layout, TargetPlatform platform, Size surface});
 
@@ -167,20 +163,6 @@ bool _hitTestable(WidgetTester tester, Finder finder) {
   );
 }
 
-bool _focusedWithin(Finder toggle) {
-  final BuildContext? focused = FocusManager.instance.primaryFocus?.context;
-  return focused != null &&
-      find
-          .descendant(
-            of: toggle,
-            matching: find.byElementPredicate(
-              (Element element) => identical(element, focused),
-            ),
-          )
-          .evaluate()
-          .isNotEmpty;
-}
-
 Future<void> _tapToggle(WidgetTester tester, Finder toggle) async {
   await tester.tap(toggle);
   await tester.idle();
@@ -239,54 +221,6 @@ void _expectShowing(
   );
 }
 
-void _expectInTheBar(WidgetTester tester, _Layout layout, Finder toggle) {
-  final String reason = layout.layout.name;
-  final Rect target = tester.getRect(toggle);
-  switch (layout.layout) {
-    case ShellLayout.sidebar:
-      final Rect bar = tester.getRect(find.byKey(windowTitleBarKey));
-      expect(target.top, bar.top, reason: reason);
-      expect(target.height, shellTitleBarHeight, reason: reason);
-      expect(target.width, kMinInteractiveDimension, reason: reason);
-      expect(target.right, bar.right - shellTitleBarPadding, reason: reason);
-    case ShellLayout.bottomBar:
-      expect(
-        find.descendant(of: find.byType(BottomBarShell), matching: toggle),
-        findsOneWidget,
-        reason: reason,
-      );
-      final Rect gear = tester.getRect(find.byKey(_gearKey));
-      expect(
-        target.size,
-        const Size.square(kMinInteractiveDimension),
-        reason: reason,
-      );
-      expect(target.right, gear.left, reason: reason);
-      expect(target.center.dy, gear.center.dy, reason: reason);
-      expect(target.top, greaterThanOrEqualTo(_statusBar), reason: reason);
-  }
-  expect(_hitTestable(tester, toggle), isTrue, reason: reason);
-}
-
-Future<void> _expectFocusRing(WidgetTester tester, Finder toggle) async {
-  final FocusHighlightStrategy previous =
-      FocusManager.instance.highlightStrategy;
-  FocusManager.instance.highlightStrategy =
-      FocusHighlightStrategy.alwaysTraditional;
-  addTearDown(() => FocusManager.instance.highlightStrategy = previous);
-  final Finder ring = find.descendant(
-    of: toggle,
-    matching: find.byKey(focusRingKey),
-  );
-  expect(ring, findsNothing);
-  for (int press = 0; press < _maxTabs && !_focusedWithin(toggle); press++) {
-    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
-    await tester.pump();
-  }
-  expect(_focusedWithin(toggle), isTrue, reason: 'Tab never reached it');
-  expect(ring, findsOneWidget);
-}
-
 void _doTask(OnboardingController controller, OnboardingChapter chapter) {
   switch (chapter) {
     case OnboardingChapter.opening:
@@ -340,49 +274,45 @@ void _expectReachableDuringOnboarding(
   }
 }
 
-Future<void> _flipsAfterOnboarding(WidgetTester tester, _Layout layout) async {
+Future<void> _absentAfterOnboarding(WidgetTester tester, _Layout layout) async {
   final String name = layout.layout.name;
   final FakeSettingsRepository settings = _onboarded(Appearance.light);
   await _pumpApp(tester, layout, settings);
   expect(find.byType(OnboardingFrame), findsNothing, reason: name);
-  expect(_anyToggle, findsOneWidget, reason: name);
-  _expectInTheBar(tester, layout, _anyToggle);
-  _expectShowing(tester, _anyToggle, Brightness.light, reason: '$name light');
-
-  await _tapToggle(tester, _anyToggle);
-  expect(settings.appearanceWrites, <Appearance>[Appearance.dark]);
-  expect(_app(tester).themeMode, ThemeMode.dark, reason: name);
-  _expectShowing(tester, _anyToggle, Brightness.dark, reason: '$name dark');
-
-  await _tapToggle(tester, _anyToggle);
-  expect(settings.appearanceWrites, <Appearance>[
-    Appearance.dark,
-    Appearance.light,
-  ]);
-  expect(_app(tester).themeMode, ThemeMode.light, reason: name);
-  _expectShowing(tester, _anyToggle, Brightness.light, reason: '$name back');
-
-  if (layout.layout == ShellLayout.sidebar) {
-    await _expectFocusRing(tester, _anyToggle);
-  }
+  expect(_anyToggle, findsNothing, reason: name);
+  expect(find.byType(AppearanceToggle), findsNothing, reason: name);
+  expect(find.byKey(windowTitleBarKey), switch (layout.layout) {
+    ShellLayout.sidebar => findsOneWidget,
+    ShellLayout.bottomBar => findsNothing,
+  }, reason: name);
+  expect(
+    find.bySemanticsLabel(appearanceToggleDarkLabel),
+    findsNothing,
+    reason: name,
+  );
+  expect(settings.appearanceWrites, isEmpty, reason: name);
   await _unmount(tester);
 }
 
-Future<void> _flipsSystemOnADarkDevice(
+Future<void> _flipsSystemOnTheMapOnADarkDevice(
   WidgetTester tester,
   _Layout layout,
 ) async {
   final String name = '${layout.layout.name} system';
   tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
   final FakeSettingsRepository settings = _onboarded(Appearance.system);
-  await _pumpApp(tester, layout, settings);
+  final ProviderContainer container = await _pumpApp(tester, layout, settings);
   expect(_app(tester).themeMode, ThemeMode.system, reason: name);
-  _expectShowing(tester, _anyToggle, Brightness.dark, reason: name);
+  expect(_anyToggle, findsNothing, reason: name);
+  container.read(onboardingControllerProvider.notifier).showMap();
+  await _settle(tester);
+  final Finder toggle = _onboardingToggle(layout.layout);
+  _expectShowing(tester, toggle, Brightness.dark, reason: name);
 
-  await _tapToggle(tester, _anyToggle);
+  await _tapToggle(tester, toggle);
   expect(settings.appearanceWrites, <Appearance>[Appearance.light]);
   expect(_app(tester).themeMode, ThemeMode.light, reason: name);
-  _expectShowing(tester, _anyToggle, Brightness.light, reason: name);
+  _expectShowing(tester, toggle, Brightness.light, reason: name);
   await _unmount(tester);
   tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
 }
@@ -492,19 +422,25 @@ Future<void> _worksOnTheMap(WidgetTester tester, _Layout layout) async {
     const OnboardingFlowMap(),
     reason: name,
   );
+
+  container.read(onboardingControllerProvider.notifier).closeMap();
+  await _settle(tester);
+  expect(find.byType(OnboardingFrame), findsNothing, reason: name);
+  expect(_anyToggle, findsNothing, reason: '$name closed');
   await _unmount(tester);
 }
 
 void main() {
   testWidgets(
-    'the toggle flips what is showing, saves it and works during onboarding',
+    'the toggle shows only during onboarding, flips what is showing and '
+    'saves it',
     (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       _onDevice(tester, Brightness.light);
       for (final _Layout layout in _layouts) {
         await _onLayout(layout, () async {
-          await _flipsAfterOnboarding(tester, layout);
-          await _flipsSystemOnADarkDevice(tester, layout);
+          await _absentAfterOnboarding(tester, layout);
+          await _flipsSystemOnTheMapOnADarkDevice(tester, layout);
           await _worksThroughOnboarding(tester, layout);
           await _worksOnTheMap(tester, layout);
         });
@@ -523,10 +459,16 @@ void main() {
           initial: _onboardedWith(Appearance.light),
           writeError: StateError('The appearance could not be saved.'),
         );
-        await _pumpApp(tester, layout, settings);
+        final ProviderContainer container = await _pumpApp(
+          tester,
+          layout,
+          settings,
+        );
+        container.read(onboardingControllerProvider.notifier).showMap();
+        await _settle(tester);
         expect(find.text(_failure), findsNothing, reason: name);
 
-        await _tapToggle(tester, _anyToggle);
+        await _tapToggle(tester, _onboardingToggle(layout.layout));
 
         expect(find.text(_failure), findsOneWidget, reason: name);
         expect(settings.appearanceWrites, isEmpty, reason: name);
