@@ -165,28 +165,39 @@ class OtherWaysPanel extends StatelessWidget {
         top: media.padding.top + onboardingPhoneTitleTop,
         bottom: gesture + onboardingControlBarReserve + _blocksClearance,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const _Rise(
-            delay: Duration.zero,
-            duration: _headingRise,
-            child: _Heading(),
-          ),
-          const SizedBox(height: _blocksTop),
-          for (final (int index, Widget block) in blocks.indexed) ...<Widget>[
-            if (index > 0) const SizedBox(height: _blocksGap),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: _blocksSide),
-                child: _Rise(
-                  delay: _blockDelays[index],
-                  duration: _blockRise,
-                  child: block,
+      child: CustomScrollView(
+        physics: const ClampingScrollPhysics(),
+        slivers: <Widget>[
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const _Rise(
+                  delay: Duration.zero,
+                  duration: _headingRise,
+                  child: _Heading(),
                 ),
-              ),
+                const SizedBox(height: _blocksTop),
+                for (final (int index, Widget block)
+                    in blocks.indexed) ...<Widget>[
+                  if (index > 0) const SizedBox(height: _blocksGap),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: _blocksSide,
+                      ),
+                      child: _Rise(
+                        delay: _blockDelays[index],
+                        duration: _blockRise,
+                        child: block,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );
