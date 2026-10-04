@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/tokens/field_notes_colors.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
@@ -24,6 +25,7 @@ import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_year_picker.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
+import 'package:field_notes/state/settings_providers.dart';
 
 import '../../support/theme_harness.dart';
 import 'support/garden_harness.dart';
@@ -56,6 +58,9 @@ Future<void> _pump(WidgetTester tester, Brightness brightness) async {
       key: ValueKey<Brightness>(brightness),
       retry: (int retryCount, Object error) => null,
       overrides: <Override>[
+        appSettingsProvider.overrideWith(
+          (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+        ),
         allDaysProvider.overrideWith(
           (Ref ref) => Stream<List<Day>>.value(_days),
         ),

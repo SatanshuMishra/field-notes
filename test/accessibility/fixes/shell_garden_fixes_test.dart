@@ -4,6 +4,7 @@ import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
 import 'package:field_notes/features/garden/scene/meadow_stage.dart';
@@ -15,6 +16,7 @@ import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_year_picker.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
@@ -207,6 +209,9 @@ void main() {
       ProviderScope(
         retry: (int retryCount, Object error) => null,
         overrides: <Override>[
+          appSettingsProvider.overrideWith(
+            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+          ),
           allDaysProvider.overrideWith(
             (Ref ref) => Stream<List<Day>>.value(<Day>[
               dayOf('2026-09-23'),
