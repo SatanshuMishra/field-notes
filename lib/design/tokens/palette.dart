@@ -1,11 +1,11 @@
 import 'package:flutter/painting.dart';
 
 abstract final class Palette {
-  static const Color panelCoralTint = Color(0x12C76A54);
+  static const Color panelCoralTint = Color(0x12B8566A);
 
-  static const Color coral = Color(0xFFC76A54);
-  static const Color coral12 = Color(0x1FC76A54);
-  static const Color coral30 = Color(0x4DC76A54);
+  static const Color coral = Color(0xFFB8566A);
+  static const Color coral12 = Color(0x1FB8566A);
+  static const Color coral30 = Color(0x4DB8566A);
 
   static const Color highlight = Color(0x8CF2D77E);
 
@@ -44,6 +44,6 @@ abstract final class Palette {
   static const Color soilLight = Color(0xFF8A6C44);
   static const Color soilDark = Color(0xFF775A37);
   static const Color creamOnSoil = Color(0xFFFBF3E4);
-  static const Color snapSage = Color(0xFF7D8450);
+  static const Color snapSage = Color(0xFF6D876D);
   static const Color sunGlow = Color(0x8CF4C960);
 }

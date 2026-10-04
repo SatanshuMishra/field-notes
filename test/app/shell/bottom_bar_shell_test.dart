@@ -24,7 +24,6 @@ const double _labelGap = 2;
 const double _plusStroke = 2.6;
 
 const Color _sceneInk = Color.fromRGBO(251, 243, 228, 0.82);
-const Color _sceneSelectedInk = Color(0xFFFFD9C9);
 
 BottomBarShell _shell({
   ShellDestination selected = ShellDestination.today,
@@ -146,7 +145,7 @@ Color _expectedInk(
   final bool overScene = selected == ShellDestination.garden;
   final bool on = d == selected;
   return switch ((overScene, on)) {
-    (true, true) => _sceneSelectedInk,
+    (true, true) => colors.accentTint,
     (true, false) => _sceneInk,
     (false, true) => colors.accentInkStrong,
     (false, false) => colors.mutedInkStrong,

@@ -117,7 +117,7 @@ const Map<int, ShellDestination> _bottomBarSelection = <int, ShellDestination>{
 
 const Color _miniatureDrop = Color(0x66281C12);
 const Color _streakFlame = Color(0xFFE0863C);
-const Color _ring = Color.fromRGBO(199, 106, 84, 0.25);
+const Color _ring = Color.fromRGBO(184, 86, 106, 0.25);
 
 const double _outline = 1.5;
 const double _badgeSidebar = 20;

@@ -136,8 +136,8 @@ void main() {
       expect(Palette.viewportDark, const Color(0xFF3A352E));
       expect(Palette.viewportDarkAlt, const Color(0xFF443F37));
       expect(_light.composerPaper, const Color(0xFFFBF3E4));
-      expect(_light.waveMid, const Color(0xFFDCAE9A));
-      expect(_light.waveLight, const Color(0xFFE3C4B2));
+      expect(_light.waveMid, const Color(0xFFDFA9B1));
+      expect(_light.waveLight, const Color(0xFFE6C0C5));
       expect(Palette.toastInk, const Color(0xFFF6EAD6));
       expect(Palette.viewportAmber, const Color(0xFFF0B34A));
       expect(Palette.viewportAmber, isNot(Palette.statusAmber));
@@ -161,10 +161,10 @@ void main() {
 
     test('pre-existing palette members keep their values', () {
       expect(_light.ink, const Color(0xFF4A3B2E));
-      expect(Palette.coral, const Color(0xFFC76A54));
+      expect(Palette.coral, const Color(0xFFB8566A));
       expect(_light.cardWarm, const Color(0xFFF8EFE0));
       expect(_light.cardBright, const Color(0xFFFFFAF1));
-      expect(Palette.panelCoralTint, const Color(0x12C76A54));
+      expect(Palette.panelCoralTint, const Color(0x12B8566A));
       expect(Palette.sunGlow, const Color(0x8CF4C960));
     });
   });

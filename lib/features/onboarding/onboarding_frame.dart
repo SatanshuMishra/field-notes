@@ -296,7 +296,7 @@ const BoxDecoration _glow = BoxDecoration(
   gradient: RadialGradient(
     center: Alignment(-0.7, -1),
     radius: 1.2,
-    colors: <Color>[Color(0x14C76A54), Color(0x00C76A54)],
+    colors: <Color>[Color(0x14B8566A), Color(0x00B8566A)],
     stops: <double>[0, 0.55],
   ),
 );

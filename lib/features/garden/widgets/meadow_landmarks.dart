@@ -12,7 +12,7 @@ const double _minColumn = 190;
 const double _sidebarGap = 10;
 const double _bottomBarGap = 8;
 const double _edge = Shapes.outlineWidth;
-const Color _pillTint = Color(0x1AC76A54);
+const Color _pillTint = Color(0x1AB8566A);
 const Duration _borderDuration = Duration(milliseconds: 200);
 const BorderRadius _cardRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusPill),

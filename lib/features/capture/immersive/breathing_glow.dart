@@ -2,13 +2,14 @@ import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/widgets.dart';
 
+import '../../../design/tokens/palette.dart';
 import 'stage_phase.dart';
 
 enum BreathingGlowMode { breathe, settle }
 
 const Duration breathingGlowCycle = Duration(seconds: 10);
 
-const Color _glowCoral = Color(0xFFC76A54);
+const Color _glowCoral = Palette.coral;
 const Color _ringInk = Color(0x57E7A087);
 const double _ringWidth = 1;
 const double _glowFadeStop = 0.68;

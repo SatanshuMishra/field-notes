@@ -22,11 +22,11 @@ import '../../support/theme_harness.dart';
 import 'photo/photo_test_support.dart';
 import 'video/video_test_support.dart';
 
-const Color _composerPaper = Color(0xFF2B241C);
-const Color _panelTop = Color(0xFF1E1914);
-const Color _cardBright = Color(0xFF211B16);
-const Color _line = Color(0xFF9D8870);
-const Color _ink = Color(0xFFEFE3CE);
+const Color _composerPaper = Color(0xFF292424);
+const Color _panelTop = Color(0xFF1C1919);
+const Color _cardBright = Color(0xFF1F1B1B);
+const Color _line = Color(0xFF968888);
+const Color _ink = Color(0xFFEDE1E1);
 const Color _stage = Color(0xFF1C1713);
 const Color _recorderLabel = Color(0xFFB7A58C);
 

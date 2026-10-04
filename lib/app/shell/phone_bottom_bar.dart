@@ -33,7 +33,6 @@ const BorderRadius _captureRadius = BorderRadius.all(
 );
 
 const Color _sceneInk = Color.fromRGBO(251, 243, 228, 0.82);
-const Color _sceneSelectedInk = Color(0xFFFFD9C9);
 const Color _captureGlow = Color.fromRGBO(120, 50, 30, 0.55);
 const Color _captureHighlight = Color.fromRGBO(255, 255, 255, 0.25);
 
@@ -94,7 +93,7 @@ class PhoneBottomBar extends StatelessWidget {
   Color _inkFor(BuildContext context, {required bool isSelected}) {
     final FieldNotesColors colors = context.colors;
     return switch ((overScene, isSelected)) {
-      (true, true) => _sceneSelectedInk,
+      (true, true) => colors.accentTint,
       (true, false) => _sceneInk,
       (false, true) => colors.accentInkStrong,
       (false, false) => colors.mutedInkStrong,

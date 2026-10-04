@@ -48,7 +48,6 @@ const double _hourSpan = 16.8;
 const int _skyMonth = 9;
 const int _skyDay = 23;
 
-const Color _kickerInk = Color(0xFFF6C9B8);
 const Color _glassFill = Color.fromRGBO(28, 22, 16, 0.5);
 const Color _boxEdge = Color.fromRGBO(251, 243, 228, 0.35);
 const Color _buttonEdge = Color.fromRGBO(251, 243, 228, 0.55);
@@ -399,7 +398,7 @@ class _Heading extends StatelessWidget {
               fontFamily: TypographyTokens.accent,
               fontSize: metrics.kickerSize,
               fontWeight: FontWeight.w600,
-              color: _kickerInk,
+              color: context.colors.accentTint,
               shadows: <Shadow>[
                 Shadow(
                   color: _textShadow.withValues(alpha: 0.4),

@@ -204,7 +204,7 @@ void main() {
     expect(find.text('Camera is off.'), findsOneWidget);
     expect(
       tester.widget<Text>(find.text('Camera is off.')).style?.color,
-      const Color(0xFFE79A80),
+      const Color(0xFFE58D9C),
     );
   });
 

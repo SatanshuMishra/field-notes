@@ -30,7 +30,6 @@ const Key reflectionShuffleKey = ValueKey<String>('reflection-shuffle');
 const double reflectionUnderwayOpacity = 0.45;
 const Duration reflectionFadeDuration = Duration(milliseconds: 1400);
 
-const Color _kickerInk = Color(0xFFD39A82);
 const Color _questionInk = Color(0xFFF3E6D1);
 const Color _shuffleInk = Color(0xFFB7A58C);
 
@@ -91,7 +90,6 @@ TextStyle _kickerStyle(double scale) {
     fontFamily: TypographyTokens.accent,
     fontSize: _kickerSize * scale,
     fontWeight: FontWeight.w600,
-    color: _kickerInk,
   );
 }
 
@@ -386,7 +384,8 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
           Text(
             reflectionKicker,
             textAlign: TextAlign.center,
-            style: _kickerStyle(kicker),
+            style: _kickerStyle(kicker)
+                .copyWith(color: context.colors.accentSoft),
           ),
           SizedBox(height: _kickerGap(sidebar, fit.gap)),
         ],

@@ -25,11 +25,10 @@ const double _gearIconSize = 22;
 const double _headerEdgeWidth = 1;
 
 const Color _paperHeaderTintLight = Color.fromRGBO(239, 226, 206, 0.62);
-const Color _paperHeaderTintDark = Color.fromRGBO(31, 26, 21, 0.66);
+const Color _paperHeaderTintDark = Color.fromRGBO(29, 26, 26, 0.66);
 const Color _sceneHeaderTint = Color.fromRGBO(24, 19, 14, 0.42);
 const Color _sceneHeaderEdge = Color.fromRGBO(255, 250, 240, 0.16);
 const Color _sceneHeaderShadow = Color.fromRGBO(0, 0, 0, 0.6);
-const Color _sceneWordmark = Color(0xFFF6C9B8);
 const Color _sceneGear = Color.fromRGBO(251, 243, 228, 1);
 
 const Offset _headerShadowOffset = Offset(0, 8);
@@ -227,7 +226,7 @@ class _BottomBarShellState extends State<BottomBarShell> {
                   'field notes',
                   style: overScene
                       ? context.textStyles.wordmarkAccent.copyWith(
-                          color: _sceneWordmark,
+                          color: colors.accentTint,
                         )
                       : context.textStyles.wordmarkAccent.copyWith(
                           color: colors.accentInkStrong,

@@ -39,9 +39,9 @@ const List<Key> _blocks = <Key>[
 ];
 
 const List<Color> _blockFills = <Color>[
-  Color(0xFFC76A54),
+  Color(0xFFB8566A),
   Color(0xFF2F2A25),
-  Color(0xFF7D8450),
+  Color(0xFF6D876D),
 ];
 
 const List<Key> _mediaKeys = <Key>[

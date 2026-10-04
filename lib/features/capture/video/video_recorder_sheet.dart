@@ -44,10 +44,8 @@ const String videoResumeLabel = 'Resume recording';
 const String videoStopAndKeepLabel = 'Stop and keep';
 
 const Color _hintInk = Color(0xFFB7A58C);
-const Color _errorInk = Color(0xFFE79A80);
 const Color _selfViewOffInk = Color(0xFFB7A58C);
 const Color _shutterRing = Color(0xEBF3E6D1);
-const Color _shutterCoreInk = Color(0xFFD9775E);
 const Color _shutterPauseInk = Color(0xFFFFFFFF);
 const Color _letGoFill = Color(0x80140F0C);
 const Color _letGoEdge = Color(0x59F3E6D1);
@@ -451,11 +449,11 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
             child: Text(
               error,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: TypographyTokens.sans,
                 fontSize: _errorSize,
                 fontWeight: FontWeight.w500,
-                color: _errorInk,
+                color: context.colors.accentBright,
               ),
             ),
           ),
@@ -657,9 +655,9 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
       final double side = sidebar ? _sidebarStopSquare : _bottomBarStopSquare;
       return SizedBox.square(
         dimension: side,
-        child: const DecoratedBox(
+        child: DecoratedBox(
           decoration: BoxDecoration(
-            color: _shutterCoreInk,
+            color: context.colors.accentRecord,
             borderRadius: BorderRadius.all(Radius.circular(_stopSquareRadius)),
           ),
         ),
@@ -668,9 +666,9 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
     final double dot = sidebar ? _sidebarShutterDot : _bottomBarShutterDot;
     return SizedBox.square(
       dimension: dot,
-      child: const DecoratedBox(
+      child: DecoratedBox(
         decoration: BoxDecoration(
-          color: _shutterCoreInk,
+          color: context.colors.accentRecord,
           shape: BoxShape.circle,
         ),
       ),

@@ -15,7 +15,7 @@ const String _juneSummary = 'June, 5 days planted, mostly Tired and Hopeful';
 
 const MeadowRange _june = MeadowRange(first: 151, last: 180, key: 'm5');
 
-const Color _highlightTint = Color(0x21C76A54);
+const Color _highlightTint = Color(0x21B8566A);
 
 MeadowYear _june2026() => MeadowYear.build(
   days: <Day>[

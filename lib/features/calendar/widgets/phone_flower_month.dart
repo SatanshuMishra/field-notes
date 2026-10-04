@@ -31,7 +31,7 @@ const double phoneMonthSwipeRatio = 1.3;
 const double phoneMonthFlowerSize = 40;
 const double phoneMonthWeekGap = 2;
 const double phoneMonthFutureOpacity = 0.45;
-const Color phoneMonthWeekTint = Color(0x14C76A54);
+const Color phoneMonthWeekTint = Color(0x14B8566A);
 
 const Key phoneMonthGridKey = ValueKey<String>('phone-month-grid');
 const Key phoneMonthWeekdaysKey = ValueKey<String>('phone-month-weekdays');

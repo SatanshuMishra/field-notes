@@ -43,14 +43,14 @@ void main() {
         );
 
         expect(theme.brightness, Brightness.dark);
-        expect(theme.scaffoldBackgroundColor, const Color(0xFF0E0C0A));
-        expect(theme.colorScheme.primary, const Color(0xFFC76A54));
-        expect(theme.colorScheme.surface, const Color(0xFF29221B));
-        expect(theme.colorScheme.onSurface, const Color(0xFFEFE3CE));
+        expect(theme.scaffoldBackgroundColor, const Color(0xFF0D0C0C));
+        expect(theme.colorScheme.primary, const Color(0xFFB8566A));
+        expect(theme.colorScheme.surface, const Color(0xFF272222));
+        expect(theme.colorScheme.onSurface, const Color(0xFFEDE1E1));
         expect(theme.extension<FieldNotesColors>(), FieldNotesColors.dark);
-        expect(theme.textTheme.bodyMedium?.color, const Color(0xFFEFE3CE));
+        expect(theme.textTheme.bodyMedium?.color, const Color(0xFFEDE1E1));
         expect(theme.textTheme.bodyMedium?.fontFamily, TypographyTokens.sans);
-        expect(theme.iconTheme.color, const Color(0xFFEFE3CE));
+        expect(theme.iconTheme.color, const Color(0xFFEDE1E1));
         expect(theme.useMaterial3, isTrue);
         expect(theme.platform, TargetPlatform.macOS);
       },

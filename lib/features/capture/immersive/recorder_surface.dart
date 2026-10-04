@@ -70,7 +70,7 @@ const BoxDecoration _sidebarGlow = BoxDecoration(
   gradient: RadialGradient(
     center: Alignment(0, 0.2),
     radius: 1,
-    colors: <Color>[Color(0x2BC76A54), Color(0x00C76A54)],
+    colors: <Color>[Color(0x2BB8566A), Color(0x00B8566A)],
     stops: <double>[0, 0.72],
     transform: _EllipseToBox(
       focus: Alignment(0, 0.2),
@@ -84,7 +84,7 @@ const BoxDecoration _bottomBarGlow = BoxDecoration(
   gradient: RadialGradient(
     center: Alignment(0, 0.16),
     radius: 1,
-    colors: <Color>[Color(0x2EC76A54), Color(0x00C76A54)],
+    colors: <Color>[Color(0x2EB8566A), Color(0x00B8566A)],
     stops: <double>[0, 0.72],
     transform: _EllipseToBox(
       focus: Alignment(0, 0.16),

@@ -14,17 +14,17 @@ import 'package:field_notes/features/today/today_header.dart';
 
 import '../../support/theme_harness.dart';
 
-const Color _panelTop = Color(0xFF1E1914);
-const Color _panelBottom = Color(0xFF191511);
-const Color _titleBar = Color(0xFF241E19);
-const Color _windowTitle = Color(0xFF8A7560);
-const Color _coral = Color(0xFFC76A54);
-const Color _line = Color(0xFF9D8870);
-const Color _shadow = Color(0xFF070504);
-const Color _cardLight = Color(0xFF342A20);
-const Color _cardWarm = Color(0xFF29221B);
-const Color _accentInk = Color(0xFFE8927A);
-const Color _ink = Color(0xFFEFE3CE);
+const Color _panelTop = Color(0xFF1C1919);
+const Color _panelBottom = Color(0xFF181515);
+const Color _titleBar = Color(0xFF221E1E);
+const Color _windowTitle = Color(0xFF837675);
+const Color _coral = Color(0xFFB8566A);
+const Color _line = Color(0xFF968888);
+const Color _shadow = Color(0xFF060505);
+const Color _cardLight = Color(0xFF312A2A);
+const Color _cardWarm = Color(0xFF272222);
+const Color _accentInk = Color(0xFFE692A0);
+const Color _ink = Color(0xFFEDE1E1);
 
 const String _windowTitleCopy = 'field notes — a journal of days';
 const String _moodQuestion = 'How are you feeling today?';

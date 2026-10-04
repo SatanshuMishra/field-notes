@@ -80,7 +80,7 @@ const int _macStreak = 5;
 const int _macGear = 6;
 const int _streakCount = 4;
 
-const Color _ring = Color.fromRGBO(199, 106, 84, 0.25);
+const Color _ring = Color.fromRGBO(184, 86, 106, 0.25);
 const double _ringSpread = 4;
 const double _pillHeight = 30;
 const double _gearExtent = 36;

@@ -13,7 +13,6 @@ const Key recorderStatusDotKey = ValueKey<String>('recorder-status-dot');
 
 const Color _statusInk = Color(0xFFDCCAB0);
 const Color _timerInk = Color(0xFFB7A58C);
-const Color _recordingDot = Color(0xFFE79A80);
 const Color _pausedDot = Color(0xFFD9B36B);
 
 const double _sidebarStatusSize = 21;
@@ -131,7 +130,7 @@ class RecorderStatusLine extends StatelessWidget {
         minOpacity: _dotMinOpacity,
         duration: _dotGlowHalfCycle,
         animate: !MediaQuery.disableAnimationsOf(context),
-        child: const _Dot(color: _recordingDot, glow: true),
+        child: _Dot(color: context.colors.accentBright, glow: true),
       );
     }
     if (phase == StagePhase.paused) {
