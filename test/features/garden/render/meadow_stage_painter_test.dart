@@ -131,29 +131,6 @@ bool _masksWithDstIn(_Call call) =>
     call.name == 'drawImageRect' &&
     (call.arguments[3]! as Paint).blendMode == BlendMode.dstIn;
 
-bool _holds(Rect outer, Rect inner) =>
-    inner.left >= outer.left &&
-    inner.top >= outer.top &&
-    inner.right <= outer.right &&
-    inner.bottom <= outer.bottom;
-
-Rect? _innermostClip(_RecordingCanvas frame, int index) {
-  final List<List<Rect>> scopes = <List<Rect>>[<Rect>[]];
-  for (int i = 0; i < index; i++) {
-    final _Call call = frame.calls[i];
-    switch (call.name) {
-      case 'save' || 'saveLayer':
-        scopes.add(<Rect>[]);
-      case 'restore':
-        scopes.removeLast();
-      case 'clipRect':
-        scopes.last.add(call.arguments[0]! as Rect);
-    }
-  }
-  final List<Rect> innermost = scopes.last;
-  return innermost.isEmpty ? null : innermost.first;
-}
-
 class _Sprite {
   const _Sprite({
     required this.image,
@@ -472,65 +449,57 @@ void main() {
     }
   });
 
-  test(
-    'the water marks draw only within the water tiles, each masked by its tile '
-    'without a layer',
-    () {
-      final List<Rect> tiles = <Rect>[
-        for (final MeadowImage tile in scene.layers.water) tile.rect,
+  test('the water marks draw in plain colours inside one layer over the water '
+      'tiles, masked once by the water', () {
+    final List<Rect> tiles = <Rect>[
+      for (final MeadowImage tile in scene.layers.water) tile.rect,
+    ];
+    expect(tiles, isNotEmpty);
+    final Rect water = tiles.reduce((Rect a, Rect b) => a.expandToInclude(b));
+    for (final (MeadowPalette palette, _Poses poses, bool glints)
+        in <(MeadowPalette, _Poses, bool)>[
+          (scene.noon, scene.dayPoses, true),
+          (scene.midnight, scene.nightPoses, false),
+        ]) {
+      final _RecordingCanvas frame = scene.paint(
+        time: 42.5,
+        palette: palette,
+        poses: poses,
+      );
+      final List<int> marks = <int>[
+        for (int i = 0; i < frame.calls.length; i++)
+          if (frame.calls[i].name == 'drawOval') i,
       ];
-      expect(tiles, isNotEmpty);
-      for (final (MeadowPalette palette, _Poses poses, bool glints)
-          in <(MeadowPalette, _Poses, bool)>[
-            (scene.noon, scene.dayPoses, true),
-            (scene.midnight, scene.nightPoses, false),
-          ]) {
-        final _RecordingCanvas frame = scene.paint(
-          time: 42.5,
-          palette: palette,
-          poses: poses,
-        );
-        expect(frame.calls.where(_masksWithDstIn), isEmpty);
-        final List<int> marks = <int>[
-          for (int i = 0; i < frame.calls.length; i++)
-            if (frame.calls[i].name == 'drawOval') i,
-        ];
-        for (final int mark in marks) {
-          final Rect oval = frame.calls[mark].arguments[0]! as Rect;
-          final Paint paint = frame.calls[mark].arguments[1]! as Paint;
-          expect(paint.shader, isA<ImageShader>(), reason: 'drawOval $mark');
-          expect(paint.colorFilter, isNotNull, reason: 'drawOval $mark');
-          expect(paint.blendMode, BlendMode.srcOver, reason: 'drawOval $mark');
-          expect(
-            frame.layers.any(
-              ((int, int) layer) => layer.$1 < mark && mark < layer.$2,
-            ),
-            isFalse,
-            reason: 'drawOval $mark',
-          );
-          final Rect bounds = paint.style == PaintingStyle.stroke
-              ? oval.inflate(paint.strokeWidth / 2)
-              : oval;
-          final Rect? clip = _innermostClip(frame, mark);
-          final bool heldByTile = tiles.any(
-            (Rect tile) => _holds(tile, bounds),
-          );
-          final bool clippedToTile =
-              clip != null && tiles.contains(clip) && clip.overlaps(bounds);
-          expect(
-            heldByTile || clippedToTile,
-            isTrue,
-            reason: 'drawOval $mark $bounds',
-          );
-        }
-        if (!glints) {
-          continue;
-        }
+      if (glints) {
         expect(palette.glintO, greaterThan(0));
         expect(marks, isNotEmpty);
       }
-    },
-  );
+      if (marks.isEmpty) {
+        continue;
+      }
+      final List<(int, int)> holding = <(int, int)>[
+        for (final (int, int) layer in frame.layers)
+          if (layer.$1 < marks.first && marks.last < layer.$2) layer,
+      ];
+      expect(holding, hasLength(1));
+      final (int open, int close) = holding.single;
+      expect(frame.calls[open].arguments[0], water);
+      for (final int mark in marks) {
+        final Paint paint = frame.calls[mark].arguments[1]! as Paint;
+        expect(paint.shader, isNull, reason: 'drawOval $mark');
+        expect(paint.colorFilter, isNull, reason: 'drawOval $mark');
+        expect(paint.blendMode, BlendMode.srcOver, reason: 'drawOval $mark');
+      }
+      final List<_Call> masks = <_Call>[
+        for (int i = marks.last; i < close; i++)
+          if (_masksWithDstIn(frame.calls[i])) frame.calls[i],
+      ];
+      expect(masks, hasLength(tiles.length));
+      expect(<Rect>[
+        for (final _Call mask in masks) mask.arguments[2]! as Rect,
+      ], tiles);
+    }
+  });
 
   test('the sun rays draw as one baked image', () {
     expect(scene.noon.raysOpacity, greaterThan(0));

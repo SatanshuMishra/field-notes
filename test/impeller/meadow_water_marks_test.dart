@@ -17,8 +17,8 @@ const double _density = 1;
 const double _scale = 1.5;
 const double _rippleScale = 1.4;
 const double _rippleOpacity = 0.8;
-const double _apart = 1;
-const int _maxChannelDelta = 2;
+const Size _shoreMark = Size(80, 24);
+const int _visibleAlpha = 2;
 
 Rect _ovalOf(
   MeadowEllipse ellipse, {
@@ -33,30 +33,18 @@ Rect _ovalOf(
 List<MeadowWaterMark> _noonMarks(
   MeadowGroundDressing ground,
   MeadowPalette noon,
+  Rect shoreMark,
 ) {
   final Offset shift = Offset(noon.glintX, 0);
-  final List<MeadowWaterMark> glints = ground.glints
-      .map(
-        (MeadowGlint glint) => MeadowWaterMark(
-          oval: _ovalOf(glint.ellipse, shift: shift),
-          colour: noon.glintC,
-          opacity: noon.glintO,
-        ),
-      )
-      .fold(
-        <MeadowWaterMark>[],
-        (List<MeadowWaterMark> kept, MeadowWaterMark mark) =>
-            kept.every(
-              (MeadowWaterMark other) =>
-                  !other.bounds.inflate(_apart).overlaps(mark.bounds),
-            )
-            ? <MeadowWaterMark>[...kept, mark]
-            : kept,
-      );
   final MeadowRipple ripple = ground.ripples.first;
   final MeadowFlowMark flow = ground.flows.first;
   return <MeadowWaterMark>[
-    ...glints,
+    for (final MeadowGlint glint in ground.glints)
+      MeadowWaterMark(
+        oval: _ovalOf(glint.ellipse, shift: shift),
+        colour: noon.glintC,
+        opacity: noon.glintO,
+      ),
     MeadowWaterMark(
       oval: _ovalOf(ripple.ellipse, scale: _rippleScale),
       colour: noon.flowC,
@@ -68,32 +56,8 @@ List<MeadowWaterMark> _noonMarks(
       colour: noon.flowC,
       opacity: noon.flowO,
     ),
+    MeadowWaterMark(oval: shoreMark, colour: noon.glintC, opacity: 1),
   ];
-}
-
-void _layeredReference(
-  Canvas canvas,
-  MeadowLayers layers,
-  List<MeadowWaterMark> marks,
-) {
-  canvas.saveLayer(
-    layers.water
-        .map((MeadowImage tile) => tile.rect)
-        .reduce((Rect a, Rect b) => a.expandToInclude(b)),
-    Paint(),
-  );
-  for (final MeadowWaterMark mark in marks) {
-    final double? stroke = mark.stroke;
-    canvas.drawOval(
-      mark.oval,
-      Paint()
-        ..color = mark.shade
-        ..style = stroke == null ? PaintingStyle.fill : PaintingStyle.stroke
-        ..strokeWidth = stroke ?? 0,
-    );
-  }
-  layers.maskToWater(canvas);
-  canvas.restore();
 }
 
 Future<Uint8List> _render(void Function(Canvas canvas) draw) async {
@@ -110,72 +74,83 @@ Future<Uint8List> _render(void Function(Canvas canvas) draw) async {
 }
 
 void main() {
-  test(
-    'the water sparkles drawn without a layer match the layered reference',
-    () async {
-      final MeadowYear year = meadowPixelsLeapYear();
-      final int seed = meadowSeed(20280229, meadowPixelsYear);
-      final MeadowTerrain terrain = buildMeadowTerrain(seed: seed, year: year);
-      final MeadowLayers layers = MeadowLayers(
-        terrain: terrain,
-        grass: buildMeadowGrass(seed: seed, terrain: terrain),
-        density: _density,
-      );
-      addTearDown(layers.dispose);
-      final MeadowPalette noon = meadowPixelsPalettes(year)['noon']!;
-      expect(noon.glintO, greaterThan(0));
-      layers
-        ..recolour(noon)
-        ..buildAll();
-      final List<MeadowImage> water = layers.water;
-      final List<MeadowWaterMark> marks = _noonMarks(terrain.ground, noon);
+  test('the water sparkles are drawn in one pass and show only where the water '
+      'is', () async {
+    final MeadowYear year = meadowPixelsLeapYear();
+    final int seed = meadowSeed(20280229, meadowPixelsYear);
+    final MeadowTerrain terrain = buildMeadowTerrain(seed: seed, year: year);
+    final MeadowLayers layers = MeadowLayers(
+      terrain: terrain,
+      grass: buildMeadowGrass(seed: seed, terrain: terrain),
+      density: _density,
+    );
+    addTearDown(layers.dispose);
+    final MeadowPalette noon = meadowPixelsPalettes(year)['noon']!;
+    expect(noon.glintO, greaterThan(0));
+    layers
+      ..recolour(noon)
+      ..buildAll();
+    final List<MeadowImage> water = layers.water;
+    expect(water, isNotEmpty);
+    final Rect uppermost = water
+        .map((MeadowImage tile) => tile.rect)
+        .reduce((Rect a, Rect b) => a.top <= b.top ? a : b);
+    final Rect shoreMark = Rect.fromCenter(
+      center: uppermost.topCenter,
+      width: _shoreMark.width,
+      height: _shoreMark.height,
+    );
+    final List<MeadowWaterMark> marks = _noonMarks(
+      terrain.ground,
+      noon,
+      shoreMark,
+    );
+    expect(marks.length, greaterThan(10));
 
-      expect(marks.length, greaterThan(10));
-      expect(
-        marks.where((MeadowWaterMark mark) => mark.stroke != null),
-        hasLength(1),
-      );
-      for (int i = 0; i < marks.length; i++) {
-        for (int j = i + 1; j < marks.length; j++) {
-          expect(
-            marks[i].bounds.overlaps(marks[j].bounds),
-            isFalse,
-            reason: 'marks $i and $j',
-          );
-        }
-        expect(
-          water.where(
-            (MeadowImage tile) => marks[i].bounds.overlaps(tile.rect),
-          ),
-          hasLength(1),
-          reason: 'mark $i',
-        );
+    final Uint8List sparkles = await _render(
+      (Canvas canvas) =>
+          paintMeadowWaterMarks(canvas, marks: marks, layers: layers),
+    );
+    final Uint8List lake = await _render((Canvas canvas) {
+      final Paint sampled = Paint()..filterQuality = FilterQuality.low;
+      for (final MeadowImage tile in water) {
+        canvas.drawImageRect(tile.image, tile.source, tile.rect, sampled);
       }
+    });
+    expect(sparkles.length, lake.length);
 
-      final Uint8List single = await _render(
-        (Canvas canvas) =>
-            paintMeadowWaterMarks(canvas, marks: marks, water: water),
-      );
-      final Uint8List layered = await _render(
-        (Canvas canvas) => _layeredReference(canvas, layers, marks),
-      );
-      expect(single.length, layered.length);
-      int worst = 0;
-      int sparkling = 0;
-      for (int i = 0; i < single.length; i += 4) {
-        for (int channel = 0; channel < 4; channel++) {
-          final int delta = (single[i + channel] - layered[i + channel]).abs();
-          if (delta > worst) {
-            worst = delta;
-          }
-        }
-        if (layered[i + 3] > 0) {
-          sparkling++;
+    final int width = (meadowWorldWidth * _scale).round();
+    final int shoreRow = (uppermost.top * _scale).floor();
+    int sparkling = 0;
+    int offWater = 0;
+    int belowShore = 0;
+    int aboveShore = 0;
+    for (int i = 0; i < sparkles.length; i += 4) {
+      if (sparkles[i + 3] <= _visibleAlpha) {
+        continue;
+      }
+      sparkling++;
+      if (lake[i + 3] == 0) {
+        offWater++;
+      }
+      final int pixel = i ~/ 4;
+      final double x = (pixel % width) / _scale;
+      final int row = pixel ~/ width;
+      if (x >= shoreMark.left && x <= shoreMark.right) {
+        if (row < shoreRow) {
+          aboveShore++;
+        } else if (row <= ((shoreMark.bottom) * _scale).ceil()) {
+          belowShore++;
         }
       }
-      printOnFailure('worst $worst sparkling $sparkling');
-      expect(sparkling, greaterThan(500));
-      expect(worst, lessThanOrEqualTo(_maxChannelDelta));
-    },
-  );
+    }
+    printOnFailure(
+      'sparkling $sparkling offWater $offWater above $aboveShore '
+      'below $belowShore',
+    );
+    expect(sparkling, greaterThan(500));
+    expect(offWater, 0);
+    expect(belowShore, greaterThan(0));
+    expect(aboveShore, 0);
+  });
 }

@@ -373,7 +373,7 @@ class MeadowStagePainter extends CustomPainter {
         );
       }
     }
-    paintMeadowWaterMarks(canvas, marks: marks, water: layers.water);
+    paintMeadowWaterMarks(canvas, marks: marks, layers: layers);
   }
 
   void _paintMist(Canvas canvas, _PaletteShaders shaders) {
