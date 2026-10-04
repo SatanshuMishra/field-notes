@@ -61,77 +61,86 @@ MeadowPalette _paletteAt(DateTime instant, MeadowYear year) =>
     );
 
 void main() {
-  testWidgets('a noon frame and a midnight frame open no offscreen layer', (
-    WidgetTester tester,
-  ) async {
-    final FragmentProgram? nightOverlay = await tester.runAsync(
-      () => FragmentProgram.fromAsset('shaders/meadow_night_overlay.frag'),
-    );
-    expect(nightOverlay, isNotNull);
-    final MeadowYear year = _fullYear();
-    final int seed = meadowSeed(_meadowKey, _leapYear);
-    final MeadowTerrain terrain = buildMeadowTerrain(seed: seed, year: year);
-    final MeadowPlants plants = buildMeadowPlants(
-      seed: seed,
-      year: year,
-      terrain: terrain,
-    );
-    final List<MeadowGrassBand> grass = buildMeadowGrass(
-      seed: seed,
-      terrain: terrain,
-    );
-    final MeadowPalette noon = _paletteAt(
-      DateTime.utc(_leapYear, 6, 21, 19, 30),
-      year,
-    );
-    final MeadowPalette midnight = _paletteAt(
-      DateTime.utc(_leapYear, 1, 15, 7),
-      year,
-    );
-    expect(noon.glintO, greaterThan(0));
-    expect(midnight.overlayAlpha, greaterThan(0));
-    final MeadowLayers layers = MeadowLayers(
-      terrain: terrain,
-      grass: grass,
-      density: _density,
-    );
-    final MeadowPlantAtlas atlas = MeadowPlantAtlas(plants, density: _density)
-      ..buildAll();
-    final MeadowCreatureArt creatures = MeadowCreatureArt.build(
-      density: _density,
-    );
-    final MeadowRays rays = MeadowRays(noon);
-    addTearDown(() {
-      layers.dispose();
-      atlas.dispose();
-      creatures.dispose();
-      rays.dispose();
-    });
-    for (final (String name, MeadowPalette palette)
-        in <(String, MeadowPalette)>[('noon', noon), ('midnight', midnight)]) {
-      layers
-        ..recolour(palette)
-        ..buildAll();
-      rays.recolour(palette);
-      final _CountingCanvas canvas = _CountingCanvas();
-      MeadowStagePainter(
-        layers: layers,
-        layersRevision: layers.revision,
-        atlas: atlas,
-        creatures: creatures,
-        rays: rays,
+  testWidgets(
+    'a noon frame and a midnight frame open one offscreen layer, for the water '
+    'marks',
+    (WidgetTester tester) async {
+      final FragmentProgram? nightOverlay = await tester.runAsync(
+        () => FragmentProgram.fromAsset('shaders/meadow_night_overlay.frag'),
+      );
+      expect(nightOverlay, isNotNull);
+      final MeadowYear year = _fullYear();
+      final int seed = meadowSeed(_meadowKey, _leapYear);
+      final MeadowTerrain terrain = buildMeadowTerrain(seed: seed, year: year);
+      final MeadowPlants plants = buildMeadowPlants(
+        seed: seed,
+        year: year,
         terrain: terrain,
-        plants: plants,
-        palette: palette,
-        viewport: const MeadowViewport(scale: 1, offset: Offset.zero, pan: 0),
-        time: 42.5,
-        animate: true,
-        growthPoint: year.limit,
-        mode: MeadowSceneMode.page,
-        heaviest: year.heaviest,
-        nightOverlay: nightOverlay,
-      ).paint(canvas, const Size(meadowWorldWidth, meadowWorldHeight));
-      expect(canvas.count('saveLayer'), 0, reason: name);
-    }
-  });
+      );
+      final List<MeadowGrassBand> grass = buildMeadowGrass(
+        seed: seed,
+        terrain: terrain,
+      );
+      final MeadowPalette noon = _paletteAt(
+        DateTime.utc(_leapYear, 6, 21, 19, 30),
+        year,
+      );
+      final MeadowPalette midnight = _paletteAt(
+        DateTime.utc(_leapYear, 1, 15, 7),
+        year,
+      );
+      expect(noon.glintO, greaterThan(0));
+      expect(midnight.overlayAlpha, greaterThan(0));
+      final MeadowLayers layers = MeadowLayers(
+        terrain: terrain,
+        grass: grass,
+        density: _density,
+      );
+      final MeadowPlantAtlas atlas = MeadowPlantAtlas(plants, density: _density)
+        ..buildAll();
+      final MeadowCreatureArt creatures = MeadowCreatureArt.build(
+        density: _density,
+      );
+      final MeadowRays rays = MeadowRays(noon);
+      addTearDown(() {
+        layers.dispose();
+        atlas.dispose();
+        creatures.dispose();
+        rays.dispose();
+      });
+      for (final (String name, MeadowPalette palette)
+          in <(String, MeadowPalette)>[
+            ('noon', noon),
+            ('midnight', midnight),
+          ]) {
+        layers
+          ..recolour(palette)
+          ..buildAll();
+        rays.recolour(palette);
+        final _CountingCanvas canvas = _CountingCanvas();
+        MeadowStagePainter(
+          layers: layers,
+          layersRevision: layers.revision,
+          atlas: atlas,
+          creatures: creatures,
+          rays: rays,
+          terrain: terrain,
+          plants: plants,
+          palette: palette,
+          viewport: const MeadowViewport(scale: 1, offset: Offset.zero, pan: 0),
+          time: 42.5,
+          animate: true,
+          growthPoint: year.limit,
+          mode: MeadowSceneMode.page,
+          heaviest: year.heaviest,
+          nightOverlay: nightOverlay,
+        ).paint(canvas, const Size(meadowWorldWidth, meadowWorldHeight));
+        final int marks = canvas.count('drawOval');
+        if (name == 'noon') {
+          expect(marks, greaterThan(0), reason: name);
+        }
+        expect(canvas.count('saveLayer'), marks > 0 ? 1 : 0, reason: name);
+      }
+    },
+  );
 }
