@@ -17,6 +17,7 @@ class AppSettings {
     required this.onboardingStatus,
     required this.appearance,
     this.sidebarCollapsed = false,
+    this.meadowPausesWhenInactive = true,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -31,6 +32,7 @@ class AppSettings {
     onboardingStatus: null,
     appearance: Appearance.light,
     sidebarCollapsed: false,
+    meadowPausesWhenInactive: true,
   );
 
   final bool reminderEnabled;
@@ -44,6 +46,7 @@ class AppSettings {
   final OnboardingStatus? onboardingStatus;
   final Appearance appearance;
   final bool sidebarCollapsed;
+  final bool meadowPausesWhenInactive;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -57,6 +60,7 @@ class AppSettings {
     OnboardingStatus? onboardingStatus,
     Appearance? appearance,
     bool? sidebarCollapsed,
+    bool? meadowPausesWhenInactive,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -72,6 +76,8 @@ class AppSettings {
       onboardingStatus: onboardingStatus ?? this.onboardingStatus,
       appearance: appearance ?? this.appearance,
       sidebarCollapsed: sidebarCollapsed ?? this.sidebarCollapsed,
+      meadowPausesWhenInactive:
+          meadowPausesWhenInactive ?? this.meadowPausesWhenInactive,
     );
   }
 
@@ -90,7 +96,8 @@ class AppSettings {
           reflectionPromptsEnabled == other.reflectionPromptsEnabled &&
           onboardingStatus == other.onboardingStatus &&
           appearance == other.appearance &&
-          sidebarCollapsed == other.sidebarCollapsed;
+          sidebarCollapsed == other.sidebarCollapsed &&
+          meadowPausesWhenInactive == other.meadowPausesWhenInactive;
 
   @override
   int get hashCode => Object.hash(
@@ -105,6 +112,7 @@ class AppSettings {
     onboardingStatus,
     appearance,
     sidebarCollapsed,
+    meadowPausesWhenInactive,
   );
 
   @override
@@ -116,5 +124,6 @@ class AppSettings {
       'notificationPermissionAsked: $notificationPermissionAsked, '
       'reflectionPromptsEnabled: $reflectionPromptsEnabled, '
       'onboardingStatus: $onboardingStatus, appearance: $appearance, '
-      'sidebarCollapsed: $sidebarCollapsed)';
+      'sidebarCollapsed: $sidebarCollapsed, '
+      'meadowPausesWhenInactive: $meadowPausesWhenInactive)';
 }

@@ -115,6 +115,7 @@ class MeadowPage extends StatefulWidget {
     this.onFastForward,
     this.motion,
     this.fullScreen,
+    this.pausesWhenInactive = true,
   });
 
   final MeadowYear year;
@@ -131,6 +132,7 @@ class MeadowPage extends StatefulWidget {
   final VoidCallback? onFastForward;
   final GardenMotionProfile? motion;
   final MeadowFullScreenRequest? fullScreen;
+  final bool pausesWhenInactive;
 
   bool get isCurrentYear => year.year == currentYear;
 
@@ -475,6 +477,7 @@ class _MeadowPageState extends State<MeadowPage> {
                 meadowPhoneOverlayLift
           : null,
       panTo: focus?.range,
+      pausesWhenInactive: widget.pausesWhenInactive,
       onDragged: compact ? null : _dragStarted,
       onDragEnd: compact ? null : _dragEnded,
       readyOverlay: empty

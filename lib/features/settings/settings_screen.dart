@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'sections/data_section.dart';
 import 'sections/journal_section.dart';
+import 'sections/performance_section.dart';
 import 'sections/reminders_sound_section.dart';
 import 'sections/sync_storage_section.dart';
 import 'spell_check_availability.dart';
@@ -296,10 +297,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         settings: settings,
         onFeedback: _showNotice,
       ),
-      SettingsTab.journal => JournalSection(
-        settings: settings,
-        onFeedback: _showNotice,
-        spellCheckAvailability: spellCheckAvailability,
+      SettingsTab.journal => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          JournalSection(
+            settings: settings,
+            onFeedback: _showNotice,
+            spellCheckAvailability: spellCheckAvailability,
+          ),
+          const SizedBox(height: _sectionGap),
+          PerformanceSection(settings: settings, onFeedback: _showNotice),
+        ],
       ),
       SettingsTab.data => DataSection(onFeedback: _showNotice),
     };
