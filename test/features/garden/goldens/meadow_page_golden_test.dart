@@ -3,6 +3,7 @@ library;
 
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/garden/model/meadow_key_provider.dart';
@@ -16,6 +17,7 @@ import 'package:field_notes/features/garden/widgets/meadow_focus_stepper.dart';
 import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -158,6 +160,9 @@ Future<void> _pumpReference(WidgetTester tester, _Reference reference) async {
       key: ValueKey<String>(reference.name),
       retry: (int retryCount, Object error) => null,
       overrides: <Override>[
+        appSettingsProvider.overrideWith(
+          (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+        ),
         allDaysProvider.overrideWith(
           (Ref ref) => Stream<List<Day>>.value(_days),
         ),

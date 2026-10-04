@@ -7,6 +7,8 @@ import 'package:flutter/painting.dart';
 import 'package:field_notes/design/flowers/garden_art_colors.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
 
+typedef MeadowFlyerSway = ({Offset offset, double angle});
+
 const double meadowBeeSize = 20;
 const double meadowButterflySize = 26;
 const double _viewBox = 24;
@@ -22,6 +24,8 @@ const double _glowReach = 4.2;
 const double _glowSpread = 1.2;
 const int _pad = 2;
 const int _sheetWidth = 512;
+
+const MeadowFlyerSway _still = (offset: Offset.zero, angle: 0);
 
 const Color _beeWing = Color.fromRGBO(244, 236, 220, 0.85);
 const Color _fireflyCore = Color(0xFFFBF0A2);
@@ -167,6 +171,7 @@ class MeadowCreatureArt {
     required List<MeadowFlyerPose> bees,
     required List<MeadowFlyerPose> butterflies,
     required double opacity,
+    MeadowFlyerSway Function(MeadowFlyerPose pose)? sway,
   }) {
     final Paint paint = Paint()..filterQuality = FilterQuality.medium;
     for (final MeadowFlyerPose bee in bees) {
@@ -177,7 +182,7 @@ class MeadowCreatureArt {
       paint.color = Color.fromRGBO(0, 0, 0, alpha.clamp(0.0, 1.0));
       final double spread = meadowWingSpread(bee.wingPhase);
       canvas.save();
-      _place(canvas, bee, meadowBeeSize);
+      _place(canvas, bee, meadowBeeSize, sway?.call(bee) ?? _still);
       _draw(canvas, _beeWingSprite, _beeLeftWing.at(spread), spread, paint);
       _draw(canvas, _beeWingSprite, _beeRightWing.at(spread), spread, paint);
       _draw(canvas, _beeBodySprite, _beeBodyBounds, 1, paint);
@@ -192,7 +197,12 @@ class MeadowCreatureArt {
       final double spread = meadowWingSpread(butterfly.wingPhase);
       final int kind = butterfly.variant % _foreWingSprites.length;
       canvas.save();
-      _place(canvas, butterfly, meadowButterflySize);
+      _place(
+        canvas,
+        butterfly,
+        meadowButterflySize,
+        sway?.call(butterfly) ?? _still,
+      );
       _draw(
         canvas,
         _foreWingSprites[kind],
@@ -268,11 +278,20 @@ class MeadowCreatureArt {
     _image.dispose();
   }
 
-  void _place(Canvas canvas, MeadowFlyerPose pose, double size) {
+  void _place(
+    Canvas canvas,
+    MeadowFlyerPose pose,
+    double size,
+    MeadowFlyerSway sway,
+  ) {
     final double unit = pose.scale * size / _viewBox;
-    canvas.translate(pose.position.dx, pose.position.dy);
-    if (pose.rotation != 0) {
-      canvas.rotate(pose.rotation);
+    final double rotation = pose.rotation + sway.angle;
+    canvas.translate(
+      pose.position.dx + sway.offset.dx,
+      pose.position.dy + sway.offset.dy,
+    );
+    if (rotation != 0) {
+      canvas.rotate(rotation);
     }
     canvas.scale(unit * pose.facing, unit);
     canvas.translate(-_viewCentre.dx, -_viewCentre.dy);

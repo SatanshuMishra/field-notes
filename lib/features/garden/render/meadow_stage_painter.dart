@@ -165,6 +165,7 @@ class MeadowStagePainter extends CustomPainter {
       bees: bees,
       butterflies: butterflies,
       opacity: palette.dayLife,
+      sway: _flyerSway,
     );
     _paintOverlay(canvas, shaders);
     _paintRays(canvas);
@@ -487,20 +488,12 @@ class MeadowStagePainter extends CustomPainter {
     bool faded = false;
     for (int i = 0; i < count; i++) {
       final (MeadowPlant plant, MeadowPlantSprite sprite) = sprites[i];
-      double opacity = _highlightOpacity(plant.dayIndex);
-      double scale = 1;
-      final double? revealed = reveals[plant.dayIndex];
-      if (animate && growAnimated && revealed != null) {
-        final ({double scale, double opacity}) grow = meadowGrowIn(
-          time - revealed,
-        );
-        scale = grow.scale;
-        opacity *= grow.opacity;
-      }
+      final ({double scale, double opacity}) grow = _growIn(plant);
+      final double opacity = _highlightOpacity(plant.dayIndex) * grow.opacity;
       final RSTransform placement = atlas.placement(
         sprite,
-        rotation: meadowSwayAngle(animate ? time - plant.swayPhase : 0),
-        scale: scale,
+        rotation: _swayOf(plant),
+        scale: grow.scale,
       );
       transforms
         ..[i * 4] = placement.scos
@@ -525,6 +518,58 @@ class MeadowStagePainter extends CustomPainter {
       null,
       _imagePaint(1),
     );
+  }
+
+  ({double scale, double opacity}) _growIn(MeadowPlant plant) {
+    final double? revealed = reveals[plant.dayIndex];
+    return animate && growAnimated && revealed != null
+        ? meadowGrowIn(time - revealed)
+        : (scale: 1, opacity: 1);
+  }
+
+  double _swayOf(MeadowPlant plant) =>
+      meadowSwayAngle(animate ? time - plant.swayPhase : 0);
+
+  MeadowFlyerSway _flyerSway(MeadowFlyerPose pose) {
+    final MeadowFlyerSway arriving = _swayOn(
+      pose.flower,
+      pose.flowerHold,
+      pose.position,
+    );
+    final MeadowFlyerSway leaving = _swayOn(
+      pose.left,
+      pose.leftHold,
+      pose.position,
+    );
+    return (
+      offset: arriving.offset + leaving.offset,
+      angle: arriving.angle + leaving.angle,
+    );
+  }
+
+  MeadowFlyerSway _swayOn(int? day, double hold, Offset at) {
+    final MeadowPlant? plant = day == null ? null : _plantsByDay(plants)[day];
+    final MeadowPlantSprite? sprite = day == null ? null : atlas.spriteOf(day);
+    if (hold <= 0 ||
+        plant == null ||
+        sprite == null ||
+        plant.dayIndex >= growthPoint) {
+      return (offset: Offset.zero, angle: 0);
+    }
+    final double angle = _swayOf(plant);
+    final RSTransform rest = atlas.placement(sprite);
+    final RSTransform swayed = atlas.placement(
+      sprite,
+      rotation: angle,
+      scale: _growIn(plant).scale,
+    );
+    final double x = (at.dx - rest.tx) / rest.scos;
+    final double y = (at.dy - rest.ty) / rest.scos;
+    final Offset moved = Offset(
+      swayed.scos * x - swayed.ssin * y + swayed.tx,
+      swayed.ssin * x + swayed.scos * y + swayed.ty,
+    );
+    return (offset: (moved - at) * hold, angle: angle * hold);
   }
 
   double _highlightOpacity(int day) {
@@ -709,6 +754,16 @@ class MeadowStagePainter extends CustomPainter {
       oldDelegate.mode != mode ||
       oldDelegate.caption != caption;
 }
+
+final Expando<Map<int, MeadowPlant>> _plantIndex =
+    Expando<Map<int, MeadowPlant>>();
+
+Map<int, MeadowPlant> _plantsByDay(MeadowPlants plants) =>
+    _plantIndex[plants] ??= Map<int, MeadowPlant>.unmodifiable(
+      <int, MeadowPlant>{
+        for (final MeadowPlant plant in plants.plants) plant.dayIndex: plant,
+      },
+    );
 
 double _rangeOpacity(MeadowRange? range, int day) =>
     range == null || (day >= range.first && day <= range.last)

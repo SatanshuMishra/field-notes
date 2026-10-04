@@ -31,6 +31,8 @@ const double _fullCircle = 6.28;
 const int _beeRecent = 5;
 const int _butterflyRecent = 6;
 const double _degrees = math.pi / 180;
+const double _settleSeconds = 0.35;
+const double _swayShare = 0.3;
 
 const Set<Mood> _openMoods = <Mood>{
   Mood.warm,
@@ -56,6 +58,8 @@ class MeadowFlyerPose {
     required this.variant,
     required this.activity,
     required this.flower,
+    this.left,
+    this.progress = 0,
   });
 
   final Offset position;
@@ -68,6 +72,18 @@ class MeadowFlyerPose {
   final int variant;
   final MeadowFlyerActivity activity;
   final int? flower;
+  final int? left;
+  final double progress;
+
+  double get flowerHold => switch (activity) {
+    MeadowFlyerActivity.perched => 1,
+    MeadowFlyerActivity.flying => _ease(1 - (1 - progress) / _swayShare),
+    MeadowFlyerActivity.away => 0,
+  };
+
+  double get leftHold => activity == MeadowFlyerActivity.flying
+      ? _ease(1 - progress / _swayShare)
+      : 0;
 }
 
 class MeadowFireflyPose {
@@ -208,31 +224,23 @@ class MeadowAmbience {
   }
 
   void _stepBee(_Flyer bee, double dt, List<MeadowPlant> targets) {
-    final double time = _time;
-    double ox = 0;
-    double oy = 0;
-    double opacity = 1;
+    final double opacity = bee.state == _State.away ? 0 : 1;
     switch (bee.state) {
       case _State.flying:
         bee.t += dt / bee.duration;
         bee.place();
-        oy = math.sin(time * 18 + bee.phase) * 1.2;
         if (bee.t >= 1) {
           if (bee.goingHome) {
             bee.state = _State.away;
             bee.wait = _random.between(3, 7);
             bee.goingHome = false;
           } else {
-            bee.state = _State.perched;
-            bee.wait = _random.between(1.2, 3.4);
+            bee.land(_random.between(1.2, 3.4));
           }
         }
       case _State.perched:
         bee.wait -= dt;
-        ox = math.sin(time * 3 + bee.phase) * 2.2 * bee.s / meadowNearScale;
-        oy =
-            math.cos(time * 4.2 + bee.phase) * 1.4 * bee.s / meadowNearScale -
-            2;
+        bee.perchedFor += dt;
         if (bee.wait <= 0) {
           bee.visits++;
           if (bee.visits > _random.between(4, 8)) {
@@ -264,7 +272,6 @@ class MeadowAmbience {
           }
         }
       case _State.away:
-        opacity = 0;
         bee.wait -= dt;
         if (bee.wait <= 0 && targets.isNotEmpty) {
           final _Pick? next = _pick(_home.x, _home.y, targets, 10, bee.recent);
@@ -283,33 +290,30 @@ class MeadowAmbience {
           }
         }
     }
-    bee.offsetX = ox;
-    bee.offsetY = oy;
+    final double time = _time;
+    final double reach = bee.s / meadowNearScale;
+    final double hover = bee.hover;
+    bee.offsetX = math.sin(time * 3 + bee.phase) * 2.2 * reach * hover;
+    bee.offsetY =
+        (math.cos(time * 4.2 + bee.phase) * 1.4 * reach - 2) * hover +
+        math.sin(time * 18 + bee.phase) * 1.2 * bee.flight;
     bee.rotation = 0;
     bee.opacity = opacity;
     bee.size = _beeSize(bee.s);
   }
 
   void _stepButterfly(_Flyer butterfly, double dt, List<MeadowPlant> open) {
-    final double time = _time;
-    double oy = 0;
-    double rotation = 0;
     switch (butterfly.state) {
       case _State.flying:
         butterfly.t += dt / butterfly.duration;
         butterfly.place();
-        oy =
-            math.sin(time * 6.5 + butterfly.phase) *
-            7 *
-            (butterfly.s / meadowNearScale + 0.3);
-        rotation = math.sin(time * 3 + butterfly.phase) * 10;
         if (butterfly.t >= 1) {
-          butterfly.state = _State.perched;
-          butterfly.wait = _random.between(2.5, 6);
+          butterfly.land(_random.between(2.5, 6));
           butterfly.wingPeriod = _butterflyRestWingPeriod;
         }
       case _State.perched:
         butterfly.wait -= dt;
+        butterfly.perchedFor += dt;
         if (butterfly.wait <= 0) {
           final _Pick? next = _pick(
             butterfly.x,
@@ -363,9 +367,16 @@ class MeadowAmbience {
           }
         }
     }
+    final double time = _time;
+    final double flight = butterfly.flight;
     butterfly.offsetX = 0;
-    butterfly.offsetY = oy;
-    butterfly.rotation = rotation * _degrees;
+    butterfly.offsetY =
+        math.sin(time * 6.5 + butterfly.phase) *
+        7 *
+        (butterfly.s / meadowNearScale + 0.3) *
+        flight;
+    butterfly.rotation =
+        math.sin(time * 3 + butterfly.phase) * 10 * _degrees * flight;
     butterfly.opacity = butterfly.state == _State.away ? 0 : 1;
     butterfly.size = _butterflySize(butterfly.s);
   }
@@ -429,6 +440,8 @@ class MeadowAmbience {
     double arc,
     int? flower,
   ) {
+    final int? left = flyer.state == _State.perched ? flyer.flower : null;
+    final double hover = flyer.hover;
     final double dx = tx - flyer.x;
     final double dy = ty - flyer.y;
     final double hypot = math.sqrt(dx * dx + dy * dy);
@@ -448,7 +461,9 @@ class MeadowAmbience {
       ..t = 0
       ..duration = math.max(0.7, distance / speed)
       ..state = _State.flying
-      ..flower = flower;
+      ..flower = flower
+      ..left = left
+      ..hoverFrom = hover;
   }
 
   void _pose({required double fireflies}) {
@@ -467,6 +482,11 @@ class MeadowAmbience {
 double _beeSize(double s) => s + 0.14;
 
 double _butterflySize(double s) => s / meadowNearScale * 0.85 + 0.18;
+
+double _ease(double share) {
+  final double k = share.clamp(0.0, 1.0);
+  return k * k * (3 - 2 * k);
+}
 
 List<int> _remember(MeadowPlant plant, List<int> recent, int keep) =>
     List<int>.unmodifiable(<int>[plant.dayIndex, ...recent].take(keep));
@@ -539,11 +559,33 @@ class _Flyer {
   bool goingHome = false;
   List<int> recent = const <int>[];
   int? flower;
+  int? left;
+  double hoverFrom = 0;
+  double perchedFor = 0;
   double offsetX = 0;
   double offsetY = 0;
   double rotation = 0;
   double opacity = 0;
   double size;
+
+  double get flown => math.min(1.0, t) * duration;
+
+  double get flight => state == _State.flying
+      ? _ease(flown / _settleSeconds) *
+            _ease((duration - flown) / _settleSeconds)
+      : 0;
+
+  double get hover => switch (state) {
+    _State.perched => _ease(perchedFor / _settleSeconds),
+    _State.flying => hoverFrom * (1 - _ease(flown / _settleSeconds)),
+    _State.away => 0,
+  };
+
+  void land(double rest) {
+    state = _State.perched;
+    wait = rest;
+    perchedFor = 0;
+  }
 
   void flap(double dt) {
     wingPhase = (wingPhase + dt / wingPeriod) % 1;
@@ -576,6 +618,8 @@ class _Flyer {
       _State.perched => MeadowFlyerActivity.perched,
     },
     flower: state == _State.away ? null : flower,
+    left: state == _State.flying ? left : null,
+    progress: math.min(1.0, t),
   );
 }
 

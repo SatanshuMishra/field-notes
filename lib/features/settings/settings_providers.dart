@@ -33,6 +33,14 @@ final Provider<bool> sidebarCollapsedProvider = Provider<bool>((Ref ref) {
   return settings.sidebarCollapsed;
 });
 
+final Provider<bool> meadowPausesWhenInactiveProvider = Provider<bool>((
+  Ref ref,
+) {
+  final AppSettings settings =
+      ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
+  return settings.meadowPausesWhenInactive;
+});
+
 @Riverpod(keepAlive: true)
 Future<SettingsDataController> settingsDataController(Ref ref) async {
   final database = ref.watch(databaseProvider);

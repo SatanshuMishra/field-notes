@@ -1,7 +1,9 @@
 import 'package:field_notes/domain/settings/settings.dart';
 
-typedef SettingsErrorHandler =
-    void Function(Object error, StackTrace stackTrace);
+typedef SettingsErrorHandler = void Function(
+  Object error,
+  StackTrace stackTrace,
+);
 
 sealed class SettingsWriteResult {
   const SettingsWriteResult();
@@ -89,6 +91,13 @@ class SettingsController {
     return _write(
       () => _repository.setSidebarCollapsed(value),
       'Could not save your sidebar setting.',
+    );
+  }
+
+  Future<SettingsWriteResult> setMeadowPausesWhenInactive(bool value) {
+    return _write(
+      () => _repository.setMeadowPausesWhenInactive(value),
+      'Could not save your Meadow setting.',
     );
   }
 

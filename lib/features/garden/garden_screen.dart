@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/streak/journaled_dates_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 
@@ -90,6 +91,7 @@ class _GardenScreenState extends ConsumerState<GardenScreen> {
     final SkyLocation location =
         ref.watch(skyLocationProvider).value ??
         resolveSkyLocation(null, DateTime.now().timeZoneOffset);
+    final bool pausesWhenInactive = ref.watch(meadowPausesWhenInactiveProvider);
     final bool study = studyYear != null;
     if (days.hasError || counts.hasError || key.hasError) {
       return MeadowPageNotice(
@@ -127,6 +129,7 @@ class _GardenScreenState extends ConsumerState<GardenScreen> {
       today: today,
       location: location,
       fullScreen: fullScreen,
+      pausesWhenInactive: pausesWhenInactive,
       onNow: sky.now,
       onFastForward: sky.toggleFastForward,
       onPickYear: (int year) => view.openYear(year, currentYear: currentYear),

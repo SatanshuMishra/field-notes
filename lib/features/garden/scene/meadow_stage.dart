@@ -103,6 +103,7 @@ class MeadowStage extends StatefulWidget {
     this.glassTips = false,
     this.overlayBottom,
     this.panTo,
+    this.pausesWhenInactive = true,
   });
 
   final MeadowYear year;
@@ -123,6 +124,7 @@ class MeadowStage extends StatefulWidget {
   final bool glassTips;
   final double? overlayBottom;
   final MeadowRange? panTo;
+  final bool pausesWhenInactive;
 
   int get resolvedGrowthPoint => growthPoint ?? year.limit;
 
@@ -165,7 +167,8 @@ class MeadowStageState extends State<MeadowStage>
   TargetPlatform? _platform;
   late MeadowPalette _palette;
   GardenMotionProfile _motion = GardenMotionProfile.reduced;
-  bool _resumed = true;
+  AppLifecycleState? _lifecycleState;
+  bool _awake = true;
   MeadowAmbience? _ambience;
   List<MeadowPlant> _targets = const <MeadowPlant>[];
   double _time = 0;
@@ -246,7 +249,8 @@ class MeadowStageState extends State<MeadowStage>
   void initState() {
     super.initState();
     _palette = _paletteOf(widget);
-    _resumed = _isResumed(WidgetsBinding.instance.lifecycleState);
+    _lifecycleState = WidgetsBinding.instance.lifecycleState;
+    _awake = _isAwake(_lifecycleState, widget.pausesWhenInactive);
     _lifecycle = AppLifecycleListener(onStateChange: _lifecycleChanged);
     _pendingPan = widget.panTo;
     _panMotion = AnimationController(
@@ -300,6 +304,9 @@ class MeadowStageState extends State<MeadowStage>
         _hit = null;
         _schedulePan();
       }
+    }
+    if (oldWidget.pausesWhenInactive != widget.pausesWhenInactive) {
+      _syncAwake();
     }
     _syncMotion();
   }
@@ -797,7 +804,7 @@ class MeadowStageState extends State<MeadowStage>
   }
 
   void _syncTicker() {
-    final bool run = _animate && _scene != null && _resumed;
+    final bool run = _animate && _scene != null && _awake;
     if (run && !_ticker.isActive) {
       _lastElapsed = Duration.zero;
       _ticker.start();
@@ -807,11 +814,16 @@ class MeadowStageState extends State<MeadowStage>
   }
 
   void _lifecycleChanged(AppLifecycleState state) {
-    final bool resumed = _isResumed(state);
-    if (resumed == _resumed) {
+    _lifecycleState = state;
+    _syncAwake();
+  }
+
+  void _syncAwake() {
+    final bool awake = _isAwake(_lifecycleState, widget.pausesWhenInactive);
+    if (awake == _awake) {
       return;
     }
-    _resumed = resumed;
+    _awake = awake;
     _syncTicker();
   }
 
@@ -1375,8 +1387,14 @@ final MeadowSceneCache<_ImageKey, _SceneImages> _scenes =
       onRelease: (_SceneImages scene) => scene.dispose(),
     );
 
-bool _isResumed(AppLifecycleState? state) =>
-    state == null || state == AppLifecycleState.resumed;
+bool _isAwake(AppLifecycleState? state, bool pausesWhenInactive) =>
+    switch (state) {
+      null || AppLifecycleState.resumed => true,
+      AppLifecycleState.inactive => !pausesWhenInactive,
+      AppLifecycleState.hidden ||
+      AppLifecycleState.paused ||
+      AppLifecycleState.detached => false,
+    };
 
 MeadowPalette _paletteOf(MeadowStage stage) => MeadowPalette.from(
   sky: stage.sky,

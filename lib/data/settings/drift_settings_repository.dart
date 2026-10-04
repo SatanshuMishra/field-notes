@@ -76,6 +76,12 @@ class DriftSettingsRepository implements SettingsRepository {
       _put(SettingsKeys.sidebarCollapsed, value ? _trueValue : _falseValue);
 
   @override
+  Future<void> setMeadowPausesWhenInactive(bool value) => _put(
+    SettingsKeys.meadowPausesWhenInactive,
+    value ? _trueValue : _falseValue,
+  );
+
+  @override
   Future<bool> hasStoredValues() async {
     final List<Setting> rows = await (_db.select(
       _db.settings,
@@ -174,6 +180,10 @@ class DriftSettingsRepository implements SettingsRepository {
       sidebarCollapsed: _decodeBool(
         values[SettingsKeys.sidebarCollapsed],
         defaults.sidebarCollapsed,
+      ),
+      meadowPausesWhenInactive: _decodeBool(
+        values[SettingsKeys.meadowPausesWhenInactive],
+        defaults.meadowPausesWhenInactive,
       ),
     );
   }

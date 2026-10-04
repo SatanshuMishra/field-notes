@@ -34,6 +34,7 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<OnboardingStatus> onboardingStatusWrites = <OnboardingStatus>[];
   final List<Appearance> appearanceWrites = <Appearance>[];
   final List<bool> sidebarCollapsedWrites = <bool>[];
+  final List<bool> meadowPausesWhenInactiveWrites = <bool>[];
   late AppSettings _latest = initial;
 
   void emit(AppSettings settings) {
@@ -116,6 +117,13 @@ class FakeSettingsRepository implements SettingsRepository {
     _failIfConfigured();
     sidebarCollapsedWrites.add(value);
     emit(_latest.copyWith(sidebarCollapsed: value));
+  }
+
+  @override
+  Future<void> setMeadowPausesWhenInactive(bool value) async {
+    _failIfConfigured();
+    meadowPausesWhenInactiveWrites.add(value);
+    emit(_latest.copyWith(meadowPausesWhenInactive: value));
   }
 
   @override

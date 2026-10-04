@@ -33,6 +33,8 @@ abstract interface class SettingsRepository {
 
   Future<void> setSidebarCollapsed(bool value);
 
+  Future<void> setMeadowPausesWhenInactive(bool value);
+
   Future<bool> hasStoredValues();
 
   Future<int> meadowKey();

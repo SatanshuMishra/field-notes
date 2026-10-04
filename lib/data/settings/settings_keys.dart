@@ -12,4 +12,5 @@ abstract final class SettingsKeys {
   static const String appearance = 'appearance';
   static const String meadowKey = 'meadow_key';
   static const String sidebarCollapsed = 'sidebar_collapsed';
+  static const String meadowPausesWhenInactive = 'meadow_pauses_when_inactive';
 }

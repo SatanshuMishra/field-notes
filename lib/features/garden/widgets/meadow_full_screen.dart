@@ -20,6 +20,7 @@ import 'package:field_notes/features/garden/widgets/garden_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
 import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_study_controls.dart';
+import 'package:field_notes/features/settings/settings_providers.dart';
 
 const Duration meadowFullScreenFade = Duration(milliseconds: 350);
 const String meadowFullScreenCloseLabel = 'Leave full screen';
@@ -210,6 +211,7 @@ class _PhoneFullScreenState extends ConsumerState<_PhoneFullScreen>
     );
     final bool morning =
         sunPosition(instant, location.latitude, location.longitude).azimuth < 0;
+    final bool pausesWhenInactive = ref.watch(meadowPausesWhenInactiveProvider);
     final bool playing = _player.playing;
     final String playLabel = playing
         ? meadowFullScreenPauseLabel
@@ -235,6 +237,7 @@ class _PhoneFullScreenState extends ConsumerState<_PhoneFullScreen>
               compact: true,
               growthPoint: widget.request.growthPoint,
               overlayBottom: rowBottom + meadowPhoneControlHeight + _overlayGap,
+              pausesWhenInactive: pausesWhenInactive,
             ),
             Positioned(
               left: _labelLeft,
