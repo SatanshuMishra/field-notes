@@ -42,6 +42,11 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     required this.dangerInk,
     required this.waveMid,
     required this.waveLight,
+    required this.accentBright,
+    required this.accentDeep,
+    required this.accentSoft,
+    required this.accentTint,
+    required this.accentRecord,
   });
 
   static const FieldNotesColors light = FieldNotesColors(
@@ -74,56 +79,66 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     placeholder: Color(0xFFB3A58C),
     dashMuted: Color(0xFFC3B39A),
     windowTitle: Color(0xFFA3866A),
-    sage: Color(0xFF7D8450),
-    accentInk: Color(0xFFC76A54),
-    coralLink: Color(0xFFB45C44),
-    accentInkStrong: Color(0xFF9A4832),
+    sage: Color(0xFF6D876D),
+    accentInk: Color(0xFFB8566A),
+    coralLink: Color(0xFFB55669),
+    accentInkStrong: Color(0xFF9B4255),
     mutedInkStrong: Color(0xFF6A5C4A),
-    coralHover: Color(0xFF9A4832),
+    coralHover: Color(0xFF9B4255),
     dangerInk: Color(0xFFC0392B),
-    waveMid: Color(0xFFDCAE9A),
-    waveLight: Color(0xFFE3C4B2),
+    waveMid: Color(0xFFDFA9B1),
+    waveLight: Color(0xFFE6C0C5),
+    accentBright: Color(0xFFE58D9C),
+    accentDeep: Color(0xFFA54B5D),
+    accentSoft: Color(0xFFD6959E),
+    accentTint: Color(0xFFFFD5DB),
+    accentRecord: Color(0xFFDA7185),
   );
 
   static const FieldNotesColors dark = FieldNotesColors(
-    page: Color(0xFF0E0C0A),
-    pageGradientInner: Color(0xFF1B1612),
-    pageGradientOuter: Color(0xFF0B0907),
-    panelTop: Color(0xFF1E1914),
-    panelBottom: Color(0xFF191511),
-    cardWarm: Color(0xFF29221B),
-    cardLight: Color(0xFF342A20),
-    cardBright: Color(0xFF211B16),
-    cardAlt: Color(0xFF26201A),
-    composerPaper: Color(0xFF2B241C),
-    paperShade: Color(0xFF2D261E),
-    titleBar: Color(0xFF241E19),
-    hatchLight: Color(0xFF2E261F),
-    hatchMid: Color(0xFF352C24),
-    hatchDark: Color(0xFF3C3229),
+    page: Color(0xFF0D0C0C),
+    pageGradientInner: Color(0xFF191616),
+    pageGradientOuter: Color(0xFF0A0909),
+    panelTop: Color(0xFF1C1919),
+    panelBottom: Color(0xFF181515),
+    cardWarm: Color(0xFF272222),
+    cardLight: Color(0xFF312A2A),
+    cardBright: Color(0xFF1F1B1B),
+    cardAlt: Color(0xFF242020),
+    composerPaper: Color(0xFF292424),
+    paperShade: Color(0xFF2B2626),
+    titleBar: Color(0xFF221E1E),
+    hatchLight: Color(0xFF2B2626),
+    hatchMid: Color(0xFF322C2C),
+    hatchDark: Color(0xFF383232),
     dangerSurface: Color(0xFF3B2320),
-    ink: Color(0xFFEFE3CE),
-    line: Color(0xFF9D8870),
-    shadow: Color(0xFF070504),
+    ink: Color(0xFFEDE1E1),
+    line: Color(0xFF968888),
+    shadow: Color(0xFF060505),
     shadowTintBase: Color(0xFF000000),
-    pill: Color(0xFF3D3229),
-    inkSoft: Color(0xFFC4B39A),
-    muted: Color(0xFFA6917A),
-    mutedDeep: Color(0xFFBFAA8E),
-    noticeInk: Color(0xFFB09C80),
-    noticeBodyInk: Color(0xFFC4B39A),
-    placeholder: Color(0xFF6E604F),
-    dashMuted: Color(0xFF5C4F42),
-    windowTitle: Color(0xFF8A7560),
-    sage: Color(0xFFADB670),
-    accentInk: Color(0xFFE8927A),
-    coralLink: Color(0xFFE5907A),
-    accentInkStrong: Color(0xFFE8927A),
-    mutedInkStrong: Color(0xFFBFAA8E),
-    coralHover: Color(0xFFF0A58E),
+    pill: Color(0xFF393332),
+    inkSoft: Color(0xFFC0B2B1),
+    muted: Color(0xFF9F9191),
+    mutedDeep: Color(0xFFB9A9A9),
+    noticeInk: Color(0xFFAB9B9B),
+    noticeBodyInk: Color(0xFFC0B2B1),
+    placeholder: Color(0xFF6A605F),
+    dashMuted: Color(0xFF574F4F),
+    windowTitle: Color(0xFF837675),
+    sage: Color(0xFFA0B9A0),
+    accentInk: Color(0xFFE692A0),
+    coralLink: Color(0xFFE38F9D),
+    accentInkStrong: Color(0xFFE692A0),
+    mutedInkStrong: Color(0xFFB9A9A9),
+    coralHover: Color(0xFFEDA8B2),
     dangerInk: Color(0xFFEF7466),
-    waveMid: Color(0xFF8A5C4B),
-    waveLight: Color(0xFF5C4339),
+    waveMid: Color(0xFF7D4E56),
+    waveLight: Color(0xFF56393E),
+    accentBright: Color(0xFFDF8796),
+    accentDeep: Color(0xFF97384E),
+    accentSoft: Color(0xFFD399A1),
+    accentTint: Color(0xFFF6D4D8),
+    accentRecord: Color(0xFFC86075),
   );
 
   static FieldNotesColors of(BuildContext context) =>
@@ -167,6 +182,11 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
   final Color dangerInk;
   final Color waveMid;
   final Color waveLight;
+  final Color accentBright;
+  final Color accentDeep;
+  final Color accentSoft;
+  final Color accentTint;
+  final Color accentRecord;
 
   Color get ink08 => ink.withAlpha(0x14);
   Color get ink12 => ink.withAlpha(0x1F);
@@ -225,6 +245,11 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     Color? dangerInk,
     Color? waveMid,
     Color? waveLight,
+    Color? accentBright,
+    Color? accentDeep,
+    Color? accentSoft,
+    Color? accentTint,
+    Color? accentRecord,
   }) {
     return FieldNotesColors(
       page: page ?? this.page,
@@ -265,6 +290,11 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       dangerInk: dangerInk ?? this.dangerInk,
       waveMid: waveMid ?? this.waveMid,
       waveLight: waveLight ?? this.waveLight,
+      accentBright: accentBright ?? this.accentBright,
+      accentDeep: accentDeep ?? this.accentDeep,
+      accentSoft: accentSoft ?? this.accentSoft,
+      accentTint: accentTint ?? this.accentTint,
+      accentRecord: accentRecord ?? this.accentRecord,
     );
   }
 
@@ -323,6 +353,11 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
       dangerInk: Color.lerp(dangerInk, other.dangerInk, t)!,
       waveMid: Color.lerp(waveMid, other.waveMid, t)!,
       waveLight: Color.lerp(waveLight, other.waveLight, t)!,
+      accentBright: Color.lerp(accentBright, other.accentBright, t)!,
+      accentDeep: Color.lerp(accentDeep, other.accentDeep, t)!,
+      accentSoft: Color.lerp(accentSoft, other.accentSoft, t)!,
+      accentTint: Color.lerp(accentTint, other.accentTint, t)!,
+      accentRecord: Color.lerp(accentRecord, other.accentRecord, t)!,
     );
   }
 
@@ -365,6 +400,11 @@ final class FieldNotesColors extends ThemeExtension<FieldNotesColors> {
     dangerInk,
     waveMid,
     waveLight,
+    accentBright,
+    accentDeep,
+    accentSoft,
+    accentTint,
+    accentRecord,
   ];
 
   @override

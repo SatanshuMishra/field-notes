@@ -20,7 +20,7 @@ final class GlassColors {
     tint: Color.fromRGBO(255, 250, 240, 0.55),
     border: Color.fromRGBO(255, 255, 255, 0.65),
     highlight: Color.fromRGBO(255, 255, 255, 0.75),
-    pill: Color.fromRGBO(199, 106, 84, 0.13),
+    pill: Color.fromRGBO(184, 86, 106, 0.13),
     shadows: <BoxShadow>[
       BoxShadow(
         color: Color.fromRGBO(74, 59, 46, 0.45),
@@ -32,10 +32,10 @@ final class GlassColors {
   );
 
   static const GlassColors paperDark = GlassColors(
-    tint: Color.fromRGBO(40, 33, 26, 0.58),
-    border: Color.fromRGBO(255, 245, 230, 0.16),
+    tint: Color.fromRGBO(38, 33, 33, 0.58),
+    border: Color.fromRGBO(252, 244, 244, 0.16),
     highlight: Color.fromRGBO(255, 255, 255, 0.08),
-    pill: Color.fromRGBO(232, 146, 122, 0.2),
+    pill: Color.fromRGBO(230, 146, 160, 0.2),
     shadows: <BoxShadow>[
       BoxShadow(
         color: Color.fromRGBO(0, 0, 0, 0.6),

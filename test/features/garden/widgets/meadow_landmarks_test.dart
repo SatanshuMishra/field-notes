@@ -16,7 +16,7 @@ const String _spruceText =
     'The tallest tree at the forest edge marks the 20 days in a row your '
     'meadow grew. The bees keep their hive in it.';
 
-const Color _coral = Color(0xFFC76A54);
+const Color _coral = Color(0xFFB8566A);
 
 List<Day> _days(int year, Iterable<int> days, Mood mood) => <Day>[
   for (final int day in days)

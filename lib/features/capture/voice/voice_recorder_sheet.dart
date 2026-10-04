@@ -50,17 +50,14 @@ const double voicePausedOrbOpacity = 0.55;
 const double voiceSavingOrbOpacity = 0.35;
 const double voiceActionsHeight = 118;
 
-const Color _orbLight = Color(0xFFE3937A);
-const Color _orbDeep = Color(0xFFA4503D);
 const Color _orbEdge = Color(0x24F3E6D1);
-const Color _orbShadow = Color(0xBFC76A54);
+const Color _orbShadow = Color(0xBFB8566A);
 const Color _orbGlyphInk = Palette.onAccent;
 const Color _keepFill = Color(0xFFF3E6D1);
 const Color _keepInk = Color(0xFF1C1713);
 const Color _keepShadow = Color(0x73F3E6D1);
 const Color _letGoInk = Color(0xFFB7A58C);
 const Color _keyHintInk = Color(0xFF9A8872);
-const Color _errorInk = Color(0xFFE79A80);
 
 const double _minTapTarget = 48;
 const double _sidebarRingInset = 34;
@@ -231,7 +228,7 @@ class VoiceRecorderSheet extends StatelessWidget {
                 key: voiceErrorKey,
                 textAlign: TextAlign.center,
                 style: context.textStyles.captionSans.copyWith(
-                  color: _errorInk,
+                  color: context.colors.accentBright,
                 ),
               ),
             ),
@@ -388,12 +385,16 @@ class _Orb extends StatelessWidget {
             child: SizedBox.square(
               dimension: diameter,
               child: DecoratedBox(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     center: _orbHighlight,
                     radius: _orbGradientRadius,
-                    colors: <Color>[_orbLight, Palette.coral, _orbDeep],
+                    colors: <Color>[
+                      context.colors.accentBright,
+                      Palette.coral,
+                      context.colors.accentDeep,
+                    ],
                     stops: _orbStops,
                   ),
                   boxShadow: <BoxShadow>[

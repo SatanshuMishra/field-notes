@@ -29,8 +29,8 @@ typedef _Look = ({
 const Color _paperLightTint = Color.fromRGBO(255, 250, 240, 0.55);
 const Color _paperLightBorder = Color.fromRGBO(255, 255, 255, 0.65);
 const Color _paperLightHighlight = Color.fromRGBO(255, 255, 255, 0.75);
-const Color _paperDarkTint = Color.fromRGBO(40, 33, 26, 0.58);
-const Color _paperDarkBorder = Color.fromRGBO(255, 245, 230, 0.16);
+const Color _paperDarkTint = Color.fromRGBO(38, 33, 33, 0.58);
+const Color _paperDarkBorder = Color.fromRGBO(252, 244, 244, 0.16);
 const Color _paperDarkHighlight = Color.fromRGBO(255, 255, 255, 0.08);
 const Color _sceneTint = Color.fromRGBO(28, 22, 16, 0.34);
 const Color _sceneBorder = Color.fromRGBO(255, 250, 240, 0.22);
@@ -343,7 +343,7 @@ void main() {
             _paperLightTint,
             _paperLightBorder,
             _paperLightHighlight,
-            const Color.fromRGBO(199, 106, 84, 0.13),
+            const Color.fromRGBO(184, 86, 106, 0.13),
           ),
           (
             GlassTone.paper,
@@ -351,7 +351,7 @@ void main() {
             _paperDarkTint,
             _paperDarkBorder,
             _paperDarkHighlight,
-            const Color.fromRGBO(232, 146, 122, 0.2),
+            const Color.fromRGBO(230, 146, 160, 0.2),
           ),
           (
             GlassTone.scene,

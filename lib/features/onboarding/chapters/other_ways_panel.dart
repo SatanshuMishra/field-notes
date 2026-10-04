@@ -64,12 +64,11 @@ const List<Duration> _waveBeats = <Duration>[
   Duration(milliseconds: 1640),
 ];
 
-const Color _speakFill = Color(0xFFC76A54);
+const Color _speakFill = Palette.coral;
 const Color _filmFill = Color(0xFF2F2A25);
 const Color _snapFill = Palette.snapSage;
 const Color _white = Color(0xFFFFFFFF);
 const Color _cream = Palette.creamOnSoil;
-const Color _filmKicker = Color(0xFFE79A80);
 const Color _filmBody = Color(0xFFCBB99F);
 const Color _stripeDark = Color(0xFF3A352E);
 const Color _stripeLight = Color(0xFF443F37);
@@ -102,8 +101,8 @@ const _BlockInk _onColour = _BlockInk(
   bodyAlpha: 0.92,
 );
 
-const _BlockInk _onDark = _BlockInk(
-  kicker: _filmKicker,
+_BlockInk _onDark(Color kicker) => _BlockInk(
+  kicker: kicker,
   kickerAlpha: 1,
   title: _cream,
   body: _filmBody,
@@ -142,7 +141,7 @@ class OtherWaysPanel extends StatelessWidget {
       _Block(
         key: otherWaysFilmKey,
         fill: _filmFill,
-        ink: _onDark,
+        ink: _onDark(context.colors.accentBright),
         kicker: 'film',
         title: 'Point and keep',
         body: 'Flip to the front camera, or turn it off and just talk.',

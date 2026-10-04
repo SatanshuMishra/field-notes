@@ -22,7 +22,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/theme_harness.dart';
 
 const Size _surface = Size(1200, 2000);
-const Color _darkInk = Color(0xFFEFE3CE);
+const Color _darkInk = Color(0xFFEDE1E1);
 const String _headed =
     '# Harbour\n\n## Tide table\n\n### Low water\n\nThe fog lifted slowly.';
 
@@ -279,18 +279,18 @@ void main() {
     final _Raster raster = await _rasterOf(tester, note);
     _expectInk(
       _pixelsIn(raster, _boxOf(note, source, 'the chart')),
-      const Color(0xFFE5907A),
+      const Color(0xFFE38F9D),
       'link',
     );
     expect(
       _wash(_pixelsIn(raster, _boxOf(note, source, 'mooring'))),
-      _drawnIn(const Color(0x14EFE3CE), rgb: 8),
+      _drawnIn(const Color(0x14EDE1E1), rgb: 8),
       reason: 'inline code background',
     );
-    expect(_paintedColours(view), contains(0xFF5C4F42), reason: 'quote rule');
+    expect(_paintedColours(view), contains(0xFF574F4F), reason: 'quote rule');
     _expectInk(
       _pixelsIn(raster, _boxOf(note, source, 'packed the stove')),
-      const Color(0xFFA6917A),
+      const Color(0xFF9F9191),
       'checked item',
     );
 
@@ -304,7 +304,7 @@ void main() {
     final _Raster markedRaster = await _rasterOf(tester, markedNote);
     expect(
       _peak(_pixelsIn(markedRaster, _boxOf(markedNote, active, '#'))),
-      _drawnIn(const Color(0x57EFE3CE), rgb: 8, alpha: 4),
+      _drawnIn(const Color(0x57EDE1E1), rgb: 8, alpha: 4),
       reason: 'caret-line markdown symbol',
     );
   });
@@ -317,8 +317,8 @@ void main() {
       'The fog lifted.',
       focused: true,
     );
-    expect(editor.cursorColor, const Color(0xFFE8927A));
-    expect(_paintedColours(editor), contains(0xFFE8927A));
+    expect(editor.cursorColor, const Color(0xFFE692A0));
+    expect(_paintedColours(editor), contains(0xFFE692A0));
 
     const String photo = '![Low tide](photo/a1b2c3d4e5f6 "right medium")';
     final MdTree tree = parseNoteTree(photo);

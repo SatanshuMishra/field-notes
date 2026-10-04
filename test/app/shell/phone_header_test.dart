@@ -250,7 +250,7 @@ void main() {
     );
     expect(
       tester.widget<Text>(find.text('field notes')).style!.color!.toARGB32(),
-      const Color(0xFFF6C9B8).toARGB32(),
+      const Color(0xFFFFD5DB).toARGB32(),
     );
   });
 }

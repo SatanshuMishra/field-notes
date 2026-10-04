@@ -10,13 +10,13 @@ import 'package:field_notes/design/widgets/widgets.dart';
 
 import '../support/theme_harness.dart';
 
-const Color _coral = Color(0xFFC76A54);
-const Color _line = Color(0xFF9D8870);
-const Color _shadow = Color(0xFF070504);
-const Color _cardWarm = Color(0xFF29221B);
-const Color _ink = Color(0xFFEFE3CE);
-const Color _panelTop = Color(0xFF1E1914);
-const Color _cardBright = Color(0xFF211B16);
+const Color _coral = Color(0xFFB8566A);
+const Color _line = Color(0xFF968888);
+const Color _shadow = Color(0xFF060505);
+const Color _cardWarm = Color(0xFF272222);
+const Color _ink = Color(0xFFEDE1E1);
+const Color _panelTop = Color(0xFF1C1919);
+const Color _cardBright = Color(0xFF1F1B1B);
 const Color _toastInk = Color(0xFFFBF3E4);
 const Color _ringOnDark = Color(0xFFE9DCC6);
 

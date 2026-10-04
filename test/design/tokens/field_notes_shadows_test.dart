@@ -42,13 +42,13 @@ void main() {
         FieldNotesColors.dark,
       );
 
-      expect(shadows.emphasis, _hard(const Color(0xFF070504), 2));
+      expect(shadows.emphasis, _hard(const Color(0xFF060505), 2));
       expect(shadows.hero, _hard(const Color(0x33000000), 3));
       expect(shadows.chip, _hard(const Color(0x29000000), 1.5));
       expect(
         shadows.outline,
         const Border.fromBorderSide(
-          BorderSide(color: Color(0xFF9D8870), width: 1.5),
+          BorderSide(color: Color(0xFF968888), width: 1.5),
         ),
       );
     });

@@ -22,11 +22,11 @@ import '../day_detail/support/day_detail_harness.dart';
 
 const Size _surface = Size(1200, 1000);
 const String _date = '2026-07-19';
-const Color _darkCard = Color(0xFF29221B);
-const Color _darkLine = Color(0xFF9D8870);
+const Color _darkCard = Color(0xFF272222);
+const Color _darkLine = Color(0xFF968888);
 const Color _darkCardShadow = Color(0x29000000);
-const Color _darkInk = Color(0xFFEFE3CE);
-const Color _darkPaper = Color(0xFF2B241C);
+const Color _darkInk = Color(0xFFEDE1E1);
+const Color _darkPaper = Color(0xFF292424);
 
 final DateTime _today = DateTime(2026, 7, 23, 9);
 

@@ -10,15 +10,15 @@ import 'package:field_notes/features/calendar/widgets/calendar_header.dart';
 
 import '../../support/theme_harness.dart';
 
-const Color _cardLight = Color(0xFF342A20);
-const Color _cardWarm = Color(0xFF29221B);
-const Color _coral = Color(0xFFC76A54);
-const Color _accentInk = Color(0xFFE8927A);
-const Color _ink = Color(0xFFEFE3CE);
-const Color _ink25 = Color(0x40EFE3CE);
-const Color _mutedDeep = Color(0xFFBFAA8E);
-const Color _sage = Color(0xFFADB670);
-const Color _line = Color(0xFF9D8870);
+const Color _cardLight = Color(0xFF312A2A);
+const Color _cardWarm = Color(0xFF272222);
+const Color _coral = Color(0xFFB8566A);
+const Color _accentInk = Color(0xFFE692A0);
+const Color _ink = Color(0xFFEDE1E1);
+const Color _ink25 = Color(0x40EDE1E1);
+const Color _mutedDeep = Color(0xFFB9A9A9);
+const Color _sage = Color(0xFFA0B9A0);
+const Color _line = Color(0xFF968888);
 
 const Size _surface = Size(900, 700);
 

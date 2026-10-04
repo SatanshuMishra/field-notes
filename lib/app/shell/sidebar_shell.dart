@@ -608,7 +608,7 @@ const double _panelGlowExtentY = 0.6;
 const double _panelGlowCentreX = 0.15;
 const double _panelGlowFadeStop = 0.55;
 
-const Color _panelCoralTintFade = Color(0x00C76A54);
+const Color _panelCoralTintFade = Color(0x00B8566A);
 
 BoxDecoration _panelWash(FieldNotesColors colors) => BoxDecoration(
   gradient: LinearGradient(

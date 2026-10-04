@@ -40,8 +40,7 @@ const double _ringSpread = 4;
 
 const Color _sceneFill = Color.fromRGBO(255, 250, 240, 0.14);
 const Color _sceneEdge = Color.fromRGBO(255, 250, 240, 0.28);
-const Color _sceneInk = Color(0xFFFFD9C9);
-const Color _ring = Color.fromRGBO(199, 106, 84, 0.25);
+const Color _ring = Color.fromRGBO(184, 86, 106, 0.25);
 
 typedef _PillLook = ({
   Color fill,
@@ -118,7 +117,7 @@ class StreakPill extends ConsumerWidget {
       StreakPillForm.headerOverScene => (
         fill: _sceneFill,
         border: Border.all(color: _sceneEdge, width: _sceneEdgeWidth),
-        ink: _sceneInk,
+        ink: colors.accentTint,
         flame: colors.accentInk,
         shadows: base,
       ),

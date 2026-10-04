@@ -228,7 +228,7 @@ void main() {
         matching: find.byType(DecoratedBox),
       );
       expect(tester.getSize(dotFace), const Size(8, 8));
-      expect(_fillsIn(tester, dot), <int>[0xFF7D8450]);
+      expect(_fillsIn(tester, dot), <int>[0xFF6D876D]);
       expect(
         tester
             .widget<Text>(_inCell('2026-07-10', find.text('10')))

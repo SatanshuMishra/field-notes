@@ -57,8 +57,8 @@ void main() {
     test('light text styles equal the live typography tokens', () {
       const Color ink = Color(0xFF4A3B2E);
       const Color mutedDeep = Color(0xFF8A7358);
-      const Color coral = Color(0xFFC76A54);
-      const Color sage = Color(0xFF7D8450);
+      const Color coral = Color(0xFFB8566A);
+      const Color sage = Color(0xFF6D876D);
       const Color muted = Color(0xFFA08A70);
 
       expect(_styles(const FieldNotesTextStyles(FieldNotesColors.light)), <
@@ -155,38 +155,38 @@ void main() {
 
       expect(
         styles.bodySans,
-        TypographyTokens.bodySans.copyWith(color: const Color(0xFFEFE3CE)),
+        TypographyTokens.bodySans.copyWith(color: const Color(0xFFEDE1E1)),
       );
       expect(
         styles.dateSerif,
-        TypographyTokens.dateSerif.copyWith(color: const Color(0xFFBFAA8E)),
+        TypographyTokens.dateSerif.copyWith(color: const Color(0xFFB9A9A9)),
       );
       expect(
         styles.pageEyebrowAccent,
         TypographyTokens.pageEyebrowAccent.copyWith(
-          color: const Color(0xFFE8927A),
+          color: const Color(0xFFE692A0),
         ),
       );
       expect(
         styles.sectionHeaderAccent,
         TypographyTokens.sectionHeaderAccent.copyWith(
-          color: const Color(0xFFADB670),
+          color: const Color(0xFFA0B9A0),
         ),
       );
       expect(
         styles.captionSans,
-        TypographyTokens.captionSans.copyWith(color: const Color(0xFFA6917A)),
+        TypographyTokens.captionSans.copyWith(color: const Color(0xFF9F9191)),
       );
       expect(
         styles.windowTitleAccent,
         TypographyTokens.windowTitleAccent.copyWith(
-          color: const Color(0xFF8A7560),
+          color: const Color(0xFF837675),
         ),
       );
       expect(
         styles.noteBodyPlaceholder,
         TypographyTokens.noteBodyPlaceholder.copyWith(
-          color: const Color(0x57EFE3CE),
+          color: const Color(0x57EDE1E1),
         ),
       );
       expect(

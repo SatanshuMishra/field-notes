@@ -113,7 +113,7 @@ const double _gearExtent = 36;
 const double _captureExtent = 46;
 const double _captureRing = 4;
 const double _ringSpread = 4;
-const Color _ring = Color.fromRGBO(199, 106, 84, 0.25);
+const Color _ring = Color.fromRGBO(184, 86, 106, 0.25);
 const Color _streakFlame = Color(0xFFE0863C);
 
 List<_Place> _placesFor(ShellLayout layout) => switch (layout) {
