@@ -1,6 +1,7 @@
 @Timeout(Duration(minutes: 2))
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -45,6 +46,58 @@ final bool hostHasJq =
 final String? jqSkip = hostHasJq
     ? null
     : 'jq is not on PATH, and relay-update.sh reads the cosign answer with it';
+
+final bool hostHasOpenssl =
+    Process.runSync('/bin/sh', <String>['-c', 'command -v openssl']).exitCode ==
+    0;
+
+final String? relayUpdateSkip =
+    jqSkip ??
+    (hostHasOpenssl
+        ? null
+        : 'openssl is not on PATH, and relay-update.sh reads the signing certificate with it');
+
+const String workflowShaExtension = '1.3.6.1.4.1.57264.1.3';
+
+final Map<String, String> _signingCertificates = <String, String>{};
+
+String signingCertificate({
+  String? commit,
+}) => _signingCertificates.putIfAbsent(commit ?? '', () {
+  final Directory scratch = Directory.systemTemp.createTempSync(
+    'relay_certificate_',
+  );
+  try {
+    final String certificate = p.join(scratch.path, 'certificate.der');
+    final ProcessResult made = Process.runSync('openssl', <String>[
+      'req',
+      '-x509',
+      '-newkey',
+      'ec',
+      '-pkeyopt',
+      'ec_paramgen_curve:prime256v1',
+      '-nodes',
+      '-keyout',
+      p.join(scratch.path, 'key.pem'),
+      '-subj',
+      '/CN=sigstore-stub',
+      '-days',
+      '1',
+      if (commit != null) ...<String>[
+        '-addext',
+        '$workflowShaExtension=DER:${ascii.encode(commit).map((int byte) => byte.toRadixString(16).padLeft(2, '0')).join()}',
+      ],
+      '-outform',
+      'DER',
+      '-out',
+      certificate,
+    ]);
+    expect(made.exitCode, 0, reason: '${made.stderr}');
+    return base64Encode(File(certificate).readAsBytesSync());
+  } finally {
+    scratch.deleteSync(recursive: true);
+  }
+});
 
 const String shebang = '#!/bin/bash\n';
 
@@ -195,18 +248,30 @@ exit 0
 '''}';
 
 const String cosignStub =
-    '$recordingPrelude${r'''if [ "${STUB_COSIGN_FAIL:-}" = "yes" ]; then
+    '$recordingPrelude${r'''if [ "$1" = "download" ]; then
+  for certificate in ${STUB_SIGNATURE_CERTS:-}; do
+    printf '{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","verificationMaterial":{"certificate":{"rawBytes":"%s"}},"dsseEnvelope":{}}\n' "$certificate"
+  done
+  exit 0
+fi
+if [ "${STUB_COSIGN_FAIL:-}" = "yes" ]; then
   printf 'Error: no matching signatures\n' >&2
   exit 1
 fi
+previous=""
+for argument in "$@"; do
+  if [ "$previous" = "--certificate-github-workflow-sha" ] && [ "$argument" != "${STUB_COMMIT:-0123456789abcdef0123456789abcdef01234567}" ]; then
+    printf 'Error: none of the expected identities matched what was in the certificate\n' >&2
+    exit 1
+  fi
+  previous="$argument"
+  image="$argument"
+done
 if [ -n "${STUB_COSIGN_OUTPUT+set}" ]; then
   printf '%s\n' "$STUB_COSIGN_OUTPUT"
   exit 0
 fi
-for argument in "$@"; do
-  image="$argument"
-done
-printf '[{"critical":{"identity":{"docker-reference":"%s"},"image":{"docker-manifest-digest":"%s"},"type":"cosign container image signature"},"optional":{"Issuer":"https://token.actions.githubusercontent.com","githubWorkflowRepository":"SatanshuMishra/field-notes","githubWorkflowRef":"refs/heads/main","githubWorkflowSha":"%s"}}]\n' "${image%@*}" "${image#*@}" "${STUB_COMMIT:-0123456789abcdef0123456789abcdef01234567}"
+printf '[{"critical":{"identity":{"docker-reference":"%s"},"image":{"docker-manifest-digest":"%s"},"type":"https://sigstore.dev/cosign/sign/v1"},"optional":{}}]\n' "${image%@*}" "${image#*@}"
 exit 0
 '''}';
 
@@ -344,6 +409,9 @@ final class ScriptBench {
         'STUB_LOGS': logs.path,
         'STUB_RELAY': relay,
         'STUB_TODAY': stubToday,
+        'STUB_SIGNATURE_CERTS': hostHasOpenssl
+            ? signingCertificate(commit: stubCommit)
+            : '',
         'FN_CONFIG_DIR': config.path,
         'FN_RETRY_DELAY': '0',
         'FN_HEALTH_DELAY': '0',
@@ -1138,6 +1206,23 @@ void main() {
         'json',
         newImage,
       ],
+      <String>['download', 'signature', newImage],
+      <String>[
+        'verify',
+        '--certificate-oidc-issuer',
+        certificateIssuer,
+        '--certificate-identity-regexp',
+        certificateIdentity,
+        '--certificate-github-workflow-repository',
+        workflowRepository,
+        '--certificate-github-workflow-ref',
+        workflowRef,
+        '--certificate-github-workflow-sha',
+        stubCommit,
+        '--output',
+        'json',
+        newImage,
+      ],
     ]);
     expect(bench.calls('msmtp'), isEmpty);
     expect(
@@ -1166,7 +1251,7 @@ void main() {
       '$relayRepository:sha-0123456789ab',
     ]);
     expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$verifiedImage\n');
-  }, skip: jqSkip);
+  }, skip: relayUpdateSkip);
 
   test(
     'relay-update refuses an image whose signature does not verify',
@@ -1267,79 +1352,148 @@ void main() {
     }
   });
 
-  test(
-    'relay-update pins the repository and ref and records the commit',
-    () async {
-      final ScriptBench bench = await ScriptBench.create();
+  test('relay-update pins the repository and ref and records the commit', () async {
+    final ScriptBench bench = await ScriptBench.create();
 
-      final ProcessResult result = await bench.run(
-        'relay-update.sh',
-        <String, String>{'STUB_REPO_DIGESTS': newImage},
-      );
+    final ProcessResult result = await bench.run(
+      'relay-update.sh',
+      <String, String>{'STUB_REPO_DIGESTS': newImage},
+    );
 
-      expect(result.exitCode, 0, reason: '${result.stderr}');
-      final List<String> verify = bench.calls('cosign').single;
-      expect(verify.first, 'verify');
-      expect(verify.last, newImage);
-      for (final List<String> pair in <List<String>>[
-        <String>['--certificate-oidc-issuer', certificateIssuer],
-        <String>['--certificate-identity-regexp', certificateIdentity],
-        <String>[
-          '--certificate-github-workflow-repository',
-          workflowRepository,
-        ],
-        <String>['--certificate-github-workflow-ref', workflowRef],
-        <String>['--output', 'json'],
-      ]) {
-        expect(verify, containsAllInOrder(pair));
-        expect(verify[verify.indexOf(pair.first) + 1], pair.last);
-      }
-      expect('${result.stdout}', contains('built from commit $stubCommit'));
-      final List<String> history = bench.historyFile.readAsLinesSync();
-      expect(history, hasLength(1));
-      expect(
-        history.single,
-        matches(
-          RegExp(
-            '^sha256:${'c' * 64} $stubCommit '
-            r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$',
-          ),
+    expect(result.exitCode, 0, reason: '${result.stderr}');
+    final List<List<String>> calls = bench.calls('cosign');
+    expect(calls, hasLength(3));
+    final List<String> verify = calls.first;
+    expect(verify.first, 'verify');
+    expect(verify.last, newImage);
+    for (final List<String> pair in <List<String>>[
+      <String>['--certificate-oidc-issuer', certificateIssuer],
+      <String>['--certificate-identity-regexp', certificateIdentity],
+      <String>['--certificate-github-workflow-repository', workflowRepository],
+      <String>['--certificate-github-workflow-ref', workflowRef],
+      <String>['--output', 'json'],
+    ]) {
+      expect(verify, containsAllInOrder(pair));
+      expect(verify[verify.indexOf(pair.first) + 1], pair.last);
+    }
+    expect(calls[1], <String>['download', 'signature', newImage]);
+    final List<String> confirm = calls.last;
+    expect(confirm.first, 'verify');
+    expect(confirm.last, newImage);
+    expect(
+      confirm[confirm.indexOf('--certificate-github-workflow-sha') + 1],
+      stubCommit,
+    );
+    expect('${result.stdout}', contains('built from commit $stubCommit'));
+    final List<String> history = bench.historyFile.readAsLinesSync();
+    expect(history, hasLength(1));
+    expect(
+      history.single,
+      matches(
+        RegExp(
+          '^sha256:${'c' * 64} $stubCommit '
+          r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$',
         ),
+      ),
+    );
+
+    final String unrecorded = '$relayRepository@sha256:${'d' * 64}';
+    final String otherCommit = 'e' * 40;
+    for (final (String, Map<String, String>, String) refusal
+        in <(String, Map<String, String>, String)>[
+          (
+            'no signature bundle',
+            <String, String>{'STUB_SIGNATURE_CERTS': ''},
+            'read the commit',
+          ),
+          (
+            'a certificate without the workflow commit',
+            <String, String>{'STUB_SIGNATURE_CERTS': signingCertificate()},
+            'read the commit',
+          ),
+          (
+            'certificates naming two commits',
+            <String, String>{
+              'STUB_SIGNATURE_CERTS':
+                  '${signingCertificate(commit: stubCommit)} '
+                  '${signingCertificate(commit: otherCommit)}',
+            },
+            'read the commit',
+          ),
+          (
+            'a legacy answer naming no commit',
+            <String, String>{
+              'STUB_SIGNATURE_CERTS': '',
+              'STUB_COSIGN_OUTPUT':
+                  '[{"optional":{"githubWorkflowSha":"main"}}]',
+            },
+            'read the commit',
+          ),
+          (
+            'a legacy answer naming two commits',
+            <String, String>{
+              'STUB_SIGNATURE_CERTS': '',
+              'STUB_COSIGN_OUTPUT':
+                  '[{"optional":{"githubWorkflowSha":"$stubCommit"}},'
+                  '{"optional":{"githubWorkflowSha":"$otherCommit"}}]',
+            },
+            'read the commit',
+          ),
+          (
+            'an answer that is not JSON',
+            <String, String>{
+              'STUB_SIGNATURE_CERTS': '',
+              'STUB_COSIGN_OUTPUT': 'not json',
+            },
+            'read the commit',
+          ),
+          (
+            'a downloaded certificate the signature does not back',
+            <String, String>{
+              'STUB_SIGNATURE_CERTS': signingCertificate(commit: otherCommit),
+            },
+            'confirm that the signature of $unrecorded names commit $otherCommit',
+          ),
+        ]) {
+      final (String reason, Map<String, String> environment, String step) =
+          refusal;
+      bench.clearLogs();
+
+      final ProcessResult refused = await bench.run(
+        'relay-update.sh',
+        <String, String>{'STUB_REPO_DIGESTS': unrecorded, ...environment},
       );
 
-      final String unrecorded = '$relayRepository@sha256:${'d' * 64}';
-      for (final String output in <String>[
-        '[]',
-        '[{"optional":{}}]',
-        '[{"optional":{"githubWorkflowSha":"main"}}]',
-        '[{"optional":{"githubWorkflowSha":"$stubCommit"}},'
-            '{"optional":{"githubWorkflowSha":"${'e' * 40}"}}]',
-        'not json',
-      ]) {
-        bench.clearLogs();
+      expect(refused.exitCode, isNot(0), reason: reason);
+      expect(
+        bench.imageFile.readAsStringSync(),
+        'RELAY_IMAGE=$newImage\n',
+        reason: reason,
+      );
+      expect(bench.historyFile.readAsLinesSync(), history, reason: reason);
+      expect(bench.calls('msmtp'), hasLength(1), reason: reason);
+      expect(bench.mail(), contains(step), reason: reason);
+      expect('${refused.stdout}', isNot(contains('RELAY_IMAGE=')));
+    }
 
-        final ProcessResult refused = await bench.run(
-          'relay-update.sh',
-          <String, String>{
-            'STUB_REPO_DIGESTS': unrecorded,
-            'STUB_COSIGN_OUTPUT': output,
-          },
-        );
+    bench.clearLogs();
+    final ProcessResult legacy = await bench.run(
+      'relay-update.sh',
+      <String, String>{
+        'STUB_REPO_DIGESTS': unrecorded,
+        'STUB_SIGNATURE_CERTS': '',
+        'STUB_COSIGN_OUTPUT':
+            '[{"optional":{"githubWorkflowSha":"$stubCommit"}}]',
+      },
+    );
 
-        expect(refused.exitCode, isNot(0), reason: output);
-        expect(
-          bench.imageFile.readAsStringSync(),
-          'RELAY_IMAGE=$newImage\n',
-          reason: output,
-        );
-        expect(bench.historyFile.readAsLinesSync(), history, reason: output);
-        expect(bench.calls('msmtp'), hasLength(1), reason: output);
-        expect(bench.mail(), contains('read the commit'), reason: output);
-        expect('${refused.stdout}', isNot(contains('RELAY_IMAGE=')));
-      }
-    },
-    skip: jqSkip,
-  );
+    expect(legacy.exitCode, 0, reason: '${legacy.stderr}');
+    expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$unrecorded\n');
+    expect(
+      bench.historyFile.readAsLinesSync().last,
+      startsWith('sha256:${'d' * 64} $stubCommit '),
+    );
+  }, skip: relayUpdateSkip);
 
   test(
     'relay-update refuses an older image unless a digest is named',
@@ -1405,7 +1559,7 @@ void main() {
       expect(again.exitCode, 0, reason: '${again.stderr}');
       expect(bench.historyFile.readAsLinesSync(), hasLength(4));
     },
-    skip: jqSkip,
+    skip: relayUpdateSkip,
   );
 
   test(
@@ -1532,7 +1686,7 @@ void main() {
       expect(history.take(recorded.length), recorded);
       expect(history.last, startsWith('sha256:${'b' * 64} $stubCommit '));
     },
-    skip: jqSkip,
+    skip: relayUpdateSkip,
   );
 
   test('the copy scripts refuse a config folder others can write', () async {

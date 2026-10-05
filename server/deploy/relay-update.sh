@@ -11,6 +11,7 @@ identity='^https://github\.com/(?i:satanshumishra)/field-notes/\.github/workflow
 workflow_repository="SatanshuMishra/field-notes"
 workflow_ref="refs/heads/main"
 commit_pattern='^[0-9a-f]{40}$'
+workflow_sha_extension='1.3.6.1.4.1.57264.1.3:'
 config_dir="${FN_CONFIG_DIR:-/home/satanshumishra/.config/field-notes}"
 image_file="$config_dir/relay-image.env"
 history_file="$config_dir/relay-image.history"
@@ -74,20 +75,43 @@ if [[ ! $wanted =~ $digest_pattern ]] && [ -s "$history_file" ]; then
   fi
 fi
 
+verify_signature() {
+  cosign verify \
+    --certificate-oidc-issuer "$issuer" \
+    --certificate-identity-regexp "$identity" \
+    --certificate-github-workflow-repository "$workflow_repository" \
+    --certificate-github-workflow-ref "$workflow_ref" \
+    "$@" \
+    --output json \
+    "$pinned"
+}
+
+signed_commits() {
+  local bundle certificate
+  printf '%s' "$verification" | jq -r '.[]? | .optional.githubWorkflowSha // empty' 2>/dev/null
+  while IFS= read -r bundle; do
+    certificate="$(printf '%s' "$bundle" \
+      | jq -r '.verificationMaterial.certificate.rawBytes // .Cert.Raw // empty' 2>/dev/null)"
+    if [ -z "$certificate" ]; then
+      continue
+    fi
+    printf '%s' "$certificate" \
+      | base64 -d 2>/dev/null \
+      | openssl x509 -inform DER -noout -text 2>/dev/null \
+      | awk -v extension="$workflow_sha_extension" '$1 == extension { getline; gsub(/[[:space:]]/, ""); print }'
+  done < <(cosign download signature "$pinned" 2>/dev/null)
+}
+
 log "verifying the signature of $pinned"
-verification="$(cosign verify \
-  --certificate-oidc-issuer "$issuer" \
-  --certificate-identity-regexp "$identity" \
-  --certificate-github-workflow-repository "$workflow_repository" \
-  --certificate-github-workflow-ref "$workflow_ref" \
-  --output json \
-  "$pinned")" \
+verification="$(verify_signature)" \
   || fail "verify the signature of $pinned, which this repository's image workflow on main did not sign"
-commit="$(printf '%s' "$verification" \
-  | jq -r '[.[] | .optional.githubWorkflowSha // empty] | unique | if length == 1 then .[0] else empty end' 2>/dev/null)"
-if [[ ! $commit =~ $commit_pattern ]]; then
+commits="$(signed_commits | grep -E "$commit_pattern" | sort -u)"
+if [ "$(printf '%s' "$commits" | grep -c .)" -ne 1 ]; then
   fail "read the commit $pinned was built from, which its signature must name once"
 fi
+commit="$commits"
+verify_signature --certificate-github-workflow-sha "$commit" >/dev/null \
+  || fail "confirm that the signature of $pinned names commit $commit"
 log "$pinned was built from commit $commit"
 
 if [ ! -d "$config_dir" ]; then
