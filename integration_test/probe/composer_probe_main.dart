@@ -12,6 +12,8 @@ import 'package:field_notes/data/database/app_database.dart'
 import 'package:field_notes/data/drafts/filesystem_draft_store.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/settings/drift_settings_repository.dart';
+import 'package:field_notes/data/settings/journal_settings_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/note_tree.dart';
 import 'package:field_notes/domain/notes/markdown/syntax_tree.dart';
@@ -760,6 +762,7 @@ final class _Probe {
     if (storage.wiped) {
       await DriftSettingsRepository(
         database,
+        JournalSettingsStore(database, ChangeRecorder(database)),
       ).setOnboardingStatus(OnboardingStatus.done);
     }
     _storage = storage;

@@ -8,6 +8,8 @@ import '../../domain/models/media_blob.dart';
 import '../../domain/models/media_kind.dart';
 import '../../domain/services/media_store.dart';
 import '../database/app_database.dart' as db;
+import '../sync/change_recorder.dart';
+import '../sync/synced_tables.dart';
 import 'blob_paths.dart';
 import 'blob_prefix.dart';
 import 'content_hash.dart';
@@ -21,13 +23,15 @@ int _systemMillis() => DateTime.now().millisecondsSinceEpoch;
 class FilesystemMediaStore implements MediaStore {
   FilesystemMediaStore({
     required db.AppDatabase database,
+    required this._recorder,
     required this._root,
     this._drafts,
     int Function()? clock,
-  })  : _db = database,
-        _clock = clock ?? _systemMillis;
+  }) : _db = database,
+       _clock = clock ?? _systemMillis;
 
   final db.AppDatabase _db;
+  final ChangeRecorder _recorder;
   final Directory _root;
   final Directory? _drafts;
   final int Function() _clock;
@@ -83,9 +87,9 @@ class FilesystemMediaStore implements MediaStore {
 
   @override
   Future<MediaBlob?> blobById(String id) async {
-    final row = await (_db.select(_db.mediaBlobs)
-          ..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    final row = await (_db.select(
+      _db.mediaBlobs,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
     return row == null ? null : _toDomain(row);
   }
 
@@ -125,7 +129,7 @@ class FilesystemMediaStore implements MediaStore {
             (t) => upper == null
                 ? t.id.isBiggerOrEqualValue(prefix)
                 : t.id.isBiggerOrEqualValue(prefix) &
-                    t.id.isSmallerThanValue(upper),
+                      t.id.isSmallerThanValue(upper),
           )
           ..limit(limit))
         .get();
@@ -162,8 +166,11 @@ class FilesystemMediaStore implements MediaStore {
 
   @override
   Future<int> collectGarbage() {
-    return MediaGarbageCollector(database: _db, root: _root, drafts: _drafts)
-        .collectGarbage();
+    return MediaGarbageCollector(
+      database: _db,
+      root: _root,
+      drafts: _drafts,
+    ).collectGarbage();
   }
 
   Future<MediaBlob> _finalize({
@@ -186,20 +193,33 @@ class FilesystemMediaStore implements MediaStore {
     await _atomicWrite(finalPath: finalPath, write: write, id: id);
 
     try {
-      await _db.into(_db.mediaBlobs).insert(
-            db.MediaBlobsCompanion.insert(
-              id: id,
-              relPath: relPath,
-              mime: mime,
-              kind: kind.id,
-              bytes: bytes,
-              width: Value(width),
-              height: Value(height),
-              durationMs: Value(durationMs),
-              createdAt: _clock(),
-            ),
-            mode: InsertMode.insertOrIgnore,
-          );
+      await _db.transaction(() async {
+        if (await blobById(id) != null) {
+          return;
+        }
+        final String clocks = await _recorder.stamp(
+          table: SyncedTables.mediaBlobs,
+          rowId: id,
+          fields: SyncedTables.mediaBlobFields,
+          currentClocks: '{}',
+        );
+        await _db
+            .into(_db.mediaBlobs)
+            .insert(
+              db.MediaBlobsCompanion.insert(
+                id: id,
+                relPath: relPath,
+                mime: mime,
+                kind: kind.id,
+                bytes: bytes,
+                width: Value(width),
+                height: Value(height),
+                durationMs: Value(durationMs),
+                createdAt: _clock(),
+                fieldClocks: Value(clocks),
+              ),
+            );
+      });
     } catch (_) {
       await _bestEffortDelete(File(finalPath));
       rethrow;

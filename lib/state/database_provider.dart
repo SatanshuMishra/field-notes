@@ -1,4 +1,5 @@
 import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'database_provider.g.dart';
@@ -8,4 +9,9 @@ AppDatabase database(Ref ref) {
   final db = AppDatabase.open();
   ref.onDispose(db.close);
   return db;
+}
+
+@Riverpod(keepAlive: true)
+ChangeRecorder changeRecorder(Ref ref) {
+  return ChangeRecorder(ref.watch(databaseProvider));
 }

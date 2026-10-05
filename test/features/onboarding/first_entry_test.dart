@@ -2,6 +2,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/database/app_database.dart' as db;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
@@ -280,7 +281,10 @@ void main() {
         final ProviderContainer container = await _open(
           tester,
           layout,
-          journal: DriftJournalRepository(database),
+          journal: DriftJournalRepository(
+            database,
+            recorder: ChangeRecorder(database),
+          ),
           clock: () => now,
         );
         final OnboardingController controller = _controller(container);
@@ -378,6 +382,7 @@ void main() {
           final db.AppDatabase database = newTestDatabase();
           final DriftJournalRepository journal = DriftJournalRepository(
             database,
+            recorder: ChangeRecorder(database),
           );
           final ProviderContainer container = await _open(
             tester,
@@ -443,7 +448,10 @@ void main() {
           final ProviderContainer overlap = await _open(
             tester,
             layout,
-            journal: DriftJournalRepository(quiet),
+            journal: DriftJournalRepository(
+              quiet,
+              recorder: ChangeRecorder(quiet),
+            ),
             clock: () => _lateEvening,
             writer: slow,
           );
@@ -497,7 +505,10 @@ void main() {
           final ProviderContainer failed = await _open(
             tester,
             layout,
-            journal: DriftJournalRepository(steady),
+            journal: DriftJournalRepository(
+              steady,
+              recorder: ChangeRecorder(steady),
+            ),
             clock: () => _lateEvening,
             writer: refusing,
           );
@@ -539,6 +550,7 @@ void main() {
           int tick = 0;
           final DriftJournalRepository journal = DriftJournalRepository(
             database,
+            recorder: ChangeRecorder(database),
             clock: () => tick += 1000,
           );
 

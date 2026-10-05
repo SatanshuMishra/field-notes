@@ -13,4 +13,6 @@ abstract final class SettingsKeys {
   static const String meadowKey = 'meadow_key';
   static const String sidebarCollapsed = 'sidebar_collapsed';
   static const String meadowPausesWhenInactive = 'meadow_pauses_when_inactive';
+  static const String keepAllMediaOnDevice = 'keep_all_media_on_device';
+  static const String allowMobileDataForMedia = 'allow_mobile_data_for_media';
 }

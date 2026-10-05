@@ -1,7 +1,9 @@
 import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/settings/drift_settings_repository.dart';
+import 'package:field_notes/data/settings/journal_settings_store.dart';
 import 'package:field_notes/data/settings/settings_keys.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
@@ -65,6 +67,13 @@ Future<Setting?> _spellCheckRow(AppDatabase db) {
       .getSingleOrNull();
 }
 
+DriftSettingsRepository _settingsFor(AppDatabase db) {
+  return DriftSettingsRepository(
+    db,
+    JournalSettingsStore(db, ChangeRecorder(db)),
+  );
+}
+
 void main() {
   testWidgets('spell check is off by default', (WidgetTester tester) async {
     _useSurface(tester);
@@ -73,7 +82,7 @@ void main() {
 
     final AppSettings? loaded = await tester.runAsync(() async {
       final AppDatabase db = AppDatabase(NativeDatabase.memory());
-      final AppSettings settings = await DriftSettingsRepository(db).load();
+      final AppSettings settings = await _settingsFor(db).load();
       await db.close();
       return settings;
     });
@@ -119,7 +128,7 @@ void main() {
 
     final List<Object?>? stored = await tester.runAsync(() async {
       final AppDatabase db = AppDatabase(NativeDatabase.memory());
-      final DriftSettingsRepository drift = DriftSettingsRepository(db);
+      final DriftSettingsRepository drift = _settingsFor(db);
       await drift.setSpellCheckEnabled(true);
       final AppSettings afterOn = await drift.load();
       final Setting? rowOn = await _spellCheckRow(db);
@@ -204,7 +213,7 @@ void main() {
             ),
           );
 
-      final AppSettings settings = await DriftSettingsRepository(db).load();
+      final AppSettings settings = await _settingsFor(db).load();
 
       expect(settings.spellCheckEnabled, isFalse);
     });
@@ -212,7 +221,7 @@ void main() {
     test('a repeated write upserts one row', () async {
       final AppDatabase db = newTestDatabase();
       addTearDown(db.close);
-      final DriftSettingsRepository repository = DriftSettingsRepository(db);
+      final DriftSettingsRepository repository = _settingsFor(db);
 
       await repository.setSpellCheckEnabled(true);
       await repository.setSpellCheckEnabled(false);

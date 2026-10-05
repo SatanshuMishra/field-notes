@@ -54,7 +54,97 @@ final class JournalRepositoryProvider
   }
 }
 
-String _$journalRepositoryHash() => r'3ca66305f162dc76335492f19704b8a84c4ef082';
+String _$journalRepositoryHash() => r'a40256d000649f3c42781ab5e7787436537caee8';
+
+@ProviderFor(journalSettingsStore)
+final journalSettingsStoreProvider = JournalSettingsStoreProvider._();
+
+final class JournalSettingsStoreProvider
+    extends
+        $FunctionalProvider<
+          JournalSettingsStore,
+          JournalSettingsStore,
+          JournalSettingsStore
+        >
+    with $Provider<JournalSettingsStore> {
+  JournalSettingsStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'journalSettingsStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$journalSettingsStoreHash();
+
+  @$internal
+  @override
+  $ProviderElement<JournalSettingsStore> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  JournalSettingsStore create(Ref ref) {
+    return journalSettingsStore(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(JournalSettingsStore value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<JournalSettingsStore>(value),
+    );
+  }
+}
+
+String _$journalSettingsStoreHash() =>
+    r'20207d92a0463171432ae615a21c323c9963f880';
+
+@ProviderFor(journalSettingChanges)
+final journalSettingChangesProvider = JournalSettingChangesProvider._();
+
+final class JournalSettingChangesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<Map<String, String>>,
+          Map<String, String>,
+          Stream<Map<String, String>>
+        >
+    with
+        $FutureModifier<Map<String, String>>,
+        $StreamProvider<Map<String, String>> {
+  JournalSettingChangesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'journalSettingChangesProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$journalSettingChangesHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<Map<String, String>> $createElement(
+    $ProviderPointer pointer,
+  ) => $StreamProviderElement(pointer);
+
+  @override
+  Stream<Map<String, String>> create(Ref ref) {
+    return journalSettingChanges(ref);
+  }
+}
+
+String _$journalSettingChangesHash() =>
+    r'6aee7232961a532ef96e1562377213852f9461f2';
 
 @ProviderFor(settingsRepository)
 final settingsRepositoryProvider = SettingsRepositoryProvider._();
@@ -102,4 +192,4 @@ final class SettingsRepositoryProvider
 }
 
 String _$settingsRepositoryHash() =>
-    r'089b44970711e54ecd9e562ac7227c1206e39cf8';
+    r'e3568470d00bea624995fb57bba42c42f178573a';

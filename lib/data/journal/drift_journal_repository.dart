@@ -3,6 +3,7 @@ import '../../domain/repositories/journal_repository.dart';
 import '../database/app_database.dart' as db show Entry;
 import '../database/app_database.dart' show AppDatabase;
 import '../database/ids.dart';
+import '../sync/change_recorder.dart';
 import 'days_dao.dart';
 import 'entries_dao.dart';
 import 'entry_photos_dao.dart';
@@ -12,14 +13,15 @@ import 'journal_mappers.dart';
 class DriftJournalRepository implements JournalRepository {
   DriftJournalRepository(
     AppDatabase db, {
+    required ChangeRecorder recorder,
     String Function()? idGenerator,
     int Function()? clock,
-  })  : _db = db,
-        _newId = idGenerator ?? newId,
-        _clock = clock ?? _systemClock,
-        _days = DaysDao(db),
-        _entries = EntriesDao(db),
-        _photos = EntryPhotosDao(db);
+  }) : _db = db,
+       _newId = idGenerator ?? newId,
+       _clock = clock ?? _systemClock,
+       _days = DaysDao(db, recorder),
+       _entries = EntriesDao(db, recorder),
+       _photos = EntryPhotosDao(db, recorder);
 
   final AppDatabase _db;
   final String Function() _newId;
@@ -37,7 +39,6 @@ class DriftJournalRepository implements JournalRepository {
       }
       final now = _clock();
       final row = await _days.insertDay(
-        id: _newId(),
         date: date,
         moodId: mood?.id,
         createdAt: now,
@@ -68,7 +69,6 @@ class DriftJournalRepository implements JournalRepository {
       }
       final now = _clock();
       final row = await _days.insertDay(
-        id: _newId(),
         date: date,
         moodId: null,
         createdAt: now,
@@ -85,7 +85,6 @@ class DriftJournalRepository implements JournalRepository {
       final now = _clock();
       if (existing == null) {
         final row = await _days.insertDay(
-          id: _newId(),
           date: date,
           moodId: mood?.id,
           createdAt: now,
@@ -179,15 +178,14 @@ class DriftJournalRepository implements JournalRepository {
     required int now,
   }) async {
     final existingDay = await _days.activeDayForDate(date);
-    final dayId = existingDay?.id ??
+    final dayId =
+        existingDay?.id ??
         (await _days.insertDay(
-          id: _newId(),
           date: date,
           moodId: null,
           createdAt: now,
           updatedAt: now,
-        ))
-            .id;
+        )).id;
     return _entries.insertEntry(
       id: _newId(),
       dayId: dayId,
@@ -275,9 +273,9 @@ class DriftJournalRepository implements JournalRepository {
 
   @override
   Stream<List<Day>> watchAllDays() {
-    return _days
-        .watchAllActiveDays()
-        .map((rows) => rows.map(toDomainDay).toList());
+    return _days.watchAllActiveDays().map(
+      (rows) => rows.map(toDomainDay).toList(),
+    );
   }
 
   @override

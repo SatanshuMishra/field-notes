@@ -3,6 +3,7 @@ import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/data/database/app_database.dart' as db;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/settings/settings.dart';
@@ -633,7 +634,10 @@ void main() {
             layout,
             settings: _StoredSettings(),
             scheduler: RecordingReminderScheduler(),
-            journal: DriftJournalRepository(database),
+            journal: DriftJournalRepository(
+              database,
+              recorder: ChangeRecorder(database),
+            ),
           );
           final OnboardingController controller = _controller(container);
 

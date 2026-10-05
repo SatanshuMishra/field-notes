@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/journal/entries_dao.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 
 import 'journal_test_db.dart';
 
@@ -28,7 +29,7 @@ void main() {
 
   setUp(() {
     db = newTestDatabase();
-    dao = EntriesDao(db);
+    dao = EntriesDao(db, ChangeRecorder(db));
   });
 
   tearDown(() async {

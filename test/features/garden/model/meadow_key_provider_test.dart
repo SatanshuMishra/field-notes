@@ -31,6 +31,9 @@ Future<int> _readMeadowKey(SettingsRepository settings) {
   final ProviderContainer container = ProviderContainer(
     overrides: <Override>[
       settingsRepositoryProvider.overrideWithValue(settings),
+      journalSettingChangesProvider.overrideWith(
+        (Ref ref) => const Stream<Map<String, String>>.empty(),
+      ),
     ],
   );
   addTearDown(container.dispose);
