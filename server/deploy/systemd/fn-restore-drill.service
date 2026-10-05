@@ -1,0 +1,9 @@
+[Unit]
+Description=Field Notes monthly restore drill from the NAS copy
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/field-notes/restore-drill.sh
+TimeoutStartSec=6h
+Nice=10
+IOSchedulingClass=idle

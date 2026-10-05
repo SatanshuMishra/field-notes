@@ -1,0 +1,64 @@
+services:
+  fn-relay:
+    image: ghcr.io/satanshumishra/field-notes-relay:main
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    stop_grace_period: 30s
+    environment:
+      RELAY_DATABASE: /srv/field-notes-relay/relay.sqlite3
+      RELAY_MEDIA_DIR: /srv/field-notes-relay/media
+      RELAY_PORT: "8080"
+    volumes:
+      - type: bind
+        source: /srv/field-notes-relay
+        target: /srv/field-notes-relay
+    networks:
+      fn-edge:
+        aliases:
+          - fn-relay
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  fn-relay-test:
+    image: ghcr.io/satanshumishra/field-notes-relay:main
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    stop_grace_period: 30s
+    environment:
+      RELAY_DATABASE: /srv/field-notes-relay-test/relay.sqlite3
+      RELAY_MEDIA_DIR: /srv/field-notes-relay-test/media
+      RELAY_PORT: "8080"
+    volumes:
+      - type: bind
+        source: /srv/field-notes-relay-test
+        target: /srv/field-notes-relay-test
+    networks:
+      fn-edge:
+        aliases:
+          - fn-relay-test
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  fn-edge:
+    external: true

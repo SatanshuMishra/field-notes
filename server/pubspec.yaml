@@ -1,0 +1,24 @@
+name: relay_server
+description: The Field Notes sync relay, which stores and forwards ciphertext.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  crypto: ^3.0.7
+  path: ^1.9.1
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_web_socket: ^3.0.0
+  sodium: 4.1.1+2
+  sqlite3: ^3.7.0
+  sync_protocol:
+    path: ../packages/sync_protocol
+  web_socket_channel: ^3.0.3
+
+dev_dependencies:
+  http: ^1.6.0
+  lints: ^6.1.0
+  test: ^1.32.0

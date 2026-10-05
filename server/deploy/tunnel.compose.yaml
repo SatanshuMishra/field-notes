@@ -1,0 +1,27 @@
+services:
+  fn-tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token-file /run/token
+    user: "1000:1000"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - "no-new-privileges:true"
+    volumes:
+      - type: bind
+        source: /home/satanshumishra/.config/field-notes/cloudflared.token
+        target: /run/token
+        read_only: true
+    networks:
+      - fn-edge
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+networks:
+  fn-edge:
+    external: true
