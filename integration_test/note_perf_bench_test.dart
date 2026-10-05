@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:field_notes/data/media/filesystem_media_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -105,6 +106,7 @@ void main() {
     addTearDown(sandbox.dispose);
     final MediaStore store = FilesystemMediaStore(
       database: sandbox.database,
+      recorder: ChangeRecorder(sandbox.database),
       root: sandbox.mediaRoot,
     );
 
@@ -177,6 +179,7 @@ void main() {
     addTearDown(sandbox.dispose);
     final MediaStore store = FilesystemMediaStore(
       database: sandbox.database,
+      recorder: ChangeRecorder(sandbox.database),
       root: sandbox.mediaRoot,
     );
 

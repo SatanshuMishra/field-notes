@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:field_notes/data/database/app_database.dart' show AppDatabase;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -45,7 +46,10 @@ void main() {
       TextCaptureRequest(date: '2026-07-19', text: 'through the graph'),
     );
 
-    final DriftJournalRepository journal = DriftJournalRepository(db);
+    final DriftJournalRepository journal = DriftJournalRepository(
+      db,
+      recorder: ChangeRecorder(db),
+    );
     final List<Entry> stored = await journal.entriesForDay(result.day.id);
     expect(stored.single.textContent, 'through the graph');
   });

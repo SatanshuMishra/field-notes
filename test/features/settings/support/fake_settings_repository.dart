@@ -35,6 +35,8 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<Appearance> appearanceWrites = <Appearance>[];
   final List<bool> sidebarCollapsedWrites = <bool>[];
   final List<bool> meadowPausesWhenInactiveWrites = <bool>[];
+  final List<bool> keepAllMediaOnDeviceWrites = <bool>[];
+  final List<bool> allowMobileDataForMediaWrites = <bool>[];
   late AppSettings _latest = initial;
 
   void emit(AppSettings settings) {
@@ -124,6 +126,20 @@ class FakeSettingsRepository implements SettingsRepository {
     _failIfConfigured();
     meadowPausesWhenInactiveWrites.add(value);
     emit(_latest.copyWith(meadowPausesWhenInactive: value));
+  }
+
+  @override
+  Future<void> setKeepAllMediaOnDevice(bool value) async {
+    _failIfConfigured();
+    keepAllMediaOnDeviceWrites.add(value);
+    emit(_latest.copyWith(keepAllMediaOnDevice: value));
+  }
+
+  @override
+  Future<void> setAllowMobileDataForMedia(bool value) async {
+    _failIfConfigured();
+    allowMobileDataForMediaWrites.add(value);
+    emit(_latest.copyWith(allowMobileDataForMedia: value));
   }
 
   @override
