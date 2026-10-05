@@ -10,6 +10,7 @@ import 'package:relay_server/src/accounts.dart';
 import 'package:relay_server/src/blobs.dart';
 import 'package:relay_server/src/body_slots.dart';
 import 'package:relay_server/src/database.dart';
+import 'package:relay_server/src/timers.dart';
 import 'package:sodium/sodium.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
@@ -75,6 +76,47 @@ final class SignedIn {
       AuthCredential(AuthScheme.uploadPass, response.uploadPass);
 }
 
+final class ManualTimer implements Timer {
+  ManualTimer(this.duration, this._callback);
+
+  final Duration duration;
+  final void Function() _callback;
+  bool _active = true;
+
+  @override
+  bool get isActive => _active;
+
+  @override
+  int get tick => 0;
+
+  @override
+  void cancel() {
+    _active = false;
+  }
+
+  void fire() {
+    if (_active) {
+      _active = false;
+      _callback();
+    }
+  }
+}
+
+final class ManualTimers {
+  final List<ManualTimer> _started = <ManualTimer>[];
+
+  Timer start(Duration duration, void Function() callback) {
+    final ManualTimer timer = ManualTimer(duration, callback);
+    _started.add(timer);
+    return timer;
+  }
+
+  List<ManualTimer> pending(Duration duration) => <ManualTimer>[
+    for (final ManualTimer timer in _started)
+      if (timer.isActive && timer.duration == duration) timer,
+  ];
+}
+
 final class LiveClient {
   LiveClient._(this._socket) {
     _socket.listen(
@@ -138,6 +180,7 @@ final class RelayHarness {
     required this.beforeAssembly,
     required this.rename,
     required this.largeBodyWait,
+    required this.startTimer,
     required this._now,
   });
 
@@ -149,6 +192,7 @@ final class RelayHarness {
     int minFreeBytes = RelayConfig.defaultMinFreeBytes,
     int largeBodySlots = RelayConfig.defaultLargeBodySlots,
     Duration largeBodyWait = largeBodyWaitLimit,
+    StartTimer startTimer = Timer.new,
   }) async {
     final Directory root = await Directory.systemTemp.createTemp(
       'relay_harness_',
@@ -168,6 +212,7 @@ final class RelayHarness {
       beforeAssembly: beforeAssembly,
       rename: rename,
       largeBodyWait: largeBodyWait,
+      startTimer: startTimer,
       now: harnessStart,
     );
     await harness.boot();
@@ -181,6 +226,7 @@ final class RelayHarness {
   final AssemblyHook? beforeAssembly;
   final Rename rename;
   final Duration largeBodyWait;
+  final StartTimer startTimer;
   final List<String> logLines = <String>[];
   final StreamController<String> _logged = StreamController<String>.broadcast(
     sync: true,
@@ -220,6 +266,7 @@ final class RelayHarness {
       freeSpace: (String directory) async => freeBytes,
       rename: rename,
       largeBodyWait: largeBodyWait,
+      startTimer: startTimer,
     );
     _server = await RelayServer.serve(
       app,

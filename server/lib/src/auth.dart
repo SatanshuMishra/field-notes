@@ -150,46 +150,107 @@ const RelayException _noBodySlot = RelayException(
   1,
 );
 
-Future<bool> _admitAlways() async => true;
+const RelayException _bodyTooSlow = RelayException(
+  SyncErrorCode.badRequest,
+  'Body too slow',
+);
 
 Future<Uint8List> readBody(
   Request request, {
   required int maxBytes,
-  Future<bool> Function()? admitLarge,
+  Future<void>? deadline,
 }) async {
   final int? declared = request.contentLength;
   if (declared != null && declared > maxBytes) {
     throw _bodyTooLarge;
   }
-  final Future<bool> Function() admit = admitLarge ?? _admitAlways;
-  bool admitted =
-      admitLarge == null || (declared != null && declared <= smallJsonLimit);
-  bool refused = false;
-  if (!admitted && declared != null) {
-    admitted = true;
-    refused = !await admit();
-  }
+  final Completer<Uint8List> body = Completer<Uint8List>();
   final BytesBuilder builder = BytesBuilder(copy: false);
+  int received = 0;
+  void finish() {
+    if (body.isCompleted) {
+      return;
+    }
+    if (received > maxBytes) {
+      body.completeError(_bodyTooLarge);
+    } else {
+      body.complete(builder.takeBytes());
+    }
+  }
+
+  late final StreamSubscription<List<int>> reading;
+  reading = request.read().listen(
+    (List<int> chunk) {
+      received += chunk.length;
+      if (received <= maxBytes) {
+        builder.add(chunk);
+      } else if (received > 2 * maxBytes) {
+        unawaited(reading.cancel());
+        finish();
+      }
+    },
+    onError: (Object error, StackTrace stackTrace) {
+      if (!body.isCompleted) {
+        body.completeError(error, stackTrace);
+      }
+    },
+    onDone: finish,
+    cancelOnError: true,
+  );
+  unawaited(
+    deadline?.then((_) {
+      if (!body.isCompleted) {
+        reading.pause();
+        body.completeError(_bodyTooSlow);
+      }
+    }),
+  );
+  return body.future;
+}
+
+Future<void> _discardBody(Request request, int maxBytes) async {
   int received = 0;
   await for (final List<int> chunk in request.read()) {
     received += chunk.length;
-    if (!admitted && received > smallJsonLimit) {
-      admitted = true;
-      refused = !await admit();
-    }
-    if (!refused && received <= maxBytes) {
-      builder.add(chunk);
-    } else if (received > 2 * maxBytes) {
+    if (received > 2 * maxBytes) {
       break;
     }
   }
-  if (refused) {
-    throw _noBodySlot;
-  }
-  if (received > maxBytes) {
+}
+
+bool _needsSlot(Request request, int maxBytes) {
+  final int? declared = request.contentLength;
+  return maxBytes > smallJsonLimit &&
+      (declared == null || declared > smallJsonLimit);
+}
+
+Future<Uint8List> _readLargeBody(
+  Request request,
+  int maxBytes,
+  LargeBodySlots slots,
+) async {
+  final int? declared = request.contentLength;
+  if (declared != null && declared > maxBytes) {
     throw _bodyTooLarge;
   }
-  return builder.takeBytes();
+  final String accountId =
+      (request.context[callerContextKey] as Caller?)?.accountId ?? '';
+  if (!await slots.acquire(accountId)) {
+    await _discardBody(request, maxBytes);
+    throw _noBodySlot;
+  }
+  final Completer<void> expired = Completer<void>();
+  final Timer deadline = slots.holdDeadline(expired.complete);
+  try {
+    return await readBody(
+      request,
+      maxBytes: maxBytes,
+      deadline: expired.future,
+    );
+  } finally {
+    deadline.cancel();
+    slots.release(accountId);
+  }
 }
 
 int jsonOpeners(List<int> body) {
@@ -207,33 +268,17 @@ Future<Map<String, Object?>> readJson(
   required int maxBytes,
   LargeBodySlots? slots,
 }) async {
-  final String accountId =
-      (request.context[callerContextKey] as Caller?)?.accountId ?? '';
-  bool holding = false;
-  try {
-    final Uint8List body = await readBody(
-      request,
-      maxBytes: maxBytes,
-      admitLarge: slots == null
-          ? null
-          : () async {
-              holding = await slots.acquire(accountId);
-              return holding;
-            },
-    );
-    if (jsonOpeners(body) > maxJsonOpeners) {
-      throw const RelayException(SyncErrorCode.badRequest, 'Too many objects');
-    }
-    final Map<String, Object?> json = decodeJsonObject(utf8.decode(body));
-    if (readProtocolVersion(json) != syncProtocolVersion) {
-      throw const RelayException(SyncErrorCode.unsupportedProtocol);
-    }
-    return json;
-  } finally {
-    if (holding) {
-      slots!.release(accountId);
-    }
+  final Uint8List body = slots != null && _needsSlot(request, maxBytes)
+      ? await _readLargeBody(request, maxBytes, slots)
+      : await readBody(request, maxBytes: maxBytes);
+  if (jsonOpeners(body) > maxJsonOpeners) {
+    throw const RelayException(SyncErrorCode.badRequest, 'Too many objects');
   }
+  final Map<String, Object?> json = decodeJsonObject(utf8.decode(body));
+  if (readProtocolVersion(json) != syncProtocolVersion) {
+    throw const RelayException(SyncErrorCode.unsupportedProtocol);
+  }
+  return json;
 }
 
 Caller callerOf(Request request) =>

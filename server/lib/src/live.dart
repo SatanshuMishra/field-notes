@@ -9,12 +9,15 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'auth.dart';
 import 'database.dart';
 import 'live_guard.dart';
+import 'timers.dart';
 
 const Duration liveIdleLimit = Duration(seconds: 90);
+const Duration liveCloseLimit = Duration(seconds: 5);
 const int maxLiveSocketsPerDevice = 4;
 const int maxLiveFrameBytes = 4 * 1024;
 
 const int liveClosedCode = 1000;
+const int liveTooFastCode = 1008;
 const int liveTooBigCode = 1009;
 const int liveIdleCode = 4000;
 const int liveRevokedCode = 4001;
@@ -26,11 +29,15 @@ final class _LiveSocket {
   const _LiveSocket({
     required this.grant,
     required this.webSocket,
+    required this.socket,
+    required this.ended,
     required this.lastHeard,
   });
 
   final SessionGrant grant;
   final WebSocket webSocket;
+  final Socket socket;
+  final Future<void> ended;
   final DateTime lastHeard;
 
   String get accountId => grant.caller.accountId;
@@ -45,8 +52,13 @@ final class _LiveSocket {
     }
   }
 
-  _LiveSocket heardAt(DateTime time) =>
-      _LiveSocket(grant: grant, webSocket: webSocket, lastHeard: time);
+  _LiveSocket heardAt(DateTime time) => _LiveSocket(
+    grant: grant,
+    webSocket: webSocket,
+    socket: socket,
+    ended: ended,
+    lastHeard: time,
+  );
 }
 
 bool _hasToken(String? header, String token) =>
@@ -58,14 +70,19 @@ bool _hasToken(String? header, String token) =>
         .contains(token);
 
 final class LiveHub {
-  LiveHub(this._clock, this._isCurrent);
+  LiveHub(this._clock, this._isCurrent, {this._startTimer = Timer.new});
 
   final DateTime Function() _clock;
   final GrantCheck _isCurrent;
+  final StartTimer _startTimer;
   final Map<int, _LiveSocket> _sockets = <int, _LiveSocket>{};
+  final Map<int, ({Socket socket, Timer deadline})> _closing =
+      <int, ({Socket socket, Timer deadline})>{};
   int _nextId = 0;
 
   int get openCount => _sockets.length;
+
+  int get closingCount => _closing.length;
 
   Handler handler(SessionGrant grant) =>
       (Request request) => _upgrade(grant, request);
@@ -110,9 +127,18 @@ final class LiveHub {
       for (final _LiveSocket socket in sockets)
         socket.webSocket
             .close(liveClosedCode)
-            .timeout(const Duration(seconds: 2), onTimeout: () {})
+            .timeout(
+              const Duration(seconds: 2),
+              onTimeout: () => socket.socket.destroy(),
+            )
             .catchError((Object _) {}),
     ]);
+    for (final ({Socket socket, Timer deadline}) closing
+        in _closing.values.toList()) {
+      closing.deadline.cancel();
+      closing.socket.destroy();
+    }
+    _closing.clear();
   }
 
   Response _upgrade(SessionGrant grant, Request request) {
@@ -154,18 +180,58 @@ final class LiveHub {
 
   void _close(int id, int code) {
     final _LiveSocket? socket = _sockets.remove(id);
-    unawaited(socket?.webSocket.close(code).catchError((Object _) {}));
+    if (socket == null) {
+      return;
+    }
+    _awaitClosed(id, socket);
+    unawaited(socket.webSocket.close(code).catchError((Object _) {}));
+  }
+
+  void _ended(int id) {
+    final _LiveSocket? socket = _sockets.remove(id);
+    if (socket != null) {
+      _awaitClosed(id, socket);
+    }
+  }
+
+  void _awaitClosed(int id, _LiveSocket socket) {
+    _closing[id] = (
+      socket: socket.socket,
+      deadline: _startTimer(liveCloseLimit, () {
+        _closing.remove(id);
+        socket.socket.destroy();
+      }),
+    );
+    void finished(Object? _) {
+      _closing.remove(id)?.deadline.cancel();
+    }
+
+    unawaited(
+      Future.wait<void>(<Future<void>>[socket.ended, socket.webSocket.done])
+          .then(finished, onError: finished),
+    );
   }
 
   void _attach(SessionGrant grant, Socket socket) {
     final int id = _nextId++;
+    final Completer<void> ended = Completer<void>();
+    void end() {
+      if (!ended.isCompleted) {
+        ended.complete();
+      }
+      _ended(id);
+    }
+
     final WebSocket webSocket = WebSocket.fromUpgradedSocket(
       GuardedSocket(
         socket,
         guardedFrames(
           socket,
-          LiveFrameGuard(maxLiveFrameBytes),
-          () => _close(id, liveTooBigCode),
+          LiveFrameGuard(maxLiveFrameBytes, _clock),
+          (LiveRefusal refusal) => _close(id, switch (refusal) {
+            LiveRefusal.tooBig => liveTooBigCode,
+            LiveRefusal.tooFast => liveTooFastCode,
+          }),
         ),
       ),
       serverSide: true,
@@ -173,12 +239,14 @@ final class LiveHub {
     _sockets[id] = _LiveSocket(
       grant: grant,
       webSocket: webSocket,
+      socket: socket,
+      ended: ended.future,
       lastHeard: _clock(),
     );
     webSocket.listen(
       (Object? message) => _receive(id, message),
-      onDone: () => _sockets.remove(id),
-      onError: (Object _) => _sockets.remove(id),
+      onDone: end,
+      onError: (Object _) => end(),
       cancelOnError: true,
     );
     final List<int> sameDevice = <int>[

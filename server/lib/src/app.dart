@@ -22,6 +22,7 @@ import 'migrations.dart';
 import 'pairing.dart';
 import 'probes.dart';
 import 'rate_limit.dart';
+import 'timers.dart';
 import 'trash.dart';
 
 const Duration purgeInterval = Duration(hours: 24);
@@ -51,8 +52,7 @@ final class RelayApp {
     required this.devices,
     required this.pairing,
     required this.restores,
-    required this.limiter,
-    required this.sharedLimit,
+    required this.rateLimits,
     required this.largeBodies,
     required this._logSink,
   }) : _lastPurge = clock();
@@ -66,6 +66,7 @@ final class RelayApp {
     FreeSpaceProbe freeSpace = dfFreeBytes,
     Rename rename = renameOnDisk,
     Duration largeBodyWait = largeBodyWaitLimit,
+    StartTimer startTimer = Timer.new,
   }) async {
     final DateTime Function() now = clock ?? systemClock;
     migrate(
@@ -109,7 +110,7 @@ final class RelayApp {
       accounts: Accounts(database, now),
       sessions: sessions,
       changeLog: ChangeLog(database, now),
-      live: LiveHub(now, sessions.isCurrent),
+      live: LiveHub(now, sessions.isCurrent, startTimer: startTimer),
       blobs: blobs,
       devices: Devices(database, config.mediaDirectory, now, rename: rename),
       pairing: Pairing(database, now),
@@ -119,20 +120,12 @@ final class RelayApp {
         sodium: sodium,
         challenges: challenges,
       ),
-      limiter: RateLimiter(
-        burst: config.rateBurst,
-        perSecond: config.ratePerSecond,
-        clock: now,
-      ),
-      sharedLimit: SharedRateLimit(
-        burst: config.rateGlobalBurst,
-        perSecond: config.rateGlobalPerSecond,
-        clock: now,
-      ),
+      rateLimits: RateLimits.fromConfig(config, now),
       largeBodies: LargeBodySlots(
         total: config.largeBodySlots,
         perAccount: config.largeBodySlotsPerAccount,
         waitLimit: largeBodyWait,
+        startTimer: startTimer,
       ),
       logSink: logSink,
     );
@@ -151,8 +144,7 @@ final class RelayApp {
   final Devices devices;
   final Pairing pairing;
   final Restores restores;
-  final RateLimiter limiter;
-  final SharedRateLimit sharedLimit;
+  final RateLimits rateLimits;
   final LargeBodySlots largeBodies;
   final LogSink _logSink;
   final Set<Future<void>> _deletions = <Future<void>>{};
@@ -169,7 +161,7 @@ final class RelayApp {
 
   Future<void> tick() async {
     live.sweep();
-    limiter.sweep();
+    rateLimits.sweep();
     if (!clock().isBefore(_lastPurge.add(purgeInterval))) {
       await purge();
     }
@@ -208,7 +200,11 @@ final class RelayApp {
       Pipeline pipeline = const Pipeline();
       if (rateLimitedRoutes.contains(route)) {
         pipeline = pipeline.addMiddleware(
-          rateLimit(limiter, sharedLimit, route),
+          rateLimit(
+            rateLimits,
+            route,
+            exempt: route == SyncRoutes.pairingStatus ? _signedIn : null,
+          ),
         );
       }
       if (route != SyncRoutes.health) {
@@ -284,6 +280,19 @@ final class RelayApp {
   );
 
   Response _notFound(Request request) => errorResponse(SyncErrorCode.notFound);
+
+  bool _signedIn(Request request) {
+    final AuthCredential? credential = credentialOf(request);
+    if (credential == null || credential.scheme != AuthScheme.session) {
+      return false;
+    }
+    try {
+      sessions.authorize(SyncRoutes.pairingStatus, Access.session, credential);
+      return true;
+    } on RelayException {
+      return false;
+    }
+  }
 
   Future<Response> _redeem(Request request) async => jsonResponse(
     accounts.redeem(

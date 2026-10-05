@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:relay_server/relay_server.dart';
 import 'package:relay_server/src/auth.dart';
 import 'package:relay_server/src/live.dart';
+import 'package:relay_server/src/live_guard.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 import 'package:test/test.dart';
 
@@ -32,6 +33,131 @@ List<int> frameHeader({required int first, required int length}) => <int>[
   ...maskKey,
 ];
 
+const Timeout socketTimeout = Timeout(Duration(minutes: 2));
+const int rawLimit = 16 * 1024;
+
+Future<bool> eventually(
+  bool Function() condition, {
+  Duration within = const Duration(seconds: 10),
+}) async {
+  final Stopwatch watch = Stopwatch()..start();
+  while (!condition()) {
+    if (watch.elapsed > within) {
+      return false;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+  return true;
+}
+
+String upgradeRequest(Uri live, SignedIn who) =>
+    'GET ${live.path} HTTP/1.1\r\n'
+    'Host: ${live.host}:${live.port}\r\n'
+    'Upgrade: websocket\r\n'
+    'Connection: Upgrade\r\n'
+    'Sec-WebSocket-Key: ${base64.encode(List<int>.generate(16, (int index) => index))}\r\n'
+    'Sec-WebSocket-Version: 13\r\n'
+    '${SyncHeaders.protocol}: $syncProtocolVersion\r\n'
+    '${SyncHeaders.authorization}: ${who.session.authorization}\r\n'
+    '\r\n';
+
+int? closeCodeIn(List<int> bytes) {
+  int index = 0;
+  while (index + 2 <= bytes.length) {
+    final int opcode = bytes[index] & 0x0f;
+    int length = bytes[index + 1] & 0x7f;
+    int header = 2;
+    if (length == 126 && index + 4 <= bytes.length) {
+      length = (bytes[index + 2] << 8) | bytes[index + 3];
+      header = 4;
+    } else if (length == 127 && index + 10 <= bytes.length) {
+      length = 0;
+      for (int offset = 2; offset < 10; offset++) {
+        length = length * 256 + bytes[index + offset];
+      }
+      header = 10;
+    }
+    if (opcode == 0x8 && length >= 2 && index + header + 2 <= bytes.length) {
+      return (bytes[index + header] << 8) | bytes[index + header + 1];
+    }
+    index += header + length;
+  }
+  return null;
+}
+
+final class RawPeer {
+  RawPeer._(this.socket) {
+    socket.listen(
+      (RawSocketEvent event) {
+        if (event == RawSocketEvent.read) {
+          final Uint8List? data = socket.read();
+          if (data != null) {
+            _bytes.addAll(data);
+          }
+        } else if (event == RawSocketEvent.readClosed) {
+          readClosed = true;
+        }
+      },
+      onError: (Object _) {
+        reset = true;
+      },
+      cancelOnError: false,
+    );
+  }
+
+  static Future<RawPeer> open(RelayHarness harness, SignedIn who) async {
+    final Uri live = SyncRoutes.live.uri(harness.baseUrl);
+    final RawPeer peer = RawPeer._(
+      await RawSocket.connect(live.host, live.port),
+    );
+    await peer.send(latin1.encode(upgradeRequest(live, who)));
+    expect(await eventually(() => peer._headLength != null), isTrue);
+    expect(latin1.decode(peer._bytes), startsWith('HTTP/1.1 101'));
+    return peer;
+  }
+
+  final RawSocket socket;
+  final List<int> _bytes = <int>[];
+  bool readClosed = false;
+  bool reset = false;
+
+  int? get _headLength {
+    final int end = latin1.decode(_bytes).indexOf('\r\n\r\n');
+    return end < 0 ? null : end + 4;
+  }
+
+  List<int> get received => _bytes.sublist(_headLength ?? _bytes.length);
+
+  void pause() {
+    socket.readEventsEnabled = false;
+  }
+
+  void resume() {
+    socket.readEventsEnabled = true;
+  }
+
+  Future<void> send(List<int> bytes) async {
+    int offset = 0;
+    while (offset < bytes.length) {
+      offset += socket.write(bytes, offset);
+      if (offset < bytes.length) {
+        await Future<void>.delayed(const Duration(milliseconds: 1));
+      }
+    }
+  }
+
+  bool poke() {
+    if (!reset) {
+      try {
+        socket.write(frameHeader(first: 0x8a, length: 0));
+      } on SocketException {
+        reset = true;
+      }
+    }
+    return reset;
+  }
+}
+
 final class RawLive {
   RawLive._(this.socket) {
     socket.done.ignore();
@@ -57,19 +183,7 @@ final class RawLive {
     final Uri live = SyncRoutes.live.uri(harness.baseUrl);
     final Socket socket = await Socket.connect(live.host, live.port);
     final RawLive raw = RawLive._(socket);
-    socket.add(
-      latin1.encode(
-        'GET ${live.path} HTTP/1.1\r\n'
-        'Host: ${live.host}:${live.port}\r\n'
-        'Upgrade: websocket\r\n'
-        'Connection: Upgrade\r\n'
-        'Sec-WebSocket-Key: ${base64.encode(List<int>.generate(16, (int index) => index))}\r\n'
-        'Sec-WebSocket-Version: 13\r\n'
-        '${SyncHeaders.protocol}: $syncProtocolVersion\r\n'
-        '${SyncHeaders.authorization}: ${who.session.authorization}\r\n'
-        '\r\n',
-      ),
-    );
+    socket.add(latin1.encode(upgradeRequest(live, who)));
     expect(await raw.upgraded.future, startsWith('HTTP/1.1 101'));
     return raw;
   }
@@ -275,5 +389,153 @@ void main() {
 
     await live.closed;
     expect(harness.app.live.openCount, 0);
+  });
+  test('a flood of pings closes the socket', () async {
+    final TestAccount account = await harness.enrol();
+    final SignedIn mac = await harness.signIn(account.firstDevice);
+    final RawPeer peer = await RawPeer.open(harness, mac);
+    addTearDown(peer.socket.close);
+    peer.pause();
+
+    await peer.send(<int>[
+      for (int ping = 0; ping < 200; ping++)
+        ...frameHeader(first: 0x89, length: 0),
+    ]);
+
+    expect(await eventually(() => harness.app.live.openCount == 0), isTrue);
+    peer.resume();
+    expect(await eventually(() => peer.readClosed || peer.reset), isTrue);
+    expect(closeCodeIn(peer.received), liveTooFastCode);
+  }, timeout: socketTimeout);
+
+  test('filler frames inside an unfinished message close the socket', () async {
+    final TestAccount account = await harness.enrol();
+    final SignedIn mac = await harness.signIn(account.firstDevice);
+    final RawPeer peer = await RawPeer.open(harness, mac);
+    addTearDown(peer.socket.close);
+    final List<int> oneByte = <int>[
+      ...frameHeader(first: 0x00, length: 1),
+      0x41,
+    ];
+    final List<int> filler = <int>[
+      ...frameHeader(first: 0x01, length: 1),
+      0x41,
+    ];
+    int sinceOneByte = 0;
+    int fillers = 0;
+    while (filler.length <= rawLimit + 4096) {
+      if (sinceOneByte >= 4096) {
+        filler.addAll(oneByte);
+        sinceOneByte = 0;
+      }
+      final List<int> frame = frameHeader(
+        first: fillers.isEven ? 0x00 : 0x8a,
+        length: 0,
+      );
+      filler.addAll(frame);
+      sinceOneByte += frame.length;
+      fillers++;
+    }
+    expect(filler.length, greaterThan(rawLimit));
+
+    await peer.send(filler);
+
+    expect(await eventually(() => harness.app.live.openCount == 0), isTrue);
+    expect(await eventually(() => peer.readClosed || peer.reset), isTrue);
+    expect(closeCodeIn(peer.received), anyOf(liveTooFastCode, liveTooBigCode));
+  }, timeout: socketTimeout);
+
+  test('a socket that does not finish closing is destroyed', () async {
+    final ManualTimers timers = ManualTimers();
+    final RelayHarness relay = await RelayHarness.start(
+      startTimer: timers.start,
+    );
+    addTearDown(relay.dispose);
+    final TestAccount account = await relay.enrol();
+    final SignedIn mac = await relay.signIn(account.firstDevice);
+    final RawPeer peer = await RawPeer.open(relay, mac);
+    addTearDown(peer.socket.close);
+
+    relay.advance(liveIdleLimit);
+    await relay.tick();
+
+    expect(await eventually(() => peer.readClosed), isTrue);
+    expect(closeCodeIn(peer.received), liveIdleCode);
+    final List<ManualTimer> deadlines = timers.pending(liveCloseLimit);
+    expect(deadlines, hasLength(1));
+    expect(deadlines.single.duration, const Duration(seconds: 5));
+    expect(relay.app.live.closingCount, 1);
+    expect(peer.poke(), isFalse);
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    expect(peer.poke(), isFalse);
+
+    deadlines.single.fire();
+
+    expect(
+      await eventually(peer.poke, within: const Duration(seconds: 3)),
+      isTrue,
+    );
+    expect(relay.app.live.closingCount, 0);
+  }, timeout: socketTimeout);
+
+  test('the live guard allows at most 60 frames in any 60 seconds', () {
+    DateTime now = harnessStart;
+    final List<int> pong = frameHeader(first: 0x8a, length: 0);
+    final LiveFrameGuard burst = LiveFrameGuard(frameLimit, () => now);
+    for (int frame = 1; frame <= 60; frame++) {
+      expect(burst.admit(pong), isNull, reason: 'frame $frame');
+    }
+    expect(burst.admit(pong), LiveRefusal.tooFast);
+
+    final LiveFrameGuard spread = LiveFrameGuard(frameLimit, () => now);
+    for (int frame = 1; frame <= 30; frame++) {
+      expect(spread.admit(pong), isNull, reason: 'first frame $frame');
+    }
+    now = harnessStart.add(liveFrameWindow - const Duration(seconds: 1));
+    for (int frame = 1; frame <= 30; frame++) {
+      expect(spread.admit(pong), isNull, reason: 'second frame $frame');
+    }
+    now = harnessStart.add(liveFrameWindow);
+    for (int frame = 1; frame <= 30; frame++) {
+      expect(spread.admit(pong), isNull, reason: 'third frame $frame');
+    }
+    expect(spread.admit(pong), LiveRefusal.tooFast);
+  });
+
+  test('the live guard closes after 16 KiB with no finished message', () {
+    DateTime now = harnessStart;
+    final List<int> pong = <int>[
+      ...frameHeader(first: 0x8a, length: 125),
+      ...List<int>.filled(125, 0x41),
+    ];
+    final List<int> finished = <int>[
+      ...frameHeader(first: 0x81, length: 1),
+      0x41,
+    ];
+    int frames = 0;
+    LiveRefusal? send(LiveFrameGuard guard, List<int> frame) {
+      if (frames == 60) {
+        now = now.add(liveFrameWindow);
+        frames = 0;
+      }
+      frames++;
+      return guard.admit(frame);
+    }
+
+    final LiveFrameGuard idle = LiveFrameGuard(frameLimit, () => now);
+    for (int frame = 1; frame <= 125; frame++) {
+      expect(send(idle, pong), isNull, reason: 'pong $frame');
+    }
+    expect(125 * pong.length, lessThanOrEqualTo(rawLimit));
+    expect(send(idle, pong), LiveRefusal.tooBig);
+
+    final LiveFrameGuard talking = LiveFrameGuard(frameLimit, () => now);
+    for (int frame = 1; frame <= 125; frame++) {
+      expect(send(talking, pong), isNull, reason: 'first pong $frame');
+    }
+    expect(send(talking, finished), isNull);
+    for (int frame = 1; frame <= 125; frame++) {
+      expect(send(talking, pong), isNull, reason: 'second pong $frame');
+    }
   });
 }

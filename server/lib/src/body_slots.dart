@@ -1,6 +1,10 @@
 import 'dart:async';
 
+import 'timers.dart';
+
 const Duration largeBodyWaitLimit = Duration(seconds: 30);
+const Duration largeBodyHoldLimit = Duration(seconds: 60);
+const int maxLargeBodyWaitersPerAccount = 8;
 
 final class _Waiter {
   _Waiter(this.accountId);
@@ -15,11 +19,17 @@ final class LargeBodySlots {
     required this.total,
     required this.perAccount,
     this.waitLimit = largeBodyWaitLimit,
+    this.holdLimit = largeBodyHoldLimit,
+    this.waitersPerAccount = maxLargeBodyWaitersPerAccount,
+    this._startTimer = Timer.new,
   });
 
   final int total;
   final int perAccount;
   final Duration waitLimit;
+  final Duration holdLimit;
+  final int waitersPerAccount;
+  final StartTimer _startTimer;
   final Map<String, int> _held = <String, int>{};
   final List<_Waiter> _queue = <_Waiter>[];
   int _active = 0;
@@ -33,8 +43,14 @@ final class LargeBodySlots {
       _take(accountId);
       return Future<bool>.value(true);
     }
+    if (_queue
+            .where((_Waiter waiter) => waiter.accountId == accountId)
+            .length >=
+        waitersPerAccount) {
+      return Future<bool>.value(false);
+    }
     final _Waiter waiter = _Waiter(accountId);
-    waiter.timer = Timer(waitLimit, () {
+    waiter.timer = _startTimer(waitLimit, () {
       if (_queue.remove(waiter)) {
         waiter.admitted.complete(false);
       }
@@ -42,6 +58,9 @@ final class LargeBodySlots {
     _queue.add(waiter);
     return waiter.admitted.future;
   }
+
+  Timer holdDeadline(void Function() onExpired) =>
+      _startTimer(holdLimit, onExpired);
 
   void release(String accountId) {
     _active--;

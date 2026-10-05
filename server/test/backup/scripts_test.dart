@@ -39,6 +39,13 @@ final String newImage = '$relayRepository@sha256:${'c' * 64}';
 final String serverDirectory = p.dirname(defaultMigrationsDirectory());
 final String deployDirectory = p.join(serverDirectory, 'deploy');
 
+final bool hostHasJq =
+    Process.runSync('/bin/sh', <String>['-c', 'command -v jq']).exitCode == 0;
+
+final String? jqSkip = hostHasJq
+    ? null
+    : 'jq is not on PATH, and relay-update.sh reads the cosign answer with it';
+
 const String shebang = '#!/bin/bash\n';
 
 const String recordingLines = r'''log="$STUB_LOGS/$(basename "$0").log"
@@ -1159,7 +1166,7 @@ void main() {
       '$relayRepository:sha-0123456789ab',
     ]);
     expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$verifiedImage\n');
-  });
+  }, skip: jqSkip);
 
   test(
     'relay-update refuses an image whose signature does not verify',
@@ -1331,6 +1338,7 @@ void main() {
         expect('${refused.stdout}', isNot(contains('RELAY_IMAGE=')));
       }
     },
+    skip: jqSkip,
   );
 
   test(
@@ -1397,6 +1405,7 @@ void main() {
       expect(again.exitCode, 0, reason: '${again.stderr}');
       expect(bench.historyFile.readAsLinesSync(), hasLength(4));
     },
+    skip: jqSkip,
   );
 
   test(
@@ -1473,6 +1482,94 @@ void main() {
       }
     }
 
+    for (final String script in <String>[
+      'nightly-copy.sh',
+      'restore-drill.sh',
+    ]) {
+      bench.clearLogs();
+      final ProcessResult passed = await bench.run(script, environment);
+      expect(passed.exitCode, 0, reason: '$script: ${passed.stderr}');
+    }
+  });
+  test(
+    'relay-update recognises digests recorded in the old history format',
+    () async {
+      final ScriptBench bench = await ScriptBench.create();
+      final String olderDigest = 'sha256:${'a' * 64}';
+      final String olderImage = '$relayRepository@$olderDigest';
+      final String newerImage = '$relayRepository@sha256:${'b' * 64}';
+      final List<String> recorded = <String>[
+        '2026-09-01T01:00:00Z main RELAY_IMAGE=$olderImage',
+        '2026-09-15T01:00:00Z sha-0123456789ab RELAY_IMAGE=$newerImage',
+      ];
+      writePrivate(bench.historyFile.path, '${recorded.join('\n')}\n');
+      writePrivate(bench.imageFile.path, 'RELAY_IMAGE=$newerImage\n');
+
+      final ProcessResult refused = await bench.run(
+        'relay-update.sh',
+        <String, String>{'STUB_REPO_DIGESTS': olderImage},
+      );
+
+      expect(refused.exitCode, isNot(0));
+      expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$newerImage\n');
+      expect(bench.historyFile.readAsLinesSync(), recorded);
+      expect(bench.calls('cosign'), isEmpty);
+      expect(bench.calls('msmtp'), hasLength(1));
+      expect(bench.mail(), contains('relay update failed'));
+      expect(bench.mail(), contains(olderDigest));
+      expect('${refused.stdout}', isNot(contains('RELAY_IMAGE=')));
+
+      bench.clearLogs();
+      final ProcessResult newest = await bench.run(
+        'relay-update.sh',
+        <String, String>{'STUB_REPO_DIGESTS': newerImage},
+      );
+
+      expect(newest.exitCode, 0, reason: '${newest.stderr}');
+      expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$newerImage\n');
+      final List<String> history = bench.historyFile.readAsLinesSync();
+      expect(history, hasLength(recorded.length + 1));
+      expect(history.take(recorded.length), recorded);
+      expect(history.last, startsWith('sha256:${'b' * 64} $stubCommit '));
+    },
+    skip: jqSkip,
+  );
+
+  test('the copy scripts refuse a config folder others can write', () async {
+    final ScriptBench bench = await ScriptBench.create();
+    final Map<String, String> environment = <String, String>{
+      ...bench.relayRoots(),
+      'FN_DRILL_ROOT': p.join(bench.root.path, 'drill'),
+      'STUB_NAS': bench.fakeNas().path,
+      'STUB_VERIFY_COPY': 'pass',
+    };
+    addTearDown(
+      () => Process.runSync('chmod', <String>['700', bench.config.path]),
+    );
+
+    for (final String mode in <String>['770', '707']) {
+      Process.runSync('chmod', <String>[mode, bench.config.path]);
+      for (final String script in <String>[
+        'nightly-copy.sh',
+        'restore-drill.sh',
+      ]) {
+        final String what = '$script with the config folder at mode $mode';
+        bench.clearLogs();
+
+        final ProcessResult refused = await bench.run(script, environment);
+
+        expect(refused.exitCode, isNot(0), reason: what);
+        expect(bench.calls('ssh'), isEmpty, reason: what);
+        expect(bench.transfers(), isEmpty, reason: what);
+        expect(bench.calls('docker'), isEmpty, reason: what);
+        expect(bench.heartbeats(), isEmpty, reason: what);
+        expect(bench.calls('msmtp'), hasLength(1), reason: what);
+        expect(bench.mail(), contains(bench.config.path), reason: what);
+        expect(bench.mail(), contains('no other user can write'), reason: what);
+      }
+    }
+
+    Process.runSync('chmod', <String>['700', bench.config.path]);
     for (final String script in <String>[
       'nightly-copy.sh',
       'restore-drill.sh',

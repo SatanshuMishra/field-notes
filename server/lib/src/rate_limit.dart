@@ -11,6 +11,7 @@ import 'auth.dart';
 import 'config.dart';
 
 const int maxRateBuckets = 10000;
+const int prefixRateFactor = 4;
 const Duration rateBucketIdleLimit = Duration(minutes: 10);
 
 const String clientAddressHeader = 'cf-connecting-ip';
@@ -28,12 +29,29 @@ final Set<SyncRoute> rateLimitedRoutes = <SyncRoute>{
   SyncRoutes.pairingStatus,
 };
 
+final Set<SyncRoute> relayWideRoutes = <SyncRoute>{
+  SyncRoutes.redeemInvite,
+  SyncRoutes.restoreChallenge,
+  SyncRoutes.restore,
+  SyncRoutes.registerRestoredDevice,
+  SyncRoutes.joinPairing,
+  SyncRoutes.pairingStatus,
+};
+
 final class _Bucket {
   const _Bucket({required this.tokens, required this.updatedAt});
 
   final double tokens;
   final DateTime updatedAt;
 }
+
+bool _isMapped(Uint8List bytes) =>
+    bytes.take(10).every((int byte) => byte == 0) &&
+    bytes[10] == 0xff &&
+    bytes[11] == 0xff;
+
+String _prefixOf(Uint8List bytes, int prefixBytes) =>
+    '${<String>[for (final int byte in bytes.take(prefixBytes)) byte.toRadixString(16).padLeft(2, '0')].join()}/${prefixBytes * 8}';
 
 String rateKeyOf(String address) {
   final InternetAddress? parsed = InternetAddress.tryParse(address);
@@ -44,14 +62,19 @@ String rateKeyOf(String address) {
     return parsed.address;
   }
   final Uint8List bytes = parsed.rawAddress;
-  final bool mapped =
-      bytes.take(10).every((int byte) => byte == 0) &&
-      bytes[10] == 0xff &&
-      bytes[11] == 0xff;
-  if (mapped) {
+  if (_isMapped(bytes)) {
     return bytes.sublist(12).join('.');
   }
-  return '${<String>[for (final int byte in bytes.take(8)) byte.toRadixString(16).padLeft(2, '0')].join()}/64';
+  return _prefixOf(bytes, 8);
+}
+
+String? widePrefixKeyOf(String address) {
+  final InternetAddress? parsed = InternetAddress.tryParse(address);
+  if (parsed == null || parsed.type != InternetAddressType.IPv6) {
+    return null;
+  }
+  final Uint8List bytes = parsed.rawAddress;
+  return _isMapped(bytes) ? null : _prefixOf(bytes, 6);
 }
 
 double _refilled(_Bucket bucket, DateTime now, int capacity, double rate) {
@@ -99,12 +122,14 @@ final class RateLimiter {
     required this._clock,
     this.maxBuckets = maxRateBuckets,
     this.idleLimit = rateBucketIdleLimit,
+    this.keyOf = rateKeyOf,
   }) : _hmac = Hmac(sha256, randomBytes(32));
 
   final int burst;
   final double perSecond;
   final int maxBuckets;
   final Duration idleLimit;
+  final String? Function(String address) keyOf;
   final DateTime Function() _clock;
   final Hmac _hmac;
   final Map<String, _Bucket> _buckets = <String, _Bucket>{};
@@ -112,9 +137,13 @@ final class RateLimiter {
   int get bucketCount => _buckets.length;
 
   int? take(String address) {
+    final String? rateKey = keyOf(address);
+    if (rateKey == null) {
+      return null;
+    }
     final DateTime now = _clock();
     final String key = base64Url.encode(
-      _hmac.convert(utf8.encode(rateKeyOf(address))).bytes,
+      _hmac.convert(utf8.encode(rateKey)).bytes,
     );
     final _Bucket? previous = _buckets.remove(key);
     if (previous == null) {
@@ -157,20 +186,63 @@ String clientAddressOf(Request request) {
       : '';
 }
 
-bool rateLimitApplies(SyncRoute route, Request request) =>
-    route != SyncRoutes.pairingStatus ||
-    credentialOf(request)?.scheme == AuthScheme.mailbox;
+final class RateLimits {
+  const RateLimits({
+    required this.address,
+    required this.widePrefix,
+    required this.relayWide,
+  });
+
+  factory RateLimits.fromConfig(
+    RelayConfig config,
+    DateTime Function() clock,
+  ) => RateLimits(
+    address: RateLimiter(
+      burst: config.rateBurst,
+      perSecond: config.ratePerSecond,
+      clock: clock,
+    ),
+    widePrefix: RateLimiter(
+      burst: config.rateBurst * prefixRateFactor,
+      perSecond: config.ratePerSecond * prefixRateFactor,
+      clock: clock,
+      keyOf: widePrefixKeyOf,
+    ),
+    relayWide: SharedRateLimit(
+      burst: config.rateGlobalBurst,
+      perSecond: config.rateGlobalPerSecond,
+      clock: clock,
+    ),
+  );
+
+  final RateLimiter address;
+  final RateLimiter widePrefix;
+  final SharedRateLimit relayWide;
+
+  int? take(String client, {required bool relayWideRoute}) =>
+      address.take(client) ??
+      widePrefix.take(client) ??
+      (relayWideRoute ? relayWide.take() : null);
+
+  void sweep() {
+    address.sweep();
+    widePrefix.sweep();
+  }
+}
 
 Middleware rateLimit(
-  RateLimiter limiter,
-  SharedRateLimit shared,
-  SyncRoute route,
-) =>
+  RateLimits limits,
+  SyncRoute route, {
+  bool Function(Request request)? exempt,
+}) =>
     (Handler inner) => (Request request) {
-      if (!rateLimitApplies(route, request)) {
+      if (exempt != null && exempt(request)) {
         return inner(request);
       }
-      final int? wait = limiter.take(clientAddressOf(request)) ?? shared.take();
+      final int? wait = limits.take(
+        clientAddressOf(request),
+        relayWideRoute: relayWideRoutes.contains(route),
+      );
       if (wait == null) {
         return inner(request);
       }

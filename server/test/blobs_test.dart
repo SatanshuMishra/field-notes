@@ -866,5 +866,5 @@ void main() {
       statusOf(await uploadStatus(harness, me, name, uploadId)).receivedParts,
       isEmpty,
     );
-  });
+  }, timeout: const Timeout(Duration(minutes: 2)));
 }

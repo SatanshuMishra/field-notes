@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -14,35 +15,60 @@ const int _maxControlPayload = 125;
 const int _twoByteLength = 126;
 const int _eightByteLength = 127;
 
+const int maxLiveRawBytes = 16 * 1024;
+const int maxLiveFrames = 60;
+const Duration liveFrameWindow = Duration(seconds: 60);
+
+enum LiveRefusal { tooBig, tooFast }
+
 final class LiveFrameGuard {
-  LiveFrameGuard(this.limit);
+  LiveFrameGuard(this.limit, this._clock);
 
   final int limit;
+  final DateTime Function() _clock;
   final List<int> _header = <int>[];
+  final ListQueue<DateTime> _frames = ListQueue<DateTime>();
   int _payloadLeft = 0;
   int _messageBytes = 0;
+  int _rawBytes = 0;
+  bool _completesMessage = false;
 
-  bool admit(List<int> chunk) {
+  LiveRefusal? admit(List<int> chunk) {
     int index = 0;
     while (index < chunk.length) {
       if (_payloadLeft > 0) {
         final int taken = min(_payloadLeft, chunk.length - index);
         _payloadLeft -= taken;
         index += taken;
+        _rawBytes += taken;
+        if (_rawBytes > maxLiveRawBytes) {
+          return LiveRefusal.tooBig;
+        }
+        if (_payloadLeft == 0) {
+          _frameEnded();
+        }
         continue;
       }
       _header.add(chunk[index]);
       index++;
+      _rawBytes++;
+      if (_rawBytes > maxLiveRawBytes) {
+        return LiveRefusal.tooBig;
+      }
       final int? headerLength = _headerLength();
       if (headerLength == null || _header.length < headerLength) {
         continue;
       }
-      if (!_frameFits()) {
-        return false;
+      final LiveRefusal? refusal = _frameStarts();
+      if (refusal != null) {
+        return refusal;
       }
       _header.clear();
+      if (_payloadLeft == 0) {
+        _frameEnded();
+      }
     }
-    return true;
+    return null;
   }
 
   int? _headerLength() {
@@ -59,7 +85,29 @@ final class LiveFrameGuard {
     return 2 + extended + mask;
   }
 
-  bool _frameFits() {
+  bool _withinRate() {
+    final DateTime now = _clock();
+    while (_frames.isNotEmpty &&
+        !now.isBefore(_frames.first.add(liveFrameWindow))) {
+      _frames.removeFirst();
+    }
+    if (_frames.length >= maxLiveFrames) {
+      return false;
+    }
+    _frames.addLast(now);
+    return true;
+  }
+
+  void _frameEnded() {
+    if (_completesMessage) {
+      _rawBytes = 0;
+    }
+  }
+
+  LiveRefusal? _frameStarts() {
+    if (!_withinRate()) {
+      return LiveRefusal.tooFast;
+    }
     final bool fin = (_header[0] & _finBit) != 0;
     final int opcode = _header[0] & _opcodeBits;
     final int lengthCode = _header[1] & _lengthBits;
@@ -71,31 +119,33 @@ final class LiveFrameGuard {
     int length = lengthBytes == 0 ? lengthCode : 0;
     for (int index = 0; index < lengthBytes; index++) {
       if (length > limit) {
-        return false;
+        return LiveRefusal.tooBig;
       }
       length = length * 256 + _header[2 + index];
     }
     if (opcode >= _firstControlOpcode) {
       if (length > _maxControlPayload) {
-        return false;
+        return LiveRefusal.tooBig;
       }
+      _completesMessage = false;
       _payloadLeft = length;
-      return true;
+      return null;
     }
     final int total = (opcode == _continuation ? _messageBytes : 0) + length;
     if (total > limit) {
-      return false;
+      return LiveRefusal.tooBig;
     }
     _messageBytes = fin ? 0 : total;
+    _completesMessage = fin;
     _payloadLeft = length;
-    return true;
+    return null;
   }
 }
 
 Stream<Uint8List> guardedFrames(
   Stream<Uint8List> source,
   LiveFrameGuard guard,
-  void Function() onRefused,
+  void Function(LiveRefusal refusal) onRefused,
 ) {
   bool refused = false;
   return source.transform(
@@ -104,12 +154,13 @@ Stream<Uint8List> guardedFrames(
         if (refused) {
           return;
         }
-        if (guard.admit(chunk)) {
+        final LiveRefusal? refusal = guard.admit(chunk);
+        if (refusal == null) {
           sink.add(chunk);
           return;
         }
         refused = true;
-        onRefused();
+        onRefused(refusal);
       },
     ),
   );

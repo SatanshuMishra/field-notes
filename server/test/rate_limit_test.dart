@@ -1,3 +1,6 @@
+@Timeout(Duration(minutes: 2))
+library;
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -12,6 +15,10 @@ const String otherAddress = '198.51.100.23';
 const String addressHeader = 'CF-Connecting-IP';
 const int burst = 60;
 const int relayBurst = 600;
+const int widePrefixBurst = 240;
+
+String manyAddress(int index) =>
+    '10.${(index >> 16) & 0xff}.${(index >> 8) & 0xff}.${index & 0xff}';
 
 void main() {
   late RelayHarness harness;
@@ -201,26 +208,143 @@ void main() {
   });
 
   test('the relay-wide limit caps open requests from many addresses', () async {
-    final String deviceId = newSyncId();
+    final RestoreChallengeRequest unknownPhrase = RestoreChallengeRequest(
+      recoverySignPublicKey: harness.signKeys().publicKey,
+    );
+    Future<http.Response> restoreFrom(String address) => harness.send(
+      SyncRoutes.restoreChallenge,
+      body: unknownPhrase,
+      headers: <String, String>{addressHeader: address},
+    );
     for (int request = 1; request <= relayBurst; request++) {
-      final http.Response answered = await challengeFrom(
-        '10.${(request >> 16) & 0xff}.${(request >> 8) & 0xff}.${request & 0xff}',
-        deviceId,
+      final http.Response answered = await restoreFrom(manyAddress(request));
+      expect(
+        answered.statusCode,
+        HttpStatus.notFound,
+        reason: 'request $request',
       );
-      expect(answered.statusCode, HttpStatus.ok, reason: 'request $request');
     }
 
-    final http.Response limited = await challengeFrom('192.0.2.1', deviceId);
+    final http.Response limited = await restoreFrom('192.0.2.1');
 
     expect(limited.statusCode, HttpStatus.tooManyRequests);
     expect(errorOf(limited).code, SyncErrorCode.tooManyRequests);
     expect(limited.headers['retry-after'], '1');
 
     harness.advance(const Duration(seconds: 1));
+    expect((await restoreFrom('192.0.2.2')).statusCode, HttpStatus.notFound);
+  });
+
+  test('sign-in is not held back by the relay-wide limit', () async {
+    final TestAccount account = await harness.enrol();
+    final TestKeys certifying = harness.signKeys();
+    final InviteRedeemRequest unknownInvite = harness.redeemRequest(
+      'not-an-invite',
+      certifyingKeys: certifying,
+      device: harness.newDevice(certifying),
+      recoverySignKeys: harness.signKeys(),
+      recoveryBoxPublicKey: harness.sodium.crypto.box.keyPair().publicKey,
+      recoveryEpochOneCopy: harness.randomOpaque(72),
+    );
+    Future<http.Response> redeemFrom(String address) => harness.send(
+      SyncRoutes.redeemInvite,
+      body: unknownInvite,
+      headers: <String, String>{addressHeader: address},
+    );
+    for (int request = 2; request <= relayBurst; request++) {
+      final http.Response answered = await redeemFrom(manyAddress(request));
+      expect(
+        errorOf(answered).code,
+        SyncErrorCode.inviteInvalid,
+        reason: 'request $request',
+      );
+    }
     expect(
-      (await challengeFrom('192.0.2.2', deviceId)).statusCode,
+      (await redeemFrom('192.0.2.1')).statusCode,
+      HttpStatus.tooManyRequests,
+    );
+    const String freshAddress = '198.51.100.200';
+    const Map<String, String> fresh = <String, String>{
+      addressHeader: freshAddress,
+    };
+
+    final http.Response challenged = await harness.send(
+      SyncRoutes.sessionChallenge,
+      body: ChallengeRequest(deviceId: account.firstDevice.deviceId),
+      headers: fresh,
+    );
+    expect(challenged.statusCode, HttpStatus.ok);
+    final http.Response signedIn = await harness.send(
+      SyncRoutes.session,
+      body: harness.sessionRequest(
+        account.firstDevice,
+        ChallengeResponse.fromJson(decodeJsonObject(challenged.body)),
+      ),
+      headers: fresh,
+    );
+
+    expect(signedIn.statusCode, HttpStatus.ok);
+    expect(
+      SessionResponse.fromJson(decodeJsonObject(signedIn.body)).token,
+      isNotEmpty,
+    );
+    expect(
+      (await redeemFrom('192.0.2.2')).statusCode,
+      HttpStatus.tooManyRequests,
+    );
+  });
+
+  test('addresses in one IPv6 /48 share a wider limit', () async {
+    final String deviceId = newSyncId();
+    for (int request = 1; request <= widePrefixBurst; request++) {
+      final http.Response answered = await challengeFrom(
+        '2001:db8:5:${request.toRadixString(16)}::1',
+        deviceId,
+      );
+      expect(answered.statusCode, HttpStatus.ok, reason: 'request $request');
+    }
+
+    final http.Response limited = await challengeFrom(
+      '2001:db8:5:ffff::1',
+      deviceId,
+    );
+
+    expect(limited.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(limited).code, SyncErrorCode.tooManyRequests);
+    expect(limited.headers['retry-after'], '1');
+    expect(
+      (await challengeFrom('2001:db8:6::1', deviceId)).statusCode,
       HttpStatus.ok,
     );
+    expect(
+      (await challengeFrom('2001:db8:5:ffff::2', deviceId)).statusCode,
+      HttpStatus.tooManyRequests,
+    );
+  });
+
+  test('an unauthenticated pairing status poll is rate limited', () async {
+    final String mailboxId = newSyncId();
+    const AuthCredential junk = AuthCredential(AuthScheme.session, 'junk');
+    Future<http.Response> poll() => harness.send(
+      SyncRoutes.pairingStatus,
+      parameters: <String, Object>{SyncRoutes.mailboxIdParameter: mailboxId},
+      credential: junk,
+      headers: const <String, String>{addressHeader: clientAddress},
+    );
+
+    for (int request = 1; request <= burst; request++) {
+      final http.Response answered = await poll();
+      expect(
+        answered.statusCode,
+        HttpStatus.unauthorized,
+        reason: 'poll $request',
+      );
+    }
+    final http.Response limited = await poll();
+
+    expect(limited.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(limited).code, SyncErrorCode.tooManyRequests);
+    expect(limited.headers['retry-after'], '1');
   });
 
   test('signed-in pairing status polls are not rate limited', () async {

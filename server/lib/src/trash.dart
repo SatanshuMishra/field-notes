@@ -117,6 +117,7 @@ final class LeftoverReport {
     'deleted_accounts': deletedAccounts,
     'unowned_uploads': unownedUploads,
     'swept': swept,
+    'unswept': unswept,
   };
 }
 

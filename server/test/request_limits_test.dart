@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -16,6 +17,9 @@ const int pushLimit = 8 * 1024 * 1024;
 const int openerLimit = 4096;
 const int changeLimit = 500;
 const int largeBody = 100 * 1024;
+const int waitersPerAccount = 8;
+const Timeout pollingTimeout = Timeout(Duration(minutes: 2));
+const Duration answerLimit = Duration(seconds: 10);
 
 int openersIn(List<int> body) =>
     body.where((int byte) => byte == 0x7b || byte == 0x5b).length;
@@ -685,7 +689,7 @@ void main() {
     expect(tight.database.count('SELECT count(*) FROM records'), 2);
     expect(tight.app.largeBodies.active, 0);
     expect(tight.app.largeBodies.waiting, 0);
-  });
+  }, timeout: pollingTimeout);
 
   test('a large body that waits too long for a slot gets 429', () async {
     final RelayHarness tight = await RelayHarness.start(
@@ -731,7 +735,232 @@ void main() {
       HttpStatus.ok,
     );
     expect(tight.database.count('SELECT count(*) FROM records'), 1);
-  });
+  }, timeout: pollingTimeout);
+
+  Future<({Socket socket, Future<String> answer})> openRawPush(
+    RelayHarness relay,
+    SignedIn who,
+    List<int> body,
+    int sent,
+  ) async {
+    final Uri push = relay.uri(SyncRoutes.pushRecords);
+    final Socket socket = await Socket.connect(push.host, push.port);
+    final List<int> answer = <int>[];
+    final Completer<String> answered = Completer<String>();
+    void finish() {
+      if (!answered.isCompleted) {
+        answered.complete(latin1.decode(answer));
+      }
+    }
+
+    socket.done.ignore();
+    socket.listen(
+      answer.addAll,
+      onDone: finish,
+      onError: (Object _) => finish(),
+      cancelOnError: true,
+    );
+    socket
+      ..add(
+        latin1.encode(
+          'POST ${push.path} HTTP/1.1\r\n'
+          'Host: ${push.host}:${push.port}\r\n'
+          'Content-Length: ${body.length}\r\n'
+          'content-type: application/json\r\n'
+          '${SyncHeaders.protocol}: $syncProtocolVersion\r\n'
+          '${SyncHeaders.authorization}: ${who.session.authorization}\r\n'
+          '\r\n',
+        ),
+      )
+      ..add(body.sublist(0, sent));
+    await socket.flush();
+    return (socket: socket, answer: answered.future);
+  }
+
+  test('a slow body loses its slot', () async {
+    final ManualTimers timers = ManualTimers();
+    final RelayHarness tight = await RelayHarness.start(
+      largeBodySlots: 1,
+      startTimer: timers.start,
+    );
+    addTearDown(tight.dispose);
+    final TestAccount account = await tight.enrol();
+    final SignedIn macIn = await tight.signIn(account.firstDevice);
+    final List<int> first = padded(
+      PushRequest(changes: <RecordPush>[tight.record('first')]),
+      largeBody,
+    );
+    final (:Socket socket, :Future<String> answer) = await openRawPush(
+      tight,
+      macIn,
+      first,
+      largeBody ~/ 2,
+    );
+    addTearDown(socket.destroy);
+    await until(() => tight.app.largeBodies.active == 1);
+    final Future<http.Response> waiting = pushBody(
+      tight,
+      macIn,
+      padded(
+        PushRequest(changes: <RecordPush>[tight.record('second')]),
+        largeBody,
+      ),
+    );
+    await until(() => tight.app.largeBodies.waiting == 1);
+    final List<ManualTimer> deadlines = timers.pending(largeBodyHoldLimit);
+    expect(deadlines, hasLength(1));
+    expect(deadlines.single.duration, const Duration(seconds: 60));
+
+    deadlines.single.fire();
+
+    final http.Response second = await waiting.timeout(answerLimit);
+    expect(second.statusCode, HttpStatus.ok);
+    final String slow = await answer.timeout(answerLimit);
+    expect(slow, startsWith('HTTP/1.1 400'));
+    expect(slow, contains(SyncErrorCode.badRequest.wireName));
+    expect(
+      tight.database
+          .select('SELECT record_key FROM records')
+          .map((Map<String, Object?> row) => row['record_key']),
+      <String>['second'],
+    );
+    expect(tight.app.largeBodies.active, 0);
+    expect(tight.app.largeBodies.waiting, 0);
+  }, timeout: pollingTimeout);
+
+  test('waiters beyond the per-account queue are refused at once', () async {
+    final ManualTimers timers = ManualTimers();
+    final RelayHarness tight = await RelayHarness.start(
+      largeBodySlots: 1,
+      startTimer: timers.start,
+    );
+    addTearDown(tight.dispose);
+    final TestAccount account = await tight.enrol();
+    final SignedIn macIn = await tight.signIn(account.firstDevice);
+    List<int> body(String recordKey) => padded(
+      PushRequest(changes: <RecordPush>[tight.record(recordKey)]),
+      largeBody,
+    );
+    final List<int> first = body('holder');
+    final (
+      :http.StreamedRequest request,
+      :Future<http.StreamedResponse> response,
+    ) = openPush(
+      tight,
+      macIn,
+      first,
+    );
+    request.sink.add(first.sublist(0, largeBody ~/ 2));
+    await until(() => tight.app.largeBodies.active == 1);
+    final List<Future<http.Response>> waiting = <Future<http.Response>>[];
+    for (int waiter = 1; waiter <= waitersPerAccount; waiter++) {
+      waiting.add(pushBody(tight, macIn, body('waiter-$waiter')));
+      await until(() => tight.app.largeBodies.waiting == waiter);
+    }
+
+    final http.Response refused = await pushBody(
+      tight,
+      macIn,
+      body('ninth'),
+    ).timeout(answerLimit);
+
+    expect(refused.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(refused).code, SyncErrorCode.tooManyRequests);
+    expect(refused.headers['retry-after'], '1');
+    expect(tight.app.largeBodies.waiting, waitersPerAccount);
+    request.sink
+      ..add(first.sublist(largeBody ~/ 2))
+      ..close();
+    expect(
+      (await http.Response.fromStream(await response).timeout(answerLimit))
+          .statusCode,
+      HttpStatus.ok,
+    );
+    for (final Future<http.Response> waiter in waiting) {
+      expect((await waiter.timeout(answerLimit)).statusCode, HttpStatus.ok);
+    }
+    expect(
+      tight.database.count('SELECT count(*) FROM records'),
+      waitersPerAccount + 1,
+    );
+    expect(
+      tight.database.count(
+        "SELECT count(*) FROM records WHERE record_key = 'ninth'",
+      ),
+      0,
+    );
+  }, timeout: pollingTimeout);
+
+  test(
+    'a large-route body without a declared length waits for a slot',
+    () async {
+      final ManualTimers timers = ManualTimers();
+      final RelayHarness tight = await RelayHarness.start(
+        largeBodySlots: 1,
+        startTimer: timers.start,
+      );
+      addTearDown(tight.dispose);
+      final TestAccount account = await tight.enrol();
+      final SignedIn macIn = await tight.signIn(account.firstDevice);
+      final List<int> first = padded(
+        PushRequest(changes: <RecordPush>[tight.record('first')]),
+        largeBody,
+      );
+      final (
+        :http.StreamedRequest request,
+        :Future<http.StreamedResponse> response,
+      ) = openPush(
+        tight,
+        macIn,
+        first,
+      );
+      request.sink.add(first.sublist(0, largeBody ~/ 2));
+      await until(() => tight.app.largeBodies.active == 1);
+      final http.StreamedRequest streamed =
+          http.StreamedRequest(
+              SyncRoutes.pushRecords.method,
+              tight.uri(SyncRoutes.pushRecords),
+            )
+            ..headers.addAll(<String, String>{
+              SyncHeaders.protocol: '$syncProtocolVersion',
+              SyncHeaders.authorization: macIn.session.authorization,
+              'content-type': 'application/json',
+            });
+      final Future<http.StreamedResponse> streamedResponse = tight.client.send(
+        streamed,
+      );
+      streamed.sink
+        ..add(
+          utf8.encode(
+            jsonEncode(
+              PushRequest(changes: <RecordPush>[tight.record('streamed')])
+                  .toJson(),
+            ),
+          ),
+        )
+        ..close();
+
+      await until(() => tight.app.largeBodies.waiting == 1);
+      expect(tight.database.count('SELECT count(*) FROM records'), 0);
+
+      request.sink
+        ..add(first.sublist(largeBody ~/ 2))
+        ..close();
+      expect(
+        (await http.Response.fromStream(await response).timeout(answerLimit))
+            .statusCode,
+        HttpStatus.ok,
+      );
+      expect(
+        (await http.Response.fromStream(await streamedResponse)
+                .timeout(answerLimit))
+            .statusCode,
+        HttpStatus.ok,
+      );
+      expect(tight.database.count('SELECT count(*) FROM records'), 2);
+    },
+    timeout: pollingTimeout,
+  );
 
   test('one account holds at most its share of the large body slots', () async {
     final LargeBodySlots slots = LargeBodySlots(total: 3, perAccount: 2);
