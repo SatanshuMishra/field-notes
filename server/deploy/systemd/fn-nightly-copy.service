@@ -1,0 +1,9 @@
+[Unit]
+Description=Field Notes nightly copy of both relays to the NAS
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/field-notes/nightly-copy.sh
+TimeoutStartSec=4h
+Nice=10
+IOSchedulingClass=idle
