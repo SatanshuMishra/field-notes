@@ -222,6 +222,31 @@ void main() {
     });
   });
 
+  test('a day created later without a mood keeps the other mood', () async {
+    final _Device phone = device('Phone');
+    final _Device mac = device('Mac');
+    await mac.addDay(moodId: 'sunny');
+    phone.now = _noon + _minute;
+    await phone.addDay();
+    final RecordState planted = await mac.state(
+      SyncedTables.days,
+      dayIdForDate(_date),
+    );
+    final RecordState empty = await phone.state(
+      SyncedTables.days,
+      dayIdForDate(_date),
+    );
+
+    await phone.applyAll(<RecordState>[planted]);
+    await mac.applyAll(<RecordState>[empty]);
+
+    expect((await phone.day()).moodId, 'sunny');
+    expect((await mac.day()).moodId, 'sunny');
+    await inEitherOrder(planted, empty, (_Device fresh) async {
+      expect((await fresh.day()).moodId, 'sunny');
+    });
+  });
+
   test('a delete wins over a later edit', () async {
     final _Device phone = device('Phone');
     final _Device mac = device('Mac');
