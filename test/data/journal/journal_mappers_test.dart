@@ -9,6 +9,7 @@ void main() {
   group('toDomainDay', () {
     test('maps a stored mood id to the Mood enum and copies fields', () {
       final row = db.Day(
+        fieldClocks: '{}',
         id: 'd1',
         date: '2026-07-12',
         moodId: 'calm',
@@ -28,6 +29,7 @@ void main() {
 
     test('maps a null mood id to a null mood', () {
       final row = db.Day(
+        fieldClocks: '{}',
         id: 'd2',
         date: '2026-07-12',
         createdAt: 0,
@@ -39,6 +41,7 @@ void main() {
 
     test('an unknown mood id reads as a day with no mood', () {
       final row = db.Day(
+        fieldClocks: '{}',
         id: 'd3',
         date: '2026-07-12',
         moodId: 'euphoric',
@@ -64,6 +67,7 @@ void main() {
       addTearDown(() => debugPrint = original);
 
       db.Day row(String id, String moodId) => db.Day(
+        fieldClocks: '{}',
         id: id,
         date: '2026-07-12',
         moodId: moodId,
@@ -84,6 +88,8 @@ void main() {
   group('toDomainEntry', () {
     test('maps the stored type string to EntryType and copies fields', () {
       final row = db.Entry(
+        fieldClocks: '{}',
+        textVersion: '{}',
         id: 'e1',
         dayId: 'd1',
         type: 'voice',
@@ -104,6 +110,8 @@ void main() {
 
     test('throws MalformedRowException on an unknown entry type', () {
       final row = db.Entry(
+        fieldClocks: '{}',
+        textVersion: '{}',
         id: 'e2',
         dayId: 'd1',
         type: 'hologram',
@@ -117,6 +125,7 @@ void main() {
 
   test('toDomainEntryPhoto copies all fields', () {
     final row = db.EntryPhoto(
+      fieldClocks: '{}',
       id: 'p1',
       entryId: 'e1',
       mediaId: 'm1',
