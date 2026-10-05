@@ -249,8 +249,10 @@ exit 0
 
 const String cosignStub =
     '$recordingPrelude${r'''if [ "$1" = "download" ]; then
+  logged=1791222000
   for certificate in ${STUB_SIGNATURE_CERTS:-}; do
-    printf '{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","verificationMaterial":{"certificate":{"rawBytes":"%s"}},"dsseEnvelope":{}}\n' "$certificate"
+    logged=$((logged + 60))
+    printf '{"mediaType":"application/vnd.dev.sigstore.bundle.v0.3+json","verificationMaterial":{"certificate":{"rawBytes":"%s"},"tlogEntries":[{"integratedTime":"%s"}]},"dsseEnvelope":{}}\n' "$certificate" "$logged"
   done
   exit 0
 fi
@@ -260,9 +262,14 @@ if [ "${STUB_COSIGN_FAIL:-}" = "yes" ]; then
 fi
 previous=""
 for argument in "$@"; do
-  if [ "$previous" = "--certificate-github-workflow-sha" ] && [ "$argument" != "${STUB_COMMIT:-0123456789abcdef0123456789abcdef01234567}" ]; then
-    printf 'Error: none of the expected identities matched what was in the certificate\n' >&2
-    exit 1
+  if [ "$previous" = "--certificate-github-workflow-sha" ]; then
+    case " ${STUB_SIGNED_COMMITS:-0123456789abcdef0123456789abcdef01234567} " in
+      *" $argument "*) ;;
+      *)
+        printf 'Error: none of the expected identities matched what was in the certificate\n' >&2
+        exit 1
+        ;;
+    esac
   fi
   previous="$argument"
   image="$argument"
@@ -1412,13 +1419,13 @@ void main() {
             'read the commit',
           ),
           (
-            'certificates naming two commits',
+            'two certificates, one naming a commit no signature backs',
             <String, String>{
               'STUB_SIGNATURE_CERTS':
                   '${signingCertificate(commit: stubCommit)} '
                   '${signingCertificate(commit: otherCommit)}',
             },
-            'read the commit',
+            'confirm that the signature of $unrecorded names commit $otherCommit',
           ),
           (
             'a legacy answer naming no commit',
@@ -1430,14 +1437,14 @@ void main() {
             'read the commit',
           ),
           (
-            'a legacy answer naming two commits',
+            'a legacy answer naming a commit no signature backs',
             <String, String>{
               'STUB_SIGNATURE_CERTS': '',
               'STUB_COSIGN_OUTPUT':
                   '[{"optional":{"githubWorkflowSha":"$stubCommit"}},'
                   '{"optional":{"githubWorkflowSha":"$otherCommit"}}]',
             },
-            'read the commit',
+            'confirm that the signature of $unrecorded names commit $otherCommit',
           ),
           (
             'an answer that is not JSON',
@@ -1493,6 +1500,37 @@ void main() {
       bench.historyFile.readAsLinesSync().last,
       startsWith('sha256:${'d' * 64} $stubCommit '),
     );
+
+    final String resigned = '$relayRepository@sha256:${'f' * 64}';
+    bench.clearLogs();
+    final ProcessResult signedTwice = await bench.run(
+      'relay-update.sh',
+      <String, String>{
+        'STUB_REPO_DIGESTS': resigned,
+        'STUB_SIGNATURE_CERTS':
+            '${signingCertificate(commit: otherCommit)} '
+            '${signingCertificate(commit: stubCommit)}',
+        'STUB_SIGNED_COMMITS': '$stubCommit $otherCommit',
+      },
+    );
+
+    expect(signedTwice.exitCode, 0, reason: '${signedTwice.stderr}');
+    expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$resigned\n');
+    expect(
+      bench.historyFile.readAsLinesSync().last,
+      startsWith('sha256:${'f' * 64} $stubCommit '),
+    );
+    expect('${signedTwice.stdout}', contains('built from commit $stubCommit'));
+    expect(
+      '${signedTwice.stderr}',
+      contains('also signed for commit $otherCommit'),
+    );
+    final List<String> confirmed = <String>[
+      for (final List<String> call in bench.calls('cosign'))
+        if (call.contains('--certificate-github-workflow-sha'))
+          call[call.indexOf('--certificate-github-workflow-sha') + 1],
+    ];
+    expect(confirmed.toSet(), <String>{stubCommit, otherCommit});
   }, skip: relayUpdateSkip);
 
   test(
