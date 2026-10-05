@@ -361,4 +361,35 @@ void main() {
     expect(await _uploaded(mac, held.id), isTrue);
     expect(await client.blobExists(names.blobName(held.id)), isTrue);
   });
+
+  test(
+    'a file still uploading is not started again when the relay lacks it',
+    () async {
+      final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+      final SyncTestMedia media = await SyncTestMedia.create(mac);
+      final domain.MediaBlob video = await media.store.putBytes(
+        bytes: _bytes(1500, 9),
+        mime: 'video/mp4',
+        kind: domain.MediaKind.video,
+      );
+      final domain.Day day = await mac.journal.ensureDayForDate('2026-10-11');
+      await mac.journal.createEntry(
+        dayId: day.id,
+        type: domain.EntryType.video,
+        mediaId: video.id,
+      );
+      final PendingUpload inFlight = (await media.uploads.prepare(video.id))!;
+      final SyncUpload before = (await _uploads(mac)).single;
+      await writeSyncState(mac.database, pullCompleteKey, pullCompleteValue);
+      final RelayClient client = await clientOf(mac);
+
+      final BlobReport report = await media.unusedBlobs.report(client);
+
+      expect(report.lacking, <String>[video.id]);
+      final SyncUpload after = (await _uploads(mac)).single;
+      expect(after.uploadId, inFlight.uploadId);
+      expect(after.partsDir, before.partsDir);
+      expect(Directory(after.partsDir!).existsSync(), isTrue);
+    },
+  );
 }

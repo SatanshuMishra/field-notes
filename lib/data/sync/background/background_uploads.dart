@@ -158,7 +158,23 @@ final class PackageBackgroundUploader implements BackgroundUploader {
   }
 
   @override
-  Future<bool> enqueue(UploadTask task) => _downloader.enqueue(task);
+  Future<bool> enqueue(UploadTask task) {
+    final TaskNotificationConfig? notification = task.notificationConfig;
+    if (notification != null) {
+      _downloader.configureNotificationForTask(
+        task,
+        running: notification.running,
+        complete: notification.complete,
+        error: notification.error,
+        paused: notification.paused,
+        canceled: notification.canceled,
+        progressBar: notification.progressBar,
+        tapOpensFile: notification.tapOpensFile,
+        groupNotificationId: notification.groupNotificationId,
+      );
+    }
+    return _downloader.enqueue(task);
+  }
 
   @override
   Future<List<Task>> queuedTasks() => _downloader.allTasks(allGroups: true);

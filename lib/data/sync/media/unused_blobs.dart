@@ -112,7 +112,7 @@ final class UnusedBlobReporter {
       await writeSyncState(_db, referencedReportAtKey, '$now');
     }
     if (lacking.isNotEmpty && isCurrent()) {
-      await _uploads.requeue(lacking);
+      await _uploads.requeue(lacking, keepInFlight: true);
     }
     return BlobReport(unused: unused, referenced: referenced, lacking: lacking);
   }

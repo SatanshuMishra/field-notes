@@ -354,7 +354,10 @@ final class UploadQueue {
     await _deleteParts(row?.partsDir);
   }
 
-  Future<int> requeue(Iterable<String> blobIds) async {
+  Future<int> requeue(
+    Iterable<String> blobIds, {
+    bool keepInFlight = false,
+  }) async {
     int queued = 0;
     for (final String blobId in blobIds.toSet()) {
       if (await _localFile(blobId) == null) {
@@ -363,6 +366,9 @@ final class UploadQueue {
       final SyncUpload? row = await (_db.select(
         _db.syncUploads,
       )..where((t) => t.blobId.equals(blobId))).getSingleOrNull();
+      if (keepInFlight && row != null) {
+        continue;
+      }
       await _db.transaction(() async {
         await (_db.delete(
           _db.syncUploads,
