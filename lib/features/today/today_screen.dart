@@ -1,3 +1,6 @@
+import 'package:field_notes/data/sync/engine/sync_engine.dart'
+    show FirstPullProgress;
+import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -24,6 +27,65 @@ const double todayFeedCacheExtent = 600;
 
 const EdgeInsets _stackedPagePadding = EdgeInsets.all(20);
 const EdgeInsets _railPagePadding = EdgeInsets.all(24);
+
+const EdgeInsets _syncLinesMargin = EdgeInsets.only(top: 12);
+const double _syncLineGap = 4;
+
+String firstPullProgressLabel(FirstPullProgress progress) =>
+    'Bringing your journal over · ${progress.done} of ${progress.total}';
+
+class TodaySyncLines extends ConsumerWidget {
+  const TodaySyncLines({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(syncEnabledProvider).value != true) {
+      return const SizedBox.shrink();
+    }
+    final FirstPullProgress? progress = ref
+        .watch(firstPullProgressProvider)
+        .value;
+    final SyncStatus? status = defaultTargetPlatform == TargetPlatform.android
+        ? ref.watch(syncStatusProvider).value
+        : null;
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    final FieldNotesColors colors = context.colors;
+    final List<Widget> lines = <Widget>[
+      if (status is AttentionStatus) ...<Widget>[
+        Text(
+          status.label(DateTime.now().toUtc()),
+          style: textStyles.labelSans.copyWith(color: colors.dangerInk),
+        ),
+        if (status.fix case final String fix)
+          Text(
+            fix,
+            style: textStyles.captionSans.copyWith(color: colors.muted),
+          ),
+      ],
+      if (progress != null)
+        Text(
+          firstPullProgressLabel(progress),
+          style: textStyles.captionSans.copyWith(color: colors.accentInk),
+        ),
+    ];
+    if (lines.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: _syncLinesMargin,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          for (int index = 0; index < lines.length; index++) ...<Widget>[
+            if (index > 0) const SizedBox(height: _syncLineGap),
+            lines[index],
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 String todayFeedEyebrowLabel(int count) =>
     'today · $count log${count == 1 ? '' : 's'}';
@@ -132,6 +194,7 @@ class TodayScreen extends ConsumerWidget {
                   longDate: headerDateLabel(now),
                 ),
               ),
+              const SliverToBoxAdapter(child: TodaySyncLines()),
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
               if (inlineMood)
                 SliverToBoxAdapter(child: MoodBannerForDate(date: date)),

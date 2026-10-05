@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/sync_overrides.dart';
 import 'support/fake_settings_repository.dart';
 import 'support/recording_reminder_scheduler.dart';
 import 'support/settings_harness.dart';
@@ -53,6 +54,7 @@ void main() {
           settingsDataControllerProvider.overrideWith(
             (Ref ref) async => controller,
           ),
+          ...syncOffOverrides(),
         ],
       ),
     );

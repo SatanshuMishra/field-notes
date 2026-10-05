@@ -45,6 +45,7 @@ import '../features/search/support/search_harness.dart' show dayOf, entryOf;
 import '../features/settings/support/fake_settings_repository.dart';
 import '../features/settings/support/recording_reminder_scheduler.dart';
 import '../features/sound/support/fake_sound_player.dart';
+import '../support/sync_overrides.dart';
 
 const Size _galaxyS24 = Size(384, 832);
 const double _statusBar = 34;
@@ -138,6 +139,7 @@ List<Override> _overrides(Mood? mood) => <Override>[
       ),
     ]),
   ),
+  ...syncOffOverrides(),
 ];
 
 class _PhoneShell extends ConsumerWidget {

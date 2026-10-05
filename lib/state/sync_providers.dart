@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:drift/drift.dart';
+import 'package:field_notes/data/crypto/device_keys.dart';
 import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/journal/journal_delete_all_service.dart';
@@ -8,11 +10,13 @@ import 'package:field_notes/data/media/media_gc.dart';
 import 'package:field_notes/data/sync/background/background_uploads.dart';
 import 'package:field_notes/data/sync/background/battery_settings.dart';
 import 'package:field_notes/data/sync/background/upload_result_applier.dart';
+import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/pull_cycle.dart';
 import 'package:field_notes/data/sync/engine/server_address.dart';
 import 'package:field_notes/data/sync/engine/sync_engine.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
+import 'package:field_notes/data/sync/enrolment/restore_service.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
 import 'package:field_notes/data/sync/erase/journal_erase_service.dart';
 import 'package:field_notes/data/sync/erase/local_journal_wipe.dart';
@@ -23,6 +27,8 @@ import 'package:field_notes/data/sync/media/network_policy.dart';
 import 'package:field_notes/data/sync/media/poster_maker.dart';
 import 'package:field_notes/data/sync/media/unused_blobs.dart';
 import 'package:field_notes/data/sync/media/upload_queue.dart';
+import 'package:field_notes/data/sync/pairing/pairing_service.dart';
+import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
@@ -40,15 +46,26 @@ KeyStore keyStore(Ref ref) => const KeyStore();
 @Riverpod(keepAlive: true)
 NetworkMonitor networkMonitor(Ref ref) => ConnectivityNetworkMonitor();
 
-@Riverpod(keepAlive: true)
-Stream<bool> syncEnabled(Ref ref) {
-  final AppDatabase database = ref.watch(databaseProvider);
-  return (database.select(database.syncStates)
-        ..where((t) => t.key.equals(SyncStateKeys.syncEnabled)))
-      .watchSingleOrNull()
-      .map((SyncState? row) => row?.value == syncEnabledValue)
-      .distinct();
+Stream<String?> _watchSyncState(AppDatabase database, String key) async* {
+  yield await readSyncState(database, key);
+  await for (final Set<TableUpdate> _ in database.tableUpdates(
+    TableUpdateQuery.onTable(database.syncStates),
+  )) {
+    yield await readSyncState(database, key);
+  }
 }
+
+@Riverpod(keepAlive: true)
+Stream<bool> syncEnabled(Ref ref) => _watchSyncState(
+  ref.watch(databaseProvider),
+  SyncStateKeys.syncEnabled,
+).map((String? value) => value == syncEnabledValue).distinct();
+
+@Riverpod(keepAlive: true)
+Stream<String?> relayAddress(Ref ref) => _watchSyncState(
+  ref.watch(databaseProvider),
+  SyncStateKeys.relayUrl,
+).distinct();
 
 @Riverpod(keepAlive: true)
 LifecycleSource appLifecycle(Ref ref) {
@@ -246,4 +263,51 @@ ServerAddress serverAddress(Ref ref) {
     settings: ref.watch(journalSettingsStoreProvider),
     syncNow: engine.syncNow,
   );
+}
+
+@Riverpod(keepAlive: true)
+EnrolmentService enrolmentService(Ref ref) => EnrolmentService(
+  database: ref.watch(databaseProvider),
+  keyStore: ref.watch(keyStoreProvider),
+);
+
+@Riverpod(keepAlive: true)
+RestoreService restoreService(Ref ref) => RestoreService(
+  database: ref.watch(databaseProvider),
+  keyStore: ref.watch(keyStoreProvider),
+);
+
+@Riverpod(keepAlive: true)
+PairingService pairingService(Ref ref) => PairingService(
+  database: ref.watch(databaseProvider),
+  keyStore: ref.watch(keyStoreProvider),
+);
+
+@riverpod
+Future<DeviceService?> deviceService(Ref ref) async {
+  if (!await ref.watch(syncEnabledProvider.future)) {
+    return null;
+  }
+  final String? address = await ref.watch(relayAddressProvider.future);
+  final KeyStore keyStore = ref.watch(keyStoreProvider);
+  final DeviceKeys? device = await keyStore.readDeviceKeys();
+  if (address == null || device == null) {
+    return null;
+  }
+  final RelayClient client = RelayClient(
+    baseUrl: Uri.parse(address),
+    device: device,
+  );
+  ref.onDispose(client.close);
+  return DeviceService(
+    database: ref.watch(databaseProvider),
+    keyStore: keyStore,
+    client: client,
+  );
+}
+
+@riverpod
+Future<List<JournalDevice>> journalDevices(Ref ref) async {
+  final DeviceService? devices = await ref.watch(deviceServiceProvider.future);
+  return devices == null ? const <JournalDevice>[] : devices.list();
 }

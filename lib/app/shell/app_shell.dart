@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/motion/petal_drift.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/day.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/reminders/reminder_lifecycle.dart';
+import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/today/today.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
+import 'package:field_notes/state/sync_providers.dart';
 
 import 'bottom_bar_shell.dart';
 import 'shell_content.dart';
@@ -103,6 +107,8 @@ class _AppShellState extends ConsumerState<AppShell> {
         soundOn: ref.watch(soundEnabledProvider),
         collapsed: _sidebarCollapsed(),
         onCollapsedChanged: _setSidebarCollapsed,
+        syncStatus: (BuildContext context, bool collapsed) =>
+            SidebarSyncStatus(collapsed: collapsed),
         body: body,
         obscured: obscured,
       ),
@@ -130,6 +136,32 @@ class _AppShellState extends ConsumerState<AppShell> {
               child: ExcludeFocus(child: PetalDrift(flower: flower)),
             ),
         ],
+      ),
+    );
+  }
+}
+
+class SidebarSyncStatus extends ConsumerWidget {
+  const SidebarSyncStatus({super.key, required this.collapsed});
+
+  final bool collapsed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(syncEnabledProvider).value != true) {
+      return const SizedBox.shrink();
+    }
+    final SyncStatus? status = ref.watch(syncStatusProvider).value;
+    if (status == null) {
+      return const SizedBox.shrink();
+    }
+    final String? address = ref.watch(relayAddressProvider).value;
+    return SyncClockRefresh(
+      builder: (BuildContext context) => SidebarSyncLine(
+        status: status.label(DateTime.now().toUtc()),
+        tone: syncStatusTone(status, context.colors),
+        collapsed: collapsed,
+        address: address,
       ),
     );
   }

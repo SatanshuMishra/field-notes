@@ -26,6 +26,7 @@ import '../../accessibility/states/shell_states.dart';
 import '../../accessibility/states/viewer_states.dart';
 import '../../accessibility/support/a11y_state.dart';
 import '../../features/today/support/today_harness.dart';
+import '../../support/sync_overrides.dart';
 import '../../support/tab_reach.dart';
 import '../app_harness.dart';
 
@@ -127,6 +128,7 @@ List<Override> _todayOverrides() => <Override>[
     ),
   ),
   captureRoutesProvider.overrideWithValue(_allCaptureRoutes()),
+  ...syncOffOverrides(),
 ];
 
 Future<void> _pumpMacSidebar(WidgetTester tester) async {

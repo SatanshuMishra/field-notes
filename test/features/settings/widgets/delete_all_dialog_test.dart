@@ -1,11 +1,18 @@
+import 'package:field_notes/data/sync/engine/sync_status.dart';
+import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/settings/widgets/delete_all_dialog.dart';
+import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Future<void> _openDialog(
-  WidgetTester tester,
-  List<bool> outcomes,
-) async {
+import '../../../support/sync_overrides.dart';
+
+final TargetPlatformVariant _bothPlatforms = TargetPlatformVariant(
+  <TargetPlatform>{TargetPlatform.macOS, TargetPlatform.android},
+);
+
+Future<void> _openDialog(WidgetTester tester, List<bool> outcomes) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: ThemeData(platform: TargetPlatform.macOS),
@@ -27,14 +34,69 @@ Future<void> _openDialog(
   expect(outcomes, isEmpty);
 }
 
+Future<void> _openSyncDialog(WidgetTester tester, List<bool> outcomes) async {
+  tester.view.physicalSize = const Size(900, 1400);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: syncOnOverrides(status: SyncedStatus(DateTime.now().toUtc())),
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (BuildContext context) => TextButton(
+              onPressed: () async {
+                outcomes.add(await confirmDeleteAll(context));
+              },
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
+}
+
+bool _deleteEverywhereEnabled(WidgetTester tester) {
+  final Finder key = find.byKey(deleteEverywhereKey);
+  final Widget button = tester.widget(key);
+  if (button is StickerButton) {
+    return button.onPressed != null;
+  }
+  return tester
+          .widget<SyncFlowButton>(
+            find.ancestor(of: key, matching: find.byType(SyncFlowButton)),
+          )
+          .action
+          .onPressed !=
+      null;
+}
+
+Finder _confirmField() => find
+    .descendant(
+      of: find
+          .ancestor(
+            of: find.text(deleteEverywhereConfirmLabel),
+            matching: find.byType(SyncFlowField),
+          )
+          .first,
+      matching: find.byType(EditableText),
+    )
+    .first;
+
 void main() {
   testWidgets('cancelling resolves to false', (WidgetTester tester) async {
     final List<bool> outcomes = <bool>[];
     await _openDialog(tester, outcomes);
 
     expect(
-      find.text('This erases every entry, photo, and mood on this device. '
-          'It cannot be undone.'),
+      find.text(
+        'This erases every entry, photo, and mood on this device. '
+        'It cannot be undone.',
+      ),
       findsOneWidget,
     );
 
@@ -45,8 +107,9 @@ void main() {
     expect(outcomes, <bool>[false]);
   });
 
-  testWidgets('dismissing the barrier resolves to false',
-      (WidgetTester tester) async {
+  testWidgets('dismissing the barrier resolves to false', (
+    WidgetTester tester,
+  ) async {
     final List<bool> outcomes = <bool>[];
     await _openDialog(tester, outcomes);
 
@@ -67,4 +130,39 @@ void main() {
     expect(find.byType(DeleteAllConfirmDialog), findsNothing);
     expect(outcomes, <bool>[true]);
   });
+
+  testWidgets('with sync on the dialog offers both delete actions', (
+    WidgetTester tester,
+  ) async {
+    final List<bool> outcomes = <bool>[];
+    await _openSyncDialog(tester, outcomes);
+
+    expect(find.byType(DeleteAllConfirmDialog), findsNothing);
+    expect(find.byType(SyncDeleteAllDialog), findsOneWidget);
+    expect(find.text('Delete your journal'), findsOneWidget);
+    expect(find.text(removeFromThisDeviceMessage), findsOneWidget);
+    expect(find.text(deleteJournalEverywhereMessage), findsOneWidget);
+    expect(find.text(deleteEverywhereConfirmLabel), findsOneWidget);
+    expect(find.byKey(removeFromThisDeviceKey), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    expect(find.byKey(deleteEverywhereKey), findsOneWidget);
+    expect(_deleteEverywhereEnabled(tester), isFalse);
+
+    await tester.tap(find.byKey(deleteEverywhereKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(SyncDeleteAllDialog), findsOneWidget);
+
+    await tester.enterText(_confirmField(), 'delet');
+    await tester.pump();
+    expect(_deleteEverywhereEnabled(tester), isFalse);
+
+    await tester.enterText(_confirmField(), 'delete');
+    await tester.pump();
+    expect(_deleteEverywhereEnabled(tester), isTrue);
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SyncDeleteAllDialog), findsNothing);
+    expect(outcomes, <bool>[false]);
+  }, variant: _bothPlatforms);
 }

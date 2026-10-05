@@ -1,25 +1,32 @@
+import 'package:field_notes/data/sync/devices/device_service.dart';
+import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
-import 'package:field_notes/features/settings/sync/pairing_qr_placeholder.dart';
-import 'package:field_notes/features/settings/sync/sync_shell_options.dart';
+import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
+import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../support/sync_overrides.dart';
+import '../support/fake_settings_repository.dart';
 import '../support/settings_harness.dart';
 
-const String _onDeviceNote =
-    'Entries are stored only on this device. Nothing is uploaded '
-    'and there is no syncing across devices.';
+const String _address = 'https://sync.example.com';
 
-const List<String> _serverRows = <String>[
+const List<String> _mockUpControls = <String>[
+  'Storage mode',
   'Server URL',
   'Access token',
   'Sync frequency',
   'Recovery passphrase',
   'Pair a device',
   'Connection',
+  'Not connected',
+  'Test connection',
 ];
 
 final TargetPlatformVariant _macOS = TargetPlatformVariant.only(
@@ -34,111 +41,298 @@ final TargetPlatformVariant _bothPlatforms = TargetPlatformVariant(
   <TargetPlatform>{TargetPlatform.macOS, TargetPlatform.android},
 );
 
-Future<void> _pumpSection(WidgetTester tester) async {
-  useWideSurface(tester);
+bool get _onPhone => defaultTargetPlatform == TargetPlatform.android;
+
+List<JournalDevice> _twoDevices(DateTime now) => <JournalDevice>[
+  JournalDevice(
+    deviceId: 'this-device',
+    name: 'Satanshu MacBook',
+    createdAt: now.subtract(const Duration(days: 30)),
+    lastSeenAt: now,
+    isThisDevice: true,
+  ),
+  JournalDevice(
+    deviceId: 'phone-device',
+    name: 'Galaxy S24 Ultra',
+    createdAt: now.subtract(const Duration(days: 20)),
+    lastSeenAt: now.subtract(const Duration(hours: 3)),
+    isThisDevice: false,
+  ),
+];
+
+Future<void> _pumpSection(
+  WidgetTester tester,
+  List<Override> sync, {
+  AppSettings settings = AppSettings.defaults,
+}) async {
+  tester.view.physicalSize = _onPhone
+      ? const Size(412, 1800)
+      : const Size(1400, 2600);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
   await tester.pumpWidget(
     settingsFeatureHarness(
-      const SyncStorageSection(storageMode: StorageMode.onDevice),
+      SyncStorageSection(settings: settings, onFeedback: (String _) {}),
+      overrides: <Override>[
+        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+        ...sync,
+      ],
     ),
   );
   await tester.pumpAndSettle();
 }
 
+Finder _rowControl(String label, Finder control) => find.descendant(
+  of: find.ancestor(
+    of: find.text(label),
+    matching: find.byType(SettingsFieldRow),
+  ),
+  matching: control,
+);
+
+Finder _button(String label) => find.widgetWithText(StickerButton, label);
+
+void _expectNoMockUpControls() {
+  for (final String control in _mockUpControls) {
+    expect(
+      find.text(control, skipOffstage: false),
+      findsNothing,
+      reason: control,
+    );
+  }
+  expect(find.byType(SettingsTextField), findsNothing);
+  expect(find.byType(SettingsSecretField), findsNothing);
+  expect(find.bySubtype<SettingsSegmented<Object?>>(), findsNothing);
+}
+
 void main() {
-  testWidgets('macOS renders every sync field at full fidelity', (
+  testWidgets('sync off offers start, join and restore', (
     WidgetTester tester,
   ) async {
-    await _pumpSection(tester);
+    await _pumpSection(tester, syncOffOverrides());
 
     expect(find.text('Sync & storage'), findsOneWidget);
-    expect(find.text('Syncing arrives in a future update'), findsOneWidget);
-    expect(find.text('Storage mode'), findsOneWidget);
-    for (final String row in _serverRows) {
-      expect(find.text(row), findsOneWidget, reason: row);
+    expect(
+      find.text(
+        _onPhone
+            ? 'Your journal is only on this phone. Sync keeps it on your '
+                  'other devices, encrypted.'
+            : 'Your journal is stored only on this Mac. Turn on sync to keep '
+                  'it on your other devices too. Everything is encrypted '
+                  'before it leaves this Mac.',
+      ),
+      findsOneWidget,
+    );
+    final Map<String, String> captions = _onPhone
+        ? <String, String>{
+            'Start syncing': 'First device. Server address and invite code.',
+            'Join my journal': 'Scan the code on your other device.',
+            'Restore with recovery phrase': 'Use your 12 words.',
+          }
+        : <String, String>{
+            'Start syncing':
+                'First device. Needs your server address and an invite code.',
+            'Join my journal':
+                'You already sync on another device. Scan or type its code.',
+            'Restore with recovery phrase':
+                'You lost every device. Use your 12 words.',
+          };
+    for (final MapEntry<String, String> action in captions.entries) {
+      final Finder row = find.widgetWithText(SyncActionRow, action.key);
+      expect(row, findsOneWidget, reason: action.key);
+      expect(
+        find.descendant(of: row, matching: find.text(action.value)),
+        findsOneWidget,
+        reason: action.value,
+      );
+      expect(
+        tester.getSize(row).height,
+        greaterThanOrEqualTo(48),
+        reason: action.key,
+      );
     }
-    expect(find.byType(PairingQrPlaceholder), findsOneWidget);
-    expect(find.text('Not connected'), findsOneWidget);
-    expect(find.text(_onDeviceNote), findsOneWidget);
-  }, variant: _macOS);
+    _expectNoMockUpControls();
+    expect(find.text('Sync now'), findsNothing);
+    expect(find.text('Pause sync'), findsNothing);
 
-  testWidgets('the phone shows only the storage mode and the on-device note', (
-    WidgetTester tester,
-  ) async {
-    await _pumpSection(tester);
-
-    expect(find.text('Sync & storage'), findsOneWidget);
-    expect(find.text('Syncing arrives in a future update'), findsOneWidget);
-    expect(find.text('Storage mode'), findsOneWidget);
-    expect(find.text(_onDeviceNote), findsOneWidget);
-    for (final String row in _serverRows) {
-      expect(find.text(row, skipOffstage: false), findsNothing, reason: row);
-    }
-    expect(find.byType(PairingQrPlaceholder), findsNothing);
-    expect(find.byType(SettingsTextField), findsNothing);
-    expect(find.byType(SettingsSecretField), findsNothing);
-    expect(find.byType(DashedDivider), findsNWidgets(2));
-  }, variant: _android);
-
-  testWidgets('locks storage mode to On this device', (
-    WidgetTester tester,
-  ) async {
-    await _pumpSection(tester);
-
-    final SettingsSegmented<SyncStorageChoice> segmented = tester
-        .widget<SettingsSegmented<SyncStorageChoice>>(
-          find.byType(SettingsSegmented<SyncStorageChoice>),
-        );
-
-    expect(segmented.value, SyncStorageChoice.onDevice);
-    expect(segmented.enabled, isFalse);
-    expect(segmented.onChanged, isNull);
-
-    await tester.tap(find.text('Sync to server'));
+    await tester.tap(find.text('Start syncing'));
     await tester.pumpAndSettle();
 
-    expect(
-      tester
-          .widget<SettingsSegmented<SyncStorageChoice>>(
-            find.byType(SettingsSegmented<SyncStorageChoice>),
-          )
-          .value,
-      SyncStorageChoice.onDevice,
-    );
+    expect(find.text(startSyncMessage), findsOneWidget);
+    expect(find.text(serverAddressLabel), findsOneWidget);
+    expect(find.text(inviteCodeLabel), findsOneWidget);
+    expect(find.text(syncCancelLabel), findsOneWidget);
+    expect(find.text(syncContinueLabel), findsOneWidget);
   }, variant: _bothPlatforms);
 
-  testWidgets('macOS leaves every sync control inert', (
+  testWidgets('sync on shows every control on the Mac', (
     WidgetTester tester,
   ) async {
-    await _pumpSection(tester);
-
-    expect(find.byType(SettingsTextField), findsNWidgets(3));
-    expect(find.byType(SettingsSecretField), findsNWidgets(2));
-    for (final SettingsTextField field in tester.widgetList<SettingsTextField>(
-      find.byType(SettingsTextField),
-    )) {
-      expect(field.enabled, isFalse);
-    }
-    for (final SettingsSecretField field
-        in tester.widgetList<SettingsSecretField>(
-          find.byType(SettingsSecretField),
-        )) {
-      expect(field.enabled, isFalse);
-    }
-
-    final SettingsSelect<SyncFrequency> select = tester
-        .widget<SettingsSelect<SyncFrequency>>(
-          find.byType(SettingsSelect<SyncFrequency>),
-        );
-    expect(select.enabled, isFalse);
-    expect(select.onChanged, isNull);
-
-    await tester.tap(find.byType(SettingsSelect<SyncFrequency>));
-    await tester.pumpAndSettle();
-    expect(find.text('Manual'), findsNothing);
-
-    final StickerButton testConnection = tester.widget<StickerButton>(
-      find.widgetWithText(StickerButton, 'Test connection'),
+    final DateTime now = DateTime.now().toUtc();
+    final SyncedStatus status = SyncedStatus(now);
+    await _pumpSection(
+      tester,
+      syncOnOverrides(status: status, devices: _twoDevices(now)),
     );
-    expect(testConnection.onPressed, isNull);
+
+    expect(find.text('Status'), findsOneWidget);
+    expect(find.text('Last change sent just now'), findsOneWidget);
+    expect(find.text(status.label(now)), findsOneWidget);
+    expect(_button('Sync now'), findsOneWidget);
+    expect(find.text('Pause sync'), findsOneWidget);
+    expect(
+      find.text('Stops sending and receiving until you switch it back'),
+      findsOneWidget,
+    );
+    expect(
+      _rowControl('Pause sync', find.byType(SettingsToggle)),
+      findsOneWidget,
+    );
+    expect(find.text('Server address'), findsOneWidget);
+    expect(
+      find.text('Every device follows when you change it'),
+      findsOneWidget,
+    );
+    expect(find.text(_address), findsOneWidget);
+    expect(_rowControl('Server address', _button('Change')), findsOneWidget);
+    expect(find.text('Your devices'), findsOneWidget);
+    expect(find.text('Satanshu MacBook'), findsOneWidget);
+    expect(find.text('This Mac'), findsOneWidget);
+    expect(find.text('Galaxy S24 Ultra'), findsOneWidget);
+    expect(find.text('Last seen 3 hours ago'), findsOneWidget);
+    expect(_rowControl('Galaxy S24 Ultra', _button('Remove')), findsOneWidget);
+    expect(find.text('Delete journal everywhere'), findsNothing);
+    expect(find.text('Add a device'), findsOneWidget);
+    expect(find.text('Show a code to scan'), findsOneWidget);
+    expect(_rowControl('Add a device', _button('Show code')), findsOneWidget);
+    expect(find.text('Keep all media on this device'), findsOneWidget);
+    expect(
+      find.text(
+        'Download every photo, voice note and video in the background. '
+        'On for Macs.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      _rowControl('Keep all media on this device', find.byType(SettingsToggle)),
+      findsOneWidget,
+    );
+    expect(find.text('Allow mobile data for media'), findsNothing);
+    expect(find.text('Background uploads'), findsNothing);
+    expect(find.text('Start syncing'), findsNothing);
+    _expectNoMockUpControls();
   }, variant: _macOS);
+
+  testWidgets('sync on shows every control on the phone', (
+    WidgetTester tester,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    final SyncedStatus status = SyncedStatus(now);
+    await _pumpSection(
+      tester,
+      syncOnOverrides(status: status, devices: _twoDevices(now)),
+    );
+
+    expect(find.text(status.label(now)), findsOneWidget);
+    expect(find.text(_address), findsNWidgets(2));
+    expect(_button('Sync now'), findsOneWidget);
+    expect(
+      _rowControl('Pause sync', find.byType(SettingsToggle)),
+      findsOneWidget,
+    );
+    expect(
+      _rowControl('Keep all media on this phone', find.byType(SettingsToggle)),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Off: videos download when you open them'),
+      findsOneWidget,
+    );
+    expect(
+      _rowControl('Allow mobile data for media', find.byType(SettingsToggle)),
+      findsOneWidget,
+    );
+    expect(find.text('Off: full videos move on Wi-Fi only'), findsOneWidget);
+    expect(find.text('Devices'), findsOneWidget);
+    expect(find.text('2 devices · add or remove'), findsOneWidget);
+    expect(_rowControl('Server address', _button('Change')), findsOneWidget);
+    expect(find.text('Background uploads'), findsOneWidget);
+    expect(find.text('Keep all media on this device'), findsNothing);
+    _expectNoMockUpControls();
+
+    await tester.tap(_rowControl('Devices', find.byType(StickerButton)));
+    await tester.pumpAndSettle();
+
+    final Finder sheet = find.byType(PhoneSheet);
+    expect(sheet, findsOneWidget);
+    expect(
+      find.descendant(of: sheet, matching: find.text('Satanshu MacBook')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.text('This phone')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: sheet, matching: _button('Remove')),
+      findsNWidgets(2),
+    );
+    expect(
+      find.descendant(of: sheet, matching: find.text('Add a device')),
+      findsOneWidget,
+    );
+  }, variant: _android);
+
+  testWidgets('background uploads shows the battery state', (
+    WidgetTester tester,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    final FakeBatterySettings battery = FakeBatterySettings();
+    await _pumpSection(
+      tester,
+      syncOnOverrides(
+        status: SyncedStatus(now),
+        devices: _twoDevices(now),
+        battery: battery,
+      ),
+    );
+
+    expect(find.text('Background uploads'), findsOneWidget);
+    expect(find.text('Battery: Optimised'), findsOneWidget);
+    expect(find.text('Battery: Unrestricted'), findsNothing);
+    final Finder open = _rowControl(
+      'Background uploads',
+      _button(openBatterySettingsLabel),
+    );
+    expect(open, findsOneWidget);
+
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+    expect(find.text(backgroundUploadsTitle), findsOneWidget);
+    expect(find.text(backgroundUploadsMessage), findsOneWidget);
+    await tester.tap(
+      find.descendant(
+        of: find.byType(PhoneSheet),
+        matching: find.text(openBatterySettingsLabel),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(battery.opens, 1);
+    expect(find.text(backgroundUploadsTitle), findsNothing);
+
+    await tester.pumpWidget(const SizedBox());
+    await _pumpSection(
+      tester,
+      syncOnOverrides(
+        status: SyncedStatus(now),
+        devices: _twoDevices(now),
+        battery: FakeBatterySettings(exempt: true),
+      ),
+    );
+
+    expect(find.text('Background uploads'), findsOneWidget);
+    expect(find.text('Battery: Unrestricted'), findsOneWidget);
+    expect(find.text('Battery: Optimised'), findsNothing);
+    expect(_button(openBatterySettingsLabel), findsNothing);
+  }, variant: _android);
 }

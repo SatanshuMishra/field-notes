@@ -59,6 +59,20 @@ const BorderRadius _toggleRadius = BorderRadius.all(
 const String _soundOnLabel = 'Sound effects on';
 const String _soundOffLabel = 'Sound effects off';
 
+typedef SidebarSyncStatusBuilder = Widget Function(
+  BuildContext context,
+  bool collapsed,
+);
+
+const Key sidebarSyncDotKey = ValueKey<String>('sidebar-sync-dot');
+const Key sidebarSyncLineKey = ValueKey<String>('sidebar-sync-line');
+
+const double _syncGap = 8;
+const double _syncDotSize = 8;
+const double _syncLineDotSize = 6;
+const double _syncLineDotGap = 6;
+const double _syncAddressGap = 2;
+
 double _toggleLeft({required bool collapsed}) => collapsed
     ? shellSidebarCollapsedWidth + _toggleOverhang - _toggleExtent
     : shellSidebarOpenWidth - _toggleOpenInset - _toggleExtent;
@@ -72,6 +86,7 @@ class SidebarShell extends StatefulWidget {
     required this.onSound,
     required this.body,
     this.streak,
+    this.syncStatus,
     this.soundOn = true,
     this.obscured = false,
     this.collapsed = false,
@@ -84,6 +99,7 @@ class SidebarShell extends StatefulWidget {
   final VoidCallback onSound;
   final Widget body;
   final Widget? streak;
+  final SidebarSyncStatusBuilder? syncStatus;
   final bool soundOn;
   final bool obscured;
   final bool collapsed;
@@ -322,6 +338,7 @@ class _SidebarShellState extends State<SidebarShell> {
                           ? StreakPillForm.rail
                           : StreakPillForm.sidebar,
                     ),
+                ?widget.syncStatus?.call(context, collapsed),
                 const SizedBox(height: _streakGap),
                 _footer(context),
               ],
@@ -646,5 +663,88 @@ class _PanelGlowScale extends GradientTransform {
       ..setEntry(1, 1, scaleY)
       ..setEntry(0, 3, centreX * (1 - scaleX))
       ..setEntry(1, 3, centreY * (1 - scaleY));
+  }
+}
+
+class SidebarSyncLine extends StatelessWidget {
+  const SidebarSyncLine({
+    super.key,
+    required this.status,
+    required this.tone,
+    required this.collapsed,
+    this.address,
+  });
+
+  final String status;
+  final Color tone;
+  final bool collapsed;
+  final String? address;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget dot = DecoratedBox(
+      decoration: BoxDecoration(color: tone, shape: BoxShape.circle),
+      child: SizedBox.square(
+        dimension: collapsed ? _syncDotSize : _syncLineDotSize,
+      ),
+    );
+    if (collapsed) {
+      return Padding(
+        padding: const EdgeInsets.only(top: _syncGap),
+        child: Center(
+          child: Semantics(
+            label: status,
+            container: true,
+            child: Tooltip(
+              key: sidebarSyncDotKey,
+              message: status,
+              excludeFromSemantics: true,
+              child: dot,
+            ),
+          ),
+        ),
+      );
+    }
+    final String? address = this.address;
+    return Padding(
+      key: sidebarSyncLineKey,
+      padding: const EdgeInsets.only(top: _syncGap),
+      child: MergeSemantics(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                dot,
+                const SizedBox(width: _syncLineDotGap),
+                Expanded(
+                  child: Text(
+                    status,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textStyles.syncPrimarySans,
+                  ),
+                ),
+              ],
+            ),
+            if (address != null) ...<Widget>[
+              const SizedBox(height: _syncAddressGap),
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: _syncLineDotSize + _syncLineDotGap,
+                ),
+                child: Text(
+                  address,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textStyles.syncSecondarySans,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }

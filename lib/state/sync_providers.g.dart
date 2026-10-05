@@ -122,7 +122,40 @@ final class SyncEnabledProvider
   }
 }
 
-String _$syncEnabledHash() => r'7e85dc5fc9df001871877fa94da9afd1df102c4d';
+String _$syncEnabledHash() => r'37f5853825e3aee0692bb7f37223148fa482d9c9';
+
+@ProviderFor(relayAddress)
+final relayAddressProvider = RelayAddressProvider._();
+
+final class RelayAddressProvider
+    extends $FunctionalProvider<AsyncValue<String?>, String?, Stream<String?>>
+    with $FutureModifier<String?>, $StreamProvider<String?> {
+  RelayAddressProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'relayAddressProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$relayAddressHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<String?> create(Ref ref) {
+    return relayAddress(ref);
+  }
+}
+
+String _$relayAddressHash() => r'81fef487628b42a8ee57c8a961b65c5886525dff';
 
 @ProviderFor(appLifecycle)
 final appLifecycleProvider = AppLifecycleProvider._();
@@ -686,3 +719,211 @@ final class ServerAddressProvider
 }
 
 String _$serverAddressHash() => r'c2e0ca3e36bb1b963b14efb135e7eb2ea82a5572';
+
+@ProviderFor(enrolmentService)
+final enrolmentServiceProvider = EnrolmentServiceProvider._();
+
+final class EnrolmentServiceProvider
+    extends
+        $FunctionalProvider<
+          EnrolmentService,
+          EnrolmentService,
+          EnrolmentService
+        >
+    with $Provider<EnrolmentService> {
+  EnrolmentServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'enrolmentServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$enrolmentServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<EnrolmentService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  EnrolmentService create(Ref ref) {
+    return enrolmentService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(EnrolmentService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<EnrolmentService>(value),
+    );
+  }
+}
+
+String _$enrolmentServiceHash() => r'f46b3322a319dc1fb23a14d0d1e15f1b45c89602';
+
+@ProviderFor(restoreService)
+final restoreServiceProvider = RestoreServiceProvider._();
+
+final class RestoreServiceProvider
+    extends $FunctionalProvider<RestoreService, RestoreService, RestoreService>
+    with $Provider<RestoreService> {
+  RestoreServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'restoreServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$restoreServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<RestoreService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  RestoreService create(Ref ref) {
+    return restoreService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(RestoreService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<RestoreService>(value),
+    );
+  }
+}
+
+String _$restoreServiceHash() => r'4fdbe616218025fb533bec97b1fa226493e2e2af';
+
+@ProviderFor(pairingService)
+final pairingServiceProvider = PairingServiceProvider._();
+
+final class PairingServiceProvider
+    extends $FunctionalProvider<PairingService, PairingService, PairingService>
+    with $Provider<PairingService> {
+  PairingServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'pairingServiceProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$pairingServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<PairingService> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  PairingService create(Ref ref) {
+    return pairingService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(PairingService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<PairingService>(value),
+    );
+  }
+}
+
+String _$pairingServiceHash() => r'4500c4666bdeabcc2c7575aca0390b025f91f890';
+
+@ProviderFor(deviceService)
+final deviceServiceProvider = DeviceServiceProvider._();
+
+final class DeviceServiceProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<DeviceService?>,
+          DeviceService?,
+          FutureOr<DeviceService?>
+        >
+    with $FutureModifier<DeviceService?>, $FutureProvider<DeviceService?> {
+  DeviceServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'deviceServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$deviceServiceHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<DeviceService?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<DeviceService?> create(Ref ref) {
+    return deviceService(ref);
+  }
+}
+
+String _$deviceServiceHash() => r'e311210db9d94eb47f7b8f46456afe1a59cb14cc';
+
+@ProviderFor(journalDevices)
+final journalDevicesProvider = JournalDevicesProvider._();
+
+final class JournalDevicesProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<List<JournalDevice>>,
+          List<JournalDevice>,
+          FutureOr<List<JournalDevice>>
+        >
+    with
+        $FutureModifier<List<JournalDevice>>,
+        $FutureProvider<List<JournalDevice>> {
+  JournalDevicesProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'journalDevicesProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$journalDevicesHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<JournalDevice>> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<JournalDevice>> create(Ref ref) {
+    return journalDevices(ref);
+  }
+}
+
+String _$journalDevicesHash() => r'b7aa24bcfd15ecef2c473318c3a4675c1135a205';
