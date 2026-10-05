@@ -5,6 +5,11 @@ import 'package:test/test.dart';
 
 import 'support/relay_harness.dart';
 
+final bool runningAsRoot =
+    '${Process.runSync('id', <String>['-u']).stdout}'.trim() == '0';
+
+const String rootSkip = 'chmod does not stop root from writing files';
+
 void main() {
   test('the health probe runs at most once every five seconds', () async {
     final RelayHarness harness = await RelayHarness.start();
@@ -28,5 +33,5 @@ void main() {
     expect(await health(), HttpStatus.serviceUnavailable);
     harness.advance(const Duration(seconds: 5));
     expect(await health(), HttpStatus.ok);
-  });
+  }, skip: runningAsRoot ? rootSkip : null);
 }

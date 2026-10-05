@@ -53,6 +53,7 @@ String logLine({
 });
 
 const String leftoversEvent = 'leftovers_cleared';
+const String freeSpaceFailedEvent = 'free_space_failed';
 
 String internalErrorLine(DateTime time) => jsonEncode(<String, Object?>{
   'ts': time.toUtc().toIso8601String(),

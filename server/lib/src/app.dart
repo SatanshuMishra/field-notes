@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart';
@@ -16,12 +17,17 @@ import 'change_log.dart';
 import 'config.dart';
 import 'database.dart';
 import 'devices.dart';
+import 'in_flight.dart';
 import 'live.dart';
+import 'live_guard.dart';
 import 'logging.dart';
 import 'migrations.dart';
 import 'pairing.dart';
 import 'probes.dart';
 import 'rate_limit.dart';
+import 'request_body.dart';
+import 'response_output.dart';
+import 'timers.dart';
 import 'trash.dart';
 
 const Duration purgeInterval = Duration(hours: 24);
@@ -51,10 +57,12 @@ final class RelayApp {
     required this.devices,
     required this.pairing,
     required this.restores,
-    required this.limiter,
-    required this.sharedLimit,
+    required this.rateLimits,
     required this.largeBodies,
+    required this.space,
+    required this.responses,
     required this._logSink,
+    required this._startTimer,
   }) : _lastPurge = clock();
 
   static Future<RelayApp> open({
@@ -63,9 +71,12 @@ final class RelayApp {
     DateTime Function()? clock,
     LogSink logSink = stdoutLogSink,
     AssemblyHook? beforeAssembly,
-    FreeSpaceProbe freeSpace = dfFreeBytes,
+    FreeSpaceProbe? freeSpace,
     Rename rename = renameOnDisk,
     Duration largeBodyWait = largeBodyWaitLimit,
+    StartTimer startTimer = Timer.new,
+    SendOutput liveOutput = sendOutput,
+    ResponseOutput responseOutput = passResponse,
   }) async {
     final DateTime Function() now = clock ?? systemClock;
     migrate(
@@ -84,15 +95,29 @@ final class RelayApp {
     if (leftovers.worthLogging) {
       logSink(eventLine(now(), leftoversEvent, leftovers.fields));
     }
+    final FreeSpaceProbe probe =
+        freeSpace ?? DfProbe(startTimer: startTimer).read;
+    final FreeSpace space = FreeSpace(
+      probe: () async {
+        final List<int?> readings = await Future.wait(<Future<int?>>[
+          probe(config.mediaDirectory),
+          probe(p.dirname(config.databasePath)),
+        ]);
+        final int? media = readings.first;
+        final int? data = readings.last;
+        return media == null || data == null ? null : min(media, data);
+      },
+      clock: now,
+      minFreeBytes: config.minFreeBytes,
+      onFailedReading: () => logSink(
+        eventLine(now(), freeSpaceFailedEvent, const <String, Object>{}),
+      ),
+    );
     final BlobStore blobs = BlobStore(
       database: database,
       mediaDirectory: config.mediaDirectory,
       clock: now,
-      space: FreeSpace(
-        probe: () => freeSpace(config.mediaDirectory),
-        clock: now,
-        minFreeBytes: config.minFreeBytes,
-      ),
+      space: space,
       beforeAssembly: beforeAssembly,
       rename: rename,
     )..prepare();
@@ -109,7 +134,12 @@ final class RelayApp {
       accounts: Accounts(database, now),
       sessions: sessions,
       changeLog: ChangeLog(database, now),
-      live: LiveHub(now, sessions.isCurrent),
+      live: LiveHub(
+        now,
+        sessions.isCurrent,
+        startTimer: startTimer,
+        sendOutput: liveOutput,
+      ),
       blobs: blobs,
       devices: Devices(database, config.mediaDirectory, now, rename: rename),
       pairing: Pairing(database, now),
@@ -119,22 +149,17 @@ final class RelayApp {
         sodium: sodium,
         challenges: challenges,
       ),
-      limiter: RateLimiter(
-        burst: config.rateBurst,
-        perSecond: config.ratePerSecond,
-        clock: now,
-      ),
-      sharedLimit: SharedRateLimit(
-        burst: config.rateGlobalBurst,
-        perSecond: config.rateGlobalPerSecond,
-        clock: now,
-      ),
+      rateLimits: RateLimits.fromConfig(config, now),
       largeBodies: LargeBodySlots(
         total: config.largeBodySlots,
         perAccount: config.largeBodySlotsPerAccount,
         waitLimit: largeBodyWait,
+        startTimer: startTimer,
       ),
+      space: space,
+      responses: ResponseOutputs(now, output: responseOutput),
       logSink: logSink,
+      startTimer: startTimer,
     );
     await app.purge();
     return app;
@@ -151,10 +176,20 @@ final class RelayApp {
   final Devices devices;
   final Pairing pairing;
   final Restores restores;
-  final RateLimiter limiter;
-  final SharedRateLimit sharedLimit;
+  final RateLimits rateLimits;
   final LargeBodySlots largeBodies;
+  final FreeSpace space;
+  final ResponseOutputs responses;
+  final RequestsInFlight devicesInFlight = RequestsInFlight();
+  final RequestsInFlight addressesInFlight = RequestsInFlight();
+  final RequestsInFlight pullsInFlight = RequestsInFlight(
+    limit: maxPullsInFlight,
+  );
+  final RequestsInFlight pushesInFlight = RequestsInFlight(
+    limit: maxPushesInFlight,
+  );
   final LogSink _logSink;
+  final StartTimer _startTimer;
   final Set<Future<void>> _deletions = <Future<void>>{};
   late final CachedProbe<bool> _health = CachedProbe<bool>(
     probe: _probeHealth,
@@ -165,11 +200,21 @@ final class RelayApp {
 
   late final Handler handler = const Pipeline()
       .addMiddleware(requestLogger(_logSink, clock))
+      .addMiddleware(responseGuard(responses))
+      .addMiddleware(
+        bodyGuard(
+          startTimer: _startTimer,
+          clock: clock,
+          addresses: addressesInFlight,
+          addressOf: addressKeyOf,
+        ),
+      )
       .addHandler(_router().call);
 
   Future<void> tick() async {
     live.sweep();
-    limiter.sweep();
+    responses.sweep();
+    rateLimits.sweep();
     if (!clock().isBefore(_lastPurge.add(purgeInterval))) {
       await purge();
     }
@@ -208,14 +253,21 @@ final class RelayApp {
       Pipeline pipeline = const Pipeline();
       if (rateLimitedRoutes.contains(route)) {
         pipeline = pipeline.addMiddleware(
-          rateLimit(limiter, sharedLimit, route),
+          rateLimit(
+            rateLimits,
+            addressesInFlight,
+            route,
+            exempt: route == SyncRoutes.pairingStatus ? _verifiedSession : null,
+          ),
         );
       }
       if (route != SyncRoutes.health) {
         pipeline = pipeline.addMiddleware(protocolGate());
       }
       final Handler guarded = pipeline
-          .addMiddleware(authorization(sessions, route, access))
+          .addMiddleware(
+            authorization(sessions, devicesInFlight, route, access),
+          )
           .addHandler(handler);
       router.add(
         route.method,
@@ -285,6 +337,22 @@ final class RelayApp {
 
   Response _notFound(Request request) => errorResponse(SyncErrorCode.notFound);
 
+  SessionGrant? _verifiedSession(Request request) {
+    final AuthCredential? credential = credentialOf(request);
+    if (credential == null || credential.scheme != AuthScheme.session) {
+      return null;
+    }
+    try {
+      return sessions.authorize(
+        SyncRoutes.pairingStatus,
+        Access.session,
+        credential,
+      );
+    } on RelayException {
+      return null;
+    }
+  }
+
   Future<Response> _redeem(Request request) async => jsonResponse(
     accounts.redeem(
       InviteRedeemRequest.fromJson(
@@ -309,28 +377,57 @@ final class RelayApp {
     ),
   );
 
-  Future<Response> _push(Request request) async {
+  Future<Response> _push(Request request) => holding(request, (
+    RequestHold hold,
+  ) async {
     final Caller caller = callerOf(request);
+    if (!await hold.enterWithin(
+      pushesInFlight,
+      caller.deviceId,
+      wait: pushSlotWaitLimit,
+      startTimer: _startTimer,
+    )) {
+      throw tryAgainShortly;
+    }
     final PushRequest push = PushRequest.fromJson(
       await readJson(request, maxBytes: pushJsonLimit, slots: largeBodies),
     );
     if (push.changes.length > maxPushChanges) {
       throw const RelayException(SyncErrorCode.badRequest, 'Too many changes');
     }
-    final PushOutcome outcome = changeLog.push(caller, push);
+    changeLog.validate(push);
+    final int writing = pushWriteBytes(push);
+    if (!await space.reservePush(writing)) {
+      throw const RelayException(SyncErrorCode.storageFull);
+    }
+    final PushOutcome outcome;
+    try {
+      outcome = changeLog.push(caller, push);
+    } catch (_) {
+      space.release(writing, written: false);
+      rethrow;
+    }
     final int? acceptedSeq = outcome.acceptedSeq;
+    space.release(writing, written: acceptedSeq != null);
     if (acceptedSeq != null) {
       live.nudge(caller.accountId, caller.deviceId, acceptedSeq);
     }
     return jsonResponse(outcome.response);
-  }
+  });
 
-  Response _pull(Request request) => jsonResponse(
-    changeLog.pull(
-      callerOf(request).accountId,
-      PullQuery.parse(request.url.queryParameters),
-    ),
-  );
+  Future<Response> _pull(Request request) =>
+      holding(request, (RequestHold hold) {
+        final Caller caller = callerOf(request);
+        if (!hold.enter(pullsInFlight, caller.deviceId)) {
+          throw tryAgainShortly;
+        }
+        return jsonResponse(
+          changeLog.pull(
+            caller.accountId,
+            PullQuery.parse(request.url.queryParameters),
+          ),
+        );
+      });
 
   FutureOr<Response> _live(Request request) =>
       live.handler(grantOf(request))(request);
@@ -353,6 +450,9 @@ final class RelayApp {
       headers: <String, String>{
         'content-type': 'application/octet-stream',
         'content-length': '${file.lengthSync()}',
+      },
+      context: const <String, Object>{
+        stallLimitContextKey: fileResponseStallLimit,
       },
     );
   }
@@ -377,7 +477,7 @@ final class RelayApp {
       await blobs.putPart(
         callerOf(request).accountId,
         part,
-        request.read(),
+        bodyOf(request),
         contentLength: request.contentLength,
       ),
     );
@@ -539,7 +639,20 @@ final class RelayServer {
       port ?? app.config.port,
     );
     final Timer? timer = runZonedGuarded<Timer?>(() {
-      shelf_io.serveRequests(server, app.handler);
+      server.listen(
+        (HttpRequest raw) => shelf_io.handleRequest(
+          raw,
+          (Request request) => app.handler(
+            request.change(
+              context: <String, Object>{
+                dropConnectionContextKey: () {
+                  raw.response.deadline = Duration.zero;
+                },
+              },
+            ),
+          ),
+        ),
+      );
       return tickInterval == null
           ? null
           : Timer.periodic(tickInterval, (_) => unawaited(app.tick()));

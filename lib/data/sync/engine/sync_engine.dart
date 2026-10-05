@@ -17,6 +17,7 @@ import 'package:field_notes/data/sync/engine/pull_cycle.dart';
 import 'package:field_notes/data/sync/engine/push_cycle.dart';
 import 'package:field_notes/data/sync/engine/relay_rebase.dart';
 import 'package:field_notes/data/sync/engine/server_address.dart';
+import 'package:field_notes/data/sync/engine/stale_records.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/erase/journal_erase_service.dart';
@@ -213,6 +214,7 @@ class SyncEngine {
   NetworkKind _networkKind = NetworkKind.unmetered;
   AttentionReason? _stopReason;
   bool _storageFull = false;
+  StaleRecords _stale = const StaleRecords();
   int _failures = 0;
   int _liveFailures = 0;
   DateTime? _blockedUntil;
@@ -359,8 +361,9 @@ class SyncEngine {
     _changed();
     if (paused) {
       await _quiet();
-      await _background?.uploads.cancelAll();
+      await _background?.uploads.pause();
     } else {
+      _background?.uploads.resume();
       await _resume();
     }
   }
@@ -390,6 +393,7 @@ class SyncEngine {
   }
 
   Future<bool> fetchMedia(String blobId) async {
+    await _waitOutRateLimit();
     if (!_mayTalk) {
       return false;
     }
@@ -406,6 +410,9 @@ class SyncEngine {
     }
     try {
       return await media.downloads.download(client, blobId);
+    } on RelayRateLimited catch (error) {
+      _rateLimited(error.retryAfter);
+      return fetchMedia(blobId);
     } on RelayException {
       return false;
     } on MediaDownloadException {
@@ -585,12 +592,12 @@ class SyncEngine {
     if (held > 0) {
       return AttentionReason.clock;
     }
+    if (_storageFull) {
+      return AttentionReason.storageFull;
+    }
     if (_failures >= unreachableAfterFailures &&
         _networkKind != NetworkKind.offline) {
       return AttentionReason.unreachable;
-    }
-    if (_storageFull) {
-      return AttentionReason.storageFull;
     }
     return null;
   }
@@ -655,7 +662,10 @@ class SyncEngine {
     try {
       final JoinMerge? join = _join;
       if (join == null || await join.stage() == JoinStage.done) {
-        await background.uploads.handOverPushes(await _pushCycle(null));
+        await background.uploads.handOverPushes(
+          await _pushCycle(null),
+          excluding: _stale.unpulled,
+        );
       }
       await background.uploads.handOverPrepared();
     } on CryptoException {
@@ -724,6 +734,7 @@ class SyncEngine {
     _stopReason = null;
     _failures = 0;
     _liveFailures = 0;
+    _stale = const StaleRecords();
     _changed();
     await _background?.results.start();
     unawaited(_prepareMedia());
@@ -911,6 +922,7 @@ class SyncEngine {
     );
     if (pulled.complete) {
       _setProgress(null);
+      _stale = _stale.afterCompletePull();
     }
     if (!_mayTalk || !current()) {
       return;
@@ -949,6 +961,11 @@ class SyncEngine {
     final SessionResponse session;
     try {
       session = await candidate.signIn();
+    } on RelayRateLimited catch (error) {
+      candidate.close();
+      _newServerUnreachable = false;
+      _rateLimited(error.retryAfter);
+      return;
     } on RelayException {
       candidate.close();
       _newServerUnreachable = true;
@@ -1035,6 +1052,7 @@ class SyncEngine {
       }
       _clientAddress = addressText;
       _keysRefreshed = true;
+      _stale = const StaleRecords();
       _setProgress(null);
     } on RelayException {
       if (!identical(_client, client)) {
@@ -1087,12 +1105,15 @@ class SyncEngine {
     DeviceService devices,
     FenceCheck current,
   ) async {
-    final Set<int> skipped = <int>{};
+    _stale = _stale.within(await _outboxIds());
+    final Set<int> held = _stale.heldAt(_clock.now());
+    final Set<int> skipped = <int>{...held};
+    final Set<int> again = <int>{};
     bool epochRefreshed = false;
     while (_mayTalk && current()) {
       final PushBatch? batch = await push.buildBatch(excluding: skipped);
       if (batch == null) {
-        return;
+        break;
       }
       final PushResponse response = await client.push(batch.request);
       if (!current()) {
@@ -1104,7 +1125,13 @@ class SyncEngine {
         isCurrent: current,
       );
       skipped.addAll(applied.stale);
-      if (applied.stale.isNotEmpty) {
+      final Set<int> repeated = _stale.answeredAgain(applied.stale);
+      again.addAll(repeated);
+      _stale = _stale.afterAnswer(
+        sent: batch.outboxIds.toSet(),
+        stale: applied.stale,
+      );
+      if (applied.stale.difference(repeated).isNotEmpty) {
         _wanted = true;
       }
       if (applied.staleEpoch.isNotEmpty) {
@@ -1126,6 +1153,30 @@ class SyncEngine {
         skipped.addAll(batch.outboxIds);
       }
     }
+    _holdStale(again: again, held: held);
+  }
+
+  void _holdStale({required Set<int> again, required Set<int> held}) {
+    final DateTime now = _clock.now();
+    final DateTime? until = _stale.heldUntil;
+    if (again.isNotEmpty) {
+      final Duration wait = backoffAfter(_stale.rounds + 1);
+      _stale = _stale.heldTill(now.add(wait));
+      _scheduleRetry(wait);
+    } else if (held.isNotEmpty && until != null && _retryTimer == null) {
+      _scheduleRetry(until.difference(now));
+    }
+    _stale = _stale.releasedWhenRepaired();
+  }
+
+  Future<Set<int>> _outboxIds() async {
+    final List<TypedResult> rows = await (_db.selectOnly(
+      _db.syncOutbox,
+    )..addColumns(<Expression<Object>>[_db.syncOutbox.id])).get();
+    return rows
+        .map((TypedResult row) => row.read(_db.syncOutbox.id))
+        .whereType<int>()
+        .toSet();
   }
 
   void _succeeded() {
@@ -1149,6 +1200,16 @@ class SyncEngine {
     _scheduleRetry(retryAfter);
   }
 
+  Future<void> _waitOutRateLimit() async {
+    DateTime? until = _blockedUntil;
+    while (!_disposed && until != null && _clock.now().isBefore(until)) {
+      final Completer<void> waited = Completer<void>();
+      _clock.timer(until.difference(_clock.now()), waited.complete);
+      await waited.future;
+      until = _blockedUntil;
+    }
+  }
+
   void _rejected(RelayRejected error) {
     switch (error.code) {
       case SyncErrorCode.unsupportedProtocol:
@@ -1160,7 +1221,7 @@ class SyncEngine {
         unawaited(_journalErased());
       case SyncErrorCode.storageFull:
         _storageFull = true;
-        _changed();
+        _failed();
       case SyncErrorCode.tooManyRequests:
         _rateLimited(defaultRetryAfter);
       default:

@@ -12,7 +12,9 @@ import 'package:sync_protocol/sync_protocol.dart';
 
 import 'body_slots.dart';
 import 'database.dart';
+import 'in_flight.dart';
 import 'logging.dart';
+import 'request_body.dart';
 
 const List<SyncRoute> uploadPassRoutes = <SyncRoute>[
   SyncRoutes.pushRecords,
@@ -30,6 +32,7 @@ const int maxJsonOpeners = 4096;
 
 const String callerContextKey = 'relay.caller';
 const String grantContextKey = 'relay.grant';
+const String verifiedGrantContextKey = 'relay.verified_grant';
 
 enum Access { open, session, sessionOrUploadPass, sessionOrMailbox, mailbox }
 
@@ -117,10 +120,15 @@ Response errorResponse(SyncErrorCode code, [String message = '']) =>
     );
 
 const Set<int> _storageFullErrors = <int>{28, 69, 122};
+const int _sqliteFull = 13;
 
-bool isStorageFull(Object error) =>
-    error is FileSystemException &&
-    _storageFullErrors.contains(error.osError?.errorCode);
+bool isStorageFull(Object error) => switch (error) {
+  FileSystemException(:final OSError? osError) => _storageFullErrors.contains(
+    osError?.errorCode,
+  ),
+  SqliteException(:final int resultCode) => resultCode == _sqliteFull,
+  _ => false,
+};
 
 Response? knownErrorResponse(Object error) => switch (error) {
   RelayException(
@@ -144,52 +152,78 @@ const RelayException _bodyTooLarge = RelayException(
   'Body too large',
 );
 
-const RelayException _noBodySlot = RelayException(
+const RelayException tryAgainShortly = RelayException(
   SyncErrorCode.tooManyRequests,
   '',
   1,
 );
 
-Future<bool> _admitAlways() async => true;
-
 Future<Uint8List> readBody(
   Request request, {
   required int maxBytes,
-  Future<bool> Function()? admitLarge,
+  BodyPace pace = BodyPace.whole,
+  int? stopAfter,
 }) async {
   final int? declared = request.contentLength;
   if (declared != null && declared > maxBytes) {
     throw _bodyTooLarge;
   }
-  final Future<bool> Function() admit = admitLarge ?? _admitAlways;
-  bool admitted =
-      admitLarge == null || (declared != null && declared <= smallJsonLimit);
-  bool refused = false;
-  if (!admitted && declared != null) {
-    admitted = true;
-    refused = !await admit();
-  }
+  final int readLimit = stopAfter ?? 2 * maxBytes;
   final BytesBuilder builder = BytesBuilder(copy: false);
   int received = 0;
-  await for (final List<int> chunk in request.read()) {
-    received += chunk.length;
-    if (!admitted && received > smallJsonLimit) {
-      admitted = true;
-      refused = !await admit();
+  try {
+    await for (final List<int> chunk in bodyOf(request).read(pace)) {
+      received += chunk.length;
+      if (received <= maxBytes) {
+        builder.add(chunk);
+        continue;
+      }
+      builder.clear();
+      if (received > readLimit) {
+        break;
+      }
     }
-    if (!refused && received <= maxBytes) {
-      builder.add(chunk);
-    } else if (received > 2 * maxBytes) {
-      break;
-    }
-  }
-  if (refused) {
-    throw _noBodySlot;
+  } on Object {
+    builder.clear();
+    rethrow;
   }
   if (received > maxBytes) {
     throw _bodyTooLarge;
   }
   return builder.takeBytes();
+}
+
+bool _needsSlot(Request request, int maxBytes) {
+  final int? declared = request.contentLength;
+  return maxBytes > smallJsonLimit &&
+      (declared == null || declared > smallJsonLimit);
+}
+
+Future<Uint8List> _readLargeBody(
+  Request request,
+  int maxBytes,
+  LargeBodySlots slots,
+) async {
+  final int? declared = request.contentLength;
+  if (declared != null && declared > maxBytes) {
+    throw _bodyTooLarge;
+  }
+  final String accountId =
+      (request.context[callerContextKey] as Caller?)?.accountId ?? '';
+  if (!await slots.acquire(accountId)) {
+    await bodyOf(request).drain();
+    throw tryAgainShortly;
+  }
+  try {
+    return await readBody(
+      request,
+      maxBytes: maxBytes,
+      pace: BodyPace.steady,
+      stopAfter: maxBytes,
+    );
+  } finally {
+    slots.release(accountId);
+  }
 }
 
 int jsonOpeners(List<int> body) {
@@ -207,33 +241,17 @@ Future<Map<String, Object?>> readJson(
   required int maxBytes,
   LargeBodySlots? slots,
 }) async {
-  final String accountId =
-      (request.context[callerContextKey] as Caller?)?.accountId ?? '';
-  bool holding = false;
-  try {
-    final Uint8List body = await readBody(
-      request,
-      maxBytes: maxBytes,
-      admitLarge: slots == null
-          ? null
-          : () async {
-              holding = await slots.acquire(accountId);
-              return holding;
-            },
-    );
-    if (jsonOpeners(body) > maxJsonOpeners) {
-      throw const RelayException(SyncErrorCode.badRequest, 'Too many objects');
-    }
-    final Map<String, Object?> json = decodeJsonObject(utf8.decode(body));
-    if (readProtocolVersion(json) != syncProtocolVersion) {
-      throw const RelayException(SyncErrorCode.unsupportedProtocol);
-    }
-    return json;
-  } finally {
-    if (holding) {
-      slots!.release(accountId);
-    }
+  final Uint8List body = slots != null && _needsSlot(request, maxBytes)
+      ? await _readLargeBody(request, maxBytes, slots)
+      : await readBody(request, maxBytes: maxBytes);
+  if (jsonOpeners(body) > maxJsonOpeners) {
+    throw const RelayException(SyncErrorCode.badRequest, 'Too many objects');
   }
+  final Map<String, Object?> json = decodeJsonObject(utf8.decode(body));
+  if (readProtocolVersion(json) != syncProtocolVersion) {
+    throw const RelayException(SyncErrorCode.unsupportedProtocol);
+  }
+  return json;
 }
 
 Caller callerOf(Request request) =>
@@ -660,37 +678,47 @@ Middleware protocolGate() =>
       return inner(request);
     };
 
-Middleware authorization(Sessions sessions, SyncRoute route, Access access) =>
+Middleware authorization(
+  Sessions sessions,
+  RequestsInFlight devicesInFlight,
+  SyncRoute route,
+  Access access,
+) =>
     (Handler inner) => (Request request) async {
-      final SessionGrant? grant = sessions.authorize(
-        route,
-        access,
-        credentialOf(request),
-      );
+      final SessionGrant? grant =
+          request.context[verifiedGrantContextKey] as SessionGrant? ??
+          sessions.authorize(route, access, credentialOf(request));
       final Caller? caller = grant?.caller;
       final Map<String, Object> attribution = <String, Object>{
         if (caller != null) LogContext.account: caller.accountId,
         if (caller != null) LogContext.device: caller.deviceId,
       };
-      try {
-        final Response response = await inner(
-          grant == null
-              ? request
-              : request.change(
-                  context: <String, Object>{
-                    callerContextKey: grant.caller,
-                    grantContextKey: grant,
-                  },
-                ),
-        );
-        return response.change(context: attribution);
-      } on HijackException {
-        throw AttributedHijack(attribution);
-      } catch (error) {
-        final Response? response = knownErrorResponse(error);
-        if (response == null) {
-          rethrow;
+      return holding(request, (RequestHold hold) async {
+        if (caller != null && !hold.enter(devicesInFlight, caller.deviceId)) {
+          bodyOf(request).abandon();
+          return knownErrorResponse(tryAgainShortly)!
+              .change(context: attribution);
         }
-        return response.change(context: attribution);
-      }
+        try {
+          final Response response = await inner(
+            grant == null
+                ? request
+                : request.change(
+                    context: <String, Object>{
+                      callerContextKey: grant.caller,
+                      grantContextKey: grant,
+                    },
+                  ),
+          );
+          return response.change(context: attribution);
+        } on HijackException {
+          throw AttributedHijack(attribution);
+        } catch (error) {
+          final Response? response = knownErrorResponse(error);
+          if (response == null) {
+            rethrow;
+          }
+          return response.change(context: attribution);
+        }
+      });
     };

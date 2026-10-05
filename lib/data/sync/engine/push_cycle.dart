@@ -50,6 +50,7 @@ final class PushCycle {
     required this._refreshKeys,
     this.maxChanges = maxPushChanges,
     this.maxBodyBytes = maxPushBodyBytes,
+    this.maxEnvelope = maxEnvelopeBytes,
     Random? random,
     int Function()? wallClock,
   }) : _db = database,
@@ -64,6 +65,7 @@ final class PushCycle {
   final JournalKeysSource _refreshKeys;
   final int maxChanges;
   final int maxBodyBytes;
+  final int maxEnvelope;
   final Random _random;
   final int Function() _wallClock;
 
@@ -97,14 +99,14 @@ final class PushCycle {
         continue;
       }
       final RecordPush? change = await _prepare(row.id, keys, names);
-      if (change == null) {
+      if (change == null || change.envelope.length > maxEnvelope) {
         continue;
       }
       final int changeBytes =
           _jsonLength(change.toJson()) + (changes.isEmpty ? 0 : 1);
       if (bodyBytes + changeBytes > maxBodyBytes) {
         if (changes.isEmpty) {
-          throw StateError('A single record exceeds the push size limit');
+          continue;
         }
         break;
       }

@@ -11,6 +11,8 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 const Duration defaultRetryAfter = Duration(seconds: 30);
 const Duration relayRequestTimeout = Duration(seconds: 30);
+const Duration liveUpgradeRetryAfter = Duration(seconds: 1);
+const int slowestUploadBytesPerSecond = 16 * 1024;
 const String retryAfterHeader = 'retry-after';
 
 sealed class RelayException implements Exception {
@@ -79,6 +81,21 @@ Future<WebSocketChannel> connectWebSocket(
   );
   await channel.ready;
   return channel;
+}
+
+Duration requestTimeoutFor(Duration base, int bodyBytes) =>
+    base +
+    Duration(milliseconds: bodyBytes * 1000 ~/ slowestUploadBytesPerSecond);
+
+RelayException liveConnectFailure(Object error) {
+  final Object? inner = error is WebSocketChannelException
+      ? error.inner
+      : error;
+  if (inner is WebSocketException &&
+      inner.httpStatusCode == HttpStatus.tooManyRequests) {
+    return const RelayRateLimited(liveUpgradeRetryAfter);
+  }
+  return RelayUnreachable(error);
 }
 
 Duration retryAfterOf(Map<String, String> headers) {
@@ -266,9 +283,9 @@ final class RelayClient {
         ).authorization,
       });
     } on WebSocketChannelException catch (error) {
-      throw RelayUnreachable(error);
+      throw liveConnectFailure(error);
     } on WebSocketException catch (error) {
-      throw RelayUnreachable(error);
+      throw liveConnectFailure(error);
     } on TimeoutException catch (error) {
       throw RelayUnreachable(error);
     } on SocketException catch (error) {
@@ -596,11 +613,24 @@ final class RelayClient {
     } else if (bytes != null) {
       request.bodyBytes = bytes;
     }
+    final Duration limit = requestTimeoutFor(timeout, request.bodyBytes.length);
     final http.Response response;
     try {
+      final http.StreamedResponse streamed = await _client
+          .send(request)
+          .timeout(limit);
       response = await http.Response.fromStream(
-        await _client.send(request).timeout(timeout),
-      ).timeout(timeout);
+        http.StreamedResponse(
+          streamed.stream.timeout(timeout),
+          streamed.statusCode,
+          contentLength: streamed.contentLength,
+          request: streamed.request,
+          headers: streamed.headers,
+          isRedirect: streamed.isRedirect,
+          persistentConnection: streamed.persistentConnection,
+          reasonPhrase: streamed.reasonPhrase,
+        ),
+      );
     } on TimeoutException catch (error) {
       throw RelayUnreachable(error);
     } on SocketException catch (error) {
