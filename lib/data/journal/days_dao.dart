@@ -5,8 +5,13 @@ import '../sync/change_recorder.dart';
 import '../sync/synced_tables.dart';
 import 'day_ids.dart';
 
-const List<String> _reviveFields = <String>['moodId', 'updatedAt', 'deletedAt'];
-const List<String> _moodFields = <String>['moodId', 'updatedAt'];
+const String _moodField = 'moodId';
+const List<String> _reviveFields = <String>[
+  _moodField,
+  'updatedAt',
+  'deletedAt',
+];
+const List<String> _moodFields = <String>[_moodField, 'updatedAt'];
 const List<String> _deleteFields = <String>['deletedAt', 'updatedAt'];
 
 class DaysDao {
@@ -30,7 +35,10 @@ class DaysDao {
       final String clocks = await _recorder.stamp(
         table: SyncedTables.days,
         rowId: id,
-        fields: SyncedTables.dayFields,
+        fields: <String>[
+          for (final String field in SyncedTables.dayFields)
+            if (moodId != null || field != _moodField) field,
+        ],
         currentClocks: '{}',
       );
       return _db
