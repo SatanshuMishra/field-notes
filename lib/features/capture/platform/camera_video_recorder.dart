@@ -15,6 +15,8 @@ const String videoRecordingMime = 'video/mp4';
 const String videoRecordingExtension = 'mp4';
 const String videoThumbnailMime = 'image/jpeg';
 const String videoThumbnailExtension = 'jpg';
+const int videoRecordingBitrate = 4000000;
+const int videoRecordingAudioBitrate = 96000;
 
 String videoRecordingFileName(int nowMs) =>
     'video_$nowMs.$videoRecordingExtension';
@@ -289,8 +291,10 @@ class CameraVideoRecorder implements VideoRecorder {
       }
       final CameraController controller = CameraController(
         _selected(cameras, session.deviceId),
-        ResolutionPreset.high,
+        ResolutionPreset.veryHigh,
         enableAudio: true,
+        videoBitrate: videoRecordingBitrate,
+        audioBitrate: videoRecordingAudioBitrate,
       );
       _controller = controller;
       await controller.initialize();
@@ -461,6 +465,9 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       cameraMode: CameraMacOSMode.video,
       fit: BoxFit.cover,
       useMovieFileOutput: true,
+      movieResolution: PictureResolution.veryHigh,
+      videoBitrate: videoRecordingBitrate,
+      audioBitrate: videoRecordingAudioBitrate,
       pictureFormat: PictureFormat.jpg,
       onCameraInizialized: (CameraMacOSController controller) =>
           _onControllerReady(ready, controller),

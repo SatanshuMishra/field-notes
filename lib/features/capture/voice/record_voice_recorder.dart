@@ -24,8 +24,8 @@ class RecordVoiceRecorder implements VoiceRecorder {
   RecordVoiceRecorder({
     AudioRecorder? recorder,
     Future<Directory> Function()? temporaryDirectory,
-  })  : _recorder = recorder ?? AudioRecorder(),
-        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+  }) : _recorder = recorder ?? AudioRecorder(),
+       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
 
   final AudioRecorder _recorder;
   final Future<Directory> Function() _temporaryDirectory;
@@ -51,7 +51,11 @@ class RecordVoiceRecorder implements VoiceRecorder {
         ..reset()
         ..start();
       await _recorder.start(
-        const RecordConfig(encoder: voiceRecordingEncoder),
+        const RecordConfig(
+          encoder: voiceRecordingEncoder,
+          numChannels: 1,
+          bitRate: 48000,
+        ),
         path: path,
       );
       _activePath = path;

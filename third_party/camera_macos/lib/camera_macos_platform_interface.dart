@@ -40,6 +40,9 @@ abstract class CameraMacOSPlatform extends PlatformInterface {
     CameraOrientation orientation = CameraOrientation.orientation0deg,
     bool isVideoMirrored = true,
     bool useMovieFileOutput = false,
+    PictureResolution? movieResolution,
+    int? videoBitrate,
+    int? audioBitrate,
     required CameraMacOSMode cameraMacOSMode,
   }) {
     throw UnimplementedError("");
