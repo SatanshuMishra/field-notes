@@ -82,7 +82,7 @@ void main() {
         }
       }
 
-      await silent.closed.timeout(const Duration(seconds: 5));
+      await silent.closed;
       expect(silent.closeCode, liveIdleCode);
       expect(harness.app.live.openCount, 1);
       expect(chatty.isClosed, isFalse);

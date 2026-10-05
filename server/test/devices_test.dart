@@ -112,7 +112,7 @@ void main() {
     );
     expect(challenge.statusCode, HttpStatus.unauthorized);
     expect(errorOf(challenge).code, SyncErrorCode.deviceRemoved);
-    await tabletLive.closed.timeout(const Duration(seconds: 5));
+    await tabletLive.closed;
     expect(tabletLive.closeCode, liveRevokedCode);
 
     expect(

@@ -20,6 +20,7 @@ import 'logging.dart';
 import 'migrations.dart';
 import 'pairing.dart';
 import 'probes.dart';
+import 'rate_limit.dart';
 import 'trash.dart';
 
 const Duration purgeInterval = Duration(hours: 24);
@@ -49,6 +50,7 @@ final class RelayApp {
     required this.devices,
     required this.pairing,
     required this.restores,
+    required this.limiter,
     required this._logSink,
   }) : _lastPurge = clock();
 
@@ -105,6 +107,11 @@ final class RelayApp {
         sodium: sodium,
         challenges: challenges,
       ),
+      limiter: RateLimiter(
+        burst: config.rateBurst,
+        perSecond: config.ratePerSecond,
+        clock: now,
+      ),
       logSink: logSink,
     );
     await app.purge();
@@ -122,6 +129,7 @@ final class RelayApp {
   final Devices devices;
   final Pairing pairing;
   final Restores restores;
+  final RateLimiter limiter;
   final LogSink _logSink;
   final Set<Future<void>> _deletions = <Future<void>>{};
   late final CachedProbe<bool> _health = CachedProbe<bool>(
@@ -137,6 +145,7 @@ final class RelayApp {
 
   Future<void> tick() async {
     live.sweep();
+    limiter.sweep();
     if (!clock().isBefore(_lastPurge.add(purgeInterval))) {
       await purge();
     }
@@ -173,6 +182,9 @@ final class RelayApp {
     final Router router = Router(notFoundHandler: _notFound);
     void add(SyncRoute route, Access access, Handler handler) {
       Pipeline pipeline = const Pipeline();
+      if (rateLimitedRoutes.contains(route)) {
+        pipeline = pipeline.addMiddleware(rateLimit(limiter));
+      }
       if (route != SyncRoutes.health) {
         pipeline = pipeline.addMiddleware(protocolGate());
       }

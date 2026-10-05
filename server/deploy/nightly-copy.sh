@@ -5,17 +5,16 @@ set -o pipefail
 config_dir="${FN_CONFIG_DIR:-/home/satanshumishra/.config/field-notes}"
 relay_root="${FN_RELAY_ROOT:-/srv/field-notes-relay}"
 test_relay_root="${FN_TEST_RELAY_ROOT:-/srv/field-notes-relay-test}"
-nas_hosts="${FN_NAS_HOSTS:-10.0.0.246 10.0.0.247}"
 retry_delay="${FN_RETRY_DELAY:-600}"
 keep_snapshots="${FN_KEEP_SNAPSHOTS:-7}"
 relay_binary="${FN_RELAY_BINARY:-/app/bin/relay}"
-live_database="relay.sqlite3"
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 alert="$script_dir/alert.sh"
-password_file="$config_dir/nas-rsync.pass"
 heartbeat_file="$config_dir/heartbeat.env"
 ping_url=""
 failed_steps=""
+
+. "$script_dir/nas-rsync.sh"
 
 if [ -r "$heartbeat_file" ]; then
   . "$heartbeat_file"
@@ -74,24 +73,13 @@ prune_snapshots() {
 
 sync_to_nas() {
   local root="$1"
-  local module="$2"
+  local share="$2"
   local host
-  for host in $nas_hosts; do
-    if rsync -a --delete \
-      --contimeout=30 \
-      --timeout=600 \
-      --password-file="$password_file" \
-      --exclude='#snapshot/' \
-      --exclude='@eaDir/' \
-      --exclude='.uploads/' \
-      --exclude="$live_database" \
-      --exclude="$live_database-wal" \
-      --exclude="$live_database-shm" \
-      --exclude='*-wal' \
-      --exclude='*-shm' \
-      "$root/backup" "$root/media" \
-      "rsync://fn-backup@$host/$module/"; then
-      log "copied $root to $host/$module"
+  for host in $NAS_HOSTS; do
+    nas_rsync_args push "$share" "$host" "$(nas_transport "push-$share")" \
+      "$root/backup" "$root/media"
+    if rsync "${nas_args[@]}"; then
+      log "copied $root to $host:$NAS_VOLUME/$share"
       return 0
     fi
     log "rsync to $host failed"
@@ -102,7 +90,7 @@ sync_to_nas() {
 copy_relay() {
   local service="$1"
   local root="$2"
-  local module="$3"
+  local share="$3"
   local container
   local target
   container="$(container_for "$service")"
@@ -121,7 +109,7 @@ copy_relay() {
     return 1
   fi
   prune_snapshots "$root/backup"
-  if ! sync_to_nas "$root" "$module"; then
+  if ! sync_to_nas "$root" "$share"; then
     fail_step "copy of $service to the NAS"
     return 1
   fi
@@ -141,6 +129,14 @@ if ! rsync_is_current "$found_rsync"; then
   log "rsync ${found_rsync:-of an unknown version} is older than 3.4.0"
   ping_heartbeat /fail
   "$alert" "nightly copy failed" "The nightly copy did not run. Failed step: check rsync (found ${found_rsync:-an unknown version}, need 3.4.0 or newer)."
+  exit 1
+fi
+nas_load_config
+nas_problem="$(nas_ready_problem push-field-notes-backup push-field-notes-backup-test)"
+if [ -n "$nas_problem" ]; then
+  log "the NAS connection is not ready: $nas_problem"
+  ping_heartbeat /fail
+  "$alert" "nightly copy failed" "The nightly copy did not run and connected to nothing. Failed step: check the NAS connection ($nas_problem)."
   exit 1
 fi
 if copy_everything; then

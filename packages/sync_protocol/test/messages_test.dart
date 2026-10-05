@@ -334,6 +334,22 @@ void main() {
         expect(LiveMessage.fromJson(json), equals(value));
       }
     }
+    for (final SyncErrorCode code in SyncErrorCode.values) {
+      final ErrorResponse error = ErrorResponse(
+        code: code,
+        message: code.wireName,
+      );
+      final Map<String, Object?> json = throughJson(error);
+      expect(json['code'], code.wireName, reason: '$code');
+      expect(ErrorResponse.fromJson(json), equals(error), reason: '$code');
+    }
+    const ErrorResponse tooMany = ErrorResponse(
+      code: SyncErrorCode.tooManyRequests,
+      message: 'Too many tries. Wait a minute and try again.',
+    );
+    expect(throughJson(tooMany)['code'], 'too_many_requests');
+    expect(ErrorResponse.fromJson(throughJson(tooMany)), equals(tooMany));
+    expect(SyncErrorCode.tooManyRequests.httpStatus, 429);
   });
 
   test('a message differing in any one field is not equal', () {

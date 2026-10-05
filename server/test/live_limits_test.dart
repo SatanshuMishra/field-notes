@@ -39,7 +39,7 @@ void main() {
   }
 
   Future<void> expectClosed(LiveClient client, int code) async {
-    await client.closed.timeout(const Duration(seconds: 5));
+    await client.closed;
     expect(client.closeCode, code);
   }
 
@@ -134,10 +134,7 @@ void main() {
 
     socket.add('x' * frameLimit);
     socket.add(jsonEncode(const LivePing().toJson()));
-    expect(
-      await replies.moveNext().timeout(const Duration(seconds: 5)),
-      isTrue,
-    );
+    expect(await replies.moveNext(), isTrue);
     expect(
       LiveMessage.fromJson(decodeJsonObject(replies.current as String)),
       const LivePong(),
@@ -145,10 +142,7 @@ void main() {
 
     socket.add('x' * (frameLimit + 1));
 
-    expect(
-      await replies.moveNext().timeout(const Duration(seconds: 5)),
-      isFalse,
-    );
+    expect(await replies.moveNext(), isFalse);
     expect(socket.closeCode, tooBigCode);
     expect(harness.app.live.openCount, 0);
   });

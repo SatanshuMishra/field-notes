@@ -104,21 +104,14 @@ final class LiveClient {
 
   void send(LiveMessage message) => _socket.add(jsonEncode(message.toJson()));
 
-  Future<LiveMessage> next({
-    Duration timeout = const Duration(seconds: 5),
-  }) async {
-    final DateTime deadline = DateTime.now().add(timeout);
+  Future<LiveMessage> next() async {
     while (_buffer.isEmpty) {
       if (_closed.isCompleted) {
         throw StateError('The live socket closed');
       }
-      final Duration left = deadline.difference(DateTime.now());
-      if (left <= Duration.zero) {
-        throw TimeoutException('No live message', timeout);
-      }
       final Completer<void> waiting = Completer<void>();
       _waiting = waiting;
-      await waiting.future.timeout(left, onTimeout: () {});
+      await waiting.future;
     }
     return LiveMessage.fromJson(decodeJsonObject(_buffer.removeAt(0)));
   }
@@ -175,6 +168,9 @@ final class RelayHarness {
   final Sodium sodium;
   final AssemblyHook? beforeAssembly;
   final List<String> logLines = <String>[];
+  final StreamController<String> _logged = StreamController<String>.broadcast(
+    sync: true,
+  );
   final http.Client client = http.Client();
   int freeBytes = 1 << 40;
   DateTime _now;
@@ -205,7 +201,7 @@ final class RelayHarness {
       config: config,
       migrationsDirectory: migrationsDirectory,
       clock: clock,
-      logSink: logLines.add,
+      logSink: _log,
       beforeAssembly: beforeAssembly,
       freeSpace: (String directory) async => freeBytes,
     );
@@ -230,9 +226,24 @@ final class RelayHarness {
 
   Future<void> tick() => app.tick();
 
+  Future<String> logLine(bool Function(String line) test) {
+    for (final String line in logLines) {
+      if (test(line)) {
+        return Future<String>.value(line);
+      }
+    }
+    return _logged.stream.firstWhere(test);
+  }
+
+  void _log(String line) {
+    logLines.add(line);
+    _logged.add(line);
+  }
+
   Future<void> dispose() async {
     await stop();
     client.close();
+    await _logged.close();
     if (await root.exists()) {
       await root.delete(recursive: true);
     }

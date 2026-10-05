@@ -3,19 +3,21 @@ set -u
 set -o pipefail
 
 config_dir="${FN_CONFIG_DIR:-/home/satanshumishra/.config/field-notes}"
-nas_hosts="${FN_NAS_HOSTS:-10.0.0.246 10.0.0.247}"
-module="${FN_DRILL_MODULE:-field-notes-backup}"
+share="${FN_DRILL_SHARE:-field-notes-backup}"
 drill_root="${FN_DRILL_ROOT:-/var/tmp/field-notes-drill}"
-image="${FN_RELAY_IMAGE:-ghcr.io/satanshumishra/field-notes-relay:main}"
+image_file="$config_dir/relay-image.env"
+verified_image_pattern='^ghcr\.io/satanshumishra/field-notes-relay@sha256:[0-9a-f]{64}$'
 health_attempts="${FN_HEALTH_ATTEMPTS:-30}"
 health_delay="${FN_HEALTH_DELAY:-2}"
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 alert="$script_dir/alert.sh"
-password_file="$config_dir/nas-rsync.pass"
 heartbeat_file="$config_dir/heartbeat.env"
 ping_url=""
 scratch=""
 container=""
+image=""
+
+. "$script_dir/nas-rsync.sh"
 
 if [ -r "$heartbeat_file" ]; then
   . "$heartbeat_file"
@@ -69,16 +71,15 @@ private_root() {
   [ -n "$(find "$drill_root" -maxdepth 0 -type d -user "$(id -u)" -perm 0700 2>/dev/null)" ]
 }
 
+verified_image() {
+  sed -n 's/^RELAY_IMAGE=//p' "$image_file" 2>/dev/null | tail -n 1
+}
+
 pull_copy() {
   local host
-  for host in $nas_hosts; do
-    if rsync -a --no-links \
-      --contimeout=30 \
-      --timeout=600 \
-      --password-file="$password_file" \
-      --exclude='#snapshot/' \
-      --exclude='@eaDir/' \
-      "rsync://fn-backup@$host/$module/" "$scratch/"; then
+  for host in $NAS_HOSTS; do
+    nas_rsync_args pull "$share" "$host" "$(nas_transport "pull-$share")" "$scratch/"
+    if rsync "${nas_args[@]}"; then
       return 0
     fi
     log "rsync from $host failed"
@@ -91,11 +92,24 @@ found_rsync="$(rsync_version)"
 if ! rsync_is_current "$found_rsync"; then
   fail "check rsync (found ${found_rsync:-an unknown version}, need 3.4.0 or newer)"
 fi
+case " $nas_shares " in
+  *" $share "*) ;;
+  *) fail "check the share $share, which is not one of $nas_shares" ;;
+esac
+image="$(verified_image)"
+if [[ ! $image =~ $verified_image_pattern ]]; then
+  fail "read the verified relay image from $image_file, which must hold RELAY_IMAGE=ghcr.io/satanshumishra/field-notes-relay@sha256:<digest>; run relay-update.sh"
+fi
 if [ ! -e "$drill_root" ] && [ ! -L "$drill_root" ]; then
   mkdir -m 0700 "$drill_root" || fail "create the scratch root $drill_root"
 fi
 if ! private_root; then
   fail "check the scratch root $drill_root, which must be a folder owned by $(id -un) with mode 0700"
+fi
+nas_load_config
+nas_problem="$(nas_ready_problem "pull-$share")"
+if [ -n "$nas_problem" ]; then
+  fail "check the NAS connection ($nas_problem)"
 fi
 scratch="$(mktemp -d "$drill_root/drill.XXXXXX")" || fail "create the scratch folder"
 pull_copy || fail "pull the latest copy from the NAS"

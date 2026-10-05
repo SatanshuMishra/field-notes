@@ -41,13 +41,17 @@ install_missing() {
 }
 
 say "Packages"
-install_missing msmtp msmtp-mta smartmontools snapper btrfs-progs
+install_missing msmtp msmtp-mta smartmontools snapper btrfs-progs openssh rsync
+
+say "cosign, which verifies the relay image's signature"
+pacman -S --needed --noconfirm cosign
 
 say "Scripts in $install_dir, owned by root and read-only"
 install -d -o root -g root -m 0755 "$install_dir"
-for script in nightly-copy.sh restore-drill.sh alert.sh; do
+for script in nightly-copy.sh restore-drill.sh alert.sh nas-ssh-keys.sh relay-update.sh; do
   install -o root -g root -m 0555 "$script_dir/$script" "$install_dir/$script"
 done
+install -o root -g root -m 0444 "$script_dir/nas-rsync.sh" "$install_dir/nas-rsync.sh"
 
 say "Relay data folders, with unfinished uploads kept out of the /srv snapshots"
 for relay_root in $relay_roots; do

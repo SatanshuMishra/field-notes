@@ -62,13 +62,9 @@ void main() {
     } on http.ClientException {
       downloaded = null;
     }
-    final DateTime deadline = DateTime.now().add(const Duration(seconds: 5));
-    bool logged() => harness.logLines.any(
+    await harness.logLine(
       (String line) => line.contains('"event":"internal_error"'),
     );
-    while (!logged() && DateTime.now().isBefore(deadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    }
 
     expect(downloaded?.bodyBytes, isNot(blob));
     final List<Map<String, Object?>> lines = <Map<String, Object?>>[

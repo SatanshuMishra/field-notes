@@ -12,7 +12,8 @@ enum SyncErrorCode {
   deviceRemoved('device_removed', 401),
   staleEpoch('stale_epoch', 409),
   badRequest('bad_request', 400),
-  forbidden('forbidden', 403);
+  forbidden('forbidden', 403),
+  tooManyRequests('too_many_requests', 429);
 
   const SyncErrorCode(this.wireName, this.httpStatus);
 

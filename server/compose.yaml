@@ -1,6 +1,7 @@
 services:
   fn-relay:
-    image: ghcr.io/satanshumishra/field-notes-relay:main
+    image: "${RELAY_IMAGE:?Set RELAY_IMAGE in Dokploy Environment to the verified digest that relay-update.sh printed}"
+    pull_policy: missing
     restart: unless-stopped
     user: "1000:1000"
     read_only: true
@@ -32,7 +33,8 @@ services:
         max-file: "5"
 
   fn-relay-test:
-    image: ghcr.io/satanshumishra/field-notes-relay:main
+    image: "${RELAY_TEST_IMAGE:?Set RELAY_TEST_IMAGE in Dokploy Environment to the verified digest that relay-update.sh printed}"
+    pull_policy: missing
     restart: unless-stopped
     user: "1000:1000"
     read_only: true

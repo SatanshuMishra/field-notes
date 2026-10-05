@@ -66,6 +66,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      id-token: write
     env:
       IMAGE: ghcr.io/satanshumishra/field-notes-relay
     steps:
@@ -76,6 +77,10 @@ jobs:
 
       - name: Load the image
         run: docker load --input "$RUNNER_TEMP/relay-image.tar"
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6
+        with:
+          cosign-release: v3.1.3
 
       - name: Sign in to GHCR
         env:
@@ -89,6 +94,16 @@ jobs:
           docker tag field-notes-relay:smoke "$IMAGE:$revision"
           docker push "$IMAGE:main"
           docker push "$IMAGE:$revision"
+
+      - name: Sign the pushed digest
+        run: |
+          pushed="$(docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:main")"
+          digest="${pushed#*@}"
+          if [[ "$pushed" != "$IMAGE@"* ]] || [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "The pushed image has no digest in $IMAGE: $pushed" >&2
+            exit 1
+          fi
+          cosign sign --yes "$IMAGE@$digest"
 
       - name: Sign out of GHCR
         if: always()

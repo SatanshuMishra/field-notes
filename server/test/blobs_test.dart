@@ -782,7 +782,7 @@ void main() {
       blob: blob,
       index: 2,
     );
-    await entered.future.timeout(const Duration(seconds: 5));
+    await entered.future;
 
     final http.Response again = await put(
       harness,
