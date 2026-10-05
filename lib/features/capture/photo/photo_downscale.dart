@@ -1,12 +1,14 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui' as ui;
+
+import 'package:field_notes/data/media/jpeg_resize.dart';
 
 import 'photo_intrinsics.dart';
 import 'photo_picker.dart';
 
 const int photoLongEdgeTarget = 2048;
-const String downscaledPhotoMime = 'image/png';
+const String downscaledPhotoMime = 'image/jpeg';
+const int photoJpegQuality = 82;
 
 class DownscaledPhoto {
   const DownscaledPhoto({
@@ -50,36 +52,21 @@ Future<DownscaledPhoto> downscalePhoto({
     );
   }
 
-  final PhotoIntrinsics target = downscaleTargetFor(intrinsics);
-  ui.Codec? codec;
-  ui.FrameInfo? frame;
   try {
-    codec = await ui.instantiateImageCodec(
-      bytes,
-      targetWidth: target.width,
-      targetHeight: target.height,
+    final ResizedJpeg resized = await resizeToJpeg(
+      bytes: bytes,
+      sourceWidth: intrinsics.width,
+      sourceHeight: intrinsics.height,
+      longEdge: photoLongEdgeTarget,
+      quality: photoJpegQuality,
     );
-    frame = await codec.getNextFrame();
-    final ByteData? encoded =
-        await frame.image.toByteData(format: ui.ImageByteFormat.png);
-    if (encoded == null) {
-      throw const PhotoPickException(undecodablePhotoMessage);
-    }
     return DownscaledPhoto(
-      bytes: encoded.buffer.asUint8List(
-        encoded.offsetInBytes,
-        encoded.lengthInBytes,
-      ),
+      bytes: resized.bytes,
       mime: downscaledPhotoMime,
-      width: frame.image.width,
-      height: frame.image.height,
+      width: resized.width,
+      height: resized.height,
     );
-  } on PhotoPickException {
-    rethrow;
   } catch (error) {
     throw PhotoPickException(undecodablePhotoMessage, cause: error);
-  } finally {
-    frame?.image.dispose();
-    codec?.dispose();
   }
 }
