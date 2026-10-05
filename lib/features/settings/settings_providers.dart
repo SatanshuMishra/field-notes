@@ -1,12 +1,13 @@
+import 'package:field_notes/data/journal/journal_delete_all_service.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/data/export_delivery.dart';
 import 'package:field_notes/features/data/export_runner.dart';
-import 'package:field_notes/features/data/journal_delete_all_service.dart';
 import 'package:field_notes/features/data/journal_export_service.dart';
 import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
+import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
@@ -46,6 +47,10 @@ Future<SettingsDataController> settingsDataController(Ref ref) async {
   final database = ref.watch(databaseProvider);
   final root = await ref.watch(mediaRootProvider.future);
   final mediaStore = await ref.watch(mediaStoreProvider.future);
+  final bool syncOn = await ref.watch(syncEnabledProvider.future);
+  final Future<int> Function() reclaim = syncOn
+      ? (await ref.watch(syncMediaProvider.future)).cache.reclaim
+      : collectorReclaim(mediaStore);
   return JournalDataController(
     exportRunner: ExportRunner(
       exportService: JournalExportService(
@@ -54,7 +59,7 @@ Future<SettingsDataController> settingsDataController(Ref ref) async {
       ),
       delivery: defaultExportDelivery(),
     ),
-    mediaStore: mediaStore,
+    reclaim: reclaim,
     temporaryDirectory: getTemporaryDirectory,
     deleteAllService: JournalDeleteAllService(
       database: database,

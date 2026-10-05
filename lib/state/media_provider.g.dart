@@ -121,4 +121,46 @@ final class MediaStoreProvider
   }
 }
 
-String _$mediaStoreHash() => r'bea3a15d1a5212bce34ba1e627642ab459ec2404';
+String _$mediaStoreHash() => r'92c2f1f8467cf15631c902dd9083d524a99c9963';
+
+@ProviderFor(filesystemMediaStore)
+final filesystemMediaStoreProvider = FilesystemMediaStoreProvider._();
+
+final class FilesystemMediaStoreProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<FilesystemMediaStore>,
+          FilesystemMediaStore,
+          FutureOr<FilesystemMediaStore>
+        >
+    with
+        $FutureModifier<FilesystemMediaStore>,
+        $FutureProvider<FilesystemMediaStore> {
+  FilesystemMediaStoreProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'filesystemMediaStoreProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$filesystemMediaStoreHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<FilesystemMediaStore> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<FilesystemMediaStore> create(Ref ref) {
+    return filesystemMediaStore(ref);
+  }
+}
+
+String _$filesystemMediaStoreHash() =>
+    r'9d5c4d3d28380d56c1ee336a50443323f73db0b9';

@@ -28,7 +28,11 @@ Future<Directory> mediaDraftsRoot(Ref ref) async {
 }
 
 @Riverpod(keepAlive: true)
-Future<MediaStore> mediaStore(Ref ref) async {
+Future<MediaStore> mediaStore(Ref ref) =>
+    ref.watch(filesystemMediaStoreProvider.future);
+
+@Riverpod(keepAlive: true)
+Future<FilesystemMediaStore> filesystemMediaStore(Ref ref) async {
   final database = ref.watch(databaseProvider);
   final recorder = ref.watch(changeRecorderProvider);
   final root = await ref.watch(mediaRootProvider.future);

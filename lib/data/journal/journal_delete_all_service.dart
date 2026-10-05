@@ -2,13 +2,24 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
-import '../../data/database/app_database.dart' as db;
-import '../../data/media/blob_paths.dart';
-import '../../data/media/capture_temp_sweep.dart';
 import '../../domain/services/delete_all_service.dart';
-import 'data_exceptions.dart';
+import '../database/app_database.dart' as db;
+import '../media/blob_paths.dart';
+import '../media/capture_temp_sweep.dart';
 
 const String _tmpSubdir = '.tmp';
+
+class DeleteAllException implements Exception {
+  const DeleteAllException(this.message, [this.cause]);
+
+  final String message;
+  final Object? cause;
+
+  @override
+  String toString() => cause == null
+      ? 'DeleteAllException: $message'
+      : 'DeleteAllException: $message ($cause)';
+}
 
 class JournalDeleteAllService implements DeleteAllService {
   JournalDeleteAllService({

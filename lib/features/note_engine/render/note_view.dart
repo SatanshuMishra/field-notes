@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -8,6 +9,7 @@ import 'package:flutter/rendering.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
+import 'package:field_notes/features/entry_cards/media/live_media.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/note_engine/document/selection.dart';
 import 'package:field_notes/features/note_engine/layout/note_inks.dart';
@@ -155,12 +157,14 @@ class _NoteViewState extends State<NoteView> {
   String? _readerSource;
   MdTree? _readerTree;
   VisibleText? _readerVisible;
+  StreamSubscription<String>? _arrivals;
 
   @override
   void initState() {
     super.initState();
     PaintingBinding.instance.systemFonts.addListener(_handleFontsChanged);
     _photos = _photoBlocksOf(widget.tree, widget.source);
+    _watchArrivals();
     _syncMedia();
   }
 
@@ -173,6 +177,7 @@ class _NoteViewState extends State<NoteView> {
       _readSizes = const <String, Size>{};
       _sizeReads = const <String>{};
       _undecodable = const <String>{};
+      _watchArrivals();
     }
     if (!identical(oldWidget.tree, widget.tree) ||
         oldWidget.source != widget.source) {
@@ -184,7 +189,33 @@ class _NoteViewState extends State<NoteView> {
   @override
   void dispose() {
     PaintingBinding.instance.systemFonts.removeListener(_handleFontsChanged);
+    unawaited(_arrivals?.cancel());
     super.dispose();
+  }
+
+  void _watchArrivals() {
+    unawaited(_arrivals?.cancel());
+    _arrivals = null;
+    final MediaResolver? resolver = widget.mediaResolver;
+    if (resolver is! LiveMedia) {
+      return;
+    }
+    _arrivals = (resolver as LiveMedia).arrivals.listen(_onArrival);
+  }
+
+  void _onArrival(String arrived) {
+    final MediaResolver? resolver = widget.mediaResolver;
+    if (!mounted || resolver == null) {
+      return;
+    }
+    final List<String> stale = <String>[
+      for (final MapEntry<String, ResolvedMedia> entry in _media.entries)
+        if (!entry.value.isAvailable && arrivalMatches(arrived, entry.key))
+          entry.key,
+    ];
+    for (final String reference in stale) {
+      _request(resolver, reference);
+    }
   }
 
   void _handleFontsChanged() {

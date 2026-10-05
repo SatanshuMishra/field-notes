@@ -7,15 +7,15 @@ import 'package:field_notes/domain/services/media_store.dart';
 import 'package:field_notes/features/capture/photo/image_picker_photo_picker.dart';
 import 'package:field_notes/features/capture/photo/photo_picker.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
+import 'package:field_notes/features/entry_cards/media/media_resolver_provider.dart';
 import 'package:field_notes/state/state.dart';
 
 final Provider<PhotoPicker> notePhotoPickerProvider =
     Provider<PhotoPicker>((Ref ref) => ImagePickerPhotoPicker());
 
 final FutureProvider<MediaResolver> notesMediaResolverProvider =
-    FutureProvider<MediaResolver>((Ref ref) async {
-  return MediaStoreResolver(await ref.watch(mediaStoreProvider.future));
-});
+    FutureProvider<MediaResolver>(
+        (Ref ref) => ref.watch(mediaResolverProvider.future));
 
 final FutureProvider<NotePhotoStore> notePhotoStoreProvider =
     FutureProvider<NotePhotoStore>((Ref ref) async {

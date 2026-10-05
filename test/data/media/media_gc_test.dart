@@ -229,4 +229,35 @@ void main() {
     expect(File(store.absolutePath(dead)).existsSync(), isFalse);
     expect(await store.blobById(dead.id), isNull);
   });
+
+  test('the poster of a reachable blob survives collection', () async {
+    final photo = await store.putBytes(
+        bytes: [9, 9, 9], mime: 'image/jpeg', kind: MediaKind.photo);
+    final poster = await store.putBytes(
+        bytes: [10, 10, 10], mime: 'image/jpeg', kind: MediaKind.photo);
+    final orphanPhoto = await store.putBytes(
+        bytes: [11, 11, 11], mime: 'image/jpeg', kind: MediaKind.photo);
+    final orphanPoster = await store.putBytes(
+        bytes: [12, 12, 12], mime: 'image/jpeg', kind: MediaKind.photo);
+    await (db.update(db.mediaBlobs)..where((t) => t.id.equals(photo.id)))
+        .write(MediaBlobsCompanion(posterId: Value(poster.id)));
+    await (db.update(db.mediaBlobs)
+          ..where((t) => t.id.equals(orphanPhoto.id)))
+        .write(MediaBlobsCompanion(posterId: Value(orphanPoster.id)));
+    await insertEntry(id: 'e9', type: 'photo', mediaId: photo.id);
+
+    final reachable = await MediaGarbageCollector(
+      database: db,
+      root: root,
+      drafts: drafts,
+    ).reachableMediaIds();
+
+    expect(reachable, containsAll(<String>[photo.id, poster.id]));
+    expect(reachable, isNot(contains(orphanPoster.id)));
+    expect(await store.collectGarbage(), 2);
+    expect(await store.blobById(poster.id), isNotNull);
+    expect(File(store.absolutePath(poster)).existsSync(), isTrue);
+    expect(await store.blobById(orphanPoster.id), isNull);
+    expect(await store.blobById(orphanPhoto.id), isNull);
+  });
 }

@@ -10,18 +10,21 @@ import 'package:field_notes/features/data/export_runner.dart';
 import 'settings_controller.dart';
 import 'settings_data_controller.dart';
 
+Future<int> Function() collectorReclaim(MediaStore store) =>
+    store.collectGarbage;
+
 class JournalDataController implements SettingsDataController {
   const JournalDataController({
     required this._exportRunner,
     required this._deleteAllService,
-    required this._mediaStore,
+    required this._reclaim,
     this._temporaryDirectory,
     this._onError,
   });
 
   final ExportRunner _exportRunner;
   final DeleteAllService _deleteAllService;
-  final MediaStore _mediaStore;
+  final Future<int> Function() _reclaim;
   final Future<Directory> Function()? _temporaryDirectory;
   final SettingsErrorHandler? _onError;
 
@@ -60,8 +63,7 @@ class JournalDataController implements SettingsDataController {
   @override
   Future<DataActionResult> reclaimSpace() async {
     try {
-      final int reclaimed =
-          await _mediaStore.collectGarbage() + await _sweepCaptureTemp();
+      final int reclaimed = await _reclaim() + await _sweepCaptureTemp();
       return DataActionSucceeded(
         reclaimed == 0
             ? 'Nothing to reclaim. Every photo is still in use.'
