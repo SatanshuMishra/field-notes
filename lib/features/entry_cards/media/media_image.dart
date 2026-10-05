@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
 import 'decode_target.dart';
+import 'live_media.dart';
 import 'media_placeholders.dart';
 import 'media_resolver.dart';
 
@@ -148,6 +149,7 @@ class _MediaResolution extends StatefulWidget {
 }
 
 class _MediaResolutionState extends State<_MediaResolution> {
+  final MediaArrivalWatch _arrivals = MediaArrivalWatch();
   ResolvedMedia? _media;
 
   @override
@@ -166,18 +168,29 @@ class _MediaResolutionState extends State<_MediaResolution> {
     _media = _start();
   }
 
+  @override
+  void dispose() {
+    _arrivals.cancel();
+    super.dispose();
+  }
+
   ResolvedMedia? _start() {
+    _arrivals.cancel();
     final String id = widget.mediaId;
     final ResolvedMedia? memo = widget.resolver.resolved(id);
     if (memo != null) {
       return memo;
     }
+    _resolve(id);
+    return null;
+  }
+
+  void _resolve(String id) {
     widget.resolver.resolve(id).then(
       (ResolvedMedia media) => _arrive(id, media),
       onError: (Object error, StackTrace stackTrace) =>
           _arrive(id, const ResolvedMedia.missing()),
     );
-    return null;
   }
 
   void _arrive(String id, ResolvedMedia media) {
@@ -185,6 +198,11 @@ class _MediaResolutionState extends State<_MediaResolution> {
       return;
     }
     setState(() => _media = media);
+    if (media.isAvailable) {
+      _arrivals.cancel();
+    } else if (!_arrivals.isWatching) {
+      _arrivals.watch(widget.resolver, id, () => _resolve(id));
+    }
   }
 
   @override

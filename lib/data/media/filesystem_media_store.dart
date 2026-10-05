@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 
@@ -36,6 +37,23 @@ class FilesystemMediaStore implements MediaStore {
   final Directory? _drafts;
   final int Function() _clock;
   final Random _random = Random();
+  final StreamController<String> _arrivals =
+      StreamController<String>.broadcast();
+
+  Stream<String> get arrivals => _arrivals.stream;
+
+  Directory get root => _root;
+
+  Future<void> restoreFile(MediaBlob blob, File source) async {
+    await _atomicWrite(
+      finalPath: p.join(_root.path, blob.relPath),
+      write: (String tmpPath) async {
+        await source.copy(tmpPath);
+      },
+      id: blob.id,
+    );
+    _arrived(blob.id);
+  }
 
   @override
   Future<MediaBlob> putBytes({
@@ -185,6 +203,11 @@ class FilesystemMediaStore implements MediaStore {
   }) async {
     final existing = await blobById(id);
     if (existing != null) {
+      final existingPath = absolutePath(existing);
+      if (!await File(existingPath).exists()) {
+        await _atomicWrite(finalPath: existingPath, write: write, id: id);
+        _arrived(id);
+      }
       return existing;
     }
 
@@ -229,7 +252,14 @@ class FilesystemMediaStore implements MediaStore {
     if (stored == null) {
       throw MediaWriteException('media blob $id was not stored');
     }
+    _arrived(id);
     return stored;
+  }
+
+  void _arrived(String id) {
+    if (!_arrivals.isClosed) {
+      _arrivals.add(id);
+    }
   }
 
   Future<void> _atomicWrite({

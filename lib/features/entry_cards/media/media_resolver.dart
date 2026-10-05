@@ -65,7 +65,9 @@ class MediaStoreResolver implements MediaResolver {
   Future<ResolvedMedia> _load(String mediaId) async {
     try {
       final ResolvedMedia result = await _lookup(mediaId);
-      _memo[mediaId] = result;
+      if (result.isAvailable) {
+        _memo[mediaId] = result;
+      }
       return result;
     } finally {
       _inFlight.remove(mediaId);

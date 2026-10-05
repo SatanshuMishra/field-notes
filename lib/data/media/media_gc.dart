@@ -22,16 +22,24 @@ class MediaGarbageCollector {
 
   Future<int> collectGarbage() {
     return _db.transaction(() async {
-      final reachable = await _reachableMediaIds();
+      final reachable = await reachableMediaIds();
       await _sweepFiles(reachable);
       return _sweepRows(reachable);
     });
   }
 
-  Future<Set<String>> _reachableMediaIds() async {
+  Future<Set<String>> reachableMediaIds() async {
     final Set<String> live = await liveJournalMediaIds(_db);
     final Set<String> drafted = await _draftReferencedMediaIds();
-    return <String>{...live, ...drafted};
+    final Set<String> referenced = <String>{...live, ...drafted};
+    final List<MediaBlob> withPosters = await (_db.select(_db.mediaBlobs)
+          ..where((t) => t.posterId.isNotNull()))
+        .get();
+    return <String>{
+      ...referenced,
+      for (final MediaBlob blob in withPosters)
+        if (referenced.contains(blob.id)) ?blob.posterId,
+    };
   }
 
   Future<Set<String>> _draftReferencedMediaIds() async {

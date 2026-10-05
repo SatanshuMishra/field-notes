@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../domain/models/models.dart';
+import '../media/live_media.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/audio_playback.dart';
@@ -45,6 +46,7 @@ class VoiceBody extends StatefulWidget {
 }
 
 class _VoiceBodyState extends State<VoiceBody> {
+  final MediaArrivalWatch _arrivals = MediaArrivalWatch();
   EntryAudioPlayer? _player;
   StreamSubscription<AudioPlaybackState>? _stateSub;
   StreamSubscription<Duration>? _positionSub;
@@ -66,11 +68,27 @@ class _VoiceBodyState extends State<VoiceBody> {
     if (!_needsRePrepare(oldWidget)) {
       return;
     }
+    _arrivals.cancel();
     _teardownPlayer();
     _state = AudioPlaybackState.idle;
     _position = Duration.zero;
     _unavailable = false;
     _ready = false;
+    _startPrepare();
+  }
+
+  void _onArrived() {
+    if (!mounted || !_unavailable) {
+      return;
+    }
+    _arrivals.cancel();
+    _teardownPlayer();
+    setState(() {
+      _state = AudioPlaybackState.idle;
+      _position = Duration.zero;
+      _unavailable = false;
+      _ready = false;
+    });
     _startPrepare();
   }
 
@@ -110,6 +128,7 @@ class _VoiceBodyState extends State<VoiceBody> {
     }
     if (!media.isAvailable || media.file == null) {
       setState(() => _unavailable = true);
+      _arrivals.watch(widget.resolver, mediaId, _onArrived);
       return;
     }
     final EntryAudioPlayer player = widget.playerFactory();
@@ -264,6 +283,7 @@ class _VoiceBodyState extends State<VoiceBody> {
   @override
   void dispose() {
     _generation += 1;
+    _arrivals.cancel();
     _teardownPlayer();
     super.dispose();
   }

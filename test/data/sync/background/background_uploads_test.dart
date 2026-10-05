@@ -1,0 +1,601 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:background_downloader/background_downloader.dart';
+import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:field_notes/data/crypto/key_store.dart';
+import 'package:field_notes/data/database/app_database.dart' as db;
+import 'package:field_notes/data/journal/journal_delete_all_service.dart';
+import 'package:field_notes/data/sync/background/background_uploads.dart';
+import 'package:field_notes/data/sync/background/upload_result_applier.dart';
+import 'package:field_notes/data/sync/engine/pull_cycle.dart';
+import 'package:field_notes/data/sync/engine/push_cycle.dart';
+import 'package:field_notes/data/sync/engine/sync_engine.dart';
+import 'package:field_notes/data/sync/erase/local_journal_wipe.dart';
+import 'package:field_notes/data/sync/media/upload_queue.dart';
+import 'package:field_notes/data/sync/merge/state_applier.dart';
+import 'package:field_notes/data/sync/relay_client.dart';
+import 'package:field_notes/domain/models/models.dart' as domain;
+import 'package:field_notes/domain/settings/settings.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleState;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as p;
+import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
+
+import '../../../support/sync_overrides.dart';
+import '../../../sync/support/relay_fixture.dart';
+
+const String _push = '/v1/records/push';
+
+final class _FakeUploader implements BackgroundUploader {
+  final List<UploadTask> enqueued = <UploadTask>[];
+  final Map<String, Task> held = <String, Task>{};
+  final List<String> cancelled = <String>[];
+  final List<TaskStatusUpdate> stored = <TaskStatusUpdate>[];
+  void Function(TaskStatusUpdate update)? _listener;
+  int starts = 0;
+
+  List<UploadTask> get parts => <UploadTask>[
+    for (final UploadTask task in enqueued)
+      if (task.group == mediaPartGroup) task,
+  ];
+
+  List<UploadTask> get pushes => <UploadTask>[
+    for (final UploadTask task in enqueued)
+      if (task.group == recordPushGroup) task,
+  ];
+
+  @override
+  Future<void> start(void Function(TaskStatusUpdate update) onUpdate) async {
+    starts += 1;
+    _listener = onUpdate;
+    for (final TaskStatusUpdate update in stored) {
+      onUpdate(update);
+    }
+    stored.clear();
+  }
+
+  @override
+  Future<bool> enqueue(UploadTask task) async {
+    enqueued.add(task);
+    held[task.taskId] = task;
+    return true;
+  }
+
+  @override
+  Future<List<Task>> queuedTasks() async => held.values.toList();
+
+  @override
+  Future<void> cancel(Iterable<String> taskIds) async {
+    for (final String id in taskIds) {
+      cancelled.add(id);
+      held.remove(id);
+    }
+  }
+
+  void finish(Task task, TaskStatus status, {String? body}) {
+    held.remove(task.taskId);
+    _listener?.call(TaskStatusUpdate(task, status, null, body));
+  }
+}
+
+final class _Background {
+  _Background(this.device, this.media, this.uploader, {Directory? pushRoot})
+    : pushRoot = pushRoot ?? pushWorkRoot(media.root) {
+    uploads = BackgroundUploads(
+      database: device.database,
+      uploader: uploader,
+      keyStore: device.keyStore,
+      uploads: media.uploads,
+      isVisible: () {
+        final AppLifecycleState? state = device.lifecycle.current;
+        return state == null || !isBackgrounded(state);
+      },
+      pushRoot: this.pushRoot,
+      allowMobileData: () async => media.settings.allowMobileDataForMedia,
+    );
+    results = UploadResultApplier(
+      database: device.database,
+      uploader: uploader,
+      uploads: media.uploads,
+      background: uploads,
+    );
+  }
+
+  final SyncTestDevice device;
+  final SyncTestMedia media;
+  final _FakeUploader uploader;
+  final Directory pushRoot;
+  late final BackgroundUploads uploads;
+  late final UploadResultApplier results;
+
+  BackgroundTransfer get transfer =>
+      BackgroundTransfer(uploads: uploads, results: results);
+
+  SyncEngine engine() =>
+      device.engine(media: media.source(), background: () async => transfer);
+
+  PushCycle pushCycle() => PushCycle(
+    database: device.database,
+    applier: StateApplier(
+      database: device.database,
+      recorder: device.recorder,
+      localDeviceName: device.name,
+    ),
+    keys: journalKeysFrom(device.keyStore),
+    refreshKeys: journalKeysFrom(device.keyStore),
+  );
+}
+
+File _taskFile(UploadTask task) =>
+    File(p.join(p.separator, task.directory, task.filename));
+
+List<int> _bytes(int length, int seed) =>
+    List<int>.generate(length, (int index) => (index * 23 + seed) % 251);
+
+Future<void> _note(SyncTestDevice device, String text) async {
+  final domain.Day day = await device.journal.ensureDayForDate('2026-10-20');
+  await device.journal.createEntry(
+    dayId: day.id,
+    type: domain.EntryType.text,
+    textContent: text,
+  );
+}
+
+Future<void> _grantPass(SyncTestDevice device) async {
+  await device.keyStore.writeUploadPass(
+    UploadPass(
+      token: 'pass-${device.name}',
+      expiresAt: DateTime.now().toUtc().add(const Duration(days: 7)),
+    ),
+  );
+}
+
+void main() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  late RelayFixture relay;
+  late List<SyncTestDevice> devices;
+
+  setUp(() async {
+    relay = await RelayFixture.start(rateBurst: 1000);
+    devices = <SyncTestDevice>[];
+  });
+
+  tearDown(() async {
+    for (final SyncTestDevice device in devices) {
+      await device.dispose();
+    }
+    await relay.dispose();
+  });
+
+  Future<_Background> enrolled(
+    String name, {
+    AppSettings settings = AppSettings.defaults,
+  }) async {
+    final SyncTestDevice phone = SyncTestDevice(name);
+    devices.add(phone);
+    await enrolDevice(relay, phone);
+    final SyncTestMedia media = await SyncTestMedia.create(
+      phone,
+      settings: settings,
+    );
+    return _Background(phone, media, _FakeUploader());
+  }
+
+  test('prepared media parts are handed to the uploader at once', () async {
+    final _Background phone = await enrolled('Phone');
+    final SyncEngine engine = phone.engine();
+    await engine.start();
+    await engine.syncNow();
+    final UploadPass pass = (await phone.device.keyStore.readUploadPass())!;
+
+    final domain.MediaBlob video = await phone.media.store.putBytes(
+      bytes: _bytes(3000, 1),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await eventually(() async => phone.uploader.parts.length == 3);
+
+    final PendingUpload upload =
+        (await phone.media.uploads.pendingUploads()).single;
+    expect(upload.blobId, video.id);
+    expect(phone.uploader.parts.map((UploadTask task) => task.taskId), <String>[
+      for (int index = 0; index < 3; index++)
+        partTaskId(upload.uploadId, index),
+    ]);
+    for (final UploadTask task in phone.uploader.parts) {
+      final int index = int.parse(task.taskId.split('.').last);
+      expect(task.httpRequestMethod, 'PUT');
+      expect(task.post, 'binary');
+      expect(
+        Uri.parse(task.url).path,
+        '/v1/blobs/${upload.blobName}/uploads/${upload.uploadId}/parts/$index',
+      );
+      expect(task.headers['Authorization'], 'Upload ${pass.token}');
+      expect(task.headers['X-Sync-Protocol'], '$syncProtocolVersion');
+      expect(task.headers['X-Blob-Size'], '${upload.totalBytes}');
+      expect(task.headers['X-Part-Size'], '${upload.partBytes}');
+      expect(_taskFile(task).path, upload.partFile(index).path);
+    }
+    expect(
+      phone.device.http.sent.where((SentRequest r) => r.method == 'PUT'),
+      isEmpty,
+    );
+  });
+
+  test('leaving the app hands every pending push to the uploader', () async {
+    final _Background phone = await enrolled('Phone');
+    final SyncEngine engine = phone.engine();
+    await engine.start();
+    await engine.syncNow();
+    final UploadPass pass = (await phone.device.keyStore.readUploadPass())!;
+    await _note(phone.device, 'saved before leaving');
+    await _note(phone.device, 'and another');
+
+    phone.device.lifecycle.state = AppLifecycleState.hidden;
+    await eventually(() async => phone.uploader.pushes.isNotEmpty);
+
+    final UploadTask task = phone.uploader.pushes.single;
+    expect(task.httpRequestMethod, 'POST');
+    expect(task.post, 'binary');
+    expect(Uri.parse(task.url).path, _push);
+    expect(task.headers['Authorization'], 'Upload ${pass.token}');
+    expect(task.headers['X-Sync-Protocol'], '$syncProtocolVersion');
+    final PushRequest request = PushRequest.fromJson(
+      decodeJsonObject(await _taskFile(task).readAsString()),
+    );
+    final List<db.SyncOutboxData> outbox = await phone.device.database
+        .select(phone.device.database.syncOutbox)
+        .get();
+    expect(request.changes, hasLength(outbox.length));
+    expect(
+      request.changes.map((RecordPush change) => change.changeId).toSet(),
+      outbox.map((db.SyncOutboxData row) => row.changeId).toSet(),
+    );
+    expect(phone.device.http.countOf('POST', _push), 0);
+  });
+
+  test('media parts carry the notification and the Wi-Fi rule', () async {
+    final _Background phone = await enrolled('Phone');
+    await _grantPass(phone.device);
+    final domain.MediaBlob photo = await phone.media.store.putBytes(
+      bytes: _bytes(2500, 2),
+      mime: 'image/jpeg',
+      kind: domain.MediaKind.photo,
+    );
+    final domain.MediaBlob poster = await phone.media.store.putBytes(
+      bytes: _bytes(500, 3),
+      mime: 'image/jpeg',
+      kind: domain.MediaKind.photo,
+    );
+    await (phone.device.database.update(phone.device.database.mediaBlobs)
+          ..where((t) => t.id.equals(photo.id)))
+        .write(db.MediaBlobsCompanion(posterId: Value(poster.id)));
+    await phone.media.uploads.prepareAll();
+    await _note(phone.device, 'a record push');
+
+    await phone.uploads.handOverPrepared();
+    await phone.uploads.handOverPushes(phone.pushCycle());
+
+    final List<UploadTask> full = <UploadTask>[
+      for (final UploadTask task in phone.uploader.parts)
+        if (task.metaData.contains(photo.id)) task,
+    ];
+    final List<UploadTask> small = <UploadTask>[
+      for (final UploadTask task in phone.uploader.parts)
+        if (task.metaData.contains(poster.id)) task,
+    ];
+    expect(full, isNotEmpty);
+    expect(small, isNotEmpty);
+    for (final UploadTask task in phone.uploader.enqueued) {
+      expect(task.retries, 10);
+    }
+    for (final UploadTask task in phone.uploader.parts) {
+      final TaskNotificationConfig config = task.notificationConfig!;
+      expect(config.running!.title, 'Uploading to your journal');
+      expect(config.groupNotificationId, mediaNotificationGroup);
+      expect(config.progressBar, isTrue);
+      expect(config.complete, isNull);
+      expect(config.paused, isNull);
+    }
+    for (final UploadTask task in full) {
+      expect(task.requiresWiFi, isTrue);
+      expect(
+        task.notificationConfig!.running!.body,
+        '{progress} · waits for Wi-Fi if you leave',
+      );
+    }
+    for (final UploadTask task in small) {
+      expect(task.requiresWiFi, isFalse);
+      expect(task.notificationConfig!.running!.body, '{progress}');
+    }
+    final UploadTask push = phone.uploader.pushes.single;
+    expect(push.requiresWiFi, isFalse);
+    expect(push.notificationConfig, isNull);
+
+    phone.media.settings = AppSettings.defaults.copyWith(
+      allowMobileDataForMedia: true,
+    );
+    await phone.uploads.rescheduleForNetworkRule();
+
+    expect(
+      phone.uploader.cancelled.toSet(),
+      full.map((UploadTask task) => task.taskId).toSet(),
+    );
+    final List<UploadTask> rescheduled = <UploadTask>[
+      for (final Task task in await phone.uploader.queuedTasks())
+        if (task is UploadTask && task.metaData.contains(photo.id)) task,
+    ];
+    expect(rescheduled, hasLength(full.length));
+    for (final UploadTask task in rescheduled) {
+      expect(task.requiresWiFi, isFalse);
+      expect(task.notificationConfig!.running!.body, '{progress}');
+      expect(task.retries, 10);
+    }
+  });
+
+  test('parts prepared after the app is hidden run as ordinary work', () async {
+    final _Background phone = await enrolled('Phone');
+    final SyncEngine engine = phone.engine();
+    await engine.start();
+    await engine.syncNow();
+
+    phone.device.lifecycle.state = AppLifecycleState.hidden;
+    await phone.media.store.putBytes(
+      bytes: _bytes(1500, 4),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await eventually(() async => phone.uploader.parts.length == 2);
+    phone.device.lifecycle.state = AppLifecycleState.paused;
+    await phone.media.store.putBytes(
+      bytes: _bytes(1500, 5),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await eventually(() async => phone.uploader.parts.length == 4);
+
+    expect(
+      phone.uploader.parts.map((UploadTask task) => task.priority),
+      everyElement(ordinaryPriority),
+    );
+
+    phone.device.lifecycle.state = AppLifecycleState.resumed;
+    await phone.media.store.putBytes(
+      bytes: _bytes(1500, 6),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await eventually(() async => phone.uploader.parts.length == 6);
+    expect(
+      phone.uploader.parts.skip(4).map((UploadTask task) => task.priority),
+      everyElement(userInitiatedPriority),
+    );
+  });
+
+  test('the first hundred parts run as user-initiated jobs', () async {
+    final _Background phone = await enrolled('Phone');
+    await _grantPass(phone.device);
+    await phone.media.store.putBytes(
+      bytes: _bytes(130 * 1024 - 100, 7),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await phone.media.uploads.prepareAll();
+    expect((await phone.media.uploads.pendingUploads()).single.partCount, 130);
+
+    await phone.uploads.handOverPrepared();
+    await phone.uploads.handOverPrepared();
+
+    expect(phone.uploader.parts, hasLength(130));
+    expect(
+      phone.uploader.parts.where(
+        (UploadTask task) => task.priority == userInitiatedPriority,
+      ),
+      hasLength(100),
+    );
+    expect(
+      phone.uploader.parts.where(
+        (UploadTask task) => task.priority == ordinaryPriority,
+      ),
+      hasLength(30),
+    );
+  });
+
+  test(
+    'results collected on start are applied and failures prepared again',
+    () async {
+      final _Background first = await enrolled('Phone');
+      final SyncTestDevice phone = first.device;
+      final SyncEngine engine = first.engine();
+      await engine.start();
+      await engine.syncNow();
+      await phone.disposeEngines();
+      final RelayClient client = phone.relayClient(
+        relay.baseUrl,
+        await phone.deviceKeys(),
+        (_) {},
+      );
+      await _note(phone, 'kept response');
+      await first.uploads.handOverPushes(first.pushCycle());
+      await _note(phone, 'lost response');
+      await first.uploads.handOverPushes(first.pushCycle());
+      expect(first.uploader.pushes, hasLength(2));
+      final UploadTask kept = first.uploader.pushes[0];
+      final UploadTask lost = first.uploader.pushes[1];
+      Future<PushRequest> requestOf(UploadTask task) async =>
+          PushRequest.fromJson(
+            decodeJsonObject(await _taskFile(task).readAsString()),
+          );
+      final PushRequest keptRequest = await requestOf(kept);
+      final PushRequest lostRequest = await requestOf(lost);
+      final PushResponse keptResponse = await client.push(keptRequest);
+      await client.push(lostRequest);
+      await first.media.store.putBytes(
+        bytes: _bytes(3000, 8),
+        mime: 'video/mp4',
+        kind: domain.MediaKind.video,
+      );
+      await first.media.uploads.prepareAll();
+      await first.uploads.handOverPrepared();
+      final List<UploadTask> parts = first.uploader.parts;
+      expect(parts, hasLength(3));
+      final PendingUpload upload =
+          (await first.media.uploads.pendingUploads()).single;
+      final UploadStatusResponse answer = await client.uploadPart(
+        name: upload.blobName,
+        uploadId: upload.uploadId,
+        index: 0,
+        blobSize: upload.totalBytes,
+        partSize: upload.partBytes,
+        bytes: await upload.partFile(0).readAsBytes(),
+      );
+      final _FakeUploader restarted = _FakeUploader()
+        ..stored.addAll(<TaskStatusUpdate>[
+          TaskStatusUpdate(
+            kept,
+            TaskStatus.complete,
+            null,
+            jsonEncode(keptResponse.toJson()),
+          ),
+          TaskStatusUpdate(lost, TaskStatus.complete),
+          TaskStatusUpdate(
+            parts[0],
+            TaskStatus.complete,
+            null,
+            jsonEncode(answer.toJson()),
+          ),
+          TaskStatusUpdate(parts[1], TaskStatus.failed),
+          TaskStatusUpdate(parts[2], TaskStatus.canceled),
+        ]);
+      final _Background second = _Background(phone, first.media, restarted);
+      final int sentBefore = phone.http.sent.length;
+
+      final SyncEngine reopened = second.engine();
+      await reopened.start();
+      await reopened.syncNow();
+
+      expect(restarted.starts, 1);
+      expect(
+        await phone.database.select(phone.database.syncOutbox).get(),
+        isEmpty,
+      );
+      final List<PushRequest> foreground = <PushRequest>[
+        for (final SentRequest request in phone.http.sent.skip(sentBefore))
+          if (request.method == 'POST' && request.path == _push)
+            PushRequest.fromJson(decodeJsonObject(request.body)),
+      ];
+      Set<String> idsOf(PushRequest request) => <String>{
+        for (final RecordPush change in request.changes) change.changeId,
+      };
+      expect(idsOf(foreground.first), idsOf(lostRequest));
+      expect(
+        foreground.where(
+          (PushRequest request) =>
+              idsOf(request).intersection(idsOf(keptRequest)).isNotEmpty,
+        ),
+        isEmpty,
+      );
+      expect(
+        foreground.where(
+          (PushRequest request) =>
+              idsOf(request).intersection(idsOf(lostRequest)).isNotEmpty,
+        ),
+        hasLength(1),
+      );
+      expect(
+        await phone.database.select(phone.database.syncRecordSeqs).get(),
+        hasLength(keptRequest.changes.length + lostRequest.changes.length + 1),
+      );
+      expect(
+        restarted.parts.map((UploadTask task) => task.taskId).toSet(),
+        <String>{
+          partTaskId(upload.uploadId, 1),
+          partTaskId(upload.uploadId, 2),
+        },
+      );
+      expect(
+        decodeAckedParts(
+          (await phone.database.select(phone.database.syncUploads).getSingle())
+              .ackedParts,
+        ),
+        <int>[0],
+      );
+      expect(await _taskFile(kept).exists(), isFalse);
+      expect(await _taskFile(lost).exists(), isFalse);
+    },
+  );
+
+  test('pause and wipe cancel queued uploads', () async {
+    final _Background phone = await enrolled('Phone');
+    final SyncEngine engine = phone.engine();
+    await engine.start();
+    await engine.syncNow();
+    await _note(phone.device, 'waiting to go');
+    phone.device.lifecycle.state = AppLifecycleState.hidden;
+    await eventually(() async => phone.uploader.pushes.isNotEmpty);
+    phone.device.lifecycle.state = AppLifecycleState.resumed;
+    await phone.media.store.putBytes(
+      bytes: _bytes(1500, 9),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await eventually(() async => phone.uploader.parts.length == 2);
+    final Set<String> queued = phone.uploader.held.keys.toSet();
+    expect(queued, hasLength(3));
+
+    await engine.pause(true);
+
+    expect(phone.uploader.held, isEmpty);
+    expect(phone.uploader.cancelled.toSet(), containsAll(queued));
+
+    await engine.pause(false);
+    await eventually(() async => phone.uploader.held.isNotEmpty);
+    final Set<String> handedAgain = phone.uploader.held.keys.toSet();
+    await LocalJournalWipe(
+      database: phone.device.database,
+      keyStore: phone.device.keyStore,
+      deleteAll: JournalDeleteAllService(
+        database: phone.device.database,
+        mediaRoot: phone.media.root,
+      ),
+      cancelUploads: phone.uploads.cancelAll,
+    ).wipe();
+
+    expect(phone.uploader.held, isEmpty);
+    expect(phone.uploader.cancelled.toSet(), containsAll(handedAgain));
+    expect(await phone.pushRoot.exists(), isFalse);
+  });
+
+  test('after leaving the app sends nothing itself', () async {
+    final _Background phone = await enrolled('Phone');
+    final SyncEngine engine = phone.engine();
+    await engine.start();
+    await engine.syncNow();
+    await eventually(() async => engine.isLive);
+    await _note(phone.device, 'saved just before leaving');
+
+    phone.device.lifecycle.state = AppLifecycleState.hidden;
+    await eventually(() async => !engine.isLive);
+    await eventually(() async => phone.uploader.pushes.isNotEmpty);
+    final int sentWhenHidden = phone.device.http.sent.length;
+    await phone.media.store.putBytes(
+      bytes: _bytes(1500, 10),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await eventually(() async => phone.uploader.parts.length == 2);
+    await phone.device.clock.advance(const Duration(minutes: 10));
+    await engine.syncNow();
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    expect(phone.device.http.sent.length, sentWhenHidden);
+    expect(phone.device.sockets, 1);
+    expect(phone.uploader.pushes, hasLength(1));
+    expect(
+      phone.uploader.parts.map((UploadTask task) => task.priority),
+      everyElement(ordinaryPriority),
+    );
+  });
+}

@@ -182,7 +182,7 @@ final class TodayMediaResolverProvider
 }
 
 String _$todayMediaResolverHash() =>
-    r'e018713a1273ecf893c79f5a1a293b35570aa3fb';
+    r'b28f58c652302976706b6f8d63d64c0bc00d2859';
 
 @ProviderFor(todayAudioPlayerFactory)
 final todayAudioPlayerFactoryProvider = TodayAudioPlayerFactoryProvider._();
@@ -317,4 +317,4 @@ final class OnThisDayMemoryProvider
   }
 }
 
-String _$onThisDayMemoryHash() => r'a0e9145e48091b60f02ee459482d67d47637a260';
+String _$onThisDayMemoryHash() => r'79f247b6c5c00b01e48d8c3c2f035ec6a9b6ac43';

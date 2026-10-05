@@ -11,6 +11,7 @@ import '../../../domain/models/models.dart';
 import '../../notes/render/note_photo_block.dart' show NoteMediaScope;
 import '../cards/note_body.dart';
 import '../cards/voice_body.dart';
+import '../media/live_media.dart';
 import '../media/media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
@@ -678,6 +679,7 @@ class _CompactMedia extends StatefulWidget {
 }
 
 class _CompactMediaState extends State<_CompactMedia> {
+  final MediaArrivalWatch _arrivals = MediaArrivalWatch();
   ResolvedMedia? _media;
   bool _decodeFailed = false;
 
@@ -698,7 +700,14 @@ class _CompactMediaState extends State<_CompactMedia> {
     _media = _start();
   }
 
+  @override
+  void dispose() {
+    _arrivals.cancel();
+    super.dispose();
+  }
+
   ResolvedMedia? _start() {
+    _arrivals.cancel();
     final String? id = widget.mediaId;
     if (id == null || id.isEmpty) {
       return const ResolvedMedia.missing();
@@ -707,6 +716,11 @@ class _CompactMediaState extends State<_CompactMedia> {
     if (memo != null) {
       return memo;
     }
+    _resolve(id);
+    return null;
+  }
+
+  void _resolve(String id) {
     widget.resolver
         .resolve(id)
         .then(
@@ -714,7 +728,6 @@ class _CompactMediaState extends State<_CompactMedia> {
           onError: (Object error, StackTrace stackTrace) =>
               _arrive(id, const ResolvedMedia.missing()),
         );
-    return null;
   }
 
   void _arrive(String id, ResolvedMedia media) {
@@ -722,6 +735,11 @@ class _CompactMediaState extends State<_CompactMedia> {
       return;
     }
     setState(() => _media = media);
+    if (media.isAvailable) {
+      _arrivals.cancel();
+    } else if (!_arrivals.isWatching) {
+      _arrivals.watch(widget.resolver, id, () => _resolve(id));
+    }
   }
 
   void _onDecodeError() {

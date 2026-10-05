@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -67,7 +68,17 @@ final class RelayFixture {
 
   String get mediaDirectory => config.mediaDirectory;
 
-  Future<void> boot() async {
+  Future<void> boot() => runZoned(
+    _serve,
+    zoneSpecification: ZoneSpecification(
+      print: (Zone self, ZoneDelegate parent, Zone zone, String line) {
+        logLines.add(line);
+        parent.print(zone, line);
+      },
+    ),
+  );
+
+  Future<void> _serve() async {
     final RelayApp app = await RelayApp.open(
       config: config,
       migrationsDirectory: migrationsDirectory,
@@ -123,6 +134,41 @@ final class RelayFixture {
     "SELECT count(*) FROM devices WHERE account_id = ? AND status = 'active'",
     <Object?>[accountId],
   );
+
+  Map<String, int> recordSeqs(String accountId) => <String, int>{
+    for (final Map<String, Object?> row in app.database.select(
+      'SELECT record_key, seq FROM records WHERE account_id = ?',
+      <Object?>[accountId],
+    ))
+      row['record_key']! as String: row['seq']! as int,
+  };
+
+  List<File> storedFiles() {
+    final Map<String, File> files = <String, File>{};
+    void collect(Directory directory) {
+      if (!directory.existsSync()) {
+        return;
+      }
+      for (final FileSystemEntity entity in directory.listSync(
+        recursive: true,
+        followLinks: false,
+      )) {
+        if (entity is File) {
+          files[p.normalize(entity.absolute.path)] = entity;
+        }
+      }
+    }
+
+    collect(root);
+    collect(Directory(mediaDirectory));
+    for (final String suffix in const <String>['', '-wal', '-shm']) {
+      final File file = File('$databasePath$suffix');
+      if (file.existsSync()) {
+        files[p.normalize(file.absolute.path)] = file;
+      }
+    }
+    return List<File>.unmodifiable(files.values);
+  }
 
   bool isActiveDevice(String deviceId) =>
       app.database.count(

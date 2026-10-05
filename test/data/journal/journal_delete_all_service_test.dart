@@ -6,7 +6,7 @@ import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/media/content_hash.dart';
 import 'package:field_notes/domain/models/media_kind.dart';
-import 'package:field_notes/features/data/journal_delete_all_service.dart';
+import 'package:field_notes/data/journal/journal_delete_all_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
