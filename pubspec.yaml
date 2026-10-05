@@ -89,6 +89,8 @@ dev_dependencies:
   drift_dev: ^2.34.0
   riverpod_generator: ^4.0.4
   build_runner: ^2.15.1
+  relay_server:
+    path: server
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
