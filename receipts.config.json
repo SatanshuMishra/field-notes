@@ -1,18 +1,25 @@
 {
-  "$schema": "./receipts.config.schema.json",
   "version": 1,
   "claim": {
     "issue_link": "closes #(\\d+)",
-    "downgrade_tags": ["unverified-reasoned", "speculative", "reverted"]
+    "downgrade_tags": [
+      "unverified-reasoned",
+      "speculative",
+      "reverted"
+    ]
   },
   "build": {
-    "sha_source": "git rev-parse HEAD"
+    "sha_source": "none",
+    "platform": "none",
+    "deploy_host_patterns": [],
+    "environments": {},
+    "verify_against": "none"
   },
   "verify": {
     "test_command": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter test",
     "suite_command": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter test",
-    "require_fresh_base": "warn",
     "live_drive": null,
+    "require_fresh_base": "warn",
     "scopedCheckCmd": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter analyze",
     "fullValidationCmd": "export PATH=\"/opt/homebrew/bin:$PATH\" && flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter analyze && flutter test"
   },
@@ -20,10 +27,48 @@
     "on_no_receipt": "require-downgrade-tag",
     "on_unreachable_build": "sha-bind-only"
   },
+  "agent": {
+    "loop_skills": [
+      "gates"
+    ],
+    "staging_query_patterns": [],
+    "observe": {
+      "confirmed": true,
+      "surface": "The Field Notes screen: the Android phone layout first, then the macOS window (Today, day detail, the capture recorders, the garden and Meadow, calendar, search, settings).",
+      "value": "The exact text, state or accessibility label a widget shows, such as a saved entry's text, a streak count or whether a button is enabled; never mere presence.",
+      "observe_by": "flutter_test widget tests on the real widget tree; integration_test on macOS for platform code; live, a debug build in the VM lab (lab) driven through its Dart VM service.",
+      "terminal_action": "The control that commits: Save on a capture or note, a recorder's Stop or Keep, confirming a delete or an export; the screen then re-renders from the Drift database.",
+      "build_artifact": "A debug or release build made from the commit's git sha and installed in a VM lab instance (macOS or Android); for tests, the checked-out commit.",
+      "twin": "The macOS and Android versions of one feature: the vendored camera_macos package against the camera plugin in CameraVideoRecorder, macos/ against android/ platform code, the phone layout against the desktop layout of the same screen.",
+      "dependent": "Drift tables and their build_runner output feed the repositories in lib/data, which feed the Riverpod providers in lib/state and then the screens; design tokens feed every screen and the golden images checked by the goldens CI workflow.",
+      "receipt": "A flutter_test widget or unit test under test/ that is red on base and green on head; for platform-only behaviour, an integration_test under integration_test/ run on macOS.",
+      "compat_boundary": "None on main: the app is local-only and every install is rebuilt from scratch, so no data migration is kept. Once device sync merges: two devices on different app builds talking to the relay, gated by its protocol version.",
+      "reach": {
+        "access": "No account or sign-in exists on main. Start a clean macOS or Android instance from the VM lab (lab), install a debug build of the commit, and drive it through its Dart VM service. Never run flutter drive on the owner's phone.",
+        "shortcut": "A debug build's Dart VM service drives the app with no taps or screen capture; seeded installs come from ~/.mitosis/field-notes/prototype-phone-macos/device-pass/install_seeded.zsh; the composer probe app lives in integration_test/probe; pin meadowKeyProvider for comparable Meadow screenshots.",
+        "fixtures": "No backend. A fresh install starts empty; seeded installs and integration_test/fixtures supply realistic journals and media; all test data is disposable.",
+        "special_surfaces": [
+          "GPU performance (Impeller frame timing, the Meadow scene): the VM lab's Android emulator on an M4 Mac does not replicate a phone GPU, so a pass there proves nothing about phones, while a failure there is conclusive and needs no phone. A performance pass needs the real phone, with the Note 10+ as the low-end floor check.",
+          "Camera and microphone recorders, and reminder notifications: the VM lab replicates these and is the primary check; the real phone is a redundant second check, not a requirement."
+        ]
+      }
+    },
+    "closeout_fixed_statuses": [
+      "Pending Retest",
+      "Verified"
+    ],
+    "repo_name": "fireplace",
+    "receipts_version": "0.9.3"
+  },
   "gates": {
-    "medium": "library",
+    "medium": "mobile",
     "enabled": "all",
-    "G8": { "integration_branch": "main" },
-    "G10": { "mode": "warn" }
+    "disabled": [],
+    "G8": {
+      "integration_branch": "main"
+    },
+    "G10": {
+      "mode": "warn"
+    }
   }
 }
