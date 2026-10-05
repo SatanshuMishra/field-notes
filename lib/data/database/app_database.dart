@@ -1,12 +1,27 @@
 import 'package:drift/drift.dart';
 
 import 'connection.dart';
+import 'sync_tables.dart';
 import 'tables.dart';
 
 part 'app_database.g.dart';
 
 @DriftDatabase(
-  tables: [MediaBlobs, Days, Entries, EntryPhotos, Settings],
+  tables: [
+    MediaBlobs,
+    Days,
+    Entries,
+    EntryPhotos,
+    Settings,
+    JournalSettings,
+    SyncOutbox,
+    SyncRecordSeqs,
+    SyncTextBases,
+    SyncStates,
+    SyncHeldStates,
+    SyncUploads,
+    SyncMediaCache,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);

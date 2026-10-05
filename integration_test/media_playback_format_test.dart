@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/media_kind.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/just_audio_player.dart';
@@ -26,7 +27,11 @@ void main() {
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     root = await Directory.systemTemp.createTemp('fn_playback_format');
-    store = FilesystemMediaStore(database: db, root: root);
+    store = FilesystemMediaStore(
+      database: db,
+      recorder: ChangeRecorder(db),
+      root: root,
+    );
   });
 
   tearDown(() async {

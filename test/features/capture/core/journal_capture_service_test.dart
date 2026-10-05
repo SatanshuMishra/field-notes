@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:field_notes/data/database/app_database.dart' show AppDatabase;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart';
@@ -20,8 +21,9 @@ void main() {
   setUp(() async {
     db = newTestDatabase();
     root = await newTempMediaRoot();
-    journal = DriftJournalRepository(db);
-    media = FilesystemMediaStore(database: db, root: root);
+    final ChangeRecorder recorder = ChangeRecorder(db);
+    journal = DriftJournalRepository(db, recorder: recorder);
+    media = FilesystemMediaStore(database: db, recorder: recorder, root: root);
     service = JournalCaptureService(journal: journal, media: media);
   });
 

@@ -1,9 +1,19 @@
 import 'package:drift/native.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/settings/drift_settings_repository.dart';
+import 'package:field_notes/data/settings/journal_settings_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+
+DriftSettingsRepository _settingsFor(AppDatabase db) {
+  return DriftSettingsRepository(
+    db,
+    JournalSettingsStore(db, ChangeRecorder(db)),
+  );
+}
 
 void main() {
   group('DriftSettingsRepository', () {
@@ -12,7 +22,7 @@ void main() {
 
     setUp(() {
       db = AppDatabase(NativeDatabase.memory());
-      repository = DriftSettingsRepository(db);
+      repository = _settingsFor(db);
     });
 
     tearDown(() async {
@@ -81,8 +91,10 @@ void main() {
           .into(db.settings)
           .insert(SettingsCompanion.insert(key: 'text_size', value: '9'));
       await db
-          .into(db.settings)
-          .insert(SettingsCompanion.insert(key: 'week_start', value: 'xyz'));
+          .into(db.journalSettings)
+          .insert(
+            JournalSettingsCompanion.insert(key: 'week_start', value: 'xyz'),
+          );
       await db
           .into(db.settings)
           .insert(
@@ -131,7 +143,7 @@ void main() {
         await repository.setOnboardingStatus(OnboardingStatus.pending);
         await repository.setOnboardingStatus(OnboardingStatus.done);
 
-        final reloaded = DriftSettingsRepository(db);
+        final reloaded = _settingsFor(db);
         final settings = await reloaded.load();
 
         expect(settings.weekStart, WeekStart.saturday);
@@ -147,7 +159,7 @@ void main() {
 
         await repository.setAppearance(Appearance.dark);
         expect(
-          (await DriftSettingsRepository(db).load()).appearance,
+          (await _settingsFor(db).load()).appearance,
           Appearance.dark,
         );
 
@@ -158,7 +170,7 @@ void main() {
           'system',
         );
         expect(
-          (await DriftSettingsRepository(db).load()).appearance,
+          (await _settingsFor(db).load()).appearance,
           Appearance.system,
         );
       },
@@ -181,14 +193,20 @@ void main() {
     test('the meadow key is made once and kept', () async {
       final int first = await repository.meadowKey();
 
-      final List<Setting> rows = await db.select(db.settings).get();
+      final List<JournalSetting> rows = await db
+          .select(db.journalSettings)
+          .get();
       expect(
-        rows.where((Setting row) => row.key == 'meadow_key').single.value,
+        rows
+            .where((JournalSetting row) => row.key == 'meadow_key')
+            .single
+            .value,
         '$first',
       );
+      expect(await db.select(db.settings).get(), isEmpty);
       expect(first, inInclusiveRange(0, 4294967295));
       expect(await repository.meadowKey(), first);
-      expect(await DriftSettingsRepository(db).meadowKey(), first);
+      expect(await _settingsFor(db).meadowKey(), first);
     });
 
     test('a meadow key alone does not count as stored settings', () async {
@@ -199,17 +217,95 @@ void main() {
 
     test('a stored meadow key at the top of the range is kept', () async {
       await db
-          .into(db.settings)
+          .into(db.journalSettings)
           .insert(
-            SettingsCompanion.insert(key: 'meadow_key', value: '4294967295'),
+            JournalSettingsCompanion.insert(
+              key: 'meadow_key',
+              value: '4294967295',
+            ),
           );
 
       expect(await repository.meadowKey(), 4294967295);
-      final List<Setting> rows = await db.select(db.settings).get();
+      final List<JournalSetting> rows = await db
+          .select(db.journalSettings)
+          .get();
       expect(
-        rows.where((Setting row) => row.key == 'meadow_key').single.value,
+        rows
+            .where((JournalSetting row) => row.key == 'meadow_key')
+            .single
+            .value,
         '4294967295',
       );
+    });
+
+    test(
+      'week start and reflection questions are kept as journal settings',
+      () async {
+        await repository.setWeekStart(WeekStart.monday);
+        await repository.setReflectionPromptsEnabled(true);
+
+        final List<JournalSetting> journal = await db
+            .select(db.journalSettings)
+            .get();
+        expect(
+          <String, String>{
+            for (final JournalSetting row in journal) row.key: row.value,
+          },
+          <String, String>{'week_start': '1', 'reflection_prompts': 'true'},
+        );
+        expect(await db.select(db.settings).get(), isEmpty);
+      },
+    );
+
+    test('watch re-emits when a journal setting changes', () async {
+      final emissions = <AppSettings>[];
+      final subscription = repository.watch().listen(emissions.add);
+      addTearDown(subscription.cancel);
+
+      await pumpEventQueue();
+      await repository.setWeekStart(WeekStart.saturday);
+      await pumpEventQueue();
+
+      expect(emissions.first.weekStart, WeekStart.sunday);
+      expect(emissions.last.weekStart, WeekStart.saturday);
+    });
+
+    test('a journal setting alone counts as stored settings', () async {
+      await repository.setWeekStart(WeekStart.monday);
+
+      expect(await repository.hasStoredValues(), isTrue);
+    });
+
+    test(
+      'media is kept on a Mac by default and fetched on demand on a phone',
+      () async {
+        expect((await repository.load()).keepAllMediaOnDevice, isFalse);
+
+        debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+        final bool onMac = (await repository.load()).keepAllMediaOnDevice;
+        debugDefaultTargetPlatformOverride = null;
+
+        expect(onMac, isTrue);
+        expect((await repository.load()).allowMobileDataForMedia, isFalse);
+      },
+    );
+
+    test('the two media settings are saved on this device', () async {
+      await repository.setKeepAllMediaOnDevice(true);
+      await repository.setAllowMobileDataForMedia(true);
+
+      final AppSettings reloaded = await _settingsFor(db).load();
+      expect(reloaded.keepAllMediaOnDevice, isTrue);
+      expect(reloaded.allowMobileDataForMedia, isTrue);
+      final List<Setting> rows = await db.select(db.settings).get();
+      expect(
+        <String, String>{for (final Setting row in rows) row.key: row.value},
+        <String, String>{
+          'keep_all_media_on_device': 'true',
+          'allow_mobile_data_for_media': 'true',
+        },
+      );
+      expect(await db.select(db.journalSettings).get(), isEmpty);
     });
   });
 }

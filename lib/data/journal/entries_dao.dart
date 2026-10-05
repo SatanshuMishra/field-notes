@@ -1,11 +1,25 @@
+import 'dart:collection';
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../database/app_database.dart';
+import '../sync/change_recorder.dart';
+import '../sync/synced_tables.dart';
+
+const String _emptyVersion = '{}';
+const List<String> _textFields = <String>[
+  'textContent',
+  'textVersion',
+  'updatedAt',
+];
+const List<String> _deleteFields = <String>['deletedAt', 'updatedAt'];
 
 class EntriesDao {
-  EntriesDao(this._db);
+  EntriesDao(this._db, this._recorder);
 
   final AppDatabase _db;
+  final ChangeRecorder _recorder;
 
   Future<Entry> insertEntry({
     required String id,
@@ -18,24 +32,40 @@ class EntriesDao {
     required int createdAt,
     required int updatedAt,
   }) {
-    return _db.into(_db.entries).insertReturning(
-          EntriesCompanion.insert(
-            id: id,
-            dayId: dayId,
-            type: type,
-            textContent: Value(textContent),
-            mediaId: Value(mediaId),
-            thumbnailMediaId: Value(thumbnailMediaId),
-            durationMs: Value(durationMs),
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-          ),
-        );
+    return _db.transaction(() async {
+      final String clocks = await _recorder.stamp(
+        table: SyncedTables.entries,
+        rowId: id,
+        fields: SyncedTables.entryFields,
+        currentClocks: '{}',
+      );
+      final String version = textContent == null
+          ? _emptyVersion
+          : _raisedVersion(_emptyVersion, _recorder.nodeId);
+      return _db
+          .into(_db.entries)
+          .insertReturning(
+            EntriesCompanion.insert(
+              id: id,
+              dayId: dayId,
+              type: type,
+              textContent: Value(textContent),
+              mediaId: Value(mediaId),
+              thumbnailMediaId: Value(thumbnailMediaId),
+              durationMs: Value(durationMs),
+              createdAt: createdAt,
+              updatedAt: updatedAt,
+              textVersion: Value(version),
+              fieldClocks: Value(clocks),
+            ),
+          );
+    });
   }
 
   Future<Entry?> entryById(String id) {
-    return (_db.select(_db.entries)..where((t) => t.id.equals(id)))
-        .getSingleOrNull();
+    return (_db.select(
+      _db.entries,
+    )..where((t) => t.id.equals(id))).getSingleOrNull();
   }
 
   Future<List<Entry>> activeEntriesForDay(String dayId) {
@@ -50,21 +80,53 @@ class EntriesDao {
     required String textContent,
     required int updatedAt,
   }) {
-    return (_db.update(_db.entries)..where((t) => t.id.equals(id))).write(
-      EntriesCompanion(
-        textContent: Value(textContent),
-        updatedAt: Value(updatedAt),
-      ),
-    );
+    return _db.transaction(() async {
+      final Entry? existing = await entryById(id);
+      if (existing == null) {
+        return 0;
+      }
+      if (existing.textContent == textContent) {
+        return 1;
+      }
+      final String clocks = await _recorder.stamp(
+        table: SyncedTables.entries,
+        rowId: id,
+        fields: _textFields,
+        currentClocks: existing.fieldClocks,
+      );
+      return (_db.update(_db.entries)..where((t) => t.id.equals(id))).write(
+        EntriesCompanion(
+          textContent: Value(textContent),
+          textVersion: Value(
+            _raisedVersion(existing.textVersion, _recorder.nodeId),
+          ),
+          updatedAt: Value(updatedAt),
+          fieldClocks: Value(clocks),
+        ),
+      );
+    });
   }
 
   Future<int> softDelete({required String id, required int deletedAt}) {
-    return (_db.update(_db.entries)..where((t) => t.id.equals(id))).write(
-      EntriesCompanion(
-        deletedAt: Value(deletedAt),
-        updatedAt: Value(deletedAt),
-      ),
-    );
+    return _db.transaction(() async {
+      final Entry? existing = await entryById(id);
+      if (existing == null) {
+        return 0;
+      }
+      final String clocks = await _recorder.stamp(
+        table: SyncedTables.entries,
+        rowId: id,
+        fields: _deleteFields,
+        currentClocks: existing.fieldClocks,
+      );
+      return (_db.update(_db.entries)..where((t) => t.id.equals(id))).write(
+        EntriesCompanion(
+          deletedAt: Value(deletedAt),
+          updatedAt: Value(deletedAt),
+          fieldClocks: Value(clocks),
+        ),
+      );
+    });
   }
 
   Stream<List<Entry>> watchActiveEntriesForDay(String dayId) {
@@ -75,17 +137,36 @@ class EntriesDao {
   }
 
   Stream<List<Entry>> watchActiveEntriesForDate(String date) {
-    final query = _db.select(_db.entries).join([
-      innerJoin(_db.days, _db.days.id.equalsExp(_db.entries.dayId)),
-    ])
-      ..where(
-        _db.days.date.equals(date) &
-            _db.days.deletedAt.isNull() &
-            _db.entries.deletedAt.isNull(),
-      )
-      ..orderBy([OrderingTerm.asc(_db.entries.createdAt)]);
+    final query =
+        _db.select(_db.entries).join([
+            innerJoin(_db.days, _db.days.id.equalsExp(_db.entries.dayId)),
+          ])
+          ..where(
+            _db.days.date.equals(date) &
+                _db.days.deletedAt.isNull() &
+                _db.entries.deletedAt.isNull(),
+          )
+          ..orderBy([OrderingTerm.asc(_db.entries.createdAt)]);
     return query.watch().map(
-          (rows) => rows.map((row) => row.readTable(_db.entries)).toList(),
-        );
+      (rows) => rows.map((row) => row.readTable(_db.entries)).toList(),
+    );
   }
+}
+
+String _raisedVersion(String encoded, String nodeId) {
+  final Object? decoded = jsonDecode(encoded);
+  if (decoded is! Map<String, Object?> ||
+      decoded.values.any((Object? count) => count is! int)) {
+    throw FormatException(
+      'A text version is not a JSON object of edit counts.',
+      encoded,
+    );
+  }
+  final Map<String, int> counts = decoded.cast<String, int>();
+  return jsonEncode(
+    SplayTreeMap<String, int>.of(<String, int>{
+      ...counts,
+      nodeId: (counts[nodeId] ?? 0) + 1,
+    }),
+  );
 }

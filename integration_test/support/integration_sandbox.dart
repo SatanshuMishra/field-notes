@@ -4,6 +4,8 @@ import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/drafts/draft_paths.dart';
 import 'package:field_notes/data/settings/drift_settings_repository.dart';
+import 'package:field_notes/data/settings/journal_settings_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/draft_provider.dart';
@@ -35,6 +37,7 @@ class IntegrationSandbox {
     final AppDatabase database = AppDatabase(NativeDatabase.memory());
     await DriftSettingsRepository(
       database,
+      JournalSettingsStore(database, ChangeRecorder(database)),
     ).setOnboardingStatus(OnboardingStatus.done);
     return IntegrationSandbox._(
       root: root,

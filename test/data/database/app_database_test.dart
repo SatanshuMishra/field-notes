@@ -4,6 +4,7 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/sync/synced_tables.dart';
 
 class _FutureSchemaDatabase extends AppDatabase {
   _FutureSchemaDatabase(super.executor);
@@ -30,15 +31,28 @@ void main() {
       expect(row.read<int>('user_version'), 1);
     });
 
-    test('creates all five tables and the partial unique index', () async {
+    test('creates every journal and sync table and the partial unique index',
+        () async {
       final tables = await db
           .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
           .get();
       final names = tables.map((r) => r.read<String>('name')).toSet();
       expect(
-        names.containsAll(
-          {'days', 'entries', 'entry_photos', 'media_blobs', 'settings'},
-        ),
+        names.containsAll({
+          'days',
+          'entries',
+          'entry_photos',
+          'media_blobs',
+          'settings',
+          'journal_settings',
+          'sync_outbox',
+          'sync_record_seqs',
+          'sync_text_bases',
+          'sync_states',
+          'sync_held_states',
+          'sync_uploads',
+          'sync_media_cache',
+        }),
         isTrue,
       );
 
@@ -83,13 +97,91 @@ void main() {
       expect(active.single.read<String>('id'), 'c');
     });
 
-    test('enforces foreign keys', () async {
+    test('an entry can be inserted whose day does not exist', () async {
+      await db.customStatement(
+        "INSERT INTO entries "
+        "(id, day_id, type, media_id, thumbnail_media_id, created_at, "
+        "updated_at) "
+        "VALUES ('e', 'missing-day', 'video', 'missing-blob', "
+        "'missing-poster', 0, 0)",
+      );
+      await db.customStatement(
+        "INSERT INTO entry_photos "
+        "(id, entry_id, media_id, sort_order, created_at, updated_at) "
+        "VALUES ('p', 'missing-entry', 'missing-blob', 0, 0, 0)",
+      );
+
+      final Entry entry = await db.select(db.entries).getSingle();
+      expect(entry.dayId, 'missing-day');
+      expect(entry.fieldClocks, '{}');
+      expect(entry.textVersion, '{}');
+      final EntryPhoto photo = await db.select(db.entryPhotos).getSingle();
+      expect(photo.entryId, 'missing-entry');
+    });
+
+    test('a record can hold only one pending outbox entry', () async {
+      await db.customStatement(
+        "INSERT INTO sync_outbox (record_table, row_id, enqueued_at) "
+        "VALUES ('days', 'day-2026-07-11', 0)",
+      );
+
       await expectLater(
         db.customStatement(
-          "INSERT INTO entries (id, day_id, type, created_at, updated_at) "
-          "VALUES ('e', 'missing-day', 'text', 0, 0)",
+          "INSERT INTO sync_outbox (record_table, row_id, enqueued_at) "
+          "VALUES ('days', 'day-2026-07-11', 1)",
         ),
-        throwsA(predicate((Object e) => e.toString().contains('FOREIGN KEY'))),
+        throwsA(predicate((Object e) => e.toString().contains('UNIQUE'))),
+      );
+    });
+
+    test('every column but the field clocks and local paths is synced',
+        () async {
+      await db.customStatement(
+        "INSERT INTO days (id, date, created_at, updated_at) "
+        "VALUES ('d', '2026-07-11', 0, 0)",
+      );
+      await db.customStatement(
+        "INSERT INTO entries (id, day_id, type, created_at, updated_at) "
+        "VALUES ('e', 'd', 'text', 0, 0)",
+      );
+      await db.customStatement(
+        "INSERT INTO entry_photos "
+        "(id, entry_id, media_id, sort_order, created_at, updated_at) "
+        "VALUES ('p', 'e', 'm', 0, 0, 0)",
+      );
+      await db.customStatement(
+        "INSERT INTO media_blobs "
+        "(id, rel_path, mime, kind, bytes, created_at) "
+        "VALUES ('m', 'blobs/m', 'image/jpeg', 'photo', 1, 0)",
+      );
+      await db.customStatement(
+        "INSERT INTO journal_settings (key, value) VALUES ('week_start', '1')",
+      );
+      final Map<String, Set<String>> columns = {
+        SyncedTables.days:
+            (await db.select(db.days).getSingle()).toJson().keys.toSet(),
+        SyncedTables.entries:
+            (await db.select(db.entries).getSingle()).toJson().keys.toSet(),
+        SyncedTables.entryPhotos:
+            (await db.select(db.entryPhotos).getSingle()).toJson().keys.toSet(),
+        SyncedTables.mediaBlobs:
+            (await db.select(db.mediaBlobs).getSingle()).toJson().keys.toSet(),
+        SyncedTables.journalSettings: (await db.select(db.journalSettings)
+                .getSingle())
+            .toJson()
+            .keys
+            .toSet(),
+      };
+
+      expect(
+        SyncedTables.fields.map(
+          (String table, List<String> fields) =>
+              MapEntry(table, fields.toSet()),
+        ),
+        columns.map(
+          (String table, Set<String> names) =>
+              MapEntry(table, names.difference({'fieldClocks', 'relPath'})),
+        ),
       );
     });
   });

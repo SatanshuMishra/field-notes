@@ -3,6 +3,7 @@ import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/data/database/app_database.dart' as db;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/chapters/tour_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
@@ -89,7 +90,10 @@ Future<_App> _pumpApp(WidgetTester tester, Size surface) async {
         for (final Override override in shellOverrides())
           if (!replaced.contains(override.origin)) override,
         journalRepositoryProvider.overrideWithValue(
-          DriftJournalRepository(database),
+          DriftJournalRepository(
+            database,
+            recorder: ChangeRecorder(database),
+          ),
         ),
         settingsRepositoryProvider.overrideWithValue(settings),
         reminderSchedulerProvider.overrideWithValue(

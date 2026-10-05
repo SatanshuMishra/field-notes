@@ -3,6 +3,8 @@ import 'dart:io';
 import 'package:drift/native.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/settings/drift_settings_repository.dart';
+import 'package:field_notes/data/settings/journal_settings_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
@@ -13,6 +15,13 @@ Future<String?> _storedValue(AppDatabase db) async {
           ))
           .getSingleOrNull();
   return row?.value;
+}
+
+DriftSettingsRepository _settingsFor(AppDatabase db) {
+  return DriftSettingsRepository(
+    db,
+    JournalSettingsStore(db, ChangeRecorder(db)),
+  );
 }
 
 void main() {
@@ -30,7 +39,7 @@ void main() {
 
   test('the Meadow background pause setting saves and reloads, defaulting to pause', () async {
     final AppDatabase first = AppDatabase(NativeDatabase(file));
-    final DriftSettingsRepository fresh = DriftSettingsRepository(first);
+    final DriftSettingsRepository fresh = _settingsFor(first);
 
     expect((await fresh.load()).meadowPausesWhenInactive, isTrue);
     expect((await fresh.watch().first).meadowPausesWhenInactive, isTrue);
@@ -42,7 +51,7 @@ void main() {
 
     final AppDatabase reopened = AppDatabase(NativeDatabase(file));
     addTearDown(reopened.close);
-    final DriftSettingsRepository restored = DriftSettingsRepository(reopened);
+    final DriftSettingsRepository restored = _settingsFor(reopened);
 
     expect((await restored.load()).meadowPausesWhenInactive, isFalse);
     expect((await restored.watch().first).meadowPausesWhenInactive, isFalse);

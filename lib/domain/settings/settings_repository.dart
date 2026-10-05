@@ -35,6 +35,10 @@ abstract interface class SettingsRepository {
 
   Future<void> setMeadowPausesWhenInactive(bool value);
 
+  Future<void> setKeepAllMediaOnDevice(bool value);
+
+  Future<void> setAllowMobileDataForMedia(bool value);
+
   Future<bool> hasStoredValues();
 
   Future<int> meadowKey();

@@ -18,6 +18,8 @@ class AppSettings {
     required this.appearance,
     this.sidebarCollapsed = false,
     this.meadowPausesWhenInactive = true,
+    this.keepAllMediaOnDevice = false,
+    this.allowMobileDataForMedia = false,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -33,6 +35,8 @@ class AppSettings {
     appearance: Appearance.light,
     sidebarCollapsed: false,
     meadowPausesWhenInactive: true,
+    keepAllMediaOnDevice: false,
+    allowMobileDataForMedia: false,
   );
 
   final bool reminderEnabled;
@@ -47,6 +51,8 @@ class AppSettings {
   final Appearance appearance;
   final bool sidebarCollapsed;
   final bool meadowPausesWhenInactive;
+  final bool keepAllMediaOnDevice;
+  final bool allowMobileDataForMedia;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -61,6 +67,8 @@ class AppSettings {
     Appearance? appearance,
     bool? sidebarCollapsed,
     bool? meadowPausesWhenInactive,
+    bool? keepAllMediaOnDevice,
+    bool? allowMobileDataForMedia,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -78,6 +86,9 @@ class AppSettings {
       sidebarCollapsed: sidebarCollapsed ?? this.sidebarCollapsed,
       meadowPausesWhenInactive:
           meadowPausesWhenInactive ?? this.meadowPausesWhenInactive,
+      keepAllMediaOnDevice: keepAllMediaOnDevice ?? this.keepAllMediaOnDevice,
+      allowMobileDataForMedia:
+          allowMobileDataForMedia ?? this.allowMobileDataForMedia,
     );
   }
 
@@ -97,7 +108,9 @@ class AppSettings {
           onboardingStatus == other.onboardingStatus &&
           appearance == other.appearance &&
           sidebarCollapsed == other.sidebarCollapsed &&
-          meadowPausesWhenInactive == other.meadowPausesWhenInactive;
+          meadowPausesWhenInactive == other.meadowPausesWhenInactive &&
+          keepAllMediaOnDevice == other.keepAllMediaOnDevice &&
+          allowMobileDataForMedia == other.allowMobileDataForMedia;
 
   @override
   int get hashCode => Object.hash(
@@ -113,6 +126,8 @@ class AppSettings {
     appearance,
     sidebarCollapsed,
     meadowPausesWhenInactive,
+    keepAllMediaOnDevice,
+    allowMobileDataForMedia,
   );
 
   @override
@@ -125,5 +140,7 @@ class AppSettings {
       'reflectionPromptsEnabled: $reflectionPromptsEnabled, '
       'onboardingStatus: $onboardingStatus, appearance: $appearance, '
       'sidebarCollapsed: $sidebarCollapsed, '
-      'meadowPausesWhenInactive: $meadowPausesWhenInactive)';
+      'meadowPausesWhenInactive: $meadowPausesWhenInactive, '
+      'keepAllMediaOnDevice: $keepAllMediaOnDevice, '
+      'allowMobileDataForMedia: $allowMobileDataForMedia)';
 }

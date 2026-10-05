@@ -9,6 +9,7 @@ import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/data/media/content_hash.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/media/media_gc.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/media_kind.dart';
 
 import 'media_test_support.dart';
@@ -25,6 +26,7 @@ void main() {
     drafts = await Directory.systemTemp.createTemp('fn_drafts');
     store = FilesystemMediaStore(
       database: db,
+      recorder: ChangeRecorder(db),
       root: root,
       drafts: drafts,
       clock: () => 0,
@@ -197,7 +199,12 @@ void main() {
   });
 
   test('a store with no drafts root sweeps exactly as before', () async {
-    final bare = FilesystemMediaStore(database: db, root: root, clock: () => 0);
+    final bare = FilesystemMediaStore(
+      database: db,
+      recorder: ChangeRecorder(db),
+      root: root,
+      clock: () => 0,
+    );
     final orphan = await bare.putBytes(
         bytes: [15, 15, 15], mime: 'image/jpeg', kind: MediaKind.photo);
 

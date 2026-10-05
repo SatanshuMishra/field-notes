@@ -1,5 +1,6 @@
 import 'package:field_notes/data/database/app_database.dart' show AppDatabase;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/draft_store.dart';
@@ -33,7 +34,11 @@ void main() {
 
   setUp(() {
     db = newTestDatabase();
-    repository = DriftJournalRepository(db, clock: () => 1000);
+    repository = DriftJournalRepository(
+      db,
+      recorder: ChangeRecorder(db),
+      clock: () => 1000,
+    );
     drafts = FakeDraftStore();
     writer = JournalNoteWriter(journal: repository, drafts: drafts);
   });

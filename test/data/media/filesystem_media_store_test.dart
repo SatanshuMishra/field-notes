@@ -8,6 +8,7 @@ import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/data/media/content_hash.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/media/media_exceptions.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/media_blob.dart';
 import 'package:field_notes/domain/models/media_kind.dart';
 
@@ -21,7 +22,12 @@ void main() {
   setUp(() async {
     db = newTestDatabase();
     root = await newTempRoot();
-    store = FilesystemMediaStore(database: db, root: root, clock: () => 1234);
+    store = FilesystemMediaStore(
+      database: db,
+      recorder: ChangeRecorder(db),
+      root: root,
+      clock: () => 1234,
+    );
   });
 
   tearDown(() async {

@@ -7,6 +7,7 @@ import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/media/blob_paths.dart';
 import 'package:field_notes/data/media/content_hash.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/media_kind.dart';
 import 'package:field_notes/features/data/journal_export_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,7 +52,11 @@ void main() {
     root = await Directory.systemTemp.createTemp('fn_export');
     service = JournalExportService(
       database: db,
-      mediaStore: FilesystemMediaStore(database: db, root: root),
+      mediaStore: FilesystemMediaStore(
+        database: db,
+        recorder: ChangeRecorder(db),
+        root: root,
+      ),
       clock: () => 1751000000000,
     );
   });

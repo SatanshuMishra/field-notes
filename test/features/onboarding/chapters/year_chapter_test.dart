@@ -2,6 +2,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/database/app_database.dart' as db;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/settings/week_start.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
@@ -91,7 +92,10 @@ Future<db.AppDatabase> _pumpYear(
         for (final Override override in shellOverrides())
           if (override.origin != journalRepositoryProvider) override,
         journalRepositoryProvider.overrideWithValue(
-          DriftJournalRepository(database),
+          DriftJournalRepository(
+            database,
+            recorder: ChangeRecorder(database),
+          ),
         ),
         skyLocationProvider.overrideWith((Ref ref) async => _solarClock),
         onboardingControllerProvider.overrideWithBuild(

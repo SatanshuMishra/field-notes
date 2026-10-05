@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/journal/entry_photos_dao.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 
 import 'journal_test_db.dart';
 
@@ -30,7 +31,7 @@ void main() {
 
   setUp(() async {
     db = newTestDatabase();
-    dao = EntryPhotosDao(db);
+    dao = EntryPhotosDao(db, ChangeRecorder(db));
     await _seedDayAndEntry(db);
     await seedMediaBlob(db, 'blob-a');
     await seedMediaBlob(db, 'blob-b');
@@ -99,8 +100,8 @@ void main() {
     await sub.cancel();
   });
 
-  test('replacePhotos clears the existing rows and inserts the new set in '
-      'sort order', () async {
+  test('replacePhotos keeps the links still in use, moves them and inserts '
+      'links only for new photos', () async {
     await seedMediaBlob(db, 'blob-c');
     await dao.insertPhoto(
       id: 'old-1',
@@ -128,16 +129,47 @@ void main() {
       newId: () => 'new-${counter++}',
     );
 
-    expect(rows.map((r) => r.id).toList(), ['new-0', 'new-1']);
+    expect(rows.map((r) => r.id).toList(), ['new-0', 'old-1']);
     expect(rows.map((r) => r.sortOrder).toList(), [0, 1]);
-    expect(rows.map((r) => r.createdAt).toSet(), {42});
+    expect(rows.map((r) => r.createdAt).toList(), [42, 0]);
+    expect(rows.map((r) => r.updatedAt).toSet(), {42});
     final active = await dao.activePhotosForEntry('e1');
     expect(active.map((r) => r.mediaId).toList(), ['blob-c', 'blob-a']);
     final all = await db.select(db.entryPhotos).get();
-    expect(all.map((r) => r.id).toSet(), {'new-0', 'new-1'});
+    expect(all.map((r) => r.id).toSet(), {'old-1', 'old-2', 'new-0'});
+    expect(all.singleWhere((r) => r.id == 'old-2').deletedAt, 5);
   });
 
-  test('replacePhotos with no media ids empties the entry index', () async {
+  test(
+    'replacePhotos keeps one link per placement of a repeated photo',
+    () async {
+      var counter = 0;
+      String nextId() => 'new-${counter++}';
+      final first = await dao.replacePhotos(
+        entryId: 'e1',
+        mediaIds: ['blob-a', 'blob-b', 'blob-a'],
+        now: 1,
+        newId: nextId,
+      );
+
+      final second = await dao.replacePhotos(
+        entryId: 'e1',
+        mediaIds: ['blob-a', 'blob-a'],
+        now: 2,
+        newId: nextId,
+      );
+
+      expect(first.map((r) => r.id).toList(), ['new-0', 'new-1', 'new-2']);
+      expect(second.map((r) => r.id).toList(), ['new-0', 'new-2']);
+      expect(second.map((r) => r.sortOrder).toList(), [0, 1]);
+      expect((await dao.activePhotosForEntry('e1')).map((r) => r.id).toList(), [
+        'new-0',
+        'new-2',
+      ]);
+    },
+  );
+
+  test('replacePhotos with no media ids soft-deletes every link', () async {
     await dao.insertPhoto(
       id: 'old-1',
       entryId: 'e1',
@@ -155,6 +187,9 @@ void main() {
     );
 
     expect(rows, isEmpty);
-    expect(await db.select(db.entryPhotos).get(), isEmpty);
+    expect(await dao.activePhotosForEntry('e1'), isEmpty);
+    final stored = await db.select(db.entryPhotos).getSingle();
+    expect(stored.id, 'old-1');
+    expect(stored.deletedAt, 42);
   });
 }

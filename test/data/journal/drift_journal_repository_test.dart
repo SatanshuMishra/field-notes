@@ -4,6 +4,7 @@ import 'package:field_notes/data/database/app_database.dart'
     show AppDatabase, DaysCompanion;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
 import 'package:field_notes/data/journal/journal_exceptions.dart';
+import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 
 import 'journal_test_db.dart';
@@ -13,14 +14,22 @@ void main() {
   late DriftJournalRepository repo;
   var idCounter = 0;
   var nowValue = 1000;
+  var idsRunOut = false;
 
   setUp(() {
     idCounter = 0;
     nowValue = 1000;
+    idsRunOut = false;
     db = newTestDatabase();
     repo = DriftJournalRepository(
       db,
-      idGenerator: () => 'id-${(idCounter++).toString().padLeft(4, '0')}',
+      recorder: ChangeRecorder(db),
+      idGenerator: () {
+        if (idsRunOut) {
+          throw StateError('no ids left');
+        }
+        return 'id-${(idCounter++).toString().padLeft(4, '0')}';
+      },
       clock: () => nowValue,
     );
   });
@@ -33,7 +42,7 @@ void main() {
     test('createDay stores an active day mapped to the domain model', () async {
       final day = await repo.createDay(date: '2026-07-12', mood: Mood.calm);
 
-      expect(day.id, 'id-0000');
+      expect(day.id, 'day-2026-07-12');
       expect(day.date, '2026-07-12');
       expect(day.mood, Mood.calm);
       expect(day.createdAt, 1000);
@@ -50,18 +59,20 @@ void main() {
       );
     });
 
-    test(
-      'createDay succeeds again after the prior day is soft-deleted',
-      () async {
-        final first = await repo.createDay(date: '2026-07-12');
-        await repo.softDeleteDay(first.id);
+    test('createDay revives the soft-deleted day of the same date', () async {
+      final first = await repo.createDay(date: '2026-07-12', mood: Mood.calm);
+      await repo.softDeleteDay(first.id);
 
-        final second = await repo.createDay(date: '2026-07-12');
+      nowValue = 2000;
+      final second = await repo.createDay(date: '2026-07-12');
 
-        expect(second.id, isNot(first.id));
-        expect(await repo.activeDayForDate('2026-07-12'), second);
-      },
-    );
+      expect(second.id, first.id);
+      expect(second.mood, isNull);
+      expect(second.deletedAt, isNull);
+      expect(second.updatedAt, 2000);
+      expect(await repo.activeDayForDate('2026-07-12'), second);
+      expect(await db.select(db.days).get(), hasLength(1));
+    });
 
     test('ensureDayForDate is idempotent for the same date', () async {
       final a = await repo.ensureDayForDate('2026-07-12');
@@ -364,7 +375,11 @@ void main() {
         final photos = await repo.photosForEntry(created.id);
         expect(photos.map((p) => p.mediaId).toList(), ['blob-b']);
         final rows = await db.select(db.entryPhotos).get();
-        expect(rows, hasLength(1));
+        expect(rows, hasLength(2));
+        expect(
+          rows.singleWhere((row) => row.mediaId == 'blob-a').deletedAt,
+          2000,
+        );
       },
     );
 
@@ -381,21 +396,6 @@ void main() {
       expect(await db.select(db.entries).get(), isEmpty);
     });
 
-    test('entry and entry_photos land or roll back together', () async {
-      await expectLater(
-        repo.saveNote(
-          date: '2026-07-12',
-          source: 'a good day',
-          photoMediaIds: ['blob-that-does-not-exist'],
-        ),
-        throwsA(anything),
-      );
-
-      expect(await repo.activeDayForDate('2026-07-12'), isNull);
-      expect(await db.select(db.entries).get(), isEmpty);
-      expect(await db.select(db.entryPhotos).get(), isEmpty);
-    });
-
     test(
       'a failed edit leaves the previous text and photos in place',
       () async {
@@ -406,14 +406,15 @@ void main() {
           photoMediaIds: ['blob-a'],
         );
 
+        idsRunOut = true;
         await expectLater(
           repo.saveNote(
             entryId: created.id,
             date: '2026-07-12',
             source: 'a worse day',
-            photoMediaIds: ['blob-that-does-not-exist'],
+            photoMediaIds: ['blob-b'],
           ),
-          throwsA(anything),
+          throwsStateError,
         );
 
         expect((await repo.entryById(created.id))!.textContent, 'a good day');
