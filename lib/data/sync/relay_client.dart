@@ -616,9 +616,21 @@ final class RelayClient {
     final Duration limit = requestTimeoutFor(timeout, request.bodyBytes.length);
     final http.Response response;
     try {
+      final http.StreamedResponse streamed = await _client
+          .send(request)
+          .timeout(limit);
       response = await http.Response.fromStream(
-        await _client.send(request).timeout(limit),
-      ).timeout(limit);
+        http.StreamedResponse(
+          streamed.stream.timeout(timeout),
+          streamed.statusCode,
+          contentLength: streamed.contentLength,
+          request: streamed.request,
+          headers: streamed.headers,
+          isRedirect: streamed.isRedirect,
+          persistentConnection: streamed.persistentConnection,
+          reasonPhrase: streamed.reasonPhrase,
+        ),
+      );
     } on TimeoutException catch (error) {
       throw RelayUnreachable(error);
     } on SocketException catch (error) {
