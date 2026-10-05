@@ -21,6 +21,7 @@ const int backgroundTaskRetries = 10;
 const int maxUserInitiatedJobs = 100;
 const int userInitiatedPriority = 0;
 const int ordinaryPriority = 5;
+const int maxUploadsAtOncePerRelay = 2;
 const String mediaNotificationTitle = 'Uploading to your journal';
 const String mediaNotificationBody = '{progress}';
 const String mediaNotificationBodyWaitingForWiFi =
@@ -150,6 +151,7 @@ final class PackageBackgroundUploader implements BackgroundUploader {
     await _downloader.configure(
       androidConfig: <(String, Object)>[
         (Config.runInForeground, Config.always),
+        (Config.holdingQueue, (null, maxUploadsAtOncePerRelay, null)),
       ],
     );
     await _downloader.start();
@@ -188,8 +190,18 @@ final class BackgroundUploads implements UploadSender {
   final Directory _pushRoot;
   final Future<bool> Function() _allowMobileData;
   final Random _random;
+  bool _paused = false;
 
   bool get _visible => _isVisible();
+
+  Future<void> pause() async {
+    _paused = true;
+    await cancelAll();
+  }
+
+  void resume() {
+    _paused = false;
+  }
 
   @override
   Future<void> sendParts(
@@ -213,6 +225,9 @@ final class BackgroundUploads implements UploadSender {
         .length;
     final bool allowMobileData = await _allowMobileData();
     for (final int index in indexes) {
+      if (_paused) {
+        return;
+      }
       if (held.contains(partTaskId(upload.uploadId, index))) {
         continue;
       }
@@ -243,7 +258,10 @@ final class BackgroundUploads implements UploadSender {
     }
   }
 
-  Future<int> handOverPushes(PushCycle push) async {
+  Future<int> handOverPushes(
+    PushCycle push, {
+    Set<int> excluding = const <int>{},
+  }) async {
     final _Credentials? credentials = await _credentials();
     if (credentials == null) {
       return 0;
@@ -253,6 +271,7 @@ final class BackgroundUploads implements UploadSender {
         if (isPushTask(task)) ...?PushTaskInfo.of(task)?.changeIds,
     };
     final Set<int> skipped = <int>{
+      ...excluding,
       for (final SyncOutboxData row in await _db.select(_db.syncOutbox).get())
         if (row.changeId != null && heldChangeIds.contains(row.changeId))
           row.id,
@@ -261,13 +280,17 @@ final class BackgroundUploads implements UploadSender {
     await _pushRoot.create(recursive: true);
     while (true) {
       final PushBatch? batch = await push.buildBatch(excluding: skipped);
-      if (batch == null) {
+      if (batch == null || _paused) {
         return handed;
       }
       skipped.addAll(batch.outboxIds);
       final String id = newSyncId(_random);
       final File file = File(p.join(_pushRoot.path, '$id.json'));
       await file.writeAsString(jsonEncode(batch.request.toJson()), flush: true);
+      if (_paused) {
+        await file.delete();
+        return handed;
+      }
       if (await _uploader.enqueue(
         _pushTask(id, file, batch.request, credentials: credentials),
       )) {

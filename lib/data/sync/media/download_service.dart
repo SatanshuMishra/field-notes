@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:io';
 import 'dart:math';
 
@@ -19,6 +20,7 @@ import 'package:field_notes/domain/models/media_blob.dart' as domain;
 import 'package:path/path.dart' as p;
 
 const String downloadWorkSubdir = 'sync_downloads';
+const int maxDownloadsAtOnce = 4;
 
 int _systemMillis() => DateTime.now().millisecondsSinceEpoch;
 
@@ -75,6 +77,8 @@ final class DownloadService {
   final int Function() _clock;
   final Random _random;
   final Map<String, Future<bool>> _running = <String, Future<bool>>{};
+  final Queue<Completer<void>> _waiting = Queue<Completer<void>>();
+  int _active = 0;
   final StreamController<MediaDownloadProgress> _progress =
       StreamController<MediaDownloadProgress>.broadcast();
 
@@ -146,11 +150,35 @@ final class DownloadService {
     if (running != null) {
       return running;
     }
-    final Future<bool> started = _download(client, blobId).whenComplete(() {
-      _running.remove(blobId);
-    });
+    final Future<bool> started = _inTurn(() => _download(client, blobId))
+        .whenComplete(() {
+          _running.remove(blobId);
+        });
     _running[blobId] = started;
     return started;
+  }
+
+  Future<bool> _inTurn(Future<bool> Function() work) async {
+    if (_active < maxDownloadsAtOnce) {
+      _active += 1;
+    } else {
+      final Completer<void> turn = Completer<void>();
+      _waiting.add(turn);
+      await turn.future;
+    }
+    try {
+      return await work();
+    } finally {
+      _passTurn();
+    }
+  }
+
+  void _passTurn() {
+    if (_waiting.isEmpty) {
+      _active -= 1;
+      return;
+    }
+    _waiting.removeFirst().complete();
   }
 
   Future<bool> _download(RelayClient client, String blobId) async {
