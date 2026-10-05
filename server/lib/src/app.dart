@@ -457,15 +457,22 @@ final class RelayApp {
     );
   }
 
-  Future<Response> _uploadStatus(Request request) async => jsonResponse(
-    await blobs.status(
-      callerOf(request).accountId,
-      _param(request, SyncRoutes.nameParameter),
-      _param(request, SyncRoutes.uploadIdParameter),
-    ),
-  );
+  Future<Response> _uploadStatus(Request request) {
+    final Caller caller = callerOf(request);
+    final String name = _param(request, SyncRoutes.nameParameter);
+    return _announcingAssembly(
+      caller,
+      name,
+      () => blobs.status(
+        caller.accountId,
+        name,
+        _param(request, SyncRoutes.uploadIdParameter),
+      ),
+    );
+  }
 
-  Future<Response> _uploadPart(Request request) async {
+  Future<Response> _uploadPart(Request request) {
+    final Caller caller = callerOf(request);
     final PartUpload part = PartUpload.parse(
       name: _param(request, SyncRoutes.nameParameter),
       uploadId: _param(request, SyncRoutes.uploadIdParameter),
@@ -473,14 +480,33 @@ final class RelayApp {
       blobSize: request.headers[SyncHeaders.blobSize],
       partSize: request.headers[SyncHeaders.partSize],
     );
-    return jsonResponse(
-      await blobs.putPart(
-        callerOf(request).accountId,
+    return _announcingAssembly(
+      caller,
+      part.name,
+      () => blobs.putPart(
+        caller.accountId,
         part,
         bodyOf(request),
         contentLength: request.contentLength,
       ),
     );
+  }
+
+  Future<Response> _announcingAssembly(
+    Caller caller,
+    String name,
+    Future<UploadStatusResponse> Function() answer,
+  ) async {
+    final bool heldBefore = blobs.holds(caller.accountId, name);
+    final UploadStatusResponse status = await answer();
+    if (status.assembled && !heldBefore) {
+      live.nudge(
+        caller.accountId,
+        caller.deviceId,
+        changeLog.latestSeq(caller.accountId),
+      );
+    }
+    return jsonResponse(status);
   }
 
   Future<Response> _reportUnused(Request request) async {
