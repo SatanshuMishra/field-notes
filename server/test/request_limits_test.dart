@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 import 'package:relay_server/relay_server.dart';
 import 'package:relay_server/src/accounts.dart';
 import 'package:relay_server/src/body_slots.dart';
+import 'package:relay_server/src/in_flight.dart';
 import 'package:relay_server/src/request_body.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 import 'package:test/test.dart';
@@ -50,6 +53,8 @@ Future<bool> eventually(bool Function() condition) async {
 }
 
 typedef RawRequest = ({Socket socket, Future<String> answer});
+
+typedef DueTimer = ({ManualTimer timer, DateTime due});
 
 void main() {
   late ManualTimers timers;
@@ -775,9 +780,11 @@ void main() {
     SyncRoute route,
     List<int> body,
     int sent, {
+    Map<String, Object> parameters = const <String, Object>{},
     Map<String, String> headers = const <String, String>{},
+    bool keepAlive = false,
   }) async {
-    final Uri target = relay.uri(route);
+    final Uri target = relay.uri(route, parameters: parameters);
     final Socket socket = await Socket.connect(target.host, target.port);
     final List<int> answer = <int>[];
     final Completer<String> answered = Completer<String>();
@@ -799,7 +806,7 @@ void main() {
         latin1.encode(
           '${route.method} ${target.path} HTTP/1.1\r\n'
           'Host: ${target.host}:${target.port}\r\n'
-          'Connection: close\r\n'
+          '${keepAlive ? '' : 'Connection: close\r\n'}'
           'Content-Length: ${body.length}\r\n'
           'content-type: application/json\r\n'
           '${SyncHeaders.protocol}: $syncProtocolVersion\r\n'
@@ -888,10 +895,17 @@ void main() {
     addTearDown(tight.dispose);
     final TestAccount account = await tight.enrol();
     final SignedIn macIn = await tight.signIn(account.firstDevice);
+    final SignedIn phoneIn = await tight.signIn(tight.addDevice(account));
+    final SignedIn tabletIn = await tight.signIn(tight.addDevice(account));
     List<int> body(String recordKey) => padded(
       PushRequest(changes: <RecordPush>[tight.record(recordKey)]),
       largeBody,
     );
+    SignedIn senderOf(int waiter) => waiter < maxPushesInFlight
+        ? macIn
+        : waiter < 2 * maxPushesInFlight
+        ? phoneIn
+        : tabletIn;
     final List<int> first = body('holder');
     final (
       :http.StreamedRequest request,
@@ -905,13 +919,13 @@ void main() {
     await until(() => tight.app.largeBodies.active == 1);
     final List<Future<http.Response>> waiting = <Future<http.Response>>[];
     for (int waiter = 1; waiter <= waitersPerAccount; waiter++) {
-      waiting.add(pushBody(tight, macIn, body('waiter-$waiter')));
+      waiting.add(pushBody(tight, senderOf(waiter), body('waiter-$waiter')));
       await until(() => tight.app.largeBodies.waiting == waiter);
     }
 
     final http.Response refused = await pushBody(
       tight,
-      macIn,
+      tabletIn,
       body('ninth'),
     ).timeout(answerLimit);
 
@@ -1158,10 +1172,187 @@ void main() {
     timers.pending(readLimit).single.fire();
 
     final String aborted = await answer.timeout(answerLimit);
-    expect(aborted, startsWith('HTTP/1.1 400'));
-    expect(aborted, contains(SyncErrorCode.badRequest.wireName));
+    expect(aborted, startsWith('HTTP/1.1 401'));
+    expect(aborted, contains(SyncErrorCode.unauthorized.wireName));
     expect(aborted.toLowerCase(), contains('connection: close'));
     expect(count('SELECT count(*) FROM records'), 0);
+  }, timeout: pollingTimeout);
+
+  test('a duplicate part sent at the rate floor keeps its answer', () async {
+    const int partBytes = 8 * 1024 * 1024;
+    const int stepBytes = paceFloor + 1024;
+    const Duration step = Duration(seconds: 29);
+    final List<DueTimer> scheduled = <DueTimer>[];
+    RelayHarness? started;
+    DateTime now() => started?.now ?? harnessStart;
+    Timer startTimer(Duration duration, void Function() callback) {
+      final ManualTimer timer = ManualTimer(duration, callback);
+      scheduled.add((timer: timer, due: now().add(duration)));
+      return timer;
+    }
+
+    final RelayHarness relay = await RelayHarness.start(startTimer: startTimer);
+    started = relay;
+    addTearDown(relay.dispose);
+    void fireDue() {
+      for (final DueTimer entry in scheduled.toList()) {
+        if (!entry.due.isAfter(relay.now)) {
+          entry.timer.fire();
+        }
+      }
+    }
+
+    bool paced(DateTime target) {
+      final List<DueTimer> active = <DueTimer>[
+        for (final DueTimer entry in scheduled)
+          if (entry.timer.isActive) entry,
+      ];
+      return active.isNotEmpty &&
+          active.every((DueTimer entry) => !entry.due.isBefore(target));
+    }
+
+    final TestAccount account = await relay.enrol();
+    final SignedIn mac = await relay.signIn(account.firstDevice);
+    final String name = relay.blobName();
+    final String uploadId = newSyncId();
+    final Uint8List part = relay.randomOpaque(partBytes);
+    final Map<String, Object> parameters = <String, Object>{
+      SyncRoutes.nameParameter: name,
+      SyncRoutes.uploadIdParameter: uploadId,
+      SyncRoutes.indexParameter: 0,
+    };
+    final Map<String, String> partHeaders = <String, String>{
+      SyncHeaders.authorization: mac.session.authorization,
+      SyncHeaders.blobSize: '${partBytes + 1024}',
+      SyncHeaders.partSize: '$partBytes',
+    };
+    expect(
+      (await relay.putPart(
+        mac.session,
+        name: name,
+        uploadId: uploadId,
+        index: 0,
+        blobSize: partBytes + 1024,
+        partSize: partBytes,
+        bytes: part,
+      )).statusCode,
+      HttpStatus.ok,
+    );
+
+    final (:Socket socket, :Future<String> answer) = await openRaw(
+      relay,
+      SyncRoutes.uploadPart,
+      part,
+      0,
+      parameters: parameters,
+      headers: partHeaders,
+    );
+    addTearDown(socket.destroy);
+    bool answered = false;
+    unawaited(answer.then((String _) => answered = true));
+    int sent = 0;
+    while (sent < part.length && !answered) {
+      final int end = min(sent + stepBytes, part.length);
+      socket.add(part.sublist(sent, end));
+      await socket.flush();
+      sent = end;
+      final DateTime target = relay.now.add(paceWindow);
+      await eventually(() => answered || paced(target));
+      if (sent < part.length) {
+        relay.advance(step);
+        fireDue();
+      }
+    }
+
+    final String reply = await answer.timeout(answerLimit);
+    expect(reply, startsWith('HTTP/1.1 200'));
+    final UploadStatusResponse status = UploadStatusResponse.fromJson(
+      decodeJsonObject(reply.substring(reply.indexOf('\r\n\r\n') + 4)),
+    );
+    expect(status.receivedParts, <int>[0]);
+    expect(status.assembled, isFalse);
+    expect(sent, part.length);
+  }, timeout: pollingTimeout);
+
+  test('a refused body cut off mid-drain keeps its refusal', () async {
+    final TestAccount account = await harness.enrol();
+    final SignedIn mac = await harness.signIn(account.firstDevice);
+    harness.advance(const Duration(hours: 24));
+    final List<int> body = padded(
+      PushRequest(changes: <RecordPush>[harness.record('refused')]),
+      1000,
+    );
+    final (:Socket socket, :Future<String> answer) = await openRaw(
+      harness,
+      SyncRoutes.pushRecords,
+      body,
+      10,
+      headers: <String, String>{
+        SyncHeaders.authorization: mac.session.authorization,
+      },
+      keepAlive: true,
+    );
+    addTearDown(socket.destroy);
+    expect(
+      await eventually(() => timers.pending(paceWindow).length == 1),
+      isTrue,
+    );
+
+    timers.pending(paceWindow).single.fire();
+
+    final String refused = await answer.timeout(answerLimit);
+    expect(refused, startsWith('HTTP/1.1 401'));
+    expect(refused, contains(SyncErrorCode.unauthorized.wireName));
+    expect(refused.toLowerCase(), contains('connection: close'));
+    expect(count('SELECT count(*) FROM records'), 0);
+    final List<ManualTimer> dropping = timers.pending(closeLimit);
+    expect(dropping, hasLength(1));
+    dropping.single.fire();
+  }, timeout: pollingTimeout);
+
+  test('refused bodies being drained count toward the address cap', () async {
+    final List<int> body = padded(
+      PushRequest(changes: <RecordPush>[harness.record('refused')]),
+      1000,
+    );
+    final Map<String, String> junk = <String, String>{
+      SyncHeaders.authorization: const AuthCredential(
+        AuthScheme.session,
+        'junk',
+      ).authorization,
+    };
+    for (int index = 0; index < inFlightLimit; index++) {
+      final (:Socket socket, answer: _) = await openRaw(
+        harness,
+        SyncRoutes.pushRecords,
+        body,
+        10,
+        headers: junk,
+      );
+      addTearDown(socket.destroy);
+    }
+    expect(
+      await eventually(
+        () => harness.app.addressesInFlight.count('127.0.0.1') == inFlightLimit,
+      ),
+      isTrue,
+    );
+    expect(timers.pending(paceWindow), hasLength(inFlightLimit));
+
+    final (:Socket socket, :Future<String> answer) = await openRaw(
+      harness,
+      SyncRoutes.pushRecords,
+      body,
+      0,
+      headers: junk,
+    );
+    addTearDown(socket.destroy);
+
+    final String refused = await answer.timeout(answerLimit);
+    expect(refused, startsWith('HTTP/1.1 401'));
+    expect(refused.toLowerCase(), contains('connection: close'));
+    expect(timers.pending(paceWindow), hasLength(inFlightLimit));
+    expect(harness.app.addressesInFlight.count('127.0.0.1'), inFlightLimit);
   }, timeout: pollingTimeout);
 
   test('requests in flight per device are capped', () async {

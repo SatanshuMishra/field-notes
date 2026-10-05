@@ -218,6 +218,8 @@ String clientAddressOf(Request request) {
       : '';
 }
 
+String addressKeyOf(Request request) => rateKeyOf(clientAddressOf(request));
+
 final class RateLimits {
   const RateLimits({
     required this.address,
@@ -294,12 +296,11 @@ Middleware rateLimit(
         );
       }
       final String client = clientAddressOf(request);
-      final String inFlightKey = rateKeyOf(client);
-      if (!addressesInFlight.enter(inFlightKey)) {
-        bodyOf(request).abandon();
-        return _tooManyRequests(1);
-      }
-      try {
+      return holding(request, (RequestHold hold) {
+        if (!hold.enter(addressesInFlight, rateKeyOf(client))) {
+          bodyOf(request).abandon();
+          return _tooManyRequests(1);
+        }
         final int? wait = limits.take(
           client,
           relayWideRoute: relayWideRoutes.contains(route),
@@ -307,8 +308,6 @@ Middleware rateLimit(
         if (wait != null) {
           return _tooManyRequests(wait);
         }
-        return await inner(request);
-      } finally {
-        addressesInFlight.leave(inFlightKey);
-      }
+        return inner(request);
+      });
     };

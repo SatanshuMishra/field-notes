@@ -26,6 +26,7 @@ import 'pairing.dart';
 import 'probes.dart';
 import 'rate_limit.dart';
 import 'request_body.dart';
+import 'response_output.dart';
 import 'timers.dart';
 import 'trash.dart';
 
@@ -59,6 +60,7 @@ final class RelayApp {
     required this.rateLimits,
     required this.largeBodies,
     required this.space,
+    required this.responses,
     required this._logSink,
     required this._startTimer,
   }) : _lastPurge = clock();
@@ -69,11 +71,12 @@ final class RelayApp {
     DateTime Function()? clock,
     LogSink logSink = stdoutLogSink,
     AssemblyHook? beforeAssembly,
-    FreeSpaceProbe freeSpace = dfFreeBytes,
+    FreeSpaceProbe? freeSpace,
     Rename rename = renameOnDisk,
     Duration largeBodyWait = largeBodyWaitLimit,
     StartTimer startTimer = Timer.new,
     SendOutput liveOutput = sendOutput,
+    ResponseOutput responseOutput = passResponse,
   }) async {
     final DateTime Function() now = clock ?? systemClock;
     migrate(
@@ -92,14 +95,24 @@ final class RelayApp {
     if (leftovers.worthLogging) {
       logSink(eventLine(now(), leftoversEvent, leftovers.fields));
     }
+    final FreeSpaceProbe probe =
+        freeSpace ??
+        (String directory) => dfFreeBytes(directory, startTimer: startTimer);
     final FreeSpace space = FreeSpace(
       probe: () async {
-        final int? media = await freeSpace(config.mediaDirectory);
-        final int? data = await freeSpace(p.dirname(config.databasePath));
+        final List<int?> readings = await Future.wait(<Future<int?>>[
+          probe(config.mediaDirectory),
+          probe(p.dirname(config.databasePath)),
+        ]);
+        final int? media = readings.first;
+        final int? data = readings.last;
         return media == null || data == null ? null : min(media, data);
       },
       clock: now,
       minFreeBytes: config.minFreeBytes,
+      onFailedReading: () => logSink(
+        eventLine(now(), freeSpaceFailedEvent, const <String, Object>{}),
+      ),
     );
     final BlobStore blobs = BlobStore(
       database: database,
@@ -145,6 +158,7 @@ final class RelayApp {
         startTimer: startTimer,
       ),
       space: space,
+      responses: ResponseOutputs(now, output: responseOutput),
       logSink: logSink,
       startTimer: startTimer,
     );
@@ -166,8 +180,15 @@ final class RelayApp {
   final RateLimits rateLimits;
   final LargeBodySlots largeBodies;
   final FreeSpace space;
+  final ResponseOutputs responses;
   final RequestsInFlight devicesInFlight = RequestsInFlight();
   final RequestsInFlight addressesInFlight = RequestsInFlight();
+  final RequestsInFlight pullsInFlight = RequestsInFlight(
+    limit: maxPullsInFlight,
+  );
+  final RequestsInFlight pushesInFlight = RequestsInFlight(
+    limit: maxPushesInFlight,
+  );
   final LogSink _logSink;
   final StartTimer _startTimer;
   final Set<Future<void>> _deletions = <Future<void>>{};
@@ -180,11 +201,20 @@ final class RelayApp {
 
   late final Handler handler = const Pipeline()
       .addMiddleware(requestLogger(_logSink, clock))
-      .addMiddleware(bodyGuard(startTimer: _startTimer, clock: clock))
+      .addMiddleware(responseGuard(responses))
+      .addMiddleware(
+        bodyGuard(
+          startTimer: _startTimer,
+          clock: clock,
+          addresses: addressesInFlight,
+          addressOf: addressKeyOf,
+        ),
+      )
       .addHandler(_router().call);
 
   Future<void> tick() async {
     live.sweep();
+    responses.sweep();
     rateLimits.sweep();
     if (!clock().isBefore(_lastPurge.add(purgeInterval))) {
       await purge();
@@ -348,8 +378,13 @@ final class RelayApp {
     ),
   );
 
-  Future<Response> _push(Request request) async {
+  Future<Response> _push(Request request) => holding(request, (
+    RequestHold hold,
+  ) async {
     final Caller caller = callerOf(request);
+    if (!hold.enter(pushesInFlight, caller.deviceId)) {
+      throw tryAgainShortly;
+    }
     final PushRequest push = PushRequest.fromJson(
       await readJson(request, maxBytes: pushJsonLimit, slots: largeBodies),
     );
@@ -358,7 +393,7 @@ final class RelayApp {
     }
     changeLog.validate(push);
     final int writing = pushWriteBytes(push);
-    if (!await space.reserve(writing)) {
+    if (!await space.reservePush(writing)) {
       throw const RelayException(SyncErrorCode.storageFull);
     }
     final PushOutcome outcome;
@@ -374,14 +409,21 @@ final class RelayApp {
       live.nudge(caller.accountId, caller.deviceId, acceptedSeq);
     }
     return jsonResponse(outcome.response);
-  }
+  });
 
-  Response _pull(Request request) => jsonResponse(
-    changeLog.pull(
-      callerOf(request).accountId,
-      PullQuery.parse(request.url.queryParameters),
-    ),
-  );
+  Future<Response> _pull(Request request) =>
+      holding(request, (RequestHold hold) {
+        final Caller caller = callerOf(request);
+        if (!hold.enter(pullsInFlight, caller.deviceId)) {
+          throw tryAgainShortly;
+        }
+        return jsonResponse(
+          changeLog.pull(
+            caller.accountId,
+            PullQuery.parse(request.url.queryParameters),
+          ),
+        );
+      });
 
   FutureOr<Response> _live(Request request) =>
       live.handler(grantOf(request))(request);

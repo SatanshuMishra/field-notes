@@ -147,7 +147,7 @@ const RelayException _bodyTooLarge = RelayException(
   'Body too large',
 );
 
-const RelayException _tryAgainShortly = RelayException(
+const RelayException tryAgainShortly = RelayException(
   SyncErrorCode.tooManyRequests,
   '',
   1,
@@ -157,11 +157,13 @@ Future<Uint8List> readBody(
   Request request, {
   required int maxBytes,
   BodyPace pace = BodyPace.whole,
+  int? stopAfter,
 }) async {
   final int? declared = request.contentLength;
   if (declared != null && declared > maxBytes) {
     throw _bodyTooLarge;
   }
+  final int readLimit = stopAfter ?? 2 * maxBytes;
   final BytesBuilder builder = BytesBuilder(copy: false);
   int received = 0;
   try {
@@ -172,7 +174,7 @@ Future<Uint8List> readBody(
         continue;
       }
       builder.clear();
-      if (received > 2 * maxBytes) {
+      if (received > readLimit) {
         break;
       }
     }
@@ -204,11 +206,16 @@ Future<Uint8List> _readLargeBody(
   final String accountId =
       (request.context[callerContextKey] as Caller?)?.accountId ?? '';
   if (!await slots.acquire(accountId)) {
-    await bodyOf(request).drain(maxBytes: 2 * maxBytes);
-    throw _tryAgainShortly;
+    await bodyOf(request).drain();
+    throw tryAgainShortly;
   }
   try {
-    return await readBody(request, maxBytes: maxBytes, pace: BodyPace.steady);
+    return await readBody(
+      request,
+      maxBytes: maxBytes,
+      pace: BodyPace.steady,
+      stopAfter: maxBytes,
+    );
   } finally {
     slots.release(accountId);
   }
@@ -681,34 +688,32 @@ Middleware authorization(
         if (caller != null) LogContext.account: caller.accountId,
         if (caller != null) LogContext.device: caller.deviceId,
       };
-      if (caller != null && !devicesInFlight.enter(caller.deviceId)) {
-        bodyOf(request).abandon();
-        return knownErrorResponse(_tryAgainShortly)!
-            .change(context: attribution);
-      }
-      try {
-        final Response response = await inner(
-          grant == null
-              ? request
-              : request.change(
-                  context: <String, Object>{
-                    callerContextKey: grant.caller,
-                    grantContextKey: grant,
-                  },
-                ),
-        );
-        return response.change(context: attribution);
-      } on HijackException {
-        throw AttributedHijack(attribution);
-      } catch (error) {
-        final Response? response = knownErrorResponse(error);
-        if (response == null) {
-          rethrow;
+      return holding(request, (RequestHold hold) async {
+        if (caller != null && !hold.enter(devicesInFlight, caller.deviceId)) {
+          bodyOf(request).abandon();
+          return knownErrorResponse(tryAgainShortly)!
+              .change(context: attribution);
         }
-        return response.change(context: attribution);
-      } finally {
-        if (caller != null) {
-          devicesInFlight.leave(caller.deviceId);
+        try {
+          final Response response = await inner(
+            grant == null
+                ? request
+                : request.change(
+                    context: <String, Object>{
+                      callerContextKey: grant.caller,
+                      grantContextKey: grant,
+                    },
+                  ),
+          );
+          return response.change(context: attribution);
+        } on HijackException {
+          throw AttributedHijack(attribution);
+        } catch (error) {
+          final Response? response = knownErrorResponse(error);
+          if (response == null) {
+            rethrow;
+          }
+          return response.change(context: attribution);
         }
-      }
+      });
     };

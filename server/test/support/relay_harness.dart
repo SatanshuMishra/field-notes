@@ -11,6 +11,7 @@ import 'package:relay_server/src/blobs.dart';
 import 'package:relay_server/src/body_slots.dart';
 import 'package:relay_server/src/database.dart';
 import 'package:relay_server/src/live_guard.dart';
+import 'package:relay_server/src/response_output.dart';
 import 'package:relay_server/src/timers.dart';
 import 'package:sodium/sodium.dart';
 import 'package:sync_protocol/sync_protocol.dart';
@@ -183,6 +184,7 @@ final class RelayHarness {
     required this.largeBodyWait,
     required this.startTimer,
     required this.liveOutput,
+    required this.responseOutput,
     required this._now,
   });
 
@@ -196,6 +198,7 @@ final class RelayHarness {
     Duration largeBodyWait = largeBodyWaitLimit,
     StartTimer startTimer = Timer.new,
     SendOutput liveOutput = sendOutput,
+    ResponseOutput responseOutput = passResponse,
   }) async {
     final Directory root = await Directory.systemTemp.createTemp(
       'relay_harness_',
@@ -217,6 +220,7 @@ final class RelayHarness {
       largeBodyWait: largeBodyWait,
       startTimer: startTimer,
       liveOutput: liveOutput,
+      responseOutput: responseOutput,
       now: harnessStart,
     );
     await harness.boot();
@@ -232,12 +236,13 @@ final class RelayHarness {
   final Duration largeBodyWait;
   final StartTimer startTimer;
   final SendOutput liveOutput;
+  final ResponseOutput responseOutput;
   final List<String> logLines = <String>[];
   final StreamController<String> _logged = StreamController<String>.broadcast(
     sync: true,
   );
   final http.Client client = http.Client();
-  int freeBytes = 1 << 40;
+  int? freeBytes = 1 << 40;
   DateTime _now;
   RelayServer? _server;
 
@@ -273,6 +278,7 @@ final class RelayHarness {
       largeBodyWait: largeBodyWait,
       startTimer: startTimer,
       liveOutput: liveOutput,
+      responseOutput: responseOutput,
     );
     _server = await RelayServer.serve(
       app,

@@ -6,13 +6,14 @@ import 'package:sync_protocol/sync_protocol.dart';
 
 import 'auth.dart';
 import 'database.dart';
+import 'in_flight.dart';
 import 'timers.dart';
 
 const Duration bodyReadLimit = Duration(seconds: 30);
 const Duration bodyPaceWindow = Duration(seconds: 30);
 const int bodyPaceFloorBytes = 256 * 1024;
 const Duration bodyAbortCloseLimit = Duration(seconds: 5);
-const int maxRefusedBodyBytes = 2 * maxPushBodyBytes;
+const int maxDrainBytes = maxPushBodyBytes + 1024 * 1024;
 const Duration _paceMergeSpan = Duration(seconds: 1);
 
 const String bodyContextKey = 'relay.body';
@@ -74,6 +75,7 @@ final class RequestBody {
   Timer? _deadline;
   DateTime? _deadlineAt;
   bool _started = false;
+  bool _draining = false;
   bool _finished = false;
   bool _aborted = false;
   bool _abandoned = false;
@@ -163,15 +165,16 @@ final class RequestBody {
     return out.stream;
   }
 
-  Future<void> drain({required int maxBytes}) async {
+  Future<void> drain() async {
     if (_started) {
       return;
     }
+    _draining = true;
     int seen = 0;
     try {
-      await for (final List<int> chunk in read(BodyPace.whole)) {
+      await for (final List<int> chunk in read(BodyPace.steady)) {
         seen += chunk.length;
-        if (seen > maxBytes) {
+        if (seen > maxDrainBytes) {
           return;
         }
       }
@@ -193,10 +196,15 @@ final class RequestBody {
 
   Future<Response> settle(
     Response response,
-    void Function()? dropConnection,
-  ) async {
+    void Function()? dropConnection, {
+    bool Function()? mayDrain,
+  }) async {
     if (!_started) {
-      await drain(maxBytes: maxRefusedBodyBytes);
+      if (mayDrain?.call() ?? true) {
+        await drain();
+      } else {
+        abandon();
+      }
     }
     if (!_aborted && !_abandoned) {
       return response;
@@ -204,7 +212,7 @@ final class RequestBody {
     if (dropConnection != null) {
       _startTimer(bodyAbortCloseLimit, dropConnection);
     }
-    final Response answer = _aborted
+    final Response answer = _aborted && !_draining
         ? errorResponse(
             bodyTooSlow.code,
             bodyTooSlow.message,
@@ -240,6 +248,8 @@ RequestBody bodyOf(Request request) =>
 Middleware bodyGuard({
   required StartTimer startTimer,
   required DateTime Function() clock,
+  RequestsInFlight? addresses,
+  String Function(Request request)? addressOf,
 }) =>
     (Handler inner) => (Request request) async {
       final RequestBody body = RequestBody(
@@ -247,6 +257,12 @@ Middleware bodyGuard({
         startTimer: startTimer,
         clock: clock,
       );
+      final RequestHold? hold = holdOf(request);
+      bool mayDrain() =>
+          hold == null ||
+          addresses == null ||
+          addressOf == null ||
+          hold.enter(addresses, addressOf(request));
       Response response;
       try {
         response = await inner(
@@ -260,5 +276,6 @@ Middleware bodyGuard({
       return body.settle(
         response,
         request.context[dropConnectionContextKey] as void Function()?,
+        mayDrain: mayDrain,
       );
     };

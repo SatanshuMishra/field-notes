@@ -164,9 +164,12 @@ The relay refuses what would let one account or one bad client exhaust the serve
 | `{` and `[` in any JSON request body, counted before it is decoded | 4,096 | 400 |
 | JSON request bodies over 64 KiB being read at once, counting every body on those routes that declares no length | 8 across the relay, 4 per account; others wait without being read, and a freed slot goes to the waiting body whose account holds the fewest slots | 429 with `Retry-After: 1` after 30 seconds of waiting |
 | Bodies of one account waiting for one of those slots | 8; a ninth is refused at once | 429 with `Retry-After: 1` |
-| Pace of a body that holds a slot, and of a file part | at least 256 KiB in every 30 seconds until it ends, so an 8 MiB push or part still arrives over a slow uplink; the slot then goes to the next body | 400, then the connection is closed within 5 seconds |
-| Time any other request body may take to arrive, and time the relay spends reading away the body of a request it refused | 30 seconds | 400, then the connection is closed within 5 seconds |
-| Requests in flight | 32 per signed-in device; 32 per address (an IPv6 address counted with its /64) on the routes without a session and the pairing mailbox routes | 429 with `Retry-After: 1`, then the connection is closed |
+| Pace of a body that holds a slot, and of a file part | at least 256 KiB in every 30 seconds until it ends, so an 8 MiB push or part still arrives over a slow uplink; the slot then goes to the next body, and a body that holds a slot stops being read one byte past its limit | 400, then the connection is closed within 5 seconds |
+| Time any other request body may take to arrive | 30 seconds | 400, then the connection is closed within 5 seconds |
+| Reading away the body of a request the relay refused, or of a part it already holds | at least 256 KiB in every 30 seconds, up to 9 MiB; past either, the relay stops reading | the answer the relay had already decided (such as 401, 404, 429, 507, or 200 with the upload's status for a part sent again), then the connection is closed within 5 seconds |
+| Requests in flight | 32 per signed-in device; 32 per address (an IPv6 address counted with its /64) on the routes without a session and the pairing mailbox routes, and for every body the relay reads away after refusing it; a request counts until its answer has been written or its connection has ended | 429 with `Retry-After: 1`, then the connection is closed; a refused body over the address's count is not read away, and its connection is closed after the answer |
+| Pulls in flight | 2 per device, counted until the page has been written | 429 with `Retry-After: 1` |
+| An answer the device stops reading | cut off once none of it has been written for 30 seconds, which also frees its count of requests in flight | connection dropped |
 | One page of a pull | 500 records, and it stops before its JSON reaches 8 MiB, always holding at least one record; the count of records left above it stays exact | none: the app asks for the next page |
 | Current records in a push answer | each refused record carries the relay's current copy only while the answer stays under 8 MiB; the rest come back refused without it | none: the app pulls them |
 | One file | 2 GiB, in at most 256 parts of at most 8 MiB | 400 |
@@ -185,7 +188,9 @@ The relay refuses what would let one account or one bad client exhaust the serve
 
 To keep more space free, add `RELAY_MIN_FREE_BYTES` (a byte count) to the service's `environment` in `server/compose.yaml`. The request limit per address comes from `RELAY_RATE_BURST` (requests at once, default 60) and `RELAY_RATE_PER_SECOND` (default 1.0), the limit per IPv6 /48 is always four times both, and the relay-wide one from `RELAY_RATE_GLOBAL_BURST` (default 600) and `RELAY_RATE_GLOBAL_PER_SECOND` (default 20), set the same way. `RELAY_LARGE_BODY_SLOTS` (default 8) and `RELAY_LARGE_BODY_SLOTS_PER_ACCOUNT` (default 4) set how many large request bodies are read at once.
 
-The relay reads free space with `df` on both the media folder and the database's folder, at most once every 5 seconds. If `df` fails for either, pushes and parts answer 507 until it works again.
+A part must keep the 256 KiB per 30 seconds pace by itself: parts sent side by side share the device's uplink, and the relay times each one separately. A device on a slow uplink should therefore send at most two parts at once.
+
+The relay reads free space with `df` on both the media folder and the database's folder, at most once every 5 seconds, and stops a `df` that has not answered within 5 seconds. If `df` fails or is stopped for either folder, parts answer 507 until it works again. A records push then uses the last reading that worked, if it is less than 10 minutes old, and otherwise goes ahead; SQLite still answers 507 on a drive that is truly full. Each failed reading logs one line, `{"ts": ..., "event": "free_space_failed"}`, with no path in it.
 
 When a file's last part arrives but the drive has no room for the whole file, the relay keeps every part and answers 507. The next upload status request for that file joins it once there is room again, as does sending any of its parts again; the app does both while it retries.
 

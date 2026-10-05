@@ -16,7 +16,6 @@ typedef Rename = void Function(String source, String target);
 
 const int maxBlobSize = 2 * 1024 * 1024 * 1024;
 const int maxPartSize = 8 * 1024 * 1024;
-const int maxDrainBytes = maxPartSize + 1024 * 1024;
 const int maxPartCount = 256;
 const int maxUnfinishedUploads = 32;
 const int maxStagedBytes = 4 * 1024 * 1024 * 1024;
@@ -220,11 +219,11 @@ final class BlobStore {
     int? contentLength,
   }) async {
     if (contentLength != null && contentLength != part.expectedLength) {
-      await body.drain(maxBytes: maxDrainBytes);
+      await body.drain();
       throw const RelayException(SyncErrorCode.badRequest, 'Wrong part size');
     }
     if (holds(accountId, part.name)) {
-      await body.drain(maxBytes: maxDrainBytes);
+      await body.drain();
       return UploadStatusResponse(
         receivedParts: const <int>[],
         assembled: true,
@@ -232,7 +231,7 @@ final class BlobStore {
     }
     final int length = part.expectedLength;
     if (!await _space.reserve(length)) {
-      await body.drain(maxBytes: maxDrainBytes);
+      await body.drain();
       throw const RelayException(SyncErrorCode.storageFull);
     }
     final _PartOutcome outcome;
@@ -263,24 +262,24 @@ final class BlobStore {
     try {
       upload = _open(accountId, part);
     } on RelayException {
-      await body.drain(maxBytes: maxDrainBytes);
+      await body.drain();
       rethrow;
     }
     if (upload.busy || _hasPart(upload.id, part.index)) {
-      await body.drain(maxBytes: maxDrainBytes);
+      await body.drain();
       return (upload: upload, stored: false, next: _Next.settle);
     }
     final int length = part.expectedLength;
     if (_stagedBytes(accountId) + (_inFlight[accountId] ?? 0) + length >
         maxStagedBytes) {
-      await body.drain(maxBytes: maxDrainBytes);
+      await body.drain();
       throw const RelayException(SyncErrorCode.storageFull);
     }
     _hold(accountId, length);
     try {
       final File received;
       try {
-        received = await _receive(part, body.read(BodyPace.steady));
+        received = await _receive(part, body);
       } on FileSystemException catch (error) {
         if (isStorageFull(error) || !(_upload(upload.id)?.busy ?? false)) {
           rethrow;
@@ -624,11 +623,12 @@ final class BlobStore {
     return null;
   }
 
-  Future<File> _receive(PartUpload part, Stream<List<int>> body) async {
+  Future<File> _receive(PartUpload part, RequestBody body) async {
     final Directory staging = Directory(
       stagingPath(mediaDirectory, part.uploadId),
     );
     await staging.create(recursive: true);
+    final Stream<List<int>> bytes = body.read(BodyPace.steady);
     final File temporary = File(
       p.join(staging.path, '.part-${part.index}-${newSecret()}'),
     );
@@ -636,7 +636,7 @@ final class BlobStore {
     final IOSink sink = temporary.openWrite();
     try {
       try {
-        await for (final List<int> chunk in body) {
+        await for (final List<int> chunk in bytes) {
           received += chunk.length;
           if (received > maxDrainBytes) {
             break;

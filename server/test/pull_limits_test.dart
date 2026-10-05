@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -13,6 +15,34 @@ const int storedStates = 6;
 const int freeFloor = 1024 * 1024 * 1024;
 const Duration probeLifetime = Duration(seconds: 5);
 const Timeout largeTimeout = Timeout(Duration(minutes: 2));
+const Duration answerLimit = Duration(seconds: 10);
+const Duration stallLimit = Duration(seconds: 30);
+
+Future<bool> eventually(bool Function() condition) async {
+  final Stopwatch watch = Stopwatch()..start();
+  while (!condition()) {
+    if (watch.elapsed > answerLimit) {
+      return false;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+  return true;
+}
+
+final class HeldResponses {
+  final List<StreamSubscription<List<int>>> held =
+      <StreamSubscription<List<int>>>[];
+  int toHold = 0;
+
+  Stream<List<int>> output(Stream<List<int>> body) {
+    if (toHold == 0) {
+      return body;
+    }
+    toHold--;
+    held.add(body.listen(null)..pause());
+    return Stream<List<int>>.fromFuture(Completer<List<int>>().future);
+  }
+}
 
 void main() {
   late RelayHarness harness;
@@ -178,4 +208,124 @@ void main() {
     },
     timeout: largeTimeout,
   );
+
+  Future<http.Response> sendPull(RelayHarness relay, SignedIn who) =>
+      relay.send(
+        SyncRoutes.pullRecords,
+        credential: who.session,
+        query: const <String, String>{SyncRoutes.afterQuery: '0'},
+      );
+
+  Future<({Socket socket, Future<void> closed})> openRawPull(
+    RelayHarness relay,
+    SignedIn who,
+  ) async {
+    final Uri target = relay.uri(
+      SyncRoutes.pullRecords,
+      query: const <String, String>{SyncRoutes.afterQuery: '0'},
+    );
+    final Socket socket = await Socket.connect(target.host, target.port);
+    final Completer<void> closed = Completer<void>();
+    void finish() {
+      if (!closed.isCompleted) {
+        closed.complete();
+      }
+    }
+
+    socket.done.ignore();
+    socket.listen(
+      (List<int> _) {},
+      onDone: finish,
+      onError: (Object _) => finish(),
+      cancelOnError: true,
+    );
+    socket.add(
+      latin1.encode(
+        '${SyncRoutes.pullRecords.method} ${target.path}?${target.query} '
+        'HTTP/1.1\r\n'
+        'Host: ${target.host}:${target.port}\r\n'
+        '${SyncHeaders.protocol}: $syncProtocolVersion\r\n'
+        '${SyncHeaders.authorization}: ${who.session.authorization}\r\n'
+        '\r\n',
+      ),
+    );
+    await socket.flush();
+    return (socket: socket, closed: closed.future);
+  }
+
+  test('unread pull pages are bounded per device', () async {
+    final HeldResponses responses = HeldResponses();
+    final RelayHarness relay = await RelayHarness.start(
+      startTimer: ManualTimers().start,
+      responseOutput: responses.output,
+    );
+    addTearDown(relay.dispose);
+    final TestAccount account = await relay.enrol();
+    final SignedIn mac = await relay.signIn(account.firstDevice);
+    final SignedIn phone = await relay.signIn(relay.addDevice(account));
+    await relay.push(mac.session, <RecordPush>[relay.record('note-1')]);
+    final String deviceId = account.firstDevice.deviceId;
+
+    responses.toHold = 2;
+    for (int index = 0; index < 2; index++) {
+      sendPull(relay, mac).ignore();
+    }
+    expect(await eventually(() => responses.held.length == 2), isTrue);
+    expect(relay.app.pullsInFlight.count(deviceId), 2);
+    expect(relay.app.devicesInFlight.count(deviceId), 2);
+
+    final http.Response refused = await sendPull(
+      relay,
+      mac,
+    ).timeout(answerLimit);
+
+    expect(refused.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(refused).code, SyncErrorCode.tooManyRequests);
+    expect(refused.headers['retry-after'], '1');
+    final PullResponse elsewhere = await relay
+        .pull(phone.session)
+        .timeout(answerLimit);
+    expect(
+      elsewhere.states.map((RecordState state) => state.recordKey),
+      <String>['note-1'],
+    );
+    expect(relay.app.pullsInFlight.count(deviceId), 2);
+  });
+
+  test('a response that makes no progress is cut off', () async {
+    final HeldResponses responses = HeldResponses();
+    final RelayHarness relay = await RelayHarness.start(
+      startTimer: ManualTimers().start,
+      responseOutput: responses.output,
+    );
+    addTearDown(relay.dispose);
+    final TestAccount account = await relay.enrol();
+    final SignedIn mac = await relay.signIn(account.firstDevice);
+    final String deviceId = account.firstDevice.deviceId;
+
+    responses.toHold = 1;
+    final (:Socket socket, :Future<void> closed) = await openRawPull(
+      relay,
+      mac,
+    );
+    addTearDown(socket.destroy);
+    bool cutOff = false;
+    unawaited(closed.then((void _) => cutOff = true));
+    expect(await eventually(() => responses.held.length == 1), isTrue);
+    expect(relay.app.devicesInFlight.count(deviceId), 1);
+    expect(relay.app.pullsInFlight.count(deviceId), 1);
+
+    relay.advance(stallLimit);
+    await relay.tick();
+    expect(relay.app.devicesInFlight.count(deviceId), 1);
+    expect(cutOff, isFalse);
+
+    relay.advance(const Duration(seconds: 1));
+    await relay.tick();
+
+    await closed.timeout(answerLimit);
+    expect(relay.app.devicesInFlight.count(deviceId), 0);
+    expect(relay.app.pullsInFlight.count(deviceId), 0);
+    expect(relay.app.responses.open, 0);
+  });
 }
