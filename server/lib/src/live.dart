@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:shelf/shelf.dart';
 import 'package:sync_protocol/sync_protocol.dart';
@@ -13,6 +14,7 @@ import 'timers.dart';
 
 const Duration liveIdleLimit = Duration(seconds: 90);
 const Duration liveCloseLimit = Duration(seconds: 5);
+const Duration liveNudgeInterval = Duration(seconds: 1);
 const int maxLiveSocketsPerDevice = 4;
 const int maxLiveFrameBytes = 4 * 1024;
 
@@ -78,6 +80,8 @@ final class LiveHub {
   final Map<int, _LiveSocket> _sockets = <int, _LiveSocket>{};
   final Map<int, ({Socket socket, Timer deadline})> _closing =
       <int, ({Socket socket, Timer deadline})>{};
+  final Map<int, DateTime> _lastNudged = <int, DateTime>{};
+  final Map<int, int> _heldNudges = <int, int>{};
   int _nextId = 0;
 
   int get openCount => _sockets.length;
@@ -88,12 +92,53 @@ final class LiveHub {
       (Request request) => _upgrade(grant, request);
 
   void nudge(String accountId, String exceptDeviceId, int latestSeq) {
-    final String message = jsonEncode(LiveNudge(latestSeq: latestSeq).toJson());
-    for (final _LiveSocket socket in _sockets.values.toList()) {
-      if (socket.accountId == accountId && socket.deviceId != exceptDeviceId) {
-        socket.send(message);
-      }
+    final List<int> ids = <int>[
+      for (final MapEntry<int, _LiveSocket> entry in _sockets.entries)
+        if (entry.value.accountId == accountId &&
+            entry.value.deviceId != exceptDeviceId)
+          entry.key,
+    ];
+    for (final int id in ids) {
+      _nudge(id, latestSeq);
     }
+  }
+
+  void _nudge(int id, int latestSeq) {
+    final int? held = _heldNudges[id];
+    if (held != null) {
+      _heldNudges[id] = max(held, latestSeq);
+      return;
+    }
+    final DateTime now = _clock();
+    final DateTime? last = _lastNudged[id];
+    final Duration wait = last == null
+        ? Duration.zero
+        : last.add(liveNudgeInterval).difference(now);
+    if (wait <= Duration.zero) {
+      _sendNudge(id, latestSeq, now);
+      return;
+    }
+    _heldNudges[id] = latestSeq;
+    _startTimer(wait, () {
+      final int? seq = _heldNudges.remove(id);
+      if (seq != null) {
+        _sendNudge(id, seq, _clock());
+      }
+    });
+  }
+
+  void _sendNudge(int id, int latestSeq, DateTime now) {
+    final _LiveSocket? socket = _sockets[id];
+    if (socket == null) {
+      return;
+    }
+    _lastNudged[id] = now;
+    socket.send(jsonEncode(LiveNudge(latestSeq: latestSeq).toJson()));
+  }
+
+  void _forget(int id) {
+    _lastNudged.remove(id);
+    _heldNudges.remove(id);
   }
 
   void sweep() {
@@ -123,6 +168,8 @@ final class LiveHub {
   Future<void> closeAll() async {
     final List<_LiveSocket> sockets = _sockets.values.toList();
     _sockets.clear();
+    _lastNudged.clear();
+    _heldNudges.clear();
     await Future.wait(<Future<void>>[
       for (final _LiveSocket socket in sockets)
         socket.webSocket
@@ -180,6 +227,7 @@ final class LiveHub {
 
   void _close(int id, int code) {
     final _LiveSocket? socket = _sockets.remove(id);
+    _forget(id);
     if (socket == null) {
       return;
     }
@@ -189,6 +237,7 @@ final class LiveHub {
 
   void _ended(int id) {
     final _LiveSocket? socket = _sockets.remove(id);
+    _forget(id);
     if (socket != null) {
       _awaitClosed(id, socket);
     }
