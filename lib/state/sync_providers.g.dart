@@ -238,7 +238,7 @@ final class SyncEngineProvider
   }
 }
 
-String _$syncEngineHash() => r'f40109364c53f574f360476e6752838bf3cefc34';
+String _$syncEngineHash() => r'f130edb8f38d991475591632d9d340b3e5be724a';
 
 @ProviderFor(syncStatus)
 final syncStatusProvider = SyncStatusProvider._();
@@ -560,7 +560,7 @@ final class BackgroundUploaderProvider
 }
 
 String _$backgroundUploaderHash() =>
-    r'e10ab0cd8942a7b2d2b9b4494501c5b0355f95b9';
+    r'8da26076f452774a4813cddf7ac8eb31419beafd';
 
 @ProviderFor(backgroundTransfer)
 final backgroundTransferProvider = BackgroundTransferProvider._();
@@ -602,7 +602,7 @@ final class BackgroundTransferProvider
 }
 
 String _$backgroundTransferHash() =>
-    r'0cdf8b8859f66908a455be9a880ed5dd1b1f94f3';
+    r'9ac5f3ad7692f2c9bc8327c1e9865cb73ea8166b';
 
 @ProviderFor(batterySettings)
 final batterySettingsProvider = BatterySettingsProvider._();

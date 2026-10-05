@@ -34,7 +34,6 @@ import 'package:field_notes/state/database_provider.dart';
 import 'package:field_notes/state/media_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -206,7 +205,7 @@ Stream<String?> syncNotice(Ref ref) async* {
 }
 
 @Riverpod(keepAlive: true)
-BackgroundUploader backgroundUploader(Ref ref) => PackageBackgroundUploader();
+BackgroundUploader backgroundUploader(Ref ref) => ChannelBackgroundUploader();
 
 @Riverpod(keepAlive: true)
 Future<BackgroundTransfer?> backgroundTransfer(Ref ref) async {
@@ -214,7 +213,6 @@ Future<BackgroundTransfer?> backgroundTransfer(Ref ref) async {
     return null;
   }
   final AppDatabase database = ref.watch(databaseProvider);
-  final LifecycleSource lifecycle = ref.watch(appLifecycleProvider);
   final BackgroundUploader uploader = ref.watch(backgroundUploaderProvider);
   final UploadQueue uploads = (await ref.watch(syncMediaProvider.future))
       .uploads;
@@ -225,10 +223,6 @@ Future<BackgroundTransfer?> backgroundTransfer(Ref ref) async {
     uploader: uploader,
     keyStore: ref.watch(keyStoreProvider),
     uploads: uploads,
-    isVisible: () {
-      final AppLifecycleState? state = lifecycle.current;
-      return state == null || !isBackgrounded(state);
-    },
     pushRoot: pushWorkRoot(root),
     allowMobileData: () async =>
         (await settings.load()).allowMobileDataForMedia,

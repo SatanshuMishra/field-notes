@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/sync/engine/push_cycle.dart';
@@ -10,22 +9,19 @@ import 'package:field_notes/data/sync/engine/relay_rebase.dart';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/media/network_policy.dart';
 import 'package:field_notes/data/sync/media/upload_queue.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 
 const String mediaPartGroup = 'field_notes_media';
 const String recordPushGroup = 'field_notes_records';
-const String mediaNotificationGroup = 'field_notes_media_uploads';
+const String backgroundUploadsChannel = 'field_notes/background_uploads';
 const String pushWorkSubdir = 'sync_pushes';
-const int backgroundTaskRetries = 10;
-const int maxUserInitiatedJobs = 100;
-const int userInitiatedPriority = 0;
-const int ordinaryPriority = 5;
-const int maxUploadsAtOncePerRelay = 2;
 const String mediaNotificationTitle = 'Uploading to your journal';
 const String mediaNotificationBody = '{progress}';
 const String mediaNotificationBodyWaitingForWiFi =
     '{progress} · waits for Wi-Fi if you leave';
+const String mediaNotificationChannelName = 'Uploads';
 const String _partPrefix = 'part';
 const String _pushPrefix = 'push';
 const String _jsonMime = 'application/json';
@@ -45,9 +41,118 @@ String partTaskId(String uploadId, int index) =>
 
 String pushTaskId(String id) => '$_pushPrefix.$id';
 
-bool isPartTask(Task task) => task.group == mediaPartGroup;
+bool isPartTask(HandedTask task) => task.group == mediaPartGroup;
 
-bool isPushTask(Task task) => task.group == recordPushGroup;
+bool isPushTask(HandedTask task) => task.group == recordPushGroup;
+
+final class HandedTask {
+  HandedTask({
+    required this.taskId,
+    required this.group,
+    required this.url,
+    required this.method,
+    required Map<String, String> headers,
+    required this.filePath,
+    required this.mimeType,
+    required this.requiresWiFi,
+    required this.metaData,
+  }) : headers = Map<String, String>.unmodifiable(headers);
+
+  factory HandedTask.fromJson(Map<String, Object?> json) {
+    final Object? headers = json[_headersKey];
+    return HandedTask(
+      taskId: _string(json, _taskIdKey),
+      group: _string(json, _groupKey),
+      url: _string(json, _urlKey),
+      method: _string(json, _methodKey),
+      headers: <String, String>{
+        if (headers is Map<String, Object?>)
+          for (final MapEntry<String, Object?> entry in headers.entries)
+            if (entry.value is String) entry.key: entry.value! as String,
+      },
+      filePath: _string(json, _fileKey),
+      mimeType: _string(json, _mimeTypeKey),
+      requiresWiFi: _boolean(json, _requiresWiFiKey),
+      metaData: _string(json, _metaDataKey),
+    );
+  }
+
+  static const String _taskIdKey = 'taskId';
+  static const String _groupKey = 'group';
+  static const String _urlKey = 'url';
+  static const String _methodKey = 'method';
+  static const String _headersKey = 'headers';
+  static const String _fileKey = 'file';
+  static const String _mimeTypeKey = 'mimeType';
+  static const String _requiresWiFiKey = 'requiresWiFi';
+  static const String _metaDataKey = 'metaData';
+
+  final String taskId;
+  final String group;
+  final String url;
+  final String method;
+  final Map<String, String> headers;
+  final String filePath;
+  final String mimeType;
+  final bool requiresWiFi;
+  final String metaData;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    _taskIdKey: taskId,
+    _groupKey: group,
+    _urlKey: url,
+    _methodKey: method,
+    _headersKey: headers,
+    _fileKey: filePath,
+    _mimeTypeKey: mimeType,
+    _requiresWiFiKey: requiresWiFi,
+    _metaDataKey: metaData,
+  };
+}
+
+enum HandedStatus { complete, failed }
+
+final class HandedResult {
+  const HandedResult(this.task, this.status, {this.statusCode, this.body});
+
+  factory HandedResult.fromJson(Map<String, Object?> json) {
+    final Object? task = json['task'];
+    if (task is! Map<String, Object?>) {
+      throw const FormatException('A handed result has no task');
+    }
+    final Object? statusCode = json['statusCode'];
+    final Object? body = json['body'];
+    return HandedResult(
+      HandedTask.fromJson(task),
+      _string(json, 'status') == HandedStatus.complete.name
+          ? HandedStatus.complete
+          : HandedStatus.failed,
+      statusCode: statusCode is int ? statusCode : null,
+      body: body is String ? body : null,
+    );
+  }
+
+  final HandedTask task;
+  final HandedStatus status;
+  final int? statusCode;
+  final String? body;
+}
+
+String _string(Map<String, Object?> json, String key) {
+  final Object? value = json[key];
+  if (value is String) {
+    return value;
+  }
+  throw FormatException('Invalid $key');
+}
+
+bool _boolean(Map<String, Object?> json, String key) {
+  final Object? value = json[key];
+  if (value is bool) {
+    return value;
+  }
+  throw FormatException('Invalid $key');
+}
 
 RelayTag? _tagOf(Map<String, Object?> json) {
   final Object? tag = json[_tagField];
@@ -69,7 +174,7 @@ final class PartTaskInfo {
     required this.tag,
   });
 
-  static PartTaskInfo? of(Task task) {
+  static PartTaskInfo? of(HandedTask task) {
     final Map<String, Object?> json = _metaData(task);
     final Object? blobId = json[_blobIdField];
     final Object? uploadId = json[_uploadIdField];
@@ -98,7 +203,7 @@ final class PushTaskInfo {
     required this.tag,
   }) : changeIds = List<String>.unmodifiable(changeIds);
 
-  static PushTaskInfo? of(Task task) {
+  static PushTaskInfo? of(HandedTask task) {
     final Map<String, Object?> json = _metaData(task);
     final Object? file = json[_fileField];
     final Object? changeIds = json[_changeIdsField];
@@ -119,7 +224,7 @@ final class PushTaskInfo {
   final RelayTag? tag;
 }
 
-Map<String, Object?> _metaData(Task task) {
+Map<String, Object?> _metaData(HandedTask task) {
   try {
     return decodeJsonObject(task.metaData);
   } on FormatException {
@@ -128,61 +233,105 @@ Map<String, Object?> _metaData(Task task) {
 }
 
 abstract interface class BackgroundUploader {
-  Future<void> start(void Function(TaskStatusUpdate update) onUpdate);
+  Future<void> start(void Function(HandedResult result) onResult);
 
-  Future<bool> enqueue(UploadTask task);
+  Future<void> enqueue(List<HandedTask> tasks);
 
-  Future<List<Task>> queuedTasks();
+  Future<List<HandedTask>> queuedTasks();
 
   Future<void> cancel(Iterable<String> taskIds);
 }
 
-final class PackageBackgroundUploader implements BackgroundUploader {
-  PackageBackgroundUploader([FileDownloader? downloader])
-    : _downloader = downloader ?? FileDownloader();
+final class ChannelBackgroundUploader implements BackgroundUploader {
+  ChannelBackgroundUploader([MethodChannel? channel])
+    : _channel = channel ?? const MethodChannel(backgroundUploadsChannel);
 
-  final FileDownloader _downloader;
+  final MethodChannel _channel;
+  void Function(HandedResult result)? _onResult;
 
   @override
-  Future<void> start(void Function(TaskStatusUpdate update) onUpdate) async {
-    _downloader
-      ..registerCallbacks(group: mediaPartGroup, taskStatusCallback: onUpdate)
-      ..registerCallbacks(group: recordPushGroup, taskStatusCallback: onUpdate);
-    await _downloader.configure(
-      androidConfig: <(String, Object)>[
-        (Config.runInForeground, Config.always),
-        (Config.holdingQueue, (null, maxUploadsAtOncePerRelay, null)),
-      ],
-    );
-    await _downloader.start();
+  Future<void> start(void Function(HandedResult result) onResult) async {
+    _onResult = onResult;
+    _channel.setMethodCallHandler((MethodCall call) async {
+      if (call.method == _resultsReady) {
+        await _takeResults();
+      }
+    });
+    await _channel.invokeMethod<void>(_configure, <String, String>{
+      'title': mediaNotificationTitle,
+      'body': mediaNotificationBody,
+      'bodyWaitingForWiFi': mediaNotificationBodyWaitingForWiFi,
+      'channelName': mediaNotificationChannelName,
+    });
+    await _takeResults();
   }
 
   @override
-  Future<bool> enqueue(UploadTask task) {
-    final TaskNotificationConfig? notification = task.notificationConfig;
-    if (notification != null) {
-      _downloader.configureNotificationForTask(
-        task,
-        running: notification.running,
-        complete: notification.complete,
-        error: notification.error,
-        paused: notification.paused,
-        canceled: notification.canceled,
-        progressBar: notification.progressBar,
-        tapOpensFile: notification.tapOpensFile,
-        groupNotificationId: notification.groupNotificationId,
-      );
+  Future<void> enqueue(List<HandedTask> tasks) async {
+    if (tasks.isEmpty) {
+      return;
     }
-    return _downloader.enqueue(task);
+    await _channel.invokeMethod<bool>(_enqueue, <String, Object>{
+      'tasks': <String>[
+        for (final HandedTask task in tasks) jsonEncode(task.toJson()),
+      ],
+    });
   }
 
   @override
-  Future<List<Task>> queuedTasks() => _downloader.allTasks(allGroups: true);
+  Future<List<HandedTask>> queuedTasks() async {
+    final List<String> encoded =
+        await _channel.invokeListMethod<String>(_queued) ?? const <String>[];
+    return <HandedTask>[
+      for (final String task in encoded) ?_decodeTask(task),
+    ];
+  }
 
   @override
   Future<void> cancel(Iterable<String> taskIds) async {
-    await _downloader.cancelTasksWithIds(taskIds);
+    final List<String> ids = taskIds.toList();
+    if (ids.isEmpty) {
+      return;
+    }
+    await _channel.invokeMethod<void>(_cancel, <String, Object>{
+      'taskIds': ids,
+    });
   }
+
+  Future<void> _takeResults() async {
+    final void Function(HandedResult result)? onResult = _onResult;
+    final List<String> encoded =
+        await _channel.invokeListMethod<String>(_take) ?? const <String>[];
+    for (final String result in encoded) {
+      final HandedResult? decoded = _decodeResult(result);
+      if (decoded != null) {
+        onResult?.call(decoded);
+      }
+    }
+  }
+
+  static HandedTask? _decodeTask(String source) {
+    try {
+      return HandedTask.fromJson(decodeJsonObject(source));
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static HandedResult? _decodeResult(String source) {
+    try {
+      return HandedResult.fromJson(decodeJsonObject(source));
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static const String _configure = 'configure';
+  static const String _enqueue = 'enqueue';
+  static const String _queued = 'queued';
+  static const String _cancel = 'cancel';
+  static const String _take = 'takeResults';
+  static const String _resultsReady = 'resultsReady';
 }
 
 final class BackgroundUploads implements UploadSender {
@@ -191,7 +340,6 @@ final class BackgroundUploads implements UploadSender {
     required this._uploader,
     required this._keyStore,
     required this._uploads,
-    required this._isVisible,
     required this._pushRoot,
     required this._allowMobileData,
     Random? random,
@@ -202,13 +350,10 @@ final class BackgroundUploads implements UploadSender {
   final BackgroundUploader _uploader;
   final KeyStore _keyStore;
   final UploadQueue _uploads;
-  final bool Function() _isVisible;
   final Directory _pushRoot;
   final Future<bool> Function() _allowMobileData;
   final Random _random;
   bool _paused = false;
-
-  bool get _visible => _isVisible();
 
   Future<void> pause() async {
     _paused = true;
@@ -229,39 +374,24 @@ final class BackgroundUploads implements UploadSender {
     if (credentials == null) {
       return;
     }
-    final List<Task> queued = await _uploader.queuedTasks();
     final Set<String> held = <String>{
-      for (final Task task in queued) task.taskId,
+      for (final HandedTask task in await _uploader.queuedTasks()) task.taskId,
     };
-    int userInitiated = queued
-        .where(
-          (Task task) =>
-              isPartTask(task) && task.priority == userInitiatedPriority,
-        )
-        .length;
     final bool allowMobileData = await _allowMobileData();
-    for (final int index in indexes) {
-      if (_paused) {
-        return;
-      }
-      if (held.contains(partTaskId(upload.uploadId, index))) {
-        continue;
-      }
-      final bool asUserInitiated =
-          _visible && userInitiated < maxUserInitiatedJobs;
-      final bool enqueued = await _uploader.enqueue(
-        _partTask(
-          upload,
-          index,
-          credentials: credentials,
-          userInitiated: asUserInitiated,
-          allowMobileData: allowMobileData,
-        ),
-      );
-      if (enqueued && asUserInitiated) {
-        userInitiated += 1;
-      }
+    final List<HandedTask> tasks = <HandedTask>[
+      for (final int index in indexes)
+        if (!held.contains(partTaskId(upload.uploadId, index)))
+          _partTask(
+            upload,
+            index,
+            credentials: credentials,
+            allowMobileData: allowMobileData,
+          ),
+    ];
+    if (_paused) {
+      return;
     }
+    await _uploader.enqueue(tasks);
   }
 
   Future<void> handOverPrepared({Iterable<String>? blobIds}) async {
@@ -283,7 +413,7 @@ final class BackgroundUploads implements UploadSender {
       return 0;
     }
     final Set<String> heldChangeIds = <String>{
-      for (final Task task in await _uploader.queuedTasks())
+      for (final HandedTask task in await _uploader.queuedTasks())
         if (isPushTask(task)) ...?PushTaskInfo.of(task)?.changeIds,
     };
     final Set<int> skipped = <int>{
@@ -307,18 +437,17 @@ final class BackgroundUploads implements UploadSender {
         await file.delete();
         return handed;
       }
-      if (await _uploader.enqueue(
+      await _uploader.enqueue(<HandedTask>[
         _pushTask(id, file, batch.request, credentials: credentials),
-      )) {
-        handed += 1;
-      }
+      ]);
+      handed += 1;
     }
   }
 
   Future<void> cancelAll() async {
-    final List<Task> queued = await _uploader.queuedTasks();
+    final List<HandedTask> queued = await _uploader.queuedTasks();
     await _uploader.cancel(<String>[
-      for (final Task task in queued)
+      for (final HandedTask task in queued)
         if (isPartTask(task) || isPushTask(task)) task.taskId,
     ]);
     try {
@@ -335,7 +464,7 @@ final class BackgroundUploads implements UploadSender {
     final Set<String> posters = await posterMediaIds(_db);
     final List<String> stale = <String>[];
     final Set<String> blobs = <String>{};
-    for (final Task task in await _uploader.queuedTasks()) {
+    for (final HandedTask task in await _uploader.queuedTasks()) {
       final PartTaskInfo? info = isPartTask(task)
           ? PartTaskInfo.of(task)
           : null;
@@ -358,79 +487,58 @@ final class BackgroundUploads implements UploadSender {
     await handOverPrepared(blobIds: blobs);
   }
 
-  UploadTask _partTask(
+  HandedTask _partTask(
     PendingUpload upload,
     int index, {
     required _Credentials credentials,
-    required bool userInitiated,
     required bool allowMobileData,
-  }) {
-    final bool requiresWiFi = _requiresWiFi(
+  }) => HandedTask(
+    taskId: partTaskId(upload.uploadId, index),
+    group: mediaPartGroup,
+    url: SyncRoutes.uploadPart
+        .uri(
+          credentials.baseUrl,
+          parameters: <String, Object>{
+            SyncRoutes.nameParameter: upload.blobName,
+            SyncRoutes.uploadIdParameter: upload.uploadId,
+            SyncRoutes.indexParameter: index,
+          },
+        )
+        .toString(),
+    method: SyncRoutes.uploadPart.method,
+    headers: <String, String>{
+      ...credentials.headers,
+      SyncHeaders.blobSize: '${upload.totalBytes}',
+      SyncHeaders.partSize: '${upload.partBytes}',
+    },
+    filePath: upload.partFile(index).path,
+    mimeType: _binaryMime,
+    requiresWiFi: _requiresWiFi(
       isPoster: upload.isPoster,
       allowMobileData: allowMobileData,
-    );
-    return UploadTask.fromFile(
-      file: upload.partFile(index),
-      taskId: partTaskId(upload.uploadId, index),
-      url: SyncRoutes.uploadPart
-          .uri(
-            credentials.baseUrl,
-            parameters: <String, Object>{
-              SyncRoutes.nameParameter: upload.blobName,
-              SyncRoutes.uploadIdParameter: upload.uploadId,
-              SyncRoutes.indexParameter: index,
-            },
-          )
-          .toString(),
-      headers: <String, String>{
-        ...credentials.headers,
-        SyncHeaders.blobSize: '${upload.totalBytes}',
-        SyncHeaders.partSize: '${upload.partBytes}',
-      },
-      httpRequestMethod: SyncRoutes.uploadPart.method,
-      post: 'binary',
-      mimeType: _binaryMime,
-      group: mediaPartGroup,
-      updates: Updates.statusAndProgress,
-      requiresWiFi: requiresWiFi,
-      retries: backgroundTaskRetries,
-      priority: userInitiated ? userInitiatedPriority : ordinaryPriority,
-      metaData: jsonEncode(<String, Object?>{
-        _blobIdField: upload.blobId,
-        _uploadIdField: upload.uploadId,
-        _indexField: index,
-        _tagField: credentials.tag.toJson(),
-      }),
-      notificationConfig: TaskNotificationConfig(
-        running: TaskNotification(
-          mediaNotificationTitle,
-          requiresWiFi
-              ? mediaNotificationBodyWaitingForWiFi
-              : mediaNotificationBody,
-        ),
-        progressBar: true,
-        groupNotificationId: mediaNotificationGroup,
-      ),
-    );
-  }
+    ),
+    metaData: jsonEncode(<String, Object?>{
+      _blobIdField: upload.blobId,
+      _uploadIdField: upload.uploadId,
+      _indexField: index,
+      _tagField: credentials.tag.toJson(),
+    }),
+  );
 
-  UploadTask _pushTask(
+  HandedTask _pushTask(
     String id,
     File file,
     PushRequest request, {
     required _Credentials credentials,
-  }) => UploadTask.fromFile(
-    file: file,
+  }) => HandedTask(
     taskId: pushTaskId(id),
-    url: SyncRoutes.pushRecords.uri(credentials.baseUrl).toString(),
-    headers: credentials.headers,
-    httpRequestMethod: SyncRoutes.pushRecords.method,
-    post: 'binary',
-    mimeType: _jsonMime,
     group: recordPushGroup,
+    url: SyncRoutes.pushRecords.uri(credentials.baseUrl).toString(),
+    method: SyncRoutes.pushRecords.method,
+    headers: credentials.headers,
+    filePath: file.path,
+    mimeType: _jsonMime,
     requiresWiFi: false,
-    retries: backgroundTaskRetries,
-    priority: ordinaryPriority,
     metaData: jsonEncode(<String, Object?>{
       _fileField: file.path,
       _changeIdsField: <String>[

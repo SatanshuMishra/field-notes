@@ -60,7 +60,6 @@ dependencies:
   sync_protocol:
     path: packages/sync_protocol
   sodium: ^4.1.1+2
-  background_downloader: ^9.6.3
   flutter_secure_storage: ^11.2.0
   diff_match_patch: ^0.4.1
   image: ^4.10.1

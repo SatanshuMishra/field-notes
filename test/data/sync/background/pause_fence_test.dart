@@ -1,35 +1,34 @@
 import 'dart:async';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:field_notes/data/sync/background/background_uploads.dart';
 import 'package:field_notes/data/sync/background/upload_result_applier.dart';
 import 'package:field_notes/data/sync/engine/sync_engine.dart';
 import 'package:field_notes/domain/models/models.dart' as domain;
-import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/sync_overrides.dart';
 import '../../../sync/support/relay_fixture.dart';
 
 final class _GatedUploader implements BackgroundUploader {
-  final Map<String, Task> held = <String, Task>{};
-  final List<UploadTask> enqueued = <UploadTask>[];
+  final Map<String, HandedTask> held = <String, HandedTask>{};
+  final List<HandedTask> enqueued = <HandedTask>[];
   Completer<void>? gate;
   bool waiting = false;
 
   @override
-  Future<void> start(void Function(TaskStatusUpdate update) onUpdate) async {}
+  Future<void> start(void Function(HandedResult result) onResult) async {}
 
   @override
-  Future<bool> enqueue(UploadTask task) async {
-    enqueued.add(task);
-    held[task.taskId] = task;
-    return true;
+  Future<void> enqueue(List<HandedTask> tasks) async {
+    for (final HandedTask task in tasks) {
+      enqueued.add(task);
+      held[task.taskId] = task;
+    }
   }
 
   @override
-  Future<List<Task>> queuedTasks() async {
+  Future<List<HandedTask>> queuedTasks() async {
     final Completer<void>? closed = gate;
     if (closed != null) {
       gate = null;
@@ -74,10 +73,6 @@ void main() {
       uploader: uploader,
       keyStore: phone.keyStore,
       uploads: media.uploads,
-      isVisible: () {
-        final AppLifecycleState? state = phone.lifecycle.current;
-        return state == null || !isBackgrounded(state);
-      },
       pushRoot: pushWorkRoot(media.root),
       allowMobileData: () async => false,
     );
