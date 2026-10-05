@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../features/settings/support/fake_settings_repository.dart';
 import '../../features/settings/support/recording_reminder_scheduler.dart';
+import '../../support/sync_overrides.dart';
 
 const List<String> _journaledDates = <String>[];
 const int _meadowKey = 24601;
@@ -74,6 +75,7 @@ List<Override> shellOverrides() => <Override>[
           SpellCheckAvailability.available,
         ),
       ),
+      ...syncOffOverrides(),
     ];
 
 Future<void> pumpShell(

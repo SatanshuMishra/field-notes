@@ -5,7 +5,6 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
-import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -291,7 +290,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   ) {
     return switch (tab) {
       SettingsTab.syncStorage => SyncStorageSection(
-        storageMode: ref.watch(settingsRepositoryProvider).storageMode,
+        settings: settings,
+        onFeedback: _showNotice,
       ),
       SettingsTab.remindersSound => RemindersSoundSection(
         settings: settings,

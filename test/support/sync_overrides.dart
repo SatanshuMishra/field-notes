@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:drift/native.dart';
 import 'package:field_notes/data/crypto/device_keys.dart';
@@ -12,7 +13,9 @@ import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/media/media_gc.dart';
 import 'package:field_notes/data/settings/drift_settings_repository.dart';
 import 'package:field_notes/data/settings/journal_settings_store.dart';
+import 'package:field_notes/data/sync/background/battery_settings.dart';
 import 'package:field_notes/data/sync/change_recorder.dart';
+import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/live_connection.dart';
 import 'package:field_notes/data/sync/engine/pull_cycle.dart';
 import 'package:field_notes/data/sync/engine/sync_engine.dart';
@@ -35,20 +38,101 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:path/path.dart' as p;
 import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../sync/support/relay_fixture.dart';
 
-List<Override> syncOffOverrides() => <Override>[
+final class FakeBatterySettings implements BatterySettings {
+  FakeBatterySettings({this.exempt = false});
+
+  bool exempt;
+  int checks = 0;
+  int opens = 0;
+
+  @override
+  Future<bool> isExempt() async {
+    checks += 1;
+    return exempt;
+  }
+
+  @override
+  Future<BatterySettingsScreen> open() async {
+    opens += 1;
+    return BatterySettingsScreen.ignoreOptimizationsRequest;
+  }
+}
+
+Never _noSyncSetup(Ref ref) =>
+    throw StateError('No sync set-up runs in this test');
+
+List<Override> syncOffOverrides({BatterySettings? battery}) => <Override>[
   syncEnabledProvider.overrideWith((Ref ref) => Stream<bool>.value(false)),
+  relayAddressProvider.overrideWith((Ref ref) => Stream<String?>.value(null)),
   syncStatusProvider.overrideWith((Ref ref) => Stream<SyncStatus?>.value(null)),
   firstPullProgressProvider.overrideWith(
     (Ref ref) => Stream<FirstPullProgress?>.value(null),
   ),
   syncNoticeProvider.overrideWith((Ref ref) => Stream<String?>.value(null)),
+  enrolmentServiceProvider.overrideWith(_noSyncSetup),
+  restoreServiceProvider.overrideWith(_noSyncSetup),
+  pairingServiceProvider.overrideWith(_noSyncSetup),
+  deviceServiceProvider.overrideWith((Ref ref) async => null),
+  journalDevicesProvider.overrideWith(
+    (Ref ref) async => const <JournalDevice>[],
+  ),
+  batterySettingsProvider.overrideWithValue(battery ?? FakeBatterySettings()),
 ];
+
+List<Override> syncOnOverrides({
+  required SyncStatus status,
+  String address = 'https://sync.example.com',
+  List<JournalDevice> devices = const <JournalDevice>[],
+  BatterySettings? battery,
+  Stream<FirstPullProgress?>? progress,
+}) => <Override>[
+  syncEnabledProvider.overrideWith((Ref ref) => Stream<bool>.value(true)),
+  relayAddressProvider.overrideWith(
+    (Ref ref) => Stream<String?>.value(address),
+  ),
+  syncStatusProvider.overrideWith(
+    (Ref ref) => Stream<SyncStatus?>.value(status),
+  ),
+  firstPullProgressProvider.overrideWith(
+    (Ref ref) => progress ?? Stream<FirstPullProgress?>.value(null),
+  ),
+  syncNoticeProvider.overrideWith((Ref ref) => Stream<String?>.value(null)),
+  enrolmentServiceProvider.overrideWith(_noSyncSetup),
+  restoreServiceProvider.overrideWith(_noSyncSetup),
+  pairingServiceProvider.overrideWith(_noSyncSetup),
+  deviceServiceProvider.overrideWith((Ref ref) async => null),
+  journalDevicesProvider.overrideWith((Ref ref) async => devices),
+  batterySettingsProvider.overrideWithValue(battery ?? FakeBatterySettings()),
+];
+
+EnrolmentService stubRelayEnrolment(
+  AppDatabase database, {
+  String accountId = 'account-stub',
+  Random? random,
+}) => EnrolmentService(
+  database: database,
+  keyStore: KeyStore(MemorySecureValues()),
+  clientFor: (Uri baseUrl, DeviceKeys? device) => RelayClient(
+    baseUrl: baseUrl,
+    device: device,
+    client: MockClient(
+      (http.Request request) async => http.Response(
+        jsonEncode(InviteRedeemResponse(accountId: accountId).toJson()),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      ),
+    ),
+  ),
+  deviceName: () async => 'Test device',
+  random: random,
+);
 
 Future<void> eventually(
   Future<bool> Function() condition, {

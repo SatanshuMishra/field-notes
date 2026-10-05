@@ -8,7 +8,7 @@ import 'support/a11y_state.dart';
 import 'support/reading_order.dart';
 
 const Map<String, String> _tabStates = <String, String>{
-  'b1-settings': 'Storage mode',
+  'b1-settings': 'Start syncing',
   'b6-settings-reminders': 'Daily reminder',
   'b7-settings-journal': 'Text size',
   'b8-settings-data': 'Delete all',

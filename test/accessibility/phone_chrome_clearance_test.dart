@@ -14,6 +14,7 @@ import 'package:field_notes/features/search/search_day_view.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
 import 'package:field_notes/features/search/search_field.dart';
 import 'package:field_notes/features/search/search_providers.dart';
+import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/spell_check_availability.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
@@ -32,6 +33,7 @@ import '../features/day_detail/support/day_detail_harness.dart'
 import '../features/search/support/search_harness.dart' show dayOf, entryOf;
 import '../features/settings/support/fake_settings_repository.dart';
 import '../features/settings/support/recording_reminder_scheduler.dart';
+import '../support/sync_overrides.dart';
 
 const List<Size> _phones = <Size>[Size(384, 832), Size(412, 869)];
 const double _statusBar = 34;
@@ -116,6 +118,7 @@ List<Override> _overrides(AppSettings settings) => <Override>[
         ),
     ]),
   ),
+  ...syncOffOverrides(),
 ];
 
 Future<void> _settle(WidgetTester tester) async {
@@ -312,6 +315,11 @@ Future<void> _checkSearch(WidgetTester tester, Size phone) async {
   _expectChromeAboveTabBar(tester, '$page search field', field);
 }
 
+final Finder _settingsRows = find.byWidgetPredicate(
+  (Widget widget) => widget is SettingsFieldRow || widget is SyncActionRow,
+  description: 'a settings row or a sync action row',
+);
+
 Future<void> _checkSettings(WidgetTester tester, Size phone) async {
   bool overflowed = false;
   for (final SettingsTab tab in SettingsTab.values) {
@@ -336,7 +344,7 @@ Future<void> _checkSettings(WidgetTester tester, Size phone) async {
     _expectBetween(
       tester,
       '$page first row',
-      tester.getRect(find.byType(SettingsFieldRow).first),
+      tester.getRect(_settingsRows.first),
       top: _headerBottom,
       bottom: double.infinity,
     );
@@ -349,7 +357,7 @@ Future<void> _checkSettings(WidgetTester tester, Size phone) async {
     _expectBetween(
       tester,
       '$page last row',
-      tester.getRect(find.byType(SettingsFieldRow).last),
+      tester.getRect(_settingsRows.last),
       top: _headerBottom,
       bottom: segments.top,
     );

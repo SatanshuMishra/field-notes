@@ -205,6 +205,8 @@ _DensityStyle _styleFor(CompactLogDensity density, FieldNotesColors colors) {
   }
 }
 
+const double _conflictLabelGap = 6;
+
 class CompactLogCard extends StatefulWidget {
   const CompactLogCard({
     super.key,
@@ -385,7 +387,10 @@ class _CompactLogCardState extends State<CompactLogCard> {
           ? IgnorePointer(
               child: NoteMediaScope(
                 resolver: widget.resolver,
-                child: NoteBody(text: text),
+                child: NoteBody(
+                  text: text,
+                  conflictSourceDevice: widget.entry.conflictSourceDevice,
+                ),
               ),
             )
           : NoteMediaScope(
@@ -394,6 +399,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
                 text: text,
                 selectable: false,
                 onToggleTask: onToggleTask,
+                conflictSourceDevice: widget.entry.conflictSourceDevice,
               ),
             ),
     );
@@ -401,10 +407,15 @@ class _CompactLogCardState extends State<CompactLogCard> {
 
   Widget _longNote(_DensityStyle style, LogPreview preview) {
     final String? photo = preview.firstPhotoReference;
+    final String? conflictDevice = widget.entry.conflictSourceDevice;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
+        if (conflictDevice != null) ...<Widget>[
+          ConflictCopyLabel(deviceName: conflictDevice),
+          const SizedBox(height: _conflictLabelGap),
+        ],
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

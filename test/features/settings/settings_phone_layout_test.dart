@@ -4,13 +4,11 @@ import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/glass/glass.dart';
-import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
-import 'package:field_notes/features/settings/sync/sync_shell_options.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
@@ -32,17 +30,23 @@ const double _titleGap = 12;
 const double _segmentHeight = 40;
 const double _minHitHeight = 44;
 
-const String _onDeviceNote =
-    'Entries are stored only on this device. Nothing is uploaded '
-    'and there is no syncing across devices.';
+const String _lastSyncCaption = 'Use your 12 words.';
 
-const List<String> _serverRows = <String>[
+const List<String> _syncOffRows = <String>[
+  'Start syncing',
+  'Join my journal',
+  'Restore with recovery phrase',
+];
+
+const List<String> _mockUpRows = <String>[
+  'Storage mode',
   'Server URL',
   'Access token',
   'Sync frequency',
   'Recovery passphrase',
   'Pair a device',
   'Connection',
+  'Test connection',
 ];
 
 const Map<SettingsTab, String> _segmentLabels = <SettingsTab, String>{
@@ -246,7 +250,7 @@ void main() {
         final double syncLastRow = _lastRowBottom();
         expect(
           syncLastRow,
-          moreOrLessEquals(tester.getRect(find.text(_onDeviceNote)).bottom),
+          moreOrLessEquals(tester.getRect(find.text(_lastSyncCaption)).bottom),
         );
         expect(syncLastRow, lessThan(segmented.top - _rowsToBar));
         expect(segmented.top - syncLastRow, lessThan(48));
@@ -303,30 +307,31 @@ void main() {
   );
 
   testWidgets(
-    'phone sync settings hide the server rows while storage is on this device',
+    'sync settings offer start, join and restore and none of the mock-up rows',
     (WidgetTester tester) async {
       await _pumpPhone(tester);
 
       expect(find.byType(SyncStorageSection), findsOneWidget);
-      for (final String row in _serverRows) {
+      for (final String row in _mockUpRows) {
         expect(find.text(row, skipOffstage: false), findsNothing, reason: row);
       }
-      expect(find.text('Storage mode'), findsOneWidget);
-      expect(find.text(_onDeviceNote), findsOneWidget);
-      expect(find.text('Sync to server'), findsOneWidget);
-      final SettingsSegmented<SyncStorageChoice> storage = tester
-          .widget<SettingsSegmented<SyncStorageChoice>>(
-            find.byType(SettingsSegmented<SyncStorageChoice>),
-          );
-      expect(storage.value, SyncStorageChoice.onDevice);
-      expect(storage.enabled, isFalse);
-      expect(storage.onChanged, isNull);
+      for (final String row in _syncOffRows) {
+        expect(find.text(row), findsOneWidget, reason: row);
+      }
+      expect(
+        find.text(
+          'Your journal is only on this phone. Sync keeps it on your other '
+          'devices, encrypted.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(_lastSyncCaption), findsOneWidget);
       expect(
         find.descendant(
           of: find.byType(SyncStorageSection),
           matching: find.byType(DashedDivider),
         ),
-        findsNWidgets(2),
+        findsNWidgets(4),
       );
 
       await tester.pumpWidget(const SizedBox());
@@ -346,11 +351,16 @@ void main() {
 
       expect(find.byKey(settingsTabRailKey), findsOneWidget);
       expect(find.byType(SyncStorageSection), findsOneWidget);
-      for (final String row in _serverRows) {
+      for (final String row in _mockUpRows) {
+        expect(find.text(row), findsNothing, reason: row);
+      }
+      for (final String row in _syncOffRows) {
         expect(find.text(row), findsOneWidget, reason: row);
       }
-      expect(find.text('Storage mode'), findsOneWidget);
-      expect(find.text(_onDeviceNote), findsOneWidget);
+      expect(
+        find.text('You lost every device. Use your 12 words.'),
+        findsOneWidget,
+      );
     },
   );
 

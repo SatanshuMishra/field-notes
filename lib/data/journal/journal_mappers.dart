@@ -42,6 +42,7 @@ Entry toDomainEntry(db.Entry row) {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     deletedAt: row.deletedAt,
+    conflictSourceDevice: row.conflictSourceDevice,
   );
 }
 

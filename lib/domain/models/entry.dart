@@ -12,6 +12,7 @@ class Entry {
     this.thumbnailMediaId,
     this.durationMs,
     this.deletedAt,
+    this.conflictSourceDevice,
   });
 
   final String id;
@@ -24,6 +25,7 @@ class Entry {
   final int createdAt;
   final int updatedAt;
   final int? deletedAt;
+  final String? conflictSourceDevice;
 
   bool get isDeleted => deletedAt != null;
 
@@ -41,26 +43,29 @@ class Entry {
           durationMs == other.durationMs &&
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
-          deletedAt == other.deletedAt;
+          deletedAt == other.deletedAt &&
+          conflictSourceDevice == other.conflictSourceDevice;
 
   @override
   int get hashCode => Object.hash(
-        id,
-        dayId,
-        type,
-        textContent,
-        mediaId,
-        thumbnailMediaId,
-        durationMs,
-        createdAt,
-        updatedAt,
-        deletedAt,
-      );
+    id,
+    dayId,
+    type,
+    textContent,
+    mediaId,
+    thumbnailMediaId,
+    durationMs,
+    createdAt,
+    updatedAt,
+    deletedAt,
+    conflictSourceDevice,
+  );
 
   @override
   String toString() =>
       'Entry(id: $id, dayId: $dayId, type: $type, '
       'textContent: $textContent, mediaId: $mediaId, '
       'thumbnailMediaId: $thumbnailMediaId, durationMs: $durationMs, '
-      'createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt)';
+      'createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt, '
+      'conflictSourceDevice: $conflictSourceDevice)';
 }

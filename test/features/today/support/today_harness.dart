@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../../support/sync_overrides.dart';
+
 const Size todayPhoneSurface = Size(420, 780);
 const Size todayDesktopSurface = Size(1000, 780);
 
@@ -26,8 +28,18 @@ Future<void> pumpToday(
   tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  final Set<Object?> overridden = <Object?>{
+    for (final Override override in overrides) override.origin,
+  };
   await tester.pumpWidget(
-    ProviderScope(overrides: overrides, child: todayHarness(child)),
+    ProviderScope(
+      overrides: <Override>[
+        for (final Override override in syncOffOverrides())
+          if (!overridden.contains(override.origin)) override,
+        ...overrides,
+      ],
+      child: todayHarness(child),
+    ),
   );
   await tester.pumpAndSettle();
 }

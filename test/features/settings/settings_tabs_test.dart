@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/sync_overrides.dart';
 import 'support/fake_settings_repository.dart';
 import 'support/recording_reminder_scheduler.dart';
 import 'support/settings_harness.dart';
@@ -66,24 +67,13 @@ const List<String> _chipLabels = <String>[
   'Data',
 ];
 
-const Set<String> _phoneHiddenSyncRows = <String>{
-  'Server URL',
-  'Access token',
-  'Sync frequency',
-  'Recovery passphrase',
-  'Pair a device',
-  'Connection',
-};
+const String _firstSyncRow = 'Start syncing';
 
 const Map<String, List<String>> _rowsByTab = <String, List<String>>{
   _syncStorage: <String>[
-    'Storage mode',
-    'Server URL',
-    'Access token',
-    'Sync frequency',
-    'Recovery passphrase',
-    'Pair a device',
-    'Connection',
+    _firstSyncRow,
+    'Join my journal',
+    'Restore with recovery phrase',
   ],
   _remindersSound: <String>['Daily reminder', 'Reminder time', 'Sound effects'],
   _journal: <String>[
@@ -144,6 +134,7 @@ Future<void> _pumpSettings(
           settingsDataControllerProvider.overrideWith(
             (Ref ref) async => dataController,
           ),
+        ...syncOffOverrides(),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -275,7 +266,7 @@ void main() {
           previousBottom = sublabelRect.bottom;
         }
         _expectSelected(tester, _syncStorage);
-        expect(find.text('Storage mode').hitTestable(), findsOneWidget);
+        expect(find.text(_firstSyncRow).hitTestable(), findsOneWidget);
         expect(find.text('Daily reminder'), findsNothing);
         expect(find.text('Delete all…'), findsNothing);
         semantics.dispose();
@@ -293,6 +284,7 @@ void main() {
           size: _desktop,
           textScale: _largeTextScale,
         );
+        await _select(tester, _journal);
 
         final Finder rail = find.byKey(_railKey);
         final Finder content = find.byKey(_contentKey);
@@ -361,7 +353,7 @@ void main() {
           expect(rect.center.dy, row, reason: label);
           previousRight = rect.right;
         }
-        expect(find.text('Storage mode'), findsOneWidget);
+        expect(find.text(_firstSyncRow), findsOneWidget);
 
         await tester.tap(
           find.descendant(of: chips, matching: find.text('Data')),
@@ -369,7 +361,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Delete all'), findsOneWidget);
-        expect(find.text('Storage mode'), findsNothing);
+        expect(find.text(_firstSyncRow), findsNothing);
       });
     },
   );
@@ -397,12 +389,9 @@ void main() {
         }
         for (final MapEntry<String, List<String>> tab in _rowsByTab.entries) {
           for (final String row in tab.value) {
-            final bool hidden =
-                platform == TargetPlatform.android &&
-                _phoneHiddenSyncRows.contains(row);
             expect(
               foundOn[row],
-              hidden ? <String>[] : <String>[tab.key],
+              <String>[tab.key],
               reason: '$row on ${platform.name}',
             );
           }
@@ -467,7 +456,7 @@ void main() {
 
       _expectSelected(tester, _remindersSound);
       expect(find.text('Daily reminder'), findsOneWidget);
-      expect(find.text('Storage mode'), findsNothing);
+      expect(find.text(_firstSyncRow), findsNothing);
       expect(_focusedLabel(), _tabLabels[_remindersSound]);
 
       await _press(tester, LogicalKeyboardKey.tab);
@@ -588,7 +577,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Text size'), findsOneWidget);
-      expect(find.text('Storage mode'), findsNothing);
+      expect(find.text(_firstSyncRow), findsNothing);
     });
   });
 }

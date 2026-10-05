@@ -9,6 +9,18 @@ import '../states/capture_states.dart';
 import '../support/a11y_rules.dart';
 import '../support/a11y_state.dart';
 
+const List<String> _syncActions = <String>[
+  'Start syncing',
+  'Join my journal',
+  'Restore with recovery phrase',
+];
+
+const List<String> _mockUpFields = <String>[
+  'Server URL',
+  'Access token',
+  'Recovery passphrase',
+];
+
 Future<List<String>> _idsIn(
   WidgetTester tester,
   List<A11yState> states,
@@ -47,6 +59,36 @@ List<SemanticsNode> _nodes(
   bool Function(SemanticsNode node) test,
 ) => find.semantics.byPredicate(test).evaluate().toList();
 
+void _expectSyncActionButtons(WidgetTester tester) {
+  for (final String name in _syncActions) {
+    final List<SemanticsNode> buttons = _nodes(
+      tester,
+      (SemanticsNode node) =>
+          node.getSemanticsData().flagsCollection.isButton &&
+          node.label == name,
+    );
+    expect(buttons, hasLength(1), reason: name);
+    final SemanticsData data = buttons.single.getSemanticsData();
+    expect(data.flagsCollection.isEnabled, Tristate.isTrue, reason: name);
+    expect(data.hasAction(SemanticsAction.tap), isTrue, reason: name);
+  }
+  for (final String name in _mockUpFields) {
+    expect(
+      _nodes(tester, (SemanticsNode node) => node.label.contains(name)),
+      isEmpty,
+      reason: name,
+    );
+  }
+  expect(
+    _nodes(
+      tester,
+      (SemanticsNode node) =>
+          node.getSemanticsData().flagsCollection.isTextField,
+    ),
+    isEmpty,
+  );
+}
+
 void main() {
   testWidgets(
     'the settings controls are 48 dp buttons that report their state',
@@ -56,9 +98,13 @@ void main() {
         settingsStates,
         'b1-settings',
       );
-      _expectNone(sync, 'missing-state', 'b1-settings', <String>[
-        'On this device',
-      ]);
+      for (final String rule in <String>[
+        'small-target',
+        'missing-role',
+        'unlabelled-tap',
+      ]) {
+        _expectNone(sync, rule, 'b1-settings', _syncActions);
+      }
       final List<String> reminders = await _idsIn(
         tester,
         settingsStates,
@@ -85,54 +131,23 @@ void main() {
     },
   );
 
-  testWidgets('the disabled sync fields are named and marked disabled', (
-    WidgetTester tester,
-  ) async {
-    await _idsIn(tester, settingsStates, 'b1-settings');
-    final SemanticsHandle handle = tester.ensureSemantics();
-    for (final String name in <String>[
-      'Server URL',
-      'Access token',
-      'Recovery passphrase',
-    ]) {
-      final List<SemanticsNode> fields = _nodes(
-        tester,
-        (SemanticsNode node) =>
-            node.getSemanticsData().flagsCollection.isTextField &&
-            node.label.contains(name),
-      );
-      expect(fields, hasLength(1), reason: name);
-      final SemanticsData data = fields.single.getSemanticsData();
-      expect(data.flagsCollection.isEnabled, Tristate.isFalse, reason: name);
-      expect(data.hasAction(SemanticsAction.tap), isFalse, reason: name);
-    }
-    handle.dispose();
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
-
   testWidgets(
-    'the phone leaves the unusable sync fields out instead of greying them',
+    'the Mac offers the sync actions as named buttons and no mock-up fields',
     (WidgetTester tester) async {
       await _idsIn(tester, settingsStates, 'b1-settings');
       final SemanticsHandle handle = tester.ensureSemantics();
-      for (final String name in <String>[
-        'Server URL',
-        'Access token',
-        'Recovery passphrase',
-      ]) {
-        expect(
-          _nodes(tester, (SemanticsNode node) => node.label.contains(name)),
-          isEmpty,
-          reason: name,
-        );
-      }
-      expect(
-        _nodes(
-          tester,
-          (SemanticsNode node) =>
-              node.getSemanticsData().flagsCollection.isTextField,
-        ),
-        isEmpty,
-      );
+      _expectSyncActionButtons(tester);
+      handle.dispose();
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
+
+  testWidgets(
+    'the phone offers the sync actions as named buttons and no mock-up fields',
+    (WidgetTester tester) async {
+      await _idsIn(tester, settingsStates, 'b1-settings');
+      final SemanticsHandle handle = tester.ensureSemantics();
+      _expectSyncActionButtons(tester);
       handle.dispose();
     },
     variant: TargetPlatformVariant.only(TargetPlatform.android),

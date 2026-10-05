@@ -14,6 +14,7 @@ import 'package:field_notes/features/settings/spell_check_availability.dart';
 import 'package:field_notes/features/settings/widgets/delete_all_dialog.dart';
 import 'package:field_notes/features/settings/widgets/settings_notice.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
+import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -26,6 +27,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../features/settings/support/fake_settings_repository.dart';
 import '../../features/settings/support/recording_reminder_scheduler.dart';
 import '../../features/settings/support/settings_harness.dart';
+import '../../support/sync_overrides.dart';
 import '../support/a11y_state.dart';
 
 const Size _tallNoteSurface = Size(1080, 6840);
@@ -54,11 +56,6 @@ final A11yStatefulControl _segments = A11yStatefulControl.finder(
   ),
   A11yStateKind.selected,
 );
-
-final List<A11yStatefulControl> _syncStateful = <A11yStatefulControl>[
-  ..._tabStateful,
-  _segments,
-];
 
 final List<A11yStatefulControl> _remindersStateful = <A11yStatefulControl>[
   ..._tabStateful,
@@ -126,6 +123,7 @@ Future<void> _pumpSettings(
             deleteResult: const DataActionSucceeded(_deleteNotice),
           ),
         ),
+        ...syncOffOverrides(),
       ],
     ),
   );
@@ -147,8 +145,9 @@ final List<A11yState> settingsStates = <A11yState>[
     proof: <A11yProof>[
       A11yProof(find.byType(SettingsScreen)),
       A11yProof(find.byType(SyncStorageSection)),
+      A11yProof(find.text(startSyncTitle)),
     ],
-    stateful: _syncStateful,
+    stateful: _tabStateful,
   ),
   A11yState(
     id: 'b2-settings-spell-unavailable',
