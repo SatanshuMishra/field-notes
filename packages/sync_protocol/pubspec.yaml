@@ -1,0 +1,14 @@
+name: sync_protocol
+description: The wire format shared by Field Notes and its sync relay.
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  crypto: ^3.0.7
+
+dev_dependencies:
+  lints: ^6.1.0
+  test: ^1.32.0
