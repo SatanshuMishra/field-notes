@@ -54,28 +54,65 @@ int? parseDfAvailableBytes(String output) {
   return available == null ? null : available * 1024;
 }
 
+typedef StartProcess = Future<Process> Function(
+  String executable,
+  List<String> arguments,
+);
+
+final class DfProbe {
+  DfProbe({
+    this.executable = 'df',
+    this._startTimer = Timer.new,
+    this._startProcess = Process.start,
+  });
+
+  final String executable;
+  final StartTimer _startTimer;
+  final StartProcess _startProcess;
+  final Set<String> _unfinished = <String>{};
+
+  Future<int?> read(String directory) async {
+    if (!_unfinished.add(directory)) {
+      return null;
+    }
+    final Process process;
+    try {
+      process = await _startProcess(executable, <String>['-Pk', directory]);
+    } on ProcessException {
+      _unfinished.remove(directory);
+      return null;
+    }
+    unawaited(
+      process.exitCode.then<void>(
+        (int _) {
+          _unfinished.remove(directory);
+        },
+        onError: (Object _) {
+          _unfinished.remove(directory);
+        },
+      ),
+    );
+    final Completer<int?> killed = Completer<int?>();
+    final Timer limit = _startTimer(dfTimeLimit, () {
+      process.kill(ProcessSignal.sigkill);
+      killed.complete(null);
+    });
+    try {
+      return await Future.any(<Future<int?>>[
+        _dfReading(process),
+        killed.future,
+      ]);
+    } finally {
+      limit.cancel();
+    }
+  }
+}
+
 Future<int?> dfFreeBytes(
   String directory, {
   String executable = 'df',
   StartTimer startTimer = Timer.new,
-}) async {
-  final Process process;
-  try {
-    process = await Process.start(executable, <String>['-Pk', directory]);
-  } on ProcessException {
-    return null;
-  }
-  final Completer<int?> killed = Completer<int?>();
-  final Timer limit = startTimer(dfTimeLimit, () {
-    process.kill(ProcessSignal.sigkill);
-    killed.complete(null);
-  });
-  try {
-    return await Future.any(<Future<int?>>[_dfReading(process), killed.future]);
-  } finally {
-    limit.cancel();
-  }
-}
+}) => DfProbe(executable: executable, startTimer: startTimer).read(directory);
 
 Future<int?> _dfReading(Process process) async {
   try {

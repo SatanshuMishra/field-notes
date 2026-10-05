@@ -96,8 +96,7 @@ final class RelayApp {
       logSink(eventLine(now(), leftoversEvent, leftovers.fields));
     }
     final FreeSpaceProbe probe =
-        freeSpace ??
-        (String directory) => dfFreeBytes(directory, startTimer: startTimer);
+        freeSpace ?? DfProbe(startTimer: startTimer).read;
     final FreeSpace space = FreeSpace(
       probe: () async {
         final List<int?> readings = await Future.wait(<Future<int?>>[
@@ -382,7 +381,12 @@ final class RelayApp {
     RequestHold hold,
   ) async {
     final Caller caller = callerOf(request);
-    if (!hold.enter(pushesInFlight, caller.deviceId)) {
+    if (!await hold.enterWithin(
+      pushesInFlight,
+      caller.deviceId,
+      wait: pushSlotWaitLimit,
+      startTimer: _startTimer,
+    )) {
       throw tryAgainShortly;
     }
     final PushRequest push = PushRequest.fromJson(
@@ -446,6 +450,9 @@ final class RelayApp {
       headers: <String, String>{
         'content-type': 'application/octet-stream',
         'content-length': '${file.lengthSync()}',
+      },
+      context: const <String, Object>{
+        stallLimitContextKey: fileResponseStallLimit,
       },
     );
   }
