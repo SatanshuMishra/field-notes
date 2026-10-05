@@ -59,6 +59,12 @@ class CameraMacOSView extends StatefulWidget {
 
   final bool useMovieFileOutput;
 
+  final PictureResolution? movieResolution;
+
+  final int? videoBitrate;
+
+  final int? audioBitrate;
+
   const CameraMacOSView({
     Key? key,
     this.deviceId,
@@ -79,6 +85,9 @@ class CameraMacOSView extends StatefulWidget {
     this.orientation = CameraOrientation.orientation0deg,
     this.isVideoMirrored = true,
     this.useMovieFileOutput = false,
+    this.movieResolution,
+    this.videoBitrate,
+    this.audioBitrate,
   }) : super(key: key);
 
   @override
@@ -107,6 +116,9 @@ class CameraMacOSViewState extends State<CameraMacOSView> {
       orientation: widget.orientation,
       isVideoMirrored: widget.isVideoMirrored,
       useMovieFileOutput: widget.useMovieFileOutput,
+      movieResolution: widget.movieResolution,
+      videoBitrate: widget.videoBitrate,
+      audioBitrate: widget.audioBitrate,
     )
         .then((value) {
       if (value != null) {
@@ -217,6 +229,9 @@ class CameraMacOSViewState extends State<CameraMacOSView> {
         oldWidget.orientation != widget.orientation ||
         oldWidget.isVideoMirrored != widget.isVideoMirrored ||
         oldWidget.useMovieFileOutput != widget.useMovieFileOutput ||
+        oldWidget.movieResolution != widget.movieResolution ||
+        oldWidget.videoBitrate != widget.videoBitrate ||
+        oldWidget.audioBitrate != widget.audioBitrate ||
         oldWidget.videoFormat != widget.videoFormat ||
         oldWidget.key != widget.key) {
       initializeCameraFuture = CameraMacOSPlatform.instance
@@ -234,6 +249,9 @@ class CameraMacOSViewState extends State<CameraMacOSView> {
         orientation: widget.orientation,
         isVideoMirrored: widget.isVideoMirrored,
         useMovieFileOutput: widget.useMovieFileOutput,
+        movieResolution: widget.movieResolution,
+        videoBitrate: widget.videoBitrate,
+        audioBitrate: widget.audioBitrate,
       )
           .then((value) {
         if (value != null) {

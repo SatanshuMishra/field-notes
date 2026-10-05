@@ -89,7 +89,10 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
       /// Set camera orientation
       CameraOrientation orientation = CameraOrientation.orientation0deg,
       bool isVideoMirrored = true,
-      bool useMovieFileOutput = false}) async {
+      bool useMovieFileOutput = false,
+      PictureResolution? movieResolution,
+      int? videoBitrate,
+      int? audioBitrate}) async {
     try {
       final Map<String, dynamic>? result =
           await methodChannel.invokeMapMethod<String, dynamic>(
@@ -108,6 +111,9 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
           'vformat': videoFormat.name,
           'aformat': audioFormat.index,
           'useMovieFileOutput': useMovieFileOutput,
+          'movieResolution': movieResolution?.name,
+          'videoBitrate': videoBitrate,
+          'audioBitrate': audioBitrate,
         },
       );
       if (result == null) {
