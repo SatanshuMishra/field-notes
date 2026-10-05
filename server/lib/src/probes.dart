@@ -2,9 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'timers.dart';
+
 typedef FreeSpaceProbe = Future<int?> Function(String directory);
 
 const Duration probeLifetime = Duration(seconds: 5);
+const Duration dfTimeLimit = Duration(seconds: 5);
+const Duration goodReadingLifetime = Duration(minutes: 10);
 
 final RegExp _dfColumns = RegExp(r'\s(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%\s');
 
@@ -50,16 +54,39 @@ int? parseDfAvailableBytes(String output) {
   return available == null ? null : available * 1024;
 }
 
-Future<int?> dfFreeBytes(String directory) async {
+Future<int?> dfFreeBytes(
+  String directory, {
+  String executable = 'df',
+  StartTimer startTimer = Timer.new,
+}) async {
+  final Process process;
   try {
-    final ProcessResult result = await Process.run('df', <String>[
-      '-Pk',
-      directory,
-    ]);
-    return result.exitCode == 0
-        ? parseDfAvailableBytes('${result.stdout}')
-        : null;
+    process = await Process.start(executable, <String>['-Pk', directory]);
   } on ProcessException {
+    return null;
+  }
+  final Completer<int?> killed = Completer<int?>();
+  final Timer limit = startTimer(dfTimeLimit, () {
+    process.kill(ProcessSignal.sigkill);
+    killed.complete(null);
+  });
+  try {
+    return await Future.any(<Future<int?>>[_dfReading(process), killed.future]);
+  } finally {
+    limit.cancel();
+  }
+}
+
+Future<int?> _dfReading(Process process) async {
+  try {
+    final List<String> output = await Future.wait(<Future<String>>[
+      process.stdout.transform(systemEncoding.decoder).join(),
+      process.stderr.transform(systemEncoding.decoder).join(),
+    ]);
+    return await process.exitCode == 0
+        ? parseDfAvailableBytes(output.first)
+        : null;
+  } on Object {
     return null;
   }
 }
@@ -70,15 +97,18 @@ final class FreeSpace {
     required this._clock,
     required this.minFreeBytes,
     this.lifetime = probeLifetime,
+    this._onFailedReading,
   });
 
   final Future<int?> Function() _probe;
   final DateTime Function() _clock;
   final int minFreeBytes;
   final Duration lifetime;
+  final void Function()? _onFailedReading;
   int _reserved = 0;
   int _written = 0;
   ({DateTime at, int? free})? _reading;
+  ({DateTime at, int free})? _lastGood;
   Future<int?>? _probing;
 
   int get reservedBytes => _reserved;
@@ -87,7 +117,25 @@ final class FreeSpace {
 
   Future<bool> reserve(int bytes) async {
     final int? free = await _read();
-    if (free == null || free - _reserved - _written - bytes < minFreeBytes) {
+    return free != null && _take(free, bytes);
+  }
+
+  Future<bool> reservePush(int bytes) async {
+    final int? free = await _read();
+    if (free != null) {
+      return _take(free, bytes);
+    }
+    final ({DateTime at, int free})? lastGood = _lastGood;
+    if (lastGood != null &&
+        _clock().difference(lastGood.at) < goodReadingLifetime) {
+      return _take(lastGood.free, bytes);
+    }
+    _reserved += bytes;
+    return true;
+  }
+
+  bool _take(int free, int bytes) {
+    if (free - _reserved - _written - bytes < minFreeBytes) {
       return false;
     }
     _reserved += bytes;
@@ -118,6 +166,11 @@ final class FreeSpace {
     final int writtenBefore = _written;
     final int? free = await _probe();
     _reading = (at: now, free: free);
+    if (free == null) {
+      _onFailedReading?.call();
+      return null;
+    }
+    _lastGood = (at: now, free: free);
     _written -= writtenBefore;
     return free;
   }

@@ -67,8 +67,9 @@ if [[ $wanted =~ $digest_pattern ]] && [ "$digest" != "$wanted" ]; then
 fi
 
 if [[ ! $wanted =~ $digest_pattern ]] && [ -s "$history_file" ]; then
-  newest="$(awk 'NF { last = $1 } END { print last }' "$history_file")"
-  if [ "$digest" != "$newest" ] && awk -v digest="$digest" '$1 == digest { found = 1 } END { exit !found }' "$history_file"; then
+  recorded="$(grep -oE 'sha256:[0-9a-f]{64}' "$history_file")"
+  newest="$(tail -n 1 <<< "$recorded")"
+  if [ "$digest" != "$newest" ] && grep -qxF "$digest" <<< "$recorded"; then
     fail "accept $reference, which resolves to $digest, an older image in $history_file than the newest one; to roll back on purpose, run $0 $digest"
   fi
 fi

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:shelf/shelf.dart';
 import 'package:sync_protocol/sync_protocol.dart';
@@ -9,12 +10,16 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'auth.dart';
 import 'database.dart';
 import 'live_guard.dart';
+import 'timers.dart';
 
 const Duration liveIdleLimit = Duration(seconds: 90);
+const Duration liveCloseLimit = Duration(seconds: 5);
+const Duration liveNudgeInterval = Duration(seconds: 1);
 const int maxLiveSocketsPerDevice = 4;
 const int maxLiveFrameBytes = 4 * 1024;
 
 const int liveClosedCode = 1000;
+const int liveTooFastCode = 1008;
 const int liveTooBigCode = 1009;
 const int liveIdleCode = 4000;
 const int liveRevokedCode = 4001;
@@ -26,11 +31,17 @@ final class _LiveSocket {
   const _LiveSocket({
     required this.grant,
     required this.webSocket,
+    required this.socket,
+    required this.output,
+    required this.ended,
     required this.lastHeard,
   });
 
   final SessionGrant grant;
   final WebSocket webSocket;
+  final Socket socket;
+  final LiveOutput output;
+  final Future<void> ended;
   final DateTime lastHeard;
 
   String get accountId => grant.caller.accountId;
@@ -45,8 +56,14 @@ final class _LiveSocket {
     }
   }
 
-  _LiveSocket heardAt(DateTime time) =>
-      _LiveSocket(grant: grant, webSocket: webSocket, lastHeard: time);
+  _LiveSocket heardAt(DateTime time) => _LiveSocket(
+    grant: grant,
+    webSocket: webSocket,
+    socket: socket,
+    output: output,
+    ended: ended,
+    lastHeard: time,
+  );
 }
 
 bool _hasToken(String? header, String token) =>
@@ -57,30 +74,92 @@ bool _hasToken(String? header, String token) =>
         .map((String part) => part.trim())
         .contains(token);
 
+typedef _Closing = ({String deviceId, Socket socket, Timer deadline});
+
 final class LiveHub {
-  LiveHub(this._clock, this._isCurrent);
+  LiveHub(
+    this._clock,
+    this._isCurrent, {
+    this._startTimer = Timer.new,
+    this._sendOutput = sendOutput,
+  });
 
   final DateTime Function() _clock;
   final GrantCheck _isCurrent;
+  final StartTimer _startTimer;
+  final SendOutput _sendOutput;
   final Map<int, _LiveSocket> _sockets = <int, _LiveSocket>{};
+  final Map<int, _Closing> _closing = <int, _Closing>{};
+  final Map<int, DateTime> _lastNudged = <int, DateTime>{};
+  final Map<int, int> _heldNudges = <int, int>{};
   int _nextId = 0;
 
   int get openCount => _sockets.length;
+
+  int get closingCount => _closing.length;
 
   Handler handler(SessionGrant grant) =>
       (Request request) => _upgrade(grant, request);
 
   void nudge(String accountId, String exceptDeviceId, int latestSeq) {
-    final String message = jsonEncode(LiveNudge(latestSeq: latestSeq).toJson());
-    for (final _LiveSocket socket in _sockets.values.toList()) {
-      if (socket.accountId == accountId && socket.deviceId != exceptDeviceId) {
-        socket.send(message);
-      }
+    final List<int> ids = <int>[
+      for (final MapEntry<int, _LiveSocket> entry in _sockets.entries)
+        if (entry.value.accountId == accountId &&
+            entry.value.deviceId != exceptDeviceId)
+          entry.key,
+    ];
+    for (final int id in ids) {
+      _nudge(id, latestSeq);
     }
+  }
+
+  void _nudge(int id, int latestSeq) {
+    final int? held = _heldNudges[id];
+    if (held != null) {
+      _heldNudges[id] = max(held, latestSeq);
+      return;
+    }
+    final DateTime now = _clock();
+    final DateTime? last = _lastNudged[id];
+    final Duration untilDue = last == null
+        ? Duration.zero
+        : last.add(liveNudgeInterval).difference(now);
+    final Duration wait = untilDue > liveNudgeInterval
+        ? liveNudgeInterval
+        : untilDue;
+    if (wait <= Duration.zero) {
+      _sendNudge(id, latestSeq, now);
+      return;
+    }
+    _heldNudges[id] = latestSeq;
+    _startTimer(wait, () {
+      final int? seq = _heldNudges.remove(id);
+      if (seq != null) {
+        _sendNudge(id, seq, _clock());
+      }
+    });
+  }
+
+  void _sendNudge(int id, int latestSeq, DateTime now) {
+    final _LiveSocket? socket = _sockets[id];
+    if (socket == null) {
+      return;
+    }
+    _lastNudged[id] = now;
+    socket.send(jsonEncode(LiveNudge(latestSeq: latestSeq).toJson()));
+  }
+
+  void _forget(int id) {
+    _lastNudged.remove(id);
+    _heldNudges.remove(id);
   }
 
   void sweep() {
     final DateTime now = _clock();
+    _closeWhere(
+      (_LiveSocket socket) => socket.output.stalled(now),
+      liveIdleCode,
+    );
     _closeWhere(
       (_LiveSocket socket) =>
           !socket.expiresAt.isAfter(now) || !_isCurrent(socket.grant),
@@ -106,13 +185,23 @@ final class LiveHub {
   Future<void> closeAll() async {
     final List<_LiveSocket> sockets = _sockets.values.toList();
     _sockets.clear();
+    _lastNudged.clear();
+    _heldNudges.clear();
     await Future.wait(<Future<void>>[
       for (final _LiveSocket socket in sockets)
         socket.webSocket
             .close(liveClosedCode)
-            .timeout(const Duration(seconds: 2), onTimeout: () {})
+            .timeout(
+              const Duration(seconds: 2),
+              onTimeout: () => socket.socket.destroy(),
+            )
             .catchError((Object _) {}),
     ]);
+    for (final _Closing closing in _closing.values.toList()) {
+      closing.deadline.cancel();
+      closing.socket.destroy();
+    }
+    _closing.clear();
   }
 
   Response _upgrade(SessionGrant grant, Request request) {
@@ -126,6 +215,9 @@ final class LiveHub {
         request.protocolVersion != '1.1' ||
         key == null) {
       throw const RelayException(SyncErrorCode.badRequest);
+    }
+    if (_closingFor(grant.caller.deviceId) >= maxLiveSocketsPerDevice) {
+      throw const RelayException(SyncErrorCode.tooManyRequests, '', 1);
     }
     request.hijack((channel) {
       final Socket socket = channel.sink as Socket;
@@ -154,40 +246,100 @@ final class LiveHub {
 
   void _close(int id, int code) {
     final _LiveSocket? socket = _sockets.remove(id);
-    unawaited(socket?.webSocket.close(code).catchError((Object _) {}));
+    _forget(id);
+    if (socket == null) {
+      return;
+    }
+    _awaitClosed(id, socket);
+    unawaited(socket.webSocket.close(code).catchError((Object _) {}));
+  }
+
+  void _ended(int id) {
+    final _LiveSocket? socket = _sockets.remove(id);
+    _forget(id);
+    if (socket != null) {
+      _awaitClosed(id, socket);
+    }
+  }
+
+  int _closingFor(String deviceId) => _closing.values
+      .where((_Closing closing) => closing.deviceId == deviceId)
+      .length;
+
+  void _awaitClosed(int id, _LiveSocket socket) {
+    _closing[id] = (
+      deviceId: socket.deviceId,
+      socket: socket.socket,
+      deadline: _startTimer(liveCloseLimit, () {
+        _closing.remove(id);
+        socket.socket.destroy();
+      }),
+    );
+    void finished(Object? _) {
+      _closing.remove(id)?.deadline.cancel();
+    }
+
+    unawaited(
+      Future.wait<void>(<Future<void>>[socket.ended, socket.webSocket.done])
+          .then(finished, onError: finished),
+    );
   }
 
   void _attach(SessionGrant grant, Socket socket) {
     final int id = _nextId++;
+    final Completer<void> ended = Completer<void>();
+    void end() {
+      if (!ended.isCompleted) {
+        ended.complete();
+      }
+      _ended(id);
+    }
+
+    final LiveOutput output = LiveOutput(
+      _clock,
+      () => _close(id, liveIdleCode),
+    );
     final WebSocket webSocket = WebSocket.fromUpgradedSocket(
       GuardedSocket(
         socket,
         guardedFrames(
           socket,
-          LiveFrameGuard(maxLiveFrameBytes),
-          () => _close(id, liveTooBigCode),
+          LiveFrameGuard(maxLiveFrameBytes, _clock),
+          (LiveRefusal refusal) => _close(id, switch (refusal) {
+            LiveRefusal.tooBig => liveTooBigCode,
+            LiveRefusal.tooFast => liveTooFastCode,
+          }),
         ),
+        output: output,
+        send: _sendOutput,
       ),
       serverSide: true,
     );
     _sockets[id] = _LiveSocket(
       grant: grant,
       webSocket: webSocket,
+      socket: socket,
+      output: output,
+      ended: ended.future,
       lastHeard: _clock(),
     );
     webSocket.listen(
       (Object? message) => _receive(id, message),
-      onDone: () => _sockets.remove(id),
-      onError: (Object _) => _sockets.remove(id),
+      onDone: end,
+      onError: (Object _) => end(),
       cancelOnError: true,
     );
     final List<int> sameDevice = <int>[
       for (final MapEntry<int, _LiveSocket> entry in _sockets.entries)
         if (entry.value.deviceId == grant.caller.deviceId) entry.key,
     ];
-    if (sameDevice.length > maxLiveSocketsPerDevice) {
+    final int excess =
+        sameDevice.length +
+        _closingFor(grant.caller.deviceId) -
+        maxLiveSocketsPerDevice;
+    if (excess > 0) {
       for (final int oldest in sameDevice.take(
-        sameDevice.length - maxLiveSocketsPerDevice,
+        min(excess, sameDevice.length - 1),
       )) {
         _close(oldest, liveReplacedCode);
       }

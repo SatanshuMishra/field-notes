@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:sqlite3/sqlite3.dart';
@@ -9,6 +10,8 @@ import 'database.dart';
 const int defaultPullLimit = 500;
 const int maxPullLimit = 500;
 const int maxRecordKeyLength = 128;
+const int maxAnswerBytes = 8 * 1024 * 1024;
+const int recordWriteOverheadBytes = 1024;
 
 final RegExp _recordKeyPattern = RegExp(r'^[A-Za-z0-9_-]+$');
 
@@ -58,7 +61,42 @@ void _validate(RecordPush change) {
       change.baseSeq < 0) {
     throw const RelayException(SyncErrorCode.badRequest, 'Invalid record');
   }
+  if (change.envelope.length > maxEnvelopeBytes) {
+    throw const RelayException(SyncErrorCode.badRequest, 'Envelope too large');
+  }
 }
+
+int pushWriteBytes(PushRequest request) => request.changes.fold(
+  0,
+  (int total, RecordPush change) =>
+      total + change.envelope.length + recordWriteOverheadBytes,
+);
+
+int base64UrlLength(int bytes) =>
+    bytes ~/ 3 * 4 +
+    switch (bytes % 3) {
+      0 => 0,
+      1 => 2,
+      _ => 3,
+    };
+
+int _encodedLength(SyncValue value) =>
+    utf8.encode(jsonEncode(value.toJson())).length;
+
+int _stateBytes(String recordKey, int seq, int epoch, int envelopeBytes) =>
+    _encodedLength(
+      RecordState(
+        recordKey: recordKey,
+        seq: seq,
+        epoch: epoch,
+        envelope: Uint8List(0),
+      ),
+    ) +
+    base64UrlLength(envelopeBytes);
+
+const int _nullBytes = 4;
+
+typedef _Stored = ({int seq, int epoch, int size});
 
 final class ChangeLog {
   ChangeLog(this._database, this._clock);
@@ -66,21 +104,32 @@ final class ChangeLog {
   final RelayDatabase _database;
   final DateTime Function() _clock;
 
+  void validate(PushRequest request) => request.changes.forEach(_validate);
+
   PushOutcome push(Caller caller, PushRequest request) {
-    request.changes.forEach(_validate);
+    validate(request);
     final int now = toMillis(_clock());
     return _database.transaction(() {
       final int currentEpoch = _currentEpoch(caller.accountId);
       int lastSeq = latestSeq(caller.accountId);
       int? acceptedSeq;
       final List<RecordPushResult> results = <RecordPushResult>[];
+      int answerBytes = _encodedLength(
+        PushResponse(results: const <RecordPushResult>[]),
+      );
+      void answer(RecordPushResult result, [int? bytes]) {
+        answerBytes +=
+            (results.isEmpty ? 0 : 1) + (bytes ?? _encodedLength(result));
+        results.add(result);
+      }
+
       for (final RecordPush change in request.changes) {
         final Row? duplicate = _database.selectOne(
           'SELECT seq FROM change_ids WHERE account_id = ? AND change_id = ?',
           <Object?>[caller.accountId, change.changeId],
         );
         if (duplicate != null) {
-          results.add(
+          answer(
             RecordPushResult(
               changeId: change.changeId,
               status: PushStatus.duplicate,
@@ -90,7 +139,7 @@ final class ChangeLog {
           continue;
         }
         if (change.epoch != currentEpoch) {
-          results.add(
+          answer(
             RecordPushResult(
               changeId: change.changeId,
               status: PushStatus.staleEpoch,
@@ -98,18 +147,40 @@ final class ChangeLog {
           );
           continue;
         }
-        final RecordState? stored = _state(caller.accountId, change.recordKey);
+        final _Stored? stored = _stored(caller.accountId, change.recordKey);
         final bool matches = stored == null
             ? change.baseSeq == 0
             : stored.seq == change.baseSeq;
         if (!matches) {
-          results.add(
-            RecordPushResult(
-              changeId: change.changeId,
-              status: PushStatus.stale,
-              current: caller.kind == CallerKind.session ? stored : null,
-            ),
+          final RecordPushResult bare = RecordPushResult(
+            changeId: change.changeId,
+            status: PushStatus.stale,
           );
+          final int bareBytes = _encodedLength(bare);
+          final int? withState =
+              stored == null || caller.kind != CallerKind.session
+              ? null
+              : bareBytes -
+                    _nullBytes +
+                    _stateBytes(
+                      change.recordKey,
+                      stored.seq,
+                      stored.epoch,
+                      stored.size,
+                    );
+          if (withState != null &&
+              answerBytes + 1 + withState <= maxAnswerBytes) {
+            answer(
+              RecordPushResult(
+                changeId: change.changeId,
+                status: PushStatus.stale,
+                current: _state(caller.accountId, change.recordKey),
+              ),
+              withState,
+            );
+          } else {
+            answer(bare, bareBytes);
+          }
           continue;
         }
         lastSeq += 1;
@@ -140,7 +211,7 @@ final class ChangeLog {
           <Object?>[caller.accountId, lastSeq],
         );
         acceptedSeq = lastSeq;
-        results.add(
+        answer(
           RecordPushResult(
             changeId: change.changeId,
             status: PushStatus.accepted,
@@ -156,26 +227,61 @@ final class ChangeLog {
   }
 
   PullResponse pull(String accountId, PullQuery query) => _database.read(() {
-    final List<RecordState> states = <RecordState>[
-      for (final Row row in _database.select(
-        'SELECT record_key, seq, epoch, envelope FROM records '
-        'WHERE account_id = ? AND seq > ? ORDER BY seq LIMIT ?',
-        <Object?>[accountId, query.after, query.limit],
-      ))
-        _toState(row),
-    ];
-    final int lastReturned = states.isEmpty ? query.after : states.last.seq;
-    final int remaining = _database.count(
-      'SELECT count(*) FROM records WHERE account_id = ? AND seq > ?',
-      <Object?>[accountId, lastReturned],
+    final ResultSet candidates = _database.select(
+      'SELECT record_key, seq, epoch, length(envelope) AS size FROM records '
+      'WHERE account_id = ? AND seq > ? ORDER BY seq LIMIT ?',
+      <Object?>[accountId, query.after, query.limit],
     );
+    final int above = _database.count(
+      'SELECT count(*) FROM records WHERE account_id = ? AND seq > ?',
+      <Object?>[accountId, query.after],
+    );
+    final int latest = latestSeq(accountId);
+    final int currentEpoch = _currentEpoch(accountId);
+    final String generation = _database.generation();
+    int pageBytes = _encodedLength(
+      PullResponse(
+        states: const <RecordState>[],
+        latestSeq: latest,
+        hasMore: false,
+        remaining: above,
+        currentEpoch: currentEpoch,
+        generation: generation,
+      ),
+    );
+    int taken = 0;
+    for (final Row row in candidates) {
+      final int bytes =
+          (taken == 0 ? 0 : 1) +
+          _stateBytes(
+            row['record_key'] as String,
+            row['seq'] as int,
+            row['epoch'] as int,
+            row['size'] as int,
+          );
+      if (taken > 0 && pageBytes + bytes > maxAnswerBytes) {
+        break;
+      }
+      pageBytes += bytes;
+      taken++;
+    }
+    final List<RecordState> states = <RecordState>[
+      if (taken > 0)
+        for (final Row row in _database.select(
+          'SELECT record_key, seq, epoch, envelope FROM records '
+          'WHERE account_id = ? AND seq > ? ORDER BY seq LIMIT ?',
+          <Object?>[accountId, query.after, taken],
+        ))
+          _toState(row),
+    ];
+    final int remaining = above - states.length;
     return PullResponse(
       states: states,
-      latestSeq: latestSeq(accountId),
+      latestSeq: latest,
       hasMore: remaining > 0,
       remaining: remaining,
-      currentEpoch: _currentEpoch(accountId),
-      generation: _database.generation(),
+      currentEpoch: currentEpoch,
+      generation: generation,
     );
   });
 
@@ -196,6 +302,21 @@ final class ChangeLog {
       throw const RelayException(SyncErrorCode.journalErased);
     }
     return row['current_epoch'] as int;
+  }
+
+  _Stored? _stored(String accountId, String recordKey) {
+    final Row? row = _database.selectOne(
+      'SELECT seq, epoch, length(envelope) AS size FROM records '
+      'WHERE account_id = ? AND record_key = ?',
+      <Object?>[accountId, recordKey],
+    );
+    return row == null
+        ? null
+        : (
+            seq: row['seq'] as int,
+            epoch: row['epoch'] as int,
+            size: row['size'] as int,
+          );
   }
 
   RecordState? _state(String accountId, String recordKey) {

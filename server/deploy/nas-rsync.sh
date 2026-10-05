@@ -12,8 +12,24 @@ NAS_USER=fn-backup
 NAS_VOLUME=/volume1
 NAS_ALLOW_FROM=10.0.0.0/24
 
+nas_private_folder_problem() {
+  local folder="$1"
+  if [ ! -e "$folder" ] && [ ! -L "$folder" ]; then
+    return 0
+  fi
+  if [ -z "$(find "$folder" -maxdepth 0 -type d -user "$(id -u)" ! -perm -0020 ! -perm -0002 2>/dev/null)" ]; then
+    printf '%s, which must be a folder owned by %s that no other user can write' "$folder" "$(id -un)"
+  fi
+}
+
 nas_private_file_problem() {
   local file="$1"
+  local folder_problem
+  folder_problem="$(nas_private_folder_problem "$(dirname "$file")")"
+  if [ -n "$folder_problem" ]; then
+    printf '%s' "$folder_problem"
+    return 0
+  fi
   if [ ! -e "$file" ] && [ ! -L "$file" ]; then
     return 0
   fi

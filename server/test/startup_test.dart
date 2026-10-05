@@ -46,6 +46,11 @@ List<String> backupsBeside(String databasePath) => <String>[
       p.basename(entity.path),
 ];
 
+final bool runningAsRoot =
+    '${Process.runSync('id', <String>['-u']).stdout}'.trim() == '0';
+
+const String rootSkip = 'chmod does not stop root from writing files';
+
 void main() {
   test('an empty data directory is migrated and reports healthy', () async {
     final Directory scratch = await scratchFolder();
@@ -93,7 +98,7 @@ void main() {
     Process.runSync('chmod', <String>['755', harness.mediaDirectory]);
     harness.advance(const Duration(seconds: 5));
     expect((await harness.send(SyncRoutes.health)).statusCode, HttpStatus.ok);
-  });
+  }, skip: runningAsRoot ? rootSkip : null);
 
   test('a pending migration backs up a non-empty database first', () async {
     final Directory scratch = await scratchFolder();
