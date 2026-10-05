@@ -13,6 +13,7 @@ typedef AssemblyHook = Future<void> Function(String uploadId);
 
 const int maxBlobSize = 2 * 1024 * 1024 * 1024;
 const int maxPartSize = 8 * 1024 * 1024;
+const int maxDrainBytes = maxPartSize + 1024 * 1024;
 const int maxPartCount = 256;
 const int maxUnfinishedUploads = 32;
 const int maxStagedBytes = 4 * 1024 * 1024 * 1024;
@@ -198,35 +199,35 @@ final class BlobStore {
     int? contentLength,
   }) async {
     if (contentLength != null && contentLength != part.expectedLength) {
-      await _drain(body, part.expectedLength);
+      await _drain(body);
       throw const RelayException(SyncErrorCode.badRequest, 'Wrong part size');
     }
     if (holds(accountId, part.name)) {
-      await _drain(body, part.expectedLength);
+      await _drain(body);
       return UploadStatusResponse(
         receivedParts: const <int>[],
         assembled: true,
       );
     }
     if (((await _freeSpace.read()) ?? 0) < _minFreeBytes) {
-      await _drain(body, part.expectedLength);
+      await _drain(body);
       throw const RelayException(SyncErrorCode.storageFull);
     }
     final _Upload upload;
     try {
       upload = _open(accountId, part);
     } on RelayException {
-      await _drain(body, part.expectedLength);
+      await _drain(body);
       rethrow;
     }
     if (upload.busy || _hasPart(upload.id, part.index)) {
-      await _drain(body, part.expectedLength);
+      await _drain(body);
       return _settle(accountId, upload.id);
     }
     final int length = part.expectedLength;
     if (_stagedBytes(accountId) + (_receiving[accountId] ?? 0) + length >
         maxStagedBytes) {
-      await _drain(body, length);
+      await _drain(body);
       throw const RelayException(SyncErrorCode.storageFull);
     }
     _receiving[accountId] = (_receiving[accountId] ?? 0) + length;
@@ -594,12 +595,12 @@ final class BlobStore {
   String _partPath(String uploadId, int index) =>
       p.join(stagingPath(mediaDirectory, uploadId), '$index');
 
-  static Future<void> _drain(Stream<List<int>> body, int limit) async {
+  static Future<void> _drain(Stream<List<int>> body) async {
     int seen = 0;
     try {
       await for (final List<int> chunk in body) {
         seen += chunk.length;
-        if (seen > limit) {
+        if (seen > maxDrainBytes) {
           return;
         }
       }
