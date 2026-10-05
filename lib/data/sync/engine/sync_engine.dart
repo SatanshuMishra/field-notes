@@ -36,6 +36,7 @@ import 'package:flutter/widgets.dart'
 import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 
 const Duration localWriteDelay = Duration(seconds: 1);
+const Duration inactiveLeaveDelay = Duration(seconds: 1);
 const Duration offlinePollInterval = Duration(minutes: 5);
 const Duration firstBackoff = Duration(seconds: 2);
 const Duration maxBackoff = Duration(minutes: 5);
@@ -178,6 +179,7 @@ class SyncEngine {
     this._wipe,
     this._backgroundSource,
     this.pullPageSize,
+    this.leaveWhenInactive = false,
   }) : _db = database;
 
   final AppDatabase _db;
@@ -194,6 +196,7 @@ class SyncEngine {
   final BackgroundTransferSource? _backgroundSource;
   BackgroundTransfer? _background;
   final int? pullPageSize;
+  final bool leaveWhenInactive;
   Future<SyncMedia?>? _loadedMedia;
   Future<void>? _preparing;
 
@@ -232,6 +235,7 @@ class SyncEngine {
   bool _liveOpening = false;
 
   Timer? _writeTimer;
+  Timer? _inactiveTimer;
   Timer? _retryTimer;
   Timer? _reconnectTimer;
   Timer? _pollTimer;
@@ -451,6 +455,8 @@ class SyncEngine {
     }
     _disposed = true;
     _cancelTimers();
+    _inactiveTimer?.cancel();
+    _inactiveTimer = null;
     for (final StreamSubscription<Object?> subscription in _subscriptions) {
       await subscription.cancel();
     }
@@ -639,10 +645,21 @@ class SyncEngine {
   }
 
   void _lifecycleChanged(AppLifecycleState state) {
+    _inactiveTimer?.cancel();
+    _inactiveTimer = null;
     if (state == AppLifecycleState.inactive) {
+      if (leaveWhenInactive && _visible) {
+        _inactiveTimer = _clock.timer(inactiveLeaveDelay, () {
+          _inactiveTimer = null;
+          _setVisible(false);
+        });
+      }
       return;
     }
-    final bool visible = !isBackgrounded(state);
+    _setVisible(!isBackgrounded(state));
+  }
+
+  void _setVisible(bool visible) {
     if (visible == _visible) {
       return;
     }

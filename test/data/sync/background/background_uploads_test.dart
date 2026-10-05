@@ -12,6 +12,7 @@ import 'package:field_notes/data/sync/engine/pull_cycle.dart';
 import 'package:field_notes/data/sync/engine/push_cycle.dart';
 import 'package:field_notes/data/sync/engine/sync_engine.dart';
 import 'package:field_notes/data/sync/erase/local_journal_wipe.dart';
+import 'package:field_notes/data/sync/media/network_policy.dart';
 import 'package:field_notes/data/sync/media/upload_queue.dart';
 import 'package:field_notes/data/sync/merge/state_applier.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
@@ -112,8 +113,11 @@ final class _Background {
   BackgroundTransfer get transfer =>
       BackgroundTransfer(uploads: uploads, results: results);
 
-  SyncEngine engine() =>
-      device.engine(media: media.source(), background: () async => transfer);
+  SyncEngine engine({bool leaveWhenInactive = false}) => device.engine(
+    media: media.source(),
+    background: () async => transfer,
+    leaveWhenInactive: leaveWhenInactive,
+  );
 
   PushCycle pushCycle() => PushCycle(
     database: device.database,
@@ -254,6 +258,69 @@ void main() {
       outbox.map((db.SyncOutboxData row) => row.changeId).toSet(),
     );
     expect(phone.device.http.countOf('POST', _push), 0);
+  });
+
+  test(
+    'an app left in the app switcher hands every pending push to the uploader',
+    () async {
+      final _Background phone = await enrolled('Phone');
+      final SyncEngine engine = phone.engine(leaveWhenInactive: true);
+      await engine.start();
+      await engine.syncNow();
+      phone.device.network.kind = NetworkKind.offline;
+      await _note(phone.device, 'saved with no signal');
+      final int sentBefore = phone.device.http.countOf('POST', _push);
+
+      phone.device.lifecycle.state = AppLifecycleState.inactive;
+      await phone.device.clock.advance(inactiveLeaveDelay);
+      await eventually(() async => phone.uploader.pushes.isNotEmpty);
+
+      final PushRequest request = PushRequest.fromJson(
+        decodeJsonObject(
+          await _taskFile(phone.uploader.pushes.single).readAsString(),
+        ),
+      );
+      final List<db.SyncOutboxData> outbox = await phone.device.database
+          .select(phone.device.database.syncOutbox)
+          .get();
+      expect(
+        request.changes.map((RecordPush change) => change.changeId).toSet(),
+        outbox.map((db.SyncOutboxData row) => row.changeId).toSet(),
+      );
+      expect(phone.device.http.countOf('POST', _push), sentBefore);
+    },
+  );
+
+  test('an app back in focus within a second hands nothing over', () async {
+    final _Background phone = await enrolled('Phone');
+    final SyncEngine engine = phone.engine(leaveWhenInactive: true);
+    await engine.start();
+    await engine.syncNow();
+    phone.device.network.kind = NetworkKind.offline;
+    await _note(phone.device, 'saved with no signal');
+
+    phone.device.lifecycle.state = AppLifecycleState.inactive;
+    await phone.device.clock.advance(inactiveLeaveDelay ~/ 2);
+    phone.device.lifecycle.state = AppLifecycleState.resumed;
+    await phone.device.clock.advance(inactiveLeaveDelay * 2);
+    await pumpEventQueue();
+
+    expect(phone.uploader.pushes, isEmpty);
+  });
+
+  test('a window that only loses focus keeps syncing itself', () async {
+    final _Background phone = await enrolled('Mac');
+    final SyncEngine engine = phone.engine();
+    await engine.start();
+    await engine.syncNow();
+    phone.device.network.kind = NetworkKind.offline;
+    await _note(phone.device, 'saved with no signal');
+
+    phone.device.lifecycle.state = AppLifecycleState.inactive;
+    await phone.device.clock.advance(inactiveLeaveDelay * 2);
+    await pumpEventQueue();
+
+    expect(phone.uploader.pushes, isEmpty);
   });
 
   test('media parts carry the notification and the Wi-Fi rule', () async {
@@ -551,7 +618,13 @@ void main() {
     expect(phone.uploader.cancelled.toSet(), containsAll(queued));
 
     await engine.pause(false);
-    await eventually(() async => phone.uploader.held.isNotEmpty);
+    await eventually(
+      () async =>
+          phone.uploader.held.values
+              .where((Task task) => task.group == mediaPartGroup)
+              .length ==
+          2,
+    );
     final Set<String> handedAgain = phone.uploader.held.keys.toSet();
     await LocalJournalWipe(
       database: phone.device.database,

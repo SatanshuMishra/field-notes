@@ -307,6 +307,7 @@ final class SyncTestDevice {
     bool joining = false,
     JournalWiper? wipe,
     BackgroundTransferSource? background,
+    bool leaveWhenInactive = false,
   }) {
     final SyncEngine created = SyncEngine(
       database: database,
@@ -322,6 +323,7 @@ final class SyncTestDevice {
       wipe: wipe,
       backgroundSource: background,
       pullPageSize: pullPageSize,
+      leaveWhenInactive: leaveWhenInactive,
     );
     _engines.add(created);
     return created;
