@@ -160,24 +160,32 @@ The relay refuses what would let one account or one bad client exhaust the serve
 | Request body on the routes without a session, the pairing mailbox routes and device removal | 64 KiB | 400 |
 | Request body for pairing completion and the unused and referenced file reports | 1 MiB | 400 |
 | Request body for a records push | 8 MiB, at most 500 changes | 400 |
+| One record in a push | an envelope of at most 4 MiB + 1 KiB, room for any record of up to 4 MiB; nothing in the push is stored | 400 |
 | `{` and `[` in any JSON request body, counted before it is decoded | 4,096 | 400 |
-| JSON request bodies over 64 KiB being read at once, counting every body on those routes that declares no length | 8 across the relay, 4 per account; others wait without being read | 429 with `Retry-After: 1` after 30 seconds of waiting |
+| JSON request bodies over 64 KiB being read at once, counting every body on those routes that declares no length | 8 across the relay, 4 per account; others wait without being read, and a freed slot goes to the waiting body whose account holds the fewest slots | 429 with `Retry-After: 1` after 30 seconds of waiting |
 | Bodies of one account waiting for one of those slots | 8; a ninth is refused at once | 429 with `Retry-After: 1` |
-| Time a body may take to arrive once it holds a slot | 60 seconds; the slot then goes to the next body | 400, then the connection is closed |
+| Pace of a body that holds a slot, and of a file part | at least 256 KiB in every 30 seconds until it ends, so an 8 MiB push or part still arrives over a slow uplink; the slot then goes to the next body | 400, then the connection is closed within 5 seconds |
+| Time any other request body may take to arrive, and time the relay spends reading away the body of a request it refused | 30 seconds | 400, then the connection is closed within 5 seconds |
+| Requests in flight | 32 per signed-in device; 32 per address (an IPv6 address counted with its /64) on the routes without a session and the pairing mailbox routes | 429 with `Retry-After: 1`, then the connection is closed |
+| One page of a pull | 500 records, and it stops before its JSON reaches 8 MiB, always holding at least one record; the count of records left above it stays exact | none: the app asks for the next page |
+| Current records in a push answer | each refused record carries the relay's current copy only while the answer stays under 8 MiB; the rest come back refused without it | none: the app pulls them |
 | One file | 2 GiB, in at most 256 parts of at most 8 MiB | 400 |
 | Unfinished uploads per account | 32 | 507, shown as "your server is full" |
 | Staged parts per account | 4 GiB | 507 |
-| Free space on the media drive | a part, or a whole file being joined from its parts, is refused when writing it would leave less than `RELAY_MIN_FREE_BYTES` free, 2 GiB unless set, counting everything other uploads are writing at the same time | 507 |
-| Live connections per device | 4; a fifth closes the oldest | close code 4002 |
+| Free space, the smaller of what the media drive and the database's drive have free | a records push, a part, or a whole file being joined from its parts, is refused when writing it would leave less than `RELAY_MIN_FREE_BYTES` free, 2 GiB unless set, counting everything other pushes and uploads are writing at the same time | 507 |
+| Live connections per device, counting connections still closing | 4; a new one closes the oldest open ones, and while 4 are still closing a new one is refused | close code 4002; 429 with `Retry-After: 1` |
 | One live message | 4 KiB, refused from its frame headers before it is held in memory, also when it arrives in fragments | close code 1009 |
 | Bytes on one live connection since its last complete message, counting frame headers, masks and control frames | 16 KiB | close code 1009 |
 | Frames of any kind on one live connection | 60 in any 60 seconds (the app sends one every 30 seconds) | close code 1008 |
 | A live connection the relay has closed but whose device never finishes closing it | cut off 5 seconds after the close | connection dropped |
+| A live connection whose device stops reading what the relay sends | closed once its outgoing frames have waited more than 30 seconds, or once more than 64 KiB of them are waiting, then cut off 5 seconds later | connection dropped |
 | Requests from one address (an IPv6 address together with its /64) on the routes without a session and the pairing mailbox routes | 60 at once, then 1 per second | 429 with `Retry-After` |
 | Requests from one IPv6 /48 on those routes | 240 at once, then 4 per second | 429 with `Retry-After` |
 | Requests from all addresses together on enrolment, restore and pairing (not signing in) | 600 at once, then 20 per second | 429 with `Retry-After` |
 
 To keep more space free, add `RELAY_MIN_FREE_BYTES` (a byte count) to the service's `environment` in `server/compose.yaml`. The request limit per address comes from `RELAY_RATE_BURST` (requests at once, default 60) and `RELAY_RATE_PER_SECOND` (default 1.0), the limit per IPv6 /48 is always four times both, and the relay-wide one from `RELAY_RATE_GLOBAL_BURST` (default 600) and `RELAY_RATE_GLOBAL_PER_SECOND` (default 20), set the same way. `RELAY_LARGE_BODY_SLOTS` (default 8) and `RELAY_LARGE_BODY_SLOTS_PER_ACCOUNT` (default 4) set how many large request bodies are read at once.
+
+The relay reads free space with `df` on both the media folder and the database's folder, at most once every 5 seconds. If `df` fails for either, pushes and parts answer 507 until it works again.
 
 When a file's last part arrives but the drive has no room for the whole file, the relay keeps every part and answers 507. The next upload status request for that file joins it once there is room again, as does sending any of its parts again; the app does both while it retries.
 
@@ -254,8 +262,11 @@ rsync's `--delete` never removes a path the copy is told to leave out, so a `.tr
 
 ```sh
 sudo rm -rf /volume1/field-notes-backup/media/.trash /volume1/field-notes-backup-test/media/.trash
-sudo rm -f /volume1/field-notes-backup/media/.health-* /volume1/field-notes-backup-test/media/.health-*
+sudo find /volume1/field-notes-backup/media -maxdepth 1 -name '.health-*' -delete
+sudo find /volume1/field-notes-backup-test/media -maxdepth 1 -name '.health-*' -delete
 ```
+
+The `.health-*` pattern stays in quotes so that `find`, running as the administrator, matches the files itself; left unquoted, your own shell would try to expand it first in a folder it may not be allowed to read.
 
 The locked NAS snapshots keep their own copies until they expire.
 

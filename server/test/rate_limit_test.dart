@@ -390,4 +390,75 @@ void main() {
     expect(limited.statusCode, HttpStatus.tooManyRequests);
     expect(errorOf(limited).code, SyncErrorCode.tooManyRequests);
   });
+
+  test('a refused request spends no tokens', () async {
+    final TestKeys certifying = harness.signKeys();
+    final InviteRedeemRequest unknownInvite = harness.redeemRequest(
+      'not-an-invite',
+      certifyingKeys: certifying,
+      device: harness.newDevice(certifying),
+      recoverySignKeys: harness.signKeys(),
+      recoveryBoxPublicKey: harness.sodium.crypto.box.keyPair().publicKey,
+      recoveryEpochOneCopy: harness.randomOpaque(72),
+    );
+    Future<http.Response> redeemFrom(String address) => harness.send(
+      SyncRoutes.redeemInvite,
+      body: unknownInvite,
+      headers: <String, String>{addressHeader: address},
+    );
+    for (int request = 1; request <= relayBurst; request++) {
+      expect(
+        errorOf(await redeemFrom(manyAddress(request))).code,
+        SyncErrorCode.inviteInvalid,
+        reason: 'request $request',
+      );
+    }
+    for (int request = 1; request <= burst; request++) {
+      expect(
+        (await redeemFrom(clientAddress)).statusCode,
+        HttpStatus.tooManyRequests,
+        reason: 'refused request $request',
+      );
+    }
+
+    harness.advance(const Duration(seconds: 1));
+
+    for (int request = 1; request <= 2; request++) {
+      expect(
+        errorOf(await redeemFrom(clientAddress)).code,
+        SyncErrorCode.inviteInvalid,
+        reason: 'request $request after the relay-wide refill',
+      );
+    }
+
+    final String deviceId = newSyncId();
+    for (int request = 1; request <= widePrefixBurst; request++) {
+      expect(
+        (await challengeFrom(
+          '2001:db8:7:${request.toRadixString(16)}::1',
+          deviceId,
+        )).statusCode,
+        HttpStatus.ok,
+        reason: 'request $request',
+      );
+    }
+    const String inside = '2001:db8:7:ffff::1';
+    for (int request = 1; request <= burst; request++) {
+      expect(
+        (await challengeFrom(inside, deviceId)).statusCode,
+        HttpStatus.tooManyRequests,
+        reason: 'refused request $request',
+      );
+    }
+
+    harness.advance(const Duration(seconds: 1));
+
+    for (int request = 1; request <= 2; request++) {
+      expect(
+        (await challengeFrom(inside, deviceId)).statusCode,
+        HttpStatus.ok,
+        reason: 'request $request after the /48 refill',
+      );
+    }
+  });
 }

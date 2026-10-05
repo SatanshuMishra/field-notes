@@ -12,7 +12,9 @@ import 'package:sync_protocol/sync_protocol.dart';
 
 import 'body_slots.dart';
 import 'database.dart';
+import 'in_flight.dart';
 import 'logging.dart';
+import 'request_body.dart';
 
 const List<SyncRoute> uploadPassRoutes = <SyncRoute>[
   SyncRoutes.pushRecords,
@@ -30,6 +32,7 @@ const int maxJsonOpeners = 4096;
 
 const String callerContextKey = 'relay.caller';
 const String grantContextKey = 'relay.grant';
+const String verifiedGrantContextKey = 'relay.verified_grant';
 
 enum Access { open, session, sessionOrUploadPass, sessionOrMailbox, mailbox }
 
@@ -144,78 +147,43 @@ const RelayException _bodyTooLarge = RelayException(
   'Body too large',
 );
 
-const RelayException _noBodySlot = RelayException(
+const RelayException _tryAgainShortly = RelayException(
   SyncErrorCode.tooManyRequests,
   '',
   1,
 );
 
-const RelayException _bodyTooSlow = RelayException(
-  SyncErrorCode.badRequest,
-  'Body too slow',
-);
-
 Future<Uint8List> readBody(
   Request request, {
   required int maxBytes,
-  Future<void>? deadline,
+  BodyPace pace = BodyPace.whole,
 }) async {
   final int? declared = request.contentLength;
   if (declared != null && declared > maxBytes) {
     throw _bodyTooLarge;
   }
-  final Completer<Uint8List> body = Completer<Uint8List>();
   final BytesBuilder builder = BytesBuilder(copy: false);
   int received = 0;
-  void finish() {
-    if (body.isCompleted) {
-      return;
-    }
-    if (received > maxBytes) {
-      body.completeError(_bodyTooLarge);
-    } else {
-      body.complete(builder.takeBytes());
-    }
-  }
-
-  late final StreamSubscription<List<int>> reading;
-  reading = request.read().listen(
-    (List<int> chunk) {
+  try {
+    await for (final List<int> chunk in bodyOf(request).read(pace)) {
       received += chunk.length;
       if (received <= maxBytes) {
         builder.add(chunk);
-      } else if (received > 2 * maxBytes) {
-        unawaited(reading.cancel());
-        finish();
+        continue;
       }
-    },
-    onError: (Object error, StackTrace stackTrace) {
-      if (!body.isCompleted) {
-        body.completeError(error, stackTrace);
+      builder.clear();
+      if (received > 2 * maxBytes) {
+        break;
       }
-    },
-    onDone: finish,
-    cancelOnError: true,
-  );
-  unawaited(
-    deadline?.then((_) {
-      if (!body.isCompleted) {
-        reading.pause();
-        body.completeError(_bodyTooSlow);
-      }
-    }),
-  );
-  return body.future;
-}
-
-Future<void> _discardBody(Request request, int maxBytes) async {
-  int received = 0;
-  await for (final List<int> chunk in request.read()) {
-    received += chunk.length;
-    if (received > 2 * maxBytes) {
-      break;
     }
+  } on Object {
+    builder.clear();
+    rethrow;
   }
+  if (received > maxBytes) {
+    throw _bodyTooLarge;
+  }
+  return builder.takeBytes();
 }
 
 bool _needsSlot(Request request, int maxBytes) {
@@ -236,19 +204,12 @@ Future<Uint8List> _readLargeBody(
   final String accountId =
       (request.context[callerContextKey] as Caller?)?.accountId ?? '';
   if (!await slots.acquire(accountId)) {
-    await _discardBody(request, maxBytes);
-    throw _noBodySlot;
+    await bodyOf(request).drain(maxBytes: 2 * maxBytes);
+    throw _tryAgainShortly;
   }
-  final Completer<void> expired = Completer<void>();
-  final Timer deadline = slots.holdDeadline(expired.complete);
   try {
-    return await readBody(
-      request,
-      maxBytes: maxBytes,
-      deadline: expired.future,
-    );
+    return await readBody(request, maxBytes: maxBytes, pace: BodyPace.steady);
   } finally {
-    deadline.cancel();
     slots.release(accountId);
   }
 }
@@ -705,18 +666,26 @@ Middleware protocolGate() =>
       return inner(request);
     };
 
-Middleware authorization(Sessions sessions, SyncRoute route, Access access) =>
+Middleware authorization(
+  Sessions sessions,
+  RequestsInFlight devicesInFlight,
+  SyncRoute route,
+  Access access,
+) =>
     (Handler inner) => (Request request) async {
-      final SessionGrant? grant = sessions.authorize(
-        route,
-        access,
-        credentialOf(request),
-      );
+      final SessionGrant? grant =
+          request.context[verifiedGrantContextKey] as SessionGrant? ??
+          sessions.authorize(route, access, credentialOf(request));
       final Caller? caller = grant?.caller;
       final Map<String, Object> attribution = <String, Object>{
         if (caller != null) LogContext.account: caller.accountId,
         if (caller != null) LogContext.device: caller.deviceId,
       };
+      if (caller != null && !devicesInFlight.enter(caller.deviceId)) {
+        bodyOf(request).abandon();
+        return knownErrorResponse(_tryAgainShortly)!
+            .change(context: attribution);
+      }
       try {
         final Response response = await inner(
           grant == null
@@ -737,5 +706,9 @@ Middleware authorization(Sessions sessions, SyncRoute route, Access access) =>
           rethrow;
         }
         return response.change(context: attribution);
+      } finally {
+        if (caller != null) {
+          devicesInFlight.leave(caller.deviceId);
+        }
       }
     };

@@ -8,6 +8,7 @@ import 'package:sync_protocol/sync_protocol.dart';
 import 'auth.dart';
 import 'database.dart';
 import 'probes.dart';
+import 'request_body.dart';
 
 typedef AssemblyHook = Future<void> Function(String uploadId);
 
@@ -215,15 +216,15 @@ final class BlobStore {
   Future<UploadStatusResponse> putPart(
     String accountId,
     PartUpload part,
-    Stream<List<int>> body, {
+    RequestBody body, {
     int? contentLength,
   }) async {
     if (contentLength != null && contentLength != part.expectedLength) {
-      await _drain(body);
+      await body.drain(maxBytes: maxDrainBytes);
       throw const RelayException(SyncErrorCode.badRequest, 'Wrong part size');
     }
     if (holds(accountId, part.name)) {
-      await _drain(body);
+      await body.drain(maxBytes: maxDrainBytes);
       return UploadStatusResponse(
         receivedParts: const <int>[],
         assembled: true,
@@ -231,7 +232,7 @@ final class BlobStore {
     }
     final int length = part.expectedLength;
     if (!await _space.reserve(length)) {
-      await _drain(body);
+      await body.drain(maxBytes: maxDrainBytes);
       throw const RelayException(SyncErrorCode.storageFull);
     }
     final _PartOutcome outcome;
@@ -256,30 +257,30 @@ final class BlobStore {
   Future<_PartOutcome> _acceptPart(
     String accountId,
     PartUpload part,
-    Stream<List<int>> body,
+    RequestBody body,
   ) async {
     final _Upload upload;
     try {
       upload = _open(accountId, part);
     } on RelayException {
-      await _drain(body);
+      await body.drain(maxBytes: maxDrainBytes);
       rethrow;
     }
     if (upload.busy || _hasPart(upload.id, part.index)) {
-      await _drain(body);
+      await body.drain(maxBytes: maxDrainBytes);
       return (upload: upload, stored: false, next: _Next.settle);
     }
     final int length = part.expectedLength;
     if (_stagedBytes(accountId) + (_inFlight[accountId] ?? 0) + length >
         maxStagedBytes) {
-      await _drain(body);
+      await body.drain(maxBytes: maxDrainBytes);
       throw const RelayException(SyncErrorCode.storageFull);
     }
     _hold(accountId, length);
     try {
       final File received;
       try {
-        received = await _receive(part, body);
+        received = await _receive(part, body.read(BodyPace.steady));
       } on FileSystemException catch (error) {
         if (isStorageFull(error) || !(_upload(upload.id)?.busy ?? false)) {
           rethrow;
@@ -696,20 +697,6 @@ final class BlobStore {
 
   String _partPath(String uploadId, int index) =>
       p.join(stagingPath(mediaDirectory, uploadId), '$index');
-
-  static Future<void> _drain(Stream<List<int>> body) async {
-    int seen = 0;
-    try {
-      await for (final List<int> chunk in body) {
-        seen += chunk.length;
-        if (seen > maxDrainBytes) {
-          return;
-        }
-      }
-    } on Object {
-      return;
-    }
-  }
 }
 
 void _deleteQuietly(FileSystemEntity entity) {

@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:relay_server/relay_server.dart';
 import 'package:relay_server/src/accounts.dart';
 import 'package:relay_server/src/body_slots.dart';
+import 'package:relay_server/src/request_body.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 import 'package:test/test.dart';
 
@@ -20,6 +21,13 @@ const int largeBody = 100 * 1024;
 const int waitersPerAccount = 8;
 const Timeout pollingTimeout = Timeout(Duration(minutes: 2));
 const Duration answerLimit = Duration(seconds: 10);
+const Duration readLimit = Duration(seconds: 30);
+const Duration paceWindow = Duration(seconds: 30);
+const int paceFloor = 256 * 1024;
+const Duration slotWait = Duration(seconds: 20);
+const Duration closeLimit = Duration(seconds: 5);
+const int inFlightLimit = 32;
+const String addressHeader = 'CF-Connecting-IP';
 
 int openersIn(List<int> body) =>
     body.where((int byte) => byte == 0x7b || byte == 0x5b).length;
@@ -30,11 +38,26 @@ Future<void> until(bool Function() condition) async {
   }
 }
 
+Future<bool> eventually(bool Function() condition) async {
+  final Stopwatch watch = Stopwatch()..start();
+  while (!condition()) {
+    if (watch.elapsed > answerLimit) {
+      return false;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+  return true;
+}
+
+typedef RawRequest = ({Socket socket, Future<String> answer});
+
 void main() {
+  late ManualTimers timers;
   late RelayHarness harness;
 
   setUp(() async {
-    harness = await RelayHarness.start();
+    timers = ManualTimers();
+    harness = await RelayHarness.start(startTimer: timers.start);
   });
 
   tearDown(() async {
@@ -642,7 +665,10 @@ void main() {
   });
 
   test("large bodies beyond the relay's slots wait for one", () async {
-    final RelayHarness tight = await RelayHarness.start(largeBodySlots: 1);
+    final RelayHarness tight = await RelayHarness.start(
+      largeBodySlots: 1,
+      startTimer: ManualTimers().start,
+    );
     addTearDown(tight.dispose);
     final TestAccount account = await tight.enrol();
     final SignedIn macIn = await tight.signIn(account.firstDevice);
@@ -692,9 +718,11 @@ void main() {
   }, timeout: pollingTimeout);
 
   test('a large body that waits too long for a slot gets 429', () async {
+    final ManualTimers slotTimers = ManualTimers();
     final RelayHarness tight = await RelayHarness.start(
       largeBodySlots: 1,
-      largeBodyWait: const Duration(milliseconds: 200),
+      largeBodyWait: slotWait,
+      startTimer: slotTimers.start,
     );
     addTearDown(tight.dispose);
     final TestAccount account = await tight.enrol();
@@ -713,8 +741,7 @@ void main() {
     );
     request.sink.add(first.sublist(0, largeBody ~/ 2));
     await until(() => tight.app.largeBodies.active == 1);
-
-    final http.Response refused = await pushBody(
+    final Future<http.Response> waiting = pushBody(
       tight,
       macIn,
       padded(
@@ -722,6 +749,12 @@ void main() {
         largeBody,
       ),
     );
+    await until(() => tight.app.largeBodies.waiting == 1);
+    final List<ManualTimer> waits = slotTimers.pending(slotWait);
+    expect(waits, hasLength(1));
+
+    waits.single.fire();
+    final http.Response refused = await waiting.timeout(answerLimit);
 
     expect(refused.statusCode, HttpStatus.tooManyRequests);
     expect(errorOf(refused).code, SyncErrorCode.tooManyRequests);
@@ -737,14 +770,15 @@ void main() {
     expect(tight.database.count('SELECT count(*) FROM records'), 1);
   }, timeout: pollingTimeout);
 
-  Future<({Socket socket, Future<String> answer})> openRawPush(
+  Future<RawRequest> openRaw(
     RelayHarness relay,
-    SignedIn who,
+    SyncRoute route,
     List<int> body,
-    int sent,
-  ) async {
-    final Uri push = relay.uri(SyncRoutes.pushRecords);
-    final Socket socket = await Socket.connect(push.host, push.port);
+    int sent, {
+    Map<String, String> headers = const <String, String>{},
+  }) async {
+    final Uri target = relay.uri(route);
+    final Socket socket = await Socket.connect(target.host, target.port);
     final List<int> answer = <int>[];
     final Completer<String> answered = Completer<String>();
     void finish() {
@@ -763,12 +797,13 @@ void main() {
     socket
       ..add(
         latin1.encode(
-          'POST ${push.path} HTTP/1.1\r\n'
-          'Host: ${push.host}:${push.port}\r\n'
+          '${route.method} ${target.path} HTTP/1.1\r\n'
+          'Host: ${target.host}:${target.port}\r\n'
+          'Connection: close\r\n'
           'Content-Length: ${body.length}\r\n'
           'content-type: application/json\r\n'
           '${SyncHeaders.protocol}: $syncProtocolVersion\r\n'
-          '${SyncHeaders.authorization}: ${who.session.authorization}\r\n'
+          '${<String>[for (final MapEntry<String, String> header in headers.entries) '${header.key}: ${header.value}\r\n'].join()}'
           '\r\n',
         ),
       )
@@ -777,11 +812,27 @@ void main() {
     return (socket: socket, answer: answered.future);
   }
 
+  Future<RawRequest> openRawPush(
+    RelayHarness relay,
+    SignedIn who,
+    List<int> body,
+    int sent,
+  ) => openRaw(
+    relay,
+    SyncRoutes.pushRecords,
+    body,
+    sent,
+    headers: <String, String>{
+      SyncHeaders.authorization: who.session.authorization,
+    },
+  );
+
   test('a slow body loses its slot', () async {
-    final ManualTimers timers = ManualTimers();
+    final ManualTimers slotTimers = ManualTimers();
     final RelayHarness tight = await RelayHarness.start(
       largeBodySlots: 1,
-      startTimer: timers.start,
+      largeBodyWait: slotWait,
+      startTimer: slotTimers.start,
     );
     addTearDown(tight.dispose);
     final TestAccount account = await tight.enrol();
@@ -807,9 +858,9 @@ void main() {
       ),
     );
     await until(() => tight.app.largeBodies.waiting == 1);
-    final List<ManualTimer> deadlines = timers.pending(largeBodyHoldLimit);
+    final List<ManualTimer> deadlines = slotTimers.pending(paceWindow);
     expect(deadlines, hasLength(1));
-    expect(deadlines.single.duration, const Duration(seconds: 60));
+    expect(deadlines.single.duration, const Duration(seconds: 30));
 
     deadlines.single.fire();
 
@@ -961,6 +1012,275 @@ void main() {
     },
     timeout: pollingTimeout,
   );
+
+  test('a freed slot goes to an account holding none', () async {
+    final ManualTimers slotTimers = ManualTimers();
+    final RelayHarness tight = await RelayHarness.start(
+      largeBodySlots: 3,
+      startTimer: slotTimers.start,
+    );
+    addTearDown(tight.dispose);
+    final TestAccount firstAccount = await tight.enrol(note: 'First journal');
+    final TestAccount secondAccount = await tight.enrol(note: 'Second journal');
+    final TestAccount thirdAccount = await tight.enrol(note: 'Third journal');
+    final SignedIn first = await tight.signIn(firstAccount.firstDevice);
+    final SignedIn second = await tight.signIn(secondAccount.firstDevice);
+    final SignedIn third = await tight.signIn(thirdAccount.firstDevice);
+    List<int> body(String recordKey) => padded(
+      PushRequest(changes: <RecordPush>[tight.record(recordKey)]),
+      largeBody,
+    );
+    int stored(String recordKey) => tight.database.count(
+      'SELECT count(*) FROM records WHERE record_key = ?',
+      <Object?>[recordKey],
+    );
+    final List<({Socket socket, Future<String> answer, List<int> body})>
+    holders = <({Socket socket, Future<String> answer, List<int> body})>[];
+    for (final (SignedIn who, String recordKey) in <(SignedIn, String)>[
+      (first, 'first-held'),
+      (first, 'first-held-too'),
+      (second, 'second-held'),
+    ]) {
+      final List<int> held = body(recordKey);
+      final (:Socket socket, :Future<String> answer) = await openRawPush(
+        tight,
+        who,
+        held,
+        largeBody ~/ 2,
+      );
+      addTearDown(socket.destroy);
+      holders.add((socket: socket, answer: answer, body: held));
+      await until(() => tight.app.largeBodies.active == holders.length);
+    }
+    final List<Future<http.Response>> waiters = <Future<http.Response>>[];
+    for (final (SignedIn who, String recordKey) in <(SignedIn, String)>[
+      (first, 'first-waiting'),
+      (second, 'second-waiting'),
+    ]) {
+      waiters.add(pushBody(tight, who, body(recordKey)));
+      await until(() => tight.app.largeBodies.waiting == waiters.length);
+    }
+    final List<int> thirdBody = body('third-waiting');
+    final (socket: Socket thirdSocket, answer: Future<String> thirdAnswer) =
+        await openRawPush(tight, third, thirdBody, largeBody ~/ 2);
+    addTearDown(thirdSocket.destroy);
+    await until(() => tight.app.largeBodies.waiting == 3);
+
+    holders.first.socket.add(holders.first.body.sublist(largeBody ~/ 2));
+    expect(
+      await holders.first.answer.timeout(answerLimit),
+      startsWith('HTTP/1.1 200'),
+    );
+
+    expect(
+      await eventually(
+        () => tight.app.largeBodies.heldBy(thirdAccount.accountId) == 1,
+      ),
+      isTrue,
+    );
+    expect(tight.app.largeBodies.waiting, 2);
+    expect(stored('first-waiting'), 0);
+    expect(stored('second-waiting'), 0);
+
+    thirdSocket.add(thirdBody.sublist(largeBody ~/ 2));
+    expect(await thirdAnswer.timeout(answerLimit), startsWith('HTTP/1.1 200'));
+    for (final ({Socket socket, Future<String> answer, List<int> body}) holder
+        in holders.skip(1)) {
+      holder.socket.add(holder.body.sublist(largeBody ~/ 2));
+      expect(
+        await holder.answer.timeout(answerLimit),
+        startsWith('HTTP/1.1 200'),
+      );
+    }
+    for (final Future<http.Response> waiter in waiters) {
+      expect((await waiter.timeout(answerLimit)).statusCode, HttpStatus.ok);
+    }
+    expect(tight.database.count('SELECT count(*) FROM records'), 6);
+    expect(tight.app.largeBodies.active, 0);
+    expect(tight.app.largeBodies.waiting, 0);
+  }, timeout: pollingTimeout);
+
+  test('a small body that stalls is aborted', () async {
+    final TestAccount account = await harness.enrol();
+    final List<int> body = padded(
+      ChallengeRequest(deviceId: account.firstDevice.deviceId),
+      1000,
+    );
+    final int before = count('SELECT count(*) FROM challenges');
+    final (:Socket socket, :Future<String> answer) = await openRaw(
+      harness,
+      SyncRoutes.sessionChallenge,
+      body,
+      10,
+    );
+    addTearDown(socket.destroy);
+    expect(
+      await eventually(() => timers.pending(readLimit).length == 1),
+      isTrue,
+    );
+
+    timers.pending(readLimit).single.fire();
+
+    final String aborted = await answer.timeout(answerLimit);
+    expect(aborted, startsWith('HTTP/1.1 400'));
+    expect(aborted, contains(SyncErrorCode.badRequest.wireName));
+    expect(aborted.toLowerCase(), contains('connection: close'));
+    expect(count('SELECT count(*) FROM challenges'), before);
+    final List<ManualTimer> dropping = timers.pending(closeLimit);
+    expect(dropping, hasLength(1));
+    dropping.single.fire();
+    expect(harness.app.addressesInFlight.count('127.0.0.1'), 0);
+  }, timeout: pollingTimeout);
+
+  test('a stalled drain is aborted', () async {
+    final List<int> body = padded(
+      PushRequest(changes: <RecordPush>[harness.record('refused')]),
+      1000,
+    );
+    final (:Socket socket, :Future<String> answer) = await openRaw(
+      harness,
+      SyncRoutes.pushRecords,
+      body,
+      10,
+      headers: <String, String>{
+        SyncHeaders.authorization: const AuthCredential(
+          AuthScheme.session,
+          'junk',
+        ).authorization,
+      },
+    );
+    addTearDown(socket.destroy);
+    expect(
+      await eventually(() => timers.pending(readLimit).length == 1),
+      isTrue,
+    );
+
+    timers.pending(readLimit).single.fire();
+
+    final String aborted = await answer.timeout(answerLimit);
+    expect(aborted, startsWith('HTTP/1.1 400'));
+    expect(aborted, contains(SyncErrorCode.badRequest.wireName));
+    expect(aborted.toLowerCase(), contains('connection: close'));
+    expect(count('SELECT count(*) FROM records'), 0);
+  }, timeout: pollingTimeout);
+
+  test('requests in flight per device are capped', () async {
+    final TestAccount account = await harness.enrol();
+    final SignedIn macIn = await harness.signIn(account.firstDevice);
+    final String deviceId = account.firstDevice.deviceId;
+    final List<({Socket socket, Future<String> answer, List<int> body})>
+    stalled = <({Socket socket, Future<String> answer, List<int> body})>[];
+    for (int index = 0; index < inFlightLimit; index++) {
+      final List<int> body = padded(
+        PushRequest(changes: <RecordPush>[harness.record('note-$index')]),
+        1000,
+      );
+      final (:Socket socket, :Future<String> answer) = await openRawPush(
+        harness,
+        macIn,
+        body,
+        10,
+      );
+      addTearDown(socket.destroy);
+      stalled.add((socket: socket, answer: answer, body: body));
+    }
+    expect(
+      await eventually(
+        () => harness.app.devicesInFlight.count(deviceId) == inFlightLimit,
+      ),
+      isTrue,
+    );
+
+    final http.Response refused = await harness.send(
+      SyncRoutes.pullRecords,
+      credential: macIn.session,
+      query: const <String, String>{SyncRoutes.afterQuery: '0'},
+    );
+
+    expect(refused.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(refused).code, SyncErrorCode.tooManyRequests);
+    expect(refused.headers['retry-after'], '1');
+    expect(harness.app.devicesInFlight.count(deviceId), inFlightLimit);
+
+    final ({Socket socket, Future<String> answer, List<int> body}) finished =
+        stalled.first;
+    finished.socket.add(finished.body.sublist(10));
+    expect(
+      await finished.answer.timeout(answerLimit),
+      startsWith('HTTP/1.1 200'),
+    );
+    expect(
+      await eventually(
+        () => harness.app.devicesInFlight.count(deviceId) == inFlightLimit - 1,
+      ),
+      isTrue,
+    );
+    final PullResponse pulled = await harness.pull(macIn.session);
+    expect(pulled.states.map((RecordState state) => state.recordKey), <String>[
+      'note-0',
+    ]);
+  }, timeout: pollingTimeout);
+
+  test('requests in flight per address are capped on open routes', () async {
+    final TestAccount account = await harness.enrol();
+    const String crowded = '203.0.113.50';
+    final ChallengeRequest challenge = ChallengeRequest(
+      deviceId: account.firstDevice.deviceId,
+    );
+    final List<int> body = padded(challenge, 1000);
+    for (int index = 0; index < inFlightLimit; index++) {
+      final (:Socket socket, answer: _) = await openRaw(
+        harness,
+        SyncRoutes.sessionChallenge,
+        body,
+        10,
+        headers: const <String, String>{addressHeader: crowded},
+      );
+      addTearDown(socket.destroy);
+    }
+    expect(
+      await eventually(
+        () => harness.app.addressesInFlight.count(crowded) == inFlightLimit,
+      ),
+      isTrue,
+    );
+
+    final http.Response refused = await harness.send(
+      SyncRoutes.sessionChallenge,
+      body: challenge,
+      headers: const <String, String>{addressHeader: crowded},
+    );
+    final http.Response elsewhere = await harness.send(
+      SyncRoutes.sessionChallenge,
+      body: challenge,
+      headers: const <String, String>{addressHeader: '198.51.100.7'},
+    );
+
+    expect(refused.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(refused).code, SyncErrorCode.tooManyRequests);
+    expect(refused.headers['retry-after'], '1');
+    expect(elsewhere.statusCode, HttpStatus.ok);
+  }, timeout: pollingTimeout);
+
+  test('a body that keeps its pace is never aborted', () {
+    DateTime at(int seconds) => harnessStart.add(Duration(seconds: seconds));
+    final PaceWindow window = PaceWindow(harnessStart);
+    expect(window.deadline, at(30));
+
+    window.arrived(at(10), paceFloor ~/ 2);
+    expect(window.deadline, at(30));
+    window.arrived(at(29), paceFloor ~/ 2);
+    expect(window.deadline, at(40));
+    window.arrived(at(39), paceFloor);
+    expect(window.deadline, at(69));
+
+    int received = 2 * paceFloor;
+    for (int second = 68; received < pushLimit; second += 29) {
+      window.arrived(at(second), paceFloor);
+      received += paceFloor;
+      expect(window.deadline, at(second + 30), reason: 'at $second s');
+    }
+  });
 
   test('one account holds at most its share of the large body slots', () async {
     final LargeBodySlots slots = LargeBodySlots(total: 3, perAccount: 2);

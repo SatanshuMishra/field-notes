@@ -46,4 +46,24 @@ void main() {
     expect(await phoneLive.next(), const LiveNudge(latestSeq: 22));
     expect(timers.pending(liveNudgeInterval), isEmpty);
   });
+
+  test('a clock stepping back holds a nudge for at most a second', () async {
+    final TestAccount account = await harness.enrol();
+    final TestDevice phone = harness.addDevice(account);
+    final SignedIn mac = await harness.signIn(account.firstDevice);
+    final SignedIn phoneIn = await harness.signIn(phone);
+    final LiveClient phoneLive = await harness.openLive(phoneIn.token);
+    await harness.push(mac.session, <RecordPush>[harness.record('note-0')]);
+    expect(await phoneLive.next(), const LiveNudge(latestSeq: 1));
+
+    harness.advance(const Duration(hours: -1));
+    await harness.push(mac.session, <RecordPush>[harness.record('note-1')]);
+    phoneLive.send(const LivePing());
+    expect(await phoneLive.next(), const LivePong());
+
+    final List<ManualTimer> held = timers.pending(liveNudgeInterval);
+    expect(held, hasLength(1));
+    held.single.fire();
+    expect(await phoneLive.next(), const LiveNudge(latestSeq: 2));
+  });
 }

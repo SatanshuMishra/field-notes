@@ -18,6 +18,8 @@ const int _eightByteLength = 127;
 const int maxLiveRawBytes = 16 * 1024;
 const int maxLiveFrames = 60;
 const Duration liveFrameWindow = Duration(seconds: 60);
+const Duration liveStallLimit = Duration(seconds: 30);
+const int maxLiveWaitingBytes = 64 * 1024;
 
 enum LiveRefusal { tooBig, tooFast }
 
@@ -32,9 +34,21 @@ final class LiveFrameGuard {
   int _messageBytes = 0;
   int _rawBytes = 0;
   bool _completesMessage = false;
+  bool _inControlFrame = false;
 
-  LiveRefusal? admit(List<int> chunk) {
+  LiveRefusal? admit(List<int> chunk, [List<(int, int)>? controlFrames]) {
     int index = 0;
+    int? controlStart = _inControlFrame ? 0 : null;
+    void frameEnded() {
+      _frameEnded();
+      final int? start = controlStart;
+      if (start != null) {
+        controlFrames?.add((start, index));
+        controlStart = null;
+      }
+      _inControlFrame = false;
+    }
+
     while (index < chunk.length) {
       if (_payloadLeft > 0) {
         final int taken = min(_payloadLeft, chunk.length - index);
@@ -45,9 +59,13 @@ final class LiveFrameGuard {
           return LiveRefusal.tooBig;
         }
         if (_payloadLeft == 0) {
-          _frameEnded();
+          frameEnded();
         }
         continue;
+      }
+      if (_header.isEmpty) {
+        _inControlFrame = (chunk[index] & _opcodeBits) >= _firstControlOpcode;
+        controlStart = _inControlFrame ? index : null;
       }
       _header.add(chunk[index]);
       index++;
@@ -65,8 +83,12 @@ final class LiveFrameGuard {
       }
       _header.clear();
       if (_payloadLeft == 0) {
-        _frameEnded();
+        frameEnded();
       }
+    }
+    final int? start = controlStart;
+    if (start != null) {
+      controlFrames?.add((start, chunk.length));
     }
     return null;
   }
@@ -87,6 +109,9 @@ final class LiveFrameGuard {
 
   bool _withinRate() {
     final DateTime now = _clock();
+    if (_frames.isNotEmpty && now.isBefore(_frames.first)) {
+      _frames.clear();
+    }
     while (_frames.isNotEmpty &&
         !now.isBefore(_frames.first.add(liveFrameWindow))) {
       _frames.removeFirst();
@@ -154,22 +179,140 @@ Stream<Uint8List> guardedFrames(
         if (refused) {
           return;
         }
-        final LiveRefusal? refusal = guard.admit(chunk);
-        if (refusal == null) {
+        final List<(int, int)> controlFrames = <(int, int)>[];
+        final LiveRefusal? refusal = guard.admit(chunk, controlFrames);
+        if (refusal != null) {
+          refused = true;
+          onRefused(refusal);
+          return;
+        }
+        if (controlFrames.isEmpty) {
           sink.add(chunk);
           return;
         }
-        refused = true;
-        onRefused(refusal);
+        int from = 0;
+        for (final (int start, int end) in controlFrames) {
+          if (start > from) {
+            sink.add(Uint8List.sublistView(chunk, from, start));
+          }
+          sink.add(Uint8List.fromList(chunk.sublist(start, end)));
+          from = end;
+        }
+        if (from < chunk.length) {
+          sink.add(Uint8List.sublistView(chunk, from));
+        }
       },
     ),
   );
 }
 
+typedef SendOutput = Future<void> Function(
+  Socket socket,
+  Stream<List<int>> output,
+);
+
+Future<void> sendOutput(Socket socket, Stream<List<int>> output) =>
+    socket.addStream(output);
+
+final class LiveOutput {
+  LiveOutput(this._clock, this._onOverflow);
+
+  final DateTime Function() _clock;
+  final void Function() _onOverflow;
+  final ListQueue<List<int>> _waiting = ListQueue<List<int>>();
+  int _waitingBytes = 0;
+  DateTime? _pausedSince;
+  bool _overflowed = false;
+  bool _sourceDone = false;
+  StreamController<List<int>>? _out;
+  StreamSubscription<List<int>>? _source;
+
+  int get waitingBytes => _waitingBytes;
+
+  bool get overflowed => _overflowed;
+
+  bool stalled(DateTime now) {
+    final DateTime? since = _pausedSince;
+    return since != null && now.difference(since) > liveStallLimit;
+  }
+
+  Stream<List<int>> watch(Stream<List<int>> source) {
+    final StreamController<List<int>> out = StreamController<List<int>>(
+      sync: true,
+    );
+    out
+      ..onListen = () {
+        _source = source.listen(
+          _add,
+          onError: (Object error, StackTrace stackTrace) {
+            if (!out.isClosed) {
+              out.addError(error, stackTrace);
+            }
+          },
+          onDone: () {
+            _sourceDone = true;
+            _flush();
+          },
+        );
+      }
+      ..onPause = () {
+        _pausedSince ??= _clock();
+      }
+      ..onResume = () {
+        _pausedSince = null;
+        scheduleMicrotask(_flush);
+      }
+      ..onCancel = () => _source?.cancel();
+    _out = out;
+    return out.stream;
+  }
+
+  void _add(List<int> chunk) {
+    final StreamController<List<int>>? out = _out;
+    if (out == null || out.isClosed || _overflowed) {
+      return;
+    }
+    if (!out.isPaused && _waiting.isEmpty) {
+      out.add(chunk);
+      return;
+    }
+    _waiting.addLast(chunk);
+    _waitingBytes += chunk.length;
+    if (_waitingBytes > maxLiveWaitingBytes) {
+      _overflowed = true;
+      _waiting.clear();
+      _waitingBytes = 0;
+      scheduleMicrotask(_onOverflow);
+    }
+  }
+
+  void _flush() {
+    final StreamController<List<int>>? out = _out;
+    if (out == null || out.isClosed) {
+      return;
+    }
+    while (!out.isPaused && _waiting.isNotEmpty) {
+      final List<int> chunk = _waiting.removeFirst();
+      _waitingBytes -= chunk.length;
+      out.add(chunk);
+    }
+    if (_sourceDone && _waiting.isEmpty) {
+      unawaited(out.close());
+    }
+  }
+}
+
 final class GuardedSocket extends StreamView<Uint8List> implements Socket {
-  GuardedSocket(this._socket, Stream<Uint8List> incoming) : super(incoming);
+  GuardedSocket(
+    this._socket,
+    Stream<Uint8List> incoming, {
+    required this._output,
+    this._send = sendOutput,
+  }) : super(incoming);
 
   final Socket _socket;
+  final LiveOutput _output;
+  final SendOutput _send;
 
   @override
   Encoding get encoding => _socket.encoding;
@@ -200,7 +343,8 @@ final class GuardedSocket extends StreamView<Uint8List> implements Socket {
       _socket.addError(error, stackTrace);
 
   @override
-  Future<void> addStream(Stream<List<int>> stream) => _socket.addStream(stream);
+  Future<void> addStream(Stream<List<int>> stream) =>
+      _send(_socket, _output.watch(stream));
 
   @override
   Future<void> flush() => _socket.flush();

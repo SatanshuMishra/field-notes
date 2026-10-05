@@ -9,6 +9,8 @@ import 'package:sync_protocol/sync_protocol.dart';
 
 import 'auth.dart';
 import 'config.dart';
+import 'in_flight.dart';
+import 'request_body.dart';
 
 const int maxRateBuckets = 10000;
 const int prefixRateFactor = 4;
@@ -100,18 +102,29 @@ final class SharedRateLimit {
   final DateTime Function() _clock;
   _Bucket? _bucket;
 
-  int? take() {
+  int? check() {
     final DateTime now = _clock();
     final _Bucket? previous = _bucket;
     final double available = previous == null
         ? burst.toDouble()
         : _refilled(previous, now, burst, perSecond);
-    if (available < 1) {
-      _bucket = _Bucket(tokens: available, updatedAt: now);
-      return _wait(available, perSecond);
+    _bucket = _Bucket(tokens: available, updatedAt: now);
+    return available < 1 ? _wait(available, perSecond) : null;
+  }
+
+  void spend() {
+    final _Bucket? bucket = _bucket;
+    if (bucket != null) {
+      _bucket = _Bucket(tokens: bucket.tokens - 1, updatedAt: bucket.updatedAt);
     }
-    _bucket = _Bucket(tokens: available - 1, updatedAt: now);
-    return null;
+  }
+
+  int? take() {
+    final int? wait = check();
+    if (wait == null) {
+      spend();
+    }
+    return wait;
   }
 }
 
@@ -136,15 +149,12 @@ final class RateLimiter {
 
   int get bucketCount => _buckets.length;
 
-  int? take(String address) {
-    final String? rateKey = keyOf(address);
-    if (rateKey == null) {
+  int? check(String address) {
+    final String? key = _keyOf(address);
+    if (key == null) {
       return null;
     }
     final DateTime now = _clock();
-    final String key = base64Url.encode(
-      _hmac.convert(utf8.encode(rateKey)).bytes,
-    );
     final _Bucket? previous = _buckets.remove(key);
     if (previous == null) {
       _makeRoom();
@@ -152,12 +162,34 @@ final class RateLimiter {
     final double available = previous == null
         ? burst.toDouble()
         : _refilled(previous, now, burst, perSecond);
-    if (available < 1) {
-      _buckets[key] = _Bucket(tokens: available, updatedAt: now);
-      return _wait(available, perSecond);
+    _buckets[key] = _Bucket(tokens: available, updatedAt: now);
+    return available < 1 ? _wait(available, perSecond) : null;
+  }
+
+  void spend(String address) {
+    final String? key = _keyOf(address);
+    final _Bucket? bucket = key == null ? null : _buckets[key];
+    if (key != null && bucket != null) {
+      _buckets[key] = _Bucket(
+        tokens: bucket.tokens - 1,
+        updatedAt: bucket.updatedAt,
+      );
     }
-    _buckets[key] = _Bucket(tokens: available - 1, updatedAt: now);
-    return null;
+  }
+
+  int? take(String address) {
+    final int? wait = check(address);
+    if (wait == null) {
+      spend(address);
+    }
+    return wait;
+  }
+
+  String? _keyOf(String address) {
+    final String? rateKey = keyOf(address);
+    return rateKey == null
+        ? null
+        : base64Url.encode(_hmac.convert(utf8.encode(rateKey)).bytes);
   }
 
   void sweep() {
@@ -219,10 +251,22 @@ final class RateLimits {
   final RateLimiter widePrefix;
   final SharedRateLimit relayWide;
 
-  int? take(String client, {required bool relayWideRoute}) =>
-      address.take(client) ??
-      widePrefix.take(client) ??
-      (relayWideRoute ? relayWide.take() : null);
+  int? take(String client, {required bool relayWideRoute}) {
+    final int wait = <int>[
+      address.check(client) ?? 0,
+      widePrefix.check(client) ?? 0,
+      if (relayWideRoute) relayWide.check() ?? 0,
+    ].reduce(max);
+    if (wait > 0) {
+      return wait;
+    }
+    address.spend(client);
+    widePrefix.spend(client);
+    if (relayWideRoute) {
+      relayWide.spend();
+    }
+    return null;
+  }
 
   void sweep() {
     address.sweep();
@@ -230,22 +274,41 @@ final class RateLimits {
   }
 }
 
+Response _tooManyRequests(int wait) =>
+    errorResponse(SyncErrorCode.tooManyRequests)
+        .change(headers: <String, String>{retryAfterHeader: '$wait'});
+
 Middleware rateLimit(
   RateLimits limits,
+  RequestsInFlight addressesInFlight,
   SyncRoute route, {
-  bool Function(Request request)? exempt,
+  SessionGrant? Function(Request request)? exempt,
 }) =>
-    (Handler inner) => (Request request) {
-      if (exempt != null && exempt(request)) {
-        return inner(request);
+    (Handler inner) => (Request request) async {
+      final SessionGrant? verified = exempt?.call(request);
+      if (verified != null) {
+        return inner(
+          request.change(
+            context: <String, Object>{verifiedGrantContextKey: verified},
+          ),
+        );
       }
-      final int? wait = limits.take(
-        clientAddressOf(request),
-        relayWideRoute: relayWideRoutes.contains(route),
-      );
-      if (wait == null) {
-        return inner(request);
+      final String client = clientAddressOf(request);
+      final String inFlightKey = rateKeyOf(client);
+      if (!addressesInFlight.enter(inFlightKey)) {
+        bodyOf(request).abandon();
+        return _tooManyRequests(1);
       }
-      return errorResponse(SyncErrorCode.tooManyRequests)
-          .change(headers: <String, String>{retryAfterHeader: '$wait'});
+      try {
+        final int? wait = limits.take(
+          client,
+          relayWideRoute: relayWideRoutes.contains(route),
+        );
+        if (wait != null) {
+          return _tooManyRequests(wait);
+        }
+        return await inner(request);
+      } finally {
+        addressesInFlight.leave(inFlightKey);
+      }
     };
