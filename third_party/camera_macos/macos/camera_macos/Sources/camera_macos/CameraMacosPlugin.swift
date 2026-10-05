@@ -521,6 +521,7 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                                     connection.isVideoMirrored = self.isVideoMirrored
                                 }
                             }
+                            self.applyMovieSettings(videoOutput, arguments)
                             outputInitialized = true
                         }
                         let previewVideoOutput = AVCaptureVideoDataOutput()
@@ -617,6 +618,53 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         }
     }
     
+    func moviePreset(_ resolution: String?) -> AVCaptureSession.Preset? {
+        switch resolution {
+        case "low":
+            return .vga640x480
+        case "medium":
+            return .qHD960x540
+        case "high":
+            return .hd1280x720
+        case "veryHigh":
+            if #available(macOS 10.15, *) {
+                return .hd1920x1080
+            }
+            return nil
+        case "ultraHigh":
+            if #available(macOS 10.15, *) {
+                return .hd4K3840x2160
+            }
+            return nil
+        default:
+            return nil
+        }
+    }
+
+    func applyMovieSettings(_ movieOutput: AVCaptureMovieFileOutput, _ arguments: Dictionary<String, Any>) {
+        if let preset = moviePreset(arguments["movieResolution"] as? String), captureSession.canSetSessionPreset(preset) {
+            captureSession.sessionPreset = preset
+        }
+        if let videoBitrate = arguments["videoBitrate"] as? Int, let videoConnection = movieOutput.connection(with: .video) {
+            let codec: Any
+            if #available(macOS 10.13, *) {
+                codec = AVVideoCodecType.h264
+            } else {
+                codec = AVVideoCodecH264
+            }
+            movieOutput.setOutputSettings([
+                AVVideoCodecKey: codec,
+                AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: videoBitrate],
+            ], for: videoConnection)
+        }
+        if let audioBitrate = arguments["audioBitrate"] as? Int, let audioConnection = movieOutput.connection(with: .audio) {
+            movieOutput.setOutputSettings([
+                AVFormatIDKey: kAudioFormatMPEG4AAC,
+                AVEncoderBitRateKey: audioBitrate,
+            ], for: audioConnection)
+        }
+    }
+
     func takePicture(_ result: @escaping FlutterResult, _ format: NSBitmapImageRep.FileType?) {
         if format != nil{
             guard let imageBuffer = latestBuffer, let nsImage = imageFromSampleBuffer(imageBuffer: imageBuffer),

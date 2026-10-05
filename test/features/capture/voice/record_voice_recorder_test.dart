@@ -9,9 +9,11 @@ import 'package:record/record.dart';
 
 class _FakeAudioRecorder extends Fake implements AudioRecorder {
   String? _path;
+  RecordConfig? startedWith;
 
   @override
   Future<void> start(RecordConfig config, {required String path}) async {
+    startedWith = config;
     _path = path;
     await File(path).writeAsBytes(<int>[1, 2, 3], flush: true);
   }
@@ -35,6 +37,27 @@ void main() {
       expect(voiceRecordingEncoder, AudioEncoder.aacLc);
       expect(voiceRecordingExtension, 'm4a');
       expect(voiceRecordingMime, 'audio/mp4');
+    });
+  });
+
+  group('voice recording configuration', () {
+    test('starts recording as AAC-LC mono at 48 kbps', () async {
+      final Directory temp =
+          await Directory.systemTemp.createTemp('voice_config_test_');
+      addTearDown(() => temp.delete(recursive: true));
+      final _FakeAudioRecorder fake = _FakeAudioRecorder();
+      final RecordVoiceRecorder recorder = RecordVoiceRecorder(
+        recorder: fake,
+        temporaryDirectory: () async => temp,
+      );
+
+      await recorder.start();
+
+      final RecordConfig? config = fake.startedWith;
+      expect(config, isNotNull);
+      expect(config!.encoder, AudioEncoder.aacLc);
+      expect(config.numChannels, 1);
+      expect(config.bitRate, 48000);
     });
   });
 
