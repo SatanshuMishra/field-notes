@@ -46,6 +46,9 @@ install_missing msmtp msmtp-mta smartmontools snapper btrfs-progs openssh rsync 
 say "cosign, which verifies the relay image's signature"
 pacman -S --needed --noconfirm cosign
 
+say "Network time through systemd-timesyncd, which Arch leaves off"
+timedatectl set-ntp true
+
 say "Scripts in $install_dir, owned by root and read-only"
 install -d -o root -g root -m 0755 "$install_dir"
 for script in nightly-copy.sh restore-drill.sh alert.sh nas-ssh-keys.sh relay-update.sh; do
