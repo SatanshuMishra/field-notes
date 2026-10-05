@@ -185,10 +185,11 @@ void main() {
     addTearDown(() => scratch.delete(recursive: true));
     final String data = p.join(scratch.path, 'data');
     final String media = p.join(data, 'media');
+    final List<String> ids = <String>[newSyncId(), newSyncId(), newSyncId()];
     final List<File> kept = <File>[
-      File(p.join(media, newSyncId(), 'ab', 'first-account-blob')),
-      File(p.join(media, newSyncId(), 'cd', 'second-account-blob')),
-      File(p.join(stagingPath(media, newSyncId()), '0')),
+      File(p.join(media, ids[0], 'ab', 'first-account-blob')),
+      File(p.join(media, ids[1], 'cd', 'second-account-blob')),
+      File(p.join(stagingPath(media, ids[2]), '0')),
     ];
     for (final File file in kept) {
       file
@@ -204,6 +205,20 @@ void main() {
     for (final File file in kept) {
       expect(file.existsSync(), isTrue, reason: file.path);
       expect(file.readAsStringSync(), 'kept', reason: file.path);
+    }
+    final List<Map<String, Object?>> cleared = <Map<String, Object?>>[
+      for (final String line in harness.logLines)
+        if ((jsonDecode(line) as Map<String, Object?>)['event'] ==
+            'leftovers_cleared')
+          jsonDecode(line) as Map<String, Object?>,
+    ];
+    expect(cleared, hasLength(1));
+    expect(cleared.single['swept'], isFalse);
+    expect(cleared.single['unswept'], kept.length);
+    for (final String line in harness.logLines) {
+      for (final String id in ids) {
+        expect(line, isNot(contains(id)));
+      }
     }
   });
 
