@@ -17,6 +17,7 @@ const Duration probeLifetime = Duration(seconds: 5);
 const Timeout largeTimeout = Timeout(Duration(minutes: 2));
 const Duration answerLimit = Duration(seconds: 10);
 const Duration stallLimit = Duration(seconds: 30);
+const Duration downloadStallLimit = Duration(minutes: 5);
 
 Future<bool> eventually(bool Function() condition) async {
   final Stopwatch watch = Stopwatch()..start();
@@ -216,14 +217,10 @@ void main() {
         query: const <String, String>{SyncRoutes.afterQuery: '0'},
       );
 
-  Future<({Socket socket, Future<void> closed})> openRawPull(
-    RelayHarness relay,
+  Future<({Socket socket, Future<void> closed})> openRawGet(
     SignedIn who,
+    Uri target,
   ) async {
-    final Uri target = relay.uri(
-      SyncRoutes.pullRecords,
-      query: const <String, String>{SyncRoutes.afterQuery: '0'},
-    );
     final Socket socket = await Socket.connect(target.host, target.port);
     final Completer<void> closed = Completer<void>();
     void finish() {
@@ -241,7 +238,7 @@ void main() {
     );
     socket.add(
       latin1.encode(
-        '${SyncRoutes.pullRecords.method} ${target.path}?${target.query} '
+        'GET ${target.path}${target.hasQuery ? '?${target.query}' : ''} '
         'HTTP/1.1\r\n'
         'Host: ${target.host}:${target.port}\r\n'
         '${SyncHeaders.protocol}: $syncProtocolVersion\r\n'
@@ -252,6 +249,17 @@ void main() {
     await socket.flush();
     return (socket: socket, closed: closed.future);
   }
+
+  Future<({Socket socket, Future<void> closed})> openRawPull(
+    RelayHarness relay,
+    SignedIn who,
+  ) => openRawGet(
+    who,
+    relay.uri(
+      SyncRoutes.pullRecords,
+      query: const <String, String>{SyncRoutes.afterQuery: '0'},
+    ),
+  );
 
   test('unread pull pages are bounded per device', () async {
     final HeldResponses responses = HeldResponses();
@@ -326,6 +334,49 @@ void main() {
     await closed.timeout(answerLimit);
     expect(relay.app.devicesInFlight.count(deviceId), 0);
     expect(relay.app.pullsInFlight.count(deviceId), 0);
+    expect(relay.app.responses.open, 0);
+  });
+
+  test('a paused download is cut off only after five minutes', () async {
+    final HeldResponses responses = HeldResponses();
+    final RelayHarness relay = await RelayHarness.start(
+      startTimer: ManualTimers().start,
+      responseOutput: responses.output,
+    );
+    addTearDown(relay.dispose);
+    final TestAccount account = await relay.enrol();
+    final SignedIn mac = await relay.signIn(account.firstDevice);
+    final String deviceId = account.firstDevice.deviceId;
+    final String name = relay.blobName();
+    await relay.uploadBlob(mac.session, name, relay.randomOpaque(4096));
+
+    responses.toHold = 1;
+    final (:Socket socket, :Future<void> closed) = await openRawGet(
+      mac,
+      relay.uri(
+        SyncRoutes.downloadBlob,
+        parameters: <String, Object>{SyncRoutes.nameParameter: name},
+      ),
+    );
+    addTearDown(socket.destroy);
+    expect(await eventually(() => responses.held.length == 1), isTrue);
+    expect(relay.app.devicesInFlight.count(deviceId), 1);
+
+    relay.advance(stallLimit + const Duration(seconds: 1));
+    await relay.tick();
+    expect(relay.app.devicesInFlight.count(deviceId), 1);
+    expect(relay.app.responses.open, 1);
+
+    relay.advance(downloadStallLimit - stallLimit - const Duration(seconds: 1));
+    await relay.tick();
+    expect(relay.app.devicesInFlight.count(deviceId), 1);
+    expect(relay.app.responses.open, 1);
+
+    relay.advance(const Duration(seconds: 1));
+    await relay.tick();
+
+    await closed.timeout(answerLimit);
+    expect(relay.app.devicesInFlight.count(deviceId), 0);
     expect(relay.app.responses.open, 0);
   });
 }

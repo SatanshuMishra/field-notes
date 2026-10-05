@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:shelf/shelf.dart';
 import 'package:sync_protocol/sync_protocol.dart';
@@ -85,6 +86,13 @@ final class RequestBody {
   bool get aborted => _aborted;
 
   bool get abandoned => _abandoned;
+
+  bool get empty {
+    final int? length = _request.contentLength;
+    return length == 0 ||
+        (length == null &&
+            !_request.headers.containsKey(HttpHeaders.transferEncodingHeader));
+  }
 
   Stream<List<int>> read(BodyPace pace) {
     if (_started) {
@@ -199,7 +207,7 @@ final class RequestBody {
     void Function()? dropConnection, {
     bool Function()? mayDrain,
   }) async {
-    if (!_started) {
+    if (!_started && !empty) {
       if (mayDrain?.call() ?? true) {
         await drain();
       } else {

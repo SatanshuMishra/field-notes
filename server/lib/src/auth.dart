@@ -120,10 +120,15 @@ Response errorResponse(SyncErrorCode code, [String message = '']) =>
     );
 
 const Set<int> _storageFullErrors = <int>{28, 69, 122};
+const int _sqliteFull = 13;
 
-bool isStorageFull(Object error) =>
-    error is FileSystemException &&
-    _storageFullErrors.contains(error.osError?.errorCode);
+bool isStorageFull(Object error) => switch (error) {
+  FileSystemException(:final OSError? osError) => _storageFullErrors.contains(
+    osError?.errorCode,
+  ),
+  SqliteException(:final int resultCode) => resultCode == _sqliteFull,
+  _ => false,
+};
 
 Response? knownErrorResponse(Object error) => switch (error) {
   RelayException(
