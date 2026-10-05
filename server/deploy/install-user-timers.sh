@@ -10,12 +10,16 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 install_dir="/usr/local/lib/field-notes"
 unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
-for script in nightly-copy.sh restore-drill.sh alert.sh; do
+for script in nightly-copy.sh restore-drill.sh alert.sh nas-ssh-keys.sh relay-update.sh; do
   if [ ! -x "$install_dir/$script" ]; then
     echo "$install_dir/$script is missing. Run root-setup.sh with sudo first." >&2
     exit 1
   fi
 done
+if [ ! -r "$install_dir/nas-rsync.sh" ]; then
+  echo "$install_dir/nas-rsync.sh is missing. Run root-setup.sh with sudo first." >&2
+  exit 1
+fi
 
 install -d -m 0755 "$unit_dir"
 for unit in fn-nightly-copy.service fn-nightly-copy.timer fn-restore-drill.service fn-restore-drill.timer; do

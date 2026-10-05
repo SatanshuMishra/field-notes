@@ -7,14 +7,23 @@ import 'package:sync_protocol/sync_protocol.dart';
 
 import 'auth.dart';
 import 'database.dart';
+import 'probes.dart';
+import 'request_body.dart';
 
 typedef AssemblyHook = Future<void> Function(String uploadId);
 
-const int maxPartSize = 16 * 1024 * 1024;
+typedef Rename = void Function(String source, String target);
+
+const int maxBlobSize = 2 * 1024 * 1024 * 1024;
+const int maxPartSize = 8 * 1024 * 1024;
+const int maxPartCount = 256;
+const int maxUnfinishedUploads = 32;
+const int maxStagedBytes = 4 * 1024 * 1024 * 1024;
 const int maxBlobNames = 100000;
 const Duration unusedBlobGrace = Duration(days: 30);
 const Duration unfinishedUploadLifetime = Duration(days: 7);
 const String stagingFolderName = '.uploads';
+const String assemblyFolderName = '.assembling';
 
 final RegExp _blobNamePattern = RegExp(r'^[A-Za-z0-9_-]{43}$');
 final RegExp _uploadIdPattern = RegExp(r'^[A-Za-z0-9_-]{22}$');
@@ -32,6 +41,18 @@ String accountMediaPath(String mediaDirectory, String accountId) =>
 
 String stagingPath(String mediaDirectory, String uploadId) =>
     p.join(mediaDirectory, stagingFolderName, uploadId);
+
+String assemblyPath(String mediaDirectory) =>
+    p.join(mediaDirectory, assemblyFolderName);
+
+void renameOnDisk(String source, String target) {
+  if (FileSystemEntity.typeSync(source, followLinks: false) ==
+      FileSystemEntityType.directory) {
+    Directory(source).renameSync(target);
+  } else {
+    File(source).renameSync(target);
+  }
+}
 
 void _requireName(String name) {
   if (!isBlobName(name)) {
@@ -72,6 +93,7 @@ final class PartUpload {
         parsedBlobSize == null ||
         parsedPartSize == null ||
         parsedBlobSize < 1 ||
+        parsedBlobSize > maxBlobSize ||
         parsedPartSize < 1 ||
         parsedPartSize > maxPartSize) {
       throw const RelayException(SyncErrorCode.badRequest, 'Invalid part');
@@ -83,7 +105,7 @@ final class PartUpload {
       blobSize: parsedBlobSize,
       partSize: parsedPartSize,
     );
-    if (parsedIndex >= part.partCount) {
+    if (part.partCount > maxPartCount || parsedIndex >= part.partCount) {
       throw const RelayException(SyncErrorCode.badRequest, 'Invalid part');
     }
     return part;
@@ -100,6 +122,10 @@ final class PartUpload {
   int get expectedLength =>
       index == partCount - 1 ? blobSize - partSize * (partCount - 1) : partSize;
 }
+
+enum _Next { settle, status, assemble }
+
+typedef _PartOutcome = ({_Upload upload, bool stored, _Next next});
 
 final class _Upload {
   const _Upload({
@@ -140,17 +166,23 @@ final class BlobStore {
     required this._database,
     required this.mediaDirectory,
     required this._clock,
+    required this._space,
     this._beforeAssembly,
+    this._rename = renameOnDisk,
   });
 
   final RelayDatabase _database;
   final String mediaDirectory;
   final DateTime Function() _clock;
+  final FreeSpace _space;
   final AssemblyHook? _beforeAssembly;
+  final Rename _rename;
+  final Map<String, int> _inFlight = <String, int>{};
 
   void prepare() {
     Directory(p.join(mediaDirectory, stagingFolderName))
         .createSync(recursive: true);
+    Directory(assemblyPath(mediaDirectory)).createSync(recursive: true);
     _database.transaction(() {
       _database.execute(
         'UPDATE uploads SET assembling = 0 WHERE assembling != 0',
@@ -183,78 +215,170 @@ final class BlobStore {
   Future<UploadStatusResponse> putPart(
     String accountId,
     PartUpload part,
-    Stream<List<int>> body, {
+    RequestBody body, {
     int? contentLength,
   }) async {
     if (contentLength != null && contentLength != part.expectedLength) {
-      await _drain(body);
+      await body.drain();
       throw const RelayException(SyncErrorCode.badRequest, 'Wrong part size');
     }
     if (holds(accountId, part.name)) {
-      await _drain(body);
+      await body.drain();
       return UploadStatusResponse(
         receivedParts: const <int>[],
         assembled: true,
       );
     }
-    final _Upload upload = _database.transaction(() {
-      _database.execute(
-        'INSERT OR IGNORE INTO uploads (id, account_id, name, total_bytes, '
-        'part_size, created_at, assembling, assembled) '
-        'VALUES (?, ?, ?, ?, ?, ?, 0, 0)',
-        <Object?>[
-          part.uploadId,
-          accountId,
-          part.name,
-          part.blobSize,
-          part.partSize,
-          toMillis(_clock()),
-        ],
-      );
-      final _Upload stored = _upload(part.uploadId)!;
-      if (stored.accountId != accountId ||
-          stored.name != part.name ||
-          stored.totalBytes != part.blobSize ||
-          stored.partSize != part.partSize) {
-        throw const RelayException(
-          SyncErrorCode.badRequest,
-          'Upload does not match',
-        );
-      }
-      return stored;
-    });
-    if (upload.busy || _hasPart(upload.id, part.index)) {
-      await _drain(body);
-      return _settle(accountId, upload.id);
+    final int length = part.expectedLength;
+    if (!await _space.reserve(length)) {
+      await body.drain();
+      throw const RelayException(SyncErrorCode.storageFull);
     }
-    final File received;
+    final _PartOutcome outcome;
     try {
-      received = await _receive(part, body);
-    } on FileSystemException catch (error) {
-      if (isStorageFull(error) || !(_upload(upload.id)?.busy ?? false)) {
-        rethrow;
-      }
-      return _status(accountId, part.name, upload.id);
+      outcome = await _acceptPart(accountId, part, body);
+    } catch (_) {
+      _space.release(length, written: false);
+      rethrow;
     }
-    final bool claimed = _database.transaction(() {
-      final _Upload? current = _upload(upload.id);
-      if (current == null || current.busy || _hasPart(upload.id, part.index)) {
-        _deleteQuietly(received);
-        return current != null && _claim(current);
-      }
-      received.renameSync(_partPath(upload.id, part.index));
-      _database.execute(
-        'INSERT OR IGNORE INTO upload_parts (upload_id, part_index) '
-        'VALUES (?, ?)',
-        <Object?>[upload.id, part.index],
-      );
-      return _claim(current);
-    });
-    if (claimed) {
-      await _assemble(upload);
+    _space.release(length, written: outcome.stored);
+    switch (outcome.next) {
+      case _Next.settle:
+        return _settle(accountId, outcome.upload.id);
+      case _Next.assemble:
+        await _assemble(outcome.upload);
+      case _Next.status:
+        break;
     }
-    return _status(accountId, part.name, upload.id);
+    return _status(accountId, part.name, outcome.upload.id);
   }
+
+  Future<_PartOutcome> _acceptPart(
+    String accountId,
+    PartUpload part,
+    RequestBody body,
+  ) async {
+    final _Upload upload;
+    try {
+      upload = _open(accountId, part);
+    } on RelayException {
+      await body.drain();
+      rethrow;
+    }
+    if (upload.busy || _hasPart(upload.id, part.index)) {
+      await body.drain();
+      return (upload: upload, stored: false, next: _Next.settle);
+    }
+    final int length = part.expectedLength;
+    if (_stagedBytes(accountId) + (_inFlight[accountId] ?? 0) + length >
+        maxStagedBytes) {
+      await body.drain();
+      throw const RelayException(SyncErrorCode.storageFull);
+    }
+    _hold(accountId, length);
+    try {
+      final File received;
+      try {
+        received = await _receive(part, body);
+      } on FileSystemException catch (error) {
+        if (isStorageFull(error) || !(_upload(upload.id)?.busy ?? false)) {
+          rethrow;
+        }
+        return (upload: upload, stored: false, next: _Next.status);
+      }
+      final ({bool stored, bool claimed}) recorded = _record(
+        upload,
+        part,
+        received,
+      );
+      return (
+        upload: upload,
+        stored: recorded.stored,
+        next: recorded.claimed ? _Next.assemble : _Next.status,
+      );
+    } finally {
+      _unhold(accountId, length);
+    }
+  }
+
+  void _hold(String accountId, int bytes) {
+    _inFlight[accountId] = (_inFlight[accountId] ?? 0) + bytes;
+  }
+
+  void _unhold(String accountId, int bytes) {
+    final int remaining = (_inFlight[accountId] ?? bytes) - bytes;
+    if (remaining > 0) {
+      _inFlight[accountId] = remaining;
+    } else {
+      _inFlight.remove(accountId);
+    }
+  }
+
+  _Upload _open(String accountId, PartUpload part) => _database.transaction(() {
+    if (_upload(part.uploadId) == null &&
+        _database.count(
+              'SELECT count(*) FROM uploads '
+              'WHERE account_id = ? AND assembled = 0',
+              <Object?>[accountId],
+            ) >=
+            maxUnfinishedUploads) {
+      throw const RelayException(SyncErrorCode.storageFull);
+    }
+    _database.execute(
+      'INSERT OR IGNORE INTO uploads (id, account_id, name, total_bytes, '
+      'part_size, created_at, assembling, assembled) '
+      'VALUES (?, ?, ?, ?, ?, ?, 0, 0)',
+      <Object?>[
+        part.uploadId,
+        accountId,
+        part.name,
+        part.blobSize,
+        part.partSize,
+        toMillis(_clock()),
+      ],
+    );
+    final _Upload stored = _upload(part.uploadId)!;
+    if (stored.accountId != accountId ||
+        stored.name != part.name ||
+        stored.totalBytes != part.blobSize ||
+        stored.partSize != part.partSize) {
+      throw const RelayException(
+        SyncErrorCode.badRequest,
+        'Upload does not match',
+      );
+    }
+    return stored;
+  });
+
+  ({bool stored, bool claimed}) _record(
+    _Upload upload,
+    PartUpload part,
+    File received,
+  ) => _database.transaction(() {
+    final _Upload? current = _upload(upload.id);
+    if (current == null || current.busy || _hasPart(upload.id, part.index)) {
+      _deleteQuietly(received);
+      return (stored: false, claimed: current != null && _claim(current));
+    }
+    _rename(received.path, _partPath(upload.id, part.index));
+    _database.execute(
+      'INSERT OR IGNORE INTO upload_parts (upload_id, part_index) '
+      'VALUES (?, ?)',
+      <Object?>[upload.id, part.index],
+    );
+    return (stored: true, claimed: _claim(current));
+  });
+
+  int _stagedBytes(String accountId) => _database.count(
+    'SELECT coalesce(sum(CASE '
+    'WHEN p.part_index = (u.total_bytes + u.part_size - 1) / u.part_size - 1 '
+    'THEN u.total_bytes - u.part_size * '
+    '((u.total_bytes + u.part_size - 1) / u.part_size - 1) '
+    'ELSE u.part_size END), 0) '
+    'FROM upload_parts p JOIN uploads u ON u.id = p.upload_id '
+    'WHERE u.account_id = ? AND u.assembled = 0',
+    <Object?>[accountId],
+  );
 
   Future<UploadStatusResponse> status(
     String accountId,
@@ -396,14 +520,22 @@ final class BlobStore {
 
   Future<void> _assemble(_Upload upload) async {
     final String staging = stagingPath(mediaDirectory, upload.id);
-    final File assembly = File(p.join(staging, '.assembly-${newSecret()}'));
+    final File assembly = File(
+      p.join(assemblyPath(mediaDirectory), '${upload.id}-${newSecret()}'),
+    );
     final String target = blobPath(
       mediaDirectory,
       upload.accountId,
       upload.name,
     );
+    bool reserved = false;
+    _hold(upload.accountId, upload.totalBytes);
     try {
-      await _beforeAssembly?.call(upload.id);
+      reserved = await _space.reserve(upload.totalBytes);
+      if (!reserved) {
+        throw const RelayException(SyncErrorCode.storageFull);
+      }
+      await assembly.parent.create(recursive: true);
       final IOSink sink = assembly.openWrite();
       try {
         for (int index = 0; index < upload.partCount; index++) {
@@ -416,9 +548,14 @@ final class BlobStore {
       if (await assembly.length() != upload.totalBytes) {
         throw StateError('Assembled blob has the wrong size');
       }
-      await Directory(p.dirname(target)).create(recursive: true);
+      await _beforeAssembly?.call(upload.id);
       _database.transaction(() {
-        assembly.renameSync(target);
+        final SyncErrorCode? refusal = _refusal(upload);
+        if (refusal != null) {
+          throw RelayException(refusal);
+        }
+        Directory(p.dirname(target)).createSync(recursive: true);
+        _rename(assembly.path, target);
         _database.execute(
           'INSERT INTO blobs (account_id, name, size, created_at, unused_since) '
           'VALUES (?, ?, ?, ?, NULL) ON CONFLICT (account_id, name) '
@@ -440,41 +577,73 @@ final class BlobStore {
         );
       });
     } catch (error) {
+      _deleteQuietly(assembly);
       _database.transaction(() {
         _database.execute(
           'UPDATE uploads SET assembling = 0 WHERE id = ? AND assembled = 0',
           <Object?>[upload.id],
         );
       });
-      _deleteQuietly(assembly);
+      if (error is RelayException) {
+        rethrow;
+      }
+      final SyncErrorCode? refusal = _refusal(upload);
+      if (refusal != null) {
+        throw RelayException(refusal);
+      }
       if (isStorageFull(error)) {
         throw const RelayException(SyncErrorCode.storageFull);
       }
       rethrow;
+    } finally {
+      _unhold(upload.accountId, upload.totalBytes);
+      if (reserved) {
+        _space.release(upload.totalBytes, written: false);
+      }
     }
     _deleteQuietly(Directory(staging));
   }
 
-  Future<File> _receive(PartUpload part, Stream<List<int>> body) async {
+  SyncErrorCode? _refusal(_Upload upload) {
+    final Row? account = _database.selectOne(
+      'SELECT status FROM accounts WHERE id = ?',
+      <Object?>[upload.accountId],
+    );
+    final AccountStatus? status = AccountStatus.parse(
+      account?['status'] as String?,
+    );
+    if (status == null ||
+        status == AccountStatus.erased ||
+        _upload(upload.id) == null) {
+      return SyncErrorCode.journalErased;
+    }
+    if (status == AccountStatus.suspended) {
+      return SyncErrorCode.suspended;
+    }
+    return null;
+  }
+
+  Future<File> _receive(PartUpload part, RequestBody body) async {
     final Directory staging = Directory(
       stagingPath(mediaDirectory, part.uploadId),
     );
     await staging.create(recursive: true);
+    final Stream<List<int>> bytes = body.read(BodyPace.steady);
     final File temporary = File(
       p.join(staging.path, '.part-${part.index}-${newSecret()}'),
     );
     int received = 0;
-    bool overflow = false;
     final IOSink sink = temporary.openWrite();
     try {
       try {
-        await for (final List<int> chunk in body) {
+        await for (final List<int> chunk in bytes) {
           received += chunk.length;
-          if (received > part.expectedLength) {
-            overflow = true;
+          if (received > maxDrainBytes) {
             break;
           }
-          sink.add(chunk);
+          if (received <= part.expectedLength) {
+            sink.add(chunk);
+          }
         }
         await sink.flush();
       } finally {
@@ -484,7 +653,7 @@ final class BlobStore {
       _deleteQuietly(temporary);
       rethrow;
     }
-    if (overflow || received != part.expectedLength) {
+    if (received != part.expectedLength) {
       _deleteQuietly(temporary);
       throw const RelayException(SyncErrorCode.badRequest, 'Wrong part size');
     }
@@ -528,14 +697,6 @@ final class BlobStore {
 
   String _partPath(String uploadId, int index) =>
       p.join(stagingPath(mediaDirectory, uploadId), '$index');
-
-  static Future<void> _drain(Stream<List<int>> body) async {
-    try {
-      await body.drain<void>();
-    } on Object {
-      return;
-    }
-  }
 }
 
 void _deleteQuietly(FileSystemEntity entity) {

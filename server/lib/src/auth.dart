@@ -10,8 +10,11 @@ import 'package:sodium/sodium.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
+import 'body_slots.dart';
 import 'database.dart';
+import 'in_flight.dart';
 import 'logging.dart';
+import 'request_body.dart';
 
 const List<SyncRoute> uploadPassRoutes = <SyncRoute>[
   SyncRoutes.pushRecords,
@@ -22,9 +25,14 @@ const Duration challengeLifetime = Duration(seconds: 60);
 const Duration sessionLifetime = Duration(hours: 24);
 const Duration uploadPassLifetime = Duration(days: 7);
 
-const int maxJsonBytes = 32 * 1024 * 1024;
+const int smallJsonLimit = 64 * 1024;
+const int largeJsonLimit = 1024 * 1024;
+const int pushJsonLimit = maxPushBodyBytes;
+const int maxJsonOpeners = 4096;
 
 const String callerContextKey = 'relay.caller';
+const String grantContextKey = 'relay.grant';
+const String verifiedGrantContextKey = 'relay.verified_grant';
 
 enum Access { open, session, sessionOrUploadPass, sessionOrMailbox, mailbox }
 
@@ -47,6 +55,18 @@ final class Caller {
   final String accountId;
   final String deviceId;
   final CallerKind kind;
+}
+
+final class SessionGrant {
+  const SessionGrant({
+    required this.caller,
+    required this.tokenHash,
+    required this.expiresAt,
+  });
+
+  final Caller caller;
+  final String tokenHash;
+  final DateTime expiresAt;
 }
 
 final Random _secureRandom = Random.secure();
@@ -100,39 +120,133 @@ Response errorResponse(SyncErrorCode code, [String message = '']) =>
     );
 
 const Set<int> _storageFullErrors = <int>{28, 69, 122};
+const int _sqliteFull = 13;
 
-bool isStorageFull(Object error) =>
-    error is FileSystemException &&
-    _storageFullErrors.contains(error.osError?.errorCode);
+bool isStorageFull(Object error) => switch (error) {
+  FileSystemException(:final OSError? osError) => _storageFullErrors.contains(
+    osError?.errorCode,
+  ),
+  SqliteException(:final int resultCode) => resultCode == _sqliteFull,
+  _ => false,
+};
 
 Response? knownErrorResponse(Object error) => switch (error) {
-  RelayException(:final SyncErrorCode code, :final String message) =>
-    errorResponse(code, message),
+  RelayException(
+    :final SyncErrorCode code,
+    :final String message,
+    :final int? retryAfter,
+  ) =>
+    retryAfter == null
+        ? errorResponse(code, message)
+        : errorResponse(
+            code,
+            message,
+          ).change(headers: <String, String>{'retry-after': '$retryAfter'}),
   FormatException() => errorResponse(SyncErrorCode.badRequest),
   _ when isStorageFull(error) => errorResponse(SyncErrorCode.storageFull),
   _ => null,
 };
 
+const RelayException _bodyTooLarge = RelayException(
+  SyncErrorCode.badRequest,
+  'Body too large',
+);
+
+const RelayException tryAgainShortly = RelayException(
+  SyncErrorCode.tooManyRequests,
+  '',
+  1,
+);
+
 Future<Uint8List> readBody(
   Request request, {
-  int maxBytes = maxJsonBytes,
+  required int maxBytes,
+  BodyPace pace = BodyPace.whole,
+  int? stopAfter,
 }) async {
   final int? declared = request.contentLength;
   if (declared != null && declared > maxBytes) {
-    throw const RelayException(SyncErrorCode.badRequest, 'Body too large');
+    throw _bodyTooLarge;
   }
+  final int readLimit = stopAfter ?? 2 * maxBytes;
   final BytesBuilder builder = BytesBuilder(copy: false);
-  await for (final List<int> chunk in request.read()) {
-    builder.add(chunk);
-    if (builder.length > maxBytes) {
-      throw const RelayException(SyncErrorCode.badRequest, 'Body too large');
+  int received = 0;
+  try {
+    await for (final List<int> chunk in bodyOf(request).read(pace)) {
+      received += chunk.length;
+      if (received <= maxBytes) {
+        builder.add(chunk);
+        continue;
+      }
+      builder.clear();
+      if (received > readLimit) {
+        break;
+      }
     }
+  } on Object {
+    builder.clear();
+    rethrow;
+  }
+  if (received > maxBytes) {
+    throw _bodyTooLarge;
   }
   return builder.takeBytes();
 }
 
-Future<Map<String, Object?>> readJson(Request request) async {
-  final Uint8List body = await readBody(request);
+bool _needsSlot(Request request, int maxBytes) {
+  final int? declared = request.contentLength;
+  return maxBytes > smallJsonLimit &&
+      (declared == null || declared > smallJsonLimit);
+}
+
+Future<Uint8List> _readLargeBody(
+  Request request,
+  int maxBytes,
+  LargeBodySlots slots,
+) async {
+  final int? declared = request.contentLength;
+  if (declared != null && declared > maxBytes) {
+    throw _bodyTooLarge;
+  }
+  final String accountId =
+      (request.context[callerContextKey] as Caller?)?.accountId ?? '';
+  if (!await slots.acquire(accountId)) {
+    await bodyOf(request).drain();
+    throw tryAgainShortly;
+  }
+  try {
+    return await readBody(
+      request,
+      maxBytes: maxBytes,
+      pace: BodyPace.steady,
+      stopAfter: maxBytes,
+    );
+  } finally {
+    slots.release(accountId);
+  }
+}
+
+int jsonOpeners(List<int> body) {
+  int openers = 0;
+  for (final int byte in body) {
+    if (byte == 0x7b || byte == 0x5b) {
+      openers++;
+    }
+  }
+  return openers;
+}
+
+Future<Map<String, Object?>> readJson(
+  Request request, {
+  required int maxBytes,
+  LargeBodySlots? slots,
+}) async {
+  final Uint8List body = slots != null && _needsSlot(request, maxBytes)
+      ? await _readLargeBody(request, maxBytes, slots)
+      : await readBody(request, maxBytes: maxBytes);
+  if (jsonOpeners(body) > maxJsonOpeners) {
+    throw const RelayException(SyncErrorCode.badRequest, 'Too many objects');
+  }
   final Map<String, Object?> json = decodeJsonObject(utf8.decode(body));
   if (readProtocolVersion(json) != syncProtocolVersion) {
     throw const RelayException(SyncErrorCode.unsupportedProtocol);
@@ -142,6 +256,9 @@ Future<Map<String, Object?>> readJson(Request request) async {
 
 Caller callerOf(Request request) =>
     request.context[callerContextKey]! as Caller;
+
+SessionGrant grantOf(Request request) =>
+    request.context[grantContextKey]! as SessionGrant;
 
 AuthCredential? credentialOf(Request request) =>
     AuthCredential.parse(request.headers[SyncHeaders.authorization]);
@@ -194,6 +311,10 @@ final class DeviceStanding {
   final String accountId;
   final DeviceStatus deviceStatus;
   final AccountStatus? accountStatus;
+
+  bool get isActive =>
+      deviceStatus == DeviceStatus.active &&
+      accountStatus == AccountStatus.active;
 
   void requireActive() {
     if (accountStatus == null ||
@@ -265,6 +386,12 @@ final class Challenges {
     );
   }
 
+  ChallengeResponse decoy() => ChallengeResponse(
+    challengeId: newSyncId(),
+    nonce: encodeBase64Url(randomBytes(32)),
+    expiresAt: _clock().add(challengeLifetime),
+  );
+
   ChallengeClaim? consume(
     String challengeId,
     bool Function(String subject) accepts,
@@ -321,21 +448,26 @@ final class Sessions {
     required this._database,
     required this._clock,
     required this._sodium,
-    required this.generation,
     required this.challenges,
   });
 
   final RelayDatabase _database;
   final DateTime Function() _clock;
   final Sodium _sodium;
-  final String generation;
   final Challenges challenges;
 
   ChallengeResponse challenge(ChallengeRequest request) {
     if (!isSyncId(request.deviceId)) {
       throw const RelayException(SyncErrorCode.badRequest);
     }
-    deviceStanding(_database, request.deviceId)?.requireActive();
+    final DeviceStanding? standing = deviceStanding(
+      _database,
+      request.deviceId,
+    );
+    if (standing == null) {
+      return challenges.decoy();
+    }
+    standing.requireActive();
     return challenges.issue(deviceSubject(request.deviceId));
   }
 
@@ -378,7 +510,7 @@ final class Sessions {
     final String uploadPass = newDeviceToken(request.deviceId);
     final DateTime expiresAt = now.add(sessionLifetime);
     final DateTime uploadPassExpiresAt = now.add(uploadPassLifetime);
-    final int currentEpoch = _database.transaction(() {
+    final (int currentEpoch, String generation) = _database.transaction(() {
       _database.execute(
         'DELETE FROM sessions WHERE device_id = ? AND expires_at <= ?',
         <Object?>[request.deviceId, toMillis(now)],
@@ -401,11 +533,14 @@ final class Sessions {
         'UPDATE devices SET last_seen_at = ? WHERE id = ?',
         <Object?>[toMillis(now), request.deviceId],
       );
-      return _database.selectOne(
-            'SELECT current_epoch FROM accounts WHERE id = ?',
-            <Object?>[standing.accountId],
-          )!['current_epoch']
-          as int;
+      return (
+        _database.selectOne(
+              'SELECT current_epoch FROM accounts WHERE id = ?',
+              <Object?>[standing.accountId],
+            )!['current_epoch']
+            as int,
+        _database.generation(),
+      );
     });
     return SessionResponse(
       token: token,
@@ -417,7 +552,7 @@ final class Sessions {
     );
   }
 
-  Caller? authorize(
+  SessionGrant? authorize(
     SyncRoute route,
     Access access,
     AuthCredential? credential,
@@ -450,22 +585,23 @@ final class Sessions {
     }
   }
 
-  Caller _requireScheme(AuthCredential? credential, AuthScheme scheme) {
+  SessionGrant _requireScheme(AuthCredential? credential, AuthScheme scheme) {
     if (credential == null || credential.scheme != scheme) {
       throw const RelayException(SyncErrorCode.unauthorized);
     }
     return _authenticate(credential);
   }
 
-  Caller _authenticate(AuthCredential credential) {
+  SessionGrant _authenticate(AuthCredential credential) {
     final CallerKind kind = credential.scheme == AuthScheme.uploadPass
         ? CallerKind.uploadPass
         : CallerKind.session;
     final DateTime now = _clock();
+    final String tokenHash = secretHash(credential.token);
     final Row? row = _database.selectOne(
       'SELECT device_id, expires_at FROM sessions '
       'WHERE token_hash = ? AND kind = ?',
-      <Object?>[secretHash(credential.token), kind.storedName],
+      <Object?>[tokenHash, kind.storedName],
     );
     if (row == null || (row['expires_at'] as int) <= toMillis(now)) {
       final String? deviceId = deviceIdOfToken(credential.token);
@@ -484,11 +620,39 @@ final class Sessions {
       'UPDATE devices SET last_seen_at = ? WHERE id = ?',
       <Object?>[toMillis(now), deviceId],
     );
-    return Caller(
-      accountId: standing.accountId,
-      deviceId: deviceId,
-      kind: kind,
+    return SessionGrant(
+      caller: Caller(
+        accountId: standing.accountId,
+        deviceId: deviceId,
+        kind: kind,
+      ),
+      tokenHash: tokenHash,
+      expiresAt: fromMillis(row['expires_at'] as int),
     );
+  }
+
+  bool isCurrent(SessionGrant grant) {
+    final DateTime now = _clock();
+    if (!grant.expiresAt.isAfter(now)) {
+      return false;
+    }
+    final Row? row = _database.selectOne(
+      'SELECT device_id, expires_at FROM sessions '
+      'WHERE token_hash = ? AND kind = ?',
+      <Object?>[grant.tokenHash, grant.caller.kind.storedName],
+    );
+    if (row == null ||
+        row['device_id'] != grant.caller.deviceId ||
+        (row['expires_at'] as int) <= toMillis(now)) {
+      return false;
+    }
+    final DeviceStanding? standing = deviceStanding(
+      _database,
+      grant.caller.deviceId,
+    );
+    return standing != null &&
+        standing.accountId == grant.caller.accountId &&
+        standing.isActive;
   }
 
   void purgeExpired() {
@@ -514,33 +678,47 @@ Middleware protocolGate() =>
       return inner(request);
     };
 
-Middleware authorization(Sessions sessions, SyncRoute route, Access access) =>
+Middleware authorization(
+  Sessions sessions,
+  RequestsInFlight devicesInFlight,
+  SyncRoute route,
+  Access access,
+) =>
     (Handler inner) => (Request request) async {
-      final Caller? caller = sessions.authorize(
-        route,
-        access,
-        credentialOf(request),
-      );
+      final SessionGrant? grant =
+          request.context[verifiedGrantContextKey] as SessionGrant? ??
+          sessions.authorize(route, access, credentialOf(request));
+      final Caller? caller = grant?.caller;
       final Map<String, Object> attribution = <String, Object>{
         if (caller != null) LogContext.account: caller.accountId,
         if (caller != null) LogContext.device: caller.deviceId,
       };
-      try {
-        final Response response = await inner(
-          caller == null
-              ? request
-              : request.change(
-                  context: <String, Object>{callerContextKey: caller},
-                ),
-        );
-        return response.change(context: attribution);
-      } on HijackException {
-        throw AttributedHijack(attribution);
-      } catch (error) {
-        final Response? response = knownErrorResponse(error);
-        if (response == null) {
-          rethrow;
+      return holding(request, (RequestHold hold) async {
+        if (caller != null && !hold.enter(devicesInFlight, caller.deviceId)) {
+          bodyOf(request).abandon();
+          return knownErrorResponse(tryAgainShortly)!
+              .change(context: attribution);
         }
-        return response.change(context: attribution);
-      }
+        try {
+          final Response response = await inner(
+            grant == null
+                ? request
+                : request.change(
+                    context: <String, Object>{
+                      callerContextKey: grant.caller,
+                      grantContextKey: grant,
+                    },
+                  ),
+          );
+          return response.change(context: attribution);
+        } on HijackException {
+          throw AttributedHijack(attribution);
+        } catch (error) {
+          final Response? response = knownErrorResponse(error);
+          if (response == null) {
+            rethrow;
+          }
+          return response.change(context: attribution);
+        }
+      });
     };

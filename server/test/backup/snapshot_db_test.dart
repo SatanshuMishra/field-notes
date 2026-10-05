@@ -20,9 +20,16 @@ typedef WriterJob = ({
   String deviceId,
   SendPort progress,
   int count,
+  Set<int> waitAfter,
 });
 
+const String resume = 'resume';
+const String done = 'done';
+
 Future<void> pushInBackground(WriterJob job) async {
+  final ReceivePort signals = ReceivePort();
+  final StreamIterator<Object?> resumes = StreamIterator<Object?>(signals);
+  job.progress.send(signals.sendPort);
   final RelayDatabase database = RelayDatabase.open(
     job.databasePath,
     create: false,
@@ -49,10 +56,13 @@ Future<void> pushInBackground(WriterJob job) async {
       ),
     );
     job.progress.send(index + 1);
-    await Future<void>.delayed(const Duration(milliseconds: 1));
+    if (job.waitAfter.contains(index + 1)) {
+      await resumes.moveNext();
+    }
   }
   database.close();
-  job.progress.send('done');
+  await resumes.cancel();
+  job.progress.send(done);
 }
 
 Set<String> recordKeys(RelayDatabase database) => <String>{
@@ -87,30 +97,40 @@ void main() {
         await seededRelay();
     final ReceivePort progress = ReceivePort();
     addTearDown(progress.close);
-    final Completer<void> started = Completer<void>();
-    final Completer<void> finished = Completer<void>();
-    progress.listen((Object? message) {
-      if (message is int && message >= 50 && !started.isCompleted) {
-        started.complete();
+    final StreamIterator<Object?> updates = StreamIterator<Object?>(progress);
+    addTearDown(updates.cancel);
+    Future<void> reach(Object wanted) async {
+      while (await updates.moveNext()) {
+        final Object? update = updates.current;
+        if (update is List) {
+          fail('The writer failed: $update');
+        }
+        if (update == wanted) {
+          return;
+        }
       }
-      if (message == 'done' && !finished.isCompleted) {
-        finished.complete();
-      }
-    });
+      fail('The writer stopped before $wanted');
+    }
+
     await Isolate.spawn<WriterJob>(pushInBackground, (
       databasePath: harness.databasePath,
       accountId: account.accountId,
       deviceId: account.firstDevice.deviceId,
       progress: progress.sendPort,
       count: 400,
-    ));
-    await started.future.timeout(const Duration(seconds: 30));
+      waitAfter: <int>{50, 60},
+    ), onError: progress.sendPort);
+    expect(await updates.moveNext(), isTrue);
+    final SendPort writer = updates.current! as SendPort;
+    await reach(50);
+    writer.send(resume);
 
     final SnapshotResult result = snapshotDatabase(
       databasePath: harness.databasePath,
       target: p.join(harness.root.path, 'backup', 'relay-2026-10-04.sqlite3'),
     );
-    await finished.future.timeout(const Duration(seconds: 60));
+    writer.send(resume);
+    await reach(done);
 
     final RelayDatabase copy = RelayDatabase.openCopy(
       result.databasePath,

@@ -5,10 +5,11 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
 final class RelayException implements Exception {
-  const RelayException(this.code, [this.message = '']);
+  const RelayException(this.code, [this.message = '', this.retryAfter]);
 
   final SyncErrorCode code;
   final String message;
+  final int? retryAfter;
 
   @override
   String toString() => 'RelayException(${code.wireName})';
@@ -82,6 +83,13 @@ final class RelayDatabase {
       _db.execute(sql, parameters);
 
   int get updatedRows => _db.updatedRows;
+
+  bool hasTable(String name) =>
+      count(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+        <Object?>[name],
+      ) >
+      0;
 
   T transaction<T>(T Function() body) {
     if (!_db.autocommit) {

@@ -7,7 +7,12 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:relay_server/relay_server.dart';
 import 'package:relay_server/src/accounts.dart';
+import 'package:relay_server/src/blobs.dart';
+import 'package:relay_server/src/body_slots.dart';
 import 'package:relay_server/src/database.dart';
+import 'package:relay_server/src/live_guard.dart';
+import 'package:relay_server/src/response_output.dart';
+import 'package:relay_server/src/timers.dart';
 import 'package:sodium/sodium.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
@@ -73,6 +78,47 @@ final class SignedIn {
       AuthCredential(AuthScheme.uploadPass, response.uploadPass);
 }
 
+final class ManualTimer implements Timer {
+  ManualTimer(this.duration, this._callback);
+
+  final Duration duration;
+  final void Function() _callback;
+  bool _active = true;
+
+  @override
+  bool get isActive => _active;
+
+  @override
+  int get tick => 0;
+
+  @override
+  void cancel() {
+    _active = false;
+  }
+
+  void fire() {
+    if (_active) {
+      _active = false;
+      _callback();
+    }
+  }
+}
+
+final class ManualTimers {
+  final List<ManualTimer> _started = <ManualTimer>[];
+
+  Timer start(Duration duration, void Function() callback) {
+    final ManualTimer timer = ManualTimer(duration, callback);
+    _started.add(timer);
+    return timer;
+  }
+
+  List<ManualTimer> pending(Duration duration) => <ManualTimer>[
+    for (final ManualTimer timer in _started)
+      if (timer.isActive && timer.duration == duration) timer,
+  ];
+}
+
 final class LiveClient {
   LiveClient._(this._socket) {
     _socket.listen(
@@ -104,21 +150,14 @@ final class LiveClient {
 
   void send(LiveMessage message) => _socket.add(jsonEncode(message.toJson()));
 
-  Future<LiveMessage> next({
-    Duration timeout = const Duration(seconds: 5),
-  }) async {
-    final DateTime deadline = DateTime.now().add(timeout);
+  Future<LiveMessage> next() async {
     while (_buffer.isEmpty) {
       if (_closed.isCompleted) {
         throw StateError('The live socket closed');
       }
-      final Duration left = deadline.difference(DateTime.now());
-      if (left <= Duration.zero) {
-        throw TimeoutException('No live message', timeout);
-      }
       final Completer<void> waiting = Completer<void>();
       _waiting = waiting;
-      await waiting.future.timeout(left, onTimeout: () {});
+      await waiting.future;
     }
     return LiveMessage.fromJson(decodeJsonObject(_buffer.removeAt(0)));
   }
@@ -141,6 +180,11 @@ final class RelayHarness {
     required this.migrationsDirectory,
     required this.sodium,
     required this.beforeAssembly,
+    required this.rename,
+    required this.largeBodyWait,
+    required this.startTimer,
+    required this.liveOutput,
+    required this.responseOutput,
     required this._now,
   });
 
@@ -148,6 +192,13 @@ final class RelayHarness {
     String? dataDirectory,
     String? migrationsDirectory,
     AssemblyHook? beforeAssembly,
+    Rename rename = renameOnDisk,
+    int minFreeBytes = RelayConfig.defaultMinFreeBytes,
+    int largeBodySlots = RelayConfig.defaultLargeBodySlots,
+    Duration largeBodyWait = largeBodyWaitLimit,
+    StartTimer startTimer = Timer.new,
+    SendOutput liveOutput = sendOutput,
+    ResponseOutput responseOutput = passResponse,
   }) async {
     final Directory root = await Directory.systemTemp.createTemp(
       'relay_harness_',
@@ -159,10 +210,17 @@ final class RelayHarness {
         databasePath: p.join(data, 'relay.sqlite3'),
         mediaDirectory: p.join(data, 'media'),
         port: 0,
+        minFreeBytes: minFreeBytes,
+        largeBodySlots: largeBodySlots,
       ),
       migrationsDirectory: migrationsDirectory ?? defaultMigrationsDirectory(),
       sodium: await SodiumInit.init(),
       beforeAssembly: beforeAssembly,
+      rename: rename,
+      largeBodyWait: largeBodyWait,
+      startTimer: startTimer,
+      liveOutput: liveOutput,
+      responseOutput: responseOutput,
       now: harnessStart,
     );
     await harness.boot();
@@ -174,8 +232,17 @@ final class RelayHarness {
   final String migrationsDirectory;
   final Sodium sodium;
   final AssemblyHook? beforeAssembly;
+  final Rename rename;
+  final Duration largeBodyWait;
+  final StartTimer startTimer;
+  final SendOutput liveOutput;
+  final ResponseOutput responseOutput;
   final List<String> logLines = <String>[];
+  final StreamController<String> _logged = StreamController<String>.broadcast(
+    sync: true,
+  );
   final http.Client client = http.Client();
+  int? freeBytes = 1 << 40;
   DateTime _now;
   RelayServer? _server;
 
@@ -204,8 +271,14 @@ final class RelayHarness {
       config: config,
       migrationsDirectory: migrationsDirectory,
       clock: clock,
-      logSink: logLines.add,
+      logSink: _log,
       beforeAssembly: beforeAssembly,
+      freeSpace: (String directory) async => freeBytes,
+      rename: rename,
+      largeBodyWait: largeBodyWait,
+      startTimer: startTimer,
+      liveOutput: liveOutput,
+      responseOutput: responseOutput,
     );
     _server = await RelayServer.serve(
       app,
@@ -228,9 +301,24 @@ final class RelayHarness {
 
   Future<void> tick() => app.tick();
 
+  Future<String> logLine(bool Function(String line) test) {
+    for (final String line in logLines) {
+      if (test(line)) {
+        return Future<String>.value(line);
+      }
+    }
+    return _logged.stream.firstWhere(test);
+  }
+
+  void _log(String line) {
+    logLines.add(line);
+    _logged.add(line);
+  }
+
   Future<void> dispose() async {
     await stop();
     client.close();
+    await _logged.close();
     if (await root.exists()) {
       await root.delete(recursive: true);
     }

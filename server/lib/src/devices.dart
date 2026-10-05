@@ -7,6 +7,7 @@ import 'package:sync_protocol/sync_protocol.dart';
 import 'auth.dart';
 import 'blobs.dart';
 import 'database.dart';
+import 'trash.dart';
 
 DeviceInfo deviceInfoFromRow(Row row) => DeviceInfo(
   deviceId: row['id'] as String,
@@ -61,75 +62,64 @@ List<EpochRotation> rotationsFor(
     ),
 ];
 
-void eraseAccountData(
+List<String> eraseAccountRows(
   RelayDatabase database,
-  String mediaDirectory,
   String accountId,
-) {
-  database.transaction(() {
-    final List<String> uploadIds = <String>[
-      for (final Row row in database.select(
-        'SELECT id FROM uploads WHERE account_id = ?',
-        <Object?>[accountId],
-      ))
-        row['id'] as String,
-    ];
-    final List<Object?> account = <Object?>[accountId];
-    database.execute('DELETE FROM records WHERE account_id = ?', account);
-    database.execute('DELETE FROM account_seqs WHERE account_id = ?', account);
-    database.execute('DELETE FROM change_ids WHERE account_id = ?', account);
-    database.execute('DELETE FROM blobs WHERE account_id = ?', account);
-    database.execute(
-      'DELETE FROM upload_parts WHERE upload_id IN '
-      '(SELECT id FROM uploads WHERE account_id = ?)',
-      account,
-    );
-    database.execute('DELETE FROM uploads WHERE account_id = ?', account);
-    database.execute(
-      'DELETE FROM epoch_rotations WHERE account_id = ?',
-      account,
-    );
-    database.execute(
-      'DELETE FROM epoch_deliveries WHERE account_id = ?',
-      account,
-    );
-    database.execute('DELETE FROM mailboxes WHERE account_id = ?', account);
-    database.execute(
-      'DELETE FROM restore_tokens WHERE account_id = ?',
-      account,
-    );
-    database.execute(
-      'DELETE FROM sessions WHERE device_id IN '
-      '(SELECT id FROM devices WHERE account_id = ?)',
-      account,
-    );
-    database.execute(
-      "UPDATE devices SET status = ?, encrypted_name = x'' "
-      'WHERE account_id = ?',
-      <Object?>[DeviceStatus.erased.storedName, accountId],
-    );
-    database.execute(
-      "UPDATE accounts SET recovery_epoch_one_copy = x'' WHERE id = ?",
-      account,
-    );
-    _deleteTree(Directory(accountMediaPath(mediaDirectory, accountId)));
-    for (final String uploadId in uploadIds) {
-      _deleteTree(Directory(stagingPath(mediaDirectory, uploadId)));
-    }
-  });
-}
-
-void _deleteTree(Directory directory) {
-  if (directory.existsSync()) {
-    directory.deleteSync(recursive: true);
-  }
-}
+) => database.transaction(() {
+  final List<String> uploadIds = <String>[
+    for (final Row row in database.select(
+      'SELECT id FROM uploads WHERE account_id = ?',
+      <Object?>[accountId],
+    ))
+      row['id'] as String,
+  ];
+  final List<Object?> account = <Object?>[accountId];
+  database.execute('DELETE FROM records WHERE account_id = ?', account);
+  database.execute('DELETE FROM account_seqs WHERE account_id = ?', account);
+  database.execute('DELETE FROM change_ids WHERE account_id = ?', account);
+  database.execute('DELETE FROM blobs WHERE account_id = ?', account);
+  database.execute(
+    'DELETE FROM upload_parts WHERE upload_id IN '
+    '(SELECT id FROM uploads WHERE account_id = ?)',
+    account,
+  );
+  database.execute('DELETE FROM uploads WHERE account_id = ?', account);
+  database.execute('DELETE FROM epoch_rotations WHERE account_id = ?', account);
+  database.execute(
+    'DELETE FROM epoch_deliveries WHERE account_id = ?',
+    account,
+  );
+  database.execute('DELETE FROM mailboxes WHERE account_id = ?', account);
+  database.execute('DELETE FROM restore_tokens WHERE account_id = ?', account);
+  database.execute(
+    'DELETE FROM sessions WHERE device_id IN '
+    '(SELECT id FROM devices WHERE account_id = ?)',
+    account,
+  );
+  database.execute(
+    "UPDATE devices SET status = ?, encrypted_name = x'' "
+    'WHERE account_id = ?',
+    <Object?>[DeviceStatus.erased.storedName, accountId],
+  );
+  database.execute(
+    "UPDATE accounts SET recovery_epoch_one_copy = x'' WHERE id = ?",
+    account,
+  );
+  return uploadIds;
+});
 
 final class Devices {
-  Devices(this._database, this._mediaDirectory);
+  Devices(
+    this._database,
+    this._mediaDirectory,
+    this._clock, {
+    this._rename = renameOnDisk,
+  });
 
   final RelayDatabase _database;
   final String _mediaDirectory;
+  final DateTime Function() _clock;
+  final Rename _rename;
 
   EpochKeysResponse keys(Caller caller) => _database.read(() {
     final Row account = _account(caller.accountId);
@@ -225,14 +215,22 @@ final class Devices {
     });
   }
 
-  void eraseJournal(Caller caller) {
-    _database.transaction(() {
-      eraseAccountData(_database, _mediaDirectory, caller.accountId);
+  List<Directory> eraseJournal(Caller caller) {
+    final List<String> uploadIds = _database.transaction(() {
+      final List<String> erased = eraseAccountRows(_database, caller.accountId);
       _database.execute(
         'UPDATE accounts SET status = ? WHERE id = ?',
         <Object?>[AccountStatus.erased.storedName, caller.accountId],
       );
+      return erased;
     });
+    return trashAccountMedia(
+      _mediaDirectory,
+      caller.accountId,
+      uploadIds,
+      _clock(),
+      rename: _rename,
+    );
   }
 
   Row _account(String accountId) {

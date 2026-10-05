@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:shelf/shelf.dart';
@@ -11,25 +12,43 @@ import 'package:sync_protocol/sync_protocol.dart';
 import 'accounts.dart';
 import 'auth.dart';
 import 'blobs.dart';
+import 'body_slots.dart';
 import 'change_log.dart';
 import 'config.dart';
 import 'database.dart';
 import 'devices.dart';
+import 'in_flight.dart';
 import 'live.dart';
+import 'live_guard.dart';
 import 'logging.dart';
 import 'migrations.dart';
 import 'pairing.dart';
+import 'probes.dart';
+import 'rate_limit.dart';
+import 'request_body.dart';
+import 'response_output.dart';
+import 'timers.dart';
+import 'trash.dart';
 
 const Duration purgeInterval = Duration(hours: 24);
 
 DateTime systemClock() => DateTime.now().toUtc();
+
+Stream<List<int>> guardedRead(File file) async* {
+  try {
+    await for (final List<int> chunk in file.openRead()) {
+      yield chunk;
+    }
+  } on FileSystemException {
+    return;
+  }
+}
 
 final class RelayApp {
   RelayApp._({
     required this.config,
     required this.clock,
     required this.database,
-    required this.generation,
     required this.accounts,
     required this.sessions,
     required this.changeLog,
@@ -38,7 +57,12 @@ final class RelayApp {
     required this.devices,
     required this.pairing,
     required this.restores,
+    required this.rateLimits,
+    required this.largeBodies,
+    required this.space,
+    required this.responses,
     required this._logSink,
+    required this._startTimer,
   }) : _lastPurge = clock();
 
   static Future<RelayApp> open({
@@ -47,6 +71,12 @@ final class RelayApp {
     DateTime Function()? clock,
     LogSink logSink = stdoutLogSink,
     AssemblyHook? beforeAssembly,
+    FreeSpaceProbe? freeSpace,
+    Rename rename = renameOnDisk,
+    Duration largeBodyWait = largeBodyWaitLimit,
+    StartTimer startTimer = Timer.new,
+    SendOutput liveOutput = sendOutput,
+    ResponseOutput responseOutput = passResponse,
   }) async {
     final DateTime Function() now = clock ?? systemClock;
     migrate(
@@ -57,31 +87,61 @@ final class RelayApp {
     await Directory(config.mediaDirectory).create(recursive: true);
     final RelayDatabase database = RelayDatabase.open(config.databasePath);
     final Sodium sodium = await SodiumInit.init();
-    final String generation = database.generation();
     final Challenges challenges = Challenges(database, now);
+    final LeftoverReport leftovers = await clearLeftovers(
+      database,
+      config.mediaDirectory,
+    );
+    if (leftovers.worthLogging) {
+      logSink(eventLine(now(), leftoversEvent, leftovers.fields));
+    }
+    final FreeSpaceProbe probe =
+        freeSpace ?? DfProbe(startTimer: startTimer).read;
+    final FreeSpace space = FreeSpace(
+      probe: () async {
+        final List<int?> readings = await Future.wait(<Future<int?>>[
+          probe(config.mediaDirectory),
+          probe(p.dirname(config.databasePath)),
+        ]);
+        final int? media = readings.first;
+        final int? data = readings.last;
+        return media == null || data == null ? null : min(media, data);
+      },
+      clock: now,
+      minFreeBytes: config.minFreeBytes,
+      onFailedReading: () => logSink(
+        eventLine(now(), freeSpaceFailedEvent, const <String, Object>{}),
+      ),
+    );
     final BlobStore blobs = BlobStore(
       database: database,
       mediaDirectory: config.mediaDirectory,
       clock: now,
+      space: space,
       beforeAssembly: beforeAssembly,
+      rename: rename,
     )..prepare();
+    final Sessions sessions = Sessions(
+      database: database,
+      clock: now,
+      sodium: sodium,
+      challenges: challenges,
+    );
     final RelayApp app = RelayApp._(
       config: config,
       clock: now,
       database: database,
-      generation: generation,
       accounts: Accounts(database, now),
-      sessions: Sessions(
-        database: database,
-        clock: now,
-        sodium: sodium,
-        generation: generation,
-        challenges: challenges,
-      ),
+      sessions: sessions,
       changeLog: ChangeLog(database, now),
-      live: LiveHub(now),
+      live: LiveHub(
+        now,
+        sessions.isCurrent,
+        startTimer: startTimer,
+        sendOutput: liveOutput,
+      ),
       blobs: blobs,
-      devices: Devices(database, config.mediaDirectory),
+      devices: Devices(database, config.mediaDirectory, now, rename: rename),
       pairing: Pairing(database, now),
       restores: Restores(
         database: database,
@@ -89,7 +149,17 @@ final class RelayApp {
         sodium: sodium,
         challenges: challenges,
       ),
+      rateLimits: RateLimits.fromConfig(config, now),
+      largeBodies: LargeBodySlots(
+        total: config.largeBodySlots,
+        perAccount: config.largeBodySlotsPerAccount,
+        waitLimit: largeBodyWait,
+        startTimer: startTimer,
+      ),
+      space: space,
+      responses: ResponseOutputs(now, output: responseOutput),
       logSink: logSink,
+      startTimer: startTimer,
     );
     await app.purge();
     return app;
@@ -98,7 +168,6 @@ final class RelayApp {
   final RelayConfig config;
   final DateTime Function() clock;
   final RelayDatabase database;
-  final String generation;
   final Accounts accounts;
   final Sessions sessions;
   final ChangeLog changeLog;
@@ -107,16 +176,45 @@ final class RelayApp {
   final Devices devices;
   final Pairing pairing;
   final Restores restores;
+  final RateLimits rateLimits;
+  final LargeBodySlots largeBodies;
+  final FreeSpace space;
+  final ResponseOutputs responses;
+  final RequestsInFlight devicesInFlight = RequestsInFlight();
+  final RequestsInFlight addressesInFlight = RequestsInFlight();
+  final RequestsInFlight pullsInFlight = RequestsInFlight(
+    limit: maxPullsInFlight,
+  );
+  final RequestsInFlight pushesInFlight = RequestsInFlight(
+    limit: maxPushesInFlight,
+  );
   final LogSink _logSink;
+  final StartTimer _startTimer;
+  final Set<Future<void>> _deletions = <Future<void>>{};
+  late final CachedProbe<bool> _health = CachedProbe<bool>(
+    probe: _probeHealth,
+    clock: clock,
+  );
   DateTime _lastPurge;
   Future<void>? _purging;
 
   late final Handler handler = const Pipeline()
       .addMiddleware(requestLogger(_logSink, clock))
+      .addMiddleware(responseGuard(responses))
+      .addMiddleware(
+        bodyGuard(
+          startTimer: _startTimer,
+          clock: clock,
+          addresses: addressesInFlight,
+          addressOf: addressKeyOf,
+        ),
+      )
       .addHandler(_router().call);
 
   Future<void> tick() async {
     live.sweep();
+    responses.sweep();
+    rateLimits.sweep();
     if (!clock().isBefore(_lastPurge.add(purgeInterval))) {
       await purge();
     }
@@ -130,23 +228,46 @@ final class RelayApp {
     _lastPurge = clock();
     await blobs.purge();
     sessions.purgeExpired();
+    pairing.purgeExpired();
   }
+
+  void reportInternalError(Object error, StackTrace stackTrace) =>
+      _logSink(internalErrorLine(clock()));
 
   Future<void> close() async {
     await live.closeAll();
     await _purging;
+    await Future.wait(_deletions.toList());
     database.close();
+  }
+
+  void _deleteLater(Directory directory) {
+    final Future<void> deletion = deleteQuietly(directory);
+    _deletions.add(deletion);
+    unawaited(deletion.whenComplete(() => _deletions.remove(deletion)));
   }
 
   Router _router() {
     final Router router = Router(notFoundHandler: _notFound);
     void add(SyncRoute route, Access access, Handler handler) {
       Pipeline pipeline = const Pipeline();
+      if (rateLimitedRoutes.contains(route)) {
+        pipeline = pipeline.addMiddleware(
+          rateLimit(
+            rateLimits,
+            addressesInFlight,
+            route,
+            exempt: route == SyncRoutes.pairingStatus ? _verifiedSession : null,
+          ),
+        );
+      }
       if (route != SyncRoutes.health) {
         pipeline = pipeline.addMiddleware(protocolGate());
       }
       final Handler guarded = pipeline
-          .addMiddleware(authorization(sessions, route, access))
+          .addMiddleware(
+            authorization(sessions, devicesInFlight, route, access),
+          )
           .addHandler(handler);
       router.add(
         route.method,
@@ -178,7 +299,7 @@ final class RelayApp {
     add(SyncRoutes.devices, Access.session, _devices);
     add(SyncRoutes.removeDevice, Access.session, _removeDevice);
     add(SyncRoutes.eraseJournal, Access.session, _eraseJournal);
-    add(SyncRoutes.health, Access.open, _health);
+    add(SyncRoutes.health, Access.open, _healthCheck);
     return router;
   }
 
@@ -216,41 +337,100 @@ final class RelayApp {
 
   Response _notFound(Request request) => errorResponse(SyncErrorCode.notFound);
 
+  SessionGrant? _verifiedSession(Request request) {
+    final AuthCredential? credential = credentialOf(request);
+    if (credential == null || credential.scheme != AuthScheme.session) {
+      return null;
+    }
+    try {
+      return sessions.authorize(
+        SyncRoutes.pairingStatus,
+        Access.session,
+        credential,
+      );
+    } on RelayException {
+      return null;
+    }
+  }
+
   Future<Response> _redeem(Request request) async => jsonResponse(
-    accounts.redeem(InviteRedeemRequest.fromJson(await readJson(request))),
+    accounts.redeem(
+      InviteRedeemRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
+    ),
   );
 
   Future<Response> _sessionChallenge(Request request) async => jsonResponse(
-    sessions.challenge(ChallengeRequest.fromJson(await readJson(request))),
+    sessions.challenge(
+      ChallengeRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
+    ),
   );
 
   Future<Response> _session(Request request) async => jsonResponse(
-    sessions.signIn(SessionRequest.fromJson(await readJson(request))),
+    sessions.signIn(
+      SessionRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
+    ),
   );
 
-  Future<Response> _push(Request request) async {
+  Future<Response> _push(Request request) => holding(request, (
+    RequestHold hold,
+  ) async {
     final Caller caller = callerOf(request);
-    final PushOutcome outcome = changeLog.push(
-      caller,
-      PushRequest.fromJson(await readJson(request)),
+    if (!await hold.enterWithin(
+      pushesInFlight,
+      caller.deviceId,
+      wait: pushSlotWaitLimit,
+      startTimer: _startTimer,
+    )) {
+      throw tryAgainShortly;
+    }
+    final PushRequest push = PushRequest.fromJson(
+      await readJson(request, maxBytes: pushJsonLimit, slots: largeBodies),
     );
+    if (push.changes.length > maxPushChanges) {
+      throw const RelayException(SyncErrorCode.badRequest, 'Too many changes');
+    }
+    changeLog.validate(push);
+    final int writing = pushWriteBytes(push);
+    if (!await space.reservePush(writing)) {
+      throw const RelayException(SyncErrorCode.storageFull);
+    }
+    final PushOutcome outcome;
+    try {
+      outcome = changeLog.push(caller, push);
+    } catch (_) {
+      space.release(writing, written: false);
+      rethrow;
+    }
     final int? acceptedSeq = outcome.acceptedSeq;
+    space.release(writing, written: acceptedSeq != null);
     if (acceptedSeq != null) {
       live.nudge(caller.accountId, caller.deviceId, acceptedSeq);
     }
     return jsonResponse(outcome.response);
-  }
+  });
 
-  Response _pull(Request request) => jsonResponse(
-    changeLog.pull(
-      callerOf(request).accountId,
-      PullQuery.parse(request.url.queryParameters),
-      generation: generation,
-    ),
-  );
+  Future<Response> _pull(Request request) =>
+      holding(request, (RequestHold hold) {
+        final Caller caller = callerOf(request);
+        if (!hold.enter(pullsInFlight, caller.deviceId)) {
+          throw tryAgainShortly;
+        }
+        return jsonResponse(
+          changeLog.pull(
+            caller.accountId,
+            PullQuery.parse(request.url.queryParameters),
+          ),
+        );
+      });
 
   FutureOr<Response> _live(Request request) =>
-      live.handler(callerOf(request))(request);
+      live.handler(grantOf(request))(request);
 
   Response _blobExists(Request request) =>
       blobs.exists(callerOf(request).accountId, _param(request, 'name'))
@@ -266,10 +446,13 @@ final class RelayApp {
       return errorResponse(SyncErrorCode.notFound);
     }
     return Response.ok(
-      file.openRead(),
+      guardedRead(file),
       headers: <String, String>{
         'content-type': 'application/octet-stream',
         'content-length': '${file.lengthSync()}',
+      },
+      context: const <String, Object>{
+        stallLimitContextKey: fileResponseStallLimit,
       },
     );
   }
@@ -294,7 +477,7 @@ final class RelayApp {
       await blobs.putPart(
         callerOf(request).accountId,
         part,
-        request.read(),
+        bodyOf(request),
         contentLength: request.contentLength,
       ),
     );
@@ -303,7 +486,9 @@ final class RelayApp {
   Future<Response> _reportUnused(Request request) async {
     blobs.markUnused(
       callerOf(request).accountId,
-      BlobNamesRequest.fromJson(await readJson(request)),
+      BlobNamesRequest.fromJson(
+        await readJson(request, maxBytes: largeJsonLimit, slots: largeBodies),
+      ),
     );
     return Response(HttpStatus.noContent);
   }
@@ -311,7 +496,9 @@ final class RelayApp {
   Future<Response> _reportReferenced(Request request) async => jsonResponse(
     blobs.markReferenced(
       callerOf(request).accountId,
-      BlobNamesRequest.fromJson(await readJson(request)),
+      BlobNamesRequest.fromJson(
+        await readJson(request, maxBytes: largeJsonLimit, slots: largeBodies),
+      ),
     ),
   );
 
@@ -321,17 +508,26 @@ final class RelayApp {
   Future<Response> _openPairing(Request request) async => jsonResponse(
     pairing.open(
       callerOf(request),
-      PairingOpenRequest.fromJson(await readJson(request)),
+      PairingOpenRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
     ),
   );
 
-  Future<Response> _joinPairing(Request request) async => jsonResponse(
-    pairing.join(
-      _param(request, SyncRoutes.mailboxIdParameter),
-      credentialOf(request)!.token,
-      PairingJoinRequest.fromJson(await readJson(request)),
-    ),
-  );
+  Future<Response> _joinPairing(Request request) async {
+    final String mailboxId = _param(request, SyncRoutes.mailboxIdParameter);
+    final String token = credentialOf(request)!.token;
+    pairing.verifyToken(mailboxId, token);
+    return jsonResponse(
+      pairing.join(
+        mailboxId,
+        token,
+        PairingJoinRequest.fromJson(
+          await readJson(request, maxBytes: smallJsonLimit),
+        ),
+      ),
+    );
+  }
 
   Response _pairingStatus(Request request) {
     final String mailboxId = _param(request, SyncRoutes.mailboxIdParameter);
@@ -347,22 +543,34 @@ final class RelayApp {
     pairing.complete(
       callerOf(request),
       _param(request, SyncRoutes.mailboxIdParameter),
-      PairingCompleteRequest.fromJson(await readJson(request)),
+      PairingCompleteRequest.fromJson(
+        await readJson(request, maxBytes: largeJsonLimit, slots: largeBodies),
+      ),
     ),
   );
 
   Future<Response> _restoreChallenge(Request request) async => jsonResponse(
     restores.challenge(
-      RestoreChallengeRequest.fromJson(await readJson(request)),
+      RestoreChallengeRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
     ),
   );
 
   Future<Response> _restore(Request request) async => jsonResponse(
-    restores.restore(RestoreRequest.fromJson(await readJson(request))),
+    restores.restore(
+      RestoreRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
+    ),
   );
 
   Future<Response> _registerRestored(Request request) async {
-    restores.register(RestoreRegisterRequest.fromJson(await readJson(request)));
+    restores.register(
+      RestoreRegisterRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
+    );
     return Response(HttpStatus.noContent);
   }
 
@@ -374,7 +582,9 @@ final class RelayApp {
     devices.remove(
       callerOf(request),
       deviceId,
-      DeviceRemoveRequest.fromJson(await readJson(request)),
+      DeviceRemoveRequest.fromJson(
+        await readJson(request, maxBytes: smallJsonLimit),
+      ),
     );
     live.closeDevice(deviceId);
     return Response(HttpStatus.noContent);
@@ -382,12 +592,17 @@ final class RelayApp {
 
   Response _eraseJournal(Request request) {
     final Caller caller = callerOf(request);
-    devices.eraseJournal(caller);
+    final List<Directory> trashed = devices.eraseJournal(caller);
     live.closeAccount(caller.accountId);
+    trashed.forEach(_deleteLater);
     return Response(HttpStatus.noContent);
   }
 
-  Future<Response> _health(Request request) async {
+  Future<Response> _healthCheck(Request request) async => await _health.read()
+      ? Response.ok('ok')
+      : Response(HttpStatus.serviceUnavailable, body: 'unavailable');
+
+  Future<bool> _probeHealth() async {
     try {
       database.select('SELECT 1');
       final File probe = File(
@@ -395,9 +610,9 @@ final class RelayApp {
       );
       await probe.writeAsString('ok', flush: true);
       await probe.delete();
-      return Response.ok('ok');
+      return true;
     } on Object {
-      return Response(HttpStatus.serviceUnavailable, body: 'unavailable');
+      return false;
     }
   }
 
@@ -419,14 +634,29 @@ final class RelayServer {
     int? port,
     Duration? tickInterval = const Duration(seconds: 5),
   }) async {
-    final HttpServer server = await shelf_io.serve(
-      app.handler,
+    final HttpServer server = await HttpServer.bind(
       address ?? InternetAddress.anyIPv4,
       port ?? app.config.port,
     );
-    final Timer? timer = tickInterval == null
-        ? null
-        : Timer.periodic(tickInterval, (_) => unawaited(app.tick()));
+    final Timer? timer = runZonedGuarded<Timer?>(() {
+      server.listen(
+        (HttpRequest raw) => shelf_io.handleRequest(
+          raw,
+          (Request request) => app.handler(
+            request.change(
+              context: <String, Object>{
+                dropConnectionContextKey: () {
+                  raw.response.deadline = Duration.zero;
+                },
+              },
+            ),
+          ),
+        ),
+      );
+      return tickInterval == null
+          ? null
+          : Timer.periodic(tickInterval, (_) => unawaited(app.tick()));
+    }, app.reportInternalError);
     return RelayServer._(app, server, timer);
   }
 
