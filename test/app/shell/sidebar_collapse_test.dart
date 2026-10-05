@@ -225,7 +225,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('Entries are stored only on this device'),
+        find.textContaining('Your journal is stored only on this Mac'),
         findsOneWidget,
       );
       expect(find.byType(AppearanceToggle), findsNothing);
