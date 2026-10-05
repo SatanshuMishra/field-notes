@@ -14,15 +14,24 @@ const String heartbeatBase = 'https://heartbeat.invalid';
 final String serverDirectory = p.dirname(defaultMigrationsDirectory());
 final String deployDirectory = p.join(serverDirectory, 'deploy');
 
-const String recordingPrelude = r'''#!/bin/bash
-log="$STUB_LOGS/$(basename "$0").log"
+const String shebang = '#!/bin/bash\n';
+
+const String recordingLines = r'''log="$STUB_LOGS/$(basename "$0").log"
 for argument in "$@"; do
   printf '%s\037' "$argument" >> "$log"
 done
 printf '\n' >> "$log"
 ''';
 
-const String rsyncStub = '''$recordingPrelude
+const String recordingPrelude = '$shebang$recordingLines';
+
+const String rsyncStub =
+    '''$shebang
+if [ "\$1" = "--version" ]; then
+  printf 'rsync  version %s  protocol version 32\\n' "\${STUB_RSYNC_VERSION:-3.4.1}"
+  exit 0
+fi
+$recordingLines
 for host in \${STUB_RSYNC_FAIL:-}; do
   for argument in "\$@"; do
     case "\$argument" in
@@ -471,4 +480,125 @@ void main() {
     );
     expect(drillRoot.listSync(), isEmpty);
   }, timeout: const Timeout(Duration(minutes: 4)));
+
+  test('the nightly copy refuses an rsync older than 3.4.0', () async {
+    final ScriptBench bench = await ScriptBench.create();
+    final Map<String, String> roots = <String, String>{
+      'FN_RELAY_ROOT': bench.relayRoot('relay').path,
+      'FN_TEST_RELAY_ROOT': bench.relayRoot('relay-test').path,
+    };
+
+    final ProcessResult old = await bench.run(
+      'nightly-copy.sh',
+      <String, String>{...roots, 'STUB_RSYNC_VERSION': '3.3.0'},
+    );
+
+    expect(old.exitCode, isNot(0));
+    expect(bench.calls('rsync'), isEmpty);
+    expect(bench.calls('docker'), isEmpty);
+    expect(bench.heartbeats(), <String>[
+      '$heartbeatBase/nightly/start',
+      '$heartbeatBase/nightly/fail',
+    ]);
+    expect(bench.calls('msmtp'), hasLength(1));
+    expect(bench.mail(), contains('nightly copy failed'));
+    expect(
+      bench.mail(),
+      contains('check rsync (found 3.3.0, need 3.4.0 or newer)'),
+    );
+
+    bench.clearLogs();
+    final ProcessResult current = await bench.run(
+      'nightly-copy.sh',
+      <String, String>{...roots, 'STUB_RSYNC_VERSION': '3.4.0'},
+    );
+
+    expect(current.exitCode, 0, reason: '${current.stderr}');
+    expect(bench.calls('rsync'), hasLength(2));
+    expect(bench.calls('msmtp'), isEmpty);
+  });
+
+  test('the restore drill refuses an rsync older than 3.4.0', () async {
+    final ScriptBench bench = await ScriptBench.create();
+    final Directory drillRoot = Directory(p.join(bench.root.path, 'drill'));
+
+    final ProcessResult result = await bench.run(
+      'restore-drill.sh',
+      <String, String>{
+        'FN_DRILL_ROOT': drillRoot.path,
+        'STUB_RSYNC_VERSION': '3.2.7',
+      },
+    );
+
+    expect(result.exitCode, isNot(0));
+    expect(bench.calls('rsync'), isEmpty);
+    expect(bench.calls('docker'), isEmpty);
+    expect(bench.heartbeats(), <String>[
+      '$heartbeatBase/drill/start',
+      '$heartbeatBase/drill/fail',
+    ]);
+    expect(bench.calls('msmtp'), hasLength(1));
+    expect(bench.mail(), contains('restore drill failed'));
+    expect(
+      bench.mail(),
+      contains('check rsync (found 3.2.7, need 3.4.0 or newer)'),
+    );
+  });
+
+  test(
+    'the restore drill refuses a scratch root that is not private',
+    () async {
+      final ScriptBench bench = await ScriptBench.create();
+      final Directory open = Directory(p.join(bench.root.path, 'open-drill'))
+        ..createSync();
+      Process.runSync('chmod', <String>['755', open.path]);
+      final Directory private = Directory(
+        p.join(bench.root.path, 'private-drill'),
+      )..createSync();
+      Process.runSync('chmod', <String>['700', private.path]);
+      final Link linked = Link(p.join(bench.root.path, 'linked-drill'))
+        ..createSync(private.path);
+
+      for (final String root in <String>[open.path, linked.path]) {
+        bench.clearLogs();
+        final ProcessResult result = await bench.run(
+          'restore-drill.sh',
+          <String, String>{'FN_DRILL_ROOT': root},
+        );
+
+        expect(result.exitCode, isNot(0), reason: root);
+        expect(bench.calls('rsync'), isEmpty, reason: root);
+        expect(bench.heartbeats(), <String>[
+          '$heartbeatBase/drill/start',
+          '$heartbeatBase/drill/fail',
+        ], reason: root);
+        expect(bench.calls('msmtp'), hasLength(1), reason: root);
+        expect(bench.mail(), contains('check the scratch root $root'));
+      }
+      expect(open.listSync(), isEmpty);
+      expect(private.listSync(), isEmpty);
+    },
+  );
+
+  test(
+    'the restore drill pulls without links into a private scratch root',
+    () async {
+      final ScriptBench bench = await ScriptBench.create();
+      final Directory drillRoot = Directory(p.join(bench.root.path, 'drill'));
+
+      final ProcessResult result = await bench.run(
+        'restore-drill.sh',
+        <String, String>{'FN_DRILL_ROOT': drillRoot.path},
+      );
+
+      expect(result.exitCode, isNot(0));
+      expect(bench.mail(), contains('find a database copy'));
+      final List<String> pull = bench.calls('rsync').single;
+      expect(pull.indexOf('-a'), isNonNegative);
+      expect(pull.indexOf('--no-links'), greaterThan(pull.indexOf('-a')));
+      expect(drillRoot.statSync().type, FileSystemEntityType.directory);
+      expect(drillRoot.statSync().modeString(), 'rwx------');
+      expect(drillRoot.listSync(), isEmpty);
+    },
+  );
 }

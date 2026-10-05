@@ -7,10 +7,15 @@ import 'package:sync_protocol/sync_protocol.dart';
 
 import 'auth.dart';
 import 'database.dart';
+import 'probes.dart';
 
 typedef AssemblyHook = Future<void> Function(String uploadId);
 
-const int maxPartSize = 16 * 1024 * 1024;
+const int maxBlobSize = 2 * 1024 * 1024 * 1024;
+const int maxPartSize = 8 * 1024 * 1024;
+const int maxPartCount = 256;
+const int maxUnfinishedUploads = 32;
+const int maxStagedBytes = 4 * 1024 * 1024 * 1024;
 const int maxBlobNames = 100000;
 const Duration unusedBlobGrace = Duration(days: 30);
 const Duration unfinishedUploadLifetime = Duration(days: 7);
@@ -72,6 +77,7 @@ final class PartUpload {
         parsedBlobSize == null ||
         parsedPartSize == null ||
         parsedBlobSize < 1 ||
+        parsedBlobSize > maxBlobSize ||
         parsedPartSize < 1 ||
         parsedPartSize > maxPartSize) {
       throw const RelayException(SyncErrorCode.badRequest, 'Invalid part');
@@ -83,7 +89,7 @@ final class PartUpload {
       blobSize: parsedBlobSize,
       partSize: parsedPartSize,
     );
-    if (parsedIndex >= part.partCount) {
+    if (part.partCount > maxPartCount || parsedIndex >= part.partCount) {
       throw const RelayException(SyncErrorCode.badRequest, 'Invalid part');
     }
     return part;
@@ -140,13 +146,18 @@ final class BlobStore {
     required this._database,
     required this.mediaDirectory,
     required this._clock,
+    required this._freeSpace,
+    required this._minFreeBytes,
     this._beforeAssembly,
   });
 
   final RelayDatabase _database;
   final String mediaDirectory;
   final DateTime Function() _clock;
+  final CachedProbe<int?> _freeSpace;
+  final int _minFreeBytes;
   final AssemblyHook? _beforeAssembly;
+  final Map<String, int> _receiving = <String, int>{};
 
   void prepare() {
     Directory(p.join(mediaDirectory, stagingFolderName))
@@ -187,74 +198,128 @@ final class BlobStore {
     int? contentLength,
   }) async {
     if (contentLength != null && contentLength != part.expectedLength) {
-      await _drain(body);
+      await _drain(body, part.expectedLength);
       throw const RelayException(SyncErrorCode.badRequest, 'Wrong part size');
     }
     if (holds(accountId, part.name)) {
-      await _drain(body);
+      await _drain(body, part.expectedLength);
       return UploadStatusResponse(
         receivedParts: const <int>[],
         assembled: true,
       );
     }
-    final _Upload upload = _database.transaction(() {
-      _database.execute(
-        'INSERT OR IGNORE INTO uploads (id, account_id, name, total_bytes, '
-        'part_size, created_at, assembling, assembled) '
-        'VALUES (?, ?, ?, ?, ?, ?, 0, 0)',
-        <Object?>[
-          part.uploadId,
-          accountId,
-          part.name,
-          part.blobSize,
-          part.partSize,
-          toMillis(_clock()),
-        ],
-      );
-      final _Upload stored = _upload(part.uploadId)!;
-      if (stored.accountId != accountId ||
-          stored.name != part.name ||
-          stored.totalBytes != part.blobSize ||
-          stored.partSize != part.partSize) {
-        throw const RelayException(
-          SyncErrorCode.badRequest,
-          'Upload does not match',
-        );
-      }
-      return stored;
-    });
+    if (((await _freeSpace.read()) ?? 0) < _minFreeBytes) {
+      await _drain(body, part.expectedLength);
+      throw const RelayException(SyncErrorCode.storageFull);
+    }
+    final _Upload upload;
+    try {
+      upload = _open(accountId, part);
+    } on RelayException {
+      await _drain(body, part.expectedLength);
+      rethrow;
+    }
     if (upload.busy || _hasPart(upload.id, part.index)) {
-      await _drain(body);
+      await _drain(body, part.expectedLength);
       return _settle(accountId, upload.id);
     }
-    final File received;
-    try {
-      received = await _receive(part, body);
-    } on FileSystemException catch (error) {
-      if (isStorageFull(error) || !(_upload(upload.id)?.busy ?? false)) {
-        rethrow;
-      }
-      return _status(accountId, part.name, upload.id);
+    final int length = part.expectedLength;
+    if (_stagedBytes(accountId) + (_receiving[accountId] ?? 0) + length >
+        maxStagedBytes) {
+      await _drain(body, length);
+      throw const RelayException(SyncErrorCode.storageFull);
     }
-    final bool claimed = _database.transaction(() {
-      final _Upload? current = _upload(upload.id);
-      if (current == null || current.busy || _hasPart(upload.id, part.index)) {
-        _deleteQuietly(received);
-        return current != null && _claim(current);
+    _receiving[accountId] = (_receiving[accountId] ?? 0) + length;
+    final bool claimed;
+    try {
+      final File received;
+      try {
+        received = await _receive(part, body);
+      } on FileSystemException catch (error) {
+        if (isStorageFull(error) || !(_upload(upload.id)?.busy ?? false)) {
+          rethrow;
+        }
+        return _status(accountId, part.name, upload.id);
       }
-      received.renameSync(_partPath(upload.id, part.index));
-      _database.execute(
-        'INSERT OR IGNORE INTO upload_parts (upload_id, part_index) '
-        'VALUES (?, ?)',
-        <Object?>[upload.id, part.index],
-      );
-      return _claim(current);
-    });
+      claimed = _record(upload, part, received);
+    } finally {
+      final int remaining = (_receiving[accountId] ?? length) - length;
+      if (remaining > 0) {
+        _receiving[accountId] = remaining;
+      } else {
+        _receiving.remove(accountId);
+      }
+    }
     if (claimed) {
       await _assemble(upload);
     }
     return _status(accountId, part.name, upload.id);
   }
+
+  _Upload _open(String accountId, PartUpload part) => _database.transaction(() {
+    if (_upload(part.uploadId) == null &&
+        _database.count(
+              'SELECT count(*) FROM uploads '
+              'WHERE account_id = ? AND assembled = 0',
+              <Object?>[accountId],
+            ) >=
+            maxUnfinishedUploads) {
+      throw const RelayException(SyncErrorCode.storageFull);
+    }
+    _database.execute(
+      'INSERT OR IGNORE INTO uploads (id, account_id, name, total_bytes, '
+      'part_size, created_at, assembling, assembled) '
+      'VALUES (?, ?, ?, ?, ?, ?, 0, 0)',
+      <Object?>[
+        part.uploadId,
+        accountId,
+        part.name,
+        part.blobSize,
+        part.partSize,
+        toMillis(_clock()),
+      ],
+    );
+    final _Upload stored = _upload(part.uploadId)!;
+    if (stored.accountId != accountId ||
+        stored.name != part.name ||
+        stored.totalBytes != part.blobSize ||
+        stored.partSize != part.partSize) {
+      throw const RelayException(
+        SyncErrorCode.badRequest,
+        'Upload does not match',
+      );
+    }
+    return stored;
+  });
+
+  bool _record(_Upload upload, PartUpload part, File received) =>
+      _database.transaction(() {
+        final _Upload? current = _upload(upload.id);
+        if (current == null ||
+            current.busy ||
+            _hasPart(upload.id, part.index)) {
+          _deleteQuietly(received);
+          return current != null && _claim(current);
+        }
+        received.renameSync(_partPath(upload.id, part.index));
+        _database.execute(
+          'INSERT OR IGNORE INTO upload_parts (upload_id, part_index) '
+          'VALUES (?, ?)',
+          <Object?>[upload.id, part.index],
+        );
+        return _claim(current);
+      });
+
+  int _stagedBytes(String accountId) => _database.count(
+    'SELECT coalesce(sum(CASE '
+    'WHEN p.part_index = (u.total_bytes + u.part_size - 1) / u.part_size - 1 '
+    'THEN u.total_bytes - u.part_size * '
+    '((u.total_bytes + u.part_size - 1) / u.part_size - 1) '
+    'ELSE u.part_size END), 0) '
+    'FROM upload_parts p JOIN uploads u ON u.id = p.upload_id '
+    'WHERE u.account_id = ? AND u.assembled = 0',
+    <Object?>[accountId],
+  );
 
   Future<UploadStatusResponse> status(
     String accountId,
@@ -529,9 +594,15 @@ final class BlobStore {
   String _partPath(String uploadId, int index) =>
       p.join(stagingPath(mediaDirectory, uploadId), '$index');
 
-  static Future<void> _drain(Stream<List<int>> body) async {
+  static Future<void> _drain(Stream<List<int>> body, int limit) async {
+    int seen = 0;
     try {
-      await body.drain<void>();
+      await for (final List<int> chunk in body) {
+        seen += chunk.length;
+        if (seen > limit) {
+          return;
+        }
+      }
     } on Object {
       return;
     }

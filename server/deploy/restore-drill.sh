@@ -50,10 +50,29 @@ fail() {
   exit 1
 }
 
+rsync_version() {
+  rsync --version 2>/dev/null \
+    | sed -n '1s/^rsync[[:space:]]\{1,\}version[[:space:]]\{1,\}v\{0,1\}\([0-9][0-9.]*\).*/\1/p'
+}
+
+rsync_is_current() {
+  local major="${1%%.*}"
+  local minor="${1#*.}"
+  minor="${minor%%.*}"
+  case "$major.$minor" in
+    *[!0-9.]* | .* | *.) return 1 ;;
+  esac
+  [ "$major" -gt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -ge 4 ]; }
+}
+
+private_root() {
+  [ -n "$(find "$drill_root" -maxdepth 0 -type d -user "$(id -u)" -perm 0700 2>/dev/null)" ]
+}
+
 pull_copy() {
   local host
   for host in $nas_hosts; do
-    if rsync -a \
+    if rsync -a --no-links \
       --contimeout=30 \
       --timeout=600 \
       --password-file="$password_file" \
@@ -68,7 +87,16 @@ pull_copy() {
 }
 
 ping_heartbeat /start
-mkdir -p "$drill_root" || fail "create the scratch folder"
+found_rsync="$(rsync_version)"
+if ! rsync_is_current "$found_rsync"; then
+  fail "check rsync (found ${found_rsync:-an unknown version}, need 3.4.0 or newer)"
+fi
+if [ ! -e "$drill_root" ] && [ ! -L "$drill_root" ]; then
+  mkdir -m 0700 "$drill_root" || fail "create the scratch root $drill_root"
+fi
+if ! private_root; then
+  fail "check the scratch root $drill_root, which must be a folder owned by $(id -un) with mode 0700"
+fi
 scratch="$(mktemp -d "$drill_root/drill.XXXXXX")" || fail "create the scratch folder"
 pull_copy || fail "pull the latest copy from the NAS"
 

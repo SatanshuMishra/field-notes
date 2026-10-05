@@ -11,6 +11,8 @@ services:
     security_opt:
       - "no-new-privileges:true"
     stop_grace_period: 30s
+    mem_limit: 1g
+    pids_limit: 256
     environment:
       RELAY_DATABASE: /srv/field-notes-relay/relay.sqlite3
       RELAY_MEDIA_DIR: /srv/field-notes-relay/media
@@ -41,6 +43,8 @@ services:
     security_opt:
       - "no-new-privileges:true"
     stop_grace_period: 30s
+    mem_limit: 1g
+    pids_limit: 256
     environment:
       RELAY_DATABASE: /srv/field-notes-relay-test/relay.sqlite3
       RELAY_MEDIA_DIR: /srv/field-notes-relay-test/media

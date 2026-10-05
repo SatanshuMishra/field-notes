@@ -176,6 +176,7 @@ final class RelayHarness {
   final AssemblyHook? beforeAssembly;
   final List<String> logLines = <String>[];
   final http.Client client = http.Client();
+  int freeBytes = 1 << 40;
   DateTime _now;
   RelayServer? _server;
 
@@ -206,6 +207,7 @@ final class RelayHarness {
       clock: clock,
       logSink: logLines.add,
       beforeAssembly: beforeAssembly,
+      freeSpace: (String directory) async => freeBytes,
     );
     _server = await RelayServer.serve(
       app,

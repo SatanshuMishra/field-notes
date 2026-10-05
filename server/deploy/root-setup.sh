@@ -17,6 +17,10 @@ script_dir="$(cd "$(dirname "$0")" && pwd)"
 install_dir="/usr/local/lib/field-notes"
 alert="$install_dir/alert.sh"
 drive="/dev/nvme0"
+relay_roots="/srv/field-notes-relay /srv/field-notes-relay-test"
+relay_uid=1000
+relay_gid=1000
+drill_root="/var/tmp/field-notes-drill"
 
 say() {
   printf '==> %s\n' "$*"
@@ -37,13 +41,42 @@ install_missing() {
 }
 
 say "Packages"
-install_missing msmtp msmtp-mta smartmontools snapper
+install_missing msmtp msmtp-mta smartmontools snapper btrfs-progs
 
 say "Scripts in $install_dir, owned by root and read-only"
 install -d -o root -g root -m 0755 "$install_dir"
 for script in nightly-copy.sh restore-drill.sh alert.sh; do
   install -o root -g root -m 0555 "$script_dir/$script" "$install_dir/$script"
 done
+
+say "Relay data folders, with unfinished uploads kept out of the /srv snapshots"
+for relay_root in $relay_roots; do
+  media="$relay_root/media"
+  for folder in "$relay_root" "$media"; do
+    if [ ! -d "$folder" ]; then
+      install -d -o "$relay_uid" -g "$relay_gid" -m 0750 "$folder"
+    fi
+  done
+  staging="$media/.uploads"
+  filesystem="$(stat -f -c %T "$media")"
+  if [ -e "$staging" ] || [ -L "$staging" ]; then
+    if [ "$filesystem" = "btrfs" ] && ! btrfs subvolume show "$staging" >/dev/null 2>&1; then
+      say "$staging is a plain folder; docs/deploy/relay.md explains how to convert it"
+    fi
+  elif [ "$filesystem" = "btrfs" ]; then
+    btrfs subvolume create "$staging"
+    chown "$relay_uid:$relay_gid" "$staging"
+    chmod 0750 "$staging"
+  else
+    say "$media is on $filesystem, not btrfs, so the relay creates $staging itself"
+  fi
+done
+
+say "Restore drill scratch root $drill_root, private to $user_name"
+if [ -L "$drill_root" ]; then
+  rm -f "$drill_root"
+fi
+install -d -o "$user_name" -g "$(id -gn "$user_name")" -m 0700 "$drill_root"
 
 say "Mail through Gmail in /etc/msmtprc"
 if [ -f /etc/msmtprc ] && [ ! -f /etc/msmtprc.before-field-notes ]; then

@@ -87,9 +87,11 @@ void main() {
     addTearDown(
       () => Process.runSync('chmod', <String>['755', harness.mediaDirectory]),
     );
+    harness.advance(const Duration(seconds: 5));
     final http.Response unwritable = await harness.send(SyncRoutes.health);
     expect(unwritable.statusCode, HttpStatus.serviceUnavailable);
     Process.runSync('chmod', <String>['755', harness.mediaDirectory]);
+    harness.advance(const Duration(seconds: 5));
     expect((await harness.send(SyncRoutes.health)).statusCode, HttpStatus.ok);
   });
 

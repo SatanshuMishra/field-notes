@@ -6,6 +6,7 @@ import 'auth.dart';
 import 'config.dart';
 import 'database.dart';
 import 'devices.dart';
+import 'trash.dart';
 
 const int exitOk = 0;
 const int exitFailure = 1;
@@ -98,17 +99,30 @@ final class RelayAdmin {
   bool resumeAccount(String id) =>
       _accounts.setStatus(id, AccountStatus.active);
 
-  bool deleteAccount(String id) => _database.transaction(() {
-    if (_database.count('SELECT count(*) FROM accounts WHERE id = ?', <Object?>[
-          id,
-        ]) ==
-        0) {
+  bool deleteAccount(String id) {
+    final List<String>? uploadIds = _database.transaction(() {
+      if (_database.count(
+            'SELECT count(*) FROM accounts WHERE id = ?',
+            <Object?>[id],
+          ) ==
+          0) {
+        return null;
+      }
+      final List<String> erased = eraseAccountRows(_database, id);
+      _database.execute('DELETE FROM accounts WHERE id = ?', <Object?>[id]);
+      return erased;
+    });
+    if (uploadIds == null) {
       return false;
     }
-    eraseAccountData(_database, _mediaDirectory, id);
-    _database.execute('DELETE FROM accounts WHERE id = ?', <Object?>[id]);
+    trashAccountMedia(
+      _mediaDirectory,
+      id,
+      uploadIds,
+      clock(),
+    ).forEach(deleteQuietlySync);
     return true;
-  });
+  }
 
   String markRestored() {
     final String generation = encodeBase64Url(randomBytes(16));

@@ -122,16 +122,27 @@ final class Pairing {
     });
   }
 
-  PairingStatusResponse statusForToken(String mailboxId, String token) {
-    final _Mailbox mailbox = _withToken(mailboxId, token);
-    return mailbox.status == PairingStatus.complete
-        ? PairingStatusResponse(
-            status: PairingStatus.complete,
-            accountId: mailbox.accountId,
-            keyBundle: mailbox.completePayload,
-          )
-        : PairingStatusResponse(status: mailbox.status);
-  }
+  void verifyToken(String mailboxId, String token) =>
+      _withToken(mailboxId, token);
+
+  PairingStatusResponse statusForToken(String mailboxId, String token) =>
+      _database.transaction(() {
+        final _Mailbox mailbox = _withToken(mailboxId, token);
+        if (mailbox.status != PairingStatus.complete) {
+          return PairingStatusResponse(status: mailbox.status);
+        }
+        if (mailbox.completePayload != null) {
+          _database.execute(
+            'UPDATE mailboxes SET complete_payload = NULL WHERE id = ?',
+            <Object?>[mailbox.id],
+          );
+        }
+        return PairingStatusResponse(
+          status: PairingStatus.complete,
+          accountId: mailbox.accountId,
+          keyBundle: mailbox.completePayload,
+        );
+      });
 
   PairingStatusResponse statusForCaller(Caller caller, String mailboxId) {
     final _Mailbox mailbox = _forCaller(caller, mailboxId);
@@ -183,6 +194,19 @@ final class Pairing {
         ],
       );
       return PairingStatusResponse(status: PairingStatus.complete);
+    });
+  }
+
+  void purgeExpired() {
+    if (!_database.hasTable('mailboxes')) {
+      return;
+    }
+    final int cutoff = toMillis(_clock().subtract(mailboxLifetime));
+    _database.transaction(() {
+      _database.execute(
+        'DELETE FROM mailboxes WHERE created_at <= ?',
+        <Object?>[cutoff],
+      );
     });
   }
 

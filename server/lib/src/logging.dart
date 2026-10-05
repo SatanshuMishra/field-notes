@@ -25,6 +25,9 @@ const List<String> logFields = <String>[
 
 const String unmatchedRoute = 'unmatched';
 
+const String eventField = 'event';
+const String internalErrorEvent = 'internal_error';
+
 final class AttributedHijack extends HijackException {
   const AttributedHijack(this.attributes);
 
@@ -47,6 +50,11 @@ String logLine({
   'bytes': bytes,
   'status': status,
   'ms': milliseconds,
+});
+
+String internalErrorLine(DateTime time) => jsonEncode(<String, Object?>{
+  'ts': time.toUtc().toIso8601String(),
+  eventField: internalErrorEvent,
 });
 
 Middleware requestLogger(LogSink sink, DateTime Function() clock) =>

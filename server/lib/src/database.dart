@@ -83,6 +83,13 @@ final class RelayDatabase {
 
   int get updatedRows => _db.updatedRows;
 
+  bool hasTable(String name) =>
+      count(
+        "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+        <Object?>[name],
+      ) >
+      0;
+
   T transaction<T>(T Function() body) {
     if (!_db.autocommit) {
       _db.execute('SAVEPOINT relay_nested');

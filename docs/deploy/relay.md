@@ -21,21 +21,40 @@ The domain `satanshu.tech` stays registered at Porkbun, and its DNS is on Cloudf
    - `sync-test.satanshu.tech` to the service `http://fn-relay-test:8080`
 3. In the `satanshu.tech` zone, open Security, then WAF, then Custom rules, and create a rule named "Field Notes relay":
    - Expression: `(http.host in {"sync.satanshu.tech" "sync-test.satanshu.tech"})`
-   - Action: Skip, and tick every security feature the form offers to skip (the remaining custom rules, Security Level, Browser Integrity Check and any challenge features listed).
-   - The app talks to the relay directly and cannot answer a browser challenge, so a challenge would stop sync.
-4. If Bot Fight Mode is turned on for the zone, turn it off. Cloudflare's documentation says a Skip rule cannot exempt hostnames from Bot Fight Mode (not re-checked for this guide).
+   - Action: Skip. Tick only the managed challenge, Browser Integrity Check and Security Level. Leave "All remaining custom rules", "All rate limiting rules" and "All managed rules" unticked, so the rate limit in step 5 and Cloudflare's free managed rules still protect the relay. The exact labels in the form were not re-checked for this guide.
+   - The app talks to the relay directly and cannot answer a browser challenge, so a challenge would stop sync. Those three features are the ones that challenge a client; everything else keeps working for the relay hostnames.
+4. Keep Bot Fight Mode off for the zone. On the free plan it applies to every request in the zone and cannot be skipped for a hostname or a path, so turning it on would challenge the app's requests and stop sync. (Super Bot Fight Mode, which can be skipped, needs a paid plan.)
+5. Open Security, then WAF, then Rate limiting rules, and create one rule named "Field Notes open routes" for the routes that answer without a session:
+   - Expression: `(http.host in {"sync.satanshu.tech" "sync-test.satanshu.tech"} and (http.request.uri.path in {"/v1/invites/redeem" "/v1/session/challenge" "/v1/session"} or starts_with(http.request.uri.path, "/v1/restore") or starts_with(http.request.uri.path, "/v1/pairing/")))`
+   - Counting: by IP, 30 requests per 10 seconds.
+   - Action: Block, for the shortest duration the plan offers.
+   - A device signs in with two requests, and a pairing or restore takes a handful plus a status check every few seconds, so a household stays well under the limit; someone guessing invite codes or pairing secrets from one address is blocked once they pass 30 tries in 10 seconds. The free plan allows one rate limiting rule; if its rule builder refuses a field or function in this expression, keep the path conditions and drop the host condition (not re-checked against the free plan's builder).
 
 The tunnel connector already runs as its own compose service in Dokploy's "Field Notes" project. Its definition is recorded in `server/deploy/tunnel.compose.yaml`: image `cloudflare/cloudflared:2026.9.3`, its token read from `/home/satanshumishra/.config/field-notes/cloudflared.token`, running as user 1000 with a read-only root filesystem, no capabilities, `no-new-privileges`, on the `fn-edge` network. Recreate it from that file if it is ever lost.
 
 ## 2. The data folders
 
-Create both folders, owned by user 1000, which is the user the relay runs as:
+`root-setup.sh` (section 8, step 3) creates both data folders and their `media/` folders, owned by user 1000, which is the user the relay runs as. Run it before the relays first start, so it can also set up their upload staging folders. If you need the folders before that, create them by hand:
 
 ```sh
 sudo install -d -o 1000 -g 1000 -m 0750 /srv/field-notes-relay /srv/field-notes-relay-test
 ```
 
 On this server `/srv` is a btrfs subvolume with copy-on-write turned off, which suits SQLite. The database must never live on a network share: SQLite's locking is not safe over one, and a relay that stores the database there can corrupt it.
+
+Each relay keeps the parts of unfinished uploads in `media/.uploads/`, up to 4 GiB per account. `root-setup.sh` creates that folder as a nested btrfs subvolume, owned by 1000:1000, when the media folder is on btrfs and `.uploads` does not exist yet. A btrfs snapshot of `/srv` does not include nested subvolumes, so the hourly snapshots never hold staged parts: they would otherwise keep up to several GiB of half-uploaded video alive for a day after the uploads finished. The script leaves an existing `.uploads` alone, because its parts belong to uploads the database still lists. To convert one on a relay that has already run, stop that relay, then:
+
+```sh
+cd /srv/field-notes-relay/media
+sudo mv .uploads .uploads-plain
+sudo btrfs subvolume create .uploads
+sudo chown 1000:1000 .uploads
+sudo chmod 0750 .uploads
+sudo cp -a .uploads-plain/. .uploads/
+sudo rm -rf .uploads-plain
+```
+
+Start the relay again afterwards. Do the same in `/srv/field-notes-relay-test/media` for the test relay.
 
 ## 3. Reaching Dokploy
 
@@ -49,10 +68,15 @@ Then open `http://localhost:3000` in a browser.
 
 ## 4. The image
 
-GitHub Actions builds the image (`.github/workflows/relay-image.yml`) on every push to `main` that touches `server/` or `packages/sync_protocol/`. It builds with `dart build cli`, starts the image with empty temporary folders and expects `GET /health` to answer 200 (`server/tool/smoke.sh`), and only then pushes:
+GitHub Actions builds the image (`.github/workflows/relay-image.yml`) on every push to `main` that touches `server/` or `packages/sync_protocol/`, in two jobs:
+
+1. `build` can only read the repository. It checks out without keeping the token, builds with `dart build cli`, starts the image with empty temporary folders and expects `GET /health` to answer 200 (`server/tool/smoke.sh`), then saves the image as a workflow artifact. It writes the build cache only for `main`.
+2. `push` runs only for `main`, after `build` succeeds. It is the only job that may write packages: it loads the saved image, signs in to GHCR with the workflow's own token through `docker login --password-stdin`, and pushes:
 
 - `ghcr.io/satanshumishra/field-notes-relay:main`, which the servers run
 - `ghcr.io/satanshumishra/field-notes-relay:sha-<commit>`, kept for rolling back
+
+Every action is pinned to a full commit SHA, and both base images in `server/Dockerfile` (`dart:3.13.4` and `debian:trixie-slim`) are pinned by digest, so a moved tag upstream cannot change what is built. Updating one means replacing its SHA or digest in a reviewed change.
 
 After the first push, open the package on GitHub (your profile, then Packages, then `field-notes-relay`, then Package settings) and set its visibility to Public if GitHub has not already. The server then pulls it without signing in. The image holds no secrets.
 
@@ -65,6 +89,7 @@ After the first push, open the package on GitHub (your profile, then Packages, t
    - drops every capability and sets `no-new-privileges`
    - bind-mounts its data folder at the same path inside the container and sets `RELAY_DATABASE` and `RELAY_MEDIA_DIR` inside it
    - joins the external attachable overlay network `fn-edge` and publishes no ports, so only the tunnel connector can reach it
+   - is limited to 1 GB of memory and 256 processes (`mem_limit`, `pids_limit`), so a flood of requests cannot take the server down with it
    - restarts unless stopped
 3. Deploy. At start-up each relay creates or migrates its database. Before applying a migration to a database that already has tables, it writes a copy beside it named `relay.sqlite3.bak-<UTC time>`. If a migration fails, the relay refuses to start.
 4. Check both relays from the Mac:
@@ -74,9 +99,25 @@ curl -fsS https://sync.satanshu.tech/health
 curl -fsS https://sync-test.satanshu.tech/health
 ```
 
-Each prints `ok`. The relay answers 503 instead when its database does not answer or its media folder is not writable.
+Each prints `ok`. The relay answers 503 instead when its database does not answer or its media folder is not writable. It checks both at most once every 5 seconds and answers from that result in between, so a flood of health checks cannot wear the disk.
 
-The relay logs one JSON line per request with only the time, the route pattern, the account and device ids, the byte count, the status and the duration. It never logs bodies, headers, invite codes or tokens.
+The relay logs one JSON line per request with only the time, the route pattern, the account and device ids, the byte count, the status and the duration. It never logs bodies, headers, invite codes or tokens. An unexpected error outside a request, such as a download whose file cannot be read, is logged as `{"ts": ..., "event": "internal_error"}` with nothing else, never a message, path or file name.
+
+The relay refuses what would let one account or one bad client exhaust the server:
+
+| Limit | Value | Answer |
+|---|---|---|
+| Request body on the routes without a session, the pairing mailbox routes and device removal | 64 KiB | 400 |
+| Request body for pairing completion and the unused and referenced file reports | 1 MiB | 400 |
+| Request body for a records push | 8 MiB | 400 |
+| One file | 2 GiB, in at most 256 parts of at most 8 MiB | 400 |
+| Unfinished uploads per account | 32 | 507, shown as "your server is full" |
+| Staged parts per account | 4 GiB | 507 |
+| Free space on the media drive | uploads stop below `RELAY_MIN_FREE_BYTES`, 2 GiB unless set | 507 |
+| Live connections per device | 4; a fifth closes the oldest | close code 4002 |
+| One live message | 4 KiB | close code 1009 |
+
+To keep more space free, add `RELAY_MIN_FREE_BYTES` (a byte count) to the service's `environment` in `server/compose.yaml`.
 
 ## 6. The firewall
 
@@ -101,12 +142,13 @@ For the test relay, filter on `fn-relay-test` instead.
 | `account list` | Prints each account's id, note, status, active device count, bytes stored and last-seen time, and nothing else. |
 | `account suspend <account-id>` | Refuses every call from the account's devices with "sync suspended" (403). |
 | `account resume <account-id>` | Lets a suspended account sync again. |
-| `account delete <account-id>` | Erases the account's records, files, uploads, keys and pairing mailboxes, then deletes the account. Its devices are told the journal was erased. |
-| `mark-restored` | Gives the relay a new generation and ends every session and upload pass. Run it after restoring the relay's data from any backup (section 8). |
+| `account delete <account-id>` | Erases the account's records, uploads, keys and pairing mailboxes and deletes the account, then moves its files to `media/.trash/` and deletes them there. Its devices are told the journal was erased, and their open connections close within 5 seconds. |
 | `snapshot-db --to <file>` | Writes a consistent, checked copy of the database and a manifest beside it. The nightly copy uses it. |
 | `verify-copy --db <file> --media <dir> --manifest <file>` | Checks a copy's integrity and that every record and file in its manifest is present. The restore drill uses it. |
 
-`mark-restored` must run while the relay is stopped, because the relay reads its generation at start-up. Run it in a throwaway container on the same image, with the same bind mount, user and `RELAY_*` settings:
+`account suspend` and `account delete` reach a running relay within 5 seconds: it closes the account's open connections on its next check.
+
+`mark-restored` gives the relay a new generation and ends every session and upload pass. Run it only after restoring the relay's data from a backup (section 8), and only on the stopped relay, so no device can push to the restored data before it is marked. Never run it with `docker exec`. Run it in a throwaway container on the same image, with the same bind mount, user and `RELAY_*` settings:
 
 ```sh
 docker run --rm --user 1000:1000 \
@@ -116,7 +158,9 @@ docker run --rm --user 1000:1000 \
   ghcr.io/satanshumishra/field-notes-relay:main mark-restored
 ```
 
-Any other command can run the same way when the relay is stopped.
+Any other command in the table can run the same way when the relay is stopped.
+
+When a journal is erased from the app or with `account delete`, its database rows are deleted first and its media folder is then moved to `media/.trash/<account>-<time>` and deleted in the background. If the relay stops before that finishes, it deletes whatever is left in `media/.trash/` at its next start, together with any media or upload folder no account or upload owns any more.
 
 ## 8. Backups
 
@@ -141,7 +185,9 @@ The nightly copy, for the relay and then the test relay:
 2. keeps the last 7 snapshots in `backup/`;
 3. copies `backup/` and `media/` with rsync to `rsync://fn-backup@10.0.0.246/field-notes-backup/` (the test relay to `field-notes-backup-test`), trying 10.0.0.247 if 10.0.0.246 fails. It mirrors deletions, never copies the live `relay.sqlite3`, `-wal` or `-shm` files or the `.uploads` folder of unfinished uploads, and leaves the NAS's own `#snapshot` and `@eaDir` folders alone.
 
-The restore drill pulls the latest copy from the NAS into a scratch folder under `/var/tmp/field-notes-drill/`, outside `/srv` so the hourly snapshots never hold a second copy of the media, runs `relay verify-copy`, starts a throwaway relay on the copy with no network but its own, expects `GET /health` to answer 200, and removes everything afterwards.
+The restore drill pulls the latest copy from the NAS into a scratch folder under `/var/tmp/field-notes-drill/`, outside `/srv` so the hourly snapshots never hold a second copy of the media, runs `relay verify-copy`, starts a throwaway relay on the copy with no network but its own, expects `GET /health` to answer 200, and removes everything afterwards. It pulls with `rsync -a --no-links`, so a link planted in a copy on the NAS cannot point the drill at a file outside its scratch folder. The scratch root must be a folder (not a link) owned by `satanshumishra` with mode 0700; `root-setup.sh` creates it that way, and the drill creates it the same way if it has been cleaned away. Any other owner or mode, which would let another account on the server swap files under the drill, makes the drill refuse to run and send an alert.
+
+Both jobs check `rsync --version` first and refuse to run, with an alert, when rsync is older than 3.4.0, the release that fixed the January 2025 rsync security holes. Update rsync with `sudo pacman -Syu rsync` if that alert arrives.
 
 Both jobs report their start, success or failure to Healthchecks.io. On a failure they send one email naming the step that failed, through `alert.sh` and `msmtp`, to satanshumishra@outlook.com.
 
@@ -172,7 +218,7 @@ The NAS password file `/home/satanshumishra/.config/field-notes/nas-rsync.pass` 
    sudo ./root-setup.sh field.notes.alerts@gmail.com
    ```
 
-   It installs `msmtp` and `msmtp-mta` (and `smartmontools` and `snapper` only if they are missing). It installs `nightly-copy.sh`, `restore-drill.sh` and `alert.sh` to `/usr/local/lib/field-notes/`, owned by root and read-only, because root's scrub and `smartd` hooks run `alert.sh` and must never run a file your account can change. It writes `/etc/msmtprc` for the Gmail account (smtp.gmail.com, port 465, TLS, reading the password from `gmail.pass`). It creates the snapper config `srv` for `/srv` with 24 hourly and 7 daily snapshots and nothing longer, and makes sure `snapper-timeline.timer` and `snapper-cleanup.timer` are enabled. It enables the monthly `btrfs-scrub@-.timer` with a hook that emails when the scrub reports errors, configures `smartd` to watch `/dev/nvme0` and email through `alert.sh`, and turns on lingering for `satanshumishra`. It touches no firewall, network or Docker setting.
+   It installs `msmtp` and `msmtp-mta` (and `smartmontools`, `snapper` and `btrfs-progs` only if they are missing). It creates the relay data folders and their `.uploads` subvolumes as section 2 describes, and the restore drill's scratch root `/var/tmp/field-notes-drill/` owned by `satanshumishra` with mode 0700. It installs `nightly-copy.sh`, `restore-drill.sh` and `alert.sh` to `/usr/local/lib/field-notes/`, owned by root and read-only, because root's scrub and `smartd` hooks run `alert.sh` and must never run a file your account can change. It writes `/etc/msmtprc` for the Gmail account (smtp.gmail.com, port 465, TLS, reading the password from `gmail.pass`). It creates the snapper config `srv` for `/srv` with 24 hourly and 7 daily snapshots and nothing longer, and makes sure `snapper-timeline.timer` and `snapper-cleanup.timer` are enabled. It enables the monthly `btrfs-scrub@-.timer` with a hook that emails when the scrub reports errors, configures `smartd` to watch `/dev/nvme0` and email through `alert.sh`, and turns on lingering for `satanshumishra`. It touches no firewall, network or Docker setting, and running it again changes nothing that is already in place.
 
 4. As `satanshumishra`, install and start the two timers:
 
@@ -195,14 +241,26 @@ On the Synology DS923+ ("Pulsar"):
 
 The `fn-backup` account writes only to the two backup folders and cannot delete snapshots.
 
+### Option: copying over SSH instead of the rsync daemon
+
+The nightly copy and the drill talk to the Synology's rsync daemon, which sends the `fn-backup` password and the copy unencrypted across the home network. That is the current setup, and nothing in this guide changes it. If you later want the copy encrypted and authenticated by key instead, the Synology can take rsync over SSH:
+
+1. On the Synology, turn on SSH (Control Panel, Terminal & SNMP) and allow `fn-backup` to use it, then add a key to `fn-backup`'s `~/.ssh/authorized_keys` restricted to rsync, for example with `command="rsync --server ..."` and `restrict`.
+2. On the server, create that key for `satanshumishra` without a passphrase, readable only by that account, and record the Synology's host key in `~/.ssh/known_hosts`.
+3. In both scripts, replace the `rsync://fn-backup@$host/<module>/` targets with `fn-backup@$host:/volume1/<module>/`, add `-e "ssh -i <key> -o BatchMode=yes"`, and drop `--password-file`.
+
+This is a choice for the owner to make and test; the scripts and their tests describe the rsync daemon setup.
+
 ### Restoring the relay by hand
 
 1. Stop the relay (in Dokploy, or `docker stop` on its container).
 2. Bring back its data, either way:
    - From a server snapshot: list them with `sudo snapper -c srv list`, then copy the relay's folder back from `/srv/.snapshots/<number>/snapshot/field-notes-relay/`.
    - From the NAS: copy the chosen `backup/relay-<date>.sqlite3` to `/srv/field-notes-relay/relay.sqlite3`, delete any `relay.sqlite3-wal` and `relay.sqlite3-shm` files beside it, and copy the `media/` folder back.
-3. Run `mark-restored` with `docker run --rm` exactly as section 7 shows.
+3. Run `mark-restored` with `docker run --rm` exactly as section 7 shows, while the relay is still stopped.
 4. Start the relay. Every device sees the new generation, signs in again and offers again everything the restore lost.
+
+A snapshot of `/srv` does not hold `media/.uploads/`, so after a restore that folder still holds today's staged parts. When the relay starts, it deletes the staged parts of uploads the restored database does not list; the rest expire within 7 days. Devices start their unfinished uploads again after the mark.
 
 Never skip the mark. Without it, a device notices the restore only while its saved position is above the relay's latest sequence number, and the first device to offer its records again lifts that number past the other devices' positions, so they stop noticing and their lost changes stay lost.
 

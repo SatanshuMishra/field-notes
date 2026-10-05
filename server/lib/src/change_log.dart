@@ -107,7 +107,7 @@ final class ChangeLog {
             RecordPushResult(
               changeId: change.changeId,
               status: PushStatus.stale,
-              current: stored,
+              current: caller.kind == CallerKind.session ? stored : null,
             ),
           );
           continue;
@@ -155,11 +155,7 @@ final class ChangeLog {
     });
   }
 
-  PullResponse pull(
-    String accountId,
-    PullQuery query, {
-    required String generation,
-  }) => _database.read(() {
+  PullResponse pull(String accountId, PullQuery query) => _database.read(() {
     final List<RecordState> states = <RecordState>[
       for (final Row row in _database.select(
         'SELECT record_key, seq, epoch, envelope FROM records '
@@ -179,7 +175,7 @@ final class ChangeLog {
       hasMore: remaining > 0,
       remaining: remaining,
       currentEpoch: _currentEpoch(accountId),
-      generation: generation,
+      generation: _database.generation(),
     );
   });
 

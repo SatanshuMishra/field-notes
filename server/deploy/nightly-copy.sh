@@ -42,6 +42,21 @@ fail_step() {
   log "failed: $1"
 }
 
+rsync_version() {
+  rsync --version 2>/dev/null \
+    | sed -n '1s/^rsync[[:space:]]\{1,\}version[[:space:]]\{1,\}v\{0,1\}\([0-9][0-9.]*\).*/\1/p'
+}
+
+rsync_is_current() {
+  local major="${1%%.*}"
+  local minor="${1#*.}"
+  minor="${minor%%.*}"
+  case "$major.$minor" in
+    *[!0-9.]* | .* | *.) return 1 ;;
+  esac
+  [ "$major" -gt 3 ] || { [ "$major" -eq 3 ] && [ "$minor" -ge 4 ]; }
+}
+
 container_for() {
   docker ps --quiet --filter "label=com.docker.compose.service=$1" | head -n 1
 }
@@ -121,6 +136,13 @@ copy_everything() {
 }
 
 ping_heartbeat /start
+found_rsync="$(rsync_version)"
+if ! rsync_is_current "$found_rsync"; then
+  log "rsync ${found_rsync:-of an unknown version} is older than 3.4.0"
+  ping_heartbeat /fail
+  "$alert" "nightly copy failed" "The nightly copy did not run. Failed step: check rsync (found ${found_rsync:-an unknown version}, need 3.4.0 or newer)."
+  exit 1
+fi
 if copy_everything; then
   ping_heartbeat ""
   log "finished"
