@@ -1,3 +1,6 @@
+@Timeout(Duration(minutes: 2))
+library;
+
 import 'dart:io';
 
 import 'package:path/path.dart' as p;
@@ -16,6 +19,9 @@ const String relayRepository = 'ghcr.io/satanshumishra/field-notes-relay';
 const String certificateIssuer = 'https://token.actions.githubusercontent.com';
 const String certificateIdentity =
     r'^https://github\.com/(?i:satanshumishra)/field-notes/\.github/workflows/relay-image\.yml@refs/heads/main$';
+const String workflowRepository = 'SatanshuMishra/field-notes';
+const String workflowRef = 'refs/heads/main';
+const String stubCommit = '0123456789abcdef0123456789abcdef01234567';
 const List<String> shares = <String>[
   'field-notes-backup',
   'field-notes-backup-test',
@@ -103,7 +109,7 @@ const String sshStub =
     '$recordingPrelude${r'''host=""
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    -p|-i|-o|-l)
+    -p|-i|-o|-l|-F)
       [ "$#" -ge 2 ] || exit 2
       shift 2
       ;;
@@ -186,6 +192,14 @@ const String cosignStub =
   printf 'Error: no matching signatures\n' >&2
   exit 1
 fi
+if [ -n "${STUB_COSIGN_OUTPUT+set}" ]; then
+  printf '%s\n' "$STUB_COSIGN_OUTPUT"
+  exit 0
+fi
+for argument in "$@"; do
+  image="$argument"
+done
+printf '[{"critical":{"identity":{"docker-reference":"%s"},"image":{"docker-manifest-digest":"%s"},"type":"cosign container image signature"},"optional":{"Issuer":"https://token.actions.githubusercontent.com","githubWorkflowRepository":"SatanshuMishra/field-notes","githubWorkflowRef":"refs/heads/main","githubWorkflowSha":"%s"}}]\n' "${image%@*}" "${image#*@}" "${STUB_COMMIT:-0123456789abcdef0123456789abcdef01234567}"
 exit 0
 '''}';
 
@@ -303,7 +317,8 @@ final class ScriptBench {
       'cd "$serverDirectory" || exit 70\n'
       'exec "${Platform.resolvedExecutable}" run bin/relay.dart "\$@"\n',
     );
-    File(p.join(config.path, 'heartbeat.env')).writeAsStringSync(
+    writePrivate(
+      p.join(config.path, 'heartbeat.env'),
       'FN_NIGHTLY_PING_URL=$heartbeatBase/nightly\n'
       'FN_DRILL_PING_URL=$heartbeatBase/drill\n',
     );
@@ -379,6 +394,8 @@ final class ScriptBench {
   String get knownHosts => p.join(config.path, 'nas_known_hosts');
 
   File get imageFile => File(p.join(config.path, 'relay-image.env'));
+
+  File get historyFile => File(p.join(config.path, 'relay-image.history'));
 
   String keyPath(String name) => p.join(keysDirectory, name);
 
@@ -1106,13 +1123,19 @@ void main() {
         certificateIssuer,
         '--certificate-identity-regexp',
         certificateIdentity,
+        '--certificate-github-workflow-repository',
+        workflowRepository,
+        '--certificate-github-workflow-ref',
+        workflowRef,
+        '--output',
+        'json',
         newImage,
       ],
     ]);
     expect(bench.calls('msmtp'), isEmpty);
     expect(
-      File(p.join(bench.config.path, 'relay-image.history')).readAsStringSync(),
-      contains(' main RELAY_IMAGE=$newImage\n'),
+      bench.historyFile.readAsStringSync(),
+      startsWith('sha256:${'c' * 64} $stubCommit '),
     );
     expect(
       bench.config.listSync().where(
@@ -1234,6 +1257,229 @@ void main() {
       expect(bench.calls('msmtp'), hasLength(1), reason: '$content');
       expect(bench.mail(), contains('restore drill failed'));
       expect(bench.mail(), contains(bench.imageFile.path));
+    }
+  });
+
+  test(
+    'relay-update pins the repository and ref and records the commit',
+    () async {
+      final ScriptBench bench = await ScriptBench.create();
+
+      final ProcessResult result = await bench.run(
+        'relay-update.sh',
+        <String, String>{'STUB_REPO_DIGESTS': newImage},
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      final List<String> verify = bench.calls('cosign').single;
+      expect(verify.first, 'verify');
+      expect(verify.last, newImage);
+      for (final List<String> pair in <List<String>>[
+        <String>['--certificate-oidc-issuer', certificateIssuer],
+        <String>['--certificate-identity-regexp', certificateIdentity],
+        <String>[
+          '--certificate-github-workflow-repository',
+          workflowRepository,
+        ],
+        <String>['--certificate-github-workflow-ref', workflowRef],
+        <String>['--output', 'json'],
+      ]) {
+        expect(verify, containsAllInOrder(pair));
+        expect(verify[verify.indexOf(pair.first) + 1], pair.last);
+      }
+      expect('${result.stdout}', contains('built from commit $stubCommit'));
+      final List<String> history = bench.historyFile.readAsLinesSync();
+      expect(history, hasLength(1));
+      expect(
+        history.single,
+        matches(
+          RegExp(
+            '^sha256:${'c' * 64} $stubCommit '
+            r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$',
+          ),
+        ),
+      );
+
+      final String unrecorded = '$relayRepository@sha256:${'d' * 64}';
+      for (final String output in <String>[
+        '[]',
+        '[{"optional":{}}]',
+        '[{"optional":{"githubWorkflowSha":"main"}}]',
+        '[{"optional":{"githubWorkflowSha":"$stubCommit"}},'
+            '{"optional":{"githubWorkflowSha":"${'e' * 40}"}}]',
+        'not json',
+      ]) {
+        bench.clearLogs();
+
+        final ProcessResult refused = await bench.run(
+          'relay-update.sh',
+          <String, String>{
+            'STUB_REPO_DIGESTS': unrecorded,
+            'STUB_COSIGN_OUTPUT': output,
+          },
+        );
+
+        expect(refused.exitCode, isNot(0), reason: output);
+        expect(
+          bench.imageFile.readAsStringSync(),
+          'RELAY_IMAGE=$newImage\n',
+          reason: output,
+        );
+        expect(bench.historyFile.readAsLinesSync(), history, reason: output);
+        expect(bench.calls('msmtp'), hasLength(1), reason: output);
+        expect(bench.mail(), contains('read the commit'), reason: output);
+        expect('${refused.stdout}', isNot(contains('RELAY_IMAGE=')));
+      }
+    },
+  );
+
+  test(
+    'relay-update refuses an older image unless a digest is named',
+    () async {
+      final ScriptBench bench = await ScriptBench.create();
+      final String olderDigest = 'sha256:${'a' * 64}';
+      final String olderImage = '$relayRepository@$olderDigest';
+      final String newerImage = '$relayRepository@sha256:${'b' * 64}';
+      for (final String image in <String>[olderImage, newerImage]) {
+        final ProcessResult updated = await bench.run(
+          'relay-update.sh',
+          <String, String>{'STUB_REPO_DIGESTS': image},
+        );
+        expect(updated.exitCode, 0, reason: '${updated.stderr}');
+      }
+      final List<String> recorded = bench.historyFile.readAsLinesSync();
+      expect(recorded, hasLength(2));
+      bench.clearLogs();
+
+      final ProcessResult refused = await bench.run(
+        'relay-update.sh',
+        <String, String>{'STUB_REPO_DIGESTS': olderImage},
+      );
+
+      expect(refused.exitCode, isNot(0));
+      expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$newerImage\n');
+      expect(bench.historyFile.readAsLinesSync(), recorded);
+      expect(bench.calls('msmtp'), hasLength(1));
+      expect(bench.mail(), contains('relay update failed'));
+      expect(bench.mail(), contains(olderDigest));
+      expect('${refused.stdout}', isNot(contains('RELAY_IMAGE=')));
+      expect(
+        bench.config.listSync().where(
+          (FileSystemEntity entity) =>
+              p.basename(entity.path).startsWith('.relay-image.env.'),
+        ),
+        isEmpty,
+      );
+
+      bench.clearLogs();
+      final ProcessResult rolledBack = await bench.run(
+        'relay-update.sh',
+        <String, String>{'STUB_REPO_DIGESTS': olderImage},
+        <String>[olderDigest],
+      );
+
+      expect(rolledBack.exitCode, 0, reason: '${rolledBack.stderr}');
+      expect(bench.calls('docker').first, <String>[
+        'pull',
+        '--quiet',
+        olderImage,
+      ]);
+      expect(bench.imageFile.readAsStringSync(), 'RELAY_IMAGE=$olderImage\n');
+      final List<String> history = bench.historyFile.readAsLinesSync();
+      expect(history, hasLength(3));
+      expect(history.last, startsWith('$olderDigest $stubCommit '));
+
+      bench.clearLogs();
+      final ProcessResult again = await bench.run(
+        'relay-update.sh',
+        <String, String>{'STUB_REPO_DIGESTS': olderImage},
+      );
+      expect(again.exitCode, 0, reason: '${again.stderr}');
+      expect(bench.historyFile.readAsLinesSync(), hasLength(4));
+    },
+  );
+
+  test(
+    'the nightly copy leaves trash, health probes and assembly out',
+    () async {
+      final ScriptBench bench = await ScriptBench.create();
+
+      final ProcessResult result = await bench.run(
+        'nightly-copy.sh',
+        bench.relayRoots(),
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stderr}');
+      final List<List<String>> copies = bench.transfers();
+      expect(copies, hasLength(shares.length));
+      for (final List<String> copy in copies) {
+        expect(
+          copy,
+          containsAll(<String>[
+            '--exclude=.uploads/',
+            '--exclude=.trash/',
+            '--exclude=.assembling/',
+            '--exclude=.health-*',
+          ]),
+        );
+        expect(
+          transportOf(copy).split(' '),
+          containsAllInOrder(<String>['ssh', '-F', '/dev/null']),
+        );
+      }
+      final List<List<String>> connections = bench.calls('ssh');
+      expect(connections, hasLength(shares.length));
+      for (final List<String> connection in connections) {
+        expect(connection, containsAllInOrder(<String>['-F', '/dev/null']));
+      }
+    },
+  );
+
+  test('the copy scripts refuse a config file others can write', () async {
+    final ScriptBench bench = await ScriptBench.create();
+    final Map<String, String> environment = <String, String>{
+      ...bench.relayRoots(),
+      'FN_DRILL_ROOT': p.join(bench.root.path, 'drill'),
+      'STUB_NAS': bench.fakeNas().path,
+      'STUB_VERIFY_COPY': 'pass',
+    };
+
+    for (final String name in <String>['nas.env', 'heartbeat.env']) {
+      final File file = File(p.join(bench.config.path, name));
+      for (final String mode in <String>['620', '602']) {
+        Process.runSync('chmod', <String>[mode, file.path]);
+        for (final String script in <String>[
+          'nightly-copy.sh',
+          'restore-drill.sh',
+        ]) {
+          final String what = '$script with $name at mode $mode';
+          bench.clearLogs();
+
+          final ProcessResult refused = await bench.run(script, environment);
+
+          expect(refused.exitCode, isNot(0), reason: what);
+          expect(bench.calls('ssh'), isEmpty, reason: what);
+          expect(bench.transfers(), isEmpty, reason: what);
+          expect(bench.calls('docker'), isEmpty, reason: what);
+          expect(bench.calls('msmtp'), hasLength(1), reason: what);
+          expect(bench.mail(), contains(file.path), reason: what);
+          expect(
+            bench.mail(),
+            contains('no other user can write'),
+            reason: what,
+          );
+        }
+        Process.runSync('chmod', <String>['600', file.path]);
+      }
+    }
+
+    for (final String script in <String>[
+      'nightly-copy.sh',
+      'restore-drill.sh',
+    ]) {
+      bench.clearLogs();
+      final ProcessResult passed = await bench.run(script, environment);
+      expect(passed.exitCode, 0, reason: '$script: ${passed.stderr}');
     }
   });
 }

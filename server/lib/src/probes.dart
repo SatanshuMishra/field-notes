@@ -63,3 +63,62 @@ Future<int?> dfFreeBytes(String directory) async {
     return null;
   }
 }
+
+final class FreeSpace {
+  FreeSpace({
+    required this._probe,
+    required this._clock,
+    required this.minFreeBytes,
+    this.lifetime = probeLifetime,
+  });
+
+  final Future<int?> Function() _probe;
+  final DateTime Function() _clock;
+  final int minFreeBytes;
+  final Duration lifetime;
+  int _reserved = 0;
+  int _written = 0;
+  ({DateTime at, int? free})? _reading;
+  Future<int?>? _probing;
+
+  int get reservedBytes => _reserved;
+
+  int get writtenBytes => _written;
+
+  Future<bool> reserve(int bytes) async {
+    final int? free = await _read();
+    if (free == null || free - _reserved - _written - bytes < minFreeBytes) {
+      return false;
+    }
+    _reserved += bytes;
+    return true;
+  }
+
+  void release(int bytes, {required bool written}) {
+    _reserved -= bytes;
+    if (written) {
+      _written += bytes;
+    }
+  }
+
+  Future<int?> _read() {
+    final DateTime now = _clock();
+    final ({DateTime at, int? free})? reading = _reading;
+    if (reading != null &&
+        !now.isBefore(reading.at) &&
+        now.isBefore(reading.at.add(lifetime))) {
+      return Future<int?>.value(reading.free);
+    }
+    return _probing ??= _fresh(now).whenComplete(() {
+      _probing = null;
+    });
+  }
+
+  Future<int?> _fresh(DateTime now) async {
+    final int writtenBefore = _written;
+    final int? free = await _probe();
+    _reading = (at: now, free: free);
+    _written -= writtenBefore;
+    return free;
+  }
+}

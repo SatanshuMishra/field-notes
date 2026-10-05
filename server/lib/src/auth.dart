@@ -10,6 +10,7 @@ import 'package:sodium/sodium.dart';
 import 'package:sqlite3/sqlite3.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
+import 'body_slots.dart';
 import 'database.dart';
 import 'logging.dart';
 
@@ -24,7 +25,8 @@ const Duration uploadPassLifetime = Duration(days: 7);
 
 const int smallJsonLimit = 64 * 1024;
 const int largeJsonLimit = 1024 * 1024;
-const int pushJsonLimit = 8 * 1024 * 1024;
+const int pushJsonLimit = maxPushBodyBytes;
+const int maxJsonOpeners = 4096;
 
 const String callerContextKey = 'relay.caller';
 const String grantContextKey = 'relay.grant';
@@ -121,44 +123,117 @@ bool isStorageFull(Object error) =>
     _storageFullErrors.contains(error.osError?.errorCode);
 
 Response? knownErrorResponse(Object error) => switch (error) {
-  RelayException(:final SyncErrorCode code, :final String message) =>
-    errorResponse(code, message),
+  RelayException(
+    :final SyncErrorCode code,
+    :final String message,
+    :final int? retryAfter,
+  ) =>
+    retryAfter == null
+        ? errorResponse(code, message)
+        : errorResponse(
+            code,
+            message,
+          ).change(headers: <String, String>{'retry-after': '$retryAfter'}),
   FormatException() => errorResponse(SyncErrorCode.badRequest),
   _ when isStorageFull(error) => errorResponse(SyncErrorCode.storageFull),
   _ => null,
 };
 
-Future<Uint8List> readBody(Request request, {required int maxBytes}) async {
+const RelayException _bodyTooLarge = RelayException(
+  SyncErrorCode.badRequest,
+  'Body too large',
+);
+
+const RelayException _noBodySlot = RelayException(
+  SyncErrorCode.tooManyRequests,
+  '',
+  1,
+);
+
+Future<bool> _admitAlways() async => true;
+
+Future<Uint8List> readBody(
+  Request request, {
+  required int maxBytes,
+  Future<bool> Function()? admitLarge,
+}) async {
   final int? declared = request.contentLength;
   if (declared != null && declared > maxBytes) {
-    throw const RelayException(SyncErrorCode.badRequest, 'Body too large');
+    throw _bodyTooLarge;
+  }
+  final Future<bool> Function() admit = admitLarge ?? _admitAlways;
+  bool admitted =
+      admitLarge == null || (declared != null && declared <= smallJsonLimit);
+  bool refused = false;
+  if (!admitted && declared != null) {
+    admitted = true;
+    refused = !await admit();
   }
   final BytesBuilder builder = BytesBuilder(copy: false);
   int received = 0;
   await for (final List<int> chunk in request.read()) {
     received += chunk.length;
-    if (received <= maxBytes) {
+    if (!admitted && received > smallJsonLimit) {
+      admitted = true;
+      refused = !await admit();
+    }
+    if (!refused && received <= maxBytes) {
       builder.add(chunk);
     } else if (received > 2 * maxBytes) {
       break;
     }
   }
+  if (refused) {
+    throw _noBodySlot;
+  }
   if (received > maxBytes) {
-    throw const RelayException(SyncErrorCode.badRequest, 'Body too large');
+    throw _bodyTooLarge;
   }
   return builder.takeBytes();
+}
+
+int jsonOpeners(List<int> body) {
+  int openers = 0;
+  for (final int byte in body) {
+    if (byte == 0x7b || byte == 0x5b) {
+      openers++;
+    }
+  }
+  return openers;
 }
 
 Future<Map<String, Object?>> readJson(
   Request request, {
   required int maxBytes,
+  LargeBodySlots? slots,
 }) async {
-  final Uint8List body = await readBody(request, maxBytes: maxBytes);
-  final Map<String, Object?> json = decodeJsonObject(utf8.decode(body));
-  if (readProtocolVersion(json) != syncProtocolVersion) {
-    throw const RelayException(SyncErrorCode.unsupportedProtocol);
+  final String accountId =
+      (request.context[callerContextKey] as Caller?)?.accountId ?? '';
+  bool holding = false;
+  try {
+    final Uint8List body = await readBody(
+      request,
+      maxBytes: maxBytes,
+      admitLarge: slots == null
+          ? null
+          : () async {
+              holding = await slots.acquire(accountId);
+              return holding;
+            },
+    );
+    if (jsonOpeners(body) > maxJsonOpeners) {
+      throw const RelayException(SyncErrorCode.badRequest, 'Too many objects');
+    }
+    final Map<String, Object?> json = decodeJsonObject(utf8.decode(body));
+    if (readProtocolVersion(json) != syncProtocolVersion) {
+      throw const RelayException(SyncErrorCode.unsupportedProtocol);
+    }
+    return json;
+  } finally {
+    if (holding) {
+      slots!.release(accountId);
+    }
   }
-  return json;
 }
 
 Caller callerOf(Request request) =>

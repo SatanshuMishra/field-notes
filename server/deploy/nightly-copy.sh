@@ -16,14 +16,24 @@ failed_steps=""
 
 . "$script_dir/nas-rsync.sh"
 
+log() {
+  printf '%s nightly-copy: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2
+}
+
+refuse_config() {
+  log "refused: $1"
+  "$alert" "nightly copy failed" "The nightly copy did not run and connected to nothing. Failed step: check $1."
+  exit 1
+}
+
+config_problem="$(nas_private_file_problem "$heartbeat_file")"
+if [ -n "$config_problem" ]; then
+  refuse_config "$config_problem"
+fi
 if [ -r "$heartbeat_file" ]; then
   . "$heartbeat_file"
   ping_url="${FN_NIGHTLY_PING_URL:-}"
 fi
-
-log() {
-  printf '%s nightly-copy: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2
-}
 
 ping_heartbeat() {
   if [ -z "$ping_url" ]; then
@@ -130,6 +140,11 @@ if ! rsync_is_current "$found_rsync"; then
   ping_heartbeat /fail
   "$alert" "nightly copy failed" "The nightly copy did not run. Failed step: check rsync (found ${found_rsync:-an unknown version}, need 3.4.0 or newer)."
   exit 1
+fi
+config_problem="$(nas_private_file_problem "$nas_env_file")"
+if [ -n "$config_problem" ]; then
+  ping_heartbeat /fail
+  refuse_config "$config_problem"
 fi
 nas_load_config
 nas_problem="$(nas_ready_problem push-field-notes-backup push-field-notes-backup-test)"

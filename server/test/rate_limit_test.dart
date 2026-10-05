@@ -11,6 +11,7 @@ const String clientAddress = '203.0.113.77';
 const String otherAddress = '198.51.100.23';
 const String addressHeader = 'CF-Connecting-IP';
 const int burst = 60;
+const int relayBurst = 600;
 
 void main() {
   late RelayHarness harness;
@@ -167,5 +168,102 @@ void main() {
         );
       }
     }
+  });
+
+  test('addresses in one IPv6 /64 share a limit', () async {
+    final TestAccount account = await harness.enrol();
+    final String deviceId = account.firstDevice.deviceId;
+
+    await exhaust('2001:db8:1:2::1', deviceId);
+
+    expect(
+      (await challengeFrom(
+        '2001:db8:1:2:ffff:ffff:ffff:fffe',
+        deviceId,
+      )).statusCode,
+      HttpStatus.tooManyRequests,
+    );
+    expect(
+      (await challengeFrom('2001:db8:1:3::1', deviceId)).statusCode,
+      HttpStatus.ok,
+    );
+
+    await exhaust('203.0.113.9', deviceId);
+
+    expect(
+      (await challengeFrom('::ffff:203.0.113.9', deviceId)).statusCode,
+      HttpStatus.tooManyRequests,
+    );
+    expect(
+      (await challengeFrom('203.0.113.10', deviceId)).statusCode,
+      HttpStatus.ok,
+    );
+  });
+
+  test('the relay-wide limit caps open requests from many addresses', () async {
+    final String deviceId = newSyncId();
+    for (int request = 1; request <= relayBurst; request++) {
+      final http.Response answered = await challengeFrom(
+        '10.${(request >> 16) & 0xff}.${(request >> 8) & 0xff}.${request & 0xff}',
+        deviceId,
+      );
+      expect(answered.statusCode, HttpStatus.ok, reason: 'request $request');
+    }
+
+    final http.Response limited = await challengeFrom('192.0.2.1', deviceId);
+
+    expect(limited.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(limited).code, SyncErrorCode.tooManyRequests);
+    expect(limited.headers['retry-after'], '1');
+
+    harness.advance(const Duration(seconds: 1));
+    expect(
+      (await challengeFrom('192.0.2.2', deviceId)).statusCode,
+      HttpStatus.ok,
+    );
+  });
+
+  test('signed-in pairing status polls are not rate limited', () async {
+    final TestAccount account = await harness.enrol();
+    final SignedIn me = await harness.signIn(account.firstDevice);
+    final String mailboxId = newSyncId();
+    final String token = encodeBase64Url(harness.randomOpaque(16));
+    expect(
+      (await harness.send(
+        SyncRoutes.openPairing,
+        credential: me.session,
+        body: PairingOpenRequest(
+          mailboxId: mailboxId,
+          tokenHash: mailboxTokenHash(token),
+        ),
+      )).statusCode,
+      HttpStatus.ok,
+    );
+    Future<http.Response> poll(AuthCredential credential) => harness.send(
+      SyncRoutes.pairingStatus,
+      parameters: <String, Object>{SyncRoutes.mailboxIdParameter: mailboxId},
+      credential: credential,
+      headers: const <String, String>{addressHeader: clientAddress},
+    );
+
+    for (int request = 1; request <= burst + 10; request++) {
+      expect(
+        (await poll(me.session)).statusCode,
+        HttpStatus.ok,
+        reason: 'signed-in poll $request',
+      );
+    }
+
+    final AuthCredential mailbox = AuthCredential(AuthScheme.mailbox, token);
+    for (int request = 1; request <= burst; request++) {
+      expect(
+        (await poll(mailbox)).statusCode,
+        HttpStatus.ok,
+        reason: 'mailbox poll $request',
+      );
+    }
+    final http.Response limited = await poll(mailbox);
+    expect(limited.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(limited).code, SyncErrorCode.tooManyRequests);
   });
 }

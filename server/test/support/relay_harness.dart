@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import 'package:relay_server/relay_server.dart';
 import 'package:relay_server/src/accounts.dart';
+import 'package:relay_server/src/blobs.dart';
+import 'package:relay_server/src/body_slots.dart';
 import 'package:relay_server/src/database.dart';
 import 'package:sodium/sodium.dart';
 import 'package:sync_protocol/sync_protocol.dart';
@@ -134,6 +136,8 @@ final class RelayHarness {
     required this.migrationsDirectory,
     required this.sodium,
     required this.beforeAssembly,
+    required this.rename,
+    required this.largeBodyWait,
     required this._now,
   });
 
@@ -141,6 +145,10 @@ final class RelayHarness {
     String? dataDirectory,
     String? migrationsDirectory,
     AssemblyHook? beforeAssembly,
+    Rename rename = renameOnDisk,
+    int minFreeBytes = RelayConfig.defaultMinFreeBytes,
+    int largeBodySlots = RelayConfig.defaultLargeBodySlots,
+    Duration largeBodyWait = largeBodyWaitLimit,
   }) async {
     final Directory root = await Directory.systemTemp.createTemp(
       'relay_harness_',
@@ -152,10 +160,14 @@ final class RelayHarness {
         databasePath: p.join(data, 'relay.sqlite3'),
         mediaDirectory: p.join(data, 'media'),
         port: 0,
+        minFreeBytes: minFreeBytes,
+        largeBodySlots: largeBodySlots,
       ),
       migrationsDirectory: migrationsDirectory ?? defaultMigrationsDirectory(),
       sodium: await SodiumInit.init(),
       beforeAssembly: beforeAssembly,
+      rename: rename,
+      largeBodyWait: largeBodyWait,
       now: harnessStart,
     );
     await harness.boot();
@@ -167,6 +179,8 @@ final class RelayHarness {
   final String migrationsDirectory;
   final Sodium sodium;
   final AssemblyHook? beforeAssembly;
+  final Rename rename;
+  final Duration largeBodyWait;
   final List<String> logLines = <String>[];
   final StreamController<String> _logged = StreamController<String>.broadcast(
     sync: true,
@@ -204,6 +218,8 @@ final class RelayHarness {
       logSink: _log,
       beforeAssembly: beforeAssembly,
       freeSpace: (String directory) async => freeBytes,
+      rename: rename,
+      largeBodyWait: largeBodyWait,
     );
     _server = await RelayServer.serve(
       app,

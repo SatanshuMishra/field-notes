@@ -9,6 +9,7 @@ import 'blobs.dart';
 import 'database.dart';
 
 const String trashFolderName = '.trash';
+const String deletedAccountsTable = 'deleted_accounts';
 
 String trashPath(String mediaDirectory) =>
     p.join(mediaDirectory, trashFolderName);
@@ -16,13 +17,20 @@ String trashPath(String mediaDirectory) =>
 String stagingTrashPath(String mediaDirectory) =>
     p.join(mediaDirectory, stagingFolderName, trashFolderName);
 
-Directory? _moveToTrash(Directory source, String trashRoot, String label) {
+Directory? _moveToTrash(
+  Directory source,
+  String trashRoot,
+  String label,
+  Rename rename,
+) {
   if (!source.existsSync()) {
     return null;
   }
   try {
     Directory(trashRoot).createSync(recursive: true);
-    return source.renameSync(p.join(trashRoot, label));
+    final String target = p.join(trashRoot, label);
+    rename(source.path, target);
+    return Directory(target);
   } on FileSystemException {
     return source;
   }
@@ -32,20 +40,23 @@ List<Directory> trashAccountMedia(
   String mediaDirectory,
   String accountId,
   List<String> uploadIds,
-  DateTime now,
-) {
+  DateTime now, {
+  Rename rename = renameOnDisk,
+}) {
   final int millis = toMillis(now);
   final List<Directory?> moved = <Directory?>[
     _moveToTrash(
       Directory(accountMediaPath(mediaDirectory, accountId)),
       trashPath(mediaDirectory),
       '$accountId-$millis',
+      rename,
     ),
     for (final String uploadId in uploadIds)
       _moveToTrash(
         Directory(stagingPath(mediaDirectory, uploadId)),
         stagingTrashPath(mediaDirectory),
         '$uploadId-$millis',
+        rename,
       ),
   ];
   return moved.whereType<Directory>().toList();
@@ -67,53 +78,143 @@ void deleteQuietlySync(Directory directory) {
   }
 }
 
-Future<void> clearLeftovers(
+final class LeftoverReport {
+  const LeftoverReport({
+    required this.trash,
+    required this.uploadTrash,
+    required this.assembling,
+    required this.erasedAccounts,
+    required this.deletedAccounts,
+    required this.unownedUploads,
+    required this.swept,
+    required this.unswept,
+  });
+
+  final int trash;
+  final int uploadTrash;
+  final int assembling;
+  final int erasedAccounts;
+  final int deletedAccounts;
+  final int unownedUploads;
+  final bool swept;
+  final int unswept;
+
+  bool get worthLogging =>
+      trash +
+              uploadTrash +
+              assembling +
+              erasedAccounts +
+              deletedAccounts +
+              unownedUploads >
+          0 ||
+      unswept > 0;
+
+  Map<String, Object> get fields => <String, Object>{
+    'trash': trash,
+    'upload_trash': uploadTrash,
+    'assembling': assembling,
+    'erased_accounts': erasedAccounts,
+    'deleted_accounts': deletedAccounts,
+    'unowned_uploads': unownedUploads,
+    'swept': swept,
+  };
+}
+
+Future<LeftoverReport> clearLeftovers(
   RelayDatabase database,
   String mediaDirectory,
 ) async {
-  final List<Directory> leftovers = <Directory>[
-    Directory(trashPath(mediaDirectory)),
+  final int trash = await _clearFolder(Directory(trashPath(mediaDirectory)));
+  final int uploadTrash = await _clearFolder(
     Directory(stagingTrashPath(mediaDirectory)),
-    ..._orphanAccounts(database, mediaDirectory),
-    ..._orphanUploads(database, mediaDirectory),
+  );
+  final int assembling = await _clearFolder(
+    Directory(assemblyPath(mediaDirectory)),
+  );
+  final List<Directory> accountFolders = <Directory>[
+    for (final Directory directory in _children(mediaDirectory))
+      if (isSyncId(p.basename(directory.path))) directory,
   ];
-  for (final Directory directory in leftovers) {
-    if (directory.existsSync()) {
-      await deleteQuietly(directory);
+  final List<Directory> uploadFolders = <Directory>[
+    for (final Directory directory in _children(
+      p.join(mediaDirectory, stagingFolderName),
+    ))
+      if (isUploadId(p.basename(directory.path))) directory,
+  ];
+  if (database.count('SELECT count(*) FROM accounts') == 0) {
+    return LeftoverReport(
+      trash: trash,
+      uploadTrash: uploadTrash,
+      assembling: assembling,
+      erasedAccounts: 0,
+      deletedAccounts: 0,
+      unownedUploads: 0,
+      swept: false,
+      unswept: accountFolders.length + uploadFolders.length,
+    );
+  }
+  final Set<String> deleted = _deletedAccounts(database);
+  final List<Directory> erasedFolders = <Directory>[];
+  final List<Directory> deletedFolders = <Directory>[];
+  for (final Directory directory in accountFolders) {
+    final String accountId = p.basename(directory.path);
+    final Row? account = database.selectOne(
+      'SELECT status FROM accounts WHERE id = ?',
+      <Object?>[accountId],
+    );
+    if (account?['status'] == AccountStatus.erased.storedName) {
+      erasedFolders.add(directory);
+    } else if (account == null && deleted.contains(accountId)) {
+      deletedFolders.add(directory);
     }
   }
+  final List<Directory> unownedFolders = <Directory>[
+    for (final Directory directory in uploadFolders)
+      if (database.count('SELECT count(*) FROM uploads WHERE id = ?', <Object?>[
+            p.basename(directory.path),
+          ]) ==
+          0)
+        directory,
+  ];
+  for (final Directory directory in <Directory>[
+    ...erasedFolders,
+    ...deletedFolders,
+    ...unownedFolders,
+  ]) {
+    await deleteQuietly(directory);
+  }
+  return LeftoverReport(
+    trash: trash,
+    uploadTrash: uploadTrash,
+    assembling: assembling,
+    erasedAccounts: erasedFolders.length,
+    deletedAccounts: deletedFolders.length,
+    unownedUploads: unownedFolders.length,
+    swept: true,
+    unswept: 0,
+  );
 }
 
-Iterable<Directory> _orphanAccounts(
-  RelayDatabase database,
-  String mediaDirectory,
-) => _children(mediaDirectory).where((Directory directory) {
-  final String accountId = p.basename(directory.path);
-  if (!isSyncId(accountId)) {
-    return false;
+Set<String> _deletedAccounts(RelayDatabase database) {
+  if (!database.hasTable(deletedAccountsTable)) {
+    return const <String>{};
   }
-  final Row? account = database.selectOne(
-    'SELECT status FROM accounts WHERE id = ?',
-    <Object?>[accountId],
-  );
-  return account == null ||
-      account['status'] == AccountStatus.erased.storedName;
-});
+  return <String>{
+    for (final Row row in database.select(
+      'SELECT id FROM $deletedAccountsTable',
+    ))
+      row['id'] as String,
+  };
+}
 
-Iterable<Directory> _orphanUploads(
-  RelayDatabase database,
-  String mediaDirectory,
-) =>
-    _children(p.join(mediaDirectory, stagingFolderName))
-        .where((Directory directory) {
-          final String uploadId = p.basename(directory.path);
-          return isUploadId(uploadId) &&
-              database.count(
-                    'SELECT count(*) FROM uploads WHERE id = ?',
-                    <Object?>[uploadId],
-                  ) ==
-                  0;
-        });
+Future<int> _clearFolder(Directory folder) async {
+  if (!folder.existsSync()) {
+    return 0;
+  }
+  final int entries = folder.listSync(followLinks: false).length;
+  await deleteQuietly(folder);
+  return entries;
+}
 
 List<Directory> _children(String path) {
   final Directory parent = Directory(path);

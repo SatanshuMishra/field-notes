@@ -5,10 +5,11 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
 final class RelayException implements Exception {
-  const RelayException(this.code, [this.message = '']);
+  const RelayException(this.code, [this.message = '', this.retryAfter]);
 
   final SyncErrorCode code;
   final String message;
+  final int? retryAfter;
 
   @override
   String toString() => 'RelayException(${code.wireName})';

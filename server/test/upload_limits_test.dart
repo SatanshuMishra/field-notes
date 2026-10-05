@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as p;
+import 'package:relay_server/src/blobs.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 import 'package:test/test.dart';
 
@@ -250,5 +252,122 @@ void main() {
       )).statusCode,
       HttpStatus.ok,
     );
+  });
+
+  test('concurrent parts cannot overrun the free-space floor', () async {
+    const int floor = 1000000;
+    const int partLength = 1024;
+    final RelayHarness tight = await RelayHarness.start(minFreeBytes: floor);
+    addTearDown(tight.dispose);
+    final TestAccount owner = await tight.enrol();
+    final SignedIn signedIn = await tight.signIn(owner.firstDevice);
+    tight.freeBytes = floor + 2 * partLength + partLength ~/ 2;
+
+    final List<http.Response> answers = await Future.wait(
+      <Future<http.Response>>[
+        for (int index = 0; index < 3; index++)
+          tight.putPart(
+            signedIn.session,
+            name: tight.blobName(),
+            uploadId: newSyncId(),
+            index: 0,
+            blobSize: 2 * partLength,
+            partSize: partLength,
+            bytes: Uint8List(partLength),
+          ),
+      ],
+    );
+
+    expect(
+      answers.where(
+        (http.Response answer) => answer.statusCode == HttpStatus.ok,
+      ),
+      hasLength(2),
+    );
+    final List<http.Response> refused = <http.Response>[
+      for (final http.Response answer in answers)
+        if (answer.statusCode != HttpStatus.ok) answer,
+    ];
+    expect(refused, hasLength(1));
+    expectRefused(refused.single, SyncErrorCode.storageFull, 'a third part');
+    expect(tight.database.count('SELECT count(*) FROM upload_parts'), 2);
+  });
+
+  test('assembly needs room for the whole blob', () async {
+    const int floor = 1000000;
+    const int partLength = 1024;
+    final RelayHarness tight = await RelayHarness.start(minFreeBytes: floor);
+    addTearDown(tight.dispose);
+    final TestAccount owner = await tight.enrol();
+    final SignedIn signedIn = await tight.signIn(owner.firstDevice);
+    final Uint8List blob = Uint8List.fromList(
+      List<int>.generate(3 * partLength, (int index) => index % 251),
+    );
+    final String name = tight.blobName();
+    final String uploadId = newSyncId();
+    Future<http.Response> sendPart(int index) => tight.putPart(
+      signedIn.session,
+      name: name,
+      uploadId: uploadId,
+      index: index,
+      blobSize: blob.length,
+      partSize: partLength,
+      bytes: blob.sublist(index * partLength, (index + 1) * partLength),
+    );
+    int stagedParts() => tight.database.count(
+      'SELECT count(*) FROM upload_parts WHERE upload_id = ?',
+      <Object?>[uploadId],
+    );
+    Future<http.Response> askStatus() => tight.send(
+      SyncRoutes.uploadStatus,
+      parameters: <String, Object>{
+        SyncRoutes.nameParameter: name,
+        SyncRoutes.uploadIdParameter: uploadId,
+      },
+      credential: signedIn.session,
+    );
+    expect((await sendPart(0)).statusCode, HttpStatus.ok);
+    expect((await sendPart(1)).statusCode, HttpStatus.ok);
+    tight.freeBytes = floor + partLength + 100;
+    tight.advance(const Duration(seconds: 5));
+
+    final http.Response last = await sendPart(2);
+
+    expectRefused(last, SyncErrorCode.storageFull, 'a blob without room');
+    expect(stagedParts(), 3);
+    for (int index = 0; index < 3; index++) {
+      expect(
+        File(p.join(stagingPath(tight.mediaDirectory, uploadId), '$index'))
+            .lengthSync(),
+        partLength,
+      );
+    }
+    expect(
+      tight.database.count(
+        'SELECT count(*) FROM blobs WHERE name = ?',
+        <Object?>[name],
+      ),
+      0,
+    );
+    expectRefused(
+      await askStatus(),
+      SyncErrorCode.storageFull,
+      'a status request while there is still no room',
+    );
+    expect(stagedParts(), 3);
+
+    tight.freeBytes = floor + 10 * blob.length;
+    tight.advance(const Duration(seconds: 5));
+    final http.Response status = await askStatus();
+
+    expect(status.statusCode, HttpStatus.ok);
+    expect(statusOf(status).assembled, isTrue);
+    expect(stagedParts(), 0);
+    final http.Response downloaded = await tight.send(
+      SyncRoutes.downloadBlob,
+      parameters: <String, Object>{SyncRoutes.nameParameter: name},
+      credential: signedIn.session,
+    );
+    expect(downloaded.bodyBytes, blob);
   });
 }

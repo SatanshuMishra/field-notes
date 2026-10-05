@@ -41,7 +41,7 @@ install_missing() {
 }
 
 say "Packages"
-install_missing msmtp msmtp-mta smartmontools snapper btrfs-progs openssh rsync
+install_missing msmtp msmtp-mta smartmontools snapper btrfs-progs openssh rsync jq
 
 say "cosign, which verifies the relay image's signature"
 pacman -S --needed --noconfirm cosign

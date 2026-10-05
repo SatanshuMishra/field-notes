@@ -110,6 +110,11 @@ final class RelayAdmin {
       }
       final List<String> erased = eraseAccountRows(_database, id);
       _database.execute('DELETE FROM accounts WHERE id = ?', <Object?>[id]);
+      _database.execute(
+        'INSERT OR REPLACE INTO $deletedAccountsTable (id, deleted_at) '
+        'VALUES (?, ?)',
+        <Object?>[id, toMillis(clock())],
+      );
       return erased;
     });
     if (uploadIds == null) {

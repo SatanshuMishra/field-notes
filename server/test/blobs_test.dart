@@ -814,4 +814,57 @@ void main() {
     expect(statusOf(finished).assembled, isTrue);
     expect((await download(harness, me, name)).bodyBytes, blob);
   });
+
+  test('an overlong part is always answered with 400', () async {
+    final RelayHarness harness = await startHarness();
+    final SignedIn me = await signedInto(harness);
+    final String name = harness.blobName();
+    final String uploadId = newSyncId();
+    final Uint8List blob = ciphertext(partSize * 2, 24);
+    final List<int> first = partOf(blob, 0);
+
+    for (int attempt = 1; attempt <= 50; attempt++) {
+      final http.StreamedRequest overlong =
+          http.StreamedRequest(
+              SyncRoutes.uploadPart.method,
+              harness.uri(
+                SyncRoutes.uploadPart,
+                parameters: <String, Object>{
+                  SyncRoutes.nameParameter: name,
+                  SyncRoutes.uploadIdParameter: uploadId,
+                  SyncRoutes.indexParameter: 0,
+                },
+              ),
+            )
+            ..headers.addAll(<String, String>{
+              SyncHeaders.protocol: '$syncProtocolVersion',
+              SyncHeaders.authorization: me.session.authorization,
+              SyncHeaders.blobSize: '${blob.length}',
+              SyncHeaders.partSize: '$partSize',
+            });
+      final Future<http.StreamedResponse> sent = harness.client.send(overlong);
+      overlong.sink.add(<int>[...first, 7]);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      overlong.sink
+        ..add(const <int>[7])
+        ..close();
+
+      final http.Response response = await http.Response.fromStream(await sent);
+
+      expect(
+        response.statusCode,
+        HttpStatus.badRequest,
+        reason: 'part $attempt',
+      );
+      expect(
+        errorOf(response).code,
+        SyncErrorCode.badRequest,
+        reason: 'part $attempt',
+      );
+    }
+    expect(
+      statusOf(await uploadStatus(harness, me, name, uploadId)).receivedParts,
+      isEmpty,
+    );
+  });
 }

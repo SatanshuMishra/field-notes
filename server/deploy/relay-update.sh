@@ -8,6 +8,9 @@ tag_pattern='^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$'
 digest_pattern='^sha256:[0-9a-f]{64}$'
 issuer="https://token.actions.githubusercontent.com"
 identity='^https://github\.com/(?i:satanshumishra)/field-notes/\.github/workflows/relay-image\.yml@refs/heads/main$'
+workflow_repository="SatanshuMishra/field-notes"
+workflow_ref="refs/heads/main"
+commit_pattern='^[0-9a-f]{40}$'
 config_dir="${FN_CONFIG_DIR:-/home/satanshumishra/.config/field-notes}"
 image_file="$config_dir/relay-image.env"
 history_file="$config_dir/relay-image.history"
@@ -63,12 +66,28 @@ if [[ $wanted =~ $digest_pattern ]] && [ "$digest" != "$wanted" ]; then
   fail "match the pulled digest $digest to the requested $wanted"
 fi
 
+if [[ ! $wanted =~ $digest_pattern ]] && [ -s "$history_file" ]; then
+  newest="$(awk 'NF { last = $1 } END { print last }' "$history_file")"
+  if [ "$digest" != "$newest" ] && awk -v digest="$digest" '$1 == digest { found = 1 } END { exit !found }' "$history_file"; then
+    fail "accept $reference, which resolves to $digest, an older image in $history_file than the newest one; to roll back on purpose, run $0 $digest"
+  fi
+fi
+
 log "verifying the signature of $pinned"
-cosign verify \
+verification="$(cosign verify \
   --certificate-oidc-issuer "$issuer" \
   --certificate-identity-regexp "$identity" \
-  "$pinned" >/dev/null \
+  --certificate-github-workflow-repository "$workflow_repository" \
+  --certificate-github-workflow-ref "$workflow_ref" \
+  --output json \
+  "$pinned")" \
   || fail "verify the signature of $pinned, which this repository's image workflow on main did not sign"
+commit="$(printf '%s' "$verification" \
+  | jq -r '[.[] | .optional.githubWorkflowSha // empty] | unique | if length == 1 then .[0] else empty end' 2>/dev/null)"
+if [[ ! $commit =~ $commit_pattern ]]; then
+  fail "read the commit $pinned was built from, which its signature must name once"
+fi
+log "$pinned was built from commit $commit"
 
 if [ ! -d "$config_dir" ]; then
   mkdir -p -m 0700 "$config_dir" || fail "create $config_dir"
@@ -77,7 +96,7 @@ line="RELAY_IMAGE=$pinned"
 staged="$(mktemp "$config_dir/.relay-image.env.XXXXXX")" || fail "stage $image_file"
 printf '%s\n' "$line" > "$staged" || fail "write $image_file"
 chmod 0600 "$staged" || fail "set the mode of $image_file"
-(umask 077; printf '%s %s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$wanted" "$line" >> "$history_file") \
+(umask 077; printf '%s %s %s\n' "$digest" "$commit" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$history_file") \
   || fail "record $pinned in $history_file"
 mv -f "$staged" "$image_file" || fail "write $image_file"
 staged=""
@@ -85,7 +104,7 @@ staged=""
 printf '%s\n' "$line"
 cat <<NEXT
 
-Verified $reference as $pinned and saved it in $image_file.
+Verified $reference as $pinned, built from commit $commit, and saved it in $image_file.
 Next steps:
   1. In Dokploy, open the Field Notes project, the relay compose app, then Environment, set
      RELAY_TEST_IMAGE=$pinned

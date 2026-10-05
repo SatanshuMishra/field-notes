@@ -119,6 +119,8 @@ if [ "$(id -u)" -eq 0 ]; then
   die "Run this as satanshumishra, not with sudo."
 fi
 
+problem="$(nas_private_file_problem "$nas_env_file")"
+[ -z "$problem" ] || die "Cannot continue: $problem."
 nas_load_config
 problem="$(nas_config_problem)"
 [ -z "$problem" ] || die "Cannot continue: $problem."

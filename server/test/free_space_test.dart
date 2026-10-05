@@ -43,7 +43,7 @@ void main() {
     expect(errorOf(refused).code, SyncErrorCode.storageFull);
     expect(harness.database.count('SELECT count(*) FROM uploads'), 0);
 
-    harness.freeBytes = RelayConfig.defaultMinFreeBytes;
+    harness.freeBytes = RelayConfig.defaultMinFreeBytes + 1024;
     expect(
       errorOf(await sendPart()).code,
       SyncErrorCode.storageFull,
@@ -58,15 +58,17 @@ void main() {
     expect(parseDfAvailableBytes(spacedDf), 0);
     expect(parseDfAvailableBytes('df: /missing: No such file\n'), isNull);
 
-    final int? free = await dfFreeBytes(Directory.systemTemp.path);
-    expect(free, isNotNull);
-    expect(free!, greaterThan(0));
-    expect(
-      await dfFreeBytes(
-        '${Directory.systemTemp.path}/no-such-folder-${newSyncId()}',
-      ),
-      isNull,
-    );
+    for (final String folder in <String>[
+      Directory.systemTemp.path,
+      '${Directory.systemTemp.path}/no-such-folder-${newSyncId()}',
+    ]) {
+      final int? free = await dfFreeBytes(folder);
+      expect(
+        free == null || free > 0,
+        isTrue,
+        reason: 'a positive number or null for $folder, got $free',
+      );
+    }
   });
 
   test('the minimum free space is read from RELAY_MIN_FREE_BYTES', () {

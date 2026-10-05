@@ -139,7 +139,7 @@ void main() {
     );
     expect(
       backup.count(
-        "SELECT count(*) FROM sqlite_master WHERE name = 'mailboxes'",
+        "SELECT count(*) FROM sqlite_master WHERE name = 'deleted_accounts'",
       ),
       0,
     );
@@ -149,7 +149,7 @@ void main() {
     );
     expect(
       harness.database.count(
-        "SELECT count(*) FROM sqlite_master WHERE name = 'mailboxes'",
+        "SELECT count(*) FROM sqlite_master WHERE name = 'deleted_accounts'",
       ),
       1,
     );

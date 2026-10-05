@@ -11,6 +11,7 @@ import 'package:sync_protocol/sync_protocol.dart';
 import 'accounts.dart';
 import 'auth.dart';
 import 'blobs.dart';
+import 'body_slots.dart';
 import 'change_log.dart';
 import 'config.dart';
 import 'database.dart';
@@ -51,6 +52,8 @@ final class RelayApp {
     required this.pairing,
     required this.restores,
     required this.limiter,
+    required this.sharedLimit,
+    required this.largeBodies,
     required this._logSink,
   }) : _lastPurge = clock();
 
@@ -61,6 +64,8 @@ final class RelayApp {
     LogSink logSink = stdoutLogSink,
     AssemblyHook? beforeAssembly,
     FreeSpaceProbe freeSpace = dfFreeBytes,
+    Rename rename = renameOnDisk,
+    Duration largeBodyWait = largeBodyWaitLimit,
   }) async {
     final DateTime Function() now = clock ?? systemClock;
     migrate(
@@ -72,17 +77,24 @@ final class RelayApp {
     final RelayDatabase database = RelayDatabase.open(config.databasePath);
     final Sodium sodium = await SodiumInit.init();
     final Challenges challenges = Challenges(database, now);
-    await clearLeftovers(database, config.mediaDirectory);
+    final LeftoverReport leftovers = await clearLeftovers(
+      database,
+      config.mediaDirectory,
+    );
+    if (leftovers.worthLogging) {
+      logSink(eventLine(now(), leftoversEvent, leftovers.fields));
+    }
     final BlobStore blobs = BlobStore(
       database: database,
       mediaDirectory: config.mediaDirectory,
       clock: now,
-      freeSpace: CachedProbe<int?>(
+      space: FreeSpace(
         probe: () => freeSpace(config.mediaDirectory),
         clock: now,
+        minFreeBytes: config.minFreeBytes,
       ),
-      minFreeBytes: config.minFreeBytes,
       beforeAssembly: beforeAssembly,
+      rename: rename,
     )..prepare();
     final Sessions sessions = Sessions(
       database: database,
@@ -99,7 +111,7 @@ final class RelayApp {
       changeLog: ChangeLog(database, now),
       live: LiveHub(now, sessions.isCurrent),
       blobs: blobs,
-      devices: Devices(database, config.mediaDirectory, now),
+      devices: Devices(database, config.mediaDirectory, now, rename: rename),
       pairing: Pairing(database, now),
       restores: Restores(
         database: database,
@@ -111,6 +123,16 @@ final class RelayApp {
         burst: config.rateBurst,
         perSecond: config.ratePerSecond,
         clock: now,
+      ),
+      sharedLimit: SharedRateLimit(
+        burst: config.rateGlobalBurst,
+        perSecond: config.rateGlobalPerSecond,
+        clock: now,
+      ),
+      largeBodies: LargeBodySlots(
+        total: config.largeBodySlots,
+        perAccount: config.largeBodySlotsPerAccount,
+        waitLimit: largeBodyWait,
       ),
       logSink: logSink,
     );
@@ -130,6 +152,8 @@ final class RelayApp {
   final Pairing pairing;
   final Restores restores;
   final RateLimiter limiter;
+  final SharedRateLimit sharedLimit;
+  final LargeBodySlots largeBodies;
   final LogSink _logSink;
   final Set<Future<void>> _deletions = <Future<void>>{};
   late final CachedProbe<bool> _health = CachedProbe<bool>(
@@ -183,7 +207,9 @@ final class RelayApp {
     void add(SyncRoute route, Access access, Handler handler) {
       Pipeline pipeline = const Pipeline();
       if (rateLimitedRoutes.contains(route)) {
-        pipeline = pipeline.addMiddleware(rateLimit(limiter));
+        pipeline = pipeline.addMiddleware(
+          rateLimit(limiter, sharedLimit, route),
+        );
       }
       if (route != SyncRoutes.health) {
         pipeline = pipeline.addMiddleware(protocolGate());
@@ -285,10 +311,13 @@ final class RelayApp {
 
   Future<Response> _push(Request request) async {
     final Caller caller = callerOf(request);
-    final PushOutcome outcome = changeLog.push(
-      caller,
-      PushRequest.fromJson(await readJson(request, maxBytes: pushJsonLimit)),
+    final PushRequest push = PushRequest.fromJson(
+      await readJson(request, maxBytes: pushJsonLimit, slots: largeBodies),
     );
+    if (push.changes.length > maxPushChanges) {
+      throw const RelayException(SyncErrorCode.badRequest, 'Too many changes');
+    }
+    final PushOutcome outcome = changeLog.push(caller, push);
     final int? acceptedSeq = outcome.acceptedSeq;
     if (acceptedSeq != null) {
       live.nudge(caller.accountId, caller.deviceId, acceptedSeq);
@@ -358,7 +387,7 @@ final class RelayApp {
     blobs.markUnused(
       callerOf(request).accountId,
       BlobNamesRequest.fromJson(
-        await readJson(request, maxBytes: largeJsonLimit),
+        await readJson(request, maxBytes: largeJsonLimit, slots: largeBodies),
       ),
     );
     return Response(HttpStatus.noContent);
@@ -368,7 +397,7 @@ final class RelayApp {
     blobs.markReferenced(
       callerOf(request).accountId,
       BlobNamesRequest.fromJson(
-        await readJson(request, maxBytes: largeJsonLimit),
+        await readJson(request, maxBytes: largeJsonLimit, slots: largeBodies),
       ),
     ),
   );
@@ -415,7 +444,7 @@ final class RelayApp {
       callerOf(request),
       _param(request, SyncRoutes.mailboxIdParameter),
       PairingCompleteRequest.fromJson(
-        await readJson(request, maxBytes: largeJsonLimit),
+        await readJson(request, maxBytes: largeJsonLimit, slots: largeBodies),
       ),
     ),
   );

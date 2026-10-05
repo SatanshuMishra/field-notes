@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:relay_server/relay_server.dart';
 import 'package:relay_server/src/accounts.dart';
+import 'package:relay_server/src/body_slots.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 import 'package:test/test.dart';
 
@@ -11,6 +13,18 @@ import 'support/relay_harness.dart';
 const int smallLimit = 64 * 1024;
 const int largeLimit = 1024 * 1024;
 const int pushLimit = 8 * 1024 * 1024;
+const int openerLimit = 4096;
+const int changeLimit = 500;
+const int largeBody = 100 * 1024;
+
+int openersIn(List<int> body) =>
+    body.where((int byte) => byte == 0x7b || byte == 0x5b).length;
+
+Future<void> until(bool Function() condition) async {
+  while (!condition()) {
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+  }
+}
 
 void main() {
   late RelayHarness harness;
@@ -529,4 +543,241 @@ void main() {
       );
     },
   );
+
+  List<int> withOpeners(SyncMessage message, int openers) {
+    List<int> encode(int objects) => utf8.encode(
+      jsonEncode(<String, Object?>{
+        ...message.toJson(),
+        'padding': <Object>[
+          for (int index = 0; index < objects; index++) <String, Object>{},
+        ],
+      }),
+    );
+    final List<int> body = encode(openers - openersIn(encode(0)));
+    expect(openersIn(body), openers);
+    return body;
+  }
+
+  ({http.StreamedRequest request, Future<http.StreamedResponse> response})
+  openPush(RelayHarness relay, SignedIn who, List<int> body) {
+    final http.StreamedRequest request =
+        http.StreamedRequest(
+            SyncRoutes.pushRecords.method,
+            relay.uri(SyncRoutes.pushRecords),
+          )
+          ..contentLength = body.length
+          ..headers.addAll(<String, String>{
+            SyncHeaders.protocol: '$syncProtocolVersion',
+            SyncHeaders.authorization: who.session.authorization,
+            'content-type': 'application/json',
+          });
+    return (request: request, response: relay.client.send(request));
+  }
+
+  Future<http.Response> pushBody(
+    RelayHarness relay,
+    SignedIn who,
+    List<int> body,
+  ) => relay.send(
+    SyncRoutes.pushRecords,
+    credential: who.session,
+    bytes: body,
+    headers: const <String, String>{'content-type': 'application/json'},
+  );
+
+  test(
+    'a JSON body with too many objects is refused before decoding',
+    () async {
+      final TestAccount account = await harness.enrol();
+      final ChallengeRequest request = ChallengeRequest(
+        deviceId: account.firstDevice.deviceId,
+      );
+      final int before = count('SELECT count(*) FROM challenges');
+
+      expectTooLarge(
+        await sendBody(
+          SyncRoutes.sessionChallenge,
+          withOpeners(request, openerLimit + 1),
+        ),
+        'too many objects',
+      );
+      expect(count('SELECT count(*) FROM challenges'), before);
+
+      final http.Response accepted = await sendBody(
+        SyncRoutes.sessionChallenge,
+        withOpeners(request, openerLimit),
+      );
+      expect(accepted.statusCode, HttpStatus.ok);
+      expect(count('SELECT count(*) FROM challenges'), before + 1);
+    },
+  );
+
+  test('a push over the change limit is refused', () async {
+    final TestAccount account = await harness.enrol();
+    final SignedIn macIn = await harness.signIn(account.firstDevice);
+    List<RecordPush> changes(int total) => <RecordPush>[
+      for (int index = 0; index < total; index++) harness.record('note-$index'),
+    ];
+
+    expectTooLarge(
+      await harness.send(
+        SyncRoutes.pushRecords,
+        credential: macIn.session,
+        body: PushRequest(changes: changes(changeLimit + 1)),
+      ),
+      'a push of 501 changes',
+    );
+    expect(count('SELECT count(*) FROM records'), 0);
+
+    final PushResponse accepted = await harness.push(
+      macIn.session,
+      changes(changeLimit),
+    );
+    expect(accepted.results, hasLength(changeLimit));
+    expect(count('SELECT count(*) FROM records'), changeLimit);
+  });
+
+  test("large bodies beyond the relay's slots wait for one", () async {
+    final RelayHarness tight = await RelayHarness.start(largeBodySlots: 1);
+    addTearDown(tight.dispose);
+    final TestAccount account = await tight.enrol();
+    final SignedIn macIn = await tight.signIn(account.firstDevice);
+    final List<int> first = padded(
+      PushRequest(changes: <RecordPush>[tight.record('first')]),
+      largeBody,
+    );
+    final List<int> second = padded(
+      PushRequest(changes: <RecordPush>[tight.record('second')]),
+      largeBody,
+    );
+    final (
+      :http.StreamedRequest request,
+      :Future<http.StreamedResponse> response,
+    ) = openPush(
+      tight,
+      macIn,
+      first,
+    );
+    request.sink.add(first.sublist(0, largeBody ~/ 2));
+    await until(() => tight.app.largeBodies.active == 1);
+
+    bool secondAnswered = false;
+    final Future<http.Response> waiting = pushBody(
+      tight,
+      macIn,
+      second,
+    ).whenComplete(() => secondAnswered = true);
+    await until(() => tight.app.largeBodies.waiting == 1);
+
+    expect(secondAnswered, isFalse);
+    expect(tight.database.count('SELECT count(*) FROM records'), 0);
+
+    request.sink
+      ..add(first.sublist(largeBody ~/ 2))
+      ..close();
+    final http.Response firstAnswer = await http.Response.fromStream(
+      await response,
+    );
+    final http.Response secondAnswer = await waiting;
+
+    expect(firstAnswer.statusCode, HttpStatus.ok);
+    expect(secondAnswer.statusCode, HttpStatus.ok);
+    expect(tight.database.count('SELECT count(*) FROM records'), 2);
+    expect(tight.app.largeBodies.active, 0);
+    expect(tight.app.largeBodies.waiting, 0);
+  });
+
+  test('a large body that waits too long for a slot gets 429', () async {
+    final RelayHarness tight = await RelayHarness.start(
+      largeBodySlots: 1,
+      largeBodyWait: const Duration(milliseconds: 200),
+    );
+    addTearDown(tight.dispose);
+    final TestAccount account = await tight.enrol();
+    final SignedIn macIn = await tight.signIn(account.firstDevice);
+    final List<int> first = padded(
+      PushRequest(changes: <RecordPush>[tight.record('first')]),
+      largeBody,
+    );
+    final (
+      :http.StreamedRequest request,
+      :Future<http.StreamedResponse> response,
+    ) = openPush(
+      tight,
+      macIn,
+      first,
+    );
+    request.sink.add(first.sublist(0, largeBody ~/ 2));
+    await until(() => tight.app.largeBodies.active == 1);
+
+    final http.Response refused = await pushBody(
+      tight,
+      macIn,
+      padded(
+        PushRequest(changes: <RecordPush>[tight.record('second')]),
+        largeBody,
+      ),
+    );
+
+    expect(refused.statusCode, HttpStatus.tooManyRequests);
+    expect(errorOf(refused).code, SyncErrorCode.tooManyRequests);
+    expect(refused.headers['retry-after'], '1');
+    expect(tight.app.largeBodies.waiting, 0);
+    request.sink
+      ..add(first.sublist(largeBody ~/ 2))
+      ..close();
+    expect(
+      (await http.Response.fromStream(await response)).statusCode,
+      HttpStatus.ok,
+    );
+    expect(tight.database.count('SELECT count(*) FROM records'), 1);
+  });
+
+  test('one account holds at most its share of the large body slots', () async {
+    final LargeBodySlots slots = LargeBodySlots(total: 3, perAccount: 2);
+    expect(await slots.acquire('a'), isTrue);
+    expect(await slots.acquire('a'), isTrue);
+    final Future<bool> third = slots.acquire('a');
+    expect(slots.waiting, 1);
+
+    expect(await slots.acquire('b'), isTrue);
+    expect(slots.active, 3);
+    slots.release('b');
+    expect(slots.waiting, 1);
+    expect(slots.active, 2);
+
+    slots.release('a');
+    expect(await third, isTrue);
+    expect(slots.waiting, 0);
+    expect(slots.active, 2);
+  });
+
+  test('the large body slots come from the environment', () {
+    final RelayConfig defaults = RelayConfig.fromEnvironment(
+      const <String, String>{},
+    );
+    expect(defaults.largeBodySlots, 8);
+    expect(defaults.largeBodySlotsPerAccount, 4);
+
+    final RelayConfig set = RelayConfig.fromEnvironment(const <String, String>{
+      'RELAY_LARGE_BODY_SLOTS': '2',
+      'RELAY_LARGE_BODY_SLOTS_PER_ACCOUNT': '1',
+    });
+    expect(set.largeBodySlots, 2);
+    expect(set.largeBodySlotsPerAccount, 1);
+
+    for (final String variable in <String>[
+      'RELAY_LARGE_BODY_SLOTS',
+      'RELAY_LARGE_BODY_SLOTS_PER_ACCOUNT',
+    ]) {
+      for (final String invalid in <String>['0', '-1', 'many', '1.5']) {
+        expect(
+          () =>
+              RelayConfig.fromEnvironment(<String, String>{variable: invalid}),
+          throwsA(isA<ConfigException>()),
+          reason: '$variable=$invalid',
+        );
+      }
+    }
+  });
 }

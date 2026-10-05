@@ -8,6 +8,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'auth.dart';
 import 'database.dart';
+import 'live_guard.dart';
 
 const Duration liveIdleLimit = Duration(seconds: 90);
 const int maxLiveSocketsPerDevice = 4;
@@ -137,7 +138,7 @@ final class LiveHub {
           '\r\n',
         ),
       );
-      _attach(grant, WebSocket.fromUpgradedSocket(socket, serverSide: true));
+      _attach(grant, socket);
     });
   }
 
@@ -156,8 +157,19 @@ final class LiveHub {
     unawaited(socket?.webSocket.close(code).catchError((Object _) {}));
   }
 
-  void _attach(SessionGrant grant, WebSocket webSocket) {
+  void _attach(SessionGrant grant, Socket socket) {
     final int id = _nextId++;
+    final WebSocket webSocket = WebSocket.fromUpgradedSocket(
+      GuardedSocket(
+        socket,
+        guardedFrames(
+          socket,
+          LiveFrameGuard(maxLiveFrameBytes),
+          () => _close(id, liveTooBigCode),
+        ),
+      ),
+      serverSide: true,
+    );
     _sockets[id] = _LiveSocket(
       grant: grant,
       webSocket: webSocket,

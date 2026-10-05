@@ -12,6 +12,16 @@ NAS_USER=fn-backup
 NAS_VOLUME=/volume1
 NAS_ALLOW_FROM=10.0.0.0/24
 
+nas_private_file_problem() {
+  local file="$1"
+  if [ ! -e "$file" ] && [ ! -L "$file" ]; then
+    return 0
+  fi
+  if [ -z "$(find "$file" -maxdepth 0 -type f -user "$(id -u)" ! -perm -0020 ! -perm -0002 2>/dev/null)" ]; then
+    printf '%s, which must be a file owned by %s that no other user can write' "$file" "$(id -un)"
+  fi
+}
+
 nas_load_config() {
   if [ -r "$nas_env_file" ]; then
     . "$nas_env_file"
@@ -58,7 +68,7 @@ nas_remote() {
 }
 
 nas_transport() {
-  printf 'ssh -p %s -i %s -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=%s -o ConnectTimeout=30' \
+  printf 'ssh -F /dev/null -p %s -i %s -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=%s -o ConnectTimeout=30' \
     "$NAS_SSH_PORT" "$nas_keys_dir/$1" "$nas_known_hosts"
 }
 
@@ -77,6 +87,9 @@ nas_rsync_args() {
         --exclude='#snapshot/'
         --exclude='@eaDir/'
         --exclude='.uploads/'
+        --exclude='.trash/'
+        --exclude='.assembling/'
+        --exclude='.health-*'
         --exclude=relay.sqlite3
         --exclude=relay.sqlite3-wal
         --exclude=relay.sqlite3-shm

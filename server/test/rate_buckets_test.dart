@@ -111,4 +111,70 @@ void main() {
       );
     }
   });
+
+  test('a full bucket table evicts the least recently used address', () {
+    DateTime now = start;
+    final RateLimiter limiter = RateLimiter(
+      burst: 1,
+      perSecond: 0.001,
+      clock: () => now,
+      maxBuckets: 3,
+    );
+    expect(limiter.take('a'), isNull);
+    now = start.add(const Duration(seconds: 1));
+    expect(limiter.take('b'), isNull);
+    now = start.add(const Duration(seconds: 2));
+    expect(limiter.take('c'), isNull);
+    now = start.add(const Duration(seconds: 3));
+    expect(limiter.take('a'), isNotNull);
+
+    expect(limiter.take('d'), isNull);
+
+    expect(limiter.bucketCount, 3);
+    expect(limiter.take('a'), isNotNull);
+    expect(limiter.take('c'), isNotNull);
+    expect(limiter.take('b'), isNull);
+
+    now = start.add(rateBucketIdleLimit + const Duration(minutes: 1));
+    expect(limiter.take('e'), isNull);
+
+    expect(limiter.bucketCount, 3);
+    expect(limiter.take('c'), isNotNull);
+    expect(limiter.take('b'), isNotNull);
+    expect(limiter.take('a'), isNull);
+  });
+
+  test('the relay-wide limit settings come from the environment', () {
+    final RelayConfig defaults = RelayConfig.fromEnvironment(
+      const <String, String>{},
+    );
+    expect(defaults.rateGlobalBurst, 600);
+    expect(defaults.rateGlobalPerSecond, 20.0);
+
+    final RelayConfig set = RelayConfig.fromEnvironment(const <String, String>{
+      'RELAY_RATE_GLOBAL_BURST': '1000',
+      'RELAY_RATE_GLOBAL_PER_SECOND': '50',
+    });
+    expect(set.rateGlobalBurst, 1000);
+    expect(set.rateGlobalPerSecond, 50.0);
+
+    for (final String invalid in <String>['0', '-1', 'many', '1.5']) {
+      expect(
+        () => RelayConfig.fromEnvironment(<String, String>{
+          'RELAY_RATE_GLOBAL_BURST': invalid,
+        }),
+        throwsA(isA<ConfigException>()),
+        reason: invalid,
+      );
+    }
+    for (final String invalid in <String>['0', '-1', 'fast', 'Infinity']) {
+      expect(
+        () => RelayConfig.fromEnvironment(<String, String>{
+          'RELAY_RATE_GLOBAL_PER_SECOND': invalid,
+        }),
+        throwsA(isA<ConfigException>()),
+        reason: invalid,
+      );
+    }
+  });
 }

@@ -19,11 +19,6 @@ image=""
 
 . "$script_dir/nas-rsync.sh"
 
-if [ -r "$heartbeat_file" ]; then
-  . "$heartbeat_file"
-  ping_url="${FN_DRILL_PING_URL:-}"
-fi
-
 log() {
   printf '%s restore-drill: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2
 }
@@ -51,6 +46,15 @@ fail() {
   "$alert" "restore drill failed" "The monthly restore drill failed. Failed step: $1."
   exit 1
 }
+
+config_problem="$(nas_private_file_problem "$heartbeat_file")"
+if [ -n "$config_problem" ]; then
+  fail "check $config_problem"
+fi
+if [ -r "$heartbeat_file" ]; then
+  . "$heartbeat_file"
+  ping_url="${FN_DRILL_PING_URL:-}"
+fi
 
 rsync_version() {
   rsync --version 2>/dev/null \
@@ -106,6 +110,10 @@ fi
 if ! private_root; then
   fail "check the scratch root $drill_root, which must be a folder owned by $(id -un) with mode 0700"
 fi
+config_problem="$(nas_private_file_problem "$nas_env_file")"
+if [ -n "$config_problem" ]; then
+  fail "check $config_problem"
+fi
 nas_load_config
 nas_problem="$(nas_ready_problem "pull-$share")"
 if [ -n "$nas_problem" ]; then
@@ -122,6 +130,8 @@ copy="$scratch/backup/$latest"
 mkdir -p "$scratch/media" || fail "prepare the scratch media folder"
 
 docker run --rm --network none --user 1000:1000 \
+  --read-only --tmpfs /tmp \
+  --cap-drop ALL --security-opt no-new-privileges \
   --volume "$scratch:$scratch" \
   "$image" verify-copy --db "$copy" --media "$scratch/media" --manifest "$copy.manifest" \
   || fail "verify-copy of $latest"

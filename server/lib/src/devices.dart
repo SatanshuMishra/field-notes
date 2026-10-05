@@ -5,6 +5,7 @@ import 'package:sqlite3/sqlite3.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
 import 'auth.dart';
+import 'blobs.dart';
 import 'database.dart';
 import 'trash.dart';
 
@@ -108,11 +109,17 @@ List<String> eraseAccountRows(
 });
 
 final class Devices {
-  Devices(this._database, this._mediaDirectory, this._clock);
+  Devices(
+    this._database,
+    this._mediaDirectory,
+    this._clock, {
+    this._rename = renameOnDisk,
+  });
 
   final RelayDatabase _database;
   final String _mediaDirectory;
   final DateTime Function() _clock;
+  final Rename _rename;
 
   EpochKeysResponse keys(Caller caller) => _database.read(() {
     final Row account = _account(caller.accountId);
@@ -222,6 +229,7 @@ final class Devices {
       caller.accountId,
       uploadIds,
       _clock(),
+      rename: _rename,
     );
   }
 

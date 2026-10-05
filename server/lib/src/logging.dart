@@ -52,10 +52,19 @@ String logLine({
   'ms': milliseconds,
 });
 
+const String leftoversEvent = 'leftovers_cleared';
+
 String internalErrorLine(DateTime time) => jsonEncode(<String, Object?>{
   'ts': time.toUtc().toIso8601String(),
   eventField: internalErrorEvent,
 });
+
+String eventLine(DateTime time, String event, Map<String, Object> fields) =>
+    jsonEncode(<String, Object?>{
+      'ts': time.toUtc().toIso8601String(),
+      eventField: event,
+      ...fields,
+    });
 
 Middleware requestLogger(LogSink sink, DateTime Function() clock) =>
     (Handler inner) => (Request request) async {
