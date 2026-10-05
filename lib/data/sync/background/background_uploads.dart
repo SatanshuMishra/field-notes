@@ -257,7 +257,7 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
         await _takeResults();
       }
     });
-    await _channel.invokeMethod<void>(_configure, <String, String>{
+    await _channel.invokeMethod<void>(_start, <String, String>{
       'title': mediaNotificationTitle,
       'body': mediaNotificationBody,
       'bodyWaitingForWiFi': mediaNotificationBodyWaitingForWiFi,
@@ -282,9 +282,7 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
   Future<List<HandedTask>> queuedTasks() async {
     final List<String> encoded =
         await _channel.invokeListMethod<String>(_queued) ?? const <String>[];
-    return <HandedTask>[
-      for (final String task in encoded) ?_decodeTask(task),
-    ];
+    return <HandedTask>[for (final String task in encoded) ?_decodeTask(task)];
   }
 
   @override
@@ -326,7 +324,7 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
     }
   }
 
-  static const String _configure = 'configure';
+  static const String _start = 'start';
   static const String _enqueue = 'enqueue';
   static const String _queued = 'queued';
   static const String _cancel = 'cancel';
@@ -354,6 +352,9 @@ final class BackgroundUploads implements UploadSender {
   final Future<bool> Function() _allowMobileData;
   final Random _random;
   bool _paused = false;
+  int _generation = 0;
+
+  bool _fenced(int generation) => _paused || generation != _generation;
 
   Future<void> pause() async {
     _paused = true;
@@ -369,6 +370,12 @@ final class BackgroundUploads implements UploadSender {
     PendingUpload upload,
     List<int> indexes,
     UploadAnswer onAnswer,
+  ) => _sendParts(upload, indexes, _generation);
+
+  Future<void> _sendParts(
+    PendingUpload upload,
+    List<int> indexes,
+    int generation,
   ) async {
     final _Credentials? credentials = await _credentials();
     if (credentials == null) {
@@ -388,19 +395,23 @@ final class BackgroundUploads implements UploadSender {
             allowMobileData: allowMobileData,
           ),
     ];
-    if (_paused) {
+    if (_fenced(generation)) {
       return;
     }
     await _uploader.enqueue(tasks);
   }
 
   Future<void> handOverPrepared({Iterable<String>? blobIds}) async {
+    final int generation = _generation;
     final Set<String>? only = blobIds?.toSet();
     for (final PendingUpload upload in await _uploads.pendingUploads()) {
+      if (_fenced(generation)) {
+        return;
+      }
       if (only != null && !only.contains(upload.blobId)) {
         continue;
       }
-      await sendParts(upload, upload.missingParts, _ignoreAnswer);
+      await _sendParts(upload, upload.missingParts, generation);
     }
   }
 
@@ -408,6 +419,7 @@ final class BackgroundUploads implements UploadSender {
     PushCycle push, {
     Set<int> excluding = const <int>{},
   }) async {
+    final int generation = _generation;
     final _Credentials? credentials = await _credentials();
     if (credentials == null) {
       return 0;
@@ -426,14 +438,14 @@ final class BackgroundUploads implements UploadSender {
     await _pushRoot.create(recursive: true);
     while (true) {
       final PushBatch? batch = await push.buildBatch(excluding: skipped);
-      if (batch == null || _paused) {
+      if (batch == null || _fenced(generation)) {
         return handed;
       }
       skipped.addAll(batch.outboxIds);
       final String id = newSyncId(_random);
       final File file = File(p.join(_pushRoot.path, '$id.json'));
       await file.writeAsString(jsonEncode(batch.request.toJson()), flush: true);
-      if (_paused) {
+      if (_fenced(generation)) {
         await file.delete();
         return handed;
       }
@@ -445,6 +457,7 @@ final class BackgroundUploads implements UploadSender {
   }
 
   Future<void> cancelAll() async {
+    _generation += 1;
     final List<HandedTask> queued = await _uploader.queuedTasks();
     await _uploader.cancel(<String>[
       for (final HandedTask task in queued)
@@ -567,9 +580,6 @@ final class BackgroundUploads implements UploadSender {
       tag: await readRelayTag(_db),
     );
   }
-
-  static Future<void> _ignoreAnswer(UploadStatusResponse _) =>
-      Future<void>.value();
 }
 
 final class _Credentials {

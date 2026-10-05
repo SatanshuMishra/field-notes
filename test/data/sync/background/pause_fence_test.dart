@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/sync/background/background_uploads.dart';
 import 'package:field_notes/data/sync/background/upload_result_applier.dart';
 import 'package:field_notes/data/sync/engine/sync_engine.dart';
@@ -110,5 +111,44 @@ void main() {
 
     await engine.pause(false);
     await eventually(() async => uploader.held.length == 2);
+  });
+
+  test('a wipe queues nothing a hand-over had in flight', () async {
+    final SyncTestMedia media = await SyncTestMedia.create(phone);
+    final _GatedUploader uploader = _GatedUploader();
+    final BackgroundUploads uploads = BackgroundUploads(
+      database: phone.database,
+      uploader: uploader,
+      keyStore: phone.keyStore,
+      uploads: media.uploads,
+      pushRoot: pushWorkRoot(media.root),
+      allowMobileData: () async => false,
+    );
+    await media.store.putBytes(
+      bytes: _bytes(1500, 2),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await media.uploads.prepareAll();
+    await phone.keyStore.writeUploadPass(
+      UploadPass(
+        token: 'pass',
+        expiresAt: DateTime.now().toUtc().add(const Duration(days: 7)),
+      ),
+    );
+    final Completer<void> gate = Completer<void>();
+    uploader.gate = gate;
+
+    final Future<void> handOver = uploads.handOverPrepared();
+    await eventually(() async => uploader.waiting);
+    final Future<void> wipe = uploads.cancelAll();
+    gate.complete();
+    await Future.wait(<Future<void>>[handOver, wipe]);
+
+    expect(uploader.enqueued, isEmpty);
+    expect(uploader.held, isEmpty);
+
+    await uploads.handOverPrepared();
+    expect(uploader.held, hasLength(2));
   });
 }

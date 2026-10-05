@@ -28,7 +28,7 @@ class UploadChannel(private val context: Context) {
     private fun answer(call: MethodCall, result: MethodChannel.Result) {
         val reply: Any? = try {
             when (call.method) {
-                "configure" -> configure(call)
+                "start" -> start(call)
                 "enqueue" -> enqueue(call)
                 "queued" -> store.pending().map { it.taskJson().toString() }
                 "cancel" -> scheduler.cancel(call.argument<List<String>>("taskIds") ?: emptyList())
@@ -52,7 +52,7 @@ class UploadChannel(private val context: Context) {
         main.post { result.success(if (reply is Unit) null else reply) }
     }
 
-    private fun configure(call: MethodCall) {
+    private fun start(call: MethodCall) {
         UploadCopy.save(
             context,
             UploadCopy(
@@ -62,6 +62,7 @@ class UploadChannel(private val context: Context) {
                 channelName = call.argument<String>("channelName") ?: "",
             ),
         )
+        scheduler.schedule()
     }
 
     private fun enqueue(call: MethodCall): Boolean {

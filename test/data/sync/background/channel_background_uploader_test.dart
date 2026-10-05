@@ -88,10 +88,10 @@ void main() {
 
     await ChannelBackgroundUploader().start(collected.add);
 
-    final MethodCall configure = native.calls.firstWhere(
-      (MethodCall call) => call.method == 'configure',
+    final MethodCall started = native.calls.firstWhere(
+      (MethodCall call) => call.method == 'start',
     );
-    expect(configure.arguments, <String, String>{
+    expect(started.arguments, <String, String>{
       'title': mediaNotificationTitle,
       'body': mediaNotificationBody,
       'bodyWaitingForWiFi': mediaNotificationBodyWaitingForWiFi,
