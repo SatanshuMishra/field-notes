@@ -9,7 +9,10 @@ import 'in_flight.dart';
 import 'request_body.dart';
 
 const Duration responseStallLimit = Duration(seconds: 30);
+const Duration fileResponseStallLimit = Duration(minutes: 5);
 const int responsePieceBytes = 64 * 1024;
+
+const String stallLimitContextKey = 'relay.stall_limit';
 
 typedef ResponseOutput = Stream<List<int>> Function(Stream<List<int>> body);
 
@@ -40,12 +43,14 @@ final class ResponseOutputs {
   Stream<List<int>> watch(
     Stream<List<int>> body,
     RequestHold hold,
-    void Function()? dropConnection,
-  ) {
+    void Function()? dropConnection, {
+    Duration stallLimit = responseStallLimit,
+  }) {
     final _WatchedResponse watched = _WatchedResponse(
       this,
       hold,
       dropConnection,
+      stallLimit,
       _clock(),
     );
     _open.add(watched);
@@ -64,11 +69,18 @@ final class ResponseOutputs {
 }
 
 final class _WatchedResponse {
-  _WatchedResponse(this._outputs, this._hold, this._drop, this._progressAt);
+  _WatchedResponse(
+    this._outputs,
+    this._hold,
+    this._drop,
+    this._stallLimit,
+    this._progressAt,
+  );
 
   final ResponseOutputs _outputs;
   final RequestHold _hold;
   final void Function()? _drop;
+  final Duration _stallLimit;
   final ListQueue<List<int>> _waiting = ListQueue<List<int>>();
   DateTime _progressAt;
   StreamController<List<int>>? _out;
@@ -77,7 +89,7 @@ final class _WatchedResponse {
   bool _ended = false;
 
   bool stalled(DateTime now) =>
-      !_ended && now.difference(_progressAt) > responseStallLimit;
+      !_ended && now.difference(_progressAt) > _stallLimit;
 
   Stream<List<int>> stream(Stream<List<int>> body) {
     final StreamController<List<int>> out = StreamController<List<int>>(
@@ -180,6 +192,9 @@ Middleware responseGuard(ResponseOutputs outputs) =>
           response.read(),
           hold,
           request.context[dropConnectionContextKey] as void Function()?,
+          stallLimit:
+              response.context[stallLimitContextKey] as Duration? ??
+              responseStallLimit,
         ),
       );
     };

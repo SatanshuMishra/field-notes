@@ -40,6 +40,41 @@ Future<bool> eventually(bool Function() condition) async {
 bool running(int pid) =>
     Process.runSync('kill', <String>['-0', '$pid']).exitCode == 0;
 
+final class StuckProcess implements Process {
+  final Completer<int> exited = Completer<int>();
+  final List<ProcessSignal> signals = <ProcessSignal>[];
+  final StreamController<List<int>> _out = StreamController<List<int>>();
+  final StreamController<List<int>> _errors = StreamController<List<int>>();
+
+  @override
+  Future<int> get exitCode => exited.future;
+
+  @override
+  Stream<List<int>> get stdout => _out.stream;
+
+  @override
+  Stream<List<int>> get stderr => _errors.stream;
+
+  @override
+  IOSink get stdin => IOSink(StreamController<List<int>>().sink);
+
+  @override
+  int get pid => 0;
+
+  @override
+  bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
+    signals.add(signal);
+    return true;
+  }
+
+  void finish(String output) {
+    _out.add(output.codeUnits);
+    unawaited(_out.close());
+    unawaited(_errors.close());
+    exited.complete(0);
+  }
+}
+
 void main() {
   test('a part is refused while the media disk is nearly full', () async {
     final RelayHarness harness = await RelayHarness.start();
@@ -202,5 +237,74 @@ void main() {
       expect(warning.keys, unorderedEquals(<String>['ts', 'event']));
     }
     expect(harness.database.count('SELECT count(*) FROM records'), 3);
+  });
+
+  test('a df that never exits is not started again', () async {
+    final ManualTimers timers = ManualTimers();
+    final List<({String directory, StuckProcess process})> started =
+        <({String directory, StuckProcess process})>[];
+    final DfProbe df = DfProbe(
+      startTimer: timers.start,
+      startProcess: (String executable, List<String> arguments) async {
+        final StuckProcess process = StuckProcess();
+        started.add((directory: arguments.last, process: process));
+        return process;
+      },
+    );
+    const String media = '/srv/relay/media';
+    const String data = '/srv/relay/data';
+
+    final Future<int?> stuck = df.read(media);
+    expect(await eventually(() => timers.pending(dfLimit).length == 1), isTrue);
+    timers.pending(dfLimit).single.fire();
+    expect(await stuck.timeout(answerLimit), isNull);
+    final StuckProcess hung = started.single.process;
+    expect(hung.signals, <ProcessSignal>[ProcessSignal.sigkill]);
+
+    for (int attempt = 0; attempt < 3; attempt++) {
+      expect(await df.read(media).timeout(answerLimit), isNull);
+    }
+    expect(started, hasLength(1));
+    expect(timers.pending(dfLimit), isEmpty);
+
+    final Future<int?> other = df.read(data);
+    expect(await eventually(() => started.length == 2), isTrue);
+    expect(started.last.directory, data);
+    started.last.process.finish(linuxDf);
+    expect(await other.timeout(answerLimit), 850000000 * 1024);
+
+    hung.exited.complete(-9);
+    await pumpEventQueue();
+    final Future<int?> again = df.read(media);
+    expect(await eventually(() => started.length == 3), isTrue);
+    expect(started.last.directory, media);
+    started.last.process.finish(linuxDf);
+    expect(await again.timeout(answerLimit), 850000000 * 1024);
+  });
+
+  test('a full database answers storage_full', () async {
+    final RelayHarness harness = await RelayHarness.start(
+      startTimer: ManualTimers().start,
+    );
+    addTearDown(harness.dispose);
+    final TestAccount account = await harness.enrol();
+    final SignedIn me = await harness.signIn(account.firstDevice);
+    harness.freeBytes = null;
+    final int pages = harness.database.count('PRAGMA page_count');
+    harness.database.execute('PRAGMA max_page_count = $pages');
+
+    final http.Response full = await harness.send(
+      SyncRoutes.pushRecords,
+      credential: me.session,
+      body: PushRequest(
+        changes: <RecordPush>[
+          harness.record('note-1', envelope: harness.randomOpaque(256 * 1024)),
+        ],
+      ),
+    );
+
+    expect(full.statusCode, HttpStatus.insufficientStorage);
+    expect(errorOf(full).code, SyncErrorCode.storageFull);
+    expect(harness.database.count('SELECT count(*) FROM records'), 0);
   });
 }

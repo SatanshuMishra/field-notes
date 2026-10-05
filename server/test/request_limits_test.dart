@@ -31,6 +31,7 @@ const Duration slotWait = Duration(seconds: 20);
 const Duration closeLimit = Duration(seconds: 5);
 const int inFlightLimit = 32;
 const String addressHeader = 'CF-Connecting-IP';
+const int pullingDevices = 20;
 
 int openersIn(List<int> body) =>
     body.where((int byte) => byte == 0x7b || byte == 0x5b).length;
@@ -55,6 +56,29 @@ Future<bool> eventually(bool Function() condition) async {
 typedef RawRequest = ({Socket socket, Future<String> answer});
 
 typedef DueTimer = ({ManualTimer timer, DateTime due});
+
+final class GatedResponses {
+  Completer<void>? _gate;
+  int held = 0;
+
+  void close() {
+    _gate = Completer<void>();
+  }
+
+  void open() {
+    _gate?.complete();
+    _gate = null;
+  }
+
+  Stream<List<int>> output(Stream<List<int>> body) {
+    final Completer<void>? gate = _gate;
+    if (gate == null) {
+      return body;
+    }
+    held++;
+    return gate.future.asStream().asyncExpand((void _) => body);
+  }
+}
 
 void main() {
   late ManualTimers timers;
@@ -1410,6 +1434,67 @@ void main() {
     expect(pulled.states.map((RecordState state) => state.recordKey), <String>[
       'note-0',
     ]);
+  }, timeout: pollingTimeout);
+
+  test('requests without a body never count as drains', () async {
+    final ManualTimers pullTimers = ManualTimers();
+    final GatedResponses responses = GatedResponses();
+    final RelayHarness relay = await RelayHarness.start(
+      startTimer: pullTimers.start,
+      responseOutput: responses.output,
+    );
+    addTearDown(relay.dispose);
+    final TestAccount account = await relay.enrol();
+    final List<SignedIn> devices = <SignedIn>[
+      await relay.signIn(account.firstDevice),
+    ];
+    while (devices.length < pullingDevices) {
+      devices.add(await relay.signIn(relay.addDevice(account)));
+    }
+    await relay.push(devices.first.session, <RecordPush>[
+      relay.record('note-1'),
+    ]);
+
+    responses.close();
+    final List<Future<http.Response?>> pulls = <Future<http.Response?>>[
+      for (final SignedIn device in devices)
+        for (int index = 0; index < maxPullsInFlight; index++)
+          relay
+              .send(
+                SyncRoutes.pullRecords,
+                credential: device.session,
+                query: const <String, String>{SyncRoutes.afterQuery: '0'},
+              )
+              .then<http.Response?>(
+                (http.Response response) => response,
+                onError: (Object _) => null,
+              ),
+    ];
+    expect(pulls, hasLength(40));
+    expect(await eventually(() => responses.held == pulls.length), isTrue);
+    final int countedWhileHeld = relay.app.addressesInFlight.count('127.0.0.1');
+    relay.advance(closeLimit);
+    for (final ManualTimer timer in pullTimers.pending(closeLimit)) {
+      timer.fire();
+    }
+    await pumpEventQueue();
+    responses.open();
+
+    final List<http.Response?> answers = await Future.wait(pulls)
+        .timeout(answerLimit);
+    expect(
+      answers.map((http.Response? answer) => answer?.statusCode),
+      everyElement(HttpStatus.ok),
+    );
+    for (final http.Response? answer in answers) {
+      expect(
+        PullResponse.fromJson(decodeJsonObject(answer!.body)).states
+            .map((RecordState state) => state.recordKey),
+        <String>['note-1'],
+      );
+    }
+    expect(countedWhileHeld, 0);
+    expect(relay.app.addressesInFlight.count('127.0.0.1'), 0);
   }, timeout: pollingTimeout);
 
   test('requests in flight per address are capped on open routes', () async {
