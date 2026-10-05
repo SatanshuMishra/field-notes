@@ -87,6 +87,44 @@ Duration requestTimeoutFor(Duration base, int bodyBytes) =>
     base +
     Duration(milliseconds: bodyBytes * 1000 ~/ slowestUploadBytesPerSecond);
 
+Future<Uint8List> readWhileArriving(Stream<List<int>> body, Duration idle) {
+  final BytesBuilder received = BytesBuilder(copy: false);
+  final Completer<Uint8List> done = Completer<Uint8List>();
+  Timer? quiet;
+  late final StreamSubscription<List<int>> subscription;
+  void fail(Object error, [StackTrace? stack]) {
+    quiet?.cancel();
+    if (!done.isCompleted) {
+      done.completeError(error, stack);
+    }
+  }
+
+  void wait() {
+    quiet?.cancel();
+    quiet = Timer(idle, () {
+      unawaited(subscription.cancel());
+      fail(TimeoutException('No answer arrived', idle));
+    });
+  }
+
+  subscription = body.listen(
+    (List<int> chunk) {
+      received.add(chunk);
+      wait();
+    },
+    onError: fail,
+    onDone: () {
+      quiet?.cancel();
+      if (!done.isCompleted) {
+        done.complete(received.takeBytes());
+      }
+    },
+    cancelOnError: true,
+  );
+  wait();
+  return done.future;
+}
+
 RelayException liveConnectFailure(Object error) {
   final Object? inner = error is WebSocketChannelException
       ? error.inner
@@ -619,17 +657,14 @@ final class RelayClient {
       final http.StreamedResponse streamed = await _client
           .send(request)
           .timeout(limit);
-      response = await http.Response.fromStream(
-        http.StreamedResponse(
-          streamed.stream.timeout(timeout),
-          streamed.statusCode,
-          contentLength: streamed.contentLength,
-          request: streamed.request,
-          headers: streamed.headers,
-          isRedirect: streamed.isRedirect,
-          persistentConnection: streamed.persistentConnection,
-          reasonPhrase: streamed.reasonPhrase,
-        ),
+      response = http.Response.bytes(
+        await readWhileArriving(streamed.stream, timeout),
+        streamed.statusCode,
+        request: streamed.request,
+        headers: streamed.headers,
+        isRedirect: streamed.isRedirect,
+        persistentConnection: streamed.persistentConnection,
+        reasonPhrase: streamed.reasonPhrase,
       );
     } on TimeoutException catch (error) {
       throw RelayUnreachable(error);
