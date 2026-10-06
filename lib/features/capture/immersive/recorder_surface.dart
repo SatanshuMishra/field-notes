@@ -10,6 +10,7 @@ import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 
+import 'recorder_glass_button.dart';
 import 'stage_phase.dart';
 
 enum RecorderArrangement { voice, video }
@@ -41,6 +42,7 @@ const double _lockStroke = 2;
 const double _lockViewBox = 24;
 const double _sidebarLeaveGlyph = 13;
 const double _bottomBarLeaveGlyph = 18;
+const double _glassLeaveGlyph = 15;
 const double _leaveGap = 7;
 const EdgeInsets _leavePadding = EdgeInsets.fromLTRB(9, 7, 12, 7);
 const BorderRadius _leaveRadius = BorderRadius.all(Radius.circular(10));
@@ -111,8 +113,8 @@ const BoxDecoration _veil = BoxDecoration(
 class RecorderSurface extends StatelessWidget {
   const RecorderSurface({
     super.key,
-    required this.privacyLine,
     required this.onLeave,
+    this.privacyLine,
     this.arrangement = RecorderArrangement.voice,
     this.glow = true,
     this.background,
@@ -122,9 +124,11 @@ class RecorderSurface extends StatelessWidget {
     this.status,
     this.actions,
     this.leaveKey = recorderLeaveKey,
+    this.glassLeave = false,
+    this.feedGestures,
   });
 
-  final String privacyLine;
+  final String? privacyLine;
   final VoidCallback? onLeave;
   final RecorderArrangement arrangement;
   final bool glow;
@@ -135,6 +139,8 @@ class RecorderSurface extends StatelessWidget {
   final Widget? status;
   final Widget? actions;
   final Key leaveKey;
+  final bool glassLeave;
+  final Widget? feedGestures;
 
   @override
   Widget build(BuildContext context) {
@@ -172,6 +178,7 @@ class _Stage extends StatelessWidget {
           ],
           if (surface.glow)
             DecoratedBox(decoration: sidebar ? _sidebarGlow : _bottomBarGlow),
+          ?surface.feedGestures,
           Column(
             children: <Widget>[
               _band(context),
@@ -208,12 +215,13 @@ class _Stage extends StatelessWidget {
                 ),
               ),
             ),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: constraints.maxWidth * _privacyShare,
+            if (surface.privacyLine case final String line)
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: constraints.maxWidth * _privacyShare,
+                ),
+                child: _privacy(line),
               ),
-              child: _privacy(),
-            ),
             Expanded(
               child: Align(
                 alignment: Alignment.centerRight,
@@ -258,6 +266,18 @@ class _Stage extends StatelessWidget {
   Widget _leave() {
     final VoidCallback? onLeave = surface.onLeave;
     final bool enabled = onLeave != null;
+    if (surface.glassLeave) {
+      return RecorderGlassButton(
+        key: surface.leaveKey,
+        label: recorderLeaveLabel,
+        onPressed: onLeave,
+        glyph: const IconStickerGlyphIcon(
+          glyph: IconStickerGlyph.close,
+          color: _leaveGlyphInkBottomBar,
+          size: _glassLeaveGlyph,
+        ),
+      );
+    }
     return Semantics(
       button: true,
       enabled: enabled,
@@ -332,7 +352,7 @@ class _Stage extends StatelessWidget {
     );
   }
 
-  Widget _privacy() {
+  Widget _privacy(String line) {
     final double lock = sidebar ? _sidebarLockSize : _bottomBarLockSize;
     return Semantics(
       container: true,
@@ -346,7 +366,7 @@ class _Stage extends StatelessWidget {
           const SizedBox(width: _privacyGap),
           Flexible(
             child: Text(
-              surface.privacyLine,
+              line,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(

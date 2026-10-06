@@ -63,6 +63,37 @@ class VideoRecorderException implements Exception {
       : 'VideoRecorderException: $message ($cause)';
 }
 
+class ZoomRange {
+  const ZoomRange(this.min, this.max);
+
+  final double min;
+  final double max;
+
+  double clamp(double zoom) => zoom.clamp(min, max).toDouble();
+
+  @override
+  bool operator ==(Object other) =>
+      other is ZoomRange && other.min == min && other.max == max;
+
+  @override
+  int get hashCode => Object.hash(min, max);
+
+  @override
+  String toString() => 'ZoomRange($min, $max)';
+}
+
+abstract interface class CameraControls {
+  double get zoom;
+
+  Rect? previewRectIn(Size area);
+
+  Future<ZoomRange?> zoomRange();
+
+  Future<void> setZoom(double zoom);
+
+  Future<void> focusAt(Offset point);
+}
+
 abstract interface class VideoRecorder {
   Duration get elapsed;
 

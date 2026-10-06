@@ -266,13 +266,21 @@ void main() {
           size: _desktop,
         );
         await tester.pump(const Duration(milliseconds: 50));
-        _expectRecorderStage(tester, find.byType(VideoRecorderSheet));
+        _expectRecorderStage(
+          tester,
+          find.byType(VideoRecorderSheet),
+          textLeave: false,
+        );
       }
     },
   );
 }
 
-void _expectRecorderStage(WidgetTester tester, Finder sheet) {
+void _expectRecorderStage(
+  WidgetTester tester,
+  Finder sheet, {
+  bool textLeave = true,
+}) {
   final Iterable<Color> fills = tester
       .widgetList<ColoredBox>(
         find.descendant(of: sheet, matching: find.byType(ColoredBox)),
@@ -286,6 +294,9 @@ void _expectRecorderStage(WidgetTester tester, Finder sheet) {
     ),
     _recorderLabel,
   );
+  if (!textLeave) {
+    return;
+  }
   expect(
     _textColour(
       tester,

@@ -291,7 +291,7 @@ void main() {
     },
   );
 
-  testWidgets('the soft timer never overlaps the camera picker', (
+  testWidgets('the soft timer never overlaps the camera controls', (
     WidgetTester tester,
   ) async {
     for (final double width in _sheetWidths) {
@@ -300,18 +300,19 @@ void main() {
         await _pumpTopBand(tester, width: width, phase: phase);
         expect(tester.takeException(), isNull, reason: reason);
 
-        final Finder picker = find.byType(CameraPicker);
+        final Finder flip = find.byKey(videoFlipCameraKey);
         final Finder timer = find.byKey(recorderTimerKey);
+        expect(find.byType(CameraPicker), findsNothing, reason: reason);
         if (phase == VideoRecorderPhase.idle) {
-          expect(picker, findsOneWidget, reason: reason);
+          expect(flip, findsOneWidget, reason: reason);
           expect(timer, findsNothing, reason: reason);
           expect(
-            tester.getRect(picker).overlaps(_chipRect(tester)),
+            tester.getRect(flip).overlaps(_chipRect(tester)),
             isFalse,
             reason: reason,
           );
         } else {
-          expect(picker, findsNothing, reason: reason);
+          expect(flip, findsNothing, reason: reason);
           expect(
             tester.getRect(timer).overlaps(_chipRect(tester)),
             isFalse,
@@ -346,7 +347,10 @@ void main() {
         expect(tester.takeException(), isNull, reason: reason);
         final Rect close = tester.getRect(find.byKey(videoCloseKey));
         final Rect chip = _chipRect(tester);
-        final Rect picker = tester.getRect(find.byType(CameraPicker));
+        final Finder switcher = sidebar
+            ? find.byType(CameraPicker)
+            : find.byKey(videoFlipCameraKey);
+        final Rect picker = tester.getRect(switcher);
         expect(close.left - sheet.left, leaveLeft, reason: reason);
         expect(close.height, greaterThanOrEqualTo(48), reason: reason);
         expect(sheet.right - chip.right, inset, reason: reason);
@@ -366,7 +370,7 @@ void main() {
           phase: VideoRecorderPhase.idle,
           devices: const <VideoCaptureDevice>[],
         );
-        expect(find.byType(CameraPicker), findsNothing, reason: reason);
+        expect(switcher, findsNothing, reason: reason);
         expect(bare.right - _chipRect(tester).right, inset, reason: reason);
       }
       await tester.pumpWidget(const SizedBox.shrink());

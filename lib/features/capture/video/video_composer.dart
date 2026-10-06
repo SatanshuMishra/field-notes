@@ -533,6 +533,10 @@ class _VideoComposerConnectorState
         devices: _devices,
         selectedDeviceId: _deviceId,
         onDeviceChanged: _selectDevice,
+        controls: switch (_recorder) {
+          final CameraControls controls => controls,
+          _ => null,
+        },
         elapsed: _elapsed,
         nudgeMessage: _nudgeMessage,
         errorMessage: _errorMessage,

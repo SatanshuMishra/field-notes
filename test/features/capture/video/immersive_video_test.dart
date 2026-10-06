@@ -243,6 +243,21 @@ class _GatedStartRecorder extends FakeVideoRecorder {
   }
 }
 
+SemanticsNode _selfView(WidgetTester tester) =>
+    tester.getSemantics(find.byKey(videoSelfViewKey));
+
+final Matcher _selfViewOn = isSemantics(
+  label: 'Self-view',
+  hasToggledState: true,
+  isToggled: true,
+);
+
+final Matcher _selfViewOff = isSemantics(
+  label: 'Self-view',
+  hasToggledState: true,
+  isToggled: false,
+);
+
 void main() {
   testWidgets(
     'the video recorder covers the whole window with the live preview in both layouts',
@@ -457,13 +472,9 @@ void main() {
       await _pumpApp(tester, layout: _Layout.sidebar, recorder: recorder);
       await _open(tester);
 
-      expect(find.text('Self-view on'), findsOneWidget);
+      expect(_selfView(tester), _selfViewOn);
       expect(
-        tester.getSemantics(find.text('Self-view on')),
-        isSemantics(label: 'Self-view', hasToggledState: true, isToggled: true),
-      );
-      expect(
-        tester.getSemantics(find.text('Self-view on')).rect.height,
+        tester.getSemantics(find.byKey(videoSelfViewKey)).rect.height,
         greaterThanOrEqualTo(48),
       );
       expect(fakeVideoPreview(), findsOneWidget);
@@ -471,18 +482,10 @@ void main() {
       await _startNow(tester);
       expect(_phase(tester), VideoRecorderPhase.recording);
 
-      await tester.tap(find.text('Self-view on'));
+      await tester.tap(find.byKey(videoSelfViewKey));
       await tester.pump();
 
-      expect(find.text('Self-view off'), findsOneWidget);
-      expect(
-        tester.getSemantics(find.text('Self-view off')),
-        isSemantics(
-          label: 'Self-view',
-          hasToggledState: true,
-          isToggled: false,
-        ),
-      );
+      expect(_selfView(tester), _selfViewOff);
       expect(fakeVideoPreview(), findsNothing);
       expect(
         find.byWidgetPredicate(
@@ -503,15 +506,15 @@ void main() {
       expect(recorder.cancelCalls, 0);
       expect(recorder.previewDeviceIds.last, 'built-in-id');
 
-      await tester.tap(find.text('Self-view off'));
+      await tester.tap(find.byKey(videoSelfViewKey));
       await tester.pump();
-      expect(find.text('Self-view on'), findsOneWidget);
+      expect(_selfView(tester), _selfViewOn);
       expect(fakeVideoPreview(), findsOneWidget);
       expect(find.text(_selfViewOffTitle), findsNothing);
 
-      await tester.tap(find.text('Self-view on'));
+      await tester.tap(find.byKey(videoSelfViewKey));
       await tester.pump();
-      expect(find.text('Self-view off'), findsOneWidget);
+      expect(_selfView(tester), _selfViewOff);
 
       await tester.tap(find.byKey(videoCloseKey));
       await _settle(tester);
@@ -520,8 +523,7 @@ void main() {
       expect(find.byType(VideoRecorderSheet), findsNothing);
 
       await _open(tester);
-      expect(find.text('Self-view on'), findsOneWidget);
-      expect(find.text('Self-view off'), findsNothing);
+      expect(_selfView(tester), _selfViewOn);
       expect(fakeVideoPreview(), findsOneWidget);
       await _closeAll(tester);
 
@@ -531,10 +533,21 @@ void main() {
         recorder: FakeVideoRecorder(),
       );
       await _open(tester);
-      expect(find.text('Mirror on'), findsOneWidget);
-      await tester.tap(find.text('Mirror on'));
+      expect(
+        tester.getSemantics(find.byKey(videoSelfViewKey)),
+        isSemantics(label: 'Self-view', hasToggledState: true, isToggled: true),
+      );
+      expect(find.text('Mirror on'), findsNothing);
+      await tester.tap(find.byKey(videoSelfViewKey));
       await tester.pump();
-      expect(find.text('Mirror off'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.byKey(videoSelfViewKey)),
+        isSemantics(
+          label: 'Self-view',
+          hasToggledState: true,
+          isToggled: false,
+        ),
+      );
       expect(fakeVideoPreview(), findsNothing);
       expect(find.text(_selfViewOffTitle), findsOneWidget);
       await _closeAll(tester);
@@ -834,7 +847,7 @@ void main() {
   );
 
   testWidgets(
-    'the camera picker shows only while idle with more than one camera',
+    'the camera switch shows only while idle with more than one camera',
     (WidgetTester tester) async {
       for (final _Layout layout in _Layout.values) {
         final FakeVideoRecorder recorder = FakeVideoRecorder(
@@ -853,12 +866,13 @@ void main() {
         );
         await _open(tester);
 
-        final Finder picker = find.byType(CameraPicker);
+        final bool sidebar = layout == _Layout.sidebar;
+        final Finder picker = sidebar
+            ? find.byType(CameraPicker)
+            : find.byKey(videoFlipCameraKey);
         expect(picker, findsOneWidget, reason: '$layout');
         final Rect pickerRect = tester.getRect(picker);
-        final Rect chip = tester.getRect(
-          find.text(layout == _Layout.sidebar ? 'Self-view on' : 'Mirror on'),
-        );
+        final Rect chip = tester.getRect(find.byKey(videoSelfViewKey));
         final Rect leave = tester.getRect(find.byKey(videoCloseKey));
         expect(
           pickerRect.right,
@@ -880,16 +894,24 @@ void main() {
           lessThan(1),
           reason: '$layout',
         );
-        final RenderParagraph label = tester.renderObject<RenderParagraph>(
-          find.descendant(
-            of: picker,
-            matching: find.text(
-              'FaceTime HD Camera with a very long descriptive name',
+        if (sidebar) {
+          final RenderParagraph label = tester.renderObject<RenderParagraph>(
+            find.descendant(
+              of: picker,
+              matching: find.text(
+                'FaceTime HD Camera with a very long descriptive name',
+              ),
             ),
-          ),
-        );
-        expect(label.maxLines, 1, reason: '$layout');
-        expect(label.overflow, TextOverflow.ellipsis, reason: '$layout');
+          );
+          expect(label.maxLines, 1, reason: '$layout');
+          expect(label.overflow, TextOverflow.ellipsis, reason: '$layout');
+        } else {
+          expect(
+            find.bySemanticsLabel('Switch to usb camera'),
+            findsOneWidget,
+            reason: '$layout',
+          );
+        }
         expect(tester.takeException(), isNull, reason: '$layout');
 
         await _tapShutter(tester);
