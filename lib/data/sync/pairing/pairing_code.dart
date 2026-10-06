@@ -124,6 +124,9 @@ final class PairingCode {
     if (url == null || !url.hasScheme || url.host.isEmpty) {
       throw const PairingCodeException('The QR code has no relay address');
     }
+    if (url.userInfo.isNotEmpty || url.hasQuery) {
+      throw const PairingCodeException('The QR code relay address is unusual');
+    }
     try {
       final Uint8List secret = decodeBase64Url(payload.substring(hash + 1));
       if (secret.length != pairingSecretBytes) {

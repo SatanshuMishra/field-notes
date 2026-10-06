@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
+import 'package:field_notes/data/sync/pairing/pairing_code.dart';
+import 'package:field_notes/data/sync/pairing/pairing_service.dart';
 import 'package:field_notes/features/sync/ui/join_journal_flow.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:flutter/material.dart';
@@ -9,8 +11,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
 
-const String _pairing = 'fieldnotes-pair:https://relay.example#AAAA';
-const String _otherPairing = 'fieldnotes-pair:https://relay.example#BBBB';
+final Uri _relay = Uri.parse('https://relay.example');
+final String _pairing = _payload(1);
+final String _otherPairing = _payload(2);
+
+String _payload(int fill) => PairingCode(
+  secret: List<int>.filled(pairingSecretBytes, fill),
+  relayUrl: _relay,
+).qrPayload;
 
 class _NoCameras extends CameraPlatform {
   @override
@@ -86,10 +94,11 @@ void main() {
     expect(pairingCodeIn(const <String?>[]), isNull);
   });
 
-  testWidgets('a scanned pairing code joins once and finishes the flow', (
+  testWidgets('a scanned code joins only after its server is confirmed', (
     WidgetTester tester,
   ) async {
     _usePhoneCamera();
+    final SemanticsHandle semantics = tester.ensureSemantics();
     final _FakeJoin join = _FakeJoin();
     final _Opened opened = await _openFlow(tester, join);
 
@@ -99,6 +108,16 @@ void main() {
 
     _scan(tester, _pairing);
     await tester.pump();
+    expect(find.text(joinServerTitle(_relay)), findsOneWidget);
+    expect(find.text('Join relay.example?'), findsOneWidget);
+    expect(find.text(joinServerMessage(phone: true)), findsOneWidget);
+    expect(find.text('https://relay.example'), findsOneWidget);
+    expect(find.byType(ReaderWidget), findsNothing);
+    expect(join.codes, isEmpty);
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
     expect(find.text(joinWaitingTitle), findsOneWidget);
     expect(find.byType(ReaderWidget), findsNothing);
     expect(join.codes, <String>[_pairing]);
@@ -106,6 +125,53 @@ void main() {
     join.answer.complete();
     await tester.pumpAndSettle();
     expect(opened.result, isTrue);
+    semantics.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('declining a server goes back to scanning and skips that code', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+
+    _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.text(joinDeclineLabel));
+    await tester.pump();
+    expect(find.byType(ReaderWidget), findsOneWidget);
+    expect(find.text(joinServerTitle(_relay)), findsNothing);
+
+    _scan(tester, _pairing);
+    await tester.pump();
+    expect(find.byType(ReaderWidget), findsOneWidget);
+
+    _scan(tester, _otherPairing);
+    await tester.pump();
+    expect(find.text(joinServerTitle(_relay)), findsOneWidget);
+    expect(join.codes, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('a code whose address hides another server is refused', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+
+    _scan(
+      tester,
+      _pairing.replaceFirst(
+        'https://relay.example',
+        'https://relay.example@attacker.example',
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text(pairingRetryMessage), findsOneWidget);
+    expect(find.byType(ReaderWidget), findsOneWidget);
+    expect(find.textContaining('attacker'), findsNothing);
+    expect(join.codes, isEmpty);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('a refused code is not retried while it stays in view', (
@@ -116,6 +182,8 @@ void main() {
     await _openFlow(tester, join);
 
     _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
     await tester.pump();
     join.answer.completeError(const SyncSetupException('That code expired.'));
     await tester.pumpAndSettle();
@@ -129,6 +197,9 @@ void main() {
     expect(find.text('That code expired.'), findsOneWidget);
 
     _scan(tester, _otherPairing);
+    await tester.pump();
+    expect(join.codes, <String>[_pairing]);
+    await tester.tap(find.byKey(joinServerConfirmKey));
     await tester.pump();
     expect(join.codes, <String>[_pairing, _otherPairing]);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
@@ -167,6 +238,30 @@ void main() {
     await tester.pump();
     expect(find.byType(ReaderWidget), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('a pairing code pasted into the words asks about its server', (
+    WidgetTester tester,
+  ) async {
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+
+    await tester.enterText(find.byType(EditableText).first, _pairing);
+    await tester.tap(find.byKey(joinConfirmKey));
+    await tester.pump();
+    expect(find.text(joinServerTitle(_relay)), findsOneWidget);
+    expect(find.text(joinServerMessage(phone: false)), findsOneWidget);
+    expect(join.codes, isEmpty);
+
+    await tester.tap(find.text(joinDeclineLabel));
+    await tester.pump();
+    expect(find.text(joinWordsLabel), findsOneWidget);
+
+    await tester.tap(find.byKey(joinConfirmKey));
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    expect(join.codes, <String>[_pairing]);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('a Mac joins by typing the 8 words and can cancel', (
     WidgetTester tester,
