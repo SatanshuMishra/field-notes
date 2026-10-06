@@ -5,6 +5,7 @@ import 'package:sync_protocol/sync_protocol.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 const Duration livePingInterval = Duration(seconds: 30);
+const Duration liveSilenceLimit = Duration(seconds: 75);
 
 abstract interface class SyncClock {
   DateTime now();
@@ -38,6 +39,7 @@ final class LiveConnection {
     required this._onNudge,
     required this._onClosed,
     this._pingInterval = livePingInterval,
+    this._silenceLimit = liveSilenceLimit,
   });
 
   final LiveConnector _connect;
@@ -45,9 +47,11 @@ final class LiveConnection {
   final void Function(int latestSeq) _onNudge;
   final void Function() _onClosed;
   final Duration _pingInterval;
+  final Duration _silenceLimit;
   WebSocketChannel? _channel;
   StreamSubscription<Object?>? _subscription;
   Timer? _pings;
+  DateTime? _heard;
   bool _closing = false;
 
   bool get isOpen => _channel != null;
@@ -69,7 +73,29 @@ final class LiveConnection {
       onError: (Object _) => _lost(channel),
       cancelOnError: true,
     );
-    _pings = _clock.periodic(_pingInterval, () => _send(const LivePing()));
+    _heard = _clock.now();
+    _pings = _clock.periodic(_pingInterval, () => _keepAlive(channel));
+  }
+
+  void _keepAlive(WebSocketChannel channel) {
+    final DateTime? heard = _heard;
+    if (heard != null && _clock.now().difference(heard) >= _silenceLimit) {
+      _abandon(channel);
+      return;
+    }
+    _send(const LivePing());
+  }
+
+  void _abandon(WebSocketChannel channel) {
+    final StreamSubscription<Object?>? subscription = _subscription;
+    _lost(channel);
+    unawaited(subscription?.cancel());
+    unawaited(
+      channel.sink.close().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {},
+      ),
+    );
   }
 
   Future<void> close() async {
@@ -99,6 +125,7 @@ final class LiveConnection {
   }
 
   void _receive(Object? message) {
+    _heard = _clock.now();
     if (message is! String) {
       return;
     }
@@ -127,6 +154,7 @@ final class LiveConnection {
   void _release() {
     _pings?.cancel();
     _pings = null;
+    _heard = null;
     _channel = null;
   }
 }

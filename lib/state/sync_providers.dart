@@ -90,7 +90,11 @@ SyncEngine syncEngine(Ref ref) {
     ),
     wipe: () async => (await ref.read(localJournalWipeProvider.future)).wipe(),
     backgroundSource: () => ref.read(backgroundTransferProvider.future),
-    leaveWhenInactive: defaultTargetPlatform == TargetPlatform.android,
+    leaveRule: switch (defaultTargetPlatform) {
+      TargetPlatform.android => LeaveRule.inactive,
+      TargetPlatform.macOS => LeaveRule.quit,
+      _ => LeaveRule.hidden,
+    },
   );
   ref.onDispose(engine.dispose);
   engine.start();

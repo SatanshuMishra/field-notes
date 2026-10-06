@@ -54,21 +54,37 @@ final class _IdleClosingProxy {
       _pipes.add(pipe);
       client.listen(
         (List<int> data) {
+          pipe.live ??= String.fromCharCodes(data.take(32))
+              .contains('/v1/live');
+          if (pipe.silent) {
+            return;
+          }
           pipe.lastActivity = _clock.now();
           upstream.add(data);
         },
-        onDone: pipe.close,
-        onError: (Object _) => pipe.close(),
+        onDone: pipe.closeUnlessSilent,
+        onError: (Object _) => pipe.closeUnlessSilent(),
       );
       upstream.listen(
         (List<int> data) {
+          if (pipe.silent) {
+            return;
+          }
           pipe.lastActivity = _clock.now();
           client.add(data);
         },
-        onDone: pipe.close,
-        onError: (Object _) => pipe.close(),
+        onDone: pipe.closeUnlessSilent,
+        onError: (Object _) => pipe.closeUnlessSilent(),
       );
     });
+  }
+
+  void silenceLiveSockets() {
+    for (final _Pipe pipe in _pipes) {
+      if (pipe.live ?? false) {
+        pipe.silent = true;
+      }
+    }
   }
 
   void sweep() {
@@ -101,6 +117,14 @@ final class _Pipe {
   final Socket upstream;
   DateTime lastActivity;
   bool open = true;
+  bool? live;
+  bool silent = false;
+
+  void closeUnlessSilent() {
+    if (!silent) {
+      close();
+    }
+  }
 
   void close() {
     if (!open) {
@@ -507,6 +531,107 @@ void main() {
     );
     expect((await _entries(mac)).single.textContent, 'ten quiet minutes later');
   });
+
+  test(
+    'a Mac stays connected while hidden and leaves only when it quits',
+    () async {
+      final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+      final SyncTestDevice phone = await pairDevice(
+        relay,
+        mac,
+        device('Phone'),
+      );
+      final SyncEngine macEngine = mac.engine(leaveRule: LeaveRule.quit);
+      await macEngine.start();
+      await eventually(() async => macEngine.isLive);
+
+      mac.lifecycle.state = AppLifecycleState.inactive;
+      mac.lifecycle.state = AppLifecycleState.hidden;
+      for (int step = 0; step < 6; step++) {
+        await mac.clock.advance(livePingInterval);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+      }
+      expect(macEngine.isLive, isTrue);
+      expect(mac.sockets, 1);
+
+      final SyncEngine phoneEngine = phone.engine();
+      await phoneEngine.start();
+      final domain.Day day = await phone.journal.ensureDayForDate('2026-10-08');
+      await phone.journal.createEntry(
+        dayId: day.id,
+        type: domain.EntryType.text,
+        textContent: 'sent while the Mac was covered',
+      );
+      await phoneEngine.syncNow();
+      await eventually(
+        () async => (await _entries(mac)).isNotEmpty,
+        timeout: const Duration(seconds: 5),
+      );
+
+      await mac.journal.createEntry(
+        dayId: day.id,
+        type: domain.EntryType.text,
+        textContent: 'written while covered',
+      );
+      await macEngine.syncNow();
+      await eventually(
+        () async => (await _entries(phone)).length == 2,
+        timeout: const Duration(seconds: 5),
+      );
+
+      mac.lifecycle.state = AppLifecycleState.detached;
+      await eventually(() async => !macEngine.isLive);
+    },
+  );
+
+  test(
+    'a live connection that stops answering is dropped and reopened',
+    () async {
+      final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+      final SyncTestDevice phone = await pairDevice(
+        relay,
+        mac,
+        device('Phone'),
+      );
+      final _IdleClosingProxy proxy = _IdleClosingProxy(
+        relay.port,
+        mac.clock,
+        const Duration(hours: 1),
+      );
+      await proxy.start();
+      addTearDown(proxy.stop);
+      await writeSyncState(
+        mac.database,
+        SyncStateKeys.relayUrl,
+        '${proxy.baseUrl}',
+      );
+      final SyncEngine macEngine = mac.engine(leaveRule: LeaveRule.quit);
+      await macEngine.start();
+      await eventually(() async => macEngine.isLive);
+      expect(mac.sockets, 1);
+
+      proxy.silenceLiveSockets();
+      for (int step = 0; step < 4; step++) {
+        await mac.clock.advance(livePingInterval);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+      }
+      await eventually(() async => mac.sockets == 2 && macEngine.isLive);
+
+      final SyncEngine phoneEngine = phone.engine();
+      await phoneEngine.start();
+      final domain.Day day = await phone.journal.ensureDayForDate('2026-10-09');
+      await phone.journal.createEntry(
+        dayId: day.id,
+        type: domain.EntryType.text,
+        textContent: 'after the silent drop',
+      );
+      await phoneEngine.syncNow();
+      await eventually(
+        () async => (await _entries(mac)).isNotEmpty,
+        timeout: const Duration(seconds: 5),
+      );
+    },
+  );
 
   test('first-pull progress comes from the pull responses', () async {
     final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
