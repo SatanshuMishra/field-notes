@@ -125,4 +125,33 @@ void main() {
       throwsA(isA<PairingCodeException>()),
     );
   });
+
+  test('a QR code whose address hides its real server is refused', () {
+    final String secret = encodeBase64Url(
+      PairingCode.generate(relayUrl: relayUrl).secret,
+    );
+
+    for (final String address in <String>[
+      'https://sync.example.test@relay.attacker.test',
+      'https://sync.example.test:pw@relay.attacker.test',
+      'https://relay.attacker.test?sync.example.test',
+      'ftp://sync.example.test',
+      'wss://sync.example.test',
+      'https://sync.ex\u0430mple.test',
+      'https://${'a' * 64}.example.test',
+      'https://sync.example.test/${'a' * 120}',
+    ]) {
+      expect(
+        () => PairingCode.parse('fieldnotes-pair:$address#$secret'),
+        throwsA(isA<PairingCodeException>()),
+        reason: address,
+      );
+    }
+    expect(
+      PairingCode.parse(
+        'fieldnotes-pair:https://sync.example.test:8443/relay#$secret',
+      ).relayUrl,
+      Uri.parse('https://sync.example.test:8443/relay'),
+    );
+  });
 }

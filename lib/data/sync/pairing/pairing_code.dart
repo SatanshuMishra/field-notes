@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:field_notes/data/crypto/recovery_phrase.dart';
 import 'package:field_notes/data/crypto/sodium_loader.dart';
+import 'package:field_notes/data/sync/relay_address.dart';
 import 'package:sodium/sodium.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
@@ -121,8 +122,8 @@ final class PairingCode {
       throw const PairingCodeException('The QR code has no secret');
     }
     final Uri? url = Uri.tryParse(payload.substring(0, hash));
-    if (url == null || !url.hasScheme || url.host.isEmpty) {
-      throw const PairingCodeException('The QR code has no relay address');
+    if (url == null || !isUsableRelayAddress(url)) {
+      throw const PairingCodeException('The QR code has no usable address');
     }
     try {
       final Uint8List secret = decodeBase64Url(payload.substring(hash + 1));

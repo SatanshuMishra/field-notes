@@ -1,5 +1,6 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
+import 'package:field_notes/data/sync/relay_address.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
@@ -78,7 +79,7 @@ Uri? parseServerAddress(String input) {
   final Uri? parsed = Uri.tryParse(
     trimmed.contains('://') ? trimmed : 'https://$trimmed',
   );
-  if (parsed == null || parsed.host.isEmpty) {
+  if (parsed == null || !isUsableRelayAddress(parsed)) {
     return null;
   }
   return parsed;

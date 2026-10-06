@@ -1,5 +1,6 @@
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
+import 'package:field_notes/data/sync/pairing/pairing_service.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/state/sync_providers.dart';
@@ -21,15 +22,38 @@ const String joinWaitingTitle = 'Waiting for your other device';
 const String joinWaitingMessage =
     'Choose "Add" on your other device to finish joining.';
 const String joinCameraLabel = 'Camera view for scanning the code';
+const String joinDeclineLabel = "Don't join";
 
 const Key joinConfirmKey = ValueKey<String>('join-confirm');
 const Key typeWordsInsteadKey = ValueKey<String>('join-type-words');
+const Key joinServerConfirmKey = ValueKey<String>('join-server-confirm');
+
+String joinServerTitle(Uri server) => 'Join ${server.host}?';
+
+String joinServerMessage({required bool phone}) =>
+    'Everything on this ${phone ? 'phone' : 'device'} will be added to the '
+    'journal on this server. Only join a server you set up.';
+
+String joinAddressMismatchMessage(Uri code, Uri typed) =>
+    'That code is for ${code.host}, not ${typed.host}.';
+
+String shownServerAddress(Uri server) => Uri(
+  scheme: server.scheme,
+  host: server.host,
+  port: server.hasPort ? server.port : null,
+  path: server.path,
+).toString();
 
 const double _cameraHeight = 240;
+const double _labelGap = 6;
 const double _scanArea = 0.9;
 const Duration _scanPause = Duration(milliseconds: 100);
 
-typedef PairingJoin = Future<void> Function(String code, {Uri? relayUrl});
+typedef PairingJoin = Future<void> Function(
+  String code, {
+  Uri? relayUrl,
+  bool Function() cancelled,
+});
 
 bool get joinCanScan => defaultTargetPlatform == TargetPlatform.android;
 
@@ -55,7 +79,7 @@ Future<void> joinJournal(BuildContext context, WidgetRef ref) async {
   }
 }
 
-enum _JoinStage { scan, type, waiting }
+enum _JoinStage { scan, type, confirm, waiting }
 
 class JoinJournalFlow extends ConsumerStatefulWidget {
   const JoinJournalFlow({super.key, this.join});
@@ -73,10 +97,13 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   late _JoinStage _returnTo = _stage;
   String? _error;
   String? _refusedCode;
+  String? _offeredCode;
+  Uri? _offeredServer;
   bool _closing = false;
 
   @override
   void dispose() {
+    _closing = true;
     _words.dispose();
     _address.dispose();
     super.dispose();
@@ -88,9 +115,41 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
     }
     final String? value = pairingCodeIn(<String?>[code.text]);
     if (value != null && value != _refusedCode) {
-      _join(value, null);
+      _offer(value);
     }
   }
+
+  void _offer(String code) {
+    final Uri? server = _serverIn(code);
+    if (server == null) {
+      setState(() {
+        _error = pairingRetryMessage;
+        _refusedCode = _stage == _JoinStage.scan ? code : null;
+      });
+      return;
+    }
+    setState(() {
+      _returnTo = _stage;
+      _stage = _JoinStage.confirm;
+      _error = null;
+      _offeredCode = code;
+      _offeredServer = server;
+    });
+  }
+
+  static Uri? _serverIn(String code) {
+    try {
+      return PairingCode.parse(code).relayUrl;
+    } on PairingCodeException {
+      return null;
+    }
+  }
+
+  void _decline() => setState(() {
+    _stage = _returnTo;
+    _error = null;
+    _refusedCode = _returnTo == _JoinStage.scan ? _offeredCode : null;
+  });
 
   void _showStage(_JoinStage stage) => setState(() {
     _stage = stage;
@@ -105,19 +164,34 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
       setState(() => _error = unreachableMessage);
       return;
     }
-    _join(_words.text, relayUrl);
+    final String? pasted = pairingCodeIn(<String?>[_words.text]);
+    if (pasted == null) {
+      _join(_words.text, relayUrl);
+      return;
+    }
+    final Uri? server = _serverIn(pasted);
+    if (server != null && relayUrl != null && server.host != relayUrl.host) {
+      setState(() => _error = joinAddressMismatchMessage(server, relayUrl));
+      return;
+    }
+    _offer(pasted);
   }
 
   Future<void> _join(String code, Uri? relayUrl) async {
+    if (_stage == _JoinStage.waiting || _closing) {
+      return;
+    }
     setState(() {
-      _returnTo = _stage;
+      if (_stage != _JoinStage.confirm) {
+        _returnTo = _stage;
+      }
       _stage = _JoinStage.waiting;
       _error = null;
     });
     final PairingJoin join =
         widget.join ?? ref.read(pairingServiceProvider).join;
     try {
-      await join(code, relayUrl: relayUrl);
+      await join(code, relayUrl: relayUrl, cancelled: () => _closing);
       if (mounted) {
         Navigator.of(context).pop(true);
       }
@@ -142,6 +216,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
     return switch (_stage) {
       _JoinStage.scan => _scanStage(),
       _JoinStage.type => _typeStage(),
+      _JoinStage.confirm => _confirmStage(),
       _JoinStage.waiting => _waitingStage(),
     };
   }
@@ -219,6 +294,38 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
           label: joinLabel,
           primary: true,
           onPressed: _joinTyped,
+        ),
+      ],
+    );
+  }
+
+  Widget _confirmStage() {
+    final Uri server = _offeredServer!;
+    final String code = _offeredCode!;
+    return SyncFlowFrame(
+      title: joinServerTitle(server),
+      message: joinServerMessage(phone: syncFlowOnAndroid(context)),
+      content: <Widget>[
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(serverAddressLabel, style: context.textStyles.labelSans),
+            const SizedBox(height: _labelGap),
+            Text(
+              shownServerAddress(server),
+              style: context.textStyles.bodySans,
+            ),
+          ],
+        ),
+      ],
+      actions: <SyncFlowAction>[
+        SyncFlowAction(label: joinDeclineLabel, onPressed: _decline),
+        SyncFlowAction(
+          key: joinServerConfirmKey,
+          label: joinLabel,
+          primary: true,
+          onPressed: () => _join(code, null),
         ),
       ],
     );
