@@ -1,5 +1,6 @@
 import 'package:field_notes/design/glass/glass_surface.dart';
 import 'package:field_notes/features/capture/video/camera_gestures.dart';
+import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:flutter/widgets.dart';
@@ -210,32 +211,46 @@ void main() {
     },
   );
 
-  testWidgets('the Mac recorder keeps its text Leave and privacy line', (
-    WidgetTester tester,
-  ) async {
-    await tester.pumpWidget(
-      videoSheetHarness(
-        SizedBox(
-          width: 1024,
-          height: 640,
-          child: VideoRecorderSheet(
-            phase: VideoRecorderPhase.idle,
-            onStart: () {},
-            onStop: () {},
-            onLeave: () {},
+  testWidgets(
+    'the Mac recorder has the same glass Leave and self-view, no flip and no privacy line',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        videoSheetHarness(
+          SizedBox(
+            width: 1024,
+            height: 640,
+            child: VideoRecorderSheet(
+              phase: VideoRecorderPhase.idle,
+              devices: const <VideoCaptureDevice>[
+                VideoCaptureDevice(id: 'built-in', label: 'MacBook Pro Camera'),
+                VideoCaptureDevice(id: 'obs', label: 'OBS Virtual Camera'),
+              ],
+              selectedDeviceId: 'built-in',
+              onDeviceChanged: (String _) {},
+              onStart: () {},
+              onStop: () {},
+              onLeave: () {},
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pump(const Duration(milliseconds: 50));
+      );
+      await tester.pump(const Duration(milliseconds: 50));
 
-    expect(find.text(videoSidebarPrivacyLine), findsOneWidget);
-    expect(
-      find.descendant(
-        of: find.byKey(videoCloseKey),
-        matching: find.byType(GlassSurface),
-      ),
-      findsNothing,
-    );
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+      for (final Key key in <Key>[videoCloseKey, videoSelfViewKey]) {
+        expect(
+          find.descendant(
+            of: find.byKey(key),
+            matching: find.byType(GlassSurface),
+          ),
+          findsOneWidget,
+          reason: '$key',
+        );
+      }
+      expect(find.byKey(videoFlipCameraKey), findsNothing);
+      expect(find.byKey(cameraGestureLayerKey), findsNothing);
+      expect(find.byType(CameraPicker), findsOneWidget);
+      expect(find.textContaining('only you'), findsNothing);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 }

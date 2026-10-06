@@ -113,8 +113,8 @@ const BoxDecoration _veil = BoxDecoration(
 class RecorderSurface extends StatelessWidget {
   const RecorderSurface({
     super.key,
-    required this.privacyLine,
     required this.onLeave,
+    this.privacyLine,
     this.arrangement = RecorderArrangement.voice,
     this.glow = true,
     this.background,
@@ -266,7 +266,7 @@ class _Stage extends StatelessWidget {
   Widget _leave() {
     final VoidCallback? onLeave = surface.onLeave;
     final bool enabled = onLeave != null;
-    if (surface.glassLeave && !sidebar) {
+    if (surface.glassLeave) {
       return RecorderGlassButton(
         key: surface.leaveKey,
         label: recorderLeaveLabel,

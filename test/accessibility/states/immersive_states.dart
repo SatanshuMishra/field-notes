@@ -9,8 +9,6 @@ import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart'
     show cameraDeviceLabels;
 import 'package:field_notes/features/capture/video/camera_picker.dart';
-import 'package:field_notes/features/capture/video/self_view_chip.dart'
-    show selfViewSemanticLabel;
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart'
     show VideoCaptureDevice;
@@ -301,7 +299,7 @@ Finder _semanticsLabelled(String label) => find.byWidgetPredicate(
 );
 
 const List<A11yStatefulControl> _selfViewToggle = <A11yStatefulControl>[
-  A11yStatefulControl.label(selfViewSemanticLabel, A11yStateKind.toggled),
+  A11yStatefulControl.label(videoSelfViewLabel, A11yStateKind.toggled),
 ];
 
 List<A11yState> _inBothLayouts({

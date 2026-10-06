@@ -564,7 +564,7 @@ class CameraMacosVideoRecorder implements VideoRecorder {
       key: ValueKey<String>('camera-preview-$deviceId'),
       deviceId: deviceId,
       cameraMode: CameraMacOSMode.video,
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
       useMovieFileOutput: true,
       movieResolution: PictureResolution.veryHigh,
       videoBitrate: videoRecordingBitrate,

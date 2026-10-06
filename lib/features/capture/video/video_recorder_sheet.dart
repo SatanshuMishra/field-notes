@@ -10,7 +10,6 @@ import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'camera_gestures.dart';
 import 'camera_glyphs.dart';
 import 'camera_picker.dart';
-import 'self_view_chip.dart';
 import 'video_recorder.dart';
 
 enum VideoRecorderPhase {
@@ -34,7 +33,6 @@ const Key videoKeyboardHintKey = ValueKey<String>('video-keyboard-hint');
 const Key videoFlipCameraKey = ValueKey<String>('video-flip-camera');
 
 const String videoFeedLabel = 'CAMERA FEED';
-const String videoSidebarPrivacyLine = 'Private · only you will see this';
 const String videoSelfViewOffTitle = 'The camera is still recording.';
 const String videoSelfViewOffMessage = 'You just won’t see yourself.';
 const String videoLetGoLabel = 'Let go';
@@ -105,7 +103,6 @@ const double _keyboardHintSize = 11;
 const double _keyboardHintTracking = 0.22;
 const double _keyboardHintInset = 20;
 const double _sidebarTrailingGap = 8;
-const double _bottomBarTrailingGap = 6;
 
 const double _sidebarQuestionShadowBlur = 20;
 const double _bottomBarQuestionShadowBlur = 16;
@@ -308,7 +305,6 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
         children: <Widget>[
           RecorderSurface(
             arrangement: RecorderArrangement.video,
-            privacyLine: sidebar ? videoSidebarPrivacyLine : null,
             onLeave: _isSaving ? null : widget.onLeave,
             leaveKey: videoCloseKey,
             glassLeave: true,
@@ -420,49 +416,29 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   }
 
   Widget? _trailing(bool sidebar) {
-    if (!sidebar) {
-      return _glassControls();
-    }
     final bool picker =
-        _phase == VideoRecorderPhase.idle && widget.devices.length > 1;
-    final bool chip = !_isDenied;
-    if (!picker && !chip) {
+        sidebar &&
+        _phase == VideoRecorderPhase.idle &&
+        widget.devices.length > 1;
+    if (_isDenied && !picker) {
       return null;
     }
+    final VideoCaptureDevice? other = sidebar ? null : _otherCamera;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (picker)
           Flexible(
-            child: CameraPicker(
-              devices: widget.devices,
-              selectedDeviceId: widget.selectedDeviceId,
-              onChanged: widget.onDeviceChanged,
-              label: widget.cameraLabel,
+            child: Padding(
+              padding: const EdgeInsets.only(right: _sidebarTrailingGap),
+              child: CameraPicker(
+                devices: widget.devices,
+                selectedDeviceId: widget.selectedDeviceId,
+                onChanged: widget.onDeviceChanged,
+                label: widget.cameraLabel,
+              ),
             ),
           ),
-        if (picker && chip)
-          SizedBox(
-            width: sidebar ? _sidebarTrailingGap : _bottomBarTrailingGap,
-          ),
-        if (chip)
-          SelfViewChip(
-            key: videoSelfViewKey,
-            value: _selfView,
-            onChanged: _setSelfView,
-          ),
-      ],
-    );
-  }
-
-  Widget? _glassControls() {
-    if (_isDenied) {
-      return null;
-    }
-    final VideoCaptureDevice? other = _otherCamera;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
         if (other != null)
           RecorderGlassButton(
             key: videoFlipCameraKey,
@@ -470,15 +446,16 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
             onPressed: _flip,
             glyph: const CameraGlyph(CameraGlyphKind.flip),
           ),
-        RecorderGlassButton(
-          key: videoSelfViewKey,
-          label: videoSelfViewLabel,
-          toggled: _selfView,
-          onPressed: () => _setSelfView(!_selfView),
-          glyph: CameraGlyph(
-            _selfView ? CameraGlyphKind.camera : CameraGlyphKind.cameraOff,
+        if (!_isDenied)
+          RecorderGlassButton(
+            key: videoSelfViewKey,
+            label: videoSelfViewLabel,
+            toggled: _selfView,
+            onPressed: () => _setSelfView(!_selfView),
+            glyph: CameraGlyph(
+              _selfView ? CameraGlyphKind.camera : CameraGlyphKind.cameraOff,
+            ),
           ),
-        ),
       ],
     );
   }
