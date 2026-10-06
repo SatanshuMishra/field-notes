@@ -3,9 +3,10 @@ import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/state/sync_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:flutter_zxing/flutter_zxing.dart';
 
 import 'start_sync_flow.dart';
 
@@ -25,6 +26,20 @@ const Key joinConfirmKey = ValueKey<String>('join-confirm');
 const Key typeWordsInsteadKey = ValueKey<String>('join-type-words');
 
 const double _cameraHeight = 240;
+const double _scanArea = 0.9;
+
+bool get joinCanScan => defaultTargetPlatform == TargetPlatform.android;
+
+String? pairingCodeIn(Iterable<String?> values) {
+  for (final String? value in values) {
+    if (value != null &&
+        value.trim().toLowerCase().startsWith('$pairingScheme:')) {
+      return value;
+    }
+  }
+  return null;
+}
+
 const BorderRadius _cameraRadius = BorderRadius.all(Radius.circular(14));
 
 Future<void> joinJournal(BuildContext context, WidgetRef ref) async {
@@ -49,8 +64,8 @@ class JoinJournalFlow extends ConsumerStatefulWidget {
 class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   final TextEditingController _words = TextEditingController();
   final TextEditingController _address = TextEditingController();
-  _JoinStage _stage = _JoinStage.scan;
-  _JoinStage _returnTo = _JoinStage.scan;
+  late _JoinStage _stage = joinCanScan ? _JoinStage.scan : _JoinStage.type;
+  late _JoinStage _returnTo = _stage;
   String? _error;
 
   @override
@@ -60,17 +75,13 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
     super.dispose();
   }
 
-  void _scanned(BarcodeCapture capture) {
+  void _scanned(Code code) {
     if (_stage != _JoinStage.scan) {
       return;
     }
-    for (final Barcode barcode in capture.barcodes) {
-      final String? value = barcode.rawValue;
-      if (value != null &&
-          value.trim().toLowerCase().startsWith('$pairingScheme:')) {
-        _join(value, null);
-        return;
-      }
+    final String? value = pairingCodeIn(<String?>[code.text]);
+    if (value != null) {
+      _join(value, null);
     }
   }
 
@@ -131,12 +142,18 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
               height: _cameraHeight,
               child: ColoredBox(
                 color: context.colors.panelTop,
-                child: MobileScanner(
-                  onDetect: _scanned,
-                  errorBuilder: (
-                    BuildContext context,
-                    MobileScannerException _,
-                  ) => const CrossHatchPlaceholder(),
+                child: ReaderWidget(
+                  onScan: _scanned,
+                  codeFormat: Format.qrCode,
+                  tryHarder: true,
+                  tryInverted: true,
+                  cropPercent: _scanArea,
+                  showScannerOverlay: false,
+                  showFlashlight: false,
+                  showToggleCamera: false,
+                  showGallery: false,
+                  allowPinchZoom: false,
+                  loading: const CrossHatchPlaceholder(),
                 ),
               ),
             ),
@@ -174,13 +191,16 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
         if (error != null) SyncFlowError(message: error),
       ],
       actions: <SyncFlowAction>[
-        SyncFlowAction(
-          label: joinBackLabel,
-          onPressed: () => setState(() {
-            _stage = _JoinStage.scan;
-            _error = null;
-          }),
-        ),
+        if (joinCanScan)
+          SyncFlowAction(
+            label: joinBackLabel,
+            onPressed: () => setState(() {
+              _stage = _JoinStage.scan;
+              _error = null;
+            }),
+          )
+        else
+          SyncFlowAction(label: syncCancelLabel, onPressed: _cancel),
         SyncFlowAction(
           key: joinConfirmKey,
           label: joinLabel,

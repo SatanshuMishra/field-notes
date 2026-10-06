@@ -52,3 +52,24 @@ dependencies {
 flutter {
     source = "../.."
 }
+
+val googleTelemetryGroups = listOf(
+    "com.google.mlkit",
+    "com.google.android.datatransport",
+    "com.google.firebase",
+    "com.google.android.gms",
+)
+
+val checkNoGoogleTelemetry by tasks.registering {
+    val releaseClasspath = configurations.named("releaseRuntimeClasspath")
+    doLast {
+        val found = releaseClasspath.get().incoming.resolutionResult.allComponents
+            .mapNotNull { (it.id as? org.gradle.api.artifacts.component.ModuleComponentIdentifier)?.group }
+            .filter { group -> googleTelemetryGroups.any { group.startsWith(it) } }
+            .distinct()
+            .sorted()
+        check(found.isEmpty()) { "The release build would carry Google telemetry libraries: $found" }
+    }
+}
+
+tasks.named("preBuild") { dependsOn(checkNoGoogleTelemetry) }
