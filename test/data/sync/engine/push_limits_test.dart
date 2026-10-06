@@ -272,7 +272,10 @@ void main() {
       <String>[large.id],
     );
     expect(engine.consecutiveFailures, 0);
-    expect(await engine.status(), const WaitingStatus(1));
+    expect(
+      await engine.status(),
+      const AttentionStatus(AttentionReason.noteTooLong),
+    );
   });
 
   test(

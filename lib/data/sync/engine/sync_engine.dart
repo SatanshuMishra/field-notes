@@ -247,6 +247,7 @@ class SyncEngine {
   AttentionReason? _stopReason;
   bool _storageFull = false;
   bool _deviceFull = false;
+  bool _noteTooLong = false;
   bool _keysLocked = false;
   bool _troubled = false;
   bool _pulling = false;
@@ -690,6 +691,9 @@ class SyncEngine {
     }
     if (_deviceFull) {
       return AttentionReason.deviceFull;
+    }
+    if (_noteTooLong) {
+      return AttentionReason.noteTooLong;
     }
     if (_failures >= unreachableAfterFailures &&
         _networkKind != NetworkKind.offline) {
@@ -1363,6 +1367,10 @@ class SyncEngine {
       }
     }
     _holdStale(again: again, held: held);
+    if (_noteTooLong != push.oversized.isNotEmpty) {
+      _noteTooLong = push.oversized.isNotEmpty;
+      _changed();
+    }
   }
 
   void _holdStale({required Set<int> again, required Set<int> held}) {

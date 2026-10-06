@@ -1,6 +1,7 @@
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/draft_store.dart';
+import 'package:field_notes/domain/services/note_limits.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 
 import 'capture_date.dart';
@@ -28,6 +29,9 @@ class JournalNoteWriter implements NoteWriter {
     final String text = normaliseNoteSource(source);
     if (text.isEmpty) {
       throw const NoteWriteException(blankTextMessage);
+    }
+    if (!noteFitsSync(text)) {
+      throw const NoteWriteException(noteTooLongMessage);
     }
 
     final Entry entry;

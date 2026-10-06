@@ -110,6 +110,7 @@ void main() {
         'Needs attention · this device was removed',
         'Needs attention · your server is full',
         'Needs attention · this device is low on space',
+        'Needs attention · a note is too long to sync',
         'Needs attention · sync hit a problem',
       ],
     );
