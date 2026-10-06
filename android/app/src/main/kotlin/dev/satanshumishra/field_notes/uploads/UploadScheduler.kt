@@ -64,11 +64,6 @@ class UploadScheduler(
         if (!jobs.canRunUserInitiatedJobs()) {
             return false
         }
-        if (jobs.getPendingJob(lane.jobId) != null &&
-            jobs.getPendingJobReason(lane.jobId) != JobScheduler.PENDING_JOB_REASON_EXECUTING
-        ) {
-            return true
-        }
         val info = JobInfo.Builder(lane.jobId, ComponentName(context, UploadJobService::class.java))
             .setUserInitiated(true)
             .setRequiredNetworkType(if (lane == Lane.UNMETERED) JobInfo.NETWORK_TYPE_UNMETERED else JobInfo.NETWORK_TYPE_ANY)

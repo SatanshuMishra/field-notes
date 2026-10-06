@@ -55,6 +55,9 @@ final class _Uploader implements BackgroundUploader {
       held.remove(id);
     }
   }
+
+  @override
+  Future<void> cancelAll() => cancel(held.keys.toList());
 }
 
 final class _ZoneTimer implements Timer {

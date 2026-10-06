@@ -130,7 +130,7 @@ class UploadRunnerTest {
     }
 
     @Test
-    fun a_transient_failure_counts_an_attempt_and_asks_for_a_retry() {
+    fun a_transient_failure_counts_an_attempt_and_ends_the_run_with_a_retry() {
         store.put(item("part.video.0"))
         store.put(item("part.video.1"))
         val transport = FakeTransport(answer = { item, call ->
@@ -138,11 +138,71 @@ class UploadRunnerTest {
         })
 
         assertEquals(UploadRunner.Outcome.RETRY, runner(transport).run())
-        assertEquals(setOf("part.video.1"), results().keys)
-        assertEquals(1, store.pending().single().attempts)
+        val first = results()
+        assertEquals(1, store.pending().first { it.taskId == "part.video.0" }.attempts)
 
         assertEquals(UploadRunner.Outcome.DONE, runner(transport).run())
-        assertEquals("complete", results().getValue("part.video.0").getString("status"))
+        val all = first + results()
+        assertEquals(setOf("part.video.0", "part.video.1"), all.keys)
+        assertTrue(all.values.all { it.getString("status") == "complete" })
+    }
+
+    @Test
+    fun a_lost_network_charges_only_the_tasks_in_flight() {
+        for (index in 0 until 6) {
+            store.put(item("part.video.$index"))
+        }
+        val transport = FakeTransport(
+            answer = { _, _ -> throw java.io.IOException("network is unreachable") },
+            delayMillis = 30,
+        )
+
+        assertEquals(UploadRunner.Outcome.RETRY, runner(transport).run())
+
+        val charged = store.pending().filter { it.attempts > 0 }
+        assertEquals(6, store.pending().size)
+        assertTrue(charged.size <= UploadCoordinator.PARTS_AT_ONCE)
+        assertTrue(charged.all { it.attempts == 1 })
+    }
+
+    @Test
+    fun work_added_after_a_cancelled_run_is_scheduled() {
+        store.put(item("part.video.0"))
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val transport = FakeTransport()
+        transport.onSend = {
+            started.countDown()
+            release.await(5, TimeUnit.SECONDS)
+        }
+        val running = runner(transport)
+        val worker = Thread { running.run() }
+        worker.start()
+        assertTrue(started.await(5, TimeUnit.SECONDS))
+        assertTrue(coordinator.isActive(Lane.ANY))
+
+        running.stop()
+
+        assertFalse(coordinator.isActive(Lane.ANY))
+        release.countDown()
+        worker.join(5_000)
+        assertFalse(coordinator.isActive(Lane.ANY))
+    }
+
+    @Test
+    fun a_lane_ends_when_its_remaining_work_is_held_by_another_job() {
+        store.put(item("part.video.0"))
+        assertEquals("part.video.0", coordinator.claimNext { store.pending() }?.taskId)
+        val transport = FakeTransport()
+        var outcome: UploadRunner.Outcome? = null
+        val worker = Thread { outcome = runner(transport).run() }
+
+        worker.start()
+        worker.join(2_000)
+
+        assertEquals(UploadRunner.Outcome.DONE, outcome)
+        assertTrue(transport.sent.isEmpty())
+        assertFalse(coordinator.isActive(Lane.ANY))
     }
 
     @Test
@@ -274,7 +334,7 @@ class UploadRunnerTest {
     fun a_file_outside_the_app_is_never_sent() {
         val outside = Files.createTempFile("outside", ".bin").toFile()
         outside.writeBytes(ByteArray(16))
-        val transport = HttpTransport(null, File(root, "app"))
+        val transport = HttpTransport({ null }, File(root, "app"))
 
         val answer = transport.send(item("part.video.0").copy(filePath = outside.path)) { }
 
@@ -321,7 +381,7 @@ class UploadRunnerTest {
     }
 
     @Test
-    fun a_full_disk_stops_the_job_for_a_retry_without_losing_the_task() {
+    fun a_failed_store_write_does_not_escape_the_runner() {
         store.put(item("part.video.0"))
         File(root, "store/results").writeText("not a folder")
 
@@ -333,12 +393,14 @@ class UploadRunnerTest {
     }
 
     @Test
-    fun cancelling_everything_also_clears_unread_results() {
+    fun cancelling_everything_keeps_results_already_finished() {
         store.put(item("part.video.0"))
         runner(FakeTransport()).run()
+        store.put(item("part.video.1"))
 
         store.cancelAll()
 
-        assertTrue(store.takeResults().isEmpty())
+        assertTrue(store.pending().isEmpty())
+        assertEquals(setOf("part.video.0"), results().keys)
     }
 }

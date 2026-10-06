@@ -15,7 +15,6 @@ import java.util.concurrent.Executors
 class UploadChannel(private val context: Context) {
     private val store = UploadStore.of(context)
     private val scheduler = UploadScheduler(context, store)
-    private val worker = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "uploads-channel") }
     private val main = Handler(Looper.getMainLooper())
 
     fun register(messenger: BinaryMessenger) {
@@ -80,6 +79,7 @@ class UploadChannel(private val context: Context) {
     }
 
     private companion object {
+        val worker = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "uploads-channel") }
         const val CHANNEL = "field_notes/background_uploads"
         const val RESULTS_READY = "resultsReady"
     }

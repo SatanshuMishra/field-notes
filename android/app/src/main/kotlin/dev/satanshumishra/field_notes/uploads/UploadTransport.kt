@@ -3,7 +3,6 @@ package dev.satanshumishra.field_notes.uploads
 import android.net.Network
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -17,7 +16,7 @@ interface UploadTransport {
     fun abortAll()
 }
 
-class HttpTransport(private val network: Network?, fileRoot: File) : UploadTransport {
+class HttpTransport(private val network: () -> Network?, fileRoot: File) : UploadTransport {
     private val open = Collections.synchronizedSet(mutableSetOf<HttpURLConnection>())
     private val root = fileRoot.canonicalPath + File.separator
 
@@ -27,7 +26,7 @@ class HttpTransport(private val network: Network?, fileRoot: File) : UploadTrans
             return TransportAnswer(MISSING_FILE, "")
         }
         val url = URL(item.url)
-        val connection = (network?.openConnection(url) ?: url.openConnection()) as? HttpURLConnection
+        val connection = (network()?.openConnection(url) ?: url.openConnection()) as? HttpURLConnection
             ?: return TransportAnswer(MISSING_FILE, "")
         open.add(connection)
         try {

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:field_notes/data/sync/background/background_uploads.dart';
 import 'package:flutter/services.dart';
@@ -36,8 +37,14 @@ final class _Native {
   final List<String> stored = <String>[];
   final List<String> results = <String>[];
 
+  PlatformException? failWith;
+
   Future<Object?> _handle(MethodCall call) async {
     calls.add(call);
+    final PlatformException? failure = failWith;
+    if (failure != null) {
+      throw failure;
+    }
     switch (call.method) {
       case 'enqueue':
         final Map<Object?, Object?> arguments =
@@ -173,6 +180,31 @@ void main() {
       expect(native.calls.map((MethodCall call) => call.method), <String>[
         'queued',
       ]);
+    },
+  );
+
+  test('cancelling everything is one call to the native side', () async {
+    await ChannelBackgroundUploader().cancelAll();
+
+    expect(native.calls.single.method, 'cancelAll');
+  });
+
+  test(
+    'a native storage error reaches the engine as a file system error',
+    () async {
+      native.failWith = PlatformException(
+        code: 'storage',
+        message: 'disk full',
+      );
+
+      await expectLater(
+        ChannelBackgroundUploader().enqueue(<HandedTask>[_part(0)]),
+        throwsA(isA<FileSystemException>()),
+      );
+      await expectLater(
+        ChannelBackgroundUploader().queuedTasks(),
+        throwsA(isA<FileSystemException>()),
+      );
     },
   );
 

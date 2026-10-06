@@ -4,6 +4,7 @@ import android.content.Context
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.UUID
 
@@ -35,8 +36,6 @@ class UploadStore(root: File) {
             }
         }.sortedWith(compareBy<UploadItem> { it.order }.thenBy { it.taskId })
     }
-
-    fun isCurrent(item: UploadItem): Boolean = synchronized(LOCK) { currentEpoch(item.taskId) == item.epoch }
 
     fun recordAttempt(item: UploadItem): UploadItem? = synchronized(LOCK) {
         if (currentEpoch(item.taskId) != item.epoch) {
@@ -81,7 +80,6 @@ class UploadStore(root: File) {
 
     fun cancelAll() = synchronized(LOCK) {
         tasks.listFiles()?.forEach { it.delete() }
-        results.listFiles()?.forEach { it.delete() }
     }
 
     private fun nextOrder(): Long {
@@ -109,7 +107,10 @@ class UploadStore(root: File) {
             throw IOException("cannot create ${folder.name}")
         }
         val temporary = File(folder, ".${target.name}.${UUID.randomUUID()}")
-        temporary.writeText(json.toString())
+        FileOutputStream(temporary).use { output ->
+            output.write(json.toString().toByteArray(Charsets.UTF_8))
+            output.fd.sync()
+        }
         if (!temporary.renameTo(target)) {
             temporary.delete()
             throw IOException("cannot write ${target.name}")

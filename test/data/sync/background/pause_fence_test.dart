@@ -45,6 +45,9 @@ final class _GatedUploader implements BackgroundUploader {
       held.remove(id);
     }
   }
+
+  @override
+  Future<void> cancelAll() => cancel(held.keys.toList());
 }
 
 List<int> _bytes(int length, int seed) =>

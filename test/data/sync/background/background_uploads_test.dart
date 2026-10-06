@@ -73,6 +73,9 @@ final class _FakeUploader implements BackgroundUploader {
     }
   }
 
+  @override
+  Future<void> cancelAll() => cancel(held.keys.toList());
+
   void finish(HandedTask task, HandedStatus status, {String? body}) {
     held.remove(task.taskId);
     _listener?.call(HandedResult(task, status, body: body));

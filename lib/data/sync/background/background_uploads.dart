@@ -240,6 +240,8 @@ abstract interface class BackgroundUploader {
   Future<List<HandedTask>> queuedTasks();
 
   Future<void> cancel(Iterable<String> taskIds);
+
+  Future<void> cancelAll();
 }
 
 final class ChannelBackgroundUploader implements BackgroundUploader {
@@ -257,7 +259,7 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
         await _takeResults();
       }
     });
-    await _channel.invokeMethod<void>(_start, <String, String>{
+    await _invoke<void>(_start, <String, String>{
       'title': mediaNotificationTitle,
       'body': mediaNotificationBody,
       'bodyWaitingForWiFi': mediaNotificationBodyWaitingForWiFi,
@@ -271,7 +273,7 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
     if (tasks.isEmpty) {
       return;
     }
-    await _channel.invokeMethod<bool>(_enqueue, <String, Object>{
+    await _invoke<bool>(_enqueue, <String, Object>{
       'tasks': <String>[
         for (final HandedTask task in tasks) jsonEncode(task.toJson()),
       ],
@@ -280,8 +282,7 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
 
   @override
   Future<List<HandedTask>> queuedTasks() async {
-    final List<String> encoded =
-        await _channel.invokeListMethod<String>(_queued) ?? const <String>[];
+    final List<String> encoded = await _invokeList(_queued);
     return <HandedTask>[for (final String task in encoded) ?_decodeTask(task)];
   }
 
@@ -291,16 +292,37 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
     if (ids.isEmpty) {
       return;
     }
-    await _channel.invokeMethod<void>(_cancel, <String, Object>{
-      'taskIds': ids,
-    });
+    await _invoke<void>(_cancel, <String, Object>{'taskIds': ids});
+  }
+
+  @override
+  Future<void> cancelAll() => _invoke<void>(_cancelAll);
+
+  Future<T?> _invoke<T>(String method, [Object? arguments]) async {
+    try {
+      return await _channel.invokeMethod<T>(method, arguments);
+    } on PlatformException catch (error) {
+      throw FileSystemException(
+        'Background uploads refused $method: ${error.message ?? error.code}',
+      );
+    }
+  }
+
+  Future<List<String>> _invokeList(String method) async {
+    try {
+      return await _channel.invokeListMethod<String>(method) ??
+          const <String>[];
+    } on PlatformException catch (error) {
+      throw FileSystemException(
+        'Background uploads refused $method: ${error.message ?? error.code}',
+      );
+    }
   }
 
   Future<void> _takeResults() async {
     final void Function(HandedResult result)? onResult = _onResult;
     while (true) {
-      final List<String> encoded =
-          await _channel.invokeListMethod<String>(_take) ?? const <String>[];
+      final List<String> encoded = await _invokeList(_take);
       if (encoded.isEmpty) {
         return;
       }
@@ -333,6 +355,7 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
   static const String _enqueue = 'enqueue';
   static const String _queued = 'queued';
   static const String _cancel = 'cancel';
+  static const String _cancelAll = 'cancelAll';
   static const String _take = 'takeResults';
   static const String _resultsReady = 'resultsReady';
 }
@@ -463,11 +486,7 @@ final class BackgroundUploads implements UploadSender {
 
   Future<void> cancelAll() async {
     _generation += 1;
-    final List<HandedTask> queued = await _uploader.queuedTasks();
-    await _uploader.cancel(<String>[
-      for (final HandedTask task in queued)
-        if (isPartTask(task) || isPushTask(task)) task.taskId,
-    ]);
+    await _uploader.cancelAll();
     try {
       if (await _pushRoot.exists()) {
         await _pushRoot.delete(recursive: true);

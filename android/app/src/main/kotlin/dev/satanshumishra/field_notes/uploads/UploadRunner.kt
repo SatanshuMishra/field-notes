@@ -11,23 +11,28 @@ import kotlin.concurrent.thread
 class UploadCoordinator(partsAtOnce: Int = PARTS_AT_ONCE) {
     private val lock = Any()
     private val claimed = mutableSetOf<String>()
-    private val active = mutableMapOf<Lane, Int>()
+    private val active = mutableMapOf<Lane, MutableSet<Long>>()
+    private var lastToken = 0L
     val partSlots = Semaphore(partsAtOnce, true)
 
     @Volatile
     var onResults: (() -> Unit)? = null
 
-    fun begin(lane: Lane) = synchronized(lock) { active[lane] = (active[lane] ?: 0) + 1 }
+    fun begin(lane: Lane): Long = synchronized(lock) {
+        lastToken += 1
+        active.getOrPut(lane) { mutableSetOf() }.add(lastToken)
+        lastToken
+    }
 
-    fun end(lane: Lane) = synchronized(lock) { active[lane] = maxOf(0, (active[lane] ?: 0) - 1) }
+    fun end(lane: Lane, token: Long) = synchronized(lock) { active[lane]?.remove(token) }
 
-    fun isActive(lane: Lane): Boolean = synchronized(lock) { (active[lane] ?: 0) > 0 }
+    fun isActive(lane: Lane): Boolean = synchronized(lock) { active[lane]?.isNotEmpty() == true }
 
-    fun endIfIdle(lane: Lane, hasWork: () -> Boolean): Boolean = synchronized(lock) {
-        if (hasWork()) {
+    fun endIfIdle(lane: Lane, token: Long, candidates: () -> List<UploadItem>): Boolean = synchronized(lock) {
+        if (candidates().any { it.taskId !in claimed }) {
             false
         } else {
-            active[lane] = maxOf(0, (active[lane] ?: 0) - 1)
+            active[lane]?.remove(token)
             true
         }
     }
@@ -37,8 +42,6 @@ class UploadCoordinator(partsAtOnce: Int = PARTS_AT_ONCE) {
         claimed.add(next.taskId)
         next
     }
-
-    fun isClaimed(taskId: String): Boolean = synchronized(lock) { taskId in claimed }
 
     fun release(taskId: String) = synchronized(lock) { claimed.remove(taskId) }
 
@@ -66,6 +69,9 @@ class UploadRunner(
 
     @Volatile
     private var storageFailed = false
+
+    @Volatile
+    private var token = NO_TOKEN
     private val skipped = mutableSetOf<String>()
     private val transientFailures = AtomicInteger(0)
     private val counted = mutableSetOf<String>()
@@ -74,12 +80,12 @@ class UploadRunner(
 
     fun stop() {
         stopped = true
+        coordinator.end(lane, token)
         transport.abortAll()
     }
 
     fun run(): Outcome {
-        coordinator.begin(lane)
-        var ended = false
+        token = coordinator.begin(lane)
         try {
             countEligibleParts()
             while (true) {
@@ -93,15 +99,12 @@ class UploadRunner(
                 if (transientFailures.get() > 0) {
                     return Outcome.RETRY
                 }
-                if (coordinator.endIfIdle(lane) { candidates(push = true).isNotEmpty() || candidates(push = false).isNotEmpty() }) {
-                    ended = true
+                if (coordinator.endIfIdle(lane, token) { candidates(push = true) + candidates(push = false) }) {
                     return Outcome.DONE
                 }
             }
         } finally {
-            if (!ended) {
-                coordinator.end(lane)
-            }
+            coordinator.end(lane, token)
         }
     }
 
@@ -114,7 +117,7 @@ class UploadRunner(
     }
 
     private fun drain(push: Boolean) {
-        while (!stopped) {
+        while (!stopped && transientFailures.get() == 0) {
             val item = coordinator.claimNext { candidates(push) } ?: return
             try {
                 if (push) {
@@ -229,5 +232,6 @@ class UploadRunner(
         val TRANSIENT_CODES = setOf(408, 425, 429)
         const val SERVER_ERROR = 500
         const val SLOT_WAIT_MILLIS = 500L
+        const val NO_TOKEN = -1L
     }
 }

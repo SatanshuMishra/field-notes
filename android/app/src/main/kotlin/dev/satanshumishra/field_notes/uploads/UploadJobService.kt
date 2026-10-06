@@ -2,15 +2,18 @@ package dev.satanshumishra.field_notes.uploads
 
 import android.app.job.JobParameters
 import android.app.job.JobService
+import android.net.Network
 import android.os.Build
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
 class UploadJobService : JobService() {
     private val runners = ConcurrentHashMap<Int, UploadRunner>()
+    private val networks = ConcurrentHashMap<Int, Network>()
 
     override fun onStartJob(params: JobParameters): Boolean {
         val lane = Lane.ofJob(params.jobId) ?: return false
+        params.network?.let { networks[params.jobId] = it }
         val notifications = UploadNotifications(applicationContext)
         val userInitiated = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && params.isUserInitiatedJob
         if (userInitiated) {
@@ -19,7 +22,7 @@ class UploadJobService : JobService() {
         val throttle = ProgressThrottle()
         val runner = UploadRunner(
             store = UploadStore.of(applicationContext),
-            transport = HttpTransport(params.network, applicationContext.dataDir),
+            transport = HttpTransport({ networks[params.jobId] ?: params.network }, applicationContext.dataDir),
             lane = lane,
             onProgress = { sent, total ->
                 if (userInitiated && throttle.due(sent, total)) {
@@ -36,6 +39,7 @@ class UploadJobService : JobService() {
         thread(name = "uploads-job-${lane.name.lowercase()}") {
             val outcome = runner.run()
             if (runners.remove(params.jobId, runner) && outcome != UploadRunner.Outcome.STOPPED) {
+                networks.remove(params.jobId)
                 jobFinished(params, outcome == UploadRunner.Outcome.RETRY)
             }
         }
@@ -44,6 +48,11 @@ class UploadJobService : JobService() {
 
     override fun onStopJob(params: JobParameters): Boolean {
         runners.remove(params.jobId)?.stop()
+        networks.remove(params.jobId)
         return true
+    }
+
+    override fun onNetworkChanged(params: JobParameters) {
+        params.network?.let { networks[params.jobId] = it }
     }
 }
