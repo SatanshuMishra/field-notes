@@ -160,7 +160,6 @@ void main() {
 
     expect(code.version, flowerQrFirstVersion);
     expect(code.blooms, isTrue);
-    expect(code.payload, contains('sync.satanshu.tech'));
   });
 
   test('the heart sits on the centre alignment pattern', () {

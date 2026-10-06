@@ -10,7 +10,9 @@ const double _eyeRadius = 2;
 const double _eyeInnerRadius = 1.2;
 const double _eyePupilRadius = 1;
 const double _petalOutline = 0.3;
-const double _heartRing = 1;
+const double _heartOuterRadius = 1.4;
+const double _heartInnerRadius = 1;
+const double _heartPupil = 0.5;
 
 class PairingQr extends StatefulWidget {
   const PairingQr({super.key, required this.payload, this.size = 260});
@@ -47,9 +49,11 @@ class _PairingQrState extends State<PairingQr> {
         ),
         child: Padding(
           padding: const EdgeInsets.all(_quietZone),
-          child: CustomPaint(
-            size: Size.square(widget.size - 2 * _quietZone),
-            painter: FlowerQrPainter(code: _code, colors: scannable),
+          child: RepaintBoundary(
+            child: CustomPaint(
+              size: Size.square(widget.size - 2 * _quietZone),
+              painter: FlowerQrPainter(code: _code, colors: scannable),
+            ),
           ),
         ),
       ),
@@ -121,14 +125,26 @@ class FlowerQrPainter extends CustomPainter {
         ..drawCircle(centre, flowerPetalRadius - _petalOutline / 2, outline);
     }
     final Paint heartInk = Paint()..color = colors.accentInkStrong;
+    final Rect heart = Rect.fromCircle(
+      center: code.heart,
+      radius: flowerHeartRadius,
+    );
     canvas
-      ..drawCircle(code.heart, flowerHeartRadius, heartInk)
-      ..drawCircle(
-        code.heart,
-        flowerHeartRadius - _heartRing,
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          heart,
+          const Radius.circular(_heartOuterRadius),
+        ),
+        heartInk,
+      )
+      ..drawRRect(
+        RRect.fromRectAndRadius(
+          heart.deflate(1),
+          const Radius.circular(_heartInnerRadius),
+        ),
         Paint()..color = colors.accentTint,
       )
-      ..drawCircle(code.heart, flowerHeartRadius - 2 * _heartRing, heartInk);
+      ..drawCircle(code.heart, _heartPupil, heartInk);
   }
 
   @override

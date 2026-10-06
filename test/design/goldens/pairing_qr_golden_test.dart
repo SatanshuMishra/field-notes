@@ -23,7 +23,7 @@ void main() {
     );
 
     await expectLater(
-      find.byType(RepaintBoundary),
+      find.byType(RepaintBoundary).first,
       matchesGoldenFile('images/pairing_qr_flower.png'),
     );
   });
