@@ -298,12 +298,17 @@ final class ChannelBackgroundUploader implements BackgroundUploader {
 
   Future<void> _takeResults() async {
     final void Function(HandedResult result)? onResult = _onResult;
-    final List<String> encoded =
-        await _channel.invokeListMethod<String>(_take) ?? const <String>[];
-    for (final String result in encoded) {
-      final HandedResult? decoded = _decodeResult(result);
-      if (decoded != null) {
-        onResult?.call(decoded);
+    while (true) {
+      final List<String> encoded =
+          await _channel.invokeListMethod<String>(_take) ?? const <String>[];
+      if (encoded.isEmpty) {
+        return;
+      }
+      for (final String result in encoded) {
+        final HandedResult? decoded = _decodeResult(result);
+        if (decoded != null) {
+          onResult?.call(decoded);
+        }
       }
     }
   }

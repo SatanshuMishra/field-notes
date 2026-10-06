@@ -18,7 +18,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : Worker(context,
         val throttle = ProgressThrottle()
         val current = UploadRunner(
             store = UploadStore.of(applicationContext),
-            transport = HttpTransport(null),
+            transport = HttpTransport(null, applicationContext.dataDir),
             lane = lane,
             onProgress = { sent, total ->
                 if (inForeground && throttle.due(sent, total)) {

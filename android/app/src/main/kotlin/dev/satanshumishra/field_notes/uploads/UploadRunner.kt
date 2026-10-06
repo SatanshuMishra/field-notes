@@ -63,6 +63,9 @@ class UploadRunner(
 
     @Volatile
     private var stopped = false
+
+    @Volatile
+    private var storageFailed = false
     private val skipped = mutableSetOf<String>()
     private val transientFailures = AtomicInteger(0)
     private val counted = mutableSetOf<String>()
@@ -81,6 +84,9 @@ class UploadRunner(
             countEligibleParts()
             while (true) {
                 runPass()
+                if (storageFailed) {
+                    return Outcome.RETRY
+                }
                 if (stopped) {
                     return Outcome.STOPPED
                 }
@@ -120,6 +126,11 @@ class UploadRunner(
                         coordinator.partSlots.release()
                     }
                 }
+            } catch (error: IOException) {
+                storageFailed = true
+                stopped = true
+            } catch (error: RuntimeException) {
+                failQuietly(item)
             } finally {
                 coordinator.release(item.taskId)
             }
@@ -196,9 +207,19 @@ class UploadRunner(
         transientFailures.incrementAndGet()
     }
 
+    private fun failQuietly(item: UploadItem) {
+        try {
+            finish(item, false, null)
+        } catch (error: IOException) {
+            storageFailed = true
+            stopped = true
+        }
+    }
+
     private fun finish(item: UploadItem, complete: Boolean, answer: TransportAnswer?) {
         val code = answer?.statusCode?.takeIf { it > 0 }
-        if (store.finish(UploadResult(item, complete, code, answer?.body))) {
+        val body = answer?.body?.takeIf { it.length <= HttpTransport.MAX_BODY_BYTES }
+        if (store.finish(UploadResult(item, complete, code, body))) {
             coordinator.announceResults()
         }
     }

@@ -251,4 +251,94 @@ class UploadRunnerTest {
     fun a_task_id_that_could_leave_the_folder_is_refused() {
         store.put(item("part.video.0").copy(taskId = "../escape"))
     }
+
+    @Test
+    fun only_web_addresses_and_upload_methods_are_accepted() {
+        val stored = item("part.video.0").storedJson()
+        val refused = listOf(
+            JSONObject(stored.toString()).put("url", "file:///data/data/app/secret"),
+            JSONObject(stored.toString()).put("method", "DELETE"),
+        ).count { json ->
+            try {
+                UploadItem.fromJson(json)
+                false
+            } catch (error: IllegalArgumentException) {
+                true
+            }
+        }
+
+        assertEquals(2, refused)
+    }
+
+    @Test
+    fun a_file_outside_the_app_is_never_sent() {
+        val outside = Files.createTempFile("outside", ".bin").toFile()
+        outside.writeBytes(ByteArray(16))
+        val transport = HttpTransport(null, File(root, "app"))
+
+        val answer = transport.send(item("part.video.0").copy(filePath = outside.path)) { }
+
+        assertEquals(HttpTransport.MISSING_FILE, answer.statusCode)
+    }
+
+    @Test
+    fun results_and_queued_tasks_never_carry_the_upload_pass() {
+        store.put(item("part.video.0"))
+
+        runner(FakeTransport()).run()
+
+        val task = results().getValue("part.video.0").getJSONObject("task")
+        assertFalse(task.has("headers"))
+        assertFalse(item("part.video.1").publicJson().has("headers"))
+    }
+
+    @Test
+    fun an_oversized_answer_is_kept_without_its_body() {
+        store.put(item("push.notes", push = true))
+        val huge = "x".repeat(HttpTransport.MAX_BODY_BYTES + 1)
+        val transport = FakeTransport(answer = { _, _ -> TransportAnswer(200, huge) })
+
+        runner(transport).run()
+
+        val result = results().getValue("push.notes")
+        assertEquals("complete", result.getString("status"))
+        assertTrue(result.isNull("body"))
+    }
+
+    @Test
+    fun an_unexpected_error_fails_only_that_task() {
+        store.put(item("part.video.0"))
+        store.put(item("part.video.1"))
+        val transport = FakeTransport(answer = { item, _ ->
+            if (item.taskId == "part.video.0") throw IllegalStateException("bad header") else TransportAnswer(200, "{}")
+        })
+
+        assertEquals(UploadRunner.Outcome.DONE, runner(transport).run())
+
+        val finished = results()
+        assertEquals("failed", finished.getValue("part.video.0").getString("status"))
+        assertEquals("complete", finished.getValue("part.video.1").getString("status"))
+    }
+
+    @Test
+    fun a_full_disk_stops_the_job_for_a_retry_without_losing_the_task() {
+        store.put(item("part.video.0"))
+        File(root, "store/results").writeText("not a folder")
+
+        val outcome = runner(FakeTransport()).run()
+
+        assertEquals(UploadRunner.Outcome.RETRY, outcome)
+        assertEquals(listOf("part.video.0"), store.pending().map { it.taskId })
+        assertEquals(0, store.pending().single().attempts)
+    }
+
+    @Test
+    fun cancelling_everything_also_clears_unread_results() {
+        store.put(item("part.video.0"))
+        runner(FakeTransport()).run()
+
+        store.cancelAll()
+
+        assertTrue(store.takeResults().isEmpty())
+    }
 }

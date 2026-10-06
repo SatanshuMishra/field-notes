@@ -17,16 +17,18 @@ interface UploadTransport {
     fun abortAll()
 }
 
-class HttpTransport(private val network: Network?) : UploadTransport {
+class HttpTransport(private val network: Network?, fileRoot: File) : UploadTransport {
     private val open = Collections.synchronizedSet(mutableSetOf<HttpURLConnection>())
+    private val root = fileRoot.canonicalPath + File.separator
 
     override fun send(item: UploadItem, onBytes: (Long) -> Unit): TransportAnswer {
-        val file = File(item.filePath)
-        if (!file.isFile) {
+        val file = File(item.filePath).canonicalFile
+        if (!file.path.startsWith(root) || !file.isFile) {
             return TransportAnswer(MISSING_FILE, "")
         }
         val url = URL(item.url)
-        val connection = (network?.openConnection(url) ?: url.openConnection()) as HttpURLConnection
+        val connection = (network?.openConnection(url) ?: url.openConnection()) as? HttpURLConnection
+            ?: return TransportAnswer(MISSING_FILE, "")
         open.add(connection)
         try {
             connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
@@ -72,12 +74,12 @@ class HttpTransport(private val network: Network?) : UploadTransport {
     private fun readCapped(stream: InputStream): String = stream.use { input ->
         val output = ByteArrayOutputStream()
         val buffer = ByteArray(CHUNK_BYTES)
-        while (output.size() < MAX_BODY_BYTES) {
+        while (output.size() < READ_LIMIT) {
             val read = input.read(buffer)
             if (read < 0) {
                 break
             }
-            output.write(buffer, 0, minOf(read, MAX_BODY_BYTES - output.size()))
+            output.write(buffer, 0, minOf(read, READ_LIMIT - output.size()))
         }
         output.toString(Charsets.UTF_8.name())
     }
@@ -87,8 +89,7 @@ class HttpTransport(private val network: Network?) : UploadTransport {
         private const val CONNECT_TIMEOUT_MILLIS = 30_000
         private const val READ_TIMEOUT_MILLIS = 120_000
         private const val CHUNK_BYTES = 64 * 1024
-        private const val MAX_BODY_BYTES = 8 * 1024 * 1024 + 1024
+        const val MAX_BODY_BYTES = 256 * 1024
+        private const val READ_LIMIT = MAX_BODY_BYTES + 1
     }
 }
-
-class TransportStopped : IOException("stopped")

@@ -8,6 +8,7 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import org.json.JSONException
 import org.json.JSONObject
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
 
@@ -30,7 +31,7 @@ class UploadChannel(private val context: Context) {
             when (call.method) {
                 "start" -> start(call)
                 "enqueue" -> enqueue(call)
-                "queued" -> store.pending().map { it.taskJson().toString() }
+                "queued" -> store.pending().map { it.publicJson().toString() }
                 "cancel" -> scheduler.cancel(call.argument<List<String>>("taskIds") ?: emptyList())
                 "cancelAll" -> scheduler.cancelAll()
                 "takeResults" -> store.takeResults().map { it.toString() }
@@ -53,6 +54,7 @@ class UploadChannel(private val context: Context) {
     }
 
     private fun start(call: MethodCall) {
+        LegacyUploads.clean(context)
         UploadCopy.save(
             context,
             UploadCopy(
@@ -67,8 +69,11 @@ class UploadChannel(private val context: Context) {
 
     private fun enqueue(call: MethodCall): Boolean {
         val tasks = call.argument<List<String>>("tasks") ?: emptyList()
+        val root = context.dataDir.canonicalPath + File.separator
         for (task in tasks) {
-            store.put(UploadItem.fromJson(JSONObject(task)))
+            val item = UploadItem.fromJson(JSONObject(task))
+            require(File(item.filePath).canonicalPath.startsWith(root)) { "file outside the app" }
+            store.put(item)
         }
         scheduler.schedule()
         return true

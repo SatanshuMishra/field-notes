@@ -19,12 +19,16 @@ class UploadJobService : JobService() {
         val throttle = ProgressThrottle()
         val runner = UploadRunner(
             store = UploadStore.of(applicationContext),
-            transport = HttpTransport(params.network),
+            transport = HttpTransport(params.network, applicationContext.dataDir),
             lane = lane,
             onProgress = { sent, total ->
                 if (userInitiated && throttle.due(sent, total)) {
-                    setNotification(params, lane.notificationId, notifications.build(lane, sent, total), JOB_END_NOTIFICATION_POLICY_REMOVE)
-                    updateTransferredNetworkBytes(params, 0, sent)
+                    try {
+                        setNotification(params, lane.notificationId, notifications.build(lane, sent, total), JOB_END_NOTIFICATION_POLICY_REMOVE)
+                        updateTransferredNetworkBytes(params, 0, sent)
+                    } catch (error: RuntimeException) {
+                        throttle.skip()
+                    }
                 }
             },
         )

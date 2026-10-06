@@ -68,6 +68,11 @@ class ProgressThrottle(private val intervalMillis: Long = 1_000L) {
         lastPercent = percent
         return true
     }
+
+    @Synchronized
+    fun skip() {
+        lastPercent = -1
+    }
 }
 
 data class UploadCopy(

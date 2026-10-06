@@ -56,9 +56,9 @@ class UploadStore(root: File) {
         true
     }
 
-    fun takeResults(): List<JSONObject> = synchronized(LOCK) {
+    fun takeResults(limit: Int = RESULTS_PER_TAKE): List<JSONObject> = synchronized(LOCK) {
         val files = results.listFiles { file -> file.name.endsWith(JSON) } ?: return emptyList()
-        files.sortedBy { it.lastModified() }.mapNotNull { file ->
+        files.sortedBy { it.lastModified() }.take(limit).mapNotNull { file ->
             val json = try {
                 JSONObject(file.readText())
             } catch (error: JSONException) {
@@ -81,6 +81,7 @@ class UploadStore(root: File) {
 
     fun cancelAll() = synchronized(LOCK) {
         tasks.listFiles()?.forEach { it.delete() }
+        results.listFiles()?.forEach { it.delete() }
     }
 
     private fun nextOrder(): Long {
@@ -118,6 +119,7 @@ class UploadStore(root: File) {
     companion object {
         private const val JSON = ".json"
         private const val ORDER_SPREAD = 1_000L
+        const val RESULTS_PER_TAKE = 100
         private val LOCK = Any()
         private var lastOrder = 0L
 

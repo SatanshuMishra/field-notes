@@ -3,8 +3,8 @@ package dev.satanshumishra.field_notes.uploads
 import org.json.JSONObject
 
 enum class Lane(val jobId: Int, val workName: String, val notificationId: Int) {
-    ANY(41_001, "field_notes_uploads_any", 41_001),
-    UNMETERED(41_002, "field_notes_uploads_unmetered", 41_002);
+    ANY(0x7F00_0001, "field_notes_uploads_any", 41_001),
+    UNMETERED(0x7F00_0002, "field_notes_uploads_unmetered", 41_002);
 
     companion object {
         fun ofJob(jobId: Int): Lane? = entries.firstOrNull { it.jobId == jobId }
@@ -42,6 +42,8 @@ data class UploadItem(
         .put(REQUIRES_WIFI, requiresWiFi)
         .put(META_DATA, metaData)
 
+    fun publicJson(): JSONObject = taskJson().apply { remove(HEADERS) }
+
     fun storedJson(): JSONObject = taskJson()
         .put(ATTEMPTS, attempts)
         .put(EPOCH, epoch)
@@ -63,6 +65,7 @@ data class UploadItem(
         private const val EPOCH = "epoch"
         private const val ORDER = "order"
         private val SAFE_ID = Regex("^[A-Za-z0-9._-]{1,200}$")
+        private val METHODS = setOf("PUT", "POST")
 
         fun isSafeId(taskId: String): Boolean = SAFE_ID.matches(taskId)
 
@@ -75,11 +78,15 @@ data class UploadItem(
             }
             val taskId = json.getString(TASK_ID)
             require(isSafeId(taskId)) { "unsafe task id" }
+            val url = json.getString(URL)
+            require(url.startsWith("https://") || url.startsWith("http://")) { "unsupported address" }
+            val method = json.getString(METHOD)
+            require(method in METHODS) { "unsupported method" }
             return UploadItem(
                 taskId = taskId,
                 group = json.getString(GROUP),
-                url = json.getString(URL),
-                method = json.getString(METHOD),
+                url = url,
+                method = method,
                 headers = headers,
                 filePath = json.getString(FILE),
                 mimeType = json.getString(MIME_TYPE),
@@ -100,7 +107,7 @@ data class UploadResult(
     val body: String?,
 ) {
     fun toJson(): JSONObject = JSONObject()
-        .put("task", item.taskJson())
+        .put("task", item.publicJson())
         .put("status", if (complete) "complete" else "failed")
         .put("statusCode", statusCode ?: JSONObject.NULL)
         .put("body", body ?: JSONObject.NULL)
