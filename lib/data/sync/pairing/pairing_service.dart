@@ -18,6 +18,7 @@ const String pairingRefusedMessage =
 const String pairingExpiredMessage = 'This code has expired. Make a new one.';
 const String relayAddressNeededMessage =
     'Type your server address with the 8 words.';
+const String pairingCancelledMessage = 'Joining was cancelled.';
 const Duration pairingPollInterval = Duration(seconds: 2);
 
 typedef PairingWait = Future<void> Function(Duration duration);
@@ -29,6 +30,12 @@ DateTime _utcNow() => DateTime.now().toUtc();
 class PairingRefused extends SyncSetupException {
   const PairingRefused() : super(pairingRefusedMessage);
 }
+
+class PairingCancelled extends SyncSetupException {
+  const PairingCancelled() : super(pairingCancelledMessage);
+}
+
+bool _neverCancelled() => false;
 
 final class PairingCandidate {
   const PairingCandidate({required this.deviceName, required this.join});
@@ -209,7 +216,11 @@ final class PairingService {
     );
   }
 
-  Future<void> join(String code, {Uri? relayUrl}) async {
+  Future<void> join(
+    String code, {
+    Uri? relayUrl,
+    bool Function() cancelled = _neverCancelled,
+  }) async {
     final PairingCode parsed;
     try {
       parsed = PairingCode.parse(code);
@@ -237,6 +248,7 @@ final class PairingService {
     );
     final RelayClient client = _clientFor(address, device);
     try {
+      _stopIf(cancelled);
       await client.joinPairing(
         parsed.mailboxId,
         parsed.mailboxToken,
@@ -248,6 +260,7 @@ final class PairingService {
       final PairingStatusResponse completed = await _awaitCompletion(
         client,
         parsed,
+        cancelled,
       );
       final JournalKeys journal = _openBundle(completed, parsed);
       await client.signIn();
@@ -260,6 +273,7 @@ final class PairingService {
       if (!certified) {
         throw const SyncSetupException(pairingRetryMessage);
       }
+      _stopIf(cancelled);
       await storeEnrolledDevice(
         database: _database,
         keyStore: _keyStore,
@@ -276,13 +290,21 @@ final class PairingService {
     }
   }
 
+  static void _stopIf(bool Function() cancelled) {
+    if (cancelled()) {
+      throw const PairingCancelled();
+    }
+  }
+
   Future<PairingStatusResponse> _awaitCompletion(
     RelayClient client,
     PairingCode code,
+    bool Function() cancelled,
   ) async {
     final DateTime deadline = _clock().add(pairingLifetime);
     while (_clock().isBefore(deadline)) {
       await _wait(_pollInterval);
+      _stopIf(cancelled);
       final PairingStatusResponse status = await client.mailboxStatus(
         code.mailboxId,
         code.mailboxToken,

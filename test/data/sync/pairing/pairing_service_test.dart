@@ -240,6 +240,31 @@ void main() {
     expect(relay.activeDevices((await mac.keyStore.readAccountId())!), 1);
   });
 
+  test('a join cancelled while waiting stores nothing after Add', () async {
+    final _Device mac = await enrolled('Mac');
+    final _Device phone = device('Phone');
+    final HostedPairing hosted = await mac.pairing().open();
+    addTearDown(hosted.close);
+    bool cancelled = false;
+
+    final Future<void> joining = phone.pairing().join(
+      hosted.code.qrPayload,
+      cancelled: () => cancelled,
+    );
+    final Future<void> refused = expectLater(
+      joining,
+      throwsA(isA<PairingCancelled>()),
+    );
+    final PairingCandidate candidate = await hosted.waitForJoin();
+    cancelled = true;
+    await hosted.confirm(candidate);
+
+    await refused;
+    expect(await phone.keyStore.readJournalKeys(), isNull);
+    expect(await phone.keyStore.readDeviceKeys(), isNull);
+    expect(await readSyncState(phone.database, SyncStateKeys.relayUrl), isNull);
+  });
+
   test('a join with a mismatched authenticator gets no keys', () async {
     final _Device mac = await enrolled('Studio Mac');
     final String accountId = (await mac.keyStore.readAccountId())!;

@@ -28,10 +28,14 @@ class _NoCameras extends CameraPlatform {
 
 class _FakeJoin {
   final List<String> codes = <String>[];
+  final List<bool Function()> cancelSignals = <bool Function()>[];
   Completer<void> answer = Completer<void>();
 
-  Future<void> call(String code, {Uri? relayUrl}) {
+  Future<void> call(String code, {Uri? relayUrl, bool Function()? cancelled}) {
     codes.add(code);
+    if (cancelled != null) {
+      cancelSignals.add(cancelled);
+    }
     return answer.future;
   }
 }
@@ -152,6 +156,42 @@ void main() {
     expect(join.codes, isEmpty);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
+  testWidgets('a second tap on Join starts nothing more', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+
+    _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.tap(find.byKey(joinServerConfirmKey), warnIfMissed: false);
+    await tester.pump();
+
+    expect(join.codes, <String>[_pairing]);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('Cancel while waiting tells the join to stop', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _FakeJoin join = _FakeJoin();
+    final _Opened opened = await _openFlow(tester, join);
+
+    _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    expect(join.cancelSignals.single(), isFalse);
+
+    await tester.tap(find.text(syncCancelLabel));
+    await tester.pumpAndSettle();
+
+    expect(opened.result, isFalse);
+    expect(join.cancelSignals.single(), isTrue);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
   testWidgets('a code whose address hides another server is refused', (
     WidgetTester tester,
   ) async {
@@ -262,6 +302,30 @@ void main() {
     await tester.pump();
     expect(join.codes, <String>[_pairing]);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets(
+    'a pasted code for another server than the typed one is refused',
+    (WidgetTester tester) async {
+      final _FakeJoin join = _FakeJoin();
+      await _openFlow(tester, join);
+
+      await tester.enterText(find.byType(EditableText).first, _pairing);
+      await tester.enterText(
+        find.byType(EditableText).last,
+        'sync.example.test',
+      );
+      await tester.tap(find.byKey(joinConfirmKey));
+      await tester.pump();
+
+      expect(
+        find.text('That code is for relay.example, not sync.example.test.'),
+        findsOneWidget,
+      );
+      expect(find.text(joinServerTitle(_relay)), findsNothing);
+      expect(join.codes, isEmpty);
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 
   testWidgets('a Mac joins by typing the 8 words and can cancel', (
     WidgetTester tester,

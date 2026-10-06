@@ -135,6 +135,11 @@ void main() {
       'https://sync.example.test@relay.attacker.test',
       'https://sync.example.test:pw@relay.attacker.test',
       'https://relay.attacker.test?sync.example.test',
+      'ftp://sync.example.test',
+      'wss://sync.example.test',
+      'https://sync.ex\u0430mple.test',
+      'https://${'a' * 64}.example.test',
+      'https://sync.example.test/${'a' * 120}',
     ]) {
       expect(
         () => PairingCode.parse('fieldnotes-pair:$address#$secret'),

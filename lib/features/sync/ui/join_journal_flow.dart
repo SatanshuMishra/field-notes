@@ -34,6 +34,9 @@ String joinServerMessage({required bool phone}) =>
     'Everything on this ${phone ? 'phone' : 'device'} will be added to the '
     'journal on this server. Only join a server you set up.';
 
+String joinAddressMismatchMessage(Uri code, Uri typed) =>
+    'That code is for ${code.host}, not ${typed.host}.';
+
 String shownServerAddress(Uri server) => Uri(
   scheme: server.scheme,
   host: server.host,
@@ -46,7 +49,11 @@ const double _labelGap = 6;
 const double _scanArea = 0.9;
 const Duration _scanPause = Duration(milliseconds: 100);
 
-typedef PairingJoin = Future<void> Function(String code, {Uri? relayUrl});
+typedef PairingJoin = Future<void> Function(
+  String code, {
+  Uri? relayUrl,
+  bool Function() cancelled,
+});
 
 bool get joinCanScan => defaultTargetPlatform == TargetPlatform.android;
 
@@ -96,6 +103,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
 
   @override
   void dispose() {
+    _closing = true;
     _words.dispose();
     _address.dispose();
     super.dispose();
@@ -150,21 +158,29 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   });
 
   void _joinTyped() {
-    final String? pasted = pairingCodeIn(<String?>[_words.text]);
-    if (pasted != null) {
-      _offer(pasted);
-      return;
-    }
     final String address = _address.text.trim();
     final Uri? relayUrl = address.isEmpty ? null : parseServerAddress(address);
     if (address.isNotEmpty && relayUrl == null) {
       setState(() => _error = unreachableMessage);
       return;
     }
-    _join(_words.text, relayUrl);
+    final String? pasted = pairingCodeIn(<String?>[_words.text]);
+    if (pasted == null) {
+      _join(_words.text, relayUrl);
+      return;
+    }
+    final Uri? server = _serverIn(pasted);
+    if (server != null && relayUrl != null && server.host != relayUrl.host) {
+      setState(() => _error = joinAddressMismatchMessage(server, relayUrl));
+      return;
+    }
+    _offer(pasted);
   }
 
   Future<void> _join(String code, Uri? relayUrl) async {
+    if (_stage == _JoinStage.waiting || _closing) {
+      return;
+    }
     setState(() {
       if (_stage != _JoinStage.confirm) {
         _returnTo = _stage;
@@ -175,7 +191,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
     final PairingJoin join =
         widget.join ?? ref.read(pairingServiceProvider).join;
     try {
-      await join(code, relayUrl: relayUrl);
+      await join(code, relayUrl: relayUrl, cancelled: () => _closing);
       if (mounted) {
         Navigator.of(context).pop(true);
       }
