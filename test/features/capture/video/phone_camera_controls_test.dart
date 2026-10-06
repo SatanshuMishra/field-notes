@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:math';
 
+import 'package:camera/camera.dart' show CameraValue, Optional;
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,6 +43,7 @@ class _FakeCameraPlatform extends CameraPlatform {
   final List<double> zooms = <double>[];
   final List<Point<double>?> focusPoints = <Point<double>?>[];
   final List<Point<double>?> exposurePoints = <Point<double>?>[];
+  final List<String> meteringOrder = <String>[];
   final StreamController<CameraInitializedEvent> _initialized =
       StreamController<CameraInitializedEvent>.broadcast();
   final StreamController<CameraErrorEvent> _errors =
@@ -122,11 +125,13 @@ class _FakeCameraPlatform extends CameraPlatform {
   @override
   Future<void> setFocusPoint(int cameraId, Point<double>? point) async {
     focusPoints.add(point);
+    meteringOrder.add('focus');
   }
 
   @override
   Future<void> setExposurePoint(int cameraId, Point<double>? point) async {
     exposurePoints.add(point);
+    meteringOrder.add('exposure');
   }
 
   @override
@@ -226,13 +231,10 @@ void main() {
     await _openSession(tester, recorder, const Size(400, 844));
     await recorder.start();
 
-    expect(platform.stabilised, isNotEmpty);
-    expect(
-      platform.stabilised.every(
-        (VideoStabilizationMode mode) => mode == VideoStabilizationMode.level1,
-      ),
-      isTrue,
-    );
+    expect(platform.stabilised, <VideoStabilizationMode>[
+      VideoStabilizationMode.level1,
+      VideoStabilizationMode.level1,
+    ]);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await recorder.dispose();
@@ -250,6 +252,8 @@ void main() {
     await recorder.focusAt(const Offset(0.25, 0.75));
 
     expect(platform.zooms, <double>[2.5]);
+    expect(recorder.zoom, 2.5);
+    expect(platform.meteringOrder, <String>['exposure', 'focus']);
     expect(platform.focusPoints, <Point<double>>[
       const Point<double>(0.25, 0.75),
     ]);
@@ -259,6 +263,46 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
     await recorder.dispose();
+  });
+
+  test('the preview shape follows the orientation the camera draws in', () {
+    final CameraValue portrait = const CameraValue.uninitialized(
+      CameraDescription(
+        name: '0',
+        lensDirection: CameraLensDirection.back,
+        sensorOrientation: 90,
+      ),
+    ).copyWith(isInitialized: true, previewSize: const Size(1920, 1080));
+
+    expect(previewAspectRatio(portrait), closeTo(1080 / 1920, 0.0001));
+    expect(
+      previewAspectRatio(
+        portrait.copyWith(deviceOrientation: DeviceOrientation.landscapeLeft),
+      ),
+      closeTo(1920 / 1080, 0.0001),
+    );
+    expect(
+      previewAspectRatio(
+        portrait.copyWith(
+          deviceOrientation: DeviceOrientation.landscapeRight,
+          isRecordingVideo: true,
+          recordingOrientation: const Optional<DeviceOrientation>.of(
+            DeviceOrientation.portraitUp,
+          ),
+        ),
+      ),
+      closeTo(1080 / 1920, 0.0001),
+    );
+    expect(
+      previewAspectRatio(
+        portrait.copyWith(
+          lockedCaptureOrientation: const Optional<DeviceOrientation>.of(
+            DeviceOrientation.landscapeLeft,
+          ),
+        ),
+      ),
+      closeTo(1920 / 1080, 0.0001),
+    );
   });
 
   test('controls do nothing before the camera is ready', () async {

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
@@ -50,7 +49,8 @@ class _CameraGestureLayerState extends State<CameraGestureLayer> {
   double _zoom = 1;
   double _startZoom = 1;
   Offset _travel = Offset.zero;
-  int _fingers = 0;
+  int _touching = 0;
+  bool _pinched = false;
   Offset? _focus;
   bool _showZoom = false;
   Timer? _focusTimer;
@@ -75,16 +75,29 @@ class _CameraGestureLayerState extends State<CameraGestureLayer> {
     _zoom = range.clamp(_zoom);
   }
 
+  void _pointerDown(PointerDownEvent _) {
+    if (_touching == 0) {
+      _pinched = false;
+    }
+    _touching += 1;
+    if (_touching > 1) {
+      _pinched = true;
+    }
+  }
+
+  void _pointerUp(PointerEvent _) {
+    _touching = _touching > 0 ? _touching - 1 : 0;
+  }
+
   void _scaleStart(ScaleStartDetails details) {
-    _fingers = details.pointerCount;
     _travel = Offset.zero;
+    _zoom = widget.controls.zoom;
     _startZoom = _zoom;
     _zoomTimer?.cancel();
     unawaited(_loadRange());
   }
 
   void _scaleUpdate(ScaleUpdateDetails details) {
-    _fingers = math.max(_fingers, details.pointerCount);
     if (details.pointerCount < 2) {
       _travel += details.focalPointDelta;
       return;
@@ -114,7 +127,7 @@ class _CameraGestureLayerState extends State<CameraGestureLayer> {
       });
     }
     final VoidCallback? onFlip = widget.onFlip;
-    if (_fingers != 1 || onFlip == null) {
+    if (_pinched || onFlip == null) {
       return;
     }
     final double rise = _travel.dy.abs();
@@ -158,51 +171,61 @@ class _CameraGestureLayerState extends State<CameraGestureLayer> {
   @override
   Widget build(BuildContext context) {
     final Offset? focus = _focus;
-    return GestureDetector(
-      key: cameraGestureLayerKey,
-      behavior: HitTestBehavior.opaque,
-      onTapUp: _tapUp,
-      onScaleStart: _scaleStart,
-      onScaleUpdate: _scaleUpdate,
-      onScaleEnd: _scaleEnd,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          if (focus != null)
-            Positioned(
-              left: focus.dx - _focusRingSize / 2,
-              top: focus.dy - _focusRingSize / 2,
-              width: _focusRingSize,
-              height: _focusRingSize,
-              child: const IgnorePointer(
-                child: DecoratedBox(
-                  key: cameraFocusRingKey,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.fromBorderSide(
-                      BorderSide(color: _focusRingInk, width: _focusRingStroke),
+    return Listener(
+      onPointerDown: _pointerDown,
+      onPointerUp: _pointerUp,
+      onPointerCancel: _pointerUp,
+      child: GestureDetector(
+        key: cameraGestureLayerKey,
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTapUp: _tapUp,
+        onScaleStart: _scaleStart,
+        onScaleUpdate: _scaleUpdate,
+        onScaleEnd: _scaleEnd,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            if (focus != null)
+              Positioned(
+                left: focus.dx - _focusRingSize / 2,
+                top: focus.dy - _focusRingSize / 2,
+                width: _focusRingSize,
+                height: _focusRingSize,
+                child: const IgnorePointer(
+                  child: DecoratedBox(
+                    key: cameraFocusRingKey,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.fromBorderSide(
+                        BorderSide(
+                          color: _focusRingInk,
+                          width: _focusRingStroke,
+                        ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-          Align(
-            alignment: _zoomPlace,
-            child: IgnorePointer(
-              child: AnimatedOpacity(
-                opacity: _showZoom ? 1 : 0,
-                duration: _fade,
-                child: _showZoom ? _zoomLevel() : const SizedBox.shrink(),
+            Align(
+              alignment: _zoomPlace,
+              child: IgnorePointer(
+                child: AnimatedOpacity(
+                  opacity: _showZoom ? 1 : 0,
+                  duration: _fade,
+                  child: _zoomLevel(),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
   Widget _zoomLevel() {
     return Semantics(
+      container: true,
       liveRegion: true,
       child: GlassSurface(
         tone: GlassTone.scene,

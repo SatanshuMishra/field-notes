@@ -98,12 +98,16 @@ class CameraVideoRecorder implements VideoRecorder, CameraControls {
   _CameraSession? _session;
   final Stopwatch _elapsed = Stopwatch();
   _OwnedCaptures _owned = const _OwnedCaptures();
+  double _zoom = 1;
 
   @override
   Duration get elapsed => _elapsed.elapsed;
 
   @override
   bool get supportsPause => true;
+
+  @override
+  double get zoom => _zoom;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
@@ -147,7 +151,8 @@ class CameraVideoRecorder implements VideoRecorder, CameraControls {
         await controller.getMinZoomLevel(),
         await controller.getMaxZoomLevel(),
       );
-    } on CameraException {
+    } on CameraException catch (error) {
+      debugPrint('Camera zoom range unavailable: $error');
       return null;
     }
   }
@@ -160,8 +165,9 @@ class CameraVideoRecorder implements VideoRecorder, CameraControls {
     }
     try {
       await controller.setZoomLevel(zoom);
-    } on CameraException {
-      return;
+      _zoom = zoom;
+    } on CameraException catch (error) {
+      debugPrint('Camera zoom failed: $error');
     }
   }
 
@@ -172,10 +178,10 @@ class CameraVideoRecorder implements VideoRecorder, CameraControls {
       return;
     }
     try {
-      await controller.setFocusPoint(point);
       await controller.setExposurePoint(point);
-    } on CameraException {
-      return;
+      await controller.setFocusPoint(point);
+    } on CameraException catch (error) {
+      debugPrint('Camera focus failed: $error');
     }
   }
 
@@ -191,10 +197,10 @@ class CameraVideoRecorder implements VideoRecorder, CameraControls {
         throw const VideoRecorderException(videoStartMessage);
       }
       await controller.startVideoRecording();
-      await _stabilise(controller);
       _elapsed
         ..reset()
         ..start();
+      await _stabilise(controller);
     } on VideoRecorderException {
       _elapsed.stop();
       rethrow;
@@ -361,6 +367,7 @@ class CameraVideoRecorder implements VideoRecorder, CameraControls {
         audioBitrate: videoRecordingAudioBitrate,
       );
       _controller = controller;
+      _zoom = 1;
       await controller.initialize();
       if (!identical(_session, session)) {
         throw const VideoRecorderException(videoStartMessage);
@@ -457,38 +464,18 @@ List<CameraDescription> frontAndBackCameras(List<CameraDescription> cameras) {
   return chosen.isEmpty ? cameras.take(1).toList() : chosen;
 }
 
-List<VideoCaptureDevice> cameraDeviceLabels(List<CameraDescription> cameras) {
-  final Map<CameraLensDirection, int> seen = <CameraLensDirection, int>{};
-  final Map<CameraLensDirection, int> totals = <CameraLensDirection, int>{};
-  for (final CameraDescription camera in cameras) {
-    totals[camera.lensDirection] = (totals[camera.lensDirection] ?? 0) + 1;
-  }
-  return <VideoCaptureDevice>[
-    for (final CameraDescription camera in cameras)
-      VideoCaptureDevice(
-        id: camera.name,
-        label: _cameraLabel(
-          camera.lensDirection,
-          index: seen[camera.lensDirection] =
-              (seen[camera.lensDirection] ?? 0) + 1,
-          total: totals[camera.lensDirection] ?? 1,
+List<VideoCaptureDevice> cameraDeviceLabels(List<CameraDescription> cameras) =>
+    <VideoCaptureDevice>[
+      for (final CameraDescription camera in cameras)
+        VideoCaptureDevice(
+          id: camera.name,
+          label: switch (camera.lensDirection) {
+            CameraLensDirection.front => 'Front camera',
+            CameraLensDirection.back => 'Back camera',
+            CameraLensDirection.external => 'External camera',
+          },
         ),
-      ),
-  ];
-}
-
-String _cameraLabel(
-  CameraLensDirection direction, {
-  required int index,
-  required int total,
-}) {
-  final String base = switch (direction) {
-    CameraLensDirection.front => 'Front camera',
-    CameraLensDirection.back => 'Back camera',
-    CameraLensDirection.external => 'External camera',
-  };
-  return total > 1 ? '$base $index' : base;
-}
+    ];
 
 class CameraMacosVideoRecorder implements VideoRecorder {
   CameraMacosVideoRecorder({Future<Directory> Function()? temporaryDirectory})

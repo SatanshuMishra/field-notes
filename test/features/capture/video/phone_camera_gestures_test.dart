@@ -24,6 +24,9 @@ const List<VideoCaptureDevice> _phoneCameras = <VideoCaptureDevice>[
 
 class _FakeControls implements CameraControls {
   final List<double> zooms = <double>[];
+
+  @override
+  double zoom = 1;
   final List<Offset> focuses = <Offset>[];
   Size? area;
 
@@ -37,7 +40,10 @@ class _FakeControls implements CameraControls {
   Future<ZoomRange?> zoomRange() async => const ZoomRange(1, 4);
 
   @override
-  Future<void> setZoom(double zoom) async => zooms.add(zoom);
+  Future<void> setZoom(double zoom) async {
+    zooms.add(zoom);
+    this.zoom = zoom;
+  }
 
   @override
   Future<void> focusAt(Offset point) async => focuses.add(point);
@@ -147,7 +153,17 @@ void main() {
     expect(controls.zooms.last, 4);
 
     await tester.pump(cameraZoomLevelTime + const Duration(milliseconds: 300));
-    expect(find.byKey(cameraZoomLevelKey), findsNothing);
+    expect(
+      tester
+          .widget<AnimatedOpacity>(
+            find.ancestor(
+              of: find.byKey(cameraZoomLevelKey),
+              matching: find.byType(AnimatedOpacity),
+            ),
+          )
+          .opacity,
+      0,
+    );
   });
 
   testWidgets('tapping the picture focuses there and shows a ring', (

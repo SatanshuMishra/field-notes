@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
@@ -14,14 +13,11 @@ const Color _pickerInk = Color(0xFFF3E6D1);
 const double _minTapTarget = 48;
 const double _edgeWidth = 1;
 const double _labelSize = 11;
-const double _sidebarChevronSize = 14;
-const double _bottomBarChevronSize = 12;
-const double _sidebarChevronGap = 4;
-const double _bottomBarChevronGap = 2;
+const double _chevronSize = 14;
+const double _chevronGap = 4;
 const double _disabledOpacity = 0.5;
 const BorderRadius _pickerRadius = BorderRadius.all(Radius.circular(16));
-const EdgeInsets _sidebarPadding = EdgeInsets.fromLTRB(12, 7, 8, 7);
-const EdgeInsets _bottomBarPadding = EdgeInsets.fromLTRB(10, 6, 6, 6);
+const EdgeInsets _padding = EdgeInsets.fromLTRB(12, 7, 8, 7);
 
 class CameraPicker extends StatefulWidget {
   const CameraPicker({
@@ -108,12 +104,7 @@ class _CameraPickerState extends State<CameraPicker> {
                                 ),
                               ),
                           ],
-                      child: _face(
-                        current.label,
-                        sidebar:
-                            resolveShellLayout(Theme.of(context).platform) ==
-                            ShellLayout.sidebar,
-                      ),
+                      child: _face(current.label),
                     ),
                   ),
                 ),
@@ -125,7 +116,7 @@ class _CameraPickerState extends State<CameraPicker> {
     );
   }
 
-  Widget _face(String deviceLabel, {required bool sidebar}) {
+  Widget _face(String deviceLabel) {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: _pickerFill,
@@ -135,7 +126,7 @@ class _CameraPickerState extends State<CameraPicker> {
         borderRadius: _pickerRadius,
       ),
       child: Padding(
-        padding: sidebar ? _sidebarPadding : _bottomBarPadding,
+        padding: _padding,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -153,12 +144,10 @@ class _CameraPickerState extends State<CameraPicker> {
                 ),
               ),
             ),
-            SizedBox(
-              width: sidebar ? _sidebarChevronGap : _bottomBarChevronGap,
-            ),
-            Icon(
+            const SizedBox(width: _chevronGap),
+            const Icon(
               Icons.expand_more,
-              size: sidebar ? _sidebarChevronSize : _bottomBarChevronSize,
+              size: _chevronSize,
               color: _pickerInk,
             ),
           ],

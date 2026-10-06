@@ -83,6 +83,8 @@ class ZoomRange {
 }
 
 abstract interface class CameraControls {
+  double get zoom;
+
   Rect? previewRectIn(Size area);
 
   Future<ZoomRange?> zoomRange();

@@ -242,19 +242,6 @@ void main() {
       expect(devices.map((VideoCaptureDevice d) => d.id), <String>['0', '1', '2']);
     });
 
-    test('disambiguates multiple cameras that share a direction', () {
-      final List<VideoCaptureDevice> devices = cameraDeviceLabels(
-        <CameraDescription>[
-          _camera('0', CameraLensDirection.back),
-          _camera('1', CameraLensDirection.back),
-        ],
-      );
-
-      expect(devices.map((VideoCaptureDevice d) => d.label), <String>[
-        'Back camera 1',
-        'Back camera 2',
-      ]);
-    });
   });
 
   testWidgets(

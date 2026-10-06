@@ -43,7 +43,7 @@ const List<VideoCaptureDevice> fakeVideoDevices = <VideoCaptureDevice>[
   VideoCaptureDevice(id: 'usb-id', label: 'USB Camera'),
 ];
 
-class FakeVideoRecorder implements VideoRecorder {
+class FakeVideoRecorder implements VideoRecorder, CameraControls {
   FakeVideoRecorder({
     this.recording,
     this.startError,
@@ -87,6 +87,24 @@ class FakeVideoRecorder implements VideoRecorder {
 
   @override
   Duration get elapsed => elapsedValue;
+
+  @override
+  double zoom = 1;
+
+  final List<Offset> focusPoints = <Offset>[];
+
+  @override
+  Rect? previewRectIn(Size area) =>
+      livePreview && _sessionLive ? Offset.zero & area : null;
+
+  @override
+  Future<ZoomRange?> zoomRange() async => const ZoomRange(1, 4);
+
+  @override
+  Future<void> setZoom(double zoom) async => this.zoom = zoom;
+
+  @override
+  Future<void> focusAt(Offset point) async => focusPoints.add(point);
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
