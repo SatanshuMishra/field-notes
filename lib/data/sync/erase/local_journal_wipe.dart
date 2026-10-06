@@ -52,5 +52,6 @@ final class LocalJournalWipe {
         continue;
       }
     }
+    await _cancelUploads?.call();
   }
 }

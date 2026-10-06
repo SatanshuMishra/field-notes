@@ -1,35 +1,35 @@
 import 'dart:async';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
+import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/sync/background/background_uploads.dart';
 import 'package:field_notes/data/sync/background/upload_result_applier.dart';
 import 'package:field_notes/data/sync/engine/sync_engine.dart';
 import 'package:field_notes/domain/models/models.dart' as domain;
-import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/sync_overrides.dart';
 import '../../../sync/support/relay_fixture.dart';
 
 final class _GatedUploader implements BackgroundUploader {
-  final Map<String, Task> held = <String, Task>{};
-  final List<UploadTask> enqueued = <UploadTask>[];
+  final Map<String, HandedTask> held = <String, HandedTask>{};
+  final List<HandedTask> enqueued = <HandedTask>[];
   Completer<void>? gate;
   bool waiting = false;
 
   @override
-  Future<void> start(void Function(TaskStatusUpdate update) onUpdate) async {}
+  Future<void> start(void Function(HandedResult result) onResult) async {}
 
   @override
-  Future<bool> enqueue(UploadTask task) async {
-    enqueued.add(task);
-    held[task.taskId] = task;
-    return true;
+  Future<void> enqueue(List<HandedTask> tasks) async {
+    for (final HandedTask task in tasks) {
+      enqueued.add(task);
+      held[task.taskId] = task;
+    }
   }
 
   @override
-  Future<List<Task>> queuedTasks() async {
+  Future<List<HandedTask>> queuedTasks() async {
     final Completer<void>? closed = gate;
     if (closed != null) {
       gate = null;
@@ -45,6 +45,9 @@ final class _GatedUploader implements BackgroundUploader {
       held.remove(id);
     }
   }
+
+  @override
+  Future<void> cancelAll() => cancel(held.keys.toList());
 }
 
 List<int> _bytes(int length, int seed) =>
@@ -74,10 +77,6 @@ void main() {
       uploader: uploader,
       keyStore: phone.keyStore,
       uploads: media.uploads,
-      isVisible: () {
-        final AppLifecycleState? state = phone.lifecycle.current;
-        return state == null || !isBackgrounded(state);
-      },
       pushRoot: pushWorkRoot(media.root),
       allowMobileData: () async => false,
     );
@@ -115,5 +114,44 @@ void main() {
 
     await engine.pause(false);
     await eventually(() async => uploader.held.length == 2);
+  });
+
+  test('a wipe queues nothing a hand-over had in flight', () async {
+    final SyncTestMedia media = await SyncTestMedia.create(phone);
+    final _GatedUploader uploader = _GatedUploader();
+    final BackgroundUploads uploads = BackgroundUploads(
+      database: phone.database,
+      uploader: uploader,
+      keyStore: phone.keyStore,
+      uploads: media.uploads,
+      pushRoot: pushWorkRoot(media.root),
+      allowMobileData: () async => false,
+    );
+    await media.store.putBytes(
+      bytes: _bytes(1500, 2),
+      mime: 'video/mp4',
+      kind: domain.MediaKind.video,
+    );
+    await media.uploads.prepareAll();
+    await phone.keyStore.writeUploadPass(
+      UploadPass(
+        token: 'pass',
+        expiresAt: DateTime.now().toUtc().add(const Duration(days: 7)),
+      ),
+    );
+    final Completer<void> gate = Completer<void>();
+    uploader.gate = gate;
+
+    final Future<void> handOver = uploads.handOverPrepared();
+    await eventually(() async => uploader.waiting);
+    final Future<void> wipe = uploads.cancelAll();
+    gate.complete();
+    await Future.wait(<Future<void>>[handOver, wipe]);
+
+    expect(uploader.enqueued, isEmpty);
+    expect(uploader.held, isEmpty);
+
+    await uploads.handOverPrepared();
+    expect(uploader.held, hasLength(2));
   });
 }

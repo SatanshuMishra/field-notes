@@ -534,6 +534,7 @@ class SyncEngine {
     }
     final RelayClient? client = _mayTalk ? await _readyClient() : null;
     if (client == null) {
+      await _applyCollectedResults(background);
       await background.uploads.handOverPrepared();
       return;
     }
@@ -671,12 +672,24 @@ class SyncEngine {
     }
   }
 
+  Future<void> _applyCollectedResults(BackgroundTransfer background) async {
+    if (!background.results.hasPending) {
+      return;
+    }
+    final int counter = _tag.counter;
+    await background.results.applyPending(
+      push: await _pushCycle(null),
+      isCurrent: () => _tag.counter == counter && !_disposed,
+    );
+  }
+
   Future<void> _handOverOnLeave() async {
     final BackgroundTransfer? background = _background;
     if (background == null || !_enabled || _paused || _disposed) {
       return;
     }
     try {
+      await _applyCollectedResults(background);
       final JoinMerge? join = _join;
       if (join == null || await join.stage() == JoinStage.done) {
         await background.uploads.handOverPushes(

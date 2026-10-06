@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:drift/drift.dart' hide isNull, isNotNull;
 import 'package:field_notes/data/crypto/journal_keys.dart';
 import 'package:field_notes/data/crypto/keyed_names.dart';
@@ -19,7 +18,6 @@ import 'package:field_notes/domain/models/models.dart' as domain;
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as p;
 import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 
 import '../../../support/sync_overrides.dart';
@@ -29,26 +27,27 @@ const String _push = '/v1/records/push';
 const String _pull = '/v1/records';
 
 final class _Uploader implements BackgroundUploader {
-  final List<UploadTask> enqueued = <UploadTask>[];
-  final Map<String, Task> held = <String, Task>{};
+  final List<HandedTask> enqueued = <HandedTask>[];
+  final Map<String, HandedTask> held = <String, HandedTask>{};
 
-  List<UploadTask> get pushes => <UploadTask>[
-    for (final UploadTask task in enqueued)
+  List<HandedTask> get pushes => <HandedTask>[
+    for (final HandedTask task in enqueued)
       if (task.group == recordPushGroup) task,
   ];
 
   @override
-  Future<void> start(void Function(TaskStatusUpdate update) onUpdate) async {}
+  Future<void> start(void Function(HandedResult result) onResult) async {}
 
   @override
-  Future<bool> enqueue(UploadTask task) async {
-    enqueued.add(task);
-    held[task.taskId] = task;
-    return true;
+  Future<void> enqueue(List<HandedTask> tasks) async {
+    for (final HandedTask task in tasks) {
+      enqueued.add(task);
+      held[task.taskId] = task;
+    }
   }
 
   @override
-  Future<List<Task>> queuedTasks() async => held.values.toList();
+  Future<List<HandedTask>> queuedTasks() async => held.values.toList();
 
   @override
   Future<void> cancel(Iterable<String> taskIds) async {
@@ -56,6 +55,9 @@ final class _Uploader implements BackgroundUploader {
       held.remove(id);
     }
   }
+
+  @override
+  Future<void> cancelAll() => cancel(held.keys.toList());
 }
 
 final class _ZoneTimer implements Timer {
@@ -170,8 +172,7 @@ bool _pushHolds(http.BaseRequest request, String recordKey) =>
     request.url.path == _push &&
     request.body.contains(recordKey);
 
-File _taskFile(UploadTask task) =>
-    File(p.join(p.separator, task.directory, task.filename));
+File _taskFile(HandedTask task) => File(task.filePath);
 
 void _forgeRecord(RelayFixture relay, String accountId, String recordKey) {
   final int seq =
@@ -468,10 +469,6 @@ void main() {
       uploader: uploader,
       keyStore: phone.keyStore,
       uploads: media.uploads,
-      isVisible: () {
-        final AppLifecycleState? state = phone.lifecycle.current;
-        return state == null || !isBackgrounded(state);
-      },
       pushRoot: pushWorkRoot(media.root),
       allowMobileData: () async => false,
     );
@@ -515,7 +512,7 @@ void main() {
     await eventually(() async => uploader.pushes.isNotEmpty);
 
     final List<PushRequest> handed = <PushRequest>[
-      for (final UploadTask task in uploader.pushes)
+      for (final HandedTask task in uploader.pushes)
         PushRequest.fromJson(
           decodeJsonObject(await _taskFile(task).readAsString()),
         ),

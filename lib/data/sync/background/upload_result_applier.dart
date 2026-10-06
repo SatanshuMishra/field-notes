@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:background_downloader/background_downloader.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/sync/background/background_uploads.dart';
 import 'package:field_notes/data/sync/engine/pull_cycle.dart';
@@ -23,7 +22,7 @@ final class UploadResultApplier {
   final BackgroundUploader _uploader;
   final UploadQueue _uploads;
   final BackgroundUploads _background;
-  final List<TaskStatusUpdate> _finished = <TaskStatusUpdate>[];
+  final List<HandedResult> _finished = <HandedResult>[];
   final List<File> _resend = <File>[];
   final StreamController<void> _arrivals = StreamController<void>.broadcast();
   Future<void>? _started;
@@ -40,12 +39,10 @@ final class UploadResultApplier {
     FenceCheck isCurrent = alwaysCurrent,
   }) async {
     await start();
-    final List<TaskStatusUpdate> finished = List<TaskStatusUpdate>.of(
-      _finished,
-    );
+    final List<HandedResult> finished = List<HandedResult>.of(_finished);
     _finished.clear();
     final Set<String> failedBlobs = <String>{};
-    for (final TaskStatusUpdate update in finished) {
+    for (final HandedResult update in finished) {
       if (!isCurrent()) {
         return;
       }
@@ -67,10 +64,7 @@ final class UploadResultApplier {
     await _handOverAgain(failedBlobs, client, isCurrent);
   }
 
-  void _collect(TaskStatusUpdate update) {
-    if (!update.status.isFinalState) {
-      return;
-    }
+  void _collect(HandedResult update) {
     _finished.add(update);
     if (!_arrivals.isClosed) {
       _arrivals.add(null);
@@ -78,7 +72,7 @@ final class UploadResultApplier {
   }
 
   Future<void> _applyPush(
-    TaskStatusUpdate update,
+    HandedResult update,
     PushCycle push,
     FenceCheck isCurrent,
   ) async {
@@ -91,12 +85,12 @@ final class UploadResultApplier {
     if (request == null) {
       return;
     }
-    if (update.status != TaskStatus.complete || !await _admits(info.tag)) {
+    if (update.status != HandedStatus.complete || !await _admits(info.tag)) {
       await _delete(file);
       return;
     }
     final PushResponse? response = _decode(
-      update.responseBody,
+      update.body,
       PushResponse.fromJson,
     );
     if (response == null) {
@@ -110,7 +104,7 @@ final class UploadResultApplier {
   }
 
   Future<String?> _applyPart(
-    TaskStatusUpdate update,
+    HandedResult update,
     FenceCheck isCurrent,
   ) async {
     final PartTaskInfo? info = PartTaskInfo.of(update.task);
@@ -121,11 +115,11 @@ final class UploadResultApplier {
     if (upload == null || !await _admits(info.tag)) {
       return null;
     }
-    if (update.status != TaskStatus.complete) {
+    if (update.status != HandedStatus.complete) {
       return info.blobId;
     }
     final UploadStatusResponse? answer = _decode(
-      update.responseBody,
+      update.body,
       UploadStatusResponse.fromJson,
     );
     if (answer != null && isCurrent()) {
