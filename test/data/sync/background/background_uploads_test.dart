@@ -111,10 +111,10 @@ final class _Background {
   BackgroundTransfer get transfer =>
       BackgroundTransfer(uploads: uploads, results: results);
 
-  SyncEngine engine({bool leaveWhenInactive = false}) => device.engine(
+  SyncEngine engine({LeaveRule leaveRule = LeaveRule.hidden}) => device.engine(
     media: media.source(),
     background: () async => transfer,
-    leaveWhenInactive: leaveWhenInactive,
+    leaveRule: leaveRule,
   );
 
   PushCycle pushCycle() => PushCycle(
@@ -261,7 +261,7 @@ void main() {
     'an app left in the app switcher hands every pending push to the uploader',
     () async {
       final _Background phone = await enrolled('Phone');
-      final SyncEngine engine = phone.engine(leaveWhenInactive: true);
+      final SyncEngine engine = phone.engine(leaveRule: LeaveRule.inactive);
       await engine.start();
       await engine.syncNow();
       phone.device.network.kind = NetworkKind.offline;
@@ -290,7 +290,7 @@ void main() {
 
   test('an app back in focus within a second hands nothing over', () async {
     final _Background phone = await enrolled('Phone');
-    final SyncEngine engine = phone.engine(leaveWhenInactive: true);
+    final SyncEngine engine = phone.engine(leaveRule: LeaveRule.inactive);
     await engine.start();
     await engine.syncNow();
     phone.device.network.kind = NetworkKind.offline;

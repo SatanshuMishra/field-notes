@@ -32,7 +32,11 @@ import 'package:field_notes/data/sync/merge/state_applier.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:flutter/widgets.dart'
-    show AppLifecycleListener, AppLifecycleState, WidgetsBinding;
+    show
+        AppLifecycleListener,
+        AppLifecycleState,
+        TargetPlatform,
+        WidgetsBinding;
 import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 
 const Duration localWriteDelay = Duration(seconds: 1);
@@ -110,10 +114,18 @@ Duration backoffAfter(int failures) {
   return Duration(milliseconds: min(millis, maxBackoff.inMilliseconds));
 }
 
-bool isBackgrounded(AppLifecycleState state) => switch (state) {
-  AppLifecycleState.hidden ||
-  AppLifecycleState.paused ||
+enum LeaveRule { inactive, hidden, quit }
+
+LeaveRule leaveRuleFor(TargetPlatform platform) => switch (platform) {
+  TargetPlatform.android => LeaveRule.inactive,
+  TargetPlatform.macOS => LeaveRule.quit,
+  _ => LeaveRule.hidden,
+};
+
+bool leavesOn(LeaveRule rule, AppLifecycleState state) => switch (state) {
   AppLifecycleState.detached => true,
+  AppLifecycleState.hidden ||
+  AppLifecycleState.paused => rule != LeaveRule.quit,
   AppLifecycleState.resumed || AppLifecycleState.inactive => false,
 };
 
@@ -179,7 +191,7 @@ class SyncEngine {
     this._wipe,
     this._backgroundSource,
     this.pullPageSize,
-    this.leaveWhenInactive = false,
+    this.leaveRule = LeaveRule.hidden,
   }) : _db = database;
 
   final AppDatabase _db;
@@ -196,7 +208,7 @@ class SyncEngine {
   final BackgroundTransferSource? _backgroundSource;
   BackgroundTransfer? _background;
   final int? pullPageSize;
-  final bool leaveWhenInactive;
+  final LeaveRule leaveRule;
   Future<SyncMedia?>? _loadedMedia;
   Future<void>? _preparing;
 
@@ -288,7 +300,7 @@ class SyncEngine {
     _tag = await readRelayTag(_db);
     _background = await _loadBackground();
     final AppLifecycleState? lifecycle = _lifecycle.current;
-    _visible = lifecycle == null || !isBackgrounded(lifecycle);
+    _visible = lifecycle == null || !leavesOn(leaveRule, lifecycle);
     _networkKind = await _network.current();
     _paused =
         await readSyncState(_db, EngineStateKeys.paused) ==
@@ -649,7 +661,7 @@ class SyncEngine {
     _inactiveTimer?.cancel();
     _inactiveTimer = null;
     if (state == AppLifecycleState.inactive) {
-      if (leaveWhenInactive && _visible) {
+      if (leaveRule == LeaveRule.inactive && _visible) {
         _inactiveTimer = _clock.timer(inactiveLeaveDelay, () {
           _inactiveTimer = null;
           _setVisible(false);
@@ -657,7 +669,7 @@ class SyncEngine {
       }
       return;
     }
-    _setVisible(!isBackgrounded(state));
+    _setVisible(!leavesOn(leaveRule, state));
   }
 
   void _setVisible(bool visible) {
