@@ -132,8 +132,7 @@ void main() {
         : <String, String>{
             'Start syncing':
                 'First device. Needs your server address and an invite code.',
-            'Join my journal':
-                'You already sync on another device. Scan or type its code.',
+            'Join my journal': 'You already sync on another device. Type the 8 words it shows.',
             'Restore with recovery phrase':
                 'You lost every device. Use your 12 words.',
           };

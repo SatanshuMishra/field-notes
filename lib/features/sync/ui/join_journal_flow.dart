@@ -27,6 +27,9 @@ const Key typeWordsInsteadKey = ValueKey<String>('join-type-words');
 
 const double _cameraHeight = 240;
 const double _scanArea = 0.9;
+const Duration _scanPause = Duration(milliseconds: 100);
+
+typedef PairingJoin = Future<void> Function(String code, {Uri? relayUrl});
 
 bool get joinCanScan => defaultTargetPlatform == TargetPlatform.android;
 
@@ -55,7 +58,9 @@ Future<void> joinJournal(BuildContext context, WidgetRef ref) async {
 enum _JoinStage { scan, type, waiting }
 
 class JoinJournalFlow extends ConsumerStatefulWidget {
-  const JoinJournalFlow({super.key});
+  const JoinJournalFlow({super.key, this.join});
+
+  final PairingJoin? join;
 
   @override
   ConsumerState<JoinJournalFlow> createState() => _JoinJournalFlowState();
@@ -67,6 +72,8 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   late _JoinStage _stage = joinCanScan ? _JoinStage.scan : _JoinStage.type;
   late _JoinStage _returnTo = _stage;
   String? _error;
+  String? _refusedCode;
+  bool _closing = false;
 
   @override
   void dispose() {
@@ -76,14 +83,20 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   }
 
   void _scanned(Code code) {
-    if (_stage != _JoinStage.scan) {
+    if (!mounted || _closing || _stage != _JoinStage.scan) {
       return;
     }
     final String? value = pairingCodeIn(<String?>[code.text]);
-    if (value != null) {
+    if (value != null && value != _refusedCode) {
       _join(value, null);
     }
   }
+
+  void _showStage(_JoinStage stage) => setState(() {
+    _stage = stage;
+    _error = null;
+    _refusedCode = null;
+  });
 
   void _joinTyped() {
     final String address = _address.text.trim();
@@ -101,8 +114,10 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
       _stage = _JoinStage.waiting;
       _error = null;
     });
+    final PairingJoin join =
+        widget.join ?? ref.read(pairingServiceProvider).join;
     try {
-      await ref.read(pairingServiceProvider).join(code, relayUrl: relayUrl);
+      await join(code, relayUrl: relayUrl);
       if (mounted) {
         Navigator.of(context).pop(true);
       }
@@ -111,12 +126,16 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
         setState(() {
           _stage = _returnTo;
           _error = error.message;
+          _refusedCode = _returnTo == _JoinStage.scan ? code : null;
         });
       }
     }
   }
 
-  void _cancel() => Navigator.of(context).pop(false);
+  void _cancel() {
+    _closing = true;
+    Navigator.of(context).pop(false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,8 +165,8 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
                   onScan: _scanned,
                   codeFormat: Format.qrCode,
                   tryHarder: true,
-                  tryInverted: true,
                   cropPercent: _scanArea,
+                  scanDelay: _scanPause,
                   showScannerOverlay: false,
                   showFlashlight: false,
                   showToggleCamera: false,
@@ -167,10 +186,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
           key: typeWordsInsteadKey,
           label: typeWordsInsteadLabel,
           primary: true,
-          onPressed: () => setState(() {
-            _stage = _JoinStage.type;
-            _error = null;
-          }),
+          onPressed: () => _showStage(_JoinStage.type),
         ),
       ],
     );
@@ -194,10 +210,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
         if (joinCanScan)
           SyncFlowAction(
             label: joinBackLabel,
-            onPressed: () => setState(() {
-              _stage = _JoinStage.scan;
-              _error = null;
-            }),
+            onPressed: () => _showStage(_JoinStage.scan),
           )
         else
           SyncFlowAction(label: syncCancelLabel, onPressed: _cancel),
