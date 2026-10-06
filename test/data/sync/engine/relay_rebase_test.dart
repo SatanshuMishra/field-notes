@@ -272,6 +272,37 @@ void main() {
     },
   );
 
+  test('a rebase that fails waits before it is tried again', () async {
+    final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
+    await _note(mac, 'before the restore');
+    await _settled(mac);
+    await restart(mark: true);
+    int sessions = 0;
+    mac.http.intercept = (http.BaseRequest request) async {
+      if (request.url.path == SyncRoutes.session.pattern) {
+        sessions += 1;
+        if (sessions > 1) {
+          return jsonAnswer(
+            HttpStatus.internalServerError,
+            const ErrorResponse(
+              code: SyncErrorCode.badRequest,
+              message: 'The relay is restarting',
+            ).toJson(),
+          );
+        }
+      }
+      return null;
+    };
+    final SyncEngine engine = mac.engine();
+    await engine.start();
+    await engine.syncNow();
+
+    await Future<void>.delayed(const Duration(seconds: 2));
+
+    expect(sessions, lessThan(5));
+    expect(engine.consecutiveFailures, greaterThan(0));
+  });
+
   test('results from before a rebase are ignored', () async {
     final SyncTestDevice mac = await enrolDevice(relay, device('Mac'));
     await _note(mac, 'already on the relay');

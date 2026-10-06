@@ -1,3 +1,4 @@
+import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
@@ -15,6 +16,8 @@ import 'start_sync_flow.dart';
 
 const String deviceRemoveLabel = 'Remove';
 const String devicesUnavailableMessage = "Can't reach your server right now.";
+const String devicesLockedMessage =
+    'Your devices show here once Field Notes can open its keys.';
 const String removeDeviceMessage =
     'It stops syncing at once. What it already holds stays on it.';
 const String removeDeviceFailedMessage =
@@ -97,6 +100,8 @@ class _DeviceListState extends ConsumerState<DeviceList> {
       ref.invalidate(journalDevicesProvider);
     } on RelayException catch (error) {
       widget.onFeedback(setupMessageFor(error));
+    } on KeyAccessException {
+      widget.onFeedback(keysLockedFix);
     } on LastDeviceException {
       widget.onFeedback(removeDeviceFailedMessage);
     } on ArgumentError {
@@ -121,8 +126,12 @@ class _DeviceListState extends ConsumerState<DeviceList> {
         alignment: Alignment.centerLeft,
         child: CrossHatchPlaceholder(width: 24, height: 24),
       ),
-      error: (Object error, StackTrace stackTrace) =>
-          Text(devicesUnavailableMessage, style: syncFlowHintStyle(context)),
+      error: (Object error, StackTrace stackTrace) => Text(
+        error is KeyAccessException
+            ? devicesLockedMessage
+            : devicesUnavailableMessage,
+        style: syncFlowHintStyle(context),
+      ),
       data: (List<JournalDevice> devices) {
         final DateTime now = (widget.now ?? DateTime.now)().toUtc();
         final bool last = devices.length == 1;

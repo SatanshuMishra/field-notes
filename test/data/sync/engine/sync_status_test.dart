@@ -104,10 +104,12 @@ void main() {
       <String>[
         "Needs attention · can't reach your server",
         "Needs attention · can't reach your new server",
+        "Needs attention · can't open your sync keys",
         "Needs attention · this device's clock",
         'Needs attention · update Field Notes',
         'Needs attention · this device was removed',
         'Needs attention · your server is full',
+        'Needs attention · sync hit a problem',
       ],
     );
     expect(

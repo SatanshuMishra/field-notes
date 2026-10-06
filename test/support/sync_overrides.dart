@@ -90,6 +90,8 @@ List<Override> syncOnOverrides({
   required SyncStatus status,
   String address = 'https://sync.example.com',
   List<JournalDevice> devices = const <JournalDevice>[],
+  Object? devicesError,
+  Object? deviceServiceError,
   BatterySettings? battery,
   Stream<FirstPullProgress?>? progress,
 }) => <Override>[
@@ -107,8 +109,13 @@ List<Override> syncOnOverrides({
   enrolmentServiceProvider.overrideWith(_noSyncSetup),
   restoreServiceProvider.overrideWith(_noSyncSetup),
   pairingServiceProvider.overrideWith(_noSyncSetup),
-  deviceServiceProvider.overrideWith((Ref ref) async => null),
-  journalDevicesProvider.overrideWith((Ref ref) async => devices),
+  deviceServiceProvider.overrideWith(
+    (Ref ref) async =>
+        deviceServiceError == null ? null : throw deviceServiceError,
+  ),
+  journalDevicesProvider.overrideWith(
+    (Ref ref) async => devicesError == null ? devices : throw devicesError,
+  ),
   batterySettingsProvider.overrideWithValue(battery ?? FakeBatterySettings()),
 ];
 
@@ -220,10 +227,24 @@ http.StreamedResponse jsonAnswer(
   headers: <String, String>{'content-type': 'application/json', ...headers},
 );
 
+final class NoJitter implements Random {
+  @override
+  bool nextBool() => false;
+
+  @override
+  double nextDouble() => 0;
+
+  @override
+  int nextInt(int max) => 0;
+}
+
 final class SyncTestDevice {
-  SyncTestDevice(this.name, {Duration ahead = Duration.zero})
+  SyncTestDevice(String name, {Duration ahead = Duration.zero})
+    : this._withValues(name, MemorySecureValues(), ahead);
+
+  SyncTestDevice._withValues(this.name, this.secureValues, Duration ahead)
     : database = AppDatabase(NativeDatabase.memory()),
-      keyStore = KeyStore(MemorySecureValues()),
+      keyStore = KeyStore(secureValues),
       wallOffset = ahead {
     recorder = ChangeRecorder(database, wallClock: wallMillis);
     journal = DriftJournalRepository(
@@ -237,6 +258,7 @@ final class SyncTestDevice {
 
   final String name;
   final AppDatabase database;
+  final MemorySecureValues secureValues;
   final KeyStore keyStore;
   final ManualSyncClock clock = ManualSyncClock();
   final FakeNetworkMonitor network = FakeNetworkMonitor();
@@ -308,6 +330,7 @@ final class SyncTestDevice {
     JournalWiper? wipe,
     BackgroundTransferSource? background,
     LeaveRule leaveRule = LeaveRule.hidden,
+    Random? random,
   }) {
     final SyncEngine created = SyncEngine(
       database: database,
@@ -324,6 +347,7 @@ final class SyncTestDevice {
       backgroundSource: background,
       pullPageSize: pullPageSize,
       leaveRule: leaveRule,
+      random: random ?? NoJitter(),
     );
     _engines.add(created);
     return created;

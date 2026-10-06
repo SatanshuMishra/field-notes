@@ -31,6 +31,7 @@ import 'package:field_notes/data/sync/media/upload_queue.dart';
 import 'package:field_notes/data/sync/merge/state_applier.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/widgets.dart'
     show
         AppLifecycleListener,
@@ -40,10 +41,12 @@ import 'package:flutter/widgets.dart'
 import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 
 const Duration localWriteDelay = Duration(seconds: 1);
+const Duration localWriteMaxDelay = Duration(seconds: 10);
 const Duration inactiveLeaveDelay = Duration(seconds: 1);
 const Duration offlinePollInterval = Duration(minutes: 5);
 const Duration firstBackoff = Duration(seconds: 2);
-const Duration maxBackoff = Duration(minutes: 5);
+const Duration maxBackoff = Duration(seconds: 64);
+const Duration maxBackoffJitter = Duration(seconds: 1);
 const int unreachableAfterFailures = 3;
 
 abstract final class EngineStateKeys {
@@ -111,6 +114,16 @@ Duration backoffAfter(int failures) {
   }
   final int shift = min(failures - 1, 20);
   final int millis = firstBackoff.inMilliseconds * (1 << shift);
+  return Duration(milliseconds: min(millis, maxBackoff.inMilliseconds));
+}
+
+Duration jitteredBackoff(int failures, Random random) {
+  if (failures <= 0) {
+    return Duration.zero;
+  }
+  final int millis =
+      backoffAfter(failures).inMilliseconds +
+      random.nextInt(maxBackoffJitter.inMilliseconds + 1);
   return Duration(milliseconds: min(millis, maxBackoff.inMilliseconds));
 }
 
@@ -192,7 +205,9 @@ class SyncEngine {
     this._backgroundSource,
     this.pullPageSize,
     this.leaveRule = LeaveRule.hidden,
-  }) : _db = database;
+    Random? random,
+  }) : _db = database,
+       _random = random ?? Random();
 
   final AppDatabase _db;
   final KeyStore _keyStore;
@@ -209,6 +224,7 @@ class SyncEngine {
   BackgroundTransfer? _background;
   final int? pullPageSize;
   final LeaveRule leaveRule;
+  final Random _random;
   Future<SyncMedia?>? _loadedMedia;
   Future<void>? _preparing;
 
@@ -229,6 +245,9 @@ class SyncEngine {
   NetworkKind _networkKind = NetworkKind.unmetered;
   AttentionReason? _stopReason;
   bool _storageFull = false;
+  bool _keysLocked = false;
+  bool _troubled = false;
+  DateTime? _writesWaitingSince;
   StaleRecords _stale = const StaleRecords();
   int _failures = 0;
   int _liveFailures = 0;
@@ -267,6 +286,8 @@ class SyncEngine {
 
   bool get isRebasing => _rebasing;
 
+  bool get keysLocked => _keysLocked;
+
   FirstPullProgress? get firstPullProgress => _currentProgress;
 
   Stream<FirstPullProgress?> get progress => _progress.stream;
@@ -290,6 +311,7 @@ class SyncEngine {
       _visible &&
       _networkKind != NetworkKind.offline &&
       _stopReason == null &&
+      !_keysLocked &&
       !_blocked;
 
   Future<void> start() async {
@@ -358,6 +380,7 @@ class SyncEngine {
   }
 
   Future<void> syncNow() async {
+    _unlockKeys();
     if (!_mayTalk) {
       return;
     }
@@ -408,13 +431,31 @@ class SyncEngine {
     }
   }
 
+  Stream<bool> watchKeysLocked() =>
+      Stream<bool>.multi((MultiStreamController<bool> controller) {
+        controller.add(_keysLocked);
+        final StreamSubscription<void> changes = _changes.stream.listen(
+          (void _) => controller.add(_keysLocked),
+          onDone: controller.close,
+        );
+        controller.onCancel = changes.cancel;
+      });
+
+  void keysRefused() => _keyAccessFailed();
+
   Future<bool> fetchMedia(String blobId) async {
     await _waitOutRateLimit();
     if (!_mayTalk) {
       return false;
     }
     final SyncMedia? media = await _mediaServices();
-    final RelayClient? client = await _readyClient();
+    final RelayClient? client;
+    try {
+      client = await _readyClient();
+    } on KeyAccessException {
+      _keyAccessFailed();
+      return false;
+    }
     if (media == null || client == null) {
       return false;
     }
@@ -434,6 +475,9 @@ class SyncEngine {
     } on MediaDownloadException {
       return false;
     } on CryptoException {
+      return false;
+    } on KeyAccessException {
+      _keyAccessFailed();
       return false;
     }
   }
@@ -513,10 +557,11 @@ class SyncEngine {
   }
 
   Future<void> _prepareMedia() {
-    if (!_enabled || _paused || _disposed) {
+    if (!_enabled || _paused || _disposed || _keysLocked) {
       return Future<void>.value();
     }
-    return _preparing ??= _prepareOnce().whenComplete(() => _preparing = null);
+    return _preparing ??= _safely(_prepareOnce)
+        .whenComplete(() => _preparing = null);
   }
 
   Future<void> _prepareOnce() async {
@@ -605,6 +650,9 @@ class SyncEngine {
     if (stop != null) {
       return stop;
     }
+    if (_keysLocked) {
+      return AttentionReason.keysLocked;
+    }
     if (_newServerUnreachable) {
       return AttentionReason.newServerUnreachable;
     }
@@ -616,7 +664,7 @@ class SyncEngine {
     }
     if (_failures >= unreachableAfterFailures &&
         _networkKind != NetworkKind.offline) {
-      return AttentionReason.unreachable;
+      return _troubled ? AttentionReason.problem : AttentionReason.unreachable;
     }
     return null;
   }
@@ -678,6 +726,7 @@ class SyncEngine {
     }
     _visible = visible;
     if (visible) {
+      _unlockKeys();
       unawaited(_resume());
     } else {
       unawaited(_quiet().then((_) => _handOverOnLeave()));
@@ -697,9 +746,17 @@ class SyncEngine {
 
   Future<void> _handOverOnLeave() async {
     final BackgroundTransfer? background = _background;
-    if (background == null || !_enabled || _paused || _disposed) {
+    if (background == null ||
+        !_enabled ||
+        _paused ||
+        _disposed ||
+        _keysLocked) {
       return;
     }
+    await _safely(() => _handOver(background));
+  }
+
+  Future<void> _handOver(BackgroundTransfer background) async {
     try {
       await _applyCollectedResults(background);
       final JoinMerge? join = _join;
@@ -764,15 +821,26 @@ class SyncEngine {
     if (!_mayTalk) {
       return;
     }
+    final DateTime now = _clock.now();
+    final Duration waited = now.difference(_writesWaitingSince ??= now);
+    final Duration left = localWriteMaxDelay - waited;
     _writeTimer?.cancel();
-    _writeTimer = _clock.timer(localWriteDelay, () {
-      _writeTimer = null;
-      unawaited(_requestCycle());
-    });
+    _writeTimer = _clock.timer(
+      left < localWriteDelay
+          ? (left.isNegative ? Duration.zero : left)
+          : localWriteDelay,
+      () {
+        _writeTimer = null;
+        _writesWaitingSince = null;
+        unawaited(_requestCycle());
+      },
+    );
   }
 
   Future<void> _activate() async {
     _keysRefreshed = false;
+    _keysLocked = false;
+    _troubled = false;
     _stopReason = null;
     _failures = 0;
     _liveFailures = 0;
@@ -809,6 +877,7 @@ class SyncEngine {
   void _cancelTimers() {
     _writeTimer?.cancel();
     _writeTimer = null;
+    _writesWaitingSince = null;
     _retryTimer?.cancel();
     _retryTimer = null;
     _reconnectTimer?.cancel();
@@ -825,8 +894,44 @@ class SyncEngine {
   Future<void> _drain() async {
     while (_wanted) {
       _wanted = false;
-      await _cycleOnce();
+      await _safely(_cycleOnce, onUnexpected: _failedUnexpectedly);
     }
+  }
+
+  Future<void> _safely(
+    Future<void> Function() work, {
+    void Function()? onUnexpected,
+  }) async {
+    try {
+      await work();
+    } on KeyAccessException {
+      _keyAccessFailed();
+    } catch (error, stack) {
+      debugPrint('Sync stopped a step that failed: $error\n$stack');
+      onUnexpected?.call();
+    }
+  }
+
+  void _keyAccessFailed() {
+    if (_keysLocked) {
+      return;
+    }
+    _keysLocked = true;
+    _setProgress(null);
+    unawaited(_quiet());
+  }
+
+  void _unlockKeys() {
+    if (!_keysLocked) {
+      return;
+    }
+    _keysLocked = false;
+    _changed();
+  }
+
+  void _failedUnexpectedly() {
+    _troubled = true;
+    _failed();
   }
 
   Future<RelayClient?> _readyClient() async {
@@ -1038,10 +1143,19 @@ class SyncEngine {
       counter: _tag.counter + 1,
     );
     _changed();
+    bool rebased = false;
     unawaited(
-      _rebase(to: to, candidate: client, session: session).whenComplete(() {
+      _safely(() async {
+        rebased = await _rebase(to: to, candidate: client, session: session);
+      }, onUnexpected: _failedUnexpectedly).whenComplete(() {
         _rebasing = false;
         _changed();
+        if (!rebased) {
+          if (_retryTimer == null) {
+            _failed();
+          }
+          return;
+        }
         if (_mayTalk) {
           unawaited(_requestCycle());
         }
@@ -1049,7 +1163,7 @@ class SyncEngine {
     );
   }
 
-  Future<void> _rebase({
+  Future<bool> _rebase({
     Uri? to,
     RelayClient? candidate,
     SessionResponse? session,
@@ -1063,7 +1177,7 @@ class SyncEngine {
     final DeviceKeys? device = await _keyStore.readDeviceKeys();
     if (device == null || (to == null && inUse == null)) {
       candidate?.close();
-      return;
+      return true;
     }
     final Uri address = to ?? Uri.parse(inUse!);
     final RelayClient client =
@@ -1096,13 +1210,19 @@ class SyncEngine {
       _keysRefreshed = true;
       _stale = const StaleRecords();
       _setProgress(null);
+    } on RelayRateLimited catch (error) {
+      if (!identical(_client, client)) {
+        client.close();
+      }
+      _rateLimited(error.retryAfter);
+      return false;
     } on RelayException {
       if (!identical(_client, client)) {
         client.close();
       }
-      return;
+      return false;
     } on CryptoException {
-      return;
+      return false;
     }
     _rebasing = false;
     await _ensureLive();
@@ -1119,9 +1239,10 @@ class SyncEngine {
           isCurrent: () => _tag.counter == counter,
         );
       } on RelayException {
-        return;
+        return true;
       }
     }
+    return true;
   }
 
   Future<JoinStage> _joinStage(JoinMerge join) async {
@@ -1202,7 +1323,7 @@ class SyncEngine {
     final DateTime now = _clock.now();
     final DateTime? until = _stale.heldUntil;
     if (again.isNotEmpty) {
-      final Duration wait = backoffAfter(_stale.rounds + 1);
+      final Duration wait = jitteredBackoff(_stale.rounds + 1, _random);
       _stale = _stale.heldTill(now.add(wait));
       _scheduleRetry(wait);
     } else if (held.isNotEmpty && until != null && _retryTimer == null) {
@@ -1223,6 +1344,7 @@ class SyncEngine {
 
   void _succeeded() {
     _failures = 0;
+    _troubled = false;
     _storageFull = false;
     _lastSyncedAt = _clock.now();
     _changed();
@@ -1232,7 +1354,7 @@ class SyncEngine {
   void _failed() {
     _failures += 1;
     _changed();
-    _scheduleRetry(backoffAfter(_failures));
+    _scheduleRetry(jitteredBackoff(_failures, _random));
     _startPolling();
   }
 
@@ -1341,6 +1463,10 @@ class SyncEngine {
     } on RelayException {
       _liveFailures += 1;
       _scheduleReconnect();
+    } catch (error) {
+      debugPrint('Sync could not open its live connection: $error');
+      _liveFailures += 1;
+      _scheduleReconnect();
     } finally {
       _liveOpening = false;
     }
@@ -1359,7 +1485,7 @@ class SyncEngine {
   void _scheduleReconnect() {
     _startPolling();
     _reconnectTimer?.cancel();
-    _reconnectTimer = _clock.timer(backoffAfter(_liveFailures), () {
+    _reconnectTimer = _clock.timer(jitteredBackoff(_liveFailures, _random), () {
       _reconnectTimer = null;
       unawaited(_resume());
     });

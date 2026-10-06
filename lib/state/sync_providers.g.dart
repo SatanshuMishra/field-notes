@@ -48,7 +48,7 @@ final class KeyStoreProvider
   }
 }
 
-String _$keyStoreHash() => r'15f86623b2621af35a934e0c9d00ac53c5ff3410';
+String _$keyStoreHash() => r'e6dec3da6f8f5e0827c793520fe714ff2715dc26';
 
 @ProviderFor(networkMonitor)
 final networkMonitorProvider = NetworkMonitorProvider._();
@@ -238,7 +238,7 @@ final class SyncEngineProvider
   }
 }
 
-String _$syncEngineHash() => r'f130edb8f38d991475591632d9d340b3e5be724a';
+String _$syncEngineHash() => r'ed25e7e6f5a0cdec31d67542d2df75966045f28c';
 
 @ProviderFor(syncStatus)
 final syncStatusProvider = SyncStatusProvider._();
@@ -848,6 +848,39 @@ final class PairingServiceProvider
 
 String _$pairingServiceHash() => r'4500c4666bdeabcc2c7575aca0390b025f91f890';
 
+@ProviderFor(syncKeysLocked)
+final syncKeysLockedProvider = SyncKeysLockedProvider._();
+
+final class SyncKeysLockedProvider
+    extends $FunctionalProvider<AsyncValue<bool>, bool, Stream<bool>>
+    with $FutureModifier<bool>, $StreamProvider<bool> {
+  SyncKeysLockedProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'syncKeysLockedProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$syncKeysLockedHash();
+
+  @$internal
+  @override
+  $StreamProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
+
+  @override
+  Stream<bool> create(Ref ref) {
+    return syncKeysLocked(ref);
+  }
+}
+
+String _$syncKeysLockedHash() => r'2f5058aed0c2f518e02a0ad85c863e30dc73b8f2';
+
 @ProviderFor(deviceService)
 final deviceServiceProvider = DeviceServiceProvider._();
 
@@ -885,7 +918,7 @@ final class DeviceServiceProvider
   }
 }
 
-String _$deviceServiceHash() => r'e311210db9d94eb47f7b8f46456afe1a59cb14cc';
+String _$deviceServiceHash() => r'8d5eaceeafcb5a0f915f126ddacee406e96eb921';
 
 @ProviderFor(journalDevices)
 final journalDevicesProvider = JournalDevicesProvider._();
@@ -926,4 +959,4 @@ final class JournalDevicesProvider
   }
 }
 
-String _$journalDevicesHash() => r'b7aa24bcfd15ecef2c473318c3a4675c1135a205';
+String _$journalDevicesHash() => r'2a7958b8ee4d2c1f483dfeb5fd2505612ad6999f';
