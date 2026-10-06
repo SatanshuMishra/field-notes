@@ -32,7 +32,11 @@ import 'package:field_notes/data/sync/merge/state_applier.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:flutter/widgets.dart'
-    show AppLifecycleListener, AppLifecycleState, WidgetsBinding;
+    show
+        AppLifecycleListener,
+        AppLifecycleState,
+        TargetPlatform,
+        WidgetsBinding;
 import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 
 const Duration localWriteDelay = Duration(seconds: 1);
@@ -111,6 +115,12 @@ Duration backoffAfter(int failures) {
 }
 
 enum LeaveRule { inactive, hidden, quit }
+
+LeaveRule leaveRuleFor(TargetPlatform platform) => switch (platform) {
+  TargetPlatform.android => LeaveRule.inactive,
+  TargetPlatform.macOS => LeaveRule.quit,
+  _ => LeaveRule.hidden,
+};
 
 bool leavesOn(LeaveRule rule, AppLifecycleState state) => switch (state) {
   AppLifecycleState.detached => true,

@@ -16,7 +16,7 @@ import 'package:field_notes/data/sync/media/network_policy.dart';
 import 'package:field_notes/data/sync/merge/record_state.dart' as local;
 import 'package:field_notes/data/sync/synced_tables.dart';
 import 'package:field_notes/domain/models/models.dart' as domain;
-import 'package:flutter/widgets.dart' show AppLifecycleState;
+import 'package:flutter/widgets.dart' show AppLifecycleState, TargetPlatform;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:sync_protocol/sync_protocol.dart' as protocol show RecordState;
@@ -55,7 +55,7 @@ final class _IdleClosingProxy {
       client.listen(
         (List<int> data) {
           pipe.live ??= String.fromCharCodes(data.take(32))
-              .contains('/v1/live');
+              .contains(SyncRoutes.live.pattern);
           if (pipe.silent) {
             return;
           }
@@ -532,6 +532,12 @@ void main() {
     expect((await _entries(mac)).single.textContent, 'ten quiet minutes later');
   });
 
+  test('each platform gets its leave rule', () {
+    expect(leaveRuleFor(TargetPlatform.android), LeaveRule.inactive);
+    expect(leaveRuleFor(TargetPlatform.macOS), LeaveRule.quit);
+    expect(leaveRuleFor(TargetPlatform.iOS), LeaveRule.hidden);
+  });
+
   test(
     'a Mac stays connected while hidden and leaves only when it quits',
     () async {
@@ -616,6 +622,12 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 60));
       }
       await eventually(() async => mac.sockets == 2 && macEngine.isLive);
+      for (int step = 0; step < 3; step++) {
+        await mac.clock.advance(livePingInterval);
+        await Future<void>.delayed(const Duration(milliseconds: 60));
+      }
+      expect(mac.sockets, 2);
+      expect(macEngine.isLive, isTrue);
 
       final SyncEngine phoneEngine = phone.engine();
       await phoneEngine.start();

@@ -5,7 +5,8 @@ import 'package:sync_protocol/sync_protocol.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 const Duration livePingInterval = Duration(seconds: 30);
-const Duration liveSilenceLimit = Duration(seconds: 75);
+const int liveUnansweredPingLimit = 2;
+const Duration liveCloseTimeout = Duration(seconds: 5);
 
 abstract interface class SyncClock {
   DateTime now();
@@ -39,7 +40,6 @@ final class LiveConnection {
     required this._onNudge,
     required this._onClosed,
     this._pingInterval = livePingInterval,
-    this._silenceLimit = liveSilenceLimit,
   });
 
   final LiveConnector _connect;
@@ -47,11 +47,10 @@ final class LiveConnection {
   final void Function(int latestSeq) _onNudge;
   final void Function() _onClosed;
   final Duration _pingInterval;
-  final Duration _silenceLimit;
   WebSocketChannel? _channel;
   StreamSubscription<Object?>? _subscription;
   Timer? _pings;
-  DateTime? _heard;
+  int _unanswered = 0;
   bool _closing = false;
 
   bool get isOpen => _channel != null;
@@ -73,42 +72,46 @@ final class LiveConnection {
       onError: (Object _) => _lost(channel),
       cancelOnError: true,
     );
-    _heard = _clock.now();
+    _unanswered = 0;
     _pings = _clock.periodic(_pingInterval, () => _keepAlive(channel));
   }
 
   void _keepAlive(WebSocketChannel channel) {
-    final DateTime? heard = _heard;
-    if (heard != null && _clock.now().difference(heard) >= _silenceLimit) {
+    if (_unanswered >= liveUnansweredPingLimit) {
       _abandon(channel);
       return;
     }
+    _unanswered += 1;
     _send(const LivePing());
   }
 
   void _abandon(WebSocketChannel channel) {
+    if (!identical(_channel, channel)) {
+      return;
+    }
     final StreamSubscription<Object?>? subscription = _subscription;
-    _lost(channel);
-    unawaited(subscription?.cancel());
-    unawaited(
-      channel.sink.close().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {},
-      ),
-    );
+    _release();
+    _subscription = null;
+    unawaited(_shut(channel, subscription));
+    _onClosed();
   }
 
   Future<void> close() async {
     _closing = true;
     final WebSocketChannel? channel = _channel;
+    final StreamSubscription<Object?>? subscription = _subscription;
     _release();
-    await _subscription?.cancel();
     _subscription = null;
+    await _shut(channel, subscription);
+  }
+
+  Future<void> _shut(
+    WebSocketChannel? channel,
+    StreamSubscription<Object?>? subscription,
+  ) async {
+    await subscription?.cancel();
     if (channel != null) {
-      await channel.sink.close().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {},
-      );
+      await channel.sink.close().timeout(liveCloseTimeout, onTimeout: () {});
     }
   }
 
@@ -125,7 +128,7 @@ final class LiveConnection {
   }
 
   void _receive(Object? message) {
-    _heard = _clock.now();
+    _unanswered = 0;
     if (message is! String) {
       return;
     }
@@ -154,7 +157,7 @@ final class LiveConnection {
   void _release() {
     _pings?.cancel();
     _pings = null;
-    _heard = null;
+    _unanswered = 0;
     _channel = null;
   }
 }
