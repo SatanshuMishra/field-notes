@@ -8,7 +8,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Collections
 
-data class TransportAnswer(val statusCode: Int, val body: String)
+data class TransportAnswer(val statusCode: Int, val body: String, val retryAfterSeconds: Int? = null)
 
 interface UploadTransport {
     fun send(item: UploadItem, onBytes: (Long) -> Unit): TransportAnswer
@@ -56,7 +56,11 @@ class HttpTransport(private val network: () -> Network?, fileRoot: File) : Uploa
             }
             val status = connection.responseCode
             val stream = if (status >= 400) connection.errorStream else connection.inputStream
-            return TransportAnswer(status, stream?.let(::readCapped) ?: "")
+            return TransportAnswer(
+                status,
+                stream?.let(::readCapped) ?: "",
+                connection.getHeaderField(RETRY_AFTER)?.trim()?.toIntOrNull(),
+            )
         } finally {
             open.remove(connection)
             connection.disconnect()
@@ -85,6 +89,7 @@ class HttpTransport(private val network: () -> Network?, fileRoot: File) : Uploa
 
     companion object {
         const val MISSING_FILE = -1
+        private const val RETRY_AFTER = "Retry-After"
         private const val CONNECT_TIMEOUT_MILLIS = 30_000
         private const val READ_TIMEOUT_MILLIS = 120_000
         private const val CHUNK_BYTES = 64 * 1024

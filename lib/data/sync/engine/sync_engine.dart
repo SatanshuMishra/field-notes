@@ -7,6 +7,7 @@ import 'package:field_notes/data/crypto/device_keys.dart';
 import 'package:field_notes/data/crypto/journal_keys.dart';
 import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/media/device_storage.dart';
 import 'package:field_notes/data/sync/background/background_uploads.dart';
 import 'package:field_notes/data/sync/background/upload_result_applier.dart';
 import 'package:field_notes/data/sync/change_recorder.dart';
@@ -245,8 +246,10 @@ class SyncEngine {
   NetworkKind _networkKind = NetworkKind.unmetered;
   AttentionReason? _stopReason;
   bool _storageFull = false;
+  bool _deviceFull = false;
   bool _keysLocked = false;
   bool _troubled = false;
+  bool _pulling = false;
   DateTime? _writesWaitingSince;
   StaleRecords _stale = const StaleRecords();
   int _failures = 0;
@@ -347,6 +350,20 @@ class SyncEngine {
               ),
             )
             .listen((_) => _localWrite()),
+      )
+      ..add(
+        _db
+            .tableUpdates(
+              TableUpdateQuery.onTableName(
+                _db.mediaBlobs.actualTableName,
+                limitUpdateKind: UpdateKind.insert,
+              ),
+            )
+            .listen((_) {
+              if (!_pulling) {
+                unawaited(_prepareMedia());
+              }
+            }),
       )
       ..add(
         _db
@@ -476,6 +493,9 @@ class SyncEngine {
       return false;
     } on CryptoException {
       return false;
+    } on NotEnoughSpaceException {
+      _setDeviceFull(true);
+      return false;
     } on KeyAccessException {
       _keyAccessFailed();
       return false;
@@ -571,7 +591,12 @@ class SyncEngine {
     }
     try {
       await media.posters.makeMissing();
+    } on Exception catch (error) {
+      debugPrint('Posters were not made this time: $error');
+    }
+    try {
       await media.uploads.prepareAll();
+      _noteDeviceSpace(media);
       await _handOverPrepared(media);
     } on RelayException {
       return;
@@ -638,6 +663,7 @@ class SyncEngine {
       allowed: (TransferKind kind) => policy.allows(kind, _networkKind),
       mayContinue: () => _mayTalk,
     );
+    _noteDeviceSpace(media);
     if (!pulled.complete || !_mayTalk || !current()) {
       return;
     }
@@ -662,11 +688,26 @@ class SyncEngine {
     if (_storageFull) {
       return AttentionReason.storageFull;
     }
+    if (_deviceFull) {
+      return AttentionReason.deviceFull;
+    }
     if (_failures >= unreachableAfterFailures &&
         _networkKind != NetworkKind.offline) {
       return _troubled ? AttentionReason.problem : AttentionReason.unreachable;
     }
     return null;
+  }
+
+  void _noteDeviceSpace(SyncMedia media) => _setDeviceFull(
+    media.uploads.waitingForSpace || media.downloads.waitingForSpace,
+  );
+
+  void _setDeviceFull(bool full) {
+    if (_deviceFull == full) {
+      return;
+    }
+    _deviceFull = full;
+    _changed();
   }
 
   Future<int> _count(TableInfo<Table, Object?> table) async {
@@ -817,7 +858,6 @@ class SyncEngine {
   }
 
   void _localWrite() {
-    unawaited(_prepareMedia());
     if (!_mayTalk) {
       return;
     }
@@ -1056,17 +1096,23 @@ class SyncEngine {
         join != null && await _joinStage(join) != JoinStage.done;
     final bool firstPull = !await firstPullHasCompleted(_db);
     await pull.retryHeld(isCurrent: current);
-    final PullResult pulled = await pull.run(
-      client,
-      onResponse: (PullResponse response, int cursor) => observeRelay(
-        generation: response.generation,
-        latestSeq: response.latestSeq,
-        cursor: cursor,
-      ),
-      onPage: firstPull ? _firstPullPage : null,
-      mayContinue: () => _mayTalk,
-      isCurrent: current,
-    );
+    final PullResult pulled;
+    _pulling = true;
+    try {
+      pulled = await pull.run(
+        client,
+        onResponse: (PullResponse response, int cursor) => observeRelay(
+          generation: response.generation,
+          latestSeq: response.latestSeq,
+          cursor: cursor,
+        ),
+        onPage: firstPull ? _firstPullPage : null,
+        mayContinue: () => _mayTalk,
+        isCurrent: current,
+      );
+    } finally {
+      _pulling = false;
+    }
     if (pulled.complete) {
       _setProgress(null);
       _stale = _stale.afterCompletePull();

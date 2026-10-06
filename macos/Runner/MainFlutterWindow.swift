@@ -23,6 +23,7 @@ private let titleBarHeight: CGFloat = 42
 private let windowButtonsLeading: CGFloat = 16
 private let windowChannelName = "field_notes/window"
 private let notificationSettingsChannelName = "field_notes/notification_settings"
+private let deviceStorageChannelName = "field_notes/device_storage"
 private let notificationSettingsURLPrefix =
   "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id="
 
@@ -49,6 +50,7 @@ class MainFlutterWindow: NSWindow {
     RegisterGeneratedPlugins(registry: flutterViewController)
     self.registerWindowChannel(flutterViewController.engine.binaryMessenger)
     self.registerNotificationSettingsChannel(flutterViewController.engine.binaryMessenger)
+    self.registerDeviceStorageChannel(flutterViewController.engine.binaryMessenger)
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
@@ -93,6 +95,44 @@ class MainFlutterWindow: NSWindow {
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  private func registerDeviceStorageChannel(_ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: deviceStorageChannelName,
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "freeBytes":
+        guard let arguments = call.arguments as? [String: Any],
+          let path = arguments["path"] as? String
+        else {
+          result(FlutterError(code: "bad_arguments", message: "A path is required", details: nil))
+          return
+        }
+        DispatchQueue.global(qos: .utility).async {
+          let free = MainFlutterWindow.freeBytes(near: path)
+          DispatchQueue.main.async { result(free) }
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private static func freeBytes(near path: String) -> Any? {
+    var url = URL(fileURLWithPath: path)
+    while !FileManager.default.fileExists(atPath: url.path) && url.path != "/" {
+      url.deleteLastPathComponent()
+    }
+    guard
+      let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]),
+      let free = values.volumeAvailableCapacityForImportantUsage
+    else {
+      return nil
+    }
+    return NSNumber(value: free)
   }
 
   private static func openNotificationSettings() -> Any? {

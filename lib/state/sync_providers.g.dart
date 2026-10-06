@@ -356,7 +356,7 @@ final class SyncMediaProvider
   }
 }
 
-String _$syncMediaHash() => r'0b317f71ca75b80c53692a15ef3f3db1bd1b8d26';
+String _$syncMediaHash() => r'0a14572b0528621dd4e8d9935c4f9afdc307a56e';
 
 @ProviderFor(localJournalWipe)
 final localJournalWipeProvider = LocalJournalWipeProvider._();

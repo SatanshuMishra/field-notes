@@ -35,35 +35,46 @@ final class FileCipher {
   final JournalKeys keys;
 
   Future<void> encryptFile(File source, File destination, int epoch) async {
-    final Uint8List subKey = keys.fileSubKey(epoch);
-    final Uint8List prefix = filePrefix(epoch);
-    final RandomAccessFile input = await source.open();
     RandomAccessFile? output;
     bool done = false;
     try {
-      final int length = await input.length();
       final RandomAccessFile sink = await destination.open(
         mode: FileMode.write,
       );
       output = sink;
-      await sink.writeFrom(prefix);
+      await encryptInto(source, sink.writeFrom, epoch);
+      await sink.flush();
+      done = true;
+    } finally {
+      await output?.close();
+      if (!done && await destination.exists()) {
+        await destination.delete();
+      }
+    }
+  }
+
+  Future<void> encryptInto(
+    File source,
+    Future<void> Function(Uint8List bytes) write,
+    int epoch,
+  ) async {
+    final Uint8List subKey = keys.fileSubKey(epoch);
+    final Uint8List prefix = filePrefix(epoch);
+    final RandomAccessFile input = await source.open();
+    try {
+      final int length = await input.length();
+      await write(prefix);
       await useSecureKeyAsync(subKey, (SecureKey key) async {
         await for (final SecretStreamCipherMessage message
             in loadSodium().crypto.secretStream.pushEx(
               messageStream: _plainChunks(input, length, prefix),
               key: key,
             )) {
-          await sink.writeFrom(message.message);
+          await write(message.message);
         }
       });
-      await sink.flush();
-      done = true;
     } finally {
       await input.close();
-      await output?.close();
-      if (!done && await destination.exists()) {
-        await destination.delete();
-      }
     }
   }
 

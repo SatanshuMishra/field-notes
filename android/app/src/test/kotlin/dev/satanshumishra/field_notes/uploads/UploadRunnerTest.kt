@@ -7,11 +7,14 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.nio.file.Files
 import java.util.Collections
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.concurrent.thread
 
 class UploadRunnerTest {
     private lateinit var root: File
@@ -41,8 +44,14 @@ class UploadRunnerTest {
         )
     }
 
-    private fun runner(transport: UploadTransport, lane: Lane = Lane.ANY) =
-        UploadRunner(store, transport, lane, coordinator)
+    private val paused: MutableList<Long> = Collections.synchronizedList(mutableListOf())
+
+    private fun runner(
+        transport: UploadTransport,
+        lane: Lane = Lane.ANY,
+        onProgress: (Long, Long) -> Unit = { _, _ -> },
+        pause: (Long) -> Unit = { paused.add(it) },
+    ) = UploadRunner(store, transport, lane, coordinator, onProgress, pause)
 
     private fun results(): Map<String, JSONObject> = store.takeResults().associateBy {
         it.getJSONObject("task").getString("taskId")
@@ -220,7 +229,7 @@ class UploadRunnerTest {
     @Test
     fun the_tenth_failed_attempt_is_reported_as_failed() {
         store.put(item("part.video.0"))
-        val transport = FakeTransport(answer = { _, _ -> TransportAnswer(429, "") })
+        val transport = FakeTransport(answer = { _, _ -> TransportAnswer(503, "") })
 
         repeat(UploadItem.MAX_ATTEMPTS - 1) {
             assertEquals(UploadRunner.Outcome.RETRY, runner(transport).run())
@@ -231,6 +240,146 @@ class UploadRunnerTest {
         assertEquals("failed", failed.getString("status"))
         assertEquals(UploadItem.MAX_ATTEMPTS, transport.sent.size)
         assertTrue(store.pending().isEmpty())
+    }
+
+    @Test
+    fun a_slow_down_waits_its_retry_after_and_counts_no_try() {
+        store.put(item("part.video.0"))
+        val transport = FakeTransport(answer = { _, call ->
+            if (call <= 15) TransportAnswer(429, "", retryAfterSeconds = 2) else TransportAnswer(200, "{}")
+        })
+
+        assertEquals(UploadRunner.Outcome.DONE, runner(transport).run())
+
+        assertEquals("complete", results().getValue("part.video.0").getString("status"))
+        assertEquals(16, transport.sent.size)
+        assertEquals(30_000L, paused.sum())
+        assertTrue(store.pending().isEmpty())
+    }
+
+    @Test
+    fun a_slow_down_without_a_wait_waits_thirty_seconds() {
+        store.put(item("push.notes", push = true))
+        val transport = FakeTransport(answer = { _, call ->
+            if (call == 1) TransportAnswer(429, "") else TransportAnswer(200, "{}")
+        })
+
+        assertEquals(UploadRunner.Outcome.DONE, runner(transport).run())
+
+        assertEquals(30_000L, paused.sum())
+        assertTrue(paused.all { it <= 500L })
+        assertEquals("complete", results().getValue("push.notes").getString("status"))
+    }
+
+    @Test
+    fun a_slow_down_waits_at_most_a_minute() {
+        store.put(item("part.video.0"))
+        val transport = FakeTransport(answer = { _, call ->
+            if (call == 1) TransportAnswer(429, "", retryAfterSeconds = 86_400) else TransportAnswer(200, "{}")
+        })
+
+        assertEquals(UploadRunner.Outcome.DONE, runner(transport).run())
+
+        assertEquals(60_000L, paused.sum())
+    }
+
+    @Test
+    fun a_stopped_lane_stops_waiting_out_a_slow_down() {
+        store.put(item("part.video.0"))
+        val transport = FakeTransport(answer = { _, _ -> TransportAnswer(429, "", retryAfterSeconds = 60) })
+        lateinit var running: UploadRunner
+        running = runner(transport, pause = { millis ->
+            paused.add(millis)
+            running.stop()
+        })
+
+        assertEquals(UploadRunner.Outcome.STOPPED, running.run())
+
+        assertEquals(1, paused.size)
+        assertEquals(0, store.pending().single().attempts)
+        assertTrue(results().isEmpty())
+    }
+
+    @Test
+    fun a_timeout_or_too_early_answer_counts_a_try() {
+        for (code in listOf(408, 425)) {
+            store.put(item("part.$code"))
+            val transport = FakeTransport(answer = { _, call ->
+                if (call == 1) TransportAnswer(code, "") else TransportAnswer(200, "{}")
+            })
+
+            assertEquals(UploadRunner.Outcome.RETRY, runner(transport).run())
+            assertEquals(1, store.pending().single { it.taskId == "part.$code" }.attempts)
+            assertEquals(UploadRunner.Outcome.DONE, runner(transport).run())
+        }
+        assertTrue(paused.isEmpty())
+    }
+
+    @Test
+    fun a_slow_down_stops_waiting_when_another_part_fails() {
+        store.put(item("part.video.0"))
+        store.put(item("part.video.1"))
+        val waiting = CountDownLatch(1)
+        val transport = FakeTransport(answer = { item, _ ->
+            if (item.taskId == "part.video.0") {
+                TransportAnswer(429, "", retryAfterSeconds = 60)
+            } else {
+                waiting.await(5, TimeUnit.SECONDS)
+                TransportAnswer(503, "")
+            }
+        })
+        val running = runner(transport, pause = { millis ->
+            paused.add(millis)
+            waiting.countDown()
+            Thread.sleep(5)
+        })
+
+        assertEquals(UploadRunner.Outcome.RETRY, running.run())
+
+        assertTrue(paused.size < 60)
+        assertEquals(0, store.pending().single { it.taskId == "part.video.0" }.attempts)
+        assertEquals(1, store.pending().single { it.taskId == "part.video.1" }.attempts)
+    }
+
+    @Test
+    fun a_slowed_down_part_is_counted_once_in_the_progress() {
+        store.put(item("part.video.0", bytes = 4096))
+        val transport = FakeTransport(answer = { _, call ->
+            if (call == 1) TransportAnswer(429, "", retryAfterSeconds = 1) else TransportAnswer(200, "{}")
+        })
+        val reported = Collections.synchronizedList(mutableListOf<Pair<Long, Long>>())
+
+        runner(transport, onProgress = { sent, total -> reported.add(sent to total) }).run()
+
+        assertTrue(reported.all { (sent, total) -> sent <= total })
+        assertEquals(4096L to 4096L, reported.last())
+    }
+
+    @Test
+    fun the_relay_wait_is_read_from_its_answer() {
+        ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
+            val relay = thread {
+                server.accept().use { socket ->
+                    val input = socket.getInputStream().bufferedReader(Charsets.ISO_8859_1)
+                    val headers = generateSequence { input.readLine() }.takeWhile { it.isNotEmpty() }.toList()
+                    val length = headers.first { it.startsWith("Content-Length:", ignoreCase = true) }
+                        .substringAfter(':').trim().toInt()
+                    repeat(length) { input.read() }
+                    socket.getOutputStream().write(
+                        "HTTP/1.1 429 Too Many Requests\r\nRetry-After: 7\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                            .toByteArray(Charsets.ISO_8859_1),
+                    )
+                }
+            }
+            val transport = HttpTransport({ null }, root)
+            val part = item("part.video.0").copy(url = "http://127.0.0.1:${server.localPort}/part")
+
+            val answer = transport.send(part) { }
+            relay.join(5_000)
+
+            assertEquals(429, answer.statusCode)
+            assertEquals(7, answer.retryAfterSeconds)
+        }
     }
 
     @Test

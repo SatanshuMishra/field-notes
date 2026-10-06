@@ -5,6 +5,7 @@ import 'package:field_notes/data/crypto/device_keys.dart';
 import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/journal/journal_delete_all_service.dart';
+import 'package:field_notes/data/media/device_storage.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/media/media_gc.dart';
 import 'package:field_notes/data/sync/background/background_uploads.dart';
@@ -123,11 +124,13 @@ Future<SyncMedia> syncMedia(Ref ref) async {
     root: root,
     drafts: drafts,
   );
+  const DeviceStorage storage = PlatformDeviceStorage();
   final UploadQueue uploads = UploadQueue(
     database: database,
     store: store,
     keys: journalKeysFrom(keyStore),
     workRoot: uploadWorkRoot(root),
+    storage: storage,
   );
   return SyncMedia(
     uploads: uploads,
@@ -136,6 +139,8 @@ Future<SyncMedia> syncMedia(Ref ref) async {
       store: store,
       keyStore: keyStore,
       workRoot: downloadWorkRoot(root),
+      storage: storage,
+      reachable: collector.reachableMediaIds,
     ),
     posters: PosterMaker(
       database: database,

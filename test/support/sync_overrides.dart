@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:drift/native.dart';
+import 'package:field_notes/data/media/device_storage.dart';
 import 'package:field_notes/data/crypto/device_keys.dart';
 import 'package:field_notes/data/crypto/journal_keys.dart';
 import 'package:field_notes/data/crypto/key_store.dart';
@@ -567,6 +568,7 @@ final class SyncTestMedia {
     this.root, {
     this.partBytes = 1024,
     this.settings = AppSettings.defaults,
+    DeviceStorage storage = const UnmeasuredDeviceStorage(),
   }) {
     store = FilesystemMediaStore(
       database: device.database,
@@ -581,12 +583,16 @@ final class SyncTestMedia {
       keys: journalKeysFrom(device.keyStore),
       workRoot: uploadWorkRoot(root),
       partBytes: partBytes,
+      storage: storage,
+      now: device.clock.now,
     );
     downloads = DownloadService(
       database: device.database,
       store: store,
       keyStore: device.keyStore,
       workRoot: downloadWorkRoot(root),
+      storage: storage,
+      reachable: collector.reachableMediaIds,
       clock: device.wallMillis,
     );
     posters = PosterMaker(
@@ -613,6 +619,7 @@ final class SyncTestMedia {
     SyncTestDevice device, {
     int partBytes = 1024,
     AppSettings settings = AppSettings.defaults,
+    DeviceStorage storage = const UnmeasuredDeviceStorage(),
   }) async {
     final Directory temporary = await Directory.systemTemp.createTemp(
       'fn_sync_media',
@@ -627,6 +634,7 @@ final class SyncTestMedia {
       Directory('${temporary.path}/media'),
       partBytes: partBytes,
       settings: settings,
+      storage: storage,
     );
   }
 

@@ -61,6 +61,7 @@ class UploadRunner(
     private val lane: Lane,
     private val coordinator: UploadCoordinator = UploadCoordinator.shared,
     private val onProgress: (sent: Long, total: Long) -> Unit = { _, _ -> },
+    private val pause: (millis: Long) -> Unit = { Thread.sleep(it) },
 ) {
     enum class Outcome { DONE, RETRY, STOPPED }
 
@@ -116,8 +117,10 @@ class UploadRunner(
         workers.forEach { it.join() }
     }
 
+    private fun keepGoing(): Boolean = !stopped && transientFailures.get() == 0
+
     private fun drain(push: Boolean) {
-        while (!stopped && transientFailures.get() == 0) {
+        while (keepGoing()) {
             val item = coordinator.claimNext { candidates(push) } ?: return
             try {
                 if (push) {
@@ -179,9 +182,11 @@ class UploadRunner(
 
     private fun send(item: UploadItem) {
         count(item)
+        val sentNow = AtomicLong(0)
         val answer = try {
             transport.send(item) { bytes ->
                 if (!item.isPush) {
+                    sentNow.addAndGet(bytes)
                     sentBytes.addAndGet(bytes)
                     report()
                 }
@@ -195,8 +200,25 @@ class UploadRunner(
         when {
             answer.statusCode in SUCCESS -> finish(item, true, answer)
             answer.statusCode == HttpTransport.MISSING_FILE -> finish(item, false, answer)
+            answer.statusCode == TOO_MANY_REQUESTS -> holdOff(answer.retryAfterSeconds, sentNow.get())
             answer.statusCode in TRANSIENT_CODES || answer.statusCode >= SERVER_ERROR -> retryLater(item)
             else -> finish(item, false, answer)
+        }
+    }
+
+    private fun holdOff(retryAfterSeconds: Int?, unsentBytes: Long) {
+        sentBytes.addAndGet(-unsentBytes)
+        report()
+        val seconds = (retryAfterSeconds ?: DEFAULT_HOLD_OFF_SECONDS).coerceIn(1, MAX_HOLD_OFF_SECONDS)
+        var left = seconds * MILLIS_PER_SECOND
+        while (left > 0 && keepGoing()) {
+            val slice = minOf(left, HOLD_OFF_SLICE_MILLIS)
+            try {
+                pause(slice)
+            } catch (error: InterruptedException) {
+                return
+            }
+            left -= slice
         }
     }
 
@@ -229,7 +251,12 @@ class UploadRunner(
 
     private companion object {
         val SUCCESS = 200..299
-        val TRANSIENT_CODES = setOf(408, 425, 429)
+        val TRANSIENT_CODES = setOf(408, 425)
+        const val TOO_MANY_REQUESTS = 429
+        const val DEFAULT_HOLD_OFF_SECONDS = 30
+        const val MAX_HOLD_OFF_SECONDS = 60
+        const val MILLIS_PER_SECOND = 1000L
+        const val HOLD_OFF_SLICE_MILLIS = 500L
         const val SERVER_ERROR = 500
         const val SLOT_WAIT_MILLIS = 500L
         const val NO_TOKEN = -1L

@@ -109,6 +109,7 @@ void main() {
         'Needs attention · update Field Notes',
         'Needs attention · this device was removed',
         'Needs attention · your server is full',
+        'Needs attention · this device is low on space',
         'Needs attention · sync hit a problem',
       ],
     );

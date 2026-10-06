@@ -48,7 +48,11 @@ class FilesystemMediaStore implements MediaStore {
     await _atomicWrite(
       finalPath: p.join(_root.path, blob.relPath),
       write: (String tmpPath) async {
-        await source.copy(tmpPath);
+        try {
+          await source.rename(tmpPath);
+        } on FileSystemException {
+          await source.copy(tmpPath);
+        }
       },
       id: blob.id,
     );

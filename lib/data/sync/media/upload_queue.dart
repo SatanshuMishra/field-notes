@@ -7,6 +7,7 @@ import 'package:field_notes/data/crypto/file_cipher.dart';
 import 'package:field_notes/data/crypto/journal_keys.dart';
 import 'package:field_notes/data/crypto/keyed_names.dart';
 import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/media/device_storage.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/sync/engine/pull_cycle.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
@@ -17,7 +18,81 @@ import 'package:sync_protocol/sync_protocol.dart' hide RecordState;
 const int uploadPartBytes = 8 * 1024 * 1024;
 const String preparedUploadStatus = 'prepared';
 const String uploadWorkSubdir = 'sync_uploads';
-const String _cipherSuffix = '.enc';
+const Duration firstPrepareRetry = Duration(minutes: 1);
+const Duration maxPrepareRetry = Duration(hours: 1);
+
+DateTime _systemNow() => DateTime.now().toUtc();
+
+final class _Deferral {
+  const _Deferral({
+    required this.until,
+    required this.attempts,
+    required this.forSpace,
+    required this.measured,
+  });
+
+  final DateTime until;
+  final int attempts;
+  final bool forSpace;
+  final bool measured;
+}
+
+final class _PartWriter {
+  _PartWriter(this._dir, this._partBytes);
+
+  final Directory _dir;
+  final int _partBytes;
+  RandomAccessFile? _open;
+  int _parts = 0;
+  int _inPart = 0;
+  int written = 0;
+
+  Future<void> add(Uint8List bytes) async {
+    int offset = 0;
+    while (offset < bytes.length) {
+      final RandomAccessFile part = _open ??= await _next();
+      final int take = min(_partBytes - _inPart, bytes.length - offset);
+      await part.writeFrom(bytes, offset, offset + take);
+      offset += take;
+      _inPart += take;
+      written += take;
+      if (_inPart == _partBytes) {
+        await _finishPart();
+      }
+    }
+  }
+
+  Future<int> close() async {
+    await _finishPart();
+    return _parts;
+  }
+
+  Future<void> abandon() async {
+    await _open?.close();
+    _open = null;
+  }
+
+  Future<RandomAccessFile> _next() async {
+    final RandomAccessFile part = await File(p.join(_dir.path, '$_parts'))
+        .open(mode: FileMode.write);
+    _parts += 1;
+    _inPart = 0;
+    return part;
+  }
+
+  Future<void> _finishPart() async {
+    final RandomAccessFile? part = _open;
+    if (part == null) {
+      return;
+    }
+    _open = null;
+    try {
+      await part.flush();
+    } finally {
+      await part.close();
+    }
+  }
+}
 
 Directory uploadWorkRoot(Directory mediaRoot) =>
     Directory(p.join(p.dirname(mediaRoot.path), uploadWorkSubdir));
@@ -118,12 +193,17 @@ abstract interface class UploadSender {
     List<int> indexes,
     UploadAnswer onAnswer,
   );
+
+  Future<bool> holdsAll(PendingUpload upload);
 }
 
 final class RelayUploadSender implements UploadSender {
   const RelayUploadSender(this._client);
 
   final RelayClient _client;
+
+  @override
+  Future<bool> holdsAll(PendingUpload upload) async => false;
 
   @override
   Future<void> sendParts(
@@ -155,8 +235,11 @@ final class UploadQueue {
     required this._keys,
     required this._workRoot,
     this.partBytes = uploadPartBytes,
+    this._storage = const UnmeasuredDeviceStorage(),
+    DateTime Function()? now,
     Random? random,
   }) : _db = database,
+       _now = now ?? _systemNow,
        _random = random ?? Random.secure();
 
   final AppDatabase _db;
@@ -164,11 +247,24 @@ final class UploadQueue {
   final JournalKeysSource _keys;
   final Directory _workRoot;
   final int partBytes;
+  final DeviceStorage _storage;
+  final DateTime Function() _now;
   final Random _random;
+  final Map<String, _Deferral> _deferred = <String, _Deferral>{};
   Future<int>? _preparing;
+  Future<void> _turn = Future<void>.value();
+
+  bool get waitingForSpace =>
+      _deferred.values.any((_Deferral deferral) => deferral.forSpace);
 
   Future<List<String>> unpreparedBlobIds() async {
-    final List<MediaBlob> blobs = await _db.select(_db.mediaBlobs).get();
+    final List<MediaBlob> blobs =
+        await (_db.select(_db.mediaBlobs)
+              ..orderBy(<OrderClauseGenerator<$MediaBlobsTable>>[
+                (t) => OrderingTerm.asc(t.bytes),
+                (t) => OrderingTerm.asc(t.id),
+              ]))
+            .get();
     final Set<String> queued = <String>{
       for (final SyncUpload row in await _db.select(_db.syncUploads).get())
         row.blobId,
@@ -194,7 +290,16 @@ final class UploadQueue {
   Future<int> prepareAll() =>
       _preparing ??= _prepareAll().whenComplete(() => _preparing = null);
 
-  Future<PendingUpload?> prepare(String blobId) async {
+  Future<PendingUpload?> prepare(String blobId) =>
+      _oneAtATime(() => _prepare(blobId));
+
+  Future<T> _oneAtATime<T>(Future<T> Function() work) {
+    final Future<T> result = _turn.then((_) => work());
+    _turn = result.then((_) {}, onError: (Object _) {});
+    return result;
+  }
+
+  Future<PendingUpload?> _prepare(String blobId) async {
     final File? source = await _localFile(blobId);
     if (source == null) {
       return null;
@@ -202,16 +307,21 @@ final class UploadQueue {
     final JournalKeys keys = await _keys();
     final String uploadId = newSyncId(_random);
     final Directory parts = Directory(p.join(_workRoot.path, blobId));
-    final File cipher = File(p.join(_workRoot.path, '$blobId$_cipherSuffix'));
     await _workRoot.create(recursive: true);
     if (await parts.exists()) {
       await parts.delete(recursive: true);
     }
+    await requireSpace(
+      _storage,
+      _workRoot,
+      encryptedFileLength(await source.length()),
+    );
     await parts.create(recursive: true);
+    final _PartWriter writer = _PartWriter(parts, partBytes);
     try {
-      await FileCipher(keys).encryptFile(source, cipher, keys.currentEpoch);
-      final int totalBytes = await cipher.length();
-      final int partCount = await _split(cipher, parts, totalBytes);
+      await FileCipher(keys).encryptInto(source, writer.add, keys.currentEpoch);
+      final int partCount = await writer.close();
+      final int totalBytes = writer.written;
       await _db
           .into(_db.syncUploads)
           .insertOnConflictUpdate(
@@ -226,11 +336,12 @@ final class UploadQueue {
               status: preparedUploadStatus,
             ),
           );
-    } finally {
-      if (await cipher.exists()) {
-        await cipher.delete();
-      }
+    } catch (_) {
+      await writer.abandon();
+      await _deleteParts(parts.path);
+      rethrow;
     }
+    _deferred.remove(blobId);
     return (await pendingUploads()).where((PendingUpload upload) {
       return upload.blobId == blobId;
     }).firstOrNull;
@@ -270,6 +381,9 @@ final class UploadQueue {
         return;
       }
       if (allowed != null && !allowed(upload)) {
+        continue;
+      }
+      if (await sender.holdsAll(upload)) {
         continue;
       }
       await sendOne(client, sender, upload, isCurrent: isCurrent);
@@ -360,29 +474,40 @@ final class UploadQueue {
   }) async {
     int queued = 0;
     for (final String blobId in blobIds.toSet()) {
-      if (await _localFile(blobId) == null) {
-        continue;
-      }
-      final SyncUpload? row = await (_db.select(
-        _db.syncUploads,
-      )..where((t) => t.blobId.equals(blobId))).getSingleOrNull();
-      if (keepInFlight && row != null) {
-        continue;
-      }
-      await _db.transaction(() async {
-        await (_db.delete(
-          _db.syncUploads,
-        )..where((t) => t.blobId.equals(blobId))).go();
-        await (_db.update(_db.syncMediaCache)
-              ..where((t) => t.blobId.equals(blobId)))
-            .write(const SyncMediaCacheCompanion(uploaded: Value(false)));
-      });
-      await _deleteParts(row?.partsDir);
-      if (await prepare(blobId) != null) {
+      if (await _oneAtATime(() => _requeueOne(blobId, keepInFlight))) {
         queued += 1;
       }
     }
     return queued;
+  }
+
+  Future<bool> _requeueOne(String blobId, bool keepInFlight) async {
+    if (await _localFile(blobId) == null) {
+      return false;
+    }
+    final SyncUpload? row = await (_db.select(
+      _db.syncUploads,
+    )..where((t) => t.blobId.equals(blobId))).getSingleOrNull();
+    if (keepInFlight && row != null) {
+      return false;
+    }
+    await _db.transaction(() async {
+      await (_db.delete(
+        _db.syncUploads,
+      )..where((t) => t.blobId.equals(blobId))).go();
+      await (_db.update(_db.syncMediaCache)
+            ..where((t) => t.blobId.equals(blobId)))
+          .write(const SyncMediaCacheCompanion(uploaded: Value(false)));
+    });
+    await _deleteParts(row?.partsDir);
+    try {
+      return await _prepare(blobId) != null;
+    } on NotEnoughSpaceException {
+      _defer(blobId, forSpace: true, measured: true);
+    } on FileSystemException catch (error) {
+      _defer(blobId, forSpace: isNoSpaceLeft(error), measured: false);
+    }
+    return false;
   }
 
   Future<void> cancelAll() async {
@@ -404,31 +529,57 @@ final class UploadQueue {
 
   Future<int> _prepareAll() async {
     int prepared = 0;
-    for (final String blobId in await unpreparedBlobIds()) {
-      if (await prepare(blobId) != null) {
-        prepared += 1;
+    final List<String> ids = await unpreparedBlobIds();
+    _deferred.removeWhere((String id, _Deferral _) => !ids.contains(id));
+    for (final String blobId in ids) {
+      final _Deferral? deferral = _deferred[blobId];
+      if (deferral != null &&
+          _now().isBefore(deferral.until) &&
+          !(deferral.measured && await _roomFor(blobId))) {
+        continue;
+      }
+      try {
+        if (await prepare(blobId) != null) {
+          prepared += 1;
+        }
+      } on NotEnoughSpaceException {
+        _defer(blobId, forSpace: true, measured: true);
+      } on FileSystemException catch (error) {
+        _defer(blobId, forSpace: isNoSpaceLeft(error), measured: false);
       }
     }
     return prepared;
   }
 
-  Future<int> _split(File cipher, Directory parts, int totalBytes) async {
-    final RandomAccessFile input = await cipher.open();
-    int index = 0;
-    try {
-      int offset = 0;
-      while (offset < totalBytes) {
-        final int size = min(partBytes, totalBytes - offset);
-        final Uint8List bytes = await input.read(size);
-        await File(p.join(parts.path, '$index'))
-            .writeAsBytes(bytes, flush: true);
-        offset += bytes.length;
-        index += 1;
-      }
-    } finally {
-      await input.close();
+  Future<bool> _roomFor(String blobId) async {
+    final File? source = await _localFile(blobId);
+    if (source == null) {
+      return false;
     }
-    return index;
+    try {
+      await requireSpace(
+        _storage,
+        _workRoot,
+        encryptedFileLength(await source.length()),
+      );
+      return true;
+    } on NotEnoughSpaceException {
+      return false;
+    }
+  }
+
+  void _defer(String blobId, {required bool forSpace, required bool measured}) {
+    final int attempts = (_deferred[blobId]?.attempts ?? 0) + 1;
+    final int millis = min(
+      firstPrepareRetry.inMilliseconds * (1 << min(attempts - 1, 20)),
+      maxPrepareRetry.inMilliseconds,
+    );
+    _deferred[blobId] = _Deferral(
+      until: _now().add(Duration(milliseconds: millis)),
+      attempts: attempts,
+      forSpace: forSpace,
+      measured: measured,
+    );
   }
 
   Future<File?> _localFile(String blobId) async {
