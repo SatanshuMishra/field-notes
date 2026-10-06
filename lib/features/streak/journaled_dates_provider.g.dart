@@ -47,7 +47,7 @@ final class JournalEntryCountsProvider
 }
 
 String _$journalEntryCountsHash() =>
-    r'a4ab9b9ca3c074150a134b77f0360b9aba8dedd0';
+    r'82c1d8537260ac20e5530dfe869f20b2918f45dc';
 
 @ProviderFor(journaledDates)
 final journaledDatesProvider = JournaledDatesProvider._();

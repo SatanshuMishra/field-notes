@@ -42,6 +42,8 @@ final class PushApplied {
   final Set<int> staleEpoch;
 }
 
+const int outboxPageRows = 1000;
+
 final class PushCycle {
   PushCycle({
     required AppDatabase database,
@@ -80,39 +82,44 @@ final class PushCycle {
   Future<PushBatch?> buildBatch({Set<int> excluding = const <int>{}}) async {
     final JournalKeys keys = await _keys();
     final KeyedNames names = KeyedNames(keys);
-    final List<SyncOutboxData> pending =
-        await (_db.select(_db.syncOutbox)
-              ..orderBy(<OrderClauseGenerator<$SyncOutboxTable>>[
-                (t) => OrderingTerm.asc(t.id),
-              ]))
-            .get();
     final List<RecordPush> changes = <RecordPush>[];
     final List<int> outboxIds = <int>[];
     int bodyBytes = _jsonLength(
       PushRequest(changes: const <RecordPush>[]).toJson(),
     );
-    for (final SyncOutboxData row in pending) {
-      if (changes.length >= maxChanges) {
+    int? after;
+    bool full = false;
+    while (!full) {
+      final List<int> page = await _outboxPage(after);
+      if (page.isEmpty) {
         break;
       }
-      if (excluding.contains(row.id)) {
-        continue;
-      }
-      final RecordPush? change = await _prepare(row.id, keys, names);
-      if (change == null || change.envelope.length > maxEnvelope) {
-        continue;
-      }
-      final int changeBytes =
-          _jsonLength(change.toJson()) + (changes.isEmpty ? 0 : 1);
-      if (bodyBytes + changeBytes > maxBodyBytes) {
-        if (changes.isEmpty) {
+      after = page.last;
+      for (final int id in page) {
+        if (changes.length >= maxChanges) {
+          full = true;
+          break;
+        }
+        if (excluding.contains(id)) {
           continue;
         }
-        break;
+        final RecordPush? change = await _prepare(id, keys, names);
+        if (change == null || change.envelope.length > maxEnvelope) {
+          continue;
+        }
+        final int changeBytes =
+            _jsonLength(change.toJson()) + (changes.isEmpty ? 0 : 1);
+        if (bodyBytes + changeBytes > maxBodyBytes) {
+          if (changes.isEmpty) {
+            continue;
+          }
+          full = true;
+          break;
+        }
+        changes.add(change);
+        outboxIds.add(id);
+        bodyBytes += changeBytes;
       }
-      changes.add(change);
-      outboxIds.add(row.id);
-      bodyBytes += changeBytes;
     }
     return changes.isEmpty
         ? null
@@ -188,6 +195,22 @@ final class PushCycle {
       stale: stale,
       staleEpoch: staleEpoch,
     );
+  }
+
+  Future<List<int>> _outboxPage(int? after) async {
+    final Expression<int> id = _db.syncOutbox.id;
+    final List<TypedResult> rows =
+        await (_db.selectOnly(_db.syncOutbox)
+              ..addColumns(<Expression<Object>>[id])
+              ..where(
+                after == null
+                    ? const Constant<bool>(true)
+                    : id.isBiggerThanValue(after),
+              )
+              ..orderBy(<OrderingTerm>[OrderingTerm.asc(id)])
+              ..limit(outboxPageRows))
+            .get();
+    return <int>[for (final TypedResult row in rows) ?row.read(id)];
   }
 
   Future<RecordPush?> _prepare(
