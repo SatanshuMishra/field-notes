@@ -145,4 +145,15 @@ systemctl restart smartd.service
 say "Lingering for $user_name"
 loginctl enable-linger "$user_name"
 
+user_manager="user@$(id -u "$user_name").service"
+manager_pid="$(systemctl show "$user_manager" -p MainPID --value)"
+if [ -n "$manager_pid" ] && [ "$manager_pid" != 0 ]; then
+  running_groups="$(awk '/^Groups:/ { for (i = 2; i <= NF; i++) print $i }' "/proc/$manager_pid/status" | sort -n | tr '\n' ' ')"
+  account_groups="$(id -G "$user_name" | tr ' ' '\n' | sort -n | tr '\n' ' ')"
+  if [ "$running_groups" != "$account_groups" ]; then
+    say "Restarting $user_manager, which started before $user_name's groups changed and cannot reach Docker"
+    systemctl restart "$user_manager"
+  fi
+fi
+
 say "Done. Next, as $user_name: $script_dir/install-user-timers.sh"
