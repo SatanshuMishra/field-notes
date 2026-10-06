@@ -531,10 +531,21 @@ void main() {
         recorder: FakeVideoRecorder(),
       );
       await _open(tester);
-      expect(find.text('Mirror on'), findsOneWidget);
-      await tester.tap(find.text('Mirror on'));
+      expect(
+        tester.getSemantics(find.byKey(videoSelfViewKey)),
+        isSemantics(label: 'Self-view', hasToggledState: true, isToggled: true),
+      );
+      expect(find.text('Mirror on'), findsNothing);
+      await tester.tap(find.byKey(videoSelfViewKey));
       await tester.pump();
-      expect(find.text('Mirror off'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.byKey(videoSelfViewKey)),
+        isSemantics(
+          label: 'Self-view',
+          hasToggledState: true,
+          isToggled: false,
+        ),
+      );
       expect(fakeVideoPreview(), findsNothing);
       expect(find.text(_selfViewOffTitle), findsOneWidget);
       await _closeAll(tester);
@@ -834,7 +845,7 @@ void main() {
   );
 
   testWidgets(
-    'the camera picker shows only while idle with more than one camera',
+    'the camera switch shows only while idle with more than one camera',
     (WidgetTester tester) async {
       for (final _Layout layout in _Layout.values) {
         final FakeVideoRecorder recorder = FakeVideoRecorder(
@@ -853,11 +864,14 @@ void main() {
         );
         await _open(tester);
 
-        final Finder picker = find.byType(CameraPicker);
+        final bool sidebar = layout == _Layout.sidebar;
+        final Finder picker = sidebar
+            ? find.byType(CameraPicker)
+            : find.byKey(videoFlipCameraKey);
         expect(picker, findsOneWidget, reason: '$layout');
         final Rect pickerRect = tester.getRect(picker);
         final Rect chip = tester.getRect(
-          find.text(layout == _Layout.sidebar ? 'Self-view on' : 'Mirror on'),
+          sidebar ? find.text('Self-view on') : find.byKey(videoSelfViewKey),
         );
         final Rect leave = tester.getRect(find.byKey(videoCloseKey));
         expect(
@@ -880,16 +894,24 @@ void main() {
           lessThan(1),
           reason: '$layout',
         );
-        final RenderParagraph label = tester.renderObject<RenderParagraph>(
-          find.descendant(
-            of: picker,
-            matching: find.text(
-              'FaceTime HD Camera with a very long descriptive name',
+        if (sidebar) {
+          final RenderParagraph label = tester.renderObject<RenderParagraph>(
+            find.descendant(
+              of: picker,
+              matching: find.text(
+                'FaceTime HD Camera with a very long descriptive name',
+              ),
             ),
-          ),
-        );
-        expect(label.maxLines, 1, reason: '$layout');
-        expect(label.overflow, TextOverflow.ellipsis, reason: '$layout');
+          );
+          expect(label.maxLines, 1, reason: '$layout');
+          expect(label.overflow, TextOverflow.ellipsis, reason: '$layout');
+        } else {
+          expect(
+            find.bySemanticsLabel('Switch to usb camera'),
+            findsOneWidget,
+            reason: '$layout',
+          );
+        }
         expect(tester.takeException(), isNull, reason: '$layout');
 
         await _tapShutter(tester);

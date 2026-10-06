@@ -93,7 +93,7 @@ Future<void> _deleteCaptureFiles(List<File> files) async {
   }
 }
 
-class CameraVideoRecorder implements VideoRecorder {
+class CameraVideoRecorder implements VideoRecorder, CameraControls {
   CameraController? _controller;
   _CameraSession? _session;
   final Stopwatch _elapsed = Stopwatch();
@@ -113,7 +113,70 @@ class CameraVideoRecorder implements VideoRecorder {
     } catch (error) {
       throw VideoRecorderException(videoDeviceListMessage, cause: error);
     }
-    return cameraDeviceLabels(cameras);
+    return cameraDeviceLabels(frontAndBackCameras(cameras));
+  }
+
+  CameraController? get _readyController {
+    final CameraController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return null;
+    }
+    return controller;
+  }
+
+  @override
+  Rect? previewRectIn(Size area) {
+    final CameraController? controller = _readyController;
+    if (controller == null || area.isEmpty) {
+      return null;
+    }
+    final double aspect = previewAspectRatio(controller.value);
+    final Size fitted =
+        applyBoxFit(BoxFit.contain, Size(aspect, 1), area).destination;
+    return Alignment.center.inscribe(fitted, Offset.zero & area);
+  }
+
+  @override
+  Future<ZoomRange?> zoomRange() async {
+    final CameraController? controller = _readyController;
+    if (controller == null) {
+      return null;
+    }
+    try {
+      return ZoomRange(
+        await controller.getMinZoomLevel(),
+        await controller.getMaxZoomLevel(),
+      );
+    } on CameraException {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> setZoom(double zoom) async {
+    final CameraController? controller = _readyController;
+    if (controller == null) {
+      return;
+    }
+    try {
+      await controller.setZoomLevel(zoom);
+    } on CameraException {
+      return;
+    }
+  }
+
+  @override
+  Future<void> focusAt(Offset point) async {
+    final CameraController? controller = _readyController;
+    if (controller == null) {
+      return;
+    }
+    try {
+      await controller.setFocusPoint(point);
+      await controller.setExposurePoint(point);
+    } on CameraException {
+      return;
+    }
   }
 
   @override
@@ -128,6 +191,7 @@ class CameraVideoRecorder implements VideoRecorder {
         throw const VideoRecorderException(videoStartMessage);
       }
       await controller.startVideoRecording();
+      await _stabilise(controller);
       _elapsed
         ..reset()
         ..start();
@@ -301,6 +365,7 @@ class CameraVideoRecorder implements VideoRecorder {
       if (!identical(_session, session)) {
         throw const VideoRecorderException(videoStartMessage);
       }
+      await _stabilise(controller);
       ready.complete(controller);
     } on VideoRecorderException catch (error) {
       ready.completeError(error);
@@ -308,6 +373,14 @@ class CameraVideoRecorder implements VideoRecorder {
       ready.completeError(
         VideoRecorderException(videoStartMessage, cause: error),
       );
+    }
+  }
+
+  Future<void> _stabilise(CameraController controller) async {
+    try {
+      await controller.setVideoStabilizationMode(VideoStabilizationMode.level1);
+    } on CameraException catch (error) {
+      debugPrint('Video stabilisation unavailable: $error');
     }
   }
 
@@ -350,10 +423,38 @@ class _CameraSessionPreview extends StatelessWidget {
         if (controller == null) {
           return const SizedBox.shrink();
         }
-        return CameraPreview(controller);
+        return Center(child: CameraPreview(controller));
       },
     );
   }
+}
+
+double previewAspectRatio(CameraValue value) {
+  final DeviceOrientation orientation = value.isRecordingVideo
+      ? value.recordingOrientation ?? value.deviceOrientation
+      : value.previewPauseOrientation ??
+          value.lockedCaptureOrientation ??
+          value.deviceOrientation;
+  final bool landscape = orientation == DeviceOrientation.landscapeLeft ||
+      orientation == DeviceOrientation.landscapeRight;
+  return landscape ? value.aspectRatio : 1 / value.aspectRatio;
+}
+
+List<CameraDescription> frontAndBackCameras(List<CameraDescription> cameras) {
+  CameraDescription? back;
+  CameraDescription? front;
+  for (final CameraDescription camera in cameras) {
+    switch (camera.lensDirection) {
+      case CameraLensDirection.back:
+        back ??= camera;
+      case CameraLensDirection.front:
+        front ??= camera;
+      case CameraLensDirection.external:
+        break;
+    }
+  }
+  final List<CameraDescription> chosen = <CameraDescription>[?back, ?front];
+  return chosen.isEmpty ? cameras.take(1).toList() : chosen;
 }
 
 List<VideoCaptureDevice> cameraDeviceLabels(List<CameraDescription> cameras) {

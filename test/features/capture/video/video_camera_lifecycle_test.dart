@@ -174,7 +174,7 @@ void main() {
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the picked camera is remembered the next time the sheet opens',
       (WidgetTester tester) async {
@@ -201,7 +201,7 @@ void main() {
     expect(fakeVideoPreview(deviceId: 'usb-id'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets(
       'a remembered camera that is no longer connected falls back to a '
@@ -232,6 +232,41 @@ void main() {
     expect(recorder.previewDeviceId, 'built-in-id');
     expect(fakeVideoPreview(deviceId: 'built-in-id'), findsOneWidget);
     expect(find.byType(CameraPicker), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('on a phone the flip button swaps the back and front cameras', (
+    WidgetTester tester,
+  ) async {
+    final FakeVideoRecorder recorder = FakeVideoRecorder(
+      devices: const <VideoCaptureDevice>[
+        VideoCaptureDevice(id: '0', label: 'Back camera'),
+        VideoCaptureDevice(id: '1', label: 'Front camera'),
+      ],
+    );
+    final FakeCaptureService service = FakeCaptureService();
+
+    await tester.pumpWidget(
+      _recorderApp(recorder: recorder, service: service),
+    );
+    await _openComposer(tester);
+
+    expect(find.byType(CameraPicker), findsNothing);
+    expect(recorder.previewDeviceId, '0');
+    expect(find.bySemanticsLabel('Switch to front camera'), findsOneWidget);
+
+    await tester.tap(find.byKey(videoFlipCameraKey));
+    await _settle(tester);
+
+    expect(recorder.previewDeviceId, '1');
+    expect(fakeVideoPreview(deviceId: '1'), findsOneWidget);
+    expect(find.bySemanticsLabel('Switch to back camera'), findsOneWidget);
+
+    await tester.tap(find.byKey(videoFlipCameraKey));
+    await _settle(tester);
+
+    expect(recorder.previewDeviceId, '0');
 
     await tester.pumpWidget(const SizedBox.shrink());
   });

@@ -6,7 +6,6 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
-import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
@@ -270,7 +269,7 @@ void main() {
     await _open(tester);
 
     expect(find.byType(CrossHatchPlaceholder), findsWidgets);
-    expect(find.byType(CameraPicker), findsOneWidget);
+    expect(find.byKey(videoFlipCameraKey), findsOneWidget);
     expect(find.text(stageIdleStatus), findsOneWidget);
     expect(fakeVideoPreview(), findsNothing);
 
@@ -324,10 +323,7 @@ void main() {
     );
     await _open(tester);
 
-    await tester.tap(find.text('Built-in Camera'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('USB Camera'));
-    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(videoFlipCameraKey));
     await _settle(tester);
 
     expect(find.text(videoReleaseMessage), findsOneWidget);

@@ -378,7 +378,12 @@ final List<A11yState> immersiveStates = <A11yState>[
     proof: <A11yProof>[
       A11yProof(find.byKey(videoShutterKey)),
       A11yProof(find.byKey(videoSelfViewKey)),
-      A11yProof(find.byType(CameraPicker)),
+      A11yProof(
+        find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is CameraPicker || widget.key == videoFlipCameraKey,
+        ),
+      ),
     ],
     stateful: _selfViewToggle,
   ),
