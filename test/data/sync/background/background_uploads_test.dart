@@ -521,6 +521,65 @@ void main() {
     },
   );
 
+  test(
+    'results collected on start are applied before an offline hand-over',
+    () async {
+      final _Background first = await enrolled('Phone');
+      final SyncTestDevice phone = first.device;
+      final SyncEngine engine = first.engine();
+      await engine.start();
+      await engine.syncNow();
+      await phone.disposeEngines();
+      final RelayClient client = phone.relayClient(
+        relay.baseUrl,
+        await phone.deviceKeys(),
+        (_) {},
+      );
+      await first.media.store.putBytes(
+        bytes: _bytes(3000, 11),
+        mime: 'video/mp4',
+        kind: domain.MediaKind.video,
+      );
+      await first.media.uploads.prepareAll();
+      await first.uploads.handOverPrepared();
+      final List<HandedTask> parts = first.uploader.parts;
+      expect(parts, hasLength(3));
+      final PendingUpload upload =
+          (await first.media.uploads.pendingUploads()).single;
+      final UploadStatusResponse answer = await client.uploadPart(
+        name: upload.blobName,
+        uploadId: upload.uploadId,
+        index: 0,
+        blobSize: upload.totalBytes,
+        partSize: upload.partBytes,
+        bytes: await upload.partFile(0).readAsBytes(),
+      );
+      final _FakeUploader restarted = _FakeUploader()
+        ..stored.add(
+          HandedResult(
+            parts[0],
+            HandedStatus.complete,
+            statusCode: 200,
+            body: jsonEncode(answer.toJson()),
+          ),
+        );
+      final _Background second = _Background(phone, first.media, restarted);
+      phone.network.kind = NetworkKind.offline;
+
+      final SyncEngine reopened = second.engine();
+      await reopened.start();
+      await eventually(() async => restarted.parts.isNotEmpty);
+
+      expect(
+        restarted.parts.map((HandedTask task) => task.taskId).toSet(),
+        <String>{
+          partTaskId(upload.uploadId, 1),
+          partTaskId(upload.uploadId, 2),
+        },
+      );
+    },
+  );
+
   test('pause and wipe cancel queued uploads', () async {
     final _Background phone = await enrolled('Phone');
     final SyncEngine engine = phone.engine();
