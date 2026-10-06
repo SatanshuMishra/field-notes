@@ -52,3 +52,50 @@ dependencies {
 flutter {
     source = "../.."
 }
+
+abstract class CheckNoGoogleTelemetry : DefaultTask() {
+    @get:Input
+    abstract val banned: ListProperty<String>
+
+    @get:Input
+    abstract val groups: ListProperty<String>
+
+    @TaskAction
+    fun check() {
+        val found = groups.get().filter { group -> banned.get().any { group.startsWith(it) } }.distinct().sorted()
+        check(found.isEmpty()) { "The build would carry Google telemetry libraries: $found" }
+    }
+}
+
+fun resolvedGroups(root: org.gradle.api.artifacts.result.ResolvedComponentResult): List<String> {
+    val seen = mutableSetOf<org.gradle.api.artifacts.result.ResolvedComponentResult>()
+    val pending = ArrayDeque(listOf(root))
+    while (pending.isNotEmpty()) {
+        val component = pending.removeFirst()
+        if (!seen.add(component)) {
+            continue
+        }
+        component.dependencies
+            .filterIsInstance<org.gradle.api.artifacts.result.ResolvedDependencyResult>()
+            .forEach { pending.addLast(it.selected) }
+    }
+    return seen.mapNotNull { (it.id as? org.gradle.api.artifacts.component.ModuleComponentIdentifier)?.group }
+}
+
+androidComponents {
+    onVariants { variant ->
+        val name = variant.name.replaceFirstChar { it.uppercase() }
+        val check = tasks.register<CheckNoGoogleTelemetry>("check${name}NoGoogleTelemetry") {
+            banned.set(
+                listOf(
+                    "com.google.mlkit",
+                    "com.google.android.datatransport",
+                    "com.google.firebase",
+                    "com.google.android.gms",
+                ),
+            )
+            groups.set(variant.runtimeConfiguration.incoming.resolutionResult.rootComponent.map(::resolvedGroups))
+        }
+        tasks.matching { it.name == "pre${name}Build" }.configureEach { dependsOn(check) }
+    }
+}

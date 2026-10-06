@@ -35,7 +35,7 @@ const String startSyncCaptionMac =
 const String startSyncCaptionPhone =
     'First device. Server address and invite code.';
 const String joinJournalCaptionMac =
-    'You already sync on another device. Scan or type its code.';
+    'You already sync on another device. Type the 8 words it shows.';
 const String joinJournalCaptionPhone = 'Scan the code on your other device.';
 const String restoreLabelTitle = 'Restore with recovery phrase';
 const String restoreCaptionMac = 'You lost every device. Use your 12 words.';
