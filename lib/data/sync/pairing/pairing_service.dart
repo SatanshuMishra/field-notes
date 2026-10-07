@@ -6,6 +6,7 @@ import 'package:field_notes/data/crypto/journal_keys.dart';
 import 'package:field_notes/data/crypto/key_store.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/sync/device_name.dart';
+import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
@@ -19,9 +20,37 @@ const String pairingExpiredMessage = 'This code has expired. Make a new one.';
 const String relayAddressNeededMessage =
     'Type your server address with the 8 words.';
 const String pairingCancelledMessage = 'Joining was cancelled.';
+const String pairingTakenMessage =
+    'Another device already used this code. On your other device, choose '
+    '"Don\'t add", then make a new code.';
+const String pairingDeclinedMessage = 'Nothing was joined.';
 const Duration pairingPollInterval = Duration(seconds: 2);
+const int shownDeviceNameLength = 40;
+
+final RegExp _spacing = RegExp(r'\s+', unicode: true);
+final RegExp _hiddenCharacters = RegExp(
+  r'[\p{Cc}\p{Cf}\p{Co}\p{Cs}\p{Zl}\p{Zp}]',
+  unicode: true,
+);
+
+String shownDeviceName(String name) {
+  final String plain = name
+      .replaceAll(_spacing, ' ')
+      .replaceAll(_hiddenCharacters, '')
+      .trim();
+  if (plain.isEmpty) {
+    return unnamedDeviceName;
+  }
+  final List<int> runes = plain.runes.toList();
+  if (runes.length <= shownDeviceNameLength) {
+    return plain;
+  }
+  return '${String.fromCharCodes(runes.take(shownDeviceNameLength - 1)).trimRight()}\u2026';
+}
 
 typedef PairingWait = Future<void> Function(Duration duration);
+
+typedef JournalConfirmation = Future<bool> Function(String? journalLabel);
 
 Future<void> waitFor(Duration duration) => Future<void>.delayed(duration);
 
@@ -35,17 +64,30 @@ class PairingCancelled extends SyncSetupException {
   const PairingCancelled() : super(pairingCancelledMessage);
 }
 
+class PairingTaken extends SyncSetupException {
+  const PairingTaken() : super(pairingTakenMessage);
+}
+
+class PairingDeclined extends SyncSetupException {
+  const PairingDeclined() : super(pairingDeclinedMessage);
+}
+
 bool _neverCancelled() => false;
 
+void _ignoreComparison(String comparison) {}
+
 final class PairingCandidate {
-  const PairingCandidate({required this.deviceName, required this.join});
+  const PairingCandidate({
+    required this.deviceName,
+    required this.join,
+    required this.comparison,
+  });
 
   final String deviceName;
   final PairingJoinRequest join;
+  final String comparison;
 
   String get deviceId => join.device.deviceId;
-
-  String get prompt => 'Add $deviceName?';
 }
 
 final class HostedPairing {
@@ -109,7 +151,11 @@ final class HostedPairing {
         code.mailboxId,
         PairingCompleteRequest(
           device: certified,
-          keyBundle: sealPairingBundle(_journal, code.pairingKey),
+          keyBundle: sealPairingBundleFor(
+            _journal,
+            code.pairingKey,
+            joined.boxPublicKey,
+          ),
         ),
       );
     } on RelayException catch (error) {
@@ -126,12 +172,11 @@ final class HostedPairing {
     }
     try {
       return PairingCandidate(
-        deviceName: openNameUnder(
-          device.encryptedName,
-          device.deviceId,
-          code.pairingKey,
+        deviceName: shownDeviceName(
+          openNameUnder(device.encryptedName, device.deviceId, code.pairingKey),
         ),
         join: join,
+        comparison: code.comparisonFor(device),
       );
     } on CryptoException {
       throw const PairingRefused();
@@ -218,8 +263,10 @@ final class PairingService {
 
   Future<void> join(
     String code, {
+    required JournalConfirmation confirmJournal,
     Uri? relayUrl,
     bool Function() cancelled = _neverCancelled,
+    void Function(String comparison) onComparison = _ignoreComparison,
   }) async {
     final PairingCode parsed;
     try {
@@ -249,20 +296,26 @@ final class PairingService {
     final RelayClient client = _clientFor(address, device);
     try {
       _stopIf(cancelled);
-      await client.joinPairing(
+      final PairingStatusResponse waiting = await client.mailboxStatus(
         parsed.mailboxId,
         parsed.mailboxToken,
-        PairingJoinRequest(
-          device: registration,
-          authenticator: parsed.authenticatorFor(registration),
-        ),
       );
+      if (waiting.status != PairingStatus.open) {
+        throw const PairingTaken();
+      }
+      final bool confirmed = await confirmJournal(waiting.journalLabel);
+      _stopIf(cancelled);
+      if (!confirmed) {
+        throw const PairingDeclined();
+      }
+      await _post(client, parsed, registration);
+      onComparison(parsed.comparisonFor(registration));
       final PairingStatusResponse completed = await _awaitCompletion(
         client,
         parsed,
         cancelled,
       );
-      final JournalKeys journal = _openBundle(completed, parsed);
+      final JournalKeys journal = _openBundle(completed, parsed, device);
       await client.signIn();
       final EpochKeysResponse keys = await client.keys();
       final bool certified = keys.devices.any(
@@ -287,6 +340,33 @@ final class PairingService {
       throw setupFailure(error, messages: _joinMessages);
     } finally {
       client.close();
+    }
+  }
+
+  static Future<void> _post(
+    RelayClient client,
+    PairingCode code,
+    DeviceRegistration registration,
+  ) async {
+    try {
+      await client.joinPairing(
+        code.mailboxId,
+        code.mailboxToken,
+        PairingJoinRequest(
+          device: registration,
+          authenticator: code.authenticatorFor(registration),
+        ),
+      );
+    } on RelayRejected catch (error) {
+      if (error.code == SyncErrorCode.badRequest &&
+          (await client.mailboxStatus(
+                code.mailboxId,
+                code.mailboxToken,
+              )).status !=
+              PairingStatus.open) {
+        throw const PairingTaken();
+      }
+      rethrow;
     }
   }
 
@@ -319,15 +399,20 @@ final class PairingService {
   static JournalKeys _openBundle(
     PairingStatusResponse completed,
     PairingCode code,
+    DeviceKeys device,
   ) {
     final Uint8List? bundle = completed.keyBundle;
     if (bundle == null || completed.accountId == null) {
       throw const SyncSetupException(pairingRetryMessage);
     }
     try {
-      return openPairingBundle(bundle, code.pairingKey);
-    } on CryptoException catch (error) {
-      throw SyncSetupException(pairingRetryMessage, error);
+      return openPairingBundleFor(bundle, code.pairingKey, device.boxKeyPair);
+    } on CryptoException {
+      try {
+        return openPairingBundle(bundle, code.pairingKey);
+      } on CryptoException catch (error) {
+        throw SyncSetupException(pairingRetryMessage, error);
+      }
     }
   }
 }

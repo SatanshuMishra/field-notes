@@ -29,13 +29,23 @@ class _NoCameras extends CameraPlatform {
 class _FakeJoin {
   final List<String> codes = <String>[];
   final List<bool Function()> cancelSignals = <bool Function()>[];
+  JournalConfirmation? confirmJournal;
+  void Function(String comparison)? showComparison;
   Completer<void> answer = Completer<void>();
 
-  Future<void> call(String code, {Uri? relayUrl, bool Function()? cancelled}) {
+  Future<void> call(
+    String code, {
+    required JournalConfirmation confirmJournal,
+    Uri? relayUrl,
+    bool Function()? cancelled,
+    void Function(String comparison)? onComparison,
+  }) {
     codes.add(code);
     if (cancelled != null) {
       cancelSignals.add(cancelled);
     }
+    this.confirmJournal = confirmJournal;
+    showComparison = onComparison;
     return answer.future;
   }
 }
@@ -122,7 +132,7 @@ void main() {
 
     await tester.tap(find.byKey(joinServerConfirmKey));
     await tester.pump();
-    expect(find.text(joinWaitingTitle), findsOneWidget);
+    expect(find.text(joinCheckingTitle), findsOneWidget);
     expect(find.byType(ReaderWidget), findsNothing);
     expect(join.codes, <String>[_pairing]);
 
@@ -130,6 +140,136 @@ void main() {
     await tester.pumpAndSettle();
     expect(opened.result, isTrue);
     semantics.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('the journal is named and confirmed before the number shows', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final _FakeJoin join = _FakeJoin();
+    final _Opened opened = await _openFlow(tester, join);
+    _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+
+    final Future<bool> asked = join.confirmJournal!('Satanshu');
+    await tester.pump();
+    expect(find.text(joinJournalTitle), findsOneWidget);
+    expect(find.text(joinJournalMessage(phone: true)), findsOneWidget);
+    expect(find.text(joinJournalNameLabel), findsOneWidget);
+    expect(find.text('Satanshu'), findsOneWidget);
+    await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    await tester.tap(find.byKey(joinJournalConfirmKey));
+    await tester.tap(find.byKey(joinJournalConfirmKey), warnIfMissed: false);
+    await tester.pump();
+    expect(await asked, isTrue);
+    expect(find.text(joinCheckingTitle), findsOneWidget);
+
+    join.showComparison!('482 913');
+    await tester.pump();
+    expect(find.text(joinWaitingTitle), findsOneWidget);
+    expect(find.text(joinWaitingMessage), findsOneWidget);
+    expect(find.text('482 913'), findsOneWidget);
+    expect(find.bySemanticsLabel('Number 482 913'), findsOneWidget);
+
+    join.answer.complete();
+    await tester.pumpAndSettle();
+    expect(opened.result, isTrue);
+    semantics.dispose();
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('declining the journal goes back without an error', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+    _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    final Future<bool> asked = join.confirmJournal!('Alex');
+    await tester.pump();
+
+    await tester.tap(find.text(joinDeclineLabel));
+    await tester.pump();
+    expect(await asked, isFalse);
+    join.answer.completeError(const PairingDeclined());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReaderWidget), findsOneWidget);
+    expect(find.text(pairingDeclinedMessage), findsNothing);
+    expect(find.text(joinJournalTitle), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('an unnamed journal is joined only with a warning', (
+    WidgetTester tester,
+  ) async {
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+    await tester.enterText(
+      find.byType(EditableText).first,
+      'abandon ability able about above absent absorb abstract',
+    );
+    await tester.enterText(
+      find.byType(EditableText).last,
+      'https://relay.example',
+    );
+    await tester.tap(find.byKey(joinConfirmKey));
+    await tester.pump();
+
+    final Future<bool> asked = join.confirmJournal!(null);
+    await tester.pump();
+
+    expect(find.text(joinJournalTitle), findsOneWidget);
+    expect(find.text(joinUnnamedJournalMessage(phone: false)), findsOneWidget);
+    expect(find.text(joinJournalNameLabel), findsNothing);
+    await tester.tap(find.text(joinDeclineLabel));
+    await tester.pump();
+    expect(await asked, isFalse);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('closing the sheet while asking about the journal answers no', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+    _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    final Future<bool> asked = join.confirmJournal!('Satanshu');
+    await tester.pump();
+
+    final NavigatorState navigator = tester.state<NavigatorState>(
+      find.byType(Navigator),
+    );
+    navigator.pop();
+    await tester.pumpAndSettle();
+
+    expect(await asked, isFalse);
+    expect(join.cancelSignals.single(), isTrue);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('a code another device used says so', (
+    WidgetTester tester,
+  ) async {
+    _usePhoneCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+    _scan(tester, _pairing);
+    await tester.pump();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+
+    join.answer.completeError(const PairingTaken());
+    await tester.pumpAndSettle();
+
+    expect(find.text(pairingTakenMessage), findsOneWidget);
+    expect(find.byType(ReaderWidget), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
   testWidgets('declining a server goes back to scanning and skips that code', (

@@ -173,6 +173,7 @@ List<SyncValue> everyMessage() {
       join: join,
       accountId: newSyncId(),
       keyBundle: bytes(50, 200),
+      journalLabel: 'Satanshu',
     ),
     RestoreChallengeRequest(recoverySignPublicKey: bytes(51)),
     RestoreRequest(challengeId: newSyncId(), signature: bytes(52, 64)),

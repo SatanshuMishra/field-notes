@@ -241,3 +241,5 @@ final class RelayFixture {
     return p.join(Directory.current.path, 'server', 'migrations');
   }
 }
+
+Future<bool> joinAnyJournal(String? journalLabel) async => true;

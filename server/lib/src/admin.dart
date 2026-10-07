@@ -15,13 +15,18 @@ const int exitUsage = 64;
 const String adminUsage = '''
 Usage:
   relay                                   start the relay
-  relay invite create --note <text>       create an invite and print its code
+  relay invite create --note <text>       create an invite and print its code;
+                                          the note names its journal when a
+                                          device joins
   relay invite list                       list invites
   relay invite revoke <invite-id>         revoke an unused invite
   relay account list                      list accounts
   relay account suspend <account-id>      refuse every call from an account
   relay account resume <account-id>       accept an account's calls again
   relay account delete <account-id>       erase an account and its data
+  relay account rename <account-id> --note <text>
+                                          change the name a joining device
+                                          shows for an account's journal
   relay mark-restored                     run after restoring the relay's data
   relay snapshot-db --to <file>           write a checked copy of the database
   relay verify-copy --db <file> --media <dir> --manifest <file>
@@ -66,6 +71,8 @@ final class RelayAdmin {
   List<InviteSummary> listInvites() => _accounts.listInvites();
 
   bool revokeInvite(String id) => _accounts.revokeInvite(id);
+
+  bool renameAccount(String id, String note) => _accounts.rename(id, note);
 
   List<AccountSummary> listAccounts() => <AccountSummary>[
     for (final Row row in _database.select(
@@ -223,8 +230,8 @@ int _invite(
       : arguments.sublist(1);
   switch (action) {
     case 'create':
-      final String? note = optionValue(rest, '--note');
-      if (note == null) {
+      final String? note = optionValue(rest, '--note')?.trim();
+      if (note == null || note.isEmpty) {
         err.write(adminUsage);
         return exitUsage;
       }
@@ -291,6 +298,9 @@ int _account(
     }
     return exitOk;
   }
+  if (action == 'rename') {
+    return _rename(admin, rest, out, err);
+  }
   if (rest.length != 1) {
     err.write(adminUsage);
     return exitUsage;
@@ -312,6 +322,35 @@ int _account(
     return exitFailure;
   }
   out.writeln('$done\t$id');
+  return exitOk;
+}
+
+int _rename(
+  RelayAdmin admin,
+  List<String> arguments,
+  StringSink out,
+  StringSink err,
+) {
+  final String? note = optionValue(arguments, '--note')?.trim();
+  final List<String> ids = <String>[];
+  for (int index = 0; index < arguments.length; index++) {
+    final String argument = arguments[index];
+    if (argument == '--note') {
+      index += 1;
+    } else if (!argument.startsWith('--note=')) {
+      ids.add(argument);
+    }
+  }
+  if (note == null || note.isEmpty || ids.length != 1) {
+    err.write(adminUsage);
+    return exitUsage;
+  }
+  final String id = ids.single;
+  if (!admin.renameAccount(id, note)) {
+    err.writeln('No account $id that can be renamed');
+    return exitFailure;
+  }
+  out.writeln('renamed\t$id\t${_cell(note)}');
   return exitOk;
 }
 

@@ -87,6 +87,47 @@ void main() {
   EpochKeysResponse keysOf(http.Response response) =>
       EpochKeysResponse.fromJson(decodeJsonObject(response.body));
 
+  test('a joining device sees whose journal the code belongs to', () async {
+    final TestAccount alex = await harness.enrol(note: 'Alex');
+    final TestAccount sam = await harness.enrol(note: 'Sam');
+    final SignedIn samsMac = await harness.signIn(sam.firstDevice);
+    final String mailboxId = newSyncId();
+    final String token = newToken();
+    await openMailbox(samsMac, mailboxId, token);
+
+    final PairingStatusResponse open = pairingOf(
+      await statusByToken(mailboxId, token),
+    );
+    expect(open.status, PairingStatus.open);
+    expect(open.journalLabel, 'Sam');
+
+    final TestDevice newcomer = harness.newDevice(sam.certifyingKeys);
+    await join(mailboxId, token, newcomer);
+    await complete(samsMac, mailboxId, newcomer, harness.randomOpaque(120));
+    final PairingStatusResponse finished = pairingOf(
+      await statusByToken(mailboxId, token),
+    );
+    expect(finished.status, PairingStatus.complete);
+    expect(finished.journalLabel, 'Sam');
+
+    harness.database.execute(
+      'UPDATE accounts SET note = ? WHERE id = ?',
+      <Object?>['  ', sam.accountId],
+    );
+    expect(
+      pairingOf(await statusByToken(mailboxId, token)).journalLabel,
+      'Unnamed journal ${sam.accountId.substring(0, 6)}',
+    );
+    final SignedIn alexsPhone = await harness.signIn(alex.firstDevice);
+    final String alexMailbox = newSyncId();
+    final String alexToken = newToken();
+    await openMailbox(alexsPhone, alexMailbox, alexToken);
+    expect(
+      pairingOf(await statusByToken(alexMailbox, alexToken)).journalLabel,
+      'Alex',
+    );
+  });
+
   test('a mailbox older than ten minutes is refused', () async {
     final TestAccount account = await harness.enrol();
     final SignedIn owner = await harness.signIn(account.firstDevice);

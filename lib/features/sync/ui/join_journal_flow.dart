@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/data/sync/pairing/pairing_service.dart';
@@ -9,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
 
+import 'comparison_number.dart';
 import 'start_sync_flow.dart';
 
 const String joinTitle = 'Join my journal';
@@ -20,19 +23,33 @@ const String joinLabel = 'Join';
 const String joinBackLabel = 'Back';
 const String joinWaitingTitle = 'Waiting for your other device';
 const String joinWaitingMessage =
-    'Choose "Add" on your other device to finish joining.';
+    'Check that your other device shows this number, then choose "Add" there.';
+const String joinCheckingTitle = 'Checking the code';
+const String joinJournalTitle = 'Is this your journal?';
+const String joinJournalNameLabel = 'Journal';
 const String joinCameraLabel = 'Camera view for scanning the code';
 const String joinDeclineLabel = "Don't join";
 
 const Key joinConfirmKey = ValueKey<String>('join-confirm');
 const Key typeWordsInsteadKey = ValueKey<String>('join-type-words');
 const Key joinServerConfirmKey = ValueKey<String>('join-server-confirm');
+const Key joinJournalConfirmKey = ValueKey<String>('join-journal-confirm');
 
 String joinServerTitle(Uri server) => 'Join ${server.host}?';
 
 String joinServerMessage({required bool phone}) =>
     'Everything on this ${phone ? 'phone' : 'device'} will be added to the '
     'journal on this server. Only join a server you set up.';
+
+String joinJournalMessage({required bool phone}) =>
+    'Your server keeps this journal under the name below. Everything on this '
+    '${phone ? 'phone' : 'device'} will go into it, so join only if the name '
+    'is yours.';
+
+String joinUnnamedJournalMessage({required bool phone}) =>
+    "Your server didn't name this journal. Everything on this "
+    '${phone ? 'phone' : 'device'} will go into it, so join only if the code '
+    'came from your own device.';
 
 String joinAddressMismatchMessage(Uri code, Uri typed) =>
     'That code is for ${code.host}, not ${typed.host}.';
@@ -51,8 +68,10 @@ const Duration _scanPause = Duration(milliseconds: 100);
 
 typedef PairingJoin = Future<void> Function(
   String code, {
+  required JournalConfirmation confirmJournal,
   Uri? relayUrl,
   bool Function() cancelled,
+  void Function(String comparison) onComparison,
 });
 
 bool get joinCanScan => defaultTargetPlatform == TargetPlatform.android;
@@ -79,7 +98,7 @@ Future<void> joinJournal(BuildContext context, WidgetRef ref) async {
   }
 }
 
-enum _JoinStage { scan, type, confirm, waiting }
+enum _JoinStage { scan, type, confirm, checking, journal, waiting }
 
 class JoinJournalFlow extends ConsumerStatefulWidget {
   const JoinJournalFlow({super.key, this.join});
@@ -99,11 +118,20 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   String? _refusedCode;
   String? _offeredCode;
   Uri? _offeredServer;
+  String? _journalLabel;
+  Completer<bool>? _journalAnswer;
+  String? _comparison;
   bool _closing = false;
+
+  bool get _joining =>
+      _stage == _JoinStage.checking ||
+      _stage == _JoinStage.journal ||
+      _stage == _JoinStage.waiting;
 
   @override
   void dispose() {
     _closing = true;
+    _settleJournal(false);
     _words.dispose();
     _address.dispose();
     super.dispose();
@@ -178,32 +206,86 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   }
 
   Future<void> _join(String code, Uri? relayUrl) async {
-    if (_stage == _JoinStage.waiting || _closing) {
+    if (_joining || _closing) {
       return;
     }
     setState(() {
       if (_stage != _JoinStage.confirm) {
         _returnTo = _stage;
       }
-      _stage = _JoinStage.waiting;
+      _stage = _JoinStage.checking;
       _error = null;
+      _comparison = null;
     });
     final PairingJoin join =
         widget.join ?? ref.read(pairingServiceProvider).join;
     try {
-      await join(code, relayUrl: relayUrl, cancelled: () => _closing);
+      await join(
+        code,
+        relayUrl: relayUrl,
+        cancelled: () => _closing,
+        confirmJournal: _askJournal,
+        onComparison: _showComparison,
+      );
       if (mounted) {
         Navigator.of(context).pop(true);
       }
+    } on PairingDeclined {
+      _back(code, null);
     } on SyncSetupException catch (error) {
-      if (mounted) {
-        setState(() {
-          _stage = _returnTo;
-          _error = error.message;
-          _refusedCode = _returnTo == _JoinStage.scan ? code : null;
-        });
-      }
+      _back(code, error.message);
     }
+  }
+
+  void _back(String code, String? error) {
+    if (!mounted || _closing) {
+      return;
+    }
+    setState(() {
+      _stage = _returnTo;
+      _error = error;
+      _refusedCode = _returnTo == _JoinStage.scan ? code : null;
+      _comparison = null;
+    });
+  }
+
+  Future<bool> _askJournal(String? label) {
+    if (!mounted || _closing) {
+      return Future<bool>.value(false);
+    }
+    final Completer<bool> answer = Completer<bool>();
+    setState(() {
+      _stage = _JoinStage.journal;
+      _journalLabel = label;
+      _journalAnswer = answer;
+    });
+    return answer.future;
+  }
+
+  void _answerJournal(bool join) {
+    if (_journalAnswer == null) {
+      return;
+    }
+    setState(() => _stage = _JoinStage.checking);
+    _settleJournal(join);
+  }
+
+  void _settleJournal(bool join) {
+    final Completer<bool>? answer = _journalAnswer;
+    _journalAnswer = null;
+    if (answer != null && !answer.isCompleted) {
+      answer.complete(join);
+    }
+  }
+
+  void _showComparison(String comparison) {
+    if (!mounted || _closing) {
+      return;
+    }
+    setState(() {
+      _comparison = comparison;
+      _stage = _JoinStage.waiting;
+    });
   }
 
   void _cancel() {
@@ -217,6 +299,8 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
       _JoinStage.scan => _scanStage(),
       _JoinStage.type => _typeStage(),
       _JoinStage.confirm => _confirmStage(),
+      _JoinStage.checking => _checkingStage(),
+      _JoinStage.journal => _journalStage(),
       _JoinStage.waiting => _waitingStage(),
     };
   }
@@ -331,13 +415,64 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
     );
   }
 
-  Widget _waitingStage() {
+  Widget _checkingStage() {
     return SyncFlowFrame(
-      title: joinWaitingTitle,
-      message: joinWaitingMessage,
+      title: joinCheckingTitle,
       content: const <Widget>[
         Center(child: CrossHatchPlaceholder(width: 28, height: 28)),
       ],
+      actions: <SyncFlowAction>[
+        SyncFlowAction(label: syncCancelLabel, onPressed: _cancel),
+      ],
+    );
+  }
+
+  Widget _journalStage() {
+    final String? label = _journalLabel;
+    final bool phone = syncFlowOnAndroid(context);
+    return SyncFlowFrame(
+      title: joinJournalTitle,
+      message: label == null
+          ? joinUnnamedJournalMessage(phone: phone)
+          : joinJournalMessage(phone: phone),
+      content: <Widget>[
+        if (label != null)
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(joinJournalNameLabel, style: context.textStyles.labelSans),
+              const SizedBox(height: _labelGap),
+              Text(
+                label,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: context.textStyles.bodySans,
+              ),
+            ],
+          ),
+      ],
+      actions: <SyncFlowAction>[
+        SyncFlowAction(
+          label: joinDeclineLabel,
+          onPressed: () => _answerJournal(false),
+        ),
+        SyncFlowAction(
+          key: joinJournalConfirmKey,
+          label: joinLabel,
+          primary: true,
+          onPressed: () => _answerJournal(true),
+        ),
+      ],
+    );
+  }
+
+  Widget _waitingStage() {
+    final String? comparison = _comparison;
+    return SyncFlowFrame(
+      title: joinWaitingTitle,
+      message: joinWaitingMessage,
+      content: <Widget>[if (comparison != null) ComparisonNumber(comparison)],
       actions: <SyncFlowAction>[
         SyncFlowAction(label: syncCancelLabel, onPressed: _cancel),
       ],

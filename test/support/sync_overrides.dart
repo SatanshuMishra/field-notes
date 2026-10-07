@@ -405,12 +405,17 @@ Future<SyncTestDevice> pairDevice(
     wait: _pairingPause,
   ).open();
   try {
-    final Future<void> joining = PairingService(
-      database: joiner.database,
-      keyStore: joiner.keyStore,
-      deviceName: () async => joiner.name,
-      wait: _pairingPause,
-    ).join(hosted.code.phrase, relayUrl: relay.baseUrl);
+    final Future<void> joining =
+        PairingService(
+          database: joiner.database,
+          keyStore: joiner.keyStore,
+          deviceName: () async => joiner.name,
+          wait: _pairingPause,
+        ).join(
+          hosted.code.phrase,
+          relayUrl: relay.baseUrl,
+          confirmJournal: joinAnyJournal,
+        );
     await hosted.confirm(await hosted.waitForJoin());
     await joining;
   } finally {

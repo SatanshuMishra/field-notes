@@ -257,12 +257,17 @@ final class SimulatedDevice {
       pollInterval: _pairingPoll,
     ).open();
     try {
-      final Future<void> joining = PairingService(
-        database: database,
-        keyStore: keyStore,
-        deviceName: () async => name,
-        pollInterval: _pairingPoll,
-      ).join(hosted.code.phrase, relayUrl: relay.baseUrl);
+      final Future<void> joining =
+          PairingService(
+            database: database,
+            keyStore: keyStore,
+            deviceName: () async => name,
+            pollInterval: _pairingPoll,
+          ).join(
+            hosted.code.phrase,
+            relayUrl: relay.baseUrl,
+            confirmJournal: joinAnyJournal,
+          );
       await hosted.confirm(await hosted.waitForJoin());
       await joining;
     } finally {

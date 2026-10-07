@@ -97,6 +97,30 @@ void main() {
     );
   });
 
+  test('the comparison number belongs to one code and one joining device', () {
+    final PairingCode code = PairingCode.generate(relayUrl: relayUrl);
+    final PairingCode typed = PairingCode.parse(code.phrase);
+    final DeviceRegistration registration = _registration(
+      DeviceKeys.generate(),
+      <int>[1],
+    );
+
+    final String shown = code.comparisonFor(registration);
+
+    expect(shown, matches(RegExp(r'^[0-9]{3} [0-9]{3}$')));
+    expect(typed.comparisonFor(registration), shown);
+    final Set<String> others = <String>{
+      for (int index = 0; index < 50; index++)
+        code.comparisonFor(_registration(DeviceKeys.generate(), <int>[1])),
+    };
+    expect(others.length, greaterThanOrEqualTo(49));
+    final Set<String> otherCodes = <String>{
+      for (int index = 0; index < 50; index++)
+        PairingCode.generate().comparisonFor(registration),
+    };
+    expect(otherCodes.length, greaterThanOrEqualTo(49));
+  });
+
   test('a short, unknown or broken code is refused', () {
     final PairingCode code = PairingCode.generate(relayUrl: relayUrl);
 

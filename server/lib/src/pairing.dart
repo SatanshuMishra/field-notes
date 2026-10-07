@@ -15,6 +15,8 @@ const Duration restoreTokenLifetime = Duration(minutes: 10);
 const Duration mailboxRetention = Duration(days: 1);
 
 const String _recoveryPrefix = 'recovery:';
+const String unnamedJournalLabel = 'Unnamed journal';
+const int _unnamedJournalIdLength = 6;
 
 final RegExp _tokenHashPattern = RegExp(r'^[A-Za-z0-9_-]{43}$');
 
@@ -128,8 +130,12 @@ final class Pairing {
   PairingStatusResponse statusForToken(String mailboxId, String token) =>
       _database.transaction(() {
         final _Mailbox mailbox = _withToken(mailboxId, token);
+        final String journalLabel = _journalLabel(mailbox.accountId);
         if (mailbox.status != PairingStatus.complete) {
-          return PairingStatusResponse(status: mailbox.status);
+          return PairingStatusResponse(
+            status: mailbox.status,
+            journalLabel: journalLabel,
+          );
         }
         if (mailbox.completePayload != null) {
           _database.execute(
@@ -141,8 +147,22 @@ final class Pairing {
           status: PairingStatus.complete,
           accountId: mailbox.accountId,
           keyBundle: mailbox.completePayload,
+          journalLabel: journalLabel,
         );
       });
+
+  String _journalLabel(String accountId) {
+    final Row? account = _database.selectOne(
+      'SELECT note FROM accounts WHERE id = ?',
+      <Object?>[accountId],
+    );
+    final String note = (account?['note'] as String? ?? '').trim();
+    if (note.isNotEmpty) {
+      return note;
+    }
+    return '$unnamedJournalLabel '
+        '${accountId.substring(0, _unnamedJournalIdLength)}';
+  }
 
   PairingStatusResponse statusForCaller(Caller caller, String mailboxId) {
     final _Mailbox mailbox = _forCaller(caller, mailboxId);
