@@ -266,7 +266,13 @@ final class RelayApp {
       }
       final Handler guarded = pipeline
           .addMiddleware(
-            authorization(sessions, devicesInFlight, route, access),
+            authorization(
+              sessions,
+              devicesInFlight,
+              rateLimits.device,
+              route,
+              access,
+            ),
           )
           .addHandler(handler);
       router.add(

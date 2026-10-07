@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:field_notes/data/crypto/device_keys.dart';
+import 'package:field_notes/data/sync/request_pacer.dart';
 import 'package:http/http.dart' as http;
 import 'package:sync_protocol/sync_protocol.dart';
 import 'package:web_socket_channel/io.dart';
@@ -172,9 +173,11 @@ final class RelayClient {
     this.timeout = relayRequestTimeout,
     DateTime Function()? clock,
     this._connectSocket = connectWebSocket,
+    RequestPacer? pacer,
   }) : _client = client ?? http.Client(),
        _ownsClient = client == null,
-       _clock = clock ?? _utcNow;
+       _clock = clock ?? _utcNow,
+       _pacer = pacer ?? RequestPacer();
 
   final Uri baseUrl;
   final DeviceKeys? device;
@@ -184,6 +187,7 @@ final class RelayClient {
   final bool _ownsClient;
   final DateTime Function() _clock;
   final WebSocketConnector _connectSocket;
+  final RequestPacer _pacer;
   SessionResponse? _session;
   Future<SessionResponse>? _signingIn;
 
@@ -308,6 +312,7 @@ final class RelayClient {
 
   Future<WebSocketChannel> connectLive() async {
     final String token = await _sessionToken();
+    await _pacer.take();
     final Uri address = SyncRoutes.live.uri(baseUrl);
     final Uri socketAddress = address.replace(
       scheme: address.scheme == 'https' ? 'wss' : 'ws',
@@ -460,6 +465,7 @@ final class RelayClient {
     String token, {
     DownloadProgress? onProgress,
   }) async {
+    await _pacer.take();
     final http.Request request =
         http.Request(
             SyncRoutes.downloadBlob.method,
@@ -575,6 +581,7 @@ final class RelayClient {
     Map<String, String> headers = const <String, String>{},
   }) async {
     final String token = await _sessionToken();
+    await _pacer.take();
     try {
       return await _send(
         route,
@@ -591,6 +598,7 @@ final class RelayClient {
       }
       _session = null;
       final SessionResponse renewed = await signIn();
+      await _pacer.take();
       return _send(
         route,
         parameters: parameters,

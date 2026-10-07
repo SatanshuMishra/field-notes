@@ -19,6 +19,8 @@ final class RelayFixture {
     double ratePerSecond = RelayConfig.defaultRatePerSecond,
     int rateGlobalBurst = RelayConfig.defaultRateGlobalBurst,
     double rateGlobalPerSecond = RelayConfig.defaultRateGlobalPerSecond,
+    int deviceRateBurst = RelayConfig.defaultDeviceRateBurst,
+    double deviceRatePerSecond = RelayConfig.defaultDeviceRatePerSecond,
     int minFreeBytes = 0,
   }) async {
     HttpOverrides.global = null;
@@ -36,6 +38,8 @@ final class RelayFixture {
         ratePerSecond: ratePerSecond,
         rateGlobalBurst: rateGlobalBurst,
         rateGlobalPerSecond: rateGlobalPerSecond,
+        deviceRateBurst: deviceRateBurst,
+        deviceRatePerSecond: deviceRatePerSecond,
       ),
       migrationsDirectory: _migrationsDirectory(),
     );
