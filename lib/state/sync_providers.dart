@@ -40,7 +40,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'sync_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-KeyStore keyStore(Ref ref) => const KeyStore();
+KeyStore keyStore(Ref ref) =>
+    KeyStore(CachedSecureValues(const PlatformSecureValues()));
 
 @Riverpod(keepAlive: true)
 NetworkMonitor networkMonitor(Ref ref) => ConnectivityNetworkMonitor();
@@ -278,14 +279,35 @@ PairingService pairingService(Ref ref) => PairingService(
   keyStore: ref.watch(keyStoreProvider),
 );
 
+@Riverpod(keepAlive: true)
+Stream<bool> syncKeysLocked(Ref ref) =>
+    ref.watch(syncEngineProvider).watchKeysLocked().distinct();
+
+Future<T> _lockingOnRefusal<T>(Ref ref, Future<T> Function() read) async {
+  try {
+    return await read();
+  } on KeyAccessException {
+    if (ref.mounted) {
+      ref.read(syncEngineProvider).keysRefused();
+    }
+    rethrow;
+  }
+}
+
 @riverpod
 Future<DeviceService?> deviceService(Ref ref) async {
   if (!await ref.watch(syncEnabledProvider.future)) {
     return null;
   }
   final String? address = await ref.watch(relayAddressProvider.future);
+  if (await ref.watch(syncKeysLockedProvider.future)) {
+    throw const KeyAccessException(AttentionReason.keysLocked);
+  }
   final KeyStore keyStore = ref.watch(keyStoreProvider);
-  final DeviceKeys? device = await keyStore.readDeviceKeys();
+  final DeviceKeys? device = await _lockingOnRefusal(
+    ref,
+    keyStore.readDeviceKeys,
+  );
   if (address == null || device == null) {
     return null;
   }
@@ -304,5 +326,7 @@ Future<DeviceService?> deviceService(Ref ref) async {
 @riverpod
 Future<List<JournalDevice>> journalDevices(Ref ref) async {
   final DeviceService? devices = await ref.watch(deviceServiceProvider.future);
-  return devices == null ? const <JournalDevice>[] : devices.list();
+  return devices == null
+      ? const <JournalDevice>[]
+      : _lockingOnRefusal(ref, devices.list);
 }

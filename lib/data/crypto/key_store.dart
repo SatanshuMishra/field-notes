@@ -3,8 +3,18 @@ import 'dart:convert';
 import 'package:field_notes/data/crypto/device_keys.dart';
 import 'package:field_notes/data/crypto/journal_keys.dart';
 import 'package:field_notes/data/crypto/recovery_phrase.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sync_protocol/sync_protocol.dart';
+
+class KeyAccessException implements Exception {
+  const KeyAccessException(this.cause);
+
+  final Object cause;
+
+  @override
+  String toString() => 'KeyAccessException: $cause';
+}
 
 abstract interface class SecureValues {
   Future<String?> read(String key);
@@ -24,14 +34,57 @@ final class PlatformSecureValues implements SecureValues {
   final FlutterSecureStorage _storage;
 
   @override
-  Future<String?> read(String key) => _storage.read(key: key);
+  Future<String?> read(String key) => _guarded(() => _storage.read(key: key));
 
   @override
   Future<void> write(String key, String value) =>
-      _storage.write(key: key, value: value);
+      _guarded(() => _storage.write(key: key, value: value));
 
   @override
-  Future<void> delete(String key) => _storage.delete(key: key);
+  Future<void> delete(String key) => _guarded(() => _storage.delete(key: key));
+
+  static Future<T> _guarded<T>(Future<T> Function() access) async {
+    try {
+      return await access();
+    } on PlatformException catch (error) {
+      throw KeyAccessException(error);
+    }
+  }
+}
+
+final class CachedSecureValues implements SecureValues {
+  CachedSecureValues(this._inner);
+
+  final SecureValues _inner;
+  final Map<String, String?> _known = <String, String?>{};
+  final Map<String, Future<String?>> _reading = <String, Future<String?>>{};
+
+  @override
+  Future<String?> read(String key) async {
+    if (_known.containsKey(key)) {
+      return _known[key];
+    }
+    final Future<String?> reading = _reading[key] ??= _inner
+        .read(key)
+        .whenComplete(() {
+          _reading.remove(key);
+        });
+    final String? value = await reading;
+    _known[key] = value;
+    return value;
+  }
+
+  @override
+  Future<void> write(String key, String value) async {
+    await _inner.write(key, value);
+    _known[key] = value;
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    await _inner.delete(key);
+    _known[key] = null;
+  }
 }
 
 final class MemorySecureValues implements SecureValues {

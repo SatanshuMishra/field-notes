@@ -5,14 +5,21 @@ const String unreachableFix =
 const String clockFix = 'Set the date and time automatically to keep syncing.';
 const String updateAppFix = 'Please update Field Notes to keep syncing.';
 const String removedFix = 'This device was removed from your journal.';
+const String keysLockedFix =
+    'Allow Field Notes to use its keys when asked, then tap Sync now. '
+    'Your notes are safe on this device.';
+const String problemFix =
+    "Your notes are safe on this device. Field Notes keeps trying.";
 
 enum AttentionReason {
   unreachable("can't reach your server", unreachableFix),
   newServerUnreachable("can't reach your new server", unreachableFix),
+  keysLocked("can't open your sync keys", keysLockedFix),
   clock("this device's clock", clockFix),
   updateApp('update Field Notes', updateAppFix),
   removed('this device was removed', removedFix),
-  storageFull('your server is full', null);
+  storageFull('your server is full', null),
+  problem('sync hit a problem', problemFix);
 
   const AttentionReason(this.label, this.fix);
 
