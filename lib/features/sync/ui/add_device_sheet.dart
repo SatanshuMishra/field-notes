@@ -8,6 +8,7 @@ import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'comparison_number.dart';
 import 'pairing_qr.dart';
 import 'start_sync_flow.dart';
 
@@ -18,8 +19,10 @@ const String addDeviceMessage =
 const String typeTheseWordsLabel = 'Or type these 8 words:';
 const String addDeviceDoneLabel = 'Done';
 const String addDeviceMessageForCandidate =
-    'It will be able to read and change your whole journal. Only add a device '
-    'you recognise.';
+    'Add it only if it shows this same number and you recognise it. It will '
+    'be able to read and change your whole journal.';
+const String addDeviceCandidateTitle = 'Add this device?';
+const String addDeviceNameLabel = 'Device';
 const String dontAddLabel = "Don't add";
 const String addLabel = 'Add';
 const String pairingWordSeparator = ' · ';
@@ -204,9 +207,26 @@ class _AddDeviceSheetState extends ConsumerState<AddDeviceSheet> {
   Widget _candidateStage(PairingCandidate candidate) {
     final String? error = _error;
     return SyncFlowFrame(
-      title: candidate.prompt,
+      title: addDeviceCandidateTitle,
       message: addDeviceMessageForCandidate,
-      content: <Widget>[if (error != null) SyncFlowError(message: error)],
+      content: <Widget>[
+        ComparisonNumber(candidate.comparison),
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(addDeviceNameLabel, style: context.textStyles.labelSans),
+            const SizedBox(height: 6),
+            Text(
+              candidate.deviceName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: context.textStyles.bodySans,
+            ),
+          ],
+        ),
+        if (error != null) SyncFlowError(message: error),
+      ],
       actions: <SyncFlowAction>[
         SyncFlowAction(label: dontAddLabel, onPressed: _adding ? null : _done),
         SyncFlowAction(

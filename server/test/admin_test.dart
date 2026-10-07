@@ -207,6 +207,55 @@ void main() {
     expect(admin(<String>['nonsense']).code, exitUsage);
   });
 
+  test('renaming an account changes the name its journal shows', () async {
+    final TestAccount account = await harness.enrol(note: 'verify');
+    final TestAccount other = await harness.enrol(note: 'Sam');
+
+    final AdminRun renamed = admin(<String>[
+      'account',
+      'rename',
+      account.accountId,
+      '--note',
+      ' Satanshu ',
+    ]);
+
+    expect(renamed.code, exitOk);
+    expect(rowsOf(renamed.out).single, <String>[
+      'renamed',
+      account.accountId,
+      'Satanshu',
+    ]);
+    String noteOf(String accountId) =>
+        harness.database.selectOne(
+              'SELECT note FROM accounts WHERE id = ?',
+              <Object?>[accountId],
+            )!['note']
+            as String;
+    expect(noteOf(account.accountId), 'Satanshu');
+    expect(noteOf(other.accountId), 'Sam');
+    expect(
+      admin(<String>['account', 'rename', '--note=Alex', other.accountId]).code,
+      exitOk,
+    );
+    expect(noteOf(other.accountId), 'Alex');
+    expect(
+      admin(<String>['account', 'rename', account.accountId]).code,
+      exitUsage,
+    );
+    expect(
+      admin(<String>['account', 'rename', account.accountId, '--note', ' '])
+          .code,
+      exitUsage,
+    );
+    expect(
+      admin(<String>['account', 'rename', newSyncId(), '--note', 'Nobody'])
+          .code,
+      exitFailure,
+    );
+    expect(admin(<String>['invite', 'create', '--note', '  ']).code, exitUsage);
+    expect(admin(<String>['invite', 'create', '--note=']).code, exitUsage);
+  });
+
   test("a suspended account's devices are refused", () async {
     final TestAccount account = await harness.enrol();
     final TestDevice phone = harness.addDevice(account);

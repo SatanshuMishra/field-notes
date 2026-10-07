@@ -997,6 +997,7 @@ final class PairingStatusResponse extends SyncMessage {
     this.join,
     this.accountId,
     Uint8List? keyBundle,
+    this.journalLabel,
   }) : keyBundle = keyBundle == null ? null : _frozen(keyBundle);
 
   factory PairingStatusResponse.fromJson(Map<String, Object?> json) {
@@ -1010,6 +1011,7 @@ final class PairingStatusResponse extends SyncMessage {
       join: json.optionalObject('join', PairingJoinRequest.fromJson),
       accountId: json.optionalString('accountId'),
       keyBundle: json.optionalBytes('keyBundle'),
+      journalLabel: json.optionalString('journalLabel'),
     );
   }
 
@@ -1017,6 +1019,7 @@ final class PairingStatusResponse extends SyncMessage {
   final PairingJoinRequest? join;
   final String? accountId;
   final Uint8List? keyBundle;
+  final String? journalLabel;
 
   @override
   Map<String, Object?> get _fields => <String, Object?>{
@@ -1024,10 +1027,17 @@ final class PairingStatusResponse extends SyncMessage {
     'join': join?.toJson(),
     'accountId': accountId,
     'keyBundle': keyBundle == null ? null : encodeBase64Url(keyBundle!),
+    'journalLabel': journalLabel,
   };
 
   @override
-  List<Object?> get _props => <Object?>[status, join, accountId, keyBundle];
+  List<Object?> get _props => <Object?>[
+    status,
+    join,
+    accountId,
+    keyBundle,
+    journalLabel,
+  ];
 }
 
 final class RestoreChallengeRequest extends SyncMessage {

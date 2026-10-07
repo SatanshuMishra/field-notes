@@ -107,6 +107,7 @@ void main() {
     final Future<void> joining = joiner.pairing().join(
       hosted.code.phrase,
       relayUrl: relay.baseUrl,
+      confirmJournal: joinAnyJournal,
     );
     await hosted.confirm(await hosted.waitForJoin());
     await joining;

@@ -394,6 +394,42 @@ Uint8List sealPairingBundle(JournalKeys keys, Uint8List pairingKey) =>
       pairingKey,
     );
 
+Uint8List sealPairingBundleFor(
+  JournalKeys keys,
+  Uint8List pairingKey,
+  Uint8List deviceBoxPublicKey,
+) => frozenBytes(
+  loadSodium().crypto.box.seal(
+    message: sealPairingBundle(keys, pairingKey),
+    publicKey: deviceBoxPublicKey,
+  ),
+);
+
+JournalKeys openPairingBundleFor(
+  Uint8List bundle,
+  Uint8List pairingKey,
+  RawKeyPair boxKeyPair,
+) {
+  final Box box = loadSodium().crypto.box;
+  if (bundle.length <= box.sealBytes) {
+    throw const CryptoException('The pairing bundle is not for this device');
+  }
+  final Uint8List inner;
+  try {
+    inner = useSecureKey(
+      boxKeyPair.secretKey,
+      (SecureKey key) => box.sealOpen(
+        cipherText: bundle,
+        publicKey: Uint8List.fromList(boxKeyPair.publicKey),
+        secretKey: key,
+      ),
+    );
+  } on SodiumException catch (error) {
+    throw CryptoException('The pairing bundle is not for this device', error);
+  }
+  return openPairingBundle(inner, pairingKey);
+}
+
 JournalKeys openPairingBundle(Uint8List bundle, Uint8List pairingKey) {
   final Uint8List opened = openSecretBox(bundle, pairingKey);
   try {

@@ -268,6 +268,14 @@ final class Accounts {
     });
   }
 
+  bool rename(String accountId, String note) => _database.transaction(() {
+    _database.execute(
+      'UPDATE accounts SET note = ? WHERE id = ? AND status != ?',
+      <Object?>[note, accountId, AccountStatus.erased.storedName],
+    );
+    return _database.updatedRows == 1;
+  });
+
   bool setStatus(String accountId, AccountStatus status) {
     if (status == AccountStatus.erased) {
       throw ArgumentError.value(status, 'status', 'Erase through the journal');

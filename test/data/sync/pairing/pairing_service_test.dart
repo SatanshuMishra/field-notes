@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:drift/native.dart';
 import 'package:field_notes/data/crypto/device_keys.dart';
@@ -105,10 +106,17 @@ void main() {
     final HostedPairing hosted = await host.pairing().open();
     addTearDown(hosted.close);
     final Future<void> joining = byQr
-        ? joiner.pairing().join(hosted.code.qrPayload)
-        : joiner.pairing().join(hosted.code.phrase, relayUrl: relay.baseUrl);
+        ? joiner.pairing().join(
+            hosted.code.qrPayload,
+            confirmJournal: joinAnyJournal,
+          )
+        : joiner.pairing().join(
+            hosted.code.phrase,
+            relayUrl: relay.baseUrl,
+            confirmJournal: joinAnyJournal,
+          );
     final PairingCandidate candidate = await hosted.waitForJoin();
-    expect(candidate.prompt, 'Add $name?');
+    expect(candidate.deviceName, name);
     await hosted.confirm(candidate);
     await joining;
     return joiner;
@@ -211,6 +219,7 @@ void main() {
       phone.pairing().join(
         PairingCode.generate().phrase,
         relayUrl: relay.baseUrl,
+        confirmJournal: joinAnyJournal,
       ),
       "That code didn't work. Make a new one on your other device.",
     );
@@ -218,6 +227,7 @@ void main() {
       phone.pairing().join(
         (<String>[...hosted.code.words]..[0] = 'notaword').join(' '),
         relayUrl: relay.baseUrl,
+        confirmJournal: joinAnyJournal,
       ),
       "That code didn't work. Make a new one on your other device.",
     );
@@ -225,11 +235,18 @@ void main() {
     relay.advance(const Duration(minutes: 10, seconds: 1));
 
     await expectRetryMessage(
-      phone.pairing().join(hosted.code.phrase, relayUrl: relay.baseUrl),
+      phone.pairing().join(
+        hosted.code.phrase,
+        relayUrl: relay.baseUrl,
+        confirmJournal: joinAnyJournal,
+      ),
       "That code didn't work. Make a new one on your other device.",
     );
     await expectRetryMessage(
-      phone.pairing().join(hosted.code.qrPayload),
+      phone.pairing().join(
+        hosted.code.qrPayload,
+        confirmJournal: joinAnyJournal,
+      ),
       "That code didn't work. Make a new one on your other device.",
     );
     expect(await phone.keyStore.readJournalKeys(), isNull);
@@ -250,6 +267,7 @@ void main() {
     final Future<void> joining = phone.pairing().join(
       hosted.code.qrPayload,
       cancelled: () => cancelled,
+      confirmJournal: joinAnyJournal,
     );
     final Future<void> refused = expectLater(
       joining,
@@ -263,6 +281,239 @@ void main() {
     expect(await phone.keyStore.readJournalKeys(), isNull);
     expect(await phone.keyStore.readDeviceKeys(), isNull);
     expect(await readSyncState(phone.database, SyncStateKeys.relayUrl), isNull);
+  });
+
+  test(
+    'joining names the journal and posts nothing until it is confirmed',
+    () async {
+      final _Device mac = await enrolled('Studio Mac');
+      final _Device phone = device('Pocket phone');
+      final HostedPairing hosted = await mac.pairing().open();
+      addTearDown(hosted.close);
+      final RelayClient watcher = RelayClient(baseUrl: relay.baseUrl);
+      addTearDown(watcher.close);
+      final List<String?> named = <String?>[];
+      final List<PairingStatus> seen = <PairingStatus>[];
+      final List<String> shown = <String>[];
+
+      final Future<void> joining = phone.pairing().join(
+        hosted.code.phrase,
+        relayUrl: relay.baseUrl,
+        confirmJournal: (String? label) async {
+          named.add(label);
+          seen.add(
+            (await watcher.mailboxStatus(
+              hosted.code.mailboxId,
+              hosted.code.mailboxToken,
+            )).status,
+          );
+          return true;
+        },
+        onComparison: shown.add,
+      );
+      final PairingCandidate candidate = await hosted.waitForJoin();
+      await hosted.confirm(candidate);
+      await joining;
+
+      expect(named, <String?>['Studio Mac']);
+      expect(seen, <PairingStatus>[PairingStatus.open]);
+      expect(candidate.comparison, matches(RegExp(r'^[0-9]{3} [0-9]{3}$')));
+      expect(shown, <String>[candidate.comparison]);
+      expect(await phone.keyStore.readJournalKeys(), isNotNull);
+    },
+  );
+
+  test('declining the journal posts and stores nothing', () async {
+    final _Device mac = await enrolled('Alex');
+    final _Device phone = device('Pocket phone');
+    final HostedPairing hosted = await mac.pairing().open();
+    addTearDown(hosted.close);
+    final RelayClient watcher = RelayClient(baseUrl: relay.baseUrl);
+    addTearDown(watcher.close);
+
+    await expectLater(
+      phone.pairing().join(
+        hosted.code.qrPayload,
+        confirmJournal: (String? label) async => false,
+      ),
+      throwsA(isA<PairingDeclined>()),
+    );
+
+    expect(
+      (await watcher.mailboxStatus(
+        hosted.code.mailboxId,
+        hosted.code.mailboxToken,
+      )).status,
+      PairingStatus.open,
+    );
+    expect(await phone.keyStore.readJournalKeys(), isNull);
+    expect(await phone.keyStore.readDeviceKeys(), isNull);
+    expect(await readSyncState(phone.database, SyncStateKeys.relayUrl), isNull);
+    expect(relay.activeDevices((await mac.keyStore.readAccountId())!), 1);
+  });
+
+  test(
+    'a code another device used first is reported, before or after asking',
+    () async {
+      final _Device mac = await enrolled('Studio Mac');
+      final _Device phone = device('Pocket phone');
+      final RelayClient racer = RelayClient(baseUrl: relay.baseUrl);
+      addTearDown(racer.close);
+      Future<void> raceFor(HostedPairing hosted) async {
+        final DeviceKeys keys = DeviceKeys.generate();
+        final DeviceRegistration registration = keys.registration(
+          certificate: keys.sign(
+            deviceCertificateBytes(
+              deviceId: keys.deviceId,
+              signPublicKey: keys.signKeyPair.publicKey,
+              boxPublicKey: keys.boxKeyPair.publicKey,
+            ),
+          ),
+          encryptedName: sealNameUnder(
+            'Racer',
+            keys.deviceId,
+            hosted.code.pairingKey,
+          ),
+        );
+        await racer.joinPairing(
+          hosted.code.mailboxId,
+          hosted.code.mailboxToken,
+          PairingJoinRequest(
+            device: registration,
+            authenticator: hosted.code.authenticatorFor(registration),
+          ),
+        );
+      }
+
+      final HostedPairing first = await mac.pairing().open();
+      addTearDown(first.close);
+      await raceFor(first);
+      final List<String?> asked = <String?>[];
+      await expectLater(
+        phone.pairing().join(
+          first.code.qrPayload,
+          confirmJournal: (String? label) async {
+            asked.add(label);
+            return true;
+          },
+        ),
+        throwsA(
+          isA<PairingTaken>().having(
+            (PairingTaken error) => error.message,
+            'message',
+            pairingTakenMessage,
+          ),
+        ),
+      );
+      expect(asked, isEmpty);
+
+      final HostedPairing second = await mac.pairing().open();
+      addTearDown(second.close);
+      final List<String> shown = <String>[];
+      await expectLater(
+        phone.pairing().join(
+          second.code.qrPayload,
+          confirmJournal: (String? label) async {
+            await raceFor(second);
+            return true;
+          },
+          onComparison: shown.add,
+        ),
+        throwsA(isA<PairingTaken>()),
+      );
+      expect(shown, isEmpty);
+      expect((await second.waitForJoin()).deviceName, 'Racer');
+      expect(await phone.keyStore.readJournalKeys(), isNull);
+    },
+  );
+
+  Future<void> joinAs(
+    RelayClient client,
+    HostedPairing hosted,
+    DeviceKeys keys,
+    String name,
+  ) async {
+    final DeviceRegistration registration = keys.registration(
+      certificate: keys.sign(
+        deviceCertificateBytes(
+          deviceId: keys.deviceId,
+          signPublicKey: keys.signKeyPair.publicKey,
+          boxPublicKey: keys.boxKeyPair.publicKey,
+        ),
+      ),
+      encryptedName: sealNameUnder(name, keys.deviceId, hosted.code.pairingKey),
+    );
+    await client.joinPairing(
+      hosted.code.mailboxId,
+      hosted.code.mailboxToken,
+      PairingJoinRequest(
+        device: registration,
+        authenticator: hosted.code.authenticatorFor(registration),
+      ),
+    );
+  }
+
+  test('only the joining device can open the keys the Mac leaves', () async {
+    final _Device mac = await enrolled('Studio Mac');
+    final HostedPairing hosted = await mac.pairing().open();
+    addTearDown(hosted.close);
+    final RelayClient joiner = RelayClient(baseUrl: relay.baseUrl);
+    addTearDown(joiner.close);
+    final DeviceKeys phone = DeviceKeys.generate();
+    await joinAs(joiner, hosted, phone, 'Pocket phone');
+    await hosted.confirm(await hosted.waitForJoin());
+
+    final RelayClient onlooker = RelayClient(baseUrl: relay.baseUrl);
+    addTearDown(onlooker.close);
+    final Uint8List bundle = (await onlooker.mailboxStatus(
+      hosted.code.mailboxId,
+      hosted.code.mailboxToken,
+    )).keyBundle!;
+
+    expect(
+      () => openPairingBundle(bundle, hosted.code.pairingKey),
+      throwsA(isA<CryptoException>()),
+    );
+    expect(
+      () => openPairingBundleFor(
+        bundle,
+        hosted.code.pairingKey,
+        DeviceKeys.generate().boxKeyPair,
+      ),
+      throwsA(isA<CryptoException>()),
+    );
+    expect(
+      openPairingBundleFor(
+        bundle,
+        hosted.code.pairingKey,
+        phone.boxKeyPair,
+      ).epochKeys,
+      (await mac.journal()).epochKeys,
+    );
+  });
+
+  test('the Mac shows a short, plain name for the joining device', () async {
+    final _Device mac = await enrolled('Studio Mac');
+    final RelayClient joiner = RelayClient(baseUrl: relay.baseUrl);
+    addTearDown(joiner.close);
+    final HostedPairing hosted = await mac.pairing().open();
+    addTearDown(hosted.close);
+
+    await joinAs(
+      joiner,
+      hosted,
+      DeviceKeys.generate(),
+      'Pixel 8?\n\n\n\u202eevil\u202c  Tap Add ${'x' * 200}',
+    );
+    final PairingCandidate candidate = await hosted.waitForJoin();
+
+    expect(candidate.deviceName, startsWith('Pixel 8? evil Tap Add x'));
+    expect(candidate.deviceName.runes.length, shownDeviceNameLength);
+    expect(candidate.deviceName, endsWith('\u2026'));
+    expect(candidate.deviceName, isNot(contains('\n')));
+    expect(candidate.deviceName, isNot(contains('\u202e')));
+    expect(shownDeviceName(' \u200f\t '), unnamedDeviceName);
+    expect(shownDeviceName('Studio Mac'), 'Studio Mac');
   });
 
   test('a join with a mismatched authenticator gets no keys', () async {
@@ -299,7 +550,13 @@ void main() {
 
     await expectLater(hosted.waitForJoin(), throwsA(isA<PairingRefused>()));
     await expectLater(
-      hosted.confirm(PairingCandidate(deviceName: 'Intruder', join: forged)),
+      hosted.confirm(
+        PairingCandidate(
+          deviceName: 'Intruder',
+          join: forged,
+          comparison: '000 000',
+        ),
+      ),
       throwsA(isA<PairingRefused>()),
     );
 
@@ -407,11 +664,23 @@ void main() {
       jsonEncode(PairingStatusResponse(status: PairingStatus.joined).toJson()),
       200,
     );
+    http.Response waiting() => http.Response(
+      jsonEncode(PairingStatusResponse(status: PairingStatus.open).toJson()),
+      200,
+    );
     bool refuseJoin = true;
+    bool posted = false;
     final MockClient relayDouble = MockClient((http.Request request) async {
       if (request.method == 'POST' && request.url.path.endsWith('/join')) {
         joins.add(now);
-        return refuseJoin ? limited() : joined();
+        if (refuseJoin) {
+          return limited();
+        }
+        posted = true;
+        return joined();
+      }
+      if (!posted) {
+        return waiting();
       }
       polls.add(now);
       return polls.length > 3 ? limited() : joined();
@@ -429,14 +698,18 @@ void main() {
     );
 
     await expectRetryMessage(
-      service().join(code.qrPayload),
+      service().join(code.qrPayload, confirmJournal: joinAnyJournal),
       'Too many tries. Wait a minute and try again.',
     );
     expect(polls, isEmpty);
 
     refuseJoin = false;
     await expectRetryMessage(
-      service().join(code.phrase, relayUrl: relayUrl),
+      service().join(
+        code.phrase,
+        relayUrl: relayUrl,
+        confirmJournal: joinAnyJournal,
+      ),
       'Too many tries. Wait a minute and try again.',
     );
     expect(polls, hasLength(4));

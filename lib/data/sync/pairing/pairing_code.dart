@@ -16,6 +16,9 @@ const String _rootLabel = 'field-notes-pairing-v1';
 const String _mailboxIdLabel = 'mailbox-id';
 const String _mailboxTokenLabel = 'mailbox-token';
 const String _pairingKeyLabel = 'pairing-key';
+const String _comparisonLabel = 'comparison-number';
+const int _comparisonBytes = 16;
+final BigInt _comparisonRange = BigInt.from(1000000);
 
 class PairingCodeException implements Exception {
   const PairingCodeException(this.message);
@@ -94,6 +97,17 @@ final class PairingCode {
     pairingJoinBytes(mailboxId: mailboxId, device: device),
     32,
   );
+
+  String comparisonFor(DeviceRegistration device) {
+    final BigInt value = bigIntFromBytes(
+      _keyedHash(pairingKey, <int>[
+        ...utf8.encode(_comparisonLabel),
+        ...pairingJoinBytes(mailboxId: mailboxId, device: device),
+      ], _comparisonBytes),
+    );
+    final String digits = (value % _comparisonRange).toString().padLeft(6, '0');
+    return '${digits.substring(0, 3)} ${digits.substring(3)}';
+  }
 
   bool authenticates(PairingJoinRequest join) {
     try {
