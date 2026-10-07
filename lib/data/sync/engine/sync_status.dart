@@ -11,6 +11,9 @@ const String keysLockedFix =
 const String deviceFullFix =
     'Free up space on this device so its videos and photos can upload. '
     'Your notes keep syncing.';
+const String noteTooLongFix =
+    'Shorten it to under 1,000,000 characters so it can sync. '
+    'It is safe on this device.';
 const String problemFix =
     "Your notes are safe on this device. Field Notes keeps trying.";
 
@@ -23,6 +26,7 @@ enum AttentionReason {
   removed('this device was removed', removedFix),
   storageFull('your server is full', null),
   deviceFull('this device is low on space', deviceFullFix),
+  noteTooLong('a note is too long to sync', noteTooLongFix),
   problem('sync hit a problem', problemFix);
 
   const AttentionReason(this.label, this.fix);

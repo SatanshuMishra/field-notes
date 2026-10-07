@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:field_notes/data/crypto/journal_keys.dart';
 import 'package:field_notes/data/crypto/keyed_names.dart';
+import 'package:field_notes/data/crypto/record_cipher.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/sync/engine/pull_cycle.dart';
 import 'package:field_notes/data/sync/merge/record_reader.dart';
@@ -70,6 +71,9 @@ final class PushCycle {
   final int maxEnvelope;
   final Random _random;
   final int Function() _wallClock;
+  final Set<int> _oversized = <int>{};
+
+  Set<int> get oversized => Set<int>.unmodifiable(_oversized);
 
   Future<int> pendingCount() async {
     final Expression<int> count = _db.syncOutbox.id.count();
@@ -100,11 +104,15 @@ final class PushCycle {
           full = true;
           break;
         }
-        if (excluding.contains(id)) {
+        if (excluding.contains(id) || _oversized.contains(id)) {
           continue;
         }
         final RecordPush? change = await _prepare(id, keys, names);
-        if (change == null || change.envelope.length > maxEnvelope) {
+        if (change == null) {
+          continue;
+        }
+        if (change.envelope.length > maxEnvelope) {
+          _oversized.add(id);
           continue;
         }
         final int changeBytes =
@@ -231,6 +239,11 @@ final class PushCycle {
       )..where((t) => t.id.equals(outboxId))).go();
       return null;
     }
+    final Uint8List plain = utf8.encode(jsonEncode(state.toJson()));
+    if (plain.length > maxEnvelope) {
+      _oversized.add(outboxId);
+      return null;
+    }
     final String changeId = row.changeId ?? newSyncId(_random);
     if (row.changeId == null) {
       await (_db.update(_db.syncOutbox)..where((t) => t.id.equals(outboxId)))
@@ -245,7 +258,7 @@ final class PushCycle {
       baseSeq: base?.seq ?? 0,
       changeId: changeId,
       epoch: keys.currentEpoch,
-      envelope: sealRecordState(keys, state, recordKey, keys.currentEpoch),
+      envelope: RecordCipher(keys).seal(plain, recordKey, keys.currentEpoch),
     );
   });
 

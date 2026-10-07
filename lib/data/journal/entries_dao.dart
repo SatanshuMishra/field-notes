@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../domain/services/note_limits.dart';
 import '../database/app_database.dart';
 import '../sync/change_recorder.dart';
 import '../sync/synced_tables.dart';
@@ -14,6 +15,12 @@ const List<String> _textFields = <String>[
   'updatedAt',
 ];
 const List<String> _deleteFields = <String>['deletedAt', 'updatedAt'];
+const List<String> _deleteUnsyncableFields = <String>[
+  'deletedAt',
+  'updatedAt',
+  'textContent',
+  'textVersion',
+];
 
 class EntriesDao {
   EntriesDao(this._db, this._recorder);
@@ -113,16 +120,22 @@ class EntriesDao {
       if (existing == null) {
         return 0;
       }
+      final String? text = existing.textContent;
+      final bool unsyncable = text != null && !noteFitsSync(text);
       final String clocks = await _recorder.stamp(
         table: SyncedTables.entries,
         rowId: id,
-        fields: _deleteFields,
+        fields: unsyncable ? _deleteUnsyncableFields : _deleteFields,
         currentClocks: existing.fieldClocks,
       );
       return (_db.update(_db.entries)..where((t) => t.id.equals(id))).write(
         EntriesCompanion(
           deletedAt: Value(deletedAt),
           updatedAt: Value(deletedAt),
+          textContent: unsyncable ? const Value('') : const Value.absent(),
+          textVersion: unsyncable
+              ? Value(_raisedVersion(existing.textVersion, _recorder.nodeId))
+              : const Value.absent(),
           fieldClocks: Value(clocks),
         ),
       );

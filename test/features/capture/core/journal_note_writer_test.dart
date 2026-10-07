@@ -4,6 +4,7 @@ import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/draft_store.dart';
+import 'package:field_notes/domain/services/note_limits.dart';
 import 'package:field_notes/domain/services/note_writer.dart';
 import 'package:field_notes/features/capture/core/journal_capture_service.dart';
 import 'package:field_notes/features/capture/core/journal_note_writer.dart';
@@ -65,6 +66,25 @@ void main() {
     expect(await repository.entriesForDay(day.id), <Entry>[result.entry]);
     expect(drafts.drafts, isEmpty);
     expect(drafts.deletes, <String>['session-1']);
+  });
+
+  test('a note too long to sync is refused and its draft is kept', () async {
+    final String long = 'a' * (maxNoteCharacters + 1);
+    drafts.drafts['session-2'] = long;
+
+    await expectLater(
+      writer.save(date: '2026-07-19', source: long, draftKey: 'session-2'),
+      throwsA(
+        isA<NoteWriteException>().having(
+          (NoteWriteException error) => error.message,
+          'message',
+          noteTooLongMessage,
+        ),
+      ),
+    );
+
+    expect(drafts.drafts['session-2'], long);
+    expect(await repository.activeDayForDate('2026-07-19'), isNull);
   });
 
   test('edit lands through saveNote, keyed by the entry id for its draft',
