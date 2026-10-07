@@ -19,6 +19,8 @@ final class RelayConfig {
     this.ratePerSecond = defaultRatePerSecond,
     this.rateGlobalBurst = defaultRateGlobalBurst,
     this.rateGlobalPerSecond = defaultRateGlobalPerSecond,
+    this.deviceRateBurst = defaultDeviceRateBurst,
+    this.deviceRatePerSecond = defaultDeviceRatePerSecond,
     this.largeBodySlots = defaultLargeBodySlots,
     this.largeBodySlotsPerAccount = defaultLargeBodySlotsPerAccount,
   });
@@ -54,6 +56,16 @@ final class RelayConfig {
         rateGlobalPerSecondVariable,
         defaultRateGlobalPerSecond,
       ),
+      deviceRateBurst: _count(
+        source,
+        deviceRateBurstVariable,
+        defaultDeviceRateBurst,
+      ),
+      deviceRatePerSecond: _rate(
+        source,
+        deviceRatePerSecondVariable,
+        defaultDeviceRatePerSecond,
+      ),
       largeBodySlots: _count(
         source,
         largeBodySlotsVariable,
@@ -76,6 +88,9 @@ final class RelayConfig {
   static const String rateGlobalBurstVariable = 'RELAY_RATE_GLOBAL_BURST';
   static const String rateGlobalPerSecondVariable =
       'RELAY_RATE_GLOBAL_PER_SECOND';
+  static const String deviceRateBurstVariable = 'RELAY_DEVICE_RATE_BURST';
+  static const String deviceRatePerSecondVariable =
+      'RELAY_DEVICE_RATE_PER_SECOND';
   static const String largeBodySlotsVariable = 'RELAY_LARGE_BODY_SLOTS';
   static const String largeBodySlotsPerAccountVariable =
       'RELAY_LARGE_BODY_SLOTS_PER_ACCOUNT';
@@ -88,6 +103,8 @@ final class RelayConfig {
   static const double defaultRatePerSecond = 1.0;
   static const int defaultRateGlobalBurst = 600;
   static const double defaultRateGlobalPerSecond = 20.0;
+  static const int defaultDeviceRateBurst = 600;
+  static const double defaultDeviceRatePerSecond = 10.0;
   static const int defaultLargeBodySlots = 8;
   static const int defaultLargeBodySlotsPerAccount = 4;
 
@@ -99,6 +116,8 @@ final class RelayConfig {
   final double ratePerSecond;
   final int rateGlobalBurst;
   final double rateGlobalPerSecond;
+  final int deviceRateBurst;
+  final double deviceRatePerSecond;
   final int largeBodySlots;
   final int largeBodySlotsPerAccount;
 

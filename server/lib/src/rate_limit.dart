@@ -225,6 +225,7 @@ final class RateLimits {
     required this.address,
     required this.widePrefix,
     required this.relayWide,
+    required this.device,
   });
 
   factory RateLimits.fromConfig(
@@ -247,11 +248,18 @@ final class RateLimits {
       perSecond: config.rateGlobalPerSecond,
       clock: clock,
     ),
+    device: RateLimiter(
+      burst: config.deviceRateBurst,
+      perSecond: config.deviceRatePerSecond,
+      clock: clock,
+      keyOf: deviceRateKeyOf,
+    ),
   );
 
   final RateLimiter address;
   final RateLimiter widePrefix;
   final SharedRateLimit relayWide;
+  final RateLimiter device;
 
   int? take(String client, {required bool relayWideRoute}) {
     final int wait = <int>[
@@ -273,10 +281,13 @@ final class RateLimits {
   void sweep() {
     address.sweep();
     widePrefix.sweep();
+    device.sweep();
   }
 }
 
-Response _tooManyRequests(int wait) =>
+String deviceRateKeyOf(String deviceId) => 'device:$deviceId';
+
+Response tooManyRequestsResponse(int wait) =>
     errorResponse(SyncErrorCode.tooManyRequests)
         .change(headers: <String, String>{retryAfterHeader: '$wait'});
 
@@ -299,14 +310,14 @@ Middleware rateLimit(
       return holding(request, (RequestHold hold) {
         if (!hold.enter(addressesInFlight, rateKeyOf(client))) {
           bodyOf(request).abandon();
-          return _tooManyRequests(1);
+          return tooManyRequestsResponse(1);
         }
         final int? wait = limits.take(
           client,
           relayWideRoute: relayWideRoutes.contains(route),
         );
         if (wait != null) {
-          return _tooManyRequests(wait);
+          return tooManyRequestsResponse(wait);
         }
         return inner(request);
       });

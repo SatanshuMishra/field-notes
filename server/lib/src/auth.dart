@@ -14,6 +14,7 @@ import 'body_slots.dart';
 import 'database.dart';
 import 'in_flight.dart';
 import 'logging.dart';
+import 'rate_limit.dart';
 import 'request_body.dart';
 
 const List<SyncRoute> uploadPassRoutes = <SyncRoute>[
@@ -681,6 +682,7 @@ Middleware protocolGate() =>
 Middleware authorization(
   Sessions sessions,
   RequestsInFlight devicesInFlight,
+  RateLimiter deviceRequests,
   SyncRoute route,
   Access access,
 ) =>
@@ -698,6 +700,13 @@ Middleware authorization(
           bodyOf(request).abandon();
           return knownErrorResponse(tryAgainShortly)!
               .change(context: attribution);
+        }
+        final int? wait = caller == null
+            ? null
+            : deviceRequests.take(caller.deviceId);
+        if (wait != null) {
+          bodyOf(request).abandon();
+          return tooManyRequestsResponse(wait).change(context: attribution);
         }
         try {
           final Response response = await inner(
