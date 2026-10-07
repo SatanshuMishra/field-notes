@@ -400,6 +400,20 @@ final class BackgroundUploads implements UploadSender {
     UploadAnswer onAnswer,
   ) => _sendParts(upload, indexes, _generation);
 
+  @override
+  Future<bool> holdsAll(PendingUpload upload) async {
+    final List<int> missing = upload.missingParts;
+    if (missing.isEmpty) {
+      return false;
+    }
+    final Set<String> held = <String>{
+      for (final HandedTask task in await _uploader.queuedTasks()) task.taskId,
+    };
+    return missing.every(
+      (int index) => held.contains(partTaskId(upload.uploadId, index)),
+    );
+  }
+
   Future<void> _sendParts(
     PendingUpload upload,
     List<int> indexes,

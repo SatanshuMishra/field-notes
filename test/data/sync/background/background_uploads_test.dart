@@ -225,6 +225,38 @@ void main() {
     );
   });
 
+  test(
+    'an upload the uploader already holds is not asked about again',
+    () async {
+      final _Background phone = await enrolled('Phone');
+      final SyncEngine engine = phone.engine();
+      await engine.start();
+      await engine.syncNow();
+      await phone.media.store.putBytes(
+        bytes: _bytes(3000, 2),
+        mime: 'video/mp4',
+        kind: domain.MediaKind.video,
+      );
+      await eventually(() async => phone.uploader.parts.length == 3);
+      await engine.syncNow();
+      final PendingUpload upload =
+          (await phone.media.uploads.pendingUploads()).single;
+      phone.device.http.sent.clear();
+
+      for (int cycle = 0; cycle < 3; cycle++) {
+        await engine.syncNow();
+      }
+
+      expect(
+        phone.device.http.sent.where(
+          (SentRequest request) => request.path.contains(upload.blobName),
+        ),
+        isEmpty,
+      );
+      expect(phone.uploader.parts, hasLength(3));
+    },
+  );
+
   test('leaving the app hands every pending push to the uploader', () async {
     final _Background phone = await enrolled('Phone');
     final SyncEngine engine = phone.engine();

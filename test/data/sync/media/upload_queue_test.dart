@@ -32,6 +32,9 @@ final class _RecordingSender implements UploadSender {
   final List<int> sent = <int>[];
 
   @override
+  Future<bool> holdsAll(PendingUpload upload) => _inner.holdsAll(upload);
+
+  @override
   Future<void> sendParts(
     PendingUpload upload,
     List<int> indexes,
@@ -52,6 +55,9 @@ final class _UnassembledSender implements UploadSender {
   _UnassembledSender(this._inner);
 
   final UploadSender _inner;
+
+  @override
+  Future<bool> holdsAll(PendingUpload upload) => _inner.holdsAll(upload);
 
   @override
   Future<void> sendParts(
@@ -247,6 +253,11 @@ void main() {
     );
     await _setPoster(mac, photo.id, poster.id);
     final domain.Day day = await mac.journal.ensureDayForDate('2026-10-09');
+    await mac.journal.saveNote(
+      date: '2026-10-09',
+      source: 'a photo with a poster',
+      photoMediaIds: <String>[photo.id],
+    );
     await mac.journal.createEntry(
       dayId: day.id,
       type: domain.EntryType.video,

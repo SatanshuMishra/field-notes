@@ -8,6 +8,9 @@ const String removedFix = 'This device was removed from your journal.';
 const String keysLockedFix =
     'Allow Field Notes to use its keys when asked, then tap Sync now. '
     'Your notes are safe on this device.';
+const String deviceFullFix =
+    'Free up space on this device so its videos and photos can upload. '
+    'Your notes keep syncing.';
 const String problemFix =
     "Your notes are safe on this device. Field Notes keeps trying.";
 
@@ -19,6 +22,7 @@ enum AttentionReason {
   updateApp('update Field Notes', updateAppFix),
   removed('this device was removed', removedFix),
   storageFull('your server is full', null),
+  deviceFull('this device is low on space', deviceFullFix),
   problem('sync hit a problem', problemFix);
 
   const AttentionReason(this.label, this.fix);

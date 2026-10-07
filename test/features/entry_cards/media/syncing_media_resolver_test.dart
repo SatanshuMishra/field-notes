@@ -124,6 +124,11 @@ void main() {
       kind: domain.MediaKind.photo,
     );
     await _setPoster(mac, photo.id, poster.id);
+    await mac.journal.saveNote(
+      date: '2026-10-06',
+      source: 'a photo with a poster',
+      photoMediaIds: <String>[photo.id],
+    );
     mac.network.kind = NetworkKind.metered;
     final SyncEngine macEngine = mac.engine(media: macMedia.source());
     await macEngine.start();
