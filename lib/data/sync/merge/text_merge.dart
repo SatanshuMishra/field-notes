@@ -1,3 +1,5 @@
+import 'dart:isolate';
+
 import 'package:diff_match_patch/diff_match_patch.dart';
 
 const String _lineBreak = '\n';
@@ -39,6 +41,21 @@ final class TextConflict extends TextMergeResult {
 
   @override
   String toString() => 'TextConflict()';
+}
+
+const int mergeOffThreadChars = 64 * 1024;
+
+Future<TextMergeResult> mergeAway({
+  required String base,
+  required String local,
+  required String remote,
+}) {
+  if (base.length + local.length + remote.length < mergeOffThreadChars) {
+    return Future<TextMergeResult>.value(
+      merge(base: base, local: local, remote: remote),
+    );
+  }
+  return Isolate.run(() => merge(base: base, local: local, remote: remote));
 }
 
 TextMergeResult merge({

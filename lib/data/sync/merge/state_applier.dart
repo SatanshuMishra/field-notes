@@ -184,7 +184,7 @@ class StateApplier {
     )) {
       return const TextMergeResult.conflict();
     }
-    return merge(base: base.textContent, local: local, remote: remote);
+    return mergeAway(base: base.textContent, local: local, remote: remote);
   }
 
   Future<void> _insertConflictCopy({

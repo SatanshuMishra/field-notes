@@ -20,6 +20,7 @@ const String pullCompleteKey = 'pull_complete';
 const String firstPullDoneKey = 'first_pull_done';
 const String pullCompleteValue = 'true';
 const String pullIncompleteValue = 'false';
+const Duration pullApplyBudget = Duration(milliseconds: 100);
 
 typedef JournalKeysSource = Future<JournalKeys> Function();
 
@@ -256,18 +257,38 @@ final class PullCycle {
         return PullResult(complete: false, received: received, dropped: true);
       }
       JournalKeys keys = await _keys();
-      int last = cursor;
-      for (final protocol.RecordState state in response.states) {
-        if (!refreshed && !keys.hasEpoch(state.epoch)) {
-          refreshed = true;
-          keys = await _refreshKeys();
-        }
-        await _receive(keys, state, isCurrent);
+      if (!refreshed &&
+          response.states.any(
+            (protocol.RecordState state) => !keys.hasEpoch(state.epoch),
+          )) {
+        refreshed = true;
+        keys = await _refreshKeys();
+      }
+      final List<protocol.RecordState> states = response.states;
+      int applied = 0;
+      while (applied < states.length) {
+        final int from = applied;
+        applied = await _db.transaction(() async {
+          final Stopwatch spent = Stopwatch()..start();
+          int next = from;
+          while (next < states.length &&
+              (next == from || spent.elapsed < pullApplyBudget)) {
+            await _receive(keys, states[next], isCurrent);
+            next += 1;
+            if (!isCurrent()) {
+              break;
+            }
+          }
+          return next;
+        });
         if (!isCurrent()) {
           return PullResult(complete: false, received: received, dropped: true);
         }
-        last = max(last, state.seq);
       }
+      final int last = states.fold(
+        cursor,
+        (int highest, protocol.RecordState state) => max(highest, state.seq),
+      );
       received += response.states.length;
       if (!isCurrent()) {
         return PullResult(complete: false, received: received, dropped: true);
