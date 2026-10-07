@@ -212,10 +212,11 @@ For the test relay, filter on `fn-relay-test` instead.
 
 | Command | What it does |
 |---|---|
-| `invite create --note <text>` | Creates a single-use invite valid for 7 days and prints its id, its code and its expiry. Only a hash of the code is stored, so note the code now. |
+| `invite create --note <text>` | Creates a single-use invite valid for 7 days and prints its id, its code and its expiry. Only a hash of the code is stored, so note the code now. The note becomes the name of the journal the invite creates, and a device joining that journal shows it under "Is this your journal?", so use the person's name. A blank note is refused. |
 | `invite list` | Prints each invite's id, note, creation time, expiry and state (open, used, expired or revoked). |
 | `invite revoke <invite-id>` | Revokes an unused invite. |
 | `account list` | Prints each account's id, note, status, active device count, bytes stored and last-seen time, and nothing else. |
+| `account rename <account-id> --note <text>` | Changes the name a joining device shows for the account's journal. Notes made before this command existed were private, and are now shown to anyone holding a pairing code for that journal, so rename any that hold more than a name. |
 | `account suspend <account-id>` | Refuses every call from the account's devices with "sync suspended" (403). |
 | `account resume <account-id>` | Lets a suspended account sync again. |
 | `account delete <account-id>` | Erases the account's records, uploads, keys and pairing mailboxes and deletes the account, then moves its files to `media/.trash/` and deletes them there. Its devices are told the journal was erased, and their open connections close within 5 seconds. |
