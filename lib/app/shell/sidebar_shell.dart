@@ -267,11 +267,8 @@ class _SidebarShellState extends State<SidebarShell> {
 
   Widget _dragBar(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return GestureDetector(
+    return WindowDragBand(
       key: windowTitleBarKey,
-      behavior: HitTestBehavior.opaque,
-      onPanStart: (DragStartDetails _) => unawaited(startWindowDrag()),
-      onDoubleTap: () => unawaited(runTitlebarDoubleClick()),
       child: Container(
         height: shellTitleBarHeight,
         padding: const EdgeInsets.symmetric(horizontal: shellTitleBarPadding),
