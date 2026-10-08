@@ -1,4 +1,7 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -77,7 +80,7 @@ Finder _inStage(Finder matching) =>
 
 Widget _glyph() => const SizedBox.square(dimension: 15);
 
-ViewerDockSlot _glassSlot(String label, Key key) {
+ViewerDockSlot _glassSlot(String label, Key key, {bool grouped = false}) {
   return ViewerDockSlot(
     label: label,
     control: ViewerGlassCircle(
@@ -85,14 +88,15 @@ ViewerDockSlot _glassSlot(String label, Key key) {
       label: label,
       glyph: _glyph(),
       onPressed: () {},
+      grouped: grouped,
     ),
   );
 }
 
-List<ViewerDockSlot?> _slots({required bool earlier}) {
+List<ViewerDockSlot?> _slots({required bool earlier, bool grouped = false}) {
   return <ViewerDockSlot?>[
-    _glassSlot('Close', _closeKey),
-    earlier ? _glassSlot('Earlier', _earlierKey) : null,
+    _glassSlot('Close', _closeKey, grouped: grouped),
+    earlier ? _glassSlot('Earlier', _earlierKey, grouped: grouped) : null,
     ViewerDockSlot(
       label: 'Play',
       control: ViewerPrimaryButton(
@@ -102,9 +106,84 @@ List<ViewerDockSlot?> _slots({required bool earlier}) {
         onPressed: () {},
       ),
     ),
-    _glassSlot('Later', _laterKey),
-    _glassSlot('Delete', _deleteKey),
+    _glassSlot('Later', _laterKey, grouped: grouped),
+    _glassSlot('Delete', _deleteKey, grouped: grouped),
   ];
+}
+
+const Key _boundaryKey = ValueKey<String>('viewer-glass-boundary');
+const int _maxGroupedDelta = 8;
+const double _stripe = 7;
+const List<Color> _stripeColours = <Color>[
+  Color(0xFFE4572E),
+  Color(0xFF17BEBB),
+  Color(0xFFFFC914),
+  Color(0xFF2E282A),
+  Color(0xFF76B041),
+];
+
+class _StripesPainter extends CustomPainter {
+  const _StripesPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (int index = 0; index * _stripe < size.width; index++) {
+      canvas.drawRect(
+        Rect.fromLTWH(index * _stripe, 0, _stripe, size.height),
+        Paint()..color = _stripeColours[index % _stripeColours.length],
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_StripesPainter oldDelegate) => false;
+}
+
+Widget _overPicture(Widget chrome, {required TargetPlatform platform}) {
+  return _host(
+    RepaintBoundary(
+      key: _boundaryKey,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          const CustomPaint(painter: _StripesPainter()),
+          chrome,
+        ],
+      ),
+    ),
+    platform: platform,
+  );
+}
+
+Future<Uint8List> _capture(WidgetTester tester) async {
+  final RenderRepaintBoundary boundary = tester
+      .renderObject<RenderRepaintBoundary>(find.byKey(_boundaryKey));
+  final Uint8List? pixels = await tester.runAsync(() async {
+    final ui.Image image = await boundary.toImage();
+    final ByteData? data = await image.toByteData();
+    image.dispose();
+    return data!.buffer.asUint8List();
+  });
+  return pixels!;
+}
+
+List<BackdropKey?> _backdropKeys(WidgetTester tester, Finder within) => tester
+    .renderObjectList<RenderBackdropFilter>(
+      find.descendant(of: within, matching: find.byType(BackdropFilter)),
+    )
+    .map((RenderBackdropFilter filter) => filter.backdropKey)
+    .toList();
+
+int _worstChannelDelta(Uint8List a, Uint8List b) {
+  expect(a.length, b.length);
+  int worst = 0;
+  for (int index = 0; index < a.length; index++) {
+    final int delta = (a[index] - b[index]).abs();
+    if (delta > worst) {
+      worst = delta;
+    }
+  }
+  return worst;
 }
 
 Widget _dockStage(List<ViewerDockSlot?> slots) {
@@ -385,4 +464,41 @@ void main() {
       }
     },
   );
+
+  testWidgets('the dock glass circles share one backdrop read', (
+    WidgetTester tester,
+  ) async {
+    _phone(tester);
+    await tester.pumpWidget(
+      _overPicture(
+        ViewerDock(slots: _slots(earlier: true, grouped: true)),
+        platform: TargetPlatform.android,
+      ),
+    );
+    final List<BackdropKey?> keys = _backdropKeys(
+      tester,
+      find.byType(ViewerDock),
+    );
+    expect(keys, hasLength(_glassKeys.length));
+    expect(keys.first, isNotNull);
+    expect(keys.toSet(), hasLength(1));
+    final Uint8List shared = await _capture(tester);
+
+    await tester.pumpWidget(
+      _overPicture(
+        ViewerDock(slots: _slots(earlier: true)),
+        platform: TargetPlatform.android,
+      ),
+    );
+    expect(
+      _backdropKeys(tester, find.byType(ViewerDock)).toSet(),
+      <BackdropKey?>{null},
+    );
+    final Uint8List separate = await _capture(tester);
+
+    expect(
+      _worstChannelDelta(shared, separate),
+      lessThanOrEqualTo(_maxGroupedDelta),
+    );
+  });
 }

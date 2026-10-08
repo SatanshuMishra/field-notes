@@ -255,6 +255,16 @@ List<RecordedInvocation> _scrubberPaint(WidgetTester tester) {
   return canvas.invocations.toList();
 }
 
+List<BackdropKey?> _backdropKeysIn(WidgetTester tester, Type chrome) => tester
+    .renderObjectList<RenderBackdropFilter>(
+      find.descendant(
+        of: find.byType(chrome),
+        matching: find.byType(BackdropFilter),
+      ),
+    )
+    .map((RenderBackdropFilter filter) => filter.backdropKey)
+    .toList();
+
 void main() {
   testWidgets('a portrait video is never cropped on the phone', (
     WidgetTester tester,
@@ -717,6 +727,44 @@ void main() {
         await container.read(videoAspectProvider(_videoId).future),
         _portrait.width / _portrait.height,
       );
+    },
+  );
+
+  testWidgets(
+    'the phone dock glass shares one read and the Mac capsule keeps its own',
+    (WidgetTester tester) async {
+      _phone(tester);
+      await tester.pumpWidget(
+        _host(
+          _scene(_Calls()),
+          resolver: _resolver(),
+          player: FakeEntryVideoPlayer(),
+          slots: _slots(),
+          platform: TargetPlatform.android,
+          recorded: _landscape,
+        ),
+      );
+      await _settle(tester);
+      final List<BackdropKey?> dock = _backdropKeysIn(tester, ViewerDock);
+      expect(dock, hasLength(4));
+      expect(dock.first, isNotNull);
+      expect(dock.toSet(), hasLength(1));
+
+      _mac(tester);
+      await tester.pumpWidget(
+        _host(
+          _scene(_Calls()),
+          resolver: _resolver(),
+          player: FakeEntryVideoPlayer(),
+          slots: _slots(),
+          platform: TargetPlatform.macOS,
+          recorded: _landscape,
+        ),
+      );
+      await _settle(tester);
+      final List<BackdropKey?> capsule = _backdropKeysIn(tester, ViewerCapsule);
+      expect(capsule, hasLength(3));
+      expect(capsule, everyElement(isNull));
     },
   );
 }

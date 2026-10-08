@@ -243,6 +243,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
       ViewerDockSlot(
         label: scene.exitLabel,
         control: ViewerGlassCircle(
+          grouped: true,
           key: logViewerBackKey,
           label: scene.exitLabel,
           glyph: _exitGlyph(scene.exit),
@@ -255,6 +256,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
         ViewerDockSlot(
           label: _earlierLabel,
           control: ViewerGlassCircle(
+            grouped: true,
             key: logViewerEarlierKey,
             label: logViewerEarlierLabel,
             glyph: const ChevronGlyph(
@@ -278,6 +280,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
         ViewerDockSlot(
           label: _laterLabel,
           control: ViewerGlassCircle(
+            grouped: true,
             key: logViewerLaterKey,
             label: logViewerLaterLabel,
             glyph: const ChevronGlyph(
@@ -290,6 +293,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
       ViewerDockSlot(
         label: logViewerDeleteLabel,
         control: ViewerGlassCircle(
+          grouped: true,
           key: logActionsDeleteKey,
           label: logViewerDeleteLabel,
           glyph: const IconStickerGlyphIcon(

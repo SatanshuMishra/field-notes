@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -131,6 +132,16 @@ Finder _glassOf(Finder control) =>
 
 String? _shownPhoto(WidgetTester tester) =>
     tester.widget<MediaImage>(find.byType(MediaImage)).mediaId;
+
+List<BackdropKey?> _backdropKeysIn(WidgetTester tester, Type chrome) => tester
+    .renderObjectList<RenderBackdropFilter>(
+      find.descendant(
+        of: find.byType(chrome),
+        matching: find.byType(BackdropFilter),
+      ),
+    )
+    .map((RenderBackdropFilter filter) => filter.backdropKey)
+    .toList();
 
 void main() {
   testWidgets("the photo viewer steps only within the note's photos", (
@@ -543,4 +554,22 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'the phone dock glass shares one read and the Mac capsule keeps its own',
+    (WidgetTester tester) async {
+      _phone(tester);
+      await _open(tester, platform: TargetPlatform.android, initialIndex: 1);
+      final List<BackdropKey?> dock = _backdropKeysIn(tester, ViewerDock);
+      expect(dock, hasLength(_dockLabels.length));
+      expect(dock.first, isNotNull);
+      expect(dock.toSet(), hasLength(1));
+
+      _mac(tester, const Size(1440, 900));
+      await _open(tester, platform: TargetPlatform.macOS, initialIndex: 1);
+      final List<BackdropKey?> capsule = _backdropKeysIn(tester, ViewerCapsule);
+      expect(capsule, hasLength(3));
+      expect(capsule, everyElement(isNull));
+    },
+  );
 }

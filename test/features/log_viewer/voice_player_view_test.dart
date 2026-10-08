@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -213,6 +214,16 @@ List<int> _barColours(WidgetTester tester) {
         (call.invocation.positionalArguments[1] as Paint).color.toARGB32(),
   ];
 }
+
+List<BackdropKey?> _backdropKeysIn(WidgetTester tester, Type chrome) => tester
+    .renderObjectList<RenderBackdropFilter>(
+      find.descendant(
+        of: find.byType(chrome),
+        matching: find.byType(BackdropFilter),
+      ),
+    )
+    .map((RenderBackdropFilter filter) => filter.backdropKey)
+    .toList();
 
 void main() {
   testWidgets('the phone voice player shows only the player', (
@@ -606,4 +617,38 @@ void main() {
 
     handle.dispose();
   });
+
+  testWidgets(
+    'the phone dock glass shares one read and the Mac capsule keeps its own',
+    (WidgetTester tester) async {
+      _phone(tester);
+      await tester.pumpWidget(
+        _host(
+          _scene(_Calls()),
+          resolver: _resolverFor(_recording()),
+          player: FakeEntryAudioPlayer(),
+          platform: TargetPlatform.android,
+        ),
+      );
+      await _settle(tester);
+      final List<BackdropKey?> dock = _backdropKeysIn(tester, ViewerDock);
+      expect(dock, hasLength(4));
+      expect(dock.first, isNotNull);
+      expect(dock.toSet(), hasLength(1));
+
+      _mac(tester);
+      await tester.pumpWidget(
+        _host(
+          _scene(_Calls()),
+          resolver: _resolverFor(_recording()),
+          player: FakeEntryAudioPlayer(),
+          platform: TargetPlatform.macOS,
+        ),
+      );
+      await _settle(tester);
+      final List<BackdropKey?> capsule = _backdropKeysIn(tester, ViewerCapsule);
+      expect(capsule, hasLength(3));
+      expect(capsule, everyElement(isNull));
+    },
+  );
 }

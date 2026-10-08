@@ -277,6 +277,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
       ViewerDockSlot(
         label: photoViewerBackLabel,
         control: ViewerGlassCircle(
+          grouped: true,
           label: photoViewerBackLabel,
           glyph: const IconStickerGlyphIcon(
             glyph: IconStickerGlyph.close,
@@ -295,8 +296,13 @@ class _PhotoViewerState extends State<PhotoViewer> {
     ];
   }
 
-  Widget _stepCircle({required bool back, double face = _dockCircle}) {
+  Widget _stepCircle({
+    required bool back,
+    double face = _dockCircle,
+    bool grouped = true,
+  }) {
     return ViewerGlassCircle(
+      grouped: grouped,
       label: back ? photoViewerPreviousLabel : photoViewerNextLabel,
       face: face,
       glyph: ChevronGlyph(
@@ -349,7 +355,11 @@ class _PhotoViewerState extends State<PhotoViewer> {
       dimension: _capsuleStepSlot,
       child: present
           ? Center(
-              child: _stepCircle(back: back, face: _capsuleCircle),
+              child: _stepCircle(
+                back: back,
+                face: _capsuleCircle,
+                grouped: false,
+              ),
             )
           : null,
     );

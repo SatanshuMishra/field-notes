@@ -450,6 +450,7 @@ class ViewerGlassCircle extends StatelessWidget {
     required this.onPressed,
     this.face = _tapTarget,
     this.tint,
+    this.grouped = false,
   });
 
   final String label;
@@ -457,6 +458,7 @@ class ViewerGlassCircle extends StatelessWidget {
   final VoidCallback? onPressed;
   final double face;
   final Color? tint;
+  final bool grouped;
 
   @override
   Widget build(BuildContext context) {
@@ -467,6 +469,7 @@ class ViewerGlassCircle extends StatelessWidget {
       glyph: glyph,
       onPressed: onPressed,
       tint: tint,
+      grouped: grouped,
     );
   }
 }
@@ -480,10 +483,17 @@ final class ViewerDockSlot {
   final Key? key;
 }
 
-class ViewerDock extends StatelessWidget {
+class ViewerDock extends StatefulWidget {
   const ViewerDock({super.key, required this.slots});
 
   final List<ViewerDockSlot?> slots;
+
+  @override
+  State<ViewerDock> createState() => _ViewerDockState();
+}
+
+class _ViewerDockState extends State<ViewerDock> {
+  final BackdropKey _glassGroup = BackdropKey();
 
   @override
   Widget build(BuildContext context) {
@@ -497,16 +507,19 @@ class ViewerDock extends StatelessWidget {
           _dockSideInset,
           gestureBar + viewerDockLift,
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: <Widget>[
-            for (final ViewerDockSlot? slot in slots)
-              Expanded(
-                child: slot == null
-                    ? const SizedBox.shrink()
-                    : _DockColumn(key: slot.key, slot: slot),
-              ),
-          ],
+        child: BackdropGroup(
+          backdropKey: _glassGroup,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: <Widget>[
+              for (final ViewerDockSlot? slot in widget.slots)
+                Expanded(
+                  child: slot == null
+                      ? const SizedBox.shrink()
+                      : _DockColumn(key: slot.key, slot: slot),
+                ),
+            ],
+          ),
         ),
       ),
     );
