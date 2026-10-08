@@ -168,7 +168,7 @@ rename_probe() {
   local gradle=$SCRATCH/android/app/build.gradle.kts
   local manifest=$SCRATCH/android/app/src/main/AndroidManifest.xml
   sed -i '' -e "s/applicationId = \"$OWNER_PACKAGE\"/applicationId = \"$PROBE_PACKAGE\"/" $gradle
-  sed -i '' -e "s/android:label=\"field_notes\"/android:label=\"$PROBE_NAME\"/" $manifest
+  sed -i '' -e "s/android:label=\"Field Notes\"/android:label=\"$PROBE_NAME\"/" $manifest
   if ! grep -q "applicationId = \"$PROBE_PACKAGE\"" $gradle || ! grep -q "android:label=\"$PROBE_NAME\"" $manifest; then
     print -u2 -r -- "run: could not rename the probe in the scratch worktree"
     exit 1
