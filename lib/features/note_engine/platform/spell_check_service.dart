@@ -6,8 +6,8 @@ const String spellCheckChannelName = 'field_notes/spellcheck';
 const String spellCheckMethod = 'check';
 const int maxSpellSuggestions = 5;
 
-final class MacosSpellCheckService implements SpellCheckService {
-  const MacosSpellCheckService({
+final class NativeSpellCheckService implements SpellCheckService {
+  const NativeSpellCheckService({
     this._channel = const MethodChannel(spellCheckChannelName),
   });
 
@@ -64,11 +64,11 @@ SuggestionSpan? _spanFrom(Object? entry, int textLength) {
 
 SpellCheckService? noteSpellCheckService(TargetPlatform platform) {
   return switch (platform) {
-    TargetPlatform.macOS => const MacosSpellCheckService(),
+    TargetPlatform.macOS ||
+    TargetPlatform.windows => const NativeSpellCheckService(),
     TargetPlatform.android => DefaultSpellCheckService(),
     TargetPlatform.iOS ||
     TargetPlatform.linux ||
-    TargetPlatform.windows ||
     TargetPlatform.fuchsia => null,
   };
 }
