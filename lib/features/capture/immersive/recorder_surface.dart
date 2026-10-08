@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -20,7 +19,7 @@ const Key recorderTopBandKey = ValueKey<String>('recorder-top-band');
 
 const String recorderLeaveLabel = 'Leave';
 
-const Color recorderStageColor = Color(0xFF1C1713);
+const Color recorderStageColor = Palette.mediaGround;
 
 const Color _chromeInk = Color(0xFFB7A58C);
 const Color _leaveGlyphInk = Color(0xCCFFFFFF);
@@ -248,12 +247,7 @@ class _Stage extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          GestureDetector(
-            key: recorderTopBandKey,
-            behavior: HitTestBehavior.opaque,
-            onPanStart: (DragStartDetails _) => unawaited(startWindowDrag()),
-            onDoubleTap: () => unawaited(runTitlebarDoubleClick()),
-          ),
+          const WindowDragBand(key: recorderTopBandKey, height: _bandHeight),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: _sidebarBandInset),
             child: row,
