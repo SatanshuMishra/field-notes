@@ -33,7 +33,14 @@ class SettingsStatusPill extends StatelessWidget {
               child: const SizedBox(width: 8, height: 8),
             ),
             const SizedBox(width: 8),
-            Text(label, style: context.textStyles.captionSans),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.textStyles.captionSans,
+              ),
+            ),
           ],
         ),
       ),

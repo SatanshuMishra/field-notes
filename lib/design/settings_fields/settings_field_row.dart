@@ -1,6 +1,10 @@
-import 'package:flutter/widgets.dart';
+import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
+
+const double _sidebarControlGap = 24;
+const double _phoneControlGap = 16;
 
 class SettingsFieldRow extends StatelessWidget {
   const SettingsFieldRow({
@@ -20,46 +24,56 @@ class SettingsFieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+    final Widget text = MergeSemantics(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Expanded(
-            child: MergeSemantics(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    label,
-                    style: context.textStyles.labelSans.copyWith(
-                      color: labelColor,
-                    ),
-                  ),
-                  if (description != null) ...<Widget>[
-                    const SizedBox(height: 2),
-                    Text(
-                      description!,
-                      style: context.textStyles.captionSans.copyWith(
-                        color: descriptionColor ?? context.colors.muted,
-                      ),
-                    ),
-                  ],
-                ],
+          Text(
+            label,
+            style: context.textStyles.labelSans.copyWith(color: labelColor),
+          ),
+          if (description != null) ...<Widget>[
+            const SizedBox(height: 2),
+            Text(
+              description!,
+              style: context.textStyles.captionSans.copyWith(
+                color: descriptionColor ?? context.colors.muted,
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Flexible(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Semantics(container: true, child: control),
-            ),
-          ),
+          ],
         ],
       ),
+    );
+    final Widget slot = Semantics(container: true, child: control);
+    return Semantics(
+      container: true,
+      child: switch (resolveShellLayout(Theme.of(context).platform)) {
+        ShellLayout.sidebar => LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) => Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Expanded(child: text),
+              const SizedBox(width: _sidebarControlGap),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: constraints.maxWidth / 2),
+                child: slot,
+              ),
+            ],
+          ),
+        ),
+        ShellLayout.bottomBar => Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: <Widget>[
+            Expanded(child: text),
+            const SizedBox(width: _phoneControlGap),
+            Flexible(
+              flex: 2,
+              child: Align(alignment: Alignment.centerRight, child: slot),
+            ),
+          ],
+        ),
+      },
     );
   }
 }
