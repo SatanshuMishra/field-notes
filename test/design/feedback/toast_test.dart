@@ -101,6 +101,11 @@ class _AnchoredBand extends StatelessWidget {
 }
 
 void main() {
+  test('windows toasts use the desktop scale', () {
+    expect(toastScaleFor(TargetPlatform.windows), ToastScale.desktop);
+    expect(toastScaleFor(TargetPlatform.android), ToastScale.phone);
+  });
+
   group('Toast', () {
     testWidgets('renders its message on a sticker surface', (
       WidgetTester tester,

@@ -30,8 +30,9 @@ Future<void> _idlePastHideDelay(WidgetTester tester) async {
 }
 
 Future<TestGesture> _mouseOutsideTheCard(WidgetTester tester) async {
-  final TestGesture mouse =
-      await tester.createGesture(kind: PointerDeviceKind.mouse);
+  final TestGesture mouse = await tester.createGesture(
+    kind: PointerDeviceKind.mouse,
+  );
   await mouse.addPointer(location: videoPointClearOfTheCard(tester, 0));
   addTearDown(mouse.removePointer);
   return mouse;
@@ -62,13 +63,12 @@ bool _canAutoHide({
   bool isPlaying = true,
   bool focusWithin = false,
   bool accessibleNavigation = false,
-}) =>
-    canAutoHideVideoControls(
-      controlsEnabled: controlsEnabled,
-      isPlaying: isPlaying,
-      focusWithin: focusWithin,
-      accessibleNavigation: accessibleNavigation,
-    );
+}) => canAutoHideVideoControls(
+  controlsEnabled: controlsEnabled,
+  isPlaying: isPlaying,
+  focusWithin: focusWithin,
+  accessibleNavigation: accessibleNavigation,
+);
 
 void main() {
   group('canAutoHideVideoControls', () {
@@ -109,6 +109,13 @@ void main() {
     test('gives macOS the pointer model', () {
       expect(
         resolveVideoControlModel(TargetPlatform.macOS),
+        VideoControlModel.pointer,
+      );
+    });
+
+    test('gives Windows the pointer model', () {
+      expect(
+        resolveVideoControlModel(TargetPlatform.windows),
         VideoControlModel.pointer,
       );
     });
@@ -250,10 +257,9 @@ void main() {
       await tester.pump();
       await tester.pump();
 
-      expect(
-        slots.acquireCalls,
-        <VideoSlotEvictionRights>[VideoSlotEvictionRights.evictUnpinned],
-      );
+      expect(slots.acquireCalls, <VideoSlotEvictionRights>[
+        VideoSlotEvictionRights.evictUnpinned,
+      ]);
       expect(built, hasLength(1));
       expect(built.single.playCalls, 1);
     }, variant: useTargetPlatform(TargetPlatform.macOS));

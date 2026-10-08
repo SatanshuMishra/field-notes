@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../../domain/platform/desktop_platform.dart';
 import '../focus/focus_ring.dart';
 import '../glass/glass.dart';
 import '../motion/motion_tokens.dart';
@@ -57,7 +58,7 @@ _DarkMetrics _metricsFor(ToastScale scale) =>
     scale == ToastScale.desktop ? _desktopMetrics : _phoneMetrics;
 
 ToastScale toastScaleFor(TargetPlatform platform) =>
-    platform == TargetPlatform.macOS ? ToastScale.desktop : ToastScale.phone;
+    isDesktopPlatform(platform) ? ToastScale.desktop : ToastScale.phone;
 
 const Color _glassToastInk = Color.fromRGBO(251, 243, 228, 1);
 

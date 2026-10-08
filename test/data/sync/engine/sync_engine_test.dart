@@ -538,6 +538,10 @@ void main() {
     expect(leaveRuleFor(TargetPlatform.iOS), LeaveRule.hidden);
   });
 
+  test('Windows leaves sync only when it quits', () {
+    expect(leaveRuleFor(TargetPlatform.windows), LeaveRule.quit);
+  });
+
   test(
     'a Mac stays connected while hidden and leaves only when it quits',
     () async {

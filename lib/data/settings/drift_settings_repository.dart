@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:drift/drift.dart';
 import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/settings/journal_settings_store.dart';
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:flutter/foundation.dart';
 
@@ -212,7 +213,7 @@ class DriftSettingsRepository implements SettingsRepository {
       ),
       keepAllMediaOnDevice: _decodeBool(
         values[SettingsKeys.keepAllMediaOnDevice],
-        defaultTargetPlatform == TargetPlatform.macOS,
+        isDesktopPlatform(defaultTargetPlatform),
       ),
       allowMobileDataForMedia: _decodeBool(
         values[SettingsKeys.allowMobileDataForMedia],
