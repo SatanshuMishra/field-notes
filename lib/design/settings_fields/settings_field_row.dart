@@ -5,6 +5,7 @@ import '../tokens/tokens.dart';
 
 const double _sidebarControlGap = 24;
 const double _phoneControlGap = 16;
+const double _phoneControlShare = 2 / 3;
 
 class SettingsFieldRow extends StatelessWidget {
   const SettingsFieldRow({
@@ -62,16 +63,22 @@ class SettingsFieldRow extends StatelessWidget {
             ],
           ),
         ),
-        ShellLayout.bottomBar => Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Expanded(child: text),
-            const SizedBox(width: _phoneControlGap),
-            Flexible(
-              flex: 2,
-              child: Align(alignment: Alignment.centerRight, child: slot),
-            ),
-          ],
+        ShellLayout.bottomBar => LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) => Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Expanded(child: text),
+              const SizedBox(width: _phoneControlGap),
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth:
+                      (constraints.maxWidth - _phoneControlGap) *
+                      _phoneControlShare,
+                ),
+                child: slot,
+              ),
+            ],
+          ),
         ),
       },
     );
