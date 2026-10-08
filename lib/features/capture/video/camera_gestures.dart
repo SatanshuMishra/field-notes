@@ -228,7 +228,7 @@ class _CameraGestureLayerState extends State<CameraGestureLayer> {
       container: true,
       liveRegion: true,
       child: GlassSurface(
-        tone: GlassTone.scene,
+        tone: GlassTone.media,
         borderRadius: _zoomRadius,
         padding: _zoomPadding,
         child: Text(
