@@ -120,10 +120,12 @@ class SyncStorageSection extends ConsumerStatefulWidget {
     super.key,
     required this.settings,
     required this.onFeedback,
+    this.onManageDevices,
   });
 
   final AppSettings settings;
   final SettingsFeedbackSink onFeedback;
+  final VoidCallback? onManageDevices;
 
   @override
   ConsumerState<SyncStorageSection> createState() => _SyncStorageSectionState();
@@ -279,6 +281,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     final List<JournalDevice>? devices = ref
         .watch(journalDevicesProvider)
         .value;
+    final VoidCallback? onManageDevices = widget.onManageDevices;
     return SettingsSection(
       title: syncSectionTitle,
       children: <Widget>[
@@ -321,19 +324,19 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
               ),
             ),
           ),
-        SettingsFieldRow(
-          label: devicesLabel,
-          description: devices == null
-              ? devicesFallbackCaption
-              : deviceCountLabel(devices.length),
-          control: StickerButton(
-            label: manageLabel,
-            variant: StickerButtonVariant.secondary,
-            padTapTarget: true,
-            onPressed: () =>
-                showDeviceListSheet(context, onFeedback: widget.onFeedback),
+        if (onManageDevices != null)
+          SettingsFieldRow(
+            label: devicesLabel,
+            description: devices == null
+                ? devicesFallbackCaption
+                : deviceCountLabel(devices.length),
+            control: StickerButton(
+              label: manageLabel,
+              variant: StickerButtonVariant.secondary,
+              padTapTarget: true,
+              onPressed: onManageDevices,
+            ),
           ),
-        ),
         SettingsFieldRow(
           label: serverAddressLabel,
           description: address,

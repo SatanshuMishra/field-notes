@@ -5,6 +5,8 @@ import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/data/sync/devices/device_service.dart';
+import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -19,8 +21,10 @@ import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/search/search.dart';
 import 'package:field_notes/features/search/search_entries_provider.dart';
 import 'package:field_notes/features/search/search_field.dart';
+import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/spell_check_availability.dart';
+import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/streak/streak.dart';
@@ -71,7 +75,7 @@ final List<Entry> _todayEntries = <Entry>[
     ),
 ];
 
-List<Override> _overrides(Mood? mood) => <Override>[
+List<Override> _overrides(Mood? mood, {List<Override>? sync}) => <Override>[
   journalRepositoryProvider.overrideWithValue(FakeJournalRepository()),
   settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
   journaledDatesProvider.overrideWith(
@@ -139,7 +143,7 @@ List<Override> _overrides(Mood? mood) => <Override>[
       ),
     ]),
   ),
-  ...syncOffOverrides(),
+  ...sync ?? syncOffOverrides(),
 ];
 
 class _PhoneShell extends ConsumerWidget {
@@ -171,6 +175,7 @@ Future<void> _pumpPhone(
   ShellDestination selected,
   Widget body, {
   Mood? mood = Mood.calm,
+  List<Override>? sync,
 }) async {
   tester.view.physicalSize = _galaxyS24;
   tester.view.devicePixelRatio = 1;
@@ -188,7 +193,7 @@ Future<void> _pumpPhone(
       key: UniqueKey(),
       child: ProviderScope(
         retry: (int retryCount, Object error) => null,
-        overrides: _overrides(mood),
+        overrides: _overrides(mood, sync: sync),
         child: MaterialApp(
           debugShowCheckedModeBanner: false,
           theme: fieldNotesTheme(platform: TargetPlatform.android),
@@ -211,15 +216,57 @@ Future<void> _pumpToday(WidgetTester tester, {Mood? mood = Mood.calm}) =>
 Future<void> _pumpCalendar(WidgetTester tester) =>
     _pumpPhone(tester, ShellDestination.calendar, CalendarScreen(today: _now));
 
+Future<void> _pumpSettingsList(WidgetTester tester) =>
+    _pumpPhone(tester, ShellDestination.settings, const SettingsScreen());
+
 Future<void> _pumpSettings(WidgetTester tester, SettingsTab tab) async {
-  await _pumpPhone(tester, ShellDestination.settings, const SettingsScreen());
+  await _pumpSettingsList(tester);
   await _tap(tester, find.byKey(settingsTabKey(tab)));
+}
+
+Future<void> _pumpDevices(WidgetTester tester) async {
+  final DateTime now = DateTime.now().toUtc();
+  await _pumpPhone(
+    tester,
+    ShellDestination.settings,
+    const SettingsScreen(),
+    sync: syncOnOverrides(
+      status: SyncedStatus(now),
+      devices: <JournalDevice>[
+        JournalDevice(
+          deviceId: 'this-phone',
+          name: 'Field phone',
+          createdAt: now.subtract(const Duration(days: 30)),
+          lastSeenAt: now,
+          isThisDevice: true,
+        ),
+        JournalDevice(
+          deviceId: 'studio-mac',
+          name: 'Studio Mac',
+          createdAt: now.subtract(const Duration(days: 20)),
+          lastSeenAt: now.subtract(const Duration(hours: 3)),
+          isThisDevice: false,
+        ),
+      ],
+    ),
+  );
+  await _tap(tester, find.byKey(settingsTabKey(SettingsTab.syncStorage)));
+  final Finder manage = find.widgetWithText(StickerButton, manageLabel);
+  await tester.ensureVisible(manage);
+  await _settle(tester);
+  await _tap(tester, manage);
 }
 
 final Finder _tabBar = find.byType(PhoneBottomBar);
 final Finder _moodCard = find.byType(TodayMoodDock);
 final Finder _sheetFooter = find.byKey(phoneSheetFooterKey);
-final Finder _segments = find.byKey(settingsTabChipsKey);
+final Finder _sectionRows = find.byWidgetPredicate(
+  (Widget widget) => SettingsTab.values.any(
+    (SettingsTab tab) => widget.key == settingsTabKey(tab),
+  ),
+  description: 'the settings section rows',
+);
+final Finder _backPill = find.byType(SettingsBackPill);
 final Finder _searchField = find.byType(SearchField);
 final Finder _monthControls = find.byWidgetPredicate(
   (Widget widget) =>
@@ -246,11 +293,12 @@ class _Primary {
 final _Primary _tabCells = _Primary('tab cells and +', _tabBar, count: 5);
 final _Primary _moodButton = _Primary('mood card button', _moodCard);
 final _Primary _footerButtons = _Primary('sheet footer buttons', _sheetFooter);
-final _Primary _settingsSegments = _Primary(
-  'settings segments',
-  _segments,
+final _Primary _settingsRows = _Primary(
+  'settings section rows',
+  _sectionRows,
   count: SettingsTab.values.length,
 );
+final _Primary _settingsBack = _Primary('settings Back pill', _backPill);
 final _Primary _calendarControls = _Primary(
   'calendar previous, month and next',
   _monthControls,
@@ -327,12 +375,20 @@ final List<_Surface> _surfaces = <_Surface>[
     await tester.enterText(find.byType(TextField), 'peonies');
     await _settle(tester);
   }, <_Primary>[_tabCells, _searchBox]),
+  _Surface('bottom settings list', _pumpSettingsList, <_Primary>[
+    _tabCells,
+    _settingsRows,
+  ]),
   for (final SettingsTab tab in SettingsTab.values)
     _Surface(
       'bottom settings, ${tab.label}',
       (WidgetTester tester) => _pumpSettings(tester, tab),
-      <_Primary>[_tabCells, _settingsSegments],
+      <_Primary>[_tabCells, _settingsBack],
     ),
+  _Surface('bottom settings, Devices', _pumpDevices, <_Primary>[
+    _tabCells,
+    _settingsBack,
+  ]),
   _Surface('week start sheet', (WidgetTester tester) async {
     await _pumpSettings(tester, SettingsTab.journal);
     await _tap(tester, find.byType(SettingsSelect<WeekStart>));

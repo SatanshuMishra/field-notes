@@ -11,6 +11,7 @@ import 'package:field_notes/features/settings/sections/reminders_sound_section.d
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/widgets/settings_notice.dart';
+import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
@@ -60,14 +61,26 @@ void main() {
   ) async {
     await _pumpScreen(tester, repository: FakeSettingsRepository());
 
-    expect(find.byType(SyncStorageSection), findsOneWidget);
-    expect(
-      find.byType(RemindersSoundSection, skipOffstage: false),
-      findsOneWidget,
-    );
-    expect(find.byType(JournalSection, skipOffstage: false), findsOneWidget);
-    expect(find.byType(DataSection, skipOffstage: false), findsOneWidget);
+    expect(find.byType(SettingsSectionList), findsOneWidget);
+    for (final Type section in <Type>[
+      JournalSection,
+      SyncStorageSection,
+      RemindersSoundSection,
+      DataSection,
+    ]) {
+      expect(
+        find.byType(section, skipOffstage: false),
+        findsOneWidget,
+        reason: '$section',
+      );
+    }
     expect(find.text('preferences'), findsOneWidget);
+
+    await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SyncStorageSection), findsOneWidget);
+    expect(find.byType(SettingsSectionList), findsNothing);
     expect(
       find.descendant(
         of: find.byType(SettingsScreen),

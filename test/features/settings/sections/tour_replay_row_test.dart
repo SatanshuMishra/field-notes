@@ -10,6 +10,7 @@ import 'package:field_notes/features/onboarding/onboarding.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/settings/sections/journal_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
+import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -90,10 +91,7 @@ Future<_App> _pumpApp(WidgetTester tester, Size surface) async {
         for (final Override override in shellOverrides())
           if (!replaced.contains(override.origin)) override,
         journalRepositoryProvider.overrideWithValue(
-          DriftJournalRepository(
-            database,
-            recorder: ChangeRecorder(database),
-          ),
+          DriftJournalRepository(database, recorder: ChangeRecorder(database)),
         ),
         settingsRepositoryProvider.overrideWithValue(settings),
         reminderSchedulerProvider.overrideWithValue(
@@ -243,6 +241,12 @@ void main() {
         await tester.tap(_done);
         await _settle(tester);
         _expectBackOnSettings(tester);
+
+        await tester.binding.handlePopRoute();
+        await _settle(tester);
+        expect(_selected(tester), ShellDestination.settings);
+        expect(find.byType(SettingsSectionList), findsOneWidget);
+        expect(find.text(_rowLabel), findsNothing);
 
         await tester.binding.handlePopRoute();
         await _settle(tester);

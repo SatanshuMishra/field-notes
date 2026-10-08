@@ -64,6 +64,7 @@ Future<void> _pumpSection(
   WidgetTester tester,
   List<Override> sync, {
   AppSettings settings = AppSettings.defaults,
+  VoidCallback? onManageDevices,
 }) async {
   tester.view.physicalSize = _onPhone
       ? const Size(412, 1800)
@@ -72,7 +73,11 @@ Future<void> _pumpSection(
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     settingsFeatureHarness(
-      SyncStorageSection(settings: settings, onFeedback: (String _) {}),
+      SyncStorageSection(
+        settings: settings,
+        onFeedback: (String _) {},
+        onManageDevices: onManageDevices,
+      ),
       overrides: <Override>[
         settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         ...sync,
@@ -91,6 +96,19 @@ Finder _rowControl(String label, Finder control) => find.descendant(
 );
 
 Finder _button(String label) => find.widgetWithText(StickerButton, label);
+
+void _expectOnlyUsableControls(WidgetTester tester) {
+  for (final StickerButton button in tester.widgetList<StickerButton>(
+    find.byType(StickerButton),
+  )) {
+    expect(button.onPressed, isNotNull, reason: button.label);
+  }
+  for (final SettingsToggle toggle in tester.widgetList<SettingsToggle>(
+    find.byType(SettingsToggle),
+  )) {
+    expect(toggle.enabled, isTrue, reason: toggle.semanticLabel);
+  }
+}
 
 void _expectNoMockUpControls() {
   for (final String control in _mockUpControls) {
@@ -151,6 +169,7 @@ void main() {
       );
     }
     _expectNoMockUpControls();
+    _expectOnlyUsableControls(tester);
     expect(find.text('Sync now'), findsNothing);
     expect(find.text('Pause sync'), findsNothing);
 
@@ -227,9 +246,11 @@ void main() {
   ) async {
     final DateTime now = DateTime.now().toUtc();
     final SyncedStatus status = SyncedStatus(now);
+    int manages = 0;
     await _pumpSection(
       tester,
       syncOnOverrides(status: status, devices: _twoDevices(now)),
+      onManageDevices: () => manages++,
     );
 
     expect(find.text(status.label(now)), findsOneWidget);
@@ -257,29 +278,16 @@ void main() {
     expect(_rowControl('Server address', _button('Change')), findsOneWidget);
     expect(find.text('Background uploads'), findsOneWidget);
     expect(find.text('Keep all media on this device'), findsNothing);
+    expect(find.text('Your devices'), findsNothing);
+    expect(find.text('Satanshu MacBook'), findsNothing);
     _expectNoMockUpControls();
+    _expectOnlyUsableControls(tester);
 
     await tester.tap(_rowControl('Devices', find.byType(StickerButton)));
     await tester.pumpAndSettle();
 
-    final Finder sheet = find.byType(PhoneSheet);
-    expect(sheet, findsOneWidget);
-    expect(
-      find.descendant(of: sheet, matching: find.text('Satanshu MacBook')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: sheet, matching: find.text('This phone')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(of: sheet, matching: _button('Remove')),
-      findsNWidgets(2),
-    );
-    expect(
-      find.descendant(of: sheet, matching: find.text('Add a device')),
-      findsOneWidget,
-    );
+    expect(manages, 1);
+    expect(find.byType(PhoneSheet), findsNothing);
   }, variant: _android);
 
   testWidgets('background uploads shows the battery state', (

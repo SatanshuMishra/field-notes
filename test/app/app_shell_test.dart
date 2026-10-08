@@ -13,6 +13,7 @@ import 'package:field_notes/features/calendar/calendar.dart';
 import 'package:field_notes/features/garden/garden.dart';
 import 'package:field_notes/features/search/search.dart';
 import 'package:field_notes/features/settings/settings.dart';
+import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today.dart';
@@ -37,14 +38,15 @@ void _holdStill(WidgetTester tester) {
 }
 
 void _expectLoadedSettingsScreen({
-  required Key tabs,
+  required Finder navigation,
+  required Finder opened,
   String heading = 'Settings',
 }) {
   expect(find.byType(SettingsScreen), findsOneWidget);
   expect(find.byType(CrossHatchPlaceholder), findsNothing);
   expect(find.text(heading), findsOneWidget);
-  expect(find.byKey(tabs), findsOneWidget);
-  expect(find.byType(SyncStorageSection), findsOneWidget);
+  expect(navigation, findsOneWidget);
+  expect(opened, findsOneWidget);
 }
 
 void main() {
@@ -103,7 +105,10 @@ void main() {
       await tester.tap(find.byKey(const ValueKey<String>('settings-button')));
       await tester.pumpAndSettle();
 
-      _expectLoadedSettingsScreen(tabs: settingsTabRailKey);
+      _expectLoadedSettingsScreen(
+        navigation: find.byKey(settingsTabRailKey),
+        opened: find.byType(JournalSection),
+      );
     });
 
     testWidgets('surfaces the real streak pill in the sidebar', (
@@ -191,7 +196,8 @@ void main() {
       await tester.pumpAndSettle();
 
       _expectLoadedSettingsScreen(
-        tabs: settingsTabChipsKey,
+        navigation: find.byType(SettingsSectionList),
+        opened: find.byKey(settingsTabKey(SettingsTab.journal)),
         heading: 'preferences',
       );
     });

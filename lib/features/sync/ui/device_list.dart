@@ -5,13 +5,13 @@ import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/settings/widgets/delete_all_dialog.dart';
 import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'add_device_sheet.dart';
 import 'start_sync_flow.dart';
 
 const String deviceRemoveLabel = 'Remove';
@@ -40,21 +40,9 @@ Key deviceRemoveKey(String deviceId) =>
 typedef DeviceFeedback = void Function(String message);
 
 const String devicesTitle = 'Devices';
-const String devicesDoneLabel = 'Done';
 
-Future<void> showDeviceListSheet(
-  BuildContext context, {
-  required DeviceFeedback onFeedback,
-}) async {
-  final bool? addDevice = await showSyncFlow<bool>(
-    context,
-    builder: (BuildContext sheetContext) =>
-        DeviceListSheet(onFeedback: onFeedback),
-  );
-  if (addDevice == true && context.mounted) {
-    await showAddDeviceSheet(context);
-  }
-}
+const double _detailGap = 2;
+const double _stackedActionGap = 8;
 
 class DeviceList extends ConsumerStatefulWidget {
   const DeviceList({super.key, required this.onFeedback, this.now});
@@ -175,16 +163,37 @@ class _DeviceRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (lastDevice && syncFlowUsesSheet(context)) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          MergeSemantics(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(device.name, style: context.textStyles.labelSans),
+                const SizedBox(height: _detailGap),
+                Text(
+                  detail,
+                  style: context.textStyles.captionSans.copyWith(
+                    color: context.colors.muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: _stackedActionGap),
+          _deleteEverywhere(context),
+        ],
+      );
+    }
     return SettingsFieldRow(
       label: device.name,
       description: detail,
       control: lastDevice
-          ? StickerButton(
-              label: deleteJournalEverywhereLabel,
-              variant: StickerButtonVariant.danger,
-              padTapTarget: true,
-              onPressed: busy ? null : () => showSyncDeleteAll(context),
-            )
+          ? _deleteEverywhere(context)
           : StickerButton(
               key: deviceRemoveKey(device.deviceId),
               label: deviceRemoveLabel,
@@ -194,29 +203,11 @@ class _DeviceRow extends StatelessWidget {
             ),
     );
   }
-}
 
-class DeviceListSheet extends StatelessWidget {
-  const DeviceListSheet({super.key, required this.onFeedback});
-
-  final DeviceFeedback onFeedback;
-
-  @override
-  Widget build(BuildContext context) {
-    return SyncFlowFrame(
-      title: devicesTitle,
-      content: <Widget>[DeviceList(onFeedback: onFeedback)],
-      actions: <SyncFlowAction>[
-        SyncFlowAction(
-          label: devicesDoneLabel,
-          onPressed: () => Navigator.of(context).pop(false),
-        ),
-        SyncFlowAction(
-          label: addDeviceTitle,
-          primary: true,
-          onPressed: () => Navigator.of(context).pop(true),
-        ),
-      ],
-    );
-  }
+  Widget _deleteEverywhere(BuildContext context) => StickerButton(
+    label: deleteJournalEverywhereLabel,
+    variant: StickerButtonVariant.danger,
+    padTapTarget: true,
+    onPressed: busy ? null : () => showSyncDeleteAll(context),
+  );
 }

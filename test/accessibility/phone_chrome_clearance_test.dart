@@ -17,6 +17,7 @@ import 'package:field_notes/features/search/search_providers.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/spell_check_availability.dart';
+import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/today/today.dart';
@@ -320,6 +321,37 @@ final Finder _settingsRows = find.byWidgetPredicate(
   description: 'a settings row or a sync action row',
 );
 
+Future<void> _checkSettingsList(WidgetTester tester, Size phone) async {
+  final String page = 'the Settings list in large text on $phone';
+  await _pumpPhone(
+    tester,
+    phone,
+    ShellDestination.settings,
+    const SettingsScreen(),
+    settings: AppSettings.defaults.copyWith(textSize: TextSize.large),
+  );
+  final Rect bar = tester.getRect(find.byType(PhoneBottomBar));
+  _expectBetween(
+    tester,
+    '$page first item',
+    tester.getRect(find.text(settingsListEyebrow)),
+    top: _headerBottom,
+    bottom: bar.top,
+  );
+  final ScrollPosition position = _positionAround(
+    tester,
+    find.byType(SettingsSectionList),
+  );
+  await _scrollToEnd(tester, position);
+  _expectBetween(
+    tester,
+    '$page last section',
+    tester.getRect(find.byKey(settingsTabKey(SettingsTab.values.last))),
+    top: _headerBottom,
+    bottom: bar.top,
+  );
+}
+
 Future<void> _checkSettings(WidgetTester tester, Size phone) async {
   bool overflowed = false;
   for (final SettingsTab tab in SettingsTab.values) {
@@ -333,13 +365,13 @@ Future<void> _checkSettings(WidgetTester tester, Size phone) async {
     );
     await tester.tap(find.byKey(settingsTabKey(tab)));
     await _settle(tester);
-    final Rect segments = tester.getRect(find.byKey(settingsTabChipsKey));
+    final Rect pill = tester.getRect(find.byType(SettingsBackPill));
     _expectBetween(
       tester,
       '$page first item',
-      tester.getRect(find.text('preferences')),
+      tester.getRect(find.byType(SettingsPageHeading)),
       top: _headerBottom,
-      bottom: segments.top,
+      bottom: pill.top,
     );
     _expectBetween(
       tester,
@@ -359,14 +391,14 @@ Future<void> _checkSettings(WidgetTester tester, Size phone) async {
       '$page last row',
       tester.getRect(_settingsRows.last),
       top: _headerBottom,
-      bottom: segments.top,
+      bottom: pill.top,
     );
     expect(
       tester.getRect(find.byKey(settingsTabContentKey)).bottom,
-      lessThanOrEqualTo(segments.top + _tolerance),
-      reason: '$page content ends under the segmented bar',
+      lessThanOrEqualTo(pill.top + _tolerance),
+      reason: '$page content ends under the Back pill',
     );
-    _expectChromeAboveTabBar(tester, '$page segmented bar', segments);
+    _expectChromeAboveTabBar(tester, '$page Back pill', pill);
   }
   expect(overflowed, isTrue, reason: 'no Settings section overflows on $phone');
 }
@@ -378,6 +410,7 @@ void main() {
       for (final Size phone in _phones) {
         await _checkToday(tester, phone);
         await _checkSearch(tester, phone);
+        await _checkSettingsList(tester, phone);
         await _checkSettings(tester, phone);
       }
     },

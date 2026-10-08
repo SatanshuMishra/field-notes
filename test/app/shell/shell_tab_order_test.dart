@@ -1,5 +1,6 @@
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
+import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,6 +11,14 @@ import '../support/app_shell_harness.dart';
 const int _maxPresses = 90;
 
 const String _lastSettingsControl = 'Delete all…';
+
+final List<String> _railLandmarks = <String>[
+  for (final SettingsTab tab in SettingsTab.values) tab.label,
+];
+
+final List<String> _phoneLandmarks = <String>[
+  settingsBackLabel(settingsListTitle),
+];
 
 Future<void> _selectDataTab(WidgetTester tester) async {
   await tester.tap(find.byKey(settingsTabKey(SettingsTab.data)));
@@ -116,7 +125,7 @@ Future<List<List<_Stop>>> _laps(
   return laps;
 }
 
-void _expectOneSettingsRun(List<_Stop> lap) {
+void _expectOneSettingsRun(List<_Stop> lap, List<String> landmarks) {
   int changes = 0;
   for (int index = 1; index < lap.length; index++) {
     if (lap[index].inSettings != lap[index - 1].inSettings) {
@@ -131,10 +140,8 @@ void _expectOneSettingsRun(List<_Stop> lap) {
   );
   expect(
     lap.where((_Stop stop) => stop.inSettings).map((_Stop stop) => stop.label),
-    containsAll(<String>[
-      for (final SettingsTab tab in SettingsTab.values) tab.label,
-    ]),
-    reason: 'one lap never reaches every Settings tab: $order',
+    containsAll(landmarks),
+    reason: 'one lap never reaches $landmarks: $order',
   );
   expect(
     lap.where((_Stop stop) => stop.inSettings).map((_Stop stop) => stop.label),
@@ -178,7 +185,9 @@ void main() {
 
       final List<List<_Stop>> laps = await _laps(tester, 2);
 
-      laps.forEach(_expectOneSettingsRun);
+      for (final List<_Stop> lap in laps) {
+        _expectOneSettingsRun(lap, _phoneLandmarks);
+      }
       _expectSameSettingsRun(laps);
     },
   );
@@ -195,7 +204,9 @@ void main() {
 
     final List<List<_Stop>> laps = await _laps(tester, 2);
 
-    laps.forEach(_expectOneSettingsRun);
+    for (final List<_Stop> lap in laps) {
+      _expectOneSettingsRun(lap, _railLandmarks);
+    }
     _expectSameSettingsRun(laps);
   });
 
@@ -216,7 +227,9 @@ void main() {
 
       final List<List<_Stop>> laps = await _laps(tester, 2, backward: true);
 
-      laps.forEach(_expectOneSettingsRun);
+      for (final List<_Stop> lap in laps) {
+        _expectOneSettingsRun(lap, _phoneLandmarks);
+      }
       _expectSameSettingsRun(laps);
     },
   );
@@ -233,7 +246,9 @@ void main() {
 
       final List<List<_Stop>> laps = await _laps(tester, 2, backward: true);
 
-      laps.forEach(_expectOneSettingsRun);
+      for (final List<_Stop> lap in laps) {
+        _expectOneSettingsRun(lap, _railLandmarks);
+      }
       _expectSameSettingsRun(laps);
     },
   );

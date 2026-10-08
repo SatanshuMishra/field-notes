@@ -36,12 +36,13 @@ const Size _tallDesktopSurface = Size(1280, 2600);
 const String _deleteAll = 'Delete all…';
 const String _deleteNotice = 'Deleted 3 days and 5 entries.';
 
-final List<A11yStatefulControl> _tabStateful = <A11yStatefulControl>[
-  for (final SettingsTab tab in SettingsTab.values)
-    A11yStatefulControl.finder(
-      find.byKey(settingsTabKey(tab)),
-      A11yStateKind.selected,
-    ),
+List<A11yStatefulControl> get _tabStateful => <A11yStatefulControl>[
+  if (!_onPhone)
+    for (final SettingsTab tab in SettingsTab.values)
+      A11yStatefulControl.finder(
+        find.byKey(settingsTabKey(tab)),
+        A11yStateKind.selected,
+      ),
 ];
 
 final A11yStatefulControl _toggles = A11yStatefulControl.finder(
@@ -57,12 +58,12 @@ final A11yStatefulControl _segments = A11yStatefulControl.finder(
   A11yStateKind.selected,
 );
 
-final List<A11yStatefulControl> _remindersStateful = <A11yStatefulControl>[
+List<A11yStatefulControl> get _remindersStateful => <A11yStatefulControl>[
   ..._tabStateful,
   _toggles,
 ];
 
-final List<A11yStatefulControl> _journalStateful = <A11yStatefulControl>[
+List<A11yStatefulControl> get _journalStateful => <A11yStatefulControl>[
   ..._tabStateful,
   _toggles,
   _segments,
@@ -98,33 +99,39 @@ Future<void> _pumpSettings(
 }) async {
   _useTallSurface(tester);
   await tester.pumpWidget(
-    settingsFeatureHarness(
-      const SettingsScreen(),
-      scrollable: false,
-      overrides: <Override>[
-        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
-        appSettingsProvider.overrideWith(
-          (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
-        ),
-        entriesForDateProvider.overrideWith(
-          (Ref ref, String date) => Stream<List<Entry>>.value(const <Entry>[]),
-        ),
-        reminderClockProvider.overrideWithValue(
-          () => DateTime(2026, 9, 18, 9, 30),
-        ),
-        reminderSchedulerProvider.overrideWithValue(
-          RecordingReminderScheduler(),
-        ),
-        spellCheckAvailabilityProvider.overrideWithValue(
-          AsyncValue<SpellCheckAvailability>.data(spellCheck),
-        ),
-        settingsDataControllerProvider.overrideWith(
-          (Ref ref) async => FakeSettingsDataController(
-            deleteResult: const DataActionSucceeded(_deleteNotice),
+    KeyedSubtree(
+      key: UniqueKey(),
+      child: settingsFeatureHarness(
+        const SettingsScreen(),
+        scrollable: false,
+        overrides: <Override>[
+          settingsRepositoryProvider.overrideWithValue(
+            FakeSettingsRepository(),
           ),
-        ),
-        ...syncOffOverrides(),
-      ],
+          appSettingsProvider.overrideWith(
+            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+          ),
+          entriesForDateProvider.overrideWith(
+            (Ref ref, String date) =>
+                Stream<List<Entry>>.value(const <Entry>[]),
+          ),
+          reminderClockProvider.overrideWithValue(
+            () => DateTime(2026, 9, 18, 9, 30),
+          ),
+          reminderSchedulerProvider.overrideWithValue(
+            RecordingReminderScheduler(),
+          ),
+          spellCheckAvailabilityProvider.overrideWithValue(
+            AsyncValue<SpellCheckAvailability>.data(spellCheck),
+          ),
+          settingsDataControllerProvider.overrideWith(
+            (Ref ref) async => FakeSettingsDataController(
+              deleteResult: const DataActionSucceeded(_deleteNotice),
+            ),
+          ),
+          ...syncOffOverrides(),
+        ],
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -138,7 +145,7 @@ Future<void> _openDeleteAll(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-final List<A11yState> settingsStates = <A11yState>[
+List<A11yState> get settingsStates => <A11yState>[
   A11yState(
     id: 'b1-settings',
     pump: _pumpSettings,
