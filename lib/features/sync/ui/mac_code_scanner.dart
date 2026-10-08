@@ -170,7 +170,9 @@ class MacCodeScanner extends StatefulWidget {
 enum _CameraFailure { refused, unavailable }
 
 class _MacCodeScannerState extends State<MacCodeScanner> {
-  late final MacScannerCamera _camera;
+  late final AppLifecycleListener _lifecycle;
+  MacScannerCamera? _camera;
+  int _session = 0;
   _CameraFailure? _failure;
   Timer? _rest;
   String? _lastCode;
@@ -178,15 +180,61 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
   @override
   void initState() {
     super.initState();
-    _camera = widget.camera ?? CameraMacosScannerCamera();
-    unawaited(_scan());
+    _lifecycle = AppLifecycleListener(
+      onHide: _sleep,
+      onShow: _wake,
+      onResume: _retry,
+    );
+    _open();
   }
 
-  Future<void> _scan() async {
+  void _open() {
+    final MacScannerCamera camera = widget.camera ?? CameraMacosScannerCamera();
+    _session += 1;
+    _camera = camera;
+    _failure = null;
+    unawaited(_scan(camera, _session));
+  }
+
+  void _close() {
+    final MacScannerCamera? camera = _camera;
+    _session += 1;
+    _camera = null;
+    _failure = null;
+    _rest?.cancel();
+    if (camera != null) {
+      unawaited(camera.stop());
+    }
+  }
+
+  void _sleep() {
+    if (_camera != null) {
+      setState(_close);
+    }
+  }
+
+  void _wake() {
+    if (_camera == null) {
+      setState(_open);
+    }
+  }
+
+  void _retry() {
+    if (_failure != null) {
+      setState(() {
+        _close();
+        _open();
+      });
+    }
+  }
+
+  bool _current(int session) => mounted && session == _session;
+
+  Future<void> _scan(MacScannerCamera camera, int session) async {
     try {
-      await _camera.start();
+      await camera.start();
     } catch (error) {
-      if (mounted) {
+      if (_current(session)) {
         setState(() {
           _failure = isCameraAccessRefusal(error)
               ? _CameraFailure.refused
@@ -195,15 +243,15 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
       }
       return;
     }
-    while (mounted) {
-      final CameraImageData? frame = await _camera.takeFrame();
-      if (frame == null || !mounted) {
+    while (_current(session)) {
+      final CameraImageData? frame = await camera.takeFrame();
+      if (frame == null || !_current(session)) {
         return;
       }
       final Completer<void> rested = Completer<void>();
       _rest = Timer(macScanInterval, rested.complete);
       final String? code = await _decodeOrNull(frame);
-      if (!mounted) {
+      if (!_current(session)) {
         return;
       }
       _offer(code);
@@ -238,18 +286,25 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
 
   @override
   void dispose() {
-    _rest?.cancel();
-    unawaited(_camera.stop());
+    _lifecycle.dispose();
+    _close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final MacScannerCamera? camera = _camera;
     return SizedBox.expand(
       child: ColoredBox(
         color: context.colors.panelTop,
         child: switch (_failure) {
-          null => ExcludeSemantics(child: _camera.preview()),
+          null when camera != null => ExcludeSemantics(
+            child: KeyedSubtree(
+              key: ValueKey<int>(_session),
+              child: camera.preview(),
+            ),
+          ),
+          null => const SizedBox.expand(),
           _CameraFailure.refused => _notice(
             cameraAccessRefusedMessage,
             action: StickerButton(

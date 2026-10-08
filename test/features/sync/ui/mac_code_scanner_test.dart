@@ -19,6 +19,15 @@ const MethodChannel _settingsChannel = MethodChannel(
   'field_notes/camera_settings',
 );
 const MethodChannel _pluginChannel = MethodChannel('camera_macos');
+const Key _previewKey = ValueKey<String>('fake-mac-preview');
+const List<AppLifecycleState> _hidden = <AppLifecycleState>[
+  AppLifecycleState.inactive,
+  AppLifecycleState.hidden,
+];
+const List<AppLifecycleState> _shown = <AppLifecycleState>[
+  AppLifecycleState.inactive,
+  AppLifecycleState.resumed,
+];
 const EventChannel _streamChannel = EventChannel('camera_macos/stream');
 
 final String _pairing = _payload(1);
@@ -45,18 +54,20 @@ CameraImageData _frame() =>
 class _FakeCamera implements MacScannerCamera {
   _FakeCamera({this.failure});
 
-  final Object? failure;
+  Object? failure;
   Completer<CameraImageData?>? _request;
+  int starts = 0;
   int stops = 0;
   int taken = 0;
 
   bool get streaming => _request != null;
 
   @override
-  Widget preview() => const SizedBox.expand();
+  Widget preview() => const SizedBox.expand(key: _previewKey);
 
   @override
   Future<void> start() async {
+    starts += 1;
     final Object? failure = this.failure;
     if (failure != null) {
       throw failure;
@@ -102,6 +113,16 @@ final class _PluginStream {
     'bytesPerRow': 16,
     'data': Uint8List(32),
   });
+}
+
+Future<void> _moveTo(
+  WidgetTester tester,
+  List<AppLifecycleState> states,
+) async {
+  for (final AppLifecycleState state in states) {
+    tester.binding.handleAppLifecycleStateChanged(state);
+  }
+  await tester.pump();
 }
 
 Future<void> _letChannelSettle(WidgetTester tester) async {
@@ -411,6 +432,85 @@ void main() {
       expect(camera.stops, 1);
     },
   );
+
+  testWidgets('hiding the app stops the camera and showing it starts again', (
+    WidgetTester tester,
+  ) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final _FakeCamera camera = _FakeCamera();
+    final List<String> codes = <String>[];
+    await _pumpScanner(
+      tester,
+      MacCodeScanner(
+        onCode: codes.add,
+        decode: (CameraImageData frame) async => _pairing,
+        camera: camera,
+      ),
+    );
+    expect(camera.starts, 1);
+    expect(camera.streaming, isTrue);
+    expect(find.byKey(_previewKey), findsOneWidget);
+
+    await _moveTo(tester, _hidden);
+    expect(camera.stops, 1);
+    expect(camera.streaming, isFalse);
+    camera.send(_frame());
+    await tester.pump(const Duration(seconds: 1));
+    expect(camera.starts, 1);
+    expect(codes, isEmpty);
+
+    await _moveTo(tester, _shown);
+    expect(camera.starts, 2);
+    expect(camera.streaming, isTrue);
+    expect(find.byKey(_previewKey), findsOneWidget);
+    camera.send(_frame());
+    await tester.pump();
+    expect(codes, <String>[_pairing]);
+
+    await tester.pumpWidget(const SizedBox());
+    expect(camera.stops, 2);
+  });
+
+  testWidgets('a refused camera tries again when the app comes back', (
+    WidgetTester tester,
+  ) async {
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    final _FakeCamera hiddenCamera = _FakeCamera(failure: _refusal);
+    await _pumpScanner(
+      tester,
+      MacCodeScanner(onCode: (String code) {}, camera: hiddenCamera),
+    );
+    expect(find.text(_refusedMessage), findsOneWidget);
+
+    await _moveTo(tester, _hidden);
+    hiddenCamera.failure = null;
+    await _moveTo(tester, _shown);
+    expect(hiddenCamera.starts, 2);
+    expect(find.text(_refusedMessage), findsNothing);
+    expect(find.text(_settingsLabel), findsNothing);
+    expect(find.byKey(_previewKey), findsOneWidget);
+    expect(hiddenCamera.streaming, isTrue);
+
+    final _FakeCamera coveredCamera = _FakeCamera(failure: _refusal);
+    await _pumpScanner(
+      tester,
+      MacCodeScanner(
+        key: const ValueKey<String>('covered'),
+        onCode: (String code) {},
+        camera: coveredCamera,
+      ),
+    );
+    expect(find.text(_refusedMessage), findsOneWidget);
+
+    await _moveTo(tester, <AppLifecycleState>[AppLifecycleState.inactive]);
+    coveredCamera.failure = null;
+    expect(coveredCamera.starts, 1);
+    await _moveTo(tester, <AppLifecycleState>[AppLifecycleState.resumed]);
+    expect(coveredCamera.starts, 2);
+    expect(find.text(_refusedMessage), findsNothing);
+    expect(find.byKey(_previewKey), findsOneWidget);
+    expect(coveredCamera.streaming, isTrue);
+  });
 
   testWidgets('the camera notices follow the light and the dark theme', (
     WidgetTester tester,
