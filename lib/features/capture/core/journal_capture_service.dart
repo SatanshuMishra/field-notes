@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:field_notes/data/media/media_duration.dart';
+import 'package:field_notes/data/media/media_probe.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/repositories/journal_repository.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
@@ -10,7 +10,7 @@ import 'capture_date.dart';
 
 const Duration _mediaReadyPollInterval = Duration(milliseconds: 50);
 const int _mediaReadyPollAttempts = 20;
-const Duration _durationProbeTimeout = Duration(seconds: 5);
+const Duration _mediaProbeTimeout = Duration(seconds: 5);
 
 const String blankTextMessage = 'Add a few words before saving your note.';
 const String invalidDateMessage =
@@ -33,16 +33,20 @@ typedef _Resolved = ({
   int? durationMs,
 });
 
+typedef _StoredVideo = ({MediaBlob blob, MediaMeasure? measured});
+
+typedef _Dimensions = ({int width, int height});
+
 class JournalCaptureService implements CaptureService {
   const JournalCaptureService({
     required this.journal,
     required this.media,
-    this.durationProbe,
+    this.probe,
   });
 
   final JournalRepository journal;
   final MediaStore media;
-  final MediaDurationProbe? durationProbe;
+  final MediaProbe? probe;
 
   @override
   Future<CaptureResult> capture(CaptureRequest request) async {
@@ -95,10 +99,10 @@ class JournalCaptureService implements CaptureService {
   }
 
   Future<_Resolved> _resolve(CaptureRequest request) => switch (request) {
-        TextCaptureRequest r => _resolveText(r),
-        VoiceCaptureRequest r => _resolveVoice(r),
-        VideoCaptureRequest r => _resolveVideo(r),
-      };
+    TextCaptureRequest r => _resolveText(r),
+    VoiceCaptureRequest r => _resolveVoice(r),
+    VideoCaptureRequest r => _resolveVideo(r),
+  };
 
   Future<_Resolved> _resolveText(TextCaptureRequest request) async {
     final String text = request.text.trim();
@@ -111,46 +115,88 @@ class JournalCaptureService implements CaptureService {
   Future<_Resolved> _resolveVoice(VoiceCaptureRequest request) async {
     _requireDuration(request.durationMs);
     final MediaBlob audio = await _finalize(request.audio, MediaKind.audio);
+    final MediaMeasure? measured = await _measure(
+      File(media.absolutePath(audio)),
+      MediaKind.audio,
+    );
     return (
       text: null,
       media: audio,
       thumbnail: null,
-      durationMs: await _finishedDuration(audio, request.durationMs),
+      durationMs: _finishedDuration(measured, request.durationMs),
     );
   }
 
   Future<_Resolved> _resolveVideo(VideoCaptureRequest request) async {
     _requireDuration(request.durationMs);
-    final MediaBlob video = await _finalize(request.video, MediaKind.video);
+    final _StoredVideo video = await _finalizeVideo(request.video);
     final CaptureMedia? source = request.thumbnail;
-    final MediaBlob? thumbnail =
-        source == null ? null : await _finalize(source, MediaKind.photo);
+    final MediaBlob? thumbnail = source == null
+        ? null
+        : await _finalize(source, MediaKind.photo);
     return (
       text: null,
-      media: video,
+      media: video.blob,
       thumbnail: thumbnail,
-      durationMs: await _finishedDuration(video, request.durationMs),
+      durationMs: _finishedDuration(video.measured, request.durationMs),
     );
   }
 
-  Future<int> _finishedDuration(MediaBlob blob, int recordedMs) async {
-    final MediaDurationProbe? probe = durationProbe;
-    if (probe == null) {
-      return recordedMs;
+  Future<_StoredVideo> _finalizeVideo(CaptureMedia payload) async {
+    switch (payload) {
+      case CaptureBytes():
+        final MediaBlob blob = await _finalize(payload, MediaKind.video);
+        return (
+          blob: blob,
+          measured: await _measure(
+            File(media.absolutePath(blob)),
+            MediaKind.video,
+          ),
+        );
+      case CaptureFile(:final File file):
+        await _awaitFileReady(file);
+        final MediaMeasure? measured = await _measure(file, MediaKind.video);
+        final bool sizeGiven = payload.width != null || payload.height != null;
+        final _Dimensions? size = _dimensionsOf(measured);
+        final MediaBlob blob = await _store(
+          payload,
+          MediaKind.video,
+          width: sizeGiven ? payload.width : size?.width,
+          height: sizeGiven ? payload.height : size?.height,
+        );
+        return (blob: blob, measured: measured);
     }
-    final Duration? measured;
+  }
+
+  Future<MediaMeasure?> _measure(File file, MediaKind kind) async {
+    final MediaProbe? measurer = probe;
+    if (measurer == null) {
+      return null;
+    }
     try {
-      measured = await probe
-          .duration(file: File(media.absolutePath(blob)), kind: blob.kind)
-          .timeout(_durationProbeTimeout);
+      return await measurer
+          .measure(file: file, kind: kind)
+          .timeout(_mediaProbeTimeout);
     } catch (_) {
-      return recordedMs;
+      return null;
     }
-    final int? measuredMs = measured?.inMilliseconds;
+  }
+
+  int _finishedDuration(MediaMeasure? measured, int recordedMs) {
+    final int? measuredMs = measured?.duration?.inMilliseconds;
     if (measuredMs == null || measuredMs <= 0) {
       return recordedMs;
     }
     return measuredMs;
+  }
+
+  _Dimensions? _dimensionsOf(MediaMeasure? measured) {
+    final int? width = measured?.width;
+    final int? height = measured?.height;
+    if (width == null || height == null || width <= 0 || height <= 0) {
+      return null;
+    }
+    return (width: width, height: height);
   }
 
   void _requireDuration(int durationMs) {
@@ -164,24 +210,33 @@ class JournalCaptureService implements CaptureService {
         (kind == MediaKind.audio || kind == MediaKind.video)) {
       await _awaitFileReady(payload.file);
     }
+    return _store(payload, kind, width: payload.width, height: payload.height);
+  }
+
+  Future<MediaBlob> _store(
+    CaptureMedia payload,
+    MediaKind kind, {
+    required int? width,
+    required int? height,
+  }) async {
     try {
       return await switch (payload) {
         CaptureBytes m => media.putBytes(
-            bytes: m.bytes,
-            mime: m.mime,
-            kind: kind,
-            width: m.width,
-            height: m.height,
-            durationMs: m.durationMs,
-          ),
+          bytes: m.bytes,
+          mime: m.mime,
+          kind: kind,
+          width: width,
+          height: height,
+          durationMs: m.durationMs,
+        ),
         CaptureFile m => media.putFile(
-            source: m.file,
-            mime: m.mime,
-            kind: kind,
-            width: m.width,
-            height: m.height,
-            durationMs: m.durationMs,
-          ),
+          source: m.file,
+          mime: m.mime,
+          kind: kind,
+          width: width,
+          height: height,
+          durationMs: m.durationMs,
+        ),
       };
     } catch (error) {
       throw CaptureException(mediaWriteMessage, cause: error);
@@ -189,7 +244,7 @@ class JournalCaptureService implements CaptureService {
   }
 
   Future<void> _awaitFileReady(File file) async {
-    for (var attempt = 0;; attempt++) {
+    for (var attempt = 0; ; attempt++) {
       if (_isFileReady(file)) {
         return;
       }
