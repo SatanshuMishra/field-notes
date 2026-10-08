@@ -148,7 +148,7 @@ class JoinScanPage extends StatelessWidget {
             children: <Widget>[
               Text(
                 joinScanKicker,
-                style: TypographyTokens.pageEyebrowAccent.copyWith(
+                style: context.textStyles.pageEyebrowAccent.copyWith(
                   color: Palette.mediaInk,
                 ),
               ),
@@ -157,7 +157,7 @@ class JoinScanPage extends StatelessWidget {
                 header: true,
                 child: Text(
                   joinScanMessage,
-                  style: TypographyTokens.headlineSerif.copyWith(
+                  style: context.textStyles.headlineSerif.copyWith(
                     fontSize: _messageSize,
                     height: _messageHeight,
                     color: Palette.mediaInk,
@@ -290,7 +290,7 @@ class _ScanError extends StatelessWidget {
         liveRegion: true,
         child: Text(
           message,
-          style: TypographyTokens.bodySans.copyWith(color: Palette.mediaInk),
+          style: context.textStyles.bodySans.copyWith(color: Palette.mediaInk),
         ),
       ),
     );
@@ -326,7 +326,7 @@ class _CancelControl extends StatelessWidget {
           child: ExcludeSemantics(
             child: Text(
               syncCancelLabel,
-              style: TypographyTokens.captureLabelSans.copyWith(
+              style: context.textStyles.captureLabelSans.copyWith(
                 color: Palette.mediaInk,
               ),
             ),
@@ -377,7 +377,7 @@ class _TypeWordsPill extends StatelessWidget {
                           typeWordsInsteadLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TypographyTokens.buttonSans.copyWith(
+                          style: context.textStyles.buttonSans.copyWith(
                             color: Palette.mediaInk,
                           ),
                         ),
