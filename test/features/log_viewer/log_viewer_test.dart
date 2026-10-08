@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
@@ -389,6 +390,7 @@ Future<_Mixed> _openMixed(
   bool readNotes = false,
   Widget Function(MediaResolver resolver)? inline,
   bool open = true,
+  ThemeData? theme,
 }) async {
   final _Mixed session = _Mixed(_DayRepository(_mixedEntries()));
   final MediaResolver resolver = _mediaResolver();
@@ -412,6 +414,7 @@ Future<_Mixed> _openMixed(
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        theme: theme,
         home: _MixedOpener(
           session: session,
           entryId: entryId,
@@ -904,5 +907,36 @@ void main() {
     expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
     expect(find.byKey(logViewerPanelKey), findsNothing);
     await _drainToast(tester);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('arrow keys step across note, voice and video and back', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    addTearDown(tester.view.reset);
+    final _Mixed session = await _openMixed(
+      tester,
+      entryId: 'note-log',
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+    );
+    expect(_inPanel(find.byType(NotePanelView)), findsOneWidget);
+
+    final List<(LogicalKeyboardKey, Type)> steps = <(LogicalKeyboardKey, Type)>[
+      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
+      (LogicalKeyboardKey.arrowRight, NotePanelView),
+      (LogicalKeyboardKey.arrowRight, VideoViewerView),
+      (LogicalKeyboardKey.arrowLeft, NotePanelView),
+      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
+    ];
+    for (final (LogicalKeyboardKey key, Type view) in steps) {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+      expect(_inPanel(find.byType(view)), findsOneWidget, reason: '$view');
+    }
+    expect(session.outcomes, isEmpty);
+    expect(find.byKey(logViewerPanelKey), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }
