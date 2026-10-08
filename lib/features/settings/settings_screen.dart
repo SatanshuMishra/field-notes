@@ -11,6 +11,7 @@ import 'package:field_notes/features/sync/ui/add_device_sheet.dart';
 import 'package:field_notes/features/sync/ui/device_list.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
+import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -110,11 +111,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _scrollToTop();
   }
 
+  _PhonePage _visiblePage({required bool syncOff}) => switch (_page) {
+    _DevicesPage() when syncOff => const _SectionPage(SettingsTab.syncStorage),
+    final _PhonePage page => page,
+  };
+
+  bool get _syncOff => ref.read(syncEnabledProvider).value == false;
+
   void _back() {
-    _showPage(switch (_page) {
+    _showPage(switch (_visiblePage(syncOff: _syncOff)) {
       _DevicesPage() => const _SectionPage(SettingsTab.syncStorage),
       _SectionPage() || _ListPage() => const _ListPage(),
     });
+  }
+
+  void _leaveDevicesWhenSyncStops(
+    AsyncValue<bool>? previous,
+    AsyncValue<bool> next,
+  ) {
+    if (next.value == false && _page is _DevicesPage) {
+      _showPage(const _SectionPage(SettingsTab.syncStorage));
+    }
   }
 
   void _onPhonePop(bool didPop, Object? result) {
@@ -240,7 +257,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildBottomBar(AppSettings settings) {
-    final _PhonePage page = _page;
+    ref.listen<AsyncValue<bool>>(
+      syncEnabledProvider,
+      _leaveDevicesWhenSyncStops,
+    );
+    final _PhonePage page = _visiblePage(
+      syncOff: ref.watch(syncEnabledProvider).value == false,
+    );
     final double gestureBar = MediaQuery.viewPaddingOf(context).bottom;
     final String? backLabel = switch (page) {
       _ListPage() => null,

@@ -30,6 +30,7 @@ import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart'
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/sync/ui/device_list.dart';
+import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:field_notes/state/sync_providers.dart';
@@ -590,6 +591,64 @@ void main() {
       find.widgetWithText(StickerButton, 'Delete journal everywhere'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('turning sync off on Devices shows Sync & storage', (
+    WidgetTester tester,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    final StreamController<bool> syncOn = StreamController<bool>();
+    addTearDown(() => unawaited(syncOn.close()));
+    syncOn.add(true);
+    await _pumpPhone(
+      tester,
+      sync: <Override>[
+        for (final Override override in syncOnOverrides(
+          status: SyncedStatus(now),
+          devices: _devices(now, alone: false),
+        ))
+          if (override.origin != syncEnabledProvider) override,
+        syncEnabledProvider.overrideWith((Ref ref) => syncOn.stream),
+      ],
+    );
+    await _open(tester, SettingsTab.syncStorage);
+    await _manage(tester);
+    _expectPageHeading(tester, devicesTitle);
+    _expectPill(tester, 'Sync & storage');
+
+    syncOn.add(false);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DeviceList), findsNothing);
+    expect(find.widgetWithText(StickerButton, showCodeLabel), findsNothing);
+    _expectPageHeading(tester, 'Sync & storage');
+    expect(find.widgetWithText(SyncActionRow, startSyncTitle), findsOneWidget);
+    _expectPill(tester, 'Settings');
+
+    syncOn.add(true);
+    await tester.pumpAndSettle();
+
+    _expectPageHeading(tester, 'Sync & storage');
+    expect(find.byType(DeviceList), findsNothing);
+    final Finder manage = find.widgetWithText(StickerButton, manageLabel);
+    expect(manage, findsOneWidget);
+    _expectPill(tester, 'Settings');
+
+    await tester.ensureVisible(manage);
+    await tester.pumpAndSettle();
+    syncOn.add(false);
+    await tester.tap(manage);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DeviceList), findsNothing);
+    _expectPageHeading(tester, 'Sync & storage');
+    _expectPill(tester, 'Settings');
+
+    await tester.tap(_pill);
+    await tester.pumpAndSettle();
+
+    expect(_list, findsOneWidget);
+    expect(_pill, findsNothing);
   });
 
   testWidgets('leaving Devices while a removal is pending still refreshes it', (
