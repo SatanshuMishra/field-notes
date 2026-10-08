@@ -191,6 +191,44 @@ void _expectOnNote(
 }
 
 void main() {
+  for (final double scale in <double>[1, 1.3]) {
+    testWidgets('on a short phone the note field keeps a visible line above '
+        'the keyboard at text scale $scale', (WidgetTester tester) async {
+      const Size short = Size(360, 640);
+      const double keyboard = 300;
+      await _onLayout(ShellLayout.bottomBar, () async {
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final ProviderContainer container = await _pumpApp(
+          tester,
+          ShellLayout.bottomBar,
+        );
+        tester.view.physicalSize = short;
+        await _openMoment(tester, container);
+        await tester.tap(find.byKey(momentFieldKey));
+        await tester.pump();
+        tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+        tester.view.padding = const FakeViewPadding(top: _statusBar);
+        await _settle(tester);
+        await tester.enterText(find.byKey(momentFieldKey), 'Fog at nine.');
+        await _settle(tester);
+
+        final double above = short.height - keyboard;
+        final Rect bar = tester.getRect(find.byKey(onboardingControlBarKey));
+        final Rect field = tester.getRect(find.byKey(momentFieldKey));
+        expect(tester.takeException(), isNull);
+        expect(bar.bottom, lessThanOrEqualTo(above));
+        expect(field.height, greaterThanOrEqualTo(32 * scale - 0.5));
+        expect(field.top, greaterThanOrEqualTo(_statusBar));
+        expect(
+          tester.getRect(find.byKey(momentCardKey)).bottom,
+          lessThanOrEqualTo(bar.top),
+        );
+        await _unmount(tester);
+      });
+    });
+  }
+
   testWidgets('on the phone the swipe bar and note card rise above the '
       'keyboard', (WidgetTester tester) async {
     const double keyboard = 300;

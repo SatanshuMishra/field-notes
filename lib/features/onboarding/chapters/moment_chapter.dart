@@ -10,6 +10,7 @@ import 'package:field_notes/features/onboarding/onboarding_frame.dart';
 import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -369,26 +370,42 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
         top: media.padding.top + onboardingPhoneTitleTop,
         bottom: bottom + _bottomBarCardClearance,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const _Enter.rise(
-            duration: _headingRise,
-            delay: Duration.zero,
-            child: _MomentHeading(layout: ShellLayout.bottomBar),
-          ),
-          const SizedBox(height: _bottomBarCardGap),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _MomentMetrics.bottomBarSide,
-              ),
-              child: _Enter.rise(
-                duration: _cardRise,
-                delay: _cardDelay,
-                child: card,
-              ),
+      child: CustomScrollView(
+        slivers: <Widget>[
+          const SliverToBoxAdapter(
+            child: _Enter.rise(
+              duration: _headingRise,
+              delay: Duration.zero,
+              child: _MomentHeading(layout: ShellLayout.bottomBar),
             ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: _bottomBarCardGap)),
+          SliverLayoutBuilder(
+            builder: (BuildContext context, SliverConstraints constraints) {
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _MomentMetrics.bottomBarSide,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: math.max(
+                        0,
+                        constraints.viewportMainAxisExtent -
+                            constraints.precedingScrollExtent,
+                      ),
+                    ),
+                    child: IntrinsicHeight(
+                      child: _Enter.rise(
+                        duration: _cardRise,
+                        delay: _cardDelay,
+                        child: card,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
