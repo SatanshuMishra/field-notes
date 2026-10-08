@@ -11,6 +11,21 @@ String _environmentBlock(String pubspec) {
   return match!.group(1)!;
 }
 
+Map<String, String> _jobs(String workflow) {
+  final String body = workflow.substring(workflow.indexOf('\njobs:\n') + 7);
+  final List<RegExpMatch> headers = RegExp(
+    r'^  ([\w-]+):$',
+    multiLine: true,
+  ).allMatches(body).toList();
+  return <String, String>{
+    for (int index = 0; index < headers.length; index++)
+      headers[index].group(1)!: body.substring(
+        headers[index].end,
+        index + 1 < headers.length ? headers[index + 1].start : body.length,
+      ),
+  };
+}
+
 void main() {
   group('toolchain pin', () {
     test('the project requires Flutter 3.47.5 and Dart 3.13.4', () {
@@ -27,6 +42,30 @@ void main() {
           .readAsStringSync();
 
       expect(workflow, contains("flutter-version: '3.47.5'"));
+    });
+
+    test('the release workflow builds with Flutter 3.47.5', () {
+      final Map<String, String> jobs = _jobs(
+        File('.github/workflows/release.yml').readAsStringSync(),
+      );
+      final Map<String, String> builds = <String, String>{
+        for (final MapEntry<String, String> job in jobs.entries)
+          if (job.value.contains('subosito/flutter-action')) job.key: job.value,
+      };
+
+      expect(builds.keys.toSet(), <String>{'macos', 'windows', 'android'});
+      for (final MapEntry<String, String> build in builds.entries) {
+        expect(
+          "flutter-version: '3.47.5'".allMatches(build.value),
+          hasLength(1),
+          reason: 'the ${build.key} job must pin Flutter 3.47.5',
+        );
+        expect(
+          'flutter-version:'.allMatches(build.value),
+          hasLength(1),
+          reason: 'the ${build.key} job must pin one Flutter version',
+        );
+      }
     });
   });
 }
