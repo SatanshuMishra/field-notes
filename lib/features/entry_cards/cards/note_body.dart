@@ -32,12 +32,14 @@ class NoteBody extends StatelessWidget {
     required this.text,
     this.selectable = true,
     this.onToggleTask,
+    this.onOpenPhoto,
     this.conflictSourceDevice,
   });
 
   final String text;
   final bool selectable;
   final ValueChanged<int>? onToggleTask;
+  final ValueChanged<int>? onOpenPhoto;
   final String? conflictSourceDevice;
 
   @override
@@ -72,6 +74,7 @@ class NoteBody extends StatelessWidget {
       source: text,
       selectable: selectable,
       onToggleTask: onToggleTask,
+      onOpenPhoto: onOpenPhoto,
     );
   }
 }
