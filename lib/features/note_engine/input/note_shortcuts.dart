@@ -1,3 +1,4 @@
+import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/features/note_engine/input/command_registry.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -19,11 +20,8 @@ final class NoteLeaveEditorIntent extends Intent {
 }
 
 Map<ShortcutActivator, Intent> noteShortcuts(TargetPlatform platform) {
-  final bool apple =
-      platform == TargetPlatform.macOS || platform == TargetPlatform.iOS;
-
   SingleActivator command(LogicalKeyboardKey key, {bool shift = false}) =>
-      SingleActivator(key, meta: apple, control: !apple, shift: shift);
+      primaryShortcut(key, platform, shift: shift);
 
   return <ShortcutActivator, Intent>{
     command(LogicalKeyboardKey.keyB): const NoteCommandIntent(
@@ -65,7 +63,7 @@ Map<ShortcutActivator, Intent> noteShortcuts(TargetPlatform platform) {
         const NoteLeaveEditorIntent(forward: true),
     const SingleActivator(LogicalKeyboardKey.tab, control: true, shift: true):
         const NoteLeaveEditorIntent(forward: false),
-    if (!apple)
+    if (!usesCommandKey(platform))
       const SingleActivator(LogicalKeyboardKey.keyY, control: true):
           const RedoTextIntent(SelectionChangedCause.keyboard),
   };

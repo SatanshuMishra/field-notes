@@ -6,6 +6,7 @@ import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/repository_providers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,6 +23,8 @@ const Key _soundButton = ValueKey<String>('sound-button');
 
 const String _collapseLabel = 'Collapse sidebar (⌘\\)';
 const String _expandLabel = 'Expand sidebar (⌘\\)';
+const String _windowsCollapseLabel = 'Collapse sidebar (Ctrl+\\)';
+const String _windowsExpandLabel = 'Expand sidebar (Ctrl+\\)';
 
 void _holdStill(WidgetTester tester) {
   tester.platformDispatcher.accessibilityFeaturesTestValue =
@@ -29,8 +32,18 @@ void _holdStill(WidgetTester tester) {
   addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
 }
 
-Future<FakeSettingsRepository> _pumpMac(
+Future<void> _onWindows(Future<void> Function() body) async {
+  debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+  try {
+    await body();
+  } finally {
+    debugDefaultTargetPlatformOverride = null;
+  }
+}
+
+Future<FakeSettingsRepository> _pumpShell(
   WidgetTester tester, {
+  required TargetPlatform platform,
   bool collapsed = false,
 }) async {
   final FakeSettingsRepository settings = FakeSettingsRepository(
@@ -49,7 +62,7 @@ Future<FakeSettingsRepository> _pumpMac(
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+        theme: fieldNotesTheme(platform: platform),
         home: const AppShell(),
       ),
     ),
@@ -57,6 +70,11 @@ Future<FakeSettingsRepository> _pumpMac(
   await tester.pumpAndSettle();
   return settings;
 }
+
+Future<FakeSettingsRepository> _pumpMac(
+  WidgetTester tester, {
+  bool collapsed = false,
+}) => _pumpShell(tester, platform: TargetPlatform.macOS, collapsed: collapsed);
 
 double _railWidth(WidgetTester tester) =>
     tester.getSize(find.byKey(_rail)).width;
@@ -74,6 +92,21 @@ Future<void> _pressCommandBackslash(WidgetTester tester) async {
   await tester.sendKeyDownEvent(LogicalKeyboardKey.metaLeft);
   await tester.sendKeyEvent(LogicalKeyboardKey.backslash);
   await tester.sendKeyUpEvent(LogicalKeyboardKey.metaLeft);
+}
+
+Future<void> _pressControlBackslash(WidgetTester tester) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.backslash);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.backslash);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+}
+
+void _expectToggleLabel(WidgetTester tester, String label) {
+  expect(_tooltipAbove(tester, find.byKey(_toggle)), label);
+  expect(
+    tester.getSemantics(find.byKey(_toggle)),
+    isSemantics(label: label, isButton: true, hasTapAction: true),
+  );
 }
 
 void _expectOpen(WidgetTester tester) {
@@ -191,6 +224,46 @@ void main() {
       _expectCollapsed(tester);
       expect(restored.sidebarCollapsedWrites, isEmpty);
       handle.dispose();
+    },
+  );
+
+  testWidgets(
+    'Ctrl+backslash toggles the sidebar on Windows and names the key',
+    (WidgetTester tester) async {
+      await _onWindows(() async {
+        _holdStill(tester);
+        final SemanticsHandle handle = tester.ensureSemantics();
+        final FakeSettingsRepository settings = await _pumpShell(
+          tester,
+          platform: TargetPlatform.windows,
+        );
+
+        expect(_railWidth(tester), 176);
+        _expectToggleLabel(tester, _windowsCollapseLabel);
+
+        await _pressCommandBackslash(tester);
+        await tester.pumpAndSettle();
+
+        expect(settings.sidebarCollapsedWrites, isEmpty);
+        expect(_railWidth(tester), 176);
+        _expectToggleLabel(tester, _windowsCollapseLabel);
+
+        await _pressControlBackslash(tester);
+        await tester.pumpAndSettle();
+
+        expect(settings.sidebarCollapsedWrites, <bool>[true]);
+        expect(_railWidth(tester), 68);
+        _expectToggleLabel(tester, _windowsExpandLabel);
+
+        await _pressControlBackslash(tester);
+        await tester.pumpAndSettle();
+
+        expect(settings.sidebarCollapsedWrites, <bool>[true, false]);
+        expect(_railWidth(tester), 176);
+        _expectToggleLabel(tester, _windowsCollapseLabel);
+        expect(tester.takeException(), isNull);
+        handle.dispose();
+      });
     },
   );
 

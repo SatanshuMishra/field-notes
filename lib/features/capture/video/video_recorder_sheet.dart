@@ -275,6 +275,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   };
 
   String get _keyHint => recorderKeyHint(
+    platform: Theme.of(context).platform,
     primary: _primaryKey == null ? null : _primaryVerb,
     keep: _keepKey != null,
     leave: _leaveKey == null ? null : _leaveVerb,

@@ -409,6 +409,72 @@ void main() {
       });
     },
   );
+
+  testWidgets('Windows pushes the chosen appearance to the window', (
+    WidgetTester tester,
+  ) async {
+    await _onPlatform(TargetPlatform.windows, () async {
+      final List<Object?> sent = <Object?>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        windowChannel,
+        (MethodCall call) async {
+          if (call.method == setAppearanceMethod) {
+            sent.add(call.arguments);
+          }
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          windowChannel,
+          null,
+        ),
+      );
+      _setDeviceBrightness(tester, Brightness.light);
+
+      await _pumpApp(tester, _stored(Appearance.dark));
+
+      expect(sent, <Object?>['dark']);
+
+      await _switchTo(_container(tester), Appearance.light);
+      await _settle(tester);
+
+      expect(sent, <Object?>['dark', 'light']);
+
+      await _switchTo(_container(tester), Appearance.system);
+      await _settle(tester);
+
+      expect(sent, <Object?>['dark', 'light', 'system']);
+    });
+  });
+
+  testWidgets('Android sends no appearance to a window', (
+    WidgetTester tester,
+  ) async {
+    await _onPlatform(TargetPlatform.android, () async {
+      final List<String> calls = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        windowChannel,
+        (MethodCall call) async {
+          calls.add(call.method);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          windowChannel,
+          null,
+        ),
+      );
+      _setDeviceBrightness(tester, Brightness.light);
+
+      await _pumpApp(tester, _stored(Appearance.dark), surface: _phoneSurface);
+      await _switchTo(_container(tester), Appearance.light);
+      await _settle(tester);
+
+      expect(calls, isEmpty);
+    });
+  });
 }
 
 void _expectSystemBars(SystemUiOverlayStyle? style, Brightness icons) {

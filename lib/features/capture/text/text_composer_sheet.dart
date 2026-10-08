@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart'
@@ -204,19 +205,11 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Map<ShortcutActivator, VoidCallback> _shortcuts(BuildContext context) {
-    final bool apple = switch (Theme.of(context).platform) {
-      TargetPlatform.macOS || TargetPlatform.iOS => true,
-      _ => false,
-    };
+    final TargetPlatform platform = Theme.of(context).platform;
     void save() => _handleSaveShortcut(context);
     return <ShortcutActivator, VoidCallback>{
-      SingleActivator(LogicalKeyboardKey.enter, meta: apple, control: !apple):
-          save,
-      SingleActivator(
-        LogicalKeyboardKey.numpadEnter,
-        meta: apple,
-        control: !apple,
-      ): save,
+      primaryShortcut(LogicalKeyboardKey.enter, platform): save,
+      primaryShortcut(LogicalKeyboardKey.numpadEnter, platform): save,
       const SingleActivator(LogicalKeyboardKey.escape): _handleEscape,
     };
   }

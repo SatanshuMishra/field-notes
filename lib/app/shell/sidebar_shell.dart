@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,8 +21,11 @@ const double shellSidebarCollapsedWidth = 68;
 const Duration shellSidebarResize = Duration(milliseconds: 250);
 const Cubic shellSidebarCurve = Cubic(0.2, 0.8, 0.2, 1);
 
-const String sidebarCollapseLabel = 'Collapse sidebar (⌘\\)';
-const String sidebarExpandLabel = 'Expand sidebar (⌘\\)';
+String sidebarCollapseLabel(TargetPlatform platform) =>
+    'Collapse sidebar (${primaryModifierLabel(platform)}\\)';
+
+String sidebarExpandLabel(TargetPlatform platform) =>
+    'Expand sidebar (${primaryModifierLabel(platform)}\\)';
 
 const Key sidebarRailKey = ValueKey<String>('sidebar-rail');
 const Key sidebarToggleKey = ValueKey<String>('sidebar-toggle');
@@ -210,8 +214,10 @@ class _SidebarShellState extends State<SidebarShell> {
     return Shortcuts(
       includeSemantics: false,
       shortcuts: <ShortcutActivator, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.backslash):
-            const _ToggleSidebarIntent(),
+        primaryShortcut(
+          LogicalKeyboardKey.backslash,
+          Theme.of(context).platform,
+        ): const _ToggleSidebarIntent(),
       },
       child: Actions(
         actions: _actions,
@@ -267,6 +273,7 @@ class _SidebarShellState extends State<SidebarShell> {
 
   Widget _dragBar(BuildContext context) {
     final FieldNotesColors colors = context.colors;
+    final double slot = windowButtonsSlotWidthFor(Theme.of(context).platform);
     return WindowDragBand(
       key: windowTitleBarKey,
       child: Container(
@@ -278,9 +285,9 @@ class _SidebarShellState extends State<SidebarShell> {
         ),
         child: Row(
           children: <Widget>[
-            const SizedBox(
-              key: ValueKey<String>('traffic-lights'),
-              width: windowButtonsSlotWidth,
+            SizedBox(
+              key: const ValueKey<String>('traffic-lights'),
+              width: slot,
             ),
             Expanded(
               child: Text(
@@ -291,7 +298,7 @@ class _SidebarShellState extends State<SidebarShell> {
                 style: context.textStyles.windowTitleAccent,
               ),
             ),
-            const SizedBox(width: windowButtonsSlotWidth),
+            SizedBox(width: slot),
           ],
         ),
       ),
@@ -522,7 +529,10 @@ class _SidebarToggleState extends State<_SidebarToggle> {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final bool collapsed = widget.collapsed;
-    final String label = collapsed ? sidebarExpandLabel : sidebarCollapseLabel;
+    final TargetPlatform platform = Theme.of(context).platform;
+    final String label = collapsed
+        ? sidebarExpandLabel(platform)
+        : sidebarCollapseLabel(platform);
     final Color fill = _hovered
         ? colors.ink08
         : collapsed
