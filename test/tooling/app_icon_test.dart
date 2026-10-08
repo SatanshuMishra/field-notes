@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 const String _macIconSet = 'macos/Runner/Assets.xcassets/AppIcon.appiconset';
 const String _androidRes = 'android/app/src/main/res';
+const String _windowsIcon = 'windows/runner/resources/app_icon.ico';
 
 const Set<String> _macIcons = <String>{
   '$_macIconSet/app_icon_16.png',
@@ -26,6 +27,8 @@ const Map<String, int> _legacyLaunchers = <String, int>{
   '$_androidRes/mipmap-xxhdpi/ic_launcher.png': 144,
   '$_androidRes/mipmap-xxxhdpi/ic_launcher.png': 192,
 };
+
+const List<int> _windowsIconSizes = <int>[16, 24, 32, 48, 64, 128, 256];
 
 const Map<String, String> _flutterDefaultMd5 = <String, String>{
   '$_macIconSet/app_icon_16.png': '8bf511604bc6ed0a6aeb380c5113fdcf',
@@ -348,6 +351,62 @@ void main() {
       );
       _expectNear(legacy, 96, 58, _cream, 'the top petal');
       _expectNear(legacy, 96, 104, _blush, 'the peony centre');
+    },
+  );
+
+  test(
+    'the Windows icon is the rose icon at every size Windows asks for',
+    () async {
+      final Uint8List icon = _read(_windowsIcon);
+      final ByteData directory = ByteData.sublistView(icon);
+      expect(directory.getUint16(0, Endian.little), 0, reason: 'reserved');
+      expect(directory.getUint16(2, Endian.little), 1, reason: 'an icon');
+      final int count = directory.getUint16(4, Endian.little);
+      expect(count, _windowsIconSizes.length);
+
+      final Map<int, Uint8List> entries = <int, Uint8List>{};
+      for (int index = 0; index < count; index += 1) {
+        final int entry = 6 + index * 16;
+        final int width = icon[entry] == 0 ? 256 : icon[entry];
+        final int height = icon[entry + 1] == 0 ? 256 : icon[entry + 1];
+        expect(height, width, reason: 'entry $index is square');
+        expect(icon[entry + 2], 0, reason: 'entry $index colour count');
+        expect(icon[entry + 3], 0, reason: 'entry $index reserved');
+        expect(directory.getUint16(entry + 4, Endian.little), 1);
+        expect(directory.getUint16(entry + 6, Endian.little), 32);
+        final int length = directory.getUint32(entry + 8, Endian.little);
+        final int offset = directory.getUint32(entry + 12, Endian.little);
+        expect(offset, greaterThanOrEqualTo(6 + count * 16));
+        expect(offset + length, lessThanOrEqualTo(icon.length));
+        final Uint8List png = Uint8List.sublistView(
+          icon,
+          offset,
+          offset + length,
+        );
+        expect(_pngSize('$_windowsIcon at $width', png), (
+          width,
+          height,
+        ), reason: 'the $width entry states its size');
+        entries[width] = png;
+      }
+      expect(entries.keys.toList()..sort(), _windowsIconSizes);
+
+      final _Pixels largest = await _decode(entries[256]!);
+      _expectTransparent(largest, const <(int, int)>[
+        (0, 0),
+        (255, 0),
+        (0, 255),
+        (255, 255),
+      ], 'the rounded corner');
+      _expectNear(
+        largest,
+        13,
+        128,
+        _rose,
+        'the rounded square near its left edge',
+      );
+      _expectNear(largest, 128, 77, _cream, 'the top petal');
+      _expectNear(largest, 128, 139, _blush, 'the peony centre');
     },
   );
 }

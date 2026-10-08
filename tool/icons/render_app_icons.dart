@@ -8,8 +8,13 @@ import 'package:flutter_test/flutter_test.dart';
 const String _svgPath = 'tool/icons/app_icon.svg';
 const String _macIconSet = 'macos/Runner/Assets.xcassets/AppIcon.appiconset';
 const String _androidRes = 'android/app/src/main/res';
+const String _windowsIcon = 'windows/runner/resources/app_icon.ico';
 
 const List<int> _macSizes = <int>[16, 32, 64, 128, 256, 512, 1024];
+
+const List<int> _windowsSizes = <int>[16, 24, 32, 48, 64, 128, 256];
+const int _icoHeaderLength = 6;
+const int _icoEntryLength = 16;
 
 const Map<String, int> _legacyLauncherSizes = <String, int>{
   'mdpi': 48,
@@ -816,6 +821,37 @@ const String _adaptiveIcon =
     '    <foreground android:drawable="@drawable/ic_launcher_foreground" />\n'
     '</adaptive-icon>\n';
 
+Uint8List _icoOf(Map<int, Uint8List> pngs) {
+  final int directoryLength = _icoHeaderLength + _icoEntryLength * pngs.length;
+  final int length = pngs.values.fold<int>(
+    directoryLength,
+    (int total, Uint8List png) => total + png.length,
+  );
+  final Uint8List icon = Uint8List(length);
+  final ByteData directory = ByteData.sublistView(icon)
+    ..setUint16(0, 0, Endian.little)
+    ..setUint16(2, 1, Endian.little)
+    ..setUint16(4, pngs.length, Endian.little);
+  int offset = directoryLength;
+  int entry = _icoHeaderLength;
+  for (final MapEntry<int, Uint8List> png in pngs.entries) {
+    final int edge = png.key >= 256 ? 0 : png.key;
+    directory
+      ..setUint8(entry, edge)
+      ..setUint8(entry + 1, edge)
+      ..setUint8(entry + 2, 0)
+      ..setUint8(entry + 3, 0)
+      ..setUint16(entry + 4, 1, Endian.little)
+      ..setUint16(entry + 6, 32, Endian.little)
+      ..setUint32(entry + 8, png.value.length, Endian.little)
+      ..setUint32(entry + 12, offset, Endian.little);
+    icon.setRange(offset, offset + png.value.length, png.value);
+    offset += png.value.length;
+    entry += _icoEntryLength;
+  }
+  return icon;
+}
+
 void _writeBytes(String path, List<int> bytes) {
   final File file = File(path);
   file.parent.createSync(recursive: true);
@@ -859,5 +895,12 @@ void main() {
       );
     }
     _writeText('$_androidRes/raw/keep.xml', _keepResources);
+    _writeBytes(
+      _windowsIcon,
+      _icoOf(<int, Uint8List>{
+        for (final int size in _windowsSizes)
+          size: await _renderLegacyLauncher(art, size),
+      }),
+    );
   });
 }
