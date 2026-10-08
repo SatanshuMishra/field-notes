@@ -45,7 +45,7 @@ final class DraftRootProvider
   }
 }
 
-String _$draftRootHash() => r'00069d8f65936a791340e344ba968712e3cfd827';
+String _$draftRootHash() => r'ef37fec0641779082a96a695f8e68440c101ac64';
 
 @ProviderFor(draftStore)
 final draftStoreProvider = DraftStoreProvider._();
