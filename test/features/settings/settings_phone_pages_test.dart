@@ -35,6 +35,7 @@ import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -591,6 +592,69 @@ void main() {
       find.widgetWithText(StickerButton, 'Delete journal everywhere'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('each phone settings page is announced as its own route', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final DateTime now = DateTime.now().toUtc();
+    await _pumpPhone(
+      tester,
+      sync: syncOnOverrides(
+        status: SyncedStatus(now),
+        devices: _devices(now, alone: false),
+      ),
+    );
+    final Finder route = find.descendant(
+      of: find.byType(SettingsScreen),
+      matching: find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is Semantics && (widget.properties.scopesRoute ?? false),
+        description: 'a settings page route',
+      ),
+    );
+    final State<StatefulWidget> section = tester.state(
+      find.byType(SyncStorageSection, skipOffstage: false),
+    );
+    final Set<int> announced = <int>{};
+
+    void expectRoute(String title) {
+      expect(route, findsOneWidget, reason: title);
+      final SemanticsNode node = tester.getSemantics(route);
+      expect(
+        node,
+        isSemantics(label: title, scopesRoute: true, namesRoute: true),
+        reason: title,
+      );
+      expect(
+        announced.add(node.id),
+        isTrue,
+        reason: '$title reuses the route of an earlier page',
+      );
+    }
+
+    expectRoute(settingsListTitle);
+    for (final SettingsTab tab in SettingsTab.values) {
+      await _open(tester, tab);
+      expectRoute(tab.label);
+      await tester.tap(_pill);
+      await tester.pumpAndSettle();
+      expectRoute(settingsListTitle);
+    }
+    await _open(tester, SettingsTab.syncStorage);
+    expectRoute(SettingsTab.syncStorage.label);
+    await _manage(tester);
+    expectRoute(devicesTitle);
+    await tester.tap(_pill);
+    await tester.pumpAndSettle();
+    expectRoute(SettingsTab.syncStorage.label);
+
+    expect(
+      tester.state(find.byType(SyncStorageSection, skipOffstage: false)),
+      same(section),
+    );
+    semantics.dispose();
   });
 
   testWidgets('turning sync off on Devices shows Sync & storage', (

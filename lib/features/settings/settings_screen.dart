@@ -49,17 +49,41 @@ sealed class _PhonePage {
 
 final class _ListPage extends _PhonePage {
   const _ListPage();
+
+  @override
+  bool operator ==(Object other) => other is _ListPage;
+
+  @override
+  int get hashCode => (_ListPage).hashCode;
 }
 
 final class _SectionPage extends _PhonePage {
   const _SectionPage(this.tab);
 
   final SettingsTab tab;
+
+  @override
+  bool operator ==(Object other) => other is _SectionPage && other.tab == tab;
+
+  @override
+  int get hashCode => tab.hashCode;
 }
 
 final class _DevicesPage extends _PhonePage {
   const _DevicesPage();
+
+  @override
+  bool operator ==(Object other) => other is _DevicesPage;
+
+  @override
+  int get hashCode => (_DevicesPage).hashCode;
 }
+
+String _phonePageTitle(_PhonePage page) => switch (page) {
+  _ListPage() => settingsListTitle,
+  _SectionPage(:final SettingsTab tab) => tab.label,
+  _DevicesPage() => devicesTitle,
+};
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -70,6 +94,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey _phoneSectionsKey = GlobalKey();
   String? _notice;
   SettingsTab _tab = SettingsTab.journal;
   _PhonePage _page = const _ListPage();
@@ -279,29 +304,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return PopScope<Object?>(
       canPop: page is _ListPage,
       onPopInvokedWithResult: _onPhonePop,
-      child: Stack(
-        children: <Widget>[
-          Positioned.fill(
-            child: _buildPhoneContent(
-              settings,
-              page,
-              EdgeInsets.fromLTRB(
-                _phoneSideInset,
-                MediaQuery.paddingOf(context).top + _phoneHeaderGap,
-                _phoneSideInset,
-                endRoom,
+      child: Semantics(
+        key: ValueKey<_PhonePage>(page),
+        scopesRoute: true,
+        namesRoute: true,
+        explicitChildNodes: true,
+        label: _phonePageTitle(page),
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: _buildPhoneContent(
+                settings,
+                page,
+                EdgeInsets.fromLTRB(
+                  _phoneSideInset,
+                  MediaQuery.paddingOf(context).top + _phoneHeaderGap,
+                  _phoneSideInset,
+                  endRoom,
+                ),
               ),
             ),
-          ),
-          if (backLabel != null)
-            Positioned(
-              left: _backPillLeft,
-              bottom: gestureBar + _backPillLift,
-              child: FocusTraversalGroup(
-                child: SettingsBackPill(label: backLabel, onPressed: _back),
+            if (backLabel != null)
+              Positioned(
+                left: _backPillLeft,
+                bottom: gestureBar + _backPillLift,
+                child: FocusTraversalGroup(
+                  child: SettingsBackPill(label: backLabel, onPressed: _back),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -336,7 +368,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 SizedBox(height: _phoneTitleGap),
               ],
             },
-            _buildTabColumn(settings, page is _SectionPage ? page.tab : null),
+            KeyedSubtree(
+              key: _phoneSectionsKey,
+              child: _buildTabColumn(
+                settings,
+                page is _SectionPage ? page.tab : null,
+              ),
+            ),
             if (page is _DevicesPage) _DevicesCard(onFeedback: _showNotice),
           ],
         ),
