@@ -31,10 +31,12 @@ Future<String?> _modelName(
     case TargetPlatform.android:
       final AndroidDeviceInfo android = await info.androidInfo;
       return _present(android.model);
+    case TargetPlatform.windows:
+      final WindowsDeviceInfo windows = await info.windowsInfo;
+      return _present(windows.computerName);
     case TargetPlatform.fuchsia:
     case TargetPlatform.iOS:
     case TargetPlatform.linux:
-    case TargetPlatform.windows:
       return null;
   }
 }
