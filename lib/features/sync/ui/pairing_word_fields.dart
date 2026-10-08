@@ -180,6 +180,7 @@ class _PairingWordFieldsState extends State<PairingWordFields> {
                 semanticLabel: pairingWordLabel(index + 1),
                 autocorrect: false,
                 enableSuggestions: false,
+                enableIMEPersonalizedLearning: false,
                 textInputAction: last
                     ? TextInputAction.done
                     : TextInputAction.next,

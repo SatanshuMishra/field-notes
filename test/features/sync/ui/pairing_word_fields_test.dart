@@ -176,8 +176,6 @@ void main() {
             ? TextInputAction.done
             : TextInputAction.next,
       );
-      expect(editable.autocorrect, isFalse);
-      expect(editable.enableSuggestions, isFalse);
     }
 
     await tester.showKeyboard(_editable(2));
@@ -189,6 +187,25 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pump();
     expect(harness.submitted, 2);
+  }, variant: _bothPlatforms);
+
+  testWidgets('the keyboard never corrects, suggests or learns a word', (
+    WidgetTester tester,
+  ) async {
+    await _pumpFields(tester);
+
+    for (int number = 1; number <= pairingWordCount; number++) {
+      final EditableText editable = tester.widget<EditableText>(
+        _editable(number),
+      );
+      expect(editable.autocorrect, isFalse, reason: 'word $number');
+      expect(editable.enableSuggestions, isFalse, reason: 'word $number');
+      expect(
+        editable.enableIMEPersonalizedLearning,
+        isFalse,
+        reason: 'word $number',
+      );
+    }
   }, variant: _bothPlatforms);
 
   testWidgets(

@@ -18,6 +18,7 @@ class SettingsTextField extends StatefulWidget {
     this.onSubmitted,
     this.autocorrect = true,
     this.enableSuggestions = true,
+    this.enableIMEPersonalizedLearning = true,
   });
 
   final TextEditingController controller;
@@ -32,6 +33,7 @@ class SettingsTextField extends StatefulWidget {
   final ValueChanged<String>? onSubmitted;
   final bool autocorrect;
   final bool enableSuggestions;
+  final bool enableIMEPersonalizedLearning;
 
   @override
   State<SettingsTextField> createState() => _SettingsTextFieldState();
@@ -103,8 +105,9 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
     }
-    _editableTextKey.currentState?.renderEditable
-        .selectPosition(cause: SelectionChangedCause.tap);
+    _editableTextKey.currentState?.renderEditable.selectPosition(
+      cause: SelectionChangedCause.tap,
+    );
   }
 
   @override
@@ -140,17 +143,22 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
                         child: IgnorePointer(
                           child: ValueListenableBuilder<TextEditingValue>(
                             valueListenable: widget.controller,
-                            builder: (BuildContext context,
-                                TextEditingValue value, _) {
-                              if (value.text.isNotEmpty) {
-                                return const SizedBox.shrink();
-                              }
-                              return Text(
-                                widget.hintText!,
-                                style: textStyles.bodySans
-                                    .copyWith(color: colors.placeholder),
-                              );
-                            },
+                            builder:
+                                (
+                                  BuildContext context,
+                                  TextEditingValue value,
+                                  _,
+                                ) {
+                                  if (value.text.isNotEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Text(
+                                    widget.hintText!,
+                                    style: textStyles.bodySans.copyWith(
+                                      color: colors.placeholder,
+                                    ),
+                                  );
+                                },
                           ),
                         ),
                       ),
@@ -164,6 +172,8 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
                       textInputAction: widget.textInputAction,
                       autocorrect: widget.autocorrect,
                       enableSuggestions: widget.enableSuggestions,
+                      enableIMEPersonalizedLearning:
+                          widget.enableIMEPersonalizedLearning,
                       style: textStyles.bodySans,
                       cursorColor: colors.accentInk,
                       backgroundCursorColor: colors.muted,
