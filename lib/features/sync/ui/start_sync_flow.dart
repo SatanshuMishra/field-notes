@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'recovery_phrase_check.dart';
+import 'sync_flow_page.dart';
 
 const String startSyncTitle = 'Start syncing';
 const String startSyncMessage =
@@ -41,7 +42,10 @@ const Key writtenDownKey = ValueKey<String>('start-sync-written-down');
 Key recoveryWordKey(int position) =>
     ValueKey<String>('recovery-word-$position');
 
+const String _flowBarrierLabel = 'Dismiss';
+const Duration _flowFade = Duration(milliseconds: 150);
 const double _flowMaxWidth = 460;
+const double _flowScrimAlpha = 0.42;
 const double _flowGap = 16;
 const double _labelGap = 6;
 const int _wordColumnsWide = 3;
@@ -89,16 +93,60 @@ Future<T?> showSyncFlow<T>(
   BuildContext context, {
   required WidgetBuilder builder,
 }) {
-  if (syncFlowUsesSheet(context)) {
-    return showPhoneSheet<T>(context, builder: builder);
-  }
-  return showDialog<T>(
+  final bool sheet = syncFlowUsesSheet(context);
+  final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+  return showGeneralDialog<T>(
     context: context,
     barrierDismissible: true,
-    barrierColor: Palette.toolbarInk.withValues(alpha: 0.42),
-    builder: (BuildContext dialogContext) =>
-        DialogHost(child: Builder(builder: builder)),
+    barrierLabel: _flowBarrierLabel,
+    barrierColor: Colors.transparent,
+    transitionDuration: still
+        ? Duration.zero
+        : sheet
+        ? phoneSheetEntrance
+        : _flowFade,
+    pageBuilder:
+        (
+          BuildContext flowContext,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+        ) {
+          return DialogHost(child: Builder(builder: builder));
+        },
+    transitionBuilder:
+        (
+          BuildContext flowContext,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+          Widget child,
+        ) {
+          if (sheet) {
+            return child;
+          }
+          return FadeTransition(
+            opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
+            child: child,
+          );
+        },
   );
+}
+
+final Animatable<Offset> _flowRise = Tween<Offset>(
+  begin: const Offset(0, 1),
+  end: Offset.zero,
+).chain(CurveTween(curve: phoneSheetCurve));
+
+class SyncFlowSlide extends StatelessWidget {
+  const SyncFlowSlide({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final Animation<double> route =
+        ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation;
+    return SlideTransition(position: route.drive(_flowRise), child: child);
+  }
 }
 
 Future<void> startSync(BuildContext context, WidgetRef ref) async {
@@ -220,16 +268,45 @@ class SyncFlowFrame extends StatelessWidget {
       ],
     );
     if (sheet) {
-      return PhoneSheet(
-        footerDirection: Axis.vertical,
-        footerPadding: _sheetFooterPadding,
-        actions: <Widget>[
-          for (final SyncFlowAction action in actions.reversed)
-            SyncFlowButton(action: action),
+      return Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: FadeTransition(
+              opacity:
+                  ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation,
+              child: const _SyncFlowScrim(color: phoneSheetBarrierColor),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SyncFlowSlide(
+              child: PhoneSheet(
+                footerDirection: Axis.vertical,
+                footerPadding: _sheetFooterPadding,
+                actions: <Widget>[
+                  for (final SyncFlowAction action in actions.reversed)
+                    SyncFlowButton(action: action),
+                ],
+                child: Padding(padding: _sheetBodyPadding, child: body),
+              ),
+            ),
+          ),
         ],
-        child: Padding(padding: _sheetBodyPadding, child: body),
       );
     }
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: _SyncFlowScrim(
+            color: Palette.toolbarInk.withValues(alpha: _flowScrimAlpha),
+          ),
+        ),
+        SafeArea(child: _card(context, body)),
+      ],
+    );
+  }
+
+  Widget _card(BuildContext context, Widget body) {
     return Center(
       child: Material(
         type: MaterialType.transparency,
@@ -269,6 +346,22 @@ class SyncFlowFrame extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SyncFlowScrim extends StatelessWidget {
+  const _SyncFlowScrim({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () => Navigator.maybePop(context),
+      child: ColoredBox(color: color),
     );
   }
 }
@@ -345,6 +438,9 @@ class SyncFlowField extends StatelessWidget {
     this.keyboardType,
     this.enabled = true,
     this.onChanged,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.enableIMEPersonalizedLearning = true,
   });
 
   final String label;
@@ -353,6 +449,9 @@ class SyncFlowField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool enabled;
   final ValueChanged<String>? onChanged;
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final bool enableIMEPersonalizedLearning;
 
   @override
   Widget build(BuildContext context) {
@@ -373,6 +472,9 @@ class SyncFlowField extends StatelessWidget {
             enabled: enabled,
             onChanged: onChanged,
             semanticLabel: label,
+            autocorrect: autocorrect,
+            enableSuggestions: enableSuggestions,
+            enableIMEPersonalizedLearning: enableIMEPersonalizedLearning,
           ),
         ),
       ],
@@ -463,26 +565,35 @@ class _StartSyncFlowState extends ConsumerState<StartSyncFlow> {
   @override
   Widget build(BuildContext context) {
     final PendingEnrolment? pending = _pending;
+    final bool closable = _stage == _StartStage.address;
     return PopScope<bool>(
-      canPop: _stage == _StartStage.address,
-      child: switch (_stage) {
-        _StartStage.address => _addressStage(),
-        _StartStage.phrase when pending != null => _phraseStage(pending),
-        _StartStage.check when pending != null => RecoveryPhraseCheck(
-          enrolment: pending,
-          onBack: () => setState(() => _stage = _StartStage.phrase),
-          onConfirmed: () => _close(true),
-        ),
-        _ => _addressStage(),
-      },
+      canPop: closable,
+      child: KeyedSubtree(
+        key: ValueKey<_StartStage>(_stage),
+        child: switch (_stage) {
+          _StartStage.address => _addressStage(closable: closable),
+          _StartStage.phrase when pending != null => _phraseStage(
+            pending,
+            closable: closable,
+          ),
+          _StartStage.check when pending != null => RecoveryPhraseCheck(
+            enrolment: pending,
+            closable: closable,
+            onBack: () => setState(() => _stage = _StartStage.phrase),
+            onConfirmed: () => _close(true),
+          ),
+          _ => _addressStage(closable: closable),
+        },
+      ),
     );
   }
 
-  Widget _addressStage() {
+  Widget _addressStage({required bool closable}) {
     final String? error = _error;
-    return SyncFlowFrame(
+    return SyncTaskFrame(
       title: startSyncTitle,
       message: startSyncMessage,
+      closable: closable,
       content: <Widget>[
         SyncFlowField(
           label: serverAddressLabel,
@@ -513,10 +624,11 @@ class _StartSyncFlowState extends ConsumerState<StartSyncFlow> {
     );
   }
 
-  Widget _phraseStage(PendingEnrolment pending) {
-    return SyncFlowFrame(
+  Widget _phraseStage(PendingEnrolment pending, {required bool closable}) {
+    return SyncTaskFrame(
       title: recoveryPhraseTitle,
       message: recoveryPhraseMessage,
+      closable: closable,
       content: <Widget>[RecoveryWordGrid(words: pending.words)],
       actions: <SyncFlowAction>[
         SyncFlowAction(

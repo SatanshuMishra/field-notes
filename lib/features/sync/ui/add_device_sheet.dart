@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_service.dart';
@@ -11,7 +12,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'comparison_number.dart';
 import 'pairing_qr.dart';
 import 'start_sync_flow.dart';
+import 'sync_flow_page.dart';
 
+const String addDeviceKicker = 'sync';
 const String addDeviceTitle = 'Add a device';
 const String addDeviceMessage =
     'On your other device, open Field Notes and choose "Join my journal", '
@@ -28,6 +31,31 @@ const String addLabel = 'Add';
 const String pairingWordSeparator = ' · ';
 
 const Key addDeviceConfirmKey = ValueKey<String>('add-device-confirm');
+const Key addDevicePanelKey = ValueKey<String>('add-device-panel');
+
+Key addDeviceWordKey(int position) =>
+    ValueKey<String>('add-device-word-$position');
+
+const double _phoneCodeSide = 268;
+const double _macCodeSide = 300;
+const double _codeQuietZones = 24;
+const double _loadingSide = 28;
+const double _wordsLabelGap = 6;
+const double _macPanelMaxWidth = 820;
+const double _macPanelMargin = 48;
+const double _macColumnGap = 28;
+const double _macScrimAlpha = 0.42;
+const double _macKickerGap = 2;
+const double _macMessageGap = 8;
+const double _macSectionGap = 18;
+const double _macWordsLabelGap = 10;
+const double _macWordRowGap = 8;
+const double _macWordNumberWidth = 20;
+const double _macWordNumberGap = 8;
+const double _macWordSize = 18;
+const double _macDoneGap = 20;
+const int _macWordsPerColumn = 4;
+const EdgeInsets _macPanelPadding = EdgeInsets.all(28);
 
 String worksForLabel(Duration remaining) {
   final int seconds = remaining.isNegative ? 0 : remaining.inSeconds;
@@ -157,35 +185,61 @@ class _AddDeviceSheetState extends ConsumerState<AddDeviceSheet> {
 
   void _done() => Navigator.of(context).pop();
 
+  HostedPairing? get _shown {
+    final HostedPairing? hosted = _hosted;
+    return hosted != null && _remaining > Duration.zero ? hosted : null;
+  }
+
+  bool get _loading => _hosted == null && _error == null;
+
   @override
   Widget build(BuildContext context) {
     final PairingCandidate? candidate = _candidate;
     if (candidate != null) {
       return _candidateStage(candidate);
     }
-    return _codeStage();
+    if (syncFlowUsesSheet(context)) {
+      return _phoneCodeStage();
+    }
+    return _MacCodePanel(
+      pairing: _shown,
+      remaining: _remaining,
+      loading: _loading,
+      error: _error,
+      onDone: _done,
+    );
   }
 
-  Widget _codeStage() {
-    final HostedPairing? hosted = _hosted;
+  Widget _phoneCodeStage() {
+    final HostedPairing? shown = _shown;
     final String? error = _error;
-    final bool live = hosted != null && _remaining > Duration.zero;
-    return SyncFlowFrame(
+    return SyncFlowPage(
+      kicker: addDeviceKicker,
       title: addDeviceTitle,
       message: addDeviceMessage,
       content: <Widget>[
-        if (hosted == null && error == null)
-          const Center(child: CrossHatchPlaceholder(width: 28, height: 28)),
-        if (hosted != null && live) ...<Widget>[
-          Center(child: PairingQr(payload: hosted.code.qrPayload)),
+        if (_loading)
+          const Center(
+            child: CrossHatchPlaceholder(
+              width: _loadingSide,
+              height: _loadingSide,
+            ),
+          ),
+        if (shown != null) ...<Widget>[
+          Center(
+            child: PairingQr(
+              payload: shown.code.qrPayload,
+              size: _phoneCodeSide + _codeQuietZones,
+            ),
+          ),
           Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               Text(typeTheseWordsLabel, style: context.textStyles.labelSans),
-              const SizedBox(height: 6),
+              const SizedBox(height: _wordsLabelGap),
               Text(
-                hosted.code.words.join(pairingWordSeparator),
+                shown.code.words.join(pairingWordSeparator),
                 style: context.textStyles.bodySans,
               ),
             ],
@@ -236,6 +290,234 @@ class _AddDeviceSheetState extends ConsumerState<AddDeviceSheet> {
           onPressed: _adding ? null : () => _add(candidate),
         ),
       ],
+    );
+  }
+}
+
+class _MacCodePanel extends StatelessWidget {
+  const _MacCodePanel({
+    required this.pairing,
+    required this.remaining,
+    required this.loading,
+    required this.error,
+    required this.onDone,
+  });
+
+  final HostedPairing? pairing;
+  final Duration remaining;
+  final bool loading;
+  final String? error;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    final HostedPairing? pairing = this.pairing;
+    final String? error = this.error;
+    final double width = math.max(
+      0,
+      math.min(
+        _macPanelMaxWidth,
+        MediaQuery.sizeOf(context).width - _macPanelMargin,
+      ),
+    );
+    return Stack(
+      children: <Widget>[
+        const Positioned.fill(child: _MacPanelScrim()),
+        SafeArea(
+          child: Center(
+            child: SizedBox(
+              width: width,
+              child: SingleChildScrollView(
+                child: StickerCard(
+                  key: addDevicePanelKey,
+                  surface: context.colors.cardBright,
+                  padding: _macPanelPadding,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      SizedBox.square(
+                        dimension: _macCodeSide + _codeQuietZones,
+                        child: pairing != null
+                            ? PairingQr(
+                                payload: pairing.code.qrPayload,
+                                size: _macCodeSide + _codeQuietZones,
+                              )
+                            : loading
+                            ? const Center(
+                                child: CrossHatchPlaceholder(
+                                  width: _loadingSide,
+                                  height: _loadingSide,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: _macColumnGap),
+                      Expanded(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(
+                            minHeight: _macCodeSide + _codeQuietZones,
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  Text(
+                                    addDeviceKicker,
+                                    style: textStyles.pageEyebrowAccent,
+                                  ),
+                                  const SizedBox(height: _macKickerGap),
+                                  Semantics(
+                                    header: true,
+                                    child: Text(
+                                      addDeviceTitle,
+                                      style: textStyles.titleSerif,
+                                    ),
+                                  ),
+                                  const SizedBox(height: _macMessageGap),
+                                  Text(
+                                    addDeviceMessage,
+                                    style: textStyles.bodySans.copyWith(
+                                      color: context.colors.mutedDeep,
+                                    ),
+                                  ),
+                                  if (pairing != null) ...<Widget>[
+                                    const SizedBox(height: _macSectionGap),
+                                    Text(
+                                      typeTheseWordsLabel,
+                                      style: textStyles.labelSans,
+                                    ),
+                                    const SizedBox(height: _macWordsLabelGap),
+                                    _NumberedWords(words: pairing.code.words),
+                                    const SizedBox(height: _macSectionGap),
+                                    Text(
+                                      worksForLabel(remaining),
+                                      style: syncFlowHintStyle(context),
+                                    ),
+                                  ],
+                                  if (error != null) ...<Widget>[
+                                    const SizedBox(height: _macSectionGap),
+                                    SyncFlowError(message: error),
+                                  ],
+                                ],
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: _macDoneGap,
+                                ),
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: StickerButton(
+                                    label: addDeviceDoneLabel,
+                                    padTapTarget: true,
+                                    onPressed: onDone,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NumberedWords extends StatelessWidget {
+  const _NumberedWords({required this.words});
+
+  final List<String> words;
+
+  @override
+  Widget build(BuildContext context) {
+    final int columns = (words.length / _macWordsPerColumn).ceil();
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (int column = 0; column < columns; column++) ...<Widget>[
+          if (column > 0) const SizedBox(width: _macColumnGap),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                for (
+                  int index = column * _macWordsPerColumn;
+                  index <
+                      math.min(words.length, (column + 1) * _macWordsPerColumn);
+                  index++
+                ) ...<Widget>[
+                  if (index > column * _macWordsPerColumn)
+                    const SizedBox(height: _macWordRowGap),
+                  _NumberedWord(position: index + 1, word: words[index]),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _NumberedWord extends StatelessWidget {
+  const _NumberedWord({required this.position, required this.word});
+
+  final int position;
+  final String word;
+
+  @override
+  Widget build(BuildContext context) {
+    final FieldNotesTextStyles textStyles = context.textStyles;
+    return MergeSemantics(
+      key: addDeviceWordKey(position),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: <Widget>[
+          SizedBox(
+            width: _macWordNumberWidth,
+            child: Text('$position', style: textStyles.captionSans),
+          ),
+          const SizedBox(width: _macWordNumberGap),
+          Flexible(
+            child: Text(
+              word,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textStyles.sectionSerif.copyWith(fontSize: _macWordSize),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MacPanelScrim extends StatelessWidget {
+  const _MacPanelScrim();
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () => Navigator.maybePop(context),
+      child: ColoredBox(
+        color: Palette.toolbarInk.withValues(alpha: _macScrimAlpha),
+      ),
     );
   }
 }

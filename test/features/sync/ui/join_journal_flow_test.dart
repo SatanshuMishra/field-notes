@@ -1,15 +1,28 @@
 import 'dart:async';
 
-import 'package:camera_platform_interface/camera_platform_interface.dart';
+import 'package:camera_macos/camera_macos.dart' show CameraImageData;
+import 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraDescription, CameraPlatform;
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/data/sync/pairing/pairing_service.dart';
+import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/features/sync/ui/join_journal_flow.dart';
+import 'package:field_notes/features/sync/ui/join_window.dart';
+import 'package:field_notes/features/sync/ui/mac_code_scanner.dart';
+import 'package:field_notes/features/sync/ui/qr_frame_decoder.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
+import 'package:sync_protocol/sync_protocol.dart';
+
+const Size _phone = Size(384, 832);
+const Size _mac = Size(1280, 800);
+const double _statusBar = 34;
+const double _gestureBar = 24;
 
 final Uri _relay = Uri.parse('https://relay.example');
 final String _pairing = _payload(1);
@@ -20,14 +33,69 @@ String _payload(int fill) => PairingCode(
   relayUrl: _relay,
 ).qrPayload;
 
+const SyncSetupException _expired = SyncSetupException(
+  'That code expired.',
+  RelayRejected(
+    code: SyncErrorCode.pairingExpired,
+    message: 'Pairing expired',
+    statusCode: 410,
+  ),
+);
+
+CameraImageData _frame() =>
+    CameraImageData(width: 4, height: 2, bytesPerRow: 16, bytes: Uint8List(32));
+
+Future<String?> _decodePairing(CameraImageData frame) async => _pairing;
+
 class _NoCameras extends CameraPlatform {
   @override
   Future<List<CameraDescription>> availableCameras() async =>
       const <CameraDescription>[];
 }
 
+class _StillMacCamera implements MacScannerCamera {
+  @override
+  Widget preview() => const SizedBox.expand();
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<CameraImageData?> takeFrame() => Completer<CameraImageData?>().future;
+
+  @override
+  Future<void> stop() async {}
+}
+
+class _FrameMacCamera implements MacScannerCamera {
+  Completer<CameraImageData?>? _request;
+
+  @override
+  Widget preview() => const SizedBox.expand();
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<CameraImageData?> takeFrame() {
+    final Completer<CameraImageData?> request = Completer<CameraImageData?>();
+    _request = request;
+    return request.future;
+  }
+
+  void send(CameraImageData? frame) {
+    final Completer<CameraImageData?>? request = _request;
+    _request = null;
+    request?.complete(frame);
+  }
+
+  @override
+  Future<void> stop() async => send(null);
+}
+
 class _FakeJoin {
   final List<String> codes = <String>[];
+  final List<Uri?> relays = <Uri?>[];
   final List<bool Function()> cancelSignals = <bool Function()>[];
   JournalConfirmation? confirmJournal;
   void Function(String comparison)? showComparison;
@@ -41,6 +109,7 @@ class _FakeJoin {
     void Function(String comparison)? onComparison,
   }) {
     codes.add(code);
+    relays.add(relayUrl);
     if (cancelled != null) {
       cancelSignals.add(cancelled);
     }
@@ -55,7 +124,25 @@ class _Opened {
   bool closed = false;
 }
 
-Future<_Opened> _openFlow(WidgetTester tester, _FakeJoin join) async {
+void _useSurface(WidgetTester tester) {
+  final bool phone = defaultTargetPlatform == TargetPlatform.android;
+  final FakeViewPadding bars = phone
+      ? const FakeViewPadding(top: _statusBar, bottom: _gestureBar)
+      : FakeViewPadding.zero;
+  tester.view.physicalSize = phone ? _phone : _mac;
+  tester.view.devicePixelRatio = 1;
+  tester.view.padding = bars;
+  tester.view.viewPadding = bars;
+  addTearDown(tester.view.reset);
+}
+
+Future<_Opened> _openFlow(
+  WidgetTester tester,
+  _FakeJoin join, {
+  MacScannerCamera? macCamera,
+  QrFrameDecode? macDecode,
+}) async {
+  _useSurface(tester);
   final _Opened opened = _Opened();
   await tester.pumpWidget(
     ProviderScope(
@@ -65,8 +152,13 @@ Future<_Opened> _openFlow(WidgetTester tester, _FakeJoin join) async {
             onPressed: () async {
               opened.result = await Navigator.of(context).push<bool>(
                 MaterialPageRoute<bool>(
-                  builder: (BuildContext _) =>
-                      Scaffold(body: JoinJournalFlow(join: join.call)),
+                  builder: (BuildContext _) => Scaffold(
+                    body: JoinJournalFlow(
+                      join: join.call,
+                      macCamera: macCamera ?? _StillMacCamera(),
+                      macDecode: macDecode,
+                    ),
+                  ),
                 ),
               );
               opened.closed = true;
@@ -226,6 +318,10 @@ void main() {
     expect(find.text(joinJournalTitle), findsOneWidget);
     expect(find.text(joinUnnamedJournalMessage(phone: false)), findsOneWidget);
     expect(find.text(joinJournalNameLabel), findsNothing);
+    expect(join.codes, <String>[
+      'abandon ability able about above absent absorb abstract',
+    ]);
+    expect(join.relays, <Uri?>[_relay]);
     await tester.tap(find.text(joinDeclineLabel));
     await tester.pump();
     expect(await asked, isFalse);
@@ -365,7 +461,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(joinServerConfirmKey));
     await tester.pump();
-    join.answer.completeError(const SyncSetupException('That code expired.'));
+    join.answer.completeError(_expired);
     await tester.pumpAndSettle();
     expect(find.text('That code expired.'), findsOneWidget);
     expect(find.byType(ReaderWidget), findsOneWidget);
@@ -383,6 +479,68 @@ void main() {
     await tester.pump();
     expect(join.codes, <String>[_pairing, _otherPairing]);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('a Mac retries the same code after a network failure', (
+    WidgetTester tester,
+  ) async {
+    final _FrameMacCamera camera = _FrameMacCamera();
+    final _FakeJoin join = _FakeJoin();
+    final _Opened opened = await _openFlow(
+      tester,
+      join,
+      macCamera: camera,
+      macDecode: _decodePairing,
+    );
+
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    expect(join.codes, <String>[_pairing]);
+
+    join.answer.completeError(
+      setupFailure(const RelayUnreachable('connection refused')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text(unreachableMessage), findsOneWidget);
+
+    join.answer = Completer<void>();
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    expect(find.text(joinServerTitle(_relay)), findsOneWidget);
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    expect(join.codes, <String>[_pairing, _pairing]);
+
+    join.answer.complete();
+    await tester.pumpAndSettle();
+    expect(opened.closed, isTrue);
+    expect(opened.result, isTrue);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a Mac skips a code the server declined', (
+    WidgetTester tester,
+  ) async {
+    final _FrameMacCamera camera = _FrameMacCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join, macCamera: camera, macDecode: _decodePairing);
+
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    join.answer.completeError(_expired);
+    await tester.pumpAndSettle();
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text('That code expired.'), findsOneWidget);
+
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    expect(find.text(joinServerTitle(_relay)), findsNothing);
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(join.codes, <String>[_pairing]);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('a code read after Cancel starts nothing', (
     WidgetTester tester,
@@ -412,7 +570,7 @@ void main() {
     await tester.tap(find.byKey(typeWordsInsteadKey));
     await tester.pump();
     expect(find.byType(ReaderWidget), findsNothing);
-    expect(find.text(joinWordsLabel), findsOneWidget);
+    expect(find.text(joinTypeTitle), findsOneWidget);
 
     await tester.tap(find.text(joinBackLabel));
     await tester.pump();
@@ -426,6 +584,7 @@ void main() {
     await _openFlow(tester, join);
 
     await tester.enterText(find.byType(EditableText).first, _pairing);
+    await tester.pump();
     await tester.tap(find.byKey(joinConfirmKey));
     await tester.pump();
     expect(find.text(joinServerTitle(_relay)), findsOneWidget);
@@ -434,7 +593,8 @@ void main() {
 
     await tester.tap(find.text(joinDeclineLabel));
     await tester.pump();
-    expect(find.text(joinWordsLabel), findsOneWidget);
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text(joinTypeTitle), findsOneWidget);
 
     await tester.tap(find.byKey(joinConfirmKey));
     await tester.pump();
@@ -473,7 +633,8 @@ void main() {
     final _Opened opened = await _openFlow(tester, _FakeJoin());
 
     expect(find.byType(ReaderWidget), findsNothing);
-    expect(find.text(joinWordsLabel), findsOneWidget);
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text(joinTypeTitle), findsOneWidget);
     expect(find.text(joinBackLabel), findsNothing);
 
     await tester.tap(find.text(syncCancelLabel));

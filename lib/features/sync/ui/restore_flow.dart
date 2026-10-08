@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'start_sync_flow.dart';
+import 'sync_flow_page.dart';
 
 const String restoreTitle = 'Restore your journal';
 const String restoreWordsLabel = 'Your 12 words';
@@ -80,8 +81,9 @@ class _RestoreFlowState extends ConsumerState<RestoreFlow> {
     final String? error = _error;
     return PopScope<bool>(
       canPop: !_busy,
-      child: SyncFlowFrame(
+      child: SyncTaskFrame(
         title: restoreTitle,
+        closable: !_busy,
         content: <Widget>[
           SyncFlowField(
             label: serverAddressLabel,
@@ -94,6 +96,9 @@ class _RestoreFlowState extends ConsumerState<RestoreFlow> {
             label: restoreWordsLabel,
             controller: _words,
             enabled: !_busy,
+            autocorrect: false,
+            enableSuggestions: false,
+            enableIMEPersonalizedLearning: false,
           ),
           Text(restoreHint, style: syncFlowHintStyle(context)),
           if (error != null) SyncFlowError(message: error),

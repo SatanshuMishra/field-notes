@@ -2,6 +2,7 @@ import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:flutter/widgets.dart';
 
 import 'start_sync_flow.dart';
+import 'sync_flow_page.dart';
 
 const String checkPhraseTitle = 'Check your phrase';
 const String checkPhraseMessage =
@@ -19,11 +20,13 @@ class RecoveryPhraseCheck extends StatefulWidget {
     required this.enrolment,
     required this.onBack,
     required this.onConfirmed,
+    this.closable = true,
   });
 
   final PendingEnrolment enrolment;
   final VoidCallback onBack;
   final VoidCallback onConfirmed;
+  final bool closable;
 
   @override
   State<RecoveryPhraseCheck> createState() => _RecoveryPhraseCheckState();
@@ -78,9 +81,10 @@ class _RecoveryPhraseCheckState extends State<RecoveryPhraseCheck> {
   Widget build(BuildContext context) {
     final String? error = _error;
     final List<int> positions = widget.enrolment.positions;
-    return SyncFlowFrame(
+    return SyncTaskFrame(
       title: checkPhraseTitle,
       message: checkPhraseMessage,
+      closable: widget.closable,
       content: <Widget>[
         for (int index = 0; index < positions.length; index++)
           SyncFlowField(
@@ -88,6 +92,9 @@ class _RecoveryPhraseCheckState extends State<RecoveryPhraseCheck> {
             controller: _typed[index],
             enabled: !_busy,
             onChanged: (String _) => setState(() => _error = null),
+            autocorrect: false,
+            enableSuggestions: false,
+            enableIMEPersonalizedLearning: false,
           ),
         if (error != null) SyncFlowError(message: error),
       ],

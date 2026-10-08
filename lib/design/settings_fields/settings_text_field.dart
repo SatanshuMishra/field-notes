@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
@@ -12,6 +13,12 @@ class SettingsTextField extends StatefulWidget {
     this.keyboardType,
     this.onChanged,
     this.semanticLabel,
+    this.focusNode,
+    this.textInputAction,
+    this.onSubmitted,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.enableIMEPersonalizedLearning = true,
   });
 
   final TextEditingController controller;
@@ -21,6 +28,12 @@ class SettingsTextField extends StatefulWidget {
   final TextInputType? keyboardType;
   final ValueChanged<String>? onChanged;
   final String? semanticLabel;
+  final FocusNode? focusNode;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final bool enableIMEPersonalizedLearning;
 
   @override
   State<SettingsTextField> createState() => _SettingsTextFieldState();
@@ -29,28 +42,41 @@ class SettingsTextField extends StatefulWidget {
 class _SettingsTextFieldState extends State<SettingsTextField> {
   final GlobalKey<EditableTextState> _editableTextKey =
       GlobalKey<EditableTextState>();
-  late final FocusNode _focusNode;
+  FocusNode? _ownedFocusNode;
   bool _focused = false;
+
+  FocusNode get _focusNode =>
+      widget.focusNode ?? (_ownedFocusNode ??= FocusNode());
 
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode(
-      canRequestFocus: widget.enabled,
-      skipTraversal: !widget.enabled,
-    );
+    _applyEnabled();
     _focusNode.addListener(_handleFocusChange);
+    _focused = _focusNode.hasFocus;
   }
 
   @override
   void didUpdateWidget(covariant SettingsTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.enabled != widget.enabled) {
-      _focusNode.canRequestFocus = widget.enabled;
-      _focusNode.skipTraversal = !widget.enabled;
-      if (!widget.enabled && _focusNode.hasFocus) {
-        _focusNode.unfocus();
-      }
+    final bool nodeChanged = oldWidget.focusNode != widget.focusNode;
+    if (nodeChanged) {
+      final FocusNode previous = oldWidget.focusNode ?? _ownedFocusNode!;
+      previous.removeListener(_handleFocusChange);
+      _focusNode.addListener(_handleFocusChange);
+      _focused = _focusNode.hasFocus;
+    }
+    if (nodeChanged || oldWidget.enabled != widget.enabled) {
+      _applyEnabled();
+    }
+  }
+
+  void _applyEnabled() {
+    final FocusNode node = _focusNode;
+    node.canRequestFocus = widget.enabled;
+    node.skipTraversal = !widget.enabled;
+    if (!widget.enabled && node.hasFocus) {
+      node.unfocus();
     }
   }
 
@@ -61,7 +87,7 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
   @override
   void dispose() {
     _focusNode.removeListener(_handleFocusChange);
-    _focusNode.dispose();
+    _ownedFocusNode?.dispose();
     super.dispose();
   }
 
@@ -79,8 +105,9 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
     }
-    _editableTextKey.currentState?.renderEditable
-        .selectPosition(cause: SelectionChangedCause.tap);
+    _editableTextKey.currentState?.renderEditable.selectPosition(
+      cause: SelectionChangedCause.tap,
+    );
   }
 
   @override
@@ -116,17 +143,22 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
                         child: IgnorePointer(
                           child: ValueListenableBuilder<TextEditingValue>(
                             valueListenable: widget.controller,
-                            builder: (BuildContext context,
-                                TextEditingValue value, _) {
-                              if (value.text.isNotEmpty) {
-                                return const SizedBox.shrink();
-                              }
-                              return Text(
-                                widget.hintText!,
-                                style: textStyles.bodySans
-                                    .copyWith(color: colors.placeholder),
-                              );
-                            },
+                            builder:
+                                (
+                                  BuildContext context,
+                                  TextEditingValue value,
+                                  _,
+                                ) {
+                                  if (value.text.isNotEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+                                  return Text(
+                                    widget.hintText!,
+                                    style: textStyles.bodySans.copyWith(
+                                      color: colors.placeholder,
+                                    ),
+                                  );
+                                },
                           ),
                         ),
                       ),
@@ -137,10 +169,16 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
                       readOnly: !widget.enabled,
                       obscureText: widget.obscureText,
                       keyboardType: widget.keyboardType ?? TextInputType.text,
+                      textInputAction: widget.textInputAction,
+                      autocorrect: widget.autocorrect,
+                      enableSuggestions: widget.enableSuggestions,
+                      enableIMEPersonalizedLearning:
+                          widget.enableIMEPersonalizedLearning,
                       style: textStyles.bodySans,
                       cursorColor: colors.accentInk,
                       backgroundCursorColor: colors.muted,
                       onChanged: widget.onChanged,
+                      onSubmitted: widget.onSubmitted,
                     ),
                   ],
                 ),
