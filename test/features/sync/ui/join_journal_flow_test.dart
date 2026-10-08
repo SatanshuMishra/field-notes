@@ -6,15 +6,18 @@ import 'package:camera_platform_interface/camera_platform_interface.dart'
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/data/sync/pairing/pairing_service.dart';
+import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/features/sync/ui/join_journal_flow.dart';
 import 'package:field_notes/features/sync/ui/join_window.dart';
 import 'package:field_notes/features/sync/ui/mac_code_scanner.dart';
+import 'package:field_notes/features/sync/ui/qr_frame_decoder.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
+import 'package:sync_protocol/sync_protocol.dart';
 
 const Size _phone = Size(384, 832);
 const Size _mac = Size(1280, 800);
@@ -29,6 +32,20 @@ String _payload(int fill) => PairingCode(
   secret: List<int>.filled(pairingSecretBytes, fill),
   relayUrl: _relay,
 ).qrPayload;
+
+const SyncSetupException _expired = SyncSetupException(
+  'That code expired.',
+  RelayRejected(
+    code: SyncErrorCode.pairingExpired,
+    message: 'Pairing expired',
+    statusCode: 410,
+  ),
+);
+
+CameraImageData _frame() =>
+    CameraImageData(width: 4, height: 2, bytesPerRow: 16, bytes: Uint8List(32));
+
+Future<String?> _decodePairing(CameraImageData frame) async => _pairing;
 
 class _NoCameras extends CameraPlatform {
   @override
@@ -48,6 +65,32 @@ class _StillMacCamera implements MacScannerCamera {
 
   @override
   Future<void> stop() async {}
+}
+
+class _FrameMacCamera implements MacScannerCamera {
+  Completer<CameraImageData?>? _request;
+
+  @override
+  Widget preview() => const SizedBox.expand();
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<CameraImageData?> takeFrame() {
+    final Completer<CameraImageData?> request = Completer<CameraImageData?>();
+    _request = request;
+    return request.future;
+  }
+
+  void send(CameraImageData? frame) {
+    final Completer<CameraImageData?>? request = _request;
+    _request = null;
+    request?.complete(frame);
+  }
+
+  @override
+  Future<void> stop() async => send(null);
 }
 
 class _FakeJoin {
@@ -93,7 +136,12 @@ void _useSurface(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
-Future<_Opened> _openFlow(WidgetTester tester, _FakeJoin join) async {
+Future<_Opened> _openFlow(
+  WidgetTester tester,
+  _FakeJoin join, {
+  MacScannerCamera? macCamera,
+  QrFrameDecode? macDecode,
+}) async {
   _useSurface(tester);
   final _Opened opened = _Opened();
   await tester.pumpWidget(
@@ -107,7 +155,8 @@ Future<_Opened> _openFlow(WidgetTester tester, _FakeJoin join) async {
                   builder: (BuildContext _) => Scaffold(
                     body: JoinJournalFlow(
                       join: join.call,
-                      macCamera: _StillMacCamera(),
+                      macCamera: macCamera ?? _StillMacCamera(),
+                      macDecode: macDecode,
                     ),
                   ),
                 ),
@@ -412,7 +461,7 @@ void main() {
     await tester.pump();
     await tester.tap(find.byKey(joinServerConfirmKey));
     await tester.pump();
-    join.answer.completeError(const SyncSetupException('That code expired.'));
+    join.answer.completeError(_expired);
     await tester.pumpAndSettle();
     expect(find.text('That code expired.'), findsOneWidget);
     expect(find.byType(ReaderWidget), findsOneWidget);
@@ -430,6 +479,68 @@ void main() {
     await tester.pump();
     expect(join.codes, <String>[_pairing, _otherPairing]);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('a Mac retries the same code after a network failure', (
+    WidgetTester tester,
+  ) async {
+    final _FrameMacCamera camera = _FrameMacCamera();
+    final _FakeJoin join = _FakeJoin();
+    final _Opened opened = await _openFlow(
+      tester,
+      join,
+      macCamera: camera,
+      macDecode: _decodePairing,
+    );
+
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    expect(join.codes, <String>[_pairing]);
+
+    join.answer.completeError(
+      setupFailure(const RelayUnreachable('connection refused')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text(unreachableMessage), findsOneWidget);
+
+    join.answer = Completer<void>();
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    expect(find.text(joinServerTitle(_relay)), findsOneWidget);
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    expect(join.codes, <String>[_pairing, _pairing]);
+
+    join.answer.complete();
+    await tester.pumpAndSettle();
+    expect(opened.closed, isTrue);
+    expect(opened.result, isTrue);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a Mac skips a code the server declined', (
+    WidgetTester tester,
+  ) async {
+    final _FrameMacCamera camera = _FrameMacCamera();
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join, macCamera: camera, macDecode: _decodePairing);
+
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(joinServerConfirmKey));
+    await tester.pump();
+    join.answer.completeError(_expired);
+    await tester.pumpAndSettle();
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text('That code expired.'), findsOneWidget);
+
+    camera.send(_frame());
+    await tester.pumpAndSettle();
+    expect(find.text(joinServerTitle(_relay)), findsNothing);
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(join.codes, <String>[_pairing]);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('a code read after Cancel starts nothing', (
     WidgetTester tester,

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/data/sync/pairing/pairing_service.dart';
+import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/state/sync_providers.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
+import 'package:sync_protocol/sync_protocol.dart';
 
 import 'comparison_number.dart';
 import 'join_scan_page.dart';
@@ -96,6 +98,13 @@ typedef PairingJoin = Future<void> Function(
 });
 
 bool get joinCanScan => defaultTargetPlatform == TargetPlatform.android;
+
+bool _relayDeclined(SyncSetupException error) => switch (error) {
+  PairingTaken() => true,
+  SyncSetupException(cause: RelayRejected(code: final SyncErrorCode code)) =>
+    code != SyncErrorCode.tooManyRequests,
+  _ => false,
+};
 
 String? pairingCodeIn(Iterable<String?> values) {
   for (final String? value in values) {
@@ -282,20 +291,20 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
         Navigator.of(context).pop(true);
       }
     } on PairingDeclined {
-      _back(code, null, scanned: scanned);
+      _back(code, null, refused: scanned);
     } on SyncSetupException catch (error) {
-      _back(code, error.message, scanned: scanned);
+      _back(code, error.message, refused: scanned && _relayDeclined(error));
     }
   }
 
-  void _back(String code, String? error, {required bool scanned}) {
+  void _back(String code, String? error, {required bool refused}) {
     if (!mounted || _closing) {
       return;
     }
     setState(() {
       _stage = _returnTo;
       _error = error;
-      _refusedCode = scanned ? code : _refusedCode;
+      _refusedCode = refused ? code : _refusedCode;
       _comparison = null;
     });
   }
