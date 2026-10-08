@@ -372,7 +372,7 @@ class ViewerQuietLine extends StatelessWidget {
             maxLines: 1,
             softWrap: false,
             overflow: TextOverflow.ellipsis,
-            style: TypographyTokens.captionSans.copyWith(color: color),
+            style: context.textStyles.captionSans.copyWith(color: color),
           ),
         ),
       ],
@@ -532,7 +532,7 @@ class _DockColumn extends StatelessWidget {
             softWrap: false,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TypographyTokens.caption11Sans.copyWith(
+            style: context.textStyles.caption11Sans.copyWith(
               color: Palette.mediaInk,
             ),
           ),
@@ -665,7 +665,7 @@ class _ExitPill extends StatelessWidget {
                         Text(
                           label,
                           maxLines: 1,
-                          style: TypographyTokens.labelSans.copyWith(
+                          style: context.textStyles.labelSans.copyWith(
                             color: Palette.mediaInk,
                           ),
                         ),

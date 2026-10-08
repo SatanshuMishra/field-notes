@@ -165,7 +165,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
 
   Widget _elapsed(double size) {
     final VoicePlayback playback = _playback;
-    final TextStyle elapsed = TypographyTokens.displaySerif.copyWith(
+    final TextStyle elapsed = context.textStyles.displaySerif.copyWith(
       fontSize: size,
       color: Palette.mediaInk,
       fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
