@@ -553,29 +553,35 @@ class _StartSyncFlowState extends ConsumerState<StartSyncFlow> {
   @override
   Widget build(BuildContext context) {
     final PendingEnrolment? pending = _pending;
+    final bool closable = _stage == _StartStage.address;
     return PopScope<bool>(
-      canPop: _stage == _StartStage.address,
+      canPop: closable,
       child: KeyedSubtree(
         key: ValueKey<_StartStage>(_stage),
         child: switch (_stage) {
-          _StartStage.address => _addressStage(),
-          _StartStage.phrase when pending != null => _phraseStage(pending),
+          _StartStage.address => _addressStage(closable: closable),
+          _StartStage.phrase when pending != null => _phraseStage(
+            pending,
+            closable: closable,
+          ),
           _StartStage.check when pending != null => RecoveryPhraseCheck(
             enrolment: pending,
+            closable: closable,
             onBack: () => setState(() => _stage = _StartStage.phrase),
             onConfirmed: () => _close(true),
           ),
-          _ => _addressStage(),
+          _ => _addressStage(closable: closable),
         },
       ),
     );
   }
 
-  Widget _addressStage() {
+  Widget _addressStage({required bool closable}) {
     final String? error = _error;
     return SyncTaskFrame(
       title: startSyncTitle,
       message: startSyncMessage,
+      closable: closable,
       content: <Widget>[
         SyncFlowField(
           label: serverAddressLabel,
@@ -606,10 +612,11 @@ class _StartSyncFlowState extends ConsumerState<StartSyncFlow> {
     );
   }
 
-  Widget _phraseStage(PendingEnrolment pending) {
+  Widget _phraseStage(PendingEnrolment pending, {required bool closable}) {
     return SyncTaskFrame(
       title: recoveryPhraseTitle,
       message: recoveryPhraseMessage,
+      closable: closable,
       content: <Widget>[RecoveryWordGrid(words: pending.words)],
       actions: <SyncFlowAction>[
         SyncFlowAction(

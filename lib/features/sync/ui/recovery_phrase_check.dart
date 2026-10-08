@@ -20,11 +20,13 @@ class RecoveryPhraseCheck extends StatefulWidget {
     required this.enrolment,
     required this.onBack,
     required this.onConfirmed,
+    this.closable = true,
   });
 
   final PendingEnrolment enrolment;
   final VoidCallback onBack;
   final VoidCallback onConfirmed;
+  final bool closable;
 
   @override
   State<RecoveryPhraseCheck> createState() => _RecoveryPhraseCheckState();
@@ -82,6 +84,7 @@ class _RecoveryPhraseCheckState extends State<RecoveryPhraseCheck> {
     return SyncTaskFrame(
       title: checkPhraseTitle,
       message: checkPhraseMessage,
+      closable: widget.closable,
       content: <Widget>[
         for (int index = 0; index < positions.length; index++)
           SyncFlowField(

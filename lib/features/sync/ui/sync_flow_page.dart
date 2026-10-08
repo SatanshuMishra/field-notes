@@ -40,6 +40,7 @@ class SyncFlowPage extends StatelessWidget {
     this.content = const <Widget>[],
     required this.actions,
     this.onClose,
+    this.closable = true,
   });
 
   final String title;
@@ -48,6 +49,7 @@ class SyncFlowPage extends StatelessWidget {
   final List<Widget> content;
   final List<SyncFlowAction> actions;
   final VoidCallback? onClose;
+  final bool closable;
 
   @override
   Widget build(BuildContext context) {
@@ -76,9 +78,12 @@ class SyncFlowPage extends StatelessWidget {
                 ),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: _SyncFlowPageClose(
-                    onPressed: onClose ?? () => Navigator.maybePop(context),
-                  ),
+                  child: closable
+                      ? _SyncFlowPageClose(
+                          onPressed:
+                              onClose ?? () => Navigator.maybePop(context),
+                        )
+                      : const SizedBox.square(dimension: _closeExtent),
                 ),
               ),
               Expanded(
@@ -156,6 +161,7 @@ class SyncTaskFrame extends StatelessWidget {
     this.message,
     this.content = const <Widget>[],
     required this.actions,
+    this.closable = true,
   });
 
   final String title;
@@ -163,6 +169,7 @@ class SyncTaskFrame extends StatelessWidget {
   final String? message;
   final List<Widget> content;
   final List<SyncFlowAction> actions;
+  final bool closable;
 
   @override
   Widget build(BuildContext context) {
@@ -173,6 +180,7 @@ class SyncTaskFrame extends StatelessWidget {
         message: message,
         content: content,
         actions: actions,
+        closable: closable,
       );
     }
     return SyncFlowFrame(

@@ -189,6 +189,7 @@ Future<void> _expectPhonePage(
   required String title,
   required List<String> actions,
   Brightness brightness = Brightness.light,
+  bool closable = true,
 }) async {
   final Finder page = find.byType(SyncFlowPage);
   expect(page, findsOneWidget, reason: title);
@@ -228,25 +229,27 @@ Future<void> _expectPhonePage(
   );
 
   final Finder close = find.byKey(syncFlowPageCloseKey);
-  final Rect closeRect = tester.getRect(close);
-  expect(closeRect.width, greaterThanOrEqualTo(_minTarget), reason: title);
-  expect(closeRect.height, greaterThanOrEqualTo(_minTarget), reason: title);
-  expect(closeRect.left, greaterThanOrEqualTo(0), reason: title);
-  expect(closeRect.right, lessThanOrEqualTo(_closeCorner), reason: title);
-  expect(closeRect.top, greaterThanOrEqualTo(_statusBar), reason: title);
-  expect(
-    closeRect.bottom,
-    lessThanOrEqualTo(_statusBar + _closeCorner),
-    reason: title,
+  final Finder closeLabel = find.descendant(
+    of: page,
+    matching: find.bySemanticsLabel(syncFlowCloseLabel),
   );
-  expect(
-    find.descendant(
-      of: page,
-      matching: find.bySemanticsLabel(syncFlowCloseLabel),
-    ),
-    findsOneWidget,
-    reason: title,
-  );
+  if (closable) {
+    final Rect closeRect = tester.getRect(close);
+    expect(closeRect.width, greaterThanOrEqualTo(_minTarget), reason: title);
+    expect(closeRect.height, greaterThanOrEqualTo(_minTarget), reason: title);
+    expect(closeRect.left, greaterThanOrEqualTo(0), reason: title);
+    expect(closeRect.right, lessThanOrEqualTo(_closeCorner), reason: title);
+    expect(closeRect.top, greaterThanOrEqualTo(_statusBar), reason: title);
+    expect(
+      closeRect.bottom,
+      lessThanOrEqualTo(_statusBar + _closeCorner),
+      reason: title,
+    );
+    expect(closeLabel, findsOneWidget, reason: title);
+  } else {
+    expect(close, findsNothing, reason: title);
+    expect(closeLabel, findsNothing, reason: title);
+  }
 
   final Finder footer = find.byKey(syncFlowPageFooterKey);
   for (final String label in actions) {
@@ -333,17 +336,23 @@ Future<void> _provePhone(WidgetTester tester) async {
       tester,
       title: recoveryPhraseTitle,
       actions: <String>[writtenDownLabel],
+      closable: false,
     );
     _expectWordColumns(tester, 2);
     final Map<int, String> words = _readWords(tester);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(start.closed, isFalse);
+    expect(find.text(recoveryPhraseTitle), findsOneWidget);
     await tester.tap(find.byKey(writtenDownKey));
     await tester.pumpAndSettle();
     await _expectPhonePage(
       tester,
       title: checkPhraseTitle,
       actions: <String>[checkPhraseBackLabel, turnOnSyncLabel],
+      closable: false,
     );
-    await tester.tap(find.byKey(syncFlowPageCloseKey));
+    await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     expect(start.closed, isFalse);
     expect(find.text(checkPhraseTitle), findsOneWidget);
