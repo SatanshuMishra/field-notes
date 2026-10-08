@@ -145,19 +145,28 @@ void _expectWordColumns(WidgetTester tester, int columns) {
   );
 }
 
+List<int> _askedPositions() => <int>[
+  for (final Element element
+      in find
+          .byWidgetPredicate(
+            (Widget widget) =>
+                widget is Text && _checkLabel.hasMatch(widget.data ?? ''),
+          )
+          .evaluate())
+    int.parse(
+      _checkLabel.firstMatch((element.widget as Text).data!)!.group(1)!,
+    ),
+];
+
+void _expectPrivateKeyboard(WidgetTester tester, String label) {
+  final EditableText field = tester.widget<EditableText>(_fieldLabelled(label));
+  expect(field.autocorrect, isFalse, reason: label);
+  expect(field.enableSuggestions, isFalse, reason: label);
+  expect(field.enableIMEPersonalizedLearning, isFalse, reason: label);
+}
+
 Future<void> _confirmWords(WidgetTester tester, Map<int, String> words) async {
-  final List<int> asked = <int>[
-    for (final Element element
-        in find
-            .byWidgetPredicate(
-              (Widget widget) =>
-                  widget is Text && _checkLabel.hasMatch(widget.data ?? ''),
-            )
-            .evaluate())
-      int.parse(
-        _checkLabel.firstMatch((element.widget as Text).data!)!.group(1)!,
-      ),
-  ];
+  final List<int> asked = _askedPositions();
   expect(asked, hasLength(2));
   for (final int position in asked) {
     await tester.enterText(
@@ -435,6 +444,43 @@ void main() {
     await _provePhone(tester);
     await _proveMac(tester);
     semantics.dispose();
+  });
+
+  testWidgets('recovery phrase fields never let the keyboard keep the words', (
+    WidgetTester tester,
+  ) async {
+    for (final TargetPlatform platform in <TargetPlatform>[
+      TargetPlatform.android,
+      TargetPlatform.macOS,
+    ]) {
+      final AppDatabase database = AppDatabase(NativeDatabase.memory());
+      try {
+        final _Host restore = await _pumpHost(
+          tester,
+          platform: platform,
+          overrides: _overrides(database, 11),
+        );
+        await _open<bool>(tester, restore, const RestoreFlow());
+        _expectPrivateKeyboard(tester, restoreWordsLabel);
+
+        final _Host start = await _pumpHost(
+          tester,
+          platform: platform,
+          overrides: _overrides(database, 11),
+        );
+        await _open<bool>(tester, start, const StartSyncFlow());
+        await _continueToPhrase(tester);
+        await tester.tap(find.byKey(writtenDownKey));
+        await tester.pumpAndSettle();
+        final List<int> asked = _askedPositions();
+        expect(asked, hasLength(2), reason: '$platform');
+        for (final int position in asked) {
+          _expectPrivateKeyboard(tester, recoveryCheckLabel(position));
+        }
+      } finally {
+        await tester.runAsync(database.close);
+      }
+    }
   });
 
   testWidgets('small flows stay small', (WidgetTester tester) async {

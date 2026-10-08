@@ -426,6 +426,9 @@ class SyncFlowField extends StatelessWidget {
     this.keyboardType,
     this.enabled = true,
     this.onChanged,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.enableIMEPersonalizedLearning = true,
   });
 
   final String label;
@@ -434,6 +437,9 @@ class SyncFlowField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool enabled;
   final ValueChanged<String>? onChanged;
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final bool enableIMEPersonalizedLearning;
 
   @override
   Widget build(BuildContext context) {
@@ -454,6 +460,9 @@ class SyncFlowField extends StatelessWidget {
             enabled: enabled,
             onChanged: onChanged,
             semanticLabel: label,
+            autocorrect: autocorrect,
+            enableSuggestions: enableSuggestions,
+            enableIMEPersonalizedLearning: enableIMEPersonalizedLearning,
           ),
         ),
       ],
