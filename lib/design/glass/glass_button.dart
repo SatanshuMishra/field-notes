@@ -18,6 +18,7 @@ class GlassCircleButton extends StatelessWidget {
     required this.onPressed,
     this.toggled,
     this.tint,
+    this.grouped = false,
   });
 
   final GlassTone tone;
@@ -27,6 +28,7 @@ class GlassCircleButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool? toggled;
   final Color? tint;
+  final bool grouped;
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +57,7 @@ class GlassCircleButton extends StatelessWidget {
                   child: GlassSurface(
                     tone: tone,
                     tint: tint,
+                    grouped: grouped,
                     borderRadius: round,
                     child: SizedBox.square(
                       dimension: face,
