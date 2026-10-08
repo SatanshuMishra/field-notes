@@ -224,7 +224,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
             crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               if (status != null) _statusPill(status, now),
-              _syncNowButton(),
+              if (status is! PausedStatus) _syncNowButton(),
             ],
           ),
         ),
@@ -300,8 +300,10 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            _syncNowButton(),
+            if (status is! PausedStatus) ...<Widget>[
+              const SizedBox(width: 12),
+              _syncNowButton(),
+            ],
           ],
         ),
         ..._fixRows(status),

@@ -290,6 +290,28 @@ void main() {
     expect(find.byType(PhoneSheet), findsNothing);
   }, variant: _android);
 
+  testWidgets('paused sync shows only the controls that still work', (
+    WidgetTester tester,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    await _pumpSection(
+      tester,
+      syncOnOverrides(status: const PausedStatus(), devices: _twoDevices(now)),
+      onManageDevices: _onPhone ? () {} : null,
+    );
+
+    expect(find.text('Sync paused'), findsOneWidget);
+    expect(find.text(syncNowLabel), findsNothing);
+    final Finder pause = _rowControl(
+      pauseSyncLabel,
+      find.byType(SettingsToggle),
+    );
+    expect(pause, findsOneWidget);
+    expect(tester.widget<SettingsToggle>(pause).value, isTrue);
+    expect(_rowControl('Server address', _button('Change')), findsOneWidget);
+    _expectOnlyUsableControls(tester);
+  }, variant: _bothPlatforms);
+
   testWidgets('background uploads shows the battery state', (
     WidgetTester tester,
   ) async {
