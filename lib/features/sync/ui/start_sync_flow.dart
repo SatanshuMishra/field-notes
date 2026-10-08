@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'recovery_phrase_check.dart';
+import 'sync_flow_page.dart';
 
 const String startSyncTitle = 'Start syncing';
 const String startSyncMessage =
@@ -41,7 +42,10 @@ const Key writtenDownKey = ValueKey<String>('start-sync-written-down');
 Key recoveryWordKey(int position) =>
     ValueKey<String>('recovery-word-$position');
 
+const String _flowBarrierLabel = 'Dismiss';
+const Duration _flowFade = Duration(milliseconds: 150);
 const double _flowMaxWidth = 460;
+const double _flowScrimAlpha = 0.42;
 const double _flowGap = 16;
 const double _labelGap = 6;
 const int _wordColumnsWide = 3;
@@ -89,15 +93,49 @@ Future<T?> showSyncFlow<T>(
   BuildContext context, {
   required WidgetBuilder builder,
 }) {
-  if (syncFlowUsesSheet(context)) {
-    return showPhoneSheet<T>(context, builder: builder);
-  }
-  return showDialog<T>(
+  final bool sheet = syncFlowUsesSheet(context);
+  final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+  return showGeneralDialog<T>(
     context: context,
     barrierDismissible: true,
-    barrierColor: Palette.toolbarInk.withValues(alpha: 0.42),
-    builder: (BuildContext dialogContext) =>
-        DialogHost(child: Builder(builder: builder)),
+    barrierLabel: _flowBarrierLabel,
+    barrierColor: Colors.transparent,
+    transitionDuration: still
+        ? Duration.zero
+        : sheet
+        ? phoneSheetEntrance
+        : _flowFade,
+    pageBuilder:
+        (
+          BuildContext flowContext,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+        ) {
+          return DialogHost(child: Builder(builder: builder));
+        },
+    transitionBuilder:
+        (
+          BuildContext flowContext,
+          Animation<double> animation,
+          Animation<double> secondaryAnimation,
+          Widget child,
+        ) {
+          if (sheet) {
+            return SlideTransition(
+              position: animation.drive(
+                Tween<Offset>(
+                  begin: const Offset(0, 1),
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: phoneSheetCurve)),
+              ),
+              child: child,
+            );
+          }
+          return FadeTransition(
+            opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
+            child: child,
+          );
+        },
   );
 }
 
@@ -220,16 +258,43 @@ class SyncFlowFrame extends StatelessWidget {
       ],
     );
     if (sheet) {
-      return PhoneSheet(
-        footerDirection: Axis.vertical,
-        footerPadding: _sheetFooterPadding,
-        actions: <Widget>[
-          for (final SyncFlowAction action in actions.reversed)
-            SyncFlowButton(action: action),
+      return Stack(
+        children: <Widget>[
+          Positioned.fill(
+            child: FadeTransition(
+              opacity:
+                  ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation,
+              child: const _SyncFlowScrim(color: phoneSheetBarrierColor),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: PhoneSheet(
+              footerDirection: Axis.vertical,
+              footerPadding: _sheetFooterPadding,
+              actions: <Widget>[
+                for (final SyncFlowAction action in actions.reversed)
+                  SyncFlowButton(action: action),
+              ],
+              child: Padding(padding: _sheetBodyPadding, child: body),
+            ),
+          ),
         ],
-        child: Padding(padding: _sheetBodyPadding, child: body),
       );
     }
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: _SyncFlowScrim(
+            color: Palette.toolbarInk.withValues(alpha: _flowScrimAlpha),
+          ),
+        ),
+        SafeArea(child: _card(context, body)),
+      ],
+    );
+  }
+
+  Widget _card(BuildContext context, Widget body) {
     return Center(
       child: Material(
         type: MaterialType.transparency,
@@ -269,6 +334,22 @@ class SyncFlowFrame extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SyncFlowScrim extends StatelessWidget {
+  const _SyncFlowScrim({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onTap: () => Navigator.maybePop(context),
+      child: ColoredBox(color: color),
     );
   }
 }
@@ -465,22 +546,25 @@ class _StartSyncFlowState extends ConsumerState<StartSyncFlow> {
     final PendingEnrolment? pending = _pending;
     return PopScope<bool>(
       canPop: _stage == _StartStage.address,
-      child: switch (_stage) {
-        _StartStage.address => _addressStage(),
-        _StartStage.phrase when pending != null => _phraseStage(pending),
-        _StartStage.check when pending != null => RecoveryPhraseCheck(
-          enrolment: pending,
-          onBack: () => setState(() => _stage = _StartStage.phrase),
-          onConfirmed: () => _close(true),
-        ),
-        _ => _addressStage(),
-      },
+      child: KeyedSubtree(
+        key: ValueKey<_StartStage>(_stage),
+        child: switch (_stage) {
+          _StartStage.address => _addressStage(),
+          _StartStage.phrase when pending != null => _phraseStage(pending),
+          _StartStage.check when pending != null => RecoveryPhraseCheck(
+            enrolment: pending,
+            onBack: () => setState(() => _stage = _StartStage.phrase),
+            onConfirmed: () => _close(true),
+          ),
+          _ => _addressStage(),
+        },
+      ),
     );
   }
 
   Widget _addressStage() {
     final String? error = _error;
-    return SyncFlowFrame(
+    return SyncTaskFrame(
       title: startSyncTitle,
       message: startSyncMessage,
       content: <Widget>[
@@ -514,7 +598,7 @@ class _StartSyncFlowState extends ConsumerState<StartSyncFlow> {
   }
 
   Widget _phraseStage(PendingEnrolment pending) {
-    return SyncFlowFrame(
+    return SyncTaskFrame(
       title: recoveryPhraseTitle,
       message: recoveryPhraseMessage,
       content: <Widget>[RecoveryWordGrid(words: pending.words)],

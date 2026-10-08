@@ -2,6 +2,7 @@ import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:flutter/widgets.dart';
 
 import 'start_sync_flow.dart';
+import 'sync_flow_page.dart';
 
 const String checkPhraseTitle = 'Check your phrase';
 const String checkPhraseMessage =
@@ -78,7 +79,7 @@ class _RecoveryPhraseCheckState extends State<RecoveryPhraseCheck> {
   Widget build(BuildContext context) {
     final String? error = _error;
     final List<int> positions = widget.enrolment.positions;
-    return SyncFlowFrame(
+    return SyncTaskFrame(
       title: checkPhraseTitle,
       message: checkPhraseMessage,
       content: <Widget>[
