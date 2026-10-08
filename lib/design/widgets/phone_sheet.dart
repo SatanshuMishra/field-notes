@@ -274,15 +274,19 @@ class _PhoneSheetState extends State<PhoneSheet>
     );
     return Padding(
       padding: EdgeInsets.only(bottom: keyboard),
-      child: AnimatedBuilder(
-        animation: _drag,
-        builder: (BuildContext context, Widget? child) {
-          return Transform.translate(
-            offset: Offset(0, _drag.value),
-            child: child,
-          );
-        },
-        child: sheet,
+      child: MediaQuery.removeViewInsets(
+        context: context,
+        removeBottom: true,
+        child: AnimatedBuilder(
+          animation: _drag,
+          builder: (BuildContext context, Widget? child) {
+            return Transform.translate(
+              offset: Offset(0, _drag.value),
+              child: child,
+            );
+          },
+          child: sheet,
+        ),
       ),
     );
   }

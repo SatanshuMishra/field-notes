@@ -467,6 +467,10 @@ void main() {
       tester.getRect(find.byKey(_cancelKey)).bottom,
       lessThanOrEqualTo(_phone.height - _keyboard),
     );
+    expect(
+      MediaQuery.viewInsetsOf(tester.element(find.byKey(_cancelKey))).bottom,
+      0,
+    );
 
     _hideKeyboard(tester);
     await tester.pump();
