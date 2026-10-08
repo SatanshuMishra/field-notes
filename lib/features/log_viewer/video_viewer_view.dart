@@ -66,8 +66,9 @@ const double _macCapsuleSide = 24;
 
 const Key videoScrubberBarKey = ValueKey<String>('video-scrubber-bar');
 
-final FutureProviderFamily<double?, String> videoAspectProvider =
-    FutureProvider.family<double?, String>((Ref ref, String mediaId) async {
+final FutureProviderFamily<double?, String> videoAspectProvider = FutureProvider
+    .autoDispose
+    .family<double?, String>((Ref ref, String mediaId) async {
       final MediaStore store = await ref.watch(mediaStoreProvider.future);
       final MediaBlob? blob = await blobForMediaReference(store, mediaId);
       final int? width = blob?.width;

@@ -24,6 +24,7 @@ import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
+import 'package:field_notes/state/media_provider.dart';
 
 import '../entry_cards/support/entry_cards_harness.dart';
 import '../entry_cards/support/fake_video_player.dart';
@@ -667,4 +668,55 @@ void main() {
     expect(calls.back, 1);
     expect(calls.delete, 0);
   });
+
+  test(
+    'a video size that is missing is read again once the record has one',
+    () async {
+      MediaBlob videoBlob({int? width, int? height}) => MediaBlob(
+        id: _videoId,
+        relPath: 'v.mp4',
+        mime: 'video/mp4',
+        kind: MediaKind.video,
+        bytes: 0,
+        createdAt: 0,
+        width: width,
+        height: height,
+      );
+      final FakeMediaStore store = FakeMediaStore(Directory.systemTemp)
+        ..register(videoBlob());
+      final ProviderContainer container = ProviderContainer(
+        overrides: <Override>[
+          mediaStoreProvider.overrideWith((Ref ref) async => store),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final ProviderSubscription<AsyncValue<double?>> before = container.listen(
+        videoAspectProvider(_videoId),
+        (AsyncValue<double?>? previous, AsyncValue<double?> next) {},
+      );
+      expect(
+        await container.read(videoAspectProvider(_videoId).future),
+        isNull,
+      );
+      before.close();
+      await container.pump();
+
+      store.register(
+        videoBlob(
+          width: _portrait.width.round(),
+          height: _portrait.height.round(),
+        ),
+      );
+      final ProviderSubscription<AsyncValue<double?>> after = container.listen(
+        videoAspectProvider(_videoId),
+        (AsyncValue<double?>? previous, AsyncValue<double?> next) {},
+      );
+      addTearDown(after.close);
+      expect(
+        await container.read(videoAspectProvider(_videoId).future),
+        _portrait.width / _portrait.height,
+      );
+    },
+  );
 }
