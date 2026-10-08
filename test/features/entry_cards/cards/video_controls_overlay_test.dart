@@ -180,15 +180,15 @@ void main() {
 
         expect(_reachable(_pauseLabel), findsNothing);
 
-        await tester.tapAt(tester.getCenter(inCard(0, videoMuteToggleKey)));
+        await tester.tapAt(tester.getCenter(inCard(0, videoScrubBarKey)));
         await _settleFade(tester);
 
-        expect(built.single.volumeCalls, isEmpty);
+        expect(built.single.seekCalls, isEmpty);
 
-        await tester.tap(inCard(0, videoMuteToggleKey));
+        await tester.tap(inCard(0, videoScrubBarKey));
         await tester.pump();
 
-        expect(built.single.volumeCalls, <double>[0.0]);
+        expect(built.single.seekCalls, hasLength(1));
       } finally {
         handle.dispose();
       }

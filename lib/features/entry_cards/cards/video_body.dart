@@ -25,7 +25,6 @@ const List<Duration> _defaultRetryBackoff = <Duration>[
   Duration(milliseconds: 1200),
 ];
 const double defaultVideoAspectRatio = 16 / 9;
-const double _fullVolume = 1.0;
 const double _noticeInset = 8;
 const Key videoFrameKey = ValueKey<String>('video-frame');
 const double _downloadRingSize = 44;
@@ -59,13 +58,11 @@ final class VideoControlsState {
     required this.isPlaying,
     required this.position,
     required this.total,
-    required this.muted,
     required this.busy,
     required this.onToggle,
     required this.onSeek,
     required this.onScrubUpdate,
     required this.onScrubEnd,
-    required this.onToggleMute,
   });
 
   final bool ready;
@@ -73,13 +70,11 @@ final class VideoControlsState {
   final bool isPlaying;
   final Duration position;
   final Duration? total;
-  final bool muted;
   final bool busy;
   final VoidCallback? onToggle;
   final ValueChanged<Duration>? onSeek;
   final ValueChanged<Duration>? onScrubUpdate;
   final VoidCallback? onScrubEnd;
-  final VoidCallback? onToggleMute;
 
   @override
   bool operator ==(Object other) =>
@@ -89,13 +84,11 @@ final class VideoControlsState {
       other.isPlaying == isPlaying &&
       other.position == position &&
       other.total == total &&
-      other.muted == muted &&
       other.busy == busy &&
       other.onToggle == onToggle &&
       other.onSeek == onSeek &&
       other.onScrubUpdate == onScrubUpdate &&
-      other.onScrubEnd == onScrubEnd &&
-      other.onToggleMute == onToggleMute;
+      other.onScrubEnd == onScrubEnd;
 
   @override
   int get hashCode => Object.hash(
@@ -104,13 +97,11 @@ final class VideoControlsState {
     isPlaying,
     position,
     total,
-    muted,
     busy,
     onToggle,
     onSeek,
     onScrubUpdate,
     onScrubEnd,
-    onToggleMute,
   );
 }
 
@@ -187,8 +178,6 @@ class _VideoBodyState extends State<VideoBody> {
   StreamSubscription<Duration>? _positionSub;
   VideoPlaybackState _state = VideoPlaybackState.idle;
   Duration _position = Duration.zero;
-  double _volume = _fullVolume;
-  double _volumeBeforeMute = _fullVolume;
   _VideoPhase _phase = _VideoPhase.preparing;
   File? _mediaFile;
   VideoSlotToken? _token;
@@ -351,10 +340,6 @@ class _VideoBodyState extends State<VideoBody> {
       _enterPhase(_VideoPhase.ready);
       _attempt = 0;
     });
-    await _restoreVolume(player);
-    if (!_isCurrentAttempt(gen, token)) {
-      return;
-    }
     await _resumeIfInterrupted();
     if (!_isCurrentAttempt(gen, token)) {
       return;
@@ -393,17 +378,6 @@ class _VideoBodyState extends State<VideoBody> {
         _onPlaybackFailure();
       },
     );
-  }
-
-  Future<void> _restoreVolume(EntryVideoPlayer player) async {
-    if (_volume == _fullVolume) {
-      return;
-    }
-    try {
-      await player.setVolume(_volume);
-    } catch (error, stackTrace) {
-      debugPrint('Video volume restore failed: $error\n$stackTrace');
-    }
   }
 
   Future<void> _resumeIfInterrupted() async {
@@ -689,8 +663,6 @@ class _VideoBodyState extends State<VideoBody> {
 
   bool get _needsMediaResolution => _mediaFile == null;
 
-  bool get _muted => _volume <= 0;
-
   bool get _isRenderingVideo =>
       _player != null &&
       (_state == VideoPlaybackState.playing ||
@@ -736,35 +708,6 @@ class _VideoBodyState extends State<VideoBody> {
       }
       setState(() => _position = previous);
     }
-  }
-
-  Future<void> _toggleMute() async {
-    final EntryVideoPlayer? player = _player;
-    final VideoSlotToken? token = _token;
-    if (player == null || token == null) {
-      return;
-    }
-    final int gen = _generation;
-    final double restored = _volumeBeforeMute > 0
-        ? _volumeBeforeMute
-        : _fullVolume;
-    final double target = _muted ? restored : 0.0;
-    final double previous = _volume;
-    try {
-      await player.setVolume(target);
-    } catch (error, stackTrace) {
-      debugPrint('Video volume change failed: $error\n$stackTrace');
-      return;
-    }
-    if (!_isCurrentAttempt(gen, token)) {
-      return;
-    }
-    setState(() {
-      if (target <= 0) {
-        _volumeBeforeMute = previous;
-      }
-      _volume = target;
-    });
   }
 
   void _onTransportTap() {
@@ -879,13 +822,11 @@ class _VideoBodyState extends State<VideoBody> {
       isPlaying: _isPlaying,
       position: _shownPosition,
       total: _total,
-      muted: _muted,
       busy: _claimDenied,
       onToggle: ready || canStart ? _onTransportTap : null,
       onSeek: ready ? _seek : null,
       onScrubUpdate: ready ? _onScrubUpdate : null,
       onScrubEnd: ready ? _onScrubEnd : null,
-      onToggleMute: ready ? _toggleMute : null,
     );
   }
 

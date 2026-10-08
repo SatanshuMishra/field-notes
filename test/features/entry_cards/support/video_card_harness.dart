@@ -18,9 +18,6 @@ import 'fake_video_player.dart';
 const ValueKey<String> videoPlayToggleKey = ValueKey<String>(
   'video-play-toggle',
 );
-const ValueKey<String> videoMuteToggleKey = ValueKey<String>(
-  'video-mute-toggle',
-);
 const ValueKey<String> videoScrubBarKey = ValueKey<String>('video-scrub-bar');
 const ValueKey<String> videoSurfaceKey = ValueKey<String>('fake-video-surface');
 const ValueKey<String> videoSurfaceTapKey = ValueKey<String>(
@@ -190,11 +187,6 @@ Widget videoTestControls(BuildContext context, VideoControlsState state) {
             ' / ${formatMediaDuration(state.total?.inMilliseconds)}',
             maxLines: 1,
           ),
-          _VideoTestButton(
-            buttonKey: videoMuteToggleKey,
-            label: state.muted ? 'Unmute video' : 'Mute video',
-            onTap: state.onToggleMute,
-          ),
         ],
       ),
     ),
@@ -291,7 +283,15 @@ bool tapEnabled(WidgetTester tester, Finder finder) =>
     tester.widget<GestureDetector>(finder).onTap != null;
 
 bool readyControlsEnabled(WidgetTester tester, int index) =>
-    tapEnabled(tester, inCard(index, videoMuteToggleKey));
+    tester
+        .widget<VideoScrubber>(
+          find.descendant(
+            of: cardAt(index),
+            matching: find.byType(VideoScrubber),
+          ),
+        )
+        .onSeek !=
+    null;
 
 bool surfaceMounted(WidgetTester tester, int index) =>
     inCard(index, videoSurfaceKey).evaluate().isNotEmpty;
