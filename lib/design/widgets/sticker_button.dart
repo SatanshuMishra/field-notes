@@ -5,14 +5,19 @@ import '../tokens/tokens.dart';
 
 enum StickerButtonVariant { primary, secondary, danger }
 
-const BorderRadius _controlBorderRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusControl));
+const BorderRadius _controlBorderRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusControl),
+);
 
-const EdgeInsets _capturePadding =
-    EdgeInsets.symmetric(horizontal: 13, vertical: 10);
+const EdgeInsets _capturePadding = EdgeInsets.symmetric(
+  horizontal: 13,
+  vertical: 10,
+);
 
-const EdgeInsets _confirmPadding =
-    EdgeInsets.symmetric(horizontal: 16, vertical: 9);
+const EdgeInsets _confirmPadding = EdgeInsets.symmetric(
+  horizontal: 16,
+  vertical: 9,
+);
 
 const double _iconGap = 10;
 
@@ -66,11 +71,16 @@ class StickerButton extends StatelessWidget {
               icon!,
               const SizedBox(width: _iconGap),
             ],
-            ExcludeSemantics(
-              child: Text(
-                label,
-                style: (labelStyle ?? context.textStyles.buttonSans)
-                    .copyWith(color: style.foreground),
+            Flexible(
+              child: ExcludeSemantics(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: (labelStyle ?? context.textStyles.buttonSans).copyWith(
+                    color: style.foreground,
+                  ),
+                ),
               ),
             ),
           ],

@@ -6,6 +6,7 @@ import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
@@ -21,6 +22,8 @@ import '../../support/sync_overrides.dart';
 import 'support/settings_harness.dart';
 
 const Size _window = Size(1440, 900);
+const Size _laptopWindow = Size(1280, 800);
+const Size _smallestWindow = Size(872, 600);
 const double _railWidth = 196;
 const double _rightPadding = 28;
 const double _labelControlGap = 24;
@@ -47,9 +50,9 @@ List<JournalDevice> _devices(DateTime now) => <JournalDevice>[
   ),
 ];
 
-List<Override> _overrides(DateTime now) {
+List<Override> _overrides(DateTime now, SyncStatus status) {
   final List<Override> sync = syncOnOverrides(
-    status: SyncedStatus(now),
+    status: status,
     devices: _devices(now),
   );
   final Set<Object> replaced = <Object>{
@@ -68,13 +71,19 @@ List<Override> _overrides(DateTime now) {
   ];
 }
 
-Future<void> _pumpMacSettings(WidgetTester tester) async {
-  tester.view.physicalSize = _window;
+Future<void> _pumpMacSettings(
+  WidgetTester tester, {
+  Size window = _window,
+  SyncStatus? status,
+}) async {
+  final DateTime now = DateTime.now().toUtc();
+  tester.view.physicalSize = window;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     ProviderScope(
-      overrides: _overrides(DateTime.now().toUtc()),
+      key: UniqueKey(),
+      overrides: _overrides(now, status ?? SyncedStatus(now)),
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: fieldNotesTheme(platform: TargetPlatform.macOS),
@@ -258,6 +267,55 @@ void main() {
       );
       _expectPlainGroups(tester, content, page);
       _expectRowsReachTheRightEdge(tester, content, area, page);
+    }
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('the Mac sync status row fits the smallest window', (
+    WidgetTester tester,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    final List<SyncStatus> statuses = <SyncStatus>[
+      const OfflineStatus(),
+      for (final AttentionReason reason in AttentionReason.values)
+        AttentionStatus(reason),
+    ];
+    for (final Size window in <Size>[_smallestWindow, _laptopWindow, _window]) {
+      for (final SyncStatus status in statuses) {
+        final String label = status.label(now);
+        final String name = '$label at ${window.width.round()}';
+        await _pumpMacSettings(tester, window: window, status: status);
+        await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull, reason: name);
+        final Finder pill = find.byType(SettingsStatusPill);
+        final Finder syncNow = find.widgetWithText(StickerButton, syncNowLabel);
+        final Rect row = tester.getRect(
+          find.ancestor(of: pill, matching: find.byType(SettingsFieldRow)),
+        );
+        for (final Finder control in <Finder>[pill, syncNow]) {
+          final Rect rect = tester.getRect(control);
+          expect(rect.left, greaterThanOrEqualTo(row.left), reason: name);
+          expect(
+            rect.right,
+            lessThanOrEqualTo(row.right + _tolerance),
+            reason: name,
+          );
+        }
+        if (window == _smallestWindow) {
+          continue;
+        }
+        for (final Finder text in <Finder>[
+          find.descendant(of: pill, matching: find.text(label)),
+          find.descendant(of: syncNow, matching: find.text(syncNowLabel)),
+        ]) {
+          expect(
+            tester.renderObject<RenderParagraph>(text).didExceedMaxLines,
+            isFalse,
+            reason: '$name is cut short',
+          );
+        }
+      }
     }
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }
