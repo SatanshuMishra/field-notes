@@ -52,7 +52,7 @@ class WindowDragBand extends StatelessWidget {
       excludeFromSemantics: true,
       onPanStart: (DragStartDetails _) => unawaited(startWindowDrag()),
       onDoubleTap: () => unawaited(runTitlebarDoubleClick()),
-      child: SizedBox(height: height, child: child),
+      child: SizedBox(width: double.infinity, height: height, child: child),
     );
   }
 }

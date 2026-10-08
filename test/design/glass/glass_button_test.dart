@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/app/theme/app_theme.dart';
@@ -132,5 +133,41 @@ void main() {
     expect(leaves, 1);
 
     semantics.dispose();
+  });
+
+  testWidgets('a glass circle takes keyboard focus and presses on Enter', (
+    WidgetTester tester,
+  ) async {
+    _phoneSurface(tester);
+    int presses = 0;
+
+    await tester.pumpWidget(
+      _host(
+        GlassCircleButton(
+          key: _buttonKey,
+          tone: GlassTone.media,
+          face: 48,
+          label: _label,
+          glyph: const SizedBox.square(dimension: 14),
+          onPressed: () => presses += 1,
+        ),
+      ),
+    );
+    expect(_within(GlassSurface), findsOneWidget);
+    expect(find.byKey(focusRingKey), findsNothing);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(
+      find.descendant(
+        of: find.byKey(_buttonKey),
+        matching: find.byKey(focusRingKey),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    expect(presses, 1);
   });
 }

@@ -36,7 +36,7 @@ Using the same container everywhere is false consistency. Real consistency is th
 
 ## Dark glass
 
-Over media and the camera, use GlassTone.media with these values:
+Over media and the camera, use GlassTone.media with these values. The voice and video recorders are the one exception: by decision they keep the scene glass until the owner settles whether they move to media glass.
 
 - Fill rgba(28,22,16,.38).
 - Blur 18 with saturation 1.5.
