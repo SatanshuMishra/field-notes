@@ -433,13 +433,7 @@ void main() {
           if (layout.layout == ShellLayout.sidebar) {
             expect(_scroll(tester).maxScrollExtent, 0, reason: '$surface');
           } else {
-            expect(
-              find.ancestor(
-                of: find.byKey(momentCardKey),
-                matching: find.byType(Scrollable),
-              ),
-              findsNothing,
-            );
+            expect(_scroll(tester).maxScrollExtent, 0, reason: '$surface');
             final Rect card = tester.getRect(find.byKey(momentCardKey));
             expect(card.bottom, lessThanOrEqualTo(surface.height - 72 - 12));
             expect(

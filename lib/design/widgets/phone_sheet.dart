@@ -191,9 +191,13 @@ class _PhoneSheetState extends State<PhoneSheet>
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final EdgeInsets padding = MediaQuery.paddingOf(context);
+    final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
     final double maxHeight = math.max(
       0,
-      MediaQuery.sizeOf(context).height - padding.top - phoneSheetTopClearance,
+      MediaQuery.sizeOf(context).height -
+          padding.top -
+          phoneSheetTopClearance -
+          keyboard,
     );
     final String? title = widget.title;
     final Widget? header = widget.header;
@@ -268,15 +272,22 @@ class _PhoneSheetState extends State<PhoneSheet>
         ),
       ),
     );
-    return AnimatedBuilder(
-      animation: _drag,
-      builder: (BuildContext context, Widget? child) {
-        return Transform.translate(
-          offset: Offset(0, _drag.value),
-          child: child,
-        );
-      },
-      child: sheet,
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: MediaQuery.removeViewInsets(
+        context: context,
+        removeBottom: true,
+        child: AnimatedBuilder(
+          animation: _drag,
+          builder: (BuildContext context, Widget? child) {
+            return Transform.translate(
+              offset: Offset(0, _drag.value),
+              child: child,
+            );
+          },
+          child: sheet,
+        ),
+      ),
     );
   }
 

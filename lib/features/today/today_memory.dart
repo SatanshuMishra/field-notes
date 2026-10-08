@@ -1,4 +1,6 @@
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/notes/markdown/markdown.dart';
+import 'package:field_notes/domain/notes/note_photos.dart';
 import 'package:field_notes/domain/notes/note_plain_text.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
@@ -72,6 +74,21 @@ String? firstTextPreview(List<Entry> entries) {
       return collapsed;
     }
     return '${collapsed.substring(0, memoryPreviewMaxLength)}…';
+  }
+  return null;
+}
+
+String? firstPhotoReference(List<Entry> entries) {
+  for (final Entry entry in entries) {
+    if (entry.isDeleted || entry.type != EntryType.text) {
+      continue;
+    }
+    final List<NotePhoto> photos = notePhotosOf(
+      parseNoteTree(entry.textContent ?? '', tables: tablesEnabled),
+    );
+    if (photos.isNotEmpty) {
+      return photos.first.reference;
+    }
   }
   return null;
 }

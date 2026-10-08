@@ -22,7 +22,7 @@ class RecorderGlassButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlassCircleButton(
-      tone: GlassTone.scene,
+      tone: GlassTone.media,
       face: recorderGlassButtonFace,
       label: label,
       glyph: glyph,

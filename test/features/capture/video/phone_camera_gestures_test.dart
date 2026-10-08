@@ -148,6 +148,17 @@ void main() {
     expect(controls.zooms.every((double zoom) => zoom <= 4), isTrue);
     expect(find.byKey(cameraZoomLevelKey), findsOneWidget);
     expect(find.text(cameraZoomLabel(controls.zooms.last)), findsOneWidget);
+    expect(
+      tester
+          .widget<GlassSurface>(
+            find.ancestor(
+              of: find.byKey(cameraZoomLevelKey),
+              matching: find.byType(GlassSurface),
+            ),
+          )
+          .tone,
+      GlassTone.media,
+    );
 
     await _pinch(tester, 2000);
     expect(controls.zooms.last, 4);

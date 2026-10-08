@@ -116,7 +116,7 @@ void main() {
     expect(target.size, const Size.square(48));
     expect(
       tester.widget<GlassSurface>(_within(GlassSurface)).tone,
-      GlassTone.scene,
+      GlassTone.media,
     );
     expect(
       tester.getSize(_within(GlassSurface)),

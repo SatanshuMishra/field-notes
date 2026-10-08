@@ -34,8 +34,12 @@ Future<void> _openDialog(WidgetTester tester, List<bool> outcomes) async {
   expect(outcomes, isEmpty);
 }
 
-Future<void> _openSyncDialog(WidgetTester tester, List<bool> outcomes) async {
-  tester.view.physicalSize = const Size(900, 1400);
+Future<void> _openSyncDialog(
+  WidgetTester tester,
+  List<bool> outcomes, {
+  Size surface = const Size(900, 1400),
+}) async {
+  tester.view.physicalSize = surface;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
@@ -165,4 +169,40 @@ void main() {
     expect(find.byType(SyncDeleteAllDialog), findsNothing);
     expect(outcomes, <bool>[false]);
   }, variant: _bothPlatforms);
+
+  testWidgets('on the phone the delete journal sheet keeps its field and '
+      'buttons above the keyboard', (WidgetTester tester) async {
+    const Size phone = Size(384, 832);
+    const double keyboard = 300;
+    final List<bool> outcomes = <bool>[];
+    await _openSyncDialog(tester, outcomes, surface: phone);
+    expect(find.byType(SyncDeleteAllDialog), findsOneWidget);
+
+    await tester.tap(_confirmField());
+    await tester.pump();
+    tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+    await tester.pumpAndSettle();
+
+    final double above = phone.height - keyboard;
+    final Rect footer = tester.getRect(find.byKey(phoneSheetFooterKey));
+    expect(footer.bottom, above);
+    for (final Finder button in <Finder>[
+      find.byKey(removeFromThisDeviceKey),
+      find.text('Cancel'),
+      find.byKey(deleteEverywhereKey),
+    ]) {
+      expect(tester.getRect(button).bottom, lessThanOrEqualTo(above));
+    }
+    final Rect field = tester.getRect(_confirmField());
+    expect(field.bottom, lessThanOrEqualTo(footer.top));
+    expect(
+      field.top,
+      greaterThanOrEqualTo(tester.getRect(find.byType(PhoneSheet)).top),
+    );
+
+    await tester.enterText(_confirmField(), 'delete');
+    await tester.pump();
+    expect(_deleteEverywhereEnabled(tester), isTrue);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }
