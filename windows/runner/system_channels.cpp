@@ -79,6 +79,11 @@ std::wstring ParentFolder(const std::wstring& path) {
     return std::wstring();
   }
   const std::wstring parent = path.substr(0, separator);
+  const bool network =
+      path.rfind(L"\\\\", 0) == 0 || path.rfind(L"//", 0) == 0;
+  if (network && parent.find_first_not_of(L"\\/") == std::wstring::npos) {
+    return std::wstring();
+  }
   const std::wstring folder =
       parent.empty() || parent.back() == L':' ? parent + L'\\' : parent;
   return folder.size() < path.size() ? folder : std::wstring();

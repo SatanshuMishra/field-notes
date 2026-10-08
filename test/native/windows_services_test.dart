@@ -132,6 +132,13 @@ void main() {
         expect(nearest, contains('FILE_ATTRIBUTE_DIRECTORY'));
         expect(nearest, contains('candidate = ParentFolder(candidate)'));
 
+        final String parent = _function(source, 'std::wstring ParentFolder(');
+        expect(parent, contains(r'path.rfind(L"\\\\", 0) == 0'));
+        expect(
+          parent,
+          contains(r'parent.find_first_not_of(L"\\/") == std::wstring::npos'),
+        );
+
         final String free = _function(
           source,
           'std::optional<int64_t> FreeBytesNear(',
