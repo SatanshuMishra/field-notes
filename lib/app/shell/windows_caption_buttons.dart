@@ -422,8 +422,8 @@ final class _CaptionGlyphPainter extends CustomPainter {
     switch (kind) {
       case WindowsCaptionGlyphKind.minimize:
         canvas.drawLine(
-          Offset(0, size.height / 2),
-          Offset(size.width, size.height / 2),
+          Offset(0, size.height / 2 + _halfStroke),
+          Offset(size.width, size.height / 2 + _halfStroke),
           stroke,
         );
       case WindowsCaptionGlyphKind.maximize:
