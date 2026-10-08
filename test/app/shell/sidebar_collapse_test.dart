@@ -4,6 +4,7 @@ import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/sidebar_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -222,6 +223,8 @@ void main() {
       expect(find.byKey(const ValueKey<String>('streak-card')), findsNothing);
 
       await tester.tap(find.byKey(_settingsButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
       await tester.pumpAndSettle();
 
       expect(
