@@ -12,13 +12,29 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
 
 import 'comparison_number.dart';
+import 'join_scan_page.dart';
+import 'join_window.dart';
+import 'mac_code_scanner.dart';
+import 'pairing_word_fields.dart';
+import 'qr_frame_decoder.dart';
 import 'start_sync_flow.dart';
+import 'sync_flow_page.dart';
 
 const String joinTitle = 'Join my journal';
+const String joinScanKicker = 'join my journal';
 const String joinScanMessage =
     'Point the camera at the code on your other device.';
 const String typeWordsInsteadLabel = 'Type the 8 words instead';
-const String joinWordsLabel = 'The 8 words';
+const String joinTypeTitle = 'Type the 8 words';
+const String joinScanTitle = 'Scan the code';
+const String joinScanHelp = "Hold your other device up to this Mac's camera.";
+const String joinTypeHelp =
+    "They're under the code on your other device. Paste all 8 at once if you "
+    'like.';
+const String joinServerHint =
+    'Leave it empty if your other device uses the usual server.';
+const String joinOrLabel = 'or';
+const String joinAllWordsInLabel = 'All 8 words in';
 const String joinLabel = 'Join';
 const String joinBackLabel = 'Back';
 const String joinWaitingTitle = 'Waiting for your other device';
@@ -34,6 +50,14 @@ const Key joinConfirmKey = ValueKey<String>('join-confirm');
 const Key typeWordsInsteadKey = ValueKey<String>('join-type-words');
 const Key joinServerConfirmKey = ValueKey<String>('join-server-confirm');
 const Key joinJournalConfirmKey = ValueKey<String>('join-journal-confirm');
+const Key joinScanFrameKey = ValueKey<String>('join-scan-frame');
+const Key joinScanColumnKey = ValueKey<String>('join-scan-column');
+const Key joinTypeColumnKey = ValueKey<String>('join-type-column');
+const Key joinWordsCountKey = ValueKey<String>('join-words-count');
+
+String joinWordsCountLabel(int filled) => filled >= pairingWordCount
+    ? joinAllWordsInLabel
+    : '$filled of $pairingWordCount';
 
 String joinServerTitle(Uri server) => 'Join ${server.host}?';
 
@@ -61,10 +85,7 @@ String shownServerAddress(Uri server) => Uri(
   path: server.path,
 ).toString();
 
-const double _cameraHeight = 240;
 const double _labelGap = 6;
-const double _scanArea = 0.9;
-const Duration _scanPause = Duration(milliseconds: 100);
 
 typedef PairingJoin = Future<void> Function(
   String code, {
@@ -86,8 +107,6 @@ String? pairingCodeIn(Iterable<String?> values) {
   return null;
 }
 
-const BorderRadius _cameraRadius = BorderRadius.all(Radius.circular(14));
-
 Future<void> joinJournal(BuildContext context, WidgetRef ref) async {
   final bool? joined = await showSyncFlow<bool>(
     context,
@@ -101,16 +120,22 @@ Future<void> joinJournal(BuildContext context, WidgetRef ref) async {
 enum _JoinStage { scan, type, confirm, checking, journal, waiting }
 
 class JoinJournalFlow extends ConsumerStatefulWidget {
-  const JoinJournalFlow({super.key, this.join});
+  const JoinJournalFlow({super.key, this.join, this.macCamera, this.macDecode});
 
   final PairingJoin? join;
+  final MacScannerCamera? macCamera;
+  final QrFrameDecode? macDecode;
 
   @override
   ConsumerState<JoinJournalFlow> createState() => _JoinJournalFlowState();
 }
 
 class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
-  final TextEditingController _words = TextEditingController();
+  final List<TextEditingController> _words =
+      List<TextEditingController>.unmodifiable(<TextEditingController>[
+        for (int index = 0; index < pairingWordCount; index++)
+          TextEditingController(),
+      ]);
   final TextEditingController _address = TextEditingController();
   late _JoinStage _stage = joinCanScan ? _JoinStage.scan : _JoinStage.type;
   late _JoinStage _returnTo = _stage;
@@ -118,6 +143,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   String? _refusedCode;
   String? _offeredCode;
   Uri? _offeredServer;
+  bool _offeredScanned = false;
   String? _journalLabel;
   Completer<bool>? _journalAnswer;
   String? _comparison;
@@ -128,31 +154,48 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
       _stage == _JoinStage.journal ||
       _stage == _JoinStage.waiting;
 
+  bool get _choosing => _stage == _JoinStage.scan || _stage == _JoinStage.type;
+
+  List<String> get _typedWords => <String>[
+    for (final TextEditingController word in _words) word.text,
+  ];
+
+  bool get _canJoin =>
+      filledPairingWords(_words) == _words.length ||
+      pairingCodeIn(_typedWords) != null;
+
   @override
   void dispose() {
     _closing = true;
     _settleJournal(false);
-    _words.dispose();
+    for (final TextEditingController word in _words) {
+      word.dispose();
+    }
     _address.dispose();
     super.dispose();
   }
 
-  void _scanned(Code code) {
-    if (!mounted || _closing || _stage != _JoinStage.scan) {
+  void _scanned(Code code) =>
+      _offerScanned(code.text, scanning: _stage == _JoinStage.scan);
+
+  void _macScanned(String code) => _offerScanned(code, scanning: _choosing);
+
+  void _offerScanned(String? text, {required bool scanning}) {
+    if (!mounted || _closing || !scanning) {
       return;
     }
-    final String? value = pairingCodeIn(<String?>[code.text]);
+    final String? value = pairingCodeIn(<String?>[text]);
     if (value != null && value != _refusedCode) {
-      _offer(value);
+      _offer(value, scanned: true);
     }
   }
 
-  void _offer(String code) {
+  void _offer(String code, {required bool scanned}) {
     final Uri? server = _serverIn(code);
     if (server == null) {
       setState(() {
         _error = pairingRetryMessage;
-        _refusedCode = _stage == _JoinStage.scan ? code : null;
+        _refusedCode = scanned ? code : _refusedCode;
       });
       return;
     }
@@ -162,6 +205,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
       _error = null;
       _offeredCode = code;
       _offeredServer = server;
+      _offeredScanned = scanned;
     });
   }
 
@@ -176,7 +220,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   void _decline() => setState(() {
     _stage = _returnTo;
     _error = null;
-    _refusedCode = _returnTo == _JoinStage.scan ? _offeredCode : null;
+    _refusedCode = _offeredScanned ? _offeredCode : _refusedCode;
   });
 
   void _showStage(_JoinStage stage) => setState(() {
@@ -192,9 +236,10 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
       setState(() => _error = unreachableMessage);
       return;
     }
-    final String? pasted = pairingCodeIn(<String?>[_words.text]);
+    final List<String> typed = _typedWords;
+    final String? pasted = pairingCodeIn(typed);
     if (pasted == null) {
-      _join(_words.text, relayUrl);
+      _join(typed.join(' '), relayUrl, scanned: false);
       return;
     }
     final Uri? server = _serverIn(pasted);
@@ -202,10 +247,16 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
       setState(() => _error = joinAddressMismatchMessage(server, relayUrl));
       return;
     }
-    _offer(pasted);
+    _offer(pasted, scanned: false);
   }
 
-  Future<void> _join(String code, Uri? relayUrl) async {
+  void _wordsChanged() => setState(() {});
+
+  Future<void> _join(
+    String code,
+    Uri? relayUrl, {
+    required bool scanned,
+  }) async {
     if (_joining || _closing) {
       return;
     }
@@ -231,20 +282,20 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
         Navigator.of(context).pop(true);
       }
     } on PairingDeclined {
-      _back(code, null);
+      _back(code, null, scanned: scanned);
     } on SyncSetupException catch (error) {
-      _back(code, error.message);
+      _back(code, error.message, scanned: scanned);
     }
   }
 
-  void _back(String code, String? error) {
+  void _back(String code, String? error, {required bool scanned}) {
     if (!mounted || _closing) {
       return;
     }
     setState(() {
       _stage = _returnTo;
       _error = error;
-      _refusedCode = _returnTo == _JoinStage.scan ? code : null;
+      _refusedCode = scanned ? code : _refusedCode;
       _comparison = null;
     });
   }
@@ -296,6 +347,8 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   @override
   Widget build(BuildContext context) {
     return switch (_stage) {
+      _JoinStage.scan ||
+      _JoinStage.type when !syncFlowUsesSheet(context) => _window(),
       _JoinStage.scan => _scanStage(),
       _JoinStage.type => _typeStage(),
       _JoinStage.confirm => _confirmStage(),
@@ -306,57 +359,21 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   }
 
   Widget _scanStage() {
-    final String? error = _error;
-    return SyncFlowFrame(
-      title: joinTitle,
-      message: joinScanMessage,
-      content: <Widget>[
-        Semantics(
-          label: joinCameraLabel,
-          image: true,
-          child: ClipRRect(
-            borderRadius: _cameraRadius,
-            child: SizedBox(
-              height: _cameraHeight,
-              child: ColoredBox(
-                color: context.colors.panelTop,
-                child: ReaderWidget(
-                  onScan: _scanned,
-                  codeFormat: Format.qrCode,
-                  tryHarder: true,
-                  cropPercent: _scanArea,
-                  scanDelay: _scanPause,
-                  showScannerOverlay: false,
-                  showFlashlight: false,
-                  showToggleCamera: false,
-                  showGallery: false,
-                  allowPinchZoom: false,
-                  loading: const CrossHatchPlaceholder(),
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (error != null) SyncFlowError(message: error),
-      ],
-      actions: <SyncFlowAction>[
-        SyncFlowAction(label: syncCancelLabel, onPressed: _cancel),
-        SyncFlowAction(
-          key: typeWordsInsteadKey,
-          label: typeWordsInsteadLabel,
-          primary: true,
-          onPressed: () => _showStage(_JoinStage.type),
-        ),
-      ],
+    return JoinScanPage(
+      onScan: _scanned,
+      onCancel: _cancel,
+      onTypeWords: () => _showStage(_JoinStage.type),
+      error: _error,
     );
   }
 
   Widget _typeStage() {
     final String? error = _error;
-    return SyncFlowFrame(
-      title: joinTitle,
+    return SyncFlowPage(
+      title: joinTypeTitle,
+      onClose: _cancel,
       content: <Widget>[
-        SyncFlowField(label: joinWordsLabel, controller: _words),
+        PairingWordFields(controllers: _words, onChanged: _wordsChanged),
         SyncFlowField(
           label: serverAddressLabel,
           controller: _address,
@@ -377,9 +394,23 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
           key: joinConfirmKey,
           label: joinLabel,
           primary: true,
-          onPressed: _joinTyped,
+          onPressed: _canJoin ? _joinTyped : null,
         ),
       ],
+    );
+  }
+
+  Widget _window() {
+    return JoinWindow(
+      words: _words,
+      address: _address,
+      onCode: _macScanned,
+      onCancel: _cancel,
+      onWordsChanged: _wordsChanged,
+      onJoin: _canJoin ? _joinTyped : null,
+      error: _error,
+      camera: widget.macCamera,
+      decode: widget.macDecode,
     );
   }
 
@@ -409,7 +440,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
           key: joinServerConfirmKey,
           label: joinLabel,
           primary: true,
-          onPressed: () => _join(code, null),
+          onPressed: () => _join(code, null, scanned: _offeredScanned),
         ),
       ],
     );

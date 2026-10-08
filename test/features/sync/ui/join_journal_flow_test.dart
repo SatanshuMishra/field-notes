@@ -1,15 +1,25 @@
 import 'dart:async';
 
-import 'package:camera_platform_interface/camera_platform_interface.dart';
+import 'package:camera_macos/camera_macos.dart' show CameraImageData;
+import 'package:camera_platform_interface/camera_platform_interface.dart'
+    show CameraDescription, CameraPlatform;
 import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/pairing/pairing_code.dart';
 import 'package:field_notes/data/sync/pairing/pairing_service.dart';
 import 'package:field_notes/features/sync/ui/join_journal_flow.dart';
+import 'package:field_notes/features/sync/ui/join_window.dart';
+import 'package:field_notes/features/sync/ui/mac_code_scanner.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_zxing/flutter_zxing.dart';
+
+const Size _phone = Size(384, 832);
+const Size _mac = Size(1280, 800);
+const double _statusBar = 34;
+const double _gestureBar = 24;
 
 final Uri _relay = Uri.parse('https://relay.example');
 final String _pairing = _payload(1);
@@ -26,8 +36,20 @@ class _NoCameras extends CameraPlatform {
       const <CameraDescription>[];
 }
 
+class _StillMacCamera implements MacScannerCamera {
+  @override
+  Widget preview() => const SizedBox.expand();
+
+  @override
+  Future<void> start(ValueChanged<CameraImageData> onFrame) async {}
+
+  @override
+  Future<void> stop() async {}
+}
+
 class _FakeJoin {
   final List<String> codes = <String>[];
+  final List<Uri?> relays = <Uri?>[];
   final List<bool Function()> cancelSignals = <bool Function()>[];
   JournalConfirmation? confirmJournal;
   void Function(String comparison)? showComparison;
@@ -41,6 +63,7 @@ class _FakeJoin {
     void Function(String comparison)? onComparison,
   }) {
     codes.add(code);
+    relays.add(relayUrl);
     if (cancelled != null) {
       cancelSignals.add(cancelled);
     }
@@ -55,7 +78,20 @@ class _Opened {
   bool closed = false;
 }
 
+void _useSurface(WidgetTester tester) {
+  final bool phone = defaultTargetPlatform == TargetPlatform.android;
+  final FakeViewPadding bars = phone
+      ? const FakeViewPadding(top: _statusBar, bottom: _gestureBar)
+      : FakeViewPadding.zero;
+  tester.view.physicalSize = phone ? _phone : _mac;
+  tester.view.devicePixelRatio = 1;
+  tester.view.padding = bars;
+  tester.view.viewPadding = bars;
+  addTearDown(tester.view.reset);
+}
+
 Future<_Opened> _openFlow(WidgetTester tester, _FakeJoin join) async {
+  _useSurface(tester);
   final _Opened opened = _Opened();
   await tester.pumpWidget(
     ProviderScope(
@@ -65,8 +101,12 @@ Future<_Opened> _openFlow(WidgetTester tester, _FakeJoin join) async {
             onPressed: () async {
               opened.result = await Navigator.of(context).push<bool>(
                 MaterialPageRoute<bool>(
-                  builder: (BuildContext _) =>
-                      Scaffold(body: JoinJournalFlow(join: join.call)),
+                  builder: (BuildContext _) => Scaffold(
+                    body: JoinJournalFlow(
+                      join: join.call,
+                      macCamera: _StillMacCamera(),
+                    ),
+                  ),
                 ),
               );
               opened.closed = true;
@@ -226,6 +266,10 @@ void main() {
     expect(find.text(joinJournalTitle), findsOneWidget);
     expect(find.text(joinUnnamedJournalMessage(phone: false)), findsOneWidget);
     expect(find.text(joinJournalNameLabel), findsNothing);
+    expect(join.codes, <String>[
+      'abandon ability able about above absent absorb abstract',
+    ]);
+    expect(join.relays, <Uri?>[_relay]);
     await tester.tap(find.text(joinDeclineLabel));
     await tester.pump();
     expect(await asked, isFalse);
@@ -412,7 +456,7 @@ void main() {
     await tester.tap(find.byKey(typeWordsInsteadKey));
     await tester.pump();
     expect(find.byType(ReaderWidget), findsNothing);
-    expect(find.text(joinWordsLabel), findsOneWidget);
+    expect(find.text(joinTypeTitle), findsOneWidget);
 
     await tester.tap(find.text(joinBackLabel));
     await tester.pump();
@@ -426,6 +470,7 @@ void main() {
     await _openFlow(tester, join);
 
     await tester.enterText(find.byType(EditableText).first, _pairing);
+    await tester.pump();
     await tester.tap(find.byKey(joinConfirmKey));
     await tester.pump();
     expect(find.text(joinServerTitle(_relay)), findsOneWidget);
@@ -434,7 +479,8 @@ void main() {
 
     await tester.tap(find.text(joinDeclineLabel));
     await tester.pump();
-    expect(find.text(joinWordsLabel), findsOneWidget);
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text(joinTypeTitle), findsOneWidget);
 
     await tester.tap(find.byKey(joinConfirmKey));
     await tester.pump();
@@ -473,7 +519,8 @@ void main() {
     final _Opened opened = await _openFlow(tester, _FakeJoin());
 
     expect(find.byType(ReaderWidget), findsNothing);
-    expect(find.text(joinWordsLabel), findsOneWidget);
+    expect(find.byType(JoinWindow), findsOneWidget);
+    expect(find.text(joinTypeTitle), findsOneWidget);
     expect(find.text(joinBackLabel), findsNothing);
 
     await tester.tap(find.text(syncCancelLabel));
