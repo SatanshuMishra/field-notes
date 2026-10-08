@@ -24,6 +24,9 @@ private let windowButtonsLeading: CGFloat = 16
 private let windowChannelName = "field_notes/window"
 private let notificationSettingsChannelName = "field_notes/notification_settings"
 private let deviceStorageChannelName = "field_notes/device_storage"
+private let cameraSettingsChannelName = "field_notes/camera_settings"
+private let cameraPrivacySettingsURL =
+  "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
 private let notificationSettingsURLPrefix =
   "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id="
 
@@ -51,6 +54,7 @@ class MainFlutterWindow: NSWindow {
     self.registerWindowChannel(flutterViewController.engine.binaryMessenger)
     self.registerNotificationSettingsChannel(flutterViewController.engine.binaryMessenger)
     self.registerDeviceStorageChannel(flutterViewController.engine.binaryMessenger)
+    self.registerCameraSettingsChannel(flutterViewController.engine.binaryMessenger)
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
@@ -91,6 +95,22 @@ class MainFlutterWindow: NSWindow {
       switch call.method {
       case "open":
         result(MainFlutterWindow.openNotificationSettings())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private func registerCameraSettingsChannel(_ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: cameraSettingsChannelName,
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "openCameraSettings":
+        MainFlutterWindow.openCameraPrivacySettings()
+        result(nil)
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -147,6 +167,13 @@ class MainFlutterWindow: NSWindow {
       )
     }
     return nil
+  }
+
+  private static func openCameraPrivacySettings() {
+    guard let url = URL(string: cameraPrivacySettingsURL) else {
+      return
+    }
+    _ = NSWorkspace.shared.open(url)
   }
 
   private static func appearance(named id: String?) -> NSAppearance? {
