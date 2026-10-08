@@ -25,6 +25,8 @@ class _FakeWindowsCamera extends CameraPlatform {
   final List<String> stoppedTakes = <String>[];
   final List<String> stills = <String>[];
   bool holdInitialisation = false;
+  bool failStop = false;
+  bool lockVideos = false;
   int recordingStarts = 0;
   int stabilisationQueries = 0;
   int _written = 0;
@@ -126,8 +128,14 @@ class _FakeWindowsCamera extends CameraPlatform {
 
   @override
   Future<XFile> stopVideoRecording(int cameraId) async {
+    if (failStop) {
+      throw CameraException('stop', 'The camera went away.');
+    }
     final String take = _write(videos, 'mp4', _movieBytes);
     stoppedTakes.add(take);
+    if (lockVideos) {
+      Process.runSync('chmod', <String>['555', videos]);
+    }
     return XFile(take);
   }
 
@@ -229,6 +237,68 @@ void main() {
 
     await recorder.dispose();
   });
+
+  test(
+    'a Windows recording that fails to stop leaves no still in Pictures',
+    () async {
+      final _FakeWindowsCamera camera = installCamera(const <String>[
+        _usbCamera,
+      ]);
+      final CameraWindowsVideoRecorder recorder = await recordingRecorder(
+        Directory(p.join(root.path, 'Temp')),
+      );
+      camera.failStop = true;
+
+      await expectLater(
+        recorder.stop(),
+        throwsA(
+          isA<VideoRecorderException>().having(
+            (VideoRecorderException error) => error.message,
+            'message',
+            videoStopMessage,
+          ),
+        ),
+      );
+      expect(camera.stills, hasLength(1));
+      expect(File(camera.stills.single).existsSync(), isFalse);
+
+      await recorder.dispose();
+    },
+  );
+
+  test(
+    'a Windows recording that cannot leave the Videos folder is kept there',
+    () async {
+      final _FakeWindowsCamera camera = installCamera(const <String>[
+        _usbCamera,
+      ]);
+      final Directory temporary = Directory(p.join(root.path, 'Temp'));
+      final CameraWindowsVideoRecorder recorder = await recordingRecorder(
+        temporary,
+      );
+      camera.lockVideos = true;
+      addTearDown(
+        () => Process.runSync('chmod', <String>['755', camera.videos]),
+      );
+
+      final VideoRecording recording = await recorder.stop();
+      final File movie = _captureFile(recording.media);
+      final Directory captures = Directory(p.join(temporary.path, 'captures'));
+
+      expect(movie.path, camera.stoppedTakes.single);
+      expect(movie.readAsBytesSync(), _movieBytes);
+      expect(
+        captures
+            .listSync()
+            .map((FileSystemEntity entity) => p.basename(entity.path))
+            .where((String name) => name.endsWith('.mp4')),
+        isEmpty,
+      );
+      expect(p.dirname(_captureFile(recording.thumbnail).path), captures.path);
+
+      await recorder.dispose();
+    },
+  );
 
   test('each platform gets its own recorder', () {
     expect(
