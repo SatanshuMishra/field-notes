@@ -1,9 +1,21 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:drift/native.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/data/crypto/device_keys.dart';
+import 'package:field_notes/data/crypto/device_names.dart';
+import 'package:field_notes/data/crypto/journal_keys.dart';
+import 'package:field_notes/data/crypto/key_store.dart';
+import 'package:field_notes/data/database/app_database.dart';
 import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
+import 'package:field_notes/data/sync/relay_client.dart';
+import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
@@ -13,16 +25,21 @@ import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
+import 'package:field_notes/features/settings/widgets/settings_notice.dart';
 import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/sync/ui/device_list.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
+import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:sync_protocol/sync_protocol.dart';
 
 import '../../app/support/app_shell_harness.dart';
 import '../../support/sync_overrides.dart';
@@ -223,6 +240,123 @@ Future<void> _manage(WidgetTester tester) async {
   await tester.pumpAndSettle();
   await tester.tap(manage);
   await tester.pumpAndSettle();
+}
+
+final class _HeldRelay {
+  _HeldRelay({required this.now})
+    : journal = JournalKeys.generate(),
+      phone = DeviceKeys.generate(),
+      mac = DeviceKeys.generate(),
+      recoveryBox = DeviceKeys.generate().boxKeyPair.publicKey,
+      keyStore = KeyStore(MemorySecureValues()),
+      database = AppDatabase(NativeDatabase.memory()) {
+    _listed = <DeviceInfo>[
+      _info(phone, 'Field phone', now),
+      _info(mac, 'Studio Mac', now.subtract(const Duration(hours: 3))),
+    ];
+  }
+
+  final DateTime now;
+  final JournalKeys journal;
+  final DeviceKeys phone;
+  final DeviceKeys mac;
+  final Uint8List recoveryBox;
+  final KeyStore keyStore;
+  final AppDatabase database;
+  final Completer<void> release = Completer<void>();
+  late List<DeviceInfo> _listed;
+  bool removalPending = false;
+
+  Future<void> holdKeys() async {
+    await keyStore.writeDeviceKeys(phone);
+    await keyStore.writeJournalKeys(journal);
+  }
+
+  DeviceService service() => DeviceService(
+    database: database,
+    keyStore: keyStore,
+    client: RelayClient(
+      baseUrl: Uri.parse('https://sync.example.com'),
+      device: phone,
+      client: MockClient(_answer),
+    ),
+  );
+
+  DeviceInfo _info(DeviceKeys device, String name, DateTime seen) => DeviceInfo(
+    deviceId: device.deviceId,
+    signPublicKey: device.signKeyPair.publicKey,
+    boxPublicKey: device.boxKeyPair.publicKey,
+    certificate: device.certifyWith(journal),
+    encryptedName: sealDeviceName(name, device.deviceId, journal),
+    createdAt: now.subtract(const Duration(days: 30)),
+    lastSeenAt: seen,
+  );
+
+  bool _is(
+    http.Request request,
+    SyncRoute route, [
+    Map<String, Object> parameters = const <String, Object>{},
+  ]) =>
+      request.method == route.method &&
+      request.url.path == route.path(parameters);
+
+  http.Response _json(SyncMessage message) => http.Response(
+    jsonEncode(message.toJson()),
+    200,
+    headers: <String, String>{'content-type': 'application/json'},
+  );
+
+  Future<http.Response> _answer(http.Request request) async {
+    final DateTime later = DateTime.now().toUtc().add(const Duration(hours: 1));
+    if (_is(request, SyncRoutes.sessionChallenge)) {
+      return _json(
+        ChallengeResponse(
+          challengeId: 'challenge',
+          nonce: 'nonce',
+          expiresAt: later,
+        ),
+      );
+    }
+    if (_is(request, SyncRoutes.session)) {
+      return _json(
+        SessionResponse(
+          token: 'session',
+          expiresAt: later,
+          currentEpoch: journal.currentEpoch,
+          uploadPass: 'pass',
+          uploadPassExpiresAt: later,
+          generation: 'generation',
+        ),
+      );
+    }
+    if (_is(request, SyncRoutes.keys)) {
+      return _json(
+        EpochKeysResponse(
+          currentEpoch: journal.currentEpoch,
+          rotations: const <EpochRotation>[],
+          recoveryBoxPublicKey: recoveryBox,
+          recoveryBoxCertificate: certifyRecoveryKey(journal, recoveryBox),
+          devices: _listed,
+        ),
+      );
+    }
+    if (_is(request, SyncRoutes.devices)) {
+      return _json(DeviceListResponse(devices: _listed));
+    }
+    if (_is(request, SyncRoutes.removeDevice, <String, Object>{
+      SyncRoutes.deviceIdParameter: mac.deviceId,
+    })) {
+      removalPending = true;
+      await release.future;
+      _listed = <DeviceInfo>[
+        for (final DeviceInfo device in _listed)
+          if (device.deviceId != mac.deviceId) device,
+      ];
+      removalPending = false;
+      return http.Response('', 204);
+    }
+    return http.Response('', 404);
+  }
 }
 
 void main() {
@@ -456,5 +590,56 @@ void main() {
       find.widgetWithText(StickerButton, 'Delete journal everywhere'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('leaving Devices while a removal is pending still refreshes it', (
+    WidgetTester tester,
+  ) async {
+    final DateTime now = DateTime.now().toUtc();
+    final _HeldRelay relay = _HeldRelay(now: now);
+    addTearDown(relay.database.close);
+    await relay.holdKeys();
+    final Set<Object> real = <Object>{
+      deviceServiceProvider,
+      journalDevicesProvider,
+    };
+    await _pumpPhone(
+      tester,
+      sync: <Override>[
+        for (final Override override in syncOnOverrides(
+          status: SyncedStatus(now),
+        ))
+          if (!real.contains(override.origin)) override,
+        deviceServiceProvider.overrideWith((Ref ref) async => relay.service()),
+        journalDevicesProvider.overrideWith(journalDevices),
+      ],
+    );
+    await _open(tester, SettingsTab.syncStorage);
+    expect(find.text(deviceCountLabel(2)), findsOneWidget);
+    await _manage(tester);
+    expect(find.text('Studio Mac'), findsOneWidget);
+
+    await tester.tap(find.byKey(deviceRemoveKey(relay.mac.deviceId)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(confirmDialogConfirmKey));
+    await tester.pumpAndSettle();
+    expect(relay.removalPending, isTrue);
+
+    await tester.tap(_pill);
+    await tester.pumpAndSettle();
+    _expectPageHeading(tester, 'Sync & storage');
+
+    relay.release.complete();
+    await tester.pumpAndSettle();
+
+    expect(relay.removalPending, isFalse);
+    expect(find.text(removeDeviceFailedMessage), findsNothing);
+    expect(find.byType(SettingsNotice), findsNothing);
+    expect(find.text(deviceCountLabel(1)), findsOneWidget);
+
+    await _manage(tester);
+    _expectPageHeading(tester, devicesTitle);
+    expect(find.text('Field phone'), findsOneWidget);
+    expect(find.text('Studio Mac'), findsNothing);
   });
 }

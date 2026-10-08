@@ -75,9 +75,13 @@ class _DeviceListState extends ConsumerState<DeviceList> {
     if (!confirmed || !mounted) {
       return;
     }
+    final ProviderContainer container = ProviderScope.containerOf(
+      context,
+      listen: false,
+    );
     setState(() => _removing = device.deviceId);
     try {
-      final DeviceService? devices = await ref.read(
+      final DeviceService? devices = await container.read(
         deviceServiceProvider.future,
       );
       if (devices == null) {
@@ -85,7 +89,7 @@ class _DeviceListState extends ConsumerState<DeviceList> {
         return;
       }
       await devices.remove(device.deviceId);
-      ref.invalidate(journalDevicesProvider);
+      container.invalidate(journalDevicesProvider);
     } on RelayException catch (error) {
       widget.onFeedback(setupMessageFor(error));
     } on KeyAccessException {
@@ -93,7 +97,7 @@ class _DeviceListState extends ConsumerState<DeviceList> {
     } on LastDeviceException {
       widget.onFeedback(removeDeviceFailedMessage);
     } on ArgumentError {
-      ref.invalidate(journalDevicesProvider);
+      container.invalidate(journalDevicesProvider);
     } on StateError {
       widget.onFeedback(removeDeviceFailedMessage);
     } finally {
