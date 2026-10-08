@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_notes/domain/settings/appearance.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -30,5 +32,27 @@ Future<void> _invokeWindow(String method, [Object? arguments]) async {
     await windowChannel.invokeMethod<void>(method, arguments);
   } on MissingPluginException {
     return;
+  }
+}
+
+class WindowDragBand extends StatelessWidget {
+  const WindowDragBand({
+    super.key,
+    this.height = shellTitleBarHeight,
+    this.child,
+  });
+
+  final double height;
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      excludeFromSemantics: true,
+      onPanStart: (DragStartDetails _) => unawaited(startWindowDrag()),
+      onDoubleTap: () => unawaited(runTitlebarDoubleClick()),
+      child: SizedBox(width: double.infinity, height: height, child: child),
+    );
   }
 }
