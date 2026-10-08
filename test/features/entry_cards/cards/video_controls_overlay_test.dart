@@ -6,6 +6,7 @@ import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/features/entry_cards/cards/video_controls_overlay.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
+import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 
 import '../support/fake_video_player.dart';
 import '../support/video_card_harness.dart';
@@ -146,7 +147,7 @@ void main() {
   });
 
   group('VideoControlsOverlay on pointer', () {
-    testWidgets('hovering reveals the controls that three idle seconds hide', (
+    testWidgets('hovering reveals the controls that the idle delay hides', (
       WidgetTester tester,
     ) async {
       final SemanticsHandle handle = tester.ensureSemantics();
@@ -179,15 +180,15 @@ void main() {
 
         expect(_reachable(_pauseLabel), findsNothing);
 
-        await tester.tapAt(tester.getCenter(inCard(0, videoMuteToggleKey)));
+        await tester.tapAt(tester.getCenter(inCard(0, videoScrubBarKey)));
         await _settleFade(tester);
 
-        expect(built.single.volumeCalls, isEmpty);
+        expect(built.single.seekCalls, isEmpty);
 
-        await tester.tap(inCard(0, videoMuteToggleKey));
+        await tester.tap(inCard(0, videoScrubBarKey));
         await tester.pump();
 
-        expect(built.single.volumeCalls, <double>[0.0]);
+        expect(built.single.seekCalls, hasLength(1));
       } finally {
         handle.dispose();
       }
@@ -215,6 +216,46 @@ void main() {
       } finally {
         handle.dispose();
       }
+    }, variant: useTargetPlatform(TargetPlatform.macOS));
+  });
+
+  group('VideoControlsOverlay before first play', () {
+    testWidgets("a click on a waiting video's surface calls onToggle", (
+      WidgetTester tester,
+    ) async {
+      final RecordingVideoSlots slots = recordingSlotsWithCapOf(1);
+      final List<FakeEntryVideoPlayer> built = <FakeEntryVideoPlayer>[];
+      await tester.pumpWidget(
+        videoCardColumn(
+          resolver: videoResolverFor(
+            videoFixtureFile(),
+            poster: posterFixtureFile(),
+          ),
+          playerFactory: videoFactoryInto(built),
+          slots: slots,
+          indices: <int>[0],
+          thumbnailMediaId: 'thumb',
+        ),
+      );
+      await tester.pump();
+
+      expect(slots.acquireCalls, isEmpty);
+      expect(built, isEmpty);
+
+      final TestGesture mouse = await _mouseOutsideTheCard(tester);
+      final Offset surface = videoSurfacePoint(tester, 0);
+      await mouse.moveTo(surface);
+      await mouse.down(surface);
+      await mouse.up();
+      await tester.pump();
+      await tester.pump();
+
+      expect(
+        slots.acquireCalls,
+        <VideoSlotEvictionRights>[VideoSlotEvictionRights.evictUnpinned],
+      );
+      expect(built, hasLength(1));
+      expect(built.single.playCalls, 1);
     }, variant: useTargetPlatform(TargetPlatform.macOS));
   });
 

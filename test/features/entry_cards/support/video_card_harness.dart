@@ -5,23 +5,28 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
+import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
+import 'package:field_notes/features/entry_cards/cards/video_transport.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
+import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 
 import 'entry_cards_harness.dart';
 import 'fake_video_player.dart';
 
-const ValueKey<String> videoPlayToggleKey =
-    ValueKey<String>('video-play-toggle');
-const ValueKey<String> videoMuteToggleKey =
-    ValueKey<String>('video-mute-toggle');
+const ValueKey<String> videoPlayToggleKey = ValueKey<String>(
+  'video-play-toggle',
+);
 const ValueKey<String> videoScrubBarKey = ValueKey<String>('video-scrub-bar');
-const ValueKey<String> videoSurfaceKey =
-    ValueKey<String>('fake-video-surface');
-const ValueKey<String> videoSurfaceTapKey =
-    ValueKey<String>('video-surface-tap');
+const ValueKey<String> videoSurfaceKey = ValueKey<String>('fake-video-surface');
+const ValueKey<String> videoSurfaceTapKey = ValueKey<String>(
+  'video-surface-tap',
+);
 const ValueKey<String> mediaRetryKey = ValueKey<String>('media-retry');
+
+const double videoTestControlSize = 48;
+const double _videoTestControlInset = 8;
 
 const Duration videoLoadTimeout = Duration(milliseconds: 100);
 const List<Duration> videoBackoff = <Duration>[
@@ -31,7 +36,10 @@ const List<Duration> videoBackoff = <Duration>[
 const Duration pastFirstBackoff = Duration(milliseconds: 15);
 const Duration pastAllBackoff = Duration(milliseconds: 200);
 
-typedef VideoPlayerSetup = void Function(FakeEntryVideoPlayer player, int index);
+typedef VideoPlayerSetup = void Function(
+  FakeEntryVideoPlayer player,
+  int index,
+);
 
 File videoFixtureFile({String prefix = 'video_card', int bytes = 8}) {
   final Directory dir = Directory.systemTemp.createTempSync(prefix);
@@ -152,6 +160,82 @@ Offset videoSurfacePoint(WidgetTester tester, int index) =>
 Offset videoPointClearOfTheCard(WidgetTester tester, int index) =>
     tester.getRect(cardAt(index)).bottomRight + const Offset(40, 40);
 
+Widget videoTestControls(BuildContext context, VideoControlsState state) {
+  return Align(
+    alignment: Alignment.bottomCenter,
+    child: Padding(
+      padding: const EdgeInsets.all(_videoTestControlInset),
+      child: Row(
+        children: <Widget>[
+          _VideoTestButton(
+            buttonKey: videoPlayToggleKey,
+            label: state.isPlaying ? 'Pause video' : 'Play video',
+            hint: state.busy ? videoTransportBusyHint : null,
+            onTap: state.onToggle,
+          ),
+          Expanded(
+            child: VideoScrubber(
+              position: state.position,
+              total: state.total,
+              onSeek: state.onSeek,
+              onScrubUpdate: state.onScrubUpdate,
+              onScrubEnd: state.onScrubEnd,
+            ),
+          ),
+          Text(
+            '${formatMediaDuration(state.position.inMilliseconds)}'
+            ' / ${formatMediaDuration(state.total?.inMilliseconds)}',
+            maxLines: 1,
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _VideoTestButton extends StatelessWidget {
+  const _VideoTestButton({
+    required this.buttonKey,
+    required this.label,
+    required this.onTap,
+    this.hint,
+  });
+
+  final Key buttonKey;
+  final String label;
+  final String? hint;
+  final VoidCallback? onTap;
+
+  Object? _activate(ActivateIntent intent) {
+    onTap?.call();
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onTap != null;
+    return FocusableActionDetector(
+      enabled: enabled,
+      actions: <Type, Action<Intent>>{
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: _activate),
+      },
+      child: Semantics(
+        container: true,
+        button: true,
+        enabled: enabled,
+        label: label,
+        hint: hint,
+        child: GestureDetector(
+          key: buttonKey,
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: const SizedBox.square(dimension: videoTestControlSize),
+        ),
+      ),
+    );
+  }
+}
+
 Widget videoCardColumn({
   required MediaResolver resolver,
   required EntryVideoPlayerFactory playerFactory,
@@ -180,6 +264,7 @@ Widget videoCardColumn({
               resolver: resolver,
               playerFactory: playerFactory,
               slots: slots,
+              controls: videoTestControls,
               loadTimeout: videoLoadTimeout,
               retryBackoff: videoBackoff,
             ),
@@ -198,7 +283,15 @@ bool tapEnabled(WidgetTester tester, Finder finder) =>
     tester.widget<GestureDetector>(finder).onTap != null;
 
 bool readyControlsEnabled(WidgetTester tester, int index) =>
-    tapEnabled(tester, inCard(index, videoMuteToggleKey));
+    tester
+        .widget<VideoScrubber>(
+          find.descendant(
+            of: cardAt(index),
+            matching: find.byType(VideoScrubber),
+          ),
+        )
+        .onSeek !=
+    null;
 
 bool surfaceMounted(WidgetTester tester, int index) =>
     inCard(index, videoSurfaceKey).evaluate().isNotEmpty;

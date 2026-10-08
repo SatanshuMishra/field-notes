@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/cards/video_body.dart';
+import 'package:field_notes/features/entry_cards/cards/video_scrubber.dart';
 import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
@@ -13,9 +14,9 @@ import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 
 import '../support/entry_cards_harness.dart';
 import '../support/fake_video_player.dart';
+import '../support/video_card_harness.dart';
 
 const ValueKey<String> _playToggle = ValueKey<String>('video-play-toggle');
-const ValueKey<String> _muteToggle = ValueKey<String>('video-mute-toggle');
 const ValueKey<String> _retryButton = ValueKey<String>('media-retry');
 const ValueKey<String> _surface = ValueKey<String>('fake-video-surface');
 
@@ -81,11 +82,15 @@ Widget _card({
       resolver: resolver,
       playerFactory: playerFactory,
       slots: slots,
+      controls: videoTestControls,
       loadTimeout: _loadTimeout,
       retryBackoff: _backoff,
     ),
   );
 }
+
+bool _seekEnabled(WidgetTester tester) =>
+    tester.widget<VideoScrubber>(find.byType(VideoScrubber)).onSeek != null;
 
 bool _enabled(WidgetTester tester, ValueKey<String> key) =>
     tester.widget<GestureDetector>(find.byKey(key)).onTap != null;
@@ -129,7 +134,7 @@ void main() {
       expect(find.byKey(_surface), findsNothing);
       expect(find.text(_busyNotice), findsNothing);
       expect(_enabled(tester, _playToggle), isTrue);
-      expect(_enabled(tester, _muteToggle), isFalse);
+      expect(_seekEnabled(tester), isFalse);
 
       await tester.tap(find.byKey(_playToggle));
       await tester.pump();
@@ -341,7 +346,7 @@ void main() {
       expect(find.byKey(_surface), findsNothing);
       expect(built.single.disposeCalls, 1);
       expect(_enabled(tester, _playToggle), isTrue);
-      expect(_enabled(tester, _muteToggle), isFalse);
+      expect(_seekEnabled(tester), isFalse);
     });
 
     testWidgets('reaching ready restores the full retry budget', (

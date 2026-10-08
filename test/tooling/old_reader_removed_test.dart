@@ -261,7 +261,7 @@ void main() {
         if (_directiveUri(line) != null && line.trimLeft().startsWith('export'))
           _directiveUri(line)!,
     ];
-    expect(entryCardExports, hasLength(17));
+    expect(entryCardExports, hasLength(19));
     expect(
       entryCardExports.where((String uri) => uri.startsWith('notes/')),
       isEmpty,

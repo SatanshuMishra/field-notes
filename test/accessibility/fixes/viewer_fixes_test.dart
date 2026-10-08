@@ -45,9 +45,6 @@ List<SemanticsNode> _nodes(
 
 bool _atLeast48(Size size) => size.width >= 47.99 && size.height >= 47.99;
 
-const String _logSheetScrim =
-    'missing-role | d4-viewer-video | Dismiss log viewer | <root>';
-
 void main() {
   testWidgets('the viewer steps can be pressed and are 48 dp', (
     WidgetTester tester,
@@ -119,13 +116,11 @@ void main() {
     expect(
       ids.where(
         (String id) =>
-            (id.startsWith('missing-role | ') ||
-                id.startsWith('unlabelled-tap | ')) &&
-            id != _logSheetScrim,
+            id.startsWith('missing-role | ') ||
+            id.startsWith('unlabelled-tap | '),
       ),
       isEmpty,
       reason: '$ids',
     );
-    expect(ids, contains(_logSheetScrim));
   });
 }

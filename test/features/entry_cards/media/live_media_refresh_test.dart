@@ -15,6 +15,7 @@ import 'package:field_notes/features/day_detail/day_detail_providers.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/entry_cards/media/syncing_media_resolver.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
+import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/notes/notes_providers.dart';
 import 'package:field_notes/features/today/today_entry_feed.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -35,6 +36,7 @@ import '../../today/support/today_harness.dart';
 const String _date = '2026-07-19';
 const String _voiceUnavailable = "Can't play this recording";
 const String _videoUnavailable = "Can't play this video";
+const Duration _viewerEntrance = Duration(milliseconds: 400);
 
 Future<void> _settle(WidgetTester tester) async {
   for (int round = 0; round < 8; round++) {
@@ -190,8 +192,12 @@ Future<void> _openViewer(
         entriesForDateProvider.overrideWith(
           (Ref ref, String date) => Stream<List<Entry>>.value(<Entry>[entry]),
         ),
+        dayForDateProvider.overrideWith(
+          (Ref ref, String date) => Stream<Day?>.value(null),
+        ),
         notesMediaResolverProvider.overrideWith((Ref ref) async => resolver),
         videoSlotsProvider.overrideWithValue(const UnlimitedVideoSlots()),
+        videoAspectProvider.overrideWith((Ref ref, String mediaId) => null),
         todayVideoPlayerFactoryProvider.overrideWithValue(() => player),
         todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 22)),
       ],
@@ -202,6 +208,8 @@ Future<void> _openViewer(
     ),
   );
   await tester.tap(find.text('open log'));
+  await tester.pump();
+  await tester.pump(_viewerEntrance);
   await _settle(tester);
 }
 

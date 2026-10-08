@@ -9,7 +9,7 @@ import 'package:field_notes/data/drafts/draft_paths.dart';
 import 'package:field_notes/data/journal/day_ids.dart';
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
-import 'package:field_notes/data/media/media_duration.dart';
+import 'package:field_notes/data/media/media_probe.dart';
 import 'package:field_notes/data/settings/settings_keys.dart';
 import 'package:field_notes/data/sync/change_recorder.dart';
 import 'package:field_notes/data/sync/engine/sync_engine.dart';
@@ -87,14 +87,14 @@ const List<String> _vocabulary = <String>[
   'estuary',
 ];
 
-final class SilentDurationProbe implements MediaDurationProbe {
-  const SilentDurationProbe();
+final class SilentMediaProbe implements MediaProbe {
+  const SilentMediaProbe();
 
   @override
-  Future<Duration?> duration({
+  Future<MediaMeasure?> measure({
     required File file,
     required domain.MediaKind kind,
-  }) => Future<Duration?>.value();
+  }) => Future<MediaMeasure?>.value();
 }
 
 final class SimulatedPhoto {
@@ -184,9 +184,7 @@ final class SimulatedDevice {
           (Ref ref) async => Directory(p.join(root.path, draftsSubdir)),
         ),
         backgroundTransferProvider.overrideWith((Ref ref) async => null),
-        mediaDurationProbeProvider.overrideWithValue(
-          const SilentDurationProbe(),
-        ),
+        mediaProbeProvider.overrideWithValue(const SilentMediaProbe()),
       ],
     );
     final SimulatedDevice device = SimulatedDevice._(

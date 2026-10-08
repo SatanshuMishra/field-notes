@@ -118,20 +118,27 @@ void main() {
     expect(offences, isEmpty, reason: offences.join('\n'));
   });
 
-  test('lib/domain/notes holds only the barrel and the plain text', () {
-    final List<String> direct = <String>[
-      for (final FileSystemEntity entity in Directory(
-        'lib/domain/notes',
-      ).listSync())
-        if (entity is File && entity.path.endsWith('.dart'))
-          p.basename(entity.path),
-    ]..sort();
-    expect(direct, <String>['note_plain_text.dart', 'notes.dart']);
-    expect(
-      File('test/domain/notes/note_fuzz_corpus.dart').existsSync(),
-      isTrue,
-    );
-  });
+  test(
+    'lib/domain/notes holds only the barrel, the plain text and the photos',
+    () {
+      final List<String> direct = <String>[
+        for (final FileSystemEntity entity in Directory(
+          'lib/domain/notes',
+        ).listSync())
+          if (entity is File && entity.path.endsWith('.dart'))
+            p.basename(entity.path),
+      ]..sort();
+      expect(direct, <String>[
+        'note_photos.dart',
+        'note_plain_text.dart',
+        'notes.dart',
+      ]);
+      expect(
+        File('test/domain/notes/note_fuzz_corpus.dart').existsSync(),
+        isTrue,
+      );
+    },
+  );
 
   test('notes.dart reaches the grammar and the plain text', () {
     expect(parseNoteTree('# a').blocks.single.kind, MdBlockKind.heading);

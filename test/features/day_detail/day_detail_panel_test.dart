@@ -78,8 +78,9 @@ FakeJournalRepository _twoNotes() => FakeJournalRepository(
 );
 
 void main() {
-  testWidgets('a revealed day pill lies inside every reading-order frame',
-      (WidgetTester tester) async {
+  testWidgets('a revealed day pill lies inside every reading-order frame', (
+    WidgetTester tester,
+  ) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
     await tester.pumpWidget(_panelApp(_twoNotes()));
     await tester.pumpAndSettle();
@@ -92,8 +93,9 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('day cards keep their list positions for screen readers',
-      (WidgetTester tester) async {
+  testWidgets('day cards keep their list positions for screen readers', (
+    WidgetTester tester,
+  ) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
     await tester.pumpWidget(_panelApp(_twoNotes()));
     await tester.pumpAndSettle();
@@ -102,8 +104,9 @@ void main() {
     semantics.dispose();
   });
 
-  testWidgets('renders the day heading, mood prompt, count and entries',
-      (WidgetTester tester) async {
+  testWidgets('renders the day heading, mood prompt, count and entries', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(id: 'entry-1', type: EntryType.text, textContent: 'a good day'),
@@ -134,8 +137,9 @@ void main() {
     );
   });
 
-  testWidgets('shows the dashed empty state when the day has no entries',
-      (WidgetTester tester) async {
+  testWidgets('shows the dashed empty state when the day has no entries', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_panelApp(FakeJournalRepository()));
     await tester.pumpAndSettle();
 
@@ -144,8 +148,9 @@ void main() {
     expect(find.text(dayDetailEmptyMessage), findsOneWidget);
   });
 
-  testWidgets('tapping add a note opens the note composer',
-      (WidgetTester tester) async {
+  testWidgets('tapping add a note opens the note composer', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(_panelApp(FakeJournalRepository()));
     await tester.pumpAndSettle();
 
@@ -157,8 +162,9 @@ void main() {
     expect(find.text('Sunday, July 19'), findsWidgets);
   });
 
-  testWidgets('tapping edit opens the note editor prefilled',
-      (WidgetTester tester) async {
+  testWidgets('tapping edit opens the note editor prefilled', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(type: EntryType.text, textContent: 'a good day'),
@@ -183,8 +189,9 @@ void main() {
     expect(NoteEditorDriver(tester).source, 'a good day');
   });
 
-  testWidgets('deleting an entry soft-deletes it and updates the list',
-      (WidgetTester tester) async {
+  testWidgets('deleting an entry soft-deletes it and updates the list', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(type: EntryType.text, textContent: 'a good day'),
@@ -209,8 +216,9 @@ void main() {
     await _drainToast(tester);
   });
 
-  testWidgets('a delete rebuilds the surviving tiles by id, not by position',
-      (WidgetTester tester) async {
+  testWidgets('a delete rebuilds the surviving tiles by id, not by position', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(id: 'entry-1', type: EntryType.text, textContent: 'a good day'),
@@ -252,8 +260,9 @@ void main() {
     await _drainToast(tester);
   });
 
-  testWidgets('surfaces a non-destructive message when the delete fails',
-      (WidgetTester tester) async {
+  testWidgets('surfaces a non-destructive message when the delete fails', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(type: EntryType.text, textContent: 'a good day'),
@@ -276,8 +285,9 @@ void main() {
     );
   });
 
-  testWidgets('surfaces a load error and never claims the day is empty',
-      (WidgetTester tester) async {
+  testWidgets('surfaces a load error and never claims the day is empty', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entriesError: Exception('database unavailable'),
     );
@@ -292,8 +302,9 @@ void main() {
     expect(find.text('0 logs that day'), findsNothing);
   });
 
-  testWidgets('surfaces a media error instead of mounting unplayable tiles',
-      (WidgetTester tester) async {
+  testWidgets('surfaces a media error instead of mounting unplayable tiles', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(type: EntryType.text, textContent: 'a good day'),
@@ -322,8 +333,9 @@ void main() {
     expect(find.text('Sunday, July 19'), findsOneWidget);
   });
 
-  testWidgets('builds only a bounded subset of tiles for a large day',
-      (WidgetTester tester) async {
+  testWidgets('builds only a bounded subset of tiles for a large day', (
+    WidgetTester tester,
+  ) async {
     const int entryCount = 40;
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
@@ -347,18 +359,28 @@ void main() {
     expect(builtTiles, lessThan(entryCount));
   });
 
-  testWidgets('the panel is capped at 560 wide and 86 percent tall',
-      (WidgetTester tester) async {
-    await tester.pumpWidget(_panelApp(FakeJournalRepository()));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'the panel is the window less a 24 gutter, capped at 1060 by 660',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(_panelApp(FakeJournalRepository()));
+      await tester.pumpAndSettle();
 
-    expect(dayDetailPanelMaxWidth, 560);
-    expect(tester.getSize(_panelCard()).width, 560);
-    expect(tester.getSize(_panelCard()).height, lessThanOrEqualTo(600 * 0.86));
-  });
+      expect(dayDetailPanelMaxWidth, 1060);
+      expect(dayDetailPanelMaxHeight, 660);
+      expect(tester.getSize(_panelCard()), const Size(800 - 48, 600 - 48));
 
-  testWidgets('a narrow window leaves a 16 gutter either side of the panel',
-      (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpAndSettle();
+
+      expect(tester.getSize(_panelCard()), const Size(1060, 660));
+    },
+  );
+
+  testWidgets('a narrow window leaves a 24 gutter either side of the panel', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 700);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -366,11 +388,12 @@ void main() {
     await tester.pumpWidget(_panelApp(FakeJournalRepository()));
     await tester.pumpAndSettle();
 
-    expect(tester.getSize(_panelCard()).width, 400 - 32);
+    expect(tester.getSize(_panelCard()).width, 400 - 48);
   });
 
-  testWidgets('a long day fills 86 percent of the window',
-      (WidgetTester tester) async {
+  testWidgets('a long day keeps the panel at its full height', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -389,12 +412,13 @@ void main() {
     await tester.pumpAndSettle();
 
     final Size panel = tester.getSize(_panelCard());
-    expect(panel.height, closeTo(900 * dayDetailPanelHeightShare, 0.01));
-    expect(panel.height, greaterThan(520));
+    expect(panel.height, dayDetailPanelMaxHeight);
+    expect(panel.width, 800 - 48);
   });
 
-  testWidgets('a day-detail card reads in the padded column of the panel',
-      (WidgetTester tester) async {
+  testWidgets('a day-detail card reads in the padded column of the list pane', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(type: EntryType.text, textContent: 'a good day'),
@@ -405,8 +429,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final Rect panel = tester.getRect(_panelCard());
+    final Rect list = tester.getRect(find.byKey(dayDetailListPaneKey));
     final Rect card = tester.getRect(find.byType(CompactLogCard));
-    expect(card.width, 560 - 2 * 2 - 2 * 18);
+    expect(list.width, dayDetailListMinWidth);
+    expect(list.left, panel.left + 2);
+    expect(card.width, dayDetailListMinWidth - 2 * 18);
     expect(card.left, panel.left + 2 + 18);
     expect(
       tester.widget<CompactLogCard>(find.byType(CompactLogCard)).density,
@@ -414,8 +441,9 @@ void main() {
     );
   });
 
-  testWidgets('a one-entry day keeps the body shrink-wrapped to its content',
-      (WidgetTester tester) async {
+  testWidgets('a one-entry day lists its card at the top of the list pane', (
+    WidgetTester tester,
+  ) async {
     final FakeJournalRepository repository = FakeJournalRepository(
       entries: <Entry>[
         entryOf(id: 'entry-1', type: EntryType.text, textContent: 'a good day'),
@@ -425,24 +453,22 @@ void main() {
     await tester.pumpWidget(_panelApp(repository));
     await tester.pumpAndSettle();
 
-    final double bodyBottom = tester.getBottomLeft(find.byType(ListView)).dy;
+    final double listBottom = tester
+        .getBottomLeft(find.byKey(dayDetailListPaneKey))
+        .dy;
     final double cardBottom = tester
         .getBottomLeft(find.byKey(const ValueKey<String>('entry-1')))
         .dy;
-    expect(bodyBottom, cardBottom + 20);
-    expect(
-      tester.getSize(_panelCard()).height,
-      lessThan(600 * dayDetailPanelHeightShare),
-    );
+    expect(cardBottom + 20, lessThan(listBottom));
+    expect(tester.getSize(_panelCard()).height, 600 - 48);
   });
 
-  testWidgets('a long note reads as a compact lead with a Read link',
-      (WidgetTester tester) async {
+  testWidgets('a long note reads as a compact lead with a Read link', (
+    WidgetTester tester,
+  ) async {
     final String note = _longNote(0);
     final FakeJournalRepository repository = FakeJournalRepository(
-      entries: <Entry>[
-        entryOf(type: EntryType.text, textContent: note),
-      ],
+      entries: <Entry>[entryOf(type: EntryType.text, textContent: note)],
     );
 
     await tester.pumpWidget(_panelApp(repository));
@@ -450,14 +476,17 @@ void main() {
 
     expect(find.byType(CompactLogCard), findsOneWidget);
     expect(find.byKey(compactLogOpenLabelKey), findsOneWidget);
-    expect(find.text('journal note number 0 word0 word1 word2 word3 word4…'),
-        findsNothing);
+    expect(
+      find.text('journal note number 0 word0 word1 word2 word3 word4…'),
+      findsNothing,
+    );
     expect(find.byType(NoteBody), findsNothing);
     expect(find.textContaining('word60'), findsNothing);
   });
 
-  testWidgets('the header stays fixed while the body scrolls',
-      (WidgetTester tester) async {
+  testWidgets('the header stays fixed while the body scrolls', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -483,8 +512,9 @@ void main() {
     expect(find.byKey(const ValueKey<String>('entry-0')), findsNothing);
   });
 
-  testWidgets('opening with focusEntryId scrolls that entry into view',
-      (WidgetTester tester) async {
+  testWidgets('opening with focusEntryId scrolls that entry into view', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -500,9 +530,7 @@ void main() {
       ],
     );
 
-    await tester.pumpWidget(
-      _panelApp(repository, focusEntryId: focused),
-    );
+    await tester.pumpWidget(_panelApp(repository, focusEntryId: focused));
     await tester.pumpAndSettle();
 
     final Finder tile = find.byKey(const ValueKey<String>(focused));
@@ -513,8 +541,9 @@ void main() {
     expect(tileRect.bottom, lessThanOrEqualTo(listRect.bottom + 1));
   });
 
-  testWidgets('opening without focusEntryId stays at the top of the day',
-      (WidgetTester tester) async {
+  testWidgets('opening without focusEntryId stays at the top of the day', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(800, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -537,32 +566,33 @@ void main() {
   });
 
   testWidgets(
-      'scrolling a day of 40 notes sends no accessibility update macOS rejects',
-      (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(800, 900);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-    final FakeJournalRepository repository = FakeJournalRepository(
-      entries: <Entry>[
-        for (int i = 0; i < 40; i++)
-          entryOf(
-            id: 'entry-$i',
-            type: EntryType.text,
-            textContent: 'journal note number $i for the day',
-          ),
-      ],
-    );
-    AxUpdateChecker.instance.reset();
-    final SemanticsHandle semantics = tester.ensureSemantics();
-    await tester.pumpWidget(_panelApp(repository));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView), const Offset(0, -400));
-    await tester.pumpAndSettle();
-    await tester.drag(find.byType(ListView), const Offset(0, 400));
-    await tester.pumpAndSettle();
+    'scrolling a day of 40 notes sends no accessibility update macOS rejects',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final FakeJournalRepository repository = FakeJournalRepository(
+        entries: <Entry>[
+          for (int i = 0; i < 40; i++)
+            entryOf(
+              id: 'entry-$i',
+              type: EntryType.text,
+              textContent: 'journal note number $i for the day',
+            ),
+        ],
+      );
+      AxUpdateChecker.instance.reset();
+      final SemanticsHandle semantics = tester.ensureSemantics();
+      await tester.pumpWidget(_panelApp(repository));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView), const Offset(0, 400));
+      await tester.pumpAndSettle();
 
-    expect(AxUpdateChecker.instance.updates, greaterThan(0));
-    expect(AxUpdateChecker.instance.rejections, isEmpty);
-    semantics.dispose();
-  });
+      expect(AxUpdateChecker.instance.updates, greaterThan(0));
+      expect(AxUpdateChecker.instance.rejections, isEmpty);
+      semantics.dispose();
+    },
+  );
 }

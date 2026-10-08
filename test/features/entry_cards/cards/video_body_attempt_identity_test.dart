@@ -17,7 +17,6 @@ class TracedVideoPlayer extends FakeEntryVideoPlayer {
   final int id;
   Completer<void>? seekGate;
   Completer<void>? playGate;
-  Completer<void>? volumeGate;
   Object? playError;
 
   ValueKey<String> get identityKey => ValueKey<String>('traced-player-$id');
@@ -44,12 +43,6 @@ class TracedVideoPlayer extends FakeEntryVideoPlayer {
       throw error;
     }
     await super.play();
-  }
-
-  @override
-  Future<void> setVolume(double volume) async {
-    await _passGate(volumeGate);
-    await super.setVolume(volume);
   }
 
   Future<void> _passGate(Completer<void>? gate) async {
@@ -100,11 +93,6 @@ TracedVideoPlayer playerRenderedIn(
   }
   fail('no video surface is mounted in card $card');
 }
-
-Finder semanticsIn(int card, String label) => find.descendant(
-      of: cardAt(card),
-      matching: find.bySemanticsLabel(label),
-    );
 
 void main() {
   group('VideoBody attempt identity across awaits', () {
@@ -235,105 +223,6 @@ void main() {
       expect(readyControlsEnabled(tester, 0), isTrue);
       expect(built, hasLength(4));
       expect(find.byType(CorruptMediaPlaceholder), findsNothing);
-    });
-
-    testWidgets('a reloaded card mutes the player the user muted', (
-      WidgetTester tester,
-    ) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      final LruVideoSlots slots = slotsWithCapOf(1);
-      final List<TracedVideoPlayer> built = <TracedVideoPlayer>[];
-
-      await tester.pumpWidget(
-        videoCardColumn(
-          resolver: videoResolverFor(videoFixtureFile()),
-          playerFactory: tracedFactoryInto(built),
-          slots: slots,
-          indices: <int>[0, 1],
-        ),
-      );
-      await tester.pump();
-
-      await tester.tap(inCard(0, videoMuteToggleKey));
-      await tester.pump();
-
-      expect(built[0].volumeCalls, <double>[0.0]);
-      expect(semanticsIn(0, 'Unmute video'), findsOneWidget);
-
-      await tester.tap(inCard(1, videoPlayToggleKey));
-      await tester.pump();
-      await tester.pump();
-
-      expect(built, hasLength(2));
-      expect(surfaceMounted(tester, 0), isFalse);
-
-      built[1].emitState(VideoPlaybackState.paused);
-      await tester.pump();
-
-      await tester.tap(inCard(0, videoPlayToggleKey));
-      await tester.pump();
-      await tester.pump();
-
-      final TracedVideoPlayer live = playerRenderedIn(tester, built, 0);
-      expect(live.volumeCalls, <double>[0.0]);
-      expect(live.playCalls, 1);
-      expect(semanticsIn(0, 'Unmute video'), findsOneWidget);
-      expect(semanticsIn(0, 'Mute video'), findsNothing);
-      handle.dispose();
-    });
-
-    testWidgets('a mute resolving after an eviction never paints a false mute',
-        (WidgetTester tester) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      final LruVideoSlots slots = slotsWithCapOf(1);
-      final Completer<void> volumeGate = releasableGate();
-      final List<TracedVideoPlayer> built = <TracedVideoPlayer>[];
-
-      await tester.pumpWidget(
-        videoCardColumn(
-          resolver: videoResolverFor(videoFixtureFile()),
-          playerFactory: tracedFactoryInto(
-            built,
-            setUpPlayer: (TracedVideoPlayer player, int index) {
-              if (index == 0) {
-                player.volumeGate = volumeGate;
-              }
-            },
-          ),
-          slots: slots,
-          indices: <int>[0, 1],
-        ),
-      );
-      await tester.pump();
-
-      await tester.tap(inCard(0, videoMuteToggleKey));
-      await tester.pump();
-
-      expect(built[0].volumeCalls, isEmpty);
-
-      await tester.tap(inCard(1, videoPlayToggleKey));
-      await tester.pump();
-      await tester.pump();
-
-      expect(built, hasLength(2));
-
-      built[1].emitState(VideoPlaybackState.paused);
-      await tester.pump();
-
-      await tester.tap(inCard(0, videoPlayToggleKey));
-      await tester.pump();
-      await tester.pump();
-
-      final TracedVideoPlayer live = playerRenderedIn(tester, built, 0);
-
-      volumeGate.complete();
-      await tester.pump();
-      await tester.pump();
-
-      expect(semanticsIn(0, 'Unmute video'), findsNothing);
-      expect(semanticsIn(0, 'Mute video'), findsOneWidget);
-      expect(live.volumeCalls, isEmpty);
-      handle.dispose();
     });
   });
 }

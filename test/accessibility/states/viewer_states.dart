@@ -18,6 +18,9 @@ import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
+import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
+import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/mood/mood_banner.dart';
 import 'package:field_notes/features/mood/mood_banner_for_date.dart';
 import 'package:field_notes/features/mood/mood_picker_sheet.dart';
@@ -171,6 +174,7 @@ Future<void> _openViewerAmong(
           FakeEntryVideoPlayer.new,
         ),
         videoSlotsProvider.overrideWithValue(slots),
+        videoAspectProvider.overrideWith((Ref ref, String mediaId) => null),
         todayClockProvider.overrideWithValue(() => _now),
       ],
       child: MaterialApp(
@@ -325,6 +329,9 @@ final Finder _logSheet = find.descendant(
   matching: find.byType(PhoneSheet),
 );
 
+Finder _inViewer(Finder matching) =>
+    find.descendant(of: find.byType(LogViewerPanel), matching: matching);
+
 final Finder _daySheet = find.descendant(
   of: find.byType(DayDetailPanel),
   matching: find.byType(PhoneSheet),
@@ -374,7 +381,10 @@ final List<A11yState> viewerStates = <A11yState>[
         ),
       }),
     ),
-    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.byType(VoiceBody))],
+    proof: <A11yProof>[
+      A11yProof(_inViewer(find.byType(VoicePlayerView))),
+      A11yProof(find.byType(ViewerWaveform)),
+    ],
   ),
   A11yState(
     id: 'd4-viewer-video',
@@ -394,7 +404,10 @@ final List<A11yState> viewerStates = <A11yState>[
         ),
       }),
     ),
-    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.byType(VideoBody))],
+    proof: <A11yProof>[
+      A11yProof(_inViewer(find.byType(VideoViewerView))),
+      A11yProof(find.byType(VideoBody)),
+    ],
   ),
   A11yState(
     id: 'd5-reader-menu',

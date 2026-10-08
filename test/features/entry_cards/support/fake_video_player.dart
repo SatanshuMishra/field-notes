@@ -12,7 +12,6 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
 
   final List<String> loadCalls = <String>[];
   final List<Duration> seekCalls = <Duration>[];
-  final List<double> volumeCalls = <double>[];
   int playCalls = 0;
   int pauseCalls = 0;
   int disposeCalls = 0;
@@ -63,20 +62,20 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
   }
 
   @override
-  Future<void> setVolume(double volume) async => volumeCalls.add(volume);
+  Duration? duration;
 
   @override
-  Duration? duration;
+  Size? uprightSize;
 
   @override
   Stream<Duration> get positionStream => _positionController.stream;
 
   @override
   Widget buildSurface() => const SizedBox(
-        key: ValueKey<String>('fake-video-surface'),
-        width: 160,
-        height: 90,
-      );
+    key: ValueKey<String>('fake-video-surface'),
+    width: 160,
+    height: 90,
+  );
 
   @override
   VideoPlaybackState get state => _state;

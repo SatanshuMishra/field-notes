@@ -2,14 +2,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+
 import '../../../design/tokens/tokens.dart';
 import '../util/duration_format.dart';
 
 const double scrubberHeight = 48;
-const double _trackHeight = 8;
-const double _trackRadius = _trackHeight / 2;
+const double scrubberTrackHeight = 4;
+const double _trackRadius = scrubberTrackHeight / 2;
+const double _trackAlpha = 0.24;
 const double scrubberHandleRadius = 7.0;
-const double _focusStroke = 3;
+const double _shadowAlpha = 0.45;
+const double _shadowBlur = 3;
+const Offset _shadowOffset = Offset(0, 1);
+const double _focusGap = 2;
 const Duration scrubberKeyboardStep = Duration(seconds: 5);
 
 Duration clampPlaybackPosition(Duration value, Duration total) {
@@ -194,6 +199,7 @@ class _VideoScrubberState extends State<VideoScrubber> {
         ),
       },
       child: Semantics(
+        container: true,
         slider: true,
         enabled: enabled,
         label: 'Video position',
@@ -213,7 +219,6 @@ class _VideoScrubberState extends State<VideoScrubber> {
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final double width = constraints.maxWidth;
-            final FieldNotesColors colors = context.colors;
             return GestureDetector(
               key: const ValueKey<String>('video-scrub-bar'),
               behavior: HitTestBehavior.opaque,
@@ -242,9 +247,6 @@ class _VideoScrubberState extends State<VideoScrubber> {
                     painter: _ScrubberPainter(
                       fraction: _fraction,
                       focused: _focused,
-                      trackColor: colors.cardBright,
-                      lineColor: colors.line,
-                      focusColor: colors.ink,
                     ),
                   ),
                 ),
@@ -258,19 +260,10 @@ class _VideoScrubberState extends State<VideoScrubber> {
 }
 
 class _ScrubberPainter extends CustomPainter {
-  const _ScrubberPainter({
-    required this.fraction,
-    required this.focused,
-    required this.trackColor,
-    required this.lineColor,
-    required this.focusColor,
-  });
+  const _ScrubberPainter({required this.fraction, required this.focused});
 
   final double fraction;
   final bool focused;
-  final Color trackColor;
-  final Color lineColor;
-  final Color focusColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -286,51 +279,48 @@ class _ScrubberPainter extends CustomPainter {
       right,
       centerY + _trackRadius,
     );
-    final RRect trackShape = RRect.fromRectAndRadius(
-      track,
-      const Radius.circular(_trackRadius),
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(track, const Radius.circular(_trackRadius)),
+      Paint()..color = Palette.mediaInk.withValues(alpha: _trackAlpha),
     );
-    canvas.drawRRect(trackShape, Paint()..color = trackColor);
 
     final double filled = (right - left) * fraction.clamp(0.0, 1.0);
     if (filled > 0) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(left, track.top, filled, _trackHeight),
+          Rect.fromLTWH(left, track.top, filled, scrubberTrackHeight),
           const Radius.circular(_trackRadius),
         ),
-        Paint()..color = Palette.coral,
+        Paint()..color = Palette.mediaPlayed,
       );
     }
-    canvas.drawRRect(
-      trackShape,
-      Paint()
-        ..color = lineColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = Shapes.outlineWidth,
-    );
 
     final Offset handle = Offset(left + filled, centerY);
     canvas.drawCircle(
-      handle,
+      handle + _shadowOffset,
       scrubberHandleRadius,
-      Paint()..color = Palette.coral,
+      Paint()
+        ..color = Palette.mediaBlack.withValues(alpha: _shadowAlpha)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, _shadowBlur),
     );
     canvas.drawCircle(
       handle,
       scrubberHandleRadius,
-      Paint()
-        ..color = focused ? focusColor : lineColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = focused ? _focusStroke : Shapes.outlineWidth,
+      Paint()..color = Palette.mediaInk,
     );
+    if (focused) {
+      canvas.drawCircle(
+        handle,
+        scrubberHandleRadius + _focusGap + FocusRingSurface.dark.width / 2,
+        Paint()
+          ..color = FocusRingSurface.dark.color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = FocusRingSurface.dark.width,
+      );
+    }
   }
 
   @override
   bool shouldRepaint(_ScrubberPainter oldDelegate) =>
-      fraction != oldDelegate.fraction ||
-      focused != oldDelegate.focused ||
-      trackColor != oldDelegate.trackColor ||
-      lineColor != oldDelegate.lineColor ||
-      focusColor != oldDelegate.focusColor;
+      fraction != oldDelegate.fraction || focused != oldDelegate.focused;
 }

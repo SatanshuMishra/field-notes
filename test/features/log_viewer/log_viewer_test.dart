@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/composer_guard.dart';
@@ -17,8 +19,15 @@ import 'package:field_notes/features/day_detail/day_detail_edit_note.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/log_viewer/note_panel_view.dart';
+import 'package:field_notes/features/log_viewer/note_sheet_view.dart';
+import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
+import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
+import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorView;
+import 'package:field_notes/features/notes/notes.dart'
+    show notesMediaResolverProvider;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -26,9 +35,13 @@ import '../capture/core/capture_test_support.dart'
     show FakeDraftStore, draftIdleDebounceForTest;
 import '../../support/note_editor_driver.dart';
 import '../day_detail/support/day_detail_harness.dart';
+import '../entry_cards/support/fake_audio_player.dart';
+import '../entry_cards/support/fake_video_player.dart';
 
 const String _date = '2026-07-19';
 const String _lastWord = 'finale';
+const String _voiceMedia = 'blob-voice';
+const String _videoMedia = 'blob-video';
 
 final TargetPlatformVariant _bothLayouts = TargetPlatformVariant(
   <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
@@ -240,6 +253,202 @@ Finder _noteText(String text) => find.byWidgetPredicate(
   (Widget w) => w is NoteBody && w.text.contains(text),
 );
 
+Finder _inPanel(Finder matching) =>
+    find.descendant(of: find.byType(LogViewerPanel), matching: matching);
+
+bool get _sidebar => defaultTargetPlatform == TargetPlatform.macOS;
+
+List<Entry> _mixedEntries() {
+  return <Entry>[
+    _entry(
+      id: 'voice-log',
+      type: EntryType.voice,
+      hour: 7,
+      minute: 40,
+      mediaId: _voiceMedia,
+      durationMs: 65000,
+    ),
+    _entry(
+      id: 'note-log',
+      type: EntryType.text,
+      hour: 9,
+      minute: 15,
+      textContent: 'Fed the robins.',
+    ),
+    _entry(
+      id: 'video-log',
+      type: EntryType.video,
+      hour: 11,
+      minute: 30,
+      mediaId: _videoMedia,
+      durationMs: 4000,
+    ),
+  ];
+}
+
+FakeMediaResolver _mediaResolver() {
+  final Directory folder = Directory.systemTemp.createTempSync(
+    'log-viewer-media',
+  );
+  addTearDown(() => folder.deleteSync(recursive: true));
+  final File voice = File('${folder.path}/voice.m4a')
+    ..writeAsBytesSync(const <int>[0, 1, 2, 3]);
+  final File video = File('${folder.path}/video.mp4')
+    ..writeAsBytesSync(const <int>[0, 1, 2, 3]);
+  return FakeMediaResolver(<String, ResolvedMedia>{
+    _voiceMedia: ResolvedMedia.available(
+      blob: blobOf(
+        id: _voiceMedia,
+        relPath: 'voice.m4a',
+        kind: MediaKind.audio,
+      ),
+      file: voice,
+    ),
+    _videoMedia: ResolvedMedia.available(
+      blob: blobOf(
+        id: _videoMedia,
+        relPath: 'video.mp4',
+        kind: MediaKind.video,
+      ),
+      file: video,
+    ),
+  });
+}
+
+class _Mixed {
+  _Mixed(this.repository);
+
+  final _DayRepository repository;
+  final List<LogViewerOutcome> outcomes = <LogViewerOutcome>[];
+  final List<String> readNotes = <String>[];
+  final List<FakeEntryAudioPlayer> voicePlayers = <FakeEntryAudioPlayer>[];
+  final List<FakeEntryVideoPlayer> videoPlayers = <FakeEntryVideoPlayer>[];
+
+  FakeEntryAudioPlayer buildVoice() {
+    final FakeEntryAudioPlayer player = FakeEntryAudioPlayer();
+    voicePlayers.add(player);
+    return player;
+  }
+
+  FakeEntryVideoPlayer buildVideo() {
+    final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
+    videoPlayers.add(player);
+    return player;
+  }
+}
+
+class _MixedOpener extends StatelessWidget {
+  const _MixedOpener({
+    required this.session,
+    required this.entryId,
+    required this.exit,
+    required this.readNotes,
+    this.inline,
+  });
+
+  final _Mixed session;
+  final String entryId;
+  final LogViewerExit exit;
+  final bool readNotes;
+  final Widget? inline;
+
+  Future<void> _open(BuildContext context) async {
+    session.outcomes.add(
+      await showLogViewer(
+        context,
+        date: _date,
+        entryId: entryId,
+        exit: exit,
+        onReadNote: readNotes ? session.readNotes.add : null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget? inline = this.inline;
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ?inline,
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => _open(context),
+            child: const Text('open log'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+Future<_Mixed> _openMixed(
+  WidgetTester tester, {
+  required String entryId,
+  LogViewerExit exit = LogViewerExit.back,
+  bool readNotes = false,
+  Widget Function(MediaResolver resolver)? inline,
+  bool open = true,
+  ThemeData? theme,
+}) async {
+  final _Mixed session = _Mixed(_DayRepository(_mixedEntries()));
+  final MediaResolver resolver = _mediaResolver();
+  final LruVideoSlots slots = LruVideoSlots(cap: 2);
+  addTearDown(slots.dispose);
+  await tester.pumpWidget(
+    ProviderScope(
+      key: UniqueKey(),
+      overrides: <Override>[
+        journalRepositoryProvider.overrideWithValue(session.repository),
+        draftStoreProvider.overrideWith((Ref ref) => FakeDraftStore()),
+        mediaStoreProvider.overrideWith(
+          (Ref ref) async => FakeMediaStore(Directory.systemTemp),
+        ),
+        notesMediaResolverProvider.overrideWith((Ref ref) async => resolver),
+        todayAudioPlayerFactoryProvider.overrideWithValue(session.buildVoice),
+        todayVideoPlayerFactoryProvider.overrideWithValue(session.buildVideo),
+        videoSlotsProvider.overrideWithValue(slots),
+        videoAspectProvider.overrideWith((Ref ref, String mediaId) => 16 / 9),
+        todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 23, 9)),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: theme,
+        home: _MixedOpener(
+          session: session,
+          entryId: entryId,
+          exit: exit,
+          readNotes: readNotes,
+          inline: inline?.call(resolver),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  if (open) {
+    await tester.tap(find.text('open log'));
+    await tester.pumpAndSettle();
+  }
+  return session;
+}
+
+Finder _noteView() => find.byType(_sidebar ? NotePanelView : NoteSheetView);
+
+void _expectUnboxed(WidgetTester tester, Finder media) {
+  expect(media, findsOneWidget);
+  final Iterable<DecoratedBox> boxes = tester.widgetList<DecoratedBox>(
+    find.ancestor(of: media, matching: find.byType(DecoratedBox)),
+  );
+  expect(
+    boxes.where((DecoratedBox box) {
+      final Decoration decoration = box.decoration;
+      return decoration is BoxDecoration && decoration.border != null;
+    }),
+    isEmpty,
+  );
+}
+
 void main() {
   testWidgets('view mode text carries no fallback underline', (
     WidgetTester tester,
@@ -441,9 +650,8 @@ void main() {
   ) async {
     await _open(tester, entryId: 'entry-3', exit: LogViewerExit.close);
 
-    expect(find.text('Evening voice log'), findsOneWidget);
+    expect(_inPanel(find.byType(VoicePlayerView)), findsOneWidget);
     expect(find.text('Close'), findsOneWidget);
-    expect(find.byType(VoiceBody), findsOneWidget);
     expect(find.byKey(logActionsDeleteKey), findsOneWidget);
     expect(find.byKey(logActionsEditKey), findsNothing);
   }, variant: _bothLayouts);
@@ -464,7 +672,9 @@ void main() {
     );
 
     expect(
-      tester.widget<VoiceBody>(find.byType(VoiceBody)).playerFactory,
+      tester
+          .widget<VoicePlayerView>(find.byType(VoicePlayerView))
+          .playerFactory,
       same(audio),
     );
   }, variant: _bothLayouts);
@@ -484,4 +694,249 @@ void main() {
     expect(find.text('14:30'), findsOneWidget);
     expect(find.text('08:12 · note'), findsOneWidget);
   }, variant: _bothLayouts);
+
+  testWidgets('each log type opens its own viewer', (
+    WidgetTester tester,
+  ) async {
+    await _openMixed(tester, entryId: 'voice-log');
+    expect(_inPanel(find.byType(VoicePlayerView)), findsOneWidget);
+    expect(find.byType(VideoViewerView), findsNothing);
+    expect(find.byType(NoteSheetView), findsNothing);
+    expect(find.byType(NotePanelView), findsNothing);
+
+    await _openMixed(tester, entryId: 'video-log');
+    expect(_inPanel(find.byType(VideoViewerView)), findsOneWidget);
+    expect(find.byType(VoicePlayerView), findsNothing);
+
+    await _openMixed(tester, entryId: 'note-log');
+    expect(_inPanel(_noteView()), findsOneWidget);
+    expect(find.byType(_sidebar ? NoteSheetView : NotePanelView), findsNothing);
+    expect(find.byType(VoicePlayerView), findsNothing);
+    expect(find.byType(VideoViewerView), findsNothing);
+  }, variant: _bothLayouts);
+
+  testWidgets('no viewer boxes its media', (WidgetTester tester) async {
+    await _openMixed(tester, entryId: 'voice-log');
+    _expectUnboxed(tester, _inPanel(find.byType(ViewerWaveform)));
+
+    await _openMixed(tester, entryId: 'video-log');
+    _expectUnboxed(tester, _inPanel(find.byKey(videoFrameKey)));
+  }, variant: _bothLayouts);
+
+  testWidgets('earlier and later cross log types', (WidgetTester tester) async {
+    await _openMixed(tester, entryId: 'voice-log');
+    expect(find.byType(VoicePlayerView), findsOneWidget);
+    expect(find.byKey(logViewerEarlierKey), findsNothing);
+
+    await tester.tap(find.byKey(logViewerLaterKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VoicePlayerView), findsNothing);
+    expect(_inPanel(_noteView()), findsOneWidget);
+    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text('2 of 3'), findsOneWidget);
+
+    await tester.tap(find.byKey(logViewerEarlierKey));
+    await tester.pumpAndSettle();
+
+    expect(_inPanel(find.byType(VoicePlayerView)), findsOneWidget);
+    expect(_noteView(), findsNothing);
+  }, variant: _bothLayouts);
+
+  testWidgets('delete asks first and Back or Close follows the origin', (
+    WidgetTester tester,
+  ) async {
+    _Mixed session = await _openMixed(
+      tester,
+      entryId: 'voice-log',
+      exit: LogViewerExit.back,
+    );
+    expect(find.text(logViewerBackLabel), findsOneWidget);
+    expect(find.text(logViewerCloseLabel), findsNothing);
+    await tester.tap(find.byKey(logViewerBackKey));
+    await tester.pumpAndSettle();
+    expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
+    expect(find.byType(LogViewerPanel), findsNothing);
+
+    session = await _openMixed(
+      tester,
+      entryId: 'voice-log',
+      exit: LogViewerExit.close,
+    );
+    expect(find.text(logViewerCloseLabel), findsOneWidget);
+    expect(find.text(logViewerBackLabel), findsNothing);
+    await tester.tap(find.byKey(logViewerBackKey));
+    await tester.pumpAndSettle();
+    expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
+    expect(find.byType(LogViewerPanel), findsNothing);
+
+    session = await _openMixed(tester, entryId: 'voice-log');
+    await tester.tap(find.byKey(logActionsDeleteKey));
+    await tester.pumpAndSettle();
+
+    expect(find.text(logViewerDeleteTitle), findsOneWidget);
+    expect(session.repository.deletedEntryIds, isEmpty);
+
+    await tester.tap(find.byKey(confirmDialogConfirmKey));
+    await tester.pumpAndSettle();
+
+    expect(session.repository.deletedEntryIds, <String>['voice-log']);
+    expect(find.text(logViewerDeletedMessage), findsOneWidget);
+    expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.deleted]);
+    expect(find.byType(LogViewerPanel), findsNothing);
+    await _drainToast(tester);
+  }, variant: _bothLayouts);
+
+  testWidgets(
+    'a note reached from a day-panel viewer goes back to the day panel',
+    (WidgetTester tester) async {
+      final _Mixed session = await _openMixed(
+        tester,
+        entryId: 'voice-log',
+        readNotes: true,
+      );
+      expect(find.byType(VoicePlayerView), findsOneWidget);
+
+      await tester.tap(find.byKey(logViewerLaterKey));
+      await tester.pumpAndSettle();
+
+      if (_sidebar) {
+        expect(find.byType(LogViewerPanel), findsNothing);
+        expect(find.byType(NotePanelView), findsNothing);
+        expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
+        expect(session.readNotes, <String>['note-log']);
+      } else {
+        expect(_inPanel(find.byType(NoteSheetView)), findsOneWidget);
+        expect(session.outcomes, isEmpty);
+        expect(session.readNotes, isEmpty);
+      }
+    },
+    variant: _bothLayouts,
+  );
+
+  testWidgets(
+    'opening a log pauses an inline voice note and closing stops its own',
+    (WidgetTester tester) async {
+      final FakeEntryAudioPlayer inline = FakeEntryAudioPlayer();
+      final Entry inlineEntry = _entry(
+        id: 'inline-voice',
+        type: EntryType.voice,
+        hour: 6,
+        minute: 5,
+        mediaId: _voiceMedia,
+        durationMs: 30000,
+      );
+      final _Mixed session = await _openMixed(
+        tester,
+        entryId: 'voice-log',
+        open: false,
+        inline: (MediaResolver resolver) => SizedBox(
+          width: 320,
+          child: VoiceBody(
+            entry: inlineEntry,
+            resolver: resolver,
+            playerFactory: () => inline,
+          ),
+        ),
+      );
+      expect(inline.loadCalls, hasLength(1));
+
+      await tester.tap(find.byKey(const ValueKey<String>('voice-play-toggle')));
+      await tester.pump();
+      inline.emitState(AudioPlaybackState.playing);
+      await tester.pump();
+      expect(inline.playCalls, 1);
+      expect(inline.pauseCalls, 0);
+
+      await tester.tap(find.text('open log'));
+      await tester.pumpAndSettle();
+
+      expect(inline.pauseCalls, 1);
+      expect(_inPanel(find.byType(VoicePlayerView)), findsOneWidget);
+      final FakeEntryAudioPlayer own = session.voicePlayers.single;
+      expect(own.loadCalls, hasLength(1));
+      expect(own.disposeCalls, 0);
+
+      await tester.tap(find.byKey(logViewerBackKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LogViewerPanel), findsNothing);
+      expect(own.disposeCalls, 1);
+      expect(inline.disposeCalls, 0);
+      expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
+    },
+    variant: _bothLayouts,
+  );
+
+  testWidgets('keys reach the viewer through the host', (
+    WidgetTester tester,
+  ) async {
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+    final _Session session = await _open(tester);
+    expect(find.text('Morning note'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(find.text('2 of 3'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowLeft);
+    await tester.pumpAndSettle();
+    expect(find.text('Morning note'), findsOneWidget);
+    expect(find.text('1 of 3'), findsOneWidget);
+
+    await tester.tap(find.byKey(logActionsEditKey));
+    await tester.pumpAndSettle();
+    expect(driver.find, findsOneWidget);
+    await driver.enterText('Watered the roses twice.');
+    await tester.pump(draftIdleDebounceForTest);
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+
+    expect(driver.find, findsNothing);
+    expect(session.repository.noteSaves, hasLength(1));
+    expect(_noteText('Watered the roses twice.'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+    await tester.pumpAndSettle();
+    expect(find.text('Afternoon note'), findsOneWidget);
+    expect(find.text('2 of 3'), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+    expect(session.outcomes, <LogViewerOutcome>[LogViewerOutcome.returned]);
+    expect(find.byKey(logViewerPanelKey), findsNothing);
+    await _drainToast(tester);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('arrow keys step across note, voice and video and back', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1;
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    addTearDown(tester.view.reset);
+    final _Mixed session = await _openMixed(
+      tester,
+      entryId: 'note-log',
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+    );
+    expect(_inPanel(find.byType(NotePanelView)), findsOneWidget);
+
+    final List<(LogicalKeyboardKey, Type)> steps = <(LogicalKeyboardKey, Type)>[
+      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
+      (LogicalKeyboardKey.arrowRight, NotePanelView),
+      (LogicalKeyboardKey.arrowRight, VideoViewerView),
+      (LogicalKeyboardKey.arrowLeft, NotePanelView),
+      (LogicalKeyboardKey.arrowLeft, VoicePlayerView),
+    ];
+    for (final (LogicalKeyboardKey key, Type view) in steps) {
+      await tester.sendKeyEvent(key);
+      await tester.pumpAndSettle();
+      expect(_inPanel(find.byType(view)), findsOneWidget, reason: '$view');
+    }
+    expect(session.outcomes, isEmpty);
+    expect(find.byKey(logViewerPanelKey), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }

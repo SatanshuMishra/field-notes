@@ -96,12 +96,24 @@ class _DayOpener extends StatelessWidget {
   }
 }
 
+List<Entry> _busyDay() {
+  return <Entry>[
+    for (int i = 0; i < 12; i++)
+      _entry(
+        id: 'entry-$i',
+        hour: 6 + i,
+        textContent: 'A long walk around the pond, number $i, with notes.',
+      ),
+  ];
+}
+
 Future<FakeJournalRepository> _openDay(
   WidgetTester tester, {
   required TargetPlatform platform,
+  List<Entry>? entries,
 }) async {
   final FakeJournalRepository repository = FakeJournalRepository(
-    entries: _dayEntries(),
+    entries: entries ?? _dayEntries(),
   );
   await tester.pumpWidget(
     ProviderScope(
@@ -361,6 +373,47 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets(
+    'a quiet day gives a short sheet and a busy day grows to near full',
+    (WidgetTester tester) async {
+      _usePhone(tester);
+      await _openDay(
+        tester,
+        platform: TargetPlatform.android,
+        entries: <Entry>[
+          _entry(id: _note, hour: 8, textContent: 'Watered the roses.'),
+        ],
+      );
+
+      expect(find.byType(CompactLogCard), findsOneWidget);
+      final Rect quiet = tester.getRect(find.byType(PhoneSheet));
+      expect(quiet.height, lessThan(_phone.height / 2));
+      expect(quiet.bottom, _phone.height);
+
+      await tester.pumpWidget(const SizedBox());
+      await tester.pumpAndSettle();
+      await _openDay(
+        tester,
+        platform: TargetPlatform.android,
+        entries: _busyDay(),
+      );
+
+      final Rect busy = tester.getRect(find.byType(PhoneSheet));
+      expect(busy.height, _phone.height - _statusBar - 8);
+      expect(busy.top, _statusBar + 8);
+      expect(busy.bottom, _phone.height);
+
+      final Finder firstCard = find.byType(CompactLogCard).first;
+      final double cardTop = tester.getTopLeft(firstCard).dy;
+      await tester.drag(firstCard, const Offset(0, -300));
+      await tester.pumpAndSettle();
+
+      expect(tester.getTopLeft(firstCard).dy, lessThan(cardTop - 100));
+      expect(tester.getRect(find.byType(PhoneSheet)), busy);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets('on macOS a day keeps its centred panel', (
     WidgetTester tester,
   ) async {
@@ -372,7 +425,7 @@ void main() {
     expect(find.byType(DayDetailHeader), findsOneWidget);
     expect(find.byKey(dayDetailBackKey), findsOneWidget);
     expect(find.byType(DayDetailEntriesBar), findsOneWidget);
-    expect(tester.getSize(find.byKey(dayDetailPanelKey)).width, 560);
+    expect(tester.getSize(find.byKey(dayDetailPanelKey)).width, 1060);
     expect(
       tester.getCenter(find.byKey(dayDetailPanelKey)).dx,
       _desktop.width / 2,

@@ -103,11 +103,6 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
   }
 
   @override
-  Future<void> setVolume(double volume) async {
-    await _controller?.setVolume(volume.clamp(0.0, 1.0));
-  }
-
-  @override
   Duration? get duration {
     final vp.VideoPlayerController? controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
@@ -120,6 +115,19 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
   Stream<Duration> get positionStream => _positionController.stream;
 
   @override
+  Size? get uprightSize {
+    final vp.VideoPlayerController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return null;
+    }
+    final Size size = controller.value.size;
+    if (size.isEmpty || !size.isFinite) {
+      return null;
+    }
+    return size;
+  }
+
+  @override
   Widget buildSurface() {
     final vp.VideoPlayerController? controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
@@ -127,8 +135,7 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
     }
     final Size surface = _surfaceSize(controller.value);
     return FittedBox(
-      fit: BoxFit.cover,
-      clipBehavior: Clip.hardEdge,
+      fit: BoxFit.contain,
       child: SizedBox(
         width: surface.width,
         height: surface.height,

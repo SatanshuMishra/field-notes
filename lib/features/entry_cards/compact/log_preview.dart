@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' show BuildContext, TimeOfDay;
 import '../../../design/format/clock_format.dart';
 import '../../../domain/models/models.dart';
 import '../../../domain/notes/markdown/markdown.dart';
+import '../../../domain/notes/note_photos.dart';
 import '../../../domain/notes/note_plain_text.dart';
 import '../../note_engine/capabilities.dart';
 import '../util/duration_format.dart';
@@ -120,12 +121,9 @@ String _headingFor(Entry entry) {
 LogPreview _textPreview(Entry entry, String heading) {
   final String source = entry.textContent ?? '';
   final MdTree tree = parseNoteTree(source, tables: tablesEnabled);
-  final List<MdPhotoLineData> photos = <MdPhotoLineData>[
-    for (final MdBlock block in tree.blocks)
-      if (block.photoLine case final MdPhotoLineData photo) photo,
-  ];
+  final List<NotePhoto> photos = notePhotosOf(tree);
   final int photoCount = photos.length;
-  final MdPhotoLineData? firstPhoto = photos.isEmpty ? null : photos.first;
+  final NotePhoto? firstPhoto = photos.isEmpty ? null : photos.first;
   final List<NotePlainSegment> significant = <NotePlainSegment>[
     for (final NotePlainSegment segment in notePlainSegments(tree, source))
       if (segment.kind != NotePlainKind.photo && segment.text.isNotEmpty)

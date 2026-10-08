@@ -15,10 +15,10 @@ import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 
 import '../support/entry_cards_harness.dart';
 import '../support/fake_video_player.dart';
+import '../support/video_card_harness.dart';
 
 const ValueKey<String> _playToggle = ValueKey<String>('video-play-toggle');
 const ValueKey<String> _scrubBar = ValueKey<String>('video-scrub-bar');
-const ValueKey<String> _muteToggle = ValueKey<String>('video-mute-toggle');
 
 FakeMediaResolver _resolverWithVideo() => FakeMediaResolver()
   ..set(
@@ -47,6 +47,7 @@ Widget _videoCard({
       resolver: resolver,
       playerFactory: () => player,
       slots: const UnlimitedVideoSlots(),
+      controls: videoTestControls,
     ),
   );
 }
@@ -66,7 +67,6 @@ void main() {
 
       expect(find.byKey(_playToggle), findsOneWidget);
       expect(find.byKey(_scrubBar), findsOneWidget);
-      expect(find.byKey(_muteToggle), findsOneWidget);
       expect(find.text('0:00 / 1:05'), findsOneWidget);
     });
 
@@ -89,6 +89,7 @@ void main() {
               resolver: _resolverWithVideo(),
               playerFactory: () => player,
               slots: const UnlimitedVideoSlots(),
+              controls: videoTestControls,
             ),
           ),
         );
@@ -286,35 +287,6 @@ void main() {
       expect(find.text('0:12 / 1:05'), findsOneWidget);
     });
 
-    testWidgets('mutes and restores the previous volume', (
-      WidgetTester tester,
-    ) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      try {
-        final FakeEntryVideoPlayer player = FakeEntryVideoPlayer();
-        await tester.pumpWidget(
-          _videoCard(resolver: _resolverWithVideo(), player: player),
-        );
-        await tester.pump();
-
-        expect(find.bySemanticsLabel('Mute video'), findsOneWidget);
-
-        await tester.tap(find.byKey(_muteToggle));
-        await tester.pump();
-
-        expect(player.volumeCalls, <double>[0.0]);
-        expect(find.bySemanticsLabel('Unmute video'), findsOneWidget);
-
-        await tester.tap(find.byKey(_muteToggle));
-        await tester.pump();
-
-        expect(player.volumeCalls, <double>[0.0, 1.0]);
-        expect(find.bySemanticsLabel('Mute video'), findsOneWidget);
-      } finally {
-        handle.dispose();
-      }
-    });
-
     testWidgets('does not seek when the total duration is unknown', (
       WidgetTester tester,
     ) async {
@@ -348,8 +320,6 @@ void main() {
       await tester.pump();
 
       expect(tester.getSize(find.byKey(_playToggle)).height, greaterThan(47.9));
-      expect(tester.getSize(find.byKey(_muteToggle)).height, greaterThan(47.9));
-      expect(tester.getSize(find.byKey(_muteToggle)).width, greaterThan(47.9));
       expect(tester.getSize(find.byKey(_scrubBar)).height, greaterThan(47.9));
     });
 
@@ -378,6 +348,7 @@ void main() {
             resolver: resolver,
             playerFactory: () => player,
             slots: const UnlimitedVideoSlots(),
+            controls: videoTestControls,
           ),
         ),
       );
@@ -413,6 +384,7 @@ void main() {
             resolver: FakeMediaResolver(),
             playerFactory: () => player,
             slots: const UnlimitedVideoSlots(),
+            controls: videoTestControls,
           ),
         ),
       );
@@ -420,9 +392,11 @@ void main() {
 
       expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
       expect(player.loadCalls, isEmpty);
-      expect(find.byKey(_playToggle), findsNothing);
-      expect(find.byKey(_scrubBar), findsNothing);
-      expect(find.byKey(_muteToggle), findsNothing);
+      expect(tapEnabled(tester, find.byKey(_playToggle)), isFalse);
+      expect(
+        tester.widget<VideoScrubber>(find.byType(VideoScrubber)).onSeek,
+        isNull,
+      );
     });
 
     testWidgets(
@@ -449,6 +423,7 @@ void main() {
               resolver: resolver,
               playerFactory: () => FakeEntryVideoPlayer(),
               slots: const UnlimitedVideoSlots(),
+              controls: videoTestControls,
             ),
           ),
         );
@@ -490,6 +465,7 @@ void main() {
               resolver: resolver,
               playerFactory: () => player,
               slots: const UnlimitedVideoSlots(),
+              controls: videoTestControls,
             ),
           ),
         );
@@ -545,6 +521,7 @@ void main() {
             resolver: resolver,
             playerFactory: () => player,
             slots: const UnlimitedVideoSlots(),
+            controls: videoTestControls,
           ),
         ),
       );

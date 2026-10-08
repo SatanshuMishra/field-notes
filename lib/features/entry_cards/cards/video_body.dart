@@ -11,10 +11,10 @@ import '../media/live_media.dart';
 import '../media/media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
+import '../playback/playback_focus.dart';
 import '../playback/video_playback.dart';
 import '../playback/video_slots.dart';
 import '../util/duration_format.dart';
-import 'video_control_bar.dart';
 import 'video_controls_overlay.dart';
 import 'video_scrubber.dart';
 import 'video_transport.dart';
@@ -24,18 +24,15 @@ const List<Duration> _defaultRetryBackoff = <Duration>[
   Duration(milliseconds: 400),
   Duration(milliseconds: 1200),
 ];
-const double _videoAspectRatio = 21 / 9;
-const double _videoMinHeight = 200;
-const double _fullVolume = 1.0;
-const BorderRadius _posterBorderRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusCell));
+const double defaultVideoAspectRatio = 16 / 9;
+const double _noticeInset = 8;
+const Key videoFrameKey = ValueKey<String>('video-frame');
 const double _downloadRingSize = 44;
 const double _downloadRingStroke = 3;
 const double _downloadLabelGap = 10;
 const double _bytesPerMegabyte = 1024 * 1024;
 
-String _megabytes(int bytes) =>
-    (bytes / _bytesPerMegabyte).toStringAsFixed(1);
+String _megabytes(int bytes) => (bytes / _bytesPerMegabyte).toStringAsFixed(1);
 
 String videoDownloadLabel(MediaDownloadProgress progress, int? durationMs) {
   final int? total = progress.total;
@@ -43,6 +40,99 @@ String videoDownloadLabel(MediaDownloadProgress progress, int? durationMs) {
       ? '${_megabytes(progress.received)} MB'
       : '${_megabytes(progress.received)} of ${_megabytes(total)} MB';
   return 'Video · ${formatMediaDuration(durationMs)} · downloading $share';
+}
+
+Size videoFrameSize(Size box, double aspectRatio) {
+  final double width = math.max(
+    0.0,
+    math.min(box.width, box.height * aspectRatio),
+  );
+  return Size(width, width / aspectRatio);
+}
+
+@immutable
+final class VideoControlsState {
+  const VideoControlsState({
+    required this.ready,
+    required this.canStart,
+    required this.isPlaying,
+    required this.position,
+    required this.total,
+    required this.busy,
+    required this.onToggle,
+    required this.onSeek,
+    required this.onScrubUpdate,
+    required this.onScrubEnd,
+  });
+
+  final bool ready;
+  final bool canStart;
+  final bool isPlaying;
+  final Duration position;
+  final Duration? total;
+  final bool busy;
+  final VoidCallback? onToggle;
+  final ValueChanged<Duration>? onSeek;
+  final ValueChanged<Duration>? onScrubUpdate;
+  final VoidCallback? onScrubEnd;
+
+  @override
+  bool operator ==(Object other) =>
+      other is VideoControlsState &&
+      other.ready == ready &&
+      other.canStart == canStart &&
+      other.isPlaying == isPlaying &&
+      other.position == position &&
+      other.total == total &&
+      other.busy == busy &&
+      other.onToggle == onToggle &&
+      other.onSeek == onSeek &&
+      other.onScrubUpdate == onScrubUpdate &&
+      other.onScrubEnd == onScrubEnd;
+
+  @override
+  int get hashCode => Object.hash(
+    ready,
+    canStart,
+    isPlaying,
+    position,
+    total,
+    busy,
+    onToggle,
+    onSeek,
+    onScrubUpdate,
+    onScrubEnd,
+  );
+}
+
+typedef VideoControlsBuilder = Widget Function(
+  BuildContext context,
+  VideoControlsState state,
+);
+
+class VideoControlsHandle extends ChangeNotifier {
+  VideoControlsState? _state;
+  Object? _owner;
+
+  VideoControlsState? get state => _state;
+
+  void _publish(Object owner, VideoControlsState next) {
+    _owner = owner;
+    if (next == _state) {
+      return;
+    }
+    _state = next;
+    notifyListeners();
+  }
+
+  void _retract(Object owner) {
+    if (!identical(owner, _owner)) {
+      return;
+    }
+    _owner = null;
+    _state = null;
+    notifyListeners();
+  }
 }
 
 enum _VideoPhase { waiting, preparing, ready, retrying, unavailable }
@@ -54,6 +144,11 @@ class VideoBody extends StatefulWidget {
     required this.resolver,
     required this.playerFactory,
     required this.slots,
+    required this.controls,
+    this.aspectRatio,
+    this.handle,
+    this.focus,
+    this.controlModel,
     this.loadTimeout = _defaultLoadTimeout,
     this.retryBackoff = _defaultRetryBackoff,
   });
@@ -62,6 +157,11 @@ class VideoBody extends StatefulWidget {
   final MediaResolver resolver;
   final EntryVideoPlayerFactory playerFactory;
   final VideoSlots slots;
+  final VideoControlsBuilder controls;
+  final double? aspectRatio;
+  final VideoControlsHandle? handle;
+  final PlaybackFocus? focus;
+  final VideoControlModel? controlModel;
   final Duration loadTimeout;
   final List<Duration> retryBackoff;
 
@@ -78,8 +178,6 @@ class _VideoBodyState extends State<VideoBody> {
   StreamSubscription<Duration>? _positionSub;
   VideoPlaybackState _state = VideoPlaybackState.idle;
   Duration _position = Duration.zero;
-  double _volume = _fullVolume;
-  double _volumeBeforeMute = _fullVolume;
   _VideoPhase _phase = _VideoPhase.preparing;
   File? _mediaFile;
   VideoSlotToken? _token;
@@ -91,6 +189,8 @@ class _VideoBodyState extends State<VideoBody> {
   bool _scrubbing = false;
   bool _playWhenReady = false;
   bool _claimDenied = false;
+
+  PlaybackFocus get _focus => widget.focus ?? playbackFocus;
 
   @override
   void initState() {
@@ -106,6 +206,12 @@ class _VideoBodyState extends State<VideoBody> {
   @override
   void didUpdateWidget(VideoBody oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.handle, widget.handle)) {
+      oldWidget.handle?._retract(this);
+    }
+    if (!identical(oldWidget.focus, widget.focus)) {
+      oldWidget.focus?.release(this);
+    }
     if (identical(oldWidget.resolver, widget.resolver) &&
         oldWidget.entry.mediaId == widget.entry.mediaId) {
       return;
@@ -200,11 +306,9 @@ class _VideoBodyState extends State<VideoBody> {
     if (!mounted || file == null) {
       return;
     }
-    final VideoSlotToken? token = _retainedSlot() ??
-        widget.slots.acquire(
-          onEvicted: _onSlotEvicted,
-          evictionRights: rights,
-        );
+    final VideoSlotToken? token =
+        _retainedSlot() ??
+        widget.slots.acquire(onEvicted: _onSlotEvicted, evictionRights: rights);
     if (token == null) {
       _enterWaiting(denied: rights == VideoSlotEvictionRights.evictUnpinned);
       return;
@@ -236,10 +340,6 @@ class _VideoBodyState extends State<VideoBody> {
       _enterPhase(_VideoPhase.ready);
       _attempt = 0;
     });
-    await _restoreVolume(player);
-    if (!_isCurrentAttempt(gen, token)) {
-      return;
-    }
     await _resumeIfInterrupted();
     if (!_isCurrentAttempt(gen, token)) {
       return;
@@ -278,17 +378,6 @@ class _VideoBodyState extends State<VideoBody> {
         _onPlaybackFailure();
       },
     );
-  }
-
-  Future<void> _restoreVolume(EntryVideoPlayer player) async {
-    if (_volume == _fullVolume) {
-      return;
-    }
-    try {
-      await player.setVolume(_volume);
-    } catch (error, stackTrace) {
-      debugPrint('Video volume restore failed: $error\n$stackTrace');
-    }
   }
 
   Future<void> _resumeIfInterrupted() async {
@@ -416,6 +505,7 @@ class _VideoBodyState extends State<VideoBody> {
   void _teardownPlayer() {
     final EntryVideoPlayer? player = _player;
     _player = null;
+    _focus.release(this);
     _state = VideoPlaybackState.idle;
     _scrubbing = false;
     unawaited(_stateSub?.cancel());
@@ -491,6 +581,14 @@ class _VideoBodyState extends State<VideoBody> {
     }
     setState(() => _state = state);
     _syncPin(state);
+    _syncFocus(state);
+  }
+
+  void _syncFocus(VideoPlaybackState state) {
+    if (state == VideoPlaybackState.paused ||
+        state == VideoPlaybackState.completed) {
+      _focus.release(this);
+    }
   }
 
   void _syncPin(VideoPlaybackState state) {
@@ -507,16 +605,13 @@ class _VideoBodyState extends State<VideoBody> {
   void _onPlaybackFailure() => _scheduleRecovery(_generation, _token);
 
   void _scheduleRecovery(int gen, VideoSlotToken? token) => scheduleMicrotask(
-        () => _guard(
-          _recoverFromPlaybackError(gen, token),
-          'Video playback recovery failed',
-        ),
-      );
+    () => _guard(
+      _recoverFromPlaybackError(gen, token),
+      'Video playback recovery failed',
+    ),
+  );
 
-  Future<void> _recoverFromPlaybackError(
-    int gen,
-    VideoSlotToken? token,
-  ) async {
+  Future<void> _recoverFromPlaybackError(int gen, VideoSlotToken? token) async {
     if (token == null || !_isCurrentAttempt(gen, token)) {
       debugPrint('Video playback error arrived from a stale attempt');
       return;
@@ -568,8 +663,6 @@ class _VideoBodyState extends State<VideoBody> {
 
   bool get _needsMediaResolution => _mediaFile == null;
 
-  bool get _muted => _volume <= 0;
-
   bool get _isRenderingVideo =>
       _player != null &&
       (_state == VideoPlaybackState.playing ||
@@ -617,34 +710,6 @@ class _VideoBodyState extends State<VideoBody> {
     }
   }
 
-  Future<void> _toggleMute() async {
-    final EntryVideoPlayer? player = _player;
-    final VideoSlotToken? token = _token;
-    if (player == null || token == null) {
-      return;
-    }
-    final int gen = _generation;
-    final double restored =
-        _volumeBeforeMute > 0 ? _volumeBeforeMute : _fullVolume;
-    final double target = _muted ? restored : 0.0;
-    final double previous = _volume;
-    try {
-      await player.setVolume(target);
-    } catch (error, stackTrace) {
-      debugPrint('Video volume change failed: $error\n$stackTrace');
-      return;
-    }
-    if (!_isCurrentAttempt(gen, token)) {
-      return;
-    }
-    setState(() {
-      if (target <= 0) {
-        _volumeBeforeMute = previous;
-      }
-      _volume = target;
-    });
-  }
-
   void _onTransportTap() {
     if (!_ready && !_canClaimSlot) {
       return;
@@ -665,7 +730,6 @@ class _VideoBodyState extends State<VideoBody> {
 
   Future<void> _toggle() async {
     final EntryVideoPlayer? player = _player;
-    final VideoSlotToken? token = _token;
     if (player == null) {
       return;
     }
@@ -673,7 +737,13 @@ class _VideoBodyState extends State<VideoBody> {
       await _play();
       return;
     }
+    await _pause(player);
+  }
+
+  Future<void> _pause(EntryVideoPlayer player) async {
+    final VideoSlotToken? token = _token;
     final int gen = _generation;
+    _focus.release(this);
     try {
       await player.pause();
       widget.slots.unpin(token);
@@ -682,6 +752,14 @@ class _VideoBodyState extends State<VideoBody> {
       widget.slots.unpin(token);
       _scheduleRecovery(gen, token);
     }
+  }
+
+  void _yieldPlayback() {
+    final EntryVideoPlayer? player = _player;
+    if (!mounted || player == null) {
+      return;
+    }
+    _guard(_pause(player), 'Video playback yield failed');
   }
 
   Future<void> _play() async {
@@ -696,6 +774,7 @@ class _VideoBodyState extends State<VideoBody> {
         await player.seek(Duration.zero);
       }
       widget.slots.pin(token);
+      _focus.claim(this, _yieldPlayback);
       await player.play();
     } catch (error, stackTrace) {
       debugPrint('Video playback start failed: $error\n$stackTrace');
@@ -715,43 +794,133 @@ class _VideoBodyState extends State<VideoBody> {
     _stopListeningForSlots();
     _teardownPlayer();
     _releaseSlot();
+    widget.handle?._retract(this);
     super.dispose();
+  }
+
+  double get _aspectRatio {
+    final double? hint = widget.aspectRatio;
+    if (hint != null && hint.isFinite && hint > 0) {
+      return hint;
+    }
+    final Size? upright = _player?.uprightSize;
+    if (upright != null &&
+        upright.isFinite &&
+        upright.width > 0 &&
+        upright.height > 0) {
+      return upright.width / upright.height;
+    }
+    return defaultVideoAspectRatio;
+  }
+
+  VideoControlsState get _controlsState {
+    final bool ready = _ready;
+    final bool canStart = _canClaimSlot;
+    return VideoControlsState(
+      ready: ready,
+      canStart: canStart,
+      isPlaying: _isPlaying,
+      position: _shownPosition,
+      total: _total,
+      busy: _claimDenied,
+      onToggle: ready || canStart ? _onTransportTap : null,
+      onSeek: ready ? _seek : null,
+      onScrubUpdate: ready ? _onScrubUpdate : null,
+      onScrubEnd: ready ? _onScrubEnd : null,
+    );
+  }
+
+  void _publish(VideoControlsState state) {
+    final VideoControlsHandle? handle = widget.handle;
+    if (handle == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (!mounted || !identical(widget.handle, handle)) {
+        return;
+      }
+      handle._publish(this, state);
+    });
+  }
+
+  Size _boxSize(BoxConstraints constraints, double aspectRatio) {
+    if (constraints.hasBoundedWidth && constraints.hasBoundedHeight) {
+      return constraints.biggest;
+    }
+    if (constraints.hasBoundedWidth) {
+      return constraints.constrain(
+        Size(constraints.maxWidth, constraints.maxWidth / aspectRatio),
+      );
+    }
+    if (constraints.hasBoundedHeight) {
+      return constraints.constrain(
+        Size(constraints.maxHeight * aspectRatio, constraints.maxHeight),
+      );
+    }
+    return constraints.smallest;
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_phase == _VideoPhase.unavailable) {
-      return _previewBox(
-        CorruptMediaPlaceholder(
-          label: "Can't play this video",
-          borderRadius: _posterBorderRadius,
-          onRetry: _onRetryPressed,
-        ),
-      );
-    }
-    return _previewBox(Stack(fit: StackFit.expand, children: _layers()));
+    final VideoControlsState state = _controlsState;
+    _publish(state);
+    final double aspectRatio = _aspectRatio;
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final Size box = _boxSize(constraints, aspectRatio);
+        final Size frame = videoFrameSize(box, aspectRatio);
+        return SizedBox.fromSize(
+          size: box,
+          child: ColoredBox(
+            color: Palette.mediaBlack,
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                Center(
+                  child: SizedBox.fromSize(
+                    key: videoFrameKey,
+                    size: frame,
+                    child: _frame(),
+                  ),
+                ),
+                VideoControlsOverlay(
+                  controlsEnabled: state.ready,
+                  isPlaying: state.isPlaying,
+                  onToggle: state.onToggle,
+                  hideAfter: kVideoControlsHideDelay,
+                  model: widget.controlModel,
+                  child: widget.controls(context, state),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
-  Widget _previewBox(Widget child) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: _videoMinHeight),
-      child: AspectRatio(aspectRatio: _videoAspectRatio, child: child),
-    );
+  Widget _frame() {
+    if (_phase == _VideoPhase.unavailable) {
+      return CorruptMediaPlaceholder(
+        label: "Can't play this video",
+        borderRadius: BorderRadius.zero,
+        onRetry: _onRetryPressed,
+      );
+    }
+    return Stack(fit: StackFit.expand, children: _layers());
   }
 
   List<Widget> _layers() {
     return <Widget>[
-      const NeutralMediaPlaceholder(borderRadius: _posterBorderRadius),
-      ClipRRect(
-        borderRadius: _posterBorderRadius,
-        child: _player?.buildSurface() ?? const SizedBox.shrink(),
-      ),
+      const NeutralMediaPlaceholder(borderRadius: BorderRadius.zero),
+      _player?.buildSurface() ?? const SizedBox.shrink(),
       if (_showCapturedPoster)
         MediaImage(
           resolver: widget.resolver,
           mediaId: widget.entry.thumbnailMediaId,
           errorLabel: 'Video',
-          borderRadius: _posterBorderRadius,
+          borderRadius: BorderRadius.zero,
+          fit: BoxFit.contain,
         ),
       if (_download case final MediaDownloadProgress download
           when !_isRenderingVideo)
@@ -761,30 +930,11 @@ class _VideoBodyState extends State<VideoBody> {
         ),
       if (_claimDenied)
         const Positioned(
-          left: videoControlInset,
-          right: videoControlInset,
-          top: videoControlInset,
+          left: _noticeInset,
+          right: _noticeInset,
+          top: _noticeInset,
           child: Center(child: VideoTransportBusyNotice()),
         ),
-      VideoControlsOverlay(
-        controlsEnabled: _ready,
-        isPlaying: _isPlaying,
-        onToggle: _ready || _canClaimSlot ? _onTransportTap : null,
-        transport: VideoTransport(
-          isPlaying: _isPlaying,
-          onTap: _ready || _canClaimSlot ? _onTransportTap : null,
-          hint: _claimDenied ? videoTransportBusyHint : null,
-        ),
-        controlBar: VideoControlBar(
-          position: _shownPosition,
-          total: _total,
-          muted: _muted,
-          onSeek: _ready ? _seek : null,
-          onScrubUpdate: _ready ? _onScrubUpdate : null,
-          onScrubEnd: _ready ? _onScrubEnd : null,
-          onToggleMute: _ready ? _toggleMute : null,
-        ),
-      ),
     ];
   }
 }
@@ -808,6 +958,7 @@ class _VideoDownloadOverlay extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final double? fraction = _fraction;
     return Semantics(
+      container: true,
       label: label,
       value: fraction == null ? null : '${(fraction * 100).round()}%',
       child: Center(

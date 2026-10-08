@@ -142,33 +142,52 @@ void main() {
     );
 
     final Entry entry = _note('Watered the roses.');
-    await pumpThemed(
-      tester,
-      ProviderScope(
-        key: const ValueKey<String>('log-viewer-scope'),
-        overrides: _overrides(FakeJournalRepository(entries: <Entry>[entry])),
-        child: ComposerShell(
-          closeOnScrimTap: true,
-          responsive: true,
+    for (final TargetPlatform platform in <TargetPlatform>[
+      TargetPlatform.macOS,
+      TargetPlatform.android,
+    ]) {
+      await pumpThemed(
+        tester,
+        ProviderScope(
+          key: ValueKey<String>('log-viewer-scope-$platform'),
+          overrides: _overrides(FakeJournalRepository(entries: <Entry>[entry])),
           child: LogViewerPanel(
             date: _date,
             entryId: entry.id,
             exit: LogViewerExit.back,
           ),
         ),
-      ),
-      brightness: Brightness.dark,
-      size: _surface,
-    );
-    await tester.pumpAndSettle();
+        brightness: Brightness.dark,
+        platform: platform,
+        size: _surface,
+      );
+      await tester.pumpAndSettle();
 
-    final Container paper = tester.widget<Container>(
-      find.ancestor(
-        of: find.byKey(logViewerPanelKey),
-        matching: find.byKey(composerPanelKey),
-      ),
-    );
-    expect((paper.decoration! as BoxDecoration).color, _darkPaper);
-    expect(_textColour(tester, logPreviewOf(entry).heading), _darkInk);
+      final Color? paper = platform == TargetPlatform.macOS
+          ? (tester
+                        .widget<Container>(
+                          find.descendant(
+                            of: find.byKey(logViewerPanelKey),
+                            matching: find.byKey(composerPanelKey),
+                          ),
+                        )
+                        .decoration!
+                    as BoxDecoration)
+                .color
+          : tester
+                .widget<PhoneSheet>(
+                  find.descendant(
+                    of: find.byKey(logViewerPanelKey),
+                    matching: find.byType(PhoneSheet),
+                  ),
+                )
+                .color;
+      expect(paper, _darkPaper, reason: '$platform');
+      expect(
+        _textColour(tester, logPreviewOf(entry).heading),
+        _darkInk,
+        reason: '$platform',
+      );
+    }
   });
 }

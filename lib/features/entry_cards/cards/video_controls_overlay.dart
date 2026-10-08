@@ -6,28 +6,23 @@ import 'package:flutter/widgets.dart';
 
 import '../../../design/motion/motion.dart';
 
-const Duration kVideoControlsHideDelay = Duration(seconds: 3);
-const double videoControlInset = 8;
+const Duration kVideoControlsHideDelay = Duration(milliseconds: 2600);
 
 enum VideoControlModel { pointer, touch }
 
 VideoControlModel resolveVideoControlModel(TargetPlatform platform) =>
     platform == TargetPlatform.macOS
-        ? VideoControlModel.pointer
-        : VideoControlModel.touch;
+    ? VideoControlModel.pointer
+    : VideoControlModel.touch;
 
 bool canAutoHideVideoControls({
   required bool controlsEnabled,
   required bool isPlaying,
   required bool focusWithin,
   required bool accessibleNavigation,
-}) =>
-    controlsEnabled && isPlaying && !focusWithin && !accessibleNavigation;
+}) => controlsEnabled && isPlaying && !focusWithin && !accessibleNavigation;
 
-bool videoControlsVisible({
-  required bool canAutoHide,
-  required bool hidden,
-}) =>
+bool videoControlsVisible({required bool canAutoHide, required bool hidden}) =>
     !canAutoHide || !hidden;
 
 class VideoControlsOverlay extends StatefulWidget {
@@ -36,8 +31,7 @@ class VideoControlsOverlay extends StatefulWidget {
     required this.controlsEnabled,
     required this.isPlaying,
     required this.onToggle,
-    required this.transport,
-    required this.controlBar,
+    required this.child,
     this.hideAfter = kVideoControlsHideDelay,
     this.model,
   });
@@ -45,8 +39,7 @@ class VideoControlsOverlay extends StatefulWidget {
   final bool controlsEnabled;
   final bool isPlaying;
   final VoidCallback? onToggle;
-  final Widget transport;
-  final Widget controlBar;
+  final Widget child;
   final Duration hideAfter;
   final VideoControlModel? model;
 
@@ -91,19 +84,20 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
       widget.model ?? resolveVideoControlModel(defaultTargetPlatform);
 
   bool get _canAutoHide => canAutoHideVideoControls(
-        controlsEnabled: widget.controlsEnabled,
-        isPlaying: widget.isPlaying,
-        focusWithin: _focusWithin,
-        accessibleNavigation: _accessibleNavigation,
-      );
+    controlsEnabled: widget.controlsEnabled,
+    isPlaying: widget.isPlaying,
+    focusWithin: _focusWithin,
+    accessibleNavigation: _accessibleNavigation,
+  );
 
   bool get _visible =>
       videoControlsVisible(canAutoHide: _canAutoHide, hidden: _hidden);
 
   void _restartHideTimer() {
     _hideTimer?.cancel();
-    _hideTimer =
-        _canAutoHide ? Timer(widget.hideAfter, _onHideDelayElapsed) : null;
+    _hideTimer = _canAutoHide
+        ? Timer(widget.hideAfter, _onHideDelayElapsed)
+        : null;
   }
 
   void _registerActivityBeforeBuild() {
@@ -172,44 +166,35 @@ class _VideoControlsOverlayState extends State<VideoControlsOverlay> {
     _hideNow();
   }
 
+  bool get _surfaceTapActs => widget.onToggle != null || _canAutoHide;
+
   @override
   Widget build(BuildContext context) {
     final bool visible = _visible;
+    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     return MouseRegion(
+      opaque: false,
       onEnter: _onPointerEnter,
       onHover: _onPointerHover,
       onExit: _onPointerExit,
       child: Listener(
+        behavior: HitTestBehavior.translucent,
         onPointerDown: _onPointerDown,
         onPointerMove: _onPointerMove,
         child: GestureDetector(
           key: const ValueKey<String>('video-surface-tap'),
-          behavior: HitTestBehavior.opaque,
+          behavior: HitTestBehavior.translucent,
           excludeFromSemantics: true,
-          onTap: _onSurfaceTap,
+          onTap: _surfaceTapActs ? _onSurfaceTap : null,
           child: Focus(
             canRequestFocus: false,
             skipTraversal: true,
             onFocusChange: _onFocusWithin,
             child: AnimatedOpacity(
               opacity: visible ? 1 : 0,
-              duration: Motion.fade,
+              duration: still ? Duration.zero : Motion.fade,
               curve: Motion.fadeCurve,
-              child: IgnorePointer(
-                ignoring: !visible,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    Center(child: widget.transport),
-                    Positioned(
-                      left: videoControlInset,
-                      right: videoControlInset,
-                      bottom: videoControlInset,
-                      child: widget.controlBar,
-                    ),
-                  ],
-                ),
-              ),
+              child: IgnorePointer(ignoring: !visible, child: widget.child),
             ),
           ),
         ),
