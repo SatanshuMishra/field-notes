@@ -40,12 +40,13 @@ Future<void> showPhotoViewer(
   required String dayTitle,
   required MediaResolver resolver,
 }) {
+  final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
   return showGeneralDialog<void>(
     context: context,
     barrierDismissible: false,
     barrierLabel: _barrierLabel,
     barrierColor: _clearBarrier,
-    transitionDuration: Motion.fade,
+    transitionDuration: still ? Duration.zero : Motion.fade,
     pageBuilder:
         (
           BuildContext dialogContext,
@@ -211,6 +212,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
 
   Widget _phoneLayout(BuildContext context) {
     final bool visible = !_overlaysHidden || _overlaysPinned;
+    final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     final double statusBar = MediaQuery.viewPaddingOf(context).top;
     return Stack(
       fit: StackFit.expand,
@@ -223,7 +225,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
         ),
         AnimatedOpacity(
           opacity: visible ? 1 : 0,
-          duration: Motion.fade,
+          duration: still ? Duration.zero : Motion.fade,
           curve: Motion.fadeCurve,
           child: Focus(
             canRequestFocus: false,

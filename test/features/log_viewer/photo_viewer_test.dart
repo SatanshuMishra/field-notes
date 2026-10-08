@@ -48,7 +48,7 @@ void _mac(WidgetTester tester, Size size) {
   addTearDown(tester.view.reset);
 }
 
-Future<void> _open(
+Future<void> _pumpOpener(
   WidgetTester tester, {
   required TargetPlatform platform,
   required int initialIndex,
@@ -75,10 +75,51 @@ Future<void> _open(
       ),
     ),
   );
+}
+
+Future<void> _open(
+  WidgetTester tester, {
+  required TargetPlatform platform,
+  required int initialIndex,
+  Brightness brightness = Brightness.light,
+}) async {
+  await _pumpOpener(
+    tester,
+    platform: platform,
+    initialIndex: initialIndex,
+    brightness: brightness,
+  );
   await tester.tap(find.text('Open'));
   await tester.pumpAndSettle();
   expect(find.byType(PhotoViewer), findsOneWidget);
 }
+
+double _routeOpacity(WidgetTester tester) => tester
+    .widget<FadeTransition>(
+      find
+          .ancestor(
+            of: find.byType(PhotoViewer),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    )
+    .opacity
+    .value;
+
+double _overlayOpacity(WidgetTester tester) => tester
+    .widget<FadeTransition>(
+      find
+          .descendant(
+            of: find.ancestor(
+              of: find.byType(ViewerDock),
+              matching: find.byType(AnimatedOpacity),
+            ),
+            matching: find.byType(FadeTransition),
+          )
+          .first,
+    )
+    .opacity
+    .value;
 
 Finder _circle(String label) => find.byWidgetPredicate(
   (Widget widget) => widget is ViewerGlassCircle && widget.label == label,
@@ -410,4 +451,35 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PhotoViewer), findsNothing);
   });
+
+  testWidgets(
+    'with reduce motion the photo viewer and its overlays never fade',
+    (WidgetTester tester) async {
+      _phone(tester);
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await _pumpOpener(
+        tester,
+        platform: TargetPlatform.android,
+        initialIndex: 1,
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      expect(find.byType(PhotoViewer), findsOneWidget);
+      expect(_routeOpacity(tester), 1);
+      expect(_overlayOpacity(tester), 1);
+
+      await tester.tapAt(const Offset(192, 416));
+      await tester.pump();
+      expect(_overlayOpacity(tester), 0);
+
+      await tester.tapAt(const Offset(192, 416));
+      await tester.pump();
+      expect(_overlayOpacity(tester), 1);
+    },
+  );
 }

@@ -45,6 +45,33 @@ double notePanelWidthFor(double window) => clampDouble(
   composerPanelMaxWidth,
 );
 
+class _PanelResize extends StatefulWidget {
+  const _PanelResize({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_PanelResize> createState() => _PanelResizeState();
+}
+
+class _PanelResizeState extends State<_PanelResize> {
+  final GlobalKey _content = GlobalKey(debugLabel: 'note-panel-content');
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget content = KeyedSubtree(key: _content, child: widget.child);
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      return content;
+    }
+    return AnimatedSize(
+      duration: Motion.modalPop,
+      curve: Motion.entranceCurve,
+      alignment: Alignment.topCenter,
+      child: content,
+    );
+  }
+}
+
 class NotePanelView extends StatelessWidget {
   const NotePanelView({
     super.key,
@@ -64,10 +91,7 @@ class NotePanelView extends StatelessWidget {
     return ComposerShell(
       maxWidth: notePanelWidthFor(MediaQuery.sizeOf(context).width),
       closeOnScrimTap: true,
-      child: AnimatedSize(
-        duration: Motion.modalPop,
-        curve: Motion.entranceCurve,
-        alignment: Alignment.topCenter,
+      child: _PanelResize(
         child:
             editor ??
             ViewerKeys(

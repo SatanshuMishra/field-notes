@@ -184,6 +184,75 @@ Future<void> _openPanel(
   await tester.pumpAndSettle();
 }
 
+class _TallEditor extends StatefulWidget {
+  const _TallEditor();
+
+  @override
+  State<_TallEditor> createState() => _TallEditorState();
+}
+
+class _TallEditorState extends State<_TallEditor> {
+  @override
+  Widget build(BuildContext context) => const SizedBox(height: 600);
+}
+
+Future<void> _openSwitchingPanel(
+  WidgetTester tester,
+  LogViewerScene scene,
+  ValueNotifier<Widget?> editor,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+      home: Scaffold(
+        body: Builder(
+          builder: (BuildContext context) {
+            return Center(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => showGeneralDialog<void>(
+                  context: context,
+                  barrierDismissible: false,
+                  barrierLabel: 'Dismiss log viewer',
+                  barrierColor: Colors.transparent,
+                  pageBuilder:
+                      (
+                        BuildContext dialogContext,
+                        Animation<double> animation,
+                        Animation<double> secondaryAnimation,
+                      ) {
+                        return DialogHost(
+                          child: ValueListenableBuilder<Widget?>(
+                            valueListenable: editor,
+                            builder:
+                                (
+                                  BuildContext context,
+                                  Widget? shown,
+                                  Widget? child,
+                                ) {
+                                  return NotePanelView(
+                                    scene: scene,
+                                    resolver: FakeNoteMediaResolver(),
+                                    editor: shown,
+                                  );
+                                },
+                          ),
+                        );
+                      },
+                ),
+                child: const Text('open note'),
+              ),
+            );
+          },
+        ),
+      ),
+    ),
+  );
+  await tester.tap(find.text('open note'));
+  await tester.pumpAndSettle();
+}
+
 Rect _panel(WidgetTester tester) =>
     tester.getRect(find.byKey(composerPanelKey));
 
@@ -371,5 +440,35 @@ void main() {
     await tester.pump();
 
     expect(calls, <String>['back']);
+  });
+
+  testWidgets('with reduce motion the note panel resizes without animating', (
+    WidgetTester tester,
+  ) async {
+    _useMac(tester, _wide);
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final ValueNotifier<Widget?> editor = ValueNotifier<Widget?>(null);
+    addTearDown(editor.dispose);
+    await _openSwitchingPanel(
+      tester,
+      _scene(<String>[], text: _shortNote),
+      editor,
+    );
+    final double reading = _panel(tester).height;
+
+    editor.value = const _TallEditor();
+    await tester.pump();
+    final double shown = _panel(tester).height;
+    await tester.pumpAndSettle();
+
+    expect(_panel(tester).height, greaterThan(reading + 100));
+    expect(shown, _panel(tester).height);
+
+    final State<_TallEditor> editing = tester.state(find.byType(_TallEditor));
+    tester.platformDispatcher.clearAccessibilityFeaturesTestValue();
+    await tester.pumpAndSettle();
+    expect(tester.state(find.byType(_TallEditor)), same(editing));
   });
 }
