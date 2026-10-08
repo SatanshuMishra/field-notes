@@ -8,6 +8,7 @@ import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/note_photos.dart';
 import 'package:field_notes/features/entry_cards/media/media_image.dart';
+import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/log_viewer/photo_viewer.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 
@@ -482,4 +483,27 @@ void main() {
       expect(_overlayOpacity(tester), 1);
     },
   );
+
+  testWidgets('opening a photo pauses other playback', (
+    WidgetTester tester,
+  ) async {
+    for (final TargetPlatform platform in <TargetPlatform>[
+      TargetPlatform.android,
+      TargetPlatform.macOS,
+    ]) {
+      if (platform == TargetPlatform.macOS) {
+        _mac(tester, const Size(1280, 800));
+      } else {
+        _phone(tester);
+      }
+      final Object inline = Object();
+      final List<Object> paused = <Object>[];
+      playbackFocus.claim(inline, () => paused.add(inline));
+      addTearDown(() => playbackFocus.release(inline));
+
+      await _open(tester, platform: platform, initialIndex: 0);
+
+      expect(paused, <Object>[inline], reason: '$platform');
+    }
+  });
 }

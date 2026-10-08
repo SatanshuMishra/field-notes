@@ -456,4 +456,26 @@ void main() {
     expect(find.byType(DayDetailPanel), findsNothing);
     expect(find.text(_openDayLabel), findsOneWidget);
   }, variant: _mac);
+
+  testWidgets('reading a note in the right pane pauses other playback', (
+    WidgetTester tester,
+  ) async {
+    await _openDay(tester, entries: _notes(), mood: Mood.calm);
+    final Object inline = Object();
+    final List<Object> paused = <Object>[];
+    playbackFocus.claim(inline, () => paused.add(inline));
+    addTearDown(() => playbackFocus.release(inline));
+
+    await _tapCard(tester, 'note-1');
+
+    expect(_inPane(find.text('Morning note')), findsOneWidget);
+    expect(paused, <Object>[inline]);
+
+    playbackFocus.claim(inline, () => paused.add(inline));
+    await tester.tap(_inPane(find.byKey(logViewerLaterKey)));
+    await tester.pumpAndSettle();
+
+    expect(_inPane(find.text('Afternoon note')), findsOneWidget);
+    expect(paused, <Object>[inline, inline]);
+  }, variant: _mac);
 }

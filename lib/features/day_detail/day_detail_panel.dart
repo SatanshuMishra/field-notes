@@ -198,6 +198,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
 
   Future<void> _open(Entry entry) async {
     if (!_sheet && entry.type == EntryType.text) {
+      playbackFocus.silence();
       _select(entry.id);
       return;
     }

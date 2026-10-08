@@ -11,6 +11,7 @@ import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/notes/note_photos.dart';
 import 'package:field_notes/features/entry_cards/media/media_image.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
+import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 
 const String photoViewerPreviousLabel = 'Previous';
@@ -40,6 +41,7 @@ Future<void> showPhotoViewer(
   required String dayTitle,
   required MediaResolver resolver,
 }) {
+  playbackFocus.silence();
   final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
   return showGeneralDialog<void>(
     context: context,
