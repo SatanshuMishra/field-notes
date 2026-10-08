@@ -23,7 +23,9 @@ import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
-import '../capture/core/capture_test_support.dart' show FakeDraftStore;
+import '../../support/note_editor_driver.dart';
+import '../capture/core/capture_test_support.dart'
+    show FakeDraftStore, draftIdleDebounceForTest;
 import '../day_detail/support/day_detail_harness.dart';
 
 const Size _phone = Size(384, 832);
@@ -381,6 +383,35 @@ void main() {
     expect(find.text('Editing morning note'), findsNothing);
     expect(_inSheet(find.text('Morning note')), findsOneWidget);
     expect(session.outcomes, isEmpty);
+  });
+
+  testWidgets('an expanded note sheet stays expanded after an edit is saved', (
+    WidgetTester tester,
+  ) async {
+    _usePhone(tester);
+    final NoteEditorDriver driver = NoteEditorDriver(tester);
+    final _Session session = await _openLog(tester);
+    final double resting = tester.getSize(find.byType(PhoneSheet)).height;
+
+    await tester.tap(find.byKey(phoneSheetGrabberToggleKey));
+    await tester.pumpAndSettle();
+    expect(tester.widget<PhoneSheet>(find.byType(PhoneSheet)).expanded, isTrue);
+    final double expanded = tester.getSize(find.byType(PhoneSheet)).height;
+    expect(expanded, greaterThan(resting));
+
+    await tester.tap(_inFooter(find.byKey(logActionsEditKey)));
+    await tester.pumpAndSettle();
+    await driver.enterText('Watered the roses twice.');
+    await tester.pump(draftIdleDebounceForTest);
+    await tester.tap(find.text(editNoteSaveLabel));
+    await tester.pumpAndSettle();
+
+    expect(session.repository.noteSaves, hasLength(1));
+    expect(find.text('Editing morning note'), findsNothing);
+    expect(tester.widget<PhoneSheet>(find.byType(PhoneSheet)).expanded, isTrue);
+    expect(tester.getSize(find.byType(PhoneSheet)).height, expanded);
+    expect(session.outcomes, isEmpty);
+    await _drainToast(tester);
   });
 
   testWidgets('a log opened from the day sheet hands back to the day', (

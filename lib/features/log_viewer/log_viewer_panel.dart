@@ -71,6 +71,7 @@ class LogViewerPanel extends ConsumerStatefulWidget {
 class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   late String _entryId = widget.entryId;
   bool _editing = false;
+  bool _noteExpanded = false;
   bool _deleting = false;
   bool _left = false;
   int _viewGeneration = 0;
@@ -208,6 +209,12 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       exit: ComposerExit.back,
     );
     _onEditDone(saved ?? false);
+  }
+
+  void _onNoteExpandedChanged(bool expanded) {
+    if (mounted && expanded != _noteExpanded) {
+      setState(() => _noteExpanded = expanded);
+    }
   }
 
   void _onEditDone(bool saved) {
@@ -383,6 +390,8 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
             child: NoteSheetView(
               scene: scene,
               resolver: resolver,
+              expanded: _noteExpanded,
+              onExpandedChanged: _onNoteExpandedChanged,
               onToggleTask: _toggleTaskOf(scene.entry),
             ),
           ),

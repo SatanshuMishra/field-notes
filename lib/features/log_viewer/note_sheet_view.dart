@@ -33,42 +33,32 @@ const double _backHorizontalPadding = 12;
 const double _actionGlyphSize = 17;
 const double _buttonHeight = 48;
 
-class NoteSheetView extends StatefulWidget {
+class NoteSheetView extends StatelessWidget {
   const NoteSheetView({
     super.key,
     required this.scene,
     required this.resolver,
+    required this.expanded,
+    required this.onExpandedChanged,
     this.onToggleTask,
   });
 
   final LogViewerScene scene;
   final MediaResolver resolver;
+  final bool expanded;
+  final ValueChanged<bool> onExpandedChanged;
   final ValueChanged<int>? onToggleTask;
 
   @override
-  State<NoteSheetView> createState() => _NoteSheetViewState();
-}
-
-class _NoteSheetViewState extends State<NoteSheetView> {
-  bool _expanded = false;
-
-  void _onExpandedChanged(bool expanded) {
-    if (mounted && expanded != _expanded) {
-      setState(() => _expanded = expanded);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final LogViewerScene scene = widget.scene;
     return ViewerKeys(
       onLeft: scene.onEarlier,
       onRight: scene.onLater,
       onEscape: scene.onBack,
       child: PhoneSheet(
         color: context.colors.composerPaper,
-        expanded: _expanded,
-        onExpandedChanged: _onExpandedChanged,
+        expanded: expanded,
+        onExpandedChanged: onExpandedChanged,
         header: _header(context),
         aboveFooter: scene.count > 1 ? _footer(context) : null,
         actions: _actions(),
@@ -76,9 +66,9 @@ class _NoteSheetViewState extends State<NoteSheetView> {
           padding: _bodyPadding,
           child: NoteReadingBody(
             entry: scene.entry,
-            resolver: widget.resolver,
+            resolver: resolver,
             dayTitle: scene.dayTitle,
-            onToggleTask: widget.onToggleTask,
+            onToggleTask: onToggleTask,
           ),
         ),
       ),
@@ -86,7 +76,6 @@ class _NoteSheetViewState extends State<NoteSheetView> {
   }
 
   Widget _footer(BuildContext context) {
-    final LogViewerScene scene = widget.scene;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -105,7 +94,6 @@ class _NoteSheetViewState extends State<NoteSheetView> {
   }
 
   List<Widget> _actions() {
-    final LogViewerScene scene = widget.scene;
     final VoidCallback? onEdit = scene.onEdit;
     return <Widget>[
       Expanded(
@@ -145,13 +133,13 @@ class _NoteSheetViewState extends State<NoteSheetView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                widget.scene.dayTitle,
+                scene.dayTitle,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: textStyles.stampAccent.copyWith(color: colors.accentInk),
               ),
               Text(
-                logPreviewOf(widget.scene.entry).heading,
+                logPreviewOf(scene.entry).heading,
                 style: textStyles.headlineSerif.copyWith(
                   fontSize: _titleSize,
                   height: _titleLineHeight,

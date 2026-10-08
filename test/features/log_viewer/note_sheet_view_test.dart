@@ -131,6 +131,31 @@ LogViewerScene _scene(
   );
 }
 
+class _SheetHost extends StatefulWidget {
+  const _SheetHost({required this.scene});
+
+  final LogViewerScene scene;
+
+  @override
+  State<_SheetHost> createState() => _SheetHostState();
+}
+
+class _SheetHostState extends State<_SheetHost> {
+  final FakeNoteMediaResolver _resolver = FakeNoteMediaResolver();
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return NoteSheetView(
+      scene: widget.scene,
+      resolver: _resolver,
+      expanded: _expanded,
+      onExpandedChanged: (bool expanded) =>
+          setState(() => _expanded = expanded),
+    );
+  }
+}
+
 Future<void> _openSheet(
   WidgetTester tester,
   LogViewerScene scene, {
@@ -153,10 +178,8 @@ Future<void> _openSheet(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => showPhoneSheet<void>(
                   context,
-                  builder: (BuildContext sheetContext) => NoteSheetView(
-                    scene: scene,
-                    resolver: FakeNoteMediaResolver(),
-                  ),
+                  builder: (BuildContext sheetContext) =>
+                      _SheetHost(scene: scene),
                 ),
                 child: const Text('open note'),
               ),
