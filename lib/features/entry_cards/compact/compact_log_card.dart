@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
@@ -11,8 +10,7 @@ import '../../../domain/models/models.dart';
 import '../../notes/render/note_photo_block.dart' show NoteMediaScope;
 import '../cards/note_body.dart';
 import '../cards/voice_body.dart';
-import '../media/live_media.dart';
-import '../media/media_image.dart';
+import '../media/hatched_media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/audio_playback.dart';
@@ -459,7 +457,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
             ),
           ],
         ),
-        child: _CompactMedia(
+        child: HatchedMediaImage(
           resolver: widget.resolver,
           mediaId: reference,
           width: style.thumbnailExtent,
@@ -546,7 +544,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
         alignment: Alignment.center,
         children: <Widget>[
           Positioned.fill(
-            child: _CompactMedia(
+            child: HatchedMediaImage(
               resolver: widget.resolver,
               mediaId: widget.entry.thumbnailMediaId,
               width: style.posterSize.width,
@@ -664,125 +662,4 @@ class _PlayTrianglePainter extends CustomPainter {
   @override
   bool shouldRepaint(_PlayTrianglePainter oldDelegate) =>
       color != oldDelegate.color;
-}
-
-class _CompactMedia extends StatefulWidget {
-  const _CompactMedia({
-    required this.resolver,
-    required this.mediaId,
-    required this.width,
-    required this.height,
-    required this.borderRadius,
-    required this.variant,
-    required this.errorLabel,
-  });
-
-  final MediaResolver resolver;
-  final String? mediaId;
-  final double width;
-  final double height;
-  final BorderRadius borderRadius;
-  final CrossHatchVariant variant;
-  final String errorLabel;
-
-  @override
-  State<_CompactMedia> createState() => _CompactMediaState();
-}
-
-class _CompactMediaState extends State<_CompactMedia> {
-  final MediaArrivalWatch _arrivals = MediaArrivalWatch();
-  ResolvedMedia? _media;
-  bool _decodeFailed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _media = _start();
-  }
-
-  @override
-  void didUpdateWidget(_CompactMedia oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.mediaId == widget.mediaId &&
-        oldWidget.resolver == widget.resolver) {
-      return;
-    }
-    _decodeFailed = false;
-    _media = _start();
-  }
-
-  @override
-  void dispose() {
-    _arrivals.cancel();
-    super.dispose();
-  }
-
-  ResolvedMedia? _start() {
-    _arrivals.cancel();
-    final String? id = widget.mediaId;
-    if (id == null || id.isEmpty) {
-      return const ResolvedMedia.missing();
-    }
-    final ResolvedMedia? memo = widget.resolver.resolved(id);
-    if (memo != null) {
-      return memo;
-    }
-    _resolve(id);
-    return null;
-  }
-
-  void _resolve(String id) {
-    widget.resolver
-        .resolve(id)
-        .then(
-          (ResolvedMedia media) => _arrive(id, media),
-          onError: (Object error, StackTrace stackTrace) =>
-              _arrive(id, const ResolvedMedia.missing()),
-        );
-  }
-
-  void _arrive(String id, ResolvedMedia media) {
-    if (!mounted || widget.mediaId != id) {
-      return;
-    }
-    setState(() => _media = media);
-    if (media.isAvailable) {
-      _arrivals.cancel();
-    } else if (!_arrivals.isWatching) {
-      _arrivals.watch(widget.resolver, id, () => _resolve(id));
-    }
-  }
-
-  void _onDecodeError() {
-    if (mounted && !_decodeFailed) {
-      setState(() => _decodeFailed = true);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final ResolvedMedia? media = _media;
-    final File? file = media?.file;
-    if (media == null || !media.isAvailable || file == null || _decodeFailed) {
-      return CrossHatchPlaceholder(
-        width: widget.width,
-        height: widget.height,
-        borderRadius: widget.borderRadius,
-        variant: widget.variant,
-      );
-    }
-    return ExcludeSemantics(
-      child: MediaImage(
-        resolver: widget.resolver,
-        mediaId: widget.mediaId,
-        errorLabel: widget.errorLabel,
-        width: widget.width,
-        height: widget.height,
-        borderRadius: widget.borderRadius,
-        fit: BoxFit.cover,
-        border: context.shadows.outline,
-        onDecodeError: _onDecodeError,
-      ),
-    );
-  }
 }
