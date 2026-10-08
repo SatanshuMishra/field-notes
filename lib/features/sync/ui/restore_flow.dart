@@ -83,6 +83,7 @@ class _RestoreFlowState extends ConsumerState<RestoreFlow> {
       canPop: !_busy,
       child: SyncTaskFrame(
         title: restoreTitle,
+        closable: !_busy,
         content: <Widget>[
           SyncFlowField(
             label: serverAddressLabel,

@@ -4,7 +4,12 @@ import 'dart:math';
 import 'package:drift/native.dart';
 import 'package:field_notes/app/shell/system_bars.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/data/crypto/device_keys.dart';
+import 'package:field_notes/data/crypto/key_store.dart';
+import 'package:field_notes/data/crypto/recovery_phrase.dart';
 import 'package:field_notes/data/database/app_database.dart';
+import 'package:field_notes/data/sync/enrolment/restore_service.dart';
+import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
@@ -18,6 +23,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 import '../../../support/sync_overrides.dart';
 
@@ -625,5 +632,51 @@ void main() {
     await tester.tapAt(_macCorner);
     await tester.pumpAndSettle();
     expect(tapped.closed, isTrue);
+  });
+
+  testWidgets('restore hides Close while the journal is being restored', (
+    WidgetTester tester,
+  ) async {
+    final AppDatabase database = AppDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final Completer<http.Response> relay = Completer<http.Response>();
+    final RestoreService pending = RestoreService(
+      database: database,
+      keyStore: KeyStore(MemorySecureValues()),
+      clientFor: (Uri baseUrl, DeviceKeys? device) => RelayClient(
+        baseUrl: baseUrl,
+        device: device,
+        client: MockClient((http.Request request) => relay.future),
+      ),
+      deviceName: () async => 'Test device',
+    );
+    final _Host host = await _pumpHost(
+      tester,
+      platform: TargetPlatform.android,
+      overrides: <Override>[
+        for (final Override override in _overrides(database, 11))
+          if (override.origin != restoreServiceProvider) override,
+        restoreServiceProvider.overrideWithValue(pending),
+      ],
+    );
+    await _open<bool>(tester, host, const RestoreFlow());
+    expect(find.byKey(syncFlowPageCloseKey), findsOneWidget);
+
+    await tester.enterText(
+      _fieldLabelled(serverAddressLabel),
+      'https://sync.example.com',
+    );
+    await tester.enterText(
+      _fieldLabelled(restoreWordsLabel),
+      encodeRecoveryPhrase(Uint8List.fromList(List<int>.filled(16, 7))),
+    );
+    await tester.tap(find.byKey(restoreConfirmKey));
+    await tester.pump();
+    await tester.pump();
+    expect(find.byKey(syncFlowPageCloseKey), findsNothing);
+
+    relay.complete(http.Response('', 404));
+    await tester.pumpAndSettle();
+    expect(find.byKey(syncFlowPageCloseKey), findsOneWidget);
   });
 }
