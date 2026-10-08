@@ -34,17 +34,6 @@ abstract interface class MediaProbe {
   Future<MediaMeasure?> measure({required File file, required MediaKind kind});
 }
 
-Size? uprightSizeOf(Size coded, int rotationDegrees) {
-  if (coded.isEmpty || !coded.isFinite) {
-    return null;
-  }
-  final int turn = rotationDegrees % 360;
-  if (turn == 90 || turn == 270) {
-    return coded.flipped;
-  }
-  return coded;
-}
-
 class PlatformMediaProbe implements MediaProbe {
   const PlatformMediaProbe();
 
@@ -63,11 +52,12 @@ class PlatformMediaProbe implements MediaProbe {
     try {
       await controller.initialize();
       final VideoPlayerValue value = controller.value;
-      final Size? upright = uprightSizeOf(value.size, value.rotationCorrection);
+      final Size size = value.size;
+      final bool sized = !size.isEmpty && size.isFinite;
       return MediaMeasure(
         duration: value.duration,
-        width: upright?.width.round(),
-        height: upright?.height.round(),
+        width: sized ? size.width.round() : null,
+        height: sized ? size.height.round() : null,
       );
     } finally {
       await controller.dispose();

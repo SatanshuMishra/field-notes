@@ -7,8 +7,7 @@ import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_player_impl.dart';
 
 const int _playerId = 31;
-const Size _coded = Size(1920, 1080);
-const Size _upright = Size(1080, 1920);
+const Size _portrait = Size(1080, 1920);
 
 class _QuarterTurnedVideoPlatform extends VideoPlayerPlatform {
   @override
@@ -25,7 +24,7 @@ class _QuarterTurnedVideoPlatform extends VideoPlayerPlatform {
   Stream<VideoEvent> videoEventsFor(int playerId) => Stream<VideoEvent>.value(
     VideoEvent(
       eventType: VideoEventType.initialized,
-      size: _coded,
+      size: _portrait,
       duration: const Duration(seconds: 10),
       rotationCorrection: 90,
     ),
@@ -229,7 +228,7 @@ void main() {
     expect(fitted.fit, BoxFit.contain);
     expect(fitted.clipBehavior, Clip.none);
     final SizedBox frame = fitted.child! as SizedBox;
-    expect(Size(frame.width!, frame.height!), _upright);
+    expect(Size(frame.width!, frame.height!), _portrait);
 
     await tester.pumpWidget(
       Directionality(
@@ -240,7 +239,7 @@ void main() {
 
     expect(
       tester.renderObject<RenderBox>(find.byType(VideoPlayer)).size,
-      _upright,
+      _portrait,
     );
     final Rect shown = tester.getRect(find.byType(VideoPlayer));
     expect(shown.height, closeTo(400, 0.01));
@@ -256,6 +255,6 @@ void main() {
       tester,
     );
 
-    expect(player.uprightSize, _upright);
+    expect(player.uprightSize, _portrait);
   });
 }

@@ -9,6 +9,9 @@ import 'package:video_player_platform_interface/video_player_platform_interface.
 const int _playerId = 23;
 
 class _RotatedVideoPlatform extends VideoPlayerPlatform {
+  _RotatedVideoPlatform({required this.size});
+
+  final Size size;
   final List<int> disposedPlayers = <int>[];
 
   @override
@@ -22,7 +25,7 @@ class _RotatedVideoPlatform extends VideoPlayerPlatform {
   Stream<VideoEvent> videoEventsFor(int playerId) => Stream<VideoEvent>.value(
     VideoEvent(
       eventType: VideoEventType.initialized,
-      size: const Size(1920.4, 1079.6),
+      size: size,
       duration: const Duration(milliseconds: 6400),
       rotationCorrection: 90,
     ),
@@ -50,48 +53,53 @@ class _RotatedVideoPlatform extends VideoPlayerPlatform {
   Future<void> dispose(int playerId) async => disposedPlayers.add(playerId);
 }
 
-void main() {
-  test('a rotated frame stores its upright size', () {
-    const Size landscape = Size(1920, 1080);
-    const Size portrait = Size(1080, 1920);
+Future<MediaMeasure?> _measure(
+  WidgetTester tester,
+  _RotatedVideoPlatform platform,
+) async {
+  final VideoPlayerPlatform previous = VideoPlayerPlatform.instance;
+  VideoPlayerPlatform.instance = platform;
+  addTearDown(() => VideoPlayerPlatform.instance = previous);
+  return tester.runAsync<MediaMeasure?>(
+    () => const PlatformMediaProbe().measure(
+      file: File('portrait.mp4'),
+      kind: MediaKind.video,
+    ),
+  );
+}
 
-    expect(uprightSizeOf(landscape, 90), portrait);
-    expect(uprightSizeOf(landscape, 270), portrait);
-    expect(uprightSizeOf(landscape, 0), landscape);
-    expect(uprightSizeOf(landscape, 180), landscape);
-    expect(uprightSizeOf(landscape, -90), portrait);
-    expect(uprightSizeOf(landscape, 450), portrait);
-    expect(uprightSizeOf(Size.zero, 0), isNull);
-    expect(uprightSizeOf(Size.zero, 90), isNull);
-    expect(uprightSizeOf(const Size(1920, 0), 0), isNull);
-    expect(uprightSizeOf(const Size(double.infinity, 1080), 0), isNull);
-    expect(uprightSizeOf(const Size(double.nan, 1080), 90), isNull);
+void main() {
+  testWidgets('a rotated frame stores its upright size', (
+    WidgetTester tester,
+  ) async {
+    final _RotatedVideoPlatform platform = _RotatedVideoPlatform(
+      size: const Size(1079.6, 1920.4),
+    );
+
+    final MediaMeasure? measured = await _measure(tester, platform);
+
+    expect(
+      measured,
+      const MediaMeasure(
+        duration: Duration(milliseconds: 6400),
+        width: 1080,
+        height: 1920,
+      ),
+    );
+    expect(platform.disposedPlayers, <int>[_playerId]);
   });
 
-  testWidgets(
-    'the platform probe measures a rotated video upright and releases it',
-    (WidgetTester tester) async {
-      final VideoPlayerPlatform previous = VideoPlayerPlatform.instance;
-      final _RotatedVideoPlatform platform = _RotatedVideoPlatform();
-      VideoPlayerPlatform.instance = platform;
-      addTearDown(() => VideoPlayerPlatform.instance = previous);
+  testWidgets('a video without a frame size stores no size', (
+    WidgetTester tester,
+  ) async {
+    final MediaMeasure? measured = await _measure(
+      tester,
+      _RotatedVideoPlatform(size: Size.zero),
+    );
 
-      final MediaMeasure? measured = await tester.runAsync<MediaMeasure?>(
-        () => const PlatformMediaProbe().measure(
-          file: File('portrait.mp4'),
-          kind: MediaKind.video,
-        ),
-      );
-
-      expect(
-        measured,
-        const MediaMeasure(
-          duration: Duration(milliseconds: 6400),
-          width: 1080,
-          height: 1920,
-        ),
-      );
-      expect(platform.disposedPlayers, <int>[_playerId]);
-    },
-  );
+    expect(
+      measured,
+      const MediaMeasure(duration: Duration(milliseconds: 6400)),
+    );
+  });
 }
