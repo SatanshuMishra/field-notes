@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:flutter/material.dart';
 
@@ -72,7 +74,7 @@ class SettingsFieldRow extends StatelessWidget {
               ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth:
-                      (constraints.maxWidth - _phoneControlGap) *
+                      math.max(0, constraints.maxWidth - _phoneControlGap) *
                       _phoneControlShare,
                 ),
                 child: slot,
