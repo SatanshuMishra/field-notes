@@ -20,6 +20,10 @@ const double joinWindowFrameMax = 300;
 const double joinWindowPreviewRadius = 18;
 const double joinWindowPreviewBorder = 2;
 const double joinWindowDividerWidth = 1.5;
+const double joinWindowTypeOnlyWidth = 480;
+
+bool joinWindowScans(TargetPlatform platform) =>
+    platform == TargetPlatform.macOS;
 
 const double _headerTop = 12;
 const double _headerBottom = 20;
@@ -83,7 +87,7 @@ class JoinWindow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     _header(context),
-                    Expanded(child: _body()),
+                    Expanded(child: _body(context)),
                   ],
                 ),
               ),
@@ -123,14 +127,36 @@ class JoinWindow extends StatelessWidget {
     );
   }
 
-  Widget _body() {
+  Widget _body(BuildContext context) {
+    const EdgeInsets inset = EdgeInsets.fromLTRB(
+      joinWindowSideInset,
+      0,
+      joinWindowSideInset,
+      _bodyBottom,
+    );
+    if (!joinWindowScans(Theme.of(context).platform)) {
+      return Padding(
+        padding: inset,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: joinWindowTypeOnlyWidth,
+            ),
+            child: _TypeColumn(
+              key: joinTypeColumnKey,
+              words: words,
+              address: address,
+              onWordsChanged: onWordsChanged,
+              onJoin: onJoin,
+              error: error,
+            ),
+          ),
+        ),
+      );
+    }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        joinWindowSideInset,
-        0,
-        joinWindowSideInset,
-        _bodyBottom,
-      ),
+      padding: inset,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
