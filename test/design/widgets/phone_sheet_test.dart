@@ -16,6 +16,7 @@ const Size _phone = Size(384, 832);
 const Size _desktop = Size(1280, 900);
 const double _statusBar = 34;
 const double _gestureBar = 24;
+const double _keyboard = 300;
 
 const Key _closeKey = ValueKey<String>('close');
 const Key _addKey = ValueKey<String>('add');
@@ -46,6 +47,19 @@ void _usePhone(WidgetTester tester) {
     bottom: _gestureBar,
   );
   addTearDown(tester.view.reset);
+}
+
+void _showKeyboard(WidgetTester tester, double height) {
+  tester.view.viewInsets = FakeViewPadding(bottom: height);
+  tester.view.padding = const FakeViewPadding(top: _statusBar);
+}
+
+void _hideKeyboard(WidgetTester tester) {
+  tester.view.resetViewInsets();
+  tester.view.padding = const FakeViewPadding(
+    top: _statusBar,
+    bottom: _gestureBar,
+  );
 }
 
 void _useDesktop(WidgetTester tester) {
@@ -427,6 +441,65 @@ void main() {
     expect(tester.getRect(find.byKey(_headerKey)).top, header.top);
     expect(tester.getRect(_surface).top, sheet.top);
     expect(find.byType(PhoneSheet), findsOneWidget);
+  });
+
+  testWidgets('a phone sheet rises above the keyboard and drops back when it '
+      'closes', (WidgetTester tester) async {
+    _usePhone(tester);
+    await _pumpOpeners(tester, <String, _Opener>{
+      'open': (BuildContext context) =>
+          showPhoneSheet<void>(context, builder: _columnFooterSheet),
+    });
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    final double height = tester.getRect(_surface).height;
+
+    _showKeyboard(tester, _keyboard);
+    await tester.pump();
+
+    expect(tester.getRect(_surface).bottom, _phone.height - _keyboard);
+    expect(
+      tester.getRect(find.byKey(phoneSheetFooterKey)).bottom,
+      _phone.height - _keyboard,
+    );
+    expect(
+      tester.getRect(find.byKey(_cancelKey)).bottom,
+      lessThanOrEqualTo(_phone.height - _keyboard),
+    );
+
+    _hideKeyboard(tester);
+    await tester.pump();
+
+    expect(tester.getRect(_surface).bottom, _phone.height);
+    expect(tester.getRect(_surface).height, height);
+    expect(
+      tester.getRect(find.byKey(phoneSheetFooterKey)).bottom,
+      _phone.height - _gestureBar,
+    );
+  });
+
+  testWidgets('a tall phone sheet shrinks above the keyboard and keeps its '
+      'footer in view', (WidgetTester tester) async {
+    _usePhone(tester);
+    await _pumpOpeners(tester, <String, _Opener>{
+      'open': (BuildContext context) =>
+          showPhoneSheet<void>(context, builder: _tallSheet),
+    });
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    _showKeyboard(tester, _keyboard);
+    await tester.pump();
+
+    final Rect sheet = tester.getRect(_surface);
+    expect(sheet.top, _statusBar + 8);
+    expect(sheet.bottom, _phone.height - _keyboard);
+    final Rect footer = tester.getRect(find.byKey(phoneSheetFooterKey));
+    expect(footer.bottom, _phone.height - _keyboard);
+    expect(tester.getRect(find.byKey(_pinnedKey)).bottom, footer.top);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('dragging the grabber follows the finger and closes past 60 '
