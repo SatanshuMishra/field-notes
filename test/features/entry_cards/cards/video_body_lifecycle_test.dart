@@ -39,6 +39,7 @@ Widget _columnOfMediaIds({
               resolver: resolver,
               playerFactory: playerFactory,
               slots: slots,
+              controls: videoTestControls,
               loadTimeout: videoLoadTimeout,
               retryBackoff: videoBackoff,
             ),

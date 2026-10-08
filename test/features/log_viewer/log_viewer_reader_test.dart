@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/design/widgets/widgets.dart' show NoteColumn;
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
     show MdPhotoSide, MdPhotoSize;
@@ -15,6 +16,8 @@ import 'package:field_notes/features/capture/core/composer_shell.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
+import 'package:field_notes/features/log_viewer/note_panel_view.dart'
+    show notePanelWidthFor;
 import 'package:field_notes/features/note_engine/note_engine.dart'
     show NoteEditorView, NoteReaderView;
 import 'package:field_notes/features/note_engine/render/photo_figure.dart'
@@ -96,21 +99,30 @@ RenderNoteView _reader(WidgetTester tester) =>
     tester.renderObject<RenderNoteView>(_readerColumn());
 
 void main() {
-  testWidgets('the note viewer lays out a six hundred eighty eight pixel '
-      'column in a 1280 pixel window', (WidgetTester tester) async {
-    _pinWindow(tester, const Size(1280, 900));
+  testWidgets(
+    'the note viewer lays out a 34 em column in a 1280 pixel window',
+    (WidgetTester tester) async {
+      _pinWindow(tester, const Size(1280, 900));
 
-    await _openViewer(
-      tester,
-      entries: <Entry>[
-        entryOf(type: EntryType.text, textContent: 'A harbour morning.'),
-      ],
-      entryId: 'entry-1',
-    );
+      await _openViewer(
+        tester,
+        entries: <Entry>[
+          entryOf(type: EntryType.text, textContent: 'A harbour morning.'),
+        ],
+        entryId: 'entry-1',
+      );
 
-    expect(tester.getSize(find.byKey(composerPanelKey)).width, 768);
-    expect(tester.getSize(_readerColumn()).width, 688);
-  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+      expect(
+        tester.getSize(find.byKey(composerPanelKey)).width,
+        notePanelWidthFor(1280),
+      );
+      expect(
+        tester.getSize(_readerColumn()).width,
+        34 * NoteColumn.emOf(tester.element(_readerColumn())),
+      );
+    },
+    variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+  );
 
   testWidgets('the note viewer caps its column at 45 em in a 1920 window', (
     WidgetTester tester,
@@ -320,10 +332,7 @@ void main() {
       );
 
       expect(find.text('the porch at dusk'), findsOneWidget);
-      expect(
-        find.bySemanticsLabel('Photo, the porch at dusk'),
-        findsOneWidget,
-      );
+      expect(find.bySemanticsLabel('Photo, the porch at dusk'), findsOneWidget);
       semantics.dispose();
     });
 
@@ -351,10 +360,7 @@ void main() {
       );
 
       expect(find.byKey(photoFigureUnavailableKey), findsOneWidget);
-      expect(
-        find.bySemanticsLabel('Photo, the porch at dusk'),
-        findsOneWidget,
-      );
+      expect(find.bySemanticsLabel('Photo, the porch at dusk'), findsOneWidget);
       semantics.dispose();
     });
 

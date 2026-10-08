@@ -17,6 +17,9 @@ import 'package:field_notes/features/day_detail/day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/log_viewer/note_panel_view.dart';
+import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
+import 'package:field_notes/features/log_viewer/voice_player_view.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -270,21 +273,31 @@ void main() {
     },
   );
 
-  testWidgets('a voice log offers Delete without Edit and is labelled Close', (
+  testWidgets('a voice log opens the voice player with Close and no Edit', (
     WidgetTester tester,
   ) async {
     _usePhone(tester);
     await _openLog(tester, entryId: 'entry-3', exit: LogViewerExit.close);
 
-    expect(_inSheet(find.text('Evening voice log')), findsOneWidget);
-    expect(find.byType(VoiceBody), findsOneWidget);
-    expect(_inFooter(find.text('Close')), findsOneWidget);
+    expect(find.byType(PhoneSheet), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(LogViewerPanel),
+        matching: find.byType(VoicePlayerView),
+      ),
+      findsOneWidget,
+    );
+    final Finder dock = find.byType(ViewerDock);
+    expect(find.descendant(of: dock, matching: find.text('Close')), findsOne);
     expect(find.text('Back'), findsNothing);
     expect(find.byKey(logActionsEditKey), findsNothing);
-    expect(_inFooter(find.byKey(logActionsDeleteKey)), findsOneWidget);
     expect(
-      tester.getRect(_inFooter(find.byKey(logActionsDeleteKey))).right,
-      _phone.width - phoneSheetFooterPadding.right,
+      find.descendant(of: dock, matching: find.byKey(logActionsDeleteKey)),
+      findsOneWidget,
+    );
+    expect(
+      tester.getRect(find.byKey(logActionsDeleteKey)).bottom,
+      lessThan(_phone.height - _gestureBar),
     );
   });
 
@@ -403,7 +416,7 @@ void main() {
     expect(find.byType(PhoneSheet, skipOffstage: false), findsNothing);
   });
 
-  testWidgets('on macOS a log keeps its dialog and header toolbar', (
+  testWidgets('on macOS a note opens the note panel and its header toolbar', (
     WidgetTester tester,
   ) async {
     _useDesktop(tester);
@@ -422,6 +435,9 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Back'), findsOneWidget);
-    expect(tester.getSize(find.byKey(composerPanelKey)).width, 768);
+    expect(
+      tester.getSize(find.byKey(composerPanelKey)).width,
+      notePanelWidthFor(_desktop.width),
+    );
   });
 }

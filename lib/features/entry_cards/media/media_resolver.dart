@@ -8,18 +8,24 @@ enum MediaAvailability { available, missing }
 
 class ResolvedMedia {
   const ResolvedMedia.available({required this.blob, required this.file})
-      : availability = MediaAvailability.available;
+    : availability = MediaAvailability.available;
 
   const ResolvedMedia.missing()
-      : availability = MediaAvailability.missing,
-        blob = null,
-        file = null;
+    : availability = MediaAvailability.missing,
+      blob = null,
+      file = null;
 
   final MediaAvailability availability;
   final MediaBlob? blob;
   final File? file;
 
   bool get isAvailable => availability == MediaAvailability.available;
+}
+
+Future<MediaBlob?> blobForMediaReference(MediaStore store, String reference) {
+  return isShortBlobReference(reference)
+      ? store.blobByPrefix(reference)
+      : store.blobById(reference);
 }
 
 abstract interface class MediaResolver {
@@ -75,9 +81,7 @@ class MediaStoreResolver implements MediaResolver {
   }
 
   Future<ResolvedMedia> _lookup(String mediaId) async {
-    final MediaBlob? blob = isShortBlobReference(mediaId)
-        ? await _store.blobByPrefix(mediaId)
-        : await _store.blobById(mediaId);
+    final MediaBlob? blob = await blobForMediaReference(_store, mediaId);
     if (blob == null) {
       return const ResolvedMedia.missing();
     }

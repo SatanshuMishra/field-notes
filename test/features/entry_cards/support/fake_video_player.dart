@@ -69,14 +69,17 @@ class FakeEntryVideoPlayer implements EntryVideoPlayer {
   Duration? duration;
 
   @override
+  Size? uprightSize;
+
+  @override
   Stream<Duration> get positionStream => _positionController.stream;
 
   @override
   Widget buildSurface() => const SizedBox(
-        key: ValueKey<String>('fake-video-surface'),
-        width: 160,
-        height: 90,
-      );
+    key: ValueKey<String>('fake-video-surface'),
+    width: 160,
+    height: 90,
+  );
 
   @override
   VideoPlaybackState get state => _state;

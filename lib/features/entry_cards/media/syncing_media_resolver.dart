@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:field_notes/data/media/blob_prefix.dart';
 import 'package:field_notes/data/media/filesystem_media_store.dart';
 import 'package:field_notes/data/sync/media/download_service.dart';
 import 'package:field_notes/domain/models/media_blob.dart';
@@ -51,9 +50,7 @@ class SyncingMediaResolver implements MediaResolver, LiveMedia {
     if (local.isAvailable || mediaId == null || mediaId.isEmpty) {
       return local;
     }
-    final MediaBlob? blob = isShortBlobReference(mediaId)
-        ? await _store.blobByPrefix(mediaId)
-        : await _store.blobById(mediaId);
+    final MediaBlob? blob = await blobForMediaReference(_store, mediaId);
     if (blob == null) {
       return local;
     }

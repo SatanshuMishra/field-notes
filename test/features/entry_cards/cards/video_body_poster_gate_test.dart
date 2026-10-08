@@ -59,6 +59,7 @@ Widget _posterCardOfMediaId({
       resolver: resolver,
       playerFactory: playerFactory,
       slots: slots,
+      controls: videoTestControls,
       loadTimeout: videoLoadTimeout,
       retryBackoff: videoBackoff,
     ),
@@ -278,7 +279,9 @@ void main() {
       await tester.pump();
 
       expect(find.byKey(mediaRetryKey), findsOneWidget);
-      expect(inCard(0, videoPlayToggleKey), findsNothing);
+      expect(inCard(0, videoPlayToggleKey), findsOneWidget);
+      expect(tapEnabled(tester, inCard(0, videoPlayToggleKey)), isFalse);
+      expect(readyControlsEnabled(tester, 0), isFalse);
       expect(slots.acquireCalls, isEmpty);
       expect(built, isEmpty);
     });

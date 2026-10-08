@@ -7,7 +7,7 @@ enum VideoPlaybackState {
   playing,
   paused,
   completed,
-  error
+  error,
 }
 
 abstract interface class EntryVideoPlayer {
@@ -17,6 +17,7 @@ abstract interface class EntryVideoPlayer {
   Future<void> seek(Duration position);
   Future<void> setVolume(double volume);
   Duration? get duration;
+  Size? get uprightSize;
   Stream<Duration> get positionStream;
   Widget buildSurface();
   VideoPlaybackState get state;

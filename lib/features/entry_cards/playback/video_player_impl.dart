@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart' as vp;
 
+import 'package:field_notes/data/media/media_probe.dart' show uprightSizeOf;
+
 import 'video_playback.dart';
 
 const double _fallbackAspectRatio = 1.0;
@@ -120,15 +122,27 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
   Stream<Duration> get positionStream => _positionController.stream;
 
   @override
+  Size? get uprightSize {
+    final vp.VideoPlayerController? controller = _controller;
+    if (controller == null || !controller.value.isInitialized) {
+      return null;
+    }
+    final vp.VideoPlayerValue value = controller.value;
+    return uprightSizeOf(value.size, value.rotationCorrection);
+  }
+
+  @override
   Widget buildSurface() {
     final vp.VideoPlayerController? controller = _controller;
     if (controller == null || !controller.value.isInitialized) {
       return const SizedBox.shrink();
     }
-    final Size surface = _surfaceSize(controller.value);
+    final vp.VideoPlayerValue value = controller.value;
+    final Size coded = _surfaceSize(value);
+    final Size surface =
+        uprightSizeOf(coded, value.rotationCorrection) ?? coded;
     return FittedBox(
-      fit: BoxFit.cover,
-      clipBehavior: Clip.hardEdge,
+      fit: BoxFit.contain,
       child: SizedBox(
         width: surface.width,
         height: surface.height,

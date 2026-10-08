@@ -15,6 +15,7 @@ import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 
 import '../support/entry_cards_harness.dart';
 import '../support/fake_video_player.dart';
+import '../support/video_card_harness.dart';
 
 const ValueKey<String> _playToggle = ValueKey<String>('video-play-toggle');
 const ValueKey<String> _scrubBar = ValueKey<String>('video-scrub-bar');
@@ -47,6 +48,7 @@ Widget _videoCard({
       resolver: resolver,
       playerFactory: () => player,
       slots: const UnlimitedVideoSlots(),
+      controls: videoTestControls,
     ),
   );
 }
@@ -89,6 +91,7 @@ void main() {
               resolver: _resolverWithVideo(),
               playerFactory: () => player,
               slots: const UnlimitedVideoSlots(),
+              controls: videoTestControls,
             ),
           ),
         );
@@ -378,6 +381,7 @@ void main() {
             resolver: resolver,
             playerFactory: () => player,
             slots: const UnlimitedVideoSlots(),
+            controls: videoTestControls,
           ),
         ),
       );
@@ -413,6 +417,7 @@ void main() {
             resolver: FakeMediaResolver(),
             playerFactory: () => player,
             slots: const UnlimitedVideoSlots(),
+            controls: videoTestControls,
           ),
         ),
       );
@@ -420,9 +425,12 @@ void main() {
 
       expect(find.byType(CorruptMediaPlaceholder), findsOneWidget);
       expect(player.loadCalls, isEmpty);
-      expect(find.byKey(_playToggle), findsNothing);
-      expect(find.byKey(_scrubBar), findsNothing);
-      expect(find.byKey(_muteToggle), findsNothing);
+      expect(tapEnabled(tester, find.byKey(_playToggle)), isFalse);
+      expect(tapEnabled(tester, find.byKey(_muteToggle)), isFalse);
+      expect(
+        tester.widget<VideoScrubber>(find.byType(VideoScrubber)).onSeek,
+        isNull,
+      );
     });
 
     testWidgets(
@@ -449,6 +457,7 @@ void main() {
               resolver: resolver,
               playerFactory: () => FakeEntryVideoPlayer(),
               slots: const UnlimitedVideoSlots(),
+              controls: videoTestControls,
             ),
           ),
         );
@@ -490,6 +499,7 @@ void main() {
               resolver: resolver,
               playerFactory: () => player,
               slots: const UnlimitedVideoSlots(),
+              controls: videoTestControls,
             ),
           ),
         );
@@ -545,6 +555,7 @@ void main() {
             resolver: resolver,
             playerFactory: () => player,
             slots: const UnlimitedVideoSlots(),
+            controls: videoTestControls,
           ),
         ),
       );

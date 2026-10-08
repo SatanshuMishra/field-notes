@@ -13,6 +13,7 @@ import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 
 import '../support/entry_cards_harness.dart';
 import '../support/fake_video_player.dart';
+import '../support/video_card_harness.dart';
 
 const ValueKey<String> _playToggle = ValueKey<String>('video-play-toggle');
 const ValueKey<String> _muteToggle = ValueKey<String>('video-mute-toggle');
@@ -81,6 +82,7 @@ Widget _card({
       resolver: resolver,
       playerFactory: playerFactory,
       slots: slots,
+      controls: videoTestControls,
       loadTimeout: _loadTimeout,
       retryBackoff: _backoff,
     ),

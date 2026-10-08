@@ -94,6 +94,8 @@ class DayDetailEntriesBar extends StatelessWidget {
                     const SizedBox(width: _plusGap),
                     Text(
                       addNoteLabel,
+                      maxLines: 1,
+                      softWrap: false,
                       style: context.textStyles.captureLabelSans.copyWith(
                         color: Palette.onAccent,
                       ),

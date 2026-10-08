@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show clampDouble;
 import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
@@ -25,6 +27,8 @@ import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
         logViewerDeleteMessageFor,
         logViewerDeleteTitle,
         logViewerDeletedMessage;
+import 'package:field_notes/features/log_viewer/viewer_chrome.dart'
+    show ViewerKeys;
 import 'package:field_notes/features/mood/mood.dart';
 import 'package:field_notes/features/today/today_date.dart';
 import 'package:field_notes/features/today/today_providers.dart';
@@ -34,6 +38,7 @@ import 'day_detail_edit_note.dart';
 import 'day_detail_entries_bar.dart';
 import 'day_detail_header.dart';
 import 'day_detail_providers.dart';
+import 'day_note_pane.dart';
 
 const String dayDetailMoodPrompt = 'How was this day?';
 const String dayDetailEmptyMessage = 'No entries for this day yet.';
@@ -44,6 +49,7 @@ const String dayDetailDeleteErrorMessage =
 const String dayDetailAddNoteLabel = 'Add a note';
 
 const Key dayDetailPanelKey = ValueKey<String>('day-detail-panel');
+const Key dayDetailListPaneKey = ValueKey<String>('day-detail-list-pane');
 const Key daySheetCloseKey = ValueKey<String>('day-sheet-close');
 
 Key daySheetEditKeyFor(String entryId) =>
@@ -52,11 +58,19 @@ Key daySheetEditKeyFor(String entryId) =>
 Key daySheetDeleteKeyFor(String entryId) =>
     ValueKey<String>('day-sheet-delete-$entryId');
 
-const double dayDetailPanelMaxWidth = 560;
-const double dayDetailPanelWindowGutter = 32;
-const double dayDetailPanelHeightShare = 0.86;
+const double dayDetailPanelMaxWidth = 1060;
+const double dayDetailPanelMaxHeight = 660;
+const double dayDetailPanelWindowGutter = 48;
+const double dayDetailListShare = 0.35;
+const double dayDetailListMinWidth = 320;
+const double dayDetailListMaxWidth = 380;
+const double dayDetailSelectedOutlineWidth = 2.5;
 
 const double _panelBorderWidth = 2;
+const double _paneRuleThickness = 1.5;
+const BorderRadius _selectedOutlineRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusMd),
+);
 const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(18, 16, 18, 20);
 const double _summaryGap = 16;
 const double _messageGap = 8;
@@ -119,6 +133,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   final GlobalKey _focusedTile = GlobalKey();
 
   String? _deleteError;
+  String? _selectedId;
 
   bool get _sheet => widget.layout == ShellLayout.bottomBar;
 
@@ -182,12 +197,17 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   }
 
   Future<void> _open(Entry entry) async {
+    if (!_sheet && entry.type == EntryType.text) {
+      _select(entry.id);
+      return;
+    }
     final LogViewerOutcome outcome = await _handOver(
       () => showLogViewer(
         context,
         date: widget.date,
         entryId: entry.id,
         exit: LogViewerExit.back,
+        onReadNote: _sheet ? null : _select,
       ),
     );
     if (!mounted || outcome != LogViewerOutcome.closedAll) {
@@ -195,6 +215,70 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     }
     Navigator.of(context).pop();
   }
+
+  void _select(String entryId) {
+    if (mounted && entryId != _selectedId) {
+      setState(() => _selectedId = entryId);
+    }
+  }
+
+  void _clearSelection() {
+    if (mounted && _selectedId != null) {
+      setState(() => _selectedId = null);
+    }
+  }
+
+  void _close() => Navigator.of(context).pop();
+
+  Entry? _selectedIn(List<Entry> entries) {
+    final String? id = _selectedId;
+    if (id == null) {
+      return null;
+    }
+    for (final Entry entry in entries) {
+      if (entry.id == id && entry.type == EntryType.text) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  void _forgetVanishedSelection(
+    AsyncValue<List<Entry>> entriesAsync,
+    Entry? selected,
+  ) {
+    if (_selectedId == null || selected != null || !entriesAsync.hasValue) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((Duration _) {
+      if (!mounted) {
+        return;
+      }
+      final List<Entry>? latest = ref
+          .read(entriesForDateProvider(widget.date))
+          .value;
+      if (latest != null && _selectedIn(latest) == null) {
+        _clearSelection();
+      }
+    });
+  }
+
+  void _stepFrom(Entry from, int delta) {
+    final List<Entry>? entries = ref
+        .read(entriesForDateProvider(widget.date))
+        .value;
+    if (entries == null) {
+      return;
+    }
+    final int index = entries.indexWhere((Entry entry) => entry.id == from.id);
+    final int target = index + delta;
+    if (index < 0 || target < 0 || target >= entries.length) {
+      return;
+    }
+    unawaited(_open(entries[target]));
+  }
+
+  void _stepTo(Entry target) => unawaited(_open(target));
 
   Future<void> _addNote() async {
     await _handOver(
@@ -268,21 +352,39 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       );
     }
 
+    final Entry? selected = _selectedIn(entries);
+    _forgetVanishedSelection(entriesAsync, selected);
     final Size window = MediaQuery.sizeOf(context);
     final double width = math.max(
       0,
       math.min(widget.maxWidth, window.width - dayDetailPanelWindowGutter),
     );
+    final double height = math.max(
+      0,
+      math.min(
+        dayDetailPanelMaxHeight,
+        window.height - dayDetailPanelWindowGutter,
+      ),
+    );
+    final double listWidth = math.min(
+      math.max(0, width - 2 * _panelBorderWidth - _paneRuleThickness),
+      clampDouble(
+        width * dayDetailListShare,
+        dayDetailListMinWidth,
+        dayDetailListMaxWidth,
+      ),
+    );
     final FieldNotesColors colors = context.colors;
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: window.height * dayDetailPanelHeightShare,
-        ),
+    return ViewerKeys(
+      onLeft: selected == null ? null : () => _stepFrom(selected, -1),
+      onRight: selected == null ? null : () => _stepFrom(selected, 1),
+      onEscape: selected == null ? _close : _clearSelection,
+      child: Center(
         child: Container(
           key: dayDetailPanelKey,
           width: width,
+          height: height,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: _panelPaperFor(Theme.of(context).brightness, colors),
@@ -290,22 +392,61 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
             borderRadius: BorderRadius.circular(Shapes.radiusXl),
             boxShadow: Shadows.panelLift,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              DayDetailHeader(
-                date: widget.date,
-                today: today,
-                onClose: () => Navigator.of(context).pop(),
+              SizedBox(
+                key: dayDetailListPaneKey,
+                width: listWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    DayDetailHeader(
+                      date: widget.date,
+                      today: today,
+                      onClose: _close,
+                    ),
+                    Expanded(
+                      child: _body(
+                        entriesAsync,
+                        entries,
+                        listed,
+                        resolver,
+                        resolverAsync,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              Flexible(
-                child: _body(
-                  entriesAsync,
-                  entries,
-                  listed,
-                  resolver,
-                  resolverAsync,
+              DashedDivider(
+                axis: Axis.vertical,
+                thickness: _paneRuleThickness,
+                color: colors.ink25,
+              ),
+              Expanded(
+                child: ColoredBox(
+                  color: colors.composerPaper,
+                  child: DayNotePane(
+                    entries: entries,
+                    selected: selected,
+                    mood: ref
+                        .watch(dayForDateProvider(widget.date))
+                        .value
+                        ?.mood,
+                    dayTitle: _dayTitle(today),
+                    resolver: resolver,
+                    onEdit: _edit,
+                    onDelete: _delete,
+                    onStep: _stepTo,
+                    onToggleTask: selected == null
+                        ? null
+                        : (int boxOffset) => toggleTaskWithUndo(
+                            context,
+                            entry: selected,
+                            date: widget.date,
+                            boxOffset: boxOffset,
+                          ),
+                  ),
                 ),
               ),
             ],
@@ -313,6 +454,11 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
         ),
       ),
     );
+  }
+
+  String _dayTitle(DateTime today) {
+    final DateTime? day = parseDateKey(widget.date);
+    return day == null ? widget.date : dayTitleFor(day, today: today);
   }
 
   Widget _phoneSheet({
@@ -400,6 +546,32 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   }
 
   Widget _card(Entry entry, MediaResolver resolver, {int? semanticIndex}) {
+    final Widget card = _compactCard(
+      entry,
+      resolver,
+      semanticIndex: semanticIndex,
+    );
+    if (_sheet || entry.id != _selectedId) {
+      return card;
+    }
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Palette.coral,
+          width: dayDetailSelectedOutlineWidth,
+        ),
+        borderRadius: _selectedOutlineRadius,
+      ),
+      child: card,
+    );
+  }
+
+  Widget _compactCard(
+    Entry entry,
+    MediaResolver resolver, {
+    int? semanticIndex,
+  }) {
     return CompactLogCard(
       key: entry.id == widget.focusEntryId ? _focusedTile : null,
       entry: entry,

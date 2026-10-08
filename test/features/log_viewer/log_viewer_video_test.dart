@@ -5,6 +5,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/notes/notes.dart';
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
@@ -101,8 +102,12 @@ Future<void> _openViewer(
           (Ref ref, String date) =>
               Stream<List<Entry>>.value(<Entry>[_videoEntry()]),
         ),
+        dayForDateProvider.overrideWith(
+          (Ref ref, String date) => Stream<Day?>.value(null),
+        ),
         notesMediaResolverProvider.overrideWith((Ref ref) => resolver),
         videoSlotsProvider.overrideWithValue(slots),
+        videoAspectProvider.overrideWith((Ref ref, String mediaId) => null),
         todayVideoPlayerFactoryProvider.overrideWithValue(buildPlayer),
         todayClockProvider.overrideWithValue(() => DateTime(2026, 7, 19, 22)),
       ],
@@ -117,8 +122,9 @@ Future<void> _openViewer(
 }
 
 void main() {
-  testWidgets('hands every video card the shared decoder slot registry',
-      (WidgetTester tester) async {
+  testWidgets('hands every video card the shared decoder slot registry', (
+    WidgetTester tester,
+  ) async {
     final LruVideoSlots slots = LruVideoSlots(cap: 1);
     addTearDown(slots.dispose);
     final VideoSlotToken? occupant = slots.acquire(
@@ -145,6 +151,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(logViewerPanelKey), findsOneWidget);
+    expect(find.byType(VideoViewerView), findsOneWidget);
     expect(find.byType(VideoBody), findsOneWidget);
     expect(tester.widget<VideoBody>(find.byType(VideoBody)).slots, same(slots));
     expect(find.byType(CorruptMediaPlaceholder), findsNothing);
@@ -152,8 +159,9 @@ void main() {
     expect(playersBuilt, 0);
   });
 
-  testWidgets('loads a video card mounted before the media resolver settles',
-      (WidgetTester tester) async {
+  testWidgets('loads a video card mounted before the media resolver settles', (
+    WidgetTester tester,
+  ) async {
     final LruVideoSlots slots = LruVideoSlots(cap: 1);
     addTearDown(slots.dispose);
 
@@ -181,6 +189,7 @@ void main() {
     pending.complete(settled);
     await tester.pumpAndSettle();
 
+    expect(find.byType(VideoViewerView), findsOneWidget);
     final VideoBody body = tester.widget<VideoBody>(find.byType(VideoBody));
     expect(body.resolver, same(settled));
     expect(body.entry.mediaId, 'vid');

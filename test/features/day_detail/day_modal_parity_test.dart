@@ -11,10 +11,13 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail_header.dart';
 import 'package:field_notes/features/day_detail/day_detail_panel.dart';
 import 'package:field_notes/features/day_detail/day_detail_providers.dart';
+import 'package:field_notes/features/day_detail/day_note_pane.dart';
 import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/features/entry_cards/cards/note_body.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
+import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
+    show LogViewerPanel;
 import 'package:field_notes/features/today/today_providers.dart';
 import 'package:field_notes/state/state.dart';
 
@@ -190,9 +193,8 @@ void main() {
       ],
     );
 
-    expect(find.byType(CompactLogCard, skipOffstage: false), findsWidgets);
     final Rect panel = tester.getRect(_panel());
-    expect(panel.width, lessThanOrEqualTo(360 - 32));
+    expect(panel.width, lessThanOrEqualTo(360 - 48));
     for (final (String stamp, bool fitsWhole) in <(String, bool)>[
       ('8:12 AM · morning · note', true),
       ('12:12 PM · afternoon · note', true),
@@ -221,6 +223,7 @@ void main() {
         expect(panel.bottom, greaterThanOrEqualTo(rect.bottom));
       }
     }
+    expect(find.byType(CompactLogCard, skipOffstage: false), findsWidgets);
     expect(tester.getRect(_panel()), panel);
     expect(tester.takeException(), isNull);
   }, variant: _macOS);
@@ -314,7 +317,26 @@ void main() {
 
     expect(find.text('Morning note'), findsNothing);
     expect(_dayTitleInPanel(), findsOneWidget);
-  }, variant: _bothLayouts);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('on macOS a note card reads in the day panel instead', (
+    WidgetTester tester,
+  ) async {
+    await _openDay(tester, entries: _threeNotes());
+
+    await tester.tap(find.text('8:12 AM · morning · note'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.descendant(
+        of: find.byKey(dayNotePaneKey),
+        matching: find.text('Morning note'),
+      ),
+      findsOneWidget,
+    );
+    expect(_dayTitleInPanel(), findsOneWidget);
+    expect(find.byType(LogViewerPanel), findsNothing);
+  }, variant: _macOS);
 
   testWidgets('a scrim tap in view mode closes the day modal too', (
     WidgetTester tester,
