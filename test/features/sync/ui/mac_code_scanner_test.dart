@@ -19,6 +19,7 @@ const MethodChannel _settingsChannel = MethodChannel(
   'field_notes/camera_settings',
 );
 const MethodChannel _pluginChannel = MethodChannel('camera_macos');
+const EventChannel _streamChannel = EventChannel('camera_macos/stream');
 
 final String _pairing = _payload(1);
 final String _otherPairing = _payload(2);
@@ -45,27 +46,100 @@ class _FakeCamera implements MacScannerCamera {
   _FakeCamera({this.failure});
 
   final Object? failure;
-  ValueChanged<CameraImageData>? _onFrame;
+  Completer<CameraImageData?>? _request;
   int stops = 0;
+  int taken = 0;
+
+  bool get streaming => _request != null;
 
   @override
   Widget preview() => const SizedBox.expand();
 
   @override
-  Future<void> start(ValueChanged<CameraImageData> onFrame) async {
+  Future<void> start() async {
     final Object? failure = this.failure;
     if (failure != null) {
       throw failure;
     }
-    _onFrame = onFrame;
   }
 
-  void send(CameraImageData frame) => _onFrame?.call(frame);
+  @override
+  Future<CameraImageData?> takeFrame() {
+    final Completer<CameraImageData?> request = Completer<CameraImageData?>();
+    _request = request;
+    return request.future;
+  }
+
+  void send(CameraImageData frame) {
+    final Completer<CameraImageData?>? request = _request;
+    if (request == null) {
+      return;
+    }
+    _request = null;
+    taken += 1;
+    request.complete(frame);
+  }
 
   @override
   Future<void> stop() async {
     stops += 1;
+    final Completer<CameraImageData?>? request = _request;
+    _request = null;
+    request?.complete(null);
   }
+}
+
+final class _PluginStream {
+  int listens = 0;
+  int cancels = 0;
+  MockStreamHandlerEventSink? _sink;
+
+  bool get open => _sink != null;
+
+  void send() => _sink?.success(<String, Object?>{
+    'width': 4,
+    'height': 2,
+    'bytesPerRow': 16,
+    'data': Uint8List(32),
+  });
+}
+
+Future<void> _letChannelSettle(WidgetTester tester) async {
+  await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+  await tester.pump();
+}
+
+_PluginStream _livePlugin(WidgetTester tester) {
+  final _PluginStream stream = _PluginStream();
+  final TestDefaultBinaryMessenger messenger =
+      tester.binding.defaultBinaryMessenger;
+  messenger.setMockMethodCallHandler(_pluginChannel, (MethodCall call) async {
+    if (call.method == 'initialize') {
+      return <String, Object?>{
+        'textureId': 1,
+        'size': <String, Object?>{'width': 1280.0, 'height': 720.0},
+      };
+    }
+    return null;
+  });
+  messenger.setMockStreamHandler(
+    _streamChannel,
+    MockStreamHandler.inline(
+      onListen: (Object? arguments, MockStreamHandlerEventSink events) {
+        stream.listens += 1;
+        stream._sink = events;
+      },
+      onCancel: (Object? arguments) {
+        stream.cancels += 1;
+        stream._sink = null;
+      },
+    ),
+  );
+  addTearDown(() {
+    messenger.setMockMethodCallHandler(_pluginChannel, null);
+    messenger.setMockStreamHandler(_streamChannel, null);
+  });
+  return stream;
 }
 
 Future<void> _pumpScanner(
@@ -208,30 +282,99 @@ void main() {
       ),
     );
 
+    expect(camera.streaming, isTrue);
     camera.send(_frame());
     camera.send(_frame());
+    await tester.pump();
     expect(decodes, hasLength(1));
+    expect(camera.taken, 1);
+    expect(camera.streaming, isFalse);
 
     await tester.pump(const Duration(milliseconds: 300));
+    expect(camera.streaming, isFalse);
     camera.send(_frame());
+    await tester.pump();
+    expect(camera.taken, 1);
     expect(decodes, hasLength(1));
 
     decodes.last.complete(null);
     await tester.pump();
+    expect(camera.streaming, isTrue);
     camera.send(_frame());
+    await tester.pump();
     expect(decodes, hasLength(2));
+    expect(camera.streaming, isFalse);
 
     decodes.last.complete(null);
     await tester.pump();
-    camera.send(_frame());
+    expect(camera.streaming, isFalse);
     await tester.pump(const Duration(milliseconds: 150));
+    expect(camera.streaming, isFalse);
     camera.send(_frame());
-    expect(decodes, hasLength(2));
+    expect(camera.taken, 2);
 
     await tester.pump(const Duration(milliseconds: 60));
+    expect(camera.streaming, isTrue);
     camera.send(_frame());
+    await tester.pump();
     expect(decodes, hasLength(3));
+    expect(camera.taken, 3);
     decodes.last.complete(null);
+  });
+
+  testWidgets('the Mac camera sends no frames while one decodes', (
+    WidgetTester tester,
+  ) async {
+    final _PluginStream stream = _livePlugin(tester);
+    final List<Completer<String?>> decodes = <Completer<String?>>[];
+    await _pumpScanner(
+      tester,
+      MacCodeScanner(
+        onCode: (String code) {},
+        decode: (CameraImageData frame) {
+          final Completer<String?> pending = Completer<String?>();
+          decodes.add(pending);
+          return pending.future;
+        },
+      ),
+    );
+    await tester.pump();
+    expect(stream.listens, 1);
+    expect(stream.open, isTrue);
+
+    stream.send();
+    await tester.pump();
+    await _letChannelSettle(tester);
+    expect(decodes, hasLength(1));
+    expect(stream.cancels, 1);
+    expect(stream.open, isFalse);
+
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(stream.listens, 1);
+    expect(stream.open, isFalse);
+
+    decodes.last.complete(null);
+    await tester.pump();
+    expect(stream.listens, 2);
+    expect(stream.open, isTrue);
+
+    stream.send();
+    await tester.pump();
+    await _letChannelSettle(tester);
+    expect(decodes, hasLength(2));
+    expect(stream.open, isFalse);
+    decodes.last.complete(null);
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(stream.listens, 2);
+    expect(stream.open, isFalse);
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(stream.listens, 3);
+    expect(stream.open, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+    expect(stream.open, isFalse);
+    expect(stream.listens, 3);
   });
 
   testWidgets(

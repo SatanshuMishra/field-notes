@@ -41,7 +41,10 @@ class _StillMacCamera implements MacScannerCamera {
   Widget preview() => const SizedBox.expand();
 
   @override
-  Future<void> start(ValueChanged<CameraImageData> onFrame) async {}
+  Future<void> start() async {}
+
+  @override
+  Future<CameraImageData?> takeFrame() => Completer<CameraImageData?>().future;
 
   @override
   Future<void> stop() async {}

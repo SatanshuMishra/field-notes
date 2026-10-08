@@ -95,24 +95,32 @@ final class _FakeJoin {
 }
 
 final class _FakeMacCamera implements MacScannerCamera {
-  ValueChanged<CameraImageData>? _onFrame;
+  Completer<CameraImageData?>? _request;
   int starts = 0;
 
   @override
   Widget preview() => const SizedBox.expand(key: _previewKey);
 
   @override
-  Future<void> start(ValueChanged<CameraImageData> onFrame) async {
+  Future<void> start() async {
     starts += 1;
-    _onFrame = onFrame;
   }
-
-  void send(CameraImageData frame) => _onFrame?.call(frame);
 
   @override
-  Future<void> stop() async {
-    _onFrame = null;
+  Future<CameraImageData?> takeFrame() {
+    final Completer<CameraImageData?> request = Completer<CameraImageData?>();
+    _request = request;
+    return request.future;
   }
+
+  void send(CameraImageData? frame) {
+    final Completer<CameraImageData?>? request = _request;
+    _request = null;
+    request?.complete(frame);
+  }
+
+  @override
+  Future<void> stop() async => send(null);
 }
 
 final class _Host {

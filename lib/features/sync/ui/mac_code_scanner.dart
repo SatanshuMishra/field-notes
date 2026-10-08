@@ -24,7 +24,9 @@ const double _noticeGap = 16;
 abstract interface class MacScannerCamera {
   Widget preview();
 
-  Future<void> start(ValueChanged<CameraImageData> onFrame);
+  Future<void> start();
+
+  Future<CameraImageData?> takeFrame();
 
   Future<void> stop();
 }
@@ -43,6 +45,8 @@ class CameraMacosScannerCamera implements MacScannerCamera {
   final Completer<CameraMacOSController> _ready =
       Completer<CameraMacOSController>();
   CameraMacOSController? _controller;
+  Completer<CameraImageData?>? _frame;
+  Future<void> _streamStopped = Future<void>.value();
   bool _stopped = false;
 
   late final Widget _view = CameraMacOSView(
@@ -58,27 +62,54 @@ class CameraMacosScannerCamera implements MacScannerCamera {
   Widget preview() => _view;
 
   @override
-  Future<void> start(ValueChanged<CameraImageData> onFrame) async {
+  Future<void> start() async {
     await _ready.future;
-    if (_stopped) {
-      return;
+  }
+
+  @override
+  Future<CameraImageData?> takeFrame() async {
+    await _streamStopped;
+    if (_stopped || _controller == null) {
+      return null;
     }
-    await CameraMacOSPlatform.instance.startImageStream((
-      CameraImageData? frame,
-    ) {
-      if (frame != null) {
-        onFrame(frame);
-      }
-    }, onError: _skipFrame);
+    final Completer<CameraImageData?> frame = Completer<CameraImageData?>();
+    _frame = frame;
+    try {
+      await CameraMacOSPlatform.instance.startImageStream(
+        _receive,
+        onError: _skipFrame,
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Scanner image stream start failed: $error\n$stackTrace');
+      _settleFrame(null);
+    }
+    return frame.future;
   }
 
   @override
   Future<void> stop() async {
     _stopped = true;
+    _settleFrame(null);
     final CameraMacOSController? controller = _controller;
     _controller = null;
     if (controller != null) {
       await _release(controller);
+    }
+  }
+
+  void _receive(CameraImageData? image) {
+    if (image == null || _frame == null) {
+      return;
+    }
+    _streamStopped = _stopStream();
+    _settleFrame(image);
+  }
+
+  void _settleFrame(CameraImageData? image) {
+    final Completer<CameraImageData?>? frame = _frame;
+    _frame = null;
+    if (frame != null && !frame.isCompleted) {
+      frame.complete(image);
     }
   }
 
@@ -101,6 +132,14 @@ class CameraMacosScannerCamera implements MacScannerCamera {
   }
 
   void _skipFrame(Object? error) {}
+
+  Future<void> _stopStream() async {
+    try {
+      await CameraMacOSPlatform.instance.stopImageStream();
+    } catch (error, stackTrace) {
+      debugPrint('Scanner image stream stop failed: $error\n$stackTrace');
+    }
+  }
 
   Future<void> _release(CameraMacOSController controller) async {
     try {
@@ -133,45 +172,47 @@ enum _CameraFailure { refused, unavailable }
 class _MacCodeScannerState extends State<MacCodeScanner> {
   late final MacScannerCamera _camera;
   _CameraFailure? _failure;
-  Timer? _pause;
-  bool _decoding = false;
+  Timer? _rest;
   String? _lastCode;
 
   @override
   void initState() {
     super.initState();
     _camera = widget.camera ?? CameraMacosScannerCamera();
-    unawaited(_start());
+    unawaited(_scan());
   }
 
-  Future<void> _start() async {
+  Future<void> _scan() async {
     try {
-      await _camera.start(_onFrame);
+      await _camera.start();
     } catch (error) {
+      if (mounted) {
+        setState(() {
+          _failure = isCameraAccessRefusal(error)
+              ? _CameraFailure.refused
+              : _CameraFailure.unavailable;
+        });
+      }
+      return;
+    }
+    while (mounted) {
+      final CameraImageData? frame = await _camera.takeFrame();
+      if (frame == null || !mounted) {
+        return;
+      }
+      final Completer<void> rested = Completer<void>();
+      _rest = Timer(macScanInterval, rested.complete);
+      final String? code = await _decodeOrNull(frame);
       if (!mounted) {
         return;
       }
-      setState(() {
-        _failure = isCameraAccessRefusal(error)
-            ? _CameraFailure.refused
-            : _CameraFailure.unavailable;
-      });
+      _offer(code);
+      await rested.future;
     }
   }
 
-  void _onFrame(CameraImageData frame) {
-    if (!mounted || _failure != null || _decoding || _pause != null) {
-      return;
-    }
-    _decoding = true;
-    _pause = Timer(macScanInterval, () => _pause = null);
-    unawaited(_decode(frame));
-  }
-
-  Future<void> _decode(CameraImageData frame) async {
-    final String? code = await _decodeOrNull(frame);
-    _decoding = false;
-    if (code == null || code == _lastCode || !mounted) {
+  void _offer(String? code) {
+    if (code == null || code == _lastCode) {
       return;
     }
     _lastCode = code;
@@ -197,7 +238,7 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
 
   @override
   void dispose() {
-    _pause?.cancel();
+    _rest?.cancel();
     unawaited(_camera.stop());
     super.dispose();
   }
