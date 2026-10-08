@@ -257,6 +257,7 @@ class _ActionSquare extends StatelessWidget {
             decoration: const BoxDecoration(
               color: Palette.toolbarInk,
               borderRadius: _buttonRadius,
+              boxShadow: Shadows.toastLift,
             ),
             child: IconStickerGlyphIcon(
               glyph: glyph,

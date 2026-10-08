@@ -414,4 +414,47 @@ void main() {
     );
     semantics.dispose();
   });
+
+  testWidgets(
+    'the dark Edit and Delete squares keep their edge on dark paper',
+    (WidgetTester tester) async {
+      _usePhone(tester);
+      await _openSheet(
+        tester,
+        _scene(
+          <String>[],
+          entry: _entry(id: 'morning', hour: 8, text: 'Watered the roses.'),
+        ),
+        name: 'dark',
+        brightness: Brightness.dark,
+      );
+
+      expect(
+        tester.widget<PhoneSheet>(find.byType(PhoneSheet)).color!.toARGB32(),
+        FieldNotesColors.dark.composerPaper.toARGB32(),
+      );
+      for (final Key key in <Key>[logActionsEditKey, logActionsDeleteKey]) {
+        final BoxDecoration face =
+            tester.widget<Container>(_faceOf(key)).decoration! as BoxDecoration;
+        expect(
+          face.color!.toARGB32(),
+          Palette.toolbarInk.toARGB32(),
+          reason: '$key',
+        );
+        final List<BoxShadow> edge = face.boxShadow ?? const <BoxShadow>[];
+        expect(edge, hasLength(Shadows.toastLift.length), reason: '$key');
+        for (int i = 0; i < edge.length; i++) {
+          final BoxShadow expected = Shadows.toastLift[i];
+          expect(
+            edge[i].color.toARGB32(),
+            expected.color.toARGB32(),
+            reason: '$key',
+          );
+          expect(edge[i].offset, expected.offset, reason: '$key');
+          expect(edge[i].blurRadius, expected.blurRadius, reason: '$key');
+          expect(edge[i].spreadRadius, expected.spreadRadius, reason: '$key');
+        }
+      }
+    },
+  );
 }
