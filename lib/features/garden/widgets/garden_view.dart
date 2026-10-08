@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/app/shell/windows_caption_buttons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_focus.dart';
 import 'package:field_notes/features/garden/model/meadow_time_of_day.dart';
@@ -591,7 +592,12 @@ class _MeadowPageState extends State<MeadowPage> {
             _keys.requestFocus();
           }
         },
-        child: page,
+        child: full
+            ? DarkCaptionSurface(
+                dark: meadowSkyDarkensCaptions(sky.skyTop),
+                child: page,
+              )
+            : page,
       ),
     );
   }
