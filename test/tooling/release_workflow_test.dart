@@ -213,6 +213,10 @@ void main() {
       expect(step, contains(r'version="${GITHUB_REF_NAME#v}"'));
       expect(step, contains(r'version="${name}-pr${GITHUB_RUN_NUMBER}"'));
       expect(step, contains(r'echo "version=$version" >> "$GITHUB_OUTPUT"'));
+      expect(
+        step,
+        contains(r'echo "build_name=${version%%-*}" >> "$GITHUB_OUTPUT"'),
+      );
 
       for (int index = 0; index < steps.length; index++) {
         if (steps[index].contains('steps.version.outputs.version')) {
@@ -238,11 +242,14 @@ void main() {
       final String tagged = builds.singleWhere(
         (String candidate) => candidate.contains(_tagGuard),
       );
+      final String buildName = target.key == 'macos'
+          ? r'${{ steps.version.outputs.build_name }}'
+          : _version;
       expect(
         tagged,
         endsWith(
           'run: flutter build ${target.value} --release '
-          '--build-name $_version --build-number \${{ github.run_number }}',
+          '--build-name $buildName --build-number \${{ github.run_number }}',
         ),
       );
       final String untagged = builds.singleWhere(
@@ -300,18 +307,26 @@ void main() {
       );
     }
 
-    expect(run('refs/tags/v1.2.0', 'v1.2.0'), (0, '', 'version=1.2.0\n'));
+    expect(run('refs/tags/v1.2.0', 'v1.2.0'), (
+      0,
+      '',
+      'version=1.2.0\nbuild_name=1.2.0\n',
+    ));
     expect(run('refs/tags/v1.2.0-beta.1', 'v1.2.0-beta.1'), (
       0,
       '',
-      'version=1.2.0-beta.1\n',
+      'version=1.2.0-beta.1\nbuild_name=1.2.0\n',
     ));
     expect(run('refs/pull/7/merge', '7/merge'), (
       0,
       '',
-      'version=$name-pr42\n',
+      'version=$name-pr42\nbuild_name=$name\n',
     ));
-    expect(run('refs/heads/main', 'main'), (0, '', 'version=$name-pr42\n'));
+    expect(run('refs/heads/main', 'main'), (
+      0,
+      '',
+      'version=$name-pr42\nbuild_name=$name\n',
+    ));
 
     final (int code, String stdout, String written) = run(
       r'refs/tags/v1.2.0$(id)',
@@ -333,7 +348,7 @@ void main() {
         .takeWhile((String line) => line.startsWith('      - '))
         .map((String line) => line.trim())
         .toList();
-    expect(paths, hasLength(8));
+    expect(paths, hasLength(12));
     expect(paths.toSet(), <String>{
       "- 'windows/**'",
       "- 'macos/**'",
@@ -343,6 +358,10 @@ void main() {
       "- 'pubspec.lock'",
       "- '.github/workflows/release.yml'",
       "- 'tool/release/**'",
+      "- 'third_party/**'",
+      "- 'packages/**'",
+      "- 'shaders/**'",
+      "- 'assets/**'",
     });
     expect(workflow, contains('\n  workflow_dispatch:\n'));
     expect(
@@ -464,13 +483,24 @@ void main() {
     );
     expect(
       step,
-      contains(r'''printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"'''),
+      contains(r'''escape() { printf '%s' "$1" | sed 's/\\/\\\\/g'; }'''),
     );
     expect(
       step,
-      contains(r'''printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"'''),
+      contains(
+        r'''printf 'storePassword=%s\n' "$(escape "$ANDROID_KEYSTORE_PASSWORD")"''',
+      ),
     );
-    expect(step, contains(r'''printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"'''));
+    expect(
+      step,
+      contains(
+        r'''printf 'keyPassword=%s\n' "$(escape "$ANDROID_KEY_PASSWORD")"''',
+      ),
+    );
+    expect(
+      step,
+      contains(r'''printf 'keyAlias=%s\n' "$(escape "$ANDROID_KEY_ALIAS")"'''),
+    );
     expect(step, contains(r"printf 'storeFile=release.jks\n'"));
     expect(step, endsWith('} > android/key.properties'));
 

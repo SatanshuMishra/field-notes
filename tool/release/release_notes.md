@@ -10,7 +10,7 @@ Run `field-notes-<version>-windows-x64-setup.exe`. The installer is not code-sig
 
 ### Android
 
-Download `field-notes-<version>-android.apk` on the phone. Allow installs from the browser or files app you opened it with when Android asks, then open the APK and choose Install.
+Download `field-notes-<version>-android.apk` on the phone. Allow installs from the browser or files app you opened it with when Android asks, then open the APK and choose Install. If an earlier Field Notes build that did not come from a release is installed, uninstall it first: Android refuses to replace an app signed with a different key.
 
 ### Checksums
 
