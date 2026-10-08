@@ -7,6 +7,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart'
     show IconStickerGlyph;
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
 import 'package:field_notes/features/note_engine/commands/list_commands.dart';
 import 'package:field_notes/features/note_engine/commands/note_commands.dart';
@@ -612,7 +613,7 @@ class NoteEditorViewState extends State<NoteEditorView>
       dropTargets: _dropTargets,
       onSkipped: (String message) => _showToast(message),
     )..addListener(_markNeedsBuild);
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isDesktopPlatform(defaultTargetPlatform)) {
       _fileDrops = FileDropChannel.instance.events.listen(_handleFileDrop);
     }
   }

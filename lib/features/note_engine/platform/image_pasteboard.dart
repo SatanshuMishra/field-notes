@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 
 const String imagePasteboardChannelName = 'field_notes/pasteboard';
 
-enum PasteboardImageType { png, tiff, jpeg, heic }
+enum PasteboardImageType { png, tiff, jpeg, heic, bitmap }
 
 @immutable
 final class PasteboardContents {

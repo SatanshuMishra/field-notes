@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/services/capture_service.dart'
     show CaptureBytes, CaptureMedia;
 import 'package:field_notes/features/capture/photo/image_picker_photo_picker.dart'
@@ -35,10 +37,11 @@ const Map<String, String> photoFileMimeTypes = <String, String>{
   'tiff': 'image/tiff',
 };
 
-const Set<String> macosConvertedPhotoExtensions = <String>{'heic', 'tiff'};
+const Set<String> nativeConvertedPhotoExtensions = <String>{'heic', 'tiff'};
 
 String? _extensionOf(String path) {
-  final String segment = path.substring(path.lastIndexOf('/') + 1);
+  final int separator = math.max(path.lastIndexOf('/'), path.lastIndexOf(r'\'));
+  final String segment = path.substring(separator + 1);
   final int dot = segment.lastIndexOf('.');
   return dot < 0 ? null : segment.substring(dot + 1).toLowerCase();
 }
@@ -100,7 +103,7 @@ final class PastePlainText extends PhotoPastePlan {
   String toString() => 'PastePlainText()';
 }
 
-PhotoPastePlan planMacosPaste(PasteboardContents contents) {
+PhotoPastePlan planPasteboardPaste(PasteboardContents contents) {
   final List<String> photos = List<String>.unmodifiable(
     contents.filePaths.where(isPhotoFilePath),
   );
@@ -164,7 +167,8 @@ final class PhotoPasteDrop extends ChangeNotifier {
   Future<bool> paste() async {
     switch (_platform) {
       case TargetPlatform.macOS:
-        return _pasteOnMacos();
+      case TargetPlatform.windows:
+        return _pasteFromPasteboard();
       case TargetPlatform.android:
         if (!await _androidClipboard.hasImage()) {
           return false;
@@ -174,7 +178,6 @@ final class PhotoPasteDrop extends ChangeNotifier {
       case TargetPlatform.fuchsia:
       case TargetPlatform.iOS:
       case TargetPlatform.linux:
-      case TargetPlatform.windows:
         return false;
     }
   }
@@ -219,8 +222,8 @@ final class PhotoPasteDrop extends ChangeNotifier {
     return true;
   }
 
-  Future<bool> _pasteOnMacos() async {
-    final PhotoPastePlan plan = planMacosPaste(
+  Future<bool> _pasteFromPasteboard() async {
+    final PhotoPastePlan plan = planPasteboardPaste(
       await _pasteboard.readContents(),
     );
     switch (plan) {
@@ -263,8 +266,8 @@ final class PhotoPasteDrop extends ChangeNotifier {
   }
 
   Future<CaptureMedia> _capturePath(String path) async {
-    if (_platform == TargetPlatform.macOS &&
-        macosConvertedPhotoExtensions.contains(_extensionOf(path))) {
+    if (isDesktopPlatform(_platform) &&
+        nativeConvertedPhotoExtensions.contains(_extensionOf(path))) {
       final PastedImage image = _readable(
         await _pasteboard.readImageFile(path),
       );

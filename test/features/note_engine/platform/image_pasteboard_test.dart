@@ -91,6 +91,28 @@ void main() {
       },
     );
 
+    test('a clipboard holding only a Windows bitmap has image data', () async {
+      final List<MethodCall> calls = _mockChannel(
+        (MethodCall call) => <String, Object?>{
+          'paths': <String>[],
+          'imageTypes': <String>['bitmap'],
+          'hasText': false,
+        },
+      );
+
+      final PasteboardContents contents = await const ImagePasteboard()
+          .readContents();
+
+      expect(
+        contents,
+        const PasteboardContents(
+          imageTypes: <PasteboardImageType>{PasteboardImageType.bitmap},
+        ),
+      );
+      expect(contents.hasImageData, isTrue);
+      expect(calls.single.method, 'contents');
+    });
+
     test('readImageFile converts one file and maps the answer', () async {
       Object? answer = <String, Object?>{
         'bytes': Uint8List.fromList(<int>[1, 2, 3]),
