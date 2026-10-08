@@ -131,6 +131,48 @@ Widget _shortSheet(BuildContext context) {
   return const PhoneSheet(child: SizedBox(height: 200));
 }
 
+class _ExpandableSheet extends StatefulWidget {
+  const _ExpandableSheet({required this.changes});
+
+  final List<bool> changes;
+
+  @override
+  State<_ExpandableSheet> createState() => _ExpandableSheetState();
+}
+
+class _ExpandableSheetState extends State<_ExpandableSheet> {
+  bool _expanded = false;
+
+  void _onExpandedChanged(bool expanded) {
+    widget.changes.add(expanded);
+    setState(() => _expanded = expanded);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PhoneSheet(
+      expanded: _expanded,
+      onExpandedChanged: _onExpandedChanged,
+      header: const SizedBox(
+        key: _headerKey,
+        height: 60,
+        child: Center(child: Text('Morning note')),
+      ),
+      actions: const <Widget>[
+        Expanded(child: SizedBox(key: _addKey, height: 48)),
+      ],
+      child: const SizedBox(key: _bodyKey, height: 100),
+    );
+  }
+}
+
+_Opener _expandableOpener(List<bool> changes) {
+  return (BuildContext context) => showPhoneSheet<String>(
+    context,
+    builder: (BuildContext context) => _ExpandableSheet(changes: changes),
+  );
+}
+
 BoxDecoration _decorationOf(WidgetTester tester, Finder finder) {
   return tester.widget<DecoratedBox>(finder).decoration as BoxDecoration;
 }
@@ -349,7 +391,7 @@ void main() {
     expect(footer.bottom - cancel.bottom, 12);
   });
 
-  testWidgets('a tall phone sheet stops 20 points below the status bar and '
+  testWidgets('a tall phone sheet stops 8 points below the status bar and '
       'scrolls its body', (WidgetTester tester) async {
     _usePhone(tester);
     await _pumpOpeners(tester, <String, _Opener>{
@@ -361,8 +403,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final Rect sheet = tester.getRect(_surface);
-    expect(sheet.top, _statusBar + 20);
-    expect(sheet.height, _phone.height - _statusBar - 20);
+    expect(sheet.top, _statusBar + 8);
+    expect(sheet.height, _phone.height - _statusBar - 8);
 
     final Rect grabber = tester.getRect(_grabber);
     final Rect header = tester.getRect(find.byKey(_headerKey));
@@ -425,6 +467,116 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PhoneSheet), findsNothing);
     expect(results, <Object?>[null]);
+  });
+
+  testWidgets('an expandable sheet drags to full height and back', (
+    WidgetTester tester,
+  ) async {
+    _usePhone(tester);
+    final List<bool> changes = <bool>[];
+    final List<Object?> results = await _pumpOpeners(tester, <String, _Opener>{
+      'open': _expandableOpener(changes),
+    });
+    const double full = 832 - 34 - 8;
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+
+    final double content = tester.getSize(_surface).height;
+    expect(content, lessThan(300));
+    expect(tester.getRect(_surface).bottom, _phone.height);
+    expect(
+      tester.getCenter(find.byKey(_headerKey)).dy -
+          tester.getRect(_surface).top,
+      greaterThan(phoneSheetDragArea),
+    );
+
+    await tester.drag(find.byKey(_headerKey), const Offset(0, -40));
+    await tester.pumpAndSettle();
+    final Rect expanded = tester.getRect(_surface);
+    expect(expanded.height, full);
+    expect(expanded.top, _statusBar + 8);
+    expect(expanded.bottom, _phone.height);
+    expect(
+      tester.getTopLeft(find.byKey(_bodyKey)).dy,
+      tester.getRect(find.byKey(_headerKey)).bottom,
+    );
+    expect(
+      tester.getRect(find.byKey(phoneSheetFooterKey)).bottom,
+      _phone.height - _gestureBar,
+    );
+    expect(changes, <bool>[true]);
+
+    await tester.drag(find.byKey(_headerKey), const Offset(0, 50));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(_surface).height, content);
+    expect(tester.getRect(_surface).bottom, _phone.height);
+    expect(changes, <bool>[true, false]);
+    expect(results, isEmpty);
+
+    await tester.drag(find.byKey(_headerKey), const Offset(0, 50));
+    await tester.pumpAndSettle();
+    expect(find.byType(PhoneSheet), findsNothing);
+    expect(results, <Object?>[null]);
+    expect(changes, <bool>[true, false]);
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(_surface).height, content);
+
+    await tester.tap(_grabber);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(_surface).height, full);
+    expect(tester.getRect(_surface).top, _statusBar + 8);
+
+    await tester.tap(_grabber);
+    await tester.pumpAndSettle();
+    expect(tester.getSize(_surface).height, content);
+    expect(changes, <bool>[true, false, true, false]);
+    expect(find.byType(PhoneSheet), findsOneWidget);
+  });
+
+  testWidgets('an expandable sheet names its grabber toggle and reads a '
+      'wobble as no tap', (WidgetTester tester) async {
+    _usePhone(tester);
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final List<bool> changes = <bool>[];
+    await _pumpOpeners(tester, <String, _Opener>{
+      'open': _expandableOpener(changes),
+    });
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    final double content = tester.getSize(_surface).height;
+
+    final Finder toggle = find.byKey(phoneSheetGrabberToggleKey);
+    final Rect reach = tester.getRect(toggle);
+    expect(reach.width, greaterThanOrEqualTo(44));
+    expect(reach.height, greaterThanOrEqualTo(44));
+    expect(reach.contains(tester.getCenter(_grabber)), isTrue);
+    expect(reach.center.dx, tester.getCenter(_grabber).dx);
+
+    final TestGesture wobble = await tester.startGesture(
+      tester.getCenter(_grabber),
+    );
+    await wobble.moveBy(const Offset(0, 10));
+    await wobble.up();
+    await tester.pumpAndSettle();
+    expect(changes, isEmpty);
+    expect(tester.getSize(_surface).height, content);
+
+    expect(find.semantics.byLabel(phoneSheetExpandLabel), findsOne);
+    tester.semantics.tap(find.semantics.byLabel(phoneSheetExpandLabel));
+    await tester.pumpAndSettle();
+    expect(changes, <bool>[true]);
+    expect(tester.getSize(_surface).height, _phone.height - _statusBar - 8);
+
+    expect(find.semantics.byLabel(phoneSheetShrinkLabel), findsOne);
+    tester.semantics.tap(find.semantics.byLabel(phoneSheetShrinkLabel));
+    await tester.pumpAndSettle();
+    expect(changes, <bool>[true, false]);
+    expect(tester.getSize(_surface).height, content);
+    semantics.dispose();
   });
 
   testWidgets('the phone sheet slides up from the bottom edge', (
