@@ -623,7 +623,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             _ToastSlot(
               key: ValueKey<int>(_toastCount),
               message: message,
-              bottom: _phone ? _gestureInset + _toastLift : _toastLift,
+              bottom: _phone ? _bottomInset + _toastLift : _toastLift,
             ),
         ],
       ),
@@ -632,9 +632,12 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
 
   double get _statusInset => MediaQuery.paddingOf(context).top;
 
-  double get _gestureInset {
+  double get _bottomInset {
     final MediaQueryData media = MediaQuery.of(context);
-    return math.max(media.padding.bottom, media.viewPadding.bottom);
+    return math.max(
+      math.max(media.padding.bottom, media.viewPadding.bottom),
+      media.viewInsets.bottom,
+    );
   }
 
   List<Widget> _phoneChrome(
@@ -686,7 +689,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
         key: onboardingControlBarKey,
         left: _barSide,
         right: _barSide,
-        bottom: _gestureInset + _barLift,
+        bottom: _bottomInset + _barLift,
         height: _barHeight,
         child: _ControlBar(
           look: look,
@@ -776,7 +779,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
       return Positioned(
         left: _barSide + _barPadding,
         right: _barSide + _barPadding,
-        bottom: _gestureInset + _barLift + _barHeight + _errorGap,
+        bottom: _bottomInset + _barLift + _barHeight + _errorGap,
         child: _InOrder(
           _Region.problem,
           child: _FinishError(message: message, align: TextAlign.center),
@@ -807,7 +810,7 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
     final _ButtonMetrics metrics = _phone ? _bottomBarButton : _sidebarButton;
     return Positioned(
       right: metrics.right,
-      bottom: metrics.targetBottom + (_phone ? _gestureInset : 0),
+      bottom: metrics.targetBottom + (_phone ? _bottomInset : 0),
       child: _InOrder(
         _Region.action,
         child: OnboardingPrimaryButton(

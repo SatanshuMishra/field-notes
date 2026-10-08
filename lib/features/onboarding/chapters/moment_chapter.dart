@@ -361,10 +361,9 @@ class _MomentChapterState extends ConsumerState<MomentChapter> {
       media.padding.bottom,
       media.viewPadding.bottom,
     );
-    final double bottom = math.max(
-      gesture + onboardingControlBarReserve,
-      media.viewInsets.bottom,
-    );
+    final double bottom =
+        math.max(gesture, media.viewInsets.bottom) +
+        onboardingControlBarReserve;
     return Padding(
       padding: EdgeInsets.only(
         top: media.padding.top + onboardingPhoneTitleTop,

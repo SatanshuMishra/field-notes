@@ -1,4 +1,5 @@
 import 'package:field_notes/app/app.dart';
+import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/motion/waveform_bob.dart';
@@ -190,6 +191,52 @@ void _expectOnNote(
 }
 
 void main() {
+  testWidgets('on the phone the swipe bar and note card rise above the '
+      'keyboard', (WidgetTester tester) async {
+    const double keyboard = 300;
+    await _onLayout(ShellLayout.bottomBar, () async {
+      final ProviderContainer container = await _pumpApp(
+        tester,
+        ShellLayout.bottomBar,
+      );
+      _controller(container).chooseMood(Mood.calm);
+      await _openMoment(tester, container);
+      await tester.tap(find.byKey(momentFieldKey));
+      await tester.pump();
+      tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+      tester.view.padding = const FakeViewPadding(top: _statusBar);
+      await _settle(tester);
+
+      final double above = _phone.height - keyboard;
+      final Rect bar = tester.getRect(find.byKey(onboardingControlBarKey));
+      expect(bar.bottom, above - 8);
+      expect(
+        tester.getRect(find.byKey(onboardingCueKey)).bottom,
+        lessThanOrEqualTo(above),
+      );
+      final Rect card = tester.getRect(find.byKey(momentCardKey));
+      expect(card.bottom, moreOrLessEquals(bar.top - 4 - 12));
+      expect(card.top, greaterThan(_statusBar));
+
+      tester.view.resetViewInsets();
+      tester.view.padding = const FakeViewPadding(
+        top: _statusBar,
+        bottom: _gestureBar,
+      );
+      await _settle(tester);
+      expect(
+        tester.getRect(find.byKey(onboardingControlBarKey)).bottom,
+        _phone.height - _gestureBar - 8,
+      );
+      expect(
+        tester.getRect(find.byKey(momentCardKey)).bottom,
+        moreOrLessEquals(_phone.height - _gestureBar - 72 - 12),
+      );
+      expect(tester.takeException(), isNull);
+      await _unmount(tester);
+    });
+  });
+
   testWidgets('the phone note card fills the step without the media tiles', (
     WidgetTester tester,
   ) async {
