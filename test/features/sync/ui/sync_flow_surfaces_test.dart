@@ -308,6 +308,24 @@ void _expectPhoneSheet(WidgetTester tester, String title) {
   expect(rect.height, lessThan(_phone.height / 2), reason: title);
 }
 
+Finder _scrim() => find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is ColoredBox && widget.color == phoneSheetBarrierColor,
+);
+
+double _scrimOpacity(WidgetTester tester) => tester
+    .widget<FadeTransition>(
+      find.ancestor(of: _scrim(), matching: find.byType(FadeTransition)).first,
+    )
+    .opacity
+    .value;
+
+void _openUnsettled(_Host host, Widget flow) {
+  unawaited(
+    showSyncFlow<bool>(host.context, builder: (BuildContext _) => flow),
+  );
+}
+
 Future<void> _provePhone(WidgetTester tester) async {
   final AppDatabase database = AppDatabase(NativeDatabase.memory());
   try {
@@ -490,6 +508,61 @@ void main() {
         await tester.runAsync(database.close);
       }
     }
+  });
+
+  testWidgets('the phone scrim fades in place while the sheet slides up', (
+    WidgetTester tester,
+  ) async {
+    final _Host sheet = await _pumpHost(
+      tester,
+      platform: TargetPlatform.android,
+      overrides: syncOffOverrides(),
+    );
+    _openUnsettled(sheet, const BackgroundUploadsSheet());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+    final Rect rising = tester.getRect(find.byType(PhoneSheet));
+    expect(tester.getRect(_scrim()), Offset.zero & _phone);
+    expect(_scrimOpacity(tester), allOf(greaterThan(0), lessThan(1)));
+    expect(rising.bottom, greaterThan(_phone.height));
+
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(tester.getRect(_scrim()), Offset.zero & _phone);
+    expect(tester.getRect(find.byType(PhoneSheet)).top, lessThan(rising.top));
+
+    await tester.pumpAndSettle();
+    expect(tester.getRect(_scrim()), Offset.zero & _phone);
+    expect(_scrimOpacity(tester), 1);
+    expect(tester.getRect(find.byType(PhoneSheet)).bottom, _phone.height);
+
+    final _Host page = await _pumpHost(
+      tester,
+      platform: TargetPlatform.android,
+      overrides: syncOffOverrides(),
+    );
+    _openUnsettled(page, const RestoreFlow());
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 40));
+    final double risingTitle = tester.getTopLeft(find.text(restoreTitle)).dy;
+    await tester.pumpAndSettle();
+    expect(
+      risingTitle,
+      greaterThan(tester.getTopLeft(find.text(restoreTitle)).dy),
+    );
+
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    final _Host still = await _pumpHost(
+      tester,
+      platform: TargetPlatform.android,
+      overrides: syncOffOverrides(),
+    );
+    _openUnsettled(still, const BackgroundUploadsSheet());
+    await tester.pump();
+    expect(tester.getRect(_scrim()), Offset.zero & _phone);
+    expect(_scrimOpacity(tester), 1);
+    expect(tester.getRect(find.byType(PhoneSheet)).bottom, _phone.height);
   });
 
   testWidgets('small flows stay small', (WidgetTester tester) async {

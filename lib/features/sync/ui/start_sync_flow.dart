@@ -121,15 +121,7 @@ Future<T?> showSyncFlow<T>(
           Widget child,
         ) {
           if (sheet) {
-            return SlideTransition(
-              position: animation.drive(
-                Tween<Offset>(
-                  begin: const Offset(0, 1),
-                  end: Offset.zero,
-                ).chain(CurveTween(curve: phoneSheetCurve)),
-              ),
-              child: child,
-            );
+            return child;
           }
           return FadeTransition(
             opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
@@ -137,6 +129,24 @@ Future<T?> showSyncFlow<T>(
           );
         },
   );
+}
+
+final Animatable<Offset> _flowRise = Tween<Offset>(
+  begin: const Offset(0, 1),
+  end: Offset.zero,
+).chain(CurveTween(curve: phoneSheetCurve));
+
+class SyncFlowSlide extends StatelessWidget {
+  const SyncFlowSlide({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final Animation<double> route =
+        ModalRoute.of(context)?.animation ?? kAlwaysCompleteAnimation;
+    return SlideTransition(position: route.drive(_flowRise), child: child);
+  }
 }
 
 Future<void> startSync(BuildContext context, WidgetRef ref) async {
@@ -269,14 +279,16 @@ class SyncFlowFrame extends StatelessWidget {
           ),
           Align(
             alignment: Alignment.bottomCenter,
-            child: PhoneSheet(
-              footerDirection: Axis.vertical,
-              footerPadding: _sheetFooterPadding,
-              actions: <Widget>[
-                for (final SyncFlowAction action in actions.reversed)
-                  SyncFlowButton(action: action),
-              ],
-              child: Padding(padding: _sheetBodyPadding, child: body),
+            child: SyncFlowSlide(
+              child: PhoneSheet(
+                footerDirection: Axis.vertical,
+                footerPadding: _sheetFooterPadding,
+                actions: <Widget>[
+                  for (final SyncFlowAction action in actions.reversed)
+                    SyncFlowButton(action: action),
+                ],
+                child: Padding(padding: _sheetBodyPadding, child: body),
+              ),
             ),
           ),
         ],

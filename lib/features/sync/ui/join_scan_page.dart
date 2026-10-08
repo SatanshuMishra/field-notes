@@ -63,13 +63,15 @@ class JoinScanPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: darkBackdropSystemBars,
-      child: ColoredBox(
-        color: Palette.mediaBlack,
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) =>
-              _stage(context, constraints.biggest),
+    return SyncFlowSlide(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: darkBackdropSystemBars,
+        child: ColoredBox(
+          color: Palette.mediaBlack,
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) =>
+                _stage(context, constraints.biggest),
+          ),
         ),
       ),
     );

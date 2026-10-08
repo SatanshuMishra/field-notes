@@ -64,88 +64,90 @@ class SyncFlowPage extends StatelessWidget {
       for (final SyncFlowAction action in actions)
         if (action.primary || action.danger) action,
     ];
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: systemBarsOver(Theme.of(context).brightness),
-      child: ColoredBox(
-        color: context.colors.page,
-        child: SizedBox.expand(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Padding(
-                padding: _closePadding.copyWith(
-                  top: padding.top + _closePadding.top,
+    return SyncFlowSlide(
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: systemBarsOver(Theme.of(context).brightness),
+        child: ColoredBox(
+          color: context.colors.page,
+          child: SizedBox.expand(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Padding(
+                  padding: _closePadding.copyWith(
+                    top: padding.top + _closePadding.top,
+                  ),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: closable
+                        ? _SyncFlowPageClose(
+                            onPressed:
+                                onClose ?? () => Navigator.maybePop(context),
+                          )
+                        : const SizedBox.square(dimension: _closeExtent),
+                  ),
                 ),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: closable
-                      ? _SyncFlowPageClose(
-                          onPressed:
-                              onClose ?? () => Navigator.maybePop(context),
-                        )
-                      : const SizedBox.square(dimension: _closeExtent),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: _bodyPadding,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        if (kicker != null) ...<Widget>[
+                          Text(kicker, style: textStyles.pageEyebrowAccent),
+                          const SizedBox(height: _kickerGap),
+                        ],
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            title,
+                            style: textStyles.headlineSerif.copyWith(
+                              fontSize: _titleSize,
+                            ),
+                          ),
+                        ),
+                        if (message != null) ...<Widget>[
+                          const SizedBox(height: _messageGap),
+                          Text(
+                            message,
+                            style: textStyles.bodySans.copyWith(
+                              color: context.colors.mutedDeep,
+                            ),
+                          ),
+                        ],
+                        for (final Widget child in content) ...<Widget>[
+                          const SizedBox(height: _contentGap),
+                          child,
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: _bodyPadding,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    _footerSide,
+                    ordered.isEmpty ? 0 : _footerTop,
+                    _footerSide,
+                    (ordered.isEmpty ? 0 : _footerBottom) +
+                        math.max(keyboard, padding.bottom),
+                  ),
+                  child: Row(
+                    key: syncFlowPageFooterKey,
                     children: <Widget>[
-                      if (kicker != null) ...<Widget>[
-                        Text(kicker, style: textStyles.pageEyebrowAccent),
-                        const SizedBox(height: _kickerGap),
-                      ],
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          title,
-                          style: textStyles.headlineSerif.copyWith(
-                            fontSize: _titleSize,
-                          ),
-                        ),
-                      ),
-                      if (message != null) ...<Widget>[
-                        const SizedBox(height: _messageGap),
-                        Text(
-                          message,
-                          style: textStyles.bodySans.copyWith(
-                            color: context.colors.mutedDeep,
-                          ),
-                        ),
-                      ],
-                      for (final Widget child in content) ...<Widget>[
-                        const SizedBox(height: _contentGap),
-                        child,
+                      for (
+                        int index = 0;
+                        index < ordered.length;
+                        index++
+                      ) ...<Widget>[
+                        if (index > 0) const SizedBox(width: _actionGap),
+                        Expanded(child: SyncFlowButton(action: ordered[index])),
                       ],
                     ],
                   ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(
-                  _footerSide,
-                  ordered.isEmpty ? 0 : _footerTop,
-                  _footerSide,
-                  (ordered.isEmpty ? 0 : _footerBottom) +
-                      math.max(keyboard, padding.bottom),
-                ),
-                child: Row(
-                  key: syncFlowPageFooterKey,
-                  children: <Widget>[
-                    for (
-                      int index = 0;
-                      index < ordered.length;
-                      index++
-                    ) ...<Widget>[
-                      if (index > 0) const SizedBox(width: _actionGap),
-                      Expanded(child: SyncFlowButton(action: ordered[index])),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
