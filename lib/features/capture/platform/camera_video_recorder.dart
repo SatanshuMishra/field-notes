@@ -115,6 +115,8 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
 
   Future<(File, File?)> _claim(File movie, File? still);
 
+  Future<void> _abandonStill(File? still) async {}
+
   void _controllerCreated() {}
 
   @override
@@ -176,8 +178,9 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
     if (controller == null) {
       throw const VideoRecorderException(videoStopMessage);
     }
+    File? still;
     try {
-      final File? still = await _captureThumbnail(controller);
+      still = await _captureThumbnail(controller);
       final XFile take = await controller.stopVideoRecording();
       final (File movie, File? thumbnail) = await _claim(File(take.path), still);
       final VideoRecording recording = VideoRecording(
@@ -196,6 +199,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
     } on VideoRecorderException {
       rethrow;
     } catch (error) {
+      await _abandonStill(still);
       throw VideoRecorderException(videoStopMessage, cause: error);
     } finally {
       _session = null;
@@ -501,6 +505,9 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder {
       );
 
   @override
+  Future<void> _abandonStill(File? still) => _deleteCaptureFile(still?.path);
+
+  @override
   Future<(File, File?)> _claim(File movie, File? still) async {
     final int nowMs = DateTime.now().millisecondsSinceEpoch;
     final Directory captures;
@@ -542,8 +549,14 @@ Future<File> _moveCaptureFile(File source, String target) async {
     return await source.rename(target);
   } on FileSystemException {
     final File copy = await source.copy(target);
-    await _deleteCaptureFile(source.path);
-    return copy;
+    try {
+      await source.delete();
+      return copy;
+    } on FileSystemException catch (error, stackTrace) {
+      debugPrint('Capture file stayed in place: $error\n$stackTrace');
+      await _deleteCaptureFile(copy.path);
+      return source;
+    }
   }
 }
 
