@@ -373,8 +373,10 @@ void main() {
       );
       expect(previous, findsOneWidget);
       expect(next, findsOneWidget);
-      expect(tester.getSize(previous), const Size.square(40));
-      expect(tester.getSize(next), const Size.square(40));
+      for (final Finder step in <Finder>[previous, next]) {
+        expect(tester.getSize(step), const Size.square(48));
+        expect(tester.getSize(_glassOf(step)), const Size.square(40));
+      }
       expect(
         tester.getCenter(previous).dx,
         lessThan(tester.getRect(position).left),
@@ -505,5 +507,40 @@ void main() {
 
       expect(paused, <Object>[inline], reason: '$platform');
     }
+  });
+
+  testWidgets('the Mac photo steps have 48-point hit areas', (
+    WidgetTester tester,
+  ) async {
+    _mac(tester, const Size(1440, 900));
+    await _open(tester, platform: TargetPlatform.macOS, initialIndex: 1);
+    final Finder capsule = find.byType(ViewerCapsule);
+    Finder step(String label) =>
+        find.descendant(of: capsule, matching: _circle(label));
+
+    for (final String label in <String>['Previous', 'Next']) {
+      expect(tester.getSize(step(label)), const Size.square(48), reason: label);
+      expect(
+        tester.getSize(_glassOf(step(label))),
+        const Size.square(40),
+        reason: label,
+      );
+    }
+
+    await tester.tapAt(tester.getCenter(step('Next')) + const Offset(22, 0));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: capsule, matching: find.text('3 of 3')),
+      findsOneWidget,
+    );
+
+    await tester.tapAt(
+      tester.getCenter(step('Previous')) - const Offset(22, 0),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(of: capsule, matching: find.text('2 of 3')),
+      findsOneWidget,
+    );
   });
 }

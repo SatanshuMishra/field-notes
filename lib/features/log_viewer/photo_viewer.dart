@@ -26,6 +26,7 @@ const Color _clearBarrier = Color(0x00000000);
 const double _glyphSize = 15;
 const double _dockCircle = 48;
 const double _capsuleCircle = 40;
+const double _capsuleStepSlot = 48;
 const double _capsuleTextGap = 14;
 
 const EdgeInsets _macPhotoInset = EdgeInsets.fromLTRB(24, 56, 24, 84);
@@ -345,8 +346,12 @@ class _PhotoViewerState extends State<PhotoViewer> {
 
   Widget _capsuleSlot({required bool back, required bool present}) {
     return SizedBox.square(
-      dimension: _capsuleCircle,
-      child: present ? _stepCircle(back: back, face: _capsuleCircle) : null,
+      dimension: _capsuleStepSlot,
+      child: present
+          ? Center(
+              child: _stepCircle(back: back, face: _capsuleCircle),
+            )
+          : null,
     );
   }
 }
