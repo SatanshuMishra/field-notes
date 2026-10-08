@@ -31,6 +31,11 @@ abstract final class Palette {
   static const Color viewportScrim = Color(0x800F0D0B);
   static const Color viewportAmber = Color(0xFFF0B34A);
 
+  static const Color mediaGround = Color(0xFF1C1713);
+  static const Color mediaBlack = Color(0xFF0E0B09);
+  static const Color mediaInk = Color(0xFFF3E6D1);
+  static const Color mediaPlayed = Color(0xFFE3889A);
+
   static const Color onDark30 = Color(0x4DFFFFFF);
   static const Color onDark40 = Color(0x66FFFFFF);
   static const Color onDark72 = Color(0xB8FFFFFF);

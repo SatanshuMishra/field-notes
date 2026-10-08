@@ -38,6 +38,10 @@ const Color _sceneHighlight = Color.fromRGBO(255, 255, 255, 0.18);
 const Color _toastTint = Color.fromRGBO(40, 30, 22, 0.62);
 const Color _toastBorder = Color.fromRGBO(255, 250, 240, 0.22);
 const Color _toastHighlight = Color.fromRGBO(255, 255, 255, 0.16);
+const Color _mediaTint = Color.fromRGBO(28, 22, 16, 0.38);
+const Color _mediaBorder = Color.fromRGBO(255, 250, 240, 0.22);
+const Color _mediaHighlight = Color.fromRGBO(255, 255, 255, 0.16);
+const Color _mediaShadow = Color.fromRGBO(0, 0, 0, 0.55);
 
 final class _Pixels {
   const _Pixels(this.bytes);
@@ -84,10 +88,9 @@ void _expectNear(Color actual, Color expected, String reason) {
   );
 }
 
-ui.ImageFilter _expectedBackdrop() {
-  const double s = 1.6;
+ui.ImageFilter _expectedBackdrop({double s = 1.6}) {
   return ui.ImageFilter.compose(
-    outer: const ColorFilter.matrix(<double>[
+    outer: ColorFilter.matrix(<double>[
       0.213 + 0.787 * s,
       0.715 - 0.715 * s,
       0.072 - 0.072 * s,
@@ -328,6 +331,152 @@ void main() {
     } finally {
       debugDisableShadows = true;
     }
+  });
+
+  testWidgets('media glass is the dark glass over media', (
+    WidgetTester tester,
+  ) async {
+    void expectColour(Color actual, Color expected, String reason) {
+      expect(actual.toARGB32(), expected.toARGB32(), reason: reason);
+    }
+
+    final Finder backdrop = find.ancestor(
+      of: find.byKey(_contentKey),
+      matching: find.byType(BackdropFilter),
+    );
+    final Finder shadowPaint = find.ancestor(
+      of: find.byKey(_contentKey),
+      matching: find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is CustomPaint &&
+            widget.foregroundPainter is GlassShadowPainter,
+      ),
+    );
+
+    for (final Brightness brightness in Brightness.values) {
+      final String name = 'media in the ${brightness.name} theme';
+      final GlassColors colors = GlassTone.media.colorsFor(brightness);
+      expectColour(colors.tint, _mediaTint, '$name fill');
+      expectColour(colors.border, _mediaBorder, '$name border');
+      expectColour(colors.highlight, _mediaHighlight, '$name highlight');
+      expect(colors.saturation, 1.5, reason: '$name saturation');
+
+      final _Pixels pixels = await _paintGlass(
+        tester,
+        brightness: brightness,
+        tone: GlassTone.media,
+      );
+      expect(
+        tester.widget<BackdropFilter>(backdrop).filter,
+        _expectedBackdrop(s: 1.5),
+        reason: '$name: an 18-sigma blur with saturation 1.5',
+      );
+
+      final GlassShadowPainter painter =
+          tester.widget<CustomPaint>(shadowPaint).foregroundPainter!
+              as GlassShadowPainter;
+      expect(painter.shadows, hasLength(1), reason: '$name: one drop shadow');
+      final BoxShadow shadow = painter.shadows.single;
+      expectColour(shadow.color, _mediaShadow, '$name shadow colour');
+      expect(shadow.offset, const Offset(0, 10), reason: '$name offset');
+      expect(shadow.blurRadius, 24, reason: '$name shadow blur');
+      expect(shadow.spreadRadius, -12, reason: '$name shadow spread');
+
+      _expectLook(pixels, (
+        name: name,
+        brightness: brightness,
+        tone: GlassTone.media,
+        tint: _mediaTint,
+        border: _mediaBorder,
+        highlight: _mediaHighlight,
+      ));
+    }
+
+    final List<(GlassTone, Brightness, Color, Color, Color)> rows =
+        <(GlassTone, Brightness, Color, Color, Color)>[
+          (
+            GlassTone.paper,
+            Brightness.light,
+            _paperLightTint,
+            _paperLightBorder,
+            _paperLightHighlight,
+          ),
+          (
+            GlassTone.paper,
+            Brightness.dark,
+            _paperDarkTint,
+            _paperDarkBorder,
+            _paperDarkHighlight,
+          ),
+          (
+            GlassTone.scene,
+            Brightness.light,
+            _sceneTint,
+            _sceneBorder,
+            _sceneHighlight,
+          ),
+          (
+            GlassTone.scene,
+            Brightness.dark,
+            _sceneTint,
+            _sceneBorder,
+            _sceneHighlight,
+          ),
+          (
+            GlassTone.toast,
+            Brightness.light,
+            _toastTint,
+            _toastBorder,
+            _toastHighlight,
+          ),
+          (
+            GlassTone.toast,
+            Brightness.dark,
+            _toastTint,
+            _toastBorder,
+            _toastHighlight,
+          ),
+        ];
+
+    for (final (
+          GlassTone tone,
+          Brightness brightness,
+          Color tint,
+          Color border,
+          Color highlight,
+        )
+        in rows) {
+      final String name = '${tone.name} in the ${brightness.name} theme';
+      final GlassColors colors = tone.colorsFor(brightness);
+      expectColour(colors.tint, tint, '$name tint');
+      expectColour(colors.border, border, '$name border');
+      expectColour(colors.highlight, highlight, '$name highlight');
+      expect(colors.saturation, 1.6, reason: '$name saturation');
+
+      await _paintGlass(tester, brightness: brightness, tone: tone);
+      expect(
+        tester.widget<BackdropFilter>(backdrop).filter,
+        _expectedBackdrop(),
+        reason: '$name: an 18-sigma blur with saturation 1.6',
+      );
+    }
+
+    expect(glassBackdropFilter, _expectedBackdrop());
+    expect(glassBackdropFilterAt(1), _expectedBackdrop());
+    expect(
+      glassBackdropFilterAt(1, saturation: 1.5),
+      _expectedBackdrop(s: 1.5),
+    );
+
+    final GlassColors resaturated = GlassColors.scene.copyWith(saturation: 1.5);
+    expect(resaturated.saturation, 1.5);
+    expectColour(resaturated.tint, _sceneTint, 'copyWith keeps the fill');
+    expect(resaturated, isNot(GlassColors.scene));
+    expect(resaturated.copyWith(saturation: 1.6), GlassColors.scene);
+    expect(
+      resaturated.copyWith(saturation: 1.6).hashCode,
+      GlassColors.scene.hashCode,
+    );
   });
 
   test('glass exposes its colours and soft pill for every tone', () {

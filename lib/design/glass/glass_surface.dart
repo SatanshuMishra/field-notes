@@ -14,6 +14,7 @@ final class GlassColors {
     required this.highlight,
     required this.pill,
     required this.shadows,
+    this.saturation = glassSaturation,
   });
 
   static const GlassColors paperLight = GlassColors(
@@ -69,11 +70,28 @@ final class GlassColors {
     shadows: Shadows.toastLift,
   );
 
+  static const GlassColors media = GlassColors(
+    tint: Color.fromRGBO(28, 22, 16, 0.38),
+    border: Color.fromRGBO(255, 250, 240, 0.22),
+    highlight: Color.fromRGBO(255, 255, 255, 0.16),
+    pill: Color.fromRGBO(255, 250, 240, 0.24),
+    shadows: <BoxShadow>[
+      BoxShadow(
+        color: Color.fromRGBO(0, 0, 0, 0.55),
+        offset: Offset(0, 10),
+        blurRadius: 24,
+        spreadRadius: -12,
+      ),
+    ],
+    saturation: 1.5,
+  );
+
   final Color tint;
   final Color border;
   final Color highlight;
   final Color pill;
   final List<BoxShadow> shadows;
+  final double saturation;
 
   GlassColors copyWith({
     Color? tint,
@@ -81,6 +99,7 @@ final class GlassColors {
     Color? highlight,
     Color? pill,
     List<BoxShadow>? shadows,
+    double? saturation,
   }) {
     return GlassColors(
       tint: tint ?? this.tint,
@@ -88,6 +107,7 @@ final class GlassColors {
       highlight: highlight ?? this.highlight,
       pill: pill ?? this.pill,
       shadows: shadows ?? this.shadows,
+      saturation: saturation ?? this.saturation,
     );
   }
 
@@ -98,23 +118,32 @@ final class GlassColors {
       other.border == border &&
       other.highlight == highlight &&
       other.pill == pill &&
-      listEquals(other.shadows, shadows);
+      listEquals(other.shadows, shadows) &&
+      other.saturation == saturation;
 
   @override
-  int get hashCode =>
-      Object.hash(tint, border, highlight, pill, Object.hashAll(shadows));
+  int get hashCode => Object.hash(
+    tint,
+    border,
+    highlight,
+    pill,
+    Object.hashAll(shadows),
+    saturation,
+  );
 }
 
 enum GlassTone {
   paper,
   scene,
-  toast;
+  toast,
+  media;
 
   GlassColors colorsFor(Brightness brightness) => switch ((this, brightness)) {
     (GlassTone.paper, Brightness.light) => GlassColors.paperLight,
     (GlassTone.paper, Brightness.dark) => GlassColors.paperDark,
     (GlassTone.scene, _) => GlassColors.scene,
     (GlassTone.toast, _) => GlassColors.toast,
+    (GlassTone.media, _) => GlassColors.media,
   };
 
   Color pillFor(Brightness brightness) => colorsFor(brightness).pill;
@@ -148,11 +177,14 @@ List<double> _saturationMatrix(double saturation) => <double>[
   0,
 ];
 
-ui.ImageFilter glassBackdropFilterAt(double strength) {
+ui.ImageFilter glassBackdropFilterAt(
+  double strength, {
+  double saturation = glassSaturation,
+}) {
   final double sigma = glassBlurSigma * strength;
   return ui.ImageFilter.compose(
     outer: ColorFilter.matrix(
-      _saturationMatrix(1 + (glassSaturation - 1) * strength),
+      _saturationMatrix(1 + (saturation - 1) * strength),
     ),
     inner: ui.ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
   );
@@ -195,8 +227,9 @@ class GlassSurface extends StatelessWidget {
     final BoxBorder edge =
         border ?? Border.all(color: colors.border, width: glassBorderWidth);
 
-    final ui.ImageFilter filter = shown < 1
-        ? glassBackdropFilterAt(shown)
+    final ui.ImageFilter filter =
+        shown < 1 || colors.saturation != glassSaturation
+        ? glassBackdropFilterAt(shown, saturation: colors.saturation)
         : glassBackdropFilter;
     final Widget face = Opacity(
       opacity: shown,
