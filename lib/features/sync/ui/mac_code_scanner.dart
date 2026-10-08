@@ -157,11 +157,13 @@ class MacCodeScanner extends StatefulWidget {
     required this.onCode,
     this.decode = decodeQrFrame,
     this.camera,
+    this.overlay,
   });
 
   final ValueChanged<String> onCode;
   final QrFrameDecode decode;
   final MacScannerCamera? camera;
+  final Widget? overlay;
 
   @override
   State<MacCodeScanner> createState() => _MacCodeScannerState();
@@ -173,6 +175,7 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
   late final AppLifecycleListener _lifecycle;
   MacScannerCamera? _camera;
   int _session = 0;
+  bool _live = false;
   _CameraFailure? _failure;
   Timer? _rest;
   String? _lastCode;
@@ -192,6 +195,7 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
     final MacScannerCamera camera = widget.camera ?? CameraMacosScannerCamera();
     _session += 1;
     _camera = camera;
+    _live = false;
     _failure = null;
     unawaited(_scan(camera, _session));
   }
@@ -200,6 +204,7 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
     final MacScannerCamera? camera = _camera;
     _session += 1;
     _camera = null;
+    _live = false;
     _failure = null;
     _rest?.cancel();
     if (camera != null) {
@@ -243,6 +248,10 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
       }
       return;
     }
+    if (!_current(session)) {
+      return;
+    }
+    setState(() => _live = true);
     while (_current(session)) {
       final CameraImageData? frame = await camera.takeFrame();
       if (frame == null || !_current(session)) {
@@ -294,14 +303,21 @@ class _MacCodeScannerState extends State<MacCodeScanner> {
   @override
   Widget build(BuildContext context) {
     final MacScannerCamera? camera = _camera;
+    final Widget? overlay = widget.overlay;
     return SizedBox.expand(
       child: ColoredBox(
         color: context.colors.panelTop,
         child: switch (_failure) {
           null when camera != null => ExcludeSemantics(
-            child: KeyedSubtree(
-              key: ValueKey<int>(_session),
-              child: camera.preview(),
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                KeyedSubtree(
+                  key: ValueKey<int>(_session),
+                  child: camera.preview(),
+                ),
+                if (_live && overlay != null) overlay,
+              ],
             ),
           ),
           null => const SizedBox.expand(),

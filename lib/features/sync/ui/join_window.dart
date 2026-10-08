@@ -217,21 +217,16 @@ class _ScanColumn extends StatelessWidget {
       ),
       child: ClipRRect(
         borderRadius: _previewRadius,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            MacCodeScanner(
-              onCode: onCode,
-              camera: camera,
-              decode: decode ?? decodeQrFrame,
+        child: MacCodeScanner(
+          onCode: onCode,
+          camera: camera,
+          decode: decode ?? decodeQrFrame,
+          overlay: Center(
+            child: SizedBox.square(
+              dimension: side,
+              child: const JoinScanBrackets(key: joinScanFrameKey),
             ),
-            Center(
-              child: SizedBox.square(
-                dimension: side,
-                child: const JoinScanBrackets(key: joinScanFrameKey),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

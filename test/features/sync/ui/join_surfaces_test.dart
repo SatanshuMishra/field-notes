@@ -95,6 +95,10 @@ final class _FakeJoin {
 }
 
 final class _FakeMacCamera implements MacScannerCamera {
+  _FakeMacCamera({this.failure, this.ready});
+
+  final Object? failure;
+  final Future<void>? ready;
   Completer<CameraImageData?>? _request;
   int starts = 0;
 
@@ -104,6 +108,14 @@ final class _FakeMacCamera implements MacScannerCamera {
   @override
   Future<void> start() async {
     starts += 1;
+    final Future<void>? ready = this.ready;
+    if (ready != null) {
+      await ready;
+    }
+    final Object? failure = this.failure;
+    if (failure != null) {
+      throw failure;
+    }
   }
 
   @override
@@ -126,6 +138,16 @@ final class _FakeMacCamera implements MacScannerCamera {
 final class _Host {
   late BuildContext context;
 }
+
+final PlatformException _cameraRefused = PlatformException(
+  code: 'CAMERA_INITIALIZATION_ERROR',
+  message: 'Permission not granted',
+);
+
+final PlatformException _noCamera = PlatformException(
+  code: 'CAMERA_INITIALIZATION_ERROR',
+  message: 'Could not find a suitable camera on this device',
+);
 
 final class _Opened {
   bool? result;
@@ -895,6 +917,45 @@ void main() {
     expect(find.byType(JoinWindow), findsNothing);
     expect(escaped.codes, isEmpty);
     semantics.dispose();
+  });
+
+  testWidgets('the Mac brackets show only over a live camera', (
+    WidgetTester tester,
+  ) async {
+    final Finder brackets = find.byKey(joinScanFrameKey);
+    final Completer<void> starting = Completer<void>();
+    await _openJoin(
+      tester,
+      platform: TargetPlatform.macOS,
+      join: _FakeJoin(),
+      macCamera: _FakeMacCamera(ready: starting.future),
+    );
+    expect(find.byKey(_previewKey), findsOneWidget);
+    expect(brackets, findsNothing);
+
+    starting.complete();
+    await tester.pumpAndSettle();
+    expect(find.byKey(_previewKey), findsOneWidget);
+    expect(brackets, findsOneWidget);
+
+    await _openJoin(
+      tester,
+      platform: TargetPlatform.macOS,
+      join: _FakeJoin(),
+      macCamera: _FakeMacCamera(failure: _cameraRefused),
+    );
+    expect(find.text(cameraAccessRefusedMessage), findsOneWidget);
+    expect(brackets, findsNothing);
+
+    await _openJoin(
+      tester,
+      platform: TargetPlatform.macOS,
+      join: _FakeJoin(),
+      brightness: Brightness.dark,
+      macCamera: _FakeMacCamera(failure: _noCamera),
+    );
+    expect(find.text(cameraUnavailableMessage), findsOneWidget);
+    expect(brackets, findsNothing);
   });
 
   testWidgets(
