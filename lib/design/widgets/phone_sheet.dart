@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import '../feedback/dialog_host.dart';
+import '../focus/focus_ring.dart';
 import '../tokens/tokens.dart';
 
 const Color phoneSheetBarrierColor = Color(0x572A241D);
@@ -18,7 +19,7 @@ const double phoneSheetGrabberHeight = 4;
 const double phoneSheetGrabberRadius = 3;
 const double phoneSheetGrabberTop = 10;
 const double phoneSheetGrabberBottom = 2;
-const double phoneSheetDragArea = 44;
+const double phoneSheetDragArea = 48;
 const double phoneSheetDismissDistance = 60;
 const double phoneSheetExpandDistance = 30;
 const double phoneSheetShrinkDistance = 40;
@@ -298,15 +299,22 @@ class _PhoneSheetState extends State<PhoneSheet>
       button: true,
       label: widget.expanded ? phoneSheetShrinkLabel : phoneSheetExpandLabel,
       onTap: _toggle,
-      child: GestureDetector(
-        key: phoneSheetGrabberToggleKey,
-        behavior: HitTestBehavior.translucent,
-        excludeFromSemantics: true,
-        onTapDown: _onGrabberTapDown,
-        onTapUp: _onGrabberTapUp,
-        child: const SizedBox(
-          width: phoneSheetGrabberTargetWidth,
-          height: phoneSheetDragArea,
+      child: FocusRing(
+        onPressed: _toggle,
+        placement: FocusRingPlacement.edge,
+        borderRadius: const BorderRadius.all(
+          Radius.circular(phoneSheetDragArea / 2),
+        ),
+        child: GestureDetector(
+          key: phoneSheetGrabberToggleKey,
+          behavior: HitTestBehavior.translucent,
+          excludeFromSemantics: true,
+          onTapDown: _onGrabberTapDown,
+          onTapUp: _onGrabberTapUp,
+          child: const SizedBox(
+            width: phoneSheetGrabberTargetWidth,
+            height: phoneSheetDragArea,
+          ),
         ),
       ),
     );

@@ -425,7 +425,7 @@ void main() {
     expect(find.byType(DayDetailHeader), findsOneWidget);
     expect(find.byKey(dayDetailBackKey), findsOneWidget);
     expect(find.byType(DayDetailEntriesBar), findsOneWidget);
-    expect(tester.getSize(find.byKey(dayDetailPanelKey)).width, 560);
+    expect(tester.getSize(find.byKey(dayDetailPanelKey)).width, 1060);
     expect(
       tester.getCenter(find.byKey(dayDetailPanelKey)).dx,
       _desktop.width / 2,

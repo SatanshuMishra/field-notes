@@ -155,7 +155,7 @@ class _ExpandableSheetState extends State<_ExpandableSheet> {
       onExpandedChanged: _onExpandedChanged,
       header: const SizedBox(
         key: _headerKey,
-        height: 60,
+        height: 80,
         child: Center(child: Text('Morning note')),
       ),
       actions: const <Widget>[

@@ -38,7 +38,7 @@ const double _footerVerticalPadding = 10;
 const double _footerHorizontalPadding = 14;
 const double _stepGlyphGap = 6;
 const double _absentStepOpacity = 0.35;
-const double _phoneStepTarget = 44;
+const double _phoneStepTarget = 48;
 const double _desktopStepTarget = 48;
 const double _noteRingOutset = 8;
 
