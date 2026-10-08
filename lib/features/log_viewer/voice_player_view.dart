@@ -10,7 +10,6 @@ import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart'
     show voiceWaveformSeed;
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart'
     show logActionsDeleteKey;
-import 'package:field_notes/features/entry_cards/media/media_placeholders.dart';
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
 import 'package:field_notes/features/entry_cards/playback/audio_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
@@ -145,7 +144,15 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     if (playback.unavailable) {
       return SizedBox(
         height: height,
-        child: const CorruptMediaPlaceholder(label: _unavailableLabel),
+        child: Center(
+          child: Text(
+            _unavailableLabel,
+            textAlign: TextAlign.center,
+            style: context.textStyles.captionSans.copyWith(
+              color: Palette.mediaInk,
+            ),
+          ),
+        ),
       );
     }
     final bool ready = playback.ready;

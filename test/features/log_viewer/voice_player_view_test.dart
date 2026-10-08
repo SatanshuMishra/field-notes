@@ -152,6 +152,19 @@ Future<void> _settle(WidgetTester tester) async {
 Finder _inStage(Finder matching) =>
     find.descendant(of: find.byType(ViewerStage), matching: matching);
 
+bool _framesContent(Widget widget) {
+  if (widget is CustomPaint) {
+    return true;
+  }
+  if (widget is! DecoratedBox) {
+    return false;
+  }
+  final Decoration decoration = widget.decoration;
+  return decoration is! BoxDecoration ||
+      decoration.border != null ||
+      decoration.color != null;
+}
+
 Finder _groundBox() {
   return _inStage(
     find.byWidgetPredicate(
@@ -534,44 +547,62 @@ void main() {
   ) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     _phone(tester);
-    final _SeekingAudioPlayer player = _SeekingAudioPlayer();
-    final _Calls calls = _Calls();
-    await tester.pumpWidget(
-      _host(
-        _scene(calls),
-        resolver: FakeMediaResolver(),
-        player: player,
-        platform: TargetPlatform.android,
-      ),
-    );
-    await _settle(tester);
+    const Rect waveSlot = Rect.fromLTWH(22, (832 - 176) / 2, 384 - 44, 176);
+    for (final Brightness brightness in Brightness.values) {
+      final _SeekingAudioPlayer player = _SeekingAudioPlayer();
+      final _Calls calls = _Calls();
+      await tester.pumpWidget(
+        _host(
+          _scene(calls),
+          resolver: FakeMediaResolver(),
+          player: player,
+          platform: TargetPlatform.android,
+          brightness: brightness,
+        ),
+      );
+      await _settle(tester);
 
-    expect(player.loadCalls, isEmpty);
-    expect(find.byType(ViewerWaveform), findsNothing);
-    expect(find.text("Can't play this recording"), findsOneWidget);
-    expect(
-      tester.getRect(find.byType(CorruptMediaPlaceholder)),
-      const Rect.fromLTWH(22, (832 - 176) / 2, 384 - 44, 176),
-    );
+      expect(player.loadCalls, isEmpty);
+      expect(find.byType(ViewerWaveform), findsNothing);
+      final Finder message = find.text("Can't play this recording");
+      expect(message, findsOneWidget);
+      expect(find.byType(CorruptMediaPlaceholder), findsNothing);
+      final Rect shown = tester.getRect(message);
+      expect(shown.center, waveSlot.center);
+      expect(shown.width, lessThanOrEqualTo(waveSlot.width));
+      expect(shown.height, lessThanOrEqualTo(waveSlot.height));
+      final TextStyle style = tester.widget<Text>(message).style!;
+      final TextStyle caption = tester.element(message).textStyles.captionSans;
+      expect(style.color?.toARGB32(), _ink.toARGB32());
+      expect(style.fontFamily, caption.fontFamily);
+      expect(style.fontSize, caption.fontSize);
+      expect(
+        find.ancestor(
+          of: message,
+          matching: _inStage(find.byWidgetPredicate(_framesContent)),
+        ),
+        findsNothing,
+      );
 
-    expect(find.byKey(logViewerBackKey), findsOneWidget);
-    expect(find.byKey(logViewerEarlierKey), findsOneWidget);
-    expect(find.byKey(logViewerLaterKey), findsOneWidget);
-    expect(find.byKey(logActionsDeleteKey), findsOneWidget);
-    expect(
-      tester
-          .widget<ViewerPrimaryButton>(find.byType(ViewerPrimaryButton))
-          .onPressed,
-      isNull,
-    );
-    expect(
-      tester.getSemantics(find.byType(ViewerPrimaryButton)),
-      isSemantics(label: 'Play', isButton: true, isEnabled: false),
-    );
+      expect(find.byKey(logViewerBackKey), findsOneWidget);
+      expect(find.byKey(logViewerEarlierKey), findsOneWidget);
+      expect(find.byKey(logViewerLaterKey), findsOneWidget);
+      expect(find.byKey(logActionsDeleteKey), findsOneWidget);
+      expect(
+        tester
+            .widget<ViewerPrimaryButton>(find.byType(ViewerPrimaryButton))
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester.getSemantics(find.byType(ViewerPrimaryButton)),
+        isSemantics(label: 'Play', isButton: true, isEnabled: false),
+      );
 
-    await tester.tap(find.byType(ViewerPrimaryButton));
-    await tester.pump();
-    expect(player.playCalls, 0);
+      await tester.tap(find.byType(ViewerPrimaryButton));
+      await tester.pump();
+      expect(player.playCalls, 0);
+    }
 
     handle.dispose();
   });
