@@ -75,11 +75,13 @@ class _ScheduledToast {
     required this.id,
     required this.scheduledDate,
     required this.details,
+    required this.mode,
   });
 
   final int id;
   final tz.TZDateTime scheduledDate;
   final NotificationDetails details;
+  final AndroidScheduleMode mode;
 }
 
 class _UnresolvedPlugin implements FlutterLocalNotificationsPlugin {
@@ -119,6 +121,7 @@ class _UnresolvedPlugin implements FlutterLocalNotificationsPlugin {
         id: id,
         scheduledDate: scheduledDate,
         details: notificationDetails,
+        mode: androidScheduleMode,
       ),
     );
   }
@@ -128,6 +131,53 @@ class _UnresolvedPlugin implements FlutterLocalNotificationsPlugin {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ExactAlarmAndroid implements AndroidFlutterLocalNotificationsPlugin {
+  _ExactAlarmAndroid(this._allowed);
+
+  final Future<bool?> Function() _allowed;
+
+  @override
+  Future<bool?> canScheduleExactNotifications() => _allowed();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _AndroidPlugin extends _UnresolvedPlugin {
+  _AndroidPlugin(this.android);
+
+  final _ExactAlarmAndroid android;
+
+  @override
+  T? resolvePlatformSpecificImplementation<
+    T extends FlutterLocalNotificationsPlatform
+  >() {
+    final _ExactAlarmAndroid implementation = android;
+    return implementation is T ? implementation as T : null;
+  }
+}
+
+Future<AndroidScheduleMode> _androidModeWhen(
+  Future<bool?> Function() allowed,
+) async {
+  debugDefaultTargetPlatformOverride = TargetPlatform.android;
+  addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  _answerTimezone('Europe/London');
+  final _AndroidPlugin plugin = _AndroidPlugin(_ExactAlarmAndroid(allowed));
+  final LocalNotificationsReminderScheduler scheduler =
+      LocalNotificationsReminderScheduler(plugin: plugin);
+
+  await scheduler.schedule(<ReminderBooking>[
+    ReminderBooking(
+      id: ReminderService.bookingIds.first,
+      at: DateTime(2026, 10, 9, 20),
+    ),
+  ]);
+
+  expect(plugin.scheduled, hasLength(1));
+  return plugin.scheduled.single.mode;
 }
 
 void _answerTimezone(String identifier) {
@@ -307,4 +357,34 @@ void main() {
       expect(scheduledDate.isAtSameMomentAs(bookings[index].at), isTrue);
     }
   });
+
+  test(
+    'an Android reminder rings exactly when exact alarms are allowed',
+    () async {
+      expect(
+        await _androidModeWhen(() async => true),
+        AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    },
+  );
+
+  test(
+    'without exact alarm access an Android reminder still schedules, inexactly',
+    () async {
+      expect(
+        await _androidModeWhen(() async => false),
+        AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+      expect(
+        await _androidModeWhen(() async => null),
+        AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+      expect(
+        await _androidModeWhen(
+          () async => throw PlatformException(code: 'unavailable'),
+        ),
+        AndroidScheduleMode.inexactAllowWhileIdle,
+      );
+    },
+  );
 }

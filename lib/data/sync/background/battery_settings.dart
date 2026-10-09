@@ -3,12 +3,7 @@ import 'package:flutter/services.dart';
 const String batterySettingsChannel = 'field_notes/battery_settings';
 const String samsungManufacturer = 'samsung';
 
-enum BatterySettingsScreen {
-  samsungNeverSleeping,
-  ignoreOptimizationsRequest,
-  appDetails,
-  none,
-}
+enum BatterySettingsScreen { samsungNeverSleeping, appDetails, none }
 
 abstract interface class BatterySettings {
   Future<bool> isExempt();
@@ -34,12 +29,9 @@ class ChannelBatterySettings implements BatterySettings {
         (await channel.invokeMethod<String>('manufacturer') ?? '')
             .trim()
             .toLowerCase();
-    if (manufacturer == samsungManufacturer) {
-      if (await _start('openNeverSleepingApps')) {
-        return BatterySettingsScreen.samsungNeverSleeping;
-      }
-    } else if (await _start('requestIgnoreBatteryOptimizations')) {
-      return BatterySettingsScreen.ignoreOptimizationsRequest;
+    if (manufacturer == samsungManufacturer &&
+        await _start('openNeverSleepingApps')) {
+      return BatterySettingsScreen.samsungNeverSleeping;
     }
     if (await _start('openAppDetails')) {
       return BatterySettingsScreen.appDetails;

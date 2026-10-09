@@ -39,13 +39,6 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "isIgnoringBatteryOptimizations" -> result.success(isIgnoringBatteryOptimizations())
                     "manufacturer" -> result.success(Build.MANUFACTURER ?: "")
-                    "requestIgnoreBatteryOptimizations" -> startSettings(
-                        Intent(
-                            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                            Uri.fromParts("package", packageName, null),
-                        ),
-                        result,
-                    )
                     "openNeverSleepingApps" -> startSettings(
                         Intent(SAMSUNG_CHECKABLE_LIST_ACTION)
                             .setPackage(SAMSUNG_DEVICE_CARE_PACKAGE)
