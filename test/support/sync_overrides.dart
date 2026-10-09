@@ -62,7 +62,7 @@ final class FakeBatterySettings implements BatterySettings {
   @override
   Future<BatterySettingsScreen> open() async {
     opens += 1;
-    return BatterySettingsScreen.ignoreOptimizationsRequest;
+    return BatterySettingsScreen.appDetails;
   }
 }
 

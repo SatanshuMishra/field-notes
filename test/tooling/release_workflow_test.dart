@@ -236,7 +236,10 @@ void main() {
       );
 
       final List<String> builds = steps
-          .where((String candidate) => candidate.contains('flutter build'))
+          .where(
+            (String candidate) =>
+                candidate.contains('flutter build ${target.value} '),
+          )
           .toList();
       expect(builds, hasLength(2));
       final String tagged = builds.singleWhere(
@@ -276,7 +279,35 @@ void main() {
 
     final String android = _job(workflow, 'android');
     expect(android, contains('"field-notes-$_version-android.apk"'));
-    expect(android, contains('path: field-notes-$_version-android.apk\n'));
+    expect(android, contains('"field-notes-$_version-android.aab"'));
+    expect(
+      android,
+      contains(
+        'path: |\n'
+        '            field-notes-$_version-android.apk\n'
+        '            field-notes-$_version-android.aab\n',
+      ),
+    );
+
+    final List<String> bundles = _steps(android)
+        .where(
+          (String candidate) => candidate.contains('flutter build appbundle'),
+        )
+        .toList();
+    expect(bundles, hasLength(2));
+    expect(
+      bundles.singleWhere((String candidate) => candidate.contains(_tagGuard)),
+      endsWith(
+        'run: flutter build appbundle --release '
+        '--build-name $_version --build-number \${{ github.run_number }}',
+      ),
+    );
+    expect(
+      bundles.singleWhere(
+        (String candidate) => candidate.contains(_pullRequestGuard),
+      ),
+      endsWith('run: flutter build appbundle --release'),
+    );
   });
 
   test('the version step names tag and pull-request builds', () {
@@ -504,7 +535,8 @@ void main() {
     expect(step, contains(r"printf 'storeFile=release.jks\n'"));
     expect(step, endsWith('} > android/key.properties'));
 
-    expect('secrets.'.allMatches(workflow), hasLength(4));
+    expect('secrets.ANDROID_'.allMatches(workflow), hasLength(4));
+    expect('secrets.'.allMatches(workflow), hasLength(5));
   });
 
   test(
@@ -557,6 +589,126 @@ void main() {
       ]);
     },
   );
+
+  test('a version tag sends the app bundle to Google Play once switched on', () {
+    final String workflow = _workflow();
+    final String play = _job(workflow, 'play');
+
+    expect(play, contains('\n    needs: [release]\n'));
+    expect(
+      play,
+      contains(
+        "\n    if: startsWith(github.ref, 'refs/tags/v') && "
+        "vars.PLAY_UPLOAD == 'true'\n",
+      ),
+    );
+    expect(play, contains('\n    runs-on: ubuntu-latest\n'));
+    expect(play, isNot(contains('permissions:')));
+    expect(play, isNot(contains('contents: write')));
+
+    final List<String> steps = _steps(play);
+    final int track = _stepIndex(steps, '\n        id: play\n');
+    final int download = _stepIndex(
+      steps,
+      'uses: actions/download-artifact@v8',
+    );
+    final int upload = _stepIndex(steps, 'uses: r0adkll/upload-google-play@v1');
+    expect(track, 0);
+    expect(download, greaterThan(track));
+    expect(upload, greaterThan(download));
+
+    expect(steps[track], contains('\n        shell: bash\n'));
+    expect(
+      steps[track],
+      contains(r'PLAY_RELEASE_TRACK: ${{ vars.PLAY_RELEASE_TRACK }}'),
+    );
+    expect(
+      steps[track],
+      contains(r'PLAY_RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS }}'),
+    );
+    expect(steps[track], isNot(contains(r'${{ vars.PLAY_RELEASE_TRACK }}"')));
+    expect(steps[download], contains('\n          name: android\n'));
+    expect(steps[download], endsWith('\n          path: dist'));
+
+    final String send = steps[upload];
+    for (final String input in <String>[
+      r'serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}',
+      'packageName: dev.satanshumishra.field_notes',
+      r'releaseFiles: dist/field-notes-${{ steps.play.outputs.version }}-android.aab',
+      r'tracks: ${{ steps.play.outputs.track }}',
+      r'status: ${{ steps.play.outputs.status }}',
+      r'releaseName: ${{ steps.play.outputs.version }}',
+    ]) {
+      expect(send, contains('\n          $input'));
+    }
+    expect(
+      'secrets.PLAY_SERVICE_ACCOUNT_JSON'.allMatches(workflow),
+      hasLength(1),
+    );
+
+    final String script = _script(steps[track]);
+    final Directory directory = _scratch();
+    (int, String, String) run(
+      String refName, {
+      String track = '',
+      String status = '',
+    }) {
+      final File output = File('${directory.path}/output')
+        ..writeAsStringSync('');
+      final ProcessResult result = _bash(script, directory, <String, String>{
+        'GITHUB_REF_NAME': refName,
+        'GITHUB_OUTPUT': output.path,
+        'PLAY_RELEASE_TRACK': track,
+        'PLAY_RELEASE_STATUS': status,
+      });
+      return (
+        result.exitCode,
+        result.stdout as String,
+        output.readAsStringSync(),
+      );
+    }
+
+    expect(run('v1.2.0-rc.1'), (
+      0,
+      '',
+      'version=1.2.0-rc.1\ntrack=internal\nstatus=completed\n',
+    ));
+    expect(run('v1.2.0'), (
+      0,
+      '',
+      'version=1.2.0\ntrack=alpha\nstatus=completed\n',
+    ));
+    expect(run('v1.2.0', track: 'production'), (
+      0,
+      '',
+      'version=1.2.0\ntrack=production\nstatus=completed\n',
+    ));
+    expect(run('v1.2.0-rc.2', track: 'production'), (
+      0,
+      '',
+      'version=1.2.0-rc.2\ntrack=internal\nstatus=completed\n',
+    ));
+    expect(run('v1.2.0', status: 'draft'), (
+      0,
+      '',
+      'version=1.2.0\ntrack=alpha\nstatus=draft\n',
+    ));
+
+    for (final (String, String) bad in <(String, String)>[
+      ('nightly', ''),
+      ('production; echo hacked', ''),
+      ('', 'inProgress'),
+    ]) {
+      final (int code, String stdout, String written) = run(
+        'v1.2.0',
+        track: bad.$1,
+        status: bad.$2,
+      );
+      expect(code, isNot(0));
+      expect(stdout, startsWith('::error::'));
+      expect(written, isEmpty);
+    }
+  });
 
   test('the macOS job packs Field Notes.app into a disk image', () {
     final List<String> steps = _steps(_job(_workflow(), 'macos'));

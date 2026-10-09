@@ -158,6 +158,7 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   Future<void> schedule(List<ReminderBooking> bookings) async {
     await _ensureInitialized();
     await _cancelAll();
+    final AndroidScheduleMode mode = await _androidScheduleMode();
     for (final ReminderBooking booking in bookings) {
       await _plugin.zonedSchedule(
         id: booking.id,
@@ -165,8 +166,25 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
         body: reminderNotificationBody,
         scheduledDate: tz.TZDateTime.from(booking.at, tz.local),
         notificationDetails: _details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: mode,
       );
+    }
+  }
+
+  Future<AndroidScheduleMode> _androidScheduleMode() async {
+    final AndroidFlutterLocalNotificationsPlugin? android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    if (android == null) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    }
+    try {
+      return await android.canScheduleExactNotifications() == true
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+    } on PlatformException {
+      return AndroidScheduleMode.inexactAllowWhileIdle;
     }
   }
 

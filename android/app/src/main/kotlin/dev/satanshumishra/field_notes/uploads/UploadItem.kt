@@ -66,8 +66,22 @@ data class UploadItem(
         private const val ORDER = "order"
         private val SAFE_ID = Regex("^[A-Za-z0-9._-]{1,200}$")
         private val METHODS = setOf("PUT", "POST")
+        private val LOOPBACK_HOSTS = setOf("127.0.0.1", "localhost", "[::1]", "::1")
 
         fun isSafeId(taskId: String): Boolean = SAFE_ID.matches(taskId)
+
+        fun isAllowedAddress(url: String): Boolean {
+            val address = try {
+                java.net.URI(url)
+            } catch (_: java.net.URISyntaxException) {
+                return false
+            }
+            return when (address.scheme) {
+                "https" -> !address.host.isNullOrEmpty()
+                "http" -> address.host in LOOPBACK_HOSTS
+                else -> false
+            }
+        }
 
         fun fromJson(json: JSONObject): UploadItem {
             val headersJson = json.getJSONObject(HEADERS)
@@ -79,7 +93,7 @@ data class UploadItem(
             val taskId = json.getString(TASK_ID)
             require(isSafeId(taskId)) { "unsafe task id" }
             val url = json.getString(URL)
-            require(url.startsWith("https://") || url.startsWith("http://")) { "unsupported address" }
+            require(isAllowedAddress(url)) { "unsupported address" }
             val method = json.getString(METHOD)
             require(method in METHODS) { "unsupported method" }
             return UploadItem(
