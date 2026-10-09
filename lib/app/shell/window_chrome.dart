@@ -26,6 +26,7 @@ const String closeMethod = 'close';
 const String startResizeMethod = 'startResize';
 const String windowStateMethod = 'windowState';
 const String stateChangedMethod = 'stateChanged';
+const String windowHandleMethod = 'windowHandle';
 
 const MethodChannel windowChannel = MethodChannel(windowChannelName);
 
@@ -57,6 +58,16 @@ Future<void> closeWindow() => _invokeWindow(closeMethod);
 
 Future<void> startWindowResize(String edge) =>
     _invokeWindow(startResizeMethod, edge);
+
+Future<int?> windowHandle() async {
+  try {
+    return await windowChannel.invokeMethod<int>(windowHandleMethod);
+  } on PlatformException {
+    return null;
+  } on MissingPluginException {
+    return null;
+  }
+}
 
 Future<void> _invokeWindow(String method, [Object? arguments]) async {
   try {

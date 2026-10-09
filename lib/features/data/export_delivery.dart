@@ -1,10 +1,12 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:windows_file_picker/windows_file_picker.dart';
 
 sealed class ExportOutcome {
   const ExportOutcome();
@@ -27,18 +29,50 @@ abstract interface class ExportDelivery {
   });
 }
 
+typedef SaveDialogPlacement = ({
+  String? initialDirectory,
+  WindowsOptions windowsOptions,
+});
+
+Future<SaveDialogPlacement> _platformPlacement() async =>
+    (initialDirectory: null, windowsOptions: const WindowsOptions());
+
+Future<SaveDialogPlacement> windowsSaveDialogPlacement() async {
+  final int? owner = await windowHandle();
+  return (
+    initialDirectory: await _documentsPath(),
+    windowsOptions: FilePickerWindowsOptions(
+      lockParentWindow: owner != null,
+      parentWindowHandle: owner,
+    ),
+  );
+}
+
+Future<String?> _documentsPath() async {
+  try {
+    return (await getApplicationDocumentsDirectory()).path;
+  } on MissingPlatformDirectoryException {
+    return null;
+  }
+}
+
 class SaveFileExportDelivery implements ExportDelivery {
-  const SaveFileExportDelivery();
+  const SaveFileExportDelivery({this.placement = _platformPlacement});
+
+  final Future<SaveDialogPlacement> Function() placement;
 
   @override
   Future<ExportOutcome> deliver({
     required List<int> zipBytes,
     required String fileName,
   }) async {
+    final SaveDialogPlacement where = await placement();
     final Uri? saved = await FilePicker.saveFile(
       dialogTitle: 'Export Field Notes',
       fileName: fileName,
       bytes: Uint8List.fromList(zipBytes),
+      initialDirectory: where.initialDirectory,
+      windowsOptions: where.windowsOptions,
     );
     if (saved == null) {
       return const ExportDismissed();
@@ -71,9 +105,10 @@ class ShareExportDelivery implements ExportDelivery {
   }
 }
 
-ExportDelivery defaultExportDelivery() {
-  if (Platform.isAndroid || Platform.isIOS) {
-    return const ShareExportDelivery();
-  }
-  return const SaveFileExportDelivery();
-}
+ExportDelivery defaultExportDelivery() => switch (defaultTargetPlatform) {
+  TargetPlatform.android || TargetPlatform.iOS => const ShareExportDelivery(),
+  TargetPlatform.windows => const SaveFileExportDelivery(
+    placement: windowsSaveDialogPlacement,
+  ),
+  _ => const SaveFileExportDelivery(),
+};

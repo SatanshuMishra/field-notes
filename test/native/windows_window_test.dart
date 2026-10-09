@@ -33,6 +33,7 @@ const List<String> _windowMethods = <String>[
   startResizeMethod,
   windowStateMethod,
   stateChangedMethod,
+  windowHandleMethod,
 ];
 
 String _source(String name) {
@@ -249,6 +250,11 @@ void main() {
       expect(channel, contains('::GetForegroundWindow() == window'));
       expect(channel, contains('flutter::EncodableValue("maximized")'));
       expect(channel, contains('flutter::EncodableValue("active")'));
+      expect(
+        channel,
+        contains('static_cast<int64_t>(reinterpret_cast<intptr_t>(window))'),
+        reason: 'the export dialog needs the top-level window as its owner',
+      );
       expect(
         channel,
         matches(RegExp(r'InvokeMethod\(\s*kStateChangedMethod,')),

@@ -2,6 +2,7 @@
 
 #include <flutter/standard_method_codec.h>
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <variant>
@@ -18,6 +19,7 @@ constexpr char kCloseMethod[] = "close";
 constexpr char kStartResizeMethod[] = "startResize";
 constexpr char kWindowStateMethod[] = "windowState";
 constexpr char kStateChangedMethod[] = "stateChanged";
+constexpr char kWindowHandleMethod[] = "windowHandle";
 constexpr char kTopEdge[] = "top";
 constexpr char kDarkAppearance[] = "dark";
 constexpr char kLightAppearance[] = "light";
@@ -141,6 +143,9 @@ void WindowChannel::Handle(
     result->Success();
   } else if (method == kWindowStateMethod) {
     result->Success(StateValue(IsMaximized(window), IsActive(window)));
+  } else if (method == kWindowHandleMethod) {
+    result->Success(flutter::EncodableValue(
+        static_cast<int64_t>(reinterpret_cast<intptr_t>(window))));
   } else {
     result->NotImplemented();
   }

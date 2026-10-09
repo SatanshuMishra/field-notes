@@ -1,19 +1,26 @@
-import 'dart:typed_data';
-
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/features/data/export_delivery.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
+import 'package:windows_file_picker/windows_file_picker.dart';
 
 class _SaveRequest {
   const _SaveRequest({
     required this.bytes,
     required this.fileName,
     required this.dialogTitle,
+    required this.initialDirectory,
+    required this.windowsOptions,
   });
 
   final List<int> bytes;
   final String fileName;
   final String? dialogTitle;
+  final String? initialDirectory;
+  final WindowsOptions windowsOptions;
 }
 
 class _FakeFilePicker extends FilePickerPlatform {
@@ -38,9 +45,20 @@ class _FakeFilePicker extends FilePickerPlatform {
       bytes: List<int>.unmodifiable(bytes),
       fileName: fileName,
       dialogTitle: dialogTitle,
+      initialDirectory: initialDirectory,
+      windowsOptions: windowsOptions,
     );
     return _saved;
   }
+}
+
+class _FakeDocuments extends PathProviderPlatform {
+  _FakeDocuments(this.path);
+
+  final String? path;
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => path;
 }
 
 _FakeFilePicker _installFakePicker(Uri? saved) {
@@ -51,7 +69,42 @@ _FakeFilePicker _installFakePicker(Uri? saved) {
   return fake;
 }
 
+void _installDocuments(String? path) {
+  final PathProviderPlatform original = PathProviderPlatform.instance;
+  PathProviderPlatform.instance = _FakeDocuments(path);
+  addTearDown(() => PathProviderPlatform.instance = original);
+}
+
+void _answerWindowHandle(Object? Function() reply) {
+  final TestDefaultBinaryMessenger messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  messenger.setMockMethodCallHandler(windowChannel, (MethodCall call) async {
+    if (call.method != windowHandleMethod) {
+      return null;
+    }
+    return reply();
+  });
+  addTearDown(() => messenger.setMockMethodCallHandler(windowChannel, null));
+}
+
+void _onPlatform(TargetPlatform platform) {
+  debugDefaultTargetPlatformOverride = platform;
+  addTearDown(() => debugDefaultTargetPlatformOverride = null);
+}
+
+Future<_SaveRequest> _exportOnce(_FakeFilePicker picker) async {
+  await defaultExportDelivery().deliver(
+    zipBytes: <int>[1, 2, 3],
+    fileName: 'field-notes.zip',
+  );
+  final _SaveRequest? request = picker.received;
+  expect(request, isNotNull);
+  return request!;
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('SaveFileExportDelivery', () {
     test(
       'the save dialog receives the archive bytes and its location is reported',
@@ -86,6 +139,73 @@ void main() {
           .deliver(zipBytes: <int>[1, 2, 3], fileName: 'field-notes.zip');
 
       expect(outcome, isA<ExportDismissed>());
+    });
+  });
+
+  group('defaultExportDelivery', () {
+    test('the Windows save dialog belongs to the Field Notes window and opens '
+        'in Documents', () async {
+      _onPlatform(TargetPlatform.windows);
+      final _FakeFilePicker picker = _installFakePicker(
+        Uri.file('/tmp/field-notes.zip'),
+      );
+      _answerWindowHandle(() => 4242);
+      _installDocuments('/Users/lab/Documents');
+
+      final _SaveRequest request = await _exportOnce(picker);
+
+      expect(request.initialDirectory, '/Users/lab/Documents');
+      expect(
+        request.windowsOptions,
+        isA<FilePickerWindowsOptions>()
+            .having(
+              (FilePickerWindowsOptions o) => o.parentWindowHandle,
+              'parentWindowHandle',
+              4242,
+            )
+            .having(
+              (FilePickerWindowsOptions o) => o.lockParentWindow,
+              'lockParentWindow',
+              isTrue,
+            ),
+      );
+    });
+
+    test('a Windows window that cannot name itself never lends the dialog to '
+        'whichever window is in front', () async {
+      _onPlatform(TargetPlatform.windows);
+      final _FakeFilePicker picker = _installFakePicker(null);
+      _answerWindowHandle(() => throw PlatformException(code: 'unavailable'));
+      _installDocuments(null);
+
+      final _SaveRequest request = await _exportOnce(picker);
+
+      expect(request.initialDirectory, isNull);
+      expect(request.windowsOptions.lockParentWindow, isFalse);
+    });
+
+    test('the macOS save panel keeps its own folder and owner', () async {
+      _onPlatform(TargetPlatform.macOS);
+      final _FakeFilePicker picker = _installFakePicker(null);
+      bool asked = false;
+      _answerWindowHandle(() {
+        asked = true;
+        return 4242;
+      });
+      _installDocuments('/Users/lab/Documents');
+
+      final _SaveRequest request = await _exportOnce(picker);
+
+      expect(request.initialDirectory, isNull);
+      expect(request.windowsOptions.lockParentWindow, isFalse);
+      expect(request.windowsOptions, isNot(isA<FilePickerWindowsOptions>()));
+      expect(asked, isFalse);
+    });
+
+    test('phones share the archive instead of saving it', () {
+      _onPlatform(TargetPlatform.android);
+
+      expect(defaultExportDelivery(), isA<ShareExportDelivery>());
     });
   });
 }

@@ -1634,7 +1634,7 @@ packages:
     source: hosted
     version: "3.0.3"
   windows_file_picker:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: windows_file_picker
       sha256: "9f3aa833068b09e380fdc59560ad260a4a14e9397173abb533699f967443602e"
