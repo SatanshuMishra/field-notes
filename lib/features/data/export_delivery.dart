@@ -40,20 +40,12 @@ Future<SaveDialogPlacement> _platformPlacement() async =>
 Future<SaveDialogPlacement> windowsSaveDialogPlacement() async {
   final int? owner = await windowHandle();
   return (
-    initialDirectory: await _documentsPath(),
+    initialDirectory: null,
     windowsOptions: FilePickerWindowsOptions(
       lockParentWindow: owner != null,
       parentWindowHandle: owner,
     ),
   );
-}
-
-Future<String?> _documentsPath() async {
-  try {
-    return (await getApplicationDocumentsDirectory()).path;
-  } on MissingPlatformDirectoryException {
-    return null;
-  }
 }
 
 class SaveFileExportDelivery implements ExportDelivery {

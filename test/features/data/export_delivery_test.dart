@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:windows_file_picker/windows_file_picker.dart';
 
 class _SaveRequest {
@@ -52,27 +51,12 @@ class _FakeFilePicker extends FilePickerPlatform {
   }
 }
 
-class _FakeDocuments extends PathProviderPlatform {
-  _FakeDocuments(this.path);
-
-  final String? path;
-
-  @override
-  Future<String?> getApplicationDocumentsPath() async => path;
-}
-
 _FakeFilePicker _installFakePicker(Uri? saved) {
   final FilePickerPlatform original = FilePickerPlatform.instance;
   final _FakeFilePicker fake = _FakeFilePicker(saved);
   FilePickerPlatform.instance = fake;
   addTearDown(() => FilePickerPlatform.instance = original);
   return fake;
-}
-
-void _installDocuments(String? path) {
-  final PathProviderPlatform original = PathProviderPlatform.instance;
-  PathProviderPlatform.instance = _FakeDocuments(path);
-  addTearDown(() => PathProviderPlatform.instance = original);
 }
 
 void _answerWindowHandle(Object? Function() reply) {
@@ -143,18 +127,17 @@ void main() {
   });
 
   group('defaultExportDelivery', () {
-    test('the Windows save dialog belongs to the Field Notes window and opens '
-        'in Documents', () async {
+    test('the Windows save dialog belongs to the Field Notes window and lets '
+        'Windows reopen the last folder', () async {
       _onPlatform(TargetPlatform.windows);
       final _FakeFilePicker picker = _installFakePicker(
         Uri.file('/tmp/field-notes.zip'),
       );
       _answerWindowHandle(() => 4242);
-      _installDocuments('/Users/lab/Documents');
 
       final _SaveRequest request = await _exportOnce(picker);
 
-      expect(request.initialDirectory, '/Users/lab/Documents');
+      expect(request.initialDirectory, isNull);
       expect(
         request.windowsOptions,
         isA<FilePickerWindowsOptions>()
@@ -176,7 +159,6 @@ void main() {
       _onPlatform(TargetPlatform.windows);
       final _FakeFilePicker picker = _installFakePicker(null);
       _answerWindowHandle(() => throw PlatformException(code: 'unavailable'));
-      _installDocuments(null);
 
       final _SaveRequest request = await _exportOnce(picker);
 
@@ -192,7 +174,6 @@ void main() {
         asked = true;
         return 4242;
       });
-      _installDocuments('/Users/lab/Documents');
 
       final _SaveRequest request = await _exportOnce(picker);
 

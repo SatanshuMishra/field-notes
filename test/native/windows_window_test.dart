@@ -250,9 +250,18 @@ void main() {
       expect(channel, contains('::GetForegroundWindow() == window'));
       expect(channel, contains('flutter::EncodableValue("maximized")'));
       expect(channel, contains('flutter::EncodableValue("active")'));
+      final int handleBranch = channel.indexOf('method == kWindowHandleMethod');
+      expect(handleBranch, isNot(-1));
+      final String answer = channel.substring(
+        handleBranch,
+        channel.indexOf('} else', handleBranch),
+      );
       expect(
-        channel,
-        contains('static_cast<int64_t>(reinterpret_cast<intptr_t>(window))'),
+        answer,
+        contains(
+          'result->Success(flutter::EncodableValue(\n'
+          '        static_cast<int64_t>(reinterpret_cast<intptr_t>(window))));',
+        ),
         reason: 'the export dialog needs the top-level window as its owner',
       );
       expect(
@@ -357,6 +366,36 @@ void main() {
           _source('main.cpp'),
           matches(RegExp(r'window\.Create\(L"Field Notes", ')),
         );
+      },
+    );
+
+    test(
+      'file dialogs first open in Documents rather than the install folder',
+      () {
+        final String main = _source('main.cpp');
+        final int created = main.indexOf('if (!window.Create(');
+        final int moved = main.indexOf('OpenFileDialogsInDocuments();');
+        final int loop = main.indexOf('::GetMessage(&msg, nullptr, 0, 0)');
+        expect(created, isNot(-1));
+        expect(moved, greaterThan(created));
+        expect(loop, greaterThan(moved));
+
+        expect(main, contains('#include <knownfolders.h>'));
+        expect(main, contains('#include <shlobj.h>'));
+        expect(
+          main,
+          matches(
+            RegExp(
+              r'::SHGetKnownFolderPath\(FOLDERID_Documents,\s*KF_FLAG_DEFAULT,'
+              r'\s*nullptr,\s*&documents\)',
+            ),
+          ),
+        );
+        expect(main, contains('::SetCurrentDirectoryW(documents)'));
+        expect(main, contains('::CoTaskMemFree(documents);'));
+
+        final String cmake = _source('CMakeLists.txt');
+        expect(cmake, contains('"uuid.lib"'));
       },
     );
 

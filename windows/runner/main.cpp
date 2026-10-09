@@ -3,7 +3,9 @@
 #include <flutter_windows.h>
 #include <windows.h>
 
+#include <knownfolders.h>
 #include <ole2.h>
+#include <shlobj.h>
 #include <shobjidl.h>
 
 #include <algorithm>
@@ -60,6 +62,17 @@ OpeningFrame OpeningFrameUnderCursor() {
       Win32Window::Size(static_cast<int>(width), static_cast<int>(height))};
 }
 
+void OpenFileDialogsInDocuments() {
+  PWSTR documents = nullptr;
+  if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT,
+                                       nullptr, &documents)) &&
+      !::SetCurrentDirectoryW(documents)) {
+    OutputDebugStringW(
+        L"Field Notes could not start file dialogs in Documents.\n");
+  }
+  ::CoTaskMemFree(documents);
+}
+
 int RunFieldNotes() {
   if (FAILED(::SetCurrentProcessExplicitAppUserModelID(kAppUserModelId))) {
     OutputDebugStringW(L"Field Notes could not set its app user model ID.\n");
@@ -77,6 +90,7 @@ int RunFieldNotes() {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
+  OpenFileDialogsInDocuments();
 
   ::MSG msg;
   while (::GetMessage(&msg, nullptr, 0, 0)) {
