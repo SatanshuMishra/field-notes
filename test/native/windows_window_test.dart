@@ -411,5 +411,19 @@ void main() {
         reason: 'the identity is set before the window exists',
       );
     });
+
+    test('the audio plugin builds with the current Visual Studio', () {
+      final String build = File('windows/CMakeLists.txt').readAsStringSync();
+      final int plugins = build.indexOf(
+        'include(flutter/generated_plugins.cmake)',
+      );
+      final int silence = build.indexOf(
+        'target_compile_definitions(just_audio_windows_plugin PRIVATE\n'
+        '    _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)',
+      );
+      expect(plugins, isNot(-1));
+      expect(silence, greaterThan(plugins));
+      expect(build, contains('if(TARGET just_audio_windows_plugin)'));
+    });
   });
 }
