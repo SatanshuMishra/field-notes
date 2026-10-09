@@ -577,6 +577,48 @@ void main() {
     expect(find.byType(ReaderWidget), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
+  testWidgets('a typed plain HTTP server address asks for https', (
+    WidgetTester tester,
+  ) async {
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+    await tester.enterText(
+      find.byType(EditableText).first,
+      'abandon ability able about above absent absorb abstract',
+    );
+    await tester.enterText(
+      find.byType(EditableText).last,
+      'http://192.168.1.20:8080',
+    );
+    await tester.tap(find.byKey(joinConfirmKey));
+    await tester.pump();
+
+    expect(find.text(plainHttpAddressMessage), findsOneWidget);
+    expect(find.text(unreachableMessage), findsNothing);
+    expect(join.codes, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('a pairing code from a plain HTTP server says how to fix it', (
+    WidgetTester tester,
+  ) async {
+    final _FakeJoin join = _FakeJoin();
+    await _openFlow(tester, join);
+    final String plain = _pairing.replaceFirst(
+      'https://relay.example',
+      'http://192.168.1.20:8080',
+    );
+    expect(plain, isNot(_pairing));
+
+    await tester.enterText(find.byType(EditableText).first, plain);
+    await tester.pump();
+    await tester.tap(find.byKey(joinConfirmKey));
+    await tester.pump();
+
+    expect(find.text(plainHttpPairingMessage), findsOneWidget);
+    expect(find.text(pairingRetryMessage), findsNothing);
+    expect(join.codes, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
   testWidgets('a pairing code pasted into the words asks about its server', (
     WidgetTester tester,
   ) async {

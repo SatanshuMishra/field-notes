@@ -35,6 +35,35 @@ void main() {
     );
   });
 
+  test('an address refused only for plain HTTP is told apart', () {
+    for (final String address in <String>[
+      'http://sync.satanshu.tech',
+      'http://10.0.0.5:8080',
+      'http://nas.local:8080/relay',
+    ]) {
+      expect(
+        isPlainHttpRelayAddress(Uri.parse(address)),
+        isTrue,
+        reason: address,
+      );
+    }
+
+    for (final String address in <String>[
+      'https://sync.satanshu.tech',
+      'http://127.0.0.1:8080',
+      'http://sync.satanshu.tech@relay.attacker.test',
+      'http://relay.attacker.test?sync.satanshu.tech',
+      'http://${'a' * 64}.example.test',
+      'ftp://sync.satanshu.tech',
+    ]) {
+      expect(
+        isPlainHttpRelayAddress(Uri.parse(address)),
+        isFalse,
+        reason: address,
+      );
+    }
+  });
+
   test('Android background uploads refuse plain HTTP beyond the device', () {
     final String item = File(
       'android/app/src/main/kotlin/dev/satanshumishra/field_notes/uploads/UploadItem.kt',

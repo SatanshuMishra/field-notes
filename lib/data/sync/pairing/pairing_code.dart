@@ -29,6 +29,11 @@ class PairingCodeException implements Exception {
   String toString() => 'PairingCodeException: $message';
 }
 
+class PlainHttpPairingCodeException extends PairingCodeException {
+  const PlainHttpPairingCodeException()
+    : super('The QR code names a plain HTTP address');
+}
+
 final class PairingCode {
   PairingCode({required List<int> secret, this.relayUrl})
     : secret = frozenBytes(secret) {
@@ -136,6 +141,9 @@ final class PairingCode {
       throw const PairingCodeException('The QR code has no secret');
     }
     final Uri? url = Uri.tryParse(payload.substring(0, hash));
+    if (url != null && isPlainHttpRelayAddress(url)) {
+      throw const PlainHttpPairingCodeException();
+    }
     if (url == null || !isUsableRelayAddress(url)) {
       throw const PairingCodeException('The QR code has no usable address');
     }

@@ -14,6 +14,10 @@ import 'package:sync_protocol/sync_protocol.dart';
 
 const String pairingRetryMessage =
     "That code didn't work. Make a new one on your other device.";
+const String plainHttpPairingMessage =
+    "Your other device's server address starts with http://. On that device, "
+    'change it to an https:// address under Sync & storage, then make a new '
+    'code.';
 const String pairingRefusedMessage =
     "That device didn't have the right code. Make a new code and try again.";
 const String pairingExpiredMessage = 'This code has expired. Make a new one.';
@@ -271,6 +275,8 @@ final class PairingService {
     final PairingCode parsed;
     try {
       parsed = PairingCode.parse(code);
+    } on PlainHttpPairingCodeException catch (error) {
+      throw SyncSetupException(plainHttpPairingMessage, error);
     } on PairingCodeException catch (error) {
       throw SyncSetupException(pairingRetryMessage, error);
     }

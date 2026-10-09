@@ -51,7 +51,7 @@ class _RestoreFlowState extends ConsumerState<RestoreFlow> {
     }
     final Uri? address = parseServerAddress(_address.text);
     if (address == null) {
-      setState(() => _error = unreachableMessage);
+      setState(() => _error = serverAddressRefusal(_address.text));
       return;
     }
     setState(() {

@@ -603,6 +603,15 @@ void main() {
       ),
     );
     expect(play, contains('\n    runs-on: ubuntu-latest\n'));
+    expect(play, contains('\n    environment: google-play\n'));
+    expect(
+      play,
+      contains(
+        '\n    concurrency:\n'
+        '      group: play-upload\n'
+        '      cancel-in-progress: false\n',
+      ),
+    );
     expect(play, isNot(contains('permissions:')));
     expect(play, isNot(contains('contents: write')));
 
@@ -612,7 +621,11 @@ void main() {
       steps,
       'uses: actions/download-artifact@v8',
     );
-    final int upload = _stepIndex(steps, 'uses: r0adkll/upload-google-play@v1');
+    final int upload = _stepIndex(
+      steps,
+      'uses: r0adkll/upload-google-play@'
+      'e738b9dd8f2476ea806d921b64aacd24f34515a5\n',
+    );
     expect(track, 0);
     expect(download, greaterThan(track));
     expect(upload, greaterThan(download));

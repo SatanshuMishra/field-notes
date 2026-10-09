@@ -1,7 +1,9 @@
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../settings_data_controller.dart';
 import '../settings_feedback.dart';
@@ -9,20 +11,34 @@ import '../settings_providers.dart';
 import '../widgets/delete_all_dialog.dart';
 
 typedef DeleteAllConfirmer = Future<bool> Function(BuildContext context);
+typedef LinkOpener = Future<bool> Function(Uri link);
 
 const String reclaimSpaceLabel = 'Reclaim space';
 const String reclaimSpaceFailedMessage =
     'Reclaim space failed. Nothing was removed.';
+const String privacyPolicyLabel = 'Privacy policy';
+const String privacyPolicyOpenLabel = 'Open';
+const String privacyPolicyFailedMessage =
+    "Couldn't open the privacy policy. Find it at "
+    'github.com/SatanshuMishra/field-notes, in docs/privacy.md.';
+final Uri privacyPolicyLink = Uri.parse(
+  'https://github.com/SatanshuMishra/field-notes/blob/main/docs/privacy.md',
+);
+
+Future<bool> openInBrowser(Uri link) =>
+    launchUrl(link, mode: LaunchMode.externalApplication);
 
 class DataSection extends ConsumerStatefulWidget {
   const DataSection({
     super.key,
     required this.onFeedback,
     this.confirmDelete = confirmDeleteAll,
+    this.openLink = openInBrowser,
   });
 
   final SettingsFeedbackSink onFeedback;
   final DeleteAllConfirmer confirmDelete;
+  final LinkOpener openLink;
 
   @override
   ConsumerState<DataSection> createState() => _DataSectionState();
@@ -68,8 +84,33 @@ class _DataSectionState extends ConsumerState<DataSection> {
             onPressed: _deleting ? null : _runDeleteAll,
           ),
         ),
+        SettingsFieldRow(
+          label: privacyPolicyLabel,
+          description:
+              'What Field Notes keeps, what the sync server sees, and how '
+              'to delete it.',
+          control: StickerButton(
+            label: privacyPolicyOpenLabel,
+            variant: StickerButtonVariant.secondary,
+            padTapTarget: true,
+            onPressed: _openPrivacyPolicy,
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _openPrivacyPolicy() async {
+    bool opened;
+    try {
+      opened = await widget.openLink(privacyPolicyLink);
+    } on PlatformException catch (error) {
+      debugPrint('Opening the privacy policy failed: $error');
+      opened = false;
+    }
+    if (!opened && mounted) {
+      widget.onFeedback(privacyPolicyFailedMessage);
+    }
   }
 
   Future<void> _runExport() async {
