@@ -73,8 +73,6 @@ void StartInUserFolder() {
 }
 
 int RunFieldNotes() {
-  StartInUserFolder();
-
   if (FAILED(::SetCurrentProcessExplicitAppUserModelID(kAppUserModelId))) {
     OutputDebugStringW(L"Field Notes could not set its app user model ID.\n");
   }
@@ -105,7 +103,9 @@ int RunFieldNotes() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
-  if (!::SetDllDirectoryW(L"")) {
+  if (::SetDllDirectoryW(L"")) {
+    StartInUserFolder();
+  } else {
     OutputDebugStringW(L"Field Notes could not narrow its DLL search.\n");
   }
 

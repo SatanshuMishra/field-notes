@@ -375,23 +375,36 @@ void main() {
     test('the runner leaves the install folder for the user folder before any '
         'thread starts, and keeps the working folder out of DLL search', () {
       final String main = _source('main.cpp');
-      final int guarded = main.indexOf('if (!::SetDllDirectoryW(L""))');
       final int winMain = main.indexOf('int APIENTRY wWinMain(');
+      final int guarded = main.indexOf('if (::SetDllDirectoryW(L""))');
+      expect(winMain, isNot(-1));
       expect(guarded, greaterThan(winMain));
+      expect(
+        main.substring(guarded),
+        matches(
+          RegExp(
+            r'^if \(::SetDllDirectoryW\(L""\)\) \{\s*StartInUserFolder\(\);'
+            r'\s*\} else \{',
+          ),
+        ),
+        reason:
+            'the app leaves the install folder only once the working folder '
+            'is out of DLL search',
+      );
       expect(
         guarded,
         lessThan(main.indexOf('::OleInitialize(nullptr)')),
-        reason: 'the DLL search is fixed before COM or any plugin loads',
+        reason: 'the search narrows and the folder moves before COM starts',
       );
-
-      final int run = main.indexOf('int RunFieldNotes() {');
-      final int moved = main.indexOf('StartInUserFolder();', run);
-      expect(run, isNot(-1));
-      expect(moved, greaterThan(run));
       expect(
-        moved,
-        lessThan(main.indexOf('flutter::DartProject project(', run)),
+        guarded,
+        lessThan(main.indexOf('= RunFieldNotes();')),
         reason: 'the working folder moves before the engine starts threads',
+      );
+      expect(
+        'StartInUserFolder();'.allMatches(main).length,
+        1,
+        reason: 'only the guarded call moves the working folder',
       );
 
       expect(main, contains('#include <knownfolders.h>'));
