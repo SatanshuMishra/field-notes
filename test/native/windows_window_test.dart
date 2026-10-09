@@ -33,6 +33,7 @@ const List<String> _windowMethods = <String>[
   startResizeMethod,
   windowStateMethod,
   stateChangedMethod,
+  windowHandleMethod,
 ];
 
 String _source(String name) {
@@ -249,6 +250,23 @@ void main() {
       expect(channel, contains('::GetForegroundWindow() == window'));
       expect(channel, contains('flutter::EncodableValue("maximized")'));
       expect(channel, contains('flutter::EncodableValue("active")'));
+      final int handleBranch = channel.indexOf('method == kWindowHandleMethod');
+      expect(handleBranch, isNot(-1));
+      final String answer = channel.substring(
+        handleBranch,
+        channel.indexOf('} else', handleBranch),
+      );
+      expect(answer, contains('result->Success('));
+      expect(
+        answer,
+        contains('reinterpret_cast<intptr_t>(window)'),
+        reason: 'the export dialog needs the top-level window as its owner',
+      );
+      expect(
+        answer,
+        contains('int64_t'),
+        reason: 'a window handle is pointer-sized, so it travels as int64',
+      );
       expect(
         channel,
         matches(RegExp(r'InvokeMethod\(\s*kStateChangedMethod,')),
@@ -353,6 +371,57 @@ void main() {
         );
       },
     );
+
+    test('the runner leaves the install folder for the user folder before any '
+        'thread starts, and keeps the working folder out of DLL search', () {
+      final String main = _source('main.cpp');
+      final int winMain = main.indexOf('int APIENTRY wWinMain(');
+      final int guarded = main.indexOf('if (::SetDllDirectoryW(L""))');
+      expect(winMain, isNot(-1));
+      expect(guarded, greaterThan(winMain));
+      expect(
+        main.substring(guarded),
+        matches(
+          RegExp(
+            r'^if \(::SetDllDirectoryW\(L""\)\) \{\s*StartInUserFolder\(\);'
+            r'\s*\} else \{',
+          ),
+        ),
+        reason:
+            'the app leaves the install folder only once the working folder '
+            'is out of DLL search',
+      );
+      expect(
+        guarded,
+        lessThan(main.indexOf('::OleInitialize(nullptr)')),
+        reason: 'the search narrows and the folder moves before COM starts',
+      );
+      expect(
+        guarded,
+        lessThan(main.indexOf('= RunFieldNotes();')),
+        reason: 'the working folder moves before the engine starts threads',
+      );
+      expect(
+        'StartInUserFolder();'.allMatches(main).length,
+        1,
+        reason: 'only the guarded call moves the working folder',
+      );
+
+      expect(main, contains('#include <knownfolders.h>'));
+      expect(main, contains('#include <shlobj.h>'));
+      expect(
+        main,
+        matches(
+          RegExp(
+            r'::SHGetKnownFolderPath\(FOLDERID_Profile,\s*KF_FLAG_DEFAULT,'
+            r'\s*nullptr,\s*&profile\)',
+          ),
+        ),
+      );
+      expect(main, contains('::SetCurrentDirectoryW(profile)'));
+      expect(main, contains('::CoTaskMemFree(profile);'));
+      expect(main, isNot(contains('FOLDERID_Documents')));
+    });
 
     test('the Windows build names itself Field Notes', () {
       final String resource = _source('Runner.rc');

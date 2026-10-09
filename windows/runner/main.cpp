@@ -3,7 +3,9 @@
 #include <flutter_windows.h>
 #include <windows.h>
 
+#include <knownfolders.h>
 #include <ole2.h>
+#include <shlobj.h>
 #include <shobjidl.h>
 
 #include <algorithm>
@@ -60,6 +62,16 @@ OpeningFrame OpeningFrameUnderCursor() {
       Win32Window::Size(static_cast<int>(width), static_cast<int>(height))};
 }
 
+void StartInUserFolder() {
+  PWSTR profile = nullptr;
+  if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_Profile, KF_FLAG_DEFAULT,
+                                       nullptr, &profile)) &&
+      !::SetCurrentDirectoryW(profile)) {
+    OutputDebugStringW(L"Field Notes could not start in the user folder.\n");
+  }
+  ::CoTaskMemFree(profile);
+}
+
 int RunFieldNotes() {
   if (FAILED(::SetCurrentProcessExplicitAppUserModelID(kAppUserModelId))) {
     OutputDebugStringW(L"Field Notes could not set its app user model ID.\n");
@@ -91,6 +103,12 @@ int RunFieldNotes() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  if (::SetDllDirectoryW(L"")) {
+    StartInUserFolder();
+  } else {
+    OutputDebugStringW(L"Field Notes could not narrow its DLL search.\n");
+  }
+
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
   }

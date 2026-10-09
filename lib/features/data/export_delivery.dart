@@ -1,10 +1,12 @@
 import 'dart:io';
-import 'dart:typed_data';
 
+import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:windows_file_picker/windows_file_picker.dart';
 
 sealed class ExportOutcome {
   const ExportOutcome();
@@ -27,8 +29,20 @@ abstract interface class ExportDelivery {
   });
 }
 
+Future<WindowsOptions> _unownedDialog() async => const WindowsOptions();
+
+Future<WindowsOptions> dialogOwnedByAppWindow() async {
+  final int? owner = await windowHandle();
+  return FilePickerWindowsOptions(
+    lockParentWindow: owner != null,
+    parentWindowHandle: owner,
+  );
+}
+
 class SaveFileExportDelivery implements ExportDelivery {
-  const SaveFileExportDelivery();
+  const SaveFileExportDelivery({this.windowsOptions = _unownedDialog});
+
+  final Future<WindowsOptions> Function() windowsOptions;
 
   @override
   Future<ExportOutcome> deliver({
@@ -39,6 +53,7 @@ class SaveFileExportDelivery implements ExportDelivery {
       dialogTitle: 'Export Field Notes',
       fileName: fileName,
       bytes: Uint8List.fromList(zipBytes),
+      windowsOptions: await windowsOptions(),
     );
     if (saved == null) {
       return const ExportDismissed();
@@ -71,9 +86,10 @@ class ShareExportDelivery implements ExportDelivery {
   }
 }
 
-ExportDelivery defaultExportDelivery() {
-  if (Platform.isAndroid || Platform.isIOS) {
-    return const ShareExportDelivery();
-  }
-  return const SaveFileExportDelivery();
-}
+ExportDelivery defaultExportDelivery() => switch (defaultTargetPlatform) {
+  TargetPlatform.android || TargetPlatform.iOS => const ShareExportDelivery(),
+  TargetPlatform.windows => const SaveFileExportDelivery(
+    windowsOptions: dialogOwnedByAppWindow,
+  ),
+  _ => const SaveFileExportDelivery(),
+};
