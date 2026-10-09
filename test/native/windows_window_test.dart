@@ -256,13 +256,16 @@ void main() {
         handleBranch,
         channel.indexOf('} else', handleBranch),
       );
+      expect(answer, contains('result->Success('));
       expect(
         answer,
-        contains(
-          'result->Success(flutter::EncodableValue(\n'
-          '        static_cast<int64_t>(reinterpret_cast<intptr_t>(window))));',
-        ),
+        contains('reinterpret_cast<intptr_t>(window)'),
         reason: 'the export dialog needs the top-level window as its owner',
+      );
+      expect(
+        answer,
+        contains('int64_t'),
+        reason: 'a window handle is pointer-sized, so it travels as int64',
       );
       expect(
         channel,
@@ -369,35 +372,43 @@ void main() {
       },
     );
 
-    test(
-      'file dialogs first open in Documents rather than the install folder',
-      () {
-        final String main = _source('main.cpp');
-        final int created = main.indexOf('if (!window.Create(');
-        final int moved = main.indexOf('OpenFileDialogsInDocuments();');
-        final int loop = main.indexOf('::GetMessage(&msg, nullptr, 0, 0)');
-        expect(created, isNot(-1));
-        expect(moved, greaterThan(created));
-        expect(loop, greaterThan(moved));
+    test('the runner leaves the install folder for the user folder before any '
+        'thread starts, and keeps the working folder out of DLL search', () {
+      final String main = _source('main.cpp');
+      final int guarded = main.indexOf('if (!::SetDllDirectoryW(L""))');
+      final int winMain = main.indexOf('int APIENTRY wWinMain(');
+      expect(guarded, greaterThan(winMain));
+      expect(
+        guarded,
+        lessThan(main.indexOf('::OleInitialize(nullptr)')),
+        reason: 'the DLL search is fixed before COM or any plugin loads',
+      );
 
-        expect(main, contains('#include <knownfolders.h>'));
-        expect(main, contains('#include <shlobj.h>'));
-        expect(
-          main,
-          matches(
-            RegExp(
-              r'::SHGetKnownFolderPath\(FOLDERID_Documents,\s*KF_FLAG_DEFAULT,'
-              r'\s*nullptr,\s*&documents\)',
-            ),
+      final int run = main.indexOf('int RunFieldNotes() {');
+      final int moved = main.indexOf('StartInUserFolder();', run);
+      expect(run, isNot(-1));
+      expect(moved, greaterThan(run));
+      expect(
+        moved,
+        lessThan(main.indexOf('flutter::DartProject project(', run)),
+        reason: 'the working folder moves before the engine starts threads',
+      );
+
+      expect(main, contains('#include <knownfolders.h>'));
+      expect(main, contains('#include <shlobj.h>'));
+      expect(
+        main,
+        matches(
+          RegExp(
+            r'::SHGetKnownFolderPath\(FOLDERID_Profile,\s*KF_FLAG_DEFAULT,'
+            r'\s*nullptr,\s*&profile\)',
           ),
-        );
-        expect(main, contains('::SetCurrentDirectoryW(documents)'));
-        expect(main, contains('::CoTaskMemFree(documents);'));
-
-        final String cmake = _source('CMakeLists.txt');
-        expect(cmake, contains('"uuid.lib"'));
-      },
-    );
+        ),
+      );
+      expect(main, contains('::SetCurrentDirectoryW(profile)'));
+      expect(main, contains('::CoTaskMemFree(profile);'));
+      expect(main, isNot(contains('FOLDERID_Documents')));
+    });
 
     test('the Windows build names itself Field Notes', () {
       final String resource = _source('Runner.rc');

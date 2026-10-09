@@ -62,18 +62,19 @@ OpeningFrame OpeningFrameUnderCursor() {
       Win32Window::Size(static_cast<int>(width), static_cast<int>(height))};
 }
 
-void OpenFileDialogsInDocuments() {
-  PWSTR documents = nullptr;
-  if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_Documents, KF_FLAG_DEFAULT,
-                                       nullptr, &documents)) &&
-      !::SetCurrentDirectoryW(documents)) {
-    OutputDebugStringW(
-        L"Field Notes could not start file dialogs in Documents.\n");
+void StartInUserFolder() {
+  PWSTR profile = nullptr;
+  if (SUCCEEDED(::SHGetKnownFolderPath(FOLDERID_Profile, KF_FLAG_DEFAULT,
+                                       nullptr, &profile)) &&
+      !::SetCurrentDirectoryW(profile)) {
+    OutputDebugStringW(L"Field Notes could not start in the user folder.\n");
   }
-  ::CoTaskMemFree(documents);
+  ::CoTaskMemFree(profile);
 }
 
 int RunFieldNotes() {
+  StartInUserFolder();
+
   if (FAILED(::SetCurrentProcessExplicitAppUserModelID(kAppUserModelId))) {
     OutputDebugStringW(L"Field Notes could not set its app user model ID.\n");
   }
@@ -90,7 +91,6 @@ int RunFieldNotes() {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
-  OpenFileDialogsInDocuments();
 
   ::MSG msg;
   while (::GetMessage(&msg, nullptr, 0, 0)) {
@@ -105,6 +105,10 @@ int RunFieldNotes() {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
+  if (!::SetDllDirectoryW(L"")) {
+    OutputDebugStringW(L"Field Notes could not narrow its DLL search.\n");
+  }
+
   if (!::AttachConsole(ATTACH_PARENT_PROCESS) && ::IsDebuggerPresent()) {
     CreateAndAttachConsole();
   }

@@ -29,42 +29,31 @@ abstract interface class ExportDelivery {
   });
 }
 
-typedef SaveDialogPlacement = ({
-  String? initialDirectory,
-  WindowsOptions windowsOptions,
-});
+Future<WindowsOptions> _unownedDialog() async => const WindowsOptions();
 
-Future<SaveDialogPlacement> _platformPlacement() async =>
-    (initialDirectory: null, windowsOptions: const WindowsOptions());
-
-Future<SaveDialogPlacement> windowsSaveDialogPlacement() async {
+Future<WindowsOptions> dialogOwnedByAppWindow() async {
   final int? owner = await windowHandle();
-  return (
-    initialDirectory: null,
-    windowsOptions: FilePickerWindowsOptions(
-      lockParentWindow: owner != null,
-      parentWindowHandle: owner,
-    ),
+  return FilePickerWindowsOptions(
+    lockParentWindow: owner != null,
+    parentWindowHandle: owner,
   );
 }
 
 class SaveFileExportDelivery implements ExportDelivery {
-  const SaveFileExportDelivery({this.placement = _platformPlacement});
+  const SaveFileExportDelivery({this.windowsOptions = _unownedDialog});
 
-  final Future<SaveDialogPlacement> Function() placement;
+  final Future<WindowsOptions> Function() windowsOptions;
 
   @override
   Future<ExportOutcome> deliver({
     required List<int> zipBytes,
     required String fileName,
   }) async {
-    final SaveDialogPlacement where = await placement();
     final Uri? saved = await FilePicker.saveFile(
       dialogTitle: 'Export Field Notes',
       fileName: fileName,
       bytes: Uint8List.fromList(zipBytes),
-      initialDirectory: where.initialDirectory,
-      windowsOptions: where.windowsOptions,
+      windowsOptions: await windowsOptions(),
     );
     if (saved == null) {
       return const ExportDismissed();
@@ -100,7 +89,7 @@ class ShareExportDelivery implements ExportDelivery {
 ExportDelivery defaultExportDelivery() => switch (defaultTargetPlatform) {
   TargetPlatform.android || TargetPlatform.iOS => const ShareExportDelivery(),
   TargetPlatform.windows => const SaveFileExportDelivery(
-    placement: windowsSaveDialogPlacement,
+    windowsOptions: dialogOwnedByAppWindow,
   ),
   _ => const SaveFileExportDelivery(),
 };
