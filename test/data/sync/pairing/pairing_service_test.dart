@@ -257,6 +257,20 @@ void main() {
     expect(relay.activeDevices((await mac.keyStore.readAccountId())!), 1);
   });
 
+  test('a code naming a plain HTTP server says how to fix it', () async {
+    final _Device phone = device('Pocket phone');
+    final String plain = PairingCode(
+      secret: List<int>.filled(pairingSecretBytes, 3),
+      relayUrl: Uri.parse('https://192.168.1.20:8080'),
+    ).qrPayload.replaceFirst('https://', 'http://');
+
+    await expectRetryMessage(
+      phone.pairing().join(plain, confirmJournal: joinAnyJournal),
+      plainHttpPairingMessage,
+    );
+    expect(await phone.keyStore.readJournalKeys(), isNull);
+  });
+
   test('a join cancelled while waiting stores nothing after Add', () async {
     final _Device mac = await enrolled('Mac');
     final _Device phone = device('Phone');

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
-import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
@@ -591,7 +590,7 @@ class _ChangeServerAddressFlowState
     }
     final Uri? address = parseServerAddress(_address.text);
     if (address == null) {
-      setState(() => _error = unreachableMessage);
+      setState(() => _error = serverAddressRefusal(_address.text));
       return;
     }
     setState(() {

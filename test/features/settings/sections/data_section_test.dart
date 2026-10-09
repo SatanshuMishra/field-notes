@@ -1,21 +1,27 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/settings/sections/data_section.dart';
 import 'package:field_notes/features/settings/settings_data_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/settings_harness.dart';
 
+Future<bool> _neverOpened(Uri link) async =>
+    throw StateError('No link should open: $link');
+
 Future<void> _pumpSection(
   WidgetTester tester, {
   required FakeSettingsDataController controller,
   required List<String> messages,
   bool confirmDelete = true,
+  LinkOpener openLink = _neverOpened,
 }) async {
   useWideSurface(tester);
   await tester.pumpWidget(
@@ -23,6 +29,7 @@ Future<void> _pumpSection(
       DataSection(
         onFeedback: messages.add,
         confirmDelete: (BuildContext context) async => confirmDelete,
+        openLink: openLink,
       ),
       overrides: <Override>[
         settingsDataControllerProvider.overrideWith(
@@ -296,5 +303,65 @@ void main() {
     await _pumpSection(tester, controller: controller, messages: <String>[]);
 
     expect(controller.reclaimCalls, 0);
+  });
+
+  testWidgets('the privacy policy opens in the browser', (
+    WidgetTester tester,
+  ) async {
+    final List<String> messages = <String>[];
+    final List<Uri> opened = <Uri>[];
+    await _pumpSection(
+      tester,
+      controller: FakeSettingsDataController(),
+      messages: messages,
+      openLink: (Uri link) async {
+        opened.add(link);
+        return true;
+      },
+    );
+
+    expect(find.text(privacyPolicyLabel), findsOneWidget);
+    final Finder open = find.widgetWithText(
+      StickerButton,
+      privacyPolicyOpenLabel,
+    );
+    expect(
+      tester.widget<StickerButton>(open).variant,
+      StickerButtonVariant.secondary,
+    );
+
+    await tester.tap(open);
+    await tester.pumpAndSettle();
+
+    expect(opened, <Uri>[privacyPolicyLink]);
+    expect(messages, isEmpty);
+    expect(privacyPolicyLink.scheme, 'https');
+    expect(privacyPolicyLink.path, endsWith('/main/docs/privacy.md'));
+    expect(File('docs/privacy.md').existsSync(), isTrue);
+  });
+
+  testWidgets('a privacy policy that will not open says where to find it', (
+    WidgetTester tester,
+  ) async {
+    for (final LinkOpener failing in <LinkOpener>[
+      (Uri link) async => false,
+      (Uri link) async => throw PlatformException(code: 'ACTIVITY_NOT_FOUND'),
+    ]) {
+      final List<String> messages = <String>[];
+      await _pumpSection(
+        tester,
+        controller: FakeSettingsDataController(),
+        messages: messages,
+        openLink: failing,
+      );
+
+      await tester.tap(
+        find.widgetWithText(StickerButton, privacyPolicyOpenLabel),
+      );
+      await tester.pumpAndSettle();
+
+      expect(messages, <String>[privacyPolicyFailedMessage]);
+      expect(privacyPolicyFailedMessage, contains(privacyPolicyLink.host));
+    }
   });
 }

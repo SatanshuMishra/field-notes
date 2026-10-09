@@ -18,3 +18,8 @@ bool isUsableRelayAddress(Uri address) =>
     address.userInfo.isEmpty &&
     !address.hasQuery &&
     !address.hasFragment;
+
+bool isPlainHttpRelayAddress(Uri address) =>
+    address.scheme == 'http' &&
+    !isUsableRelayAddress(address) &&
+    isUsableRelayAddress(address.replace(scheme: 'https'));

@@ -178,4 +178,38 @@ void main() {
       Uri.parse('https://sync.example.test:8443/relay'),
     );
   });
+
+  test('a QR code naming a plain HTTP server is refused for that reason', () {
+    final String secret = encodeBase64Url(
+      PairingCode.generate(relayUrl: relayUrl).secret,
+    );
+
+    for (final String address in <String>[
+      'http://sync.example.test',
+      'http://192.168.1.20:8080',
+      'http://nas.local:8080/relay',
+    ]) {
+      expect(
+        () => PairingCode.parse('fieldnotes-pair:$address#$secret'),
+        throwsA(isA<PlainHttpPairingCodeException>()),
+        reason: address,
+      );
+    }
+    expect(
+      () => PairingCode.parse(
+        'fieldnotes-pair:http://sync.example.test@relay.attacker.test#$secret',
+      ),
+      throwsA(
+        allOf(
+          isA<PairingCodeException>(),
+          isNot(isA<PlainHttpPairingCodeException>()),
+        ),
+      ),
+    );
+    expect(
+      PairingCode.parse('fieldnotes-pair:http://127.0.0.1:8080#$secret')
+          .relayUrl,
+      Uri.parse('http://127.0.0.1:8080'),
+    );
+  });
 }

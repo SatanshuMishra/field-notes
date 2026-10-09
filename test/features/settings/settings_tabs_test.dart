@@ -77,7 +77,7 @@ const Map<String, List<String>> _rowsByTab = <String, List<String>>{
     'Restore with recovery phrase',
   ],
   _remindersSound: <String>['Daily reminder', 'Reminder time', 'Sound effects'],
-  _data: <String>['Export', 'Reclaim space', 'Delete all'],
+  _data: <String>['Export', 'Reclaim space', 'Delete all', 'Privacy policy'],
 };
 
 const String _deleteNotice = 'Deleted 1 day and 2 entries.';
@@ -565,6 +565,7 @@ void main() {
           'Export…',
           'Reclaim space',
           'Delete all…',
+          'Open',
         ]);
       });
     },

@@ -19,6 +19,9 @@ const String startSyncMessage =
     "Enter your server's address and the invite code you were given.";
 const String serverAddressLabel = 'Server address';
 const String serverAddressHint = 'https://sync.example.com';
+const String plainHttpAddressMessage =
+    'Use an https:// address. Field Notes only syncs over an encrypted '
+    'connection.';
 const String inviteCodeLabel = 'Invite code';
 const String syncCancelLabel = 'Cancel';
 const String syncContinueLabel = 'Continue';
@@ -75,18 +78,27 @@ bool syncFlowOnAndroid(BuildContext context) =>
 TextStyle syncFlowHintStyle(BuildContext context) =>
     context.textStyles.captionSans.copyWith(color: context.colors.muted);
 
-Uri? parseServerAddress(String input) {
+Uri? _typedServerAddress(String input) {
   final String trimmed = input.trim();
   if (trimmed.isEmpty) {
     return null;
   }
-  final Uri? parsed = Uri.tryParse(
-    trimmed.contains('://') ? trimmed : 'https://$trimmed',
-  );
+  return Uri.tryParse(trimmed.contains('://') ? trimmed : 'https://$trimmed');
+}
+
+Uri? parseServerAddress(String input) {
+  final Uri? parsed = _typedServerAddress(input);
   if (parsed == null || !isUsableRelayAddress(parsed)) {
     return null;
   }
   return parsed;
+}
+
+String serverAddressRefusal(String input) {
+  final Uri? parsed = _typedServerAddress(input);
+  return parsed != null && isPlainHttpRelayAddress(parsed)
+      ? plainHttpAddressMessage
+      : unreachableMessage;
 }
 
 Future<T?> showSyncFlow<T>(
@@ -531,7 +543,7 @@ class _StartSyncFlowState extends ConsumerState<StartSyncFlow> {
     }
     final Uri? address = parseServerAddress(_address.text);
     if (address == null) {
-      setState(() => _error = unreachableMessage);
+      setState(() => _error = serverAddressRefusal(_address.text));
       return;
     }
     setState(() {

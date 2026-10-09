@@ -200,10 +200,10 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
   }
 
   void _offer(String code, {required bool scanned}) {
-    final Uri? server = _serverIn(code);
+    final (Uri? server, String refusal) = _readPairing(code);
     if (server == null) {
       setState(() {
-        _error = pairingRetryMessage;
+        _error = refusal;
         _refusedCode = scanned ? code : _refusedCode;
       });
       return;
@@ -218,11 +218,15 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
     });
   }
 
-  static Uri? _serverIn(String code) {
+  static Uri? _serverIn(String code) => _readPairing(code).$1;
+
+  static (Uri?, String) _readPairing(String code) {
     try {
-      return PairingCode.parse(code).relayUrl;
+      return (PairingCode.parse(code).relayUrl, pairingRetryMessage);
+    } on PlainHttpPairingCodeException {
+      return (null, plainHttpPairingMessage);
     } on PairingCodeException {
-      return null;
+      return (null, pairingRetryMessage);
     }
   }
 
@@ -242,7 +246,7 @@ class _JoinJournalFlowState extends ConsumerState<JoinJournalFlow> {
     final String address = _address.text.trim();
     final Uri? relayUrl = address.isEmpty ? null : parseServerAddress(address);
     if (address.isNotEmpty && relayUrl == null) {
-      setState(() => _error = unreachableMessage);
+      setState(() => _error = serverAddressRefusal(address));
       return;
     }
     final List<String> typed = _typedWords;
