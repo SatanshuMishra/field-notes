@@ -1,19 +1,26 @@
 import 'package:field_notes/domain/services/reminder_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'notification_settings_opener.dart';
 import 'reminder_scheduler.dart';
 
 const String reminderNotificationTitle = 'Field Notes';
 const String reminderNotificationBody =
     "You haven't written today's field note yet.";
 const String reminderNotificationIcon = '@drawable/ic_stat_peony';
+const String windowsAppUserModelId = 'dev.satanshumishra.FieldNotes';
+const String windowsNotificationGuid = 'D6A0FDC5-EAD0-45F8-9024-F50F093EE5B2';
 
 class LocalNotificationsReminderScheduler implements ReminderScheduler {
-  LocalNotificationsReminderScheduler({FlutterLocalNotificationsPlugin? plugin})
-    : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
+  LocalNotificationsReminderScheduler({
+    FlutterLocalNotificationsPlugin? plugin,
+    this._notificationStatus = const ChannelNotificationStatus(),
+  }) : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
   static const String _channelId = 'daily_reminder';
   static const String _channelName = 'Daily reminder';
@@ -29,9 +36,11 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
       priority: Priority.high,
     ),
     macOS: DarwinNotificationDetails(),
+    windows: WindowsNotificationDetails(),
   );
 
   final FlutterLocalNotificationsPlugin _plugin;
+  final ChannelNotificationStatus _notificationStatus;
   Future<void>? _ready;
 
   Future<void> _ensureInitialized() async {
@@ -49,7 +58,7 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   Future<void> _initialize() async {
     tz_data.initializeTimeZones();
     final TimezoneInfo info = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(info.identifier));
+    tz.setLocalLocation(_locationFor(info.identifier));
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings(reminderNotificationIcon),
@@ -58,8 +67,21 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
           requestSoundPermission: false,
           requestBadgePermission: false,
         ),
+        windows: WindowsInitializationSettings(
+          appName: 'Field Notes',
+          appUserModelId: windowsAppUserModelId,
+          guid: windowsNotificationGuid,
+        ),
       ),
     );
+  }
+
+  tz.Location _locationFor(String identifier) {
+    try {
+      return tz.getLocation(identifier);
+    } on tz.LocationNotFoundException {
+      return tz.UTC;
+    }
   }
 
   @override
@@ -78,6 +100,9 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
         >();
     if (macOS != null) {
       return _permissionFrom((await macOS.checkPermissions())?.isEnabled);
+    }
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      return _windowsPermission();
     }
     return ReminderPermission.unknown;
   }
@@ -104,14 +129,30 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
           ) ??
           false;
     }
+    if (defaultTargetPlatform == TargetPlatform.windows) {
+      return await _windowsPermission() == ReminderPermission.granted;
+    }
     return false;
   }
 
+  Future<ReminderPermission> _windowsPermission() async {
+    try {
+      final String? status = await _notificationStatus.read();
+      return status == 'disabled'
+          ? ReminderPermission.denied
+          : ReminderPermission.granted;
+    } on MissingPluginException {
+      return ReminderPermission.granted;
+    } on PlatformException {
+      return ReminderPermission.granted;
+    }
+  }
+
   ReminderPermission _permissionFrom(bool? enabled) => switch (enabled) {
-        true => ReminderPermission.granted,
-        false => ReminderPermission.denied,
-        null => ReminderPermission.unknown,
-      };
+    true => ReminderPermission.granted,
+    false => ReminderPermission.denied,
+    null => ReminderPermission.unknown,
+  };
 
   @override
   Future<void> schedule(List<ReminderBooking> bookings) async {

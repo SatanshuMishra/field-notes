@@ -48,6 +48,16 @@ const BorderRadius _dockRadius = BorderRadius.all(Radius.circular(26));
 const BorderRadius _dropRadius = BorderRadius.all(Radius.circular(18));
 const BorderRadius _roundRadius = BorderRadius.all(Radius.circular(20));
 
+double meadowDetailsPanelTop({
+  required bool fullScreen,
+  required TargetPlatform platform,
+}) => fullScreen && platform == TargetPlatform.windows
+    ? meadowDetailsPanelInset + shellTitleBarHeight
+    : meadowDetailsPanelInset;
+
+bool meadowSkyDarkensCaptions(Color skyTop) =>
+    ThemeData.estimateBrightnessForColor(skyTop) == Brightness.dark;
+
 class MeadowDesktopPage extends StatefulWidget {
   const MeadowDesktopPage({super.key, required this.chrome, this.study});
 
@@ -160,7 +170,10 @@ class _MeadowDesktopPageState extends State<MeadowDesktopPage> {
                 ),
               ),
               Positioned(
-                top: meadowDetailsPanelInset,
+                top: meadowDetailsPanelTop(
+                  fullScreen: chrome.fullScreen,
+                  platform: Theme.of(context).platform,
+                ),
                 right: meadowDetailsPanelInset,
                 bottom: meadowDetailsPanelInset,
                 width: meadowDetailsPanelWidth,

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
+import 'package:field_notes/app/shell/windows_caption_buttons.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -146,7 +147,7 @@ class RecorderSurface extends StatelessWidget {
     final bool sidebar = stageLayoutOf(context) == ShellLayout.sidebar;
     final Widget stage = _Stage(surface: this, sidebar: sidebar);
     if (sidebar) {
-      return stage;
+      return DarkCaptionSurface(child: stage);
     }
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
@@ -197,6 +198,19 @@ class _Stage extends StatelessWidget {
   }
 
   Widget _band(BuildContext context) {
+    final TargetPlatform platform = Theme.of(context).platform;
+    final double leading = sidebar
+        ? math.max<double>(
+            0,
+            windowButtonsLeadingClearance(platform) - _sidebarBandInset,
+          )
+        : 0;
+    final double trailing = sidebar
+        ? math.max<double>(
+            0,
+            windowButtonsTrailingClearance(platform) - _sidebarBandInset,
+          )
+        : 0;
     final Widget row = LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return Row(
@@ -205,11 +219,7 @@ class _Stage extends StatelessWidget {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    left: sidebar
-                        ? windowButtonsClearance - _sidebarBandInset
-                        : 0,
-                  ),
+                  padding: EdgeInsets.only(left: leading),
                   child: _leave(),
                 ),
               ),
@@ -222,9 +232,12 @@ class _Stage extends StatelessWidget {
                 child: _privacy(line),
               ),
             Expanded(
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: surface.trailing,
+              child: Padding(
+                padding: EdgeInsets.only(right: trailing),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: surface.trailing,
+                ),
               ),
             ),
           ],

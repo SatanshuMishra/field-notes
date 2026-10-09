@@ -42,9 +42,9 @@ String _runnerGroup(String project) {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('MacosSpellCheckService', () {
+  group('NativeSpellCheckService', () {
     test(
-      'the macos service sends one block and reads ranges and suggestions',
+      'the native service sends one block and reads ranges and suggestions',
       () async {
         final List<MethodCall> calls = _mockChannel(
           (MethodCall call) async => <Object?>[
@@ -56,8 +56,11 @@ void main() {
           ],
         );
 
-        final List<SuggestionSpan>? spans = await const MacosSpellCheckService()
-            .fetchSpellCheckSuggestions(const Locale('en'), 'teh harbour');
+        final List<SuggestionSpan>? spans =
+            await const NativeSpellCheckService().fetchSpellCheckSuggestions(
+              const Locale('en'),
+              'teh harbour',
+            );
 
         expect(spans, <SuggestionSpan>[
           const SuggestionSpan(TextRange(start: 0, end: 3), <String>[
@@ -87,7 +90,7 @@ void main() {
         (MethodCall call) async => <Object?>[],
       );
 
-      final List<SuggestionSpan>? spans = await const MacosSpellCheckService()
+      final List<SuggestionSpan>? spans = await const NativeSpellCheckService()
           .fetchSpellCheckSuggestions(const Locale('en'), '');
 
       expect(spans, isEmpty);
@@ -95,7 +98,7 @@ void main() {
     });
 
     test('a missing plugin gives null', () async {
-      final List<SuggestionSpan>? spans = await const MacosSpellCheckService()
+      final List<SuggestionSpan>? spans = await const NativeSpellCheckService()
           .fetchSpellCheckSuggestions(const Locale('en'), 'teh');
 
       expect(spans, isNull);
@@ -107,7 +110,7 @@ void main() {
             throw PlatformException(code: 'bad-arguments'),
       );
 
-      final List<SuggestionSpan>? spans = await const MacosSpellCheckService()
+      final List<SuggestionSpan>? spans = await const NativeSpellCheckService()
           .fetchSpellCheckSuggestions(const Locale('en'), 'teh');
 
       expect(spans, isNull);
@@ -142,8 +145,11 @@ void main() {
           ],
         );
 
-        final List<SuggestionSpan>? spans = await const MacosSpellCheckService()
-            .fetchSpellCheckSuggestions(const Locale('en'), 'onn and twu');
+        final List<SuggestionSpan>? spans =
+            await const NativeSpellCheckService().fetchSpellCheckSuggestions(
+              const Locale('en'),
+              'onn and twu',
+            );
 
         expect(spans, <SuggestionSpan>[
           const SuggestionSpan(TextRange(start: 0, end: 3), <String>['one']),
@@ -157,7 +163,7 @@ void main() {
         (MethodCall call) async => <Object?>[],
       );
 
-      const MacosSpellCheckService service = MacosSpellCheckService(
+      const NativeSpellCheckService service = NativeSpellCheckService(
         channel: _channel,
       );
 
@@ -174,12 +180,11 @@ void main() {
       );
       expect(
         noteSpellCheckService(TargetPlatform.macOS),
-        isA<MacosSpellCheckService>(),
+        isA<NativeSpellCheckService>(),
       );
       for (final TargetPlatform platform in <TargetPlatform>[
         TargetPlatform.iOS,
         TargetPlatform.linux,
-        TargetPlatform.windows,
         TargetPlatform.fuchsia,
       ]) {
         expect(noteSpellCheckService(platform), isNull, reason: '$platform');
@@ -187,16 +192,22 @@ void main() {
     });
   });
 
+  group('noteSpellCheckService on Windows', () {
+    test('windows uses the native spell check channel', () {
+      expect(
+        noteSpellCheckService(TargetPlatform.windows),
+        isA<NativeSpellCheckService>(),
+      );
+    });
+  });
+
   group('macOS spell-check bridge sources', () {
-    final String bridge = File(
-      'macos/Runner/SpellCheckBridge.swift',
-    ).readAsStringSync();
-    final String window = File(
-      'macos/Runner/MainFlutterWindow.swift',
-    ).readAsStringSync();
-    final String project = File(
-      'macos/Runner.xcodeproj/project.pbxproj',
-    ).readAsStringSync();
+    final String bridge = File('macos/Runner/SpellCheckBridge.swift')
+        .readAsStringSync();
+    final String window = File('macos/Runner/MainFlutterWindow.swift')
+        .readAsStringSync();
+    final String project = File('macos/Runner.xcodeproj/project.pbxproj')
+        .readAsStringSync();
 
     test(
       'the bridge asks NSSpellChecker with automatic language detection',

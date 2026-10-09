@@ -41,6 +41,7 @@ Future<void> _pumpScreen(
   WidgetTester tester, {
   required FakeSettingsRepository repository,
   required SpellCheckService service,
+  TargetPlatform platform = TargetPlatform.android,
 }) async {
   useWideSurface(tester);
   final AppSettings settings = AppSettings.defaults.copyWith(
@@ -62,9 +63,7 @@ Future<void> _pumpScreen(
         reminderSchedulerProvider.overrideWithValue(
           RecordingReminderScheduler(),
         ),
-        spellCheckAvailabilityPlatformProvider.overrideWithValue(
-          TargetPlatform.android,
-        ),
+        spellCheckAvailabilityPlatformProvider.overrideWithValue(platform),
         spellCheckAvailabilityServiceProvider.overrideWithValue(service),
         ...syncOffOverrides(),
       ],
@@ -79,6 +78,20 @@ Future<void> _pumpScreen(
 
 SettingsToggle _toggle(WidgetTester tester) {
   return tester.widget<SettingsToggle>(find.byKey(spellCheckToggleKey));
+}
+
+Future<SpellCheckAvailability> _resolve(
+  TargetPlatform platform,
+  SpellCheckService service,
+) async {
+  final ProviderContainer container = ProviderContainer(
+    overrides: <Override>[
+      spellCheckAvailabilityPlatformProvider.overrideWithValue(platform),
+      spellCheckAvailabilityServiceProvider.overrideWithValue(service),
+    ],
+  );
+  addTearDown(container.dispose);
+  return container.read(spellCheckAvailabilityProvider.future);
 }
 
 void main() {
@@ -120,5 +133,32 @@ void main() {
     expect(find.text(_explanation), findsNothing);
     expect(_toggle(tester).enabled, isTrue);
     expect(_toggle(tester).value, isTrue);
+  });
+
+  test('Windows probes the native checker before calling spell check '
+      'available', () async {
+    expect(
+      await _resolve(
+        TargetPlatform.windows,
+        const _FakeSpellCheckService(<SuggestionSpan>[]),
+      ),
+      SpellCheckAvailability.unavailable,
+    );
+    expect(
+      await _resolve(
+        TargetPlatform.windows,
+        const _FakeSpellCheckService(<SuggestionSpan>[
+          SuggestionSpan(TextRange(start: 0, end: 3), <String>['the']),
+        ]),
+      ),
+      SpellCheckAvailability.available,
+    );
+    expect(
+      await _resolve(
+        TargetPlatform.macOS,
+        const _FakeSpellCheckService(<SuggestionSpan>[]),
+      ),
+      SpellCheckAvailability.available,
+    );
   });
 }

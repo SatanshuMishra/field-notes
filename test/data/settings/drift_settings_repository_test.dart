@@ -124,16 +124,13 @@ void main() {
       },
     );
 
-    test(
-      'a new store reports no onboarding status, reflection questions off and no stored values',
-      () async {
-        final settings = await repository.load();
+    test('a new store reports no onboarding status, reflection questions off and no stored values', () async {
+      final settings = await repository.load();
 
-        expect(settings.onboardingStatus, isNull);
-        expect(settings.reflectionPromptsEnabled, isFalse);
-        expect(await repository.hasStoredValues(), isFalse);
-      },
-    );
+      expect(settings.onboardingStatus, isNull);
+      expect(settings.reflectionPromptsEnabled, isFalse);
+      expect(await repository.hasStoredValues(), isFalse);
+    });
 
     test(
       'Saturday, reflection questions and onboarding status survive a reload',
@@ -158,10 +155,7 @@ void main() {
         expect((await repository.load()).appearance, Appearance.light);
 
         await repository.setAppearance(Appearance.dark);
-        expect(
-          (await _settingsFor(db).load()).appearance,
-          Appearance.dark,
-        );
+        expect((await _settingsFor(db).load()).appearance, Appearance.dark);
 
         await repository.setAppearance(Appearance.system);
         final List<Setting> rows = await db.select(db.settings).get();
@@ -169,10 +163,7 @@ void main() {
           rows.where((Setting row) => row.key == 'appearance').single.value,
           'system',
         );
-        expect(
-          (await _settingsFor(db).load()).appearance,
-          Appearance.system,
-        );
+        expect((await _settingsFor(db).load()).appearance, Appearance.system);
       },
     );
 
@@ -289,6 +280,13 @@ void main() {
         expect((await repository.load()).allowMobileDataForMedia, isFalse);
       },
     );
+
+    test('keeping all media on the device defaults on for Windows', () async {
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+
+      expect((await repository.load()).keepAllMediaOnDevice, isTrue);
+    });
 
     test('the two media settings are saved on this device', () async {
       await repository.setKeepAllMediaOnDevice(true);

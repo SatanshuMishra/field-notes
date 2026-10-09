@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +42,21 @@ List<String> _recordWindowCalls(WidgetTester tester) {
   return calls;
 }
 
+(Rect, Rect) _windowButtonSlots(WidgetTester tester) {
+  final Row strip = tester.widget<Row>(
+    find
+        .descendant(
+          of: find.byKey(windowTitleBarKey),
+          matching: find.byType(Row),
+        )
+        .first,
+  );
+  return (
+    tester.getRect(find.byWidget(strip.children.first)),
+    tester.getRect(find.byWidget(strip.children.last)),
+  );
+}
+
 bool _isPaintedDot(Widget widget) {
   if (widget is! Container) {
     return false;
@@ -74,6 +90,58 @@ void main() {
         ),
         findsNothing,
       );
+      expect(
+        tester.getCenter(find.text('field notes — a journal of days')).dx,
+        640,
+      );
+    });
+
+    testWidgets('the Windows title strip leaves room for the caption buttons', (
+      WidgetTester tester,
+    ) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      final List<String> calls = _recordWindowCalls(tester);
+
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      try {
+        await tester.pumpWidget(
+          appHarness(_shell(), platform: TargetPlatform.windows),
+        );
+
+        final Rect bar = tester.getRect(find.byKey(windowTitleBarKey));
+        expect(bar.top, 0);
+        expect(bar.height, shellTitleBarHeight);
+        final (Rect leading, Rect trailing) = _windowButtonSlots(tester);
+        expect(
+          tester.getRect(find.byKey(const ValueKey<String>('traffic-lights'))),
+          leading,
+        );
+        expect(leading.width, 122);
+        expect(trailing.width, 122);
+        expect(leading.left, shellTitleBarPadding);
+        expect(trailing.right, 1280 - shellTitleBarPadding);
+        expect(trailing.left, 1280 - windowsCaptionButtonsWidth);
+        expect(
+          tester.getCenter(find.text('field notes — a journal of days')).dx,
+          640,
+        );
+
+        await tester.drag(find.byKey(windowTitleBarKey), const Offset(60, 20));
+        await tester.pumpAndSettle();
+
+        expect(calls, <String>[startDragMethod]);
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+
+      await tester.pumpWidget(appHarness(_shell()));
+      await tester.pumpAndSettle();
+
+      final (Rect leading, Rect trailing) = _windowButtonSlots(tester);
+      expect(leading.width, 62);
+      expect(trailing.width, 62);
       expect(
         tester.getCenter(find.text('field notes — a journal of days')).dx,
         640,

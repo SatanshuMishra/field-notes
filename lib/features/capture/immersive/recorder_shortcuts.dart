@@ -1,3 +1,4 @@
+import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -22,13 +23,14 @@ enum RecorderLeaveVerb {
 }
 
 String recorderKeyHint({
+  required TargetPlatform platform,
   RecorderPrimaryVerb? primary,
   bool keep = false,
   RecorderLeaveVerb? leave,
 }) {
   return <String>[
     if (primary != null) 'space ${primary.word}',
-    if (keep) '⌘↩ keep',
+    if (keep) usesCommandKey(platform) ? '⌘↩ keep' : 'ctrl+enter keep',
     if (leave != null) 'esc ${leave.word}',
   ].join(' · ');
 }
@@ -49,20 +51,12 @@ class RecorderShortcuts extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool apple = switch (Theme.of(context).platform) {
-      TargetPlatform.macOS || TargetPlatform.iOS => true,
-      _ => false,
-    };
+    final TargetPlatform platform = Theme.of(context).platform;
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.space): ?onPrimary,
-        SingleActivator(LogicalKeyboardKey.enter, meta: apple, control: !apple):
-            ?onKeep,
-        SingleActivator(
-          LogicalKeyboardKey.numpadEnter,
-          meta: apple,
-          control: !apple,
-        ): ?onKeep,
+        primaryShortcut(LogicalKeyboardKey.enter, platform): ?onKeep,
+        primaryShortcut(LogicalKeyboardKey.numpadEnter, platform): ?onKeep,
         const SingleActivator(LogicalKeyboardKey.escape): ?onLeave,
       },
       child: Focus(

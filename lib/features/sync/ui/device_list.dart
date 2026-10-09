@@ -23,8 +23,14 @@ const String removeDeviceMessage =
 const String removeDeviceFailedMessage =
     "That device couldn't be removed. Try again.";
 
-String thisDeviceLabel(BuildContext context) =>
-    syncFlowUsesSheet(context) ? 'This phone' : 'This Mac';
+String thisDeviceLabel(BuildContext context) {
+  if (syncFlowUsesSheet(context)) {
+    return 'This phone';
+  }
+  return Theme.of(context).platform == TargetPlatform.windows
+      ? 'This PC'
+      : 'This Mac';
+}
 
 String lastSeenLabel(DateTime lastSeen, DateTime now) =>
     'Last seen ${relativeSyncTime(lastSeen, now)}';

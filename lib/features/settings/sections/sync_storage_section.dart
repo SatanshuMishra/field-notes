@@ -27,6 +27,9 @@ const String syncSectionTitle = 'Sync & storage';
 const String syncOffIntroMac =
     'Your journal is stored only on this Mac. Turn on sync to keep it on your '
     'other devices too. Everything is encrypted before it leaves this Mac.';
+const String syncOffIntroWindows =
+    'Your journal is stored only on this PC. Turn on sync to keep it on your '
+    'other devices too. Everything is encrypted before it leaves this PC.';
 const String syncOffIntroPhone =
     'Your journal is only on this phone. Sync keeps it on your other devices, '
     'encrypted.';
@@ -57,6 +60,18 @@ const String keepMediaMacLabel = 'Keep all media on this device';
 const String keepMediaMacCaption =
     'Download every photo, voice note and video in the background. On for '
     'Macs.';
+const String keepMediaWindowsCaption =
+    'Download every photo, voice note and video in the background. On for '
+    'PCs.';
+
+String syncOffIntroDesktop(TargetPlatform platform) =>
+    platform == TargetPlatform.windows ? syncOffIntroWindows : syncOffIntroMac;
+
+String keepMediaCaptionDesktop(TargetPlatform platform) =>
+    platform == TargetPlatform.windows
+    ? keepMediaWindowsCaption
+    : keepMediaMacCaption;
+
 const String keepMediaPhoneLabel = 'Keep all media on this phone';
 const String keepMediaPhoneCaption = 'Off: videos download when you open them';
 const String mobileDataLabel = 'Allow mobile data for media';
@@ -186,7 +201,9 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
       title: syncSectionTitle,
       children: <Widget>[
         Text(
-          phone ? syncOffIntroPhone : syncOffIntroMac,
+          phone
+              ? syncOffIntroPhone
+              : syncOffIntroDesktop(Theme.of(context).platform),
           style: context.textStyles.captionSans,
         ),
         SyncActionRow(
@@ -270,7 +287,10 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
             onPressed: () => showAddDeviceSheet(context),
           ),
         ),
-        _keepMediaRow(label: keepMediaMacLabel, caption: keepMediaMacCaption),
+        _keepMediaRow(
+          label: keepMediaMacLabel,
+          caption: keepMediaCaptionDesktop(Theme.of(context).platform),
+        ),
       ],
     );
   }

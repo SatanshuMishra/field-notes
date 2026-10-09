@@ -10,6 +10,9 @@ const String videoStartMessage =
 const String videoStartTimeoutMessage =
     'The camera did not respond. Make sure Field Notes has camera access in '
     'System Settings, then try again.';
+const String videoStartTimeoutMessageWindows =
+    'The camera did not respond. Make sure camera access is on in Settings > '
+    'Privacy & security > Camera, then try again.';
 const String videoPauseMessage =
     'Could not pause that recording. Check your camera and try again.';
 const String videoStopMessage =

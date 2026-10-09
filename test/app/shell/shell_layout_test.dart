@@ -9,6 +9,10 @@ void main() {
       expect(resolveShellLayout(TargetPlatform.macOS), ShellLayout.sidebar);
     });
 
+    test('windows resolves to the sidebar layout', () {
+      expect(resolveShellLayout(TargetPlatform.windows), ShellLayout.sidebar);
+    });
+
     test('android resolves to the bottom bar layout', () {
       expect(resolveShellLayout(TargetPlatform.android), ShellLayout.bottomBar);
     });
@@ -17,7 +21,6 @@ void main() {
       const List<TargetPlatform> others = <TargetPlatform>[
         TargetPlatform.iOS,
         TargetPlatform.linux,
-        TargetPlatform.windows,
         TargetPlatform.fuchsia,
       ];
       for (final TargetPlatform platform in others) {

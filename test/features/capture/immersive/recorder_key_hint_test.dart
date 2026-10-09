@@ -1,3 +1,4 @@
+import 'package:field_notes/features/capture/immersive/recorder_shortcuts.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:flutter/services.dart';
@@ -218,6 +219,10 @@ final TargetPlatformVariant _mac = TargetPlatformVariant.only(
   TargetPlatform.macOS,
 );
 
+final TargetPlatformVariant _windows = TargetPlatformVariant.only(
+  TargetPlatform.windows,
+);
+
 void _sidebarWindow(WidgetTester tester) {
   tester.view.physicalSize = const Size(1280, 800);
   tester.view.devicePixelRatio = 1;
@@ -283,6 +288,17 @@ String? _hint(WidgetTester tester, Key key) =>
 
 Future<void> _press(WidgetTester tester, LogicalKeyboardKey key) async {
   await tester.sendKeyEvent(key);
+  await tester.pump();
+}
+
+Future<void> _chord(
+  WidgetTester tester,
+  LogicalKeyboardKey modifier,
+  LogicalKeyboardKey key,
+) async {
+  await tester.sendKeyDownEvent(modifier);
+  await tester.sendKeyEvent(key);
+  await tester.sendKeyUpEvent(modifier);
   await tester.pump();
 }
 
@@ -457,4 +473,82 @@ void main() {
 
     await tester.pumpWidget(const SizedBox.shrink());
   }, variant: _mac);
+
+  test('the Windows keep hint names ctrl+enter', () {
+    expect(
+      recorderKeyHint(platform: TargetPlatform.windows, keep: true),
+      'ctrl+enter keep',
+    );
+    expect(
+      recorderKeyHint(platform: TargetPlatform.macOS, keep: true),
+      '⌘↩ keep',
+    );
+    expect(
+      recorderKeyHint(
+        platform: TargetPlatform.windows,
+        primary: RecorderPrimaryVerb.pause,
+        keep: true,
+        leave: RecorderLeaveVerb.leave,
+      ),
+      'space pause · ctrl+enter keep · esc leave',
+    );
+  });
+
+  test('the Windows voice keep hint names Control Enter', () {
+    expect(
+      voiceKeepShortcutHint(TargetPlatform.windows),
+      'Shortcut: Control Enter',
+    );
+    expect(
+      voiceKeepShortcutHint(TargetPlatform.macOS),
+      'Shortcut: Command Return',
+    );
+  });
+
+  testWidgets('on Windows the recorders show and take Ctrl+Enter to keep', (
+    WidgetTester tester,
+  ) async {
+    _sidebarWindow(tester);
+    final SemanticsHandle handle = tester.ensureSemantics();
+    final List<String> voiceCalls = await _pumpVoice(
+      tester,
+      phase: VoiceRecorderPhase.recording,
+    );
+
+    expect(
+      _hint(tester, voiceKeyHintKey),
+      'space pause · ctrl+enter keep · esc leave',
+    );
+    expect(
+      tester.getSemantics(find.byKey(voiceSavePillKey)),
+      isSemantics(label: voiceKeepLabel, hint: 'Shortcut: Control Enter'),
+    );
+
+    await _chord(tester, LogicalKeyboardKey.metaLeft, LogicalKeyboardKey.enter);
+    expect(voiceCalls, isEmpty);
+
+    await _chord(
+      tester,
+      LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.enter,
+    );
+    expect(voiceCalls, <String>['stop']);
+
+    final List<String> videoCalls = await _pumpVideo(
+      tester,
+      phase: VideoRecorderPhase.recording,
+    );
+
+    expect(_hint(tester, videoKeyboardHintKey), 'ctrl+enter keep · esc leave');
+
+    await _chord(
+      tester,
+      LogicalKeyboardKey.controlLeft,
+      LogicalKeyboardKey.enter,
+    );
+    expect(videoCalls, <String>['stop']);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    handle.dispose();
+  }, variant: _windows);
 }

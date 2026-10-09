@@ -45,7 +45,7 @@ final class MediaRootProvider
   }
 }
 
-String _$mediaRootHash() => r'e52e7eea4a76102b3e05c4b7f5d54bd0629af225';
+String _$mediaRootHash() => r'84ef9346470d4cea8a36d53b7810cf0fb3e91f04';
 
 @ProviderFor(mediaDraftsRoot)
 final mediaDraftsRootProvider = MediaDraftsRootProvider._();

@@ -12,6 +12,7 @@ const Key _centreKey = ValueKey<String>('stage-centre');
 const Key _statusKey = ValueKey<String>('stage-status');
 const Key _actionsKey = ValueKey<String>('stage-actions');
 const Key _questionKey = ValueKey<String>('stage-question');
+const Key _trailingKey = ValueKey<String>('stage-trailing');
 
 void _useWindow(WidgetTester tester, TargetPlatform platform, Size window) {
   debugDefaultTargetPlatformOverride = platform;
@@ -152,6 +153,43 @@ void main() {
       debugDefaultTargetPlatformOverride = null;
     },
   );
+
+  testWidgets('on Windows the trailing control clears the caption buttons', (
+    WidgetTester tester,
+  ) async {
+    RecorderSurface surface() => RecorderSurface(
+      privacyLine: 'Private · only you will hear this',
+      onLeave: () {},
+      trailing: const SizedBox(key: _trailingKey, width: 120, height: 20),
+      centre: const SizedBox(key: _centreKey, width: 250, height: 250),
+      status: const SizedBox(key: _statusKey, width: 200, height: 50),
+      actions: const SizedBox(key: _actionsKey, width: 240, height: 48),
+    );
+
+    _useWindow(tester, TargetPlatform.windows, const Size(1280, 800));
+    await tester.pumpWidget(_app(TargetPlatform.windows, surface()));
+
+    final Rect trailing = tester.getRect(find.byKey(_trailingKey));
+    expect(
+      trailing.right,
+      lessThanOrEqualTo(1280 - windowsCaptionButtonsWidth),
+    );
+    expect(tester.getRect(find.byKey(recorderLeaveKey)).left, 18);
+    expect(
+      tester.getCenter(find.text('Private · only you will hear this')).dx,
+      closeTo(640, 12),
+    );
+
+    debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+    await tester.pumpWidget(_app(TargetPlatform.macOS, surface()));
+
+    expect(tester.getRect(find.byKey(_trailingKey)).right, 1280 - 18);
+    expect(
+      tester.getRect(find.byKey(recorderLeaveKey)).left,
+      windowButtonsClearance,
+    );
+    debugDefaultTargetPlatformOverride = null;
+  });
 
   testWidgets(
     'the bottom-bar surface switches the status bar to light icons and restores it on close',

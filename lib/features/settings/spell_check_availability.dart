@@ -27,8 +27,11 @@ SpellCheckService? spellCheckAvailabilityService(Ref ref) {
 
 @Riverpod(keepAlive: true)
 Future<SpellCheckAvailability> spellCheckAvailability(Ref ref) {
-  if (ref.watch(spellCheckAvailabilityPlatformProvider) !=
-      TargetPlatform.android) {
+  final TargetPlatform platform = ref.watch(
+    spellCheckAvailabilityPlatformProvider,
+  );
+  if (platform != TargetPlatform.android &&
+      platform != TargetPlatform.windows) {
     return Future<SpellCheckAvailability>.value(
       SpellCheckAvailability.available,
     );

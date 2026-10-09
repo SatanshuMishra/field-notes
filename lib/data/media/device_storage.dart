@@ -1,11 +1,14 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 const String deviceStorageChannelName = 'field_notes/device_storage';
 const String freeBytesMethod = 'freeBytes';
 const int storageReserveBytes = 256 * 1024 * 1024;
 const int noSpaceLeftErrorCode = 28;
+const int windowsDiskFullErrorCode = 112;
+const int windowsHandleDiskFullErrorCode = 39;
 
 class NotEnoughSpaceException implements Exception {
   const NotEnoughSpaceException({required this.needed, required this.free});
@@ -18,8 +21,17 @@ class NotEnoughSpaceException implements Exception {
       'NotEnoughSpaceException: needs $needed bytes, $free free';
 }
 
-bool isNoSpaceLeft(FileSystemException error) =>
-    error.osError?.errorCode == noSpaceLeftErrorCode;
+bool isNoSpaceLeft(FileSystemException error, {TargetPlatform? platform}) {
+  final int? code = error.osError?.errorCode;
+  if (code == noSpaceLeftErrorCode) {
+    return true;
+  }
+  if ((platform ?? defaultTargetPlatform) != TargetPlatform.windows) {
+    return false;
+  }
+  return code == windowsDiskFullErrorCode ||
+      code == windowsHandleDiskFullErrorCode;
+}
 
 abstract interface class DeviceStorage {
   Future<int?> freeBytes(Directory near);

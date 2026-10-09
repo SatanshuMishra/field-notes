@@ -5,6 +5,8 @@ import 'package:archive/archive.dart';
 
 import '../../domain/services/export_service.dart';
 
+String zipEntryName(String path) => path.replaceAll(r'\', '/');
+
 class ExportZipWriter {
   const ExportZipWriter();
 
@@ -14,19 +16,17 @@ class ExportZipWriter {
     final manifestBytes = utf8.encode(
       const JsonEncoder.withIndent('  ').convert(bundle.manifest.toJson()),
     );
-    archive.addFile(ArchiveFile.bytes(
-      ExportBundle.manifestFileName,
-      manifestBytes,
-    ));
+    archive.addFile(
+      ArchiveFile.bytes(ExportBundle.manifestFileName, manifestBytes),
+    );
 
     final journalBytes = utf8.encode(bundle.journalJson);
-    archive.addFile(ArchiveFile.bytes(
-      ExportBundle.journalFileName,
-      journalBytes,
-    ));
+    archive.addFile(
+      ArchiveFile.bytes(ExportBundle.journalFileName, journalBytes),
+    );
 
     for (final entry in bundle.mediaFiles.entries) {
-      archive.addFile(ArchiveFile.bytes(entry.key, entry.value));
+      archive.addFile(ArchiveFile.bytes(zipEntryName(entry.key), entry.value));
     }
 
     return ZipEncoder().encodeBytes(archive);

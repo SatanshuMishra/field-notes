@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
@@ -16,6 +17,7 @@ import 'macos_text_shortcuts.dart';
 import 'shell/app_shell.dart';
 import 'shell/system_bars.dart';
 import 'shell/window_chrome.dart';
+import 'shell/windows_caption_buttons.dart';
 import 'theme/app_theme.dart';
 
 const Duration _settingsWait = Duration(seconds: 1);
@@ -36,9 +38,13 @@ class FieldNotesApp extends StatelessWidget {
     final Widget scaled = AppTextScale(child: child!);
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemBarsOver(Theme.of(context).brightness),
-      child: defaultTargetPlatform == TargetPlatform.macOS
-          ? MacosMenuBar(child: MacosTextShortcuts(child: scaled))
-          : scaled,
+      child: switch (defaultTargetPlatform) {
+        TargetPlatform.macOS => MacosMenuBar(
+          child: MacosTextShortcuts(child: scaled),
+        ),
+        TargetPlatform.windows => WindowsWindowFrame(child: scaled),
+        _ => scaled,
+      },
     );
   }
 }
@@ -79,7 +85,7 @@ class _ThemedAppState extends ConsumerState<_ThemedApp> {
       return;
     }
     _settingsTimeout?.cancel();
-    if (defaultTargetPlatform == TargetPlatform.macOS) {
+    if (isDesktopPlatform(defaultTargetPlatform)) {
       ref.listenManual<Appearance>(
         appearanceProvider,
         (Appearance? _, Appearance appearance) =>

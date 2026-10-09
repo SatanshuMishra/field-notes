@@ -140,7 +140,7 @@ void main() {
 
   test('image file urls on the pasteboard win over text', () async {
     expect(
-      planMacosPaste(
+      planPasteboardPaste(
         const PasteboardContents(
           filePaths: <String>['/Users/me/a.png', '/Users/me/notes.txt'],
           imageTypes: <PasteboardImageType>{PasteboardImageType.png},
@@ -175,7 +175,7 @@ void main() {
 
   test('image data is pasted only when no text is present', () async {
     expect(
-      planMacosPaste(
+      planPasteboardPaste(
         const PasteboardContents(
           imageTypes: <PasteboardImageType>{PasteboardImageType.tiff},
           hasText: true,
@@ -200,7 +200,7 @@ void main() {
     expect(withText.placeholderSeen, isFalse);
 
     expect(
-      planMacosPaste(
+      planPasteboardPaste(
         const PasteboardContents(
           imageTypes: <PasteboardImageType>{PasteboardImageType.tiff},
         ),
@@ -227,7 +227,7 @@ void main() {
     expect(withoutText.state.source, 'A\n${canonicalOf('aaa111aaa111')}\n\nB');
 
     expect(
-      planMacosPaste(
+      planPasteboardPaste(
         const PasteboardContents(
           filePaths: <String>['/x/readme.md'],
           hasText: true,
@@ -394,6 +394,115 @@ void main() {
     ]);
     expect(unreadable.imported, isEmpty);
     expect(unreadable.state.source, 'A\n\nB\n\nC');
+  });
+
+  test('Windows pastes clipboard photo files at the caret', () async {
+    final _Rig rig = _Rig(
+      'A\n\nB',
+      platform: TargetPlatform.windows,
+      pasteboard: <String, Object?>{
+        'contents': <String, Object?>{
+          'paths': <String>[
+            r'C:\Users\me\Pictures\leaf.JPG',
+            r'C:\Users\me\Documents\tide.txt',
+          ],
+          'imageTypes': <String>[],
+          'hasText': true,
+        },
+      },
+      clipboard: <String, Object?>{'hasImage': true},
+    );
+
+    expect(await rig.drop.paste(), isTrue);
+    await pumpEventQueue();
+
+    expect(rig.pasteboardMethods, <String>['contents']);
+    expect(rig.clipboardCalls, isEmpty);
+    expect(rig.skippedMessages, <String>[
+      '1 file skipped — only photos can be added to a note',
+    ]);
+    expect(rig.pathCaptures, <String>[r'C:\Users\me\Pictures\leaf.JPG']);
+    expect(rig.byteCaptures, isEmpty);
+    expect(rig.outcomes.single, isA<PhotoImportInserted>());
+    expect(rig.state.source, 'A\n${canonicalOf('aaa111aaa111')}\n\nB');
+  });
+
+  test('Windows pastes clipboard bitmap data at the caret', () async {
+    expect(
+      planPasteboardPaste(
+        const PasteboardContents(
+          imageTypes: <PasteboardImageType>{PasteboardImageType.bitmap},
+        ),
+      ),
+      const PastePhotoData(),
+    );
+    final _Rig rig = _Rig(
+      'A\n\nB',
+      platform: TargetPlatform.windows,
+      pasteboard: <String, Object?>{
+        'contents': <String, Object?>{
+          'paths': <String>[],
+          'imageTypes': <String>['bitmap'],
+          'hasText': false,
+        },
+        'image': <String, Object?>{'bytes': _pngHead, 'mime': 'image/png'},
+      },
+    );
+
+    expect(await rig.drop.paste(), isTrue);
+    await pumpEventQueue();
+
+    expect(rig.pasteboardMethods, <String>['contents', 'image']);
+    expect(rig.clipboardCalls, isEmpty);
+    expect(rig.byteCaptures.single.$1, _pngHead);
+    expect(rig.byteCaptures.single.$2, 'image/png');
+    expect(rig.pathCaptures, isEmpty);
+    expect(rig.state.source, 'A\n${canonicalOf('aaa111aaa111')}\n\nB');
+  });
+
+  test('a Windows path is classified by its extension', () {
+    expect(isPhotoFilePath(r'C:\Users\me\Pictures\leaf.JPG'), isTrue);
+    expect(isPhotoFilePath(r'C:\notes.v2\readme'), isFalse);
+    expect(isPhotoFilePath(r'C:\scans.png\readme'), isFalse);
+    expect(isPhotoFilePath(r'D:\field notes\scan.v2.TIFF'), isTrue);
+    expect(nativeConvertedPhotoExtensions, <String>{'heic', 'tiff'});
+  });
+
+  test('Windows converts a dropped HEIC through the pasteboard', () async {
+    final Uint8List converted = Uint8List.fromList(<int>[9, 8, 7]);
+    final _Rig windows = _Rig(
+      'A\n\nB\n\nC',
+      platform: TargetPlatform.windows,
+      targets: _fourTargets,
+      pasteboard: <String, Object?>{
+        'imageFile': <String, Object?>{'bytes': converted, 'mime': 'image/png'},
+      },
+    );
+    await windows.drop.drop(const Offset(10, 58), <String>[
+      r'C:\photos\leaf.heic',
+    ]);
+    await pumpEventQueue();
+    expect(windows.pasteboardMethods, <String>['imageFile']);
+    expect(windows.pasteboardCalls.single.arguments, <String, Object?>{
+      'path': r'C:\photos\leaf.heic',
+    });
+    expect(windows.pathCaptures, isEmpty);
+    expect(windows.byteCaptures.single.$1, converted);
+    expect(windows.byteCaptures.single.$2, 'image/png');
+    expect(windows.state.source, 'A\n\nB\n${canonicalOf('aaa111aaa111')}\n\nC');
+
+    final _Rig android = _Rig(
+      'A\n\nB\n\nC',
+      platform: TargetPlatform.android,
+      targets: _fourTargets,
+      pasteboard: <String, Object?>{
+        'imageFile': <String, Object?>{'bytes': converted, 'mime': 'image/png'},
+      },
+    );
+    await android.drop.drop(const Offset(10, 58), <String>['/p/leaf.heic']);
+    await pumpEventQueue();
+    expect(android.pasteboardCalls, isEmpty);
+    expect(android.pathCaptures, <String>['/p/leaf.heic']);
   });
 
   test(

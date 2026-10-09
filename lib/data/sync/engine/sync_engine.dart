@@ -31,6 +31,7 @@ import 'package:field_notes/data/sync/media/unused_blobs.dart';
 import 'package:field_notes/data/sync/media/upload_queue.dart';
 import 'package:field_notes/data/sync/merge/state_applier.dart';
 import 'package:field_notes/data/sync/relay_client.dart';
+import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/widgets.dart'
@@ -132,7 +133,7 @@ enum LeaveRule { inactive, hidden, quit }
 
 LeaveRule leaveRuleFor(TargetPlatform platform) => switch (platform) {
   TargetPlatform.android => LeaveRule.inactive,
-  TargetPlatform.macOS => LeaveRule.quit,
+  _ when isDesktopPlatform(platform) => LeaveRule.quit,
   _ => LeaveRule.hidden,
 };
 

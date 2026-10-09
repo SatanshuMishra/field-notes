@@ -5,13 +5,14 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../design/motion/motion.dart';
+import '../../../domain/platform/desktop_platform.dart';
 
 const Duration kVideoControlsHideDelay = Duration(milliseconds: 2600);
 
 enum VideoControlModel { pointer, touch }
 
 VideoControlModel resolveVideoControlModel(TargetPlatform platform) =>
-    platform == TargetPlatform.macOS
+    isDesktopPlatform(platform)
     ? VideoControlModel.pointer
     : VideoControlModel.touch;
 

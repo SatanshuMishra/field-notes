@@ -9,6 +9,18 @@ import 'reminder_providers.dart';
 const String notificationsOffLabel = 'Notifications are off for Field Notes.';
 const String openSystemSettingsLabel = 'Open System Settings';
 const String openSystemSettingsFailure = 'Could not open System Settings.';
+const String openWindowsSettingsLabel = 'Open Settings';
+const String openWindowsSettingsFailure = 'Could not open Settings.';
+
+String openSettingsLabelFor(TargetPlatform platform) =>
+    platform == TargetPlatform.windows
+    ? openWindowsSettingsLabel
+    : openSystemSettingsLabel;
+
+String openSettingsFailureFor(TargetPlatform platform) =>
+    platform == TargetPlatform.windows
+    ? openWindowsSettingsFailure
+    : openSystemSettingsFailure;
 
 const double _centredGap = 12;
 const double _centredRunGap = 4;
@@ -27,11 +39,12 @@ class NotificationsOffNotice extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final TargetPlatform platform = Theme.of(context).platform;
     final Widget button = StickerButton(
-      label: openSystemSettingsLabel,
+      label: openSettingsLabelFor(platform),
       variant: StickerButtonVariant.secondary,
       padTapTarget: true,
-      onPressed: () => _openNotificationSettings(ref),
+      onPressed: () => _openNotificationSettings(ref, platform),
     );
     return switch (layout) {
       NotificationsOffLayout.row => SettingsFieldRow(
@@ -59,12 +72,15 @@ class NotificationsOffNotice extends ConsumerWidget {
     };
   }
 
-  Future<void> _openNotificationSettings(WidgetRef ref) async {
+  Future<void> _openNotificationSettings(
+    WidgetRef ref,
+    TargetPlatform platform,
+  ) async {
     try {
       await ref.read(notificationSettingsOpenerProvider).open();
     } catch (error) {
       debugPrint('Could not open notification settings: $error');
-      onFeedback(openSystemSettingsFailure);
+      onFeedback(openSettingsFailureFor(platform));
     }
   }
 }

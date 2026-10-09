@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/widgets/note_column.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
@@ -308,13 +309,10 @@ class _NoteReaderViewState extends State<NoteReaderView> {
   }
 
   Map<ShortcutActivator, Intent> get _shortcuts {
-    final bool apple =
-        defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.iOS;
     return <ShortcutActivator, Intent>{
-      SingleActivator(LogicalKeyboardKey.keyC, meta: apple, control: !apple):
+      primaryShortcut(LogicalKeyboardKey.keyC, defaultTargetPlatform):
           CopySelectionTextIntent.copy,
-      SingleActivator(LogicalKeyboardKey.keyA, meta: apple, control: !apple):
+      primaryShortcut(LogicalKeyboardKey.keyA, defaultTargetPlatform):
           const SelectAllTextIntent(SelectionChangedCause.keyboard),
     };
   }

@@ -1,8 +1,9 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
+import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
@@ -40,7 +41,11 @@ const String voiceStartNowLabel = 'Start now';
 const String voicePauseLabel = 'Pause recording';
 const String voiceResumeLabel = 'Resume recording';
 const String voiceOrbShortcutHint = 'Shortcut: Space';
-const String voiceKeepShortcutHint = 'Shortcut: Command Return';
+
+String voiceKeepShortcutHint(TargetPlatform platform) =>
+    usesCommandKey(platform)
+    ? 'Shortcut: Command Return'
+    : 'Shortcut: Control Enter';
 
 const double voiceSidebarOrbZone = 250;
 const double voiceBottomBarOrbZone = 184;
@@ -178,7 +183,8 @@ class VoiceRecorderSheet extends StatelessWidget {
   VoidCallback? get _leaveKey =>
       _leaveVerb == null ? null : (onDismiss ?? onCancel);
 
-  String get _keyHint => recorderKeyHint(
+  String _keyHint(BuildContext context) => recorderKeyHint(
+    platform: Theme.of(context).platform,
     primary: _orbTap == null ? null : _orbVerb,
     keep: _keepKey != null,
     leave: _leaveKey == null ? null : _leaveVerb,
@@ -197,7 +203,7 @@ class VoiceRecorderSheet extends StatelessWidget {
             ? voiceSidebarPrivacyLine
             : voiceBottomBarPrivacyLine,
         onLeave: _saving || asking ? null : onCancel,
-        trailing: sidebar ? _KeyHint(text: _keyHint) : null,
+        trailing: sidebar ? _KeyHint(text: _keyHint(context)) : null,
         question: ReflectionPrompt(phase: phase.stage, showKicker: true),
         centre: _OrbZone(phase: phase, sidebar: sidebar, onTap: _orbTap),
         status: _status(context),
@@ -459,7 +465,7 @@ class _TakeActions extends StatelessWidget {
       key: voiceSavePillKey,
       label: voiceKeepLabel,
       onPressed: onKeep,
-      hint: sidebar ? voiceKeepShortcutHint : null,
+      hint: sidebar ? voiceKeepShortcutHint(Theme.of(context).platform) : null,
       ink: _keepInk,
       fill: _keepFill,
       glyph: IconStickerGlyph.check,

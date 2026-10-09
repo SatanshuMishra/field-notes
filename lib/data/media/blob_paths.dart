@@ -45,23 +45,22 @@ String blobExtensionFor({required String mime, required MediaKind kind}) {
 }
 
 String _extensionForKind(MediaKind kind) => switch (kind) {
-      MediaKind.photo => '.jpg',
-      MediaKind.audio => '.m4a',
-      MediaKind.video => '.mp4',
-    };
+  MediaKind.photo => '.jpg',
+  MediaKind.audio => '.m4a',
+  MediaKind.video => '.mp4',
+};
 
-String relPathForId(String id) => p.join(
-      blobsSubdir,
-      id.substring(0, blobShardLength),
-      id.substring(blobShardLength),
-    );
+String relPathForId(String id) => p.posix.join(
+  blobsSubdir,
+  id.substring(0, blobShardLength),
+  id.substring(blobShardLength),
+);
 
 String relPathForBlob({
   required String id,
   required String mime,
   required MediaKind kind,
-}) =>
-    '${relPathForId(id)}${blobExtensionFor(mime: mime, kind: kind)}';
+}) => '${relPathForId(id)}${blobExtensionFor(mime: mime, kind: kind)}';
 
 String? idFromRelPath(String relPath) {
   final parts = p.split(relPath);
