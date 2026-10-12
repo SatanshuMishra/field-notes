@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'app/app.dart';
 
-void main() {
-  runApp(const FieldNotesApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(await fieldNotesAppForThisDevice());
 }

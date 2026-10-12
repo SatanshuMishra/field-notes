@@ -211,11 +211,17 @@ Stream<String?> syncNotice(Ref ref) async* {
 }
 
 @Riverpod(keepAlive: true)
+bool syncAvailable(Ref ref) => true;
+
+@Riverpod(keepAlive: true)
 BackgroundUploader backgroundUploader(Ref ref) => ChannelBackgroundUploader();
 
 @Riverpod(keepAlive: true)
 Future<BackgroundTransfer?> backgroundTransfer(Ref ref) async {
   if (defaultTargetPlatform != TargetPlatform.android) {
+    return null;
+  }
+  if (!ref.watch(syncAvailableProvider)) {
     return null;
   }
   final AppDatabase database = ref.watch(databaseProvider);

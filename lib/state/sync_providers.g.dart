@@ -514,6 +514,46 @@ final class SyncNoticeProvider
 
 String _$syncNoticeHash() => r'd2a44ca6176944e05289a1a45c8ea206932b97b0';
 
+@ProviderFor(syncAvailable)
+final syncAvailableProvider = SyncAvailableProvider._();
+
+final class SyncAvailableProvider extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  SyncAvailableProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'syncAvailableProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$syncAvailableHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return syncAvailable(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$syncAvailableHash() => r'383fd2e03f48ff00dc9aee114bd50879ee58f1cc';
+
 @ProviderFor(backgroundUploader)
 final backgroundUploaderProvider = BackgroundUploaderProvider._();
 
@@ -602,7 +642,7 @@ final class BackgroundTransferProvider
 }
 
 String _$backgroundTransferHash() =>
-    r'9ac5f3ad7692f2c9bc8327c1e9865cb73ea8166b';
+    r'89b2bc8c145d54caf99b6686cdad8c31d6f93e73';
 
 @ProviderFor(batterySettings)
 final batterySettingsProvider = BatterySettingsProvider._();
