@@ -4,6 +4,8 @@ Each release has a section `## [X.Y.Z] - YYYY-MM-DD` with an optional intro para
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-12
+
 ### New
 
 - An About page in Settings shows the version of Field Notes you have, who made it and its licence.
@@ -14,3 +16,8 @@ Each release has a section `## [X.Y.Z] - YYYY-MM-DD` with an optional intro para
 ### Improved
 
 - Settings on macOS and Windows has a new look: a list of sections on the left, with the open section beside it in clear groups and smaller controls.
+
+### Fixed
+
+- The glow around the voice recorder's orb follows your voice as you speak, instead of breathing on a fixed cycle.
+- Recording a voice or video note keeps your phone, Mac or Windows PC awake, so the screen timeout or sleep no longer cuts a recording short.
