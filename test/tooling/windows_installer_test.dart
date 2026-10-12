@@ -89,8 +89,7 @@ void main() {
       'AppUserModelToastActivatorCLSID': windowsNotificationGuid,
     });
 
-    expect(sections['Run'], hasLength(1));
-    final Map<String, String> launch = _entry(sections['Run']!.single);
+    final Map<String, String> launch = _entry(sections['Run']!.first);
     expect(launch['Filename'], r'{app}\field_notes.exe');
     expect(launch['Description'], 'Launch Field Notes');
     expect(launch['Flags']!.split(' ').toSet(), <String>{
@@ -154,4 +153,33 @@ void main() {
       expect(File(iconPath).existsSync(), isTrue);
     },
   );
+
+  test('a silent update relaunches Field Notes', () {
+    final Map<String, List<String>> sections = _sections(
+      File(_scriptPath).readAsStringSync(),
+    );
+
+    final List<String> run = sections['Run']!;
+    expect(run, hasLength(2));
+    expect(_entry(run.first), <String, String>{
+      'Filename': r'{app}\field_notes.exe',
+      'Description': 'Launch Field Notes',
+      'Flags': 'nowait postinstall skipifsilent',
+    });
+    final Map<String, String> relaunch = _entry(run.last);
+    expect(relaunch.keys.toSet(), <String>{'Filename', 'Flags', 'Check'});
+    expect(relaunch['Filename'], r'{app}\field_notes.exe');
+    expect(relaunch['Flags']!.split(' ').toSet(), <String>{
+      'nowait',
+      'skipifnotsilent',
+    });
+    expect(relaunch['Check'], 'ShouldRelaunch');
+
+    expect(sections['Code'], <String>[
+      'function ShouldRelaunch: Boolean;',
+      'begin',
+      "Result := ExpandConstant('{param:RELAUNCH|0}') = '1';",
+      'end;',
+    ]);
+  });
 }
