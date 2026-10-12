@@ -6,17 +6,23 @@ import 'settings_harness.dart';
 
 const double _rowWidth = 352;
 const double _gap = 16;
+const double _desktopRowWidth = 640;
+const double _desktopGap = 20;
 const String _label = 'Pause the Meadow in the background';
 const String _description =
     "Stops the Meadow's motion while Field Notes is open but another window "
     'or app is in front. Saves battery.';
 const Key _wideKey = ValueKey<String>('wide-control');
 
-Future<void> _pumpRow(WidgetTester tester, Widget control) async {
+Future<void> _pumpRow(
+  WidgetTester tester,
+  Widget control, {
+  double width = _rowWidth,
+}) async {
   await tester.pumpWidget(
     settingsHarness(
       SizedBox(
-        width: _rowWidth,
+        width: width,
         child: SettingsFieldRow(
           label: _label,
           description: _description,
@@ -69,4 +75,44 @@ void main() {
     );
     expect(tester.takeException(), isNull);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('on the desktop a switch sits right-aligned at its natural width '
+      'after a 20 pixel gap', (WidgetTester tester) async {
+    await _pumpRow(
+      tester,
+      SettingsToggle(
+        semanticLabel: _label,
+        value: false,
+        onChanged: (bool value) {},
+      ),
+      width: _desktopRowWidth,
+    );
+
+    final Rect toggle = tester.getRect(find.byType(SettingsToggle));
+    final Rect text = _textColumn(tester);
+    expect(toggle.right, _desktopRowWidth);
+    expect(toggle.width, 36);
+    expect(text.left, 0);
+    expect(toggle.left - text.right, _desktopGap);
+    expect(text.width, _desktopRowWidth - _desktopGap - toggle.width);
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('on the desktop a control that fills its slot stops at half the '
+      'row', (WidgetTester tester) async {
+    await _pumpRow(
+      tester,
+      const SizedBox(key: _wideKey, width: double.infinity, height: 24),
+      width: _desktopRowWidth,
+    );
+
+    final Rect wide = tester.getRect(find.byKey(_wideKey));
+    expect(wide.right, _desktopRowWidth);
+    expect(wide.width, moreOrLessEquals(_desktopRowWidth / 2));
+    expect(
+      _textColumn(tester).width,
+      moreOrLessEquals(_desktopRowWidth - _desktopGap - _desktopRowWidth / 2),
+    );
+    expect(tester.takeException(), isNull);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 }
