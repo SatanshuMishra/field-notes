@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
@@ -9,12 +10,14 @@ import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/sync/ui/add_device_sheet.dart';
 import 'package:field_notes/features/sync/ui/device_list.dart';
+import 'package:field_notes/features/updates/update_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'sections/about_section.dart';
 import 'sections/data_section.dart';
 import 'sections/journal_section.dart';
 import 'sections/performance_section.dart';
@@ -26,14 +29,28 @@ import 'widgets/settings_phone_pages.dart';
 import 'widgets/settings_tabs.dart';
 
 const Key settingsTabContentKey = ValueKey<String>('settings-tab-content');
+const Key settingsContentTitleKey = ValueKey<String>('settings-content-title');
+const Key settingsSidebarColumnKey = ValueKey<String>(
+  'settings-sidebar-column',
+);
+const Key settingsContentColumnKey = ValueKey<String>(
+  'settings-content-column',
+);
 
-const double _ringRoom = 6;
-const double _pagePadding = 20;
+const String settingsSidebarKicker = 'settings';
+
+const double settingsContentMaxWidth = 680;
+const double settingsContentTitleSize = 34;
+
 const double _sectionGap = 16;
-const double _sidebarHeaderGap = 18;
-const double _railRuleGap = 24;
-const double _ruleWidth = 1.5;
-const double _contentRightPadding = 28;
+const double _desktopGroupGap = 15;
+const EdgeInsets _sidebarColumnPadding = EdgeInsets.fromLTRB(24, 26, 14, 20);
+const EdgeInsets _kickerPadding = EdgeInsets.symmetric(horizontal: 10);
+const double _kickerGap = 6;
+const double _ruleThickness = 1;
+const EdgeInsets _contentPadding = EdgeInsets.fromLTRB(28, 26, 34, 34);
+const EdgeInsets _contentTitlePadding = EdgeInsets.only(top: 17, bottom: 26);
+const double _contentTitleHeight = 1;
 
 const double _phoneSideInset = 14;
 const double _phoneHeaderGap = 6;
@@ -231,53 +248,49 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   Widget _buildSidebar(AppSettings settings) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(_pagePadding, _pagePadding, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          _SettingsHeader(kicker: context.textStyles.pageEyebrowAccent),
-          const SizedBox(height: _sidebarHeaderGap - _ringRoom),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final FieldNotesColors colors = context.colors;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          key: settingsSidebarColumnKey,
+          padding: _sidebarColumnPadding,
+          child: SizedBox(
+            width: settingsTabRailWidth,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 Padding(
-                  padding: const EdgeInsets.only(top: _ringRoom),
-                  child: FocusTraversalGroup(
-                    child: SettingsTabRail(
-                      key: settingsTabRailKey,
-                      selected: _tab,
-                      onSelected: _selectTab,
+                  padding: _kickerPadding,
+                  child: Text(
+                    settingsSidebarKicker,
+                    style: context.textStyles.pageEyebrowAccent.copyWith(
+                      color: colors.accentInk,
                     ),
                   ),
                 ),
-                const SizedBox(width: _railRuleGap),
-                Padding(
-                  padding: const EdgeInsets.only(top: _ringRoom),
-                  child: DashedDivider(
-                    axis: Axis.vertical,
-                    thickness: _ruleWidth,
-                    color: context.colors.ink25,
-                  ),
-                ),
-                const SizedBox(width: _railRuleGap - _ringRoom),
-                Expanded(
-                  child: _buildTabContent(
-                    settings,
-                    const EdgeInsets.fromLTRB(
-                      _ringRoom,
-                      _ringRoom,
-                      _contentRightPadding,
-                      _pagePadding,
-                    ),
+                const SizedBox(height: _kickerGap),
+                FocusTraversalGroup(
+                  child: SettingsTabRail(
+                    key: settingsTabRailKey,
+                    selected: _tab,
+                    onSelected: _selectTab,
+                    marked: ref.watch(updateNoticeProvider) == null
+                        ? const <SettingsTab>{}
+                        : const <SettingsTab>{SettingsTab.about},
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+        DashedDivider(
+          axis: Axis.vertical,
+          thickness: _ruleThickness,
+          color: colors.ink22,
+        ),
+        Expanded(child: _buildTabContent(settings)),
+      ],
     );
   }
 
@@ -343,51 +356,96 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _PhonePage page,
     EdgeInsets padding,
   ) {
+    final bool list = page is _ListPage;
     return FocusTraversalGroup(
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        padding: padding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            ...switch (page) {
-              _ListPage() => <Widget>[
-                SettingsSectionList(
-                  onOpen: (SettingsTab tab) {
-                    _showPage(_SectionPage(tab));
-                  },
+      child: LayoutBuilder(
+        builder: (BuildContext context, BoxConstraints constraints) =>
+            SingleChildScrollView(
+              controller: _scrollController,
+              padding: padding,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: list && constraints.hasBoundedHeight
+                      ? math.max(0, constraints.maxHeight - padding.vertical)
+                      : 0,
                 ),
-                const SizedBox(height: _phoneTitleGap),
-              ],
-              _SectionPage(:final SettingsTab tab) => <Widget>[
-                SettingsPageHeading(title: tab.label),
-                const SizedBox(height: _phoneTitleGap),
-              ],
-              _DevicesPage() => const <Widget>[
-                SettingsPageHeading(title: devicesTitle),
-                SizedBox(height: _phoneTitleGap),
-              ],
-            },
-            KeyedSubtree(
-              key: _phoneSectionsKey,
-              child: _buildTabColumn(
-                settings,
-                page is _SectionPage ? page.tab : null,
+                child: Column(
+                  mainAxisAlignment: list
+                      ? MainAxisAlignment.end
+                      : MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    ...switch (page) {
+                      _ListPage() => <Widget>[
+                        SettingsSectionList(
+                          onOpen: (SettingsTab tab) {
+                            _showPage(_SectionPage(tab));
+                          },
+                        ),
+                        if (_notice != null)
+                          const SizedBox(height: _phoneTitleGap),
+                      ],
+                      _SectionPage(:final SettingsTab tab) => <Widget>[
+                        SettingsPageHeading(title: tab.label),
+                        const SizedBox(height: _phoneTitleGap),
+                      ],
+                      _DevicesPage() => const <Widget>[
+                        SettingsPageHeading(title: devicesTitle),
+                        SizedBox(height: _phoneTitleGap),
+                      ],
+                    },
+                    KeyedSubtree(
+                      key: _phoneSectionsKey,
+                      child: _buildTabColumn(
+                        settings,
+                        page is _SectionPage ? page.tab : null,
+                      ),
+                    ),
+                    if (page is _DevicesPage)
+                      _DevicesCard(onFeedback: _showNotice),
+                  ],
+                ),
               ),
             ),
-            if (page is _DevicesPage) _DevicesCard(onFeedback: _showNotice),
-          ],
-        ),
       ),
     );
   }
 
-  Widget _buildTabContent(AppSettings settings, EdgeInsets padding) {
+  Widget _buildTabContent(AppSettings settings) {
     return FocusTraversalGroup(
       child: SingleChildScrollView(
         controller: _scrollController,
-        padding: padding,
-        child: _buildTabColumn(settings, _tab),
+        padding: _contentPadding,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: ConstrainedBox(
+            key: settingsContentColumnKey,
+            constraints: const BoxConstraints(
+              maxWidth: settingsContentMaxWidth,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Padding(
+                  padding: _contentTitlePadding,
+                  child: Semantics(
+                    header: true,
+                    child: Text(
+                      _tab.label,
+                      key: settingsContentTitleKey,
+                      style: context.textStyles.displaySerif.copyWith(
+                        fontSize: settingsContentTitleSize,
+                        fontWeight: FontWeight.w500,
+                        height: _contentTitleHeight,
+                      ),
+                    ),
+                  ),
+                ),
+                _buildTabColumn(settings, _tab),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -434,7 +492,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             height:
                 resolveShellLayout(Theme.of(context).platform) ==
                     ShellLayout.sidebar
-                ? settingsSidebarSectionGap
+                ? _desktopGroupGap
                 : _sectionGap,
           ),
           PerformanceSection(settings: settings, onFeedback: _showNotice),
@@ -450,6 +508,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         onFeedback: _showNotice,
       ),
       SettingsTab.data => DataSection(onFeedback: _showNotice),
+      SettingsTab.about => AboutSection(onFeedback: _showNotice),
     };
   }
 }
@@ -484,27 +543,6 @@ class _DevicesCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _SettingsHeader extends StatelessWidget {
-  const _SettingsHeader({required this.kicker});
-
-  final TextStyle kicker;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(settingsListEyebrow, style: kicker),
-        Semantics(
-          header: true,
-          child: Text(settingsListTitle, style: context.textStyles.titleSerif),
-        ),
-      ],
     );
   }
 }

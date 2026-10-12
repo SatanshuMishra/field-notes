@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,7 +30,8 @@ const Map<String, String> a11yRuleDescriptions = <String, String>{
   _missingState:
       'A control listed as stateful has no state of its listed kind.',
   _smallTarget:
-      'A tappable node is narrower or shorter than 48 logical pixels in the '
+      'A tappable node is narrower or shorter than 24 logical pixels on the '
+      'desktop sidebar layout, or 48 on the phone bottom-bar layout, in the '
       'part a tap can reach, or in its whole size when a clip shows more than '
       'half of it on each axis.',
   _inertButton:
@@ -36,7 +39,9 @@ const Map<String, String> a11yRuleDescriptions = <String, String>{
       'long-press action.',
 };
 
-const double _minimumTarget = 48;
+const double _desktopMinimumTarget = 24;
+
+const double _phoneMinimumTarget = 48;
 
 const double _doubledTolerance = 2;
 
@@ -305,7 +310,34 @@ bool _repeats(_Visited visited) {
   return segments.toSet().length < segments.length;
 }
 
-bool _small(_Visited visited) {
+TargetPlatform? _pumpedPlatform(WidgetTester tester) {
+  final Widget? appTheme = find
+      .descendant(
+        of: find.byType(MaterialApp),
+        matching: find.byWidgetPredicate(
+          (Widget widget) => widget is AnimatedTheme || widget is Theme,
+        ),
+      )
+      .evaluate()
+      .firstOrNull
+      ?.widget;
+  return switch (appTheme) {
+    AnimatedTheme(:final ThemeData data) ||
+    Theme(:final ThemeData data) => data.platform,
+    _ => null,
+  };
+}
+
+double _minimumTargetOf(WidgetTester tester) =>
+    switch (_pumpedPlatform(tester)) {
+      final TargetPlatform platform => switch (resolveShellLayout(platform)) {
+        ShellLayout.sidebar => _desktopMinimumTarget,
+        ShellLayout.bottomBar => _phoneMinimumTarget,
+      },
+      null => _phoneMinimumTarget,
+    };
+
+bool _small(_Visited visited, double minimumTarget) {
   if (!visited.tappable ||
       visited.data.flagsCollection.isHidden ||
       visited.data.flagsCollection.isLink) {
@@ -313,8 +345,8 @@ bool _small(_Visited visited) {
   }
   final Size? size = _judgedSize(visited);
   return size != null &&
-      (size.width < _minimumTarget - precisionErrorTolerance ||
-          size.height < _minimumTarget - precisionErrorTolerance);
+      (size.width < minimumTarget - precisionErrorTolerance ||
+          size.height < minimumTarget - precisionErrorTolerance);
 }
 
 Size? _judgedSize(_Visited visited) => switch (visited.whole) {
@@ -474,6 +506,7 @@ List<A11yFinding> a11yFindings(
   List<A11yStatefulControl> stateful = const <A11yStatefulControl>[],
 }) {
   final List<_Visited> judged = _judgedInWalkOrder(tester);
+  final double minimumTarget = _minimumTargetOf(tester);
   final List<int> doubled = _doubledHolders(judged);
   final Set<(int, A11yStateKind)> missingStates = _missingStates(
     tester,
@@ -490,7 +523,7 @@ List<A11yFinding> a11yFindings(
       for (final A11yStateKind kind in A11yStateKind.values)
         if (missingStates.contains((visited.index, kind)))
           visited.finding(_missingState, state),
-      if (_small(visited)) visited.finding(_smallTarget, state),
+      if (_small(visited, minimumTarget)) visited.finding(_smallTarget, state),
       if (_inert(visited)) visited.finding(_inertButton, state),
     ],
   ]);

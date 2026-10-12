@@ -4,6 +4,7 @@ import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -20,8 +21,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../settings_feedback.dart';
 import '../widgets/delete_all_dialog.dart';
+import '../widgets/devices_dialog.dart';
 
-const String syncSectionTitle = 'Sync & storage';
+const String turnOnSyncGroupLabel = 'turn on sync';
+const String syncGroupLabel = 'sync';
+const String serverAndDevicesGroupLabel = 'server & devices';
+const String mediaGroupLabel = 'media';
 
 const String syncOffIntroMac =
     'Your journal is stored only on this Mac. Turn on sync to keep it on your '
@@ -44,15 +49,14 @@ const String restoreCaptionMac = 'You lost every device. Use your 12 words.';
 const String restoreCaptionPhone = 'Use your 12 words.';
 const double _actionRowMinHeight = 48;
 const double _actionChevronSize = 20;
+const double _statusDotSize = 8;
 
-const String syncStatusTitle = 'Status';
 const String syncNowLabel = 'Sync now';
 const String pauseSyncLabel = 'Pause sync';
 const String pauseSyncCaption =
     'Stops sending and receiving until you switch it back';
 const String serverAddressCaption = 'Every device follows when you change it';
 const String changeLabel = 'Change';
-const String yourDevicesLabel = 'Your devices';
 const String addDeviceCaption = 'Show a code to scan';
 const String showCodeLabel = 'Show code';
 const String keepMediaMacLabel = 'Keep all media on this device';
@@ -78,6 +82,7 @@ const String mobileDataCaption = 'Off: full videos move on Wi-Fi only';
 const String devicesLabel = 'Devices';
 const String devicesFallbackCaption = 'Add or remove';
 const String manageLabel = 'Manage';
+const String manageDevicesLabel = 'Manage devices';
 const String backgroundUploadsLabel = 'Background uploads';
 const String batteryUnrestrictedLabel = 'Battery: Unrestricted';
 const String batteryOptimisedLabel = 'Battery: Optimised';
@@ -147,6 +152,9 @@ class SyncStorageSection extends ConsumerStatefulWidget {
 
 class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
   late final AppLifecycleListener _lifecycle;
+  final FocusNode _manageDevicesFocus = FocusNode(
+    debugLabel: manageDevicesLabel,
+  );
   DateTime? _lastSent;
 
   @override
@@ -160,6 +168,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
   @override
   void dispose() {
     _lifecycle.dispose();
+    _manageDevicesFocus.dispose();
     super.dispose();
   }
 
@@ -169,10 +178,7 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
   Widget build(BuildContext context) {
     final bool? syncOn = ref.watch(syncEnabledProvider).value;
     if (syncOn == null) {
-      return const SettingsSection(
-        title: syncSectionTitle,
-        children: <Widget>[],
-      );
+      return const SettingsSection.grouped(groups: <SettingsGroup>[]);
     }
     if (!syncOn) {
       return _syncOff();
@@ -190,108 +196,128 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     final String? address = ref.watch(relayAddressProvider).value;
     return SyncClockRefresh(
       builder: (BuildContext context) =>
-          _phone ? _phoneOn(status, address) : _macOn(status, address),
+          _phone ? _phoneOn(status, address) : _desktopOn(status, address),
     );
   }
 
   Widget _syncOff() {
     final bool phone = _phone;
-    return SettingsSection(
-      title: syncSectionTitle,
-      children: <Widget>[
-        Text(
-          phone
-              ? syncOffIntroPhone
-              : syncOffIntroDesktop(Theme.of(context).platform),
-          style: context.textStyles.captionSans,
-        ),
-        SyncActionRow(
-          label: startSyncTitle,
-          description: phone ? startSyncCaptionPhone : startSyncCaptionMac,
-          onPressed: () => startSync(context, ref),
-        ),
-        SyncActionRow(
-          label: joinTitle,
-          description: phone ? joinJournalCaptionPhone : joinJournalCaptionMac,
-          onPressed: () => joinJournal(context, ref),
-        ),
-        SyncActionRow(
-          label: restoreLabelTitle,
-          description: phone ? restoreCaptionPhone : restoreCaptionMac,
-          onPressed: () => restoreJournal(context, ref),
+    return SettingsSection.grouped(
+      groups: <SettingsGroup>[
+        SettingsGroup(
+          label: turnOnSyncGroupLabel,
+          rows: <Widget>[
+            Text(
+              phone
+                  ? syncOffIntroPhone
+                  : syncOffIntroDesktop(Theme.of(context).platform),
+              style: context.textStyles.captionSans,
+            ),
+            SyncActionRow(
+              label: startSyncTitle,
+              description: phone ? startSyncCaptionPhone : startSyncCaptionMac,
+              onPressed: () => startSync(context, ref),
+            ),
+            SyncActionRow(
+              label: joinTitle,
+              description: phone
+                  ? joinJournalCaptionPhone
+                  : joinJournalCaptionMac,
+              onPressed: () => joinJournal(context, ref),
+            ),
+            SyncActionRow(
+              label: restoreLabelTitle,
+              description: phone ? restoreCaptionPhone : restoreCaptionMac,
+              onPressed: () => restoreJournal(context, ref),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _macOn(SyncStatus? status, String? address) {
+  Widget _desktopOn(SyncStatus? status, String? address) {
     final DateTime now = DateTime.now().toUtc();
     final DateTime? sent = status is SyncedStatus ? status.at : _lastSent;
-    return SettingsSection(
-      title: syncSectionTitle,
-      children: <Widget>[
-        SettingsFieldRow(
-          label: syncStatusTitle,
-          description: sent == null ? null : lastChangeSentLabel(sent, now),
-          control: Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              if (status != null) _statusPill(status, now),
-              if (status is! PausedStatus) _syncNowButton(),
-            ],
-          ),
-        ),
-        ..._fixRows(status),
-        _pauseRow(status),
-        SettingsFieldRow(
-          label: serverAddressLabel,
-          description: serverAddressCaption,
-          control: Wrap(
-            spacing: 12,
-            runSpacing: 8,
-            alignment: WrapAlignment.end,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              if (address != null)
-                Text(address, style: context.textStyles.bodySans),
-              _changeButton(),
-            ],
-          ),
-        ),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Semantics(
-              header: true,
-              child: Text(
-                yourDevicesLabel,
-                style: context.textStyles.labelSans,
+    final List<JournalDevice>? devices = ref
+        .watch(journalDevicesProvider)
+        .value;
+    return SettingsSection.grouped(
+      groups: <SettingsGroup>[
+        SettingsGroup(
+          label: syncGroupLabel,
+          rows: <Widget>[
+            if (status != null)
+              SettingsFieldRow(
+                label: status.label(now),
+                leading: _statusDot(status),
+                description: sent == null
+                    ? null
+                    : lastChangeSentLabel(sent, now),
+                control: status is PausedStatus
+                    ? const SizedBox.shrink()
+                    : _syncNowButton(),
               ),
-            ),
-            const SizedBox(height: 8),
-            DeviceList(onFeedback: widget.onFeedback),
+            ..._fixRows(status),
+            _pauseRow(status),
           ],
         ),
-        SettingsFieldRow(
-          label: addDeviceTitle,
-          description: addDeviceCaption,
-          control: StickerButton(
-            label: showCodeLabel,
-            variant: StickerButtonVariant.secondary,
-            padTapTarget: true,
-            onPressed: () => showAddDeviceSheet(context),
-          ),
+        SettingsGroup(
+          label: serverAndDevicesGroupLabel,
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: serverAddressLabel,
+              description: address ?? serverAddressCaption,
+              control: _changeButton(),
+            ),
+            SettingsFieldRow(
+              label: addDeviceTitle,
+              description: addDeviceCaption,
+              control: SettingsActionButton(
+                label: showCodeLabel,
+                onPressed: () => showAddDeviceSheet(context),
+              ),
+            ),
+            Focus(
+              focusNode: _manageDevicesFocus,
+              canRequestFocus: false,
+              skipTraversal: true,
+              child: SettingsFieldRow(
+                label: manageDevicesLabel,
+                description: devices == null
+                    ? devicesFallbackCaption
+                    : deviceCountLabel(devices.length),
+                control: ChevronGlyph(
+                  pointsBack: false,
+                  color: context.colors.muted,
+                ),
+                onPressed: _openDevices,
+              ),
+            ),
+          ],
         ),
-        _keepMediaRow(
-          label: keepMediaMacLabel,
-          caption: keepMediaCaptionDesktop(Theme.of(context).platform),
+        SettingsGroup(
+          label: mediaGroupLabel,
+          rows: <Widget>[
+            _keepMediaRow(
+              label: keepMediaMacLabel,
+              caption: keepMediaCaptionDesktop(Theme.of(context).platform),
+            ),
+          ],
         ),
       ],
     );
+  }
+
+  Future<void> _openDevices() async {
+    await showDevicesDialog(context, onFeedback: widget.onFeedback);
+    if (!mounted) {
+      return;
+    }
+    _manageDevicesFocus.descendants
+        .where((FocusNode node) => node.canRequestFocus)
+        .firstOrNull
+        ?.requestFocus();
   }
 
   Widget _phoneOn(SyncStatus? status, String? address) {
@@ -301,69 +327,73 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
         .watch(journalDevicesProvider)
         .value;
     final VoidCallback? onManageDevices = widget.onManageDevices;
-    return SettingsSection(
-      title: syncSectionTitle,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (status != null) _statusPill(status, now),
-                  if (address != null) ...<Widget>[
-                    const SizedBox(height: 6),
-                    Text(address, style: syncFlowHintStyle(context)),
-                  ],
+    return SettingsSection.grouped(
+      groups: <SettingsGroup>[
+        SettingsGroup(
+          label: syncGroupLabel,
+          rows: <Widget>[
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (status != null) _statusPill(status, now),
+                      if (address != null) ...<Widget>[
+                        const SizedBox(height: 6),
+                        Text(address, style: syncFlowHintStyle(context)),
+                      ],
+                    ],
+                  ),
+                ),
+                if (status is! PausedStatus) ...<Widget>[
+                  const SizedBox(width: 12),
+                  _syncNowButton(),
                 ],
-              ),
+              ],
             ),
-            if (status is! PausedStatus) ...<Widget>[
-              const SizedBox(width: 12),
-              _syncNowButton(),
-            ],
+            ..._fixRows(status),
+            _pauseRow(status),
+            _keepMediaRow(
+              label: keepMediaPhoneLabel,
+              caption: keepMediaPhoneCaption,
+            ),
+            if (android)
+              SettingsFieldRow(
+                label: mobileDataLabel,
+                description: mobileDataCaption,
+                control: SettingsToggle(
+                  semanticLabel: mobileDataLabel,
+                  value: widget.settings.allowMobileDataForMedia,
+                  onChanged: (bool value) => _saveMedia(
+                    () => ref
+                        .read(settingsRepositoryProvider)
+                        .setAllowMobileDataForMedia(value),
+                  ),
+                ),
+              ),
+            if (onManageDevices != null)
+              SettingsFieldRow(
+                label: devicesLabel,
+                description: devices == null
+                    ? devicesFallbackCaption
+                    : deviceCountLabel(devices.length),
+                control: StickerButton(
+                  label: manageLabel,
+                  variant: StickerButtonVariant.secondary,
+                  padTapTarget: true,
+                  onPressed: onManageDevices,
+                ),
+              ),
+            SettingsFieldRow(
+              label: serverAddressLabel,
+              description: address,
+              control: _changeButton(),
+            ),
+            if (android) _backgroundUploadsRow(),
           ],
         ),
-        ..._fixRows(status),
-        _pauseRow(status),
-        _keepMediaRow(
-          label: keepMediaPhoneLabel,
-          caption: keepMediaPhoneCaption,
-        ),
-        if (android)
-          SettingsFieldRow(
-            label: mobileDataLabel,
-            description: mobileDataCaption,
-            control: SettingsToggle(
-              semanticLabel: mobileDataLabel,
-              value: widget.settings.allowMobileDataForMedia,
-              onChanged: (bool value) => _saveMedia(
-                () => ref
-                    .read(settingsRepositoryProvider)
-                    .setAllowMobileDataForMedia(value),
-              ),
-            ),
-          ),
-        if (onManageDevices != null)
-          SettingsFieldRow(
-            label: devicesLabel,
-            description: devices == null
-                ? devicesFallbackCaption
-                : deviceCountLabel(devices.length),
-            control: StickerButton(
-              label: manageLabel,
-              variant: StickerButtonVariant.secondary,
-              padTapTarget: true,
-              onPressed: onManageDevices,
-            ),
-          ),
-        SettingsFieldRow(
-          label: serverAddressLabel,
-          description: address,
-          control: _changeButton(),
-        ),
-        if (android) _backgroundUploadsRow(),
       ],
     );
   }
@@ -373,18 +403,22 @@ class _SyncStorageSectionState extends ConsumerState<SyncStorageSection> {
     dotColor: syncStatusTone(status, context.colors),
   );
 
-  Widget _syncNowButton() => StickerButton(
+  Widget _statusDot(SyncStatus status) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: syncStatusTone(status, context.colors),
+      shape: BoxShape.circle,
+    ),
+    child: const SizedBox.square(dimension: _statusDotSize),
+  );
+
+  Widget _syncNowButton() => SettingsActionButton(
     label: syncNowLabel,
-    variant: StickerButtonVariant.secondary,
-    padTapTarget: true,
     onPressed: () =>
         _engineAction(() => ref.read(syncEngineProvider).syncNow()),
   );
 
-  Widget _changeButton() => StickerButton(
+  Widget _changeButton() => SettingsActionButton(
     label: changeLabel,
-    variant: StickerButtonVariant.secondary,
-    padTapTarget: true,
     onPressed: () => showSyncFlow<void>(
       context,
       builder: (BuildContext flowContext) => const ChangeServerAddressFlow(),

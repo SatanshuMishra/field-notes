@@ -23,6 +23,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/sync_overrides.dart';
+import '../../support/update_overrides.dart';
 import 'support/fake_settings_repository.dart';
 import 'support/recording_reminder_scheduler.dart';
 import 'support/settings_harness.dart';
@@ -39,12 +40,14 @@ const String _journal = 'journal';
 const String _syncStorage = 'syncStorage';
 const String _remindersSound = 'remindersSound';
 const String _data = 'data';
+const String _about = 'about';
 
 const List<String> _tabNames = <String>[
   _journal,
   _syncStorage,
   _remindersSound,
   _data,
+  _about,
 ];
 
 const Map<String, String> _tabLabels = <String, String>{
@@ -52,6 +55,7 @@ const Map<String, String> _tabLabels = <String, String>{
   _syncStorage: 'Sync & storage',
   _remindersSound: 'Reminders & sound',
   _data: 'Data',
+  _about: 'About',
 };
 
 const List<String> _sublabels = <String>[
@@ -59,6 +63,7 @@ const List<String> _sublabels = <String>[
   'where entries live',
   'nudges, prompts',
   'export, delete',
+  'version, updates',
 ];
 
 const String _firstSyncRow = 'Start syncing';
@@ -78,6 +83,7 @@ const Map<String, List<String>> _rowsByTab = <String, List<String>>{
   ],
   _remindersSound: <String>['Daily reminder', 'Reminder time', 'Sound effects'],
   _data: <String>['Export', 'Reclaim space', 'Delete all', 'Privacy policy'],
+  _about: <String>['Satanshu Mishra'],
 };
 
 const String _deleteNotice = 'Deleted 1 day and 2 entries.';
@@ -135,6 +141,7 @@ Future<void> _pumpSettings(
             (Ref ref) async => dataController,
           ),
         ...syncOffOverrides(),
+        ...updateQuietOverrides(),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -225,9 +232,11 @@ void _expectSectionList(WidgetTester tester) {
 }
 
 void main() {
-  testWidgets('the Journal tab reads theme, calendar, text size', (
+  testWidgets('the desktop list leaves every sublabel out', (
     WidgetTester tester,
   ) async {
+    expect(SettingsTab.journal.sublabel, 'theme, calendar, text size');
+    expect(SettingsTab.about.sublabel, 'version, updates');
     await _onPlatform(TargetPlatform.macOS, () async {
       await _pumpSettings(
         tester,
@@ -236,32 +245,36 @@ void main() {
       );
 
       final Finder rail = find.byKey(_railKey);
-      expect(
-        find.descendant(
-          of: rail,
-          matching: find.text('theme, calendar, text size'),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(of: rail, matching: find.text('calendar, text size')),
-        findsNothing,
-      );
+      expect(rail, findsOneWidget);
+      for (final String sublabel in _sublabels) {
+        expect(
+          find.descendant(of: rail, matching: find.text(sublabel)),
+          findsNothing,
+          reason: sublabel,
+        );
+      }
     });
   });
 
   testWidgets(
-    'settings lists Journal, Sync & storage, Reminders & sound, Data and opens on Journal',
+    'settings lists Journal, Sync & storage, Reminders & sound, Data, About and opens on Journal',
     (WidgetTester tester) async {
       expect(SettingsTab.values, <SettingsTab>[
         SettingsTab.journal,
         SettingsTab.syncStorage,
         SettingsTab.remindersSound,
         SettingsTab.data,
+        SettingsTab.about,
       ]);
       expect(
         <String>[for (final SettingsTab tab in SettingsTab.values) tab.label],
-        <String>['Journal', 'Sync & storage', 'Reminders & sound', 'Data'],
+        <String>[
+          'Journal',
+          'Sync & storage',
+          'Reminders & sound',
+          'Data',
+          'About',
+        ],
       );
 
       await _onPlatform(TargetPlatform.macOS, () async {
@@ -290,13 +303,14 @@ void main() {
         expect(find.text(_firstSyncRow), findsNothing);
         expect(find.text('Daily reminder'), findsNothing);
         expect(find.text('Delete all…'), findsNothing);
+        expect(find.text('Satanshu Mishra'), findsNothing);
         semantics.dispose();
       });
     },
   );
 
   testWidgets(
-    'sidebar settings shows the header and a four-tab rail with sublabels',
+    'sidebar settings shows the settings kicker and a five-entry list without sublabels',
     (WidgetTester tester) async {
       await _onPlatform(TargetPlatform.macOS, () async {
         await _pumpSettings(
@@ -305,37 +319,35 @@ void main() {
           size: _desktop,
         );
 
-        expect(find.text('preferences'), findsOneWidget);
-        expect(find.text('Settings'), findsOneWidget);
-        expect(
-          tester.getRect(find.text('preferences')).bottom,
-          lessThanOrEqualTo(tester.getRect(find.text('Settings')).top),
-        );
+        expect(find.text('preferences'), findsNothing);
+        expect(find.text('Settings'), findsNothing);
+        expect(find.text('settings'), findsOneWidget);
         final Finder rail = find.byKey(_railKey);
+        expect(
+          tester.getRect(find.text('settings')).bottom,
+          lessThanOrEqualTo(tester.getRect(rail).top),
+        );
         double previousBottom = double.negativeInfinity;
         for (int index = 0; index < _tabNames.length; index++) {
           final Finder label = find.descendant(
             of: rail,
             matching: find.text(_tabLabels[_tabNames[index]]!),
           );
-          final Finder sublabel = find.descendant(
-            of: rail,
-            matching: find.text(_sublabels[index]),
-          );
           expect(label, findsOneWidget);
-          expect(sublabel, findsOneWidget);
+          expect(
+            find.descendant(of: rail, matching: find.text(_sublabels[index])),
+            findsNothing,
+          );
           final Rect labelRect = tester.getRect(label);
-          final Rect sublabelRect = tester.getRect(sublabel);
           expect(labelRect.top, greaterThan(previousBottom));
-          expect(sublabelRect.top, greaterThanOrEqualTo(labelRect.bottom));
-          previousBottom = sublabelRect.bottom;
+          previousBottom = labelRect.bottom;
         }
       });
     },
   );
 
   testWidgets(
-    'sidebar settings keeps the rail 196 wide beside a dashed rule and the rows fill the window while the content scrolls',
+    'sidebar settings keeps the list 190 wide beside a dashed rule while the content column scrolls',
     (WidgetTester tester) async {
       await _onPlatform(TargetPlatform.macOS, () async {
         await _pumpSettings(
@@ -354,28 +366,21 @@ void main() {
         );
         expect(rule, findsOneWidget);
         final DashedDivider divider = tester.widget<DashedDivider>(rule);
-        expect(divider.thickness, 1.5);
+        expect(divider.thickness, 1);
         expect(
           divider.color!.toARGB32(),
-          FieldNotesColors.light.ink25.toARGB32(),
+          FieldNotesColors.light.ink22.toARGB32(),
         );
-        expect(tester.getSize(rail).width, 196);
+        expect(tester.getSize(rail).width, 190);
         expect(
           tester.getRect(rule).left,
           greaterThan(tester.getRect(rail).right),
         );
         expect(
           tester.getRect(content).left,
-          greaterThan(tester.getRect(rule).right),
+          moreOrLessEquals(tester.getRect(rule).right + 28),
         );
-        expect(
-          tester.getRect(content).right,
-          moreOrLessEquals(_desktop.width - 28),
-        );
-        expect(
-          tester.getSize(content).width,
-          greaterThan(_desktop.width - 28 - tester.getRect(rule).right - 30),
-        );
+        expect(tester.getSize(content).width, moreOrLessEquals(680));
 
         final ScrollableState scrollable = tester.state<ScrollableState>(
           find.ancestor(of: content, matching: find.byType(Scrollable)).first,
@@ -391,17 +396,14 @@ void main() {
         expect(scrollable.position.pixels, offset);
         expect(tester.getTopLeft(content).dy, contentTop - offset);
         expect(tester.getTopLeft(rail).dy, railTop);
-        expect(tester.getSize(rail).width, 196);
-        expect(
-          tester.getRect(content).right,
-          moreOrLessEquals(_desktop.width - 28),
-        );
+        expect(tester.getSize(rail).width, 190);
+        expect(tester.getSize(content).width, moreOrLessEquals(680));
       });
     },
   );
 
   testWidgets(
-    'bottom-bar settings lists the four sections and opens each as its own page',
+    'bottom-bar settings lists the five sections and opens each as its own page',
     (WidgetTester tester) async {
       await _onPlatform(TargetPlatform.android, () async {
         await _pumpSettings(
@@ -562,10 +564,11 @@ void main() {
           'Sync & storage',
           'Reminders & sound',
           'Data',
+          'About',
           'Export…',
           'Reclaim space',
-          'Delete all…',
           'Open',
+          'Delete all…',
         ]);
       });
     },

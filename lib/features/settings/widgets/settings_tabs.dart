@@ -1,48 +1,80 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/icons/settings_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 enum SettingsTab {
-  journal(label: 'Journal', sublabel: 'theme, calendar, text size'),
-  syncStorage(label: 'Sync & storage', sublabel: 'where entries live'),
-  remindersSound(label: 'Reminders & sound', sublabel: 'nudges, prompts'),
-  data(label: 'Data', sublabel: 'export, delete');
+  journal(
+    label: 'Journal',
+    sublabel: 'theme, calendar, text size',
+    glyph: SettingsGlyph.book,
+  ),
+  syncStorage(
+    label: 'Sync & storage',
+    sublabel: 'where entries live',
+    glyph: SettingsGlyph.flip,
+  ),
+  remindersSound(
+    label: 'Reminders & sound',
+    sublabel: 'nudges, prompts',
+    glyph: SettingsGlyph.bell,
+  ),
+  data(label: 'Data', sublabel: 'export, delete', glyph: SettingsGlyph.archive),
+  about(
+    label: 'About',
+    sublabel: 'version, updates',
+    glyph: SettingsGlyph.info,
+  );
 
-  const SettingsTab({required this.label, required this.sublabel});
+  const SettingsTab({
+    required this.label,
+    required this.sublabel,
+    required this.glyph,
+  });
 
   final String label;
   final String sublabel;
+  final SettingsGlyph glyph;
 }
 
 const Key settingsTabRailKey = ValueKey<String>('settings-tab-rail');
+const Key settingsTabSeparatorKey = ValueKey<String>('settings-tab-separator');
 
 ValueKey<String> settingsTabKey(SettingsTab tab) =>
     ValueKey<String>('settings-tab-${tab.name}');
 
-const double settingsTabRailWidth = 196;
+ValueKey<String> settingsTabFaceKey(SettingsTab tab) =>
+    ValueKey<String>('settings-tab-face-${tab.name}');
 
-const double _railGap = 6;
-const double _sublabelGap = 1;
+ValueKey<String> settingsTabMarkKey(SettingsTab tab) =>
+    ValueKey<String>('settings-tab-mark-${tab.name}');
 
-const EdgeInsets _railItemPadding = EdgeInsets.symmetric(
-  horizontal: 13,
-  vertical: 10,
+const double settingsTabRailWidth = 190;
+const double settingsTabEntryMinHeight = 44;
+const double settingsTabEntryGap = 6;
+const double settingsTabIconSize = 18;
+const double settingsTabSelectedOpacity = 0.11;
+const double settingsTabHoverOpacity = 0.06;
+const double settingsTabSeparatorOpacity = 0.14;
+const double settingsTabMarkSize = 8;
+const double settingsTabMarkRing = 3;
+const double settingsTabMarkRingOpacity = 0.18;
+
+const double _hitInset = 2;
+const double _iconGap = 10;
+const double _labelSize = 14;
+const double _separatorMargin = 10;
+const double _separatorInset = 12;
+const double _separatorThickness = 1;
+
+const EdgeInsets _entryPadding = EdgeInsets.symmetric(
+  vertical: 11,
+  horizontal: 10,
 );
 
-const BorderRadius _railItemRadius = BorderRadius.all(
+const BorderRadius _entryRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
-);
-
-const Color _clear = Color(0x00000000);
-
-const Border _clearOutline = Border.fromBorderSide(
-  BorderSide(color: _clear, width: Shapes.outlineWidth),
-);
-
-const TextStyle _sublabelStyle = TextStyle(
-  fontFamily: TypographyTokens.sans,
-  fontSize: 10.5,
-  fontWeight: FontWeight.w400,
 );
 
 class SettingsTabRail extends StatelessWidget {
@@ -50,13 +82,16 @@ class SettingsTabRail extends StatelessWidget {
     super.key,
     required this.selected,
     required this.onSelected,
+    this.marked = const <SettingsTab>{},
   });
 
   final SettingsTab selected;
   final ValueChanged<SettingsTab> onSelected;
+  final Set<SettingsTab> marked;
 
   @override
   Widget build(BuildContext context) {
+    const double boxGap = settingsTabEntryGap - 2 * _hitInset;
     return SizedBox(
       width: settingsTabRailWidth,
       child: Column(
@@ -64,13 +99,16 @@ class SettingsTabRail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           for (final SettingsTab tab in SettingsTab.values) ...<Widget>[
-            if (tab != SettingsTab.values.first)
-              const SizedBox(height: _railGap),
-            _TabButton(
+            if (tab != SettingsTab.values.first) const SizedBox(height: boxGap),
+            if (tab == SettingsTab.about) ...<Widget>[
+              const _Separator(),
+              const SizedBox(height: boxGap),
+            ],
+            _TabEntry(
               tab: tab,
               selected: tab == selected,
+              marked: marked.contains(tab),
               onPressed: () => onSelected(tab),
-              child: _RailFace(tab: tab, selected: tab == selected),
             ),
           ],
         ],
@@ -79,76 +117,137 @@ class SettingsTabRail extends StatelessWidget {
   }
 }
 
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.tab,
-    required this.selected,
-    required this.onPressed,
-    required this.child,
-  });
-
-  final SettingsTab tab;
-  final bool selected;
-  final VoidCallback onPressed;
-  final Widget child;
+class _Separator extends StatelessWidget {
+  const _Separator();
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      key: settingsTabKey(tab),
-      button: true,
-      selected: selected,
-      label: tab.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          borderRadius: _railItemRadius,
-          child: ExcludeSemantics(child: child),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: _separatorInset,
+        vertical: _separatorMargin + _hitInset,
+      ),
+      child: SizedBox(
+        key: settingsTabSeparatorKey,
+        height: _separatorThickness,
+        child: ColoredBox(
+          color: context.colors.ink.withValues(
+            alpha: settingsTabSeparatorOpacity,
+          ),
         ),
       ),
     );
   }
 }
 
-class _RailFace extends StatelessWidget {
-  const _RailFace({required this.tab, required this.selected});
+class _TabEntry extends StatefulWidget {
+  const _TabEntry({
+    required this.tab,
+    required this.selected,
+    required this.marked,
+    required this.onPressed,
+  });
 
   final SettingsTab tab;
   final bool selected;
+  final bool marked;
+  final VoidCallback onPressed;
+
+  @override
+  State<_TabEntry> createState() => _TabEntryState();
+}
+
+class _TabEntryState extends State<_TabEntry> {
+  bool _hovered = false;
+
+  void _hover(bool hovered) {
+    if (hovered != _hovered) {
+      setState(() => _hovered = hovered);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final FieldNotesShadows shadows = context.shadows;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: selected ? Palette.coral : _clear,
-        border: selected ? shadows.outline : _clearOutline,
-        borderRadius: _railItemRadius,
-        boxShadow: selected ? shadows.emphasis : null,
-      ),
-      child: Padding(
-        padding: _railItemPadding,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              tab.label,
-              style: context.textStyles.toastSans.copyWith(
-                color: selected ? Palette.onAccent : colors.ink,
+    final SettingsTab tab = widget.tab;
+    final bool selected = widget.selected;
+    final Color? fill = selected
+        ? Palette.coral.withValues(alpha: settingsTabSelectedOpacity)
+        : _hovered
+        ? colors.ink.withValues(alpha: settingsTabHoverOpacity)
+        : null;
+    return Semantics(
+      key: settingsTabKey(tab),
+      button: true,
+      selected: selected,
+      label: tab.label,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (PointerEnterEvent _) => _hover(true),
+        onExit: (PointerExitEvent _) => _hover(false),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onPressed,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: _hitInset),
+            child: FocusRing(
+              onPressed: widget.onPressed,
+              borderRadius: _entryRadius,
+              child: ExcludeSemantics(
+                child: Container(
+                  key: settingsTabFaceKey(tab),
+                  constraints: const BoxConstraints(
+                    minHeight: settingsTabEntryMinHeight,
+                  ),
+                  padding: _entryPadding,
+                  decoration: BoxDecoration(
+                    color: fill,
+                    borderRadius: _entryRadius,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      SettingsIcon(
+                        tab.glyph,
+                        size: settingsTabIconSize,
+                        color: selected ? colors.accentInk : colors.ink,
+                      ),
+                      const SizedBox(width: _iconGap),
+                      Expanded(
+                        child: Text(
+                          tab.label,
+                          style: context.textStyles.labelSans.copyWith(
+                            fontSize: _labelSize,
+                            fontWeight: FontWeight.w600,
+                            color: colors.ink,
+                          ),
+                        ),
+                      ),
+                      if (widget.marked) ...<Widget>[
+                        const SizedBox(width: _iconGap),
+                        Container(
+                          key: settingsTabMarkKey(tab),
+                          width: settingsTabMarkSize,
+                          height: settingsTabMarkSize,
+                          decoration: BoxDecoration(
+                            color: Palette.coral,
+                            shape: BoxShape.circle,
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: Palette.coral.withValues(
+                                  alpha: settingsTabMarkRingOpacity,
+                                ),
+                                spreadRadius: settingsTabMarkRing,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: _sublabelGap),
-            Text(
-              tab.sublabel,
-              style: _sublabelStyle.copyWith(
-                color: selected ? Palette.onDark85 : colors.muted,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

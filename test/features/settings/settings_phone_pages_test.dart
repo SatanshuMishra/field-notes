@@ -18,6 +18,7 @@ import 'package:field_notes/data/sync/relay_client.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/icons/settings_icons.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -41,6 +42,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sync_protocol/sync_protocol.dart';
 
 import '../../app/support/app_shell_harness.dart';
@@ -67,6 +69,15 @@ const Map<SettingsTab, String> _labels = <SettingsTab, String>{
   SettingsTab.syncStorage: 'Sync & storage',
   SettingsTab.remindersSound: 'Reminders & sound',
   SettingsTab.data: 'Data',
+  SettingsTab.about: 'About',
+};
+
+const Map<SettingsTab, SettingsGlyph> _glyphs = <SettingsTab, SettingsGlyph>{
+  SettingsTab.journal: SettingsGlyph.book,
+  SettingsTab.syncStorage: SettingsGlyph.flip,
+  SettingsTab.remindersSound: SettingsGlyph.bell,
+  SettingsTab.data: SettingsGlyph.archive,
+  SettingsTab.about: SettingsGlyph.info,
 };
 
 const Map<SettingsTab, String> _syncOffSummaries = <SettingsTab, String>{
@@ -764,5 +775,111 @@ void main() {
     _expectPageHeading(tester, devicesTitle);
     expect(find.text('Field phone'), findsOneWidget);
     expect(find.text('Studio Mac'), findsNothing);
+  });
+
+  testWidgets('the phone list shows five sections with icon tiles', (
+    WidgetTester tester,
+  ) async {
+    PackageInfo.setMockInitialValues(
+      appName: 'Field Notes',
+      packageName: 'dev.satanshumishra.field_notes',
+      version: '1.4.2',
+      buildNumber: '42',
+      buildSignature: '',
+    );
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final FieldNotesColors colors = FieldNotesColors.light;
+    await _pumpPhone(tester);
+
+    final Finder card = _inside(_list, find.byType(StickerCard));
+    expect(card, findsOneWidget);
+    expect(
+      _inside(card, find.byType(DashedDivider)),
+      findsNWidgets(SettingsTab.values.length - 1),
+    );
+    expect(SettingsTab.values, hasLength(5));
+    final Map<SettingsTab, String> summaries = <SettingsTab, String>{
+      ..._syncOffSummaries,
+      SettingsTab.about: 'Version 1.4.2',
+    };
+    double previousBottom = double.negativeInfinity;
+    for (final SettingsTab tab in SettingsTab.values) {
+      final String label = _labels[tab]!;
+      final Finder row = _row(tab);
+      expect(_inside(card, row), findsOneWidget, reason: label);
+      final Rect rowRect = tester.getRect(row);
+      expect(rowRect.top, greaterThan(previousBottom), reason: label);
+      expect(
+        rowRect.height,
+        greaterThanOrEqualTo(_rowMinHeight),
+        reason: label,
+      );
+      previousBottom = rowRect.bottom;
+
+      final Finder tile = find.byKey(settingsSectionTileKey(tab));
+      expect(_inside(row, tile), findsOneWidget, reason: label);
+      final Rect tileRect = tester.getRect(tile);
+      expect(tileRect.size, const Size(42, 42), reason: label);
+      expect(
+        tileRect.left,
+        moreOrLessEquals(rowRect.left, epsilon: _tolerance),
+      );
+      expect(
+        tileRect.center.dy,
+        moreOrLessEquals(rowRect.center.dy, epsilon: _tolerance),
+        reason: label,
+      );
+      final BoxDecoration face =
+          tester.widget<Container>(tile).decoration! as BoxDecoration;
+      expect(face.color?.toARGB32(), colors.cardBright.toARGB32());
+      final Border border = face.border! as Border;
+      expect(border.top.width, 1.5);
+      expect(border.top.color.toARGB32(), colors.line.toARGB32());
+      expect(face.borderRadius, BorderRadius.circular(12));
+      final Finder icon = _inside(tile, find.byType(SettingsIcon));
+      expect(icon, findsOneWidget, reason: label);
+      final SettingsIcon glyph = tester.widget<SettingsIcon>(icon);
+      expect(glyph.glyph, _glyphs[tab], reason: label);
+      expect(glyph.size, 20, reason: label);
+      expect(glyph.strokeWidth, closeTo(1.8, 1e-6), reason: label);
+      expect(glyph.color.toARGB32(), colors.ink.toARGB32(), reason: label);
+      expect(tester.getSize(icon), const Size(20, 20), reason: label);
+
+      final Finder name = _inside(row, find.text(label));
+      final TextStyle? nameStyle = _text(tester, name).style;
+      expect(nameStyle?.fontFamily, TypographyTokens.sans, reason: label);
+      expect(nameStyle?.fontSize, 15, reason: label);
+      expect(nameStyle?.fontWeight, FontWeight.w600, reason: label);
+      expect(
+        tester.getRect(name).left - tileRect.right,
+        moreOrLessEquals(12, epsilon: _tolerance),
+        reason: label,
+      );
+      final Finder summary = _inside(row, find.text(summaries[tab]!));
+      expect(summary, findsOneWidget, reason: label);
+      expect(
+        tester.getRect(summary).top - tester.getRect(name).bottom,
+        moreOrLessEquals(3, epsilon: _tolerance),
+        reason: label,
+      );
+      final Finder chevron = _inside(row, find.byType(ChevronGlyph));
+      expect(chevron, findsOneWidget, reason: label);
+      expect(
+        tester.getSemantics(row),
+        isSemantics(
+          label: label,
+          hint: summaries[tab],
+          isButton: true,
+          hasTapAction: true,
+        ),
+        reason: label,
+      );
+    }
+    semantics.dispose();
+
+    await _open(tester, SettingsTab.about);
+    _expectPageHeading(tester, 'About');
+    _expectPill(tester, 'Settings');
+    expect(find.text('A journal of days · Version 1.4.2'), findsOneWidget);
   });
 }

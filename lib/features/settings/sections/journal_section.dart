@@ -1,5 +1,4 @@
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
-import 'package:field_notes/design/widgets/sticker_button.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart'
     as capabilities;
@@ -46,93 +45,103 @@ class JournalSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bool spellCheckWorks =
         spellCheckAvailability == SpellCheckAvailability.available;
-    return SettingsSection(
-      title: 'Journal',
-      children: <Widget>[
-        SettingsFieldRow(
-          label: 'Appearance',
-          description: 'Light, dark, or match your device.',
-          control: SettingsSegmented<Appearance>(
-            segments: <SettingsSegment<Appearance>>[
-              for (final Appearance appearance in Appearance.values)
-                SettingsSegment<Appearance>(
-                  value: appearance,
-                  label: _appearanceLabel(appearance),
+    return SettingsSection.grouped(
+      groups: <SettingsGroup>[
+        SettingsGroup(
+          label: 'look',
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Appearance',
+              description: 'Light, dark, or match your device.',
+              control: SettingsSegmented<Appearance>(
+                segments: <SettingsSegment<Appearance>>[
+                  for (final Appearance appearance in Appearance.values)
+                    SettingsSegment<Appearance>(
+                      value: appearance,
+                      label: _appearanceLabel(appearance),
+                    ),
+                ],
+                value: settings.appearance,
+                onChanged: (Appearance value) => _apply(
+                  ref,
+                  () =>
+                      ref.read(settingsControllerProvider).setAppearance(value),
                 ),
-            ],
-            value: settings.appearance,
-            onChanged: (Appearance value) => _apply(
-              ref,
-              () => ref.read(settingsControllerProvider).setAppearance(value),
-            ),
-          ),
-        ),
-        SettingsFieldRow(
-          label: 'Text size',
-          description: 'Applies across the app.',
-          control: SettingsSegmented<TextSize>(
-            segments: <SettingsSegment<TextSize>>[
-              for (final TextSize size in TextSize.values)
-                SettingsSegment<TextSize>(
-                  value: size,
-                  label: _textSizeLabel(size),
-                ),
-            ],
-            value: settings.textSize,
-            onChanged: (TextSize size) => _apply(
-              ref,
-              () =>
-                  ref.read(settingsControllerProvider).setTextSize(size.value),
-            ),
-          ),
-        ),
-        SettingsFieldRow(
-          label: 'Week starts on',
-          description: 'Used by the calendar and this-week garden.',
-          control: SettingsSelect<WeekStart>(
-            options: <SettingsSelectOption<WeekStart>>[
-              for (final WeekStart option in WeekStart.values)
-                SettingsSelectOption<WeekStart>(
-                  value: option,
-                  label: option.label,
-                ),
-            ],
-            value: settings.weekStart,
-            onChanged: (WeekStart value) => _apply(
-              ref,
-              () => ref.read(settingsControllerProvider).setWeekStart(value),
-            ),
-          ),
-        ),
-        if (spellCheckAvailable)
-          SettingsFieldRow(
-            label: 'Spell check',
-            description: spellCheckWorks
-                ? 'Underlines misspelled words as you write. Checked on this device only.'
-                : spellCheckUnavailableDescription,
-            control: SettingsToggle(
-              key: spellCheckToggleKey,
-              semanticLabel: 'Spell check',
-              enabled: spellCheckWorks,
-              value: spellCheckWorks && settings.spellCheckEnabled,
-              onChanged: (bool value) => _apply(
-                ref,
-                () => ref
-                    .read(settingsControllerProvider)
-                    .setSpellCheckEnabled(value),
               ),
             ),
-          ),
-        SettingsFieldRow(
-          label: 'Show the tour again',
-          description: 'A map of where everything lives.',
-          control: StickerButton(
-            label: 'Show tour',
-            variant: StickerButtonVariant.secondary,
-            padTapTarget: true,
-            onPressed: () =>
-                ref.read(onboardingControllerProvider.notifier).showMap(),
-          ),
+            SettingsFieldRow(
+              label: 'Text size',
+              description: 'Applies across the app.',
+              control: SettingsSegmented<TextSize>(
+                segments: <SettingsSegment<TextSize>>[
+                  for (final TextSize size in TextSize.values)
+                    SettingsSegment<TextSize>(
+                      value: size,
+                      label: _textSizeLabel(size),
+                    ),
+                ],
+                value: settings.textSize,
+                onChanged: (TextSize size) => _apply(
+                  ref,
+                  () => ref
+                      .read(settingsControllerProvider)
+                      .setTextSize(size.value),
+                ),
+              ),
+            ),
+          ],
+        ),
+        SettingsGroup(
+          label: 'writing',
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Week starts on',
+              description: 'Used by the calendar and this-week garden.',
+              control: SettingsSelect<WeekStart>(
+                options: <SettingsSelectOption<WeekStart>>[
+                  for (final WeekStart option in WeekStart.values)
+                    SettingsSelectOption<WeekStart>(
+                      value: option,
+                      label: option.label,
+                    ),
+                ],
+                value: settings.weekStart,
+                onChanged: (WeekStart value) => _apply(
+                  ref,
+                  () =>
+                      ref.read(settingsControllerProvider).setWeekStart(value),
+                ),
+              ),
+            ),
+            if (spellCheckAvailable)
+              SettingsFieldRow(
+                label: 'Spell check',
+                description: spellCheckWorks
+                    ? 'Underlines misspelled words as you write. Checked on this device only.'
+                    : spellCheckUnavailableDescription,
+                control: SettingsToggle(
+                  key: spellCheckToggleKey,
+                  semanticLabel: 'Spell check',
+                  enabled: spellCheckWorks,
+                  value: spellCheckWorks && settings.spellCheckEnabled,
+                  onChanged: (bool value) => _apply(
+                    ref,
+                    () => ref
+                        .read(settingsControllerProvider)
+                        .setSpellCheckEnabled(value),
+                  ),
+                ),
+              ),
+            SettingsFieldRow(
+              label: 'Show the tour again',
+              description: 'A map of where everything lives.',
+              control: SettingsActionButton(
+                label: 'Show tour',
+                onPressed: () =>
+                    ref.read(onboardingControllerProvider.notifier).showMap(),
+              ),
+            ),
+          ],
         ),
       ],
     );

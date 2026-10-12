@@ -5,6 +5,7 @@ import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/settings/sections/about_section.dart';
 import 'package:field_notes/features/settings/sections/data_section.dart';
 import 'package:field_notes/features/settings/sections/journal_section.dart';
 import 'package:field_notes/features/settings/sections/reminders_sound_section.dart';
@@ -21,6 +22,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/sync_overrides.dart';
+import '../../support/update_overrides.dart';
 import 'support/fake_settings_repository.dart';
 import 'support/recording_reminder_scheduler.dart';
 import 'support/settings_harness.dart';
@@ -49,6 +51,7 @@ Future<void> _pumpScreen(
           RecordingReminderScheduler(),
         ),
         ...syncOffOverrides(),
+        ...updateQuietOverrides(),
       ],
     ),
   );
@@ -67,6 +70,7 @@ void main() {
       SyncStorageSection,
       RemindersSoundSection,
       DataSection,
+      AboutSection,
     ]) {
       expect(
         find.byType(section, skipOffstage: false),
@@ -75,6 +79,9 @@ void main() {
       );
     }
     expect(find.text('preferences'), findsOneWidget);
+    for (final SettingsTab tab in SettingsTab.values) {
+      expect(find.byKey(settingsTabKey(tab)), findsOneWidget, reason: tab.name);
+    }
 
     await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
     await tester.pumpAndSettle();
@@ -86,7 +93,7 @@ void main() {
         of: find.byType(SettingsScreen),
         matching: find.text('Sync & storage'),
       ),
-      findsNWidgets(2),
+      findsOneWidget,
     );
   });
 

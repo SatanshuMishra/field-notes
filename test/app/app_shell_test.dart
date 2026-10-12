@@ -108,6 +108,12 @@ void main() {
       _expectLoadedSettingsScreen(
         navigation: find.byKey(settingsTabRailKey),
         opened: find.byType(JournalSection),
+        heading: 'settings',
+      );
+      expect(find.text('preferences'), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(settingsContentTitleKey)).data,
+        'Journal',
       );
     });
 

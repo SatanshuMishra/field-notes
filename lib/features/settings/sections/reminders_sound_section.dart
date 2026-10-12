@@ -45,55 +45,73 @@ class RemindersSoundSection extends ConsumerWidget {
         settings.reminderEnabled &&
         ref.watch(reminderPermissionStatusProvider).value ==
             ReminderPermission.denied;
-    return SettingsSection(
-      title: 'Reminders & sound',
-      children: <Widget>[
-        SettingsFieldRow(
-          label: 'Daily reminder',
-          description: 'One nudge a day, skipped once you have written.',
-          control: SettingsToggle(
-            semanticLabel: 'Daily reminder',
-            value: settings.reminderEnabled,
-            onChanged: (bool value) => _setReminderEnabled(ref, value),
-          ),
-        ),
-        if (notificationsOff) NotificationsOffNotice(onFeedback: onFeedback),
-        SettingsFieldRow(
-          label: 'Reflection question',
-          description: 'Show a gentle prompt when recording voice or video.',
-          control: SettingsToggle(
-            semanticLabel: 'Reflection question',
-            value: settings.reflectionPromptsEnabled,
-            onChanged: (bool value) => _apply(
-              ref,
-              () => ref
-                  .read(settingsControllerProvider)
-                  .setReflectionPromptsEnabled(value),
+    return SettingsSection.grouped(
+      groups: <SettingsGroup>[
+        SettingsGroup(
+          label: 'daily nudge',
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Daily reminder',
+              description: 'One nudge a day, skipped once you have written.',
+              control: SettingsToggle(
+                semanticLabel: 'Daily reminder',
+                value: settings.reminderEnabled,
+                onChanged: (bool value) => _setReminderEnabled(ref, value),
+              ),
             ),
-          ),
-        ),
-        SettingsFieldRow(
-          label: 'Reminder time',
-          description: 'When the nudge arrives.',
-          control: SettingsTimeField(
-            value: TimeOfDay(
-              hour: settings.reminderTime.hour,
-              minute: settings.reminderTime.minute,
+            SettingsFieldRow(
+              label: 'Reminder time',
+              description: 'When the nudge arrives.',
+              control: SettingsTimeField(
+                value: TimeOfDay(
+                  hour: settings.reminderTime.hour,
+                  minute: settings.reminderTime.minute,
+                ),
+                onTap: () => _chooseTime(context, ref),
+              ),
             ),
-            onTap: () => _chooseTime(context, ref),
-          ),
+            if (notificationsOff)
+              NotificationsOffNotice(onFeedback: onFeedback),
+          ],
         ),
-        SettingsFieldRow(
-          label: 'Sound effects',
-          description: 'A soft pencil sound when you plant a mood.',
-          control: SettingsToggle(
-            semanticLabel: 'Sound effects',
-            value: settings.soundEnabled,
-            onChanged: (bool value) => _apply(
-              ref,
-              () => ref.read(settingsControllerProvider).setSoundEnabled(value),
+        SettingsGroup(
+          label: 'while recording',
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Reflection question',
+              description:
+                  'Show a gentle prompt when recording voice or video.',
+              control: SettingsToggle(
+                semanticLabel: 'Reflection question',
+                value: settings.reflectionPromptsEnabled,
+                onChanged: (bool value) => _apply(
+                  ref,
+                  () => ref
+                      .read(settingsControllerProvider)
+                      .setReflectionPromptsEnabled(value),
+                ),
+              ),
             ),
-          ),
+          ],
+        ),
+        SettingsGroup(
+          label: 'sound',
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Sound effects',
+              description: 'A soft pencil sound when you plant a mood.',
+              control: SettingsToggle(
+                semanticLabel: 'Sound effects',
+                value: settings.soundEnabled,
+                onChanged: (bool value) => _apply(
+                  ref,
+                  () => ref
+                      .read(settingsControllerProvider)
+                      .setSoundEnabled(value),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

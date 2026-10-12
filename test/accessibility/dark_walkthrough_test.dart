@@ -32,6 +32,7 @@ import 'package:field_notes/features/search/search_screen.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
+import 'package:field_notes/features/settings/widgets/devices_dialog.dart';
 import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
@@ -488,6 +489,16 @@ void main() {
 
         if (layout.platform == TargetPlatform.android) {
           await _tap(tester, find.widgetWithText(StickerButton, manageLabel));
+        } else {
+          await _tap(tester, find.text(manageDevicesLabel));
+          _expectDark(tester, find.byType(DevicesDialog), 'the devices dialog');
+          expect(
+            find.descendant(
+              of: find.byType(DevicesDialog),
+              matching: find.byType(DeviceList),
+            ),
+            findsOneWidget,
+          );
         }
         _expectDark(tester, find.byType(DeviceList), 'the device list');
       }, variant: TargetPlatformVariant.only(layout.platform));

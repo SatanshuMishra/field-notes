@@ -11,6 +11,7 @@ import '../../design/tokens/tokens.dart';
 import 'keep_focus_in_view.dart';
 import 'phone_bottom_bar.dart';
 import 'shell_destination.dart';
+import 'sidebar_shell.dart';
 import 'system_bars.dart';
 
 const double phoneHeaderBarHeight = 44;
@@ -54,6 +55,7 @@ class BottomBarShell extends StatefulWidget {
     required this.onCapture,
     required this.body,
     this.obscured = false,
+    this.settingsBadge = false,
   }) : assert(
          destinations.length == 4,
          'BottomBarShell requires four destinations',
@@ -65,6 +67,7 @@ class BottomBarShell extends StatefulWidget {
   final VoidCallback onCapture;
   final Widget body;
   final bool obscured;
+  final bool settingsBadge;
 
   @override
   State<BottomBarShell> createState() => _BottomBarShellState();
@@ -300,7 +303,7 @@ class _BottomBarShellState extends State<BottomBarShell> {
     void open() => widget.onSelect(ShellDestination.settings);
     return Semantics(
       button: true,
-      label: ShellDestination.settings.label,
+      label: settingsSemanticLabel(badged: widget.settingsBadge),
       child: GestureDetector(
         key: const ValueKey<String>('gear-button'),
         behavior: HitTestBehavior.opaque,
@@ -312,11 +315,14 @@ class _BottomBarShellState extends State<BottomBarShell> {
             borderRadius: _gearRadius,
             placement: FocusRingPlacement.edge,
             child: Center(
-              child: ExcludeSemantics(
-                child: Icon(
-                  Icons.settings_outlined,
-                  size: _gearIconSize,
-                  color: ink,
+              child: SettingsBadged(
+                badged: widget.settingsBadge,
+                child: ExcludeSemantics(
+                  child: Icon(
+                    Icons.settings_outlined,
+                    size: _gearIconSize,
+                    color: ink,
+                  ),
                 ),
               ),
             ),

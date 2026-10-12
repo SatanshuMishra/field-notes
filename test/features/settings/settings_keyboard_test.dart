@@ -21,6 +21,8 @@ const List<String> _stateIds = <String>[
   'b6-settings-reminders',
   'b7-settings-journal',
   'b8-settings-data',
+  'b9-settings-about',
+  'b10-settings-about-phone',
   'c10-discard-dialog',
   'c18-discard-recording',
   'd13-change-mood-dialog',

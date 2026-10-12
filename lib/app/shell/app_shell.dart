@@ -14,6 +14,9 @@ import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/today/today.dart';
+import 'package:field_notes/features/updates/ui/update_greeting.dart';
+import 'package:field_notes/features/updates/ui/update_rail_chip.dart';
+import 'package:field_notes/features/updates/update_providers.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:field_notes/state/sync_providers.dart';
@@ -97,6 +100,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     final bool obscured =
         ref.watch(onboardingControllerProvider) is! OnboardingFlowHidden;
     final FlowerKind? flower = _todayFlower();
+    final bool updateAvailable = ref.watch(updateNoticeProvider) != null;
     final Widget body = ShellContent(destination: selected);
     final Widget shell = switch (layout) {
       ShellLayout.sidebar => SidebarShell(
@@ -109,6 +113,11 @@ class _AppShellState extends ConsumerState<AppShell> {
         onCollapsedChanged: _setSidebarCollapsed,
         syncStatus: (BuildContext context, bool collapsed) =>
             SidebarSyncStatus(collapsed: collapsed),
+        updateNotice: updateAvailable
+            ? (BuildContext context, bool collapsed) =>
+                  UpdateRailChip(collapsed: collapsed)
+            : null,
+        settingsBadge: updateAvailable,
         body: body,
         obscured: obscured,
       ),
@@ -122,6 +131,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           onCapture: onCapture,
           body: body,
           obscured: obscured,
+          settingsBadge: updateAvailable,
         ),
       ),
     };
@@ -135,6 +145,7 @@ class _AppShellState extends ConsumerState<AppShell> {
             IgnorePointer(
               child: ExcludeFocus(child: PetalDrift(flower: flower)),
             ),
+          const UpdateGreeting(),
         ],
       ),
     );

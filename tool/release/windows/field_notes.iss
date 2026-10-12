@@ -34,3 +34,10 @@ Name: "{autoprograms}\Field Notes"; Filename: "{app}\field_notes.exe"; AppUserMo
 
 [Run]
 Filename: "{app}\field_notes.exe"; Description: "Launch Field Notes"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\field_notes.exe"; Flags: nowait skipifnotsilent; Check: ShouldRelaunch
+
+[Code]
+function ShouldRelaunch: Boolean;
+begin
+  Result := ExpandConstant('{param:RELAUNCH|0}') = '1';
+end;

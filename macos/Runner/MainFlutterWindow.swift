@@ -35,6 +35,7 @@ class MainFlutterWindow: NSWindow {
   private var spellCheckBridge: SpellCheckBridge?
   private var imagePasteboardBridge: ImagePasteboardBridge?
   private var fileDropBridge: FileDropBridge?
+  private var sparkleUpdaterBridge: SparkleUpdaterBridge?
   private var stayAwakeActivity: NSObjectProtocol?
   private var appearanceObservation: NSKeyValueObservation?
   private var windowButtonPitch: CGFloat = 0
@@ -61,6 +62,7 @@ class MainFlutterWindow: NSWindow {
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
+    self.sparkleUpdaterBridge = SparkleUpdaterBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.observeWindowButtonLayout()
 
     super.awakeFromNib()

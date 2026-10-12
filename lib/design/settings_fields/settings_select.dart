@@ -20,6 +20,20 @@ const TextStyle _sheetRowStyle = TextStyle(
   fontWeight: FontWeight.w400,
 );
 
+const TextStyle _sidebarValueStyle = TextStyle(
+  fontFamily: TypographyTokens.sans,
+  fontSize: 13,
+  fontWeight: FontWeight.w400,
+);
+const BorderRadius _sidebarFieldRadius = BorderRadius.all(Radius.circular(9));
+const EdgeInsets _sidebarFieldPadding = EdgeInsets.symmetric(
+  horizontal: 10 + Shapes.outlineWidth,
+  vertical: 4 + Shapes.outlineWidth,
+);
+const double _sidebarChevronSize = 14;
+const double _sidebarChevronGap = 7;
+const double _sidebarMinTapTarget = 24;
+
 class SettingsSelectOption<T> {
   const SettingsSelectOption({required this.value, required this.label});
 
@@ -92,14 +106,23 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
     final SettingsSelectOption<T> current = widget.options.firstWhere(
       (SettingsSelectOption<T> o) => o.value == widget.value,
     );
+    final bool sheet = _usesSheet;
+    final BorderRadius radius = sheet
+        ? Shapes.buttonBorderRadius
+        : _sidebarFieldRadius;
+    final double minTapTarget = sheet
+        ? kMinInteractiveDimension
+        : _sidebarMinTapTarget;
     final Widget field = DecoratedBox(
       decoration: BoxDecoration(
         color: widget.surface ?? context.colors.cardBright,
         border: widget.border ?? context.shadows.outline,
-        borderRadius: Shapes.buttonBorderRadius,
+        borderRadius: radius,
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: sheet
+            ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
+            : _sidebarFieldPadding,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -107,15 +130,19 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
               child: Text(
                 current.label,
                 overflow: TextOverflow.ellipsis,
-                style: context.textStyles.bodySans.copyWith(
-                  color: widget.foreground,
-                ),
+                style: sheet
+                    ? context.textStyles.bodySans.copyWith(
+                        color: widget.foreground,
+                      )
+                    : _sidebarValueStyle.copyWith(
+                        color: widget.foreground ?? context.colors.ink,
+                      ),
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: sheet ? 8 : _sidebarChevronGap),
             Icon(
               Icons.expand_more,
-              size: 18,
+              size: sheet ? 18 : _sidebarChevronSize,
               color: widget.foreground ?? context.colors.ink,
             ),
           ],
@@ -128,15 +155,15 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
         container: true,
         button: true,
         enabled: _canOpen,
-        onTap: _usesSheet && _canOpen ? _open : null,
+        onTap: sheet && _canOpen ? _open : null,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           excludeFromSemantics: true,
           onTap: _canOpen ? _open : null,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: kMinInteractiveDimension,
-              minHeight: kMinInteractiveDimension,
+            constraints: BoxConstraints(
+              minWidth: minTapTarget,
+              minHeight: minTapTarget,
             ),
             child: Center(
               widthFactor: 1,
@@ -145,9 +172,9 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
                 enabled: _canOpen,
                 onPressed: _open,
                 surface: widget.focusSurface,
-                borderRadius: Shapes.buttonBorderRadius,
+                borderRadius: radius,
                 includeFocusSemantics: false,
-                child: _usesSheet
+                child: sheet
                     ? field
                     : ExcludeFocus(
                         child: PopupMenuButton<T>(

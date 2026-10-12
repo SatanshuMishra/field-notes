@@ -7,6 +7,7 @@ import '../../data/database/app_database.dart' as db;
 import '../../data/media/blob_paths.dart';
 import '../../data/media/media_exceptions.dart';
 import '../../data/media/media_reachability.dart';
+import '../../data/settings/settings_keys.dart';
 import '../../domain/services/export_service.dart';
 import '../../domain/services/media_store.dart';
 import 'data_exceptions.dart';
@@ -46,7 +47,10 @@ class JournalExportService implements ExportService {
         'entries': [for (final e in entries) _entryJson(e)],
         'entryPhotos': [for (final ph in photos) _photoJson(ph)],
         'mediaBlobs': [for (final b in blobs) _mediaBlobJson(b)],
-        'settings': {for (final s in settings) s.key: s.value},
+        'settings': {
+          for (final s in settings)
+            if (!SettingsKeys.isUpdateRecordKey(s.key)) s.key: s.value,
+        },
       };
 
       final mediaFiles = <String, List<int>>{};
