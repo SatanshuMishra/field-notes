@@ -19,6 +19,7 @@ import 'package:field_notes/state/installed_app_provider.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -854,4 +855,63 @@ void main() {
       );
     }
   });
+
+  testWidgets(
+    'the desktop About status row exposes its visible actions as buttons',
+    (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+
+      final _FixedUpdates current = _FixedUpdates(UpdateCurrent(_now));
+      await _pumpAbout(
+        tester,
+        platform: TargetPlatform.macOS,
+        updates: current,
+      );
+      final SemanticsNode row = tester.getSemantics(_statusRow());
+      expect(row, isSemantics(isLiveRegion: true));
+      expect(row.getSemanticsData().flagsCollection.isButton, isFalse);
+      expect(find.text('Field Notes is up to date'), findsOneWidget);
+      final Finder check = find.bySemanticsLabel('Check for updates');
+      expect(check, findsOneWidget);
+      final SemanticsNode checkNode = tester.getSemantics(check);
+      expect(
+        checkNode,
+        isSemantics(
+          label: 'Check for updates',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      checkNode.owner!.performAction(checkNode.id, SemanticsAction.tap);
+      await tester.pump();
+      expect(current.checks, 1);
+
+      final _FixedUpdates available = _FixedUpdates(
+        UpdateAvailable(_release, _now),
+      );
+      await _pumpAbout(
+        tester,
+        platform: TargetPlatform.macOS,
+        updates: available,
+      );
+      expect(
+        tester
+            .getSemantics(_statusRow())
+            .getSemanticsData()
+            .flagsCollection
+            .isButton,
+        isFalse,
+      );
+      for (final String action in <String>['Read changelog', 'Update now…']) {
+        final Finder button = find.bySemanticsLabel(action);
+        expect(button, findsOneWidget, reason: action);
+        expect(
+          tester.getSemantics(button),
+          isSemantics(label: action, isButton: true, hasTapAction: true),
+          reason: action,
+        );
+      }
+      handle.dispose();
+    },
+  );
 }

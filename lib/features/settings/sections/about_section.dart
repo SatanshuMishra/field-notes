@@ -342,11 +342,6 @@ class AboutSection extends ConsumerWidget {
     required bool automatic,
     required _AboutActions actions,
   }) {
-    final VoidCallback? rowAction = switch (status) {
-      UpdateIdle() || UpdateCurrent() || UpdateCheckFailed() => actions.check,
-      UpdateAvailable() => actions.openNew,
-      UpdateChecking() || UpdateDownloading() || UpdateRestarting() => null,
-    };
     final Widget control = switch (status) {
       UpdateIdle() ||
       UpdateCurrent() ||
@@ -411,7 +406,6 @@ class AboutSection extends ConsumerWidget {
                           )
                         : null,
                     control: control,
-                    onPressed: rowAction,
                   ),
                 ),
                 _AutomaticRow(automatic: automatic, actions: actions),
