@@ -34,6 +34,8 @@ void main() {
       'b6-settings-reminders',
       'b7-settings-journal',
       'b8-settings-data',
+      'b9-settings-about',
+      'b10-settings-about-phone',
     ]);
     expect(_ids(captureStates), <String>[
       'c1-chooser',
