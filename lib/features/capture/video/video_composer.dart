@@ -7,6 +7,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
+import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'camera_selection.dart';
@@ -68,6 +69,7 @@ class _VideoComposerConnectorState
   final List<Timer> _timers = <Timer>[];
   List<VideoTimelineEvent> _pendingEvents = const <VideoTimelineEvent>[];
   late final VideoRecorder _recorder;
+  late final RecordingWakeHold _wakeHold;
 
   void _startTicker() {
     _elapsedTicker?.cancel();
@@ -88,7 +90,14 @@ class _VideoComposerConnectorState
   void initState() {
     super.initState();
     _recorder = ref.read(videoRecorderProvider);
+    _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
     unawaited(_prepare());
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _wakeHold.update(live: !_closing && _phase.stage.holdsDeviceAwake);
   }
 
   Future<void> _prepare() async {
@@ -375,6 +384,8 @@ class _VideoComposerConnectorState
     if (entryId == null || !mounted) {
       return;
     }
+    _closing = true;
+    _wakeHold.update(live: false);
     await _release();
     if (!mounted) {
       return;
@@ -388,8 +399,9 @@ class _VideoComposerConnectorState
 
   Future<String> _persist() async {
     final VideoRecording recording = await _recorder.stop();
-    final CaptureService service =
-        await ref.read(captureServiceProvider.future);
+    final CaptureService service = await ref.read(
+      captureServiceProvider.future,
+    );
     final CaptureResult result = await service.capture(
       VideoCaptureRequest(
         date: widget.date,
@@ -423,6 +435,7 @@ class _VideoComposerConnectorState
       return;
     }
     _closing = true;
+    _wakeHold.update(live: false);
     _cancelBreath();
     _cancelTimers();
     _stopTicker();
@@ -473,6 +486,7 @@ class _VideoComposerConnectorState
       return;
     }
     _closing = true;
+    _wakeHold.update(live: false);
     _cancelBreath();
     _cancelTimers();
     _stopTicker();
@@ -518,6 +532,7 @@ class _VideoComposerConnectorState
     _cancelBreath();
     _cancelTimers();
     _stopTicker();
+    _wakeHold.dispose();
     unawaited(_release());
     super.dispose();
   }

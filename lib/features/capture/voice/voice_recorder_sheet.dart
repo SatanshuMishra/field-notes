@@ -65,8 +65,10 @@ const Color _letGoInk = Color(0xFFB7A58C);
 const Color _keyHintInk = Color(0xFF9A8872);
 
 const double _minTapTarget = 48;
-const double _sidebarRingInset = 34;
-const double _bottomBarRingInset = 26;
+const double _sidebarLevelReach = 60;
+const double _bottomBarLevelReach = 44;
+const int _sidebarLevelSeed = 3;
+const int _bottomBarLevelSeed = 7;
 const double _sidebarOrbGlyph = 42;
 const double _bottomBarOrbGlyph = 36;
 const Alignment _orbHighlight = Alignment(-0.24, -0.36);
@@ -127,6 +129,7 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.elapsed = Duration.zero,
     this.errorMessage,
     this.letGoKey,
+    this.levels = const Stream<double>.empty(),
   });
 
   final VoiceRecorderPhase phase;
@@ -143,6 +146,7 @@ class VoiceRecorderSheet extends StatelessWidget {
   final Duration elapsed;
   final String? errorMessage;
   final Key? letGoKey;
+  final Stream<double> levels;
 
   bool get _saving => phase == VoiceRecorderPhase.saving;
 
@@ -205,7 +209,12 @@ class VoiceRecorderSheet extends StatelessWidget {
         onLeave: _saving || asking ? null : onCancel,
         trailing: sidebar ? _KeyHint(text: _keyHint(context)) : null,
         question: ReflectionPrompt(phase: phase.stage, showKicker: true),
-        centre: _OrbZone(phase: phase, sidebar: sidebar, onTap: _orbTap),
+        centre: _OrbZone(
+          phase: phase,
+          sidebar: sidebar,
+          levels: levels,
+          onTap: _orbTap,
+        ),
         status: _status(context),
         actions: _actions(sidebar),
       ),
@@ -301,40 +310,53 @@ class _OrbZone extends StatelessWidget {
   const _OrbZone({
     required this.phase,
     required this.sidebar,
+    required this.levels,
     required this.onTap,
   });
 
   final VoiceRecorderPhase phase;
   final bool sidebar;
+  final Stream<double> levels;
   final VoidCallback? onTap;
 
-  BreathingGlowMode? get _glow => switch (phase) {
-    VoiceRecorderPhase.breathing => BreathingGlowMode.settle,
-    VoiceRecorderPhase.recording => BreathingGlowMode.breathe,
-    _ => null,
-  };
+  Widget _surround(double zone) {
+    switch (phase) {
+      case VoiceRecorderPhase.breathing:
+        return Positioned.fill(
+          child: BreathingGlow(diameter: zone, mode: BreathingGlowMode.settle),
+        );
+      case VoiceRecorderPhase.recording || VoiceRecorderPhase.paused:
+        final double reach = sidebar
+            ? _sidebarLevelReach
+            : _bottomBarLevelReach;
+        return Positioned(
+          left: -reach,
+          top: -reach,
+          right: -reach,
+          bottom: -reach,
+          child: VoiceLevelField(
+            levels: levels,
+            active: phase == VoiceRecorderPhase.recording,
+            orbRadius: (sidebar ? voiceSidebarOrb : voiceBottomBarOrb) / 2,
+            seed: sidebar ? _sidebarLevelSeed : _bottomBarLevelSeed,
+          ),
+        );
+      case VoiceRecorderPhase.idle || VoiceRecorderPhase.saving:
+        return const Positioned.fill(child: SizedBox.shrink());
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final double zone = sidebar ? voiceSidebarOrbZone : voiceBottomBarOrbZone;
-    final BreathingGlowMode? glow = _glow;
     return SizedBox.square(
       key: voiceOrbZoneKey,
       dimension: zone,
       child: Stack(
         alignment: Alignment.center,
+        clipBehavior: Clip.none,
         children: <Widget>[
-          Positioned.fill(
-            child: glow == null
-                ? const SizedBox.shrink()
-                : BreathingGlow(
-                    diameter: zone,
-                    mode: glow,
-                    ringInset: glow == BreathingGlowMode.breathe
-                        ? (sidebar ? _sidebarRingInset : _bottomBarRingInset)
-                        : null,
-                  ),
-          ),
+          _surround(zone),
           _Orb(phase: phase, sidebar: sidebar, onTap: onTap),
         ],
       ),

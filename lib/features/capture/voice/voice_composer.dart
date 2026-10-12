@@ -7,6 +7,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
+import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'voice_recorder.dart';
@@ -54,13 +55,27 @@ class _VoiceComposerConnectorState
   Timer? _breath;
   bool _pending = false;
   bool _closing = false;
+  late final RecordingWakeHold _wakeHold;
 
   VoiceRecorder get _recorder => ref.read(voiceRecorderProvider);
+
+  @override
+  void initState() {
+    super.initState();
+    _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
+  }
+
+  @override
+  void setState(VoidCallback fn) {
+    super.setState(fn);
+    _wakeHold.update(live: !_closing && _phase.stage.holdsDeviceAwake);
+  }
 
   @override
   void dispose() {
     _stopTicker();
     _cancelBreath();
+    _wakeHold.dispose();
     super.dispose();
   }
 
@@ -234,6 +249,7 @@ class _VoiceComposerConnectorState
       return;
     }
     _closing = true;
+    _wakeHold.update(live: false);
     closeImmersiveRecorder<String>(
       context,
       result: entryId,
@@ -281,6 +297,7 @@ class _VoiceComposerConnectorState
       return;
     }
     _closing = true;
+    _wakeHold.update(live: false);
     _cancelBreath();
     _stopTicker();
     Navigator.of(context).pop();
@@ -316,6 +333,7 @@ class _VoiceComposerConnectorState
       return;
     }
     _closing = true;
+    _wakeHold.update(live: false);
     _cancelBreath();
     _stopTicker();
     await _recorder.cancel();
@@ -352,6 +370,7 @@ class _VoiceComposerConnectorState
         elapsed: _elapsed,
         errorMessage: _errorMessage,
         letGoKey: voiceDiscardConfirmKey,
+        levels: _recorder.level,
       ),
     );
   }

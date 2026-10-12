@@ -28,6 +28,8 @@ enum StagePhase {
 
   bool get isUnderway => index >= recording.index;
 
+  bool get holdsDeviceAwake => this != idle;
+
   String statusText({required ShellLayout layout, String? savingText}) {
     return switch (this) {
       StagePhase.idle =>

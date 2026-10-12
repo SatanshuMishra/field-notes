@@ -191,6 +191,7 @@ void _expectPhase(
   required double opacity,
   required bool pauseGlyph,
   required BreathingGlowMode? glow,
+  required bool? level,
   required bool timer,
 }) {
   expect(_status(tester), status);
@@ -216,6 +217,13 @@ void _expectPhase(
     pauseGlyph ? findsNothing : findsOneWidget,
   );
   expect(_glowMode(tester), glow);
+  final Finder field = find.byType(VoiceLevelField);
+  if (level == null) {
+    expect(field, findsNothing);
+  } else {
+    expect(field, findsOneWidget);
+    expect(tester.widget<VoiceLevelField>(field).active, level);
+  }
   expect(find.byKey(recorderTimerKey), timer ? findsOneWidget : findsNothing);
 }
 
@@ -366,6 +374,7 @@ void main() {
         opacity: 1,
         pauseGlyph: false,
         glow: null,
+        level: null,
         timer: false,
       );
       shown.add(_status(tester));
@@ -381,6 +390,7 @@ void main() {
         opacity: 1,
         pauseGlyph: false,
         glow: BreathingGlowMode.settle,
+        level: null,
         timer: false,
       );
       shown.add(_status(tester));
@@ -395,7 +405,8 @@ void main() {
         orbEnabled: true,
         opacity: 1,
         pauseGlyph: true,
-        glow: BreathingGlowMode.breathe,
+        glow: null,
+        level: true,
         timer: true,
       );
       shown.add(_status(tester));
@@ -410,6 +421,7 @@ void main() {
         opacity: 0.55,
         pauseGlyph: false,
         glow: null,
+        level: false,
         timer: true,
       );
       shown.add(_status(tester));
@@ -425,6 +437,7 @@ void main() {
         opacity: 0.35,
         pauseGlyph: false,
         glow: null,
+        level: null,
         timer: false,
       );
       shown.add(_status(tester));

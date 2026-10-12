@@ -46,9 +46,11 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 50));
 
+      expect(find.byType(BreathingGlow), findsNothing);
+      expect(find.byType(VoiceLevelField), findsOneWidget);
       expect(
-        tester.widget<BreathingGlow>(find.byType(BreathingGlow)).mode,
-        BreathingGlowMode.breathe,
+        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).active,
+        isTrue,
       );
       expect(find.byKey(recorderTimerKey), findsOneWidget);
       expect(find.text('0:07'), findsOneWidget);
