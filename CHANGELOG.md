@@ -4,6 +4,12 @@ Each release has a section `## [X.Y.Z] - YYYY-MM-DD` with an optional intro para
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-12
+
+### Improved
+
+- Field Notes from Google Play leaves out sync, so it needs no permission to upload in the background. Sync stays in the version from GitHub.
+
 ## [1.0.0] - 2026-10-12
 
 ### New
