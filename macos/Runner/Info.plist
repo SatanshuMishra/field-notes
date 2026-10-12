@@ -36,5 +36,15 @@
 	<string>Field Notes uses the microphone to record voice and video moments in your journal.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Field Notes needs access to your photo library so you can add photo memories to a journal entry.</string>
+	<key>SUFeedURL</key>
+	<string>https://github.com/SatanshuMishra/field-notes/releases/latest/download/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>$(FIELD_NOTES_UPDATE_PUBLIC_KEY)</string>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<false/>
+	<key>SUAutomaticallyUpdate</key>
+	<false/>
 </dict>
 </plist>

@@ -32,6 +32,7 @@
 		F1E1D0012EA0000100000002 /* SpellCheckBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000001 /* SpellCheckBridge.swift */; };
 		F1E1D0012EA0000100000004 /* ImagePasteboardBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000003 /* ImagePasteboardBridge.swift */; };
 		F1E1D0012EA0000100000006 /* FileDropBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000005 /* FileDropBridge.swift */; };
+		F1E1D0012EA0000100000008 /* SparkleUpdaterBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */; };
 		FEDBDF9E3D3259039777247A /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD5B39C2331B46FD47D3B4DE /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -96,6 +97,7 @@
 		F1E1D0012EA0000100000001 /* SpellCheckBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpellCheckBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000003 /* ImagePasteboardBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePasteboardBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000005 /* FileDropBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDropBridge.swift; sourceTree = "<group>"; };
+		F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdaterBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -190,6 +192,7 @@
 				F1E1D0012EA0000100000001 /* SpellCheckBridge.swift */,
 				F1E1D0012EA0000100000003 /* ImagePasteboardBridge.swift */,
 				F1E1D0012EA0000100000005 /* FileDropBridge.swift */,
+				F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -253,6 +256,7 @@
 				33CC10EB2044A3C60003C045 /* Resources */,
 				33CC110E2044A8840003C045 /* Bundle Framework */,
 				3399D490228B24CF009A79C7 /* ShellScript */,
+				B6DA60D9925EF8AF91CEE192 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -423,6 +427,23 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
+		B6DA60D9925EF8AF91CEE192 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -444,6 +465,7 @@
 				F1E1D0012EA0000100000002 /* SpellCheckBridge.swift in Sources */,
 				F1E1D0012EA0000100000004 /* ImagePasteboardBridge.swift in Sources */,
 				F1E1D0012EA0000100000006 /* FileDropBridge.swift in Sources */,
+				F1E1D0012EA0000100000008 /* SparkleUpdaterBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
