@@ -424,4 +424,59 @@ void main() {
       }
     }
   });
+
+  testWidgets('Unchanged: the desktop rail keeps Sync & storage', (
+    WidgetTester tester,
+  ) async {
+    await _pumpMacSettings(tester);
+
+    const List<(SettingsTab, String)> entries = <(SettingsTab, String)>[
+      (SettingsTab.journal, 'Journal'),
+      (SettingsTab.syncStorage, 'Sync & storage'),
+      (SettingsTab.remindersSound, 'Reminders & sound'),
+      (SettingsTab.data, 'Data'),
+      (SettingsTab.about, 'About'),
+    ];
+    final Finder rail = find.byKey(settingsTabRailKey);
+    expect(rail, findsOneWidget);
+    expect(
+      find.descendant(of: rail, matching: find.byType(SettingsIcon)),
+      findsNWidgets(entries.length),
+    );
+    double previousBottom = double.negativeInfinity;
+    for (final (SettingsTab tab, String name) in entries) {
+      final Finder entry = find.descendant(
+        of: rail,
+        matching: find.byKey(settingsTabKey(tab)),
+      );
+      expect(entry, findsOneWidget, reason: name);
+      expect(
+        find.descendant(of: entry, matching: find.text(name)),
+        findsOneWidget,
+        reason: name,
+      );
+      final Rect rect = tester.getRect(entry);
+      expect(
+        rect.top,
+        greaterThanOrEqualTo(previousBottom - _tolerance),
+        reason: name,
+      );
+      previousBottom = rect.bottom;
+    }
+
+    await tester.tap(find.byKey(settingsTabKey(SettingsTab.syncStorage)));
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<Text>(find.byKey(settingsContentTitleKey)).data,
+      'Sync & storage',
+    );
+    expect(
+      find.descendant(
+        of: find.byKey(settingsTabContentKey),
+        matching: find.byType(SyncStorageSection),
+      ),
+      findsOneWidget,
+    );
+  });
 }

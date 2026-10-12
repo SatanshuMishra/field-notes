@@ -463,7 +463,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SettingsNotice(message: notice, onDismiss: _dismissNotice),
           const SizedBox(height: _sectionGap),
         ],
-        for (final SettingsTab tab in SettingsTab.values)
+        for (final SettingsTab tab in settingsTabsFor(
+          syncAvailable: ref.watch(syncAvailableProvider),
+        ))
           Visibility(
             key: ValueKey<SettingsTab>(tab),
             visible: tab == shown,
