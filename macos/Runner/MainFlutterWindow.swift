@@ -25,6 +25,7 @@ private let windowChannelName = "field_notes/window"
 private let notificationSettingsChannelName = "field_notes/notification_settings"
 private let deviceStorageChannelName = "field_notes/device_storage"
 private let cameraSettingsChannelName = "field_notes/camera_settings"
+private let stayAwakeChannelName = "field_notes/stay_awake"
 private let cameraPrivacySettingsURL =
   "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
 private let notificationSettingsURLPrefix =
@@ -34,6 +35,7 @@ class MainFlutterWindow: NSWindow {
   private var spellCheckBridge: SpellCheckBridge?
   private var imagePasteboardBridge: ImagePasteboardBridge?
   private var fileDropBridge: FileDropBridge?
+  private var stayAwakeActivity: NSObjectProtocol?
   private var appearanceObservation: NSKeyValueObservation?
   private var windowButtonPitch: CGFloat = 0
   private var isLayingOutWindowButtons = false
@@ -55,6 +57,7 @@ class MainFlutterWindow: NSWindow {
     self.registerNotificationSettingsChannel(flutterViewController.engine.binaryMessenger)
     self.registerDeviceStorageChannel(flutterViewController.engine.binaryMessenger)
     self.registerCameraSettingsChannel(flutterViewController.engine.binaryMessenger)
+    self.registerStayAwakeChannel(flutterViewController.engine.binaryMessenger)
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
@@ -115,6 +118,43 @@ class MainFlutterWindow: NSWindow {
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  private func registerStayAwakeChannel(_ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: stayAwakeChannelName,
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { [weak self] call, result in
+      switch call.method {
+      case "hold":
+        self?.holdStayAwakeActivity()
+        result(nil)
+      case "release":
+        self?.releaseStayAwakeActivity()
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private func holdStayAwakeActivity() {
+    guard self.stayAwakeActivity == nil else {
+      return
+    }
+    self.stayAwakeActivity = ProcessInfo.processInfo.beginActivity(
+      options: [.userInitiated, .idleDisplaySleepDisabled, .idleSystemSleepDisabled],
+      reason: "Recording in Field Notes"
+    )
+  }
+
+  private func releaseStayAwakeActivity() {
+    guard let activity = self.stayAwakeActivity else {
+      return
+    }
+    ProcessInfo.processInfo.endActivity(activity)
+    self.stayAwakeActivity = nil
   }
 
   private func registerDeviceStorageChannel(_ messenger: FlutterBinaryMessenger) {

@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
 import android.view.View
+import android.view.WindowManager
 import dev.satanshumishra.field_notes.uploads.UploadChannel
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -55,6 +56,20 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, STAY_AWAKE_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "hold" -> {
+                        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        result.success(null)
+                    }
+                    "release" -> {
+                        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean {
@@ -94,6 +109,7 @@ class MainActivity : FlutterActivity() {
     private companion object {
         const val NOTIFICATION_SETTINGS_CHANNEL = "field_notes/notification_settings"
         const val BATTERY_SETTINGS_CHANNEL = "field_notes/battery_settings"
+        const val STAY_AWAKE_CHANNEL = "field_notes/stay_awake"
         const val SAMSUNG_CHECKABLE_LIST_ACTION = "com.samsung.android.sm.ACTION_OPEN_CHECKABLE_LISTACTIVITY"
         const val SAMSUNG_DEVICE_CARE_PACKAGE = "com.samsung.android.lool"
         const val SAMSUNG_ACTIVITY_TYPE_EXTRA = "activity_type"

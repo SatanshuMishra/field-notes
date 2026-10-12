@@ -20,7 +20,18 @@ enum VideoRecorderPhase {
   recording,
   paused,
   saving,
-  denied,
+  denied;
+
+  StagePhase get stage => switch (this) {
+    VideoRecorderPhase.preparing ||
+    VideoRecorderPhase.idle ||
+    VideoRecorderPhase.denied => StagePhase.idle,
+    VideoRecorderPhase.breathing ||
+    VideoRecorderPhase.arming => StagePhase.breathing,
+    VideoRecorderPhase.recording => StagePhase.recording,
+    VideoRecorderPhase.paused => StagePhase.paused,
+    VideoRecorderPhase.saving => StagePhase.saving,
+  };
 }
 
 const Key videoCloseKey = ValueKey<String>('video-close');
@@ -191,17 +202,6 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   bool get _isSaving => _phase == VideoRecorderPhase.saving;
   bool get _isDenied => _phase == VideoRecorderPhase.denied;
   bool get _canPause => widget.supportsPause && widget.onPause != null;
-
-  StagePhase get _stagePhase => switch (_phase) {
-    VideoRecorderPhase.preparing ||
-    VideoRecorderPhase.idle ||
-    VideoRecorderPhase.denied => StagePhase.idle,
-    VideoRecorderPhase.breathing ||
-    VideoRecorderPhase.arming => StagePhase.breathing,
-    VideoRecorderPhase.recording => StagePhase.recording,
-    VideoRecorderPhase.paused => StagePhase.paused,
-    VideoRecorderPhase.saving => StagePhase.saving,
-  };
 
   void _setSelfView(bool value) => setState(() => _selfView = value);
 
@@ -474,7 +474,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
           ),
         ],
       ),
-      child: ReflectionPrompt(phase: _stagePhase, showKicker: false),
+      child: ReflectionPrompt(phase: _phase.stage, showKicker: false),
     );
   }
 
@@ -529,7 +529,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
       );
     }
     return RecorderStatusLine(
-      phase: _stagePhase,
+      phase: _phase.stage,
       elapsed: widget.elapsed,
       savingText: widget.savingHint,
       inline: true,

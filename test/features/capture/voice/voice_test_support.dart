@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
@@ -47,6 +49,11 @@ class FakeVoiceRecorder implements VoiceRecorder {
 
   @override
   Duration elapsed = Duration.zero;
+
+  final StreamController<double> levels = StreamController<double>.broadcast();
+
+  @override
+  Stream<double> get level => levels.stream;
 
   int startCalls = 0;
   int pauseCalls = 0;
