@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/widgets.dart';
 
@@ -130,6 +131,19 @@ class NoteDraftController extends ChangeNotifier with WidgetsBindingObserver {
         state == AppLifecycleState.paused) {
       unawaited(flush());
     }
+  }
+
+  @override
+  Future<AppExitResponse> didRequestAppExit() async {
+    if (_sealed || _disposed) {
+      return AppExitResponse.exit;
+    }
+    try {
+      await flush();
+    } on DraftWriteException catch (error) {
+      debugPrint('Draft $key exit flush failed: $error');
+    }
+    return AppExitResponse.exit;
   }
 
   void _apply(String source) {
