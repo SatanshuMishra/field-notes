@@ -39,6 +39,8 @@ abstract interface class SettingsRepository {
 
   Future<void> setAllowMobileDataForMedia(bool value);
 
+  Future<void> setCheckForUpdatesAutomatically(bool value);
+
   Future<bool> hasStoredValues();
 
   Future<int> meadowKey();

@@ -15,4 +15,13 @@ abstract final class SettingsKeys {
   static const String meadowPausesWhenInactive = 'meadow_pauses_when_inactive';
   static const String keepAllMediaOnDevice = 'keep_all_media_on_device';
   static const String allowMobileDataForMedia = 'allow_mobile_data_for_media';
+  static const String checkForUpdatesAutomatically =
+      'check_for_updates_automatically';
+  static const String updateRecordPrefix = 'update_';
+  static const String updateLastCheckedAt = 'update_last_checked_at';
+  static const String updateLastAvailable = 'update_last_available';
+  static const String updateLastSeenVersion = 'update_last_seen_version';
+
+  static bool isUpdateRecordKey(String key) =>
+      key.startsWith(updateRecordPrefix);
 }

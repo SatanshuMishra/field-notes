@@ -20,6 +20,7 @@ class AppSettings {
     this.meadowPausesWhenInactive = true,
     this.keepAllMediaOnDevice = false,
     this.allowMobileDataForMedia = false,
+    this.checkForUpdatesAutomatically = true,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -37,6 +38,7 @@ class AppSettings {
     meadowPausesWhenInactive: true,
     keepAllMediaOnDevice: false,
     allowMobileDataForMedia: false,
+    checkForUpdatesAutomatically: true,
   );
 
   final bool reminderEnabled;
@@ -53,6 +55,7 @@ class AppSettings {
   final bool meadowPausesWhenInactive;
   final bool keepAllMediaOnDevice;
   final bool allowMobileDataForMedia;
+  final bool checkForUpdatesAutomatically;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -69,6 +72,7 @@ class AppSettings {
     bool? meadowPausesWhenInactive,
     bool? keepAllMediaOnDevice,
     bool? allowMobileDataForMedia,
+    bool? checkForUpdatesAutomatically,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -89,6 +93,8 @@ class AppSettings {
       keepAllMediaOnDevice: keepAllMediaOnDevice ?? this.keepAllMediaOnDevice,
       allowMobileDataForMedia:
           allowMobileDataForMedia ?? this.allowMobileDataForMedia,
+      checkForUpdatesAutomatically:
+          checkForUpdatesAutomatically ?? this.checkForUpdatesAutomatically,
     );
   }
 
@@ -110,7 +116,8 @@ class AppSettings {
           sidebarCollapsed == other.sidebarCollapsed &&
           meadowPausesWhenInactive == other.meadowPausesWhenInactive &&
           keepAllMediaOnDevice == other.keepAllMediaOnDevice &&
-          allowMobileDataForMedia == other.allowMobileDataForMedia;
+          allowMobileDataForMedia == other.allowMobileDataForMedia &&
+          checkForUpdatesAutomatically == other.checkForUpdatesAutomatically;
 
   @override
   int get hashCode => Object.hash(
@@ -128,6 +135,7 @@ class AppSettings {
     meadowPausesWhenInactive,
     keepAllMediaOnDevice,
     allowMobileDataForMedia,
+    checkForUpdatesAutomatically,
   );
 
   @override
@@ -142,5 +150,6 @@ class AppSettings {
       'sidebarCollapsed: $sidebarCollapsed, '
       'meadowPausesWhenInactive: $meadowPausesWhenInactive, '
       'keepAllMediaOnDevice: $keepAllMediaOnDevice, '
-      'allowMobileDataForMedia: $allowMobileDataForMedia)';
+      'allowMobileDataForMedia: $allowMobileDataForMedia, '
+      'checkForUpdatesAutomatically: $checkForUpdatesAutomatically)';
 }

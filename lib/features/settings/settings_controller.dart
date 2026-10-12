@@ -101,6 +101,13 @@ class SettingsController {
     );
   }
 
+  Future<SettingsWriteResult> setCheckForUpdatesAutomatically(bool value) {
+    return _write(
+      () => _repository.setCheckForUpdatesAutomatically(value),
+      'Could not save your update check setting.',
+    );
+  }
+
   Future<SettingsWriteResult> _write(
     Future<void> Function() action,
     String failureMessage,

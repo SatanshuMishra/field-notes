@@ -37,6 +37,7 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<bool> meadowPausesWhenInactiveWrites = <bool>[];
   final List<bool> keepAllMediaOnDeviceWrites = <bool>[];
   final List<bool> allowMobileDataForMediaWrites = <bool>[];
+  final List<bool> checkForUpdatesAutomaticallyWrites = <bool>[];
   late AppSettings _latest = initial;
 
   void emit(AppSettings settings) {
@@ -140,6 +141,13 @@ class FakeSettingsRepository implements SettingsRepository {
     _failIfConfigured();
     allowMobileDataForMediaWrites.add(value);
     emit(_latest.copyWith(allowMobileDataForMedia: value));
+  }
+
+  @override
+  Future<void> setCheckForUpdatesAutomatically(bool value) async {
+    _failIfConfigured();
+    checkForUpdatesAutomaticallyWrites.add(value);
+    emit(_latest.copyWith(checkForUpdatesAutomatically: value));
   }
 
   @override

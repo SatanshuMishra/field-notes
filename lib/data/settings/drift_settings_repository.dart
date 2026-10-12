@@ -100,12 +100,21 @@ class DriftSettingsRepository implements SettingsRepository {
   );
 
   @override
+  Future<void> setCheckForUpdatesAutomatically(bool value) => _put(
+    SettingsKeys.checkForUpdatesAutomatically,
+    value ? _trueValue : _falseValue,
+  );
+
+  @override
   Future<bool> hasStoredValues() async {
     final List<Setting> device = await _db.select(_db.settings).get();
     final List<JournalSetting> journal = await (_db.select(
       _db.journalSettings,
     )..where((t) => t.key.isNotValue(SettingsKeys.meadowKey))).get();
-    return device.isNotEmpty || journal.isNotEmpty;
+    return device.any(
+          (Setting row) => !SettingsKeys.isUpdateRecordKey(row.key),
+        ) ||
+        journal.isNotEmpty;
   }
 
   @override
@@ -218,6 +227,10 @@ class DriftSettingsRepository implements SettingsRepository {
       allowMobileDataForMedia: _decodeBool(
         values[SettingsKeys.allowMobileDataForMedia],
         defaults.allowMobileDataForMedia,
+      ),
+      checkForUpdatesAutomatically: _decodeBool(
+        values[SettingsKeys.checkForUpdatesAutomatically],
+        defaults.checkForUpdatesAutomatically,
       ),
     );
   }
