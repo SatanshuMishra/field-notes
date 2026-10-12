@@ -21,6 +21,9 @@ class _HangingStopRecorder implements VoiceRecorder {
   Duration get elapsed => Duration.zero;
 
   @override
+  Stream<double> get level => const Stream<double>.empty();
+
+  @override
   Future<bool> hasPermission() async => true;
 
   @override

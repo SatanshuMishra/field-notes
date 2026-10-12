@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:field_notes/domain/services/capture_service.dart';
@@ -6,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import 'voice_level.dart';
 import 'voice_recorder.dart';
 
 const String voiceRecordingMime = 'audio/mp4';
@@ -32,6 +34,33 @@ class RecordVoiceRecorder implements VoiceRecorder {
   final Stopwatch _elapsed = Stopwatch();
   String? _activePath;
   Map<String, VoiceRecording> _owned = const <String, VoiceRecording>{};
+
+  late final StreamController<double> _levels =
+      StreamController<double>.broadcast(
+        onListen: _listenToAmplitude,
+        onCancel: _stopListeningToAmplitude,
+      );
+  late final Stream<double> _levelStream = _levels.stream;
+  Stream<Amplitude>? _amplitudes;
+  StreamSubscription<Amplitude>? _amplitudeSubscription;
+
+  void _listenToAmplitude() {
+    final Stream<Amplitude> amplitudes = _amplitudes ??= _recorder
+        .onAmplitudeChanged(voiceLevelInterval);
+    _amplitudeSubscription = amplitudes.listen(
+      (Amplitude amplitude) =>
+          _levels.add(voiceLevelFromDbfs(amplitude.current)),
+    );
+  }
+
+  Future<void> _stopListeningToAmplitude() async {
+    final StreamSubscription<Amplitude>? subscription = _amplitudeSubscription;
+    _amplitudeSubscription = null;
+    await subscription?.cancel();
+  }
+
+  @override
+  Stream<double> get level => _levelStream;
 
   @override
   Duration get elapsed => _elapsed.elapsed;
@@ -139,5 +168,9 @@ class RecordVoiceRecorder implements VoiceRecorder {
   }
 
   @override
-  Future<void> dispose() => _recorder.dispose();
+  Future<void> dispose() async {
+    await _stopListeningToAmplitude();
+    await _levels.close();
+    await _recorder.dispose();
+  }
 }
