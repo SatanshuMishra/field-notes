@@ -1,9 +1,12 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
+import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
+import 'package:field_notes/features/settings/sections/about_section.dart';
 import 'package:field_notes/features/settings/sections/journal_section.dart';
 import 'package:field_notes/features/settings/sections/reminders_sound_section.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
@@ -13,8 +16,10 @@ import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/spell_check_availability.dart';
 import 'package:field_notes/features/settings/widgets/delete_all_dialog.dart';
 import 'package:field_notes/features/settings/widgets/settings_notice.dart';
+import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
+import 'package:field_notes/state/installed_app_provider.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -28,6 +33,7 @@ import '../../features/settings/support/fake_settings_repository.dart';
 import '../../features/settings/support/recording_reminder_scheduler.dart';
 import '../../features/settings/support/settings_harness.dart';
 import '../../support/sync_overrides.dart';
+import '../../support/update_overrides.dart';
 import '../support/a11y_state.dart';
 
 const Size _tallNoteSurface = Size(1080, 6840);
@@ -35,6 +41,7 @@ const double _noteDevicePixelRatio = 2.625;
 const Size _tallDesktopSurface = Size(1280, 2600);
 const String _deleteAll = 'Delete all…';
 const String _deleteNotice = 'Deleted 3 days and 5 entries.';
+const String _aboutVersion = '1.4.2';
 
 List<A11yStatefulControl> get _tabStateful => <A11yStatefulControl>[
   if (!_onPhone)
@@ -69,6 +76,19 @@ List<A11yStatefulControl> get _journalStateful => <A11yStatefulControl>[
   _segments,
 ];
 
+List<A11yStatefulControl> get _aboutDesktopStateful => <A11yStatefulControl>[
+  for (final SettingsTab tab in SettingsTab.values)
+    A11yStatefulControl.finder(
+      find.byKey(settingsTabKey(tab)),
+      A11yStateKind.selected,
+    ),
+  _toggles,
+];
+
+List<A11yStatefulControl> get _aboutPhoneStateful => <A11yStatefulControl>[
+  _toggles,
+];
+
 bool get _onPhone =>
     resolveShellLayout(defaultTargetPlatform) == ShellLayout.bottomBar;
 
@@ -92,6 +112,30 @@ void _useTallSurface(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+List<Override> _settingsOverrides({
+  SpellCheckAvailability spellCheck = SpellCheckAvailability.available,
+}) => <Override>[
+  settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
+  appSettingsProvider.overrideWith(
+    (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
+  ),
+  entriesForDateProvider.overrideWith(
+    (Ref ref, String date) => Stream<List<Entry>>.value(const <Entry>[]),
+  ),
+  reminderClockProvider.overrideWithValue(() => DateTime(2026, 9, 18, 9, 30)),
+  reminderSchedulerProvider.overrideWithValue(RecordingReminderScheduler()),
+  spellCheckAvailabilityProvider.overrideWithValue(
+    AsyncValue<SpellCheckAvailability>.data(spellCheck),
+  ),
+  settingsDataControllerProvider.overrideWith(
+    (Ref ref) async => FakeSettingsDataController(
+      deleteResult: const DataActionSucceeded(_deleteNotice),
+    ),
+  ),
+  ...syncOffOverrides(),
+  ...updateQuietOverrides(),
+];
+
 Future<void> _pumpSettings(
   WidgetTester tester, {
   SpellCheckAvailability spellCheck = SpellCheckAvailability.available,
@@ -104,38 +148,48 @@ Future<void> _pumpSettings(
       child: settingsFeatureHarness(
         const SettingsScreen(),
         scrollable: false,
-        overrides: <Override>[
-          settingsRepositoryProvider.overrideWithValue(
-            FakeSettingsRepository(),
-          ),
-          appSettingsProvider.overrideWith(
-            (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
-          ),
-          entriesForDateProvider.overrideWith(
-            (Ref ref, String date) =>
-                Stream<List<Entry>>.value(const <Entry>[]),
-          ),
-          reminderClockProvider.overrideWithValue(
-            () => DateTime(2026, 9, 18, 9, 30),
-          ),
-          reminderSchedulerProvider.overrideWithValue(
-            RecordingReminderScheduler(),
-          ),
-          spellCheckAvailabilityProvider.overrideWithValue(
-            AsyncValue<SpellCheckAvailability>.data(spellCheck),
-          ),
-          settingsDataControllerProvider.overrideWith(
-            (Ref ref) async => FakeSettingsDataController(
-              deleteResult: const DataActionSucceeded(_deleteNotice),
-            ),
-          ),
-          ...syncOffOverrides(),
-        ],
+        overrides: _settingsOverrides(spellCheck: spellCheck),
       ),
     ),
   );
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(settingsTabKey(tab)));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpAbout(
+  WidgetTester tester, {
+  required TargetPlatform platform,
+}) async {
+  final bool sidebar = resolveShellLayout(platform) == ShellLayout.sidebar;
+  tester.view.physicalSize = sidebar ? _tallDesktopSurface : _tallNoteSurface;
+  tester.view.devicePixelRatio = sidebar ? 1 : _noteDevicePixelRatio;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    KeyedSubtree(
+      key: UniqueKey(),
+      child: ProviderScope(
+        overrides: <Override>[
+          ..._settingsOverrides(),
+          installedAppProvider.overrideWith(
+            (Ref ref) async => const InstalledApp(version: _aboutVersion),
+          ),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: fieldNotesTheme(platform: platform),
+          home: Builder(
+            builder: (BuildContext context) => Scaffold(
+              backgroundColor: context.colors.page,
+              body: const SettingsScreen(),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(settingsTabKey(SettingsTab.about)));
   await tester.pumpAndSettle();
 }
 
@@ -226,5 +280,28 @@ List<A11yState> get settingsStates => <A11yState>[
       A11yProof(find.widgetWithText(StickerButton, _deleteAll)),
     ],
     stateful: _tabStateful,
+  ),
+  A11yState(
+    id: 'b9-settings-about',
+    pump: (WidgetTester tester) =>
+        _pumpAbout(tester, platform: TargetPlatform.macOS),
+    proof: <A11yProof>[
+      A11yProof(find.byKey(settingsTabRailKey)),
+      A11yProof(find.byType(AboutSection)),
+      A11yProof(find.byKey(settingsContentTitleKey)),
+      A11yProof(find.text(aboutAuthorName)),
+    ],
+    stateful: _aboutDesktopStateful,
+  ),
+  A11yState(
+    id: 'b10-settings-about-phone',
+    pump: (WidgetTester tester) =>
+        _pumpAbout(tester, platform: TargetPlatform.android),
+    proof: <A11yProof>[
+      A11yProof(find.byType(AboutSection)),
+      A11yProof(find.byType(SettingsBackPill)),
+      A11yProof(find.text(aboutAuthorName)),
+    ],
+    stateful: _aboutPhoneStateful,
   ),
 ];

@@ -1,5 +1,6 @@
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/icons/settings_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -8,12 +9,16 @@ import 'package:field_notes/features/search/search_day_view.dart';
 import 'package:field_notes/features/search/search_field.dart';
 import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
+import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/sync_overrides.dart';
 import '../../support/theme_harness.dart';
+import '../../support/update_overrides.dart';
+import 'support/fake_settings_repository.dart';
 
 const Color _coral = Color(0xFFB8566A);
 const Color _line = Color(0xFF968888);
@@ -41,14 +46,15 @@ Future<void> _pumpDark(WidgetTester tester, Widget child) => pumpThemed(
 Color? _textColour(WidgetTester tester, Finder text) =>
     tester.widget<Text>(text).style?.color;
 
-BoxDecoration _decorationAbove(WidgetTester tester, String label) {
-  final DecoratedBox box = tester.widget<DecoratedBox>(
-    find
-        .ancestor(of: find.text(label), matching: find.byType(DecoratedBox))
-        .first,
-  );
-  return box.decoration as BoxDecoration;
-}
+BoxDecoration _face(WidgetTester tester, SettingsTab tab) =>
+    tester.widget<Container>(find.byKey(settingsTabFaceKey(tab))).decoration!
+        as BoxDecoration;
+
+Color _iconColour(WidgetTester tester, Finder within) => tester
+    .widget<SettingsIcon>(
+      find.descendant(of: within, matching: find.byType(SettingsIcon)),
+    )
+    .color;
 
 void main() {
   test('search and settings name no light-only colour', () {
@@ -97,6 +103,7 @@ void main() {
   testWidgets('settings tab rail draws its dark colours', (
     WidgetTester tester,
   ) async {
+    final FieldNotesColors dark = FieldNotesColors.dark;
     await _pumpDark(
       tester,
       Center(
@@ -106,19 +113,45 @@ void main() {
         ),
       ),
     );
-    final BoxDecoration selected = _decorationAbove(
-      tester,
-      SettingsTab.syncStorage.label,
+    expect(
+      _face(tester, SettingsTab.syncStorage).color!.toARGB32(),
+      _coral.withValues(alpha: 0.11).toARGB32(),
     );
-    expect(selected.color, _coral);
-    expect((selected.border! as Border).top.color, _line);
+    expect(_face(tester, SettingsTab.syncStorage).border, isNull);
     for (final SettingsTab tab in SettingsTab.values) {
-      if (tab == SettingsTab.syncStorage) {
-        continue;
+      final Finder entry = find.byKey(settingsTabKey(tab));
+      expect(
+        _textColour(
+          tester,
+          find.descendant(of: entry, matching: find.text(tab.label)),
+        )!.toARGB32(),
+        _ink.toARGB32(),
+        reason: tab.name,
+      );
+      expect(find.text(tab.sublabel), findsNothing, reason: tab.name);
+      expect(
+        _iconColour(tester, entry).toARGB32(),
+        tab == SettingsTab.syncStorage
+            ? dark.accentInk.toARGB32()
+            : _ink.toARGB32(),
+        reason: tab.name,
+      );
+      if (tab != SettingsTab.syncStorage) {
+        expect(_face(tester, tab).color, isNull, reason: tab.name);
       }
-      expect(_textColour(tester, find.text(tab.label)), _ink);
-      expect(_textColour(tester, find.text(tab.sublabel)), _muted);
     }
+    expect(
+      tester
+          .widget<ColoredBox>(
+            find.descendant(
+              of: find.byKey(settingsTabSeparatorKey),
+              matching: find.byType(ColoredBox),
+            ),
+          )
+          .color
+          .toARGB32(),
+      _ink.withValues(alpha: 0.14).toARGB32(),
+    );
   });
 
   testWidgets('phone settings list and Back pill draw their dark colours', (
@@ -127,7 +160,13 @@ void main() {
     await pumpThemed(
       tester,
       ProviderScope(
-        overrides: syncOffOverrides(),
+        overrides: <Override>[
+          settingsRepositoryProvider.overrideWithValue(
+            FakeSettingsRepository(),
+          ),
+          ...syncOffOverrides(),
+          ...updateQuietOverrides(),
+        ],
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -185,6 +224,22 @@ void main() {
           .toList();
       expect(texts, hasLength(2), reason: tab.label);
       expect(texts.last.style!.color!.toARGB32(), _muted.toARGB32());
+      final BoxDecoration tile =
+          tester
+                  .widget<Container>(find.byKey(settingsSectionTileKey(tab)))
+                  .decoration!
+              as BoxDecoration;
+      expect(tile.color!.toARGB32(), _cardBright.toARGB32(), reason: tab.label);
+      expect(
+        (tile.border! as Border).top.color.toARGB32(),
+        _line.toARGB32(),
+        reason: tab.label,
+      );
+      expect(
+        _iconColour(tester, row).toARGB32(),
+        _ink.toARGB32(),
+        reason: tab.label,
+      );
       expect(
         tester
             .widget<ChevronGlyph>(

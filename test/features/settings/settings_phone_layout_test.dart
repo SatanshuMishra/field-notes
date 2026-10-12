@@ -1,10 +1,12 @@
 import 'package:field_notes/app/shell/app_shell.dart';
+import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/settings/sections/about_section.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart';
@@ -31,6 +33,9 @@ const double _rowMinHeight = 68;
 const double _pillLift = 86;
 const double _pillHeight = 48;
 const double _pillClearance = 12;
+const double _listEndGap = 12;
+const double _headingGap = 12;
+const double _anchorTolerance = 1;
 const double _tolerance = 0.01;
 
 const String _lastSyncCaption = 'Use your 12 words.';
@@ -144,7 +149,7 @@ void main() {
         final Rect list = tester.getRect(_list);
         expect(
           list.top,
-          moreOrLessEquals(_headerBottom + _headerGap, epsilon: _tolerance),
+          greaterThanOrEqualTo(_headerBottom + _headerGap - _tolerance),
         );
         expect(list.left, moreOrLessEquals(_sideInset, epsilon: _tolerance));
         expect(
@@ -255,7 +260,7 @@ void main() {
           of: find.byType(SyncStorageSection),
           matching: find.byType(DashedDivider),
         ),
-        findsNWidgets(4),
+        findsNWidgets(3),
       );
 
       await tester.pumpWidget(const SizedBox());
@@ -289,6 +294,99 @@ void main() {
       );
     },
   );
+
+  testWidgets('the phone list sits at the bottom above the tab bar', (
+    WidgetTester tester,
+  ) async {
+    for (final Size surface in <Size>[_phone, _note]) {
+      final String view = '${surface.width.round()}x${surface.height.round()}';
+      await _pumpPhone(tester, surface: surface);
+
+      expect(tester.takeException(), isNull, reason: view);
+      final double zoneTop = surface.height - _gestureBar - phoneBottomBarZone;
+      expect(
+        tester.getRect(find.byType(PhoneBottomBar)).top,
+        greaterThanOrEqualTo(zoneTop - _tolerance),
+        reason: view,
+      );
+      final Finder card = find.descendant(
+        of: _list,
+        matching: find.byType(StickerCard),
+      );
+      expect(card, findsOneWidget, reason: view);
+      final Rect cardRect = tester.getRect(card);
+      expect(
+        cardRect.bottom,
+        moreOrLessEquals(zoneTop - _listEndGap, epsilon: _anchorTolerance),
+        reason: view,
+      );
+      final Finder title = find.descendant(
+        of: _list,
+        matching: find.text(settingsListTitle),
+      );
+      final Finder eyebrow = find.descendant(
+        of: _list,
+        matching: find.text(settingsListEyebrow),
+      );
+      expect(
+        cardRect.top - tester.getRect(title).bottom,
+        moreOrLessEquals(_headingGap, epsilon: _tolerance),
+        reason: view,
+      );
+      expect(
+        tester.getRect(eyebrow).bottom,
+        lessThanOrEqualTo(tester.getRect(title).top + _tolerance),
+        reason: view,
+      );
+      expect(
+        tester.getRect(eyebrow).top,
+        greaterThan(_headerBottom + _headerGap),
+        reason: view,
+      );
+      expect(_scroll(tester).position.maxScrollExtent, 0, reason: view);
+      expect(
+        tester.getRect(_row(SettingsTab.about)).bottom,
+        lessThanOrEqualTo(cardRect.bottom),
+        reason: view,
+      );
+    }
+  });
+
+  testWidgets('the phone list and About page fit the Note 10+', (
+    WidgetTester tester,
+  ) async {
+    await _pumpPhone(tester, surface: _note);
+
+    expect(tester.takeException(), isNull);
+    expect(_list, findsOneWidget);
+    for (final SettingsTab tab in SettingsTab.values) {
+      final Rect row = tester.getRect(_row(tab));
+      expect(row.left, greaterThanOrEqualTo(0), reason: tab.label);
+      expect(row.right, lessThanOrEqualTo(_note.width), reason: tab.label);
+    }
+
+    await _open(tester, SettingsTab.about);
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(AboutSection), findsOneWidget);
+    _expectHeading(tester, SettingsTab.about, 'About on the Note 10+');
+    final Rect pill = tester.getRect(_pillGlass);
+    final ScrollableState scroll = _scroll(tester);
+    scroll.position.jumpTo(scroll.position.maxScrollExtent);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    final Rect content = tester.getRect(_content);
+    expect(content.left, moreOrLessEquals(_sideInset, epsilon: _tolerance));
+    expect(
+      content.right,
+      moreOrLessEquals(_note.width - _sideInset, epsilon: _tolerance),
+    );
+    expect(content.bottom, lessThanOrEqualTo(pill.top + _tolerance));
+    expect(
+      find.descendant(of: _pill, matching: find.text(settingsListTitle)),
+      findsOneWidget,
+    );
+  });
 
   testWidgets('with large text the section list and pages stay on the screen', (
     WidgetTester tester,

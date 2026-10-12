@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/features/streak/streak.dart';
+import 'package:field_notes/features/updates/update_wording.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -44,6 +45,10 @@ const double _navIconSize = 18;
 const double _navLabelGap = 10;
 const double _streakGap = 12;
 const double _footerGap = 8;
+const double _updateNoticeGap = 8;
+const double _settingsBadgeSize = 10;
+const double _settingsBadgeBorder = 2;
+const double _settingsBadgeOffset = -4;
 
 const double _toggleExtent = 26;
 const double _toggleTop = 22;
@@ -69,6 +74,7 @@ typedef SidebarSyncStatusBuilder = Widget Function(
 );
 
 const Key sidebarSyncDotKey = ValueKey<String>('sidebar-sync-dot');
+const Key settingsBadgeKey = ValueKey<String>('settings-badge');
 const Key sidebarSyncLineKey = ValueKey<String>('sidebar-sync-line');
 
 const double _syncGap = 8;
@@ -81,6 +87,49 @@ double _toggleLeft({required bool collapsed}) => collapsed
     ? shellSidebarCollapsedWidth + _toggleOverhang - _toggleExtent
     : shellSidebarOpenWidth - _toggleOpenInset - _toggleExtent;
 
+String settingsSemanticLabel({required bool badged}) => badged
+    ? '${ShellDestination.settings.label}$gearBadgeSuffix'
+    : ShellDestination.settings.label;
+
+class SettingsBadged extends StatelessWidget {
+  const SettingsBadged({super.key, required this.badged, required this.child});
+
+  final bool badged;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        child,
+        if (badged)
+          Positioned(
+            top: _settingsBadgeOffset,
+            right: _settingsBadgeOffset,
+            child: IgnorePointer(
+              child: ExcludeSemantics(
+                child: Container(
+                  key: settingsBadgeKey,
+                  width: _settingsBadgeSize,
+                  height: _settingsBadgeSize,
+                  decoration: BoxDecoration(
+                    color: Palette.coral,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: context.colors.page,
+                      width: _settingsBadgeBorder,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class SidebarShell extends StatefulWidget {
   const SidebarShell({
     super.key,
@@ -91,6 +140,8 @@ class SidebarShell extends StatefulWidget {
     required this.body,
     this.streak,
     this.syncStatus,
+    this.updateNotice,
+    this.settingsBadge = false,
     this.soundOn = true,
     this.obscured = false,
     this.collapsed = false,
@@ -104,6 +155,8 @@ class SidebarShell extends StatefulWidget {
   final Widget body;
   final Widget? streak;
   final SidebarSyncStatusBuilder? syncStatus;
+  final Widget Function(BuildContext context, bool collapsed)? updateNotice;
+  final bool settingsBadge;
   final bool soundOn;
   final bool obscured;
   final bool collapsed;
@@ -336,6 +389,12 @@ class _SidebarShellState extends State<SidebarShell> {
                   _railItem(context, d),
                 ],
                 const Spacer(),
+                if (widget.updateNotice
+                    case final Widget Function(BuildContext, bool)
+                        notice) ...<Widget>[
+                  notice(context, collapsed),
+                  const SizedBox(height: _updateNoticeGap),
+                ],
                 widget.streak ??
                     StreakPill(
                       form: collapsed
@@ -388,14 +447,17 @@ class _SidebarShellState extends State<SidebarShell> {
     final bool settingsSelected = widget.selected == ShellDestination.settings;
     final bool soundOn = widget.soundOn;
     final List<Widget> buttons = <Widget>[
-      IconStickerButton(
-        key: const ValueKey<String>('settings-button'),
-        glyph: IconStickerGlyph.gear,
-        glyphColor: settingsSelected ? Palette.onAccent : colors.ink,
-        background: settingsSelected ? Palette.coral : colors.cardLight,
-        semanticLabel: ShellDestination.settings.label,
-        selected: settingsSelected,
-        onPressed: () => widget.onSelect(ShellDestination.settings),
+      SettingsBadged(
+        badged: widget.settingsBadge,
+        child: IconStickerButton(
+          key: const ValueKey<String>('settings-button'),
+          glyph: IconStickerGlyph.gear,
+          glyphColor: settingsSelected ? Palette.onAccent : colors.ink,
+          background: settingsSelected ? Palette.coral : colors.cardLight,
+          semanticLabel: settingsSemanticLabel(badged: widget.settingsBadge),
+          selected: settingsSelected,
+          onPressed: () => widget.onSelect(ShellDestination.settings),
+        ),
       ),
       IconStickerButton(
         key: const ValueKey<String>('sound-button'),

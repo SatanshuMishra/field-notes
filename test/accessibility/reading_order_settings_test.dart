@@ -82,4 +82,49 @@ void main() {
       handle.dispose();
     },
   );
+
+  testWidgets(
+    'MB2: the desktop Settings reads the kicker, the five sections, the title, '
+    'then the groups',
+    (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
+      try {
+        for (final (String id, String title, List<String> groups)
+            in <(String, String, List<String>)>[
+              (
+                'b7-settings-journal',
+                'Journal',
+                <String>['look', 'writing', 'performance'],
+              ),
+              ('b9-settings-about', 'About', <String>['updates', 'author']),
+            ]) {
+          await settingsStates
+              .firstWhere((A11yState state) => state.id == id)
+              .pump(tester);
+          final List<String> labels = labelsInReadingOrder(tester);
+          expect(labels, isNot(contains('preferences')), reason: id);
+          expect(labels.take(7).toList(), <String>[
+            'settings',
+            'Journal',
+            'Sync & storage',
+            'Reminders & sound',
+            'Data',
+            'About',
+            title,
+          ], reason: id);
+          int previous = 6;
+          for (final String group in groups) {
+            final int index = labels.indexOf(group, previous + 1);
+            expect(index, greaterThan(previous), reason: '$id $group');
+            previous = index;
+          }
+          expect(readingOrderOrphans(tester), isEmpty, reason: id);
+        }
+      } finally {
+        debugDefaultTargetPlatformOverride = null;
+      }
+      handle.dispose();
+    },
+  );
 }
