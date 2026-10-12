@@ -5,6 +5,7 @@ import 'package:field_notes/features/updates/ui/update_rail_chip.dart';
 import 'package:field_notes/features/updates/ui/update_restart_splash.dart';
 import 'package:field_notes/features/updates/update_controller.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
+import 'package:field_notes/features/updates/update_wording.dart';
 import 'package:field_notes/state/installed_app_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -49,6 +50,30 @@ final class _Restarting extends UpdateController {
   Future<void> install() async {
     installs++;
     state = UpdateRestarting(_release);
+  }
+}
+
+final class _FailingRestart extends UpdateController {
+  int installs = 0;
+
+  @override
+  UpdateStatus build() => UpdateAvailable(_release, updateQuietNow);
+
+  @override
+  Future<void> check() async {}
+
+  @override
+  Future<void> install() async {
+    installs++;
+    state = UpdateRestarting(_release);
+  }
+
+  void fail() {
+    state = UpdateAvailable(
+      _release,
+      updateQuietNow,
+      lastFailure: InstallFailure.installer,
+    );
   }
 }
 
@@ -129,6 +154,68 @@ void main() {
       await tester.pump();
       expect(updates.installs, 1);
       handle.dispose();
+    },
+    variant: TargetPlatformVariant(<TargetPlatform>{
+      TargetPlatform.macOS,
+      TargetPlatform.windows,
+    }),
+  );
+
+  testWidgets(
+    'a failed restart gives the notes panel back its Return and Esc keys',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1140, 726);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final _FailingRestart updates = _FailingRestart();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: <Override>[
+            ...shellOverrides(),
+            installedAppProvider.overrideWith(
+              (Ref ref) async => const InstalledApp(version: '1.4.2'),
+            ),
+            updateControllerProvider.overrideWith(() => updates),
+            updateRouteProvider.overrideWith(
+              (Ref ref) async => InstallRoute.restartInPlace,
+            ),
+          ],
+          child: const FieldNotesApp(),
+        ),
+      );
+      await _settle(tester);
+
+      await tester.tap(find.byKey(updateRailChipKey));
+      await _settle(tester);
+      await tester.tap(find.byKey(updateNotesActionKey));
+      await _settle(tester);
+      expect(updates.installs, 1);
+      expect(find.byKey(updateRestartSplashKey), findsOneWidget);
+
+      updates.fail();
+      await _settle(tester);
+      expect(find.byKey(updateRestartSplashKey), findsNothing);
+      expect(find.byKey(updateNotesPanelKey), findsOneWidget);
+      expect(
+        find.text(installFailureText(InstallFailure.installer)),
+        findsOneWidget,
+      );
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await _settle(tester);
+      expect(updates.installs, 2, reason: 'Return retries the update');
+      expect(find.byKey(updateRestartSplashKey), findsOneWidget);
+
+      updates.fail();
+      await _settle(tester);
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await _settle(tester);
+      expect(
+        find.byKey(updateNotesPanelKey),
+        findsNothing,
+        reason: 'Esc closes the panel',
+      );
+      expect(updates.installs, 2);
     },
     variant: TargetPlatformVariant(<TargetPlatform>{
       TargetPlatform.macOS,

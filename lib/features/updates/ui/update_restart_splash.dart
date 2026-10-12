@@ -20,13 +20,65 @@ const double _lineGap = 6;
 const double _swayDegrees = 4;
 const Duration _swayPeriod = Duration(milliseconds: 2400);
 
-class UpdateRestartCover extends ConsumerWidget {
+class UpdateRestartCover extends ConsumerStatefulWidget {
   const UpdateRestartCover({super.key, required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<UpdateRestartCover> createState() => _UpdateRestartCoverState();
+}
+
+class _UpdateRestartCoverState extends ConsumerState<UpdateRestartCover> {
+  FocusNode? _returnFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    ref.listenManual<UpdateStatus>(updateControllerProvider, _onStatus);
+  }
+
+  @override
+  void dispose() {
+    _returnFocus = null;
+    super.dispose();
+  }
+
+  void _onStatus(UpdateStatus? previous, UpdateStatus next) {
+    final bool wasRestarting = previous is UpdateRestarting;
+    final bool restarting = next is UpdateRestarting;
+    if (restarting && !wasRestarting) {
+      _returnFocus = FocusManager.instance.primaryFocus;
+      return;
+    }
+    if (!restarting && wasRestarting) {
+      final FocusNode? node = _returnFocus;
+      _returnFocus = null;
+      if (node == null) {
+        return;
+      }
+      WidgetsBinding.instance
+        ..addPostFrameCallback((Duration _) => _giveFocusBack(node))
+        ..ensureVisualUpdate();
+    }
+  }
+
+  void _giveFocusBack(FocusNode node) {
+    if (!mounted) {
+      return;
+    }
+    final BuildContext? nodeContext = node.context;
+    if (nodeContext == null || !nodeContext.mounted) {
+      return;
+    }
+    if (!node.canRequestFocus) {
+      return;
+    }
+    node.requestFocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bool restarting =
         ref.watch(updateControllerProvider) is UpdateRestarting;
     return Stack(
@@ -36,7 +88,7 @@ class UpdateRestartCover extends ConsumerWidget {
           excluding: restarting,
           child: ExcludeSemantics(
             excluding: restarting,
-            child: Offstage(offstage: restarting, child: child),
+            child: Offstage(offstage: restarting, child: widget.child),
           ),
         ),
         const UpdateRestartSplash(),
