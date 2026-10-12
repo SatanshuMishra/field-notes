@@ -36,6 +36,9 @@ constexpr char kOpenCameraSettingsMethod[] = "openCameraSettings";
 constexpr char kDeviceStorageChannelName[] = "field_notes/device_storage";
 constexpr char kFreeBytesMethod[] = "freeBytes";
 constexpr char kPathArgument[] = "path";
+constexpr char kStayAwakeChannelName[] = "field_notes/stay_awake";
+constexpr char kHoldMethod[] = "hold";
+constexpr char kReleaseMethod[] = "release";
 constexpr wchar_t kNotificationSettingsUri[] = L"ms-settings:notifications";
 constexpr wchar_t kCameraPrivacySettingsUri[] = L"ms-settings:privacy-webcam";
 
@@ -158,14 +161,29 @@ void HandleDeviceStorage(const Call& call, Result result) {
   result->Success(flutter::EncodableValue(*available));
 }
 
+void HandleStayAwake(const Call& call, Result result) {
+  if (call.method_name() == kHoldMethod) {
+    ::SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED |
+                              ES_DISPLAY_REQUIRED);
+    result->Success();
+  } else if (call.method_name() == kReleaseMethod) {
+    ::SetThreadExecutionState(ES_CONTINUOUS);
+    result->Success();
+  } else {
+    result->NotImplemented();
+  }
+}
+
 }
 
 SystemChannels::SystemChannels(flutter::BinaryMessenger* messenger)
     : notification_settings_(
           ChannelNamed(messenger, kNotificationSettingsChannelName)),
       camera_settings_(ChannelNamed(messenger, kCameraSettingsChannelName)),
-      device_storage_(ChannelNamed(messenger, kDeviceStorageChannelName)) {
+      device_storage_(ChannelNamed(messenger, kDeviceStorageChannelName)),
+      stay_awake_(ChannelNamed(messenger, kStayAwakeChannelName)) {
   notification_settings_->SetMethodCallHandler(HandleNotificationSettings);
   camera_settings_->SetMethodCallHandler(HandleCameraSettings);
   device_storage_->SetMethodCallHandler(HandleDeviceStorage);
+  stay_awake_->SetMethodCallHandler(HandleStayAwake);
 }
