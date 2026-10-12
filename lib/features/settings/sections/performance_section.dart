@@ -21,23 +21,28 @@ class PerformanceSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SettingsSection(
+    return SettingsSection.grouped(
       title: 'Performance',
-      children: <Widget>[
-        SettingsFieldRow(
-          label: 'Pause the Meadow in the background',
-          description: "Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery.",
-          control: SettingsToggle(
-            key: meadowPauseToggleKey,
-            semanticLabel: 'Pause the Meadow in the background',
-            value: settings.meadowPausesWhenInactive,
-            onChanged: (bool value) => _apply(
-              ref,
-              () => ref
-                  .read(settingsControllerProvider)
-                  .setMeadowPausesWhenInactive(value),
+      groups: <SettingsGroup>[
+        SettingsGroup(
+          label: 'performance',
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Pause the Meadow in the background',
+              description: "Stops the Meadow's motion while Field Notes is open but another window or app is in front. Saves battery.",
+              control: SettingsToggle(
+                key: meadowPauseToggleKey,
+                semanticLabel: 'Pause the Meadow in the background',
+                value: settings.meadowPausesWhenInactive,
+                onChanged: (bool value) => _apply(
+                  ref,
+                  () => ref
+                      .read(settingsControllerProvider)
+                      .setMeadowPausesWhenInactive(value),
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
     );
