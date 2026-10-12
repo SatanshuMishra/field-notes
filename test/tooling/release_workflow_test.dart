@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+import 'package:field_notes/data/updates/release_verifier.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const String _tagGuard = "if: startsWith(github.ref, 'refs/tags/v')";
@@ -22,6 +24,44 @@ const String _signingError =
     '::error::Set the ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, '
     'ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD repository secrets to sign '
     'the release APK.';
+const String _openssl = '/opt/homebrew/opt/openssl@3/bin/openssl';
+const String _publicKeyDefine =
+    r'--dart-define=FIELD_NOTES_UPDATE_PUBLIC_KEY=${{ vars.UPDATE_PUBLIC_KEY }}';
+const String _selfUpdate = '-P fieldNotesSelfUpdate=true';
+const String _releaseBody = r'"$RUNNER_TEMP/release-body.md"';
+const String _missingKeyError =
+    '::error::Set the UPDATE_SIGNING_KEY secret and the UPDATE_PUBLIC_KEY '
+    'variable to sign updates.';
+const String _mismatchError =
+    '::error::UPDATE_PUBLIC_KEY does not match UPDATE_SIGNING_KEY.';
+const String _sampleChangelog =
+    '# Changelog\n'
+    '\n'
+    '## [Unreleased]\n'
+    '\n'
+    '### New\n'
+    '\n'
+    '- Something still in the works.\n'
+    '\n'
+    '## [1.2.0] - 2026-10-12\n'
+    '\n'
+    'Updates now install from Settings.\n'
+    '\n'
+    '### New\n'
+    '\n'
+    '- An About page.\n'
+    '\n'
+    '## [1.1.0] - 2026-09-01\n'
+    '\n'
+    '### Fixed\n'
+    '\n'
+    '- A crash on launch.\n';
+const String _sampleSection =
+    'Updates now install from Settings.\n'
+    '\n'
+    '### New\n'
+    '\n'
+    '- An About page.';
 
 String _workflow() => File('.github/workflows/release.yml').readAsStringSync();
 
@@ -88,6 +128,57 @@ Directory _scratch() {
   );
   addTearDown(() => directory.deleteSync(recursive: true));
   return directory;
+}
+
+void _requireOpenssl() {
+  if (!File(_openssl).existsSync()) {
+    fail(
+      'OpenSSL 3 is missing at $_openssl. The system openssl is LibreSSL and '
+      'cannot sign with Ed25519; install OpenSSL 3 with brew install openssl@3.',
+    );
+  }
+}
+
+void _copyTool(String path, Directory directory) {
+  final File target = File('${directory.path}/$path')
+    ..parent.createSync(recursive: true);
+  File(path).copySync(target.path);
+}
+
+String _generateKey(Directory directory, String name) {
+  final String path = '${directory.path}/$name.pem';
+  final ProcessResult result = Process.runSync(_openssl, <String>[
+    'genpkey',
+    '-algorithm',
+    'ed25519',
+    '-out',
+    path,
+  ]);
+  expect(result.exitCode, 0, reason: '${result.stderr}');
+  return path;
+}
+
+String _publicKeyText(String pem) {
+  final ProcessResult result = Process.runSync(_openssl, <String>[
+    'pkey',
+    '-in',
+    pem,
+    '-pubout',
+    '-outform',
+    'DER',
+  ], stdoutEncoding: null);
+  expect(result.exitCode, 0, reason: '${result.stderr}');
+  final List<int> der = result.stdout as List<int>;
+  return base64.encode(der.sublist(der.length - updatePublicKeyBytes));
+}
+
+void _expectInOrder(String script, List<String> needles) {
+  int from = 0;
+  for (final String needle in needles) {
+    final int at = script.indexOf(needle, from);
+    expect(at, isNot(-1), reason: 'expected $needle after offset $from');
+    from = at + needle.length;
+  }
 }
 
 void main() {
@@ -178,7 +269,7 @@ void main() {
         contains(
           r'gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" '
           r'--title "Field Notes $VERSION" '
-          '--notes-file tool/release/release_notes.md',
+          '--notes-file $_releaseBody',
         ),
       );
       for (final String asset in <String>[
@@ -248,11 +339,13 @@ void main() {
       final String buildName = target.key == 'macos'
           ? r'${{ steps.version.outputs.build_name }}'
           : _version;
+      final String selfUpdate = target.key == 'android' ? ' $_selfUpdate' : '';
       expect(
         tagged,
         endsWith(
           'run: flutter build ${target.value} --release '
-          '--build-name $buildName --build-number \${{ github.run_number }}',
+          '--build-name $buildName --build-number \${{ github.run_number }} '
+          '$_publicKeyDefine$selfUpdate',
         ),
       );
       final String untagged = builds.singleWhere(
@@ -299,7 +392,8 @@ void main() {
       bundles.singleWhere((String candidate) => candidate.contains(_tagGuard)),
       endsWith(
         'run: flutter build appbundle --release '
-        '--build-name $_version --build-number \${{ github.run_number }}',
+        '--build-name $_version --build-number \${{ github.run_number }} '
+        '$_publicKeyDefine',
       ),
     );
     expect(
@@ -536,7 +630,7 @@ void main() {
     expect(step, endsWith('} > android/key.properties'));
 
     expect('secrets.ANDROID_'.allMatches(workflow), hasLength(4));
-    expect('secrets.'.allMatches(workflow), hasLength(5));
+    expect('secrets.'.allMatches(workflow), hasLength(6));
   });
 
   test(
@@ -761,5 +855,268 @@ void main() {
       ),
     );
     expect(script, isNot(contains('codesign')));
+  });
+
+  test('a tag publishes signed update files and changelog notes', () async {
+    final String workflow = _workflow();
+
+    for (final (String job, String command) in <(String, String)>[
+      ('macos', 'flutter build macos '),
+      ('windows', 'flutter build windows '),
+      ('android', 'flutter build apk '),
+      ('android', 'flutter build appbundle '),
+    ]) {
+      final List<String> builds = _steps(_job(workflow, job))
+          .where((String candidate) => candidate.contains(command))
+          .toList();
+      expect(builds, hasLength(2));
+      final String tagged = builds.singleWhere(
+        (String candidate) => candidate.contains(_tagGuard),
+      );
+      final String untagged = builds.singleWhere(
+        (String candidate) => candidate.contains(_pullRequestGuard),
+      );
+      expect(tagged, contains(' $_publicKeyDefine'));
+      expect(
+        tagged.contains(_selfUpdate),
+        command == 'flutter build apk ',
+        reason: 'only the tagged APK build updates itself',
+      );
+      expect(untagged, isNot(contains('UPDATE_PUBLIC_KEY')));
+      expect(untagged, isNot(contains('fieldNotesSelfUpdate')));
+      expect(untagged, isNot(contains('env:')));
+    }
+    expect(_selfUpdate.allMatches(workflow), hasLength(1));
+    expect('fieldNotesSelfUpdate'.allMatches(workflow), hasLength(1));
+    expect(_publicKeyDefine.allMatches(workflow), hasLength(4));
+
+    final String macosBuild = _steps(_job(workflow, 'macos')).singleWhere(
+      (String candidate) =>
+          candidate.contains('flutter build macos ') &&
+          candidate.contains(_tagGuard),
+    );
+    expect(
+      macosBuild,
+      contains(
+        '\n        env:\n'
+        r'          FIELD_NOTES_UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}'
+        '\n        run: flutter build macos ',
+      ),
+    );
+    expect('vars.UPDATE_PUBLIC_KEY'.allMatches(workflow), hasLength(6));
+
+    final List<String> steps = _steps(_job(workflow, 'release'));
+    final int version = _stepIndex(
+      steps,
+      r'echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"',
+    );
+    final int notes = _stepIndex(steps, 'tool/release/changelog_section.sh');
+    final int checksums = _stepIndex(steps, 'sha256sum');
+    final int signing = _stepIndex(steps, 'tool/release/sign_update.sh');
+    final int publish = _stepIndex(steps, 'gh release create');
+    expect(notes, greaterThan(version));
+    expect(signing, greaterThan(checksums));
+    expect(publish, greaterThan(notes));
+    expect(publish, greaterThan(signing));
+    expect(publish, steps.length - 1);
+
+    final String notesStep = steps[notes];
+    expect(notesStep, contains('\n        shell: bash\n'));
+    expect(notesStep, isNot(contains('if:')));
+    expect(notesStep, isNot(contains('secrets.')));
+    final String notesScript = _script(notesStep);
+    expect(notesScript, isNot(contains(r'${{')));
+    expect(notesScript, contains('> $_releaseBody'));
+
+    final String signStep = steps[signing];
+    expect(signStep, contains('\n        shell: bash\n'));
+    expect(signStep, isNot(contains('if:')));
+    expect(
+      signStep,
+      contains(
+        '\n        env:\n'
+        r'          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}'
+        '\n'
+        r'          UPDATE_PUBLIC_KEY: ${{ vars.UPDATE_PUBLIC_KEY }}'
+        '\n        run: |\n',
+      ),
+    );
+    expect('secrets.UPDATE_SIGNING_KEY'.allMatches(workflow), hasLength(1));
+    expect(
+      workflow.replaceFirst(signStep, ''),
+      isNot(contains('UPDATE_SIGNING_KEY')),
+    );
+    final String signScript = _script(signStep);
+    expect(signScript, isNot(contains(r'${{')));
+    expect(signScript, isNot(contains('*-*')));
+    _expectInOrder(signScript, <String>[
+      r'if [[ -z "$UPDATE_SIGNING_KEY" || -z "$UPDATE_PUBLIC_KEY" ]]; then',
+      'echo "$_missingKeyError"\n',
+      'exit 1\n',
+      'umask 077\n',
+      r'key="$(mktemp "$RUNNER_TEMP/',
+      r'''trap 'rm -f "$key"' EXIT''',
+      r'''printf '%s\n' "$UPDATE_SIGNING_KEY" > "$key"''',
+      r'openssl pkey -in "$key" -pubout -outform DER | tail -c 32 | base64',
+      r'if [[ "$public" != "$UPDATE_PUBLIC_KEY" ]]; then',
+      'echo "$_mismatchError"\n',
+      'exit 1\n',
+      r'bash tool/release/sign_update.sh "$key" dist/SHA256SUMS.txt '
+          '> dist/SHA256SUMS.txt.sig',
+      r'bash tool/release/sign_update.sh "$key" "dist/$dmg"',
+      r'bash tool/release/macos/make_appcast.sh "$VERSION" '
+          r'"$GITHUB_RUN_NUMBER" "dist/$dmg" '
+          r'"https://github.com/$GITHUB_REPOSITORY/releases/download/'
+          r'$GITHUB_REF_NAME/$dmg"',
+      '> dist/appcast.xml',
+    ]);
+
+    final String publishStep = steps[publish];
+    expect(publishStep, contains('--notes-file $_releaseBody '));
+    expect(publishStep, isNot(contains('release_notes.md')));
+    expect(
+      RegExp(r'^ {12}("?dist/\S+?)(?: \\)?$', multiLine: true)
+          .allMatches(publishStep)
+          .map((RegExpMatch match) => match.group(1))
+          .toList(),
+      <String>[
+        r'"dist/field-notes-$VERSION-macos.dmg"',
+        r'"dist/field-notes-$VERSION-windows-x64-setup.exe"',
+        r'"dist/field-notes-$VERSION-android.apk"',
+        'dist/SHA256SUMS.txt',
+        'dist/SHA256SUMS.txt.sig',
+        'dist/appcast.xml',
+      ],
+    );
+
+    final Directory notesRoot = _scratch();
+    _copyTool('tool/release/changelog_section.sh', notesRoot);
+    _copyTool('tool/release/release_notes.md', notesRoot);
+    File('${notesRoot.path}/CHANGELOG.md').writeAsStringSync(_sampleChangelog);
+    final Directory notesTemp = Directory('${notesRoot.path}/runner-temp')
+      ..createSync();
+    final File body = File('${notesTemp.path}/release-body.md');
+    final String installNotes = File('tool/release/release_notes.md')
+        .readAsStringSync();
+    (int, String, String?) compose(String version) {
+      if (body.existsSync()) {
+        body.deleteSync();
+      }
+      final ProcessResult result = _bash(
+        notesScript,
+        notesRoot,
+        <String, String>{'VERSION': version, 'RUNNER_TEMP': notesTemp.path},
+      );
+      return (
+        result.exitCode,
+        result.stderr as String,
+        body.existsSync() ? body.readAsStringSync() : null,
+      );
+    }
+
+    expect(compose('1.2.0'), (0, '', '$_sampleSection\n\n$installNotes'));
+    expect(compose('1.2.0-rc.1'), (0, '', '$_sampleSection\n\n$installNotes'));
+    expect(compose('1.3.0-rc.1'), (0, '', installNotes));
+    expect(compose('1.3.0'), (
+      1,
+      '::error::CHANGELOG.md has no section for 1.3.0.\n',
+      null,
+    ));
+
+    _requireOpenssl();
+    final Directory signRoot = _scratch();
+    _copyTool('tool/release/sign_update.sh', signRoot);
+    _copyTool('tool/release/macos/make_appcast.sh', signRoot);
+    Directory('${signRoot.path}/bin').createSync();
+    Link('${signRoot.path}/bin/openssl').createSync(_openssl);
+    final Directory keys = Directory('${signRoot.path}/keys')..createSync();
+    final String key = _generateKey(keys, 'update');
+    final String otherKey = _generateKey(keys, 'other');
+    final String secret = File(key).readAsStringSync().trimRight();
+    final String publicKey = _publicKeyText(key);
+
+    final Directory dist = Directory('${signRoot.path}/dist')..createSync();
+    final List<int> dmgBytes = List<int>.generate(
+      5000,
+      (int index) => (index * 13 + 7) % 256,
+    );
+    final File dmg = File('${dist.path}/field-notes-1.2.0-macos.dmg')
+      ..writeAsBytesSync(dmgBytes);
+    final File sums = File('${dist.path}/SHA256SUMS.txt')
+      ..writeAsStringSync(
+        '${sha256.convert(dmgBytes)}  field-notes-1.2.0-macos.dmg\n',
+      );
+    final File signature = File('${dist.path}/SHA256SUMS.txt.sig');
+    final File appcast = File('${dist.path}/appcast.xml');
+    final Directory signTemp = Directory('${signRoot.path}/runner-temp')
+      ..createSync();
+
+    ProcessResult sign(String signingKey, String publicKeyText) {
+      return _bash(signScript, signRoot, <String, String>{
+        'PATH': '${signRoot.path}/bin:/usr/bin:/bin',
+        'UPDATE_SIGNING_KEY': signingKey,
+        'UPDATE_PUBLIC_KEY': publicKeyText,
+        'VERSION': '1.2.0',
+        'GITHUB_REF_NAME': 'v1.2.0',
+        'GITHUB_REPOSITORY': 'SatanshuMishra/field-notes',
+        'GITHUB_RUN_NUMBER': '42',
+        'RUNNER_TEMP': signTemp.path,
+      });
+    }
+
+    for (final (String, String, String) refused in <(String, String, String)>[
+      ('', publicKey, _missingKeyError),
+      (secret, '', _missingKeyError),
+      (secret, _publicKeyText(otherKey), _mismatchError),
+      ('not a private key', publicKey, _mismatchError),
+    ]) {
+      final ProcessResult result = sign(refused.$1, refused.$2);
+      expect(result.exitCode, 1, reason: refused.$3);
+      expect(result.stdout, '${refused.$3}\n');
+      expect(signature.existsSync(), isFalse);
+      expect(appcast.existsSync(), isFalse);
+      expect(signTemp.listSync(), isEmpty, reason: 'the key file must go');
+    }
+
+    final ProcessResult signed = sign(secret, publicKey);
+    expect(signed.exitCode, 0, reason: '${signed.stderr}');
+    expect(signTemp.listSync(), isEmpty, reason: 'the key file must go');
+
+    final ReleaseVerifier verifier = ReleaseVerifier.fromBase64(publicKey)!;
+    final String sumsSignature = signature.readAsStringSync();
+    expect(
+      verifier.sumsAreSigned(sums.readAsBytesSync(), sumsSignature),
+      isTrue,
+    );
+    expect(
+      await verifier.verify(
+        sums: sums.readAsBytesSync(),
+        signature: sumsSignature,
+        fileName: 'field-notes-1.2.0-macos.dmg',
+        file: dmg,
+      ),
+      isTrue,
+    );
+
+    final String feed = appcast.readAsStringSync();
+    expect(feed, contains('<sparkle:version>42</sparkle:version>'));
+    expect(
+      feed,
+      contains(
+        '<sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>',
+      ),
+    );
+    final RegExpMatch? enclosure = RegExp(
+      r'<enclosure url="([^"]+)" length="(\d+)" '
+      r'type="application/octet-stream" sparkle:edSignature="([^"]+)"/>',
+    ).firstMatch(feed);
+    expect(enclosure, isNotNull, reason: feed);
+    expect(
+      enclosure!.group(1),
+      'https://github.com/SatanshuMishra/field-notes/releases/download/'
+      'v1.2.0/field-notes-1.2.0-macos.dmg',
+    );
+    expect(enclosure.group(2), '5000');
+    expect(verifier.sumsAreSigned(dmgBytes, enclosure.group(3)!), isTrue);
   });
 }
