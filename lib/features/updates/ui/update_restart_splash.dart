@@ -20,6 +20,31 @@ const double _lineGap = 6;
 const double _swayDegrees = 4;
 const Duration _swayPeriod = Duration(milliseconds: 2400);
 
+class UpdateRestartCover extends ConsumerWidget {
+  const UpdateRestartCover({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool restarting =
+        ref.watch(updateControllerProvider) is UpdateRestarting;
+    return Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        ExcludeFocus(
+          excluding: restarting,
+          child: ExcludeSemantics(
+            excluding: restarting,
+            child: Offstage(offstage: restarting, child: child),
+          ),
+        ),
+        const UpdateRestartSplash(),
+      ],
+    );
+  }
+}
+
 class UpdateRestartSplash extends ConsumerWidget {
   const UpdateRestartSplash({super.key});
 

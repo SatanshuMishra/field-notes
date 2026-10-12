@@ -9,6 +9,7 @@ import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
+import 'package:field_notes/features/updates/ui/update_restart_splash.dart';
 import 'package:field_notes/state/settings_providers.dart';
 
 import 'capture/app_capture_routes.dart';
@@ -35,7 +36,9 @@ class FieldNotesApp extends StatelessWidget {
   }
 
   static Widget _appBuilder(BuildContext context, Widget? child) {
-    final Widget scaled = AppTextScale(child: child!);
+    final Widget scaled = AppTextScale(
+      child: UpdateRestartCover(child: child!),
+    );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemBarsOver(Theme.of(context).brightness),
       child: switch (defaultTargetPlatform) {

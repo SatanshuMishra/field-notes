@@ -16,7 +16,6 @@ import 'package:field_notes/features/sound/sound_providers.dart';
 import 'package:field_notes/features/today/today.dart';
 import 'package:field_notes/features/updates/ui/update_greeting.dart';
 import 'package:field_notes/features/updates/ui/update_rail_chip.dart';
-import 'package:field_notes/features/updates/ui/update_restart_splash.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -147,7 +146,6 @@ class _AppShellState extends ConsumerState<AppShell> {
               child: ExcludeFocus(child: PetalDrift(flower: flower)),
             ),
           const UpdateGreeting(),
-          const UpdateRestartSplash(),
         ],
       ),
     );
