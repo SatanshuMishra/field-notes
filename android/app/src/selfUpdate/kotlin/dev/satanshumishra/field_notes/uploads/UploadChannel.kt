@@ -19,7 +19,13 @@ class UploadChannel(private val context: Context) {
 
     fun register(messenger: BinaryMessenger) {
         val channel = MethodChannel(messenger, CHANNEL)
-        channel.setMethodCallHandler { call, result -> worker.execute { answer(call, result) } }
+        channel.setMethodCallHandler { call, result ->
+            if (call.method == AVAILABLE) {
+                result.success(true)
+            } else {
+                worker.execute { answer(call, result) }
+            }
+        }
         UploadCoordinator.shared.onResults = {
             main.post { channel.invokeMethod(RESULTS_READY, null) }
         }
@@ -81,6 +87,7 @@ class UploadChannel(private val context: Context) {
     private companion object {
         val worker = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "uploads-channel") }
         const val CHANNEL = "field_notes/background_uploads"
+        const val AVAILABLE = "available"
         const val RESULTS_READY = "resultsReady"
     }
 }
