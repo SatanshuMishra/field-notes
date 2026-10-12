@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/data/sync/background/sync_availability.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
 import 'package:field_notes/features/updates/ui/update_restart_splash.dart';
 import 'package:field_notes/state/settings_providers.dart';
+import 'package:field_notes/state/sync_providers.dart';
 
 import 'capture/app_capture_routes.dart';
 import 'macos_menu_bar.dart';
@@ -23,14 +25,26 @@ import 'theme/app_theme.dart';
 
 const Duration _settingsWait = Duration(seconds: 1);
 
+Future<FieldNotesApp> fieldNotesAppForThisDevice() async {
+  final bool syncAvailable = await syncAvailableOnThisDevice(
+    platform: defaultTargetPlatform,
+  );
+  return FieldNotesApp(syncAvailable: syncAvailable);
+}
+
 class FieldNotesApp extends StatelessWidget {
-  const FieldNotesApp({super.key});
+  const FieldNotesApp({super.key, this.syncAvailable = true});
+
+  final bool syncAvailable;
 
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
       retry: (retryCount, error) => null,
-      overrides: [captureRoutesProvider.overrideWithValue(appCaptureRoutes)],
+      overrides: [
+        captureRoutesProvider.overrideWithValue(appCaptureRoutes),
+        syncAvailableProvider.overrideWithValue(syncAvailable),
+      ],
       child: const _ThemedApp(),
     );
   }

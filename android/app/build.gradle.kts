@@ -67,7 +67,9 @@ kotlin {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    implementation("androidx.work:work-runtime:2.11.0")
+    if (selfUpdate) {
+        implementation("androidx.work:work-runtime:2.11.0")
+    }
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20250517")
 }
@@ -126,6 +128,13 @@ androidComponents {
         if (selfUpdate) {
             variant.sources.manifests.addStaticManifestFile("src/selfUpdate/AndroidManifest.xml")
             kotlinSources.addStaticSourceDirectory("src/selfUpdate/kotlin")
+            val unitTest = (variant as? com.android.build.api.variant.HasUnitTest)?.unitTest
+            if (unitTest != null) {
+                val unitTestSources = checkNotNull(unitTest.sources.kotlin ?: unitTest.sources.java) {
+                    "The ${variant.name} unit tests expose no Kotlin or Java sources"
+                }
+                unitTestSources.addStaticSourceDirectory("src/testSelfUpdate/kotlin")
+            }
         } else {
             kotlinSources.addStaticSourceDirectory("src/store/kotlin")
         }

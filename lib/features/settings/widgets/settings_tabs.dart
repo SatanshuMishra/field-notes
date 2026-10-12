@@ -38,6 +38,12 @@ enum SettingsTab {
   final SettingsGlyph glyph;
 }
 
+List<SettingsTab> settingsTabsFor({required bool syncAvailable}) =>
+    <SettingsTab>[
+      for (final SettingsTab tab in SettingsTab.values)
+        if (syncAvailable || tab != SettingsTab.syncStorage) tab,
+    ];
+
 const Key settingsTabRailKey = ValueKey<String>('settings-tab-rail');
 const Key settingsTabSeparatorKey = ValueKey<String>('settings-tab-separator');
 

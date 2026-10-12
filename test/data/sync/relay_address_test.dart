@@ -66,7 +66,7 @@ void main() {
 
   test('Android background uploads refuse plain HTTP beyond the device', () {
     final String item = File(
-      'android/app/src/main/kotlin/dev/satanshumishra/field_notes/uploads/UploadItem.kt',
+      'android/app/src/selfUpdate/kotlin/dev/satanshumishra/field_notes/uploads/UploadItem.kt',
     ).readAsStringSync();
 
     expect(item, isNot(contains('url.startsWith("http://")')));

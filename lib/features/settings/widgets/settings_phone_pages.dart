@@ -94,6 +94,9 @@ class SettingsSectionList extends ConsumerWidget {
         : null;
     final String? version = ref.watch(installedAppProvider).value?.version;
     final ReleaseInfo? update = ref.watch(updateNoticeProvider);
+    final List<SettingsTab> tabs = settingsTabsFor(
+      syncAvailable: ref.watch(syncAvailableProvider),
+    );
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -117,8 +120,8 @@ class SettingsSectionList extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                for (final SettingsTab tab in SettingsTab.values) ...<Widget>[
-                  if (tab != SettingsTab.values.first) const DashedDivider(),
+                for (final SettingsTab tab in tabs) ...<Widget>[
+                  if (tab != tabs.first) const DashedDivider(),
                   _SectionRow(
                     tab: tab,
                     summary: tab == SettingsTab.about && update != null

@@ -19,6 +19,9 @@ const String _laterEntries =
     '\n'
     '- A later fix lands here.\n';
 
+const String _playBuildEntry =
+    '- Field Notes from Google Play leaves out sync, so it needs no permission to upload in the background. Sync stays in the version from GitHub.';
+
 String _changelog() => File('CHANGELOG.md').readAsStringSync();
 
 void main() {
@@ -57,5 +60,44 @@ void main() {
     expect(later.readAsStringSync(), contains('- A later change lands here.'));
 
     expectReleaseNotes(later.path);
+  });
+
+  test('the release job finds the dated 1.0.1 notes in the changelog', () {
+    final List<String> lines = _changelog().split('\n');
+    final List<String> headings = lines
+        .where((String line) => line.startsWith('## [1.0.1]'))
+        .toList();
+    expect(headings, <String>['## [1.0.1] - 2026-10-12']);
+    final int unreleased = lines.indexOf('## [Unreleased]');
+    final int release = lines.indexOf('## [1.0.1] - 2026-10-12');
+    final int previous = lines.indexOf('## [1.0.0] - 2026-10-12');
+    expect(unreleased, isNonNegative);
+    expect(release, greaterThan(unreleased));
+    expect(previous, greaterThan(release));
+
+    final ProcessResult result = Process.runSync('bash', <String>[
+      'tool/release/changelog_section.sh',
+      '1.0.1',
+      'CHANGELOG.md',
+    ]);
+    expect(result.exitCode, 0);
+    expect(result.stdout, '### Improved\n\n$_playBuildEntry\n');
+  });
+
+  test('Field Notes 1.0.1 finds its own release notes', () {
+    final ChangelogSection? section = changelogSection(
+      _changelog(),
+      AppVersion.tryParse('1.0.1')!,
+    );
+    expect(section, isNotNull);
+    expect(section!.date, DateTime(2026, 10, 12));
+    expect(section.notes.intro, isEmpty);
+    expect(
+      section.notes.groups.map((ReleaseNoteGroup group) => group.title),
+      <String>['Improved'],
+    );
+    expect(section.notes.groups[0].items, <String>[
+      _playBuildEntry.substring(2),
+    ]);
   });
 }

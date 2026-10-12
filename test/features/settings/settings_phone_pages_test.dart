@@ -23,6 +23,14 @@ import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/settings/sections/about_section.dart'
+    show AboutSection;
+import 'package:field_notes/features/settings/sections/data_section.dart'
+    show DataSection;
+import 'package:field_notes/features/settings/sections/journal_section.dart'
+    show JournalSection;
+import 'package:field_notes/features/settings/sections/reminders_sound_section.dart'
+    show RemindersSoundSection;
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
@@ -31,6 +39,8 @@ import 'package:field_notes/features/settings/widgets/settings_phone_pages.dart'
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/sync/ui/device_list.dart';
+import 'package:field_notes/features/sync/ui/join_journal_flow.dart'
+    show joinTitle;
 import 'package:field_notes/features/sync/ui/start_sync_flow.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/shell_navigation.dart';
@@ -881,5 +891,162 @@ void main() {
     _expectPageHeading(tester, 'About');
     _expectPill(tester, 'Settings');
     expect(find.text('A journal of days · Version 1.4.2'), findsOneWidget);
+  });
+
+  testWidgets('a copy without sync shows no Sync & storage', (
+    WidgetTester tester,
+  ) async {
+    await _pumpPhone(
+      tester,
+      sync: <Override>[
+        ...syncOffOverrides(),
+        syncAvailableProvider.overrideWithValue(false),
+      ],
+    );
+
+    const Map<SettingsTab, Type> sections = <SettingsTab, Type>{
+      SettingsTab.journal: JournalSection,
+      SettingsTab.remindersSound: RemindersSoundSection,
+      SettingsTab.data: DataSection,
+      SettingsTab.about: AboutSection,
+    };
+    final Finder card = _inside(_list, find.byType(StickerCard));
+    expect(card, findsOneWidget);
+    expect(_row(SettingsTab.syncStorage), findsNothing);
+    expect(
+      _inside(card, find.byType(SettingsIcon)),
+      findsNWidgets(sections.length),
+    );
+    final List<Rect> rules = <Rect>[
+      for (final Element rule in _inside(
+        card,
+        find.byType(DashedDivider),
+      ).evaluate())
+        tester.getRect(find.byElementPredicate((Element e) => e == rule)),
+    ];
+    expect(rules, hasLength(sections.length - 1));
+    Rect? previous;
+    for (final SettingsTab tab in sections.keys) {
+      final String label = _labels[tab]!;
+      final Finder row = _row(tab);
+      expect(_inside(card, row), findsOneWidget, reason: label);
+      expect(_inside(row, find.text(label)), findsOneWidget, reason: label);
+      final Rect rect = tester.getRect(row);
+      if (previous != null) {
+        final Rect before = previous;
+        expect(
+          rect.top,
+          greaterThanOrEqualTo(before.bottom - _tolerance),
+          reason: label,
+        );
+        expect(
+          rules.where(
+            (Rect rule) =>
+                rule.top >= before.bottom - _tolerance &&
+                rule.bottom <= rect.top + _tolerance,
+          ),
+          hasLength(1),
+          reason: '$label is not separated by one dashed rule',
+        );
+      }
+      previous = rect;
+    }
+
+    void expectNoSync(String page) {
+      expect(
+        find.byType(SyncStorageSection, skipOffstage: false),
+        findsNothing,
+        reason: page,
+      );
+      for (final String control in <String>[
+        startSyncTitle,
+        joinTitle,
+        restoreLabelTitle,
+      ]) {
+        expect(
+          find.text(control, skipOffstage: false),
+          findsNothing,
+          reason: '$control on $page',
+        );
+      }
+    }
+
+    expectNoSync(settingsListTitle);
+    for (final MapEntry<SettingsTab, Type> entry in sections.entries) {
+      final String label = _labels[entry.key]!;
+      await _open(tester, entry.key);
+
+      expect(_list, findsNothing, reason: label);
+      _expectPageHeading(tester, label);
+      expect(
+        _inside(_content, find.byType(entry.value)),
+        findsOneWidget,
+        reason: label,
+      );
+      _expectPill(tester, settingsListTitle);
+      expectNoSync(label);
+
+      await tester.tap(_pill);
+      await tester.pumpAndSettle();
+
+      expect(_list, findsOneWidget, reason: label);
+      expect(_pill, findsNothing, reason: label);
+      expect(_heading, findsNothing, reason: label);
+    }
+  });
+
+  testWidgets('Unchanged: a copy with sync keeps Sync & storage on the phone', (
+    WidgetTester tester,
+  ) async {
+    await _pumpPhone(tester, sync: syncOffOverrides());
+
+    const List<SettingsTab> order = <SettingsTab>[
+      SettingsTab.journal,
+      SettingsTab.syncStorage,
+      SettingsTab.remindersSound,
+      SettingsTab.data,
+      SettingsTab.about,
+    ];
+    final Finder card = _inside(_list, find.byType(StickerCard));
+    expect(card, findsOneWidget);
+    expect(
+      _inside(card, find.byType(SettingsIcon)),
+      findsNWidgets(order.length),
+    );
+    expect(
+      _inside(card, find.byType(DashedDivider)),
+      findsNWidgets(order.length - 1),
+    );
+    double previousBottom = double.negativeInfinity;
+    for (final SettingsTab tab in order) {
+      final String label = _labels[tab]!;
+      final Finder row = _row(tab);
+      expect(_inside(card, row), findsOneWidget, reason: label);
+      expect(_inside(row, find.text(label)), findsOneWidget, reason: label);
+      final Rect rect = tester.getRect(row);
+      expect(
+        rect.top,
+        greaterThanOrEqualTo(previousBottom - _tolerance),
+        reason: label,
+      );
+      previousBottom = rect.bottom;
+    }
+
+    await _open(tester, SettingsTab.syncStorage);
+
+    _expectPageHeading(tester, _labels[SettingsTab.syncStorage]!);
+    expect(_inside(_content, find.byType(SyncStorageSection)), findsOneWidget);
+    for (final String control in <String>[
+      startSyncTitle,
+      joinTitle,
+      restoreLabelTitle,
+    ]) {
+      expect(
+        find.widgetWithText(SyncActionRow, control),
+        findsOneWidget,
+        reason: control,
+      );
+    }
+    _expectPill(tester, settingsListTitle);
   });
 }
