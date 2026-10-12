@@ -1,17 +1,18 @@
+import 'package:field_notes/data/links/link_opener.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
-import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../settings_data_controller.dart';
 import '../settings_feedback.dart';
 import '../settings_providers.dart';
 import '../widgets/delete_all_dialog.dart';
 
+export 'package:field_notes/data/links/link_opener.dart'
+    show LinkOpener, openInBrowser;
+
 typedef DeleteAllConfirmer = Future<bool> Function(BuildContext context);
-typedef LinkOpener = Future<bool> Function(Uri link);
 
 const String reclaimSpaceLabel = 'Reclaim space';
 const String reclaimSpaceFailedMessage =
@@ -24,9 +25,6 @@ const String privacyPolicyFailedMessage =
 final Uri privacyPolicyLink = Uri.parse(
   'https://github.com/SatanshuMishra/field-notes/blob/main/docs/privacy.md',
 );
-
-Future<bool> openInBrowser(Uri link) =>
-    launchUrl(link, mode: LaunchMode.externalApplication);
 
 class DataSection extends ConsumerStatefulWidget {
   const DataSection({
@@ -51,50 +49,54 @@ class _DataSectionState extends ConsumerState<DataSection> {
 
   @override
   Widget build(BuildContext context) {
-    return SettingsSection(
-      title: 'Data',
-      children: <Widget>[
-        SettingsFieldRow(
-          label: 'Export',
-          description: 'Save a zip of every entry and photo.',
-          control: StickerButton(
-            label: 'Export…',
-            variant: StickerButtonVariant.secondary,
-            padTapTarget: true,
-            onPressed: _exporting ? null : _runExport,
-          ),
+    return SettingsSection.grouped(
+      groups: <SettingsGroup>[
+        SettingsGroup(
+          label: 'your journal',
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Export',
+              description: 'Save a zip of every entry and photo.',
+              control: SettingsActionButton(
+                label: 'Export…',
+                onPressed: _exporting ? null : _runExport,
+              ),
+            ),
+            SettingsFieldRow(
+              label: reclaimSpaceLabel,
+              description:
+                  'Remove photo files no entry or draft still refers to.',
+              control: SettingsActionButton(
+                label: reclaimSpaceLabel,
+                onPressed: _reclaiming ? null : _runReclaimSpace,
+              ),
+            ),
+            SettingsFieldRow(
+              label: privacyPolicyLabel,
+              description:
+                  'What Field Notes keeps, what the sync server sees, and how '
+                  'to delete it.',
+              control: SettingsActionButton(
+                label: privacyPolicyOpenLabel,
+                onPressed: _openPrivacyPolicy,
+              ),
+            ),
+          ],
         ),
-        SettingsFieldRow(
-          label: reclaimSpaceLabel,
-          description: 'Remove photo files no entry or draft still refers to.',
-          control: StickerButton(
-            label: reclaimSpaceLabel,
-            variant: StickerButtonVariant.secondary,
-            padTapTarget: true,
-            onPressed: _reclaiming ? null : _runReclaimSpace,
-          ),
-        ),
-        SettingsFieldRow(
-          label: 'Delete all',
-          description: 'Erase every entry, photo, and mood on this device.',
-          control: StickerButton(
-            label: 'Delete all…',
-            variant: StickerButtonVariant.danger,
-            padTapTarget: true,
-            onPressed: _deleting ? null : _runDeleteAll,
-          ),
-        ),
-        SettingsFieldRow(
-          label: privacyPolicyLabel,
-          description:
-              'What Field Notes keeps, what the sync server sees, and how '
-              'to delete it.',
-          control: StickerButton(
-            label: privacyPolicyOpenLabel,
-            variant: StickerButtonVariant.secondary,
-            padTapTarget: true,
-            onPressed: _openPrivacyPolicy,
-          ),
+        SettingsGroup(
+          label: 'erase',
+          danger: true,
+          rows: <Widget>[
+            SettingsFieldRow(
+              label: 'Delete all',
+              description: 'Erase every entry, photo, and mood on this device.',
+              control: SettingsActionButton(
+                label: 'Delete all…',
+                tone: SettingsActionTone.danger,
+                onPressed: _deleting ? null : _runDeleteAll,
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -119,8 +121,9 @@ class _DataSectionState extends ConsumerState<DataSection> {
     }
     setState(() => _exporting = true);
     try {
-      final SettingsDataController controller =
-          await ref.read(settingsDataControllerProvider.future);
+      final SettingsDataController controller = await ref.read(
+        settingsDataControllerProvider.future,
+      );
       final DataActionResult result = await controller.export();
       if (!mounted) {
         return;
@@ -144,8 +147,9 @@ class _DataSectionState extends ConsumerState<DataSection> {
     }
     setState(() => _reclaiming = true);
     try {
-      final SettingsDataController controller =
-          await ref.read(settingsDataControllerProvider.future);
+      final SettingsDataController controller = await ref.read(
+        settingsDataControllerProvider.future,
+      );
       final DataActionResult result = await controller.reclaimSpace();
       if (!mounted) {
         return;
@@ -173,8 +177,9 @@ class _DataSectionState extends ConsumerState<DataSection> {
       if (!mounted || !confirmed) {
         return;
       }
-      final SettingsDataController controller =
-          await ref.read(settingsDataControllerProvider.future);
+      final SettingsDataController controller = await ref.read(
+        settingsDataControllerProvider.future,
+      );
       final DataActionResult result = await controller.deleteAll();
       if (!mounted) {
         return;

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:field_notes/app/theme/app_theme.dart';
+import 'package:field_notes/design/settings_fields/settings_fields.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/features/settings/sections/data_section.dart';
 import 'package:field_notes/features/settings/settings_data_controller.dart';
@@ -22,15 +25,23 @@ Future<void> _pumpSection(
   required List<String> messages,
   bool confirmDelete = true,
   LinkOpener openLink = _neverOpened,
+  TargetPlatform? platform,
 }) async {
   useWideSurface(tester);
+  Widget section = DataSection(
+    onFeedback: messages.add,
+    confirmDelete: (BuildContext context) async => confirmDelete,
+    openLink: openLink,
+  );
+  if (platform != null) {
+    section = Theme(
+      data: fieldNotesTheme(platform: platform),
+      child: section,
+    );
+  }
   await tester.pumpWidget(
     settingsFeatureHarness(
-      DataSection(
-        onFeedback: messages.add,
-        confirmDelete: (BuildContext context) async => confirmDelete,
-        openLink: openLink,
-      ),
+      section,
       overrides: <Override>[
         settingsDataControllerProvider.overrideWith(
           (Ref ref) async => controller,
@@ -41,7 +52,149 @@ Future<void> _pumpSection(
   await tester.pumpAndSettle();
 }
 
+double _top(WidgetTester tester, String text) =>
+    tester.getTopLeft(find.text(text)).dy;
+
 void main() {
+  testWidgets('desktop data rows sit in your journal and erase groups', (
+    WidgetTester tester,
+  ) async {
+    final Completer<void> gate = Completer<void>();
+    final FakeSettingsDataController controller = FakeSettingsDataController(
+      exportResult: const DataActionSucceeded('Exported to /tmp/a.zip'),
+      gate: gate,
+    );
+    await _pumpSection(
+      tester,
+      controller: controller,
+      messages: <String>[],
+      platform: TargetPlatform.macOS,
+    );
+
+    final List<String> order = <String>[
+      'your journal',
+      'Export',
+      reclaimSpaceLabel,
+      privacyPolicyLabel,
+      'erase',
+      'Delete all',
+    ];
+    for (final String text in order) {
+      expect(find.text(text), findsWidgets, reason: text);
+    }
+    final List<double> tops = <double>[
+      _top(tester, 'your journal'),
+      _top(tester, 'Export'),
+      tester.getTopLeft(find.text(reclaimSpaceLabel).first).dy,
+      _top(tester, privacyPolicyLabel),
+      _top(tester, 'erase'),
+      _top(tester, 'Delete all'),
+    ];
+    for (int index = 1; index < tops.length; index++) {
+      expect(tops[index], greaterThan(tops[index - 1]), reason: order[index]);
+    }
+    expect(find.text('Data'), findsNothing);
+
+    final BuildContext context = tester.element(find.text('erase'));
+    expect(
+      tester.widget<Text>(find.text('erase')).style!.color!.toARGB32(),
+      context.colors.dangerInk.toARGB32(),
+    );
+    expect(
+      tester.widget<Text>(find.text('your journal')).style!.color!.toARGB32(),
+      isNot(context.colors.dangerInk.toARGB32()),
+    );
+    expect(
+      tester
+          .widget<SettingsActionButton>(
+            find.widgetWithText(SettingsActionButton, 'Delete all…'),
+          )
+          .tone,
+      SettingsActionTone.danger,
+    );
+    expect(
+      find.widgetWithText(SettingsActionButton, 'Export…'),
+      findsOneWidget,
+    );
+    expect(find.byType(StickerButton), findsNothing);
+
+    await tester.tap(find.text('Export…'));
+    await tester.pump();
+    expect(
+      tester
+          .widget<SettingsActionButton>(
+            find.widgetWithText(SettingsActionButton, 'Export…'),
+          )
+          .onPressed,
+      isNull,
+    );
+    gate.complete();
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<SettingsActionButton>(
+            find.widgetWithText(SettingsActionButton, 'Export…'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+  });
+
+  testWidgets('desktop delete-all button goes busy while running', (
+    WidgetTester tester,
+  ) async {
+    final Completer<void> gate = Completer<void>();
+    final FakeSettingsDataController controller = FakeSettingsDataController(
+      deleteResult: const DataActionSucceeded('Deleted.'),
+      reclaimResult: const DataActionSucceeded('Reclaimed.'),
+      gate: gate,
+    );
+    await _pumpSection(
+      tester,
+      controller: controller,
+      messages: <String>[],
+      platform: TargetPlatform.macOS,
+    );
+
+    await tester.tap(find.text('Delete all…'));
+    await tester.pump();
+    await tester.pump();
+    expect(
+      tester
+          .widget<SettingsActionButton>(
+            find.widgetWithText(SettingsActionButton, 'Delete all…'),
+          )
+          .onPressed,
+      isNull,
+    );
+    gate.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('phone data rows share one untitled card', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSection(
+      tester,
+      controller: FakeSettingsDataController(),
+      messages: <String>[],
+      platform: TargetPlatform.android,
+    );
+
+    expect(find.byType(StickerCard), findsOneWidget);
+    for (final String label in <String>['Data', 'your journal', 'erase']) {
+      expect(find.text(label), findsNothing, reason: label);
+    }
+    for (final String row in <String>[
+      'Export',
+      privacyPolicyLabel,
+      'Delete all',
+    ]) {
+      expect(find.text(row), findsOneWidget, reason: row);
+    }
+    expect(find.text(reclaimSpaceLabel), findsWidgets);
+  });
+
   testWidgets('renders the data actions with the right emphasis', (
     WidgetTester tester,
   ) async {
@@ -51,7 +204,7 @@ void main() {
       messages: <String>[],
     );
 
-    expect(find.text('Data'), findsOneWidget);
+    expect(find.text('Data'), findsNothing);
     expect(
       tester
           .widget<StickerButton>(find.widgetWithText(StickerButton, 'Export…'))

@@ -44,39 +44,38 @@ Future<void> _pumpSection(
 }
 
 void main() {
-  testWidgets(
-    'Reflection question sits directly after Daily reminder and starts off',
-    (WidgetTester tester) async {
-      await _pumpSection(tester, repository: FakeSettingsRepository());
+  testWidgets('Reflection question sits after Reminder time and starts off', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSection(tester, repository: FakeSettingsRepository());
 
-      expect(find.text('Reflection question'), findsOneWidget);
-      expect(
-        find.text('Show a gentle prompt when recording voice or video.'),
-        findsOneWidget,
-      );
+    expect(find.text('Reflection question'), findsOneWidget);
+    expect(
+      find.text('Show a gentle prompt when recording voice or video.'),
+      findsOneWidget,
+    );
 
-      final SettingsToggle toggle = tester.widget<SettingsToggle>(
-        find.descendant(
-          of: find.widgetWithText(SettingsFieldRow, 'Reflection question'),
-          matching: find.byType(SettingsToggle),
-        ),
-      );
-      expect(toggle.value, isFalse);
+    final SettingsToggle toggle = tester.widget<SettingsToggle>(
+      find.descendant(
+        of: find.widgetWithText(SettingsFieldRow, 'Reflection question'),
+        matching: find.byType(SettingsToggle),
+      ),
+    );
+    expect(toggle.value, isFalse);
 
-      final double dailyReminderTop = tester
-          .getTopLeft(find.text('Daily reminder'))
-          .dy;
-      final double reflectionTop = tester
-          .getTopLeft(find.text('Reflection question'))
-          .dy;
-      final double reminderTimeTop = tester
-          .getTopLeft(find.text('Reminder time'))
-          .dy;
+    final double dailyReminderTop = tester
+        .getTopLeft(find.text('Daily reminder'))
+        .dy;
+    final double reflectionTop = tester
+        .getTopLeft(find.text('Reflection question'))
+        .dy;
+    final double reminderTimeTop = tester
+        .getTopLeft(find.text('Reminder time'))
+        .dy;
 
-      expect(reflectionTop, greaterThan(dailyReminderTop));
-      expect(reminderTimeTop, greaterThan(reflectionTop));
-    },
-  );
+    expect(reminderTimeTop, greaterThan(dailyReminderTop));
+    expect(reflectionTop, greaterThan(reminderTimeTop));
+  });
 
   testWidgets('turning Reflection question on writes the setting', (
     WidgetTester tester,

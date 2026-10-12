@@ -40,16 +40,12 @@ class NotificationsOffNotice extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final TargetPlatform platform = Theme.of(context).platform;
-    final Widget button = StickerButton(
-      label: openSettingsLabelFor(platform),
-      variant: StickerButtonVariant.secondary,
-      padTapTarget: true,
-      onPressed: () => _openNotificationSettings(ref, platform),
-    );
+    final String label = openSettingsLabelFor(platform);
+    void open() => _openNotificationSettings(ref, platform);
     return switch (layout) {
       NotificationsOffLayout.row => SettingsFieldRow(
         label: notificationsOffLabel,
-        control: button,
+        control: SettingsActionButton(label: label, onPressed: open),
       ),
       NotificationsOffLayout.centred => Wrap(
         alignment: WrapAlignment.center,
@@ -66,7 +62,15 @@ class NotificationsOffNotice extends ConsumerWidget {
               style: context.textStyles.labelSans,
             ),
           ),
-          Semantics(container: true, child: button),
+          Semantics(
+            container: true,
+            child: StickerButton(
+              label: label,
+              variant: StickerButtonVariant.secondary,
+              padTapTarget: true,
+              onPressed: open,
+            ),
+          ),
         ],
       ),
     };
