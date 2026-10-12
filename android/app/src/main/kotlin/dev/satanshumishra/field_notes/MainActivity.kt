@@ -28,6 +28,7 @@ class MainActivity : FlutterActivity() {
         ClipboardImageBridge(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         UploadChannel(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         DeviceStorageChannel(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
+        AppUpdateChannel(this).register(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIFICATION_SETTINGS_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {

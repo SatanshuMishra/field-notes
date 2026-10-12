@@ -12,6 +12,7 @@ val keystoreProperties = Properties()
 if (hasReleaseKey) {
     keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
 }
+val selfUpdate = providers.gradleProperty("fieldNotesSelfUpdate").orNull == "true"
 
 android {
     namespace = "dev.satanshumishra.field_notes"
@@ -119,5 +120,14 @@ androidComponents {
             groups.set(variant.runtimeConfiguration.incoming.resolutionResult.rootComponent.map(::resolvedGroups))
         }
         tasks.matching { it.name == "pre${name}Build" }.configureEach { dependsOn(check) }
+        val kotlinSources = checkNotNull(variant.sources.kotlin ?: variant.sources.java) {
+            "The ${variant.name} variant exposes no Kotlin or Java sources"
+        }
+        if (selfUpdate) {
+            variant.sources.manifests.addStaticManifestFile("src/selfUpdate/AndroidManifest.xml")
+            kotlinSources.addStaticSourceDirectory("src/selfUpdate/kotlin")
+        } else {
+            kotlinSources.addStaticSourceDirectory("src/store/kotlin")
+        }
     }
 }
