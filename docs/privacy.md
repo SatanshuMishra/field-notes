@@ -1,6 +1,6 @@
 # Field Notes privacy policy
 
-Effective 9 October 2026.
+Effective 11 October 2026.
 
 This policy covers the Field Notes app for Android, macOS and Windows, made by Satanshu Mishra. In it, "I" means me, the developer, and "you" means the person using the app.
 
@@ -9,6 +9,7 @@ This policy covers the Field Notes app for Android, macOS and Windows, made by S
 - Your journal stays on your device unless you turn on sync.
 - With sync on, your entries, moods, photos, voice notes, videos and device names are encrypted on your device before they leave it. Only your own devices hold the keys, so the sync server, and I, cannot read them.
 - Field Notes has no ads, no analytics, no crash reporting and no tracking. I do not sell or share your data.
+- Field Notes checks GitHub for new versions, which you can turn off.
 
 ## What stays on your device
 
@@ -25,6 +26,14 @@ The app uses these device features only when you act:
 - **Photos**: you choose photos with your device's photo picker. The app sees only the photos you pick.
 - **Notifications**: for the daily reminder you set and for sync progress. Reminders are scheduled on your device.
 - **Spell check**: off by default. When you turn it on, the text you type is checked by your device's own spell checker.
+
+## Update checks
+
+Field Notes asks GitHub (api.github.com, run by GitHub, Inc.) whether a newer version exists. It asks once a day while Check automatically is on (Settings > About; it is on unless you turn it off) and whenever you choose Check for updates.
+
+The request carries no journal data and no account or device identifier, only what any web request carries. GitHub sees your internet address and that the request came from Field Notes. See [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
+
+Updates download from GitHub's servers, or through Google Play for copies installed from Google Play. Nothing installs until you choose to update.
 
 ## Sync (optional)
 
