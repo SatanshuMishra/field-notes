@@ -22,41 +22,51 @@ const List<String> _fixedItems = <String>[
   'Recording a voice or video note keeps your phone, Mac or Windows PC awake, so the screen timeout or sleep no longer cuts a recording short.',
 ];
 
+const String _laterEntries =
+    '## [Unreleased]\n'
+    '\n'
+    '### New\n'
+    '\n'
+    '- A later change lands here.\n'
+    '\n'
+    '## [1.0.1] - 2026-11-01\n'
+    '\n'
+    '### Fixed\n'
+    '\n'
+    '- A later fix lands here.\n';
+
 String _changelog() => File('CHANGELOG.md').readAsStringSync();
 
 String _list(String title, List<String> items) =>
     '### $title\n\n${items.map((String item) => '- $item').join('\n')}\n';
 
+void _expectReleaseNotes(String path) {
+  final List<String> lines = File(path).readAsStringSync().split('\n');
+  expect(lines.where((String line) => line.startsWith('## [1.0.0]')), <String>[
+    _heading,
+  ]);
+  final int unreleased = lines.indexOf('## [Unreleased]');
+  final int release = lines.indexOf(_heading);
+  expect(unreleased, greaterThanOrEqualTo(0));
+  expect(unreleased, lessThan(release));
+
+  final ProcessResult result = Process.runSync('bash', <String>[
+    'tool/release/changelog_section.sh',
+    '1.0.0',
+    path,
+  ]);
+  expect(result.exitCode, 0, reason: '${result.stderr}');
+  expect(
+    result.stdout as String,
+    '${_list('New', _newItems)}\n'
+    '${_list('Improved', _improvedItems)}\n'
+    '${_list('Fixed', _fixedItems)}',
+  );
+}
+
 void main() {
   test('the release job finds the dated 1.0.0 notes in the changelog', () {
-    final List<String> lines = _changelog().split('\n');
-    expect(
-      lines.where((String line) => line.startsWith('## [1.0.0]')),
-      <String>[_heading],
-    );
-    final int unreleased = lines.indexOf('## [Unreleased]');
-    final int release = lines.indexOf(_heading);
-    expect(unreleased, greaterThanOrEqualTo(0));
-    expect(unreleased, lessThan(release));
-    expect(
-      lines
-          .sublist(unreleased + 1, release)
-          .where((String line) => line.trim().isNotEmpty),
-      isEmpty,
-    );
-
-    final ProcessResult result = Process.runSync('bash', <String>[
-      'tool/release/changelog_section.sh',
-      '1.0.0',
-      'CHANGELOG.md',
-    ]);
-    expect(result.exitCode, 0, reason: '${result.stderr}');
-    expect(
-      result.stdout as String,
-      '${_list('New', _newItems)}\n'
-      '${_list('Improved', _improvedItems)}\n'
-      '${_list('Fixed', _fixedItems)}',
-    );
+    _expectReleaseNotes('CHANGELOG.md');
   });
 
   test('Field Notes 1.0.0 finds its own release notes', () {
@@ -74,5 +84,21 @@ void main() {
     expect(section.notes.groups[0].items, _newItems);
     expect(section.notes.groups[1].items, _improvedItems);
     expect(section.notes.groups[2].items, _fixedItems);
+  });
+
+  test('a later entry under Unreleased and a later release keep the 1.0.0 notes check passing', () {
+    final Directory folder = Directory.systemTemp.createTempSync(
+      'changelog_release_test',
+    );
+    addTearDown(() => folder.deleteSync(recursive: true));
+    final String changelog = _changelog();
+    expect(changelog, contains('## [Unreleased]\n'));
+    final File later = File('${folder.path}/CHANGELOG.md')
+      ..writeAsStringSync(
+        changelog.replaceFirst('## [Unreleased]\n', _laterEntries),
+      );
+    expect(later.readAsStringSync(), contains('- A later change lands here.'));
+
+    _expectReleaseNotes(later.path);
   });
 }
