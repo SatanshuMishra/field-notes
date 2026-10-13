@@ -6,6 +6,7 @@ import 'package:flutter/painting.dart';
 
 import 'package:field_notes/design/flowers/garden_art_colors.dart';
 import 'package:field_notes/features/garden/scene/meadow_ambience.dart';
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 
 typedef MeadowFlyerSway = ({Offset offset, double angle});
 
@@ -128,7 +129,7 @@ class MeadowCreatureArt {
       canvas.restore();
     }
     final ui.Picture picture = recorder.endRecording();
-    final ui.Image image = picture.toImageSync(width, height);
+    final ui.Image image = meadowSnapshot(picture, width, height);
     picture.dispose();
     final List<_Sprite> sprites = <_Sprite>[
       for (int i = 0; i < plans.length; i++)

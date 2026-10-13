@@ -1,10 +1,14 @@
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:field_notes/features/garden/render/meadow_rays.dart';
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../support/image_count.dart';
 import '../support/meadow_pixels.dart';
+import '../support/meadow_stage_harness.dart';
 
 MeadowPalette _withSunAt(MeadowPalette palette, Offset sunPosition) =>
     MeadowPalette(
@@ -74,17 +78,63 @@ MeadowPalette _withSunAt(MeadowPalette palette, Offset sunPosition) =>
     );
 
 void main() {
-  test("the rays are baked again only when the sun's colours change", () {
-    final Map<String, MeadowPalette> palettes = meadowPixelsPalettes(
-      meadowPixelsLeapYear(),
-    );
-    final MeadowPalette noon = palettes['noon']!;
-    final MeadowPalette dusk = palettes['dusk']!;
-    final int side = (2 * meadowRaysReach * meadowRaysScale).ceil();
+  final Map<String, MeadowPalette> palettes = meadowPixelsPalettes(
+    meadowPixelsLeapYear(),
+  );
+  final MeadowPalette noon = palettes['noon']!;
+  final MeadowPalette dusk = palettes['dusk']!;
+  final int side = (2 * meadowRaysReach * meadowRaysScale).ceil();
 
+  ImageCount countImages() {
+    final ImageCount count = ImageCount()..start();
+    addTearDown(count.stop);
+    return count;
+  }
+
+  Future<Uint8List> bytesOf(Image image) async =>
+      (await image.toByteData(format: ImageByteFormat.rawRgba))!.buffer
+          .asUint8List();
+
+  test('the rays count every image they render', () {
+    final MeadowPacer pacer = installPacer(MeadowPacer());
+    final ImageCount count = countImages();
+    final MeadowRays rays = MeadowRays(noon)..buildAll();
+    addTearDown(rays.dispose);
+    expect(count.created, 3);
+    expect(pacer.debugSnapshots, count.created);
+
+    rays
+      ..recolour(dusk)
+      ..buildAll();
+    expect(count.created, 4);
+    expect(pacer.debugSnapshots, count.created);
+  });
+
+  test('the rays build in three steps of one image each', () {
+    installPacer(MeadowPacer());
+    final ImageCount count = countImages();
     final MeadowRays rays = MeadowRays(noon);
     addTearDown(rays.dispose);
+    expect(count.created, 0);
+    expect(rays.isReady, isFalse);
+
+    for (int i = 0; i < 3; i++) {
+      final int before = count.created;
+      rays.step();
+      expect(count.created - before, 1, reason: 'step ${i + 1}');
+      expect(rays.isReady, i == 2, reason: 'step ${i + 1}');
+    }
+    expect(rays.image.width, side);
+    expect(rays.image.height, side);
+    expect(rays.debugGeometryRecordings, 2);
+  });
+
+  test("the rays are baked again only when the sun's colours change", () {
+    final ImageCount count = countImages();
+    final MeadowRays rays = MeadowRays(noon)..buildAll();
+    addTearDown(rays.dispose);
     final Image baked = rays.image;
+    final int revision = rays.revision;
     expect(baked.width, side);
     expect(baked.height, side);
     expect(rays.debugGeometryRecordings, 2);
@@ -97,14 +147,57 @@ void main() {
     expect(moved.sunColour, noon.sunColour);
     expect(moved.raysGlowAlpha, noon.raysGlowAlpha);
     rays.recolour(moved);
+    expect(rays.isRecolouring, isFalse);
     expect(baked.debugDisposed, isFalse);
     expect(rays.image, same(baked));
+    expect(rays.revision, revision);
 
     expect(dusk.sunColour, isNot(noon.sunColour));
+    final int before = count.created;
     rays.recolour(dusk);
+    expect(count.created, before);
+    expect(rays.isRecolouring, isTrue);
+    expect(rays.image, same(baked));
+
+    rays.step();
+    expect(count.created - before, 1);
     expect(rays.image, isNot(same(baked)));
     expect(baked.debugDisposed, isTrue);
     expect(rays.image.debugDisposed, isFalse);
+    expect(rays.isRecolouring, isFalse);
+    expect(rays.revision, revision + 1);
     expect(rays.debugGeometryRecordings, 2);
   });
+
+  test(
+    'a recoloured composite matches rays built fresh with the same palette',
+    () async {
+      final MeadowRays recoloured = MeadowRays(noon)..buildAll();
+      addTearDown(recoloured.dispose);
+      recoloured
+        ..recolour(dusk)
+        ..buildAll();
+      final MeadowRays fresh = MeadowRays(dusk)..buildAll();
+      addTearDown(fresh.dispose);
+      expect(await bytesOf(recoloured.image), await bytesOf(fresh.image));
+    },
+  );
+
+  test(
+    'disposing partly built rays releases only the images they rendered',
+    () {
+      final ImageCount count = countImages();
+      final MeadowRays once = MeadowRays(noon)..step();
+      expect(count.created, 1);
+      once.dispose();
+      expect(count.disposed, count.created);
+
+      final MeadowRays twice = MeadowRays(noon)
+        ..step()
+        ..step();
+      expect(count.created, 3);
+      twice.dispose();
+      expect(count.disposed, count.created);
+    },
+  );
 }

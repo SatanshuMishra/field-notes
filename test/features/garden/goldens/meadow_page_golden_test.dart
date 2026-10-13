@@ -207,9 +207,15 @@ Future<void> _pumpReference(WidgetTester tester, _Reference reference) async {
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 2)),
     );
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
   }
   expect(stage.debugIsReady, isTrue, reason: '${reference.name} never grew');
+  for (int i = 0; i < _buildFrames && tester.binding.hasScheduledFrame; i++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 2)),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+  }
   await tester.pumpAndSettle();
   final String? month = reference.focusMonth;
   if (month != null) {

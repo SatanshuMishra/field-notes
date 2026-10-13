@@ -15,6 +15,12 @@ const double _fallbackRate = 60;
 
 MeadowPacer meadowPacer = MeadowPacer();
 
+ui.Image meadowSnapshot(ui.Picture picture, int width, int height) {
+  final ui.Image image = picture.toImageSync(width, height);
+  meadowPacer.countSnapshot();
+  return image;
+}
+
 @immutable
 class MeadowBatch {
   const MeadowBatch._(this._id);
@@ -24,8 +30,10 @@ class MeadowBatch {
 
 class MeadowPacer {
   MeadowPacer({MeadowGpuMarker? marker, int Function()? nowMicros})
-    : _marker = marker ?? _drawMarker,
+    : _marker = marker ?? _readBack,
       _clock = nowMicros ?? _stopwatch();
+
+  static const int snapshotsPerGap = 4;
 
   final MeadowGpuMarker _marker;
   final int Function() _clock;
@@ -35,6 +43,9 @@ class MeadowPacer {
   int _nextBatch = 0;
   bool _used = false;
   bool _closing = false;
+  int _gapSnapshots = 0;
+  int _snapshots = 0;
+  bool _watchingGaps = false;
 
   static Duration frameInterval(double refreshRate) {
     final double rate = refreshRate.isFinite && refreshRate > 0
@@ -52,6 +63,21 @@ class MeadowPacer {
   }) => advanced == 0 || spent < frame ~/ 2;
 
   int nowMicros() => _clock();
+
+  int get snapshotRoom => math.max(0, snapshotsPerGap - _gapSnapshots);
+
+  @visibleForTesting
+  int get debugSnapshots => _snapshots;
+
+  void countSnapshot() {
+    _gapSnapshots++;
+    _snapshots++;
+    if (_watchingGaps) {
+      return;
+    }
+    _watchingGaps = true;
+    SchedulerBinding.instance.addPersistentFrameCallback(_gapEnded);
+  }
 
   int allowance(MeadowWork kind, {required Duration share}) {
     final double? estimate = _estimates[kind];
@@ -83,7 +109,7 @@ class MeadowPacer {
       id,
       _Pending(kind: kind, began: nowMicros(), interval: frame.inMicroseconds),
     );
-    _send(id, after: false);
+    _settle(id, after: false, at: nowMicros());
     return MeadowBatch._(id);
   }
 
@@ -225,6 +251,10 @@ class MeadowPacer {
     SchedulerBinding.instance.addPostFrameCallback(_frameEnded);
   }
 
+  void _gapEnded(Duration timeStamp) {
+    _gapSnapshots = 0;
+  }
+
   void _frameEnded(Duration timeStamp) {
     final List<_Turn> waiting = _waiting;
     final bool used = _used;
@@ -361,14 +391,18 @@ int Function() _stopwatch() {
   return () => watch.elapsedMicroseconds;
 }
 
-Future<void> _drawMarker() async {
+ui.Image? _readBackImage;
+
+Future<void> _readBack() async {
+  final ui.Image image = _readBackImage ??= _readBackSnapshot();
+  await image.toByteData();
+}
+
+ui.Image _readBackSnapshot() {
   final ui.PictureRecorder recorder = ui.PictureRecorder();
   ui.Canvas(recorder, const ui.Rect.fromLTWH(0, 0, 1, 1));
   final ui.Picture picture = recorder.endRecording();
-  try {
-    final ui.Image image = await picture.toImage(1, 1);
-    image.dispose();
-  } finally {
-    picture.dispose();
-  }
+  final ui.Image image = meadowSnapshot(picture, 1, 1);
+  picture.dispose();
+  return image;
 }

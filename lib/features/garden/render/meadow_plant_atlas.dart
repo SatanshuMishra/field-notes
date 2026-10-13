@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
 import 'package:flutter/foundation.dart';
 
@@ -145,7 +146,8 @@ class MeadowPlantAtlas {
       _paintCell(canvas, placed);
     }
     final Picture picture = recorder.endRecording();
-    final Image image = picture.toImageSync(
+    final Image image = meadowSnapshot(
+      picture,
       bounds.width.toInt(),
       bounds.height.toInt(),
     );
@@ -162,7 +164,7 @@ class MeadowPlantAtlas {
       canvas.drawImage(chunk.image, chunk.offset, paint);
     }
     final Picture picture = recorder.endRecording();
-    final Image image = picture.toImageSync(sheet.width, sheet.height);
+    final Image image = meadowSnapshot(picture, sheet.width, sheet.height);
     picture.dispose();
     return image;
   }

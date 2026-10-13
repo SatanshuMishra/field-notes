@@ -246,7 +246,7 @@ Future<void> _growYear(WidgetTester tester, _Year year) async {
   );
   for (int frame = 0; frame < _meadowFrames && !stage.debugIsReady; frame++) {
     await tester.runAsync(() => Future<void>.delayed(_meadowWait));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
   }
   if (!stage.debugIsReady) {
     throw StateError('the meadow never finished building');

@@ -89,7 +89,7 @@ class _Scene {
       ..buildAll();
     atlas = MeadowPlantAtlas(plants, density: _density)..buildAll();
     creatures = MeadowCreatureArt.build(density: _density);
-    rays = MeadowRays(noon);
+    rays = MeadowRays(noon)..buildAll();
   }
 
   late final MeadowYear year;
@@ -119,6 +119,7 @@ class _Scene {
       atlas: atlas,
       creatures: creatures,
       rays: rays,
+      raysRevision: rays.revision,
       terrain: terrain,
       plants: plants,
       palette: noon,

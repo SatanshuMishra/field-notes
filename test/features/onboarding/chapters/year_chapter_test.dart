@@ -174,7 +174,7 @@ Future<void> _untilReady(
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 2)),
     );
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
     eachFrame?.call();
   }
   expect(stage.debugIsReady, isTrue, reason: 'the meadow never finished');

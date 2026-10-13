@@ -90,6 +90,7 @@ class MeadowStagePainter extends CustomPainter {
     required this.atlas,
     required this.creatures,
     required this.rays,
+    required this.raysRevision,
     required this.terrain,
     required this.plants,
     required this.palette,
@@ -118,6 +119,7 @@ class MeadowStagePainter extends CustomPainter {
   final MeadowPlantAtlas atlas;
   final MeadowCreatureArt creatures;
   final MeadowRays rays;
+  final int raysRevision;
   final MeadowTerrain terrain;
   final MeadowPlants plants;
   final MeadowPalette palette;
@@ -739,6 +741,7 @@ class MeadowStagePainter extends CustomPainter {
       !identical(oldDelegate.atlas, atlas) ||
       !identical(oldDelegate.creatures, creatures) ||
       !identical(oldDelegate.rays, rays) ||
+      oldDelegate.raysRevision != raysRevision ||
       !identical(oldDelegate.terrain, terrain) ||
       !identical(oldDelegate.plants, plants) ||
       !identical(oldDelegate.bees, bees) ||

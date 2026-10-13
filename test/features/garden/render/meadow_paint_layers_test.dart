@@ -101,7 +101,7 @@ void main() {
       final MeadowCreatureArt creatures = MeadowCreatureArt.build(
         density: _density,
       );
-      final MeadowRays rays = MeadowRays(noon);
+      final MeadowRays rays = MeadowRays(noon)..buildAll();
       addTearDown(() {
         layers.dispose();
         atlas.dispose();
@@ -124,6 +124,7 @@ void main() {
           atlas: atlas,
           creatures: creatures,
           rays: rays,
+          raysRevision: rays.revision,
           terrain: terrain,
           plants: plants,
           palette: palette,
