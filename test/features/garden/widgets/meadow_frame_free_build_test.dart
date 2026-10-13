@@ -152,6 +152,7 @@ void main() {
       );
       await tester.pump();
       expect(tester.binding.hasScheduledFrame, isFalse);
+      expect(gpu.sent, isEmpty);
       final int drawn = frames;
       for (int i = 0; i < meadowBuildFrames && !state.debugIsReady; i++) {
         await _wait(tester);

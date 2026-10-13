@@ -200,4 +200,104 @@ void main() {
       expect(count.disposed, count.created);
     },
   );
+
+  test('a rays recolour is marked only when it differs from the colours of the '
+      'shown composite', () async {
+    final MeadowPalette midnight = palettes['midnight']!;
+    MeadowPalette moved(MeadowPalette palette) =>
+        _withSunAt(palette, palette.sunPosition + const Offset(40, 0));
+    final Map<String, MeadowPalette?> operations = <String, MeadowPalette?>{
+      'noon': noon,
+      'noon moved': moved(noon),
+      'dusk': dusk,
+      'midnight': midnight,
+      'midnight moved': moved(midnight),
+      'step': null,
+    };
+    expect(midnight.sunColour, isNot(noon.sunColour));
+    expect(midnight.raysGlowAlpha, noon.raysGlowAlpha);
+    expect(dusk.sunColour, midnight.sunColour);
+    expect(dusk.raysGlowAlpha, isNot(midnight.raysGlowAlpha));
+    installPacer(MeadowPacer());
+    final ImageCount count = countImages();
+    final Map<(Color, double), Uint8List> looks =
+        <(Color, double), Uint8List>{};
+    for (final MeadowPalette palette in <MeadowPalette>[noon, dusk, midnight]) {
+      final MeadowRays reference = MeadowRays(palette)..buildAll();
+      looks[(palette.sunColour, palette.raysGlowAlpha)] = await bytesOf(
+        reference.image,
+      );
+      reference.dispose();
+    }
+
+    for (final int start in <int>[3, 2]) {
+      for (final String first in operations.keys) {
+        for (final String second in operations.keys) {
+          for (final String third in operations.keys) {
+            final List<String> sequence = <String>[first, second, third];
+            final String label = 'from $start steps: $sequence';
+            final MeadowRays rays = MeadowRays(noon);
+            for (int i = 0; i < start; i++) {
+              rays.step();
+            }
+            int made = start;
+            (Color, double) requested = (noon.sunColour, noon.raysGlowAlpha);
+            (Color, double)? shown = start == 3 ? requested : null;
+            for (final String operation in sequence) {
+              final MeadowPalette? palette = operations[operation];
+              if (palette != null) {
+                requested = (palette.sunColour, palette.raysGlowAlpha);
+                rays.recolour(palette);
+                expect(
+                  rays.isRecolouring,
+                  shown != null && requested != shown,
+                  reason: '$label after recolour($operation)',
+                );
+                continue;
+              }
+              final int before = count.created;
+              if (made < 3) {
+                rays.step();
+                made++;
+                expect(count.created - before, 1, reason: label);
+                if (made == 3) {
+                  shown = requested;
+                  expect(rays.isReady, isTrue, reason: label);
+                  expect(rays.isRecolouring, isFalse, reason: label);
+                  expect(
+                    await bytesOf(rays.image),
+                    looks[shown],
+                    reason: '$label first composite',
+                  );
+                }
+                continue;
+              }
+              final Image previous = rays.image;
+              final int revision = rays.revision;
+              if (requested != shown) {
+                rays.step();
+                shown = requested;
+                expect(count.created - before, 1, reason: label);
+                expect(rays.revision, revision + 1, reason: label);
+                expect(previous.debugDisposed, isTrue, reason: label);
+                expect(
+                  await bytesOf(rays.image),
+                  looks[shown],
+                  reason: '$label redraw',
+                );
+              } else {
+                rays.step();
+                expect(count.created, before, reason: label);
+                expect(rays.image, same(previous), reason: label);
+                expect(previous.debugDisposed, isFalse, reason: label);
+                expect(rays.revision, revision, reason: label);
+              }
+              expect(rays.isRecolouring, isFalse, reason: label);
+            }
+            rays.dispose();
+          }
+        }
+      }
+    }
+  });
 }

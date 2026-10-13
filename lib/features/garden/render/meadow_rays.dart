@@ -28,6 +28,8 @@ class MeadowRays {
   ui.Image? _image;
   Color _sunColour;
   double _glowAlpha;
+  Color? _shownSunColour;
+  double? _shownGlowAlpha;
   bool _stale = false;
   bool _disposed = false;
   int _revision = 0;
@@ -64,8 +66,10 @@ class MeadowRays {
       _glowMask = _record(_paintGlow);
     } else if (shown == null) {
       _image = _composite(beams, glow);
+      _noteShown();
     } else if (_stale) {
       _image = _composite(beams, glow);
+      _noteShown();
       _stale = false;
       _revision++;
       shown.dispose();
@@ -78,16 +82,19 @@ class MeadowRays {
   }
 
   void recolour(MeadowPalette palette) {
-    if (_disposed ||
-        (palette.sunColour == _sunColour &&
-            palette.raysGlowAlpha == _glowAlpha)) {
+    if (_disposed) {
       return;
     }
     _sunColour = palette.sunColour;
     _glowAlpha = palette.raysGlowAlpha;
     if (_image != null) {
-      _stale = true;
+      _stale = _sunColour != _shownSunColour || _glowAlpha != _shownGlowAlpha;
     }
+  }
+
+  void _noteShown() {
+    _shownSunColour = _sunColour;
+    _shownGlowAlpha = _glowAlpha;
   }
 
   void dispose() {
