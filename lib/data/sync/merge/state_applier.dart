@@ -14,6 +14,7 @@ import 'package:field_notes/data/sync/merge/text_merge.dart';
 import 'package:field_notes/data/sync/synced_tables.dart';
 import 'package:field_notes/domain/models/entry_type.dart';
 import 'package:field_notes/domain/models/media_kind.dart';
+import 'package:field_notes/domain/models/voice_peaks.dart';
 
 enum ApplyOutcome { applied, heldBack }
 
@@ -22,6 +23,7 @@ const String _versionField = 'textVersion';
 const String _updatedField = 'updatedAt';
 const String _deletedField = 'deletedAt';
 const String _dayField = 'dayId';
+const String _peaksField = 'peaks';
 const String _clocksColumn = 'fieldClocks';
 const String _relPathColumn = 'relPath';
 const String _emptyClocks = '{}';
@@ -50,7 +52,8 @@ class StateApplier {
   final RecordReader _reader;
   final int Function() _wallClock;
 
-  Future<ApplyOutcome> apply(RecordState remote) async {
+  Future<ApplyOutcome> apply(RecordState received) async {
+    final RecordState remote = _withUsablePeaks(received);
     final List<String> names = _checkedFields(remote);
     final List<Hlc> remoteClocks = remote.clocks.values.map(Hlc.parse).toList();
     return _db.transaction(() async {
@@ -304,7 +307,11 @@ List<String> _checkedFields(RecordState remote) {
     throw ArgumentError.value(remote.table, 'remote', 'Not a synced table.');
   }
   final List<String> missing = names
-      .where((String name) => !remote.fields.containsKey(name))
+      .where(
+        (String name) =>
+            !remote.fields.containsKey(name) &&
+            !_mayBeMissing(remote.table, name),
+      )
       .toList();
   if (missing.isNotEmpty) {
     throw FormatException(
@@ -322,6 +329,36 @@ List<String> _checkedFields(RecordState remote) {
     );
   }
   return names;
+}
+
+bool _mayBeMissing(String table, String name) {
+  return table == SyncedTables.entries && name == _peaksField;
+}
+
+RecordState _withUsablePeaks(RecordState remote) {
+  if (remote.table != SyncedTables.entries || _hasUsablePeaks(remote)) {
+    return remote;
+  }
+  return RecordState(
+    table: remote.table,
+    rowId: remote.rowId,
+    fields: <String, Object?>{
+      for (final MapEntry<String, Object?> field in remote.fields.entries)
+        if (field.key != _peaksField) field.key: field.value,
+    },
+    clocks: <String, String>{
+      for (final MapEntry<String, String> clock in remote.clocks.entries)
+        if (clock.key != _peaksField) clock.key: clock.value,
+    },
+  );
+}
+
+bool _hasUsablePeaks(RecordState remote) {
+  if (!remote.fields.containsKey(_peaksField)) {
+    return false;
+  }
+  final Object? peaks = remote.fields[_peaksField];
+  return peaks == null || decodeVoicePeaks(peaks) != null;
 }
 
 RecordState _newestFields(

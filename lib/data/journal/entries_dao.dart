@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../domain/models/voice_peaks.dart';
 import '../../domain/services/note_limits.dart';
 import '../database/app_database.dart';
 import '../sync/change_recorder.dart';
@@ -21,6 +22,7 @@ const List<String> _deleteUnsyncableFields = <String>[
   'textContent',
   'textVersion',
 ];
+const List<String> _peaksFields = <String>['peaks'];
 
 class EntriesDao {
   EntriesDao(this._db, this._recorder);
@@ -38,6 +40,7 @@ class EntriesDao {
     required int? durationMs,
     required int createdAt,
     required int updatedAt,
+    List<double>? peaks,
   }) {
     return _db.transaction(() async {
       final String clocks = await _recorder.stamp(
@@ -64,6 +67,7 @@ class EntriesDao {
               updatedAt: updatedAt,
               textVersion: Value(version),
               fieldClocks: Value(clocks),
+              peaks: Value(peaks == null ? null : encodeVoicePeaks(peaks)),
             ),
           );
     });
@@ -114,6 +118,28 @@ class EntriesDao {
     });
   }
 
+  Future<int> setVoicePeaks({required String id, required List<double> peaks}) {
+    return _db.transaction(() async {
+      final String encoded = encodeVoicePeaks(peaks);
+      final Entry? existing = await entryById(id);
+      if (existing == null) {
+        return 0;
+      }
+      if (existing.peaks == encoded) {
+        return 1;
+      }
+      final String clocks = await _recorder.stamp(
+        table: SyncedTables.entries,
+        rowId: id,
+        fields: _peaksFields,
+        currentClocks: existing.fieldClocks,
+      );
+      return (_db.update(_db.entries)..where((t) => t.id.equals(id))).write(
+        EntriesCompanion(peaks: Value(encoded), fieldClocks: Value(clocks)),
+      );
+    });
+  }
+
   Future<int> softDelete({required String id, required int deletedAt}) {
     return _db.transaction(() async {
       final Entry? existing = await entryById(id);
@@ -145,6 +171,13 @@ class EntriesDao {
   Stream<List<Entry>> watchActiveEntriesForDay(String dayId) {
     return (_db.select(_db.entries)
           ..where((t) => t.dayId.equals(dayId) & t.deletedAt.isNull())
+          ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+        .watch();
+  }
+
+  Stream<List<Entry>> watchActiveEntriesOfType(String type) {
+    return (_db.select(_db.entries)
+          ..where((t) => t.type.equals(type) & t.deletedAt.isNull())
           ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
         .watch();
   }

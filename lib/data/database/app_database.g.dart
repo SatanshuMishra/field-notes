@@ -1266,6 +1266,15 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
     requiredDuringInsert: false,
     defaultValue: const Constant('{}'),
   );
+  static const VerificationMeta _peaksMeta = const VerificationMeta('peaks');
+  @override
+  late final GeneratedColumn<String> peaks = GeneratedColumn<String>(
+    'peaks',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1281,6 +1290,7 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
     conflictSourceDevice,
     textVersion,
     fieldClocks,
+    peaks,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1394,6 +1404,12 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
         ),
       );
     }
+    if (data.containsKey('peaks')) {
+      context.handle(
+        _peaksMeta,
+        peaks.isAcceptableOrUnknown(data['peaks']!, _peaksMeta),
+      );
+    }
     return context;
   }
 
@@ -1455,6 +1471,10 @@ class $EntriesTable extends Entries with TableInfo<$EntriesTable, Entry> {
         DriftSqlType.string,
         data['${effectivePrefix}field_clocks'],
       )!,
+      peaks: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}peaks'],
+      ),
     );
   }
 
@@ -1478,6 +1498,7 @@ class Entry extends DataClass implements Insertable<Entry> {
   final String? conflictSourceDevice;
   final String textVersion;
   final String fieldClocks;
+  final String? peaks;
   const Entry({
     required this.id,
     required this.dayId,
@@ -1492,6 +1513,7 @@ class Entry extends DataClass implements Insertable<Entry> {
     this.conflictSourceDevice,
     required this.textVersion,
     required this.fieldClocks,
+    this.peaks,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1521,6 +1543,9 @@ class Entry extends DataClass implements Insertable<Entry> {
     }
     map['text_version'] = Variable<String>(textVersion);
     map['field_clocks'] = Variable<String>(fieldClocks);
+    if (!nullToAbsent || peaks != null) {
+      map['peaks'] = Variable<String>(peaks);
+    }
     return map;
   }
 
@@ -1551,6 +1576,9 @@ class Entry extends DataClass implements Insertable<Entry> {
           : Value(conflictSourceDevice),
       textVersion: Value(textVersion),
       fieldClocks: Value(fieldClocks),
+      peaks: peaks == null && nullToAbsent
+          ? const Value.absent()
+          : Value(peaks),
     );
   }
 
@@ -1575,6 +1603,7 @@ class Entry extends DataClass implements Insertable<Entry> {
       ),
       textVersion: serializer.fromJson<String>(json['textVersion']),
       fieldClocks: serializer.fromJson<String>(json['fieldClocks']),
+      peaks: serializer.fromJson<String?>(json['peaks']),
     );
   }
   @override
@@ -1594,6 +1623,7 @@ class Entry extends DataClass implements Insertable<Entry> {
       'conflictSourceDevice': serializer.toJson<String?>(conflictSourceDevice),
       'textVersion': serializer.toJson<String>(textVersion),
       'fieldClocks': serializer.toJson<String>(fieldClocks),
+      'peaks': serializer.toJson<String?>(peaks),
     };
   }
 
@@ -1611,6 +1641,7 @@ class Entry extends DataClass implements Insertable<Entry> {
     Value<String?> conflictSourceDevice = const Value.absent(),
     String? textVersion,
     String? fieldClocks,
+    Value<String?> peaks = const Value.absent(),
   }) => Entry(
     id: id ?? this.id,
     dayId: dayId ?? this.dayId,
@@ -1629,6 +1660,7 @@ class Entry extends DataClass implements Insertable<Entry> {
         : this.conflictSourceDevice,
     textVersion: textVersion ?? this.textVersion,
     fieldClocks: fieldClocks ?? this.fieldClocks,
+    peaks: peaks.present ? peaks.value : this.peaks,
   );
   Entry copyWithCompanion(EntriesCompanion data) {
     return Entry(
@@ -1657,6 +1689,7 @@ class Entry extends DataClass implements Insertable<Entry> {
       fieldClocks: data.fieldClocks.present
           ? data.fieldClocks.value
           : this.fieldClocks,
+      peaks: data.peaks.present ? data.peaks.value : this.peaks,
     );
   }
 
@@ -1675,7 +1708,8 @@ class Entry extends DataClass implements Insertable<Entry> {
           ..write('deletedAt: $deletedAt, ')
           ..write('conflictSourceDevice: $conflictSourceDevice, ')
           ..write('textVersion: $textVersion, ')
-          ..write('fieldClocks: $fieldClocks')
+          ..write('fieldClocks: $fieldClocks, ')
+          ..write('peaks: $peaks')
           ..write(')'))
         .toString();
   }
@@ -1695,6 +1729,7 @@ class Entry extends DataClass implements Insertable<Entry> {
     conflictSourceDevice,
     textVersion,
     fieldClocks,
+    peaks,
   );
   @override
   bool operator ==(Object other) =>
@@ -1712,7 +1747,8 @@ class Entry extends DataClass implements Insertable<Entry> {
           other.deletedAt == this.deletedAt &&
           other.conflictSourceDevice == this.conflictSourceDevice &&
           other.textVersion == this.textVersion &&
-          other.fieldClocks == this.fieldClocks);
+          other.fieldClocks == this.fieldClocks &&
+          other.peaks == this.peaks);
 }
 
 class EntriesCompanion extends UpdateCompanion<Entry> {
@@ -1729,6 +1765,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
   final Value<String?> conflictSourceDevice;
   final Value<String> textVersion;
   final Value<String> fieldClocks;
+  final Value<String?> peaks;
   final Value<int> rowid;
   const EntriesCompanion({
     this.id = const Value.absent(),
@@ -1744,6 +1781,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     this.conflictSourceDevice = const Value.absent(),
     this.textVersion = const Value.absent(),
     this.fieldClocks = const Value.absent(),
+    this.peaks = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   EntriesCompanion.insert({
@@ -1760,6 +1798,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     this.conflictSourceDevice = const Value.absent(),
     this.textVersion = const Value.absent(),
     this.fieldClocks = const Value.absent(),
+    this.peaks = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        dayId = Value(dayId),
@@ -1780,6 +1819,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     Expression<String>? conflictSourceDevice,
     Expression<String>? textVersion,
     Expression<String>? fieldClocks,
+    Expression<String>? peaks,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -1797,6 +1837,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
         'conflict_source_device': conflictSourceDevice,
       if (textVersion != null) 'text_version': textVersion,
       if (fieldClocks != null) 'field_clocks': fieldClocks,
+      if (peaks != null) 'peaks': peaks,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -1815,6 +1856,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     Value<String?>? conflictSourceDevice,
     Value<String>? textVersion,
     Value<String>? fieldClocks,
+    Value<String?>? peaks,
     Value<int>? rowid,
   }) {
     return EntriesCompanion(
@@ -1831,6 +1873,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
       conflictSourceDevice: conflictSourceDevice ?? this.conflictSourceDevice,
       textVersion: textVersion ?? this.textVersion,
       fieldClocks: fieldClocks ?? this.fieldClocks,
+      peaks: peaks ?? this.peaks,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -1879,6 +1922,9 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
     if (fieldClocks.present) {
       map['field_clocks'] = Variable<String>(fieldClocks.value);
     }
+    if (peaks.present) {
+      map['peaks'] = Variable<String>(peaks.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -1901,6 +1947,7 @@ class EntriesCompanion extends UpdateCompanion<Entry> {
           ..write('conflictSourceDevice: $conflictSourceDevice, ')
           ..write('textVersion: $textVersion, ')
           ..write('fieldClocks: $fieldClocks, ')
+          ..write('peaks: $peaks, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -5873,6 +5920,7 @@ typedef $$EntriesTableCreateCompanionBuilder = EntriesCompanion Function({
   Value<String?> conflictSourceDevice,
   Value<String> textVersion,
   Value<String> fieldClocks,
+  Value<String?> peaks,
   Value<int> rowid,
 });
 typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
@@ -5889,6 +5937,7 @@ typedef $$EntriesTableUpdateCompanionBuilder = EntriesCompanion Function({
   Value<String?> conflictSourceDevice,
   Value<String> textVersion,
   Value<String> fieldClocks,
+  Value<String?> peaks,
   Value<int> rowid,
 });
 
@@ -5963,6 +6012,11 @@ class $$EntriesTableFilterComposer
 
   ColumnFilters<String> get fieldClocks => $composableBuilder(
     column: $table.fieldClocks,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get peaks => $composableBuilder(
+    column: $table.peaks,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -6040,6 +6094,11 @@ class $$EntriesTableOrderingComposer
     column: $table.fieldClocks,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get peaks => $composableBuilder(
+    column: $table.peaks,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$EntriesTableAnnotationComposer
@@ -6101,6 +6160,9 @@ class $$EntriesTableAnnotationComposer
     column: $table.fieldClocks,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get peaks =>
+      $composableBuilder(column: $table.peaks, builder: (column) => column);
 }
 
 class $$EntriesTableTableManager
@@ -6144,6 +6206,7 @@ class $$EntriesTableTableManager
                 Value<String?> conflictSourceDevice = const Value.absent(),
                 Value<String> textVersion = const Value.absent(),
                 Value<String> fieldClocks = const Value.absent(),
+                Value<String?> peaks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion(
                 id: id,
@@ -6159,6 +6222,7 @@ class $$EntriesTableTableManager
                 conflictSourceDevice: conflictSourceDevice,
                 textVersion: textVersion,
                 fieldClocks: fieldClocks,
+                peaks: peaks,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -6176,6 +6240,7 @@ class $$EntriesTableTableManager
                 Value<String?> conflictSourceDevice = const Value.absent(),
                 Value<String> textVersion = const Value.absent(),
                 Value<String> fieldClocks = const Value.absent(),
+                Value<String?> peaks = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => EntriesCompanion.insert(
                 id: id,
@@ -6191,6 +6256,7 @@ class $$EntriesTableTableManager
                 conflictSourceDevice: conflictSourceDevice,
                 textVersion: textVersion,
                 fieldClocks: fieldClocks,
+                peaks: peaks,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

@@ -49,6 +49,7 @@ class FailingJournalRepository implements JournalRepository {
     String? mediaId,
     String? thumbnailMediaId,
     int? durationMs,
+    List<double>? peaks,
   }) {
     if (failCreateEntry) {
       return Future<Entry>.error(StateError('createEntry failed'));
@@ -60,6 +61,7 @@ class FailingJournalRepository implements JournalRepository {
       mediaId: mediaId,
       thumbnailMediaId: thumbnailMediaId,
       durationMs: durationMs,
+      peaks: peaks,
     );
   }
 
@@ -80,7 +82,8 @@ class FailingJournalRepository implements JournalRepository {
   }
 
   @override
-  Future<List<Entry>> entriesForDay(String dayId) => _inner.entriesForDay(dayId);
+  Future<List<Entry>> entriesForDay(String dayId) =>
+      _inner.entriesForDay(dayId);
 
   @override
   Future<List<EntryPhoto>> photosForEntry(String entryId) =>
@@ -147,7 +150,6 @@ class FailingMediaStore implements MediaStore {
 
   @override
   Future<String> uniquePrefixFor(String id) => _inner.uniquePrefixFor(id);
-
 
   @override
   String absolutePath(MediaBlob blob) => _inner.absolutePath(blob);
@@ -241,7 +243,7 @@ class FakeNoteWriter implements NoteWriter {
 
 class FakeDraftStore implements DraftStore {
   FakeDraftStore({Map<String, String>? drafts, this.readDelay})
-      : drafts = Map<String, String>.of(drafts ?? const <String, String>{});
+    : drafts = Map<String, String>.of(drafts ?? const <String, String>{});
 
   final Map<String, String> drafts;
   final Duration? readDelay;

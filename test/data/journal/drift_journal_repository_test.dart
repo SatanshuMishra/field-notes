@@ -1,7 +1,7 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/data/database/app_database.dart'
-    show AppDatabase, DaysCompanion;
+    show AppDatabase, DaysCompanion, EntriesCompanion;
 import 'package:field_notes/data/journal/drift_journal_repository.dart';
 import 'package:field_notes/data/journal/journal_exceptions.dart';
 import 'package:field_notes/data/sync/change_recorder.dart';
@@ -144,6 +144,48 @@ void main() {
       },
     );
 
+    test('a voice entry is created with its peaks and reads back', () async {
+      final day = await repo.ensureDayForDate('2026-07-12');
+      nowValue = 10;
+      final voice = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-voice',
+        durationMs: 4200,
+        peaks: <double>[0.1, 0.9],
+      );
+      nowValue = 20;
+      final text = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.text,
+        textContent: 'no voice here',
+      );
+
+      expect(voice.peaks, <double>[0.1, 0.9]);
+      expect((await repo.entryById(voice.id))!.peaks, <double>[0.1, 0.9]);
+      expect((await repo.entryById(text.id))!.peaks, isNull);
+      expect((await repo.entriesForDay(day.id)).map((e) => e.peaks).toList(), [
+        <double>[0.1, 0.9],
+        null,
+      ]);
+    });
+
+    test('setVoicePeaks saves the peaks and keeps updatedAt', () async {
+      final day = await repo.ensureDayForDate('2026-07-12');
+      final voice = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-voice',
+      );
+
+      nowValue = 5000;
+      await repo.setVoicePeaks(voice.id, <double>[0.25, 0.75]);
+
+      final saved = await repo.entryById(voice.id);
+      expect(saved!.peaks, <double>[0.25, 0.75]);
+      expect(saved.updatedAt, 1000);
+    });
+
     test('updateEntryText replaces the text and bumps updatedAt', () async {
       final day = await repo.ensureDayForDate('2026-07-12');
       final entry = await repo.createEntry(
@@ -231,6 +273,55 @@ void main() {
         await sub.cancel();
       },
     );
+
+    test('watchVoiceEntriesWithoutPeaks lists live voice entries lacking valid peaks', () async {
+      final day = await repo.ensureDayForDate('2026-07-12');
+      nowValue = 40;
+      final damaged = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-damaged',
+      );
+      await (db.update(db.entries)..where((t) => t.id.equals(damaged.id)))
+          .write(const EntriesCompanion(peaks: Value('oops')));
+      nowValue = 30;
+      await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-with-peaks',
+        peaks: <double>[0.5],
+      );
+      nowValue = 20;
+      final deleted = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-deleted',
+      );
+      await repo.softDeleteEntry(deleted.id);
+      nowValue = 15;
+      await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.text,
+        textContent: 'not a voice',
+      );
+      nowValue = 10;
+      final missing = await repo.createEntry(
+        dayId: day.id,
+        type: EntryType.voice,
+        mediaId: 'blob-missing',
+      );
+
+      final waiting = await repo.watchVoiceEntriesWithoutPeaks().first;
+
+      expect(waiting.map((e) => e.id).toList(), [missing.id, damaged.id]);
+      expect(waiting.map((e) => e.peaks).toList(), [null, null]);
+
+      await repo.setVoicePeaks(missing.id, const <double>[]);
+
+      final left = await repo.watchVoiceEntriesWithoutPeaks().first;
+
+      expect(left.map((e) => e.id).toList(), [damaged.id]);
+    });
 
     test(
       'watchDaysInMonth returns active days for the month ascending',

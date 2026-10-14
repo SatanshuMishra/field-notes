@@ -5,3 +5,4 @@ export 'media_blob.dart';
 export 'entry_photo.dart';
 export 'entry.dart';
 export 'day.dart';
+export 'voice_peaks.dart';

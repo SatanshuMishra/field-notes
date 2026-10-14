@@ -22,6 +22,7 @@ abstract interface class JournalRepository {
     String? mediaId,
     String? thumbnailMediaId,
     int? durationMs,
+    List<double>? peaks,
   });
 
   Future<Entry?> entryById(String id);
@@ -37,6 +38,8 @@ abstract interface class JournalRepository {
     required String source,
     required List<String> photoMediaIds,
   });
+
+  Future<void> setVoicePeaks(String entryId, List<double> peaks);
 
   Future<void> softDeleteEntry(String id);
 
@@ -61,6 +64,8 @@ abstract interface class JournalRepository {
   Stream<List<Entry>> watchEntriesForDay(String dayId);
 
   Stream<List<Entry>> watchEntriesForDate(String date);
+
+  Stream<List<Entry>> watchVoiceEntriesWithoutPeaks();
 
   Stream<List<EntryPhoto>> watchPhotosForEntry(String entryId);
 
