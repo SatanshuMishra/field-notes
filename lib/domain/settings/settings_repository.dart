@@ -1,5 +1,6 @@
 import 'app_settings.dart';
 import 'appearance.dart';
+import 'input_profile.dart';
 import 'onboarding_status.dart';
 import 'reminder_time.dart';
 import 'storage_mode.dart';
@@ -40,6 +41,12 @@ abstract interface class SettingsRepository {
   Future<void> setAllowMobileDataForMedia(bool value);
 
   Future<void> setCheckForUpdatesAutomatically(bool value);
+
+  Future<void> setAudioInputId(String? value);
+
+  Future<void> setInputProfile(InputProfile value);
+
+  Future<void> setInputVolume(int value);
 
   Future<bool> hasStoredValues();
 

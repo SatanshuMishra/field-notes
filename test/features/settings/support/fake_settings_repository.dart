@@ -38,6 +38,9 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<bool> keepAllMediaOnDeviceWrites = <bool>[];
   final List<bool> allowMobileDataForMediaWrites = <bool>[];
   final List<bool> checkForUpdatesAutomaticallyWrites = <bool>[];
+  final List<String?> audioInputIdWrites = <String?>[];
+  final List<InputProfile> inputProfileWrites = <InputProfile>[];
+  final List<int> inputVolumeWrites = <int>[];
   late AppSettings _latest = initial;
 
   void emit(AppSettings settings) {
@@ -120,6 +123,31 @@ class FakeSettingsRepository implements SettingsRepository {
     _failIfConfigured();
     sidebarCollapsedWrites.add(value);
     emit(_latest.copyWith(sidebarCollapsed: value));
+  }
+
+  @override
+  Future<void> setAudioInputId(String? value) async {
+    _failIfConfigured();
+    audioInputIdWrites.add(value);
+    emit(
+      value == null
+          ? _latest.copyWith(clearAudioInputId: true)
+          : _latest.copyWith(audioInputId: value),
+    );
+  }
+
+  @override
+  Future<void> setInputProfile(InputProfile value) async {
+    _failIfConfigured();
+    inputProfileWrites.add(value);
+    emit(_latest.copyWith(inputProfile: value));
+  }
+
+  @override
+  Future<void> setInputVolume(int value) async {
+    _failIfConfigured();
+    inputVolumeWrites.add(value);
+    emit(_latest.copyWith(inputVolume: value));
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'appearance.dart';
+import 'input_profile.dart';
 import 'onboarding_status.dart';
 import 'reminder_time.dart';
 import 'text_size.dart';
@@ -21,6 +22,9 @@ class AppSettings {
     this.keepAllMediaOnDevice = false,
     this.allowMobileDataForMedia = false,
     this.checkForUpdatesAutomatically = true,
+    this.audioInputId,
+    this.inputProfile = InputProfile.studio,
+    this.inputVolume = 100,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -39,6 +43,9 @@ class AppSettings {
     keepAllMediaOnDevice: false,
     allowMobileDataForMedia: false,
     checkForUpdatesAutomatically: true,
+    audioInputId: null,
+    inputProfile: InputProfile.studio,
+    inputVolume: 100,
   );
 
   final bool reminderEnabled;
@@ -56,6 +63,9 @@ class AppSettings {
   final bool keepAllMediaOnDevice;
   final bool allowMobileDataForMedia;
   final bool checkForUpdatesAutomatically;
+  final String? audioInputId;
+  final InputProfile inputProfile;
+  final int inputVolume;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -73,6 +83,10 @@ class AppSettings {
     bool? keepAllMediaOnDevice,
     bool? allowMobileDataForMedia,
     bool? checkForUpdatesAutomatically,
+    String? audioInputId,
+    bool clearAudioInputId = false,
+    InputProfile? inputProfile,
+    int? inputVolume,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -95,6 +109,11 @@ class AppSettings {
           allowMobileDataForMedia ?? this.allowMobileDataForMedia,
       checkForUpdatesAutomatically:
           checkForUpdatesAutomatically ?? this.checkForUpdatesAutomatically,
+      audioInputId: clearAudioInputId
+          ? null
+          : (audioInputId ?? this.audioInputId),
+      inputProfile: inputProfile ?? this.inputProfile,
+      inputVolume: inputVolume ?? this.inputVolume,
     );
   }
 
@@ -117,7 +136,10 @@ class AppSettings {
           meadowPausesWhenInactive == other.meadowPausesWhenInactive &&
           keepAllMediaOnDevice == other.keepAllMediaOnDevice &&
           allowMobileDataForMedia == other.allowMobileDataForMedia &&
-          checkForUpdatesAutomatically == other.checkForUpdatesAutomatically;
+          checkForUpdatesAutomatically == other.checkForUpdatesAutomatically &&
+          audioInputId == other.audioInputId &&
+          inputProfile == other.inputProfile &&
+          inputVolume == other.inputVolume;
 
   @override
   int get hashCode => Object.hash(
@@ -136,6 +158,9 @@ class AppSettings {
     keepAllMediaOnDevice,
     allowMobileDataForMedia,
     checkForUpdatesAutomatically,
+    audioInputId,
+    inputProfile,
+    inputVolume,
   );
 
   @override
@@ -151,5 +176,7 @@ class AppSettings {
       'meadowPausesWhenInactive: $meadowPausesWhenInactive, '
       'keepAllMediaOnDevice: $keepAllMediaOnDevice, '
       'allowMobileDataForMedia: $allowMobileDataForMedia, '
-      'checkForUpdatesAutomatically: $checkForUpdatesAutomatically)';
+      'checkForUpdatesAutomatically: $checkForUpdatesAutomatically, '
+      'audioInputId: $audioInputId, inputProfile: $inputProfile, '
+      'inputVolume: $inputVolume)';
 }
