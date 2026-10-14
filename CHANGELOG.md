@@ -6,6 +6,8 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-14
+
 ### Improved
 
 - A short countdown before recording starts.
