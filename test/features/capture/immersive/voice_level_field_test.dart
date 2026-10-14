@@ -777,6 +777,110 @@ void main() {
     );
   });
 
+  test('a steady voice across a pause fires no onset on resume', () {
+    final CometsModel model = CometsModel(
+      size: const Size(370, 370),
+      orbRadius: 62,
+      random: math.Random(5),
+      stage: VoiceLevelStage.recording,
+    );
+    List<double> brightness() => <double>[
+      for (final Comet comet in model.comets) comet.brightness,
+    ];
+    List<double> flashes() => <double>[
+      for (final CometStar star in model.stars) star.flash,
+    ];
+
+    for (int frame = 0; frame < 120; frame++) {
+      model.hear(0.5);
+      model.advance(1 / 60);
+    }
+    model.stage = VoiceLevelStage.paused;
+    for (int frame = 0; frame < 120; frame++) {
+      model.advance(1 / 60);
+    }
+    model.stage = VoiceLevelStage.recording;
+    final List<double> brightnessBefore = brightness();
+    final List<double> flashesBefore = flashes();
+
+    model.hear(0.5);
+
+    expect(brightness(), brightnessBefore);
+    expect(flashes(), flashesBefore);
+  });
+
+  test(
+    'after a pause the first level is measured from the level before it',
+    () {
+      final CometsModel model = CometsModel(
+        size: const Size(370, 370),
+        orbRadius: 62,
+        random: math.Random(5),
+        stage: VoiceLevelStage.recording,
+      );
+      List<double> brightness() => <double>[
+        for (final Comet comet in model.comets) comet.brightness,
+      ];
+      List<double> flashes() => <double>[
+        for (final CometStar star in model.stars) star.flash,
+      ];
+      List<int> changed(List<double> before, List<double> after) => <int>[
+        for (int index = 0; index < after.length; index++)
+          if (after[index] != before[index]) index,
+      ];
+      void pauseForTwoSeconds() {
+        model.stage = VoiceLevelStage.paused;
+        for (int frame = 0; frame < 120; frame++) {
+          model.advance(1 / 60);
+        }
+      }
+
+      model.stage = VoiceLevelStage.paused;
+      model.stage = VoiceLevelStage.recording;
+      final List<double> firstBrightness = brightness();
+      final List<double> firstFlashes = flashes();
+      model.hear(0.3);
+      final List<double> firstRaised = brightness();
+      final List<int> firstComets = changed(firstBrightness, firstRaised);
+      expect(firstComets, hasLength(1));
+      expect(
+        firstRaised[firstComets.single] - firstBrightness[firstComets.single],
+        closeTo(0.3, 1e-12),
+      );
+      expect(flashes(), firstFlashes);
+
+      for (int frame = 0; frame < 120; frame++) {
+        model.hear(0.3);
+        model.advance(1 / 60);
+      }
+      pauseForTwoSeconds();
+      model.stage = VoiceLevelStage.recording;
+      final List<double> steadyBrightness = brightness();
+      final List<double> steadyFlashes = flashes();
+      model.hear(0.3);
+      expect(brightness(), steadyBrightness);
+      expect(flashes(), steadyFlashes);
+
+      pauseForTwoSeconds();
+      model.stage = VoiceLevelStage.recording;
+      final List<double> louderBrightness = brightness();
+      final List<double> louderFlashes = flashes();
+      model.hear(0.6);
+      final List<double> louderRaised = brightness();
+      final List<int> louderComets = changed(louderBrightness, louderRaised);
+      expect(louderComets, hasLength(1));
+      expect(
+        louderRaised[louderComets.single] -
+            louderBrightness[louderComets.single],
+        closeTo(0.6, 1e-12),
+      );
+      final List<double> louderLit = flashes();
+      final List<int> louderStars = changed(louderFlashes, louderLit);
+      expect(louderStars, hasLength(1));
+      expect(louderLit[louderStars.single], 1);
+    },
+  );
+
   testWidgets('with reduced motion comets rest and stars hold still', (
     WidgetTester tester,
   ) async {

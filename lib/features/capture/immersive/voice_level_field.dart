@@ -451,7 +451,7 @@ class CometsModel {
     }
     _stage = value;
     if (value != VoiceLevelStage.recording) {
-      _smoother.hear(0, _clock);
+      _smoother.hush();
     }
     _noteRecording();
     _bear();
