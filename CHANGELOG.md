@@ -6,6 +6,19 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+### Improved
+
+- A short countdown before recording starts.
+- A new live visualiser while you record.
+- Voice waveforms now show the shape of your recording.
+
+### Fixed
+
+- On Windows, Field Notes no longer closes when you switch back to it while reminders are on.
+- Settings now use the same background colours as the rest of the app.
+- A voice note in a past day keeps playing when you move the pointer away from it.
+- The Restarting Field Notes screen no longer shows a yellow underline under its text.
+
 ## [1.0.2] - 2026-10-13
 
 ### Fixed
