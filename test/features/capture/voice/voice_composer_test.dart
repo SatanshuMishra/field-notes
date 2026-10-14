@@ -121,6 +121,29 @@ Future<void> _expectToastOnceFadedOut(
   expect(find.text(toast), findsOneWidget);
 }
 
+Future<void> _hearLevel(
+  WidgetTester tester,
+  FakeVoiceRecorder recorder, {
+  required double level,
+  required int atMs,
+}) async {
+  recorder.elapsed = Duration(milliseconds: atMs);
+  recorder.levels.add(level);
+  await tester.pump();
+}
+
+Future<void> _recordQuarterSecond(
+  WidgetTester tester,
+  FakeVoiceRecorder recorder,
+) async {
+  await _hearLevel(tester, recorder, level: 0, atMs: 0);
+  await _hearLevel(tester, recorder, level: 1, atMs: 60);
+  await _hearLevel(tester, recorder, level: 1, atMs: 120);
+  await _hearLevel(tester, recorder, level: 0, atMs: 180);
+  await _hearLevel(tester, recorder, level: 0, atMs: 240);
+  recorder.elapsed = const Duration(milliseconds: 250);
+}
+
 void main() {
   testWidgets('records then saves a voice entry and closes with its id', (
     WidgetTester tester,
@@ -358,94 +381,194 @@ void main() {
     },
   );
 
-  testWidgets(
-    'Android back while recording asks to let go first',
-    (WidgetTester tester) async {
-      final FakeVoiceRecorder recorder = FakeVoiceRecorder();
-      String? result = 'unset';
+  testWidgets('Android back while recording asks to let go first', (
+    WidgetTester tester,
+  ) async {
+    final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+    String? result = 'unset';
 
-      await tester.pumpWidget(
-        _recorderApp(
-          recorder: recorder,
-          service: FakeCaptureService(),
-          onResult: (String? id) => result = id,
-        ),
-      );
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: FakeCaptureService(),
+        onResult: (String? id) => result = id,
+      ),
+    );
 
-      await _openComposer(tester);
+    await _openComposer(tester);
 
-      await startVoiceTake(tester);
+    await startVoiceTake(tester);
 
-      await _sendSystemBack(tester);
+    await _sendSystemBack(tester);
 
-      expect(find.text(letGoTitle), findsOneWidget);
-      expect(find.byType(VoiceRecorderSheet), findsOneWidget);
-      expect(recorder.cancelCalls, 0);
-      expect(result, 'unset');
+    expect(find.text(letGoTitle), findsOneWidget);
+    expect(find.byType(VoiceRecorderSheet), findsOneWidget);
+    expect(recorder.cancelCalls, 0);
+    expect(result, 'unset');
 
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-    variant: TargetPlatformVariant.only(TargetPlatform.android),
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 
-  testWidgets(
-    'the saved toast waits until the recorder has faded out',
-    (WidgetTester tester) async {
-      _sizeWindowForLayout(tester);
-      final List<String?> results = <String?>[];
-      await tester.pumpWidget(
-        _recorderApp(
-          recorder: FakeVoiceRecorder(),
-          service: FakeCaptureService(),
-          onResult: results.add,
-        ),
-      );
-      await _openComposer(tester);
-      await startVoiceTake(tester);
+  testWidgets('the saved toast waits until the recorder has faded out', (
+    WidgetTester tester,
+  ) async {
+    _sizeWindowForLayout(tester);
+    final List<String?> results = <String?>[];
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: FakeVoiceRecorder(),
+        service: FakeCaptureService(),
+        onResult: results.add,
+      ),
+    );
+    await _openComposer(tester);
+    await startVoiceTake(tester);
 
-      await tester.tap(find.byKey(voiceSavePillKey));
+    await tester.tap(find.byKey(voiceSavePillKey));
 
-      await _expectToastOnceFadedOut(
-        tester,
-        toast: voiceSavedToastMessage,
-        results: results,
-        delivered: <String?>['entry-1'],
-      );
+    await _expectToastOnceFadedOut(
+      tester,
+      toast: voiceSavedToastMessage,
+      results: results,
+      delivered: <String?>['entry-1'],
+    );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-    variant: _bothLayouts,
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, variant: _bothLayouts);
 
-  testWidgets(
-    'the let-go toast waits until the recorder has faded out',
-    (WidgetTester tester) async {
-      _sizeWindowForLayout(tester);
-      final List<String?> results = <String?>[];
-      await tester.pumpWidget(
-        _recorderApp(
-          recorder: FakeVoiceRecorder(),
-          service: FakeCaptureService(),
-          onResult: results.add,
-        ),
-      );
-      await _openComposer(tester);
-      await startVoiceTake(tester);
-      await tester.tap(find.byKey(voiceDiscardPillKey));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+  testWidgets('the let-go toast waits until the recorder has faded out', (
+    WidgetTester tester,
+  ) async {
+    _sizeWindowForLayout(tester);
+    final List<String?> results = <String?>[];
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: FakeVoiceRecorder(),
+        service: FakeCaptureService(),
+        onResult: results.add,
+      ),
+    );
+    await _openComposer(tester);
+    await startVoiceTake(tester);
+    await tester.tap(find.byKey(voiceDiscardPillKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
-      await tester.tap(find.byKey(voiceDiscardConfirmKey));
+    await tester.tap(find.byKey(voiceDiscardConfirmKey));
 
-      await _expectToastOnceFadedOut(
-        tester,
-        toast: voiceLetGoToastMessage,
-        results: results,
-        delivered: <String?>[null],
-      );
+    await _expectToastOnceFadedOut(
+      tester,
+      toast: voiceLetGoToastMessage,
+      results: results,
+      delivered: <String?>[null],
+    );
 
-      await tester.pumpWidget(const SizedBox.shrink());
-    },
-    variant: _bothLayouts,
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, variant: _bothLayouts);
+
+  testWidgets('the breath adds no peaks', (WidgetTester tester) async {
+    final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+    final FakeCaptureService service = FakeCaptureService();
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: service,
+        onResult: (String? id) {},
+      ),
+    );
+    await _openComposer(tester);
+
+    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.pump();
+    expect(_phase(tester), VoiceRecorderPhase.breathing);
+
+    for (int ms = 0; ms < stageBreathDuration.inMilliseconds; ms += 60) {
+      recorder.levels.add(0.9);
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(_phase(tester), VoiceRecorderPhase.recording);
+
+    for (int ms = 60; ms <= 300; ms += 60) {
+      await _hearLevel(tester, recorder, level: 0.2, atMs: ms);
+    }
+
+    await tester.tap(find.byKey(voiceSavePillKey));
+    await tester.pump();
+    await tester.pump(_closed);
+
+    final VoiceCaptureRequest request =
+        service.requests.single as VoiceCaptureRequest;
+    expect(request.peaks, hasLength(3));
+    expect(request.peaks, everyElement(lessThanOrEqualTo(0.2)));
+  });
+
+  testWidgets('saving a recording stores its peaks', (
+    WidgetTester tester,
+  ) async {
+    final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+    final FakeCaptureService service = FakeCaptureService();
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: service,
+        onResult: (String? id) {},
+      ),
+    );
+    await _openComposer(tester);
+    await startVoiceTake(tester);
+
+    await _recordQuarterSecond(tester, recorder);
+
+    await tester.tap(find.byKey(voiceSavePillKey));
+    await tester.pump();
+    await tester.pump(_closed);
+
+    final VoiceCaptureRequest request =
+        service.requests.single as VoiceCaptureRequest;
+    expect(request.peaks, <double>[0.6, 0.94, 0.84]);
+  });
+
+  testWidgets('a retried save carries the same peaks', (
+    WidgetTester tester,
+  ) async {
+    final FakeVoiceRecorder recorder = FakeVoiceRecorder();
+    final FakeCaptureService service = FakeCaptureService(
+      failure: const CaptureException('Could not save your entry.'),
+    );
+
+    await tester.pumpWidget(
+      _recorderApp(
+        recorder: recorder,
+        service: service,
+        onResult: (String? id) {},
+      ),
+    );
+    await _openComposer(tester);
+    await startVoiceTake(tester);
+
+    await _recordQuarterSecond(tester, recorder);
+
+    await tester.tap(find.byKey(voiceSavePillKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(_phase(tester), VoiceRecorderPhase.recording);
+
+    await tester.tap(find.byKey(voiceSavePillKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(service.requests, hasLength(2));
+    final VoiceCaptureRequest first =
+        service.requests[0] as VoiceCaptureRequest;
+    final VoiceCaptureRequest second =
+        service.requests[1] as VoiceCaptureRequest;
+    expect(first.peaks, hasLength(3));
+    expect(second.peaks, hasLength(3));
+    expect(second.peaks, first.peaks);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 }

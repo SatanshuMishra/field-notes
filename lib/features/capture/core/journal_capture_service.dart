@@ -31,6 +31,7 @@ typedef _Resolved = ({
   MediaBlob? media,
   MediaBlob? thumbnail,
   int? durationMs,
+  List<double>? peaks,
 });
 
 typedef _StoredVideo = ({MediaBlob blob, MediaMeasure? measured});
@@ -71,6 +72,7 @@ class JournalCaptureService implements CaptureService {
         mediaId: resolved.media?.id,
         thumbnailMediaId: resolved.thumbnail?.id,
         durationMs: resolved.durationMs,
+        peaks: resolved.peaks,
       );
     } catch (error) {
       throw CaptureException(entryWriteMessage, cause: error);
@@ -109,7 +111,13 @@ class JournalCaptureService implements CaptureService {
     if (text.isEmpty) {
       throw const CaptureException(blankTextMessage);
     }
-    return (text: text, media: null, thumbnail: null, durationMs: null);
+    return (
+      text: text,
+      media: null,
+      thumbnail: null,
+      durationMs: null,
+      peaks: null,
+    );
   }
 
   Future<_Resolved> _resolveVoice(VoiceCaptureRequest request) async {
@@ -124,6 +132,7 @@ class JournalCaptureService implements CaptureService {
       media: audio,
       thumbnail: null,
       durationMs: _finishedDuration(measured, request.durationMs),
+      peaks: request.peaks,
     );
   }
 
@@ -139,6 +148,7 @@ class JournalCaptureService implements CaptureService {
       media: video.blob,
       thumbnail: thumbnail,
       durationMs: _finishedDuration(video.measured, request.durationMs),
+      peaks: null,
     );
   }
 
