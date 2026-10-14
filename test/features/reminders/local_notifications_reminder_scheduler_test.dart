@@ -133,6 +133,169 @@ class _UnresolvedPlugin implements FlutterLocalNotificationsPlugin {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class _FailingWindowsPlugin implements FlutterLocalNotificationsPlugin {
+  _FailingWindowsPlugin({
+    required this.failingCancels,
+    required this.failingSchedules,
+  });
+
+  final Set<int> failingCancels;
+  final Set<int> failingSchedules;
+  final List<int> cancelled = <int>[];
+  final List<int> scheduled = <int>[];
+
+  @override
+  Future<bool?> initialize({
+    required InitializationSettings settings,
+    DidReceiveNotificationResponseCallback? onDidReceiveNotificationResponse,
+    DidReceiveBackgroundNotificationResponseCallback?
+    onDidReceiveBackgroundNotificationResponse,
+  }) async => true;
+
+  @override
+  T? resolvePlatformSpecificImplementation<
+    T extends FlutterLocalNotificationsPlatform
+  >() => null;
+
+  @override
+  Future<void> cancel({required int id, String? tag}) async {
+    if (failingCancels.contains(id)) {
+      throw Exception('RemoveFromSchedule failed for $id');
+    }
+    cancelled.add(id);
+  }
+
+  @override
+  Future<void> zonedSchedule({
+    required int id,
+    required tz.TZDateTime scheduledDate,
+    required NotificationDetails notificationDetails,
+    required AndroidScheduleMode androidScheduleMode,
+    String? title,
+    String? body,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    if (failingSchedules.contains(id)) {
+      throw Exception('AddToSchedule failed for $id');
+    }
+    scheduled.add(id);
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+enum _CallKind { cancel, schedule }
+
+class _Call {
+  const _Call.cancel(this.id)
+    : kind = _CallKind.cancel,
+      title = null,
+      body = null,
+      scheduledDate = null,
+      details = null,
+      mode = null;
+
+  const _Call.schedule({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.scheduledDate,
+    required this.details,
+    required this.mode,
+  }) : kind = _CallKind.schedule;
+
+  final _CallKind kind;
+  final int id;
+  final String? title;
+  final String? body;
+  final tz.TZDateTime? scheduledDate;
+  final NotificationDetails? details;
+  final AndroidScheduleMode? mode;
+}
+
+class _CallRecordingPlugin implements FlutterLocalNotificationsPlugin {
+  _CallRecordingPlugin({this.macOS, this.android});
+
+  final _RecordingMacOSPlugin? macOS;
+  final _ExactAlarmAndroid? android;
+  final List<_Call> calls = <_Call>[];
+
+  @override
+  Future<bool?> initialize({
+    required InitializationSettings settings,
+    DidReceiveNotificationResponseCallback? onDidReceiveNotificationResponse,
+    DidReceiveBackgroundNotificationResponseCallback?
+    onDidReceiveBackgroundNotificationResponse,
+  }) async => true;
+
+  @override
+  T? resolvePlatformSpecificImplementation<
+    T extends FlutterLocalNotificationsPlatform
+  >() {
+    final Object? macOSImplementation = macOS;
+    if (macOSImplementation is T) {
+      return macOSImplementation;
+    }
+    final Object? androidImplementation = android;
+    if (androidImplementation is T) {
+      return androidImplementation;
+    }
+    return null;
+  }
+
+  @override
+  Future<void> cancel({required int id, String? tag}) async {
+    calls.add(_Call.cancel(id));
+  }
+
+  @override
+  Future<void> zonedSchedule({
+    required int id,
+    required tz.TZDateTime scheduledDate,
+    required NotificationDetails notificationDetails,
+    required AndroidScheduleMode androidScheduleMode,
+    String? title,
+    String? body,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    calls.add(
+      _Call.schedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        details: notificationDetails,
+        mode: androidScheduleMode,
+      ),
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+List<ReminderBooking> _fourBookings() {
+  final DateTime start = DateTime.now().add(const Duration(days: 1));
+  return <ReminderBooking>[
+    for (int offset = 0; offset < 4; offset++)
+      ReminderBooking(
+        id: ReminderService.bookingIds[offset],
+        at: DateTime(start.year, start.month, start.day + offset, 20),
+      ),
+  ];
+}
+
+List<String> _captureLog() {
+  final List<String> lines = <String>[];
+  final DebugPrintCallback original = debugPrint;
+  debugPrint = (String? message, {int? wrapWidth}) => lines.add(message ?? '');
+  addTearDown(() => debugPrint = original);
+  return lines;
+}
+
 class _ExactAlarmAndroid implements AndroidFlutterLocalNotificationsPlugin {
   _ExactAlarmAndroid(this._allowed);
 
@@ -385,6 +548,164 @@ void main() {
         ),
         AndroidScheduleMode.inexactAllowWhileIdle,
       );
+    },
+  );
+
+  test(
+    'a failing cancel and a failing schedule still book every other reminder',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      _answerTimezone('Europe/London');
+      final List<int> ids = ReminderService.bookingIds;
+      final _FailingWindowsPlugin plugin = _FailingWindowsPlugin(
+        failingCancels: <int>{ids[0]},
+        failingSchedules: <int>{ids[2]},
+      );
+      final LocalNotificationsReminderScheduler scheduler =
+          LocalNotificationsReminderScheduler(plugin: plugin);
+
+      await scheduler.schedule(_fourBookings());
+
+      expect(plugin.cancelled, ids.sublist(1));
+      expect(plugin.scheduled, <int>[ids[1], ids[3]]);
+    },
+  );
+
+  test('turning reminders off tries every id even when one fails', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    _answerTimezone('Europe/London');
+    final List<int> ids = ReminderService.bookingIds;
+    final _FailingWindowsPlugin plugin = _FailingWindowsPlugin(
+      failingCancels: <int>{ids[3]},
+      failingSchedules: <int>{},
+    );
+    final LocalNotificationsReminderScheduler scheduler =
+        LocalNotificationsReminderScheduler(plugin: plugin);
+
+    await scheduler.cancel();
+
+    expect(plugin.cancelled, <int>[...ids.sublist(0, 3), ...ids.sublist(4)]);
+  });
+
+  test('when every call fails the app keeps going with no reminders', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    _answerTimezone('Europe/London');
+    final List<String> log = _captureLog();
+    final List<int> ids = ReminderService.bookingIds;
+    final _FailingWindowsPlugin plugin = _FailingWindowsPlugin(
+      failingCancels: ids.toSet(),
+      failingSchedules: ids.toSet(),
+    );
+    final LocalNotificationsReminderScheduler scheduler =
+        LocalNotificationsReminderScheduler(plugin: plugin);
+
+    await scheduler.schedule(_fourBookings());
+
+    expect(plugin.cancelled, isEmpty);
+    expect(plugin.scheduled, isEmpty);
+    expect(log, hasLength(7));
+  });
+
+  group(
+    'on macOS and Android the scheduler cancels then schedules as before',
+    () {
+      Future<void> expectUnchanged({
+        required TargetPlatform platform,
+        required _CallRecordingPlugin plugin,
+        required AndroidScheduleMode mode,
+      }) async {
+        debugDefaultTargetPlatformOverride = platform;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        _answerTimezone('Europe/London');
+        final List<int> ids = ReminderService.bookingIds;
+        final LocalNotificationsReminderScheduler scheduler =
+            LocalNotificationsReminderScheduler(plugin: plugin);
+        final List<ReminderBooking> bookings = _fourBookings();
+
+        await scheduler.schedule(bookings);
+
+        expect(
+          plugin.calls
+              .map((_Call call) => '${call.kind.name} ${call.id}')
+              .toList(),
+          <String>[
+            for (final int id in ids) 'cancel $id',
+            for (final int id in ids.sublist(0, 4)) 'schedule $id',
+          ],
+        );
+        final List<_Call> scheduled = plugin.calls
+            .where((_Call call) => call.kind == _CallKind.schedule)
+            .toList();
+        expect(scheduled, hasLength(4));
+        for (int index = 0; index < 4; index++) {
+          final _Call call = scheduled[index];
+          expect(call.id, ids[index]);
+          expect(call.title, 'Field Notes');
+          expect(call.body, "You haven't written today's field note yet.");
+          expect(
+            call.scheduledDate!.isAtSameMomentAs(bookings[index].at),
+            isTrue,
+          );
+          final AndroidNotificationDetails? android = call.details!.android;
+          expect(android, isNotNull);
+          expect(android!.channelId, 'daily_reminder');
+          expect(android.channelName, 'Daily reminder');
+          expect(
+            android.channelDescription,
+            'Reminds you to write your field note for the day.',
+          );
+          expect(android.importance, Importance.high);
+          expect(android.priority, Priority.high);
+          final DarwinNotificationDetails? darwin = call.details!.macOS;
+          expect(darwin, isNotNull);
+          expect(darwin!.presentAlert, isNull);
+          expect(darwin.presentBadge, isNull);
+          expect(darwin.presentSound, isNull);
+          expect(darwin.presentBanner, isNull);
+          expect(darwin.presentList, isNull);
+          expect(darwin.sound, isNull);
+          expect(darwin.badgeNumber, isNull);
+          expect(darwin.attachments, isNull);
+          expect(darwin.subtitle, isNull);
+          expect(darwin.threadIdentifier, isNull);
+          expect(darwin.categoryIdentifier, isNull);
+          expect(darwin.interruptionLevel, isNull);
+          expect(darwin.criticalSoundVolume, isNull);
+          expect(darwin.dismissIsolate, isNull);
+          expect(call.mode, mode);
+        }
+      }
+
+      test('on macOS the scheduler cancels then schedules as before', () async {
+        await expectUnchanged(
+          platform: TargetPlatform.macOS,
+          plugin: _CallRecordingPlugin(macOS: _RecordingMacOSPlugin()),
+          mode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
+      });
+
+      test('on Android with exact alarms allowed the scheduler cancels then schedules as before', () async {
+        await expectUnchanged(
+          platform: TargetPlatform.android,
+          plugin: _CallRecordingPlugin(
+            android: _ExactAlarmAndroid(() async => true),
+          ),
+          mode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
+      });
+
+      test('on Android without exact alarms the scheduler cancels then schedules as before', () async {
+        await expectUnchanged(
+          platform: TargetPlatform.android,
+          plugin: _CallRecordingPlugin(
+            android: _ExactAlarmAndroid(() async => false),
+          ),
+          mode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      });
     },
   );
 }

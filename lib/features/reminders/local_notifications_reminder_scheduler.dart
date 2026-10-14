@@ -157,17 +157,24 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
   @override
   Future<void> schedule(List<ReminderBooking> bookings) async {
     await _ensureInitialized();
-    await _cancelAll();
+    final Set<int> cancelled = await _cancelAll();
     final AndroidScheduleMode mode = await _androidScheduleMode();
     for (final ReminderBooking booking in bookings) {
-      await _plugin.zonedSchedule(
-        id: booking.id,
-        title: reminderNotificationTitle,
-        body: reminderNotificationBody,
-        scheduledDate: tz.TZDateTime.from(booking.at, tz.local),
-        notificationDetails: _details,
-        androidScheduleMode: mode,
-      );
+      if (!cancelled.contains(booking.id)) {
+        continue;
+      }
+      try {
+        await _plugin.zonedSchedule(
+          id: booking.id,
+          title: reminderNotificationTitle,
+          body: reminderNotificationBody,
+          scheduledDate: tz.TZDateTime.from(booking.at, tz.local),
+          notificationDetails: _details,
+          androidScheduleMode: mode,
+        );
+      } catch (error) {
+        debugPrint('Reminder zonedSchedule failed for ${booking.id}: $error');
+      }
     }
   }
 
@@ -194,9 +201,16 @@ class LocalNotificationsReminderScheduler implements ReminderScheduler {
     await _cancelAll();
   }
 
-  Future<void> _cancelAll() async {
+  Future<Set<int>> _cancelAll() async {
+    final Set<int> cancelled = <int>{};
     for (final int id in ReminderService.bookingIds) {
-      await _plugin.cancel(id: id);
+      try {
+        await _plugin.cancel(id: id);
+        cancelled.add(id);
+      } catch (error) {
+        debugPrint('Reminder cancel failed for $id: $error');
+      }
     }
+    return cancelled;
   }
 }
