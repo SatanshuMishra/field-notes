@@ -160,6 +160,10 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
             startRecording(arguments, result)
         case "stopRecording":
             stopRecording(result)
+        case "pauseRecording":
+            pauseRecording(result)
+        case "resumeRecording":
+            resumeRecording(result)
         case "setZoom":
             let arguments = call.arguments as? Dictionary<String, Any> ?? [:]
             zoomLevel = arguments["zoom"] as? Double ?? 1.0
@@ -485,14 +489,19 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                         var capturedAudioDevices: [AVCaptureDevice] = []
                         
                         if #available(macOS 10.15, *) {
-                            capturedAudioDevices = AVCaptureDevice.captureDevices(deviceTypes: [.builtInMicrophone, .externalUnknown], mediaType: .audio)
+                            var audioDeviceTypes: [AVCaptureDevice.DeviceType] = [.builtInMicrophone, .externalUnknown]
+                            if #available(macOS 14.0, *) {
+                                audioDeviceTypes.append(.microphone)
+                                audioDeviceTypes.append(.external)
+                            }
+                            capturedAudioDevices = AVCaptureDevice.captureDevices(deviceTypes: audioDeviceTypes, mediaType: .audio)
                         } else {
                             capturedAudioDevices = AVCaptureDevice.captureDevices(mediaType: .audio)
                         }
-                        
+
                         var micObject: AVCaptureDevice!
                         if let audioDeviceId: String = arguments["audioDeviceId"] as? String, !audioDeviceId.isEmpty {
-                            micObject = capturedAudioDevices.first(where: { $0.uniqueID == audioDeviceId })
+                            micObject = capturedAudioDevices.first(where: { $0.uniqueID == audioDeviceId }) ?? AVCaptureDevice.default(for: .audio)
                         } else {
                             micObject = AVCaptureDevice.default(for: .audio)
                         }
@@ -1003,9 +1012,27 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
                 }
             }
         }
-        
+
     }
-    
+
+    func pauseRecording(_ result: @escaping FlutterResult) {
+        guard self.isRecording, let movieOutput: AVCaptureMovieFileOutput = self.captureSession?.outputs.first(where: { $0 is AVCaptureMovieFileOutput }) as? AVCaptureMovieFileOutput, movieOutput.isRecording else {
+            result(FlutterError(code: "NOT_RECORDING", message: "No movie recording is in progress", details: nil))
+            return
+        }
+        movieOutput.pauseRecording()
+        result(true)
+    }
+
+    func resumeRecording(_ result: @escaping FlutterResult) {
+        guard self.isRecording, let movieOutput: AVCaptureMovieFileOutput = self.captureSession?.outputs.first(where: { $0 is AVCaptureMovieFileOutput }) as? AVCaptureMovieFileOutput, movieOutput.isRecording else {
+            result(FlutterError(code: "NOT_RECORDING", message: "No movie recording is in progress", details: nil))
+            return
+        }
+        movieOutput.resumeRecording()
+        result(true)
+    }
+
     @objc
     func stopRecordingSelector(){
         guard let outputChannel = self.outputChannel else {

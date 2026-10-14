@@ -44,6 +44,14 @@ class CameraMacOSController {
     return _platformInstance.stopVideoRecording();
   }
 
+  Future<bool?> pauseRecording() {
+    return _platformInstance.pauseRecording();
+  }
+
+  Future<bool?> resumeRecording() {
+    return _platformInstance.resumeRecording();
+  }
+
   /// Destroy the camera instance
   Future<bool?> destroy() {
     return _platformInstance.destroy();
