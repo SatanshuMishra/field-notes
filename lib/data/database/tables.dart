@@ -31,6 +31,7 @@ class Entries extends Table {
   TextColumn get conflictSourceDevice => text().nullable()();
   TextColumn get textVersion => text().withDefault(const Constant('{}'))();
   TextColumn get fieldClocks => text().withDefault(const Constant('{}'))();
+  TextColumn get peaks => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

@@ -41,10 +41,8 @@ final class CaptureFile extends CaptureMedia {
 }
 
 sealed class CaptureRequest {
-  CaptureRequest({
-    required this.date,
-    required List<CaptureMedia> photos,
-  }) : photos = List<CaptureMedia>.unmodifiable(photos);
+  CaptureRequest({required this.date, required List<CaptureMedia> photos})
+    : photos = List<CaptureMedia>.unmodifiable(photos);
 
   final String date;
   final List<CaptureMedia> photos;
@@ -70,11 +68,13 @@ final class VoiceCaptureRequest extends CaptureRequest {
     required super.date,
     required this.audio,
     required this.durationMs,
+    List<double> peaks = const <double>[],
     super.photos = const <CaptureMedia>[],
-  });
+  }) : peaks = List<double>.unmodifiable(peaks);
 
   final CaptureMedia audio;
   final int durationMs;
+  final List<double> peaks;
 
   @override
   EntryType get type => EntryType.voice;

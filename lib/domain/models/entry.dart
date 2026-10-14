@@ -13,6 +13,7 @@ class Entry {
     this.durationMs,
     this.deletedAt,
     this.conflictSourceDevice,
+    this.peaks,
   });
 
   final String id;
@@ -26,6 +27,7 @@ class Entry {
   final int updatedAt;
   final int? deletedAt;
   final String? conflictSourceDevice;
+  final List<double>? peaks;
 
   bool get isDeleted => deletedAt != null;
 
@@ -44,7 +46,8 @@ class Entry {
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
           deletedAt == other.deletedAt &&
-          conflictSourceDevice == other.conflictSourceDevice;
+          conflictSourceDevice == other.conflictSourceDevice &&
+          _samePeaks(peaks, other.peaks);
 
   @override
   int get hashCode => Object.hash(
@@ -59,6 +62,7 @@ class Entry {
     updatedAt,
     deletedAt,
     conflictSourceDevice,
+    peaks == null ? null : Object.hashAll(peaks!),
   );
 
   @override
@@ -67,5 +71,21 @@ class Entry {
       'textContent: $textContent, mediaId: $mediaId, '
       'thumbnailMediaId: $thumbnailMediaId, durationMs: $durationMs, '
       'createdAt: $createdAt, updatedAt: $updatedAt, deletedAt: $deletedAt, '
-      'conflictSourceDevice: $conflictSourceDevice)';
+      'conflictSourceDevice: $conflictSourceDevice, '
+      'peaks: ${peaks == null ? null : '${peaks!.length} values'})';
+}
+
+bool _samePeaks(List<double>? a, List<double>? b) {
+  if (identical(a, b)) {
+    return true;
+  }
+  if (a == null || b == null || a.length != b.length) {
+    return false;
+  }
+  for (int i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) {
+      return false;
+    }
+  }
+  return true;
 }

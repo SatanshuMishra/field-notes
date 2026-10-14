@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(runner LANGUAGES CXX)
 
 add_executable(${BINARY_NAME} WIN32
+  "audio_peaks_bridge.cpp"
   "file_drop_bridge.cpp"
   "flutter_window.cpp"
   "main.cpp"
@@ -27,7 +28,7 @@ target_compile_definitions(${BINARY_NAME} PRIVATE "FLUTTER_VERSION_BUILD=${FLUTT
 target_compile_definitions(${BINARY_NAME} PRIVATE "NOMINMAX")
 
 target_link_libraries(${BINARY_NAME} PRIVATE flutter flutter_wrapper_app)
-target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib" "ole32.lib" "runtimeobject.lib" "shell32.lib" "windowscodecs.lib")
+target_link_libraries(${BINARY_NAME} PRIVATE "dwmapi.lib" "mfplat.lib" "mfreadwrite.lib" "mfuuid.lib" "ole32.lib" "runtimeobject.lib" "shell32.lib" "windowscodecs.lib")
 target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 add_dependencies(${BINARY_NAME} flutter_assemble)

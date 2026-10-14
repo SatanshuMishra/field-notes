@@ -116,6 +116,7 @@ class DriftJournalRepository implements JournalRepository {
     String? mediaId,
     String? thumbnailMediaId,
     int? durationMs,
+    List<double>? peaks,
   }) async {
     final now = _clock();
     final row = await _entries.insertEntry(
@@ -128,6 +129,7 @@ class DriftJournalRepository implements JournalRepository {
       durationMs: durationMs,
       createdAt: now,
       updatedAt: now,
+      peaks: peaks,
     );
     return toDomainEntry(row);
   }
@@ -217,6 +219,11 @@ class DriftJournalRepository implements JournalRepository {
   }
 
   @override
+  Future<void> setVoicePeaks(String entryId, List<double> peaks) async {
+    await _entries.setVoicePeaks(id: entryId, peaks: peaks);
+  }
+
+  @override
   Future<void> softDeleteEntry(String id) async {
     await _entries.softDelete(id: id, deletedAt: _clock());
   }
@@ -290,6 +297,18 @@ class DriftJournalRepository implements JournalRepository {
     return _entries
         .watchActiveEntriesForDate(date)
         .map((rows) => rows.map(toDomainEntry).toList());
+  }
+
+  @override
+  Stream<List<Entry>> watchVoiceEntriesWithoutPeaks() {
+    return _entries
+        .watchActiveEntriesOfType(EntryType.voice.id)
+        .map(
+          (rows) => rows
+              .map(toDomainEntry)
+              .where((entry) => entry.peaks == null)
+              .toList(),
+        );
   }
 
   @override

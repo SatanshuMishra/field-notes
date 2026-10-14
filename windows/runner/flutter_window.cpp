@@ -31,6 +31,8 @@ bool FlutterWindow::OnCreate() {
   spell_check_bridge_ = std::make_unique<SpellCheckBridge>(messenger);
   pasteboard_bridge_ =
       std::make_unique<PasteboardBridge>(messenger, GetHandle());
+  audio_peaks_bridge_ =
+      std::make_unique<AudioPeaksBridge>(messenger, GetHandle());
   file_drop_bridge_.Attach(new FileDropBridge(
       messenger, flutter_controller_->view()->GetNativeWindow()));
   file_drop_bridge_.Get()->Register();
@@ -49,6 +51,7 @@ void FlutterWindow::OnDestroy() {
     file_drop_bridge_.Get()->Revoke();
     file_drop_bridge_.Reset();
   }
+  audio_peaks_bridge_ = nullptr;
   pasteboard_bridge_ = nullptr;
   spell_check_bridge_ = nullptr;
   system_channels_ = nullptr;
@@ -66,6 +69,11 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
                               LPARAM const lparam) noexcept {
   if (pasteboard_bridge_ && pasteboard_bridge_->IsImageFileMessage(message)) {
     pasteboard_bridge_->CompleteImageFile(lparam);
+    return 0;
+  }
+
+  if (audio_peaks_bridge_ && audio_peaks_bridge_->IsDecodedMessage(message)) {
+    audio_peaks_bridge_->CompleteDecode(lparam);
     return 0;
   }
 

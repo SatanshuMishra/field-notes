@@ -43,6 +43,10 @@ class FakeJournalRepository implements JournalRepository {
       Stream<List<Entry>>.value(const <Entry>[]);
 
   @override
+  Stream<List<Entry>> watchVoiceEntriesWithoutPeaks() =>
+      Stream<List<Entry>>.value(const <Entry>[]);
+
+  @override
   Stream<List<EntryPhoto>> watchPhotosForEntry(String entryId) =>
       Stream<List<EntryPhoto>>.value(const <EntryPhoto>[]);
 

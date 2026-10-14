@@ -10,6 +10,7 @@ import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
+import 'voice_peak_sampler.dart';
 import 'voice_recorder.dart';
 import 'voice_recorder_provider.dart';
 import 'voice_recorder_sheet.dart';
@@ -55,6 +56,8 @@ class _VoiceComposerConnectorState
   Timer? _breath;
   bool _pending = false;
   bool _closing = false;
+  VoicePeakSampler? _sampler;
+  StreamSubscription<double>? _levelFeed;
   late final RecordingWakeHold _wakeHold;
 
   VoiceRecorder get _recorder => ref.read(voiceRecorderProvider);
@@ -75,6 +78,7 @@ class _VoiceComposerConnectorState
   void dispose() {
     _stopTicker();
     _cancelBreath();
+    _stopFeedingSampler();
     _wakeHold.dispose();
     super.dispose();
   }
@@ -97,6 +101,22 @@ class _VoiceComposerConnectorState
   void _cancelBreath() {
     _breath?.cancel();
     _breath = null;
+  }
+
+  void _feedSampler(VoiceRecorder recorder) {
+    _stopFeedingSampler();
+    final VoicePeakSampler? sampler = _sampler;
+    if (sampler == null) {
+      return;
+    }
+    _levelFeed = recorder.level.listen(
+      (double level) => sampler.hear(level, recorder.elapsed),
+    );
+  }
+
+  void _stopFeedingSampler() {
+    unawaited(_levelFeed?.cancel());
+    _levelFeed = null;
   }
 
   Future<void> _start() async {
@@ -159,6 +179,8 @@ class _VoiceComposerConnectorState
       await recorder.cancel();
       return;
     }
+    _sampler = VoicePeakSampler();
+    _feedSampler(recorder);
     setState(() {
       _phase = VoiceRecorderPhase.recording;
       _elapsed = Duration.zero;
@@ -184,6 +206,7 @@ class _VoiceComposerConnectorState
     }
     _pending = false;
     _stopTicker();
+    _stopFeedingSampler();
     if (!mounted) {
       return;
     }
@@ -213,6 +236,7 @@ class _VoiceComposerConnectorState
     if (!mounted) {
       return;
     }
+    _feedSampler(recorder);
     setState(() {
       _phase = VoiceRecorderPhase.recording;
       _errorMessage = null;
@@ -226,6 +250,7 @@ class _VoiceComposerConnectorState
     }
     final VoiceRecorderPhase previous = _phase;
     _stopTicker();
+    _stopFeedingSampler();
     setState(() {
       _phase = VoiceRecorderPhase.saving;
       _errorMessage = null;
@@ -260,6 +285,8 @@ class _VoiceComposerConnectorState
   Future<String> _persist() async {
     final VoiceRecorder recorder = _recorder;
     final VoiceRecording recording = await recorder.stop();
+    final List<double> peaks =
+        _sampler?.finish(recorder.elapsed) ?? const <double>[];
     final CaptureService service = await ref.read(
       captureServiceProvider.future,
     );
@@ -268,6 +295,7 @@ class _VoiceComposerConnectorState
         date: widget.date,
         audio: recording.media,
         durationMs: recording.durationMs,
+        peaks: peaks,
       ),
     );
     try {
@@ -336,6 +364,7 @@ class _VoiceComposerConnectorState
     _wakeHold.update(live: false);
     _cancelBreath();
     _stopTicker();
+    _stopFeedingSampler();
     await _recorder.cancel();
     if (!mounted) {
       return;

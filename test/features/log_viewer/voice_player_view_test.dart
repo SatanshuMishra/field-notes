@@ -36,6 +36,21 @@ const String _mediaId = 'voice-media';
 const String _dayTitle = 'Thursday 2 October';
 const String _idleTime = '0:00 / 1:38';
 
+const List<double> _peaks = <double>[
+  0.1,
+  0.3,
+  0.8,
+  1.0,
+  0.6,
+  0.2,
+  0.05,
+  0.4,
+  0.9,
+  0.5,
+  0.15,
+  0.7,
+];
+
 class _SeekingAudioPlayer extends FakeEntryAudioPlayer {
   final List<Duration> seeks = <Duration>[];
 
@@ -64,8 +79,8 @@ void _phone(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
-void _mac(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1440, 900);
+void _mac(WidgetTester tester, {Size size = const Size(1440, 900)}) {
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   tester.view.padding = FakeViewPadding.zero;
   tester.view.viewPadding = FakeViewPadding.zero;
@@ -90,12 +105,16 @@ FakeMediaResolver _resolverFor(File file) {
   );
 }
 
-Entry _voiceEntry() {
-  return entryOf(
-    type: EntryType.voice,
+Entry _voiceEntry({List<double>? peaks = _peaks}) {
+  return Entry(
     id: 'voice-entry',
+    dayId: 'd1',
+    type: EntryType.voice,
     mediaId: _mediaId,
     durationMs: _durationMs,
+    createdAt: 0,
+    updatedAt: 0,
+    peaks: peaks,
   );
 }
 
@@ -104,9 +123,10 @@ LogViewerScene _scene(
   bool earlier = true,
   bool later = true,
   LogViewerExit exit = LogViewerExit.close,
+  Entry? entry,
 }) {
   return LogViewerScene(
-    entry: _voiceEntry(),
+    entry: entry ?? _voiceEntry(),
     date: '2025-10-02',
     dayTitle: _dayTitle,
     mood: Mood.calm,
@@ -200,20 +220,31 @@ TextStyle _timeStyle(WidgetTester tester) {
   return time.textSpan!.style!;
 }
 
-List<int> _barColours(WidgetTester tester) {
-  final Finder paint = find.descendant(
-    of: find.byType(ViewerWaveform),
-    matching: find.byType(CustomPaint),
-  );
+Finder _wavePaint() => find.descendant(
+  of: find.byType(ViewerWaveform),
+  matching: find.byType(CustomPaint),
+);
+
+List<RecordedInvocation> _drawnRRects(WidgetTester tester) {
+  final Finder paint = _wavePaint();
   final CustomPaint custom = tester.widget<CustomPaint>(paint);
   final TestRecordingCanvas canvas = TestRecordingCanvas();
   custom.painter!.paint(canvas, tester.getSize(paint));
-  return <int>[
+  return <RecordedInvocation>[
     for (final RecordedInvocation call in canvas.invocations)
-      if (call.invocation.memberName == #drawRRect)
-        (call.invocation.positionalArguments[1] as Paint).color.toARGB32(),
+      if (call.invocation.memberName == #drawRRect) call,
   ];
 }
+
+List<int> _barColours(WidgetTester tester) => <int>[
+  for (final RecordedInvocation call in _drawnRRects(tester))
+    (call.invocation.positionalArguments[1] as Paint).color.toARGB32(),
+];
+
+List<RRect> _barShapes(WidgetTester tester) => <RRect>[
+  for (final RecordedInvocation call in _drawnRRects(tester))
+    call.invocation.positionalArguments[0] as RRect,
+];
 
 List<BackdropKey?> _backdropKeysIn(WidgetTester tester, Type chrome) => tester
     .renderObjectList<RenderBackdropFilter>(
@@ -438,6 +469,109 @@ void main() {
     expect(calls.later, 1);
     expect(calls.earlier, 0);
     expect(player.seeks, hasLength(dragged));
+  });
+
+  testWidgets('the full-screen waveform draws 4 px bars with 3 px gaps', (
+    WidgetTester tester,
+  ) async {
+    _mac(tester, size: const Size(780, 900));
+    await tester.pumpWidget(
+      _host(
+        _scene(
+          _Calls(),
+          entry: _voiceEntry(peaks: List<double>.filled(40, 0.5)),
+        ),
+        resolver: _resolverFor(_recording()),
+        player: _SeekingAudioPlayer(),
+        platform: TargetPlatform.macOS,
+      ),
+    );
+    await _settle(tester);
+
+    expect(tester.getSize(_wavePaint()), const Size(700, 200));
+    final List<RRect> bars = _barShapes(tester);
+    expect(bars, hasLength(100));
+    for (int index = 0; index < 100; index++) {
+      final RRect bar = bars[index];
+      expect(bar.left, closeTo(1.5 + 7 * index, 1e-9), reason: 'bar $index');
+      expect(bar.width, closeTo(4, 1e-9), reason: 'bar $index width');
+      expect(bar.height, closeTo(200, 1e-9), reason: 'bar $index height');
+      expect(bar.top, closeTo(0, 1e-9), reason: 'bar $index top');
+    }
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets("the player draws the entry's own peaks", (
+    WidgetTester tester,
+  ) async {
+    _phone(tester);
+    final _SeekingAudioPlayer player = _SeekingAudioPlayer();
+    await tester.pumpWidget(
+      _host(
+        _scene(
+          _Calls(),
+          entry: _voiceEntry(
+            peaks: const <double>[
+              0,
+              0.1,
+              0.2,
+              0.3,
+              0.4,
+              0.5,
+              0.6,
+              0.7,
+              0.8,
+              0.9,
+              1.0,
+            ],
+          ),
+        ),
+        resolver: _resolverFor(_recording()),
+        player: player,
+        platform: TargetPlatform.android,
+      ),
+    );
+    await _settle(tester);
+
+    expect(tester.getSize(_wavePaint()), const Size(340, 176));
+    final List<RRect> idle = _barShapes(tester);
+    expect(idle, hasLength(49));
+    expect(idle.first.height, closeTo(176 * 0.07, 1e-9));
+    expect(idle.last.height, closeTo(176, 1e-9));
+    for (int index = 1; index < idle.length; index++) {
+      expect(
+        idle[index].height,
+        greaterThanOrEqualTo(idle[index - 1].height - 1e-9),
+        reason: 'bar $index rises',
+      );
+      expect(idle[index].left, greaterThan(idle[index - 1].left));
+    }
+    expect(idle.map((RRect bar) => bar.height).toSet().length, greaterThan(10));
+
+    player.emitState(AudioPlaybackState.playing);
+    player.emitPosition(const Duration(milliseconds: _durationMs ~/ 2));
+    await tester.pump();
+
+    final List<RRect> shapes = _barShapes(tester);
+    final List<int> colours = _barColours(tester);
+    expect(shapes, hasLength(50));
+    expect(shapes.last.width, closeTo(2, 1e-9));
+    expect(colours.last, _ink.toARGB32());
+    final int unplayed = _ink.withValues(alpha: 0.28).toARGB32();
+    final int tallUnplayed = _ink.withValues(alpha: 0.46).toARGB32();
+    for (int index = 0; index < 49; index++) {
+      expect(shapes[index].height, closeTo(idle[index].height, 1e-9));
+      expect(
+        colours[index],
+        index < 25
+            ? _played.toARGB32()
+            : shapes[index].height / 176 > 0.62
+            ? tallUnplayed
+            : unplayed,
+        reason: 'bar $index',
+      );
+    }
+    expect(colours.sublist(25, 49), containsAll(<int>[unplayed, tallUnplayed]));
   });
 
   testWidgets('the Mac voice player fills the window below the title bar', (

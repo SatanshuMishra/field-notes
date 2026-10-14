@@ -116,7 +116,7 @@ class _VoiceBodyState extends State<VoiceBody> {
             onIncrease: ready ? () => playback.seekBy(_seekStep) : null,
             onDecrease: ready ? () => playback.seekBy(-_seekStep) : null,
             child: VoiceWaveform(
-              seed: voiceWaveformSeed(widget.entry.id),
+              peaks: widget.entry.peaks,
               active: playback.isActive,
               progress: playback.progress,
               onSeek: ready ? playback.seekToFraction : null,

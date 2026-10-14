@@ -22,6 +22,36 @@ const int _minute = 60 * 1000;
 const String _date = '2026-09-29';
 const String _entryId = 'entry-1';
 
+String _phoneClock(int minutes) {
+  return Hlc(
+    millis: _noon + minutes * _minute,
+    counter: 0,
+    nodeId: 'phone',
+  ).encode();
+}
+
+RecordState _changed(
+  RecordState state, {
+  Map<String, Object?> fields = const <String, Object?>{},
+  Map<String, String> clocks = const <String, String>{},
+  Set<String> without = const <String>{},
+}) {
+  return RecordState(
+    table: state.table,
+    rowId: state.rowId,
+    fields: <String, Object?>{
+      for (final MapEntry<String, Object?> field in state.fields.entries)
+        if (!without.contains(field.key)) field.key: field.value,
+      ...fields,
+    },
+    clocks: <String, String>{
+      for (final MapEntry<String, String> clock in state.clocks.entries)
+        if (!without.contains(clock.key)) clock.key: clock.value,
+      ...clocks,
+    },
+  );
+}
+
 class _Device {
   _Device(this.name) : db = AppDatabase(NativeDatabase.memory());
 
@@ -114,6 +144,25 @@ class _Device {
 
   Future<void> editText(String text) async {
     await entries.updateText(id: _entryId, textContent: text, updatedAt: now);
+  }
+
+  Future<void> addVoice({List<double>? peaks}) async {
+    await entries.insertEntry(
+      id: _entryId,
+      dayId: dayIdForDate(_date),
+      type: EntryType.voice.id,
+      textContent: null,
+      mediaId: 'blob-voice',
+      thumbnailMediaId: null,
+      durationMs: 4200,
+      createdAt: now,
+      updatedAt: now,
+      peaks: peaks,
+    );
+  }
+
+  Future<Map<String, String>> clocks() async {
+    return decodeFieldClocks((await entry()).fieldClocks);
   }
 }
 
@@ -562,4 +611,171 @@ void main() {
 
     await arrived;
   });
+
+  Future<RecordState> localVoice(_Device holder) async {
+    await holder.addDay();
+    await holder.addVoice(peaks: <double>[0.1]);
+    return holder.state(SyncedTables.entries, _entryId);
+  }
+
+  test('newer peaks from another device replace local ones', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localVoice(mac);
+
+    await mac.applyAll(<RecordState>[
+      _changed(
+        local,
+        fields: <String, Object?>{'peaks': '[0.5,0.6]'},
+        clocks: <String, String>{'peaks': _phoneClock(1)},
+      ),
+    ]);
+
+    expect((await mac.entry()).peaks, '[0.5,0.6]');
+    expect((await mac.clocks())['peaks'], _phoneClock(1));
+  });
+
+  test('older peaks from another device are ignored', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localVoice(mac);
+    final Entry before = await mac.entry();
+
+    await mac.applyAll(<RecordState>[
+      _changed(
+        local,
+        fields: <String, Object?>{'peaks': '[0.5,0.6]'},
+        clocks: <String, String>{'peaks': _phoneClock(-1)},
+      ),
+    ]);
+
+    expect((await mac.entry()).peaks, '[0.1]');
+    expect((await mac.clocks())['peaks'], local.clocks['peaks']);
+    expect(await mac.entry(), before);
+  });
+
+  test('remote null peaks merge by clock', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localVoice(mac);
+
+    await mac.applyAll(<RecordState>[
+      _changed(
+        local,
+        fields: <String, Object?>{'peaks': null},
+        clocks: <String, String>{'peaks': _phoneClock(1)},
+      ),
+    ]);
+
+    expect((await mac.entry()).peaks, isNull);
+    expect((await mac.clocks())['peaks'], _phoneClock(1));
+  });
+
+  test('a record without peaks keeps the local peaks', () async {
+    final _Device mac = device('Mac');
+    final RecordState local = await localVoice(mac);
+    final RecordState older = _changed(
+      local,
+      fields: <String, Object?>{
+        'textContent': 'said on an older phone',
+        'textVersion': '{"phone":1}',
+      },
+      clocks: <String, String>{
+        'textContent': _phoneClock(1),
+        'textVersion': _phoneClock(1),
+      },
+      without: <String>{'peaks'},
+    );
+
+    await mac.applyAll(<RecordState>[older]);
+
+    final Entry stored = await mac.entry();
+    expect(older.fields.containsKey('peaks'), isFalse);
+    expect(stored.textContent, 'said on an older phone');
+    expect(stored.peaks, '[0.1]');
+    expect((await mac.clocks())['peaks'], local.clocks['peaks']);
+  });
+
+  test('a new entry from an older version stores no peaks', () async {
+    final _Device phone = device('Phone');
+    final _Device mac = device('Mac');
+    await phone.addDay();
+    await phone.addVoice(peaks: <double>[0.4]);
+
+    await mac.applyAll(<RecordState>[
+      await phone.state(SyncedTables.days, dayIdForDate(_date)),
+      _changed(
+        await phone.state(SyncedTables.entries, _entryId),
+        without: <String>{'peaks'},
+      ),
+    ]);
+
+    expect((await mac.entry()).mediaId, 'blob-voice');
+    expect((await mac.entry()).peaks, isNull);
+    expect((await mac.clocks()).keys, isNot(contains('peaks')));
+  });
+
+  test('a malformed peaks field is ignored and the record applied', () async {
+    final String tooMany = '[${List<String>.filled(36001, '0').join(',')}]';
+    final List<Object?> malformed = <Object?>[42, 'nope', '[2]', tooMany];
+
+    for (final (int index, Object? peaks) in malformed.indexed) {
+      final _Device mac = device('Mac $index');
+      final RecordState local = await localVoice(mac);
+
+      await mac.applyAll(<RecordState>[
+        _changed(
+          local,
+          fields: <String, Object?>{
+            'peaks': peaks,
+            'textContent': 'newer text',
+            'textVersion': '{"phone":1}',
+          },
+          clocks: <String, String>{
+            'peaks': _phoneClock(1),
+            'textContent': _phoneClock(1),
+            'textVersion': _phoneClock(1),
+          },
+        ),
+      ]);
+
+      final Entry stored = await mac.entry();
+      expect(stored.textContent, 'newer text', reason: 'case $index');
+      expect(stored.peaks, '[0.1]', reason: 'case $index');
+      expect(
+        (await mac.clocks())['peaks'],
+        local.clocks['peaks'],
+        reason: 'case $index',
+      );
+    }
+  });
+
+  test(
+    'a field the applier does not list is dropped and the record stored',
+    () async {
+      final _Device phone = device('Phone');
+      final _Device mac = device('Mac');
+      await phone.addDay();
+      await phone.addText('hello');
+      final RecordState sent = await phone.state(
+        SyncedTables.entries,
+        _entryId,
+      );
+
+      await mac.applyAll(<RecordState>[
+        await phone.state(SyncedTables.days, dayIdForDate(_date)),
+        _changed(
+          sent,
+          fields: <String, Object?>{'sticker': 'sunflower'},
+          clocks: <String, String>{'sticker': _phoneClock(0)},
+        ),
+      ]);
+
+      final RecordState stored = await mac.state(
+        SyncedTables.entries,
+        _entryId,
+      );
+      expect(stored.fields, sent.fields);
+      expect(stored.fields.keys, isNot(contains('sticker')));
+      expect(stored.clocks, sent.clocks);
+      expect((await mac.entry()).textContent, 'hello');
+    },
+  );
 }
