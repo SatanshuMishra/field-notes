@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
@@ -13,16 +12,10 @@ const int voiceWaveformMinBars = 8;
 
 const double _barRadius = 2;
 const double _midThreshold = 0.62;
-const double _minHeight = 0.14;
-const double _maxHeight = 1;
-const double _envelopeFloor = 0.45;
-const double _envelopeSwing = 0.55;
-const double _heightFloor = 0.35;
-const double _heightSwing = 0.75;
-const int _lcgMultiplier = 9301;
-const int _lcgIncrement = 49297;
-const int _lcgModulus = 233280;
-const int _seedSpread = 131;
+const double _minHeight = 0.07;
+const double _highestWeight = 0.65;
+const double _meanWeight = 0.35;
+const double _smallestLargest = 0.001;
 
 const double _playheadWidth = 2;
 const double _playheadReach = 2;
@@ -33,23 +26,9 @@ const Radius _playheadRadius = Radius.circular(1);
 const Duration _colourShift = Duration(milliseconds: 150);
 const Curve _colourCurve = Curves.ease;
 
-const int _fnvOffset = 0x811c9dc5;
-const int _fnvPrime = 0x01000193;
-const int _uint32Mask = 0xFFFFFFFF;
-const int _int31Mask = 0x7FFFFFFF;
-
 const Key voiceWaveformPlayheadKey = ValueKey<String>('voice-wave-playhead');
 
 Key voiceWaveformBarKey(int index) => ValueKey<String>('voice-wave-bar-$index');
-
-int voiceWaveformSeed(String id) =>
-    utf8
-        .encode(id)
-        .fold<int>(
-          _fnvOffset,
-          (int hash, int byte) => ((hash ^ byte) * _fnvPrime) & _uint32Mask,
-        ) &
-    _int31Mask;
 
 int voiceWaveformBarCount(double width) => math.max(
   voiceWaveformMinBars,
@@ -58,24 +37,34 @@ int voiceWaveformBarCount(double width) => math.max(
       .floor(),
 );
 
-List<double> voiceWaveformHeights(int seed, int count) =>
-    List<double>.unmodifiable(<double>[
-      for (int index = 0; index < count; index++) _heightAt(seed, index, count),
-    ]);
-
-double _heightAt(int seed, int index, int count) {
-  final int first =
-      ((seed * _seedSpread + index) * _lcgMultiplier + _lcgIncrement) %
-      _lcgModulus;
-  final int second = (first * _lcgMultiplier + _lcgIncrement) % _lcgModulus;
-  final double random = second / _lcgModulus;
-  final double envelope =
-      _envelopeFloor +
-      _envelopeSwing * math.sin(math.pi * (index + 0.5) / count);
-  return (envelope * (_heightFloor + random * _heightSwing)).clamp(
-    _minHeight,
-    _maxHeight,
+List<double> voiceWaveformBars(List<double>? peaks, int count) {
+  if (peaks == null || peaks.isEmpty) {
+    return List<double>.unmodifiable(List<double>.filled(count, _minHeight));
+  }
+  final List<double> values = <double>[
+    for (int index = 0; index < count; index++) _barValue(peaks, index, count),
+  ];
+  final double largest = math.max(
+    _smallestLargest,
+    values.fold<double>(0, math.max),
   );
+  return List<double>.unmodifiable(<double>[
+    for (final double value in values) math.max(_minHeight, value / largest),
+  ]);
+}
+
+double _barValue(List<double> peaks, int index, int count) {
+  final int total = peaks.length;
+  final double from = index * total / count;
+  final double to = math.max(from + 1, (index + 1) * total / count);
+  final int first = from.floor();
+  final int end = math.min(total, to.ceil());
+  final Iterable<double> share = peaks.getRange(first, end);
+  final double highest = share.reduce(math.max);
+  final double mean =
+      share.fold<double>(0, (double sum, double peak) => sum + peak) /
+      (end - first);
+  return _highestWeight * highest + _meanWeight * mean;
 }
 
 bool voiceWaveformBarPlayed(int index, int count, double progress) =>
@@ -84,13 +73,13 @@ bool voiceWaveformBarPlayed(int index, int count, double progress) =>
 class VoiceWaveform extends StatelessWidget {
   const VoiceWaveform({
     super.key,
-    required this.seed,
+    required this.peaks,
     required this.active,
     required this.progress,
     this.onSeek,
   });
 
-  final int seed;
+  final List<double>? peaks;
   final bool active;
   final double progress;
   final ValueChanged<double>? onSeek;
@@ -127,7 +116,7 @@ class VoiceWaveform extends StatelessWidget {
                     children: <Widget>[
                       RepaintBoundary(
                         child: _Bars(
-                          seed: seed,
+                          peaks: peaks,
                           width: width,
                           active: active,
                           progress: shown,
@@ -174,13 +163,13 @@ class VoiceWaveform extends StatelessWidget {
 
 class _Bars extends StatelessWidget {
   const _Bars({
-    required this.seed,
+    required this.peaks,
     required this.width,
     required this.active,
     required this.progress,
   });
 
-  final int seed;
+  final List<double>? peaks;
   final double width;
   final bool active;
   final double progress;
@@ -203,7 +192,7 @@ class _Bars extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final int count = voiceWaveformBarCount(width);
-    final List<double> heights = voiceWaveformHeights(seed, count);
+    final List<double> heights = voiceWaveformBars(peaks, count);
     final double stride = math.max(
       voiceWaveformBarWidth + voiceWaveformBarGap,
       (width - voiceWaveformBarWidth) / (count - 1),

@@ -6,8 +6,6 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
-import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart'
-    show voiceWaveformSeed;
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart'
     show logActionsDeleteKey;
 import 'package:field_notes/features/entry_cards/media/media_resolver.dart';
@@ -157,7 +155,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     }
     final bool ready = playback.ready;
     return ViewerWaveform(
-      seed: voiceWaveformSeed(widget.scene.entry.id),
+      peaks: widget.scene.entry.peaks,
       progress: playback.progress,
       active: playback.isActive,
       height: height,

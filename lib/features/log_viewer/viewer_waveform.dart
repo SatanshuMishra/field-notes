@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -6,6 +8,8 @@ import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 
 const String _positionLabel = 'Playback position';
 
+const double _barWidth = 4;
+const double _barGap = 3;
 const double _barRadius = 2;
 const double _tallBar = 0.62;
 const double _unplayedAlpha = 0.28;
@@ -18,7 +22,7 @@ const Radius _playheadRadius = Radius.circular(_playheadWidth / 2);
 class ViewerWaveform extends StatelessWidget {
   const ViewerWaveform({
     super.key,
-    required this.seed,
+    required this.peaks,
     required this.progress,
     required this.active,
     required this.height,
@@ -30,7 +34,7 @@ class ViewerWaveform extends StatelessWidget {
     this.onDecrease,
   });
 
-  final int seed;
+  final List<double>? peaks;
   final double progress;
   final bool active;
   final double height;
@@ -62,9 +66,7 @@ class ViewerWaveform extends StatelessWidget {
             builder: (BuildContext context, BoxConstraints constraints) {
               final double width = constraints.hasBoundedWidth
                   ? constraints.maxWidth
-                  : voiceWaveformMinBars *
-                            (voiceWaveformBarWidth + voiceWaveformBarGap) -
-                        voiceWaveformBarGap;
+                  : voiceWaveformMinBars * (_barWidth + _barGap) - _barGap;
               return MouseRegion(
                 cursor: seek == null
                     ? MouseCursor.defer
@@ -89,7 +91,7 @@ class ViewerWaveform extends StatelessWidget {
                       child: CustomPaint(
                         size: Size(width, height),
                         painter: _WaveformPainter(
-                          seed: seed,
+                          peaks: peaks,
                           progress: shown,
                           active: active,
                         ),
@@ -111,12 +113,12 @@ class ViewerWaveform extends StatelessWidget {
 
 class _WaveformPainter extends CustomPainter {
   const _WaveformPainter({
-    required this.seed,
+    required this.peaks,
     required this.progress,
     required this.active,
   });
 
-  final int seed;
+  final List<double>? peaks;
   final double progress;
   final bool active;
 
@@ -134,10 +136,13 @@ class _WaveformPainter extends CustomPainter {
     if (size.isEmpty) {
       return;
     }
-    final int count = voiceWaveformBarCount(size.width);
-    final List<double> heights = voiceWaveformHeights(seed, count);
-    const double stride = voiceWaveformBarWidth + voiceWaveformBarGap;
-    final double span = count * stride - voiceWaveformBarGap;
+    const double stride = _barWidth + _barGap;
+    final int count = math.max(
+      voiceWaveformMinBars,
+      ((size.width + _barGap) / stride).floor(),
+    );
+    final List<double> heights = voiceWaveformBars(peaks, count);
+    final double span = count * stride - _barGap;
     final double start = (size.width - span) / 2;
     final double middle = size.height / 2;
     final Paint bar = Paint()..isAntiAlias = true;
@@ -150,7 +155,7 @@ class _WaveformPainter extends CustomPainter {
           Rect.fromLTWH(
             start + index * stride,
             middle - barHeight / 2,
-            voiceWaveformBarWidth,
+            _barWidth,
             barHeight,
           ),
           const Radius.circular(_barRadius),
@@ -177,7 +182,7 @@ class _WaveformPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) =>
-      oldDelegate.seed != seed ||
+      !identical(oldDelegate.peaks, peaks) ||
       oldDelegate.progress != progress ||
       oldDelegate.active != active;
 }

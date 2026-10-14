@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart' show Theme;
 import 'package:flutter/rendering.dart';
@@ -22,6 +21,21 @@ const double _barsHeight = 28;
 const int _durationMs = 65000;
 const Duration _settle = Duration(milliseconds: 200);
 
+const List<double> _peaks = <double>[
+  0.1,
+  0.3,
+  0.8,
+  1.0,
+  0.6,
+  0.2,
+  0.05,
+  0.4,
+  0.9,
+  0.5,
+  0.15,
+  0.7,
+];
+
 class _SeekingPlayer extends FakeEntryAudioPlayer {
   final List<Duration> seekCalls = <Duration>[];
 
@@ -38,21 +52,27 @@ FakeMediaResolver _resolver() => FakeMediaResolver()
     ),
   );
 
+Entry _voiceEntry({String id = 'e1', List<double>? peaks = _peaks}) => Entry(
+  id: id,
+  dayId: 'd1',
+  type: EntryType.voice,
+  mediaId: 'aud',
+  durationMs: _durationMs,
+  createdAt: 0,
+  updatedAt: 0,
+  peaks: peaks,
+);
+
 Future<void> _pumpVoice(
   WidgetTester tester,
   EntryAudioPlayer player, {
-  String id = 'e1',
+  Entry? entry,
   MediaQueryData data = const MediaQueryData(),
   Widget Function(Widget card)? wrap,
 }) async {
   final Widget card = cardHarness(
     VoiceBody(
-      entry: entryOf(
-        type: EntryType.voice,
-        id: id,
-        mediaId: 'aud',
-        durationMs: _durationMs,
-      ),
+      entry: entry ?? _voiceEntry(),
       resolver: _resolver(),
       playerFactory: () => player,
     ),
@@ -64,12 +84,12 @@ Future<void> _pumpVoice(
 
 Future<void> _pumpWaveform(
   WidgetTester tester, {
-  required int seed,
+  required List<double>? peaks,
   required double width,
 }) async {
   await tester.pumpWidget(
     cardHarness(
-      VoiceWaveform(seed: seed, active: false, progress: 0),
+      VoiceWaveform(peaks: peaks, active: false, progress: 0),
       width: width,
     ),
   );
@@ -93,6 +113,18 @@ List<double> _heights(WidgetTester tester) => <double>[
   for (final Rect bar in _barRects(tester)) bar.height / _barsHeight,
 ];
 
+void _expectHeights(WidgetTester tester, List<double> expected) {
+  final List<double> heights = _heights(tester);
+  expect(heights, hasLength(expected.length));
+  for (int index = 0; index < expected.length; index++) {
+    expect(
+      heights[index],
+      closeTo(expected[index], 1e-9),
+      reason: 'bar $index height',
+    );
+  }
+}
+
 BoxDecoration _decorationIn(WidgetTester tester, Key key) =>
     tester
             .widget<DecoratedBox>(
@@ -106,12 +138,6 @@ BoxDecoration _decorationIn(WidgetTester tester, Key key) =>
 
 int _barArgb(WidgetTester tester, int index) =>
     _decorationIn(tester, voiceWaveformBarKey(index)).color!.toARGB32();
-
-double _envelope(int index, int count) =>
-    0.45 + 0.55 * math.sin(math.pi * (index + 0.5) / count);
-
-double _mean(List<double> values) =>
-    values.reduce((double a, double b) => a + b) / values.length;
 
 List<SemanticsNode> _sliders() => find.semantics
     .byPredicate(
@@ -131,7 +157,7 @@ void _expectFixedBars(WidgetTester tester, int count) {
     expect(bar.width, closeTo(3, 1e-9), reason: 'bar $index width');
     expect(
       bar.height,
-      inInclusiveRange(_barsHeight * 0.14 - 1e-9, _barsHeight + 1e-9),
+      inInclusiveRange(_barsHeight * 0.07 - 1e-9, _barsHeight + 1e-9),
       reason: 'bar $index height',
     );
     expect(bar.center.dy, closeTo(wave.center.dy, 1e-6));
@@ -147,52 +173,18 @@ void main() {
   testWidgets('bars are 3 wide with 2 gaps and the count follows the width', (
     WidgetTester tester,
   ) async {
-    final int seed = voiceWaveformSeed('e1');
-    expect(seed, 68865795);
-    expect(voiceWaveformSeed('e2'), 85643414);
-
-    await _pumpWaveform(tester, seed: seed, width: 300);
+    await _pumpWaveform(tester, peaks: _peaks, width: 300);
     _expectFixedBars(tester, 60);
     final List<double> wide = _heights(tester);
 
-    await _pumpWaveform(tester, seed: seed, width: 160);
+    await _pumpWaveform(tester, peaks: _peaks, width: 160);
     _expectFixedBars(tester, 32);
-    final List<double> narrow = _heights(tester);
 
     await tester.pumpWidget(const SizedBox());
-    await _pumpWaveform(tester, seed: seed, width: 300);
+    await _pumpWaveform(tester, peaks: _peaks, width: 300);
     expect(_heights(tester), wide);
 
-    final List<int> shared = <int>[
-      for (int index = 0; index < narrow.length; index++)
-        if (wide[index] < 1 - 1e-9 && narrow[index] < 1 - 1e-9) index,
-    ];
-    expect(shared.length, greaterThan(narrow.length ~/ 2));
-    for (final int index in shared) {
-      expect(
-        narrow[index] / _envelope(index, 32),
-        closeTo(wide[index] / _envelope(index, 60), 1e-9),
-        reason: 'bar $index keeps its seeded height',
-      );
-    }
-
-    expect(
-      _mean(wide.sublist(20, 40)),
-      greaterThan(_mean(<double>[...wide.sublist(0, 10), ...wide.sublist(50)])),
-    );
-
-    await _pumpWaveform(tester, seed: voiceWaveformSeed('e2'), width: 300);
-    final List<double> other = _heights(tester);
-    expect(other, hasLength(60));
-    expect(
-      <int>[
-        for (int index = 0; index < 60; index++)
-          if ((other[index] - wide[index]).abs() > 1e-6) index,
-      ].length,
-      greaterThan(30),
-    );
-
-    await _pumpWaveform(tester, seed: seed, width: 30);
+    await _pumpWaveform(tester, peaks: _peaks, width: 30);
     expect(_barRects(tester), hasLength(8));
     expect(tester.takeException(), isNull);
 
@@ -200,13 +192,182 @@ void main() {
     final VoiceWaveform onCard = tester.widget<VoiceWaveform>(
       find.byType(VoiceWaveform),
     );
-    expect(onCard.seed, seed);
+    expect(onCard.peaks, _peaks);
     expect(
       _barRects(tester),
       hasLength(
         voiceWaveformBarCount(tester.getSize(find.byType(VoiceWaveform)).width),
       ),
     );
+  });
+
+  testWidgets(
+    'bars take 0.65 of the highest and 0.35 of the mean of their share',
+    (WidgetTester tester) async {
+      await _pumpWaveform(
+        tester,
+        peaks: const <double>[
+          0.2,
+          0.4,
+          0.6,
+          0.8,
+          1.0,
+          0.0,
+          0.0,
+          0.0,
+          0.5,
+          0.5,
+          0.1,
+          0.3,
+          0.9,
+          0.7,
+          0.2,
+          0.2,
+        ],
+        width: 38,
+      );
+      _expectHeights(tester, const <double>[
+        0.365 / 0.865,
+        0.765 / 0.865,
+        0.825 / 0.865,
+        0.07,
+        0.5 / 0.865,
+        0.265 / 0.865,
+        1,
+        0.2 / 0.865,
+      ]);
+    },
+  );
+
+  testWidgets('with few peaks each bar uses its nearest one or two', (
+    WidgetTester tester,
+  ) async {
+    await _pumpWaveform(tester, peaks: const <double>[0.2, 1.0], width: 38);
+    _expectHeights(tester, const <double>[0.2, 0.86, 0.86, 0.86, 1, 1, 1, 1]);
+  });
+
+  testWidgets('with as many peaks as bars each bar is one peak', (
+    WidgetTester tester,
+  ) async {
+    await _pumpWaveform(
+      tester,
+      peaks: const <double>[0.5, 1.0, 0.25, 0.75, 0, 0, 0, 1],
+      width: 38,
+    );
+    _expectHeights(tester, const <double>[
+      0.5,
+      1,
+      0.25,
+      0.75,
+      0.07,
+      0.07,
+      0.07,
+      1,
+    ]);
+  });
+
+  testWidgets('no peaks draws a flat waveform', (WidgetTester tester) async {
+    for (final List<double>? peaks in <List<double>?>[
+      null,
+      const <double>[],
+      const <double>[0, 0, 0, 0, 0, 0],
+    ]) {
+      await tester.pumpWidget(const SizedBox());
+      await _pumpVoice(
+        tester,
+        _SeekingPlayer(),
+        entry: _voiceEntry(peaks: peaks),
+      );
+      final List<double> heights = _heights(tester);
+      expect(heights, isNotEmpty, reason: 'peaks $peaks');
+      for (int index = 0; index < heights.length; index++) {
+        expect(
+          heights[index],
+          closeTo(0.07, 1e-9),
+          reason: 'peaks $peaks bar $index',
+        );
+      }
+    }
+  });
+
+  testWidgets('card bars from peaks spread across the card', (
+    WidgetTester tester,
+  ) async {
+    final List<double> peaks = List<double>.filled(40, 0.5);
+
+    await _pumpWaveform(tester, peaks: peaks, width: 30);
+    final Rect narrowWave = tester.getRect(find.byType(VoiceWaveform));
+    final List<Rect> narrow = _barRects(tester);
+    expect(narrow, hasLength(8));
+    const List<double> narrowLefts = <double>[0, 5, 10, 15, 20, 25, 30, 35];
+    for (int index = 0; index < 8; index++) {
+      expect(
+        narrow[index].left - narrowWave.left,
+        closeTo(narrowLefts[index], 1e-9),
+        reason: 'bar $index left',
+      );
+      expect(narrow[index].width, closeTo(3, 1e-9), reason: 'bar $index');
+      expect(
+        narrow[index].height,
+        closeTo(_barsHeight, 1e-9),
+        reason: 'bar $index height',
+      );
+    }
+
+    await _pumpWaveform(tester, peaks: peaks, width: 200);
+    final Rect wideWave = tester.getRect(find.byType(VoiceWaveform));
+    final List<Rect> wide = _barRects(tester);
+    expect(wide, hasLength(40));
+    for (int index = 0; index < 40; index++) {
+      expect(
+        wide[index].left - wideWave.left,
+        closeTo(index * 197 / 39, 1e-9),
+        reason: 'bar $index left',
+      );
+      expect(wide[index].width, closeTo(3, 1e-9), reason: 'bar $index');
+      expect(
+        wide[index].height,
+        closeTo(_barsHeight, 1e-9),
+        reason: 'bar $index height',
+      );
+    }
+  });
+
+  testWidgets('two entries with the same peaks draw the same bars', (
+    WidgetTester tester,
+  ) async {
+    await _pumpVoice(
+      tester,
+      _SeekingPlayer(),
+      entry: _voiceEntry(id: 'e1', peaks: <double>[0.1, 0.9, 0.4, 0.6, 0.2]),
+    );
+    final List<double> first = _heights(tester);
+    expect(first, isNotEmpty);
+
+    await tester.pumpWidget(const SizedBox());
+    await _pumpVoice(
+      tester,
+      _SeekingPlayer(),
+      entry: _voiceEntry(
+        id: 'another-entry',
+        peaks: <double>[0.1, 0.9, 0.4, 0.6, 0.2],
+      ),
+    );
+    final List<double> second = _heights(tester);
+    expect(second, first);
+
+    await tester.pumpWidget(const SizedBox());
+    await _pumpVoice(
+      tester,
+      _SeekingPlayer(),
+      entry: _voiceEntry(
+        id: 'another-entry',
+        peaks: <double>[0.9, 0.1, 0.6, 0.4, 1.0],
+      ),
+    );
+    final List<double> changed = _heights(tester);
+    expect(changed, hasLength(first.length));
+    expect(changed, isNot(first));
   });
 
   testWidgets(
