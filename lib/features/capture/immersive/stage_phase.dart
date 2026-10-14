@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 
-const Duration stageBreathDuration = Duration(seconds: 4);
+const Duration stageBreathDuration = Duration(seconds: 3);
 
 const String stageIdleStatus = 'Tap when you’re ready.';
 const String stageIdleSidebarTail = ' There’s no wrong way to say it.';
-const String stageBreathingStatus = 'Breathe in… and slowly out.';
+const String stageCountdownWords = 'Breathe in… recording starts in';
 const String stageRecordingStatus = 'I’m listening. Take your time.';
 const String stagePausedStatus = 'Paused. Nothing’s lost.';
 const String stageSavingFallbackStatus = 'Saving…';
 
 enum StagePhase {
   idle(announcement: 'Ready to record'),
-  breathing(announcement: 'Breathing before recording'),
+  breathing(announcement: 'Recording starts in 3'),
   recording(announcement: 'Recording'),
   paused(announcement: 'Paused'),
   saving(announcement: 'Saving');
@@ -36,7 +36,7 @@ enum StagePhase {
         layout == ShellLayout.sidebar
             ? '$stageIdleStatus$stageIdleSidebarTail'
             : stageIdleStatus,
-      StagePhase.breathing => stageBreathingStatus,
+      StagePhase.breathing => stageCountdownWords,
       StagePhase.recording => stageRecordingStatus,
       StagePhase.paused => stagePausedStatus,
       StagePhase.saving => savingText ?? stageSavingFallbackStatus,

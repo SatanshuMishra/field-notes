@@ -333,7 +333,7 @@ final List<A11yState> immersiveStates = <A11yState>[
     id: 'i2-voice-breathing',
     pump: _pumpVoiceBreathing,
     proof: <A11yProof>[
-      A11yProof(find.text(stageBreathingStatus)),
+      A11yProof(find.text(stageCountdownWords)),
       A11yProof(_semanticsLabelled(voiceStartNowLabel)),
     ],
   ),

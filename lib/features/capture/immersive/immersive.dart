@@ -8,3 +8,4 @@ export 'recorder_surface.dart';
 export 'reflection_prompt.dart';
 export 'stage_phase.dart';
 export 'voice_level_field.dart';
+export 'voice_level_smoother.dart';

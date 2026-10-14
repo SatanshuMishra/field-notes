@@ -84,6 +84,7 @@ const double _bottomBarStopSquare = 24;
 const double _stopSquareRadius = 5;
 const double _shutterPauseGlyph = 26;
 const double _disabledOpacity = 0.5;
+const double videoPausedShutterOpacity = 0.55;
 
 const double _sidebarSideCircle = 52;
 const double _bottomBarSideCircle = 48;
@@ -656,6 +657,13 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
     );
   }
 
+  double _shutterOpacity(VoidCallback? tap) {
+    if (tap == null) {
+      return _disabledOpacity;
+    }
+    return _isPaused ? videoPausedShutterOpacity : 1;
+  }
+
   Widget _shutter(bool sidebar) {
     final VoidCallback? tap = _shutterTap;
     final double size = sidebar ? _sidebarShutter : _bottomBarShutter;
@@ -673,7 +681,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
           surface: FocusRingSurface.dark,
           borderRadius: BorderRadius.all(Radius.circular(size / 2)),
           child: Opacity(
-            opacity: tap == null ? _disabledOpacity : 1.0,
+            opacity: _shutterOpacity(tap),
             child: Container(
               width: size,
               height: size,

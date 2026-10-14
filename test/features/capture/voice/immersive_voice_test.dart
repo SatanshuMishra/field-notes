@@ -191,7 +191,7 @@ void _expectPhase(
   required double opacity,
   required bool pauseGlyph,
   required BreathingGlowMode? glow,
-  required bool? level,
+  required VoiceLevelStage? level,
   required bool timer,
 }) {
   expect(_status(tester), status);
@@ -199,7 +199,7 @@ void _expectPhase(
     find.byKey(recorderStatusTextKey),
   );
   expect(statusNode.label, announced.announcement);
-  expect(statusNode.value, status);
+  expect(statusNode.value, announced == StagePhase.breathing ? '' : status);
   expect(find.bySemanticsLabel(orbLabel), findsOneWidget);
   expect(
     tester.getSemantics(find.byKey(voiceRecordButtonKey)),
@@ -222,7 +222,7 @@ void _expectPhase(
     expect(field, findsNothing);
   } else {
     expect(field, findsOneWidget);
-    expect(tester.widget<VoiceLevelField>(field).active, level);
+    expect(tester.widget<VoiceLevelField>(field).stage, level);
   }
   expect(find.byKey(recorderTimerKey), timer ? findsOneWidget : findsNothing);
 }
@@ -245,6 +245,45 @@ void _expectTimerClear(WidgetTester tester) {
     expect(timer.overlaps(tester.getRect(panel)), isFalse);
   }
 }
+
+VoiceRecorderPhase _phase(WidgetTester tester) =>
+    tester.widget<VoiceRecorderSheet>(find.byType(VoiceRecorderSheet)).phase;
+
+Future<void> _breatheFor(WidgetTester tester, Duration duration) async {
+  await tester.tap(find.byKey(voiceRecordButtonKey));
+  await tester.pump();
+  await tester.pump();
+  await tester.pump(duration);
+}
+
+int _spansReading(InlineSpan span, String reading) {
+  int count = 0;
+  span.visitChildren((InlineSpan child) {
+    if (child is TextSpan && child.text == reading) {
+      count++;
+    }
+    return true;
+  });
+  return count;
+}
+
+Finder _textReading(String reading) => find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is RichText && _spansReading(widget.text, reading) > 0,
+);
+
+int _spansReadingIn(WidgetTester tester, Finder scope, String reading) {
+  int count = 0;
+  for (final RichText text in tester.widgetList<RichText>(
+    find.descendant(of: scope, matching: find.byType(RichText)),
+  )) {
+    count += _spansReading(text.text, reading);
+  }
+  return count;
+}
+
+CometsModel _comets(WidgetTester tester) =>
+    tester.state<VoiceLevelFieldState>(find.byType(VoiceLevelField)).model!;
 
 Finder _anyQuestion() => find.byWidgetPredicate(
   (Widget widget) =>
@@ -275,7 +314,7 @@ void main() {
   });
 
   testWidgets(
-    'tapping the orb breathes for 4 seconds before recording and a second tap skips the breath',
+    'tapping the orb breathes for 3 seconds before recording and a second tap skips the breath',
     (WidgetTester tester) async {
       final _Rig waited = await _openVoice(
         tester,
@@ -283,12 +322,12 @@ void main() {
       );
       await tester.tap(find.byKey(voiceRecordButtonKey));
       await tester.pump();
-      expect(_status(tester), stageBreathingStatus);
+      expect(_status(tester), stageCountdownWords);
       expect(waited.recorder.startCalls, 0);
 
-      await tester.pump(const Duration(milliseconds: 3900));
+      await tester.pump(const Duration(milliseconds: 2900));
       expect(waited.recorder.startCalls, 0);
-      expect(_status(tester), stageBreathingStatus);
+      expect(_status(tester), stageCountdownWords);
 
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump();
@@ -304,7 +343,7 @@ void main() {
       );
       await tester.tap(find.byKey(voiceRecordButtonKey));
       await tester.pump();
-      expect(_status(tester), stageBreathingStatus);
+      expect(_status(tester), stageCountdownWords);
       await tester.pump(const Duration(seconds: 1));
       expect(skipped.recorder.startCalls, 0);
 
@@ -319,13 +358,143 @@ void main() {
     },
   );
 
+  testWidgets('voice recording starts 3 s after the breath begins', (
+    WidgetTester tester,
+  ) async {
+    final _Rig rig = await _openVoice(tester, platform: TargetPlatform.macOS);
+    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.pump();
+
+    await tester.pump(const Duration(milliseconds: 2900));
+    expect(_phase(tester), VoiceRecorderPhase.breathing);
+    expect(rig.recorder.startCalls, 0);
+
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(_phase(tester), VoiceRecorderPhase.recording);
+    expect(rig.recorder.startCalls, 1);
+    await _finish(tester);
+  });
+
+  testWidgets('the voice breath shows its number only in the status line', (
+    WidgetTester tester,
+  ) async {
+    for (final TargetPlatform platform in _layouts) {
+      await _openVoice(tester, platform: platform);
+      await _breatheFor(tester, const Duration(milliseconds: 1500));
+      expect(_phase(tester), VoiceRecorderPhase.breathing);
+
+      expect(
+        _spansReadingIn(tester, find.byType(VoiceRecorderSheet), '2'),
+        1,
+        reason: '$platform',
+      );
+      expect(
+        find.descendant(
+          of: find.byType(RecorderStatusLine),
+          matching: _textReading('2'),
+        ),
+        findsOneWidget,
+        reason: '$platform',
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(voiceOrbZoneKey),
+          matching: find.byType(RichText),
+        ),
+        findsNothing,
+        reason: '$platform',
+      );
+    }
+    await _finish(tester);
+  });
+
+  testWidgets('a tap on the orb mid-countdown starts recording at once', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    final _Rig rig = await _openVoice(tester, platform: TargetPlatform.macOS);
+    await _breatheFor(tester, const Duration(milliseconds: 1500));
+    expect(_phase(tester), VoiceRecorderPhase.breathing);
+    expect(rig.recorder.startCalls, 0);
+
+    await tester.tap(find.byKey(voiceRecordButtonKey));
+    await tester.pump();
+
+    expect(_phase(tester), VoiceRecorderPhase.recording);
+    expect(rig.recorder.startCalls, 1);
+    expect(_status(tester), stageRecordingStatus);
+    expect(
+      tester.getSemantics(find.byKey(recorderStatusTextKey)).label,
+      'Recording',
+    );
+    handle.dispose();
+    await _finish(tester);
+  });
+
+  testWidgets(
+    'skipping the breath brings comet 4 at once and the rest on their marks',
+    (WidgetTester tester) async {
+      await _openVoice(tester, platform: TargetPlatform.macOS);
+      await _breatheFor(tester, const Duration(milliseconds: 500));
+      expect(_phase(tester), VoiceRecorderPhase.breathing);
+      expect(_comets(tester).comets[0].born, 0);
+      expect(_comets(tester).comets[1].isBorn, isFalse);
+      expect(_comets(tester).comets[3].isBorn, isFalse);
+
+      await tester.tap(find.byKey(voiceRecordButtonKey));
+      await tester.pump();
+      expect(_phase(tester), VoiceRecorderPhase.recording);
+      expect(_comets(tester).comets[3].born, 0.5);
+      expect(_comets(tester).comets[1].isBorn, isFalse);
+      expect(_comets(tester).comets[2].isBorn, isFalse);
+
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(_comets(tester).comets[1].born, 1.0);
+      expect(_comets(tester).comets[2].isBorn, isFalse);
+
+      await tester.pump(const Duration(milliseconds: 1000));
+      expect(_comets(tester).comets[2].born, 2.0);
+      expect(_comets(tester).comets[3].born, 0.5);
+      await _finish(tester);
+    },
+  );
+
+  testWidgets('the paused voice orb stays fully opaque', (
+    WidgetTester tester,
+  ) async {
+    final Completer<void> gate = Completer<void>();
+    final _Rig rig = await _openVoice(
+      tester,
+      platform: TargetPlatform.macOS,
+      service: FakeCaptureService(gate: gate.future),
+    );
+    await startVoiceTake(tester);
+    expect(_phase(tester), VoiceRecorderPhase.recording);
+    expect(_orbOpacity(tester), 1);
+
+    await _tapOrb(tester);
+    expect(_phase(tester), VoiceRecorderPhase.paused);
+    expect(_orbOpacity(tester), 1);
+
+    await tester.tap(find.byKey(voiceSavePillKey));
+    await tester.pump();
+    expect(_phase(tester), VoiceRecorderPhase.saving);
+    expect(_orbOpacity(tester), 0.35);
+
+    gate.complete();
+    await tester.pump();
+    await tester.pump(_fade);
+    expect(rig.results, <String?>['entry-1']);
+    await _finish(tester);
+  });
+
   testWidgets('leaving during the breath closes without recording', (
     WidgetTester tester,
   ) async {
     final _Rig left = await _openVoice(tester, platform: TargetPlatform.macOS);
     await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
-    expect(_status(tester), stageBreathingStatus);
+    expect(_status(tester), stageCountdownWords);
 
     await _tapAndSettle(tester, find.byKey(voiceCloseKey));
     await tester.pump(const Duration(seconds: 5));
@@ -342,7 +511,7 @@ void main() {
     );
     await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
-    expect(_status(tester), stageBreathingStatus);
+    expect(_status(tester), stageCountdownWords);
 
     await _sendSystemBack(tester);
     await tester.pump(const Duration(seconds: 5));
@@ -383,19 +552,19 @@ void main() {
       await tester.pump();
       _expectPhase(
         tester,
-        status: stageBreathingStatus,
+        status: stageCountdownWords,
         announced: StagePhase.breathing,
         orbLabel: 'Start now',
         orbEnabled: true,
         opacity: 1,
         pauseGlyph: false,
         glow: BreathingGlowMode.settle,
-        level: null,
+        level: VoiceLevelStage.breathing,
         timer: false,
       );
       shown.add(_status(tester));
 
-      await tester.pump(const Duration(seconds: 4));
+      await tester.pump(const Duration(seconds: 3));
       await tester.pump();
       _expectPhase(
         tester,
@@ -406,7 +575,7 @@ void main() {
         opacity: 1,
         pauseGlyph: true,
         glow: null,
-        level: true,
+        level: VoiceLevelStage.recording,
         timer: true,
       );
       shown.add(_status(tester));
@@ -418,10 +587,10 @@ void main() {
         announced: StagePhase.paused,
         orbLabel: 'Resume recording',
         orbEnabled: true,
-        opacity: 0.55,
+        opacity: 1,
         pauseGlyph: false,
         glow: null,
-        level: false,
+        level: VoiceLevelStage.paused,
         timer: true,
       );
       shown.add(_status(tester));
@@ -580,7 +749,7 @@ void main() {
     );
     await tester.tap(find.byKey(voiceRecordButtonKey));
     await tester.pump();
-    expect(_status(tester), stageBreathingStatus);
+    expect(_status(tester), stageCountdownWords);
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
@@ -747,7 +916,7 @@ void main() {
     final _Rig mac = await _openVoice(tester, platform: TargetPlatform.macOS);
 
     await _press(tester, LogicalKeyboardKey.space);
-    expect(_status(tester), stageBreathingStatus);
+    expect(_status(tester), stageCountdownWords);
     expect(mac.recorder.startCalls, 0);
 
     await _press(tester, LogicalKeyboardKey.space);

@@ -219,6 +219,54 @@ Future<void> _expectToastOnceFadedOut(
   expect(find.text(toast), findsOneWidget, reason: reason);
 }
 
+Future<void> _breatheFor(WidgetTester tester, Duration duration) async {
+  await _tapShutter(tester);
+  await tester.pump();
+  await tester.pump(duration);
+}
+
+int _spansReading(InlineSpan span, String reading) {
+  int count = 0;
+  span.visitChildren((InlineSpan child) {
+    if (child is TextSpan && child.text == reading) {
+      count++;
+    }
+    return true;
+  });
+  return count;
+}
+
+Finder _textReading(String reading) => find.byWidgetPredicate(
+  (Widget widget) =>
+      widget is RichText && _spansReading(widget.text, reading) > 0,
+);
+
+int _spansReadingIn(WidgetTester tester, Finder scope, String reading) {
+  int count = 0;
+  for (final RichText text in tester.widgetList<RichText>(
+    find.descendant(of: scope, matching: find.byType(RichText)),
+  )) {
+    count += _spansReading(text.text, reading);
+  }
+  return count;
+}
+
+double _shutterOpacity(WidgetTester tester) => tester
+    .widget<Opacity>(
+      find
+          .descendant(
+            of: find.byKey(videoShutterKey),
+            matching: find.byType(Opacity),
+          )
+          .first,
+    )
+    .opacity;
+
+final Matcher _armingOrRecording = anyOf(
+  VideoRecorderPhase.arming,
+  VideoRecorderPhase.recording,
+);
+
 class _GatedListRecorder extends FakeVideoRecorder {
   _GatedListRecorder();
 
@@ -312,7 +360,7 @@ void main() {
   );
 
   testWidgets(
-    'tapping the shutter breathes for 4 seconds before recording and a second tap skips the breath',
+    'tapping the shutter breathes for 3 seconds before recording and a second tap skips the breath',
     (WidgetTester tester) async {
       final FakeVideoRecorder waiting = FakeVideoRecorder();
       await _pumpApp(tester, layout: _Layout.sidebar, recorder: waiting);
@@ -320,12 +368,12 @@ void main() {
 
       await _tapShutter(tester);
       expect(_phase(tester).name, 'breathing');
-      expect(_inStatusLine(stageBreathingStatus), findsOneWidget);
+      expect(_inStatusLine(stageCountdownWords), findsOneWidget);
       expect(waiting.startCalls, 0);
 
       await tester.pump(stageBreathDuration - const Duration(milliseconds: 1));
       expect(waiting.startCalls, 0);
-      expect(_inStatusLine(stageBreathingStatus), findsOneWidget);
+      expect(_inStatusLine(stageCountdownWords), findsOneWidget);
 
       await tester.pump(const Duration(milliseconds: 1));
       await tester.pump();
@@ -378,6 +426,119 @@ void main() {
     },
   );
 
+  testWidgets('the camera arms 3 s after the breath begins', (
+    WidgetTester tester,
+  ) async {
+    await _pumpApp(
+      tester,
+      layout: _Layout.sidebar,
+      recorder: FakeVideoRecorder(),
+    );
+    await _open(tester);
+    await _tapShutter(tester);
+
+    await tester.pump(const Duration(milliseconds: 2900));
+    expect(_phase(tester), VideoRecorderPhase.breathing);
+
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(_phase(tester), _armingOrRecording);
+    await _closeAll(tester);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('the video breath shows its number only in the status line', (
+    WidgetTester tester,
+  ) async {
+    for (final _Layout layout in _Layout.values) {
+      await _pumpApp(tester, layout: layout, recorder: FakeVideoRecorder());
+      await _open(tester);
+      await _breatheFor(tester, const Duration(milliseconds: 1500));
+      expect(_phase(tester), VideoRecorderPhase.breathing, reason: '$layout');
+
+      expect(
+        _spansReadingIn(tester, find.byType(VideoRecorderSheet), '2'),
+        1,
+        reason: '$layout',
+      );
+      expect(
+        find.descendant(
+          of: find.byType(RecorderStatusLine),
+          matching: _textReading('2'),
+        ),
+        findsOneWidget,
+        reason: '$layout',
+      );
+      final Finder cameraView = find
+          .ancestor(
+            of: fakeVideoPreview(deviceId: 'built-in-id'),
+            matching: find.byType(Stack),
+          )
+          .first;
+      expect(
+        find.descendant(of: cameraView, matching: find.byType(BreathingGlow)),
+        findsOneWidget,
+        reason: '$layout',
+      );
+      expect(
+        find.descendant(of: cameraView, matching: find.byType(RichText)),
+        findsNothing,
+        reason: '$layout',
+      );
+      await _closeAll(tester);
+    }
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('a tap on the shutter mid-countdown arms the camera at once', (
+    WidgetTester tester,
+  ) async {
+    final FakeVideoRecorder recorder = FakeVideoRecorder();
+    await _pumpApp(tester, layout: _Layout.sidebar, recorder: recorder);
+    await _open(tester);
+    await _breatheFor(tester, const Duration(milliseconds: 1500));
+    expect(_phase(tester), VideoRecorderPhase.breathing);
+    expect(recorder.startCalls, 0);
+
+    await _tapShutter(tester);
+
+    expect(_phase(tester), _armingOrRecording);
+    await _closeAll(tester);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('the paused video shutter dims to 0.55', (
+    WidgetTester tester,
+  ) async {
+    final FakeVideoRecorder recorder = FakeVideoRecorder(supportsPause: true);
+    final Completer<void> stopGate = Completer<void>();
+    recorder.stopGate = stopGate;
+    await _pumpApp(tester, layout: _Layout.sidebar, recorder: recorder);
+    await _open(tester);
+    await _startNow(tester);
+    expect(_phase(tester), VideoRecorderPhase.recording);
+    expect(_shutterOpacity(tester), 1);
+
+    await _tapShutter(tester);
+    await _settle(tester);
+    expect(_phase(tester), VideoRecorderPhase.paused);
+    expect(_shutterOpacity(tester), 0.55);
+
+    await tester.tap(find.byKey(videoSaveCircleKey));
+    await tester.pump();
+    expect(_phase(tester), VideoRecorderPhase.saving);
+    expect(
+      tester.getSemantics(find.byKey(videoShutterKey)),
+      isSemantics(isButton: true, hasEnabledState: true, isEnabled: false),
+    );
+    expect(_shutterOpacity(tester), 0.5);
+
+    stopGate.complete();
+    await _settle(tester);
+    expect(find.byType(VideoRecorderSheet), findsNothing);
+    await _closeAll(tester);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
   testWidgets('video phases show their status text, dot and announcement', (
     WidgetTester tester,
   ) async {
@@ -401,10 +562,10 @@ void main() {
     seen.add(_statusText(tester));
 
     await _tapShutter(tester);
-    expect(_statusText(tester), stageBreathingStatus);
+    expect(_statusText(tester), stageCountdownWords);
     expect(
       _statusNode(tester),
-      isSemantics(label: 'Breathing before recording', isLiveRegion: true),
+      isSemantics(label: 'Recording starts in 3', isLiveRegion: true),
     );
     expect(find.byKey(recorderStatusDotKey), findsNothing);
     expect(find.byType(BreathingGlow), findsOneWidget);
@@ -602,7 +763,7 @@ void main() {
 
       await tester.sendKeyEvent(LogicalKeyboardKey.space);
       await tester.pump();
-      expect(_inStatusLine(stageBreathingStatus), findsOneWidget);
+      expect(_inStatusLine(stageCountdownWords), findsOneWidget);
       await tester.sendKeyEvent(LogicalKeyboardKey.space);
       await _settle(tester);
       expect(_phase(tester), VideoRecorderPhase.recording);
@@ -656,7 +817,7 @@ void main() {
       await _tapShutter(tester);
       await tester.pump(stageBreathDuration);
       expect(_phase(tester), VideoRecorderPhase.preparing);
-      expect(_inStatusLine(stageBreathingStatus), findsNothing);
+      expect(_inStatusLine(stageCountdownWords), findsNothing);
       expect(preparing.startCalls, 0);
 
       preparing.listGate.complete();
