@@ -231,6 +231,15 @@ class MainFlutterWindow: NSWindow {
     }
   }
 
+  private static func windowFrames(sampleRate: Double, windowMs: Int) -> Int? {
+    guard sampleRate.isFinite, sampleRate > 0 else { return nil }
+    let frames = (sampleRate * Double(windowMs) / 1000).rounded()
+    guard frames.isFinite, frames >= -9223372036854775808.0, frames < 9223372036854775808.0 else {
+      return nil
+    }
+    return max(1, Int(frames))
+  }
+
   private static func windowRms(path: String, windowMs: Int) -> [Double]? {
     guard
       let file = try? AVAudioFile(
@@ -243,8 +252,8 @@ class MainFlutterWindow: NSWindow {
     }
     let format = file.processingFormat
     let channels = Int(format.channelCount)
-    let windowFrames = max(1, Int((format.sampleRate * Double(windowMs) / 1000).rounded()))
     guard channels > 0,
+      let windowFrames = windowFrames(sampleRate: format.sampleRate, windowMs: windowMs),
       let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: audioPeaksReadFrames)
     else {
       return nil
