@@ -267,12 +267,10 @@ class _CompactLogCardState extends State<CompactLogCard> {
         ),
       ),
     );
-    final Widget lifted = _hovered && style.risesOnHover
-        ? Transform.translate(
-            offset: const Offset(0, -_hoverRise),
-            child: sticker,
-          )
-        : sticker;
+    final Widget lifted = Transform.translate(
+      offset: Offset(0, _hovered && style.risesOnHover ? -_hoverRise : 0),
+      child: sticker,
+    );
     return Actions(
       actions: <Type, Action<Intent>>{
         ActivateIntent: CallbackAction<ActivateIntent>(
