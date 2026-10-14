@@ -53,6 +53,10 @@ class VoiceLevelSmoother {
     return VoiceLevelOnset(intensity: level, at: at);
   }
 
+  void hush() {
+    _target = 0;
+  }
+
   void advance(double dtSeconds) {
     _level = levelAfter(dtSeconds);
   }
