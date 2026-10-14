@@ -7,6 +7,7 @@
 
 #include <memory>
 
+#include "audio_peaks_bridge.h"
 #include "file_drop_bridge.h"
 #include "pasteboard_bridge.h"
 #include "spell_check_bridge.h"
@@ -37,6 +38,8 @@ class FlutterWindow : public Win32Window {
   std::unique_ptr<SpellCheckBridge> spell_check_bridge_;
 
   std::unique_ptr<PasteboardBridge> pasteboard_bridge_;
+
+  std::unique_ptr<AudioPeaksBridge> audio_peaks_bridge_;
 
   Microsoft::WRL::ComPtr<FileDropBridge> file_drop_bridge_;
 };

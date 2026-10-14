@@ -1,3 +1,4 @@
+import AVFoundation
 import Cocoa
 import FlutterMacOS
 
@@ -26,6 +27,8 @@ private let notificationSettingsChannelName = "field_notes/notification_settings
 private let deviceStorageChannelName = "field_notes/device_storage"
 private let cameraSettingsChannelName = "field_notes/camera_settings"
 private let stayAwakeChannelName = "field_notes/stay_awake"
+private let audioPeaksChannelName = "field_notes/audio_peaks"
+private let audioPeaksReadFrames: AVAudioFrameCount = 65536
 private let cameraPrivacySettingsURL =
   "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
 private let notificationSettingsURLPrefix =
@@ -59,6 +62,7 @@ class MainFlutterWindow: NSWindow {
     self.registerDeviceStorageChannel(flutterViewController.engine.binaryMessenger)
     self.registerCameraSettingsChannel(flutterViewController.engine.binaryMessenger)
     self.registerStayAwakeChannel(flutterViewController.engine.binaryMessenger)
+    self.registerAudioPeaksChannel(flutterViewController.engine.binaryMessenger)
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
@@ -181,6 +185,105 @@ class MainFlutterWindow: NSWindow {
         result(FlutterMethodNotImplemented)
       }
     }
+  }
+
+  private func registerAudioPeaksChannel(_ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: audioPeaksChannelName,
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "windowRms":
+        guard let arguments = call.arguments as? [String: Any],
+          let path = arguments["path"] as? String,
+          let windowMs = arguments["windowMs"] as? Int,
+          windowMs > 0
+        else {
+          result(
+            FlutterError(
+              code: "bad_arguments",
+              message: "A path and a window length are required",
+              details: nil
+            )
+          )
+          return
+        }
+        DispatchQueue.global(qos: .utility).async {
+          let rms = MainFlutterWindow.windowRms(path: path, windowMs: windowMs)
+          DispatchQueue.main.async {
+            if let rms = rms {
+              result(rms)
+            } else {
+              result(
+                FlutterError(
+                  code: "decode-failed",
+                  message: "The recording could not be decoded.",
+                  details: nil
+                )
+              )
+            }
+          }
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private static func windowRms(path: String, windowMs: Int) -> [Double]? {
+    guard
+      let file = try? AVAudioFile(
+        forReading: URL(fileURLWithPath: path),
+        commonFormat: .pcmFormatFloat32,
+        interleaved: false
+      )
+    else {
+      return nil
+    }
+    let format = file.processingFormat
+    let channels = Int(format.channelCount)
+    let windowFrames = max(1, Int((format.sampleRate * Double(windowMs) / 1000).rounded()))
+    guard channels > 0,
+      let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: audioPeaksReadFrames)
+    else {
+      return nil
+    }
+    var values: [Double] = []
+    var sum = 0.0
+    var filled = 0
+    while file.framePosition < file.length {
+      do {
+        try file.read(into: buffer)
+      } catch {
+        return nil
+      }
+      let frames = Int(buffer.frameLength)
+      guard frames > 0 else {
+        break
+      }
+      guard let samples = buffer.floatChannelData else {
+        return nil
+      }
+      for frame in 0..<frames {
+        var mono = 0.0
+        for channel in 0..<channels {
+          mono += Double(samples[channel][frame])
+        }
+        mono /= Double(channels)
+        sum += mono * mono
+        filled += 1
+        if filled == windowFrames {
+          values.append((sum / Double(filled)).squareRoot())
+          sum = 0
+          filled = 0
+        }
+      }
+    }
+    if filled > 0 {
+      values.append((sum / Double(filled)).squareRoot())
+    }
+    return values
   }
 
   private static func freeBytes(near path: String) -> Any? {

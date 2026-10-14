@@ -7,6 +7,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/day.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
+import 'package:field_notes/features/capture/voice/voice_peaks_backfill.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/reminders/reminder_lifecycle.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
@@ -137,16 +138,18 @@ class _AppShellState extends ConsumerState<AppShell> {
     };
 
     return ReminderLifecycle(
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          shell,
-          if (!obscured && selected != ShellDestination.garden)
-            IgnorePointer(
-              child: ExcludeFocus(child: PetalDrift(flower: flower)),
-            ),
-          const UpdateGreeting(),
-        ],
+      child: VoicePeaksBackfill(
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            shell,
+            if (!obscured && selected != ShellDestination.garden)
+              IgnorePointer(
+                child: ExcludeFocus(child: PetalDrift(flower: flower)),
+              ),
+            const UpdateGreeting(),
+          ],
+        ),
       ),
     );
   }
