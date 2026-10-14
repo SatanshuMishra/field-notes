@@ -125,32 +125,35 @@ class UpdateRestartSplash extends ConsumerWidget {
                 colors: <Color>[colors.pageGradientInner, colors.page],
               ),
             ),
-            child: SizedBox.expand(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const _SwayingLogo(),
-                    const SizedBox(height: _logoGap),
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: context.textStyles.headlineSerif.copyWith(
-                        fontSize: _titleSize,
-                        fontWeight: FontWeight.w500,
-                        color: colors.ink,
+            child: DefaultTextStyle(
+              style: context.textStyles.bodySans,
+              child: SizedBox.expand(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const _SwayingLogo(),
+                      const SizedBox(height: _logoGap),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: context.textStyles.headlineSerif.copyWith(
+                          fontSize: _titleSize,
+                          fontWeight: FontWeight.w500,
+                          color: colors.ink,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: _lineGap),
-                    Text(
-                      line,
-                      textAlign: TextAlign.center,
-                      style: context.textStyles.sectionHeaderAccent.copyWith(
-                        fontSize: _lineSize,
-                        color: colors.accentInk,
+                      const SizedBox(height: _lineGap),
+                      Text(
+                        line,
+                        textAlign: TextAlign.center,
+                        style: context.textStyles.sectionHeaderAccent.copyWith(
+                          fontSize: _lineSize,
+                          color: colors.accentInk,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
