@@ -203,13 +203,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final AsyncValue<AppSettings> settings = ref.watch(appSettingsProvider);
-    return ColoredBox(
-      color: context.colors.page,
-      child: settings.when(
-        loading: _buildLoading,
-        error: (Object error, StackTrace stackTrace) => _buildError(),
-        data: _buildSections,
-      ),
+    return settings.when(
+      loading: _buildLoading,
+      error: (Object error, StackTrace stackTrace) => _buildError(),
+      data: _buildSections,
     );
   }
 
