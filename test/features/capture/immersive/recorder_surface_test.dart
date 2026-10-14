@@ -350,9 +350,9 @@ void main() {
       _glow(still: false, mode: BreathingGlowMode.settle),
     );
     expect(_glowScales(tester)[0], closeTo(0.55, 0.001));
-    await tester.pump(const Duration(milliseconds: 1920));
+    await tester.pump(const Duration(milliseconds: 1440));
     expect(_glowScales(tester)[0], closeTo(1.14, 0.001));
-    await tester.pump(const Duration(milliseconds: 2080));
+    await tester.pump(const Duration(milliseconds: 1560));
     expect(_glowScales(tester)[0], closeTo(0.82, 0.001));
     expect(_glowOpacities(tester)[0], closeTo(0.35, 0.001));
 
@@ -366,6 +366,29 @@ void main() {
     expect(_glowOpacities(tester), restingOpacities);
     expect(restingScales.first, closeTo(0.8, 0.001));
     expect(restingOpacities.first, closeTo(0.35, 0.001));
+    expect(tester.hasRunningAnimations, isFalse);
+    debugDefaultTargetPlatformOverride = null;
+  });
+
+  testWidgets('the settle glow peaks at 1.44 s and rests at 3 s', (
+    WidgetTester tester,
+  ) async {
+    _useWindow(tester, TargetPlatform.macOS, const Size(1280, 800));
+    await tester.pumpWidget(
+      _glow(still: false, mode: BreathingGlowMode.settle),
+    );
+    expect(_glowScales(tester)[0], closeTo(0.55, 0.001));
+
+    await tester.pump(const Duration(milliseconds: 1440));
+    expect(_glowScales(tester)[0], closeTo(1.14, 0.001));
+
+    await tester.pump(const Duration(milliseconds: 1560));
+    expect(_glowScales(tester)[0], closeTo(0.82, 0.001));
+    expect(_glowOpacities(tester)[0], closeTo(0.35, 0.001));
+
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(_glowScales(tester)[0], closeTo(0.82, 0.001));
+    expect(_glowOpacities(tester)[0], closeTo(0.35, 0.001));
     expect(tester.hasRunningAnimations, isFalse);
     debugDefaultTargetPlatformOverride = null;
   });
