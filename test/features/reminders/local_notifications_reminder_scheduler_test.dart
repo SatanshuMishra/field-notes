@@ -186,12 +186,68 @@ class _FailingWindowsPlugin implements FlutterLocalNotificationsPlugin {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _OrderedPlugin extends _UnresolvedPlugin {
-  final List<String> calls = <String>[];
+enum _CallKind { cancel, schedule }
+
+class _Call {
+  const _Call.cancel(this.id)
+    : kind = _CallKind.cancel,
+      title = null,
+      body = null,
+      scheduledDate = null,
+      details = null,
+      mode = null;
+
+  const _Call.schedule({
+    required this.id,
+    required this.title,
+    required this.body,
+    required this.scheduledDate,
+    required this.details,
+    required this.mode,
+  }) : kind = _CallKind.schedule;
+
+  final _CallKind kind;
+  final int id;
+  final String? title;
+  final String? body;
+  final tz.TZDateTime? scheduledDate;
+  final NotificationDetails? details;
+  final AndroidScheduleMode? mode;
+}
+
+class _CallRecordingPlugin implements FlutterLocalNotificationsPlugin {
+  _CallRecordingPlugin({this.macOS, this.android});
+
+  final _RecordingMacOSPlugin? macOS;
+  final _ExactAlarmAndroid? android;
+  final List<_Call> calls = <_Call>[];
+
+  @override
+  Future<bool?> initialize({
+    required InitializationSettings settings,
+    DidReceiveNotificationResponseCallback? onDidReceiveNotificationResponse,
+    DidReceiveBackgroundNotificationResponseCallback?
+    onDidReceiveBackgroundNotificationResponse,
+  }) async => true;
+
+  @override
+  T? resolvePlatformSpecificImplementation<
+    T extends FlutterLocalNotificationsPlatform
+  >() {
+    final Object? macOSImplementation = macOS;
+    if (macOSImplementation is T) {
+      return macOSImplementation;
+    }
+    final Object? androidImplementation = android;
+    if (androidImplementation is T) {
+      return androidImplementation;
+    }
+    return null;
+  }
 
   @override
   Future<void> cancel({required int id, String? tag}) async {
-    calls.add('cancel $id');
+    calls.add(_Call.cancel(id));
   }
 
   @override
@@ -205,16 +261,20 @@ class _OrderedPlugin extends _UnresolvedPlugin {
     String? payload,
     DateTimeComponents? matchDateTimeComponents,
   }) async {
-    calls.add('schedule $id');
-    return super.zonedSchedule(
-      id: id,
-      scheduledDate: scheduledDate,
-      notificationDetails: notificationDetails,
-      androidScheduleMode: androidScheduleMode,
-      title: title,
-      body: body,
+    calls.add(
+      _Call.schedule(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        details: notificationDetails,
+        mode: androidScheduleMode,
+      ),
     );
   }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 List<ReminderBooking> _fourBookings() {
@@ -549,43 +609,103 @@ void main() {
     expect(log, hasLength(7));
   });
 
-  test(
+  group(
     'on macOS and Android the scheduler cancels then schedules as before',
-    () async {
-      final List<int> ids = ReminderService.bookingIds;
-      for (final TargetPlatform platform in <TargetPlatform>[
-        TargetPlatform.macOS,
-        TargetPlatform.android,
-      ]) {
+    () {
+      Future<void> expectUnchanged({
+        required TargetPlatform platform,
+        required _CallRecordingPlugin plugin,
+        required AndroidScheduleMode mode,
+      }) async {
         debugDefaultTargetPlatformOverride = platform;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
         _answerTimezone('Europe/London');
-        final _OrderedPlugin plugin = _OrderedPlugin();
+        final List<int> ids = ReminderService.bookingIds;
         final LocalNotificationsReminderScheduler scheduler =
             LocalNotificationsReminderScheduler(plugin: plugin);
         final List<ReminderBooking> bookings = _fourBookings();
 
         await scheduler.schedule(bookings);
 
-        expect(plugin.calls, <String>[
-          for (final int id in ids) 'cancel $id',
-          for (final int id in ids.sublist(0, 4)) 'schedule $id',
-        ]);
         expect(
-          plugin.scheduled.map((_ScheduledToast toast) => toast.id).toList(),
-          ids.sublist(0, 4),
+          plugin.calls
+              .map((_Call call) => '${call.kind.name} ${call.id}')
+              .toList(),
+          <String>[
+            for (final int id in ids) 'cancel $id',
+            for (final int id in ids.sublist(0, 4)) 'schedule $id',
+          ],
         );
+        final List<_Call> scheduled = plugin.calls
+            .where((_Call call) => call.kind == _CallKind.schedule)
+            .toList();
+        expect(scheduled, hasLength(4));
         for (int index = 0; index < 4; index++) {
-          final _ScheduledToast toast = plugin.scheduled[index];
+          final _Call call = scheduled[index];
+          expect(call.id, ids[index]);
+          expect(call.title, 'Field Notes');
+          expect(call.body, "You haven't written today's field note yet.");
           expect(
-            toast.scheduledDate.isAtSameMomentAs(bookings[index].at),
+            call.scheduledDate!.isAtSameMomentAs(bookings[index].at),
             isTrue,
           );
-          expect(toast.mode, AndroidScheduleMode.exactAllowWhileIdle);
-          expect(toast.details.android?.channelId, 'daily_reminder');
-          expect(toast.details.macOS, isNotNull);
+          final AndroidNotificationDetails? android = call.details!.android;
+          expect(android, isNotNull);
+          expect(android!.channelId, 'daily_reminder');
+          expect(android.channelName, 'Daily reminder');
+          expect(
+            android.channelDescription,
+            'Reminds you to write your field note for the day.',
+          );
+          expect(android.importance, Importance.high);
+          expect(android.priority, Priority.high);
+          final DarwinNotificationDetails? darwin = call.details!.macOS;
+          expect(darwin, isNotNull);
+          expect(darwin!.presentAlert, isNull);
+          expect(darwin.presentBadge, isNull);
+          expect(darwin.presentSound, isNull);
+          expect(darwin.presentBanner, isNull);
+          expect(darwin.presentList, isNull);
+          expect(darwin.sound, isNull);
+          expect(darwin.badgeNumber, isNull);
+          expect(darwin.attachments, isNull);
+          expect(darwin.subtitle, isNull);
+          expect(darwin.threadIdentifier, isNull);
+          expect(darwin.categoryIdentifier, isNull);
+          expect(darwin.interruptionLevel, isNull);
+          expect(darwin.criticalSoundVolume, isNull);
+          expect(darwin.dismissIsolate, isNull);
+          expect(call.mode, mode);
         }
       }
-      debugDefaultTargetPlatformOverride = null;
+
+      test('on macOS the scheduler cancels then schedules as before', () async {
+        await expectUnchanged(
+          platform: TargetPlatform.macOS,
+          plugin: _CallRecordingPlugin(macOS: _RecordingMacOSPlugin()),
+          mode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
+      });
+
+      test('on Android with exact alarms allowed the scheduler cancels then schedules as before', () async {
+        await expectUnchanged(
+          platform: TargetPlatform.android,
+          plugin: _CallRecordingPlugin(
+            android: _ExactAlarmAndroid(() async => true),
+          ),
+          mode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
+      });
+
+      test('on Android without exact alarms the scheduler cancels then schedules as before', () async {
+        await expectUnchanged(
+          platform: TargetPlatform.android,
+          plugin: _CallRecordingPlugin(
+            android: _ExactAlarmAndroid(() async => false),
+          ),
+          mode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      });
     },
   );
 }
