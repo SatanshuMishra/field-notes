@@ -31,6 +31,7 @@ const Key voiceActionsKey = ValueKey<String>('voice-actions');
 const Key voiceKeepGoingKey = ValueKey<String>('voice-keep-going');
 const Key voiceErrorKey = ValueKey<String>('voice-error');
 const Key voiceKeyHintKey = ValueKey<String>('voice-key-hint');
+const Key voiceCometsKey = ValueKey<String>('voice-comets');
 
 const String voiceSidebarPrivacyLine = 'Private · only you will hear this';
 const String voiceBottomBarPrivacyLine = 'Only you will hear this';
@@ -51,7 +52,6 @@ const double voiceSidebarOrbZone = 250;
 const double voiceBottomBarOrbZone = 184;
 const double voiceSidebarOrb = 124;
 const double voiceBottomBarOrb = 100;
-const double voicePausedOrbOpacity = 0.55;
 const double voiceSavingOrbOpacity = 0.35;
 const double voiceActionsHeight = 118;
 
@@ -67,8 +67,6 @@ const Color _keyHintInk = Color(0xFF9A8872);
 const double _minTapTarget = 48;
 const double _sidebarLevelReach = 60;
 const double _bottomBarLevelReach = 44;
-const int _sidebarLevelSeed = 3;
-const int _bottomBarLevelSeed = 7;
 const double _sidebarOrbGlyph = 42;
 const double _bottomBarOrbGlyph = 36;
 const Alignment _orbHighlight = Alignment(-0.24, -0.36);
@@ -319,31 +317,39 @@ class _OrbZone extends StatelessWidget {
   final Stream<double> levels;
   final VoidCallback? onTap;
 
-  Widget _surround(double zone) {
-    switch (phase) {
-      case VoiceRecorderPhase.breathing:
-        return Positioned.fill(
-          child: BreathingGlow(diameter: zone, mode: BreathingGlowMode.settle),
-        );
-      case VoiceRecorderPhase.recording || VoiceRecorderPhase.paused:
-        final double reach = sidebar
-            ? _sidebarLevelReach
-            : _bottomBarLevelReach;
-        return Positioned(
-          left: -reach,
-          top: -reach,
-          right: -reach,
-          bottom: -reach,
-          child: VoiceLevelField(
-            levels: levels,
-            active: phase == VoiceRecorderPhase.recording,
-            orbRadius: (sidebar ? voiceSidebarOrb : voiceBottomBarOrb) / 2,
-            seed: sidebar ? _sidebarLevelSeed : _bottomBarLevelSeed,
-          ),
-        );
-      case VoiceRecorderPhase.idle || VoiceRecorderPhase.saving:
-        return const Positioned.fill(child: SizedBox.shrink());
+  VoiceLevelStage? get _cometsStage => switch (phase) {
+    VoiceRecorderPhase.breathing => VoiceLevelStage.breathing,
+    VoiceRecorderPhase.recording => VoiceLevelStage.recording,
+    VoiceRecorderPhase.paused => VoiceLevelStage.paused,
+    VoiceRecorderPhase.idle || VoiceRecorderPhase.saving => null,
+  };
+
+  Widget _settleGlow(double zone) {
+    return Positioned.fill(
+      child: phase == VoiceRecorderPhase.breathing
+          ? BreathingGlow(diameter: zone, mode: BreathingGlowMode.settle)
+          : const SizedBox.shrink(),
+    );
+  }
+
+  Widget _comets() {
+    final VoiceLevelStage? stage = _cometsStage;
+    if (stage == null) {
+      return const Positioned.fill(child: SizedBox.shrink());
     }
+    final double reach = sidebar ? _sidebarLevelReach : _bottomBarLevelReach;
+    return Positioned(
+      left: -reach,
+      top: -reach,
+      right: -reach,
+      bottom: -reach,
+      child: VoiceLevelField(
+        key: voiceCometsKey,
+        levels: levels,
+        stage: stage,
+        orbRadius: (sidebar ? voiceSidebarOrb : voiceBottomBarOrb) / 2,
+      ),
+    );
   }
 
   @override
@@ -356,8 +362,9 @@ class _OrbZone extends StatelessWidget {
         alignment: Alignment.center,
         clipBehavior: Clip.none,
         children: <Widget>[
-          _surround(zone),
+          _settleGlow(zone),
           _Orb(phase: phase, sidebar: sidebar, onTap: onTap),
+          _comets(),
         ],
       ),
     );
@@ -378,11 +385,8 @@ class _Orb extends StatelessWidget {
     VoiceRecorderPhase.idle || VoiceRecorderPhase.saving => voiceStartLabel,
   };
 
-  double get _opacity => switch (phase) {
-    VoiceRecorderPhase.paused => voicePausedOrbOpacity,
-    VoiceRecorderPhase.saving => voiceSavingOrbOpacity,
-    _ => 1,
-  };
+  double get _opacity =>
+      phase == VoiceRecorderPhase.saving ? voiceSavingOrbOpacity : 1;
 
   @override
   Widget build(BuildContext context) {

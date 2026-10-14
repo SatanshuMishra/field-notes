@@ -1,10 +1,55 @@
+import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
-import 'package:flutter/widgets.dart';
+import 'package:field_notes/state/settings_providers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'voice_test_support.dart';
+
+Widget _platformHarness(TargetPlatform platform, Widget child) {
+  return ProviderScope(
+    overrides: <Override>[
+      reflectionPromptsEnabledProvider.overrideWithValue(false),
+    ],
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: fieldNotesTheme(platform: platform),
+      home: Scaffold(body: Center(child: child)),
+    ),
+  );
+}
+
+void _useWindow(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+}
+
+List<String> _orbZoneOrder(WidgetTester tester) {
+  return find
+      .descendant(
+        of: find.byKey(voiceOrbZoneKey),
+        matching: find.byWidgetPredicate(
+          (Widget widget) =>
+              widget is BreathingGlow ||
+              widget.key == voiceRecordButtonKey ||
+              widget.key == voiceCometsKey,
+        ),
+      )
+      .evaluate()
+      .map((Element element) {
+        final Widget widget = element.widget;
+        if (widget is BreathingGlow) {
+          return 'settle glow';
+        }
+        return widget.key == voiceCometsKey ? 'comets' : 'orb';
+      })
+      .toList();
+}
 
 void main() {
   testWidgets(
@@ -49,8 +94,8 @@ void main() {
       expect(find.byType(BreathingGlow), findsNothing);
       expect(find.byType(VoiceLevelField), findsOneWidget);
       expect(
-        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).active,
-        isTrue,
+        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).stage,
+        VoiceLevelStage.recording,
       );
       expect(find.byKey(recorderTimerKey), findsOneWidget);
       expect(find.text('0:07'), findsOneWidget);
@@ -194,5 +239,101 @@ void main() {
 
     expect(keptGoing, 1);
     expect(letGo, 1);
+  });
+
+  testWidgets(
+    'the comets layer sits above the orb on the desktop from the breath and not when idle or saving',
+    (WidgetTester tester) async {
+      _useWindow(tester, const Size(1280, 800));
+      int starts = 0;
+      VoiceRecorderSheet sheet(VoiceRecorderPhase phase) => VoiceRecorderSheet(
+        phase: phase,
+        onStart: () => starts++,
+        onStop: () {},
+        onCancel: () {},
+      );
+
+      await tester.pumpWidget(
+        _platformHarness(TargetPlatform.macOS, sheet(VoiceRecorderPhase.idle)),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(voiceCometsKey), findsNothing);
+      expect(find.byType(VoiceLevelField), findsNothing);
+
+      await tester.pumpWidget(
+        _platformHarness(
+          TargetPlatform.macOS,
+          sheet(VoiceRecorderPhase.breathing),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.getSize(find.byKey(voiceOrbZoneKey)), const Size(250, 250));
+      expect(find.byKey(voiceCometsKey), findsOneWidget);
+      expect(find.byType(VoiceLevelField), findsOneWidget);
+      expect(tester.getSize(find.byKey(voiceCometsKey)), const Size(370, 370));
+      expect(
+        tester.getCenter(find.byKey(voiceCometsKey)),
+        tester.getCenter(find.byKey(voiceRecordButtonKey)),
+      );
+      expect(_orbZoneOrder(tester), <String>['settle glow', 'orb', 'comets']);
+
+      await tester.tapAt(tester.getCenter(find.byKey(voiceRecordButtonKey)));
+      await tester.pump();
+      expect(starts, 1);
+
+      await tester.pumpWidget(
+        _platformHarness(
+          TargetPlatform.macOS,
+          sheet(VoiceRecorderPhase.saving),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(voiceCometsKey), findsNothing);
+      expect(find.byType(VoiceLevelField), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('the comets layer sits above the orb on the phone', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    _useWindow(tester, const Size(384, 832));
+    int pauses = 0;
+
+    await tester.pumpWidget(
+      _platformHarness(
+        TargetPlatform.android,
+        VoiceRecorderSheet(
+          phase: VoiceRecorderPhase.recording,
+          onStart: () {},
+          onStop: () {},
+          onCancel: () {},
+          onPause: () => pauses++,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 50));
+
+    expect(tester.getSize(find.byKey(voiceOrbZoneKey)), const Size(184, 184));
+    expect(find.byKey(voiceCometsKey), findsOneWidget);
+    expect(tester.getSize(find.byKey(voiceCometsKey)), const Size(272, 272));
+    expect(
+      tester.getCenter(find.byKey(voiceCometsKey)),
+      tester.getCenter(find.byKey(voiceRecordButtonKey)),
+    );
+    expect(_orbZoneOrder(tester), <String>['orb', 'comets']);
+    expect(
+      tester.getSemantics(find.byKey(voiceCometsKey)).id,
+      tester.getSemantics(find.byKey(voiceOrbZoneKey)).id,
+    );
+
+    await tester.tapAt(tester.getCenter(find.byKey(voiceRecordButtonKey)));
+    await tester.pump();
+    expect(pauses, 1);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    handle.dispose();
   });
 }

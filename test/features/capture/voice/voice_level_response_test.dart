@@ -145,8 +145,16 @@ Future<double> _warmthAroundOrb(WidgetTester tester) async {
   final double outer = zone.width / 2 + reach;
   final double inner = orbRadius + 6;
   double warmth = 0;
-  for (int y = (centre.dy - outer).floor(); y <= (centre.dy + outer).ceil(); y++) {
-    for (int x = (centre.dx - outer).floor(); x <= (centre.dx + outer).ceil(); x++) {
+  for (
+    int y = (centre.dy - outer).floor();
+    y <= (centre.dy + outer).ceil();
+    y++
+  ) {
+    for (
+      int x = (centre.dx - outer).floor();
+      x <= (centre.dx + outer).ceil();
+      x++
+    ) {
       if (x < 0 || y < 0 || x >= width || y >= height) {
         continue;
       }
@@ -218,13 +226,17 @@ void main() {
         tester.widget<BreathingGlow>(find.byType(BreathingGlow)).mode,
         BreathingGlowMode.settle,
       );
-      expect(find.byType(VoiceLevelField), findsNothing);
+      expect(find.byType(VoiceLevelField), findsOneWidget);
+      expect(
+        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).stage,
+        VoiceLevelStage.breathing,
+      );
 
       await _tapOrb(tester);
       expect(_phase(tester), VoiceRecorderPhase.recording);
       expect(
-        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).active,
-        isTrue,
+        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).stage,
+        VoiceLevelStage.recording,
       );
 
       await _tapOrb(tester);
@@ -232,10 +244,51 @@ void main() {
       expect(find.byType(BreathingGlow), findsNothing);
       expect(find.byType(VoiceLevelField), findsOneWidget);
       expect(
-        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).active,
-        isFalse,
+        tester.widget<VoiceLevelField>(find.byType(VoiceLevelField)).stage,
+        VoiceLevelStage.paused,
       );
-      expect(_orbOpacity(tester), 0.55);
+      expect(_orbOpacity(tester), 1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    },
+    variant: TargetPlatformVariant(const <TargetPlatform>{
+      TargetPlatform.macOS,
+      TargetPlatform.android,
+    }),
+  );
+
+  testWidgets(
+    'the comets layer carries on from the breath into pause',
+    (WidgetTester tester) async {
+      _sizeWindow(tester);
+      await tester.pumpWidget(_fakeApp(FakeVoiceRecorder()));
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+
+      await tester.tap(find.byKey(voiceRecordButtonKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(_phase(tester), VoiceRecorderPhase.breathing);
+      final State<VoiceLevelField> breathing = tester.state(
+        find.byType(VoiceLevelField),
+      );
+      expect(breathing, isA<VoiceLevelFieldState>());
+
+      await _tapOrb(tester);
+      expect(_phase(tester), VoiceRecorderPhase.recording);
+      expect(
+        tester.state<State<VoiceLevelField>>(find.byType(VoiceLevelField)),
+        same(breathing),
+      );
+
+      await _tapOrb(tester);
+      expect(_phase(tester), VoiceRecorderPhase.paused);
+      expect(
+        tester.state<State<VoiceLevelField>>(find.byType(VoiceLevelField)),
+        same(breathing),
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
