@@ -38,7 +38,8 @@ class MeadowPacer {
   final MeadowGpuMarker _marker;
   final int Function() _clock;
   Map<MeadowWork, double> _estimates = const <MeadowWork, double>{};
-  Map<int, _Pending> _pending = const <int, _Pending>{};
+  Map<int, _Begun> _begun = const <int, _Begun>{};
+  Map<int, _Marked> _marked = const <int, _Marked>{};
   List<_Turn> _waiting = const <_Turn>[];
   int _nextBatch = 0;
   bool _used = false;
@@ -97,19 +98,21 @@ class MeadowPacer {
 
   bool get isBehind {
     _sweep(nowMicros());
-    return _pending.values
-            .where((_Pending pending) => pending.waiting)
-            .length >=
-        2;
+    return _marked.values.any((_Marked marked) => marked.holds);
   }
 
   MeadowBatch begin(MeadowWork kind, {required Duration frame}) {
     final int id = _nextBatch++;
-    _store(
-      id,
-      _Pending(kind: kind, began: nowMicros(), interval: frame.inMicroseconds),
-    );
-    _settle(id, after: false, at: nowMicros());
+    _begun = Map<int, _Begun>.unmodifiable(<int, _Begun>{
+      ..._begun,
+      id: _Begun(
+        kind: kind,
+        began: nowMicros(),
+        interval: frame.inMicroseconds,
+        measured:
+            SchedulerBinding.instance.schedulerPhase == SchedulerPhase.idle,
+      ),
+    });
     return MeadowBatch._(id);
   }
 
@@ -119,17 +122,27 @@ class MeadowPacer {
     void Function(Duration? cost)? answered,
   }) {
     final int id = batch._id;
-    final _Pending? pending = _pending[id];
-    if (pending == null || pending.ended) {
+    final _Begun? begun = _begun[id];
+    if (begun == null) {
       return;
     }
-    final _Pending ended = pending.end(steps: steps, answered: answered);
-    if (ended.failed) {
-      _close(id, ended);
+    _begun = Map<int, _Begun>.unmodifiable(<int, _Begun>{
+      for (final MapEntry<int, _Begun> entry in _begun.entries)
+        if (entry.key != id) entry.key: entry.value,
+    });
+    if (!begun.measured) {
+      _tell(answered, null);
       return;
     }
-    _store(id, ended);
-    _send(id, after: true);
+    _sweep(nowMicros());
+    final int? waiting = _waitingMarker;
+    if (waiting != null) {
+      _keep(waiting, _marked[waiting]!.carry());
+      _tell(answered, null);
+      return;
+    }
+    _keep(id, _Marked(batch: begun, steps: steps, answered: answered));
+    _send(id);
   }
 
   bool takeFrame() {
@@ -161,7 +174,16 @@ class MeadowPacer {
     ]);
   }
 
-  void _send(int id, {required bool after}) {
+  int? get _waitingMarker {
+    for (final MapEntry<int, _Marked> entry in _marked.entries) {
+      if (!entry.value.lapsed) {
+        return entry.key;
+      }
+    }
+    return null;
+  }
+
+  void _send(int id) {
     Future<void> answer;
     try {
       answer = _marker();
@@ -169,44 +191,39 @@ class MeadowPacer {
       answer = Future<void>.error(error, stack);
     }
     answer.then<void>(
-      (_) => _settle(id, after: after, at: nowMicros()),
-      onError: (Object error, StackTrace stack) =>
-          _settle(id, after: after, at: null),
+      (_) => _settle(id, failed: false),
+      onError: (Object error, StackTrace stack) => _settle(id, failed: true),
     );
   }
 
-  void _settle(int id, {required bool after, required int? at}) {
-    final _Pending? pending = _pending[id];
-    if (pending == null) {
+  void _settle(int id, {required bool failed}) {
+    final int now = nowMicros();
+    _sweep(now);
+    final _Marked? marked = _marked[id];
+    if (marked == null) {
       return;
     }
-    final _Pending next = pending.settle(after: after, at: at);
-    if (next.failed && !next.ended) {
-      _store(id, next);
-      return;
-    }
-    if (!next.failed && next.cost == null) {
-      _store(id, next);
-      return;
-    }
-    _close(id, next);
-  }
-
-  void _close(int id, _Pending done) {
-    _pending = Map<int, _Pending>.unmodifiable(<int, _Pending>{
-      for (final MapEntry<int, _Pending> entry in _pending.entries)
+    _marked = Map<int, _Marked>.unmodifiable(<int, _Marked>{
+      for (final MapEntry<int, _Marked> entry in _marked.entries)
         if (entry.key != id) entry.key: entry.value,
     });
-    final int? cost = done.failed ? null : done.cost;
-    if (cost != null && cost > 0 && done.steps > 0) {
-      _learn(done.kind, cost / done.steps);
+    if (failed) {
+      _tell(marked.answered, null);
+      return;
     }
-    final void Function(Duration? cost)? answered = done.answered;
+    final int cost = now - marked.batch.began;
+    if (cost > 0 && marked.steps > 0) {
+      _learn(marked.batch.kind, cost / marked.steps);
+    }
+    _tell(marked.answered, Duration(microseconds: cost));
+  }
+
+  void _tell(void Function(Duration? cost)? answered, Duration? cost) {
     if (answered == null) {
       return;
     }
     try {
-      answered(cost == null ? null : Duration(microseconds: cost));
+      answered(cost);
     } catch (error, stack) {
       _report(error, stack, 'while reporting the cost of a meadow batch');
     }
@@ -224,11 +241,17 @@ class MeadowPacer {
   }
 
   void _sweep(int now) {
-    if (!_pending.values.any((_Pending pending) => pending.staleBy(now))) {
+    if (_begun.values.any((_Begun begun) => begun.forgottenBy(now))) {
+      _begun = Map<int, _Begun>.unmodifiable(<int, _Begun>{
+        for (final MapEntry<int, _Begun> entry in _begun.entries)
+          if (!entry.value.forgottenBy(now)) entry.key: entry.value,
+      });
+    }
+    if (!_marked.values.any((_Marked marked) => marked.staleBy(now))) {
       return;
     }
-    _pending = Map<int, _Pending>.unmodifiable(<int, _Pending>{
-      for (final MapEntry<int, _Pending> entry in _pending.entries)
+    _marked = Map<int, _Marked>.unmodifiable(<int, _Marked>{
+      for (final MapEntry<int, _Marked> entry in _marked.entries)
         if (!entry.value.forgottenBy(now))
           entry.key: entry.value.lapsedBy(now)
               ? entry.value.lapse()
@@ -236,10 +259,10 @@ class MeadowPacer {
     });
   }
 
-  void _store(int id, _Pending pending) {
-    _pending = Map<int, _Pending>.unmodifiable(<int, _Pending>{
-      ..._pending,
-      id: pending,
+  void _keep(int id, _Marked marked) {
+    _marked = Map<int, _Marked>.unmodifiable(<int, _Marked>{
+      ..._marked,
+      id: marked,
     });
   }
 
@@ -289,89 +312,61 @@ class MeadowPacer {
 typedef _Turn = ({Object owner, bool Function() turn});
 
 @immutable
-class _Pending {
-  const _Pending({
+class _Begun {
+  const _Begun({
     required this.kind,
     required this.began,
     required this.interval,
-    this.ended = false,
-    this.lapsed = false,
-    this.steps = 0,
-    this.answered,
-    this.beforeAt,
-    this.afterAt,
-    this.failed = false,
+    required this.measured,
   });
 
   final MeadowWork kind;
   final int began;
   final int interval;
-  final bool ended;
-  final bool lapsed;
-  final int steps;
-  final void Function(Duration? cost)? answered;
-  final int? beforeAt;
-  final int? afterAt;
-  final bool failed;
-
-  bool get waiting => ended && !lapsed && !failed && afterAt == null;
-
-  int? get cost {
-    final int? before = beforeAt;
-    final int? after = afterAt;
-    if (before == null || after == null) {
-      return null;
-    }
-    return after - before;
-  }
-
-  bool lapsedBy(int now) =>
-      ended && !lapsed && now - began > interval * _valveFrames;
+  final bool measured;
 
   bool forgottenBy(int now) => now - began > interval * _forgetFrames;
+}
+
+@immutable
+class _Marked {
+  const _Marked({
+    required this.batch,
+    required this.steps,
+    required this.answered,
+    this.lapsed = false,
+    this.carried = 0,
+  });
+
+  final _Begun batch;
+  final int steps;
+  final void Function(Duration? cost)? answered;
+  final bool lapsed;
+  final int carried;
+
+  bool get holds => !lapsed && carried > 0;
+
+  bool lapsedBy(int now) =>
+      !lapsed && now - batch.began > batch.interval * _valveFrames;
+
+  bool forgottenBy(int now) => batch.forgottenBy(now);
 
   bool staleBy(int now) => lapsedBy(now) || forgottenBy(now);
 
-  _Pending end({
-    required int steps,
-    required void Function(Duration? cost)? answered,
-  }) => _Pending(
-    kind: kind,
-    began: began,
-    interval: interval,
-    ended: true,
-    lapsed: lapsed,
+  _Marked lapse() => _Marked(
+    batch: batch,
     steps: steps,
     answered: answered,
-    beforeAt: beforeAt,
-    afterAt: afterAt,
-    failed: failed,
-  );
-
-  _Pending lapse() => _Pending(
-    kind: kind,
-    began: began,
-    interval: interval,
-    ended: ended,
     lapsed: true,
-    steps: steps,
-    answered: answered,
-    beforeAt: beforeAt,
-    afterAt: afterAt,
-    failed: failed,
+    carried: carried,
   );
 
-  _Pending settle({required bool after, required int? at}) => _Pending(
-    kind: kind,
-    began: began,
-    interval: interval,
-    ended: ended,
-    lapsed: lapsed,
+  _Marked carry() => _Marked(
+    batch: batch,
     steps: steps,
     answered: answered,
-    beforeAt: after ? beforeAt : at,
-    afterAt: after ? at : afterAt,
-    failed: failed || at == null,
+    lapsed: lapsed,
+    carried: carried + 1,
   );
 }
 

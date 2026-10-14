@@ -558,13 +558,11 @@ class MeadowStageState extends State<MeadowStage>
 
   void _sendPieces(MeadowLayers shown, Duration frame) {
     final MeadowPacer pacer = _pacer;
-    final int allowed = pacer.allowance(MeadowWork.piece, share: frame ~/ 2);
     final int started = pacer.nowMicros();
     final MeadowBatch batch = pacer.begin(MeadowWork.piece, frame: frame);
     int drawn = 0;
     try {
-      while (drawn < allowed &&
-          shown.isRecolouring &&
+      while (shown.isRecolouring &&
           pacer.snapshotRoom > 0 &&
           MeadowPacer.keepBuilding(
             spent: Duration(microseconds: pacer.nowMicros() - started),

@@ -759,8 +759,7 @@ void main() {
   );
 
   testWidgets(
-    'pieces fill the snapshot room while the scene loads and get half a frame '
-    'once it is open',
+    'pieces fill the snapshot room while the scene loads and once it is open',
     (WidgetTester tester) async {
       useStageGpu(stepMs: 6);
       const Key key = ValueKey<String>('shared stage');
@@ -799,18 +798,15 @@ void main() {
       );
       expect(state.debugIsRecolouring, isTrue);
       final int before = state.debugRecolourPieces;
-      int frames = 0;
-      while (state.debugIsRecolouring && frames < 64) {
+      final List<int> open = <int>[];
+      while (state.debugIsRecolouring && open.length < 64) {
         final int pieces = state.debugRecolourPieces;
         await tester.pump();
-        frames++;
-        expect(
-          state.debugRecolourPieces - pieces,
-          lessThanOrEqualTo(1),
-          reason: 'frame $frames',
-        );
+        open.add(state.debugRecolourPieces - pieces);
       }
       expect(state.debugIsRecolouring, isFalse);
+      expect(open, everyElement(lessThanOrEqualTo(4)), reason: '$open');
+      expect(open, contains(4), reason: '$open');
       expect(state.debugRecolourPieces - before, greaterThan(1));
     },
   );
@@ -906,23 +902,22 @@ void main() {
     expect(state.debugRecolourPieces - before, greaterThan(3));
   });
 
-  testWidgets('a meadow sends nothing while the GPU is two batches behind', (
+  testWidgets('a meadow sends nothing while the pacer is behind', (
     WidgetTester tester,
   ) async {
     final HeldGpu gpu = installPacer(HeldGpu());
     final MeadowStageState state = await pumpMeadowStage(tester);
-    for (int i = 0; i < meadowBuildFrames && gpu.answers.length < 2; i++) {
+    for (int i = 0; i < meadowBuildFrames && !gpu.isBehind; i++) {
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 2)),
       );
-      tester.binding.scheduleFrame();
       await tester.pump(const Duration(milliseconds: 1));
     }
-    expect(gpu.answers, hasLength(2), reason: 'two batches sent');
-    expect(gpu.isBehind, isTrue);
+    expect(gpu.isBehind, isTrue, reason: 'a batch carried behind a marker');
     final int steps = state.debugBuildSteps;
     final int pieces = state.debugRecolourPieces;
     final int waited = state.debugOpeningWaited;
+    final int begun = gpu.phases.length;
     expect(steps, greaterThan(0));
     for (int i = 0; i < 8; i++) {
       tester.binding.scheduleFrame();
@@ -935,7 +930,7 @@ void main() {
       waited + 8,
       reason: 'it waited each frame',
     );
-    expect(gpu.answers, hasLength(2), reason: 'no batch began while behind');
+    expect(gpu.phases, hasLength(begun), reason: 'no batch began while behind');
 
     gpu.answers[0].complete();
     tester.binding.scheduleFrame();
@@ -943,7 +938,7 @@ void main() {
     expect(
       state.debugBuildSteps,
       greaterThan(steps),
-      reason: 'one batch answered, so the next frame builds',
+      reason: 'the marker answered, so the next frame builds',
     );
 
     for (int i = 0; i < meadowBuildFrames && !state.debugIsReady; i++) {
@@ -982,6 +977,7 @@ void main() {
 
       expect(state.debugIsRecolouring, isTrue);
       int frames = 0;
+      int widest = 0;
       while (state.debugIsRecolouring && frames < 64) {
         final int drawn = state.debugRecolourPieces;
         final MeadowStagePainter painted = _stagePainter(tester);
@@ -989,9 +985,10 @@ void main() {
         frames++;
         expect(
           state.debugRecolourPieces - drawn,
-          lessThanOrEqualTo(1),
+          lessThanOrEqualTo(4),
           reason: 'frame $frames',
         );
+        widest = math.max(widest, state.debugRecolourPieces - drawn);
         final MeadowStagePainter now = _stagePainter(tester);
         if (now.layersRevision != painted.layersRevision ||
             now.raysRevision != painted.raysRevision) {
@@ -1004,6 +1001,7 @@ void main() {
       }
       expect(state.debugIsRecolouring, isFalse);
       expect(state.debugRecolourPieces - before, greaterThan(1));
+      expect(widest, greaterThan(1), reason: 'a frame drew several pieces');
 
       useStageGpu(stepMs: 0.1);
       final int midnight = state.debugRecolourPieces;

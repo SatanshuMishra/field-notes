@@ -78,6 +78,7 @@ typedef StageBatch = ({MeadowWork kind, int steps, SchedulerPhase phase});
 class _GpuTime {
   int clock = 0;
   int pending = 0;
+  int markers = 0;
 }
 
 class StageGpu extends MeadowPacer {
@@ -87,6 +88,7 @@ class StageGpu extends MeadowPacer {
         marker: () {
           final int taken = _time.pending;
           _time.pending = 0;
+          _time.markers++;
           return Future<void>.microtask(() => _time.clock += taken);
         },
       );
@@ -100,6 +102,8 @@ class StageGpu extends MeadowPacer {
       <MeadowBatch, ({MeadowWork kind, SchedulerPhase phase})>{};
   final List<StageBatch> sent = <StageBatch>[];
   MeadowStageState? busyStage;
+
+  int get markers => _time.markers;
 
   @override
   int nowMicros() {
@@ -124,10 +128,12 @@ class StageGpu extends MeadowPacer {
     required int steps,
     void Function(Duration? cost)? answered,
   }) {
-    _time.pending = steps * _stepMicros;
     final ({MeadowWork kind, SchedulerPhase phase}) begun = _begun.remove(
       batch,
     )!;
+    if (begun.phase == SchedulerPhase.idle) {
+      _time.pending += steps * _stepMicros;
+    }
     sent.add((kind: begun.kind, steps: steps, phase: begun.phase));
     super.end(batch, steps: steps, answered: answered);
   }

@@ -43,13 +43,18 @@ void _answerAll(HeldGpu gpu) {
   }
 }
 
-Future<void> _untilTwoUnanswered(WidgetTester tester, HeldGpu gpu) async {
-  for (int i = 0; i < meadowBuildFrames && gpu.answers.length < 2; i++) {
+Future<void> _untilBehind(WidgetTester tester, HeldGpu gpu) async {
+  for (
+    int i = 0;
+    i < meadowBuildFrames && (gpu.phases.length < 2 || !gpu.isBehind);
+    i++
+  ) {
     await _wait(tester);
     await tester.pump(Duration.zero);
   }
-  expect(gpu.answers, hasLength(2), reason: 'two batches sent');
-  expect(gpu.isBehind, isTrue);
+  expect(gpu.phases, hasLength(2), reason: 'two batches begun');
+  expect(gpu.answers, hasLength(1), reason: 'one marker waits');
+  expect(gpu.isBehind, isTrue, reason: 'one batch carried behind it');
 }
 
 Future<List<StageBatch>> _buildWithoutFrames(
@@ -78,7 +83,7 @@ Future<List<StageBatch>> _buildWithoutFrames(
 Future<void> _coverOrHide(WidgetTester tester, {required bool cover}) async {
   final HeldGpu gpu = installPacer(HeldGpu());
   final MeadowStageState state = await pumpMeadowStage(tester);
-  await _untilTwoUnanswered(tester, gpu);
+  await _untilBehind(tester, gpu);
   expect(
     gpu.phases,
     everyElement(SchedulerPhase.idle),
@@ -199,26 +204,6 @@ void main() {
   );
 
   testWidgets(
-    'a frame-free build waits 1 ms while two batches are unanswered',
-    (WidgetTester tester) async {
-      final HeldGpu gpu = installPacer(HeldGpu());
-      await pumpMeadowStage(tester);
-      await _untilTwoUnanswered(tester, gpu);
-      for (int i = 0; i < 8; i++) {
-        await _wait(tester);
-        await tester.pump(Duration.zero);
-      }
-      expect(gpu.answers, hasLength(2), reason: 'no third batch while behind');
-
-      gpu.answers[0].complete();
-      await tester.pump(Duration.zero);
-      expect(gpu.answers, hasLength(2), reason: 'the step waits its 1 ms');
-      await tester.pump(const Duration(milliseconds: 1));
-      expect(gpu.answers, hasLength(3), reason: 'the third batch after 1 ms');
-    },
-  );
-
-  testWidgets(
     'a meadow builds on frames while a frame is scheduled or a scene is shown',
     (WidgetTester tester) async {
       final StageGpu framed = useStageGpu(stepMs: 0.1);
@@ -294,7 +279,7 @@ void main() {
   ) async {
     final HeldGpu gpu = installPacer(HeldGpu());
     await pumpMeadowStage(tester);
-    await _untilTwoUnanswered(tester, gpu);
+    await _untilBehind(tester, gpu);
     expect(gpu.phases, <SchedulerPhase>[
       SchedulerPhase.idle,
       SchedulerPhase.idle,
@@ -306,4 +291,77 @@ void main() {
     }
     expect(gpu.phases, hasLength(2), reason: 'no batch after the stage left');
   });
+
+  testWidgets(
+    'a frame-free build stops each batch at its bound, waits 1 ms while the '
+    'pacer is behind and still builds its first scene',
+    (WidgetTester tester) async {
+      final List<int> stillSteps = <int>[
+        for (final StageBatch batch in await _buildWithoutFrames(
+          tester,
+          stepMs: 12,
+          busy: false,
+        ))
+          batch.steps,
+      ];
+      expect(stillSteps, everyElement(lessThanOrEqualTo(11)));
+      expect(stillSteps, contains(11), reason: '$stillSteps');
+
+      final List<int> busySteps = <int>[
+        for (final StageBatch batch in await _buildWithoutFrames(
+          tester,
+          stepMs: 0.1,
+          busy: true,
+        ))
+          batch.steps,
+      ];
+      expect(busySteps, everyElement(lessThanOrEqualTo(3)));
+      expect(busySteps, contains(3), reason: '$busySteps');
+
+      final HeldGpu held = installPacer(HeldGpu());
+      final MeadowStageState state = await pumpMeadowStage(
+        tester,
+        tickers: false,
+      );
+      for (int i = 0; i < meadowBuildFrames && held.phases.length < 2; i++) {
+        await _wait(tester);
+        await tester.pump(Duration.zero);
+      }
+      expect(held.phases, <SchedulerPhase>[
+        SchedulerPhase.idle,
+        SchedulerPhase.idle,
+      ]);
+      expect(held.answers, hasLength(1), reason: 'the marker is called once');
+      expect(held.isBehind, isTrue, reason: 'the second batch is carried');
+      for (int i = 0; i < 8; i++) {
+        await _wait(tester);
+        await tester.pump(Duration.zero);
+      }
+      expect(held.phases, hasLength(2), reason: 'no third batch while behind');
+
+      held.answers[0].complete();
+      await _wait(tester);
+      await tester.pump(Duration.zero);
+      expect(held.isBehind, isFalse, reason: 'the first marker answered');
+      expect(held.phases, hasLength(2), reason: 'the step waits its 1 ms');
+
+      await _wait(tester);
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(held.phases, <SchedulerPhase>[
+        SchedulerPhase.idle,
+        SchedulerPhase.idle,
+        SchedulerPhase.idle,
+        SchedulerPhase.idle,
+      ], reason: 'the third batch after 1 ms and a fourth carried behind it');
+      expect(held.answers, hasLength(2), reason: 'the third end marks');
+      expect(held.isBehind, isTrue, reason: 'the fourth batch is carried');
+
+      for (int i = 0; i < meadowBuildFrames && !state.debugIsReady; i++) {
+        _answerAll(held);
+        await _wait(tester);
+        await tester.pump(const Duration(milliseconds: 1));
+      }
+      expect(state.debugIsReady, isTrue, reason: 'the meadow never finished');
+    },
+  );
 }
