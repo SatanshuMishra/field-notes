@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:field_notes/features/garden/scene/meadow_grass.dart';
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:field_notes/features/garden/scene/meadow_terrain.dart';
 import 'package:field_notes/features/garden/scene/meadow_world.dart';
@@ -260,12 +261,26 @@ class MeadowLayers {
         () => _buildWaterPack(i),
         () => _buildWaterShape(i),
       ],
-      for (int i = 0; i < _plan.falls.length; i++) () => _buildFall(i),
-      for (int i = 0; i < _plan.grass.length; i++) () => _buildGrass(i),
-      for (int i = 0; i < _plan.slabs.length; i++) () => _buildSlab(i),
+      for (int i = 0; i < _plan.falls.length; i++)
+        for (int part = 0; part < _fallPartCount(_plan.falls[i].fall); part++)
+          () => _buildFall(i, part),
+      for (int i = 0; i < _plan.grass.length; i++)
+        for (
+          int piece = 0;
+          piece < math.max(1, _plan.grass[i].pieces.length);
+          piece++
+        )
+          () => _buildGrass(i, piece),
+      for (int i = 0; i < _plan.slabs.length; i++)
+        for (
+          int cluster = 0;
+          cluster < math.max(1, _plan.slabs[i].clusters.length);
+          cluster++
+        )
+          () => _buildSlab(i, cluster),
       if (_plan.spruce != null) _buildSpruce,
       _buildStars,
-      _buildClouds,
+      for (int i = 0; i < terrain.sky.clouds.length; i++) () => _buildCloud(i),
       _buildSprites,
     ]);
     _waterTops = List<Image?>.filled(_plan.water.length, null);
@@ -322,6 +337,7 @@ class MeadowLayers {
   late final List<void Function()> _steps;
   final _Paths _paths = _Paths();
   final Set<Image> _held = <Image>{};
+  final List<Image> _parts = <Image>[];
   int _next = 0;
   int _geometryRecordings = 0;
   bool _disposed = false;
@@ -331,6 +347,7 @@ class MeadowLayers {
   late final List<bool> _stale;
   int _last = -1;
   int _revision = 0;
+  _FallRedraw? _redraw;
 
   Image? _mountainBase;
   Image? _nearPack;
@@ -361,7 +378,8 @@ class MeadowLayers {
 
   bool get isReady => !_disposed && isBuilt && !_drawn.contains(null);
 
-  bool get isRecolouring => !_disposed && isBuilt && _nextPiece() != null;
+  bool get isRecolouring =>
+      !_disposed && isBuilt && (_redraw != null || _nextPiece() != null);
 
   int get revision => _revision;
 
@@ -479,6 +497,8 @@ class MeadowLayers {
       image.dispose();
     }
     _held.clear();
+    _parts.clear();
+    _redraw = null;
     for (final _FallParts? parts in _fallParts) {
       parts?.dispose();
     }
@@ -849,39 +869,45 @@ class MeadowLayers {
     });
   }
 
-  void _buildFall(int index) {
-    final _FallPlan plan = _plan.falls[index];
+  void _buildFall(int index, int part) {
     final _FallFrames frames = _frames.falls[index];
-    final MeadowFall fall = plan.fall;
-    final List<MeadowShape> sheet = fall.sheet;
-    final Image body = _record(frames.body, (Canvas canvas) {
-      _packBase(canvas, frames.body.rect);
-      _intoChannel(canvas, frames.body.rect, _sheetChannel, () {
-        _drawShape(canvas, sheet.first, _whiteTint);
-        for (final MeadowShape shape in sheet.skip(1)) {
-          _drawShape(canvas, shape, _whiteTint, blendMode: BlendMode.dstOut);
-        }
-      });
-      _intoChannel(canvas, frames.body.rect, _glossChannel, () {
-        _drawShapes(canvas, sheet.skip(1), _whiteTint);
-      });
+    final MeadowFall fall = _plan.falls[index].fall;
+    _parts.add(switch (part) {
+      0 => _recordFallBody(fall, frames.body),
+      1 => _record(frames.pool, (Canvas canvas) {
+        _drawShape(canvas, fall.pool, _whiteTint);
+      }),
+      _ => _recordStreakTile(fall.streaks[part - 2], frames.streaks[part - 2]),
     });
-    final Image pool = _record(frames.pool, (Canvas canvas) {
-      _drawShape(canvas, fall.pool, _whiteTint);
-    });
-    final List<Image> tiles = <Image>[
-      for (int i = 0; i < fall.streaks.length; i++)
-        _recordStreakTile(fall.streaks[i], frames.streaks[i]),
-    ];
+    if (_parts.length < _fallPartCount(fall)) {
+      return;
+    }
     _fallParts[index] = _FallParts(
-      bodyPack: body,
-      pool: pool,
-      tiles: tiles,
+      bodyPack: _parts[0],
+      pool: _parts[1],
+      tiles: List<Image>.unmodifiable(_parts.sublist(2)),
       vertices: <Vertices>[
         for (int i = 0; i < fall.streaks.length; i++)
           _streakVertices(fall.centreLine, frames.streaks[i]),
       ],
     );
+    _parts.clear();
+  }
+
+  Image _recordFallBody(MeadowFall fall, _Frame frame) {
+    final List<MeadowShape> sheet = fall.sheet;
+    return _record(frame, (Canvas canvas) {
+      _packBase(canvas, frame.rect);
+      _intoChannel(canvas, frame.rect, _sheetChannel, () {
+        _drawShape(canvas, sheet.first, _whiteTint);
+        for (final MeadowShape shape in sheet.skip(1)) {
+          _drawShape(canvas, shape, _whiteTint, blendMode: BlendMode.dstOut);
+        }
+      });
+      _intoChannel(canvas, frame.rect, _glossChannel, () {
+        _drawShapes(canvas, sheet.skip(1), _whiteTint);
+      });
+    });
   }
 
   Image _recordStreakTile(MeadowStreak streak, _StreakFrame frame) {
@@ -946,64 +972,76 @@ class MeadowLayers {
     );
   }
 
-  void _buildGrass(int index) {
+  void _buildGrass(int index, int piece) {
     final _GrassPlan plan = _plan.grass[index];
     final MeadowGrassBand band = plan.band;
     final List<_Frame> frames = _frames.grass[index];
+    if (piece < plan.pieces.length) {
+      _parts.add(
+        _record(frames[piece], (Canvas canvas) {
+          for (int shade = 0; shade < band.colours.length; shade++) {
+            final Path blades = Path();
+            for (final MeadowGrassStroke stroke
+                in plan.pieces[piece].strokes[shade]) {
+              blades
+                ..moveTo(stroke.start.dx, stroke.start.dy)
+                ..quadraticBezierTo(
+                  stroke.control.dx,
+                  stroke.control.dy,
+                  stroke.end.dx,
+                  stroke.end.dy,
+                );
+            }
+            canvas.drawPath(
+              blades,
+              Paint()
+                ..color = band.colours[shade]
+                ..style = PaintingStyle.stroke
+                ..strokeWidth = band.strokeWidth
+                ..strokeCap = StrokeCap.round
+                ..strokeJoin = StrokeJoin.round,
+            );
+          }
+        }),
+      );
+    }
+    if (piece + 1 < plan.pieces.length) {
+      return;
+    }
     _grassImages[index] = MeadowGrassImage(
       band: band,
       pieces: List<MeadowImage>.unmodifiable(<MeadowImage>[
         for (int i = 0; i < plan.pieces.length; i++)
-          MeadowImage(
-            image: _record(frames[i], (Canvas canvas) {
-              for (int shade = 0; shade < band.colours.length; shade++) {
-                final Path blades = Path();
-                for (final MeadowGrassStroke stroke
-                    in plan.pieces[i].strokes[shade]) {
-                  blades
-                    ..moveTo(stroke.start.dx, stroke.start.dy)
-                    ..quadraticBezierTo(
-                      stroke.control.dx,
-                      stroke.control.dy,
-                      stroke.end.dx,
-                      stroke.end.dy,
-                    );
-                }
-                canvas.drawPath(
-                  blades,
-                  Paint()
-                    ..color = band.colours[shade]
-                    ..style = PaintingStyle.stroke
-                    ..strokeWidth = band.strokeWidth
-                    ..strokeCap = StrokeCap.round
-                    ..strokeJoin = StrokeJoin.round,
-                );
-              }
-            }),
-            rect: frames[i].rect,
-          ),
+          MeadowImage(image: _parts[i], rect: frames[i].rect),
       ]),
     );
+    _parts.clear();
   }
 
-  void _buildSlab(int index) {
+  void _buildSlab(int index, int cluster) {
     final _SlabPlan plan = _plan.slabs[index];
     final List<_Frame> frames = _frames.slabs[index];
+    if (cluster < plan.clusters.length) {
+      _parts.add(
+        _record(frames[cluster], (Canvas canvas) {
+          for (final MeadowTree tree in plan.clusters[cluster].trees) {
+            _drawShapes(canvas, tree.art, _ownTint);
+          }
+        }),
+      );
+    }
+    if (cluster + 1 < plan.clusters.length) {
+      return;
+    }
     _slabImages[index] = MeadowTreeSlab(
       sortKey: plan.sortKey,
       bounds: plan.bounds,
       pieces: List<MeadowImage>.unmodifiable(<MeadowImage>[
         for (int i = 0; i < plan.clusters.length; i++)
-          MeadowImage(
-            image: _record(frames[i], (Canvas canvas) {
-              for (final MeadowTree tree in plan.clusters[i].trees) {
-                _drawShapes(canvas, tree.art, _ownTint);
-              }
-            }),
-            rect: frames[i].rect,
-          ),
+          MeadowImage(image: _parts[i], rect: frames[i].rect),
       ]),
     );
+    _parts.clear();
   }
 
   void _buildSpruce() {
@@ -1036,22 +1074,19 @@ class MeadowLayers {
     });
   }
 
-  void _buildClouds() {
-    final List<MeadowCloud> clouds = _terrain.sky.clouds;
-    for (int i = 0; i < clouds.length; i++) {
-      final MeadowCloud cloud = clouds[i];
-      _cloudImages[i] = _record(_frames.clouds[i], (Canvas canvas) {
-        canvas.saveLayer(
-          null,
-          Paint()..color = Color.fromRGBO(0, 0, 0, cloud.opacity),
-        );
-        final Paint white = Paint()..color = _white;
-        for (final MeadowEllipse puff in cloud.puffs) {
-          canvas.drawPath(_paths.of(puff), white);
-        }
-        canvas.restore();
-      });
-    }
+  void _buildCloud(int index) {
+    final MeadowCloud cloud = _terrain.sky.clouds[index];
+    _cloudImages[index] = _record(_frames.clouds[index], (Canvas canvas) {
+      canvas.saveLayer(
+        null,
+        Paint()..color = Color.fromRGBO(0, 0, 0, cloud.opacity),
+      );
+      final Paint white = Paint()..color = _white;
+      for (final MeadowEllipse puff in cloud.puffs) {
+        canvas.drawPath(_paths.of(puff), white);
+      }
+      canvas.restore();
+    });
   }
 
   void _buildSprites() {
@@ -1137,6 +1172,11 @@ class MeadowLayers {
   };
 
   void _drawNext() {
+    final _FallRedraw? redraw = _redraw;
+    if (redraw != null) {
+      _continueFall(redraw);
+      return;
+    }
     final MeadowPalette? palette = _palette;
     final int? piece = _nextPiece();
     if (palette == null || piece == null) {
@@ -1149,11 +1189,15 @@ class MeadowLayers {
       case _Piece.water:
         _drawWater(index, palette);
       case _Piece.fall:
-        _fallParts[index] = _fallParts[index]!.recoloured(
-          this,
-          palette,
-          _frames.falls[index],
+        _continueFall(
+          _FallRedraw(
+            piece: piece,
+            index: index,
+            palette: palette,
+            parts: const <Image>[],
+          ),
         );
+        return;
       case _Piece.cloud:
         _drawCloud(index, palette);
     }
@@ -1161,6 +1205,31 @@ class MeadowLayers {
     _drawn[piece] = _colours(kind, palette);
     _stale[piece] = false;
     _last = piece;
+  }
+
+  void _continueFall(_FallRedraw redraw) {
+    final _FallParts current = _fallParts[redraw.index]!;
+    final _FallRedraw next = redraw.adding(
+      current.recolourPart(
+        this,
+        redraw.palette,
+        _frames.falls[redraw.index],
+        redraw.parts.length,
+      ),
+    );
+    if (next.parts.length < current.partCount) {
+      _redraw = next;
+      return;
+    }
+    _redraw = null;
+    _fallParts[redraw.index] = current.swapped(this, next.parts);
+    final List<Object> colours = _colours(_Piece.fall, redraw.palette);
+    final MeadowPalette? palette = _palette;
+    _revision++;
+    _drawn[redraw.piece] = colours;
+    _stale[redraw.piece] =
+        palette != null && !listEquals(colours, _colours(_Piece.fall, palette));
+    _last = redraw.piece;
   }
 
   void _drawMountains(MeadowPalette palette) {
@@ -1463,7 +1532,11 @@ class MeadowLayers {
       ..drawRect(all, fill)
       ..drawImage(previous, Offset.zero, Paint()..blendMode = BlendMode.dstIn);
     final Picture picture = recorder.endRecording();
-    final Image image = picture.toImageSync(previous.width, previous.height);
+    final Image image = meadowSnapshot(
+      picture,
+      previous.width,
+      previous.height,
+    );
     picture.dispose();
     return image;
   }
@@ -1487,37 +1560,36 @@ class _FallParts {
   final List<Image> tiles;
   final List<Vertices> vertices;
 
-  _FallParts recoloured(
+  int get partCount => 2 + tiles.length;
+
+  Image recolourPart(
     MeadowLayers layers,
     MeadowPalette palette,
     _FallFrames frames,
-  ) {
-    final Image nextBody = layers._keep(
-      _rasterise(frames.body, (Canvas canvas) {
-        canvas
-          ..saveLayer(frames.body.pixels, Paint()..blendMode = BlendMode.plus)
-          ..drawImage(
-            bodyPack,
-            Offset.zero,
-            Paint()..colorFilter = _channel(_sheetChannel, palette.wf, 1),
-          )
-          ..restore()
-          ..saveLayer(frames.body.pixels, Paint()..blendMode = BlendMode.plus)
-          ..drawImage(
-            bodyPack,
-            Offset.zero,
-            Paint()..colorFilter = _channel(_glossChannel, palette.wfHi, 1),
-          )
-          ..restore();
-      }),
-    );
-    final Image nextPool = layers._keep(
-      layers._repaintFlat(pool, palette.wfHi),
-    );
-    final List<Image> nextTiles = <Image>[
-      for (final Image tile in tiles)
-        layers._keep(layers._repaintFlat(tile, palette.wfHi)),
-    ];
+    int part,
+  ) => layers._keep(switch (part) {
+    0 => _rasterise(frames.body, (Canvas canvas) {
+      canvas
+        ..saveLayer(frames.body.pixels, Paint()..blendMode = BlendMode.plus)
+        ..drawImage(
+          bodyPack,
+          Offset.zero,
+          Paint()..colorFilter = _channel(_sheetChannel, palette.wf, 1),
+        )
+        ..restore()
+        ..saveLayer(frames.body.pixels, Paint()..blendMode = BlendMode.plus)
+        ..drawImage(
+          bodyPack,
+          Offset.zero,
+          Paint()..colorFilter = _channel(_glossChannel, palette.wfHi, 1),
+        )
+        ..restore();
+    }),
+    1 => layers._repaintFlat(pool, palette.wfHi),
+    _ => layers._repaintFlat(tiles[part - 2], palette.wfHi),
+  });
+
+  _FallParts swapped(MeadowLayers layers, List<Image> parts) {
     layers
       .._release(body)
       .._release(pool);
@@ -1526,9 +1598,9 @@ class _FallParts {
     }
     return _FallParts(
       bodyPack: bodyPack,
-      body: nextBody,
-      pool: nextPool,
-      tiles: nextTiles,
+      body: parts[0],
+      pool: parts[1],
+      tiles: List<Image>.unmodifiable(parts.sublist(2)),
       vertices: vertices,
     );
   }
@@ -1556,6 +1628,30 @@ class _FallParts {
     }
   }
 }
+
+@immutable
+class _FallRedraw {
+  const _FallRedraw({
+    required this.piece,
+    required this.index,
+    required this.palette,
+    required this.parts,
+  });
+
+  final int piece;
+  final int index;
+  final MeadowPalette palette;
+  final List<Image> parts;
+
+  _FallRedraw adding(Image part) => _FallRedraw(
+    piece: piece,
+    index: index,
+    palette: palette,
+    parts: List<Image>.unmodifiable(<Image>[...parts, part]),
+  );
+}
+
+int _fallPartCount(MeadowFall fall) => 2 + fall.streaks.length;
 
 const int _horizonChannel = 0;
 const int _highLeftChannel = 1;
@@ -1777,7 +1873,7 @@ Image _rasterise(_Frame frame, void Function(Canvas canvas) paint) {
   final PictureRecorder recorder = PictureRecorder();
   paint(Canvas(recorder, frame.pixels));
   final Picture picture = recorder.endRecording();
-  final Image image = picture.toImageSync(frame.width, frame.height);
+  final Image image = meadowSnapshot(picture, frame.width, frame.height);
   picture.dispose();
   return image;
 }

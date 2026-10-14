@@ -171,7 +171,7 @@ Future<void> _openYear(WidgetTester tester, ProviderContainer container) async {
     await tester.runAsync(
       () => Future<void>.delayed(const Duration(milliseconds: 2)),
     );
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
   }
   expect(stage.debugIsReady, isTrue, reason: 'the meadow never finished');
   await tester.pump();

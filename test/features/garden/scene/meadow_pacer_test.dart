@@ -1,7 +1,12 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/image_count.dart';
 
 class _FakeGpu {
   int clock = 0;
@@ -41,12 +46,18 @@ Future<Duration?> _measure(
   Future<void> Function() settle = _settle,
 }) async {
   Duration? measured;
-  final int first = gpu.answers.length;
+  gpu.clock = before;
   final MeadowBatch batch = pacer.begin(kind, frame: _sixty);
   pacer.end(batch, steps: steps, answered: (Duration? cost) => measured = cost);
-  await gpu.answer(first, at: before, settle: settle);
-  await gpu.answer(first + 1, at: after, settle: settle);
+  await gpu.answer(gpu.answers.length - 1, at: after, settle: settle);
   return measured;
+}
+
+MeadowPacer _installPacer(MeadowPacer pacer) {
+  final MeadowPacer original = meadowPacer;
+  meadowPacer = pacer;
+  addTearDown(() => meadowPacer = original);
+  return pacer;
 }
 
 void _scheduleFrame(WidgetTester tester) => tester.binding.scheduleFrame();
@@ -271,9 +282,8 @@ void main() {
     expect(slow.allowance(MeadowWork.plants, share: frame), 4);
   });
 
-  testWidgets('the pacer pauses only while two batches are unanswered', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('the pacer pauses only while a batch is carried behind a '
+      'waiting marker', (WidgetTester tester) async {
     final _FakeGpu gpu = _FakeGpu();
     final MeadowPacer pacer = gpu.pacer();
     final Duration frame = MeadowPacer.frameInterval(60);
@@ -281,7 +291,8 @@ void main() {
 
     final MeadowBatch first = pacer.begin(MeadowWork.plants, frame: frame);
     pacer.end(first, steps: 2);
-    expect(pacer.isBehind, isFalse, reason: 'one ended batch unanswered');
+    expect(gpu.answers, hasLength(1), reason: 'the first end sends a marker');
+    expect(pacer.isBehind, isFalse, reason: 'one marker waits, none carried');
 
     final MeadowBatch second = pacer.begin(MeadowWork.plants, frame: frame);
     expect(
@@ -290,15 +301,20 @@ void main() {
       reason: 'a batch that has begun but not ended does not count',
     );
     pacer.end(second, steps: 2);
-    expect(pacer.isBehind, isTrue, reason: 'two ended batches unanswered');
+    expect(pacer.isBehind, isTrue, reason: 'the second batch is carried');
+    expect(gpu.answers, hasLength(1), reason: 'a carried batch sends none');
 
-    await gpu.answer(0, at: 100, settle: tester.idle);
-    expect(pacer.isBehind, isTrue, reason: 'only the before-marker answered');
-    await gpu.answer(1, at: 900, settle: tester.idle);
-    expect(pacer.isBehind, isFalse, reason: 'the first batch answered');
+    await gpu.answer(0, at: 900, settle: tester.idle);
+    expect(pacer.isBehind, isFalse, reason: 'the first marker answered');
 
     final MeadowBatch third = pacer.begin(MeadowWork.plants, frame: frame);
     pacer.end(third, steps: 2);
+    expect(gpu.answers, hasLength(2), reason: 'the third end sends a marker');
+    expect(pacer.isBehind, isFalse);
+
+    final MeadowBatch fourth = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(fourth, steps: 2);
+    expect(gpu.answers, hasLength(2), reason: 'the fourth batch is carried');
     expect(pacer.isBehind, isTrue);
 
     final Object owner = Object();
@@ -311,10 +327,9 @@ void main() {
     pacer.waitTurn(owner, turn);
     _scheduleFrame(tester);
     await tester.pump();
-    expect(turns, 0, reason: 'no turn while two batches are unanswered');
+    expect(turns, 0, reason: 'no turn while a batch is carried');
 
-    await gpu.answer(2, at: 1000, settle: tester.idle);
-    await gpu.answer(3, at: 1800, settle: tester.idle);
+    await gpu.answer(1, at: 1800, settle: tester.idle);
     expect(pacer.isBehind, isFalse);
     _scheduleFrame(tester);
     await tester.pump();
@@ -380,143 +395,6 @@ void main() {
     );
   });
 
-  test('a failed or lost marker never stalls the pacer', () async {
-    final Duration frame = MeadowPacer.frameInterval(60);
-    final _FakeGpu gpu = _FakeGpu();
-    final MeadowPacer pacer = gpu.pacer();
-    await _measure(
-      gpu,
-      pacer,
-      MeadowWork.plants,
-      steps: 4,
-      before: 1000,
-      after: 5000,
-    );
-    expect(
-      pacer.estimateOf(MeadowWork.plants),
-      const Duration(milliseconds: 1),
-    );
-
-    final List<Duration?> heard = <Duration?>[];
-    final MeadowBatch failing = pacer.begin(MeadowWork.plants, frame: frame);
-    pacer.end(failing, steps: 4, answered: heard.add);
-    final MeadowBatch waiting = pacer.begin(MeadowWork.plants, frame: frame);
-    pacer.end(waiting, steps: 1);
-    expect(pacer.isBehind, isTrue);
-    await gpu.answer(2, at: 6000, settle: _settle);
-    gpu.clock = 90000;
-    gpu.answers[3].completeError(StateError('the GPU lost the marker'));
-    await _settle();
-    expect(pacer.isBehind, isFalse, reason: 'a failed marker stops counting');
-    expect(heard, <Duration?>[null]);
-    expect(
-      pacer.estimateOf(MeadowWork.plants),
-      const Duration(milliseconds: 1),
-    );
-
-    final _FakeGpu silentGpu = _FakeGpu();
-    final MeadowPacer silent = silentGpu.pacer();
-    for (int i = 0; i < 2; i++) {
-      final MeadowBatch batch = silent.begin(MeadowWork.plants, frame: frame);
-      silent.end(batch, steps: 2);
-    }
-    expect(silent.isBehind, isTrue);
-    silentGpu.clock = 30 * frame.inMicroseconds - 1;
-    expect(silent.isBehind, isTrue, reason: 'not yet 30 frame intervals');
-    silentGpu.clock = 30 * frame.inMicroseconds + 1;
-    expect(silent.isBehind, isFalse, reason: 'lost after 30 frame intervals');
-    expect(silent.estimateOf(MeadowWork.plants), isNull);
-
-    final _FakeGpu lateGpu = _FakeGpu();
-    final MeadowPacer late = lateGpu.pacer();
-    final MeadowBatch unheard = late.begin(MeadowWork.plants, frame: frame);
-    lateGpu.clock = 20 * frame.inMicroseconds;
-    late.end(unheard, steps: 3);
-    final MeadowBatch after = late.begin(MeadowWork.plants, frame: frame);
-    late.end(after, steps: 1);
-    expect(late.isBehind, isTrue);
-    lateGpu.clock = 30 * frame.inMicroseconds - 1;
-    expect(late.isBehind, isTrue);
-    lateGpu.clock = 30 * frame.inMicroseconds + 1;
-    expect(
-      late.isBehind,
-      isFalse,
-      reason:
-          'the batch whose before-marker never answered stops counting '
-          '30 frame intervals after it began',
-    );
-    await lateGpu.answer(1, at: 40 * frame.inMicroseconds, settle: _settle);
-    expect(late.estimateOf(MeadowWork.plants), isNull);
-    expect(late.isBehind, isFalse);
-  });
-
-  test('a batch past the valve still learns from its late answer', () async {
-    final Duration frame = MeadowPacer.frameInterval(120);
-    final int valve = 30 * MeadowPacer.frameInterval(120).inMicroseconds;
-    final int forget = 300 * MeadowPacer.frameInterval(120).inMicroseconds;
-    expect(valve, 249990);
-    final _FakeGpu gpu = _FakeGpu();
-    final MeadowPacer pacer = gpu.pacer();
-    final List<Duration?> heard = <Duration?>[];
-    final List<Duration?> lost = <Duration?>[];
-
-    final MeadowBatch late = pacer.begin(MeadowWork.plants, frame: frame);
-    pacer.end(late, steps: 60, answered: heard.add);
-    final MeadowBatch forgotten = pacer.begin(MeadowWork.plants, frame: frame);
-    pacer.end(forgotten, steps: 4, answered: lost.add);
-    expect(pacer.isBehind, isTrue);
-
-    await gpu.answer(0, at: 200000, settle: _settle);
-    expect(pacer.isBehind, isTrue, reason: 'only the before-marker answered');
-    gpu.clock = valve;
-    expect(pacer.isBehind, isTrue, reason: 'not yet past 30 frame intervals');
-    gpu.clock = valve + 1;
-    expect(
-      pacer.isBehind,
-      isFalse,
-      reason: 'past 30 frame intervals the batches stop counting',
-    );
-    expect(pacer.estimateOf(MeadowWork.plants), isNull);
-    expect(heard, isEmpty);
-
-    await gpu.answer(1, at: 260000, settle: _settle);
-    expect(
-      pacer.estimateOf(MeadowWork.plants),
-      const Duration(milliseconds: 1),
-      reason: 'the late answer still teaches its cost',
-    );
-    expect(heard, <Duration?>[const Duration(milliseconds: 60)]);
-    expect(pacer.allowance(MeadowWork.plants, share: frame), 8);
-    expect(pacer.isBehind, isFalse);
-
-    gpu.clock = forget + 1;
-    expect(pacer.isBehind, isFalse);
-    await gpu.answer(2, at: forget + 2, settle: _settle);
-    await gpu.answer(3, at: forget + 40002, settle: _settle);
-    expect(
-      pacer.estimateOf(MeadowWork.plants),
-      const Duration(milliseconds: 1),
-      reason: 'a batch forgotten after 300 frame intervals teaches nothing',
-    );
-    expect(lost, isEmpty);
-
-    final int start = gpu.clock;
-    final List<Duration?> kept = <Duration?>[];
-    final MeadowBatch slow = pacer.begin(MeadowWork.plants, frame: frame);
-    pacer.end(slow, steps: 2, answered: kept.add);
-    gpu.clock = start + forget;
-    expect(pacer.isBehind, isFalse);
-    await gpu.answer(4, at: start + forget, settle: _settle);
-    await gpu.answer(5, at: start + forget + 6000, settle: _settle);
-    expect(kept, <Duration?>[
-      const Duration(milliseconds: 6),
-    ], reason: 'a batch is kept until 300 frame intervals have passed');
-    expect(
-      pacer.estimateOf(MeadowWork.plants),
-      const Duration(milliseconds: 2),
-    );
-  });
-
   testWidgets('an error in a callback leaves the pacer usable', (
     WidgetTester tester,
   ) async {
@@ -530,12 +408,15 @@ void main() {
       steps: 4,
       answered: (Duration? cost) => throw StateError('the meadow broke'),
     );
+    gpu.clock = 3000;
+    final List<Duration?> carried = <Duration?>[];
     final MeadowBatch waiting = pacer.begin(MeadowWork.plants, frame: frame);
-    pacer.end(waiting, steps: 1);
+    pacer.end(waiting, steps: 1, answered: carried.add);
+    expect(carried, <Duration?>[null], reason: 'the batch after it is carried');
+    expect(gpu.answers, hasLength(1), reason: 'a carried batch sends none');
     expect(pacer.isBehind, isTrue);
 
-    await gpu.answer(0, at: 1000, settle: tester.idle);
-    await gpu.answer(1, at: 5000, settle: tester.idle);
+    await gpu.answer(0, at: 4000, settle: tester.idle);
     expect(tester.takeException(), isStateError);
     expect(pacer.isBehind, isFalse);
     expect(
@@ -544,8 +425,6 @@ void main() {
     );
     expect(pacer.allowance(MeadowWork.plants, share: frame), 16);
 
-    await gpu.answer(2, at: 6000, settle: tester.idle);
-    await gpu.answer(3, at: 7000, settle: tester.idle);
     final Duration? measured = await _measure(
       gpu,
       pacer,
@@ -556,6 +435,11 @@ void main() {
       settle: tester.idle,
     );
     expect(measured, const Duration(milliseconds: 16));
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(milliseconds: 1),
+      reason: 'the carried step adds nothing to the next marker',
+    );
     expect(pacer.allowance(MeadowWork.plants, share: frame), 16);
     expect(pacer.isBehind, isFalse);
 
@@ -591,5 +475,356 @@ void main() {
     _scheduleFrame(tester);
     await tester.pump();
     expect(ran, 1, reason: 'the second owner runs in a later unused frame');
+  });
+
+  testWidgets(
+    'the snapshot room counts renders since the last frame and refills when a '
+    'frame is drawn',
+    (WidgetTester tester) async {
+      final MeadowPacer pacer = MeadowPacer();
+      expect(MeadowPacer.snapshotsPerGap, 4);
+      final List<int> rooms = <int>[];
+      final List<int> counted = <int>[];
+      for (final int renders in <int>[0, 2, 2, 2]) {
+        for (int i = 0; i < renders; i++) {
+          pacer.countSnapshot();
+        }
+        rooms.add(pacer.snapshotRoom);
+        counted.add(pacer.debugSnapshots);
+      }
+      expect(rooms, <int>[4, 2, 0, 0]);
+      expect(counted, <int>[0, 2, 4, 6]);
+
+      _scheduleFrame(tester);
+      await tester.pump();
+      expect(pacer.snapshotRoom, 4);
+      expect(pacer.debugSnapshots, 6);
+    },
+  );
+
+  test(
+    'meadowSnapshot renders the picture at its size and counts it',
+    () async {
+      final MeadowPacer pacer = _installPacer(MeadowPacer());
+      final ui.PictureRecorder recorder = ui.PictureRecorder();
+      ui.Canvas(recorder, const ui.Rect.fromLTWH(0, 0, 3, 2)).drawRect(
+        const ui.Rect.fromLTWH(0, 0, 3, 2),
+        ui.Paint()..color = const ui.Color(0xFFFF0000),
+      );
+      final ui.Picture picture = recorder.endRecording();
+      addTearDown(picture.dispose);
+      expect(meadowPacer.snapshotRoom, 4);
+
+      final ui.Image image = meadowSnapshot(picture, 3, 2);
+      addTearDown(image.dispose);
+
+      expect(meadowPacer.snapshotRoom, 3);
+      expect(meadowPacer.debugSnapshots, 1);
+      expect(pacer.debugSnapshots, 1);
+      expect(image.width, 3);
+      expect(image.height, 2);
+      final ByteData bytes = (await image.toByteData())!;
+      final Uint8List rgba = bytes.buffer.asUint8List(
+        bytes.offsetInBytes,
+        bytes.lengthInBytes,
+      );
+      expect(rgba, hasLength(3 * 2 * 4));
+      for (int i = 0; i < rgba.length; i += 4) {
+        expect(rgba.sublist(i, i + 4), <int>[
+          255,
+          0,
+          0,
+          255,
+        ], reason: 'pixel $i');
+      }
+    },
+  );
+
+  test('a batch sends one marker, after it ends, and costs the time from its '
+      'start to the answer', () async {
+    final _FakeGpu gpu = _FakeGpu();
+    final MeadowPacer pacer = gpu.pacer();
+    final List<Duration?> heard = <Duration?>[];
+
+    gpu.clock = 1000;
+    final MeadowBatch batch = pacer.begin(MeadowWork.plants, frame: _sixty);
+    expect(gpu.answers, isEmpty, reason: 'begin sends no marker');
+    gpu.clock = 3000;
+    pacer.end(batch, steps: 4, answered: heard.add);
+    expect(gpu.answers, hasLength(1), reason: 'end sends one marker');
+
+    await gpu.answer(0, at: 5000, settle: _settle);
+    expect(gpu.answers, hasLength(1));
+    expect(heard, <Duration?>[const Duration(microseconds: 4000)]);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 1000),
+    );
+    expect(
+      pacer.allowance(
+        MeadowWork.plants,
+        share: const Duration(microseconds: 16667),
+      ),
+      16,
+    );
+  });
+
+  test('with one marker between frames at a time, a failed or late marker '
+      'never stalls the pacer', () async {
+    const Duration frame = Duration(microseconds: 16667);
+    final _FakeGpu gpu = _FakeGpu();
+    final MeadowPacer pacer = gpu.pacer();
+    final List<Duration?> heardA = <Duration?>[];
+    final List<Duration?> heardB = <Duration?>[];
+    final List<Duration?> heardC = <Duration?>[];
+    final List<Duration?> heardD = <Duration?>[];
+    final List<Duration?> heardE = <Duration?>[];
+    final List<Duration?> heardF = <Duration?>[];
+
+    final MeadowBatch a = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(a, steps: 2, answered: heardA.add);
+    expect(gpu.answers, hasLength(1), reason: "A's end calls the marker");
+    final MeadowBatch b = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(b, steps: 2, answered: heardB.add);
+    expect(heardB, <Duration?>[null], reason: 'B is carried behind A');
+    expect(gpu.answers, hasLength(1), reason: "B's end calls no marker");
+    expect(pacer.isBehind, isTrue, reason: "B carried behind A's marker");
+    gpu.answers[0].completeError(StateError('the GPU lost the marker'));
+    await _settle();
+    expect(pacer.isBehind, isFalse, reason: 'a failed marker stops waiting');
+    expect(heardA, <Duration?>[null]);
+    expect(pacer.estimateOf(MeadowWork.plants), isNull);
+
+    final MeadowBatch c = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(c, steps: 4, answered: heardC.add);
+    expect(gpu.answers, hasLength(2), reason: "C's end calls the marker");
+    final MeadowBatch d = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(d, steps: 1, answered: heardD.add);
+    expect(heardD, <Duration?>[null], reason: 'D is carried behind C');
+    expect(gpu.answers, hasLength(2), reason: "D's end calls no marker");
+    expect(pacer.isBehind, isTrue, reason: "D carried behind C's marker");
+    gpu.clock = 516677;
+    expect(
+      pacer.isBehind,
+      isFalse,
+      reason: "past 30 frame intervals C's marker stops waiting",
+    );
+    expect(heardC, isEmpty);
+
+    final MeadowBatch f = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(f, steps: 1, answered: heardF.add);
+    expect(
+      gpu.answers,
+      hasLength(3),
+      reason: "C's marker no longer waits, so F's end calls the marker",
+    );
+    expect(heardF, isEmpty);
+    gpu.answers[2].completeError(StateError('the GPU lost the marker'));
+    await _settle();
+    expect(heardF, <Duration?>[null]);
+
+    await gpu.answer(1, at: 600000, settle: _settle);
+    expect(heardC, <Duration?>[const Duration(microseconds: 600000)]);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 150000),
+      reason: "600,000 us over C's own 4 steps; B and D add nothing",
+    );
+
+    gpu.clock = 1000000;
+    final MeadowBatch e = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(e, steps: 2, answered: heardE.add);
+    expect(gpu.answers, hasLength(4), reason: "E's end calls the marker");
+    gpu.clock = 6016767;
+    expect(pacer.isBehind, isFalse);
+    await gpu.answer(3, at: 6016767, settle: _settle);
+    expect(heardE, isEmpty);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 150000),
+    );
+  });
+
+  testWidgets(
+    'a batch begun while a frame is drawn sends no marker and teaches nothing',
+    (WidgetTester tester) async {
+      const Duration frame = Duration(microseconds: 16667);
+      final _FakeGpu gpu = _FakeGpu();
+      final MeadowPacer pacer = gpu.pacer();
+      final List<SchedulerPhase> phases = <SchedulerPhase>[];
+      final List<List<({Duration? cost, bool ended})>> heard =
+          <List<({Duration? cost, bool ended})>>[];
+
+      void batchOfTwo() {
+        final List<({Duration? cost, bool ended})> told =
+            <({Duration? cost, bool ended})>[];
+        heard.add(told);
+        bool ended = false;
+        gpu.clock = 0;
+        phases.add(SchedulerBinding.instance.schedulerPhase);
+        final MeadowBatch batch = pacer.begin(MeadowWork.plants, frame: frame);
+        gpu.clock = 4000;
+        pacer.end(
+          batch,
+          steps: 2,
+          answered: (Duration? cost) => told.add((cost: cost, ended: ended)),
+        );
+        ended = true;
+      }
+
+      bool acted = false;
+      SchedulerBinding.instance
+        ..scheduleFrameCallback((Duration timeStamp) => batchOfTwo())
+        ..scheduleFrameCallback(
+          (Duration timeStamp) => scheduleMicrotask(batchOfTwo),
+        )
+        ..addPersistentFrameCallback((Duration timeStamp) {
+          if (acted) {
+            return;
+          }
+          acted = true;
+          batchOfTwo();
+        })
+        ..addPostFrameCallback((Duration timeStamp) => batchOfTwo());
+      await tester.pump();
+
+      expect(phases, <SchedulerPhase>[
+        SchedulerPhase.transientCallbacks,
+        SchedulerPhase.midFrameMicrotasks,
+        SchedulerPhase.persistentCallbacks,
+        SchedulerPhase.postFrameCallbacks,
+      ]);
+      expect(gpu.answers, isEmpty, reason: 'no marker for work on a frame');
+      expect(heard, hasLength(4));
+      for (int i = 0; i < heard.length; i++) {
+        expect(heard[i], <({Duration? cost, bool ended})>[
+          (cost: null, ended: false),
+        ], reason: 'batch begun in ${phases[i]}');
+      }
+      expect(pacer.isBehind, isFalse);
+      expect(pacer.estimateOf(MeadowWork.plants), isNull);
+
+      final MeadowBatch between = pacer.begin(MeadowWork.plants, frame: frame);
+      pacer.end(between, steps: 2);
+      expect(gpu.answers, hasLength(1), reason: 'a batch between frames');
+    },
+  );
+
+  test('between frames one marker waits at a time and a batch carried behind '
+      'it teaches nothing', () async {
+    const Duration frame = Duration(microseconds: 16667);
+    final _FakeGpu gpu = _FakeGpu();
+    final MeadowPacer pacer = gpu.pacer();
+    final List<Duration?> heardA = <Duration?>[];
+    final List<Duration?> heardB = <Duration?>[];
+    final List<Duration?> heardC = <Duration?>[];
+    final List<Duration?> heardD = <Duration?>[];
+    final List<Duration?> heardE = <Duration?>[];
+    final List<Duration?> heardF = <Duration?>[];
+
+    gpu.clock = 0;
+    final MeadowBatch a = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(a, steps: 2, answered: heardA.add);
+    expect(gpu.answers, hasLength(1), reason: "A's end calls the marker");
+
+    gpu.clock = 500;
+    final MeadowBatch b = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(b, steps: 3, answered: heardB.add);
+    expect(heardB, <Duration?>[null], reason: 'B is carried behind A');
+    expect(gpu.answers, hasLength(1), reason: "B's end calls no marker");
+    expect(pacer.isBehind, isTrue, reason: 'B carried behind A');
+
+    await gpu.answer(0, at: 1000, settle: _settle);
+    expect(pacer.isBehind, isFalse, reason: "A's marker answered");
+    expect(heardA, <Duration?>[const Duration(microseconds: 1000)]);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 500),
+    );
+
+    gpu.clock = 1000;
+    final MeadowBatch c = pacer.begin(MeadowWork.plants, frame: frame);
+    gpu.clock = 2000;
+    pacer.end(c, steps: 5, answered: heardC.add);
+    expect(gpu.answers, hasLength(2), reason: "C's end calls the marker");
+    await gpu.answer(1, at: 9000, settle: _settle);
+    expect(heardC, <Duration?>[const Duration(microseconds: 8000)]);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 1050),
+      reason: "8,000 us over C's own 5 steps; B's 3 carried steps add nothing",
+    );
+
+    gpu.clock = 10000;
+    final MeadowBatch d = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(d, steps: 2, answered: heardD.add);
+    expect(gpu.answers, hasLength(3), reason: "D's end calls the marker");
+    final MeadowBatch e = pacer.begin(MeadowWork.layers, frame: frame);
+    pacer.end(e, steps: 2, answered: heardE.add);
+    expect(heardE, <Duration?>[null], reason: 'E is carried behind D');
+    expect(gpu.answers, hasLength(3), reason: "E's end calls no marker");
+    expect(pacer.isBehind, isTrue, reason: 'E carried behind D');
+
+    await gpu.answer(2, at: 11500, settle: _settle);
+    expect(heardD, <Duration?>[const Duration(microseconds: 1500)]);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 900),
+    );
+
+    final MeadowBatch f = pacer.begin(MeadowWork.plants, frame: frame);
+    pacer.end(f, steps: 2, answered: heardF.add);
+    expect(gpu.answers, hasLength(4), reason: "F's end calls the marker");
+    await gpu.answer(3, at: 15500, settle: _settle);
+    expect(heardF, <Duration?>[const Duration(microseconds: 4000)]);
+    expect(
+      pacer.estimateOf(MeadowWork.plants),
+      const Duration(microseconds: 1450),
+    );
+    expect(
+      pacer.estimateOf(MeadowWork.layers),
+      isNull,
+      reason: 'the carried layers batch E teaches nothing',
+    );
+    expect(gpu.answers, hasLength(4));
+  });
+
+  testWidgets('the default marker reads back one image it renders only once', (
+    WidgetTester tester,
+  ) async {
+    final MeadowPacer pacer = _installPacer(MeadowPacer());
+    final ImageCount count = ImageCount()..start();
+    addTearDown(count.stop);
+    final List<Duration?> heard = <Duration?>[];
+
+    Future<void> oneBatch() async {
+      await tester.runAsync(() async {
+        final Completer<void> answered = Completer<void>();
+        final MeadowBatch batch = pacer.begin(MeadowWork.plants, frame: _sixty);
+        pacer.end(
+          batch,
+          steps: 1,
+          answered: (Duration? cost) {
+            heard.add(cost);
+            answered.complete();
+          },
+        );
+        await answered.future.timeout(const Duration(milliseconds: 200));
+      });
+    }
+
+    for (int i = 0; i < 3; i++) {
+      await oneBatch();
+    }
+    final int first = count.created;
+    for (int i = 0; i < 3; i++) {
+      await oneBatch();
+    }
+
+    expect(heard, hasLength(6));
+    expect(heard, everyElement(isNotNull));
+    expect(count.created, lessThanOrEqualTo(1));
+    expect(count.created, first, reason: 'the second three create none');
+    expect(meadowPacer.debugSnapshots, count.created);
   });
 }

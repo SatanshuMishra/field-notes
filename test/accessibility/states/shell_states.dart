@@ -444,7 +444,7 @@ final List<A11yState> shellStates = <A11yState>[
         await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 2)),
         );
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 1));
       }
     },
     proof: <A11yProof>[A11yProof(find.text(_gardenEmptyMessage))],

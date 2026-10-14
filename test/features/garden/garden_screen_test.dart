@@ -152,7 +152,7 @@ void main() {
       await tester.runAsync(
         () => Future<void>.delayed(const Duration(milliseconds: 2)),
       );
-      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
     }
     expect(state.debugIsReady, isTrue);
     final Finder message = find.text(_waiting);

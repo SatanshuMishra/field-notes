@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_palette.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
@@ -18,48 +19,96 @@ const Color _white = Color(0xFFFFFFFF);
 class MeadowRays {
   MeadowRays(MeadowPalette palette)
     : _sunColour = palette.sunColour,
-      _glowAlpha = palette.raysGlowAlpha {
-    _beamsMask = _record(_paintBeams);
-    _glowMask = _record(_paintGlow);
-    _image = _composite();
-  }
+      _glowAlpha = palette.raysGlowAlpha;
 
   static final int _side = (2 * meadowRaysReach * meadowRaysScale).ceil();
 
-  late final ui.Image _beamsMask;
-  late final ui.Image _glowMask;
-  late ui.Image _image;
+  ui.Image? _beamsMask;
+  ui.Image? _glowMask;
+  ui.Image? _image;
   Color _sunColour;
   double _glowAlpha;
+  Color? _shownSunColour;
+  double? _shownGlowAlpha;
+  bool _stale = false;
+  bool _disposed = false;
+  int _revision = 0;
   int _geometryRecordings = 0;
 
-  ui.Image get image => _image;
+  ui.Image get image => _image!;
 
-  int get imageBytes => <ui.Image>[_beamsMask, _glowMask, _image].fold<int>(
-    0,
-    (int total, ui.Image image) =>
-        total + image.width * image.height * _bytesPerPixel,
-  );
+  bool get isReady => !_disposed && _image != null;
+
+  bool get isRecolouring => !_disposed && _stale;
+
+  int get revision => _revision;
+
+  int get imageBytes =>
+      <ui.Image?>[_beamsMask, _glowMask, _image].nonNulls.fold<int>(
+        0,
+        (int total, ui.Image image) =>
+            total + image.width * image.height * _bytesPerPixel,
+      );
 
   @visibleForTesting
   int get debugGeometryRecordings => _geometryRecordings;
 
+  bool step() {
+    if (_disposed) {
+      return false;
+    }
+    final ui.Image? beams = _beamsMask;
+    final ui.Image? glow = _glowMask;
+    final ui.Image? shown = _image;
+    if (beams == null) {
+      _beamsMask = _record(_paintBeams);
+    } else if (glow == null) {
+      _glowMask = _record(_paintGlow);
+    } else if (shown == null) {
+      _image = _composite(beams, glow);
+      _noteShown();
+    } else if (_stale) {
+      _image = _composite(beams, glow);
+      _noteShown();
+      _stale = false;
+      _revision++;
+      shown.dispose();
+    }
+    return !isReady || isRecolouring;
+  }
+
+  void buildAll() {
+    while (step()) {}
+  }
+
   void recolour(MeadowPalette palette) {
-    if (palette.sunColour == _sunColour &&
-        palette.raysGlowAlpha == _glowAlpha) {
+    if (_disposed) {
       return;
     }
-    final ui.Image previous = _image;
     _sunColour = palette.sunColour;
     _glowAlpha = palette.raysGlowAlpha;
-    _image = _composite();
-    previous.dispose();
+    if (_image != null) {
+      _stale = _sunColour != _shownSunColour || _glowAlpha != _shownGlowAlpha;
+    }
+  }
+
+  void _noteShown() {
+    _shownSunColour = _sunColour;
+    _shownGlowAlpha = _glowAlpha;
   }
 
   void dispose() {
-    _beamsMask.dispose();
-    _glowMask.dispose();
-    _image.dispose();
+    if (_disposed) {
+      return;
+    }
+    _disposed = true;
+    _beamsMask?.dispose();
+    _glowMask?.dispose();
+    _image?.dispose();
+    _beamsMask = null;
+    _glowMask = null;
+    _image = null;
+    _stale = false;
   }
 
   ui.Image _record(void Function(Canvas canvas) paint) {
@@ -72,16 +121,16 @@ class MeadowRays {
     return _rasterise(recorder);
   }
 
-  ui.Image _composite() {
+  ui.Image _composite(ui.Image beams, ui.Image glow) {
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     Canvas(recorder, _bounds)
       ..drawImage(
-        _beamsMask,
+        beams,
         Offset.zero,
         Paint()..colorFilter = ColorFilter.mode(_sunColour, BlendMode.srcIn),
       )
       ..drawImage(
-        _glowMask,
+        glow,
         Offset.zero,
         Paint()
           ..colorFilter = ColorFilter.mode(
@@ -97,7 +146,7 @@ class MeadowRays {
 
   static ui.Image _rasterise(ui.PictureRecorder recorder) {
     final ui.Picture picture = recorder.endRecording();
-    final ui.Image image = picture.toImageSync(_side, _side);
+    final ui.Image image = meadowSnapshot(picture, _side, _side);
     picture.dispose();
     return image;
   }

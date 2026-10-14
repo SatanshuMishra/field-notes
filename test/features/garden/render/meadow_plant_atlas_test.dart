@@ -5,13 +5,16 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/garden/model/meadow_random.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
+import 'package:field_notes/features/garden/render/meadow_creature_art.dart';
 import 'package:field_notes/features/garden/render/meadow_plant_atlas.dart';
+import 'package:field_notes/features/garden/scene/meadow_pacer.dart';
 import 'package:field_notes/features/garden/scene/meadow_plants.dart';
 import 'package:field_notes/features/garden/scene/meadow_terrain.dart';
 import 'package:field_notes/features/garden/scene/meadow_world.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/garden_harness.dart';
+import '../support/image_count.dart';
 
 const int _leapYear = 2028;
 const int _megabyte = 1000 * 1000;
@@ -368,5 +371,32 @@ void main() {
     expect(atlas.imageBytes, 0);
     expect(atlas.isReady, isFalse);
     expect(atlas.step(), isFalse);
+  });
+
+  test('the atlas and the creature art count every image they render', () {
+    final MeadowPacer original = meadowPacer;
+    final MeadowPacer pacer = MeadowPacer();
+    meadowPacer = pacer;
+    addTearDown(() => meadowPacer = original);
+    final ImageCount count = ImageCount()..start();
+    addTearDown(count.stop);
+
+    final MeadowPlantAtlas atlas = MeadowPlantAtlas(
+      _plantsFor(_openKey),
+      density: _sidebarCard,
+      maxBytes: 1 << 40,
+    )..buildAll();
+    addTearDown(atlas.dispose);
+    expect(atlas.isReady, isTrue);
+    expect(count.created, greaterThan(0));
+    expect(pacer.debugSnapshots, count.created);
+    final int atlasImages = count.created;
+
+    final MeadowCreatureArt creatures = MeadowCreatureArt.build(
+      density: _sidebarCard,
+    );
+    addTearDown(creatures.dispose);
+    expect(count.created, atlasImages + 1);
+    expect(pacer.debugSnapshots, count.created);
   });
 }
