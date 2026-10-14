@@ -2,7 +2,17 @@
 
 Each release has a section `## [X.Y.Z] - YYYY-MM-DD` with an optional intro paragraph and `### New`, `### Improved` and `### Fixed` lists.
 
+Write the entries in plain English for the people who use Field Notes: say clearly what they will notice, and leave out technical detail such as frame rates, graphics memory figures or the names of the app's internal parts.
+
 ## [Unreleased]
+
+## [1.0.2] - 2026-10-13
+
+### Fixed
+
+- On Windows, Field Notes no longer closes unexpectedly while the Meadow is showing, in onboarding or on the Meadow page.
+- On Windows, the Meadow page opens much faster, and changing the time of day or switching to full screen no longer makes it stutter or freeze.
+- On Windows, the Meadow animation in onboarding plays smoothly instead of stuttering.
 
 ## [1.0.1] - 2026-10-12
 
