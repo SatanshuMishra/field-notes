@@ -6,6 +6,23 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-15
+
+### New
+
+- On macOS and Windows, you can pause a video recording and carry on where you left off. Keep saves it as one video.
+- Choose which microphone Field Notes records from with the new Input button in the voice and video recorders, which also sets the input volume and shows a live level meter. On Android, video recordings use the microphone Android chooses.
+- A new Voice page in Settings: Voice Isolation clears background noise like fans, traffic and typing from your voice when you keep a recording of 30 minutes or less, and Studio, the default, keeps your microphone as it is.
+- On macOS and Windows, the Input panel shows where sound is playing and opens your computer's sound settings.
+
+### Improved
+
+- On macOS and Windows, the recorder's buttons now sit below the window's title bar, clear of the window's own buttons.
+
+### Fixed
+
+- Turning the camera off before a video recording now turns the camera off and records only your voice. Before, the camera kept recording while hidden.
+
 ## [1.1.0] - 2026-10-14
 
 ### Improved
