@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -26,10 +27,16 @@ class RecordVoiceRecorder implements VoiceRecorder {
   RecordVoiceRecorder({
     AudioRecorder? recorder,
     Future<Directory> Function()? temporaryDirectory,
+    Future<AudioInput> Function()? resolveInput,
   }) : _recorder = recorder ?? AudioRecorder(),
-       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory;
+       _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
+       _resolveInput = resolveInput ?? _systemDefaultInput;
+
+  static Future<AudioInput> _systemDefaultInput() async =>
+      const AudioInput(id: null, label: systemDefaultInputLabel);
 
   final AudioRecorder _recorder;
+  final Future<AudioInput> Function() _resolveInput;
   final Future<Directory> Function() _temporaryDirectory;
   final Stopwatch _elapsed = Stopwatch();
   String? _activePath;
@@ -68,6 +75,14 @@ class RecordVoiceRecorder implements VoiceRecorder {
   @override
   Future<bool> hasPermission() => _recorder.hasPermission();
 
+  Future<AudioInput> _resolveInputOrDefault() async {
+    try {
+      return await _resolveInput();
+    } catch (_) {
+      return _systemDefaultInput();
+    }
+  }
+
   @override
   Future<void> start() async {
     try {
@@ -76,14 +91,19 @@ class RecordVoiceRecorder implements VoiceRecorder {
         directory,
         DateTime.now().millisecondsSinceEpoch,
       );
+      final AudioInput input = await _resolveInputOrDefault();
+      final String? inputId = input.id;
       _elapsed
         ..reset()
         ..start();
       await _recorder.start(
-        const RecordConfig(
+        RecordConfig(
           encoder: voiceRecordingEncoder,
           numChannels: 1,
           bitRate: 48000,
+          device: inputId == null
+              ? null
+              : InputDevice(id: inputId, label: input.label),
         ),
         path: path,
       );
