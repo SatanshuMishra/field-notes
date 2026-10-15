@@ -6,6 +6,7 @@ import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 enum VoiceRecorderPhase {
@@ -82,6 +83,7 @@ const double _keyHintSize = 11;
 const double _keyHintTracking = 0.02 * _keyHintSize;
 
 const double _errorGap = 8;
+const double _inputGap = 12;
 
 const double _sidebarActionsGap = 10;
 const double _bottomBarActionsGap = 8;
@@ -128,6 +130,8 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.errorMessage,
     this.letGoKey,
     this.levels = const Stream<double>.empty(),
+    this.savingText = voiceSavingStatus,
+    this.onVoiceSettings,
   });
 
   final VoiceRecorderPhase phase;
@@ -145,6 +149,8 @@ class VoiceRecorderSheet extends StatelessWidget {
   final String? errorMessage;
   final Key? letGoKey;
   final Stream<double> levels;
+  final String savingText;
+  final VoidCallback? onVoiceSettings;
 
   bool get _saving => phase == VoiceRecorderPhase.saving;
 
@@ -205,7 +211,7 @@ class VoiceRecorderSheet extends StatelessWidget {
             ? voiceSidebarPrivacyLine
             : voiceBottomBarPrivacyLine,
         onLeave: _saving || asking ? null : onCancel,
-        trailing: sidebar ? _KeyHint(text: _keyHint(context)) : null,
+        trailing: _trailing(context, sidebar),
         question: ReflectionPrompt(phase: phase.stage, showKicker: true),
         centre: _OrbZone(
           phase: phase,
@@ -219,6 +225,25 @@ class VoiceRecorderSheet extends StatelessWidget {
     );
   }
 
+  Widget? _trailing(BuildContext context, bool sidebar) {
+    final Widget? hint = sidebar ? _KeyHint(text: _keyHint(context)) : null;
+    if (phase != VoiceRecorderPhase.idle) {
+      return hint;
+    }
+    final Widget input = RecorderInputButton(onVoiceSettings: onVoiceSettings);
+    if (hint == null) {
+      return input;
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        Flexible(child: hint),
+        const SizedBox(width: _inputGap),
+        input,
+      ],
+    );
+  }
+
   Widget _status(BuildContext context) {
     final String? errorMessage = this.errorMessage;
     return Column(
@@ -227,7 +252,7 @@ class VoiceRecorderSheet extends StatelessWidget {
         RecorderStatusLine(
           phase: phase.stage,
           elapsed: elapsed,
-          savingText: voiceSavingStatus,
+          savingText: savingText,
           inline: false,
         ),
         if (errorMessage != null)

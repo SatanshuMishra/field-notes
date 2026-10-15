@@ -259,7 +259,10 @@ void main() {
           'releasing a saved video deletes the movie and thumbnail the '
           'recorder created', (WidgetTester tester) async {
         final CameraMacosVideoRecorder recorder =
-            CameraMacosVideoRecorder(temporaryDirectory: () async => temp);
+            CameraMacosVideoRecorder(
+              temporaryDirectory: () async => temp,
+              microphonePermission: () async => true,
+            );
         final File picked = File(p.join(temp.path, 'picked.mp4'))
           ..writeAsBytesSync(<int>[4, 4]);
 
@@ -303,7 +306,10 @@ void main() {
           'releasing an earlier video keeps the movie a newer recording is '
           'writing', (WidgetTester tester) async {
         final CameraMacosVideoRecorder recorder =
-            CameraMacosVideoRecorder(temporaryDirectory: () async => temp);
+            CameraMacosVideoRecorder(
+              temporaryDirectory: () async => temp,
+              microphonePermission: () async => true,
+            );
 
         await _openMacosSession(tester, recorder);
 

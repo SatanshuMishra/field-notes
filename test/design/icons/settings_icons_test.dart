@@ -31,6 +31,7 @@ const Map<SettingsGlyph, Rect> _extents = <SettingsGlyph, Rect>{
   SettingsGlyph.archive: Rect.fromLTRB(3.5, 4.5, 20.5, 19.5),
   SettingsGlyph.info: Rect.fromLTRB(3.5, 3.5, 20.5, 20.5),
   SettingsGlyph.download: Rect.fromLTRB(5, 4, 19, 20),
+  SettingsGlyph.microphone: Rect.fromLTRB(5.5, 3, 18.5, 21),
 };
 
 Rect _traced(List<Path> paths) {
@@ -107,6 +108,7 @@ void main() {
       SettingsGlyph.archive,
       SettingsGlyph.info,
       SettingsGlyph.download,
+      SettingsGlyph.microphone,
     ]);
 
     for (final SettingsGlyph glyph in SettingsGlyph.values) {

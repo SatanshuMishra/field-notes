@@ -3,11 +3,17 @@
 #include <windows.h>
 
 #include <flutter/standard_method_codec.h>
+#include <mmdeviceapi.h>
+#include <propidl.h>
 #include <roapi.h>
 #include <shellapi.h>
 #include <windows.ui.notifications.h>
 #include <wrl/client.h>
 #include <wrl/wrappers/corewrappers.h>
+
+#include <initguid.h>
+
+#include <functiondiscoverykeys_devpkey.h>
 
 #include <cstdint>
 #include <optional>
@@ -39,8 +45,12 @@ constexpr char kPathArgument[] = "path";
 constexpr char kStayAwakeChannelName[] = "field_notes/stay_awake";
 constexpr char kHoldMethod[] = "hold";
 constexpr char kReleaseMethod[] = "release";
+constexpr char kAudioOutputChannelName[] = "field_notes/audio_output";
+constexpr char kDefaultOutputNameMethod[] = "defaultOutputName";
+constexpr char kOpenSoundSettingsMethod[] = "openSoundSettings";
 constexpr wchar_t kNotificationSettingsUri[] = L"ms-settings:notifications";
 constexpr wchar_t kCameraPrivacySettingsUri[] = L"ms-settings:privacy-webcam";
+constexpr wchar_t kSoundSettingsUri[] = L"ms-settings:sound";
 
 std::unique_ptr<Channel> ChannelNamed(flutter::BinaryMessenger* messenger,
                                       const char* name) {
@@ -143,6 +153,56 @@ void HandleCameraSettings(const Call& call, Result result) {
   result->Success();
 }
 
+std::optional<std::string> DefaultOutputName() {
+  ComPtr<IMMDeviceEnumerator> enumerator;
+  if (FAILED(::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
+                                CLSCTX_ALL,
+                                IID_PPV_ARGS(enumerator.GetAddressOf())))) {
+    return std::nullopt;
+  }
+  ComPtr<IMMDevice> device;
+  if (FAILED(enumerator->GetDefaultAudioEndpoint(eRender, eConsole,
+                                                 device.GetAddressOf()))) {
+    return std::nullopt;
+  }
+  ComPtr<IPropertyStore> properties;
+  if (FAILED(device->OpenPropertyStore(STGM_READ,
+                                       properties.GetAddressOf()))) {
+    return std::nullopt;
+  }
+  PROPVARIANT name;
+  ::PropVariantInit(&name);
+  std::optional<std::string> friendly_name;
+  if (SUCCEEDED(properties->GetValue(PKEY_Device_FriendlyName, &name)) &&
+      name.vt == VT_LPWSTR && name.pwszVal != nullptr &&
+      name.pwszVal[0] != L'\0') {
+    friendly_name = Utf8FromUtf16(name.pwszVal);
+  }
+  ::PropVariantClear(&name);
+  if (friendly_name.has_value() && friendly_name->empty()) {
+    return std::nullopt;
+  }
+  return friendly_name;
+}
+
+void HandleAudioOutput(const Call& call, Result result) {
+  if (call.method_name() == kDefaultOutputNameMethod) {
+    const std::optional<std::string> name = DefaultOutputName();
+    if (!name.has_value()) {
+      result->Success();
+      return;
+    }
+    result->Success(flutter::EncodableValue(*name));
+  } else if (call.method_name() == kOpenSoundSettingsMethod) {
+    if (!OpenSettingsPage(kSoundSettingsUri)) {
+      OutputDebugStringW(L"Field Notes could not open the sound settings.\n");
+    }
+    result->Success();
+  } else {
+    result->NotImplemented();
+  }
+}
+
 void HandleDeviceStorage(const Call& call, Result result) {
   if (call.method_name() != kFreeBytesMethod) {
     result->NotImplemented();
@@ -180,10 +240,12 @@ SystemChannels::SystemChannels(flutter::BinaryMessenger* messenger)
     : notification_settings_(
           ChannelNamed(messenger, kNotificationSettingsChannelName)),
       camera_settings_(ChannelNamed(messenger, kCameraSettingsChannelName)),
+      audio_output_(ChannelNamed(messenger, kAudioOutputChannelName)),
       device_storage_(ChannelNamed(messenger, kDeviceStorageChannelName)),
       stay_awake_(ChannelNamed(messenger, kStayAwakeChannelName)) {
   notification_settings_->SetMethodCallHandler(HandleNotificationSettings);
   camera_settings_->SetMethodCallHandler(HandleCameraSettings);
+  audio_output_->SetMethodCallHandler(HandleAudioOutput);
   device_storage_->SetMethodCallHandler(HandleDeviceStorage);
   stay_awake_->SetMethodCallHandler(HandleStayAwake);
 }

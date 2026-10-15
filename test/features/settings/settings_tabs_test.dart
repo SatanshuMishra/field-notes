@@ -6,6 +6,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/reminders/reminder_providers.dart';
 import 'package:field_notes/features/settings/settings_data_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
@@ -21,6 +23,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:record/record.dart';
 
 import '../../support/sync_overrides.dart';
 import '../../support/update_overrides.dart';
@@ -39,6 +42,7 @@ const Key _contentKey = ValueKey<String>('settings-tab-content');
 const String _journal = 'journal';
 const String _syncStorage = 'syncStorage';
 const String _remindersSound = 'remindersSound';
+const String _voice = 'voice';
 const String _data = 'data';
 const String _about = 'about';
 
@@ -46,6 +50,7 @@ const List<String> _tabNames = <String>[
   _journal,
   _syncStorage,
   _remindersSound,
+  _voice,
   _data,
   _about,
 ];
@@ -54,6 +59,7 @@ const Map<String, String> _tabLabels = <String, String>{
   _journal: 'Journal',
   _syncStorage: 'Sync & storage',
   _remindersSound: 'Reminders & sound',
+  _voice: 'Voice',
   _data: 'Data',
   _about: 'About',
 };
@@ -62,6 +68,7 @@ const List<String> _sublabels = <String>[
   'theme, calendar, text size',
   'where entries live',
   'nudges, prompts',
+  'microphone, noise',
   'export, delete',
   'version, updates',
 ];
@@ -82,11 +89,27 @@ const Map<String, List<String>> _rowsByTab = <String, List<String>>{
     'Restore with recovery phrase',
   ],
   _remindersSound: <String>['Daily reminder', 'Reminder time', 'Sound effects'],
+  _voice: <String>['Voice Isolation', 'Studio', 'Input device', 'Input volume'],
   _data: <String>['Export', 'Reclaim space', 'Delete all', 'Privacy policy'],
   _about: <String>['Satanshu Mishra'],
 };
 
 const String _deleteNotice = 'Deleted 1 day and 2 entries.';
+
+class _FakeRecorder extends Fake implements AudioRecorder {
+  @override
+  Future<bool> hasPermission({bool request = true}) async => true;
+
+  @override
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async =>
+      const Stream<Uint8List>.empty();
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
+}
 
 Finder _tab(String name) => find.byKey(ValueKey<String>('settings-tab-$name'));
 
@@ -136,6 +159,10 @@ Future<void> _pumpSettings(
             SpellCheckAvailability.available,
           ),
         ),
+        audioInputListerProvider.overrideWithValue(
+          () async => const <InputDevice>[],
+        ),
+        inputLevelRecorderProvider.overrideWithValue(_FakeRecorder.new),
         if (dataController != null)
           settingsDataControllerProvider.overrideWith(
             (Ref ref) async => dataController,
@@ -263,6 +290,7 @@ void main() {
         SettingsTab.journal,
         SettingsTab.syncStorage,
         SettingsTab.remindersSound,
+        SettingsTab.voice,
         SettingsTab.data,
         SettingsTab.about,
       ]);
@@ -272,6 +300,7 @@ void main() {
           'Journal',
           'Sync & storage',
           'Reminders & sound',
+          'Voice',
           'Data',
           'About',
         ],
@@ -563,6 +592,7 @@ void main() {
           'Journal',
           'Sync & storage',
           'Reminders & sound',
+          'Voice',
           'Data',
           'About',
           'Export…',

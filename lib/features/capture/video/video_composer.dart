@@ -3,13 +3,27 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:field_notes/app/shell/shell_destination.dart';
+import 'package:field_notes/data/media/media_work_budget.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/settings/app_settings.dart';
+import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/take_cleanup.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
+import 'package:field_notes/features/capture/voice/voice_composer.dart'
+    show voiceSavedToastMessage;
+import 'package:field_notes/features/capture/voice/voice_recorder.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
+import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
+import 'package:field_notes/state/settings_providers.dart';
+import 'package:field_notes/state/settings_section_request.dart';
+import 'package:field_notes/state/shell_navigation.dart';
 
+import 'audio_input_selectable.dart';
 import 'camera_selection.dart';
 import 'video_recorder.dart';
 import 'video_recorder_provider.dart';
@@ -32,6 +46,10 @@ const String videoDiscardedToastMessage = 'Let go · nothing was saved';
 const String videoSavedToastMessage = 'Video saved';
 
 const Key videoDiscardConfirmKey = ValueKey<String>('video-discard-confirm');
+
+typedef _KeptVoice = ({VoiceRecording recording, CaptureMedia audio});
+
+typedef _KeptVideo = ({VideoRecording recording, CaptureMedia video});
 
 class VideoComposerConnector extends ConsumerStatefulWidget {
   const VideoComposerConnector({
@@ -63,6 +81,10 @@ class _VideoComposerConnectorState
   bool _switching = false;
   bool _closing = false;
   bool _asking = false;
+  bool _cameraOn = true;
+  String _savingHint = videoSavingHint;
+  Future<void>? _cameraChange;
+  VoiceRecorder? _voiceRecorder;
   Duration _elapsed = Duration.zero;
   Timer? _elapsedTicker;
   Timer? _breathTimer;
@@ -71,13 +93,24 @@ class _VideoComposerConnectorState
   late final VideoRecorder _recorder;
   late final RecordingWakeHold _wakeHold;
 
+  VoiceRecorder get _voice {
+    final VoiceRecorder voice =
+        _voiceRecorder ?? ref.read(voiceRecorderProvider);
+    _voiceRecorder = voice;
+    return voice;
+  }
+
+  Duration get _takeElapsed => _cameraOn ? _recorder.elapsed : _voice.elapsed;
+
+  bool get _takeSupportsPause => !_cameraOn || _recorder.supportsPause;
+
   void _startTicker() {
     _elapsedTicker?.cancel();
     _elapsedTicker = Timer.periodic(videoElapsedTick, (Timer _) {
       if (!mounted) {
         return;
       }
-      setState(() => _elapsed = _recorder.elapsed);
+      setState(() => _elapsed = _takeElapsed);
     });
   }
 
@@ -91,7 +124,57 @@ class _VideoComposerConnectorState
     super.initState();
     _recorder = ref.read(videoRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
+    if (_recorder is AudioInputSelectable) {
+      ref.listenManual<AsyncValue<AppSettings>>(
+        appSettingsProvider,
+        _onSettingsChanged,
+      );
+    }
     unawaited(_prepare());
+  }
+
+  void _onSettingsChanged(
+    AsyncValue<AppSettings>? previous,
+    AsyncValue<AppSettings> next,
+  ) {
+    final AppSettings? before = previous?.value;
+    final AppSettings? after = next.value;
+    if (before == null ||
+        after == null ||
+        before.audioInputId == after.audioInputId) {
+      return;
+    }
+    unawaited(_useChangedInput());
+  }
+
+  Future<void> _useChangedInput() async {
+    final String? deviceId = _deviceId;
+    if (_closing ||
+        !_cameraOn ||
+        _switching ||
+        _cameraChange != null ||
+        _phase != VideoRecorderPhase.idle ||
+        deviceId == null) {
+      return;
+    }
+    await _reopenCamera(deviceId);
+  }
+
+  Future<void> _useSelectedInput() async {
+    final AudioInputSelectable? recorder = switch (_recorder) {
+      final AudioInputSelectable selectable => selectable,
+      _ => null,
+    };
+    if (recorder == null) {
+      return;
+    }
+    String? inputId;
+    try {
+      inputId = (await ref.read(selectedAudioInputProvider.future)).id;
+    } catch (error, stackTrace) {
+      debugPrint('Audio input lookup failed: $error\n$stackTrace');
+    }
+    recorder.useAudioInput(inputId);
   }
 
   @override
@@ -123,11 +206,17 @@ class _VideoComposerConnectorState
       _showDenied(message: videoDeviceListMessage);
       return;
     }
+    if (_recorder is AudioInputSelectable) {
+      await _useSelectedInput();
+      if (!mounted) {
+        return;
+      }
+    }
     ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
     setState(() {
       _devices = List<VideoCaptureDevice>.unmodifiable(devices);
       _deviceId = deviceId;
-      _preview = _recorder.openSession(deviceId);
+      _preview = _cameraOn ? _recorder.openSession(deviceId) : null;
       _phase = VideoRecorderPhase.idle;
       _errorMessage = null;
       _deniedMessage = null;
@@ -150,13 +239,29 @@ class _VideoComposerConnectorState
 
   Future<void> _selectDevice(String deviceId) async {
     if (_switching ||
+        _cameraChange != null ||
         _phase != VideoRecorderPhase.idle ||
         deviceId == _deviceId) {
       return;
     }
+    if (!_cameraOn) {
+      ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
+      setState(() => _deviceId = deviceId);
+      return;
+    }
+    await _reopenCamera(deviceId, rememberCamera: true, preparing: true);
+  }
+
+  Future<void> _reopenCamera(
+    String deviceId, {
+    bool rememberCamera = false,
+    bool preparing = false,
+  }) async {
     _switching = true;
     setState(() {
-      _phase = VideoRecorderPhase.preparing;
+      if (preparing) {
+        _phase = VideoRecorderPhase.preparing;
+      }
       _preview = null;
       _errorMessage = null;
       _deviceId = deviceId;
@@ -172,11 +277,19 @@ class _VideoComposerConnectorState
       debugPrint('Camera release failed: $error\n$stackTrace');
       failure = videoDeviceSwitchMessage;
     }
+    if (mounted && _recorder is AudioInputSelectable) {
+      await _useSelectedInput();
+    }
     _switching = false;
     if (!mounted) {
       return;
     }
-    ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
+    if (rememberCamera) {
+      ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
+    }
+    if (_closing) {
+      return;
+    }
     setState(() {
       _preview = _recorder.openSession(deviceId);
       _phase = VideoRecorderPhase.idle;
@@ -184,7 +297,61 @@ class _VideoComposerConnectorState
     });
   }
 
+  Future<void> _setCamera(bool on) async {
+    if (_closing ||
+        _switching ||
+        _cameraChange != null ||
+        _phase != VideoRecorderPhase.idle ||
+        on == _cameraOn) {
+      return;
+    }
+    if (on) {
+      final Future<void> opening = _openCamera();
+      _cameraChange = opening;
+      await opening;
+      _cameraChange = null;
+      return;
+    }
+    setState(() {
+      _cameraOn = false;
+      _errorMessage = null;
+      _preview = null;
+    });
+    final Future<void> change = _releaseCamera();
+    _cameraChange = change;
+    await change;
+    _cameraChange = null;
+  }
+
+  Future<void> _openCamera() async {
+    if (_recorder is AudioInputSelectable) {
+      await _useSelectedInput();
+      if (!mounted || _closing) {
+        return;
+      }
+    }
+    final String? deviceId = _deviceId;
+    setState(() {
+      _cameraOn = true;
+      _errorMessage = null;
+      _preview = deviceId == null ? null : _recorder.openSession(deviceId);
+    });
+  }
+
+  Future<void> _releaseCamera() async {
+    try {
+      await _recorder.release().timeout(widget.releaseTimeout);
+    } on TimeoutException {
+      debugPrint('Camera release timed out');
+    } catch (error, stackTrace) {
+      debugPrint('Camera release failed: $error\n$stackTrace');
+    }
+  }
+
   Future<void> _start() async {
+    if (_cameraChange != null || _switching) {
+      return;
+    }
     switch (_phase) {
       case VideoRecorderPhase.denied:
         await _prepare();
@@ -223,6 +390,10 @@ class _VideoComposerConnectorState
     if (!mounted || _closing || _phase != VideoRecorderPhase.breathing) {
       return;
     }
+    if (!_cameraOn) {
+      await _armVoice();
+      return;
+    }
     final String? deviceId = _deviceId;
     if (deviceId == null) {
       _showDenied();
@@ -254,6 +425,54 @@ class _VideoComposerConnectorState
     }
   }
 
+  Future<void> _armVoice() async {
+    final VoiceRecorder voice = _voice;
+    setState(() {
+      _phase = VideoRecorderPhase.arming;
+      _errorMessage = null;
+      _nudgeMessage = null;
+    });
+    final Future<void>? cameraChange = _cameraChange;
+    if (cameraChange != null) {
+      await cameraChange;
+    }
+    bool granted;
+    try {
+      granted = await voice.hasPermission();
+    } catch (error, stackTrace) {
+      debugPrint('Microphone permission check failed: $error\n$stackTrace');
+      granted = false;
+    }
+    if (!mounted || _closing || _phase != VideoRecorderPhase.arming) {
+      return;
+    }
+    if (!granted) {
+      _failBackToIdle(micPermissionMessage);
+      return;
+    }
+    try {
+      await voice.start();
+    } on VoiceRecorderException catch (error) {
+      _failBackToIdle(error.message);
+      return;
+    } catch (error, stackTrace) {
+      debugPrint('Voice start failed: $error\n$stackTrace');
+      _failBackToIdle(recordStartMessage);
+      return;
+    }
+    if (!mounted || _closing) {
+      unawaited(_cancelVoice(voice));
+      return;
+    }
+    setState(() {
+      _phase = VideoRecorderPhase.recording;
+      _elapsed = Duration.zero;
+    });
+    _pendingEvents = videoTimelineEvents();
+    _armTimeline();
+    _startTicker();
+  }
+
   void _failBackToIdle(String message) {
     _stopTicker();
     if (!mounted) {
@@ -267,7 +486,7 @@ class _VideoComposerConnectorState
 
   void _armTimeline() {
     _cancelTimers();
-    final Duration elapsed = _recorder.elapsed;
+    final Duration elapsed = _takeElapsed;
     for (final VideoTimelineEvent event in _pendingEvents) {
       final Duration remaining = event.at - elapsed;
       _timers.add(
@@ -307,12 +526,12 @@ class _VideoComposerConnectorState
       return;
     }
     try {
-      await _recorder.pause();
+      await (_cameraOn ? _recorder.pause() : _voice.pause());
     } on VideoRecorderException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() => _errorMessage = error.message);
+      _showTakeError(error.message);
+      return;
+    } on VoiceRecorderException catch (error) {
+      _showTakeError(error.message);
       return;
     }
     _cancelTimers();
@@ -322,8 +541,15 @@ class _VideoComposerConnectorState
     }
     setState(() {
       _phase = VideoRecorderPhase.paused;
-      _elapsed = _recorder.elapsed;
+      _elapsed = _takeElapsed;
     });
+  }
+
+  void _showTakeError(String message) {
+    if (!mounted) {
+      return;
+    }
+    setState(() => _errorMessage = message);
   }
 
   Future<void> _resume() async {
@@ -331,12 +557,12 @@ class _VideoComposerConnectorState
       return;
     }
     try {
-      await _recorder.resume();
+      await (_cameraOn ? _recorder.resume() : _voice.resume());
     } on VideoRecorderException catch (error) {
-      if (!mounted) {
-        return;
-      }
-      setState(() => _errorMessage = error.message);
+      _showTakeError(error.message);
+      return;
+    } on VoiceRecorderException catch (error) {
+      _showTakeError(error.message);
       return;
     }
     if (!mounted) {
@@ -360,20 +586,72 @@ class _VideoComposerConnectorState
     _stopTicker();
     setState(() {
       _phase = VideoRecorderPhase.saving;
+      _savingHint = videoSavingHint;
       _asking = false;
       _preview = null;
-      _elapsed = _recorder.elapsed;
+      _elapsed = _takeElapsed;
       _errorMessage = null;
       _nudgeMessage = null;
     });
     String? entryId;
-    final Future<String> pending = _persist();
+    final bool voiceTake = !_cameraOn;
+    final Duration stopTimeout =
+        widget.saveTimeout + mediaWorkBudget(_elapsed) * 2;
+    final TakeCleanup cleanup = ref.read(takeCleanupProvider);
+    final AppSettings settings = takeCleanupSettings(ref);
+    final Future<void> stopping;
+    final Future<void> cleaning;
+    final Future<String> saving;
+    if (voiceTake) {
+      final VoiceRecorder voice = _voice;
+      final Future<VoiceRecording> voiceStop = voice.stop();
+      final Future<_KeptVoice> voiceClean = voiceStop.then(
+        (VoiceRecording recording) async => (
+          recording: recording,
+          audio: await _clean(
+            recording.media,
+            TakeKind.voice,
+            recording.durationMs,
+            cleanup,
+            settings,
+          ),
+        ),
+      );
+      stopping = voiceStop;
+      cleaning = voiceClean;
+      saving = voiceClean.then(
+        (_KeptVoice kept) => _captureVoice(voice, kept, cleanup),
+      );
+    } else {
+      final Future<VideoRecording> videoStop = _recorder.stop();
+      final Future<_KeptVideo> videoClean = videoStop.then(
+        (VideoRecording recording) async => (
+          recording: recording,
+          video: await _clean(
+            recording.media,
+            TakeKind.video,
+            recording.durationMs,
+            cleanup,
+            settings,
+          ),
+        ),
+      );
+      stopping = videoStop;
+      cleaning = videoClean;
+      saving = videoClean.then((_KeptVideo kept) => _capture(kept, cleanup));
+    }
+    saving.ignore();
     try {
-      entryId = await pending.timeout(widget.saveTimeout);
+      await stopping.timeout(stopTimeout);
+      await cleaning;
+      entryId = await saving.timeout(widget.saveTimeout);
     } on TimeoutException {
-      unawaited(pending.then((_) {}, onError: (_) {}));
       _failBackTo(previous, videoSaveTimeoutMessage);
+    } on VideoSegmentsKeptException catch (error) {
+      _failBackTo(VideoRecorderPhase.paused, error.message);
     } on VideoRecorderException catch (error) {
+      _failBackTo(previous, error.message);
+    } on VoiceRecorderException catch (error) {
       _failBackTo(previous, error.message);
     } on CaptureException catch (error) {
       _failBackTo(previous, error.message);
@@ -393,41 +671,118 @@ class _VideoComposerConnectorState
     closeImmersiveRecorder<String>(
       context,
       result: entryId,
-      toast: videoSavedToastMessage,
+      toast: voiceTake ? voiceSavedToastMessage : videoSavedToastMessage,
     );
   }
 
-  Future<String> _persist() async {
-    final VideoRecording recording = await _recorder.stop();
-    final CaptureService service = await ref.read(
-      captureServiceProvider.future,
-    );
-    final CaptureResult result = await service.capture(
-      VideoCaptureRequest(
-        date: widget.date,
-        video: recording.media,
-        durationMs: recording.durationMs,
-        thumbnail: recording.thumbnail,
-      ),
-    );
-    try {
-      await _recorder.releaseSaved(recording);
-    } catch (error, stackTrace) {
-      debugPrint('Video capture release failed: $error\n$stackTrace');
+  Future<CaptureMedia> _clean(
+    CaptureMedia media,
+    TakeKind kind,
+    int durationMs,
+    TakeCleanup cleanup,
+    AppSettings settings,
+  ) async {
+    final String? status = takeCleanupStatus(settings);
+    if (status != null && mounted) {
+      setState(() => _savingHint = status);
     }
-    return result.entry.id;
+    final CaptureMedia kept = await cleanTakeMedia(
+      cleanup,
+      media,
+      kind: kind,
+      settings: settings,
+      durationMs: durationMs,
+    );
+    if (mounted) {
+      setState(() => _savingHint = videoSavingHint);
+    }
+    return kept;
+  }
+
+  Future<String> _captureVoice(
+    VoiceRecorder voice,
+    _KeptVoice kept,
+    TakeCleanup cleanup,
+  ) async {
+    try {
+      final CaptureService service = await ref.read(
+        captureServiceProvider.future,
+      );
+      final CaptureResult result = await service.capture(
+        VoiceCaptureRequest(
+          date: widget.date,
+          audio: kept.audio,
+          durationMs: kept.recording.durationMs,
+        ),
+      );
+      try {
+        await voice.releaseSaved(kept.recording);
+      } catch (error, stackTrace) {
+        debugPrint('Voice capture release failed: $error\n$stackTrace');
+      }
+      return result.entry.id;
+    } finally {
+      await releaseCleanedMedia(cleanup, kept.recording.media, kept.audio);
+    }
+  }
+
+  Future<String> _capture(_KeptVideo kept, TakeCleanup cleanup) async {
+    try {
+      final CaptureService service = await ref.read(
+        captureServiceProvider.future,
+      );
+      final CaptureResult result = await service.capture(
+        VideoCaptureRequest(
+          date: widget.date,
+          video: kept.video,
+          durationMs: kept.recording.durationMs,
+          thumbnail: kept.recording.thumbnail,
+        ),
+      );
+      try {
+        await _recorder.releaseSaved(kept.recording);
+      } catch (error, stackTrace) {
+        debugPrint('Video capture release failed: $error\n$stackTrace');
+      }
+      return result.entry.id;
+    } finally {
+      await releaseCleanedMedia(cleanup, kept.recording.media, kept.video);
+    }
   }
 
   void _failBackTo(VideoRecorderPhase phase, String message) {
     if (!mounted) {
       return;
     }
-    final String? deviceId = _deviceId;
+    final String? deviceId = _cameraOn ? _deviceId : null;
     setState(() {
       _phase = phase;
       _errorMessage = message;
       _preview = deviceId == null ? null : _recorder.openSession(deviceId);
+      if (phase == VideoRecorderPhase.paused) {
+        _elapsed = _takeElapsed;
+      }
     });
+  }
+
+  Future<void> _cancelTake() async {
+    if (!_cameraOn) {
+      await _cancelVoice(_voice);
+      return;
+    }
+    try {
+      await _recorder.cancel();
+    } catch (error, stackTrace) {
+      debugPrint('Video cancel failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _cancelVoice(VoiceRecorder voice) async {
+    try {
+      await voice.cancel();
+    } catch (error, stackTrace) {
+      debugPrint('Voice cancel failed: $error\n$stackTrace');
+    }
   }
 
   Future<void> _cancel() async {
@@ -442,11 +797,7 @@ class _VideoComposerConnectorState
     if (_phase == VideoRecorderPhase.recording ||
         _phase == VideoRecorderPhase.paused ||
         _phase == VideoRecorderPhase.arming) {
-      try {
-        await _recorder.cancel();
-      } catch (error, stackTrace) {
-        debugPrint('Video cancel failed: $error\n$stackTrace');
-      }
+      await _cancelTake();
     }
     await _release();
     if (!mounted) {
@@ -464,7 +815,7 @@ class _VideoComposerConnectorState
         return;
       case VideoRecorderPhase.recording || VideoRecorderPhase.paused:
         final bool pauseFirst =
-            _phase == VideoRecorderPhase.recording && _recorder.supportsPause;
+            _phase == VideoRecorderPhase.recording && _takeSupportsPause;
         setState(() => _asking = true);
         if (pauseFirst) {
           await _pause();
@@ -472,6 +823,21 @@ class _VideoComposerConnectorState
       case _:
         await _cancel();
     }
+  }
+
+  Future<void> _openVoiceSettings() async {
+    if (_closing || _asking || _phase != VideoRecorderPhase.idle) {
+      return;
+    }
+    final SettingsSectionRequest request = ref.read(
+      settingsSectionRequestProvider.notifier,
+    );
+    final ShellNavigation navigation = ref.read(
+      shellNavigationProvider.notifier,
+    );
+    await _cancel();
+    request.request(SettingsTab.voice);
+    navigation.select(ShellDestination.settings);
   }
 
   void _keepGoing() {
@@ -490,11 +856,7 @@ class _VideoComposerConnectorState
     _cancelBreath();
     _cancelTimers();
     _stopTicker();
-    try {
-      await _recorder.cancel();
-    } catch (error, stackTrace) {
-      debugPrint('Video cancel failed: $error\n$stackTrace');
-    }
+    await _cancelTake();
     await _release();
     if (!mounted) {
       return;
@@ -532,6 +894,14 @@ class _VideoComposerConnectorState
     _cancelBreath();
     _cancelTimers();
     _stopTicker();
+    final VoiceRecorder? voice = _voiceRecorder;
+    if (voice != null &&
+        !_closing &&
+        !_cameraOn &&
+        (_phase == VideoRecorderPhase.recording ||
+            _phase == VideoRecorderPhase.paused)) {
+      unawaited(_cancelVoice(voice));
+    }
     _wakeHold.dispose();
     unawaited(_release());
     super.dispose();
@@ -548,6 +918,8 @@ class _VideoComposerConnectorState
         devices: _devices,
         selectedDeviceId: _deviceId,
         onDeviceChanged: _selectDevice,
+        cameraOn: _cameraOn,
+        onCameraChanged: _setCamera,
         controls: switch (_recorder) {
           final CameraControls controls => controls,
           _ => null,
@@ -565,7 +937,9 @@ class _VideoComposerConnectorState
         onLetGo: _letGo,
         asking: _asking,
         letGoKey: videoDiscardConfirmKey,
-        supportsPause: _recorder.supportsPause,
+        supportsPause: _takeSupportsPause,
+        savingHint: _savingHint,
+        onVoiceSettings: _openVoiceSettings,
       ),
     );
   }

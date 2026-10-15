@@ -11,6 +11,9 @@ import 'settings_keys.dart';
 
 const String _trueValue = 'true';
 const String _falseValue = 'false';
+const int _inputVolumeMin = 0;
+const int _inputVolumeMax = 200;
+const int _inputVolumeDefault = 100;
 const int _meadowKeyLimit = 1 << 32;
 const String _storedValuesQuery =
     'SELECT key, value, 0 AS journal FROM settings '
@@ -103,6 +106,20 @@ class DriftSettingsRepository implements SettingsRepository {
   Future<void> setCheckForUpdatesAutomatically(bool value) => _put(
     SettingsKeys.checkForUpdatesAutomatically,
     value ? _trueValue : _falseValue,
+  );
+
+  @override
+  Future<void> setAudioInputId(String? value) =>
+      _put(SettingsKeys.audioInputId, value ?? '');
+
+  @override
+  Future<void> setInputProfile(InputProfile value) =>
+      _put(SettingsKeys.inputProfile, value.id);
+
+  @override
+  Future<void> setInputVolume(int value) => _put(
+    SettingsKeys.inputVolume,
+    value.clamp(_inputVolumeMin, _inputVolumeMax).toString(),
   );
 
   @override
@@ -232,7 +249,31 @@ class DriftSettingsRepository implements SettingsRepository {
         values[SettingsKeys.checkForUpdatesAutomatically],
         defaults.checkForUpdatesAutomatically,
       ),
+      audioInputId: _decodeAudioInputId(values[SettingsKeys.audioInputId]),
+      inputProfile: InputProfile.fromId(values[SettingsKeys.inputProfile]),
+      inputVolume: _decodeInputVolume(values[SettingsKeys.inputVolume]),
     );
+  }
+
+  String? _decodeAudioInputId(String? raw) {
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+    return raw;
+  }
+
+  int _decodeInputVolume(String? raw) {
+    final BigInt? volume = BigInt.tryParse(raw ?? '');
+    if (volume == null) {
+      return _inputVolumeDefault;
+    }
+    if (volume < BigInt.from(_inputVolumeMin)) {
+      return _inputVolumeMin;
+    }
+    if (volume > BigInt.from(_inputVolumeMax)) {
+      return _inputVolumeMax;
+    }
+    return volume.toInt();
   }
 
   bool _decodeBool(String? raw, bool fallback) {

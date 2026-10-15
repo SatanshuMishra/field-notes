@@ -12,6 +12,7 @@ import 'package:field_notes/features/sync/ui/add_device_sheet.dart';
 import 'package:field_notes/features/sync/ui/device_list.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
+import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/material.dart';
@@ -23,6 +24,7 @@ import 'sections/journal_section.dart';
 import 'sections/performance_section.dart';
 import 'sections/reminders_sound_section.dart';
 import 'sections/sync_storage_section.dart';
+import 'sections/voice_section.dart';
 import 'spell_check_availability.dart';
 import 'widgets/settings_notice.dart';
 import 'widgets/settings_phone_pages.dart';
@@ -117,6 +119,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   _PhonePage _page = const _ListPage();
 
   @override
+  void initState() {
+    super.initState();
+    final SettingsTab? requested = ref.read(settingsSectionRequestProvider);
+    if (requested != null) {
+      _tab = requested;
+      _page = _SectionPage(requested);
+      scheduleMicrotask(_clearRequest);
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController.dispose();
     super.dispose();
@@ -143,6 +156,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     setState(() => _tab = tab);
     _scrollToTop();
+  }
+
+  void _openRequested(SettingsTab? previous, SettingsTab? next) {
+    if (next == null) {
+      return;
+    }
+    _selectTab(next);
+    _showPage(_SectionPage(next));
+    scheduleMicrotask(_clearRequest);
+  }
+
+  void _clearRequest() {
+    if (!mounted || ref.read(settingsSectionRequestProvider) == null) {
+      return;
+    }
+    ref.read(settingsSectionRequestProvider.notifier).clear();
   }
 
   void _showPage(_PhonePage page) {
@@ -202,6 +231,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<SettingsTab?>(settingsSectionRequestProvider, _openRequested);
     final AsyncValue<AppSettings> settings = ref.watch(appSettingsProvider);
     return settings.when(
       loading: _buildLoading,
@@ -467,7 +497,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             key: ValueKey<SettingsTab>(tab),
             visible: tab == shown,
             maintainState: true,
-            child: _buildTabBody(tab, settings, spellCheckAvailability),
+            child: _buildTabBody(
+              tab,
+              settings,
+              spellCheckAvailability,
+              shown: tab == shown,
+            ),
           ),
       ],
     );
@@ -476,8 +511,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildTabBody(
     SettingsTab tab,
     AppSettings settings,
-    SpellCheckAvailability spellCheckAvailability,
-  ) {
+    SpellCheckAvailability spellCheckAvailability, {
+    required bool shown,
+  }) {
     return switch (tab) {
       SettingsTab.journal => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -505,6 +541,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       SettingsTab.remindersSound => RemindersSoundSection(
         settings: settings,
         onFeedback: _showNotice,
+      ),
+      SettingsTab.voice => VoiceSection(
+        settings: settings,
+        onFeedback: _showNotice,
+        active: shown,
       ),
       SettingsTab.data => DataSection(onFeedback: _showNotice),
       SettingsTab.about => AboutSection(onFeedback: _showNotice),

@@ -1,8 +1,6 @@
 package dev.satanshumishra.field_notes
 
 import android.media.AudioFormat
-import android.media.MediaCodec
-import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.os.Handler
 import android.os.Looper
@@ -10,7 +8,6 @@ import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodChannel
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -46,108 +43,37 @@ class AudioPeaksChannel {
     }
 
     private fun windowRms(path: String, windowMs: Int): List<Double>? {
-        val extractor = MediaExtractor()
-        var codec: MediaCodec? = null
+        val windows = RmsWindows(windowMs)
         return try {
-            extractor.setDataSource(path)
-            val track = (0 until extractor.trackCount).firstOrNull { index ->
-                extractor.getTrackFormat(index).getString(MediaFormat.KEY_MIME)?.startsWith(AUDIO_MIME_PREFIX) == true
-            } ?: return null
-            val format = extractor.getTrackFormat(track)
-            val mime = format.getString(MediaFormat.KEY_MIME) ?: return null
-            extractor.selectTrack(track)
-            val decoder = MediaCodec.createDecoderByType(mime)
-            codec = decoder
-            decoder.configure(format, null, null, 0)
-            decoder.start()
-            decode(extractor, decoder, RmsWindows(format, windowMs))
+            PcmDecoder(path).decode(windows::add)
+            windows.finish()
         } catch (error: IOException) {
             null
         } catch (error: IllegalArgumentException) {
             null
         } catch (error: IllegalStateException) {
             null
-        } finally {
-            codec?.let { started ->
-                try {
-                    started.stop()
-                } catch (error: IllegalStateException) {
-                    Unit
-                }
-                started.release()
-            }
-            extractor.release()
         }
     }
 
-    private fun decode(extractor: MediaExtractor, codec: MediaCodec, windows: RmsWindows): List<Double> {
-        val info = MediaCodec.BufferInfo()
-        var inputDone = false
-        var idleTries = 0
-        while (true) {
-            var progressed = false
-            if (!inputDone) {
-                val inputIndex = codec.dequeueInputBuffer(TIMEOUT_US)
-                if (inputIndex >= 0) {
-                    val input = codec.getInputBuffer(inputIndex)
-                        ?: throw IllegalStateException("No input buffer")
-                    val size = extractor.readSampleData(input, 0)
-                    if (size < 0) {
-                        codec.queueInputBuffer(inputIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
-                        inputDone = true
-                    } else {
-                        codec.queueInputBuffer(inputIndex, 0, size, extractor.sampleTime, 0)
-                        extractor.advance()
-                    }
-                    progressed = true
-                }
-            }
-            val outputIndex = codec.dequeueOutputBuffer(info, TIMEOUT_US)
-            if (outputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                windows.reformat(codec.outputFormat)
-                progressed = true
-            } else if (outputIndex >= 0) {
-                val output = codec.getOutputBuffer(outputIndex)
-                if (output != null && info.size > 0) {
-                    output.position(info.offset)
-                    output.limit(info.offset + info.size)
-                    windows.add(output.slice().order(ByteOrder.nativeOrder()))
-                }
-                codec.releaseOutputBuffer(outputIndex, false)
-                if (info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                    return windows.finish()
-                }
-                progressed = true
-            }
-            idleTries = if (progressed) 0 else idleTries + 1
-            if (idleTries > MAX_IDLE_TRIES) {
-                throw IllegalStateException("The decoder stopped producing audio")
-            }
-        }
-    }
-
-    private class RmsWindows(input: MediaFormat, private val windowMs: Int) {
+    private class RmsWindows(private val windowMs: Int) {
         private val values = ArrayList<Double>()
-        private var channels = requiredInteger(input, MediaFormat.KEY_CHANNEL_COUNT)
-        private var windowFrames = framesPerWindow(requiredInteger(input, MediaFormat.KEY_SAMPLE_RATE))
+        private var format: MediaFormat? = null
+        private var channels = 0
+        private var windowFrames = 0
         private var floatSamples = false
         private var sum = 0.0
         private var filled = 0
 
-        fun reformat(output: MediaFormat) {
-            if (output.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
-                channels = output.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+        fun add(pcm: ByteBuffer, current: MediaFormat) {
+            if (current !== format) {
+                reformat(current)
             }
-            if (output.containsKey(MediaFormat.KEY_SAMPLE_RATE)) {
-                windowFrames = framesPerWindow(output.getInteger(MediaFormat.KEY_SAMPLE_RATE))
-            }
-            floatSamples = output.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
-                output.getInteger(MediaFormat.KEY_PCM_ENCODING) == AudioFormat.ENCODING_PCM_FLOAT
-        }
-
-        fun add(pcm: ByteBuffer) {
             if (channels <= 0) {
                 throw IllegalStateException("The audio has no channels")
+            }
+            if (windowFrames <= 0) {
+                throw IllegalStateException("The audio has no sample rate")
             }
             if (floatSamples) {
                 val samples = pcm.asFloatBuffer()
@@ -179,6 +105,18 @@ class AudioPeaksChannel {
             return values
         }
 
+        private fun reformat(output: MediaFormat) {
+            format = output
+            if (output.containsKey(MediaFormat.KEY_CHANNEL_COUNT)) {
+                channels = output.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+            }
+            if (output.containsKey(MediaFormat.KEY_SAMPLE_RATE)) {
+                windowFrames = framesPerWindow(output.getInteger(MediaFormat.KEY_SAMPLE_RATE))
+            }
+            floatSamples = output.containsKey(MediaFormat.KEY_PCM_ENCODING) &&
+                output.getInteger(MediaFormat.KEY_PCM_ENCODING) == AudioFormat.ENCODING_PCM_FLOAT
+        }
+
         private fun addFrame(mono: Double) {
             sum += mono * mono
             filled += 1
@@ -187,13 +125,6 @@ class AudioPeaksChannel {
                 sum = 0.0
                 filled = 0
             }
-        }
-
-        private fun requiredInteger(format: MediaFormat, key: String): Int {
-            if (!format.containsKey(key)) {
-                throw IllegalStateException("The audio format has no $key")
-            }
-            return format.getInteger(key)
         }
 
         private fun framesPerWindow(sampleRate: Int): Int {
@@ -208,9 +139,6 @@ class AudioPeaksChannel {
         const val CHANNEL = "field_notes/audio_peaks"
         const val WINDOW_RMS = "windowRms"
         const val DECODE_FAILED = "decode-failed"
-        const val AUDIO_MIME_PREFIX = "audio/"
-        const val TIMEOUT_US = 10_000L
-        const val MAX_IDLE_TRIES = 500
         const val PCM_16_SCALE = 32768.0
     }
 }

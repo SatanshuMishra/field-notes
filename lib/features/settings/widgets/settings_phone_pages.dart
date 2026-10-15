@@ -5,11 +5,13 @@ import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/domain/updates/updates.dart';
 import 'package:field_notes/features/updates/ui/update_notes_surface.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
 import 'package:field_notes/features/updates/update_wording.dart';
 import 'package:field_notes/state/installed_app_provider.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/sync_providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,6 +96,9 @@ class SettingsSectionList extends ConsumerWidget {
         : null;
     final String? version = ref.watch(installedAppProvider).value?.version;
     final ReleaseInfo? update = ref.watch(updateNoticeProvider);
+    final InputProfile profile =
+        (ref.watch(appSettingsProvider).value ?? AppSettings.defaults)
+            .inputProfile;
     final List<SettingsTab> tabs = settingsTabsFor(
       syncAvailable: ref.watch(syncAvailableProvider),
     );
@@ -126,7 +131,7 @@ class SettingsSectionList extends ConsumerWidget {
                     tab: tab,
                     summary: tab == SettingsTab.about && update != null
                         ? aboutRowReadySummary(update.version.toString())
-                        : _summaryFor(tab, syncOn, status, version),
+                        : _summaryFor(tab, syncOn, status, version, profile),
                     marked: tab == SettingsTab.about && update != null,
                     onPressed: () => onOpen(tab),
                   ),
@@ -144,6 +149,7 @@ class SettingsSectionList extends ConsumerWidget {
     bool? syncOn,
     SyncStatus? status,
     String? version,
+    InputProfile profile,
   ) => switch (tab) {
     SettingsTab.journal => journalSummary,
     SettingsTab.syncStorage => switch (syncOn) {
@@ -152,6 +158,7 @@ class SettingsSectionList extends ConsumerWidget {
       null => '',
     },
     SettingsTab.remindersSound => remindersSoundSummary,
+    SettingsTab.voice => profile.label,
     SettingsTab.data => dataSummary,
     SettingsTab.about => aboutSummary(version),
   };

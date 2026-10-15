@@ -53,6 +53,7 @@ Future<List<String>> _pumpSheet(
   WidgetTester tester, {
   required _FakeControls controls,
   VideoRecorderPhase phase = VideoRecorderPhase.idle,
+  bool cameraOn = true,
 }) async {
   tester.view.physicalSize = _phone;
   tester.view.devicePixelRatio = 1;
@@ -67,6 +68,8 @@ Future<List<String>> _pumpSheet(
           devices: _phoneCameras,
           selectedDeviceId: '0',
           onDeviceChanged: picked.add,
+          cameraOn: cameraOn,
+          onCameraChanged: (bool _) {},
           controls: controls,
           onStart: () {},
           onStop: () {},
@@ -201,27 +204,27 @@ void main() {
     expect(find.byKey(cameraFocusRingKey), findsNothing);
   });
 
-  testWidgets('with self-view off the picture takes no camera gestures', (
+  testWidgets('with the camera off the picture takes no camera gestures', (
     WidgetTester tester,
   ) async {
     final _FakeControls controls = _FakeControls();
     await _pumpSheet(tester, controls: controls);
+    expect(find.byKey(cameraGestureLayerKey), findsOneWidget);
 
-    await tester.tap(find.byKey(videoSelfViewKey));
-    await tester.pump();
+    await _pumpSheet(tester, controls: controls, cameraOn: false);
 
     expect(find.byKey(cameraGestureLayerKey), findsNothing);
   });
 
   testWidgets(
-    'the phone recorder has glass Leave, flip and self-view buttons and no privacy line',
+    'the phone recorder has glass Leave, flip and camera buttons and no privacy line',
     (WidgetTester tester) async {
       await _pumpSheet(tester, controls: _FakeControls());
 
       for (final Key key in <Key>[
         videoCloseKey,
         videoFlipCameraKey,
-        videoSelfViewKey,
+        videoCameraKey,
       ]) {
         expect(
           find.descendant(
@@ -239,7 +242,7 @@ void main() {
   );
 
   testWidgets(
-    'the Mac recorder has the same glass Leave and self-view, no flip and no privacy line',
+    'the Mac recorder has the same glass Leave and camera control, no flip and no privacy line',
     (WidgetTester tester) async {
       await tester.pumpWidget(
         videoSheetHarness(
@@ -263,7 +266,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 50));
 
-      for (final Key key in <Key>[videoCloseKey, videoSelfViewKey]) {
+      for (final Key key in <Key>[videoCloseKey, videoCameraKey]) {
         expect(
           find.descendant(
             of: find.byKey(key),

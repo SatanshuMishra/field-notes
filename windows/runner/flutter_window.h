@@ -7,11 +7,13 @@
 
 #include <memory>
 
+#include "audio_clean_bridge.h"
 #include "audio_peaks_bridge.h"
 #include "file_drop_bridge.h"
 #include "pasteboard_bridge.h"
 #include "spell_check_bridge.h"
 #include "system_channels.h"
+#include "video_join_bridge.h"
 #include "win32_window.h"
 #include "window_channel.h"
 
@@ -40,6 +42,10 @@ class FlutterWindow : public Win32Window {
   std::unique_ptr<PasteboardBridge> pasteboard_bridge_;
 
   std::unique_ptr<AudioPeaksBridge> audio_peaks_bridge_;
+
+  std::unique_ptr<AudioCleanBridge> audio_clean_bridge_;
+
+  std::unique_ptr<VideoJoinBridge> video_join_bridge_;
 
   Microsoft::WRL::ComPtr<FileDropBridge> file_drop_bridge_;
 };

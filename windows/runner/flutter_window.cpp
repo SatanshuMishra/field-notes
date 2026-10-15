@@ -33,6 +33,10 @@ bool FlutterWindow::OnCreate() {
       std::make_unique<PasteboardBridge>(messenger, GetHandle());
   audio_peaks_bridge_ =
       std::make_unique<AudioPeaksBridge>(messenger, GetHandle());
+  audio_clean_bridge_ =
+      std::make_unique<AudioCleanBridge>(messenger, GetHandle());
+  video_join_bridge_ =
+      std::make_unique<VideoJoinBridge>(messenger, GetHandle());
   file_drop_bridge_.Attach(new FileDropBridge(
       messenger, flutter_controller_->view()->GetNativeWindow()));
   file_drop_bridge_.Get()->Register();
@@ -51,6 +55,8 @@ void FlutterWindow::OnDestroy() {
     file_drop_bridge_.Get()->Revoke();
     file_drop_bridge_.Reset();
   }
+  video_join_bridge_ = nullptr;
+  audio_clean_bridge_ = nullptr;
   audio_peaks_bridge_ = nullptr;
   pasteboard_bridge_ = nullptr;
   spell_check_bridge_ = nullptr;
@@ -74,6 +80,16 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
 
   if (audio_peaks_bridge_ && audio_peaks_bridge_->IsDecodedMessage(message)) {
     audio_peaks_bridge_->CompleteDecode(lparam);
+    return 0;
+  }
+
+  if (audio_clean_bridge_ && audio_clean_bridge_->IsCleanedMessage(message)) {
+    audio_clean_bridge_->CompleteClean(lparam);
+    return 0;
+  }
+
+  if (video_join_bridge_ && video_join_bridge_->IsJoinedMessage(message)) {
+    video_join_bridge_->CompleteJoin(lparam);
     return 0;
   }
 

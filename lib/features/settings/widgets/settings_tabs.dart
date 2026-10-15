@@ -20,6 +20,11 @@ enum SettingsTab {
     sublabel: 'nudges, prompts',
     glyph: SettingsGlyph.bell,
   ),
+  voice(
+    label: 'Voice',
+    sublabel: 'microphone, noise',
+    glyph: SettingsGlyph.microphone,
+  ),
   data(label: 'Data', sublabel: 'export, delete', glyph: SettingsGlyph.archive),
   about(
     label: 'About',

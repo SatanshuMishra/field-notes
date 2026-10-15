@@ -116,23 +116,29 @@ Future<(_Platform, CameraVideoRecorder, List<String>)> _pumpRealCamera(
   final CameraVideoRecorder recorder = CameraVideoRecorder();
   final Widget? preview = recorder.openSession('0');
   final List<String> picked = <String>[];
+  bool cameraOn = true;
   await tester.pumpWidget(
     videoSheetHarness(
       SizedBox.fromSize(
         size: _phone,
-        child: VideoRecorderSheet(
-          phase: VideoRecorderPhase.idle,
-          preview: preview,
-          devices: const <VideoCaptureDevice>[
-            VideoCaptureDevice(id: '0', label: 'Back camera'),
-            VideoCaptureDevice(id: '1', label: 'Front camera'),
-          ],
-          selectedDeviceId: '0',
-          onDeviceChanged: picked.add,
-          controls: recorder,
-          onStart: () {},
-          onStop: () {},
-          onLeave: () {},
+        child: StatefulBuilder(
+          builder: (BuildContext context, StateSetter setState) =>
+              VideoRecorderSheet(
+                phase: VideoRecorderPhase.idle,
+                preview: preview,
+                devices: const <VideoCaptureDevice>[
+                  VideoCaptureDevice(id: '0', label: 'Back camera'),
+                  VideoCaptureDevice(id: '1', label: 'Front camera'),
+                ],
+                selectedDeviceId: '0',
+                onDeviceChanged: picked.add,
+                cameraOn: cameraOn,
+                onCameraChanged: (bool on) => setState(() => cameraOn = on),
+                controls: recorder,
+                onStart: () {},
+                onStop: () {},
+                onLeave: () {},
+              ),
         ),
       ),
     ),
@@ -181,7 +187,7 @@ void main() {
     },
   );
 
-  testWidgets('zoom carries on after self-view is turned off and on', (
+  testWidgets('zoom carries on after the camera is turned off and on', (
     WidgetTester tester,
   ) async {
     final (_Platform platform, CameraVideoRecorder recorder, _) =
@@ -192,10 +198,12 @@ void main() {
     expect(reached, greaterThan(1.5));
     expect(recorder.zoom, reached);
 
-    await tester.tap(find.byKey(videoSelfViewKey));
+    await tester.tap(find.byKey(videoCameraKey));
     await tester.pump();
-    await tester.tap(find.byKey(videoSelfViewKey));
+    expect(find.byKey(cameraGestureLayerKey), findsNothing);
+    await tester.tap(find.byKey(videoCameraKey));
     await tester.pump();
+    expect(find.byKey(cameraGestureLayerKey), findsOneWidget);
     await _pinch(tester, 40);
 
     expect(platform.zooms.last, greaterThanOrEqualTo(reached));

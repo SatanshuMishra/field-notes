@@ -2,9 +2,6 @@
 
 #include <flutter/standard_method_codec.h>
 #include <mfapi.h>
-#include <mfidl.h>
-#include <mfreadwrite.h>
-#include <wrl/client.h>
 
 #include <algorithm>
 #include <cmath>
@@ -14,11 +11,11 @@
 #include <variant>
 #include <vector>
 
+#include "audio_pcm_reader.h"
 #include "utils.h"
 
 namespace {
 
-using Microsoft::WRL::ComPtr;
 using Result = std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>;
 
 constexpr char kAudioPeaksChannelName[] = "field_notes/audio_peaks";
@@ -28,10 +25,6 @@ constexpr char kWindowMsArgument[] = "windowMs";
 constexpr char kDecodeFailedCode[] = "decode-failed";
 constexpr char kDecodeFailedMessage[] = "The recording could not be decoded.";
 constexpr wchar_t kDecodedMessageName[] = L"FieldNotes.AudioPeaksDecoded";
-constexpr DWORD kAudioStream =
-    static_cast<DWORD>(MF_SOURCE_READER_FIRST_AUDIO_STREAM);
-constexpr DWORD kAllStreams = static_cast<DWORD>(MF_SOURCE_READER_ALL_STREAMS);
-constexpr UINT32 kFloatBits = 32;
 
 struct DecodeJob {
   HWND window;
@@ -46,27 +39,10 @@ class RmsWindows {
  public:
   explicit RmsWindows(int window_ms) : window_ms_(window_ms) {}
 
-  bool Reformat(IMFMediaType* type) {
-    UINT32 sample_rate = 0;
-    UINT32 channels = 0;
-    UINT32 bits = 0;
-    if (type == nullptr ||
-        FAILED(type->GetUINT32(MF_MT_AUDIO_SAMPLES_PER_SECOND,
-                               &sample_rate)) ||
-        FAILED(type->GetUINT32(MF_MT_AUDIO_NUM_CHANNELS, &channels)) ||
-        FAILED(type->GetUINT32(MF_MT_AUDIO_BITS_PER_SAMPLE, &bits)) ||
-        sample_rate == 0 || channels == 0 || bits != kFloatBits) {
-      return false;
+  void Add(const PcmFormat& format, const float* samples, size_t count) {
+    if (format != format_) {
+      Reformat(format);
     }
-    const double frames =
-        static_cast<double>(sample_rate) * window_ms_ / 1000.0;
-    channels_ = channels;
-    window_frames_ =
-        std::max<uint64_t>(1, static_cast<uint64_t>(std::llround(frames)));
-    return true;
-  }
-
-  void Add(const float* samples, size_t count) {
     const size_t frames = count / channels_;
     for (size_t frame = 0; frame < frames; ++frame) {
       double mono = 0.0;
@@ -90,6 +66,15 @@ class RmsWindows {
   }
 
  private:
+  void Reformat(const PcmFormat& format) {
+    const double frames =
+        static_cast<double>(format.sample_rate) * window_ms_ / 1000.0;
+    format_ = format;
+    channels_ = format.channels;
+    window_frames_ =
+        std::max<uint64_t>(1, static_cast<uint64_t>(std::llround(frames)));
+  }
+
   void CompleteWindow() {
     values_.push_back(std::sqrt(sum_ / static_cast<double>(filled_)));
     sum_ = 0.0;
@@ -97,6 +82,7 @@ class RmsWindows {
   }
 
   int window_ms_;
+  PcmFormat format_{0, 0, 0};
   UINT32 channels_ = 1;
   uint64_t window_frames_ = 1;
   uint64_t filled_ = 0;
@@ -123,59 +109,18 @@ std::optional<int> IntArgument(const flutter::EncodableValue* arguments,
   return *value;
 }
 
-bool AddSample(IMFSample* sample, RmsWindows& windows) {
-  ComPtr<IMFMediaBuffer> buffer;
-  BYTE* data = nullptr;
-  DWORD length = 0;
-  if (FAILED(sample->ConvertToContiguousBuffer(&buffer)) ||
-      FAILED(buffer->Lock(&data, nullptr, &length))) {
-    return false;
-  }
-  windows.Add(reinterpret_cast<const float*>(data), length / sizeof(float));
-  return SUCCEEDED(buffer->Unlock());
-}
-
 std::optional<std::vector<double>> WindowRms(const std::wstring& path,
                                              int window_ms) {
-  ComPtr<IMFSourceReader> reader;
-  ComPtr<IMFMediaType> requested;
-  ComPtr<IMFMediaType> current;
-  if (path.empty() ||
-      FAILED(::MFCreateSourceReaderFromURL(path.c_str(), nullptr, &reader)) ||
-      FAILED(reader->SetStreamSelection(kAllStreams, FALSE)) ||
-      FAILED(reader->SetStreamSelection(kAudioStream, TRUE)) ||
-      FAILED(::MFCreateMediaType(&requested)) ||
-      FAILED(requested->SetGUID(MF_MT_MAJOR_TYPE, MFMediaType_Audio)) ||
-      FAILED(requested->SetGUID(MF_MT_SUBTYPE, MFAudioFormat_Float)) ||
-      FAILED(reader->SetCurrentMediaType(kAudioStream, nullptr,
-                                         requested.Get())) ||
-      FAILED(reader->GetCurrentMediaType(kAudioStream, &current))) {
-    return std::nullopt;
-  }
   RmsWindows windows(window_ms);
-  if (!windows.Reformat(current.Get())) {
+  const bool read = ReadPcm(
+      path, PcmEncoding::kFloat32,
+      [&windows](const PcmFormat& format, const BYTE* data, DWORD length) {
+        windows.Add(format, reinterpret_cast<const float*>(data),
+                    length / sizeof(float));
+        return true;
+      });
+  if (!read) {
     return std::nullopt;
-  }
-  bool ended = false;
-  while (!ended) {
-    DWORD flags = 0;
-    ComPtr<IMFSample> sample;
-    if (FAILED(reader->ReadSample(kAudioStream, 0, nullptr, &flags, nullptr,
-                                  &sample)) ||
-        (flags & MF_SOURCE_READERF_ERROR) != 0) {
-      return std::nullopt;
-    }
-    if ((flags & MF_SOURCE_READERF_CURRENTMEDIATYPECHANGED) != 0) {
-      ComPtr<IMFMediaType> changed;
-      if (FAILED(reader->GetCurrentMediaType(kAudioStream, &changed)) ||
-          !windows.Reformat(changed.Get())) {
-        return std::nullopt;
-      }
-    }
-    if (sample.Get() != nullptr && !AddSample(sample.Get(), windows)) {
-      return std::nullopt;
-    }
-    ended = (flags & MF_SOURCE_READERF_ENDOFSTREAM) != 0;
   }
   return windows.Finish();
 }

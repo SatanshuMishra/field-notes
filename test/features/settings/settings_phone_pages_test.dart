@@ -32,6 +32,8 @@ import 'package:field_notes/features/settings/sections/journal_section.dart'
 import 'package:field_notes/features/settings/sections/reminders_sound_section.dart'
     show RemindersSoundSection;
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
+import 'package:field_notes/features/settings/sections/voice_section.dart'
+    show VoiceSection;
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
 import 'package:field_notes/features/settings/widgets/settings_notice.dart';
@@ -78,6 +80,7 @@ const Map<SettingsTab, String> _labels = <SettingsTab, String>{
   SettingsTab.journal: 'Journal',
   SettingsTab.syncStorage: 'Sync & storage',
   SettingsTab.remindersSound: 'Reminders & sound',
+  SettingsTab.voice: 'Voice',
   SettingsTab.data: 'Data',
   SettingsTab.about: 'About',
 };
@@ -86,6 +89,7 @@ const Map<SettingsTab, SettingsGlyph> _glyphs = <SettingsTab, SettingsGlyph>{
   SettingsTab.journal: SettingsGlyph.book,
   SettingsTab.syncStorage: SettingsGlyph.flip,
   SettingsTab.remindersSound: SettingsGlyph.bell,
+  SettingsTab.voice: SettingsGlyph.microphone,
   SettingsTab.data: SettingsGlyph.archive,
   SettingsTab.about: SettingsGlyph.info,
 };
@@ -94,6 +98,7 @@ const Map<SettingsTab, String> _syncOffSummaries = <SettingsTab, String>{
   SettingsTab.journal: 'Appearance, text size, calendar, spell check',
   SettingsTab.syncStorage: 'Only on this phone',
   SettingsTab.remindersSound: 'Daily nudge, reflection prompt, sound',
+  SettingsTab.voice: 'Studio',
   SettingsTab.data: 'Export, reclaim space, delete',
 };
 
@@ -787,7 +792,7 @@ void main() {
     expect(find.text('Studio Mac'), findsNothing);
   });
 
-  testWidgets('the phone list shows five sections with icon tiles', (
+  testWidgets('the phone list shows six sections with icon tiles', (
     WidgetTester tester,
   ) async {
     PackageInfo.setMockInitialValues(
@@ -807,7 +812,7 @@ void main() {
       _inside(card, find.byType(DashedDivider)),
       findsNWidgets(SettingsTab.values.length - 1),
     );
-    expect(SettingsTab.values, hasLength(5));
+    expect(SettingsTab.values, hasLength(6));
     final Map<SettingsTab, String> summaries = <SettingsTab, String>{
       ..._syncOffSummaries,
       SettingsTab.about: 'Version 1.4.2',
@@ -907,6 +912,7 @@ void main() {
     const Map<SettingsTab, Type> sections = <SettingsTab, Type>{
       SettingsTab.journal: JournalSection,
       SettingsTab.remindersSound: RemindersSoundSection,
+      SettingsTab.voice: VoiceSection,
       SettingsTab.data: DataSection,
       SettingsTab.about: AboutSection,
     };
@@ -1004,6 +1010,7 @@ void main() {
       SettingsTab.journal,
       SettingsTab.syncStorage,
       SettingsTab.remindersSound,
+      SettingsTab.voice,
       SettingsTab.data,
       SettingsTab.about,
     ];

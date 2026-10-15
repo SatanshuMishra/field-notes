@@ -84,7 +84,7 @@ void main() {
   );
 
   testWidgets(
-    'MB2: the desktop Settings reads the kicker, the five sections, the title, '
+    'MB2: the desktop Settings reads the kicker, the six sections, the title, '
     'then the groups',
     (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
@@ -104,16 +104,17 @@ void main() {
               .pump(tester);
           final List<String> labels = labelsInReadingOrder(tester);
           expect(labels, isNot(contains('preferences')), reason: id);
-          expect(labels.take(7).toList(), <String>[
+          expect(labels.take(8).toList(), <String>[
             'settings',
             'Journal',
             'Sync & storage',
             'Reminders & sound',
+            'Voice',
             'Data',
             'About',
             title,
           ], reason: id);
-          int previous = 6;
+          int previous = 7;
           for (final String group in groups) {
             final int index = labels.indexOf(group, previous + 1);
             expect(index, greaterThan(previous), reason: '$id $group');

@@ -1,6 +1,6 @@
-import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/motion/motion.dart';
+import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/video/camera_picker.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
@@ -47,7 +47,10 @@ Future<Rect> _pumpTopBand(
 }
 
 Rect _chipRect(WidgetTester tester) =>
-    tester.getRect(find.byKey(videoSelfViewKey));
+    tester.getRect(find.byKey(videoCameraKey));
+
+Rect _inputRect(WidgetTester tester) =>
+    tester.getRect(find.byKey(recorderInputKey));
 
 void main() {
   testWidgets(
@@ -313,11 +316,8 @@ void main() {
           );
         } else {
           expect(flip, findsNothing, reason: reason);
-          expect(
-            tester.getRect(timer).overlaps(_chipRect(tester)),
-            isFalse,
-            reason: reason,
-          );
+          expect(timer, findsOneWidget, reason: reason);
+          expect(find.byKey(videoCameraKey), findsNothing, reason: reason);
         }
       }
     }
@@ -335,7 +335,7 @@ void main() {
       debugDefaultTargetPlatformOverride = platform;
       final bool sidebar = platform == TargetPlatform.macOS;
       final double inset = sidebar ? 18 : 8;
-      final double leaveLeft = sidebar ? windowButtonsClearance : 8;
+      final double leaveLeft = inset;
       for (final double width in sidebar ? _sidebarWidths : _sheetWidths) {
         final String reason = '${platform.name} ${width.toInt()} wide';
 
@@ -347,17 +347,20 @@ void main() {
         expect(tester.takeException(), isNull, reason: reason);
         final Rect close = tester.getRect(find.byKey(videoCloseKey));
         final Rect chip = _chipRect(tester);
+        final Rect input = _inputRect(tester);
         final Finder switcher = sidebar
             ? find.byType(CameraPicker)
             : find.byKey(videoFlipCameraKey);
         final Rect picker = tester.getRect(switcher);
         expect(close.left - sheet.left, leaveLeft, reason: reason);
         expect(close.height, greaterThanOrEqualTo(48), reason: reason);
-        expect(sheet.right - chip.right, inset, reason: reason);
+        expect(sheet.right - input.right, inset, reason: reason);
         expect(chip.height, greaterThanOrEqualTo(48), reason: reason);
+        expect(chip.right, lessThanOrEqualTo(input.left), reason: reason);
         expect(picker.right, lessThanOrEqualTo(chip.left), reason: reason);
         expect(picker.left, greaterThanOrEqualTo(close.right), reason: reason);
         expect(chip.center.dy, closeTo(close.center.dy, 0.01), reason: reason);
+        expect(input.center.dy, closeTo(close.center.dy, 0.01), reason: reason);
         expect(
           picker.center.dy,
           closeTo(close.center.dy, 0.01),
@@ -371,7 +374,7 @@ void main() {
           devices: const <VideoCaptureDevice>[],
         );
         expect(switcher, findsNothing, reason: reason);
-        expect(bare.right - _chipRect(tester).right, inset, reason: reason);
+        expect(bare.right - _inputRect(tester).right, inset, reason: reason);
       }
       await tester.pumpWidget(const SizedBox.shrink());
     }

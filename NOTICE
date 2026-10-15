@@ -27,6 +27,16 @@ are not relicensed under the Apache License.
   described in third_party/camera_macos/LOCAL_MODIFICATIONS.md, are licensed
   under the Apache License, Version 2.0.
 
+- third_party/camera_windows/: a copy of camera_windows 0.3.0 by the Flutter authors, under the BSD 3-Clause License (third_party/camera_windows/LICENSE), changed to record from the chosen microphone.
+  Its source is https://github.com/flutter/packages/tree/main/packages/camera/camera_windows.
+  The Field Notes modifications to it, described in
+  third_party/camera_windows/LOCAL_MODIFICATIONS.md, are licensed under the
+  Apache License, Version 2.0.
+
+- packages/rnnoise/third_party/rnnoise/: RNNoise 0.2 with upstream commit 372f7b4, by Jean-Marc Valin, the Xiph.Org Foundation, Mozilla, Amazon and contributors, under the BSD 3-Clause License (packages/rnnoise/LICENSE).
+  Its source is https://github.com/xiph/rnnoise, built for Field Notes by
+  the packages/rnnoise package.
+
 - assets/fonts/: the Caveat, Instrument Sans and Newsreader typefaces, each
   under the SIL Open Font License, Version 1.1, in the matching *-OFL.txt file.
 

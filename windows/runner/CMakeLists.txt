@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.14)
 project(runner LANGUAGES CXX)
 
 add_executable(${BINARY_NAME} WIN32
+  "audio_clean_bridge.cpp"
+  "audio_pcm_reader.cpp"
   "audio_peaks_bridge.cpp"
   "file_drop_bridge.cpp"
   "flutter_window.cpp"
@@ -10,6 +12,7 @@ add_executable(${BINARY_NAME} WIN32
   "spell_check_bridge.cpp"
   "system_channels.cpp"
   "utils.cpp"
+  "video_join_bridge.cpp"
   "win32_window.cpp"
   "window_channel.cpp"
   "${FLUTTER_MANAGED_DIR}/generated_plugin_registrant.cc"

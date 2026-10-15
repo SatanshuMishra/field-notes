@@ -237,6 +237,16 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
     }
   }
 
+  @override
+  Future<bool?> pauseRecording() {
+    return methodChannel.invokeMethod<bool>('pauseRecording');
+  }
+
+  @override
+  Future<bool?> resumeRecording() {
+    return methodChannel.invokeMethod<bool>('resumeRecording');
+  }
+
   /// Destroy the camera instance
   @override
   Future<bool?> destroy() async {

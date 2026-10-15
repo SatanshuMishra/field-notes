@@ -70,6 +70,14 @@ abstract class CameraMacOSPlatform extends PlatformInterface {
     throw UnimplementedError("");
   }
 
+  Future<bool?> pauseRecording() {
+    throw UnimplementedError("");
+  }
+
+  Future<bool?> resumeRecording() {
+    throw UnimplementedError("");
+  }
+
   Future<void> startImageStream(void Function(CameraImageData?) onAvailable,
       {void Function(dynamic)? onError}) async {
     throw UnimplementedError("");

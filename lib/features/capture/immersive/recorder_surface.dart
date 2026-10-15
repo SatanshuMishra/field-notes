@@ -48,7 +48,7 @@ const EdgeInsets _leavePadding = EdgeInsets.fromLTRB(9, 7, 12, 7);
 const BorderRadius _leaveRadius = BorderRadius.all(Radius.circular(10));
 const double _disabledOpacity = 0.5;
 
-const double _voiceQuestionGapSidebar = 60;
+const double _voiceQuestionGapSidebar = 18;
 const double _voiceQuestionGapBottomBar = 22;
 const double _videoQuestionGapSidebar = 34;
 const double _videoQuestionGapBottomBar = 10;
@@ -198,31 +198,12 @@ class _Stage extends StatelessWidget {
   }
 
   Widget _band(BuildContext context) {
-    final TargetPlatform platform = Theme.of(context).platform;
-    final double leading = sidebar
-        ? math.max<double>(
-            0,
-            windowButtonsLeadingClearance(platform) - _sidebarBandInset,
-          )
-        : 0;
-    final double trailing = sidebar
-        ? math.max<double>(
-            0,
-            windowButtonsTrailingClearance(platform) - _sidebarBandInset,
-          )
-        : 0;
     final Widget row = LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return Row(
           children: <Widget>[
             Expanded(
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: EdgeInsets.only(left: leading),
-                  child: _leave(),
-                ),
-              ),
+              child: Align(alignment: Alignment.centerLeft, child: _leave()),
             ),
             if (surface.privacyLine case final String line)
               ConstrainedBox(
@@ -232,12 +213,9 @@ class _Stage extends StatelessWidget {
                 child: _privacy(line),
               ),
             Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(right: trailing),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: surface.trailing,
-                ),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: surface.trailing,
               ),
             ),
           ],
@@ -255,18 +233,22 @@ class _Stage extends StatelessWidget {
         child: SizedBox(height: _bandHeight, child: row),
       );
     }
-    return SizedBox(
-      height: _bandHeight,
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          const WindowDragBand(key: recorderTopBandKey, height: _bandHeight),
-          Padding(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const WindowDragBand(
+          key: recorderTopBandKey,
+          height: shellTitleBarHeight,
+        ),
+        SizedBox(
+          height: _bandHeight,
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: _sidebarBandInset),
             child: row,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

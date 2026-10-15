@@ -115,18 +115,15 @@ List<double> _glowOpacities(WidgetTester tester) {
 
 void main() {
   testWidgets(
-    'the sidebar top band keeps 62 px clear for the traffic lights and drags the window',
+    'the sidebar title strip drags the window and the leave control sits below it at the left edge',
     (WidgetTester tester) async {
       _useWindow(tester, TargetPlatform.macOS, const Size(1280, 800));
       final List<String> calls = _recordWindowCalls(tester);
       await tester.pumpWidget(_app(TargetPlatform.macOS, _surface()));
 
       final Rect leave = tester.getRect(find.byKey(recorderLeaveKey));
-      expect(leave.left, greaterThanOrEqualTo(62));
-      expect(
-        leave.left,
-        greaterThanOrEqualTo(shellTitleBarPadding + windowButtonsSlotWidth),
-      );
+      expect(leave.left, 18);
+      expect(leave.top, greaterThanOrEqualTo(42));
       expect(leave.height, greaterThanOrEqualTo(48));
       expect(find.text('Leave'), findsOneWidget);
       expect(find.byType(Tooltip), findsNothing);
@@ -134,6 +131,7 @@ void main() {
       final Rect band = tester.getRect(find.byKey(recorderTopBandKey));
       expect(band.top, 0);
       expect(band.width, 1280);
+      expect(band.height, 42);
 
       final Offset emptyBand = Offset(band.left + 320, band.center.dy);
       await tester.dragFrom(emptyBand, const Offset(60, 20));
@@ -170,10 +168,8 @@ void main() {
     await tester.pumpWidget(_app(TargetPlatform.windows, surface()));
 
     final Rect trailing = tester.getRect(find.byKey(_trailingKey));
-    expect(
-      trailing.right,
-      lessThanOrEqualTo(1280 - windowsCaptionButtonsWidth),
-    );
+    expect(trailing.right, 1262);
+    expect(trailing.top, greaterThanOrEqualTo(42));
     expect(tester.getRect(find.byKey(recorderLeaveKey)).left, 18);
     expect(
       tester.getCenter(find.text('Private · only you will hear this')).dx,
@@ -183,11 +179,8 @@ void main() {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     await tester.pumpWidget(_app(TargetPlatform.macOS, surface()));
 
-    expect(tester.getRect(find.byKey(_trailingKey)).right, 1280 - 18);
-    expect(
-      tester.getRect(find.byKey(recorderLeaveKey)).left,
-      windowButtonsClearance,
-    );
+    expect(tester.getRect(find.byKey(_trailingKey)).right, 1262);
+    expect(tester.getRect(find.byKey(recorderLeaveKey)).left, 18);
     debugDefaultTargetPlatformOverride = null;
   });
 
