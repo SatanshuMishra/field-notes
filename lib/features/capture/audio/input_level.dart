@@ -90,7 +90,9 @@ class InputLevelMeter extends StatefulWidget {
 }
 
 class _InputLevelMeterState extends State<InputLevelMeter> {
-  late final AudioRecorder _recorder = widget.recorderFactory();
+  late final AppLifecycleListener _lifecycle;
+  bool _routeCurrent = true;
+  AudioRecorder? _recorder;
   StreamSubscription<Uint8List>? _chunks;
   int _generation = 0;
   double _level = 0;
@@ -99,39 +101,86 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   @override
   void initState() {
     super.initState();
-    unawaited(_listen(_generation));
+    _lifecycle = AppLifecycleListener(onStateChange: _lifecycleChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _routeCurrent = ModalRoute.of(context)?.isCurrent ?? true;
+    _follow();
   }
 
   @override
   void didUpdateWidget(InputLevelMeter oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.input != widget.input) {
-      unawaited(_restart());
+    final AudioRecorder? recorder = _recorder;
+    if (oldWidget.input != widget.input && recorder != null) {
+      unawaited(_restart(recorder));
     }
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
+    _letGo();
+    super.dispose();
+  }
+
+  bool get _shown {
+    final bool appShown = switch (WidgetsBinding.instance.lifecycleState) {
+      null || AppLifecycleState.resumed || AppLifecycleState.inactive => true,
+      AppLifecycleState.hidden ||
+      AppLifecycleState.paused ||
+      AppLifecycleState.detached => false,
+    };
+    return appShown && _routeCurrent;
+  }
+
+  void _lifecycleChanged(AppLifecycleState state) {
+    setState(_follow);
+  }
+
+  void _follow() {
+    if (!_shown) {
+      _letGo();
+      _level = 0;
+      return;
+    }
+    if (_recorder != null) {
+      return;
+    }
+    final AudioRecorder recorder = widget.recorderFactory();
+    _recorder = recorder;
+    _unavailable = false;
+    unawaited(_listen(recorder, _generation));
+  }
+
+  void _letGo() {
+    final AudioRecorder? recorder = _recorder;
+    if (recorder == null) {
+      return;
+    }
     _generation++;
     unawaited(_chunks?.cancel());
     _chunks = null;
-    unawaited(_release());
-    super.dispose();
+    _recorder = null;
+    unawaited(_release(recorder));
   }
 
   bool _current(int generation) => mounted && generation == _generation;
 
-  Future<void> _listen(int generation) async {
+  Future<void> _listen(AudioRecorder recorder, int generation) async {
     final Stream<Uint8List> chunks;
     try {
-      if (!await _recorder.hasPermission()) {
+      if (!await recorder.hasPermission()) {
         _markUnavailable(generation);
         return;
       }
       if (!_current(generation)) {
         return;
       }
-      chunks = await _recorder.startStream(inputLevelConfig(widget.input));
+      chunks = await recorder.startStream(inputLevelConfig(widget.input));
     } catch (_) {
       _markUnavailable(generation);
       return;
@@ -150,11 +199,11 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
     );
   }
 
-  Future<void> _restart() async {
+  Future<void> _restart(AudioRecorder recorder) async {
     final int generation = ++_generation;
     unawaited(_chunks?.cancel());
     _chunks = null;
-    await _quietly(_recorder.stop);
+    await _quietly(recorder.stop);
     if (!_current(generation)) {
       return;
     }
@@ -162,7 +211,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
       _level = 0;
       _unavailable = false;
     });
-    await _listen(generation);
+    await _listen(recorder, generation);
   }
 
   void _markUnavailable(int generation) {
@@ -175,9 +224,9 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
     });
   }
 
-  Future<void> _release() async {
-    await _quietly(_recorder.stop);
-    await _quietly(_recorder.dispose);
+  Future<void> _release(AudioRecorder recorder) async {
+    await _quietly(recorder.stop);
+    await _quietly(recorder.dispose);
   }
 
   Future<void> _quietly(Future<Object?> Function() call) async {

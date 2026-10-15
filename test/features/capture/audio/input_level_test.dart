@@ -77,6 +77,16 @@ class _FakeRecorder extends Fake implements AudioRecorder {
   }
 }
 
+class _Recorders {
+  final List<_FakeRecorder> made = <_FakeRecorder>[];
+
+  AudioRecorder make() {
+    final _FakeRecorder recorder = _FakeRecorder();
+    made.add(recorder);
+    return recorder;
+  }
+}
+
 Future<void> _show(WidgetTester tester, Widget meter) async {
   tester.view.physicalSize = const Size(1280, 800);
   tester.view.devicePixelRatio = 1;
@@ -92,6 +102,31 @@ Future<void> _show(WidgetTester tester, Widget meter) async {
   );
   await tester.pump();
   await tester.pump();
+}
+
+Future<void> _setLifecycle(WidgetTester tester, AppLifecycleState state) async {
+  tester.binding.handleAppLifecycleStateChanged(state);
+  await tester.pump();
+}
+
+Future<void> _cover(WidgetTester tester) async {
+  unawaited(
+    showGeneralDialog<void>(
+      context: tester.element(find.byType(InputLevelMeter)),
+      barrierColor: const Color(0x00000000),
+      pageBuilder: (
+        BuildContext context,
+        Animation<double> animation,
+        Animation<double> secondaryAnimation,
+      ) => const SizedBox(width: 120, height: 40),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+Future<void> _uncover(WidgetTester tester) async {
+  Navigator.of(tester.element(find.byType(InputLevelMeter))).pop();
+  await tester.pumpAndSettle();
 }
 
 List<bool> _segments(WidgetTester tester) => <bool>[
@@ -111,6 +146,18 @@ int _lit(WidgetTester tester) =>
     _segments(tester).where((bool lit) => lit).length;
 
 void main() {
+  tearDown(() {
+    final TestWidgetsFlutterBinding binding =
+        TestWidgetsFlutterBinding.instance;
+    while (binding.lifecycleState != AppLifecycleState.resumed) {
+      binding.handleAppLifecycleStateChanged(switch (binding.lifecycleState) {
+        AppLifecycleState.paused => AppLifecycleState.hidden,
+        AppLifecycleState.hidden => AppLifecycleState.inactive,
+        _ => AppLifecycleState.resumed,
+      });
+    }
+  });
+
   test('the input level follows the microphone and the volume', () {
     expect(inputLevelOf(_zeros(), 0), 0);
     expect(inputLevelOf(_zeros(), 100), 0);
@@ -274,4 +321,152 @@ void main() {
     expect(find.text('Microphone unavailable'), findsNothing);
     semantics.dispose();
   });
+
+  testWidgets('the meter lets go of the microphone while the app is hidden', (
+    WidgetTester tester,
+  ) async {
+    final _Recorders recorders = _Recorders();
+    await _show(
+      tester,
+      InputLevelMeter(
+        input: _corsair,
+        volume: 100,
+        recorderFactory: recorders.make,
+      ),
+    );
+
+    await _setLifecycle(tester, AppLifecycleState.inactive);
+    expect(recorders.made, hasLength(1));
+    final _FakeRecorder first = recorders.made.single;
+    expect(first.started, hasLength(1));
+    expect(first.streams.single.hasListener, isTrue);
+    expect(first.stops, 0);
+
+    await _setLifecycle(tester, AppLifecycleState.hidden);
+    expect(first.stops, 1);
+    expect(first.disposals, 1);
+    expect(first.streams.single.hasListener, isFalse);
+
+    await _setLifecycle(tester, AppLifecycleState.paused);
+    expect(first.stops, 1);
+    expect(first.disposals, 1);
+    expect(recorders.made, hasLength(1));
+
+    await _setLifecycle(tester, AppLifecycleState.hidden);
+    expect(first.stops, 1);
+    expect(first.disposals, 1);
+    expect(recorders.made, hasLength(1));
+
+    await _setLifecycle(tester, AppLifecycleState.inactive);
+    expect(recorders.made, hasLength(2));
+    final _FakeRecorder second = recorders.made.last;
+    expect(second.started, hasLength(1));
+    expect(second.streams.single.hasListener, isTrue);
+    expect(second.started.single.toMap(), first.started.single.toMap());
+
+    await _setLifecycle(tester, AppLifecycleState.resumed);
+    expect(second.stops, 0);
+    expect(recorders.made, hasLength(2));
+  });
+
+  testWidgets('a meter shown while the app is detached opens no microphone', (
+    WidgetTester tester,
+  ) async {
+    await _setLifecycle(tester, AppLifecycleState.inactive);
+    await _setLifecycle(tester, AppLifecycleState.hidden);
+    await _setLifecycle(tester, AppLifecycleState.paused);
+    await _setLifecycle(tester, AppLifecycleState.detached);
+
+    final _Recorders recorders = _Recorders();
+    await _show(
+      tester,
+      InputLevelMeter(
+        input: _corsair,
+        volume: 100,
+        recorderFactory: recorders.make,
+      ),
+    );
+    tester.binding.scheduleForcedFrame();
+    await tester.pump();
+    expect(find.byType(InputLevelMeter), findsOneWidget);
+    expect(recorders.made, isEmpty);
+
+    await _setLifecycle(tester, AppLifecycleState.resumed);
+    expect(recorders.made, hasLength(1));
+    expect(recorders.made.single.started, hasLength(1));
+    expect(recorders.made.single.streams.single.hasListener, isTrue);
+  });
+
+  testWidgets('the meter lets go of the microphone while a route covers it', (
+    WidgetTester tester,
+  ) async {
+    final _Recorders recorders = _Recorders();
+    await _show(
+      tester,
+      InputLevelMeter(
+        input: _corsair,
+        volume: 100,
+        recorderFactory: recorders.make,
+      ),
+    );
+    expect(recorders.made, hasLength(1));
+    final _FakeRecorder first = recorders.made.single;
+    expect(first.streams.single.hasListener, isTrue);
+
+    await _cover(tester);
+    expect(first.stops, 1);
+    expect(first.disposals, 1);
+    expect(first.streams.single.hasListener, isFalse);
+
+    await _uncover(tester);
+    expect(recorders.made, hasLength(2));
+    final _FakeRecorder second = recorders.made.last;
+    expect(second.started, hasLength(1));
+    expect(second.streams.single.hasListener, isTrue);
+    expect(first.stops, 1);
+  });
+
+  testWidgets(
+    'an input chosen while the meter is covered opens no microphone until it is shown',
+    (WidgetTester tester) async {
+      final _Recorders recorders = _Recorders();
+      final ValueNotifier<AudioInput> input = ValueNotifier<AudioInput>(
+        _systemDefault,
+      );
+      addTearDown(input.dispose);
+      await _show(
+        tester,
+        ValueListenableBuilder<AudioInput>(
+          valueListenable: input,
+          builder: (BuildContext context, AudioInput value, Widget? child) =>
+              InputLevelMeter(
+                input: value,
+                volume: 100,
+                recorderFactory: recorders.make,
+              ),
+        ),
+      );
+
+      input.value = _corsair;
+      await tester.pump();
+      expect(recorders.made, hasLength(1));
+      final _FakeRecorder first = recorders.made.single;
+      expect(first.started, hasLength(2));
+      expect(first.started.last.device?.id, 'b');
+
+      await _cover(tester);
+      expect(first.disposals, 1);
+      expect(first.streams.last.hasListener, isFalse);
+
+      input.value = _systemDefault;
+      await tester.pump();
+      expect(recorders.made, hasLength(1));
+
+      await _uncover(tester);
+      expect(recorders.made, hasLength(2));
+      final _FakeRecorder second = recorders.made.last;
+      expect(second.started, hasLength(1));
+      expect(second.started.single.device, isNull);
+    },
+  );
 }
