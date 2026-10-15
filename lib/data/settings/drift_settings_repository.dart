@@ -263,11 +263,17 @@ class DriftSettingsRepository implements SettingsRepository {
   }
 
   int _decodeInputVolume(String? raw) {
-    final int? volume = int.tryParse(raw ?? '');
+    final BigInt? volume = BigInt.tryParse(raw ?? '');
     if (volume == null) {
       return _inputVolumeDefault;
     }
-    return volume.clamp(_inputVolumeMin, _inputVolumeMax);
+    if (volume < BigInt.from(_inputVolumeMin)) {
+      return _inputVolumeMin;
+    }
+    if (volume > BigInt.from(_inputVolumeMax)) {
+      return _inputVolumeMax;
+    }
+    return volume.toInt();
   }
 
   bool _decodeBool(String? raw, bool fallback) {

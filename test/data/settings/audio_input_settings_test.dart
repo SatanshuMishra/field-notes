@@ -108,4 +108,15 @@ void main() {
     await _writeRow(db, 'audio_input_id', '');
     expect((await repository.load()).audioInputId, isNull);
   });
+
+  test('whole numbers beyond 64 bits clamp to the volume\'s ends', () async {
+    await _writeRow(db, 'input_volume', '9223372036854775808');
+    expect((await repository.load()).inputVolume, 200);
+    await _writeRow(db, 'input_volume', '99999999999999999999');
+    expect((await repository.load()).inputVolume, 200);
+    await _writeRow(db, 'input_volume', '-9223372036854775809');
+    expect((await repository.load()).inputVolume, 0);
+    await _writeRow(db, 'input_volume', '-99999999999999999999');
+    expect((await repository.load()).inputVolume, 0);
+  });
 }
