@@ -249,16 +249,19 @@ class _VideoComposerConnectorState
       setState(() => _deviceId = deviceId);
       return;
     }
-    await _reopenCamera(deviceId, rememberCamera: true);
+    await _reopenCamera(deviceId, rememberCamera: true, preparing: true);
   }
 
   Future<void> _reopenCamera(
     String deviceId, {
     bool rememberCamera = false,
+    bool preparing = false,
   }) async {
     _switching = true;
     setState(() {
-      _phase = VideoRecorderPhase.preparing;
+      if (preparing) {
+        _phase = VideoRecorderPhase.preparing;
+      }
       _preview = null;
       _errorMessage = null;
       _deviceId = deviceId;
@@ -283,6 +286,9 @@ class _VideoComposerConnectorState
     }
     if (rememberCamera) {
       ref.read(selectedCameraDeviceProvider.notifier).remember(deviceId);
+    }
+    if (_closing) {
+      return;
     }
     setState(() {
       _preview = _recorder.openSession(deviceId);
@@ -343,6 +349,9 @@ class _VideoComposerConnectorState
   }
 
   Future<void> _start() async {
+    if (_cameraChange != null || _switching) {
+      return;
+    }
     switch (_phase) {
       case VideoRecorderPhase.denied:
         await _prepare();

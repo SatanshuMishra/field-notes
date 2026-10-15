@@ -44,6 +44,7 @@ const String _cameraOffTitle = 'Camera off.';
 const String _cameraOffMessage = 'Only your voice is kept, as a voice log.';
 const Duration _fade = Duration(milliseconds: 600);
 const Duration _step = Duration(milliseconds: 50);
+const Duration _second = Duration(seconds: 1);
 
 const List<VideoCaptureDevice> _phoneCameras = <VideoCaptureDevice>[
   VideoCaptureDevice(id: '0', label: 'Back camera'),
@@ -115,6 +116,13 @@ Future<void> _pumpSheet(
 
 Future<void> _settle(WidgetTester tester) async {
   for (int i = 0; i < 14; i++) {
+    await tester.pump(_step);
+  }
+}
+
+Future<void> _pass(WidgetTester tester, Duration time) async {
+  final int steps = time.inMilliseconds ~/ _step.inMilliseconds;
+  for (int i = 0; i < steps; i++) {
     await tester.pump(_step);
   }
 }
@@ -379,6 +387,49 @@ void main() {
       await _closeAll(tester);
     },
   );
+
+  testWidgets('the shutter is ignored while the camera closes', (
+    WidgetTester tester,
+  ) async {
+    final FakeVideoRecorder recorder = FakeVideoRecorder(supportsPause: true)
+      ..releaseDelay = const Duration(milliseconds: 500);
+    final CameraOffVoiceRecorder voice = CameraOffVoiceRecorder();
+    await _pumpComposer(
+      tester,
+      layout: _Layout.mac,
+      recorder: recorder,
+      voice: voice,
+      service: FakeCaptureService(),
+    );
+    await _open(tester);
+    expect(_sheet(tester).cameraOn, isTrue);
+
+    await tester.tap(find.byKey(videoCameraKey));
+    await tester.pump(const Duration(milliseconds: 16));
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump(const Duration(milliseconds: 40));
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump();
+    expect(recorder.releasesFinished, 0);
+    await _pass(tester, _second);
+
+    expect(recorder.releasesFinished, 1);
+    expect(_phase(tester), VideoRecorderPhase.idle);
+    expect(find.text(_cameraOffTitle), findsOneWidget);
+    expect(voice.calls, isEmpty);
+
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.byKey(videoShutterKey));
+    await tester.pump();
+    await _pass(tester, _second);
+
+    expect(_phase(tester), VideoRecorderPhase.recording);
+    expect(voice.startCalls, 1);
+    expect(recorder.startCalls, 0);
+
+    await _closeAll(tester);
+  });
 
   testWidgets(
     'a camera chosen while the camera is off is remembered but not opened',
