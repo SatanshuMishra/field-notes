@@ -1,6 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-enum SettingsGlyph { book, flip, bell, archive, info, download }
+enum SettingsGlyph { book, flip, bell, archive, info, download, microphone }
 
 class SettingsIcon extends StatelessWidget {
   const SettingsIcon(
@@ -63,6 +63,7 @@ class SettingsIconPainter extends CustomPainter {
     SettingsGlyph.archive => _archive(),
     SettingsGlyph.info => _info(),
     SettingsGlyph.download => _download(),
+    SettingsGlyph.microphone => _microphone(),
   };
 
   Paint _stroke() => Paint()
@@ -179,6 +180,24 @@ class SettingsIconPainter extends CustomPainter {
     ..lineTo(17, 10)
     ..moveTo(5, 20)
     ..lineTo(19, 20);
+
+  Path _microphone() => Path()
+    ..addRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(9, 3, 6, 11),
+        const Radius.circular(3),
+      ),
+    )
+    ..moveTo(5.5, 11)
+    ..relativeArcToPoint(
+      const Offset(13, 0),
+      radius: const Radius.circular(6.5),
+      clockwise: false,
+    )
+    ..moveTo(12, 17.5)
+    ..lineTo(12, 21)
+    ..moveTo(8.5, 21)
+    ..lineTo(15.5, 21);
 
   @override
   bool shouldRepaint(covariant SettingsIconPainter oldDelegate) =>

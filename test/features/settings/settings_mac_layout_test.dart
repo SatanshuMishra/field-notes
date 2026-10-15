@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/sync/devices/device_service.dart';
@@ -7,6 +9,8 @@ import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
@@ -16,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:record/record.dart';
 
 import '../../app/support/app_shell_harness.dart';
 import '../../support/sync_overrides.dart';
@@ -41,6 +46,21 @@ const double _contentMaxWidth = 680;
 const double _tolerance = 0.01;
 
 const Key _settingsButton = ValueKey<String>('settings-button');
+
+class _FakeRecorder extends Fake implements AudioRecorder {
+  @override
+  Future<bool> hasPermission({bool request = true}) async => true;
+
+  @override
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async =>
+      const Stream<Uint8List>.empty();
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
+}
 
 List<JournalDevice> _devices(DateTime now) => <JournalDevice>[
   JournalDevice(
@@ -77,6 +97,10 @@ List<Override> _overrides(DateTime now, SyncStatus status) {
     settingsDataControllerProvider.overrideWith(
       (Ref ref) async => FakeSettingsDataController(),
     ),
+    audioInputListerProvider.overrideWithValue(
+      () async => const <InputDevice>[],
+    ),
+    inputLevelRecorderProvider.overrideWithValue(_FakeRecorder.new),
   ];
 }
 
@@ -170,6 +194,7 @@ void main() {
       SettingsTab.journal,
       SettingsTab.syncStorage,
       SettingsTab.remindersSound,
+      SettingsTab.voice,
       SettingsTab.data,
       SettingsTab.about,
     ]);
@@ -177,6 +202,7 @@ void main() {
       SettingsTab.journal: SettingsGlyph.book,
       SettingsTab.syncStorage: SettingsGlyph.flip,
       SettingsTab.remindersSound: SettingsGlyph.bell,
+      SettingsTab.voice: SettingsGlyph.microphone,
       SettingsTab.data: SettingsGlyph.archive,
       SettingsTab.about: SettingsGlyph.info,
     };
@@ -184,6 +210,7 @@ void main() {
       SettingsTab.journal: 'Journal',
       SettingsTab.syncStorage: 'Sync & storage',
       SettingsTab.remindersSound: 'Reminders & sound',
+      SettingsTab.voice: 'Voice',
       SettingsTab.data: 'Data',
       SettingsTab.about: 'About',
     };
@@ -434,6 +461,7 @@ void main() {
       (SettingsTab.journal, 'Journal'),
       (SettingsTab.syncStorage, 'Sync & storage'),
       (SettingsTab.remindersSound, 'Reminders & sound'),
+      (SettingsTab.voice, 'Voice'),
       (SettingsTab.data, 'Data'),
       (SettingsTab.about, 'About'),
     ];

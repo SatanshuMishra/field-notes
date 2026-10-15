@@ -33,6 +33,7 @@
 		F1E1D0012EA0000100000004 /* ImagePasteboardBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000003 /* ImagePasteboardBridge.swift */; };
 		F1E1D0012EA0000100000006 /* FileDropBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000005 /* FileDropBridge.swift */; };
 		F1E1D0012EA0000100000008 /* SparkleUpdaterBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */; };
+		F1E1D0012EA000010000000A = {isa = PBXBuildFile; fileRef = F1E1D0012EA0000100000009; };
 		FEDBDF9E3D3259039777247A /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AD5B39C2331B46FD47D3B4DE /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
 
@@ -98,6 +99,7 @@
 		F1E1D0012EA0000100000003 /* ImagePasteboardBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePasteboardBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000005 /* FileDropBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDropBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdaterBridge.swift; sourceTree = "<group>"; };
+		F1E1D0012EA0000100000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCleanBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -193,6 +195,7 @@
 				F1E1D0012EA0000100000003 /* ImagePasteboardBridge.swift */,
 				F1E1D0012EA0000100000005 /* FileDropBridge.swift */,
 				F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */,
+				F1E1D0012EA0000100000009,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -466,6 +469,7 @@
 				F1E1D0012EA0000100000004 /* ImagePasteboardBridge.swift in Sources */,
 				F1E1D0012EA0000100000006 /* FileDropBridge.swift in Sources */,
 				F1E1D0012EA0000100000008 /* SparkleUpdaterBridge.swift in Sources */,
+				F1E1D0012EA000010000000A,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

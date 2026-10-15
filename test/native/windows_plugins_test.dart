@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 const Map<String, String> _windowsMediaPlugins = <String, String>{
-  'camera_windows': '^0.3.0',
   'video_player_win': '^3.3.0',
   'just_audio_windows': '^0.2.3',
 };
+
+const String _vendoredCamera = 'camera_windows';
+const String _vendoredCameraPath = 'third_party/camera_windows';
 
 String _topLevelSection(String yaml, String key) {
   final List<String> lines = yaml.split('\n');
@@ -73,6 +75,26 @@ void main() {
         reason: '${plugin.key} must be a direct main dependency',
       );
     }
+
+    expect(
+      RegExp(
+        '^  ${RegExp.escape(_vendoredCamera)}:\\n'
+        '    path: ${RegExp.escape(_vendoredCameraPath)}\$',
+        multiLine: true,
+      ).hasMatch(dependencies),
+      isTrue,
+      reason:
+          'pubspec.yaml must depend on $_vendoredCamera by path '
+          '$_vendoredCameraPath',
+    );
+    final String camera = _lockEntry(lock, _vendoredCamera);
+    expect(
+      camera,
+      contains('dependency: "direct main"'),
+      reason: '$_vendoredCamera must be a direct main dependency',
+    );
+    expect(camera, contains('source: path'));
+    expect(camera, contains('path: "$_vendoredCameraPath"'));
 
     final RegExpMatch? resolved = RegExp(r'version: "([^"]+)"')
         .firstMatch(_lockEntry(lock, 'video_player_win'));

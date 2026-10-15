@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/bottom_bar_shell.dart';
 import 'package:field_notes/app/shell/phone_bottom_bar.dart';
@@ -6,6 +8,8 @@ import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
+import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/settings/sections/about_section.dart';
 import 'package:field_notes/features/settings/sections/sync_storage_section.dart';
 import 'package:field_notes/features/settings/settings_screen.dart';
@@ -16,6 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:record/record.dart';
 
 import '../../app/support/app_shell_harness.dart';
 
@@ -68,11 +73,28 @@ final Finder _pillGlass = find.descendant(
 
 Finder _row(SettingsTab tab) => find.byKey(settingsTabKey(tab));
 
+class _FakeRecorder extends Fake implements AudioRecorder {
+  @override
+  Future<bool> hasPermission({bool request = true}) async => true;
+
+  @override
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async =>
+      const Stream<Uint8List>.empty();
+
+  @override
+  Future<String?> stop() async => null;
+
+  @override
+  Future<void> dispose() async {}
+}
+
 List<Override> _overrides() => <Override>[
   ...shellOverrides(),
   appSettingsProvider.overrideWith(
     (Ref ref) => Stream<AppSettings>.value(AppSettings.defaults),
   ),
+  audioInputListerProvider.overrideWithValue(() async => const <InputDevice>[]),
+  inputLevelRecorderProvider.overrideWithValue(_FakeRecorder.new),
 ];
 
 Future<void> _pumpPhone(

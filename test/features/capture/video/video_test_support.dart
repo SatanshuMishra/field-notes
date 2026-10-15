@@ -3,11 +3,17 @@ import 'dart:async';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../voice/voice_test_support.dart' show FakeVoiceRecorder;
+
+export '../voice/voice_test_support.dart'
+    show FakeTakeCleanup, takeCleanupOverride;
 
 Widget videoHarness(Widget child) {
   return MaterialApp(
@@ -74,11 +80,15 @@ class FakeVideoRecorder implements VideoRecorder, CameraControls {
   int cancelCalls = 0;
   int releaseCalls = 0;
   int releaseSavedCalls = 0;
+  final List<VideoRecording> savedReleases = <VideoRecording>[];
   int disposeCalls = 0;
   int listCalls = 0;
   bool _sessionLive = false;
   final List<String> previewDeviceIds = <String>[];
   Completer<void>? stopGate;
+  Duration? stopDelay;
+  Duration? releaseDelay;
+  int releasesFinished = 0;
 
   Duration elapsedValue = Duration.zero;
 
@@ -142,6 +152,10 @@ class FakeVideoRecorder implements VideoRecorder, CameraControls {
     if (gate != null) {
       await gate.future;
     }
+    final Duration? delay = stopDelay;
+    if (delay != null) {
+      await Future<void>.delayed(delay);
+    }
     final VideoRecorderException? error = stopError;
     if (error != null) {
       throw error;
@@ -161,6 +175,7 @@ class FakeVideoRecorder implements VideoRecorder, CameraControls {
   @override
   Future<void> releaseSaved(VideoRecording recording) async {
     releaseSavedCalls++;
+    savedReleases.add(recording);
   }
 
   @override
@@ -175,6 +190,11 @@ class FakeVideoRecorder implements VideoRecorder, CameraControls {
     }
     _sessionLive = false;
     releaseCalls++;
+    final Duration? delay = releaseDelay;
+    if (delay != null) {
+      await Future<void>.delayed(delay);
+    }
+    releasesFinished++;
     final VideoRecorderException? error = releaseError;
     if (error != null) {
       throw error;
@@ -304,19 +324,74 @@ class _ReadySignalState extends State<_ReadySignal> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      const SizedBox(key: ValueKey('deferred-preview'), width: 120, height: 120);
+  Widget build(BuildContext context) => const SizedBox(
+    key: ValueKey('deferred-preview'),
+    width: 120,
+    height: 120,
+  );
+}
+
+class CameraOffVoiceRecorder extends FakeVoiceRecorder {
+  CameraOffVoiceRecorder({super.permission, super.recording});
+
+  Object? permissionError;
+  final List<String> calls = <String>[];
+
+  @override
+  Future<bool> hasPermission() async {
+    calls.add('hasPermission');
+    final Object? error = permissionError;
+    if (error != null) {
+      throw error;
+    }
+    return super.hasPermission();
+  }
+
+  @override
+  Future<void> start() {
+    calls.add('start');
+    return super.start();
+  }
+
+  @override
+  Future<void> pause() {
+    calls.add('pause');
+    return super.pause();
+  }
+
+  @override
+  Future<void> resume() {
+    calls.add('resume');
+    return super.resume();
+  }
+
+  @override
+  Future<VoiceRecording> stop() {
+    calls.add('stop');
+    return super.stop();
+  }
+
+  @override
+  Future<void> cancel() {
+    calls.add('cancel');
+    return super.cancel();
+  }
 }
 
 class FakeCaptureService implements CaptureService {
-  FakeCaptureService({this.failure});
+  FakeCaptureService({this.failure, this.gate});
 
   final CaptureException? failure;
+  final Future<void>? gate;
   final List<CaptureRequest> requests = <CaptureRequest>[];
 
   @override
   Future<CaptureResult> capture(CaptureRequest request) async {
     requests.add(request);
+    final Future<void>? gate = this.gate;
+    if (gate != null) {
+      await gate;
+    }
     final CaptureException? error = failure;
     if (error != null) {
       throw error;

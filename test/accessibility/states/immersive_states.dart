@@ -39,19 +39,20 @@ const CaptureException _heldSaveFailure = CaptureException(
 const Duration _step = Duration(milliseconds: 50);
 const Duration _panelOpen = Duration(milliseconds: 300);
 
-final List<VideoCaptureDevice> _phoneCameras =
-    cameraDeviceLabels(const <CameraDescription>[
-      CameraDescription(
-        name: '0',
-        lensDirection: CameraLensDirection.back,
-        sensorOrientation: 90,
-      ),
-      CameraDescription(
-        name: '1',
-        lensDirection: CameraLensDirection.front,
-        sensorOrientation: 270,
-      ),
-    ]);
+final List<VideoCaptureDevice> _phoneCameras = cameraDeviceLabels(
+  const <CameraDescription>[
+    CameraDescription(
+      name: '0',
+      lensDirection: CameraLensDirection.back,
+      sensorOrientation: 90,
+    ),
+    CameraDescription(
+      name: '1',
+      lensDirection: CameraLensDirection.front,
+      sensorOrientation: 270,
+    ),
+  ],
+);
 
 enum _Layout {
   sidebar(
@@ -83,8 +84,10 @@ enum _Layout {
 
 typedef _Open = Future<Object?> Function(BuildContext context);
 
-typedef _LayoutPump =
-    Future<void> Function(WidgetTester tester, _Layout layout);
+typedef _LayoutPump = Future<void> Function(
+  WidgetTester tester,
+  _Layout layout,
+);
 
 class _Launcher extends StatelessWidget {
   const _Launcher(this.open);
@@ -175,6 +178,7 @@ Future<void> _openVideo(
           supportsPause: supportsPause,
         ),
       ),
+      voiceRecorderProvider.overrideWith((Ref ref) => FakeVoiceRecorder()),
       captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
       reflectionPromptsEnabledProvider.overrideWithValue(false),
     ],
@@ -275,11 +279,10 @@ Future<void> _pumpVideoIdle(WidgetTester tester, _Layout layout) async {
   _requireVideoPhase(tester, VideoRecorderPhase.idle);
 }
 
-Future<void> _pumpVideoSelfViewOff(WidgetTester tester, _Layout layout) async {
+Future<void> _pumpVideoCameraOff(WidgetTester tester, _Layout layout) async {
   await _openVideo(tester, layout);
+  await _tap(tester, videoCameraKey);
   await _startVideoTake(tester);
-  await _tap(tester, videoSelfViewKey);
-  _requireVideoPhase(tester, VideoRecorderPhase.recording);
 }
 
 Future<void> _pumpVideoLetGo(WidgetTester tester, _Layout layout) async {
@@ -298,8 +301,8 @@ Finder _semanticsLabelled(String label) => find.byWidgetPredicate(
   (Widget widget) => widget is Semantics && widget.properties.label == label,
 );
 
-const List<A11yStatefulControl> _selfViewToggle = <A11yStatefulControl>[
-  A11yStatefulControl.label(videoSelfViewLabel, A11yStateKind.toggled),
+const List<A11yStatefulControl> _cameraToggle = <A11yStatefulControl>[
+  A11yStatefulControl.label(videoCameraLabel, A11yStateKind.toggled),
 ];
 
 List<A11yState> _inBothLayouts({
@@ -375,7 +378,7 @@ final List<A11yState> immersiveStates = <A11yState>[
     pump: _pumpVideoIdle,
     proof: <A11yProof>[
       A11yProof(find.byKey(videoShutterKey)),
-      A11yProof(find.byKey(videoSelfViewKey)),
+      A11yProof(find.byKey(videoCameraKey)),
       A11yProof(
         find.byWidgetPredicate(
           (Widget widget) =>
@@ -383,17 +386,16 @@ final List<A11yState> immersiveStates = <A11yState>[
         ),
       ),
     ],
-    stateful: _selfViewToggle,
+    stateful: _cameraToggle,
   ),
   ..._inBothLayouts(
-    id: 'i8-video-self-view-off',
-    pump: _pumpVideoSelfViewOff,
+    id: 'i8-video-camera-off',
+    pump: _pumpVideoCameraOff,
     proof: <A11yProof>[
-      A11yProof(find.text(videoSelfViewOffTitle)),
+      A11yProof(find.text(videoCameraOffTitle)),
       A11yProof(find.text(stageRecordingStatus)),
       A11yProof(find.byKey(videoSaveCircleKey)),
     ],
-    stateful: _selfViewToggle,
   ),
   ..._inBothLayouts(
     id: 'i9-video-let-go',
@@ -403,7 +405,6 @@ final List<A11yState> immersiveStates = <A11yState>[
       A11yProof(find.byKey(videoKeepGoingKey)),
       A11yProof(find.byKey(videoDiscardConfirmKey)),
     ],
-    stateful: _selfViewToggle,
   ),
   ..._inBothLayouts(
     id: 'i10-video-without-pause',
@@ -413,6 +414,5 @@ final List<A11yState> immersiveStates = <A11yState>[
       A11yProof(find.text(stageRecordingStatus)),
       A11yProof(find.byKey(videoSaveCircleKey)),
     ],
-    stateful: _selfViewToggle,
   ),
 ];

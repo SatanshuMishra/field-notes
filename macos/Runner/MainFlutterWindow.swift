@@ -1,5 +1,6 @@
 import AVFoundation
 import Cocoa
+import CoreAudio
 import FlutterMacOS
 
 private let sidebarWidth: CGFloat = 216
@@ -26,11 +27,13 @@ private let windowChannelName = "field_notes/window"
 private let notificationSettingsChannelName = "field_notes/notification_settings"
 private let deviceStorageChannelName = "field_notes/device_storage"
 private let cameraSettingsChannelName = "field_notes/camera_settings"
+private let audioOutputChannelName = "field_notes/audio_output"
 private let stayAwakeChannelName = "field_notes/stay_awake"
 private let audioPeaksChannelName = "field_notes/audio_peaks"
 private let audioPeaksReadFrames: AVAudioFrameCount = 65536
 private let cameraPrivacySettingsURL =
   "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
+private let soundSettingsURL = "x-apple.systempreferences:com.apple.preference.sound"
 private let notificationSettingsURLPrefix =
   "x-apple.systempreferences:com.apple.Notifications-Settings.extension?id="
 
@@ -61,8 +64,10 @@ class MainFlutterWindow: NSWindow {
     self.registerNotificationSettingsChannel(flutterViewController.engine.binaryMessenger)
     self.registerDeviceStorageChannel(flutterViewController.engine.binaryMessenger)
     self.registerCameraSettingsChannel(flutterViewController.engine.binaryMessenger)
+    self.registerAudioOutputChannel(flutterViewController.engine.binaryMessenger)
     self.registerStayAwakeChannel(flutterViewController.engine.binaryMessenger)
     self.registerAudioPeaksChannel(flutterViewController.engine.binaryMessenger)
+    AudioCleanBridge.register(flutterViewController.engine.binaryMessenger)
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
@@ -119,6 +124,24 @@ class MainFlutterWindow: NSWindow {
       switch call.method {
       case "openCameraSettings":
         MainFlutterWindow.openCameraPrivacySettings()
+        result(nil)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  private func registerAudioOutputChannel(_ messenger: FlutterBinaryMessenger) {
+    let channel = FlutterMethodChannel(
+      name: audioOutputChannelName,
+      binaryMessenger: messenger
+    )
+    channel.setMethodCallHandler { call, result in
+      switch call.method {
+      case "defaultOutputName":
+        result(MainFlutterWindow.defaultOutputName())
+      case "openSoundSettings":
+        MainFlutterWindow.openSoundSettings()
         result(nil)
       default:
         result(FlutterMethodNotImplemented)
@@ -328,6 +351,49 @@ class MainFlutterWindow: NSWindow {
       return
     }
     _ = NSWorkspace.shared.open(url)
+  }
+
+  private static func openSoundSettings() {
+    guard let url = URL(string: soundSettingsURL) else {
+      return
+    }
+    _ = NSWorkspace.shared.open(url)
+  }
+
+  private static func defaultOutputName() -> String? {
+    var deviceID = AudioObjectID(kAudioObjectUnknown)
+    var deviceSize = UInt32(MemoryLayout<AudioObjectID>.size)
+    var deviceAddress = AudioObjectPropertyAddress(
+      mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+    let deviceStatus = AudioObjectGetPropertyData(
+      AudioObjectID(kAudioObjectSystemObject),
+      &deviceAddress,
+      0,
+      nil,
+      &deviceSize,
+      &deviceID
+    )
+    guard deviceStatus == noErr, deviceID != kAudioObjectUnknown else {
+      return nil
+    }
+    var name = "" as CFString
+    var nameSize = UInt32(MemoryLayout<CFString>.size)
+    var nameAddress = AudioObjectPropertyAddress(
+      mSelector: kAudioObjectPropertyName,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+    let nameStatus = withUnsafeMutablePointer(to: &name) { pointer in
+      AudioObjectGetPropertyData(deviceID, &nameAddress, 0, nil, &nameSize, pointer)
+    }
+    guard nameStatus == noErr else {
+      return nil
+    }
+    let text = name as String
+    return text.isEmpty ? nil : text
   }
 
   private static func appearance(named id: String?) -> NSAppearance? {

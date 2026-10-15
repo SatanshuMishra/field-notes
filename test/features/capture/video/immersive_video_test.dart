@@ -11,6 +11,7 @@ import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder_provider.dart';
 import 'package:field_notes/features/capture/video/video_recorder_sheet.dart';
 import 'package:field_notes/features/capture/video/video_timeline.dart';
+import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -32,8 +33,8 @@ const String _behindLabel = 'behind';
 const String _preparing = 'Getting the camera ready…';
 const String _saving = 'Saving your video…';
 const String _capHint = 'Auto-stops at 30:00.';
-const String _selfViewOffTitle = 'The camera is still recording.';
-const String _selfViewOffMessage = 'You just won’t see yourself.';
+const String _cameraOffTitle = 'Camera off.';
+const String _cameraOffMessage = 'Only your voice is kept, as a voice log.';
 const String _letGoToast = 'Let go · nothing was saved';
 const String _savedToast = 'Video saved';
 const Color _stage = Color(0xFF1C1713);
@@ -62,6 +63,7 @@ Future<_Harness> _pumpApp(
   required _Layout layout,
   required VideoRecorder recorder,
   FakeCaptureService? service,
+  CameraOffVoiceRecorder? voice,
   bool reflection = false,
 }) async {
   final _Harness harness = _Harness(layout: layout);
@@ -73,6 +75,9 @@ Future<_Harness> _pumpApp(
     ProviderScope(
       overrides: <Override>[
         videoRecorderProvider.overrideWith((Ref ref) => recorder),
+        voiceRecorderProvider.overrideWith(
+          (Ref ref) => voice ?? CameraOffVoiceRecorder(),
+        ),
         captureServiceProvider.overrideWith(
           (Ref ref) => service ?? FakeCaptureService(),
         ),
@@ -291,17 +296,17 @@ class _GatedStartRecorder extends FakeVideoRecorder {
   }
 }
 
-SemanticsNode _selfView(WidgetTester tester) =>
-    tester.getSemantics(find.byKey(videoSelfViewKey));
+SemanticsNode _camera(WidgetTester tester) =>
+    tester.getSemantics(find.byKey(videoCameraKey));
 
-final Matcher _selfViewOn = isSemantics(
-  label: 'Self-view',
+final Matcher _cameraOn = isSemantics(
+  label: 'Camera',
   hasToggledState: true,
   isToggled: true,
 );
 
-final Matcher _selfViewOff = isSemantics(
-  label: 'Self-view',
+final Matcher _cameraOff = isSemantics(
+  label: 'Camera',
   hasToggledState: true,
   isToggled: false,
 );
@@ -626,27 +631,31 @@ void main() {
   });
 
   testWidgets(
-    'self-view starts on, hides only the preview, and starts on again next time',
+    'the camera starts on, turning it off releases it, and it starts on again next time',
     (WidgetTester tester) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
       final FakeVideoRecorder recorder = FakeVideoRecorder(supportsPause: true);
-      await _pumpApp(tester, layout: _Layout.sidebar, recorder: recorder);
+      final CameraOffVoiceRecorder voice = CameraOffVoiceRecorder();
+      await _pumpApp(
+        tester,
+        layout: _Layout.sidebar,
+        recorder: recorder,
+        voice: voice,
+      );
       await _open(tester);
 
-      expect(_selfView(tester), _selfViewOn);
+      expect(_camera(tester), _cameraOn);
       expect(
-        tester.getSemantics(find.byKey(videoSelfViewKey)).rect.height,
+        tester.getSemantics(find.byKey(videoCameraKey)).rect.height,
         greaterThanOrEqualTo(48),
       );
       expect(fakeVideoPreview(), findsOneWidget);
 
-      await _startNow(tester);
-      expect(_phase(tester), VideoRecorderPhase.recording);
-
-      await tester.tap(find.byKey(videoSelfViewKey));
+      await tester.tap(find.byKey(videoCameraKey));
       await tester.pump();
+      await _settle(tester);
 
-      expect(_selfView(tester), _selfViewOff);
+      expect(_camera(tester), _cameraOff);
       expect(fakeVideoPreview(), findsNothing);
       expect(
         find.byWidgetPredicate(
@@ -655,36 +664,47 @@ void main() {
               const ValueKey<String>('fake-video-preview-built-in-id'),
           skipOffstage: false,
         ),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.text(_selfViewOffTitle), findsOneWidget);
-      expect(find.text(_selfViewOffMessage), findsOneWidget);
-      expect(find.byType(BreathingGlow), findsOneWidget);
+      expect(find.text(_cameraOffTitle), findsOneWidget);
+      expect(find.text(_cameraOffMessage), findsOneWidget);
+      expect(_phase(tester), VideoRecorderPhase.idle);
+      expect(recorder.releaseCalls, 1);
+
+      await tester.tap(find.byKey(videoCameraKey));
+      await tester.pump();
+      expect(_camera(tester), _cameraOn);
+      expect(fakeVideoPreview(), findsOneWidget);
+      expect(find.text(_cameraOffTitle), findsNothing);
+      expect(recorder.previewDeviceIds.last, 'built-in-id');
+
+      await tester.tap(find.byKey(videoCameraKey));
+      await tester.pump();
+      await _settle(tester);
+      expect(_camera(tester), _cameraOff);
+
+      await _startNow(tester);
       expect(_phase(tester), VideoRecorderPhase.recording);
-      expect(recorder.startCalls, 1);
+      expect(find.byKey(videoCameraKey), findsNothing);
+      expect(fakeVideoPreview(), findsNothing);
+      expect(find.text(_cameraOffTitle), findsOneWidget);
+      expect(find.text(_cameraOffMessage), findsOneWidget);
+      expect(find.byType(BreathingGlow), findsOneWidget);
+      expect(recorder.startCalls, 0);
       expect(recorder.pauseCalls, 0);
       expect(recorder.stopCalls, 0);
       expect(recorder.cancelCalls, 0);
-      expect(recorder.previewDeviceIds.last, 'built-in-id');
-
-      await tester.tap(find.byKey(videoSelfViewKey));
-      await tester.pump();
-      expect(_selfView(tester), _selfViewOn);
-      expect(fakeVideoPreview(), findsOneWidget);
-      expect(find.text(_selfViewOffTitle), findsNothing);
-
-      await tester.tap(find.byKey(videoSelfViewKey));
-      await tester.pump();
-      expect(_selfView(tester), _selfViewOff);
+      expect(voice.startCalls, 1);
 
       await tester.tap(find.byKey(videoCloseKey));
       await _settle(tester);
       await tester.tap(find.byKey(videoDiscardConfirmKey));
       await _settle(tester);
       expect(find.byType(VideoRecorderSheet), findsNothing);
+      expect(voice.cancelCalls, 1);
 
       await _open(tester);
-      expect(_selfView(tester), _selfViewOn);
+      expect(_camera(tester), _cameraOn);
       expect(fakeVideoPreview(), findsOneWidget);
       await _closeAll(tester);
 
@@ -695,22 +715,19 @@ void main() {
       );
       await _open(tester);
       expect(
-        tester.getSemantics(find.byKey(videoSelfViewKey)),
-        isSemantics(label: 'Self-view', hasToggledState: true, isToggled: true),
+        tester.getSemantics(find.byKey(videoCameraKey)),
+        isSemantics(label: 'Camera', hasToggledState: true, isToggled: true),
       );
       expect(find.text('Mirror on'), findsNothing);
-      await tester.tap(find.byKey(videoSelfViewKey));
+      await tester.tap(find.byKey(videoCameraKey));
       await tester.pump();
+      await _settle(tester);
       expect(
-        tester.getSemantics(find.byKey(videoSelfViewKey)),
-        isSemantics(
-          label: 'Self-view',
-          hasToggledState: true,
-          isToggled: false,
-        ),
+        tester.getSemantics(find.byKey(videoCameraKey)),
+        isSemantics(label: 'Camera', hasToggledState: true, isToggled: false),
       );
       expect(fakeVideoPreview(), findsNothing);
-      expect(find.text(_selfViewOffTitle), findsOneWidget);
+      expect(find.text(_cameraOffTitle), findsOneWidget);
       await _closeAll(tester);
       semantics.dispose();
       debugDefaultTargetPlatformOverride = null;
@@ -1033,7 +1050,7 @@ void main() {
             : find.byKey(videoFlipCameraKey);
         expect(picker, findsOneWidget, reason: '$layout');
         final Rect pickerRect = tester.getRect(picker);
-        final Rect chip = tester.getRect(find.byKey(videoSelfViewKey));
+        final Rect chip = tester.getRect(find.byKey(videoCameraKey));
         final Rect leave = tester.getRect(find.byKey(videoCloseKey));
         expect(
           pickerRect.right,

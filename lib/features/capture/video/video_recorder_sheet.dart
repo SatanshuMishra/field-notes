@@ -5,6 +5,7 @@ import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'camera_gestures.dart';
@@ -39,13 +40,13 @@ const Key videoShutterKey = ValueKey<String>('video-shutter');
 const Key videoDiscardCircleKey = ValueKey<String>('video-discard-circle');
 const Key videoSaveCircleKey = ValueKey<String>('video-save-circle');
 const Key videoKeepGoingKey = ValueKey<String>('video-keep-going');
-const Key videoSelfViewKey = ValueKey<String>('video-self-view');
+const Key videoCameraKey = ValueKey<String>('video-camera');
 const Key videoKeyboardHintKey = ValueKey<String>('video-keyboard-hint');
 const Key videoFlipCameraKey = ValueKey<String>('video-flip-camera');
 
 const String videoFeedLabel = 'CAMERA FEED';
-const String videoSelfViewOffTitle = 'The camera is still recording.';
-const String videoSelfViewOffMessage = 'You just won’t see yourself.';
+const String videoCameraOffTitle = 'Camera off.';
+const String videoCameraOffMessage = 'Only your voice is kept, as a voice log.';
 const String videoLetGoLabel = 'Let go';
 const String videoKeepLabel = 'Keep';
 const String videoStartLabel = 'Start recording';
@@ -53,13 +54,14 @@ const String videoSkipBreathLabel = 'Skip the breath';
 const String videoPauseLabel = 'Pause recording';
 const String videoResumeLabel = 'Resume recording';
 const String videoStopAndKeepLabel = 'Stop and keep';
-const String videoSelfViewLabel = 'Self-view';
+const String videoCameraLabel = 'Camera';
+const String videoSavingHint = 'Saving your video…';
 
 String videoSwitchCameraLabel(VideoCaptureDevice device) =>
     'Switch to ${device.label.toLowerCase()}';
 
 const Color _hintInk = Color(0xFFB7A58C);
-const Color _selfViewOffInk = Color(0xFFB7A58C);
+const Color _cameraOffInk = Color(0xFFB7A58C);
 const Color _shutterRing = Color(0xEBF3E6D1);
 const Color _shutterPauseInk = Color(0xFFFFFFFF);
 const Color _letGoFill = Color(0x80140F0C);
@@ -103,9 +105,9 @@ const double _sidebarGlow = 300;
 const double _bottomBarGlow = 210;
 const double _settleGlowAlpha = 0.4;
 const double _breatheGlowAlpha = 0.3;
-const double _sidebarSelfViewOffSize = 18;
-const double _bottomBarSelfViewOffSize = 14;
-const double _selfViewOffLeading = 1.45;
+const double _sidebarCameraOffSize = 18;
+const double _bottomBarCameraOffSize = 14;
+const double _cameraOffLeading = 1.45;
 
 const double _noteSize = 12;
 const double _errorSize = 13;
@@ -149,15 +151,18 @@ class VideoRecorderSheet extends StatefulWidget {
     this.devices = const <VideoCaptureDevice>[],
     this.selectedDeviceId,
     this.onDeviceChanged,
+    this.cameraOn = true,
+    this.onCameraChanged,
     this.controls,
     this.elapsed = Duration.zero,
     this.nudgeMessage,
     this.errorMessage,
     this.cameraLabel = 'Camera',
     this.armingHint = 'Getting the camera ready…',
-    this.savingHint = 'Saving your video…',
+    this.savingHint = videoSavingHint,
     this.capHint = 'Auto-stops at 30:00.',
     this.deniedMessage = cameraPermissionMessage,
+    this.onVoiceSettings,
   });
 
   final VideoRecorderPhase phase;
@@ -175,6 +180,8 @@ class VideoRecorderSheet extends StatefulWidget {
   final List<VideoCaptureDevice> devices;
   final String? selectedDeviceId;
   final ValueChanged<String>? onDeviceChanged;
+  final bool cameraOn;
+  final ValueChanged<bool>? onCameraChanged;
   final CameraControls? controls;
   final Duration elapsed;
   final String? nudgeMessage;
@@ -184,14 +191,13 @@ class VideoRecorderSheet extends StatefulWidget {
   final String savingHint;
   final String capHint;
   final String deniedMessage;
+  final VoidCallback? onVoiceSettings;
 
   @override
   State<VideoRecorderSheet> createState() => _VideoRecorderSheetState();
 }
 
 class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
-  bool _selfView = true;
-
   VideoRecorderPhase get _phase => widget.phase;
   bool get _isRecording => _phase == VideoRecorderPhase.recording;
   bool get _isPaused => _phase == VideoRecorderPhase.paused;
@@ -204,11 +210,32 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   bool get _isDenied => _phase == VideoRecorderPhase.denied;
   bool get _canPause => widget.supportsPause && widget.onPause != null;
 
-  void _setSelfView(bool value) => setState(() => _selfView = value);
+  bool get _showsCameraOff =>
+      !widget.cameraOn &&
+      switch (_phase) {
+        VideoRecorderPhase.idle ||
+        VideoRecorderPhase.breathing ||
+        VideoRecorderPhase.arming ||
+        VideoRecorderPhase.recording ||
+        VideoRecorderPhase.paused => true,
+        VideoRecorderPhase.preparing ||
+        VideoRecorderPhase.saving ||
+        VideoRecorderPhase.denied => false,
+      };
+
+  VoidCallback? get _toggleCamera {
+    final ValueChanged<bool>? onCameraChanged = widget.onCameraChanged;
+    if (onCameraChanged == null) {
+      return null;
+    }
+    return () => onCameraChanged(!widget.cameraOn);
+  }
 
   VideoCaptureDevice? get _otherCamera {
     final List<VideoCaptureDevice> devices = widget.devices;
-    if (_phase != VideoRecorderPhase.idle || devices.length < 2) {
+    if (!widget.cameraOn ||
+        _phase != VideoRecorderPhase.idle ||
+        devices.length < 2) {
       return null;
     }
     final int current = devices.indexWhere(
@@ -311,7 +338,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
             leaveKey: videoCloseKey,
             glassLeave: true,
             feedGestures: _gestures(sidebar),
-            glow: !_selfView && !_isDenied,
+            glow: !widget.cameraOn && !_isDenied,
             background: _background(sidebar),
             trailing: _trailing(sidebar),
             question: _question(sidebar),
@@ -334,7 +361,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        Offstage(offstage: !_selfView, child: _feed()),
+        if (widget.cameraOn) _feed(),
         IgnorePointer(child: Center(child: _centrePiece(sidebar))),
       ],
     );
@@ -342,7 +369,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
 
   Widget? _gestures(bool sidebar) {
     final CameraControls? controls = widget.controls;
-    if (sidebar || controls == null || !_selfView || _isDenied) {
+    if (sidebar || controls == null || !widget.cameraOn || _isDenied) {
       return null;
     }
     return CameraGestureLayer(
@@ -369,7 +396,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
 
   Widget _centrePiece(bool sidebar) {
     final double diameter = sidebar ? _sidebarGlow : _bottomBarGlow;
-    final bool hidden = !_selfView && !_isDenied;
+    final bool cameraOff = _showsCameraOff;
     return SizedBox.square(
       dimension: diameter,
       child: Stack(
@@ -381,34 +408,30 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
               mode: BreathingGlowMode.settle,
               alpha: _settleGlowAlpha,
             ),
-          if (hidden && _isRecording)
+          if (cameraOff && _isRecording)
             BreathingGlow(diameter: diameter, alpha: _breatheGlowAlpha),
-          if (hidden) _selfViewOffCopy(sidebar),
+          if (cameraOff) _cameraOffCopy(sidebar),
         ],
       ),
     );
   }
 
-  Widget _selfViewOffCopy(bool sidebar) {
+  Widget _cameraOffCopy(bool sidebar) {
     final TextStyle style = TextStyle(
       fontFamily: TypographyTokens.serif,
-      fontSize: sidebar ? _sidebarSelfViewOffSize : _bottomBarSelfViewOffSize,
+      fontSize: sidebar ? _sidebarCameraOffSize : _bottomBarCameraOffSize,
       fontWeight: FontWeight.w400,
       fontStyle: FontStyle.italic,
-      height: _selfViewOffLeading,
-      color: _selfViewOffInk,
+      height: _cameraOffLeading,
+      color: _cameraOffInk,
     );
     return MergeSemantics(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
+          Text(videoCameraOffTitle, textAlign: TextAlign.center, style: style),
           Text(
-            videoSelfViewOffTitle,
-            textAlign: TextAlign.center,
-            style: style,
-          ),
-          Text(
-            videoSelfViewOffMessage,
+            videoCameraOffMessage,
             textAlign: TextAlign.center,
             style: style,
           ),
@@ -418,14 +441,13 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   }
 
   Widget? _trailing(bool sidebar) {
+    final bool idle = _phase == VideoRecorderPhase.idle;
     final bool picker =
-        sidebar &&
-        _phase == VideoRecorderPhase.idle &&
-        widget.devices.length > 1;
-    if (_isDenied && !picker) {
+        sidebar && idle && widget.cameraOn && widget.devices.length > 1;
+    final VideoCaptureDevice? other = sidebar ? null : _otherCamera;
+    if (!idle && !picker && other == null) {
       return null;
     }
-    final VideoCaptureDevice? other = sidebar ? null : _otherCamera;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
@@ -448,15 +470,22 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
             onPressed: _flip,
             glyph: const CameraGlyph(CameraGlyphKind.flip),
           ),
-        if (!_isDenied)
+        if (idle)
           RecorderGlassButton(
-            key: videoSelfViewKey,
-            label: videoSelfViewLabel,
-            toggled: _selfView,
-            onPressed: () => _setSelfView(!_selfView),
+            key: videoCameraKey,
+            label: videoCameraLabel,
+            toggled: widget.cameraOn,
+            onPressed: _toggleCamera,
             glyph: CameraGlyph(
-              _selfView ? CameraGlyphKind.camera : CameraGlyphKind.cameraOff,
+              widget.cameraOn
+                  ? CameraGlyphKind.camera
+                  : CameraGlyphKind.cameraOff,
             ),
+          ),
+        if (idle)
+          RecorderInputButton(
+            androidVideo: Theme.of(context).platform == TargetPlatform.android,
+            onVoiceSettings: widget.onVoiceSettings,
           ),
       ],
     );

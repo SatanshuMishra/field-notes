@@ -22,6 +22,8 @@ class SystemChannels {
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       camera_settings_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
+      audio_output_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       device_storage_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>>
       stay_awake_;

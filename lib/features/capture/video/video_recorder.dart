@@ -17,6 +17,12 @@ const String videoPauseMessage =
     'Could not pause that recording. Check your camera and try again.';
 const String videoStopMessage =
     'Could not finish that recording. Nothing was saved — please try again.';
+const String videoJoinMessage =
+    'Could not put the paused parts of this video together. Nothing is lost — '
+    'press Keep to try again.';
+const String videoLastPartMessage =
+    'Could not finish the last part of this video. The earlier parts are kept '
+    '— press Keep to save them.';
 const String videoDeviceListMessage =
     'Could not find a camera. Connect one and try again.';
 const String videoDeviceSwitchMessage =
@@ -64,6 +70,15 @@ class VideoRecorderException implements Exception {
   String toString() => cause == null
       ? 'VideoRecorderException: $message'
       : 'VideoRecorderException: $message ($cause)';
+}
+
+class VideoSegmentsKeptException extends VideoRecorderException {
+  const VideoSegmentsKeptException(super.message, {super.cause});
+
+  @override
+  String toString() => cause == null
+      ? 'VideoSegmentsKeptException: $message'
+      : 'VideoSegmentsKeptException: $message ($cause)';
 }
 
 class ZoomRange {
