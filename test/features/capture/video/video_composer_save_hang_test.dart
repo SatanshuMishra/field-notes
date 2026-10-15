@@ -139,6 +139,8 @@ void main() {
     expect(find.text('Saving your video…'), findsOneWidget);
 
     await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text(videoSaveTimeoutMessage), findsNothing);
+    await tester.pump(const Duration(seconds: 20));
 
     expect(recorder.stopCalls, 1);
     expect(service.requests, isEmpty);

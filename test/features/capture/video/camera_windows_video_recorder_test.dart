@@ -193,7 +193,7 @@ void main() {
     return recorder;
   }
 
-  test('Windows lists every camera by name and cannot pause', () async {
+  test('Windows lists every camera by name and can pause', () async {
     installCamera(const <String>[_integratedCamera, _usbCamera]);
     final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
       temporaryDirectory: () async => root,
@@ -203,10 +203,10 @@ void main() {
       VideoCaptureDevice(id: _integratedCamera, label: 'Integrated Camera'),
       VideoCaptureDevice(id: _usbCamera, label: 'USB Camera'),
     ]);
-    expect(recorder.supportsPause, isFalse);
+    expect(recorder.supportsPause, isTrue);
     expect(recorder, isNot(isA<CameraControls>()));
-    await expectLater(recorder.pause(), throwsUnsupportedError);
-    await expectLater(recorder.resume(), throwsUnsupportedError);
+    await expectLater(recorder.pause(), throwsA(isA<VideoRecorderException>()));
+    await expectLater(recorder.resume(), throwsA(isA<VideoRecorderException>()));
   });
 
   test("Windows moves the finished recording and its still out of the user's "
@@ -405,6 +405,7 @@ void main() {
       installCamera(const <String>[_integratedCamera]);
       final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
         temporaryDirectory: () async => root,
+        setAudioInputDevice: (String? endpointId) async {},
       );
       final List<VideoCaptureDevice> devices = await recorder.listDevices();
       final Widget? preview = recorder.openSession(devices.single.id);

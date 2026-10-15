@@ -249,7 +249,10 @@ void main() {
   testWidgets('stopping a recording returns a jpeg thumbnail written to disk',
       (WidgetTester tester) async {
     final CameraMacosVideoRecorder recorder =
-        CameraMacosVideoRecorder(temporaryDirectory: () async => temp);
+        CameraMacosVideoRecorder(
+          temporaryDirectory: () async => temp,
+          microphonePermission: () async => true,
+        );
 
     await tester.pumpWidget(
       MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
@@ -283,7 +286,10 @@ void main() {
   testWidgets('a failed still capture still returns the finished recording',
       (WidgetTester tester) async {
     final CameraMacosVideoRecorder recorder =
-        CameraMacosVideoRecorder(temporaryDirectory: () async => temp);
+        CameraMacosVideoRecorder(
+          temporaryDirectory: () async => temp,
+          microphonePermission: () async => true,
+        );
     native.takePictureError = <String, Object?>{
       'code': 'PHOTO_OUTPUT_ERROR',
       'message': 'imageData is empty or invalid',

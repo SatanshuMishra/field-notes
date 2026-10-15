@@ -60,7 +60,7 @@ void main() {
     final FakeSettingsRepository repository = FakeSettingsRepository();
     await _pumpScreen(tester, repository: repository);
 
-    expect(SettingsTab.values, hasLength(5));
+    expect(SettingsTab.values, hasLength(6));
     expect(find.byKey(meadowPauseToggleKey), findsNothing);
 
     await tester.tap(find.byKey(settingsTabKey(SettingsTab.journal)));

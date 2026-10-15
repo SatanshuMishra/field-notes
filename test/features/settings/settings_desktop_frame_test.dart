@@ -381,6 +381,7 @@ void main() {
 
       await _press(tester, LogicalKeyboardKey.arrowDown);
       await _press(tester, LogicalKeyboardKey.arrowDown);
+      await _press(tester, LogicalKeyboardKey.arrowDown);
       expect(_focusedLabel(), 'About');
       await _press(tester, LogicalKeyboardKey.enter);
       expect(_title(tester), 'About');
