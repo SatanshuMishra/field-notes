@@ -41,6 +41,21 @@ const List<String> _fixed110 = <String>[
   'The Restarting Field Notes screen no longer shows a yellow underline under its text.',
 ];
 
+const List<String> _new120 = <String>[
+  'On macOS and Windows, you can pause a video recording and carry on where you left off. Keep saves it as one video.',
+  'Choose which microphone Field Notes records from with the new Input button in the voice and video recorders, which also sets the input volume and shows a live level meter. On Android, video recordings use the microphone Android chooses.',
+  'A new Voice page in Settings: Voice Isolation clears background noise like fans, traffic and typing from your voice when you keep a recording of 30 minutes or less, and Studio, the default, keeps your microphone as it is.',
+  'On macOS and Windows, the Input panel shows where sound is playing and opens your computer\'s sound settings.',
+];
+
+const List<String> _improved120 = <String>[
+  'On macOS and Windows, the recorder\'s buttons now sit below the window\'s title bar, clear of the window\'s own buttons.',
+];
+
+const List<String> _fixed120 = <String>[
+  'Turning the camera off before a video recording now turns the camera off and records only your voice. Before, the camera kept recording while hidden.',
+];
+
 const String _plainEnglishRule =
     'Write the entries in plain English for the people who use Field Notes: say clearly what they will notice, and leave out technical detail such as frame rates, graphics memory figures or the names of the app\'s internal parts.';
 
@@ -175,12 +190,6 @@ void main() {
     expect(unreleased, isNonNegative);
     expect(release, greaterThan(unreleased));
     expect(previous, greaterThan(release));
-    expect(
-      lines
-          .sublist(unreleased + 1, release)
-          .every((String line) => line.isEmpty),
-      isTrue,
-    );
 
     final ProcessResult result = Process.runSync('bash', <String>[
       'tool/release/changelog_section.sh',
@@ -211,6 +220,59 @@ void main() {
     );
     expect(section.notes.groups[0].items, _improved110);
     expect(section.notes.groups[1].items, _fixed110);
+  });
+
+  test('the release job finds the dated 1.2.0 notes in the changelog', () {
+    final List<String> lines = _changelog().split('\n');
+    final List<String> headings = lines
+        .where((String line) => line.startsWith('## [1.2.0]'))
+        .toList();
+    expect(headings, <String>['## [1.2.0] - 2026-10-15']);
+    final int unreleased = lines.indexOf('## [Unreleased]');
+    final int release = lines.indexOf('## [1.2.0] - 2026-10-15');
+    final int previous = lines.indexOf('## [1.1.0] - 2026-10-14');
+    expect(unreleased, isNonNegative);
+    expect(release, greaterThan(unreleased));
+    expect(previous, greaterThan(release));
+    expect(
+      lines
+          .sublist(unreleased + 1, release)
+          .every((String line) => line.isEmpty),
+      isTrue,
+    );
+
+    final ProcessResult result = Process.runSync('bash', <String>[
+      'tool/release/changelog_section.sh',
+      '1.2.0',
+      'CHANGELOG.md',
+    ]);
+    expect(result.exitCode, 0);
+    expect(
+      result.stdout,
+      '### New\n\n'
+      '${_new120.map((String entry) => '- $entry\n').join()}'
+      '\n### Improved\n\n'
+      '${_improved120.map((String entry) => '- $entry\n').join()}'
+      '\n### Fixed\n\n'
+      '${_fixed120.map((String entry) => '- $entry\n').join()}',
+    );
+  });
+
+  test('Field Notes 1.2.0 finds its own release notes', () {
+    final ChangelogSection? section = changelogSection(
+      _changelog(),
+      AppVersion.tryParse('1.2.0')!,
+    );
+    expect(section, isNotNull);
+    expect(section!.date, DateTime(2026, 10, 15));
+    expect(section.notes.intro, isEmpty);
+    expect(
+      section.notes.groups.map((ReleaseNoteGroup group) => group.title),
+      <String>['New', 'Improved', 'Fixed'],
+    );
+    expect(section.notes.groups[0].items, _new120);
+    expect(section.notes.groups[1].items, _improved120);
+    expect(section.notes.groups[2].items, _fixed120);
   });
 
   test('the changelog asks for entries in plain English for the people who use Field Notes', () {
