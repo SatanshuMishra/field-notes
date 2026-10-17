@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:50:57.805Z
+Updated: 2026-10-17T06:51:26.499Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Fix the flat voice visualizer, add live input meters and a microphone dropdown p
 
 ## Where things stand
 
-Interphase is handed off: the spec holds 20 criteria and 23 Steps in three MSPs (audio; settings, stacked on audio through output-list-channel; day-panel), and the record, spec and items pass every interphase check. Pipeline stage 2 is starting: the checkout's main is at origin/main cb2428e9 with the owner's uncommitted docs/prototype and tool/probe/macos/drive.sh changes, which no Step touches. The owner's 45 s Studio take for the attenuation-limit ear pick has not arrived.
+The first mitosis build is running from FEATURE branch feat/voice-and-day-panel (cut at cb2428e9): 23 Steps, 20 criteria, three MSPs (audio, which owns output-list-channel; settings, stacked on audio; day-panel), plan-only clean with no fatal findings. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's 45 s Studio take for the attenuation-limit ear pick has not arrived.
 
 ## Next step
 
