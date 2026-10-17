@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T17:44:12.692Z
+Updated: 2026-10-17T17:44:14.701Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three committed 
 
 ## Next step
 
-Run one smoke agent per platform (macOS and Android in the VM lab, Windows on winpc) on the smoke tree, a detached local merge of all three heads (03ed3bb2) with each broken path filed against the MSP that owns it, then collect each MSP's round-1 findings (reviewer arrays plus suite findings U1 onward) and validate them.
+When the reviewers and smoke agents report, file each broken smoke path against the MSP that owns it, then collect each MSP's round-1 findings (reviewer arrays plus suite findings U1 onward) and validate them.
 
 Needs: D2.
 
