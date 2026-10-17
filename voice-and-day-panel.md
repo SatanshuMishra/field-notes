@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T17:35:13.304Z
+Updated: 2026-10-17T17:35:16.957Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -30,6 +30,7 @@ Needs: D2.
 ## Where the details live
 
 - Sample recording: /Users/satanshumishra/Downloads/Record (online-voice-recorder.com).mp3
+- Attenuation-limit ear-test renders of the owner's 33 s Studio take: ~/Desktop/Field Notes voice levels/
 - Listening renders, tune.sh (limit renders of a take), benchmark and probe tests: session scratchpad
 - Spec, decisions, record and items: docs/specs/voice-and-day-panel.{md,decisions.md,record.json,items.json}
 - Natural-voice research with sources and the measured RNNoise delay: docs/specs/voice-and-day-panel.research.md
