@@ -33,6 +33,18 @@ are not relicensed under the Apache License.
   third_party/camera_windows/LOCAL_MODIFICATIONS.md, are licensed under the
   Apache License, Version 2.0.
 
+- third_party/just_audio/: a copy of just_audio 0.10.6 by Ryan Heise and the project contributors (https://github.com/ryanheise/just_audio), under the MIT License in third_party/just_audio/LICENSE, changed to play through the chosen output.
+
+- third_party/just_audio_windows/: a copy of just_audio_windows 0.2.3 by Bruno D'Luka and the project contributors (https://github.com/bdlukaa/just_audio_windows), under the MIT License in third_party/just_audio_windows/LICENSE, changed to play through the chosen output.
+
+- third_party/video_player_avfoundation/: a copy of video_player_avfoundation 2.12.0 by the Flutter authors (https://github.com/flutter/packages/tree/main/packages/video_player/video_player_avfoundation), under the BSD 3-Clause License in third_party/video_player_avfoundation/LICENSE, changed to play through the chosen output.
+
+- third_party/video_player_android/: a copy of video_player_android 2.12.2 by the Flutter authors (https://github.com/flutter/packages/tree/main/packages/video_player/video_player_android), under the BSD 3-Clause License in third_party/video_player_android/LICENSE, changed to play through the chosen output.
+
+- third_party/video_player_win/: a copy of video_player_win 3.3.0 by jakky1 (https://github.com/jakky1/video_player_win), under the BSD 3-Clause License in third_party/video_player_win/LICENSE, changed to play through the chosen output.
+
+- third_party/audioplayers_darwin/, third_party/audioplayers_android/ and third_party/audioplayers_windows/: copies of audioplayers_darwin 6.5.0, audioplayers_android 5.3.0 and audioplayers_windows 4.4.1 by Blue Fire (https://github.com/bluefireteam/audioplayers), each under the MIT License in its own LICENSE file, changed to play through the chosen output.
+
 - packages/rnnoise/third_party/rnnoise/: RNNoise 0.2 with upstream commit 372f7b4, by Jean-Marc Valin, the Xiph.Org Foundation, Mozilla, Amazon and contributors, under the BSD 3-Clause License (packages/rnnoise/LICENSE).
   Its source is https://github.com/xiph/rnnoise, built for Field Notes by
   the packages/rnnoise package.
