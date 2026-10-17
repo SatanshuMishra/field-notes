@@ -1,11 +1,25 @@
+import 'dart:async';
+
+import 'package:field_notes/features/sound/output_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 import 'audio_playback.dart';
 
 class JustAudioEntryPlayer implements EntryAudioPlayer {
-  JustAudioEntryPlayer() : _player = AudioPlayer();
+  JustAudioEntryPlayer({AudioPlayer? player, ValueListenable<double>? volume})
+    : _player = player ?? AudioPlayer(),
+      _volume = volume ?? playbackVolume {
+    _applyVolume();
+    _volume.addListener(_applyVolume);
+  }
 
   final AudioPlayer _player;
+  final ValueListenable<double> _volume;
+
+  void _applyVolume() {
+    unawaited(_player.setVolume(_volume.value));
+  }
 
   @override
   Future<void> load(String filePath) async {
@@ -35,7 +49,10 @@ class JustAudioEntryPlayer implements EntryAudioPlayer {
       _player.playerStateStream.map(_map);
 
   @override
-  Future<void> dispose() => _player.dispose();
+  Future<void> dispose() {
+    _volume.removeListener(_applyVolume);
+    return _player.dispose();
+  }
 
   AudioPlaybackState _map(PlayerState playerState) {
     switch (playerState.processingState) {

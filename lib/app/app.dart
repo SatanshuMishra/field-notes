@@ -10,6 +10,7 @@ import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/core/capture.dart';
 import 'package:field_notes/features/onboarding/onboarding.dart';
+import 'package:field_notes/features/sound/output_route.dart';
 import 'package:field_notes/features/updates/ui/update_restart_splash.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/sync_providers.dart';
@@ -80,6 +81,7 @@ class _ThemedAppState extends ConsumerState<_ThemedApp> {
   @override
   void initState() {
     super.initState();
+    ref.read(outputRouteSyncProvider);
     _settingsTimeout = Timer(_settingsWait, _showApp);
     ref.listenManual<AsyncValue<AppSettings>>(appSettingsProvider, (
       AsyncValue<AppSettings>? _,
