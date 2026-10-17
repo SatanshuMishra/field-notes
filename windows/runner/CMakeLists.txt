@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.14)
 project(runner LANGUAGES CXX)
 
 add_executable(${BINARY_NAME} WIN32
-  "audio_clean_bridge.cpp"
   "audio_pcm_reader.cpp"
   "audio_peaks_bridge.cpp"
   "file_drop_bridge.cpp"
   "flutter_window.cpp"
+  "live_audio_bridge.cpp"
   "main.cpp"
   "pasteboard_bridge.cpp"
   "spell_check_bridge.cpp"
