@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:00:48.034Z
+Updated: 2026-10-17T06:00:51.031Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -28,4 +28,7 @@ Wait for the owner's round 1 answers by number or "yes to all"; then record them
 ## Where the details live
 
 - Sample recording: /Users/satanshumishra/Downloads/Record (online-voice-recorder.com).mp3
-- Run home: ~/.mitosis/fireplace/<slug once interphase names it>
+- Listening variants A to E, benchmark and probe tests: session scratchpad (listen/, clean_bench_test.dart, meter_probe_test.dart)
+- Interview decisions and intent: docs/specs/voice-and-day-panel.decisions.md
+- Interview record: docs/specs/voice-and-day-panel.record.json
+- Run home: ~/.mitosis/fireplace/voice-and-day-panel
