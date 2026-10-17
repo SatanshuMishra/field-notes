@@ -1,7 +1,7 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:28:11.130Z
-Next ids: c1 D1 R1 S1
+Updated: 2026-10-17T06:48:53.693Z
+Next ids: c1 D2 R1 S1
 
 ## Goal
 
@@ -20,6 +20,8 @@ Grounded causes: cleaned voice takes save peaks as an empty list that the backfi
 Phase 7 read-back is out for approval (20 criteria, 23 Steps in three MSPs: audio, settings, day-panel; record passes check_record --complete). On approval, write the spec (phase 8). When the owner's 45 s Studio take arrives, run scratchpad tune.sh on it and send the 9, 12, 15, 18 and 24 dB renders; the pick replaces naturalVoiceAttenuationLimitDb = 15 in criterion 5.1.
 
 ## Decisions in force
+
+- D1 Interphase hand-off: build the approved spec in three MSPs: Build now: audio, settings (stacked on audio) and day-panel MSPs from the FEATURE branch; the owner's pick replaces naturalVoiceAttenuationLimitDb when the take arrives.
 
 ## Open risks
 
