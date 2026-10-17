@@ -15,6 +15,7 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/features/capture/core/capture_date.dart';
 import 'package:field_notes/features/capture/text/text_composer.dart';
 import 'package:field_notes/features/capture/text/text_composer_sheet.dart'
     show ComposerExit;
@@ -133,6 +134,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   final ScrollController _entryScroll = ScrollController();
   final GlobalKey _focusedTile = GlobalKey();
 
+  late String _date = widget.date;
   String? _deleteError;
   String? _selectedId;
   bool _autoplay = false;
@@ -152,13 +154,61 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   }
 
   @override
+  void didUpdateWidget(DayDetailPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.date != widget.date) {
+      _forgetDay(widget.date);
+    }
+  }
+
+  @override
   void dispose() {
     _entryScroll.dispose();
     super.dispose();
   }
 
+  String? _dayAfter(int delta) {
+    final DateTime? day = parseDateKey(_date);
+    if (day == null) {
+      return null;
+    }
+    return captureDateKey(DateTime(day.year, day.month, day.day + delta));
+  }
+
+  VoidCallback? _earlierDay() {
+    final String? earlier = _dayAfter(-1);
+    return earlier == null ? null : () => _showDay(earlier);
+  }
+
+  VoidCallback? _laterDay(DateTime today) {
+    final String? later = _dayAfter(1);
+    if (later == null || later.compareTo(captureDateKey(today)) > 0) {
+      return null;
+    }
+    return () => _showDay(later);
+  }
+
+  void _showDay(String date) {
+    if (!mounted || date == _date) {
+      return;
+    }
+    setState(() => _forgetDay(date));
+    if (_entryScroll.hasClients) {
+      _entryScroll.jumpTo(0);
+    }
+  }
+
+  void _forgetDay(String date) {
+    playbackFocus.silence();
+    _date = date;
+    _selectedId = null;
+    _autoplay = false;
+    _startAt = null;
+    _deleteError = null;
+  }
+
   bool _entriesListed() =>
-      ref.read(entriesForDateProvider(widget.date)).hasValue &&
+      ref.read(entriesForDateProvider(_date)).hasValue &&
       ref.read(dayDetailMediaResolverProvider).hasValue;
 
   Future<void> _revealFocusedEntry() async {
@@ -209,7 +259,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     final LogViewerOutcome outcome = await _handOver(
       () => showLogViewer(
         context,
-        date: widget.date,
+        date: _date,
         entryId: entry.id,
         exit: LogViewerExit.back,
       ),
@@ -307,9 +357,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       if (!mounted) {
         return;
       }
-      final List<Entry>? latest = ref
-          .read(entriesForDateProvider(widget.date))
-          .value;
+      final List<Entry>? latest = ref.read(entriesForDateProvider(_date)).value;
       if (latest != null && _selectedIn(latest) == null) {
         _clearSelection();
       }
@@ -317,9 +365,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   }
 
   void _stepFrom(Entry from, int delta) {
-    final List<Entry>? entries = ref
-        .read(entriesForDateProvider(widget.date))
-        .value;
+    final List<Entry>? entries = ref.read(entriesForDateProvider(_date)).value;
     if (entries == null) {
       return;
     }
@@ -335,7 +381,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
 
   Future<void> _addNote() async {
     await _handOver(
-      () => showTextComposer(context, widget.date, exit: ComposerExit.back),
+      () => showTextComposer(context, _date, exit: ComposerExit.back),
     );
   }
 
@@ -344,16 +390,16 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       () => showEditNote(
         context,
         entry: entry,
-        date: widget.date,
+        date: _date,
         exit: ComposerExit.cancel,
       ),
     );
   }
 
   String _deletePlace() {
-    final DateTime? day = parseDateKey(widget.date);
+    final DateTime? day = parseDateKey(_date);
     return day == null
-        ? widget.date
+        ? _date
         : dayShortLabelFor(day, today: ref.read(todayClockProvider)());
   }
 
@@ -386,7 +432,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Entry>> entriesAsync = ref.watch(
-      entriesForDateProvider(widget.date),
+      entriesForDateProvider(_date),
     );
     final List<Entry> entries = entriesAsync.value ?? const <Entry>[];
     final AsyncValue<MediaResolver> resolverAsync = ref.watch(
@@ -455,9 +501,11 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
                     DayDetailHeader(
-                      date: widget.date,
+                      date: _date,
                       today: today,
                       onClose: _close,
+                      onEarlier: _earlierDay(),
+                      onLater: _laterDay(today),
                     ),
                     Expanded(
                       child: _body(
@@ -495,7 +543,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     MediaResolver? resolver,
     DateTime today,
   ) {
-    final Mood? mood = ref.watch(dayForDateProvider(widget.date)).value?.mood;
+    final Mood? mood = ref.watch(dayForDateProvider(_date)).value?.mood;
     if (selected != null &&
         resolver != null &&
         selected.type != EntryType.text) {
@@ -503,7 +551,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
         key: ValueKey<String>('day-media-${selected.id}-$_playRequests'),
         entries: entries,
         selected: selected,
-        date: widget.date,
+        date: _date,
         dayTitle: _dayTitle(today),
         mood: mood,
         resolver: resolver,
@@ -530,15 +578,15 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
           : (int boxOffset) => toggleTaskWithUndo(
               context,
               entry: selected,
-              date: widget.date,
+              date: _date,
               boxOffset: boxOffset,
             ),
     );
   }
 
   String _dayTitle(DateTime today) {
-    final DateTime? day = parseDateKey(widget.date);
-    return day == null ? widget.date : dayTitleFor(day, today: today);
+    final DateTime? day = parseDateKey(_date);
+    return day == null ? _date : dayTitleFor(day, today: today);
   }
 
   Widget _phoneSheet({
@@ -551,7 +599,12 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     return PhoneSheet(
       key: dayDetailPanelKey,
       color: colors.panelTop,
-      header: DayDetailSheetHeader(date: widget.date, today: today),
+      header: DayDetailSheetHeader(
+        date: _date,
+        today: today,
+        onEarlier: _earlierDay(),
+        onLater: _laterDay(today),
+      ),
       aboveFooter: DashedDivider(
         thickness: _sheetRuleThickness,
         color: colors.ink22,
@@ -669,7 +722,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
           ? (int boxOffset) => toggleTaskWithUndo(
               context,
               entry: entry,
-              date: widget.date,
+              date: _date,
               boxOffset: boxOffset,
             )
           : null,
@@ -726,7 +779,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        MoodBannerForDate(date: widget.date, promptText: dayDetailMoodPrompt),
+        MoodBannerForDate(date: _date, promptText: dayDetailMoodPrompt),
         SizedBox(height: _sheet ? _sheetMoodGap : _summaryGap),
         if (_sheet)
           _SheetEntryCount(count: count)
