@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:15:06.331Z
+Updated: 2026-10-17T06:16:19.685Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Fix the flat voice visualizer, add live input meters and a microphone dropdown p
 
 ## Where things stand
 
-Interphase interview (feature pathway, slug voice-and-day-panel): intent I1 to I4 and round 1 and 2 answers recorded in the decisions file (live processing for voice and video, full speaker settings, seams written to the record). The clarity processing is open: the owner rejected variants A to E (voice sounds unnatural, high-pitched, uneasy). Research found the cause is RNNoise's unlimited attenuation (dry, gated, bright); practice is a reduction limit of about 12 to 18 dB via a delay-aligned dry/wet mix, plus de-essing and loudness levelling. Round 3 asks to adopt it and requests a raw Studio take for tuning. An Explore agent is locating where just_audio, video_player and audioplayers create their native players on each platform, for output routing. A 10-minute 608 MB pass-through video join took 0.32 s on the M4 Pro (ffmpeg). No literal pitch shift exists in the pipeline (a 180 s take stays 180.000 s through resampling).
+Interphase interview (feature pathway, slug voice-and-day-panel): intent I1 to I4 and round 1 and 2 answers recorded in the decisions file (live processing for voice and video, full speaker settings, seams written to the record). The clarity processing is open: the owner rejected variants A to E (voice sounds unnatural, high-pitched, uneasy). Research found the cause is RNNoise's unlimited attenuation (dry, gated, bright); practice is a reduction limit of about 12 to 18 dB via a delay-aligned dry/wet mix, plus de-essing and loudness levelling. Round 3 asks to adopt it and requests a raw Studio take for tuning. No playback package (just_audio, video_player, audioplayers) can choose an output device on any platform, so output routing means vendoring nine native player sites; the Media Foundation attribute that routes an IMFMediaEngine to an endpoint is unconfirmed. A 10-minute 608 MB pass-through video join took 0.32 s on the M4 Pro (ffmpeg). No literal pitch shift exists in the pipeline (a 180 s take stays 180.000 s through resampling).
 
 Grounded causes: cleaned voice takes save peaks as an empty list that the backfill skips (voice_composer.dart:336, voice_peaks_backfill.dart:88); input meter segments lay out 0 px tall (probe: 14 x 0); the day pane placeholder's OverflowBox inherits the pane height as its minimum; Android always uses the one-column day sheet. Measured on M4 Pro for 180 s: RNNoise 0.9 s, 44.1 to 48 kHz resample 0.6 s, AAC encode 0.3 s.
 
