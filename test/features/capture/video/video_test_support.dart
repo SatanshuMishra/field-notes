@@ -12,9 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../voice/voice_test_support.dart' show FakeVoiceRecorder;
 
-export '../voice/voice_test_support.dart'
-    show FakeTakeCleanup, takeCleanupOverride;
-
 Widget videoHarness(Widget child) {
   return MaterialApp(
     debugShowCheckedModeBanner: false,
