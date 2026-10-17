@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:00:11.726Z
+Updated: 2026-10-17T06:00:48.034Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,11 +11,13 @@ Fix the flat voice visualizer, add live input meters and a microphone dropdown p
 
 ## Where things stand
 
-Not started.
+Interphase interview (feature pathway, slug voice-and-day-panel): intent I1 to I4 recorded; frontier round 1 (Q1 to Q15) asked, and the owner's reply arrived empty, so it is still unanswered.
+
+Grounded causes: cleaned voice takes save peaks as an empty list that the backfill skips (voice_composer.dart:336, voice_peaks_backfill.dart:88); input meter segments lay out 0 px tall (probe: 14 x 0); the day pane placeholder's OverflowBox inherits the pane height as its minimum; Android always uses the one-column day sheet. Measured on M4 Pro for 180 s: RNNoise 0.9 s, 44.1 to 48 kHz resample 0.6 s, AAC encode 0.3 s.
 
 ## Next step
 
-Record the owner's answers to frontier round 1 (Q1 to Q15: live versus background processing, Studio scope, clarity variant, sample origin, 48 kHz and 96 kbps, backfill, Android scope, video card rule, full screen, day arrows, dropdown, speaker depth, seams, pre-mortem, lighthouse skip) in docs/specs/voice-and-day-panel.decisions.md and the record, then compute frontier round 2.
+Wait for the owner's round 1 answers by number or "yes to all"; then record them in docs/specs/voice-and-day-panel.decisions.md and the record, and compute frontier round 2.
 
 ## Decisions in force
 
