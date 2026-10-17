@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:21:06.486Z
+Updated: 2026-10-17T06:28:08.730Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounded causes: cleaned voice takes save peaks as an empty list that the backfi
 
 ## Next step
 
-Design the criteria and Steps in docs/specs/voice-and-day-panel.record.json from the recorded decisions while a scout confirms the output-routing APIs per platform; when the owner's 45 s Studio take arrives, render it at 9, 12, 15, 18 and 24 dB limits for the owner to pick the default.
+Phase 7 read-back is out for approval (20 criteria, 23 Steps in three MSPs: audio, settings, day-panel; record passes check_record --complete). On approval, write the spec (phase 8). When the owner's 45 s Studio take arrives, run scratchpad tune.sh on it and send the 9, 12, 15, 18 and 24 dB renders; the pick replaces naturalVoiceAttenuationLimitDb = 15 in criterion 5.1.
 
 ## Decisions in force
 
