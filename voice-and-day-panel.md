@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T17:30:31.496Z
+Updated: 2026-10-17T17:30:33.511Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three committed 
 
 ## Next step
 
-When the audio and settings suites finish, dispatch round 1 reviewers (code-reviewer, conformance-auditor, security-reviewer) for both; when day-panel commits, start its round 1 the same way; then run one smoke agent per platform (macOS and Android in the VM lab, Windows on winpc) at the settings and day-panel heads.
+As each MSP's suite finishes, write its round-1 suite.txt (failures compared with its base) and dispatch its round 1 reviewers (code-reviewer, conformance-auditor, security-reviewer for audio and settings); then run one smoke agent per platform (macOS and Android in the VM lab, Windows on winpc) at the settings and day-panel heads.
 
 Needs: D1.
 
