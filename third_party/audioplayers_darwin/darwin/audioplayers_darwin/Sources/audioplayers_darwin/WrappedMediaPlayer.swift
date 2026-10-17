@@ -50,6 +50,13 @@ enum ReleaseMode: String {
     self.volume = volume
     self.releaseMode = releaseMode
     self.url = url
+    setOutputDevice(FieldNotesOutputRoute.preferredDeviceId)
+  }
+
+  func setOutputDevice(_ deviceId: String?) {
+    #if os(macOS)
+      player.audioOutputDeviceUniqueID = deviceId
+    #endif
   }
 
   func setSourceUrl(

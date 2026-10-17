@@ -19,11 +19,13 @@ static NSString *_preferredOutputDeviceId = nil;
     FlutterMethodChannel* outputRouteChannel = [FlutterMethodChannel
         methodChannelWithName:@"field_notes/output_route/just_audio"
               binaryMessenger:[registrar messenger]];
+    __weak JustAudioPlugin *weakInstance = instance;
     [outputRouteChannel setMethodCallHandler:^(FlutterMethodCall* call, FlutterResult result) {
         if ([@"setPreferredOutputDevice" isEqualToString:call.method]) {
             NSDictionary *request = (NSDictionary *)call.arguments;
             id deviceId = request[@"id"];
             _preferredOutputDeviceId = [deviceId isKindOfClass:[NSString class]] ? deviceId : nil;
+            [weakInstance routePlayersToOutputDevice:_preferredOutputDeviceId];
             result(nil);
         } else {
             result(FlutterMethodNotImplemented);
@@ -41,6 +43,12 @@ static NSString *_preferredOutputDeviceId = nil;
     _registrar = registrar;
     _players = [[NSMutableDictionary alloc] init];
     return self;
+}
+
+- (void)routePlayersToOutputDevice:(NSString *)deviceId {
+    for (AudioPlayer *player in [_players allValues]) {
+        [player applyOutputDeviceUniqueID:deviceId];
+    }
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult)result {

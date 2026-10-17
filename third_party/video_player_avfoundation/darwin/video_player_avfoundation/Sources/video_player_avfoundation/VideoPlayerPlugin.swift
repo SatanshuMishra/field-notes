@@ -97,10 +97,11 @@ public final class VideoPlayerPlugin: NSObject, FlutterPlugin, AVFoundationVideo
 
     let outputRouteChannel = FlutterMethodChannel(
       name: "field_notes/output_route/video_player_avfoundation", binaryMessenger: messenger)
-    outputRouteChannel.setMethodCallHandler { call, result in
+    outputRouteChannel.setMethodCallHandler { [weak instance] call, result in
       if call.method == "setPreferredOutputDevice" {
         let arguments = call.arguments as? [String: Any]
         FieldNotesOutputRoute.preferredDeviceId = arguments?["id"] as? String
+        instance?.routePlayersToPreferredOutputDevice()
         result(nil)
       } else {
         result(FlutterMethodNotImplemented)
@@ -255,7 +256,17 @@ public final class VideoPlayerPlugin: NSObject, FlutterPlugin, AVFoundationVideo
     return URL(fileURLWithPath: validPath).absoluteString
   }
 
+  func routePlayersToPreferredOutputDevice() {
+    playersByIdentifier.values.forEach(routeToPreferredOutputDevice)
+  }
+
   // MARK: - Private
+
+  private func routeToPreferredOutputDevice(_ player: FVPVideoPlayer) {
+    #if os(macOS)
+      player.player.audioOutputDeviceUniqueID = FieldNotesOutputRoute.preferredDeviceId
+    #endif
+  }
 
   private func configurePlayer(
     _ player: FVPVideoPlayer,
@@ -264,6 +275,7 @@ public final class VideoPlayerPlugin: NSObject, FlutterPlugin, AVFoundationVideo
     let playerId = nextPlayerIdentifier
     nextPlayerIdentifier += 1
     playersByIdentifier[playerId] = player
+    routeToPreferredOutputDevice(player)
 
     let channelSuffix = "\(playerId)"
     // Set up the player-specific API handler, and its onDispose unregistration.

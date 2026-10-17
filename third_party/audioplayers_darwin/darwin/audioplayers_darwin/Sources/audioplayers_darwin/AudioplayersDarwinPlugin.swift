@@ -77,11 +77,15 @@ public class AudioplayersDarwinPlugin: NSObject, FlutterPlugin {
 
     let outputRouteChannel = FlutterMethodChannel(
       name: "field_notes/output_route/audioplayers_darwin", binaryMessenger: binaryMessenger)
-    outputRouteChannel.setMethodCallHandler { call, result in
+    outputRouteChannel.setMethodCallHandler { [weak instance] call, result in
       if call.method == "setPreferredOutputDevice" {
         let arguments = call.arguments as? [String: Any]
-        FieldNotesOutputRoute.preferredDeviceId = arguments?["id"] as? String
-        result(nil)
+        let deviceId = arguments?["id"] as? String
+        Task { @MainActor in
+          FieldNotesOutputRoute.preferredDeviceId = deviceId
+          instance?.routePlayers(toOutputDevice: deviceId)
+          result(nil)
+        }
       } else {
         result(FlutterMethodNotImplemented)
       }
@@ -392,6 +396,13 @@ public class AudioplayersDarwinPlugin: NSObject, FlutterPlugin {
       eventHandler: eventHandler
     )
     players[playerId] = newPlayer
+  }
+
+  @MainActor
+  func routePlayers(toOutputDevice deviceId: String?) {
+    for player in players.values {
+      player.setOutputDevice(deviceId)
+    }
   }
 
   func getPlayer(playerId: String) -> WrappedMediaPlayer? {

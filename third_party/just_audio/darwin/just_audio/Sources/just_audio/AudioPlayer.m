@@ -7,6 +7,7 @@
 #import "./include/just_audio/ConcatenatingAudioSource.h"
 #import "./include/just_audio/LoopingAudioSource.h"
 #import "./include/just_audio/ClippingAudioSource.h"
+#import "./include/just_audio/JustAudioPlugin.h"
 #import <AVFoundation/AVFoundation.h>
 #import <stdlib.h>
 #include <TargetConditionals.h>
@@ -192,6 +193,12 @@
 
 - (AVQueuePlayer *)player {
     return _player;
+}
+
+- (void)applyOutputDeviceUniqueID:(NSString *)deviceId {
+#if TARGET_OS_OSX
+    _player.audioOutputDeviceUniqueID = deviceId;
+#endif
 }
 
 - (float)speed {
@@ -668,6 +675,7 @@
     // Set up an empty player
     if (!_player) {
         _player = [[AVQueuePlayer alloc] initWithItems:@[]];
+        [self applyOutputDeviceUniqueID:[JustAudioPlugin preferredOutputDeviceId]];
         if (@available(macOS 10.12, iOS 10.0, *)) {
             _player.automaticallyWaitsToMinimizeStalling = _automaticallyWaitsToMinimizeStalling;
             // TODO: Remove these observers in dispose.
