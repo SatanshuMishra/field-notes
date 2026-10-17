@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:49:10.740Z
+Updated: 2026-10-17T06:50:57.805Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -15,7 +15,9 @@ Interphase is handed off: the spec holds 20 criteria and 23 Steps in three MSPs 
 
 ## Next step
 
-Cut the FEATURE branch with pipeline feature-branch, write the run home (~/.mitosis/field-notes/voice-and-day-panel: CHARTER.md, worker-rules.txt, dispatch.zsh, run.zsh, items.json, graph.json) and run run.zsh --plan-only. When the Studio take arrives, run scratchpad tune.sh on it and send the 9, 12, 15, 18 and 24 dB renders; the pick replaces naturalVoiceAttenuationLimitDb = 15.
+Run ~/.mitosis/field-notes/voice-and-day-panel/run.zsh (first build, output to build-1.out), then read its last-line JSON result and start stage 3 review per MSP (audio, settings, day-panel).
+
+Needs: D1.
 
 ## Decisions in force
 
