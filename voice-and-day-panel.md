@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T10:17:10.497Z
+Updated: 2026-10-17T17:17:22.473Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Fix the flat voice visualizer, add live input meters and a microphone dropdown p
 
 ## Where things stand
 
-The first build of FEATURE branch feat/voice-and-day-panel (cut at cb2428e9; 23 Steps, three MSPs: audio, which owns output-list-channel; settings, stacked on audio; day-panel) finished 19 of 22 Lanes; the one allowed --resume is running for the failed Lanes 9 (audio: nine out-of-set video tests still expect camera sound), 15 and 21 (a self-written test line the red-test hook blocked). The charter now tells Workers to name out-of-set tests their intended change breaks and leave them to the review's fix pass. Known out-of-set failures for the fix pass: the nine video tests in handoff/audio-lane-9.md, 7 voice tests (voice_level, voice_selected_input, voice_level_response), 1 drift_journal_repository test, voice_settings_page_test and settings_tabs_test. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's 45 s Studio take for the attenuation-limit ear pick has not arrived.
+FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs. Audio is committed on mitosis/audio at 907bdd51 (34 gate passes) and settings on mitosis/settings at 3567ddb1, stacked on audio (22 pass, 1 inert); both are in review round 1 with diffs, obligations and 57 gate proofs written and the full suite running. Day-panel's Lane 21 test line was fixed in its worktree with the owner's approval (6 of 6 pass) and a second --resume is gating and committing it. Known out-of-set failures for the fix pass: the nine video tests in handoff/audio-lane-9.md, 7 voice tests (voice_level, voice_selected_input, voice_level_response), 1 drift_journal_repository test, voice_settings_page_test and settings_tabs_test. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's 45 s Studio take for the attenuation-limit ear pick has not arrived.
 
 ## Next step
 
