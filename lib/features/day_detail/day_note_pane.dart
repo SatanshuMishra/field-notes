@@ -11,8 +11,7 @@ import 'package:field_notes/features/entry_cards/entry_cards.dart'
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 
 const String dayNotePanePrompt = 'Choose a log to read it here.';
-const String dayNotePaneHint =
-    'Notes open on this side. Voice and video open full window.';
+const String dayNotePaneHint = 'Logs open on this side.';
 const String dayNotePaneEmptyTitle = 'Nothing logged this day yet.';
 const String dayNotePaneEmptyHint = "Add a note to start the day's page.";
 
@@ -74,7 +73,9 @@ class DayNotePane extends StatelessWidget {
     final FieldNotesTextStyles textStyles = context.textStyles;
     return ClipRect(
       child: OverflowBox(
+        minHeight: 0,
         maxHeight: double.infinity,
+        alignment: Alignment.center,
         child: Padding(
           padding: _placeholderPadding,
           child: Column(
