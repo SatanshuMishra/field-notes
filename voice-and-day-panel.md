@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T17:17:22.473Z
+Updated: 2026-10-17T17:17:25.454Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs. Audi
 
 ## Next step
 
-Run stopped on a hard failure: day-panel is not committed after its one --resume (Lane 21's arrow-keys test row taps note text no finder reaches; the one-line fix in handoff/day-panel-lane-21.md passed 6 of 6 in a scratch copy, but the red-test hook blocks the Worker). Audio (34 gates pass) and settings (22 pass, 1 inert) are committed on mitosis/audio and mitosis/settings and wait for review round 1. The owner decides whether to apply the one-line fix and continue.
+When the audio and settings suites finish, dispatch round 1 reviewers (code-reviewer, conformance-auditor, security-reviewer) for both; when day-panel commits, start its round 1 the same way; then run one smoke agent per platform (macOS and Android in the VM lab, Windows on winpc) at the settings and day-panel heads.
 
 Needs: D1.
 
