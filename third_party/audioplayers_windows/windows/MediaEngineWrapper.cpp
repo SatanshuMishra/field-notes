@@ -14,12 +14,17 @@
 
 // STL headers
 #include <functional>
+#include <iostream>
 #include <memory>
+#include <mutex>
+#include <optional>
+#include <string>
 
 #include <Audioclient.h>
 #include "MediaEngineWrapper.h"
 #include "MediaFoundationHelpers.h"
 #include "audioplayers_helpers.h"
+#include "output_route.h"
 
 using namespace Microsoft::WRL;
 
@@ -131,6 +136,30 @@ void MediaEngineWrapper::Shutdown() {
     }
     THROW_IF_FAILED(m_mediaEngine->Shutdown());
   });
+}
+
+bool MediaEngineWrapper::ApplyPreferredAudioEndpoint() {
+  bool applied = false;
+  RunSyncInMTA([&]() {
+    auto lock = m_lock.lock();
+    if (m_mediaEngine == nullptr) {
+      return;
+    }
+    applied = SetPreferredAudioEndpointOnEngine();
+  });
+  return applied;
+}
+
+bool MediaEngineWrapper::IsPaused() {
+  bool paused = true;
+  RunSyncInMTA([&]() {
+    auto lock = m_lock.lock();
+    if (m_mediaEngine == nullptr) {
+      return;
+    }
+    paused = m_mediaEngine->IsPaused() != FALSE;
+  });
+  return paused;
 }
 
 void MediaEngineWrapper::StartPlayingFrom(double timestampInSeconds) {
@@ -308,11 +337,34 @@ void MediaEngineWrapper::CreateMediaEngine() {
                                                m_mediaEngine.put()));
 }
 
+bool MediaEngineWrapper::SetPreferredAudioEndpointOnEngine() {
+  winrt::com_ptr<IMFMediaEngineAudioEndpointId> endpoint;
+  if (FAILED(m_mediaEngine->QueryInterface(IID_PPV_ARGS(endpoint.put())))) {
+    static std::once_flag unsupportedLogged;
+    std::call_once(unsupportedLogged, []() {
+      std::cerr << "[audioplayers_windows] IMFMediaEngineAudioEndpointId is "
+                   "unavailable, playing on the system output"
+                << std::endl;
+    });
+    return false;
+  }
+  const std::optional<std::wstring> endpointId =
+      field_notes_output_route::PreferredOutputEndpointId();
+  const HRESULT hr = endpoint->SetAudioEndpointId(
+      endpointId ? endpointId->c_str() : nullptr);
+  if (FAILED(hr)) {
+    LOG_HR_MSG(hr, "SetAudioEndpointId failed");
+    return false;
+  }
+  return true;
+}
+
 void MediaEngineWrapper::SetMediaSource(IMFMediaSource* mediaSource) {
   winrt::com_ptr<IUnknown> sourceUnknown;
   THROW_IF_FAILED(
       mediaSource->QueryInterface(IID_PPV_ARGS(sourceUnknown.put())));
   m_mediaEngineExtension->SetMediaSource(sourceUnknown.get());
+  SetPreferredAudioEndpointOnEngine();
 
   winrt::com_ptr<IMFMediaEngineEx> mediaEngineEx =
       m_mediaEngine.as<IMFMediaEngineEx>();

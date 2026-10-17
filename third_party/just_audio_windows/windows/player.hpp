@@ -10,12 +10,18 @@
 #include <flutter/method_channel.h>
 #include <flutter/standard_method_codec.h>
 
+#include "output_route.h"
 #include "uri_utils.hpp"
 
+#include <algorithm>
+#include <cwctype>
+
+#include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Media.Audio.h>
 #include <winrt/Windows.Media.Core.h>
+#include <winrt/Windows.Media.Devices.h>
 #include <winrt/Windows.Media.Playback.h>
 #include <winrt/Windows.System.h>
 #define TO_MILLISECONDS(timespan) timespan.count() / 10000
@@ -77,6 +83,11 @@ auto TO_WIDESTRING = [](std::string string) -> std::wstring {
   return utf16_string;
 };
 
+inline std::wstring ToLowerWide(std::wstring text) {
+  std::transform(text.begin(), text.end(), text.begin(),
+    [](wchar_t character) { return static_cast<wchar_t>(std::towlower(character)); });
+  return text;
+}
 
 class JustAudioEventSink {
 public:
@@ -238,6 +249,8 @@ public:
 
       event_sink_->Error(code, message);
     });
+
+    ApplyPreferredOutputDevice();
   }
 
   AudioPlayer::~AudioPlayer() {
@@ -246,6 +259,39 @@ public:
 
   bool HasPlayerId(std::string playerId) {
     return id == playerId;
+  }
+
+  void ApplyPreferredOutputDevice() {
+    if (disposed_) return;
+    const std::optional<std::string> requested = field_notes_output_route::PreferredOutputDeviceId();
+    Playback::MediaPlayer player = mediaPlayer;
+    if (!requested || requested->empty()) {
+      try {
+        player.AudioDevice(nullptr);
+      } catch (winrt::hresult_error const& error) {
+        std::cerr << "[just_audio_windows] Output device error: " << winrt::to_string(error.message()) << std::endl;
+      }
+      return;
+    }
+    const std::wstring endpoint = ToLowerWide(std::wstring(winrt::to_hstring(*requested)));
+    winrt::Windows::Devices::Enumeration::DeviceInformation::FindAllAsync(
+      winrt::Windows::Media::Devices::MediaDevice::GetAudioRenderSelector()
+    ).Completed([player, requested, endpoint](auto const& operation, winrt::Windows::Foundation::AsyncStatus status) {
+      if (status != winrt::Windows::Foundation::AsyncStatus::Completed) return;
+      if (field_notes_output_route::PreferredOutputDeviceId() != requested) return;
+      try {
+        winrt::Windows::Devices::Enumeration::DeviceInformation chosen{ nullptr };
+        for (auto const& device : operation.GetResults()) {
+          if (ToLowerWide(std::wstring(device.Id())).find(endpoint) != std::wstring::npos) {
+            chosen = device;
+            break;
+          }
+        }
+        player.AudioDevice(chosen);
+      } catch (winrt::hresult_error const& error) {
+        std::cerr << "[just_audio_windows] Output device error: " << winrt::to_string(error.message()) << std::endl;
+      }
+    });
   }
 
   void AudioPlayer::HandleMethodCall(

@@ -45,6 +45,7 @@ class VideoPlayerWinPlugin : public flutter::Plugin {
   MyPlayer* getPlayerById(int64_t textureId, bool autoCreate = false);
   void destroyPlayerById(int64_t textureId, bool toRelease);
   void destroyAllPlayers();
+  void routePlayersToPreferredOutputDevice();
 
 public:  
   flutter::PluginRegistrarWindows *m_registrar;

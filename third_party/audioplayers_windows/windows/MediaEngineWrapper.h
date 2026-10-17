@@ -44,6 +44,9 @@ class MediaEngineWrapper
   void Pause();
   void Shutdown();
 
+  bool ApplyPreferredAudioEndpoint();
+  bool IsPaused();
+
   // Control various aspects of playback
   void StartPlayingFrom(double timestampInSeconds);
   void Resume();
@@ -73,6 +76,7 @@ class MediaEngineWrapper
   winrt::com_ptr<MediaEngineExtension> m_mediaEngineExtension;
   winrt::com_ptr<IMFMediaEngineNotify> m_callbackHelper;
   void CreateMediaEngine();
+  bool SetPreferredAudioEndpointOnEngine();
   void OnLoaded();
   void OnError(MF_MEDIA_ENGINE_ERR error, HRESULT hr);
   void OnBufferingStateChange(BufferingState state);

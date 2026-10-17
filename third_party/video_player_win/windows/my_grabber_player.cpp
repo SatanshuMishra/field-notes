@@ -1,5 +1,6 @@
 #include "my_grabber_player.h"
 #include "my_http_bytestream.h"
+#include "output_route.h"
 
 #include <windows.h>
 
@@ -108,25 +109,44 @@ MyPlayer::MyPlayer(IDXGIAdapter* adapter) :
 
 HRESULT MyPlayer::EventNotify(DWORD event, DWORD_PTR param1, DWORD param2)
 {
+    if (m_isReloading && (event == MF_MEDIA_ENGINE_EVENT_ABORT || event == MF_MEDIA_ENGINE_EVENT_EMPTIED || event == MF_MEDIA_ENGINE_EVENT_PAUSE))
+    {
+        return S_OK;
+    }
+
     switch (event) {
         case MF_MEDIA_ENGINE_EVENT_TIMEUPDATE:
             return S_OK;
 
         case MF_MEDIA_ENGINE_EVENT_LOADEDMETADATA:
             m_hasVideo = m_pEngine->HasVideo();
-            if (m_hasVideo)
+            if (m_hasVideo && !m_pTexture)
             {
                 m_pEngine->GetNativeVideoSize(&m_VideoWidth, &m_VideoHeight);
                 m_frameRectDst.right = m_VideoWidth;
                 m_frameRectDst.bottom = m_VideoHeight;
                 initTexture();
             }
+            if (m_isReloading)
+            {
+                resumeAfterReload();
+            }
             break;
 
         case MF_MEDIA_ENGINE_EVENT_CANPLAY:
-            // notify client code that loading successfully
-            m_loadCallback(true);
-            m_loadCallback = NULL;
+            if (m_loadCallback)
+            {
+                m_loadCallback(true);
+                m_loadCallback = NULL;
+            }
+            if (m_rerouteWhenLoaded)
+            {
+                m_rerouteWhenLoaded = false;
+                if (applyPreferredAudioEndpoint())
+                {
+                    reloadAtCurrentPosition();
+                }
+            }
             break;
 
         case MF_MEDIA_ENGINE_EVENT_FIRSTFRAMEREADY:
@@ -209,7 +229,6 @@ void MyPlayer::printErrorMessage(DWORD_PTR param1)
 HRESULT MyPlayer::OpenURL(const WCHAR* pszFileName, MyPlayerCallback* playerCallback, HWND hwndVideo, std::vector<std::wstring> httpHeaders, std::function<void(bool)> loadCallback)
 {
     HRESULT hr;
-    wil::com_ptr<MyHttpByteStream> pStream;
     wil::com_ptr<IMFMediaEngineClassFactory> pFactory; // TODO: keep as static member ?
     wil::com_ptr<IMFAttributes> pAttributes;    
 
@@ -229,12 +248,10 @@ HRESULT MyPlayer::OpenURL(const WCHAR* pszFileName, MyPlayerCallback* playerCall
     
     CHECK_HR(hr = m_pEngine->QueryInterface(IID_PPV_ARGS(&m_pEngineEx)));
 
-    if (!httpHeaders.empty() && wcsncmp(pszFileName, L"http", 4) == 0) {
-        pStream.attach(new MyHttpByteStream(std::wstring(pszFileName), httpHeaders));
-        CHECK_HR(hr = m_pEngineEx->SetSourceFromByteStream(pStream.get(), (BSTR)pszFileName));
-    } else {
-      CHECK_HR(hr = m_pEngine->SetSource((BSTR)pszFileName));
-    }
+    m_sourceUrl = pszFileName;
+    m_httpHeaders = httpHeaders;
+    applyPreferredAudioEndpoint();
+    CHECK_HR(hr = loadSource());
 
 done:
     if (FAILED(hr)) 
@@ -244,6 +261,77 @@ done:
         m_loadCallback = NULL;
     }
     return hr;
+}
+
+HRESULT MyPlayer::loadSource()
+{
+    if (!m_httpHeaders.empty() && wcsncmp(m_sourceUrl.c_str(), L"http", 4) == 0) {
+        wil::com_ptr<MyHttpByteStream> pStream;
+        pStream.attach(new MyHttpByteStream(m_sourceUrl, m_httpHeaders));
+        return m_pEngineEx->SetSourceFromByteStream(pStream.get(), (BSTR)m_sourceUrl.c_str());
+    }
+    return m_pEngine->SetSource((BSTR)m_sourceUrl.c_str());
+}
+
+bool MyPlayer::applyPreferredAudioEndpoint()
+{
+    wil::com_ptr<IMFMediaEngineAudioEndpointId> endpoint;
+    if (FAILED(m_pEngine->QueryInterface(IID_PPV_ARGS(&endpoint))))
+    {
+        static std::once_flag s_unsupportedLogged;
+        std::call_once(s_unsupportedLogged, []() {
+            std::cout << TAG "IMFMediaEngineAudioEndpointId is unavailable, playing on the system output" << std::endl;
+        });
+        return false;
+    }
+    const std::optional<std::wstring> endpointId = field_notes_output_route::PreferredOutputEndpointId();
+    const HRESULT hr = endpoint->SetAudioEndpointId(endpointId ? endpointId->c_str() : nullptr);
+    if (FAILED(hr))
+    {
+        std::cout << TAG "SetAudioEndpointId() failed: hr=" << hr << std::endl;
+        return false;
+    }
+    return true;
+}
+
+void MyPlayer::RouteToPreferredOutputDevice()
+{
+    std::unique_lock<std::mutex> guard(m_mutex);
+    if (m_isShutdown || !m_pEngine) return;
+    if (m_loadCallback)
+    {
+        m_rerouteWhenLoaded = true;
+        return;
+    }
+    if (!applyPreferredAudioEndpoint()) return;
+    reloadAtCurrentPosition();
+}
+
+void MyPlayer::reloadAtCurrentPosition()
+{
+    if (m_isShutdown || !m_pEngine || m_sourceUrl.empty()) return;
+    if (!m_isReloading)
+    {
+        m_resumeAtSeconds = m_pEngine->GetCurrentTime();
+        m_resumePlaying = !m_pEngine->IsPaused() && !m_pEngine->IsEnded();
+    }
+    m_isReloading = true;
+    const HRESULT hr = loadSource();
+    if (FAILED(hr))
+    {
+        m_isReloading = false;
+        std::cout << TAG "reload for the output device failed: hr=" << hr << std::endl;
+    }
+}
+
+void MyPlayer::resumeAfterReload()
+{
+    m_isReloading = false;
+    m_pEngine->SetCurrentTime(m_resumeAtSeconds);
+    if (m_resumePlaying)
+    {
+        m_pEngine->Play();
+    }
 }
 
 MyPlayer::~MyPlayer()

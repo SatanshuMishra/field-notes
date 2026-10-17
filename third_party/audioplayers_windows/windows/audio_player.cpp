@@ -46,31 +46,57 @@ AudioPlayer::AudioPlayer(
 
 AudioPlayer::~AudioPlayer() {}
 
+winrt::com_ptr<IMFMediaSource> AudioPlayer::CreateUrlMediaSource(
+    const std::string& url) {
+  winrt::com_ptr<IMFSourceResolver> sourceResolver;
+  THROW_IF_FAILED(MFCreateSourceResolver(sourceResolver.put()));
+  constexpr uint32_t sourceResolutionFlags =
+      MF_RESOLUTION_MEDIASOURCE |
+      MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE |
+      MF_RESOLUTION_READ;
+  MF_OBJECT_TYPE objectType = {};
+
+  winrt::com_ptr<IMFMediaSource> mediaSource;
+  THROW_IF_FAILED(sourceResolver->CreateObjectFromURL(
+      winrt::to_hstring(url).c_str(), sourceResolutionFlags, nullptr,
+      &objectType, reinterpret_cast<IUnknown**>(mediaSource.put_void())));
+  return mediaSource;
+}
+
+winrt::com_ptr<IMFMediaSource> AudioPlayer::CreateBytesMediaSource(
+    const std::vector<uint8_t>& bytes) {
+  winrt::com_ptr<IMFSourceResolver> sourceResolver;
+  THROW_IF_FAILED(MFCreateSourceResolver(sourceResolver.put()));
+  constexpr uint32_t sourceResolutionFlags =
+      MF_RESOLUTION_MEDIASOURCE |
+      MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE |
+      MF_RESOLUTION_READ;
+  MF_OBJECT_TYPE objectType = {};
+
+  winrt::com_ptr<IStream> memoryStream;
+  memoryStream.attach(SHCreateMemStream(
+      bytes.data(), static_cast<unsigned int>(bytes.size())));
+  THROW_HR_IF_NULL(E_OUTOFMEMORY, memoryStream.get());
+  winrt::com_ptr<IMFByteStream> byteStream;
+  THROW_IF_FAILED(
+      MFCreateMFByteStreamOnStream(memoryStream.get(), byteStream.put()));
+
+  winrt::com_ptr<IMFMediaSource> mediaSource;
+  THROW_IF_FAILED(sourceResolver->CreateObjectFromByteStream(
+      byteStream.get(), nullptr, sourceResolutionFlags, nullptr, &objectType,
+      reinterpret_cast<IUnknown**>(mediaSource.put_void())));
+  return mediaSource;
+}
+
 // This method should be called asynchronously, to avoid freezing UI
 void AudioPlayer::SetSourceUrl(std::string url) {
   if (_url != url) {
     _url = url;
+    _sourceBytes.clear();
     _isInitialized = false;
 
     try {
-      // Create a source resolver to create an IMFMediaSource for the content
-      // URL. This will create an instance of an inbuilt OS media source for
-      // playback. An application can skip this step and instantiate a custom
-      // IMFMediaSource implementation instead.
-      winrt::com_ptr<IMFSourceResolver> sourceResolver;
-      THROW_IF_FAILED(MFCreateSourceResolver(sourceResolver.put()));
-      constexpr uint32_t sourceResolutionFlags =
-          MF_RESOLUTION_MEDIASOURCE |
-          MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE |
-          MF_RESOLUTION_READ;
-      MF_OBJECT_TYPE objectType = {};
-
-      winrt::com_ptr<IMFMediaSource> mediaSource;
-      THROW_IF_FAILED(sourceResolver->CreateObjectFromURL(
-          winrt::to_hstring(url).c_str(), sourceResolutionFlags, nullptr,
-          &objectType, reinterpret_cast<IUnknown**>(mediaSource.put_void())));
-
-      m_mediaEngineWrapper->SetMediaSource(mediaSource.get());
+      m_mediaEngineWrapper->SetMediaSource(CreateUrlMediaSource(url).get());
     } catch (const std::exception& ex) {
       this->OnError("WindowsAudioError",
                     "Failed to set source. For troubleshooting, "
@@ -92,31 +118,49 @@ void AudioPlayer::SetSourceUrl(std::string url) {
 void AudioPlayer::SetSourceBytes(std::vector<uint8_t> bytes) {
   _isInitialized = false;
   _url.clear();
-  size_t size = bytes.size();
+  _sourceBytes = std::move(bytes);
 
   try {
-    winrt::com_ptr<IMFSourceResolver> sourceResolver;
-    THROW_IF_FAILED(MFCreateSourceResolver(sourceResolver.put()));
-    constexpr uint32_t sourceResolutionFlags =
-        MF_RESOLUTION_MEDIASOURCE |
-        MF_RESOLUTION_CONTENT_DOES_NOT_HAVE_TO_MATCH_EXTENSION_OR_MIME_TYPE |
-        MF_RESOLUTION_READ;
-    MF_OBJECT_TYPE objectType = {};
-
-    winrt::com_ptr<IMFMediaSource> mediaSource;
-
-    IStream* pstm =
-        SHCreateMemStream(bytes.data(), static_cast<unsigned int>(size));
-    IMFByteStream* stream = NULL;
-    MFCreateMFByteStreamOnStream(pstm, &stream);
-
-    sourceResolver->CreateObjectFromByteStream(
-        stream, nullptr, sourceResolutionFlags, nullptr, &objectType,
-        reinterpret_cast<IUnknown**>(mediaSource.put_void()));
-    m_mediaEngineWrapper->SetMediaSource(mediaSource.get());
+    m_mediaEngineWrapper->SetMediaSource(
+        CreateBytesMediaSource(_sourceBytes).get());
   } catch (...) {
     // Forward errors to event stream, as this is called asynchronously
     this->OnError("WindowsAudioError", "Error setting bytes");
+  }
+}
+
+void AudioPlayer::RouteToPreferredOutputDevice() {
+  if (!m_mediaEngineWrapper->ApplyPreferredAudioEndpoint()) {
+    return;
+  }
+  if (_url.empty() && _sourceBytes.empty()) {
+    return;
+  }
+  if (!_isInitialized) {
+    _rerouteWhenLoaded = true;
+    return;
+  }
+  ReopenAtCurrentPosition();
+}
+
+void AudioPlayer::ReopenAtCurrentPosition() {
+  if (_url.empty() && _sourceBytes.empty()) {
+    return;
+  }
+  if (!_isReopening) {
+    const double position = m_mediaEngineWrapper->GetMediaTime();
+    _resumeAtSeconds = isnan(position) ? 0 : position;
+    _resumePlaying = !m_mediaEngineWrapper->IsPaused();
+  }
+  _isReopening = true;
+  try {
+    auto mediaSource = _url.empty() ? CreateBytesMediaSource(_sourceBytes)
+                                    : CreateUrlMediaSource(_url);
+    m_mediaEngineWrapper->SetMediaSource(mediaSource.get());
+  } catch (...) {
+    _isReopening = false;
+    this->OnError("WindowsAudioError",
+                  "Failed to move playback to the chosen output device");
   }
 }
 
@@ -220,10 +264,22 @@ void AudioPlayer::OnLog(const std::string& message) {
 }
 
 void AudioPlayer::SendInitialized() {
+  if (_isReopening) {
+    _isReopening = false;
+    m_mediaEngineWrapper->SeekTo(_resumeAtSeconds);
+    if (_resumePlaying) {
+      m_mediaEngineWrapper->Resume();
+    }
+    return;
+  }
   if (!this->_isInitialized) {
     this->_isInitialized = true;
     OnPrepared(true);
     OnDurationUpdate();
+  }
+  if (_rerouteWhenLoaded) {
+    _rerouteWhenLoaded = false;
+    std::thread(&AudioPlayer::ReopenAtCurrentPosition, this).detach();
   }
 }
 
@@ -233,6 +289,9 @@ void AudioPlayer::ReleaseMediaSource() {
   }
   m_mediaEngineWrapper->ReleaseMediaSource();
   _url.clear();
+  _sourceBytes.clear();
+  _isReopening = false;
+  _rerouteWhenLoaded = false;
   _isInitialized = false;
 }
 

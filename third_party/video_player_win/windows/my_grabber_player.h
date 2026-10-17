@@ -9,6 +9,8 @@
 #include <iostream>
 #include <functional>
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include <wil/com.h>
 
@@ -49,6 +51,8 @@ public:
 	HRESULT GetVolume(float* pVol);
 	HRESULT SetVolume(float vol);
 
+	void RouteToPreferredOutputDevice();
+
 	MyPlayer(IDXGIAdapter* adapter);
 	virtual ~MyPlayer();
 
@@ -68,6 +72,10 @@ private:
 	HRESULT startVideoThread();
 	LONGLONG updateFrame();
 	void printErrorMessage(DWORD_PTR param1);
+	bool applyPreferredAudioEndpoint();
+	HRESULT loadSource();
+	void reloadAtCurrentPosition();
+	void resumeAfterReload();
 
 	wil::com_ptr<MyPlayerCallback> m_frameCallback;
 	std::function<void(bool)> m_loadCallback;
@@ -91,4 +99,11 @@ private:
     MFVideoNormalizedRect m_frameRectSrc = {};
     RECT m_frameRectDst = {};
 	HANDLE m_threadHandle = NULL;
+
+	std::wstring m_sourceUrl;
+	std::vector<std::wstring> m_httpHeaders;
+	bool m_isReloading = false;
+	bool m_rerouteWhenLoaded = false;
+	double m_resumeAtSeconds = 0;
+	bool m_resumePlaying = false;
 };

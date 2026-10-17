@@ -113,7 +113,14 @@ void AudioplayersWindowsPlugin::RegisterWithRegistrar(
   plugin->globalEventChannel->SetStreamHandler(std::move(handler));
 
   field_notes_output_route::RegisterChannel(
-      plugin->binaryMessenger, "field_notes/output_route/audioplayers_windows");
+      plugin->binaryMessenger, "field_notes/output_route/audioplayers_windows",
+      [plugin_pointer = plugin.get()]() {
+        for (const auto& entry : plugin_pointer->audioPlayers) {
+          std::thread(&AudioPlayer::RouteToPreferredOutputDevice,
+                      entry.second.get())
+              .detach();
+        }
+      });
 
   registrar->AddPlugin(std::move(plugin));
 }

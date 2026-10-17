@@ -38,6 +38,8 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include "MediaEngineWrapper.h"
 #include "MediaFoundationHelpers.h"
@@ -90,6 +92,10 @@ class AudioPlayer {
 
   void SetSourceUrl(std::string url);
 
+  void RouteToPreferredOutputDevice();
+
+  void ReopenAtCurrentPosition();
+
   void OnLog(const std::string& message);
 
   void OnError(const std::string& code, const std::string& message);
@@ -108,6 +114,16 @@ class AudioPlayer {
   bool _isInitialized = false;
   ReleaseMode _releaseMode = ReleaseMode::release;
   std::string _url{};
+  std::vector<uint8_t> _sourceBytes{};
+  bool _isReopening = false;
+  bool _rerouteWhenLoaded = false;
+  double _resumeAtSeconds = 0;
+  bool _resumePlaying = false;
+
+  winrt::com_ptr<IMFMediaSource> CreateUrlMediaSource(const std::string& url);
+
+  winrt::com_ptr<IMFMediaSource> CreateBytesMediaSource(
+      const std::vector<uint8_t>& bytes);
 
   void SendInitialized();
 

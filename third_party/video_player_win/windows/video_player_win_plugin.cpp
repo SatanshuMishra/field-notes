@@ -276,6 +276,15 @@ void VideoPlayerWinPlugin::destroyPlayerById(int64_t textureId, bool toRelease) 
   //std::cout << "native destroy player id: " << textureId << std::endl;
 }
 
+void VideoPlayerWinPlugin::routePlayersToPreferredOutputDevice() {
+  std::lock_guard<std::mutex> lock(m_mapMutex);
+  for (auto& entry : playerMap) {
+    if (entry.second != NULL) {
+      entry.second->RouteToPreferredOutputDevice();
+    }
+  }
+}
+
 void VideoPlayerWinPlugin::destroyAllPlayers() {
   for(auto iter = playerMap.begin(); iter != playerMap.end(); iter++) {
     if (iter->first < 0) continue;
@@ -315,7 +324,10 @@ void VideoPlayerWinPlugin::RegisterWithRegistrar(
   // Jacky }
 
   field_notes_output_route::RegisterChannel(
-      registrar->messenger(), "field_notes/output_route/video_player_win");
+      registrar->messenger(), "field_notes/output_route/video_player_win",
+      [plugin_pointer = plugin.get()]() {
+        plugin_pointer->routePlayersToPreferredOutputDevice();
+      });
 
   registrar->AddPlugin(std::move(plugin));
 }
