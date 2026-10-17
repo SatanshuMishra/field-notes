@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:15:04.587Z
+Updated: 2026-10-17T06:15:06.331Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -31,4 +31,5 @@ When the research and the player survey return, ask round 3 (the clarity process
 - Listening variants A to E, benchmark and probe tests: session scratchpad (listen/, clean_bench_test.dart, meter_probe_test.dart)
 - Interview decisions and intent: docs/specs/voice-and-day-panel.decisions.md
 - Interview record: docs/specs/voice-and-day-panel.record.json
+- Natural-voice research with sources and the measured RNNoise delay: docs/specs/voice-and-day-panel.research.md
 - Run home: ~/.mitosis/fireplace/voice-and-day-panel
