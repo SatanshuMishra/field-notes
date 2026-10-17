@@ -14,6 +14,9 @@ const String _falseValue = 'false';
 const int _inputVolumeMin = 0;
 const int _inputVolumeMax = 200;
 const int _inputVolumeDefault = 100;
+const int _outputVolumeMin = 0;
+const int _outputVolumeMax = 100;
+const int _outputVolumeDefault = 100;
 const int _meadowKeyLimit = 1 << 32;
 const String _storedValuesQuery =
     'SELECT key, value, 0 AS journal FROM settings '
@@ -120,6 +123,16 @@ class DriftSettingsRepository implements SettingsRepository {
   Future<void> setInputVolume(int value) => _put(
     SettingsKeys.inputVolume,
     value.clamp(_inputVolumeMin, _inputVolumeMax).toString(),
+  );
+
+  @override
+  Future<void> setAudioOutputId(String? value) =>
+      _put(SettingsKeys.audioOutputId, value ?? '');
+
+  @override
+  Future<void> setOutputVolume(int value) => _put(
+    SettingsKeys.outputVolume,
+    value.clamp(_outputVolumeMin, _outputVolumeMax).toString(),
   );
 
   @override
@@ -252,6 +265,8 @@ class DriftSettingsRepository implements SettingsRepository {
       audioInputId: _decodeAudioInputId(values[SettingsKeys.audioInputId]),
       inputProfile: InputProfile.fromId(values[SettingsKeys.inputProfile]),
       inputVolume: _decodeInputVolume(values[SettingsKeys.inputVolume]),
+      audioOutputId: _decodeAudioInputId(values[SettingsKeys.audioOutputId]),
+      outputVolume: _decodeOutputVolume(values[SettingsKeys.outputVolume]),
     );
   }
 
@@ -272,6 +287,20 @@ class DriftSettingsRepository implements SettingsRepository {
     }
     if (volume > BigInt.from(_inputVolumeMax)) {
       return _inputVolumeMax;
+    }
+    return volume.toInt();
+  }
+
+  int _decodeOutputVolume(String? raw) {
+    final BigInt? volume = BigInt.tryParse(raw ?? '');
+    if (volume == null) {
+      return _outputVolumeDefault;
+    }
+    if (volume < BigInt.from(_outputVolumeMin)) {
+      return _outputVolumeMin;
+    }
+    if (volume > BigInt.from(_outputVolumeMax)) {
+      return _outputVolumeMax;
     }
     return volume.toInt();
   }

@@ -20,6 +20,8 @@ abstract final class SettingsKeys {
   static const String audioInputId = 'audio_input_id';
   static const String inputProfile = 'input_profile';
   static const String inputVolume = 'input_volume';
+  static const String audioOutputId = 'audio_output_id';
+  static const String outputVolume = 'output_volume';
   static const String updateRecordPrefix = 'update_';
   static const String updateLastCheckedAt = 'update_last_checked_at';
   static const String updateLastAvailable = 'update_last_available';
