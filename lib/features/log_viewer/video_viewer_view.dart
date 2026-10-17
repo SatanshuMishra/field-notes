@@ -64,6 +64,10 @@ const double _macCapsuleMaxWidth = 780;
 const double _macCapsuleBottom = 24;
 const double _macCapsuleSide = 24;
 
+const double _embeddedPrimary = 44;
+const double _embeddedCapsuleBottom = 16;
+const double _embeddedCapsuleSide = 16;
+
 const Key videoScrubberBarKey = ValueKey<String>('video-scrubber-bar');
 
 final FutureProviderFamily<double?, String> videoAspectProvider = FutureProvider
@@ -87,6 +91,8 @@ class VideoViewerView extends ConsumerStatefulWidget {
     required this.playerFactory,
     required this.slots,
     this.focus,
+    this.embedded = false,
+    this.autoplay = false,
   });
 
   final LogViewerScene scene;
@@ -94,6 +100,8 @@ class VideoViewerView extends ConsumerStatefulWidget {
   final EntryVideoPlayerFactory playerFactory;
   final VideoSlots slots;
   final PlaybackFocus? focus;
+  final bool embedded;
+  final bool autoplay;
 
   @override
   ConsumerState<VideoViewerView> createState() => _VideoViewerViewState();
@@ -101,11 +109,35 @@ class VideoViewerView extends ConsumerStatefulWidget {
 
 class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
   final VideoControlsHandle _handle = VideoControlsHandle();
+  bool _autoplayPending = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoplayPending = widget.autoplay;
+    if (_autoplayPending) {
+      _handle.addListener(_onControls);
+    }
+  }
 
   @override
   void dispose() {
+    _handle.removeListener(_onControls);
     _handle.dispose();
     super.dispose();
+  }
+
+  void _onControls() {
+    final VideoControlsState? state = _handle.state;
+    final VoidCallback? start = state?.onToggle;
+    if (!_autoplayPending || state == null || start == null) {
+      return;
+    }
+    _autoplayPending = false;
+    _handle.removeListener(_onControls);
+    if (!state.isPlaying) {
+      start();
+    }
   }
 
   void _toggle() {
@@ -125,6 +157,12 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
     final LogViewerScene scene = widget.scene;
     final TargetPlatform platform = Theme.of(context).platform;
     final bool sidebar = resolveShellLayout(platform) == ShellLayout.sidebar;
+    if (widget.embedded) {
+      return ViewerKeys(
+        onSpace: _toggle,
+        child: _body(platform, _embeddedControls),
+      );
+    }
     return ViewerKeys(
       onSpace: _toggle,
       onLeft: scene.onEarlier,
@@ -134,19 +172,56 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
         ground: ViewerGround.media,
         onSwipeNext: scene.onLater,
         onSwipePrevious: scene.onEarlier,
-        child: VideoBody(
-          key: ValueKey<String>(scene.entry.id),
-          entry: scene.entry,
-          resolver: widget.resolver,
-          playerFactory: widget.playerFactory,
-          slots: widget.slots,
-          aspectRatio: _aspectRatio(),
-          handle: _handle,
-          focus: widget.focus,
-          controlModel: resolveVideoControlModel(platform),
-          controls: sidebar ? _macControls : _phoneControls,
-        ),
+        child: _body(platform, sidebar ? _macControls : _phoneControls),
       ),
+    );
+  }
+
+  Widget _body(TargetPlatform platform, VideoControlsBuilder controls) {
+    final LogViewerScene scene = widget.scene;
+    return VideoBody(
+      key: ValueKey<String>(scene.entry.id),
+      entry: scene.entry,
+      resolver: widget.resolver,
+      playerFactory: widget.playerFactory,
+      slots: widget.slots,
+      aspectRatio: _aspectRatio(),
+      handle: _handle,
+      focus: widget.focus,
+      controlModel: resolveVideoControlModel(platform),
+      controls: controls,
+    );
+  }
+
+  Widget _embeddedControls(BuildContext context, VideoControlsState state) {
+    return Stack(
+      children: <Widget>[
+        const Positioned.fill(child: ViewerOverlayShade(top: false)),
+        Positioned(
+          left: _embeddedCapsuleSide,
+          right: _embeddedCapsuleSide,
+          bottom: _embeddedCapsuleBottom,
+          child: Center(
+            child: ViewerCapsule(
+              maxWidth: _macCapsuleMaxWidth,
+              children: <Widget>[
+                ViewerPrimaryButton(
+                  playing: state.isPlaying,
+                  diameter: _embeddedPrimary,
+                  onPressed: state.onToggle,
+                ),
+                const SizedBox(width: _timeGap),
+                _time(context, state.position),
+                const SizedBox(width: _timeGap),
+                Expanded(child: _scrubber(state)),
+                const SizedBox(width: _timeGap),
+                _time(context, state.total),
+                const SizedBox(width: _timeGap),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

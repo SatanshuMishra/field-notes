@@ -38,6 +38,7 @@ import 'day_detail_edit_note.dart';
 import 'day_detail_entries_bar.dart';
 import 'day_detail_header.dart';
 import 'day_detail_providers.dart';
+import 'day_media_pane.dart';
 import 'day_note_pane.dart';
 
 const String dayDetailMoodPrompt = 'How was this day?';
@@ -134,6 +135,8 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
 
   String? _deleteError;
   String? _selectedId;
+  bool _autoplay = false;
+  int _playRequests = 0;
 
   bool get _sheet => widget.layout == ShellLayout.bottomBar;
 
@@ -197,7 +200,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   }
 
   Future<void> _open(Entry entry) async {
-    if (!_sheet && entry.type == EntryType.text) {
+    if (!_sheet) {
       playbackFocus.silence();
       _select(entry.id);
       return;
@@ -208,7 +211,6 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
         date: widget.date,
         entryId: entry.id,
         exit: LogViewerExit.back,
-        onReadNote: _sheet ? null : _select,
       ),
     );
     if (!mounted || outcome != LogViewerOutcome.closedAll) {
@@ -219,13 +221,31 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
 
   void _select(String entryId) {
     if (mounted && entryId != _selectedId) {
-      setState(() => _selectedId = entryId);
+      setState(() {
+        _selectedId = entryId;
+        _autoplay = false;
+      });
     }
+  }
+
+  void _play(Entry entry) {
+    if (!mounted) {
+      return;
+    }
+    playbackFocus.silence();
+    setState(() {
+      _selectedId = entry.id;
+      _autoplay = true;
+      _playRequests += 1;
+    });
   }
 
   void _clearSelection() {
     if (mounted && _selectedId != null) {
-      setState(() => _selectedId = null);
+      setState(() {
+        _selectedId = null;
+        _autoplay = false;
+      });
     }
   }
 
@@ -237,7 +257,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       return null;
     }
     for (final Entry entry in entries) {
-      if (entry.id == id && entry.type == EntryType.text) {
+      if (entry.id == id) {
         return entry;
       }
     }
@@ -427,33 +447,57 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
               Expanded(
                 child: ColoredBox(
                   color: colors.composerPaper,
-                  child: DayNotePane(
-                    entries: entries,
-                    selected: selected,
-                    mood: ref
-                        .watch(dayForDateProvider(widget.date))
-                        .value
-                        ?.mood,
-                    dayTitle: _dayTitle(today),
-                    resolver: resolver,
-                    onEdit: _edit,
-                    onDelete: _delete,
-                    onStep: _stepTo,
-                    onToggleTask: selected == null
-                        ? null
-                        : (int boxOffset) => toggleTaskWithUndo(
-                            context,
-                            entry: selected,
-                            date: widget.date,
-                            boxOffset: boxOffset,
-                          ),
-                  ),
+                  child: _rightPane(entries, selected, resolver, today),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _rightPane(
+    List<Entry> entries,
+    Entry? selected,
+    MediaResolver? resolver,
+    DateTime today,
+  ) {
+    final Mood? mood = ref.watch(dayForDateProvider(widget.date)).value?.mood;
+    if (selected != null &&
+        resolver != null &&
+        selected.type != EntryType.text) {
+      return DayMediaPane(
+        key: ValueKey<String>('day-media-${selected.id}-$_playRequests'),
+        entries: entries,
+        selected: selected,
+        date: widget.date,
+        dayTitle: _dayTitle(today),
+        mood: mood,
+        resolver: resolver,
+        autoplay: _autoplay,
+        onDelete: _delete,
+        onStep: _stepTo,
+        onClose: _clearSelection,
+      );
+    }
+    return DayNotePane(
+      entries: entries,
+      selected: selected,
+      mood: mood,
+      dayTitle: _dayTitle(today),
+      resolver: resolver,
+      onEdit: _edit,
+      onDelete: _delete,
+      onStep: _stepTo,
+      onToggleTask: selected == null
+          ? null
+          : (int boxOffset) => toggleTaskWithUndo(
+              context,
+              entry: selected,
+              date: widget.date,
+              boxOffset: boxOffset,
+            ),
     );
   }
 
@@ -579,7 +623,10 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       resolver: resolver,
       density: CompactLogDensity.day,
       semanticIndex: semanticIndex,
-      audioPlayerFactory: createJustAudioPlayer,
+      audioPlayerFactory: _sheet ? createJustAudioPlayer : null,
+      onPlay: _sheet || entry.type == EntryType.text
+          ? null
+          : () => _play(entry),
       onOpen: () => _open(entry),
       onEdit: () => _edit(entry),
       onDelete: () => _delete(entry),

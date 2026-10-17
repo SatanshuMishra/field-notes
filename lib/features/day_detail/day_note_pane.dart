@@ -27,6 +27,7 @@ const double _actionButtonExtent = 30;
 const double _headerVerticalPadding = 16;
 const double _headerHorizontalPadding = 28;
 const double _headerGap = 14;
+const double _headerActionGap = 10;
 const double _titleSize = 22;
 const double _titleLineHeight = 1.05;
 const EdgeInsets _bodyPadding = EdgeInsets.fromLTRB(28, 18, 28, 24);
@@ -108,8 +109,63 @@ class DayNotePane extends StatelessWidget {
   }
 
   Widget _reading(BuildContext context, Entry note, MediaResolver media) {
+    return DayPaneFrame(
+      entries: entries,
+      entry: note,
+      title: logPreviewOf(note).heading,
+      onEdit: () => onEdit(note),
+      onDelete: () => onDelete(note),
+      onStep: onStep,
+      body: SingleChildScrollView(
+        key: ValueKey<String>('day-note-pane-${note.id}'),
+        padding: _bodyPadding,
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: _readingEms * NoteColumn.emOf(context),
+            ),
+            child: NoteReadingBody(
+              entry: note,
+              resolver: media,
+              dayTitle: dayTitle,
+              onToggleTask: onToggleTask,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DayPaneFrame extends StatelessWidget {
+  const DayPaneFrame({
+    super.key,
+    required this.entries,
+    required this.entry,
+    required this.title,
+    required this.onDelete,
+    required this.onStep,
+    required this.body,
+    this.onEdit,
+    this.actions = const <Widget>[],
+  });
+
+  final List<Entry> entries;
+  final Entry entry;
+  final String title;
+  final VoidCallback onDelete;
+  final ValueChanged<Entry> onStep;
+  final Widget body;
+  final VoidCallback? onEdit;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
     final Color rule = context.colors.ink25;
-    final int index = entries.indexWhere((Entry entry) => entry.id == note.id);
+    final int index = entries.indexWhere(
+      (Entry candidate) => candidate.id == entry.id,
+    );
     final Entry? earlier = index > 0 ? entries[index - 1] : null;
     final Entry? later = index >= 0 && index + 1 < entries.length
         ? entries[index + 1]
@@ -117,28 +173,9 @@ class DayNotePane extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _header(context, note),
+        _header(context),
         DashedDivider(thickness: _ruleThickness, color: rule),
-        Expanded(
-          child: SingleChildScrollView(
-            key: ValueKey<String>('day-note-pane-${note.id}'),
-            padding: _bodyPadding,
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: _readingEms * NoteColumn.emOf(context),
-                ),
-                child: NoteReadingBody(
-                  entry: note,
-                  resolver: media,
-                  dayTitle: dayTitle,
-                  onToggleTask: onToggleTask,
-                ),
-              ),
-            ),
-          ),
-        ),
+        Expanded(child: body),
         if (index >= 0 && entries.length > 1) ...<Widget>[
           DashedDivider(thickness: _ruleThickness, color: rule),
           LogStepFooter(
@@ -154,10 +191,14 @@ class DayNotePane extends StatelessWidget {
     );
   }
 
-  Widget _header(BuildContext context, Entry note) {
+  Widget _header(BuildContext context) {
     final EdgeInsets reach = logActionsPillTapInset(
       buttonExtent: _actionButtonExtent,
-      withEdit: true,
+      withEdit: onEdit != null,
+    );
+    final double actionsTop = math.max<double>(
+      0,
+      _headerVerticalPadding - reach.top,
     );
     return Padding(
       padding: EdgeInsetsDirectional.only(
@@ -175,7 +216,7 @@ class DayNotePane extends StatelessWidget {
                 _headerVerticalPadding,
               ),
               child: Text(
-                logPreviewOf(note).heading,
+                title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: context.textStyles.headlineSerif.copyWith(
@@ -185,14 +226,19 @@ class DayNotePane extends StatelessWidget {
               ),
             ),
           ),
-          Padding(
-            padding: EdgeInsets.symmetric(
-              vertical: math.max<double>(0, _headerVerticalPadding - reach.top),
+          for (final Widget action in actions)
+            Padding(
+              padding: EdgeInsetsDirectional.only(
+                end: math.max<double>(0, _headerActionGap - reach.left),
+              ),
+              child: action,
             ),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: actionsTop),
             child: LogActionsPill(
               buttonExtent: _actionButtonExtent,
-              onEdit: () => onEdit(note),
-              onDelete: () => onDelete(note),
+              onEdit: onEdit,
+              onDelete: onDelete,
             ),
           ),
         ],

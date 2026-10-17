@@ -10,10 +10,12 @@ import '../../../domain/models/models.dart';
 import '../../notes/render/note_photo_block.dart' show NoteMediaScope;
 import '../cards/note_body.dart';
 import '../cards/voice_body.dart';
+import '../cards/voice_waveform.dart';
 import '../media/hatched_media_image.dart';
 import '../media/media_placeholders.dart';
 import '../media/media_resolver.dart';
 import '../playback/audio_playback.dart';
+import '../util/duration_format.dart';
 import 'log_actions_pill.dart';
 import 'log_preview.dart';
 
@@ -21,10 +23,12 @@ enum CompactLogDensity { feed, day }
 
 const Key compactLogThumbnailKey = ValueKey<String>('compact-log-thumbnail');
 const Key compactLogOpenLabelKey = ValueKey<String>('compact-log-open-label');
+const Key compactLogPlayKey = ValueKey<String>('compact-log-play');
 
 const String _photoUnavailableLabel = 'Photo unavailable';
 const String _posterUnavailableLabel = 'Poster unavailable';
 const String _playbackUnavailableLabel = 'Playback unavailable';
+const String _playLabel = 'Play';
 
 const double _tiltOddDegrees = -0.5;
 const double _tiltEvenDegrees = 0.4;
@@ -33,6 +37,17 @@ const double _metaLabelGap = 8;
 const double _shortNoteSize = 13.5;
 const double _voiceUnavailableHeight = 64;
 const double _hoverRise = 1;
+
+const double _playToggleSize = 38;
+const double _playToggleTarget = 48;
+const double _playToggleGap = 12;
+const double _playToggleGlyphOffset = 2;
+const BorderRadius _playToggleRadius = BorderRadius.all(
+  Radius.circular(_playToggleSize / 2),
+);
+const double _voiceLabelGap = 12;
+const double _voiceLabelMinWidth = 62;
+const double _posterPlayTarget = 44;
 
 const BorderRadius _cardRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusMd),
@@ -217,6 +232,7 @@ class CompactLogCard extends StatefulWidget {
     this.audioPlayerFactory,
     this.onToggleTask,
     this.semanticIndex,
+    this.onPlay,
   });
 
   final Entry entry;
@@ -228,6 +244,7 @@ class CompactLogCard extends StatefulWidget {
   final EntryAudioPlayerFactory? audioPlayerFactory;
   final ValueChanged<int>? onToggleTask;
   final int? semanticIndex;
+  final VoidCallback? onPlay;
 
   @override
   State<CompactLogCard> createState() => _CompactLogCardState();
@@ -493,6 +510,10 @@ class _CompactLogCardState extends State<CompactLogCard> {
 
   Widget _voice() {
     final EntryAudioPlayerFactory? factory = widget.audioPlayerFactory;
+    final VoidCallback? onPlay = widget.onPlay;
+    if (factory == null && onPlay != null) {
+      return _staticVoice(onPlay);
+    }
     if (factory == null) {
       return const CorruptMediaPlaceholder(
         label: _playbackUnavailableLabel,
@@ -503,6 +524,36 @@ class _CompactLogCardState extends State<CompactLogCard> {
       entry: widget.entry,
       resolver: widget.resolver,
       playerFactory: factory,
+    );
+  }
+
+  Widget _staticVoice(VoidCallback onPlay) {
+    return Row(
+      children: <Widget>[
+        _CardPlayToggle(onTap: onPlay),
+        const SizedBox(
+          width: _playToggleSize + _playToggleGap - _playToggleTarget,
+        ),
+        Expanded(
+          child: VoiceWaveform(
+            peaks: widget.entry.peaks,
+            active: false,
+            progress: 0,
+          ),
+        ),
+        const SizedBox(width: _voiceLabelGap),
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: _voiceLabelMinWidth),
+          child: Text(
+            formatMediaDuration(widget.entry.durationMs),
+            textAlign: TextAlign.right,
+            style: context.textStyles.caption11Sans.copyWith(
+              color: context.colors.muted,
+              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -534,7 +585,6 @@ class _CompactLogCardState extends State<CompactLogCard> {
 
   Widget _poster(_DensityStyle style) {
     final double disc = style.playDiscExtent;
-    final FieldNotesColors colors = context.colors;
     return SizedBox.fromSize(
       key: compactLogThumbnailKey,
       size: style.posterSize,
@@ -552,26 +602,107 @@ class _CompactLogCardState extends State<CompactLogCard> {
               errorLabel: _posterUnavailableLabel,
             ),
           ),
-          SizedBox.square(
-            dimension: disc,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.cardBright.withValues(alpha: 0.92),
-                shape: BoxShape.circle,
-                border: context.shadows.outline,
-              ),
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.only(left: disc * 0.08),
-                  child: CustomPaint(
-                    size: Size.square(disc * 0.36),
-                    painter: _PlayTrianglePainter(color: colors.ink),
+          _posterPlay(disc),
+        ],
+      ),
+    );
+  }
+
+  Widget _posterPlay(double disc) {
+    final FieldNotesColors colors = context.colors;
+    final Widget face = SizedBox.square(
+      dimension: disc,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.cardBright.withValues(alpha: 0.92),
+          shape: BoxShape.circle,
+          border: context.shadows.outline,
+        ),
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.only(left: disc * 0.08),
+            child: CustomPaint(
+              size: Size.square(disc * 0.36),
+              painter: _PlayTrianglePainter(color: colors.ink),
+            ),
+          ),
+        ),
+      ),
+    );
+    final VoidCallback? onPlay = widget.onPlay;
+    if (onPlay == null) {
+      return face;
+    }
+    return Semantics(
+      container: true,
+      button: true,
+      label: _playLabel,
+      child: GestureDetector(
+        key: compactLogPlayKey,
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onPlay,
+        child: SizedBox.square(
+          dimension: math.max(disc, _posterPlayTarget),
+          child: Center(
+            child: FocusRing(
+              onPressed: onPlay,
+              borderRadius: BorderRadius.circular(disc / 2),
+              child: face,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CardPlayToggle extends StatelessWidget {
+  const _CardPlayToggle({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      label: _playLabel,
+      child: GestureDetector(
+        key: compactLogPlayKey,
+        behavior: HitTestBehavior.opaque,
+        excludeFromSemantics: true,
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: _playToggleTarget,
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FocusRing(
+              onPressed: onTap,
+              borderRadius: _playToggleRadius,
+              child: Container(
+                width: _playToggleSize,
+                height: _playToggleSize,
+                decoration: BoxDecoration(
+                  color: Palette.coral,
+                  shape: BoxShape.circle,
+                  border: context.shadows.outline,
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(
+                      left: _playToggleGlyphOffset,
+                    ),
+                    child: PlayPauseGlyph(
+                      playing: false,
+                      color: FieldNotesColors.light.cardBright,
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }

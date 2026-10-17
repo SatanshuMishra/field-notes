@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -59,6 +60,14 @@ const double _macStepSlot = 48;
 const double _macCapsuleGap = 6;
 const double _macCapsuleBottom = 30;
 
+const double _embeddedWaveMaxWidth = 720;
+const double _embeddedWaveHeight = 140;
+const double _embeddedWaveSide = 28;
+const double _embeddedElapsedSize = 44;
+const double _embeddedPrimary = 56;
+const double _embeddedGap = 18;
+const EdgeInsets _embeddedPadding = EdgeInsets.symmetric(vertical: 24);
+
 class VoicePlayerView extends StatefulWidget {
   const VoicePlayerView({
     super.key,
@@ -66,12 +75,16 @@ class VoicePlayerView extends StatefulWidget {
     required this.resolver,
     required this.playerFactory,
     this.focus,
+    this.embedded = false,
+    this.autoplay = false,
   });
 
   final LogViewerScene scene;
   final MediaResolver resolver;
   final EntryAudioPlayerFactory playerFactory;
   final PlaybackFocus? focus;
+  final bool embedded;
+  final bool autoplay;
 
   @override
   State<VoicePlayerView> createState() => _VoicePlayerViewState();
@@ -79,6 +92,7 @@ class VoicePlayerView extends StatefulWidget {
 
 class _VoicePlayerViewState extends State<VoicePlayerView> {
   late final VoicePlayback _playback;
+  bool _autoplayPending = false;
 
   @override
   void initState() {
@@ -89,6 +103,7 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
       playerFactory: widget.playerFactory,
       focus: widget.focus,
     );
+    _autoplayPending = widget.autoplay;
     _playback.addListener(_onPlayback);
   }
 
@@ -109,6 +124,12 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     if (!mounted) {
       return;
     }
+    if (_autoplayPending && _playback.ready) {
+      _autoplayPending = false;
+      if (!_playback.isPlaying) {
+        unawaited(_playback.toggle());
+      }
+    }
     setState(() {});
   }
 
@@ -121,6 +142,9 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     final LogViewerScene scene = widget.scene;
     final VoicePlayback playback = _playback;
     final VoidCallback? toggle = playback.ready ? playback.toggle : null;
+    if (widget.embedded) {
+      return ViewerKeys(onSpace: toggle, child: _embeddedPlayer(toggle));
+    }
     final bool sidebar =
         resolveShellLayout(Theme.of(context).platform) == ShellLayout.sidebar;
     return ViewerKeys(
@@ -360,6 +384,45 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+
+  Widget _embeddedPlayer(VoidCallback? toggle) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double waveWidth = math.min(
+          _embeddedWaveMaxWidth,
+          math.max(0.0, constraints.maxWidth - _embeddedWaveSide * 2),
+        );
+        return ClipRect(
+          child: OverflowBox(
+            minHeight: 0,
+            maxHeight: double.infinity,
+            alignment: Alignment.center,
+            child: Padding(
+              padding: _embeddedPadding,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  SizedBox(
+                    width: waveWidth,
+                    height: _embeddedWaveHeight,
+                    child: _media(_embeddedWaveHeight),
+                  ),
+                  const SizedBox(height: _embeddedGap),
+                  _elapsed(_embeddedElapsedSize),
+                  const SizedBox(height: _embeddedGap),
+                  ViewerPrimaryButton(
+                    playing: _playback.isPlaying,
+                    diameter: _embeddedPrimary,
+                    onPressed: toggle,
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       },
     );
