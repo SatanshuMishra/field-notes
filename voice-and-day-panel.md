@@ -1,7 +1,7 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T17:30:43.427Z
-Next ids: c1 D2 R1 S1
+Updated: 2026-10-17T17:35:07.280Z
+Next ids: c1 D3 R1 S1
 
 ## Goal
 
@@ -21,7 +21,7 @@ Needs: D1.
 
 ## Decisions in force
 
-- D1 Interphase hand-off: build the approved spec in three MSPs: Build now: audio, settings (stacked on audio) and day-panel MSPs from the FEATURE branch; the owner's pick replaces naturalVoiceAttenuationLimitDb when the take arrives.
+- D2 Attenuation limit default stays 15 dB by the owner's ear pick: naturalVoiceAttenuationLimitDb stays 15; no code change. The three-MSP build of the approved spec continues as decided at hand-off.
 
 ## Open risks
 
