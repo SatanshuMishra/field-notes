@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:51:26.499Z
+Updated: 2026-10-17T06:51:36.249Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -35,4 +35,5 @@ Needs: D1.
 - Natural-voice research with sources and the measured RNNoise delay: docs/specs/voice-and-day-panel.research.md
 - Player construction sites and output-routing APIs per platform: docs/specs/voice-and-day-panel.players.md
 - Glossary and ADRs 0001 to 0003 written at hand-off (untracked, ship with the first PR): GLOSSARY.md, docs/adr/
-- Run home: ~/.mitosis/field-notes/voice-and-day-panel
+- Run home (charter, worker rules, run.zsh, plan-only.out, build-1.out, rounds.md): ~/.mitosis/field-notes/voice-and-day-panel
+- Mitosis run directory (plan, state, lanes, worktrees): ~/.mitosis/runs/field-notes/voice-and-day-panel
