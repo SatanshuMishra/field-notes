@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T09:39:28.043Z
+Updated: 2026-10-17T10:17:10.497Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ The first build of FEATURE branch feat/voice-and-day-panel (cut at cb2428e9; 23 
 
 ## Next step
 
-When the --resume (output build-1-resume.out) returns, read its last-line JSON: an MSP still not committed is a hard failure to report; committed MSPs go to stage 3 review round 1, whose fix pass also updates the known out-of-set failing tests.
+Run stopped on a hard failure: day-panel is not committed after its one --resume (Lane 21's arrow-keys test row taps note text no finder reaches; the one-line fix in handoff/day-panel-lane-21.md passed 6 of 6 in a scratch copy, but the red-test hook blocks the Worker). Audio (34 gates pass) and settings (22 pass, 1 inert) are committed on mitosis/audio and mitosis/settings and wait for review round 1. The owner decides whether to apply the one-line fix and continue.
 
 Needs: D1.
 
