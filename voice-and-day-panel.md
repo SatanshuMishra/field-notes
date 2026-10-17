@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:16:24.090Z
+Updated: 2026-10-17T06:21:06.486Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounded causes: cleaned voice takes save peaks as an empty list that the backfi
 
 ## Next step
 
-Wait for the owner's round 3 answers (T1 natural-voice chain, T2 a 45 s Studio take for tuning the limit, T3 Android voice recognition source, T4 video join on Keep, T5 no Bluetooth special case); then record them and design the criteria and Steps in docs/specs/voice-and-day-panel.record.json.
+Design the criteria and Steps in docs/specs/voice-and-day-panel.record.json from the recorded decisions while a scout confirms the output-routing APIs per platform; when the owner's 45 s Studio take arrives, render it at 9, 12, 15, 18 and 24 dB limits for the owner to pick the default.
 
 ## Decisions in force
 
