@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T05:58:11.114Z
+Updated: 2026-10-17T06:00:11.726Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Not started.
 
 ## Next step
 
-Record the owner's intent-round answers in docs/specs/voice-and-day-panel.decisions.md, then ask frontier round 1 (Android scope for the day pop-up, background versus faster in-place cleaning, speaker settings depth, dropdown in the recorder panel too, day arrows across empty and today, what the MP3 sample is and which listening variant A to E they prefer).
+Record the owner's answers to frontier round 1 (Q1 to Q15: live versus background processing, Studio scope, clarity variant, sample origin, 48 kHz and 96 kbps, backfill, Android scope, video card rule, full screen, day arrows, dropdown, speaker depth, seams, pre-mortem, lighthouse skip) in docs/specs/voice-and-day-panel.decisions.md and the record, then compute frontier round 2.
 
 ## Decisions in force
 
