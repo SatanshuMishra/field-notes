@@ -42,6 +42,7 @@ class MainFlutterWindow: NSWindow {
   private var imagePasteboardBridge: ImagePasteboardBridge?
   private var fileDropBridge: FileDropBridge?
   private var sparkleUpdaterBridge: SparkleUpdaterBridge?
+  private var liveAudioBridge: LiveAudioBridge?
   private var stayAwakeActivity: NSObjectProtocol?
   private var appearanceObservation: NSKeyValueObservation?
   private var windowButtonPitch: CGFloat = 0
@@ -67,7 +68,7 @@ class MainFlutterWindow: NSWindow {
     self.registerAudioOutputChannel(flutterViewController.engine.binaryMessenger)
     self.registerStayAwakeChannel(flutterViewController.engine.binaryMessenger)
     self.registerAudioPeaksChannel(flutterViewController.engine.binaryMessenger)
-    AudioCleanBridge.register(flutterViewController.engine.binaryMessenger)
+    self.liveAudioBridge = LiveAudioBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
