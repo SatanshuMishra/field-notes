@@ -30,6 +30,7 @@ class MainActivity : FlutterActivity() {
         DeviceStorageChannel(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         AudioPeaksChannel().register(flutterEngine.dartExecutor.binaryMessenger)
         LiveAudioChannel().register(flutterEngine.dartExecutor.binaryMessenger)
+        AudioOutputChannel(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         AppUpdateChannel(this).register(flutterEngine.dartExecutor.binaryMessenger)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, NOTIFICATION_SETTINGS_CHANNEL)
             .setMethodCallHandler { call, result ->
