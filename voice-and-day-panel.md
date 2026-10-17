@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T06:16:19.685Z
+Updated: 2026-10-17T06:16:22.331Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounded causes: cleaned voice takes save peaks as an empty list that the backfi
 
 ## Next step
 
-When the research and the player survey return, ask round 3 (the clarity processing from the research, and the video join on Keep versus writing cleaned sound into the camera's own file), then design the criteria and Steps in docs/specs/voice-and-day-panel.record.json.
+Wait for the owner's round 3 answers (T1 natural-voice chain, T2 a 45 s Studio take for tuning the limit, T3 Android voice recognition source, T4 video join on Keep, T5 no Bluetooth special case); then record them and design the criteria and Steps in docs/specs/voice-and-day-panel.record.json.
 
 ## Decisions in force
 
