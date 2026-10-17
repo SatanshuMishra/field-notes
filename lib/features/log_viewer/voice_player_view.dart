@@ -15,7 +15,7 @@ import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/entry_cards/playback/voice_playback.dart';
 import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
-    show LogViewerExit;
+    show LogViewerExit, LogViewerPlace;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show
         logViewerBackKey,
@@ -77,6 +77,8 @@ class VoicePlayerView extends StatefulWidget {
     this.focus,
     this.embedded = false,
     this.autoplay = false,
+    this.startAt,
+    this.onPlace,
   });
 
   final LogViewerScene scene;
@@ -85,6 +87,8 @@ class VoicePlayerView extends StatefulWidget {
   final PlaybackFocus? focus;
   final bool embedded;
   final bool autoplay;
+  final Duration? startAt;
+  final ValueChanged<LogViewerPlace>? onPlace;
 
   @override
   State<VoicePlayerView> createState() => _VoicePlayerViewState();
@@ -92,7 +96,7 @@ class VoicePlayerView extends StatefulWidget {
 
 class _VoicePlayerViewState extends State<VoicePlayerView> {
   late final VoicePlayback _playback;
-  bool _autoplayPending = false;
+  bool _launchPending = false;
 
   @override
   void initState() {
@@ -103,13 +107,16 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
       playerFactory: widget.playerFactory,
       focus: widget.focus,
     );
-    _autoplayPending = widget.autoplay;
+    _launchPending = widget.autoplay || widget.startAt != null;
     _playback.addListener(_onPlayback);
   }
 
   @override
   void didUpdateWidget(VoicePlayerView oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.scene.entry.id != widget.scene.entry.id) {
+      _launchPending = false;
+    }
     _playback.rebind(entry: widget.scene.entry, resolver: widget.resolver);
   }
 
@@ -124,13 +131,26 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
     if (!mounted) {
       return;
     }
-    if (_autoplayPending && _playback.ready) {
-      _autoplayPending = false;
-      if (!_playback.isPlaying) {
-        unawaited(_playback.toggle());
-      }
+    if (_launchPending && _playback.ready) {
+      _launchPending = false;
+      _launch();
     }
+    widget.onPlace?.call((
+      position: _playback.position,
+      playing: _playback.isPlaying,
+    ));
     setState(() {});
+  }
+
+  void _launch() {
+    final Duration? startAt = widget.startAt;
+    if (startAt != null) {
+      unawaited(_playback.seekTo(startAt, play: widget.autoplay));
+      return;
+    }
+    if (widget.autoplay && !_playback.isPlaying) {
+      unawaited(_playback.toggle());
+    }
   }
 
   String _positionPhrase(Duration position) =>

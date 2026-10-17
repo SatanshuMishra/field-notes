@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart' show Tooltip;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,8 +9,8 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
     show MediaResolver, logPreviewOf, videoSlotsProvider;
-import 'package:field_notes/features/log_viewer/log_viewer.dart'
-    show LogViewerExit;
+import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
+import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_scene.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
@@ -35,7 +37,13 @@ const double _fullScreenStroke = 1.8;
 const double _fullScreenCorner = 0.36;
 const BorderRadius _fullScreenRadius = BorderRadius.all(Radius.circular(10));
 
-class DayMediaPane extends ConsumerWidget {
+typedef DayMediaFullScreenClosed = void Function(
+  Entry entry,
+  LogViewerOutcome outcome,
+  Duration? endedAt,
+);
+
+class DayMediaPane extends ConsumerStatefulWidget {
   const DayMediaPane({
     super.key,
     required this.entries,
@@ -48,7 +56,9 @@ class DayMediaPane extends ConsumerWidget {
     required this.onStep,
     required this.onClose,
     this.autoplay = false,
-    this.onFullScreen,
+    this.startAt,
+    this.onCoveredChanged,
+    this.onFullScreenClosed,
   });
 
   final List<Entry> entries;
@@ -61,20 +71,73 @@ class DayMediaPane extends ConsumerWidget {
   final ValueChanged<Entry> onStep;
   final VoidCallback onClose;
   final bool autoplay;
-  final VoidCallback? onFullScreen;
+  final Duration? startAt;
+  final ValueChanged<bool>? onCoveredChanged;
+  final DayMediaFullScreenClosed? onFullScreenClosed;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final Entry entry = selected;
+  ConsumerState<DayMediaPane> createState() => _DayMediaPaneState();
+}
+
+class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
+  LogViewerPlace _place = (position: Duration.zero, playing: false);
+  bool _fullScreen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _place = (position: widget.startAt ?? Duration.zero, playing: false);
+  }
+
+  void _onPlace(LogViewerPlace place) => _place = place;
+
+  void _openFullScreen() => unawaited(_showFullScreen());
+
+  Future<void> _showFullScreen() async {
+    if (_fullScreen) {
+      return;
+    }
+    _fullScreen = true;
+    final Entry entry = widget.selected;
+    final LogViewerPlace from = _place;
+    final ValueChanged<bool>? onCoveredChanged = widget.onCoveredChanged;
+    playbackFocus.silence();
+    Duration? endedAt;
+    onCoveredChanged?.call(true);
+    final LogViewerOutcome outcome;
+    try {
+      outcome = await showLogViewer(
+        context,
+        date: widget.date,
+        entryId: entry.id,
+        exit: LogViewerExit.back,
+        startAt: from.position,
+        autoplay: from.playing,
+        onPosition: (String entryId, Duration position) {
+          if (entryId == entry.id) {
+            endedAt = position;
+          }
+        },
+      );
+    } finally {
+      _fullScreen = false;
+      onCoveredChanged?.call(false);
+    }
+    widget.onFullScreenClosed?.call(entry, outcome, endedAt);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Entry entry = widget.selected;
     return KeyedSubtree(
       key: dayMediaPaneKey,
       child: DayPaneFrame(
-        entries: entries,
+        entries: widget.entries,
         entry: entry,
         title: logPreviewOf(entry).heading,
-        actions: <Widget>[_FullScreenButton(onPressed: onFullScreen)],
-        onDelete: () => onDelete(entry),
-        onStep: onStep,
+        actions: <Widget>[_FullScreenButton(onPressed: _openFullScreen)],
+        onDelete: () => widget.onDelete(entry),
+        onStep: widget.onStep,
         body: Padding(
           padding: _stagePadding,
           child: ClipRRect(
@@ -83,7 +146,7 @@ class DayMediaPane extends ConsumerWidget {
               color: entry.type == EntryType.video
                   ? Palette.mediaBlack
                   : Palette.mediaGround,
-              child: SizedBox.expand(child: _view(ref, _sceneOf(entry))),
+              child: SizedBox.expand(child: _view(_sceneOf(entry))),
             ),
           ),
         ),
@@ -91,27 +154,32 @@ class DayMediaPane extends ConsumerWidget {
     );
   }
 
-  Widget _view(WidgetRef ref, LogViewerScene scene) {
+  Widget _view(LogViewerScene scene) {
     if (scene.entry.type == EntryType.video) {
       return VideoViewerView(
         scene: scene,
-        resolver: resolver,
+        resolver: widget.resolver,
         playerFactory: ref.watch(todayVideoPlayerFactoryProvider),
         slots: ref.watch(videoSlotsProvider),
         embedded: true,
-        autoplay: autoplay,
+        autoplay: widget.autoplay,
+        startAt: widget.startAt,
+        onPlace: _onPlace,
       );
     }
     return VoicePlayerView(
       scene: scene,
-      resolver: resolver,
+      resolver: widget.resolver,
       playerFactory: ref.watch(todayAudioPlayerFactoryProvider),
       embedded: true,
-      autoplay: autoplay,
+      autoplay: widget.autoplay,
+      startAt: widget.startAt,
+      onPlace: _onPlace,
     );
   }
 
   LogViewerScene _sceneOf(Entry entry) {
+    final List<Entry> entries = widget.entries;
     final int index = entries.indexWhere(
       (Entry candidate) => candidate.id == entry.id,
     );
@@ -121,18 +189,18 @@ class DayMediaPane extends ConsumerWidget {
         : null;
     return LogViewerScene(
       entry: entry,
-      date: date,
-      dayTitle: dayTitle,
-      mood: mood,
+      date: widget.date,
+      dayTitle: widget.dayTitle,
+      mood: widget.mood,
       index: index,
       count: entries.length,
       earlier: earlier,
       later: later,
       exit: LogViewerExit.back,
-      onBack: onClose,
-      onEarlier: earlier == null ? null : () => onStep(earlier),
-      onLater: later == null ? null : () => onStep(later),
-      onDelete: () => onDelete(entry),
+      onBack: widget.onClose,
+      onEarlier: earlier == null ? null : () => widget.onStep(earlier),
+      onLater: later == null ? null : () => widget.onStep(later),
+      onDelete: () => widget.onDelete(entry),
       onEdit: null,
     );
   }

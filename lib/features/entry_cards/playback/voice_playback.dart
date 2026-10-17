@@ -98,6 +98,16 @@ class VoicePlayback extends ChangeNotifier {
     unawaited(_seek(stepped(delta), play: false));
   }
 
+  Future<void> seekTo(Duration target, {required bool play}) {
+    final Duration end = total;
+    final Duration clamped = target <= Duration.zero
+        ? Duration.zero
+        : end > Duration.zero && target > end
+        ? end
+        : target;
+    return _seek(clamped, play: play);
+  }
+
   Future<void> toggle() async {
     final EntryAudioPlayer? player = _player;
     if (player == null) {

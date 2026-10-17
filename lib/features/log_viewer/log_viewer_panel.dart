@@ -57,12 +57,18 @@ class LogViewerPanel extends ConsumerStatefulWidget {
     required this.entryId,
     required this.exit,
     this.onReadNote,
+    this.startAt,
+    this.autoplay = false,
+    this.onPosition,
   });
 
   final String date;
   final String entryId;
   final LogViewerExit exit;
   final ValueChanged<String>? onReadNote;
+  final Duration? startAt;
+  final bool autoplay;
+  final LogViewerPositionChanged? onPosition;
 
   @override
   ConsumerState<LogViewerPanel> createState() => _LogViewerPanelState();
@@ -74,6 +80,7 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
   bool _noteExpanded = false;
   bool _deleting = false;
   bool _left = false;
+  bool _stepped = false;
   int _viewGeneration = 0;
   int? _scrimPointer;
 
@@ -186,7 +193,10 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       onReadNote(next.id);
       return;
     }
-    setState(() => _entryId = next.id);
+    setState(() {
+      _entryId = next.id;
+      _stepped = true;
+    });
   }
 
   void _edit(Entry entry) {
@@ -318,12 +328,19 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
       return const SizedBox.shrink();
     }
     final LogViewerScene scene = _sceneFor(entries, index);
+    final bool launch = !_stepped && scene.entry.id == widget.entryId;
+    final Duration? startAt = launch ? widget.startAt : null;
+    final bool autoplay = launch && widget.autoplay;
+    final ValueChanged<LogViewerPlace> onPlace = _placeReporterFor(scene.entry);
     switch (scene.entry.type) {
       case EntryType.voice:
         return VoicePlayerView(
           scene: scene,
           resolver: resolver,
           playerFactory: ref.watch(todayAudioPlayerFactoryProvider),
+          startAt: startAt,
+          autoplay: autoplay,
+          onPlace: onPlace,
         );
       case EntryType.video:
         return VideoViewerView(
@@ -331,12 +348,20 @@ class _LogViewerPanelState extends ConsumerState<LogViewerPanel> {
           resolver: resolver,
           playerFactory: ref.watch(todayVideoPlayerFactoryProvider),
           slots: ref.watch(videoSlotsProvider),
+          startAt: startAt,
+          autoplay: autoplay,
+          onPlace: onPlace,
         );
       case EntryType.text:
         return _sidebar
             ? _notePanel(scene, resolver)
             : _noteSheet(scene, resolver);
     }
+  }
+
+  ValueChanged<LogViewerPlace> _placeReporterFor(Entry entry) {
+    return (LogViewerPlace place) =>
+        widget.onPosition?.call(entry.id, place.position);
   }
 
   LogViewerScene _sceneFor(List<Entry> entries, int index) {

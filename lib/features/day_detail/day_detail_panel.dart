@@ -136,6 +136,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   String? _deleteError;
   String? _selectedId;
   bool _autoplay = false;
+  Duration? _startAt;
   int _playRequests = 0;
 
   bool get _sheet => widget.layout == ShellLayout.bottomBar;
@@ -224,6 +225,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       setState(() {
         _selectedId = entryId;
         _autoplay = false;
+        _startAt = null;
       });
     }
   }
@@ -236,6 +238,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     setState(() {
       _selectedId = entry.id;
       _autoplay = true;
+      _startAt = null;
       _playRequests += 1;
     });
   }
@@ -245,8 +248,37 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
       setState(() {
         _selectedId = null;
         _autoplay = false;
+        _startAt = null;
       });
     }
+  }
+
+  void _setCovered(bool covered) {
+    if (covered || mounted) {
+      widget.onCoveredChanged?.call(covered);
+    }
+  }
+
+  void _onFullScreenClosed(
+    Entry entry,
+    LogViewerOutcome outcome,
+    Duration? endedAt,
+  ) {
+    if (!mounted) {
+      return;
+    }
+    if (outcome == LogViewerOutcome.closedAll) {
+      Navigator.of(context).pop();
+      return;
+    }
+    if (endedAt == null || entry.id != _selectedId) {
+      return;
+    }
+    setState(() {
+      _autoplay = false;
+      _startAt = endedAt;
+      _playRequests += 1;
+    });
   }
 
   void _close() => Navigator.of(context).pop();
@@ -476,9 +508,12 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
         mood: mood,
         resolver: resolver,
         autoplay: _autoplay,
+        startAt: _startAt,
         onDelete: _delete,
         onStep: _stepTo,
         onClose: _clearSelection,
+        onCoveredChanged: _setCovered,
+        onFullScreenClosed: _onFullScreenClosed,
       );
     }
     return DayNotePane(

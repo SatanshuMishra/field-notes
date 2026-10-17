@@ -22,7 +22,7 @@ import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
-    show LogViewerExit;
+    show LogViewerExit, LogViewerPlace;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show
         logViewerBackKey,
@@ -93,6 +93,8 @@ class VideoViewerView extends ConsumerStatefulWidget {
     this.focus,
     this.embedded = false,
     this.autoplay = false,
+    this.startAt,
+    this.onPlace,
   });
 
   final LogViewerScene scene;
@@ -102,6 +104,8 @@ class VideoViewerView extends ConsumerStatefulWidget {
   final PlaybackFocus? focus;
   final bool embedded;
   final bool autoplay;
+  final Duration? startAt;
+  final ValueChanged<LogViewerPlace>? onPlace;
 
   @override
   ConsumerState<VideoViewerView> createState() => _VideoViewerViewState();
@@ -110,13 +114,22 @@ class VideoViewerView extends ConsumerStatefulWidget {
 class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
   final VideoControlsHandle _handle = VideoControlsHandle();
   bool _autoplayPending = false;
+  Duration? _startPending;
 
   @override
   void initState() {
     super.initState();
     _autoplayPending = widget.autoplay;
-    if (_autoplayPending) {
-      _handle.addListener(_onControls);
+    _startPending = widget.startAt;
+    _handle.addListener(_onControls);
+  }
+
+  @override
+  void didUpdateWidget(VideoViewerView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scene.entry.id != widget.scene.entry.id) {
+      _autoplayPending = false;
+      _startPending = null;
     }
   }
 
@@ -129,12 +142,30 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
 
   void _onControls() {
     final VideoControlsState? state = _handle.state;
-    final VoidCallback? start = state?.onToggle;
-    if (!_autoplayPending || state == null || start == null) {
+    if (state == null) {
+      return;
+    }
+    _seekToStart(state);
+    _startIfAsked(state);
+    widget.onPlace?.call((position: state.position, playing: state.isPlaying));
+  }
+
+  void _seekToStart(VideoControlsState state) {
+    final Duration? startAt = _startPending;
+    final ValueChanged<Duration>? seek = state.onSeek;
+    if (startAt == null || !state.ready || seek == null) {
+      return;
+    }
+    _startPending = null;
+    seek(startAt);
+  }
+
+  void _startIfAsked(VideoControlsState state) {
+    final VoidCallback? start = state.onToggle;
+    if (!_autoplayPending || start == null) {
       return;
     }
     _autoplayPending = false;
-    _handle.removeListener(_onControls);
     if (!state.isPlaying) {
       start();
     }
