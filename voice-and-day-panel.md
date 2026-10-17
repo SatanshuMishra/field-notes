@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T05:49:59.606Z
+Updated: 2026-10-17T05:58:11.114Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Not started.
 
 ## Next step
 
-Run lighthouse readiness, then invoke interphase with the five-issue request and Interview me first.
+Record the owner's intent-round answers in docs/specs/voice-and-day-panel.decisions.md, then ask frontier round 1 (Android scope for the day pop-up, background versus faster in-place cleaning, speaker settings depth, dropdown in the recorder panel too, day arrows across empty and today, what the MP3 sample is and which listening variant A to E they prefer).
 
 ## Decisions in force
 
