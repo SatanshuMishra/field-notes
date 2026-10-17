@@ -306,7 +306,7 @@ class DriftJournalRepository implements JournalRepository {
         .map(
           (rows) => rows
               .map(toDomainEntry)
-              .where((entry) => entry.peaks == null)
+              .where((entry) => entry.peaks?.isEmpty ?? true)
               .toList(),
         );
   }

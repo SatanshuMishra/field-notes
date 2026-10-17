@@ -1,15 +1,20 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:field_notes/data/media/live_audio_channel.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/domain/settings/app_settings.dart';
+import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
-import 'voice_level.dart';
 import 'voice_recorder.dart';
+
+typedef VoiceProcessing = ({InputProfile profile, int volume});
 
 const String voiceRecordingMime = 'audio/mp4';
 const String voiceRecordingExtension = 'm4a';
@@ -26,60 +31,58 @@ Future<String> resolveVoiceRecordingPath(Directory directory, int nowMs) async {
 class RecordVoiceRecorder implements VoiceRecorder {
   RecordVoiceRecorder({
     AudioRecorder? recorder,
+    LiveEncoder encoder = const LiveEncoder(),
+    VoiceChainRunner chainRunner = runVoiceChainInIsolate,
     Future<Directory> Function()? temporaryDirectory,
     Future<AudioInput> Function()? resolveInput,
-  }) : _recorder = recorder ?? AudioRecorder(),
+    Future<VoiceProcessing> Function()? resolveProcessing,
+  }) : _capture = LiveAudioCapture(
+         recorderFactory: () => recorder ?? AudioRecorder(),
+         encoder: encoder,
+         chainRunner: chainRunner,
+       ),
        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
-       _resolveInput = resolveInput ?? _systemDefaultInput;
+       _resolveInput = resolveInput ?? _systemDefaultInput,
+       _resolveProcessing = resolveProcessing ?? _defaultProcessing;
 
   static Future<AudioInput> _systemDefaultInput() async =>
       const AudioInput(id: null, label: systemDefaultInputLabel);
 
-  final AudioRecorder _recorder;
+  static Future<VoiceProcessing> _defaultProcessing() async => (
+    profile: AppSettings.defaults.inputProfile,
+    volume: AppSettings.defaults.inputVolume,
+  );
+
+  final LiveAudioCapture _capture;
   final Future<AudioInput> Function() _resolveInput;
+  final Future<VoiceProcessing> Function() _resolveProcessing;
   final Future<Directory> Function() _temporaryDirectory;
   final Stopwatch _elapsed = Stopwatch();
-  String? _activePath;
+  LiveAudioTake? _lastTake;
   Map<String, VoiceRecording> _owned = const <String, VoiceRecording>{};
 
-  late final StreamController<double> _levels =
-      StreamController<double>.broadcast(
-        onListen: _listenToAmplitude,
-        onCancel: _stopListeningToAmplitude,
-      );
-  late final Stream<double> _levelStream = _levels.stream;
-  Stream<Amplitude>? _amplitudes;
-  StreamSubscription<Amplitude>? _amplitudeSubscription;
-
-  void _listenToAmplitude() {
-    final Stream<Amplitude> amplitudes = _amplitudes ??= _recorder
-        .onAmplitudeChanged(voiceLevelInterval);
-    _amplitudeSubscription = amplitudes.listen(
-      (Amplitude amplitude) =>
-          _levels.add(voiceLevelFromDbfs(amplitude.current)),
-    );
-  }
-
-  Future<void> _stopListeningToAmplitude() async {
-    final StreamSubscription<Amplitude>? subscription = _amplitudeSubscription;
-    _amplitudeSubscription = null;
-    await subscription?.cancel();
-  }
-
   @override
-  Stream<double> get level => _levelStream;
+  Stream<double> get level => _capture.level;
 
   @override
   Duration get elapsed => _elapsed.elapsed;
 
   @override
-  Future<bool> hasPermission() => _recorder.hasPermission();
+  Future<bool> hasPermission() => _capture.hasPermission();
 
   Future<AudioInput> _resolveInputOrDefault() async {
     try {
       return await _resolveInput();
     } catch (_) {
       return _systemDefaultInput();
+    }
+  }
+
+  Future<VoiceProcessing> _resolveProcessingOrDefault() async {
+    try {
+      return await _resolveProcessing();
+    } catch (_) {
+      return _defaultProcessing();
     }
   }
 
@@ -92,22 +95,16 @@ class RecordVoiceRecorder implements VoiceRecorder {
         DateTime.now().millisecondsSinceEpoch,
       );
       final AudioInput input = await _resolveInputOrDefault();
-      final String? inputId = input.id;
-      _elapsed
-        ..reset()
-        ..start();
-      await _recorder.start(
-        RecordConfig(
-          encoder: voiceRecordingEncoder,
-          numChannels: 1,
-          bitRate: 48000,
-          device: inputId == null
-              ? null
-              : InputDevice(id: inputId, label: input.label),
-        ),
+      final VoiceProcessing processing = await _resolveProcessingOrDefault();
+      _elapsed.reset();
+      _lastTake = null;
+      await _capture.start(
+        input: input,
+        profile: processing.profile,
+        volume: processing.volume,
         path: path,
       );
-      _activePath = path;
+      _elapsed.start();
     } catch (error) {
       _elapsed.stop();
       throw VoiceRecorderException(recordStartMessage, cause: error);
@@ -117,7 +114,7 @@ class RecordVoiceRecorder implements VoiceRecorder {
   @override
   Future<void> pause() async {
     try {
-      await _recorder.pause();
+      await _capture.pause();
       _elapsed.stop();
     } catch (error) {
       throw VoiceRecorderException(recordPauseMessage, cause: error);
@@ -127,35 +124,38 @@ class RecordVoiceRecorder implements VoiceRecorder {
   @override
   Future<void> resume() async {
     try {
-      await _recorder.resume();
+      await _capture.resume();
       _elapsed.start();
     } catch (error) {
       throw VoiceRecorderException(recordPauseMessage, cause: error);
     }
   }
 
+  Future<LiveAudioTake> _finishedTake() async {
+    final LiveAudioTake? last = _lastTake;
+    if (!_capture.running && last != null) {
+      return last;
+    }
+    final LiveAudioTake take = await _capture.stop();
+    _lastTake = take;
+    return take;
+  }
+
   @override
   Future<VoiceRecording> stop() async {
     _elapsed.stop();
-    final int durationMs = _elapsed.elapsedMilliseconds;
     try {
-      final String? stopped = await _recorder.stop();
-      final String resolved = stopped ?? _activePath ?? '';
-      if (resolved.isEmpty) {
-        throw const VoiceRecorderException(recordStopMessage);
-      }
+      final LiveAudioTake take = await _finishedTake();
       final VoiceRecording recording = VoiceRecording(
         media: CaptureFile(
-          file: File(resolved),
+          file: File(take.path),
           mime: voiceRecordingMime,
-          durationMs: durationMs,
+          durationMs: take.durationMs,
         ),
-        durationMs: durationMs,
+        durationMs: take.durationMs,
       );
-      _owned = <String, VoiceRecording>{..._owned, resolved: recording};
+      _owned = <String, VoiceRecording>{..._owned, take.path: recording};
       return recording;
-    } on VoiceRecorderException {
-      rethrow;
     } catch (error) {
       throw VoiceRecorderException(recordStopMessage, cause: error);
     }
@@ -184,13 +184,13 @@ class RecordVoiceRecorder implements VoiceRecorder {
   @override
   Future<void> cancel() async {
     _elapsed.stop();
-    await _recorder.cancel();
+    _lastTake = null;
+    await _capture.cancel();
   }
 
   @override
   Future<void> dispose() async {
-    await _stopListeningToAmplitude();
-    await _levels.close();
-    await _recorder.dispose();
+    _elapsed.stop();
+    await _capture.dispose();
   }
 }

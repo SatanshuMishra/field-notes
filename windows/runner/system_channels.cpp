@@ -48,6 +48,9 @@ constexpr char kReleaseMethod[] = "release";
 constexpr char kAudioOutputChannelName[] = "field_notes/audio_output";
 constexpr char kDefaultOutputNameMethod[] = "defaultOutputName";
 constexpr char kOpenSoundSettingsMethod[] = "openSoundSettings";
+constexpr char kListOutputsMethod[] = "listOutputs";
+constexpr char kOutputIdKey[] = "id";
+constexpr char kOutputNameKey[] = "name";
 constexpr wchar_t kNotificationSettingsUri[] = L"ms-settings:notifications";
 constexpr wchar_t kCameraPrivacySettingsUri[] = L"ms-settings:privacy-webcam";
 constexpr wchar_t kSoundSettingsUri[] = L"ms-settings:sound";
@@ -185,6 +188,69 @@ std::optional<std::string> DefaultOutputName() {
   return friendly_name;
 }
 
+std::optional<std::string> FriendlyName(IMMDevice* device) {
+  ComPtr<IPropertyStore> properties;
+  if (FAILED(device->OpenPropertyStore(STGM_READ,
+                                       properties.GetAddressOf()))) {
+    return std::nullopt;
+  }
+  PROPVARIANT name;
+  ::PropVariantInit(&name);
+  std::optional<std::string> friendly_name;
+  if (SUCCEEDED(properties->GetValue(PKEY_Device_FriendlyName, &name)) &&
+      name.vt == VT_LPWSTR && name.pwszVal != nullptr &&
+      name.pwszVal[0] != L'\0') {
+    friendly_name = Utf8FromUtf16(name.pwszVal);
+  }
+  ::PropVariantClear(&name);
+  if (friendly_name.has_value() && friendly_name->empty()) {
+    return std::nullopt;
+  }
+  return friendly_name;
+}
+
+flutter::EncodableList ListOutputs() {
+  ComPtr<IMMDeviceEnumerator> enumerator;
+  if (FAILED(::CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr,
+                                CLSCTX_ALL,
+                                IID_PPV_ARGS(enumerator.GetAddressOf())))) {
+    return flutter::EncodableList();
+  }
+  ComPtr<IMMDeviceCollection> endpoints;
+  if (FAILED(enumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE,
+                                            endpoints.GetAddressOf()))) {
+    return flutter::EncodableList();
+  }
+  UINT count = 0;
+  if (FAILED(endpoints->GetCount(&count))) {
+    return flutter::EncodableList();
+  }
+  flutter::EncodableList outputs;
+  for (UINT index = 0; index < count; ++index) {
+    ComPtr<IMMDevice> device;
+    if (FAILED(endpoints->Item(index, device.GetAddressOf()))) {
+      continue;
+    }
+    LPWSTR raw_id = nullptr;
+    if (FAILED(device->GetId(&raw_id)) || raw_id == nullptr) {
+      continue;
+    }
+    const std::string id = Utf8FromUtf16(raw_id);
+    ::CoTaskMemFree(raw_id);
+    const std::optional<std::string> name = FriendlyName(device.Get());
+    if (id.empty() || !name.has_value()) {
+      continue;
+    }
+    outputs.push_back(flutter::EncodableValue(flutter::EncodableMap{
+        {flutter::EncodableValue(std::string(kOutputIdKey)),
+         flutter::EncodableValue(id)},
+        {flutter::EncodableValue(std::string(kOutputNameKey)),
+         flutter::EncodableValue(*name)},
+    }));
+  }
+  return outputs;
+}
+
 void HandleAudioOutput(const Call& call, Result result) {
   if (call.method_name() == kDefaultOutputNameMethod) {
     const std::optional<std::string> name = DefaultOutputName();
@@ -193,6 +259,8 @@ void HandleAudioOutput(const Call& call, Result result) {
       return;
     }
     result->Success(flutter::EncodableValue(*name));
+  } else if (call.method_name() == kListOutputsMethod) {
+    result->Success(flutter::EncodableValue(ListOutputs()));
   } else if (call.method_name() == kOpenSoundSettingsMethod) {
     if (!OpenSettingsPage(kSoundSettingsUri)) {
       OutputDebugStringW(L"Field Notes could not open the sound settings.\n");
