@@ -71,6 +71,12 @@ public class MainMethodCallHandler implements MethodCallHandler {
         }
     }
 
+    void routePlayersToOutputDevice(String deviceId) {
+        for (AudioPlayer player : players.values()) {
+            player.applyPreferredOutputDevice(deviceId);
+        }
+    }
+
     void dispose() {
         for (AudioPlayer player : new ArrayList<AudioPlayer>(players.values())) {
             player.dispose();

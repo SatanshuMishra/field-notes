@@ -47,7 +47,9 @@ class AudioplayersPlugin : FlutterPlugin {
         outputRouteChannel = MethodChannel(binding.binaryMessenger, "field_notes/output_route/audioplayers_android")
         outputRouteChannel?.setMethodCallHandler { call, response ->
             if (call.method == "setPreferredOutputDevice") {
-                preferredOutputDeviceId = call.argument<String>("id")
+                val deviceId = call.argument<String>("id")
+                preferredOutputDeviceId = deviceId
+                players.values.forEach { it.setPreferredOutputDevice(deviceId) }
                 response.success(null)
             } else {
                 response.notImplemented()

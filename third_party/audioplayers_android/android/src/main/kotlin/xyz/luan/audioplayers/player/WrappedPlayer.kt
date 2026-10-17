@@ -349,6 +349,10 @@ class WrappedPlayer internal constructor(
         return false
     }
 
+    fun setPreferredOutputDevice(deviceId: String?) {
+        (player as? MediaPlayerWrapper)?.setPreferredOutputDevice(deviceId)
+    }
+
     /**
      * Internal logic. Private methods
      */

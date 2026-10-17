@@ -8,7 +8,9 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
+import androidx.annotation.OptIn;
 import androidx.media3.common.C;
+import androidx.media3.common.util.UnstableApi;
 import androidx.media3.exoplayer.DefaultLivePlaybackSpeedControl;
 import androidx.media3.exoplayer.DefaultLoadControl;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
@@ -800,6 +802,14 @@ public class AudioPlayer implements MethodCallHandler, Player.Listener, Metadata
             );
             setAudioSessionId(player.getAudioSessionId());
             player.addListener(this);
+            applyPreferredOutputDevice(JustAudioPlugin.getPreferredOutputDeviceId());
+        }
+    }
+
+    @OptIn(markerClass = UnstableApi.class)
+    void applyPreferredOutputDevice(String deviceId) {
+        if (player != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            player.setPreferredAudioDevice(PreferredOutputDevice.find(context, deviceId));
         }
     }
 

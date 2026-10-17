@@ -37,6 +37,9 @@ public class JustAudioPlugin implements FlutterPlugin {
             if ("setPreferredOutputDevice".equals(call.method)) {
                 Object id = call.argument("id");
                 preferredOutputDeviceId = id instanceof String ? (String) id : null;
+                if (methodCallHandler != null) {
+                    methodCallHandler.routePlayersToOutputDevice(preferredOutputDeviceId);
+                }
                 result.success(null);
             } else {
                 result.notImplemented();

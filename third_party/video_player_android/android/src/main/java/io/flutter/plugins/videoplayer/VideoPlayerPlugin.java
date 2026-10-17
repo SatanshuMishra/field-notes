@@ -5,6 +5,7 @@
 package io.flutter.plugins.videoplayer;
 
 import android.content.Context;
+import android.os.Build;
 import android.util.LongSparseArray;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -58,6 +59,7 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
           if ("setPreferredOutputDevice".equals(call.method)) {
             final Object id = call.argument("id");
             preferredOutputDeviceId = id instanceof String ? (String) id : null;
+            routePlayersToPreferredOutputDevice();
             result.success(null);
           } else {
             result.notImplemented();
@@ -187,6 +189,24 @@ public class VideoPlayerPlugin implements FlutterPlugin, AndroidVideoPlayerApi {
         () -> VideoPlayerInstanceApi.Companion.setUp(messenger, null, channelSuffix));
 
     videoPlayers.put(id, player);
+    routeToPreferredOutputDevice(player);
+  }
+
+  private void routePlayersToPreferredOutputDevice() {
+    for (int i = 0; i < videoPlayers.size(); i++) {
+      routeToPreferredOutputDevice(videoPlayers.valueAt(i));
+    }
+  }
+
+  @OptIn(markerClass = UnstableApi.class)
+  private void routeToPreferredOutputDevice(@NonNull VideoPlayer player) {
+    if (flutterState == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+      return;
+    }
+    player
+        .getExoPlayer()
+        .setPreferredAudioDevice(
+            PreferredOutputDevice.find(flutterState.applicationContext, preferredOutputDeviceId));
   }
 
   @NonNull

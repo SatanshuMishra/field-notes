@@ -4,6 +4,7 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.PowerManager
 import xyz.luan.audioplayers.AudioContextAndroid
+import xyz.luan.audioplayers.AudioplayersPlugin
 import xyz.luan.audioplayers.source.Source
 
 class MediaPlayerWrapper(
@@ -49,6 +50,13 @@ class MediaPlayerWrapper(
     override fun setSource(source: Source) {
         reset()
         source.setForMediaPlayer(mediaPlayer)
+        setPreferredOutputDevice(AudioplayersPlugin.preferredOutputDeviceId)
+    }
+
+    fun setPreferredOutputDevice(deviceId: String?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            mediaPlayer.setPreferredDevice(PreferredOutputDevice.find(wrappedPlayer.applicationContext, deviceId))
+        }
     }
 
     override fun setLooping(looping: Boolean) {
