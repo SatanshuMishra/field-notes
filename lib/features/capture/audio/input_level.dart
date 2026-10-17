@@ -251,6 +251,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
           child: SizedBox(
             height: _segmentHeight,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 for (int index = 0; index < inputLevelSegments; index++)
                   Expanded(
