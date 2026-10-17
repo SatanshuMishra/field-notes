@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: active
-Updated: 2026-10-17T09:39:02.550Z
+Updated: 2026-10-17T09:39:26.013Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ The first build of FEATURE branch feat/voice-and-day-panel (cut at cb2428e9; 23 
 
 ## Next step
 
-Run ~/.mitosis/field-notes/voice-and-day-panel/run.zsh (first build, output to build-1.out), then read its last-line JSON result and start stage 3 review per MSP (audio, settings, day-panel).
+When the --resume (output build-1-resume.out) returns, read its last-line JSON: an MSP still not committed is a hard failure to report; committed MSPs go to stage 3 review round 1, whose fix pass also updates the known out-of-set failing tests.
 
 Needs: D1.
 
