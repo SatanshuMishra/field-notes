@@ -136,8 +136,7 @@ HRESULT MyPlayer::EventNotify(DWORD event, DWORD_PTR param1, DWORD param2)
         case MF_MEDIA_ENGINE_EVENT_CANPLAY:
             if (m_loadCallback)
             {
-                m_loadCallback(true);
-                m_loadCallback = NULL;
+                finishLoad(true);
             }
             if (m_rerouteWhenLoaded)
             {
@@ -188,8 +187,8 @@ HRESULT MyPlayer::EventNotify(DWORD event, DWORD_PTR param1, DWORD param2)
         case MF_MEDIA_ENGINE_EVENT_ABORT:
             if (m_loadCallback != NULL)
             {
-                m_loadCallback(false);
-                m_loadCallback = NULL;
+                finishLoad(false);
+                return S_OK;
             }
             break;
     }
@@ -257,10 +256,19 @@ done:
     if (FAILED(hr)) 
     {
         std::cout << TAG "OpenURL() failed: hr=" << hr << std::endl;
-        m_loadCallback(SUCCEEDED(hr));
-        m_loadCallback = NULL;
+        finishLoad(false);
     }
     return hr;
+}
+
+void MyPlayer::finishLoad(bool loaded)
+{
+    std::function<void(bool)> callback = std::move(m_loadCallback);
+    m_loadCallback = NULL;
+    if (callback)
+    {
+        callback(loaded);
+    }
 }
 
 HRESULT MyPlayer::loadSource()

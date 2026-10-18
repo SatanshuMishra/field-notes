@@ -112,8 +112,10 @@ Future<void> _pumpSettings(
 String? _contentTitle(WidgetTester tester) =>
     tester.widget<Text>(find.byKey(settingsContentTitleKey)).data;
 
-Finder _choice(InputProfile profile) =>
-    find.byKey(voiceProfileChoiceKey(profile));
+Finder _choice(InputProfile profile) => find.descendant(
+  of: find.byKey(inputProfileMenuKey),
+  matching: find.byKey(inputProfileChoiceKey(profile)),
+);
 
 void main() {
   testWidgets('the Voice tab shows the input profile choices', (
@@ -168,55 +170,23 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_contentTitle(tester), 'Voice');
-    final Finder isolation = _choice(InputProfile.voiceIsolation);
-    final Finder studio = _choice(InputProfile.studio);
+    final Finder profileRow = find.byKey(inputProfileRowKey);
     expect(
-      find.descendant(of: isolation, matching: find.text('Voice Isolation')),
+      find.descendant(of: profileRow, matching: find.text('Input profile')),
       findsOneWidget,
     );
     expect(
-      find.descendant(
-        of: isolation,
-        matching: find.text(
-          'Clears background noise like fans, traffic and typing from your voice.',
-        ),
-      ),
+      find.descendant(of: profileRow, matching: find.text('Studio')),
       findsOneWidget,
-    );
-    expect(
-      find.descendant(of: studio, matching: find.text('Studio')),
-      findsOneWidget,
-    );
-    expect(
-      find.descendant(
-        of: studio,
-        matching: find.text('Your microphone as it is, with no processing.'),
-      ),
-      findsOneWidget,
-    );
-    expect(
-      tester.getSemantics(studio),
-      isSemantics(
-        hasCheckedState: true,
-        isChecked: true,
-        isInMutuallyExclusiveGroup: true,
-      ),
-    );
-    expect(
-      tester.getSemantics(isolation),
-      isSemantics(
-        hasCheckedState: true,
-        isChecked: false,
-        isInMutuallyExclusiveGroup: true,
-      ),
     );
 
     final List<Finder> order = <Finder>[
-      isolation,
-      studio,
+      profileRow,
       find.text('Input device'),
       find.text('Input volume'),
       find.byType(InputLevelMeter),
+      find.text('Output device'),
+      find.text('Output volume'),
     ];
     double previous = double.negativeInfinity;
     for (final Finder finder in order) {
@@ -226,19 +196,57 @@ void main() {
       previous = top;
     }
 
+    await tester.tap(profileRow);
+    await tester.pumpAndSettle();
+
+    final Finder isolation = _choice(InputProfile.voiceIsolation);
+    final Finder studio = _choice(InputProfile.studio);
+    expect(
+      find.descendant(of: isolation, matching: find.text('Voice Isolation')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: isolation,
+        matching: find.text(voiceIsolationDescription),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: studio, matching: find.text('Studio')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: studio, matching: find.text(studioDescription)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: studio, matching: find.byIcon(Icons.check)),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSemantics(
+        find.descendant(of: studio, matching: find.text('Studio')),
+      ),
+      isSemantics(isSelected: true, isInMutuallyExclusiveGroup: true),
+    );
+    expect(
+      tester.getSemantics(
+        find.descendant(of: isolation, matching: find.text('Voice Isolation')),
+      ),
+      isSemantics(isSelected: false, isInMutuallyExclusiveGroup: true),
+    );
+
     await tester.tap(isolation);
     await tester.pumpAndSettle();
 
     expect(repository.inputProfileWrites, <InputProfile>[
       InputProfile.voiceIsolation,
     ]);
+    expect(find.byKey(inputProfileMenuKey), findsNothing);
     expect(
-      tester.getSemantics(_choice(InputProfile.voiceIsolation)),
-      isSemantics(hasCheckedState: true, isChecked: true),
-    );
-    expect(
-      tester.getSemantics(_choice(InputProfile.studio)),
-      isSemantics(hasCheckedState: true, isChecked: false),
+      find.descendant(of: profileRow, matching: find.text('Voice Isolation')),
+      findsOneWidget,
     );
     semantics.dispose();
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
@@ -280,7 +288,7 @@ void main() {
       find.descendant(of: row, matching: find.text('Studio')),
       findsOneWidget,
     );
-    expect(_choice(InputProfile.studio), findsNothing);
+    expect(find.byKey(inputProfileRowKey), findsNothing);
 
     await tester.ensureVisible(row);
     await tester.pumpAndSettle();
@@ -295,8 +303,13 @@ void main() {
       findsOneWidget,
     );
     expect(row, findsNothing);
-    expect(_choice(InputProfile.voiceIsolation), findsOneWidget);
-    expect(_choice(InputProfile.studio), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(inputProfileRowKey),
+        matching: find.text('Studio'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('Input device'), findsOneWidget);
     expect(find.text('Input volume'), findsOneWidget);
     expect(find.byType(InputLevelMeter), findsOneWidget);
@@ -330,7 +343,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_contentTitle(tester), 'Voice');
-    expect(_choice(InputProfile.studio), findsOneWidget);
+    expect(find.byKey(inputProfileRowKey), findsOneWidget);
     expect(container.read(settingsSectionRequestProvider), isNull);
 
     await tester.pumpWidget(

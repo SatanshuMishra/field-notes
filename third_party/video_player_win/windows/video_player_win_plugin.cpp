@@ -412,6 +412,7 @@ void VideoPlayerWinPlugin::HandleMethodCall(
 
     textureId = player->textureId;
     std::shared_ptr<flutter::MethodResult<flutter::EncodableValue>> shared_result = std::move(result);
+    std::shared_ptr<bool> replied = std::make_shared<bool>(false);
     HRESULT hr = player->OpenURL(wPath, player, m_nativeHWND, headerLines, [=](bool isSuccess) {
       if (isSuccess) {
         auto _player = (MyPlayerInternal*) getPlayerById(textureId, false);
@@ -419,6 +420,7 @@ void VideoPlayerWinPlugin::HandleMethodCall(
           // the player is disposed between async OpenURL() and callback here
           flutter::EncodableMap map;
           map[flutter::EncodableValue("result")] = flutter::EncodableValue(false);
+          *replied = true;
           shared_result->Success(map);
           return;
         }
@@ -433,20 +435,21 @@ void VideoPlayerWinPlugin::HandleMethodCall(
         map[flutter::EncodableValue("videoWidth")] = flutter::EncodableValue(videoSize.cx);
         map[flutter::EncodableValue("videoHeight")] = flutter::EncodableValue(videoSize.cy);
         map[flutter::EncodableValue("volume")] = flutter::EncodableValue((double)volume);
+        *replied = true;
         shared_result->Success(flutter::EncodableValue(map));
       } else {
-        // TODO: call destroyPlayerById(true) when open video failed here will crash since player->Release() called... how to fix?
         destroyPlayerById(player->textureId, true);
 
         flutter::EncodableMap map;
         map[flutter::EncodableValue("result")] = flutter::EncodableValue(false);
+        *replied = true;
         shared_result->Success(map);
       }
     });
-    if (FAILED(hr)) {
+    if (FAILED(hr) && !*replied) {
       flutter::EncodableMap map;
       map[flutter::EncodableValue("result")] = flutter::EncodableValue(false);
-      result->Success(map);
+      shared_result->Success(map);
     }
   } else if (method_call.method_name().compare("play") == 0) {
     player->Play();

@@ -84,6 +84,7 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKeyOutsideMenu);
     _menuFocus.dispose();
     super.dispose();
   }
@@ -110,6 +111,7 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
       _shown = true;
       _portal.show();
     });
+    HardwareKeyboard.instance.addHandler(_onKeyOutsideMenu);
     widget.onOpen?.call();
     WidgetsBinding.instance.addPostFrameCallback((Duration _) {
       if (mounted && _shown) {
@@ -122,6 +124,7 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
     if (!_shown) {
       return;
     }
+    HardwareKeyboard.instance.removeHandler(_onKeyOutsideMenu);
     setState(() {
       _shown = false;
       _portal.hide();
@@ -180,6 +183,18 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
       return KeyEventResult.ignored;
     }
     return KeyEventResult.ignored;
+  }
+
+  bool _onKeyOutsideMenu(KeyEvent event) {
+    if (!_shown || _menuFocus.hasFocus || event is KeyUpEvent) {
+      return false;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      _close();
+      return true;
+    }
+    _menuFocus.requestFocus();
+    return false;
   }
 
   Rect? _anchorRect() {

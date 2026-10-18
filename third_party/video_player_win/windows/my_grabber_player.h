@@ -74,6 +74,7 @@ private:
 	void printErrorMessage(DWORD_PTR param1);
 	bool applyPreferredAudioEndpoint();
 	HRESULT loadSource();
+	void finishLoad(bool loaded);
 	void reloadAtCurrentPosition();
 	void resumeAfterReload();
 
