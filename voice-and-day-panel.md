@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T06:06:24.247Z
+Updated: 2026-10-18T06:06:28.002Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -48,3 +48,5 @@ Finish lighthouse run 1 (suite, Windows then macOS then Android lab passes, spen
 - Diagnosis briefs per MSP and kind: review/round-1/briefs/<msp>.<kind slug>.diagnosis.md; diagnoses: review/round-1/<msp>.<kind slug>.diagnosis.json
 - Audio fix-pass brief: handoff/audio-fix-round-1.md
 - Round-2 and round-3 diffs, suites, briefs, reviewer arrays, findings, candidates, verdicts, smoke reports and shots per MSP: review/round-2/, review/round-3/
+- Lighthouse run 1 (core and feature worktrees, profile copy, change.json, suite.json, paths.md, evidence/<platform>/): ~/.mitosis/field-notes/voice-and-day-panel/lighthouse/run-1
+- Owner's hand-test build of the FEATURE branch: ~/.mitosis/field-notes/voice-and-day-panel/manual-mac (detached worktree; build/macos/Build/Products/Release/Field Notes.app)
