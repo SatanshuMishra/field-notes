@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T00:35:55.208Z
+Updated: 2026-10-18T00:35:57.259Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three committed 
 
 ## Next step
 
-When the Android lab smoke reports, file each broken path (macOS D3x included) against its MSP as further U findings, then build each MSP's round-1 findings.json from review/round-1/arrays and run pipeline candidates and the validator.
+When each validator reports, save its array as review/round-1/<msp>.verdicts.json, run pipeline record and pipeline verdict for that MSP, and act on the verdict (diagnosis, then the fix pass on the branch).
 
 Needs: D2.
 
