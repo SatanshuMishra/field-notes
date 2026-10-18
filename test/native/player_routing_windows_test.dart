@@ -82,53 +82,56 @@ void main() {
     );
     expect(
       justAudioConstructor,
-      contains('    ApplyPreferredOutputDevice();\n  }\n'),
-      reason: 'a new just_audio_windows MediaPlayer is not routed',
+      contains('    PreferredOutputDevice();\n  }\n'),
+      reason:
+          'a new just_audio_windows player does not start the device lookup',
     );
-    final String justAudioApply = _between(
+    final String justAudioLookup = _between(
       justAudioPlayer,
-      'void ApplyPreferredOutputDevice() {',
-      'void AudioPlayer::HandleMethodCall(',
+      'inline DeviceInformation LookUpRenderDevice(',
+      'struct OutputDeviceLookup {',
     );
     _expectMatch(
-      justAudioApply,
-      r'if \(!requested \|\| requested->empty\(\)\) \{\s*try \{\s*'
-          r'player\.AudioDevice\(nullptr\);',
-      'a null id does not restore the system output',
-    );
-    _expectMatch(
-      justAudioApply,
-      r'winrt::Windows::Devices::Enumeration::DeviceInformation::FindAllAsync\(\s*'
-          r'winrt::Windows::Media::Devices::MediaDevice::GetAudioRenderSelector\(\)\s*\)',
+      justAudioLookup,
+      r'DeviceInformation::FindAllAsync\(\s*'
+          r'winrt::Windows::Media::Devices::MediaDevice::GetAudioRenderSelector\(\)\s*'
+          r'\)\.get\(\);',
       'just_audio_windows does not list the render devices',
     );
     expect(
-      justAudioApply,
+      justAudioLookup,
       contains(
-        'const std::wstring endpoint = ToLowerWide(std::wstring(winrt::to_hstring(*requested)));',
+        'const std::wstring endpoint = ToLowerWide(std::wstring(winrt::to_hstring(requested)));',
       ),
     );
     expect(
-      justAudioApply,
+      justAudioLookup,
       contains(
         'if (ToLowerWide(std::wstring(device.Id())).find(endpoint) != std::wstring::npos) {',
       ),
       reason: 'the device whose id contains the endpoint id is not chosen',
     );
     expect(
-      justAudioApply,
-      contains(
-        'winrt::Windows::Devices::Enumeration::DeviceInformation chosen{ nullptr };',
-      ),
+      justAudioLookup,
+      contains('  return DeviceInformation{ nullptr };\n}'),
       reason: 'an unmatched endpoint does not fall back to the system output',
     );
-    expect(justAudioApply, contains('player.AudioDevice(chosen);'));
-    expect(
-      justAudioApply,
-      contains(
-        'if (field_notes_output_route::PreferredOutputDeviceId() != requested) return;',
-      ),
-      reason: 'a stale device lookup can override a newer choice',
+    final String justAudioPreferred = _between(
+      justAudioPlayer,
+      'inline std::shared_future<DeviceInformation> PreferredOutputDevice() {',
+      'inline bool SameOutputDevice(',
+    );
+    _expectMatch(
+      justAudioPreferred,
+      r'\(!requested \|\| requested->empty\(\)\)\s*\?\s*SystemOutputDevice\(\)\s*'
+          r': std::async\(std::launch::async, LookUpRenderDevice, \*requested\)\.share\(\)',
+      'a null id does not restore the system output',
+    );
+    _expectMatch(
+      justAudioPlayer,
+      r'inline bool LookupIsReusable\([^)]*\) \{\s*'
+          r'if \(!lookup\.device\.valid\(\) \|\| lookup\.requested != requested\) return false;',
+      'a lookup for an older choice can route a newer one',
     );
     _expectMatch(
       justAudioPlayer,

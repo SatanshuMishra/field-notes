@@ -14,7 +14,10 @@
 #include "uri_utils.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cwctype>
+#include <future>
+#include <mutex>
 
 #include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -89,6 +92,64 @@ inline std::wstring ToLowerWide(std::wstring text) {
   return text;
 }
 
+using winrt::Windows::Devices::Enumeration::DeviceInformation;
+
+inline DeviceInformation LookUpRenderDevice(const std::string requested) {
+  const std::wstring endpoint = ToLowerWide(std::wstring(winrt::to_hstring(requested)));
+  try {
+    const auto devices = DeviceInformation::FindAllAsync(
+      winrt::Windows::Media::Devices::MediaDevice::GetAudioRenderSelector()
+    ).get();
+    for (auto const& device : devices) {
+      if (ToLowerWide(std::wstring(device.Id())).find(endpoint) != std::wstring::npos) {
+        return device;
+      }
+    }
+  } catch (winrt::hresult_error const& error) {
+    std::cerr << "[just_audio_windows] Output device lookup error: " << winrt::to_string(error.message()) << std::endl;
+  }
+  return DeviceInformation{ nullptr };
+}
+
+struct OutputDeviceLookup {
+  std::optional<std::string> requested;
+  std::shared_future<DeviceInformation> device;
+};
+
+inline std::shared_future<DeviceInformation> SystemOutputDevice() {
+  std::promise<DeviceInformation> none;
+  none.set_value(DeviceInformation{ nullptr });
+  return none.get_future().share();
+}
+
+inline bool LookupIsReusable(const OutputDeviceLookup& lookup, const std::optional<std::string>& requested) {
+  if (!lookup.device.valid() || lookup.requested != requested) return false;
+  if (!requested || requested->empty()) return true;
+  const bool finished = lookup.device.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+  return !finished || lookup.device.get() != nullptr;
+}
+
+inline std::shared_future<DeviceInformation> PreferredOutputDevice() {
+  static std::mutex lookup_mutex;
+  static OutputDeviceLookup lookup;
+  const std::optional<std::string> requested = field_notes_output_route::PreferredOutputDeviceId();
+  std::lock_guard<std::mutex> lock(lookup_mutex);
+  if (!LookupIsReusable(lookup, requested)) {
+    lookup = OutputDeviceLookup{
+      requested,
+      (!requested || requested->empty())
+        ? SystemOutputDevice()
+        : std::async(std::launch::async, LookUpRenderDevice, *requested).share(),
+    };
+  }
+  return lookup.device;
+}
+
+inline bool SameOutputDevice(const DeviceInformation& current, const DeviceInformation& chosen) {
+  if (!current || !chosen) return !current && !chosen;
+  return current.Id() == chosen.Id();
+}
+
 class JustAudioEventSink {
 public:
   // Prevent copying.
@@ -136,6 +197,7 @@ private:
     disposed_ = true;
     auto session = mediaPlayer.PlaybackSession();
     session.PlaybackStateChanged(playback_state_token_);
+    mediaPlayer.MediaOpened(media_opened_token_);
     mediaPlayer.MediaFailed(media_failed_token_);
     mediaPlaybackList.CurrentItemChanged(item_changed_token_);
     mediaPlaybackList.ItemFailed(item_failed_token_);
@@ -155,7 +217,10 @@ public:
 
   // Tokens for event unsubscription
   winrt::event_token playback_state_token_{};
+  winrt::event_token media_opened_token_{};
   winrt::event_token media_failed_token_{};
+
+  std::atomic<bool> output_pending_{ false };
   winrt::event_token item_changed_token_{};
   winrt::event_token item_failed_token_{};
 
@@ -183,6 +248,13 @@ public:
     playback_state_token_ = mediaPlayer.PlaybackSession().PlaybackStateChanged([this](auto, const auto& args) -> void {
       if (disposed_) return;
       broadcastState();
+    });
+
+    media_opened_token_ = mediaPlayer.MediaOpened([this](auto, auto) -> void {
+      if (disposed_) return;
+      if (output_pending_.exchange(false)) {
+        RouteToPreferredOutput();
+      }
     });
 
     // Player error event
@@ -250,7 +322,7 @@ public:
       event_sink_->Error(code, message);
     });
 
-    ApplyPreferredOutputDevice();
+    PreferredOutputDevice();
   }
 
   AudioPlayer::~AudioPlayer() {
@@ -263,35 +335,23 @@ public:
 
   void ApplyPreferredOutputDevice() {
     if (disposed_) return;
-    const std::optional<std::string> requested = field_notes_output_route::PreferredOutputDeviceId();
-    Playback::MediaPlayer player = mediaPlayer;
-    if (!requested || requested->empty()) {
-      try {
-        player.AudioDevice(nullptr);
-      } catch (winrt::hresult_error const& error) {
-        std::cerr << "[just_audio_windows] Output device error: " << winrt::to_string(error.message()) << std::endl;
-      }
+    if (mediaPlayer.PlaybackSession().PlaybackState() == Playback::MediaPlaybackState::Opening) {
+      output_pending_ = true;
       return;
     }
-    const std::wstring endpoint = ToLowerWide(std::wstring(winrt::to_hstring(*requested)));
-    winrt::Windows::Devices::Enumeration::DeviceInformation::FindAllAsync(
-      winrt::Windows::Media::Devices::MediaDevice::GetAudioRenderSelector()
-    ).Completed([player, requested, endpoint](auto const& operation, winrt::Windows::Foundation::AsyncStatus status) {
-      if (status != winrt::Windows::Foundation::AsyncStatus::Completed) return;
-      if (field_notes_output_route::PreferredOutputDeviceId() != requested) return;
-      try {
-        winrt::Windows::Devices::Enumeration::DeviceInformation chosen{ nullptr };
-        for (auto const& device : operation.GetResults()) {
-          if (ToLowerWide(std::wstring(device.Id())).find(endpoint) != std::wstring::npos) {
-            chosen = device;
-            break;
-          }
-        }
-        player.AudioDevice(chosen);
-      } catch (winrt::hresult_error const& error) {
-        std::cerr << "[just_audio_windows] Output device error: " << winrt::to_string(error.message()) << std::endl;
-      }
-    });
+    RouteToPreferredOutput();
+  }
+
+  void RouteToPreferredOutput() {
+    if (disposed_) return;
+    const DeviceInformation chosen = PreferredOutputDevice().get();
+    try {
+      if (SameOutputDevice(mediaPlayer.AudioDevice(), chosen)) return;
+      mediaPlayer.AudioDevice(chosen);
+    } catch (winrt::hresult_error const& error) {
+      output_pending_ = true;
+      std::cerr << "[just_audio_windows] Output device error, retrying once the media opens: " << winrt::to_string(error.message()) << std::endl;
+    }
   }
 
   void AudioPlayer::HandleMethodCall(
@@ -500,8 +560,9 @@ public:
     }
   }
 
-  void AudioPlayer::loadSource(const flutter::EncodableMap& source) const& {
+  void AudioPlayer::loadSource(const flutter::EncodableMap& source) {
     if(disposed_) return;
+    RouteToPreferredOutput();
     auto items = mediaPlaybackList.Items();
     items.Clear(); // Always clear the list since we are resetting
 
