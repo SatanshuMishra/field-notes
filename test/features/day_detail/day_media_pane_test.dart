@@ -296,4 +296,27 @@ void main() {
     expect(find.byKey(logViewerBackKey), findsNothing);
     expect(find.text(logViewerBackLabel), findsNothing);
   }, variant: _mac);
+  testWidgets('card play on a finished video starts it over', (
+    WidgetTester tester,
+  ) async {
+    final _Players players = await _openDay(tester, entries: <Entry>[_video()]);
+    final Finder play = _inCard('video-1', find.byKey(compactLogPlayKey));
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+    final FakeEntryVideoPlayer pane = players.video.single;
+    pane.emitState(VideoPlaybackState.playing);
+    pane.emitPosition(const Duration(milliseconds: 3900));
+    pane.emitState(VideoPlaybackState.completed);
+    await tester.pump();
+
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+
+    expect(players.video.length, greaterThan(1));
+    expect(
+      players.video.last.seekCalls,
+      isNot(contains(const Duration(milliseconds: 3900))),
+    );
+    expect(players.video.last.playCalls, greaterThan(0));
+  }, variant: _mac);
 }

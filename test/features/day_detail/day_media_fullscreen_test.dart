@@ -366,4 +366,26 @@ void main() {
     expect(resumed.seekCalls, contains(const Duration(seconds: 30)));
     expect(_inPane(find.textContaining('0:30')), findsOneWidget);
   }, variant: _mac);
+  testWidgets('card play on a finished log starts it over', (
+    WidgetTester tester,
+  ) async {
+    final _Players players = await _openDay(tester, entries: <Entry>[_voice()]);
+    final Finder play = _inCard('voice-1', find.byKey(compactLogPlayKey));
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+    final _TrackingAudioPlayer pane = players.voice.single;
+    pane.emitPosition(const Duration(milliseconds: 64800));
+    pane.emitState(AudioPlaybackState.completed);
+    await tester.pump();
+
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+
+    final _TrackingAudioPlayer replay = players.voice.last;
+    expect(replay.state, AudioPlaybackState.playing);
+    expect(
+      replay.seekCalls,
+      isNot(contains(const Duration(milliseconds: 64800))),
+    );
+  }, variant: _mac);
 }
