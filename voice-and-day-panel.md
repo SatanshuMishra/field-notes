@@ -1,7 +1,7 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T03:30:06.127Z
-Next ids: c1 D4 R2 S1
+Updated: 2026-10-18T04:41:06.121Z
+Next ids: c1 D4 R3 S1
 
 ## Goal
 
@@ -15,7 +15,9 @@ All three MSPs on FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) are 
 
 ## Next step
 
-The owner starts Integration by saying the MSP pull requests merged (#320 audio, #321 settings, #322 day-panel); then resume this thread, run pipeline:run Integration: lighthouse tests feat/voice-and-day-panel and the FEATURE pull request opens.
+The owner decides whether to fix the Windows output routing fallback (R2) on #321 before merging; otherwise the owner starts Integration by saying the MSP pull requests merged (#320, #321, #322).
+
+Needs: R1, R2.
 
 ## Decisions in force
 
@@ -25,6 +27,7 @@ The owner starts Integration by saying the MSP pull requests merged (#320 audio,
 ## Open risks
 
 - R1 Two real settings defects older than the round-2 fixes were rejected as not introduced and ship unfixed: a touch-opened dropdown that lost focus lets Escape close the recorder input panel too and arrows move the volume slider behind it (anchored_dropdown.dart, reproduced by probe), and the Windows player clears m_loadCallback and m_rerouteWhenLoaded without m_mutex (my_grabber_player.cpp, unconfirmed); raise them with the owner in the final report.
+- R2 On the real Windows PC a chosen non-default output silently plays on the system default part of the time (DELL 5 of 17, Realtek 4 of 8), with just_audio_windows logging 'Output device error: The request is invalid in the current state'; unfixed in #321 (review/winpc/settings.smoke-winpc.txt).
 
 ## Settled, do not reopen
 
