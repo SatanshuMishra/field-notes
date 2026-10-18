@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: active
-Updated: 2026-10-18T23:14:00.612Z
+Updated: 2026-10-18T23:23:58.746Z
 Next ids: c6 D1 R1 S1
 
 ## Goal
@@ -17,11 +17,11 @@ On macOS the ad-hoc signed app asks for login-keychain access once per stored it
 
 ## Where things stand
 
-Not started.
+Interphase handed off a full bug spec (unattended; the stored-data change ruled out the brief lane) with two Steps in one MSP; the spec reviewer approved it.
 
 ## Next step
 
-Run interphase:bug autonomously (standard lane) on the request, then build with mitosis on the FEATURE branch.
+Record the interphase hand-off boundary, cut the FEATURE branch, write the run home and run mitosis --plan-only.
 
 ## Decisions in force
 
