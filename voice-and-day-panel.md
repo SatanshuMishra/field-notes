@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T05:17:34.731Z
+Updated: 2026-10-18T05:17:37.212Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -15,7 +15,7 @@ The owner merged MSP pull requests #320, #321 and #322 into FEATURE branch feat/
 
 ## Next step
 
-The owner decides whether to fix the Windows output routing fallback (R2) on #321 before merging; otherwise the owner starts Integration by saying the MSP pull requests merged (#320, #321, #322).
+Read the PC routing re-run (review/round-2/integration.smoke-winpc.txt); if it passes at 06c32a71, push fix/windows-output-routing and open its pull request into feat/voice-and-day-panel with pull-request render, assigned to the owner; then Integration (lighthouse on the FEATURE branch) when the owner says that pull request merged.
 
 ## Decisions in force
 
