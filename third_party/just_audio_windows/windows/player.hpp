@@ -17,7 +17,9 @@
 #include <atomic>
 #include <cwctype>
 #include <future>
+#include <memory>
 #include <mutex>
+#include <thread>
 
 #include <winrt/Windows.Devices.Enumeration.h>
 #include <winrt/Windows.Foundation.Collections.h>
@@ -116,6 +118,19 @@ struct OutputDeviceLookup {
   std::shared_future<DeviceInformation> device;
 };
 
+inline std::shared_future<DeviceInformation> LookUpRenderDeviceInBackground(const std::string requested) {
+  std::promise<DeviceInformation> found;
+  std::shared_future<DeviceInformation> device = found.get_future().share();
+  std::thread([requested, found = std::move(found)]() mutable {
+    found.set_value(LookUpRenderDevice(requested));
+  }).detach();
+  return device;
+}
+
+inline bool LookupFinished(const std::shared_future<DeviceInformation>& device) {
+  return device.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+}
+
 inline std::shared_future<DeviceInformation> SystemOutputDevice() {
   std::promise<DeviceInformation> none;
   none.set_value(DeviceInformation{ nullptr });
@@ -125,11 +140,10 @@ inline std::shared_future<DeviceInformation> SystemOutputDevice() {
 inline bool LookupIsReusable(const OutputDeviceLookup& lookup, const std::optional<std::string>& requested) {
   if (!lookup.device.valid() || lookup.requested != requested) return false;
   if (!requested || requested->empty()) return true;
-  const bool finished = lookup.device.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-  return !finished || lookup.device.get() != nullptr;
+  return !LookupFinished(lookup.device) || lookup.device.get() != nullptr;
 }
 
-inline std::shared_future<DeviceInformation> PreferredOutputDevice() {
+inline std::shared_future<DeviceInformation> StartPreferredOutputLookup() {
   static std::mutex lookup_mutex;
   static OutputDeviceLookup lookup;
   const std::optional<std::string> requested = field_notes_output_route::PreferredOutputDeviceId();
@@ -139,7 +153,7 @@ inline std::shared_future<DeviceInformation> PreferredOutputDevice() {
       requested,
       (!requested || requested->empty())
         ? SystemOutputDevice()
-        : std::async(std::launch::async, LookUpRenderDevice, *requested).share(),
+        : LookUpRenderDeviceInBackground(*requested),
     };
   }
   return lookup.device;
@@ -188,12 +202,22 @@ private:
   std::unique_ptr<flutter::EventSink<>> sink = nullptr;
 };
 
+struct PlayerLifetime {
+  std::recursive_mutex mutex;
+  bool alive = true;
+};
+
 class AudioPlayer {
 private:
   bool disposed_ = false;
+  std::shared_ptr<PlayerLifetime> lifetime_ = std::make_shared<PlayerLifetime>();
 
   void Dispose() {
     if (disposed_) return;
+    {
+      std::lock_guard<std::recursive_mutex> lock(lifetime_->mutex);
+      lifetime_->alive = false;
+    }
     disposed_ = true;
     auto session = mediaPlayer.PlaybackSession();
     session.PlaybackStateChanged(playback_state_token_);
@@ -250,8 +274,9 @@ public:
       broadcastState();
     });
 
-    media_opened_token_ = mediaPlayer.MediaOpened([this](auto, auto) -> void {
-      if (disposed_) return;
+    media_opened_token_ = mediaPlayer.MediaOpened([this, lifetime = lifetime_](auto, auto) -> void {
+      std::lock_guard<std::recursive_mutex> lock(lifetime->mutex);
+      if (!lifetime->alive) return;
       if (output_pending_.exchange(false)) {
         RouteToPreferredOutput();
       }
@@ -322,7 +347,7 @@ public:
       event_sink_->Error(code, message);
     });
 
-    PreferredOutputDevice();
+    StartPreferredOutputLookup();
   }
 
   AudioPlayer::~AudioPlayer() {
@@ -333,24 +358,48 @@ public:
     return id == playerId;
   }
 
-  void ApplyPreferredOutputDevice() {
-    if (disposed_) return;
-    if (mediaPlayer.PlaybackSession().PlaybackState() == Playback::MediaPlaybackState::Opening) {
-      output_pending_ = true;
-      return;
-    }
-    RouteToPreferredOutput();
+  bool SourceIsOpening() {
+    return mediaPlayer.PlaybackSession().PlaybackState() == Playback::MediaPlaybackState::Opening;
   }
 
   void RouteToPreferredOutput() {
     if (disposed_) return;
-    const DeviceInformation chosen = PreferredOutputDevice().get();
-    try {
-      if (SameOutputDevice(mediaPlayer.AudioDevice(), chosen)) return;
-      mediaPlayer.AudioDevice(chosen);
-    } catch (winrt::hresult_error const& error) {
+    output_pending_ = true;
+    const std::shared_future<DeviceInformation> lookup = StartPreferredOutputLookup();
+    if (!LookupFinished(lookup)) {
+      RouteOnceLookupFinishes(lookup);
+      return;
+    }
+    if (SourceIsOpening()) return;
+    if (!output_pending_.exchange(false)) return;
+    const DeviceInformation chosen = lookup.get();
+    if (SetChosenOutput(chosen)) return;
+    output_pending_ = true;
+    if (SourceIsOpening()) return;
+    if (output_pending_.exchange(false) && !SetChosenOutput(chosen)) {
       output_pending_ = true;
+    }
+  }
+
+  void RouteOnceLookupFinishes(const std::shared_future<DeviceInformation> lookup) {
+    std::thread([this, lifetime = lifetime_, lookup]() {
+      lookup.wait();
+      std::lock_guard<std::recursive_mutex> lock(lifetime->mutex);
+      if (lifetime->alive) {
+        RouteToPreferredOutput();
+      }
+    }).detach();
+  }
+
+  bool SetChosenOutput(const DeviceInformation& chosen) {
+    try {
+      if (!SameOutputDevice(mediaPlayer.AudioDevice(), chosen)) {
+        mediaPlayer.AudioDevice(chosen);
+      }
+      return true;
+    } catch (winrt::hresult_error const& error) {
       std::cerr << "[just_audio_windows] Output device error, retrying once the media opens: " << winrt::to_string(error.message()) << std::endl;
+      return false;
     }
   }
 

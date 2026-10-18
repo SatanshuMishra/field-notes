@@ -68,8 +68,9 @@ void main() {
         '  field_notes_output_route::RegisterChannel(\n'
         '      registrar->messenger(), "field_notes/output_route/just_audio_windows",\n'
         '      []() {\n'
+        '        StartPreferredOutputLookup();\n'
         '        for (auto& player : players_) {\n'
-        '          player->ApplyPreferredOutputDevice();\n'
+        '          player->RouteToPreferredOutput();\n'
         '        }\n'
         '      });\n',
       ),
@@ -82,7 +83,7 @@ void main() {
     );
     expect(
       justAudioConstructor,
-      contains('    PreferredOutputDevice();\n  }\n'),
+      contains('    StartPreferredOutputLookup();\n  }\n'),
       reason:
           'a new just_audio_windows player does not start the device lookup',
     );
@@ -118,13 +119,13 @@ void main() {
     );
     final String justAudioPreferred = _between(
       justAudioPlayer,
-      'inline std::shared_future<DeviceInformation> PreferredOutputDevice() {',
+      'inline std::shared_future<DeviceInformation> StartPreferredOutputLookup() {',
       'inline bool SameOutputDevice(',
     );
     _expectMatch(
       justAudioPreferred,
       r'\(!requested \|\| requested->empty\(\)\)\s*\?\s*SystemOutputDevice\(\)\s*'
-          r': std::async\(std::launch::async, LookUpRenderDevice, \*requested\)\.share\(\)',
+          r': LookUpRenderDeviceInBackground\(\*requested\)',
       'a null id does not restore the system output',
     );
     _expectMatch(
@@ -352,28 +353,47 @@ void main() {
     );
     _expectMatch(
       route,
-      r'catch \(winrt::hresult_error const& error\) \{\s*'
+      r'output_pending_ = true;\s*'
+          r'const std::shared_future<DeviceInformation> lookup = StartPreferredOutputLookup\(\);\s*'
+          r'if \(!LookupFinished\(lookup\)\) \{\s*'
+          r'RouteOnceLookupFinishes\(lookup\);\s*return;\s*\}\s*'
+          r'if \(SourceIsOpening\(\)\) return;\s*'
+          r'if \(!output_pending_\.exchange\(false\)\) return;',
+      'the route is not marked pending before the open is checked, or waits on the lookup',
+    );
+    _expectMatch(
+      route,
+      r'if \(SetChosenOutput\(chosen\)\) return;\s*'
+          r'output_pending_ = true;\s*'
+          r'if \(SourceIsOpening\(\)\) return;\s*'
+          r'if \(output_pending_\.exchange\(false\) && !SetChosenOutput\(chosen\)\) \{\s*'
           r'output_pending_ = true;',
       'a refused output is dropped instead of retried',
+    );
+    _expectMatch(
+      route,
+      r'void RouteOnceLookupFinishes\([^)]*\) \{\s*'
+          r'std::thread\(\[this, lifetime = lifetime_, lookup\]\(\) \{\s*'
+          r'lookup\.wait\(\);\s*'
+          r'std::lock_guard<std::recursive_mutex> lock\(lifetime->mutex\);\s*'
+          r'if \(lifetime->alive\) \{\s*RouteToPreferredOutput\(\);',
+      'a route waiting on the lookup can outlive its player',
     );
 
     _expectMatch(
       player,
-      r'media_opened_token_ = mediaPlayer\.MediaOpened\(\[this\]\(auto, auto\) -> void \{\s*'
-          r'if \(disposed_\) return;\s*'
+      r'media_opened_token_ = mediaPlayer\.MediaOpened\(\[this, lifetime = lifetime_\]\(auto, auto\) -> void \{\s*'
+          r'std::lock_guard<std::recursive_mutex> lock\(lifetime->mutex\);\s*'
+          r'if \(!lifetime->alive\) return;\s*'
           r'if \(output_pending_\.exchange\(false\)\) \{\s*'
           r'RouteToPreferredOutput\(\);',
       'a refused output is not set again once the media opens',
     );
     _expectMatch(
       player,
-      r'void ApplyPreferredOutputDevice\(\) \{\s*'
-          r'if \(disposed_\) return;\s*'
-          r'if \(mediaPlayer\.PlaybackSession\(\)\.PlaybackState\(\) == '
-          r'Playback::MediaPlaybackState::Opening\) \{\s*'
-          r'output_pending_ = true;\s*return;\s*\}\s*'
-          r'RouteToPreferredOutput\(\);',
-      'an output change during an open is not deferred to the open',
+      r'inline std::shared_future<DeviceInformation> LookUpRenderDeviceInBackground\([^)]*\) \{\s*'
+          r'std::promise<DeviceInformation> found;',
+      'replacing an unfinished lookup can block on its future',
     );
 
     final Iterable<RegExpMatch> completions = RegExp(r'\.Completed\(')
