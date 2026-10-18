@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: active
-Updated: 2026-10-18T23:43:23.035Z
+Updated: 2026-10-18T23:53:18.455Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -17,11 +17,11 @@ On macOS the ad-hoc signed app asks for login-keychain access once per stored it
 
 ## Where things stand
 
-MSP mac-keychain is built and committed on mitosis/mac-keychain at ea0ae420 (base fix/mac-keychain-single-item at 5e0a128a, worktree ~/.mitosis/runs/fireplace/mac-keychain-single-item/trees/mac-keychain); the gate passed 13 tests and found the 5.9 unchanged-behaviour guard inert, as designed. Review round 1 is under way: diff and obligations written, full suite running, reviewer briefs rendered.
+MSP mac-keychain is built and committed on mitosis/mac-keychain at ea0ae420 (base fix/mac-keychain-single-item at 5e0a128a, worktree ~/.mitosis/runs/fireplace/mac-keychain-single-item/trees/mac-keychain); the gate passed 13 tests and found the 5.9 unchanged-behaviour guard inert, as designed. Review round 1: the full suite passed apart from one flaky tooling test (android_dump_rules_test) that passes alone at head and base and in a full test/tooling rerun; code-reviewer, security-reviewer and conformance-auditor are running.
 
 ## Next step
 
-When the round 1 suite finishes, dispatch code-reviewer, security-reviewer and conformance-auditor with the briefs in review/round-1, then collect findings and validate.
+Collect the three reviewers' JSON arrays into review/round-1/mac-keychain.findings.json, then run pipeline candidates, the validator if needed, record and verdict.
 
 Needs: D1.
 
