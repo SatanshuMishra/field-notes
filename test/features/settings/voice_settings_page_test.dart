@@ -196,8 +196,34 @@ void main() {
       previous = top;
     }
 
+    expect(
+      tester.getSemantics(
+        find.descendant(of: profileRow, matching: find.text('Input profile')),
+      ),
+      isSemantics(
+        label: 'Input profile',
+        value: 'Studio',
+        isButton: true,
+        hasExpandedState: true,
+        isExpanded: false,
+      ),
+    );
+
     await tester.tap(profileRow);
     await tester.pumpAndSettle();
+
+    expect(
+      tester.getSemantics(
+        find.descendant(of: profileRow, matching: find.text('Input profile')),
+      ),
+      isSemantics(
+        label: 'Input profile',
+        value: 'Studio',
+        isButton: true,
+        hasExpandedState: true,
+        isExpanded: true,
+      ),
+    );
 
     final Finder isolation = _choice(InputProfile.voiceIsolation);
     final Finder studio = _choice(InputProfile.studio);

@@ -30,6 +30,8 @@ class SettingsFieldRow extends StatelessWidget {
     this.marker,
     this.below,
     this.onPressed,
+    this.semanticsValue,
+    this.expanded,
   });
 
   final String label;
@@ -41,6 +43,8 @@ class SettingsFieldRow extends StatelessWidget {
   final Widget? marker;
   final Widget? below;
   final VoidCallback? onPressed;
+  final String? semanticsValue;
+  final bool? expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +134,8 @@ class SettingsFieldRow extends StatelessWidget {
     }
     return _PressableRow(
       label: label,
+      value: semanticsValue,
+      expanded: expanded,
       hint: description,
       onPressed: onPressed,
       hoverFill: sidebar,
@@ -172,6 +178,8 @@ class SettingsFieldRow extends StatelessWidget {
 class _PressableRow extends StatefulWidget {
   const _PressableRow({
     required this.label,
+    required this.value,
+    required this.expanded,
     required this.hint,
     required this.onPressed,
     required this.hoverFill,
@@ -179,6 +187,8 @@ class _PressableRow extends StatefulWidget {
   });
 
   final String label;
+  final String? value;
+  final bool? expanded;
   final String? hint;
   final VoidCallback onPressed;
   final bool hoverFill;
@@ -205,6 +215,8 @@ class _PressableRowState extends State<_PressableRow> {
       excludeSemantics: true,
       button: true,
       label: widget.label,
+      value: widget.value,
+      expanded: widget.expanded,
       hint: widget.hint,
       onTap: widget.onPressed,
       child: MouseRegion(

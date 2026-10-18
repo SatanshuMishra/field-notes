@@ -67,6 +67,8 @@ class VoiceSection extends ConsumerWidget {
                       label: title,
                       control: _DropdownValue(value: value, open: open),
                       onPressed: toggle,
+                      semanticsValue: value,
+                      expanded: open,
                     ),
                   ),
             ),

@@ -262,15 +262,15 @@ class DriftSettingsRepository implements SettingsRepository {
         values[SettingsKeys.checkForUpdatesAutomatically],
         defaults.checkForUpdatesAutomatically,
       ),
-      audioInputId: _decodeAudioInputId(values[SettingsKeys.audioInputId]),
+      audioInputId: _decodeAudioDeviceId(values[SettingsKeys.audioInputId]),
       inputProfile: InputProfile.fromId(values[SettingsKeys.inputProfile]),
       inputVolume: _decodeInputVolume(values[SettingsKeys.inputVolume]),
-      audioOutputId: _decodeAudioInputId(values[SettingsKeys.audioOutputId]),
+      audioOutputId: _decodeAudioDeviceId(values[SettingsKeys.audioOutputId]),
       outputVolume: _decodeOutputVolume(values[SettingsKeys.outputVolume]),
     );
   }
 
-  String? _decodeAudioInputId(String? raw) {
+  String? _decodeAudioDeviceId(String? raw) {
     if (raw == null || raw.isEmpty) {
       return null;
     }
