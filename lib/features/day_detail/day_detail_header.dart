@@ -136,7 +136,12 @@ class DayDetailHeader extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              _backButton(context),
+              _ChevronButton(
+                faceKey: dayDetailBackKey,
+                label: closeLabel,
+                direction: AxisDirection.left,
+                onPressed: onClose,
+              ),
               const SizedBox(width: _headerGap - _backReach),
               Expanded(
                 child: Column(
@@ -175,54 +180,6 @@ class DayDetailHeader extends StatelessWidget {
       ],
     );
   }
-
-  Widget _backButton(BuildContext context) {
-    final FieldNotesColors colors = context.colors;
-    return Semantics(
-      button: true,
-      label: closeLabel,
-      onTap: onClose,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onClose,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: FocusRing(
-              onPressed: onClose,
-              borderRadius: _backBorderRadius,
-              child: Container(
-                key: dayDetailBackKey,
-                width: _backExtent,
-                height: _backExtent,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: colors.cardWarm,
-                  border: context.shadows.outline,
-                  borderRadius: _backBorderRadius,
-                ),
-                child: SizedBox.square(
-                  dimension: _chevronExtent,
-                  child: CustomPaint(
-                    painter: _ChevronPainter(
-                      color: colors.ink,
-                      direction: AxisDirection.left,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _DayStepButtons extends StatelessWidget {
@@ -236,13 +193,13 @@ class _DayStepButtons extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        _DayStepButton(
+        _ChevronButton(
           faceKey: dayDetailEarlierDayKey,
           label: dayDetailEarlierDayLabel,
           direction: AxisDirection.left,
           onPressed: onEarlier,
         ),
-        _DayStepButton(
+        _ChevronButton(
           faceKey: dayDetailLaterDayKey,
           label: dayDetailLaterDayLabel,
           direction: AxisDirection.right,
@@ -253,8 +210,8 @@ class _DayStepButtons extends StatelessWidget {
   }
 }
 
-class _DayStepButton extends StatelessWidget {
-  const _DayStepButton({
+class _ChevronButton extends StatelessWidget {
+  const _ChevronButton({
     required this.faceKey,
     required this.label,
     required this.direction,
