@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T09:30:49.816Z
+Updated: 2026-10-18T09:30:50.878Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE pull request #324 (feat/voice-and-day-panel into main, d43d1f4d) is open
 
 ## Next step
 
-Finish lighthouse run 2 (--previous run-1) on d43d1f4d; on green open the FEATURE pull request to main.
+The owner merges FEATURE pull request #324; when they say it merged, start Clean-up (pipeline clean, remove the integration and manual-mac worktrees, close the thread).
 
 ## Decisions in force
 
