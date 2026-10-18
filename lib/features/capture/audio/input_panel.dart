@@ -8,6 +8,7 @@ import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/domain/settings/settings_repository.dart';
+import 'package:field_notes/features/capture/audio/anchored_dropdown.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/microphone_glyph.dart';
@@ -22,23 +23,27 @@ import 'package:record/record.dart';
 const String inputDeviceTitle = 'Input device';
 const String inputProfileTitle = 'Input profile';
 const String inputVolumeTitle = 'Input volume';
-const String audioOutputTitle = 'Output';
-const String systemOutputLabel = 'System output';
+const String outputDeviceTitle = 'Output device';
+const String outputVolumeTitle = 'Output volume';
 const String voiceSettingsLabel = 'Voice settings';
 const String chosenByAndroidLabel = 'Chosen by Android';
 const String recorderInputLabel = 'Input';
 const int inputVolumeMaximum = 200;
+const int outputVolumeMaximum = 100;
 const double inputPanelWidth = 300;
 
 const Key recorderInputKey = ValueKey<String>('recorder-input');
 const Key inputDeviceRowKey = ValueKey<String>('input-device-row');
 const Key inputProfileRowKey = ValueKey<String>('input-profile-row');
 const Key inputVolumeRowKey = ValueKey<String>('input-volume-row');
-const Key audioOutputRowKey = ValueKey<String>('audio-output-row');
+const Key outputDeviceRowKey = ValueKey<String>('output-device-row');
+const Key outputVolumeRowKey = ValueKey<String>('output-volume-row');
+const Key inputDeviceMenuKey = ValueKey<String>('input-device-menu');
+const Key inputProfileMenuKey = ValueKey<String>('input-profile-menu');
+const Key outputDeviceMenuKey = ValueKey<String>('output-device-menu');
 const Key voiceSettingsRowKey = ValueKey<String>('voice-settings-row');
 
 const double _rowHeight = 44;
-const double _choiceHeight = 44;
 const double _panelRadius = 18;
 const EdgeInsets _panelPadding = EdgeInsets.symmetric(
   horizontal: 10,
@@ -46,7 +51,6 @@ const EdgeInsets _panelPadding = EdgeInsets.symmetric(
 );
 const EdgeInsets _rowPadding = EdgeInsets.symmetric(horizontal: 6);
 const double _rowRadius = 10;
-const double _choiceIndent = 10;
 const double _glyphSize = 18;
 const double _glyphGap = 6;
 const double _mutedAlpha = 0.68;
@@ -79,19 +83,37 @@ Key inputChoiceKey(String? id) => ValueKey<String>('input-choice-${id ?? ''}');
 Key inputProfileChoiceKey(InputProfile profile) =>
     ValueKey<String>('input-profile-choice-${profile.id}');
 
+Key outputChoiceKey(String? id) =>
+    ValueKey<String>('output-choice-${id ?? ''}');
+
 final Provider<AudioRecorderFactory> inputLevelRecorderProvider =
     Provider<AudioRecorderFactory>((Ref ref) => AudioRecorder.new);
 
 AppSettings _settingsOf(WidgetRef ref) =>
     ref.watch(appSettingsProvider).value ?? AppSettings.defaults;
 
-Future<void> _store(Future<void> Function() write) async {
+Future<void> _store(
+  Future<void> Function() write, {
+  VoidCallback? onFailed,
+}) async {
   try {
     await write();
   } catch (error, stackTrace) {
-    debugPrint('An input setting was not saved: $error\n$stackTrace');
+    debugPrint('An audio setting was not saved: $error\n$stackTrace');
+    onFailed?.call();
   }
 }
+
+typedef DropdownRowBuilder = Widget Function(
+  BuildContext context,
+  String title,
+  String value,
+  bool open,
+  VoidCallback toggle,
+);
+
+Widget _dropdownGlyph(bool open) =>
+    _Glyph(open ? Icons.expand_less : Icons.expand_more);
 
 class RecorderInputButton extends StatefulWidget {
   const RecorderInputButton({
@@ -202,6 +224,7 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
                   ),
                   child: InputPanel(
                     androidVideo: widget.androidVideo,
+                    tapRegionGroupId: _tapGroup,
                     onVoiceSettings: widget.onVoiceSettings == null
                         ? null
                         : _openVoiceSettings,
@@ -242,10 +265,12 @@ class InputPanel extends ConsumerWidget {
     super.key,
     this.androidVideo = false,
     this.onVoiceSettings,
+    this.tapRegionGroupId,
   });
 
   final bool androidVideo;
   final VoidCallback? onVoiceSettings;
+  final Object? tapRegionGroupId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -266,14 +291,25 @@ class InputPanel extends ConsumerWidget {
                 InputDeviceRow(
                   androidVideo: androidVideo,
                   ink: Palette.mediaInk,
+                  tone: GlassTone.media,
+                  tapRegionGroupId: tapRegionGroupId,
                 ),
-                const InputProfileRow(ink: Palette.mediaInk),
+                InputProfileRow(
+                  ink: Palette.mediaInk,
+                  tone: GlassTone.media,
+                  tapRegionGroupId: tapRegionGroupId,
+                ),
                 const InputVolumeRow(ink: Palette.mediaInk),
                 const Padding(
                   padding: _meterPadding,
                   child: InputLevelRow(ink: Palette.mediaInk),
                 ),
-                if (desktop) const AudioOutputRow(ink: Palette.mediaInk),
+                if (desktop)
+                  OutputDeviceRow(
+                    ink: Palette.mediaInk,
+                    tone: GlassTone.media,
+                    tapRegionGroupId: tapRegionGroupId,
+                  ),
                 _PanelRow(
                   key: voiceSettingsRowKey,
                   title: voiceSettingsLabel,
@@ -326,10 +362,18 @@ class InputLevelRow extends ConsumerWidget {
 }
 
 class InputDeviceRow extends ConsumerStatefulWidget {
-  const InputDeviceRow({super.key, this.androidVideo = false, this.ink});
+  const InputDeviceRow({
+    super.key,
+    this.androidVideo = false,
+    this.ink,
+    this.tone = GlassTone.paper,
+    this.tapRegionGroupId,
+  });
 
   final bool androidVideo;
   final Color? ink;
+  final GlassTone tone;
+  final Object? tapRegionGroupId;
 
   @override
   ConsumerState<InputDeviceRow> createState() => _InputDeviceRowState();
@@ -337,7 +381,6 @@ class InputDeviceRow extends ConsumerStatefulWidget {
 
 class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
   List<AudioInput>? _inputs;
-  bool _open = false;
   int _listing = 0;
 
   @override
@@ -359,19 +402,13 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
     return inputs;
   }
 
-  void _toggle() {
-    if (_open) {
-      setState(() => _open = false);
-      return;
-    }
-    setState(() => _open = true);
+  void _refresh() {
     ref.invalidate(selectedAudioInputProvider);
     unawaited(_list());
   }
 
   Future<void> _choose(AudioInput chosen) async {
     final SettingsRepository repository = ref.read(settingsRepositoryProvider);
-    setState(() => _open = false);
     final List<AudioInput> inputs = await _list();
     final AudioInput resolved = resolveAudioInput(inputs, chosen.id);
     await _store(() => repository.setAudioInputId(resolved.id));
@@ -395,98 +432,234 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
         : resolveAudioInput(inputs, storedId);
     final String label =
         resolved?.label ?? (storedId == null ? systemDefaultInputLabel : '');
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _PanelRow(
-          key: inputDeviceRowKey,
-          title: inputDeviceTitle,
-          value: label,
-          ink: ink,
-          trailing: _Glyph(_open ? Icons.expand_less : Icons.expand_more),
-          expanded: _open,
-          onTap: _toggle,
-        ),
-        if (_open && inputs != null && resolved != null)
-          for (final AudioInput input in inputs)
-            _ChoiceRow(
+    return AnchoredDropdown<AudioInput>(
+      menuKey: inputDeviceMenuKey,
+      tone: widget.tone,
+      ink: ink,
+      tapRegionGroupId: widget.tapRegionGroupId,
+      choices: <AnchoredDropdownChoice<AudioInput>>[
+        if (resolved != null)
+          for (final AudioInput input in inputs ?? const <AudioInput>[])
+            AnchoredDropdownChoice<AudioInput>(
               key: inputChoiceKey(input.id),
+              value: input,
               label: input.label,
-              chosen: input.id == resolved.id,
-              ink: ink,
-              onTap: () => unawaited(_choose(input)),
             ),
       ],
+      current: resolved,
+      onOpen: _refresh,
+      onSelected: (AudioInput input) => unawaited(_choose(input)),
+      builder: (BuildContext context, bool open, VoidCallback toggle) =>
+          _PanelRow(
+            key: inputDeviceRowKey,
+            title: inputDeviceTitle,
+            value: label,
+            ink: ink,
+            trailing: _dropdownGlyph(open),
+            expanded: open,
+            onTap: toggle,
+          ),
     );
   }
 }
 
-class InputProfileRow extends ConsumerStatefulWidget {
-  const InputProfileRow({super.key, this.ink});
+class InputProfileRow extends ConsumerWidget {
+  const InputProfileRow({
+    super.key,
+    this.ink,
+    this.tone = GlassTone.paper,
+    this.tapRegionGroupId,
+    this.describe,
+    this.onSaveFailed,
+    this.rowBuilder,
+  });
 
   final Color? ink;
+  final GlassTone tone;
+  final Object? tapRegionGroupId;
+  final String Function(InputProfile profile)? describe;
+  final VoidCallback? onSaveFailed;
+  final DropdownRowBuilder? rowBuilder;
 
-  @override
-  ConsumerState<InputProfileRow> createState() => _InputProfileRowState();
-}
-
-class _InputProfileRowState extends ConsumerState<InputProfileRow> {
-  bool _open = false;
-
-  void _choose(InputProfile profile) {
+  void _choose(WidgetRef ref, InputProfile profile) {
     final SettingsRepository repository = ref.read(settingsRepositoryProvider);
     final InputProfile current =
         (ref.read(appSettingsProvider).value ?? AppSettings.defaults)
             .inputProfile;
-    setState(() => _open = false);
     if (profile == current) {
       return;
     }
-    unawaited(_store(() => repository.setInputProfile(profile)));
+    unawaited(
+      _store(() => repository.setInputProfile(profile), onFailed: onSaveFailed),
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    final Color ink = widget.ink ?? context.colors.ink;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Color ink = this.ink ?? context.colors.ink;
     final InputProfile current = _settingsOf(ref).inputProfile;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _PanelRow(
-          key: inputProfileRowKey,
-          title: inputProfileTitle,
-          value: current.label,
-          ink: ink,
-          trailing: _Glyph(_open ? Icons.expand_less : Icons.expand_more),
-          expanded: _open,
-          onTap: () => setState(() => _open = !_open),
-        ),
-        if (_open)
-          for (final InputProfile profile in InputProfile.values)
-            _ChoiceRow(
-              key: inputProfileChoiceKey(profile),
-              label: profile.label,
-              chosen: profile == current,
-              ink: ink,
-              onTap: () => _choose(profile),
-            ),
+    final String Function(InputProfile profile)? describe = this.describe;
+    final DropdownRowBuilder? rowBuilder = this.rowBuilder;
+    return AnchoredDropdown<InputProfile>(
+      menuKey: inputProfileMenuKey,
+      tone: tone,
+      ink: ink,
+      tapRegionGroupId: tapRegionGroupId,
+      choices: <AnchoredDropdownChoice<InputProfile>>[
+        for (final InputProfile profile in InputProfile.values)
+          AnchoredDropdownChoice<InputProfile>(
+            key: inputProfileChoiceKey(profile),
+            value: profile,
+            label: profile.label,
+            description: describe?.call(profile),
+          ),
       ],
+      current: current,
+      onSelected: (InputProfile profile) => _choose(ref, profile),
+      builder: (BuildContext context, bool open, VoidCallback toggle) =>
+          rowBuilder == null
+          ? _PanelRow(
+              key: inputProfileRowKey,
+              title: inputProfileTitle,
+              value: current.label,
+              ink: ink,
+              trailing: _dropdownGlyph(open),
+              expanded: open,
+              onTap: toggle,
+            )
+          : KeyedSubtree(
+              key: inputProfileRowKey,
+              child: rowBuilder(
+                context,
+                inputProfileTitle,
+                current.label,
+                open,
+                toggle,
+              ),
+            ),
     );
   }
 }
 
-class InputVolumeRow extends ConsumerStatefulWidget {
+class OutputDeviceRow extends ConsumerWidget {
+  const OutputDeviceRow({
+    super.key,
+    this.ink,
+    this.tone = GlassTone.paper,
+    this.tapRegionGroupId,
+  });
+
+  final Color? ink;
+  final GlassTone tone;
+  final Object? tapRegionGroupId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final Color ink = this.ink ?? context.colors.ink;
+    final String? storedId = _settingsOf(ref).audioOutputId;
+    final List<AudioOutputDevice>? outputs = ref
+        .watch(audioOutputsProvider)
+        .value;
+    final AudioOutputDevice? resolved = outputs == null
+        ? null
+        : resolveAudioOutput(outputs, storedId);
+    final String label =
+        resolved?.name ?? (storedId == null ? systemOutputLabel : '');
+    return AnchoredDropdown<AudioOutputDevice>(
+      menuKey: outputDeviceMenuKey,
+      tone: tone,
+      ink: ink,
+      tapRegionGroupId: tapRegionGroupId,
+      choices: <AnchoredDropdownChoice<AudioOutputDevice>>[
+        for (final AudioOutputDevice output
+            in outputs ?? const <AudioOutputDevice>[])
+          AnchoredDropdownChoice<AudioOutputDevice>(
+            key: outputChoiceKey(output.id),
+            value: output,
+            label: output.name,
+          ),
+      ],
+      current: resolved,
+      onOpen: () => ref.invalidate(audioOutputsProvider),
+      onSelected: (AudioOutputDevice output) {
+        final SettingsRepository repository = ref.read(
+          settingsRepositoryProvider,
+        );
+        unawaited(_store(() => repository.setAudioOutputId(output.id)));
+      },
+      builder: (BuildContext context, bool open, VoidCallback toggle) =>
+          _PanelRow(
+            key: outputDeviceRowKey,
+            title: outputDeviceTitle,
+            value: label,
+            ink: ink,
+            trailing: _dropdownGlyph(open),
+            expanded: open,
+            onTap: toggle,
+          ),
+    );
+  }
+}
+
+class InputVolumeRow extends StatelessWidget {
   const InputVolumeRow({super.key, this.ink});
 
   final Color? ink;
 
   @override
-  ConsumerState<InputVolumeRow> createState() => _InputVolumeRowState();
+  Widget build(BuildContext context) {
+    return _VolumeRow(
+      key: inputVolumeRowKey,
+      title: inputVolumeTitle,
+      maximum: inputVolumeMaximum,
+      ink: ink,
+      read: (AppSettings settings) => settings.inputVolume,
+      write: (SettingsRepository repository, int volume) =>
+          repository.setInputVolume(volume),
+    );
+  }
 }
 
-class _InputVolumeRowState extends ConsumerState<InputVolumeRow> {
+class OutputVolumeRow extends StatelessWidget {
+  const OutputVolumeRow({super.key, this.ink});
+
+  final Color? ink;
+
+  @override
+  Widget build(BuildContext context) {
+    return _VolumeRow(
+      key: outputVolumeRowKey,
+      title: outputVolumeTitle,
+      maximum: outputVolumeMaximum,
+      ink: ink,
+      read: (AppSettings settings) => settings.outputVolume,
+      write: (SettingsRepository repository, int volume) =>
+          repository.setOutputVolume(volume),
+    );
+  }
+}
+
+class _VolumeRow extends ConsumerStatefulWidget {
+  const _VolumeRow({
+    super.key,
+    required this.title,
+    required this.maximum,
+    required this.read,
+    required this.write,
+    this.ink,
+  });
+
+  final String title;
+  final int maximum;
+  final int Function(AppSettings settings) read;
+  final Future<void> Function(SettingsRepository repository, int volume) write;
+  final Color? ink;
+
+  @override
+  ConsumerState<_VolumeRow> createState() => _VolumeRowState();
+}
+
+class _VolumeRowState extends ConsumerState<_VolumeRow> {
   double? _dragging;
   int? _released;
 
@@ -509,9 +682,9 @@ class _InputVolumeRowState extends ConsumerState<InputVolumeRow> {
 
   Future<void> _save(SettingsRepository repository, int volume) async {
     try {
-      await repository.setInputVolume(volume);
+      await widget.write(repository, volume);
     } catch (error, stackTrace) {
-      debugPrint('The input volume was not saved: $error\n$stackTrace');
+      debugPrint('${widget.title} was not saved: $error\n$stackTrace');
       if (mounted && _released == volume) {
         setState(() {
           _dragging = null;
@@ -528,7 +701,10 @@ class _InputVolumeRowState extends ConsumerState<InputVolumeRow> {
       AsyncValue<AppSettings> next,
     ) {
       final int? released = _released;
-      if (released != null && next.value?.inputVolume == released) {
+      final AppSettings? settings = next.value;
+      if (released != null &&
+          settings != null &&
+          widget.read(settings) == released) {
         setState(() {
           _dragging = null;
           _released = null;
@@ -536,17 +712,17 @@ class _InputVolumeRowState extends ConsumerState<InputVolumeRow> {
       }
     });
     final Color ink = widget.ink ?? context.colors.ink;
-    final double value = (_dragging ?? _settingsOf(ref).inputVolume.toDouble())
-        .clamp(0, inputVolumeMaximum.toDouble())
+    final double maximum = widget.maximum.toDouble();
+    final double value = (_dragging ?? widget.read(_settingsOf(ref)).toDouble())
+        .clamp(0, maximum)
         .toDouble();
     final String shown = '${value.round()}%';
     return Column(
-      key: inputVolumeRowKey,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         ExcludeSemantics(
-          child: _PanelRow(title: inputVolumeTitle, value: shown, ink: ink),
+          child: _PanelRow(title: widget.title, value: shown, ink: ink),
         ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
@@ -559,11 +735,11 @@ class _InputVolumeRowState extends ConsumerState<InputVolumeRow> {
             showValueIndicator: ShowValueIndicator.never,
           ),
           child: Semantics(
-            label: inputVolumeTitle,
+            label: widget.title,
             child: Slider(
               value: value,
-              max: inputVolumeMaximum.toDouble(),
-              divisions: inputVolumeMaximum,
+              max: maximum,
+              divisions: widget.maximum,
               semanticFormatterCallback: (double value) => '${value.round()}%',
               onChangeStart: _start,
               onChanged: (double next) => setState(() => _dragging = next),
@@ -572,52 +748,6 @@ class _InputVolumeRowState extends ConsumerState<InputVolumeRow> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class AudioOutputRow extends ConsumerStatefulWidget {
-  const AudioOutputRow({super.key, this.ink});
-
-  final Color? ink;
-
-  @override
-  ConsumerState<AudioOutputRow> createState() => _AudioOutputRowState();
-}
-
-class _AudioOutputRowState extends ConsumerState<AudioOutputRow> {
-  String? _name;
-  bool _named = false;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_load());
-  }
-
-  Future<void> _load() async {
-    final String? name = await ref
-        .read(audioOutputProvider)
-        .defaultOutputName();
-    if (!mounted) {
-      return;
-    }
-    setState(() {
-      _name = name;
-      _named = true;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final AudioOutput output = ref.watch(audioOutputProvider);
-    return _PanelRow(
-      key: audioOutputRowKey,
-      title: audioOutputTitle,
-      value: _named ? _name ?? systemOutputLabel : '',
-      ink: widget.ink ?? context.colors.ink,
-      trailing: const _Glyph(Icons.open_in_new),
-      onTap: () => unawaited(output.openSoundSettings()),
     );
   }
 }
@@ -693,65 +823,6 @@ class _PanelRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(_rowRadius),
                 child: content,
               ),
-      ),
-    );
-  }
-}
-
-class _ChoiceRow extends StatelessWidget {
-  const _ChoiceRow({
-    super.key,
-    required this.label,
-    required this.chosen,
-    required this.ink,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool chosen;
-  final Color ink;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return MergeSemantics(
-      child: Semantics(
-        button: true,
-        selected: chosen,
-        inMutuallyExclusiveGroup: true,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(_rowRadius),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _choiceHeight),
-            child: Padding(
-              padding: _rowPadding.add(
-                const EdgeInsetsDirectional.only(start: _choiceIndent),
-              ),
-              child: Row(
-                children: <Widget>[
-                  SizedBox.square(
-                    dimension: _glyphSize,
-                    child: chosen
-                        ? Icon(Icons.check, size: _glyphSize, color: ink)
-                        : null,
-                  ),
-                  const SizedBox(width: _glyphGap),
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.textStyles.captionSans.copyWith(
-                        color: ink,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }

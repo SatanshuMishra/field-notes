@@ -1,10 +1,7 @@
-import 'dart:async';
-
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
-import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,13 +15,16 @@ const String inputProfileSaveFailed = 'Could not save your input profile.';
 
 const String _profileGroupLabel = 'input profile';
 const String _microphoneGroupLabel = 'microphone';
-const double _radioSize = 18;
-const double _radioRing = 1.6;
-const double _radioDot = 8;
-const double _choiceMinHeight = 48;
+const String _speakerGroupLabel = 'speaker';
+const double _valueGlyphSize = 18;
+const double _valueGlyphGap = 6;
+const double _rowMinHeight = 48;
 
-ValueKey<String> voiceProfileChoiceKey(InputProfile profile) =>
-    ValueKey<String>('voice-profile-${profile.id}');
+const Set<TargetPlatform> _speakerPlatforms = <TargetPlatform>{
+  TargetPlatform.macOS,
+  TargetPlatform.windows,
+  TargetPlatform.android,
+};
 
 String voiceProfileDescription(InputProfile profile) => switch (profile) {
   InputProfile.voiceIsolation => voiceIsolationDescription,
@@ -45,32 +45,33 @@ class VoiceSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final bool speaker = _speakerPlatforms.contains(Theme.of(context).platform);
     return SettingsSection.grouped(
       groups: <SettingsGroup>[
         SettingsGroup(
           label: _profileGroupLabel,
           rows: <Widget>[
-            for (final InputProfile profile in InputProfile.values)
-              MergeSemantics(
-                key: voiceProfileChoiceKey(profile),
-                child: Semantics(
-                  checked: profile == settings.inputProfile,
-                  inMutuallyExclusiveGroup: true,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(
-                      minHeight: _choiceMinHeight,
-                    ),
+            InputProfileRow(
+              describe: voiceProfileDescription,
+              onSaveFailed: () => onFeedback(inputProfileSaveFailed),
+              rowBuilder:
+                  (
+                    BuildContext context,
+                    String title,
+                    String value,
+                    bool open,
+                    VoidCallback toggle,
+                  ) => ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: _rowMinHeight),
                     child: SettingsFieldRow(
-                      label: profile.label,
-                      description: voiceProfileDescription(profile),
-                      control: _ProfileRadio(
-                        selected: profile == settings.inputProfile,
-                      ),
-                      onPressed: () => unawaited(_choose(ref, profile)),
+                      label: title,
+                      control: _DropdownValue(value: value, open: open),
+                      onPressed: toggle,
+                      semanticsValue: value,
+                      expanded: open,
                     ),
                   ),
-                ),
-              ),
+            ),
           ],
         ),
         if (active)
@@ -78,55 +79,47 @@ class VoiceSection extends ConsumerWidget {
             label: _microphoneGroupLabel,
             rows: <Widget>[InputDeviceRow(), InputVolumeRow(), InputLevelRow()],
           ),
+        if (active && speaker)
+          const SettingsGroup(
+            label: _speakerGroupLabel,
+            rows: <Widget>[OutputDeviceRow(), OutputVolumeRow()],
+          ),
       ],
     );
   }
-
-  Future<void> _choose(WidgetRef ref, InputProfile profile) async {
-    if (profile == settings.inputProfile) {
-      return;
-    }
-    final SettingsRepository repository = ref.read(settingsRepositoryProvider);
-    try {
-      await repository.setInputProfile(profile);
-    } catch (error, stackTrace) {
-      debugPrint('The input profile was not saved: $error\n$stackTrace');
-      onFeedback(inputProfileSaveFailed);
-    }
-  }
 }
 
-class _ProfileRadio extends StatelessWidget {
-  const _ProfileRadio({required this.selected});
+class _DropdownValue extends StatelessWidget {
+  const _DropdownValue({required this.value, required this.open});
 
-  final bool selected;
+  final String value;
+  final bool open;
 
   @override
   Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: Container(
-        width: _radioSize,
-        height: _radioSize,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: selected ? Palette.coral : context.colors.ink35,
-            width: _radioRing,
+    final FieldNotesColors colors = context.colors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: <Widget>[
+        Flexible(
+          child: Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.end,
+            style: context.textStyles.captionSans.copyWith(color: colors.muted),
           ),
         ),
-        child: selected
-            ? const SizedBox.square(
-                dimension: _radioDot,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Palette.coral,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              )
-            : null,
-      ),
+        const SizedBox(width: _valueGlyphGap),
+        ExcludeSemantics(
+          child: Icon(
+            open ? Icons.expand_less : Icons.expand_more,
+            size: _valueGlyphSize,
+            color: colors.ink,
+          ),
+        ),
+      ],
     );
   }
 }

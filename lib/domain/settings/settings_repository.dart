@@ -48,6 +48,10 @@ abstract interface class SettingsRepository {
 
   Future<void> setInputVolume(int value);
 
+  Future<void> setAudioOutputId(String? value);
+
+  Future<void> setOutputVolume(int value);
+
   Future<bool> hasStoredValues();
 
   Future<int> meadowKey();
