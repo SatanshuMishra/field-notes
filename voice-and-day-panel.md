@@ -1,7 +1,7 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T02:01:57.125Z
-Next ids: c1 D3 R1 S1
+Updated: 2026-10-18T02:02:16.162Z
+Next ids: c1 D3 R2 S1
 
 ## Goal
 
@@ -24,6 +24,8 @@ Needs: D2.
 - D2 Attenuation limit default stays 15 dB by the owner's ear pick: naturalVoiceAttenuationLimitDb stays 15; no code change. The three-MSP build of the approved spec continues as decided at hand-off.
 
 ## Open risks
+
+- R1 Two real settings defects older than the round-2 fixes were rejected as not introduced and ship unfixed: a touch-opened dropdown that lost focus lets Escape close the recorder input panel too and arrows move the volume slider behind it (anchored_dropdown.dart, reproduced by probe), and the Windows player clears m_loadCallback and m_rerouteWhenLoaded without m_mutex (my_grabber_player.cpp, unconfirmed); raise them with the owner in the final report.
 
 ## Settled, do not reopen
 
