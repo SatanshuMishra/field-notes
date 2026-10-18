@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T05:42:02.568Z
+Updated: 2026-10-18T05:42:04.169Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -25,7 +25,7 @@ When the owner is off calls, rerun the PC routing trials R1-R6 at 06c32a71 (brie
 ## Open risks
 
 - R1 Two real settings defects older than the round-2 fixes were rejected as not introduced and ship unfixed: a touch-opened dropdown that lost focus lets Escape close the recorder input panel too and arrows move the volume slider behind it (anchored_dropdown.dart, reproduced by probe), and the Windows player clears m_loadCallback and m_rerouteWhenLoaded without m_mutex (my_grabber_player.cpp, unconfirmed); raise them with the owner in the final report.
-- R2 On the real Windows PC a chosen non-default output silently plays on the system default part of the time (DELL 5 of 17, Realtek 4 of 8), with just_audio_windows logging 'Output device error: The request is invalid in the current state'; unfixed in #321 (review/winpc/settings.smoke-winpc.txt).
+- R2 On the real Windows PC a chosen non-default output silently plays on the system default part of the time (DELL 5 of 17, Realtek 4 of 8), with just_audio_windows logging 'Output device error: The request is invalid in the current state'; fixed in #323 but not yet proven on the PC (review/winpc/settings.smoke-winpc.txt).
 
 ## Settled, do not reopen
 
