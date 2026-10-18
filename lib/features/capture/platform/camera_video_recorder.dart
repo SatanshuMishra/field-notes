@@ -18,7 +18,6 @@ import 'package:field_notes/data/media/live_audio_channel.dart';
 import 'package:field_notes/data/media/media_work_budget.dart';
 import 'package:field_notes/data/media/video_join.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
-import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart'
     show AudioRecorderFactory;
@@ -26,7 +25,8 @@ import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
 import 'package:field_notes/features/capture/video/audio_input_selectable.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/voice/record_voice_recorder.dart'
-    show VoiceProcessing, voiceRecordingExtension;
+    show voiceRecordingExtension;
+import 'package:field_notes/features/capture/voice/voice_processing.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart'
     show micPermissionMessage;
 
@@ -164,14 +164,6 @@ VideoRecording _recordingOf(File movie, File? thumbnail, int durationMs) =>
           : CaptureFile(file: thumbnail, mime: videoThumbnailMime),
     );
 
-Future<VoiceProcessing> _defaultSoundProcessing() async => (
-  profile: AppSettings.defaults.inputProfile,
-  volume: AppSettings.defaults.inputVolume,
-);
-
-Future<AudioInput> _systemDefaultSoundInput() async =>
-    const AudioInput(id: null, label: systemDefaultInputLabel);
-
 AudioInput _soundInputWithId(String? deviceId) => deviceId == null
     ? const AudioInput(id: null, label: systemDefaultInputLabel)
     : AudioInput(id: deviceId, label: deviceId);
@@ -229,7 +221,7 @@ class _LiveSound {
          encoder: encoder,
          chainRunner: chainRunner,
        ),
-       _resolveProcessing = resolveProcessing ?? _defaultSoundProcessing;
+       _resolveProcessing = resolveProcessing ?? defaultVoiceProcessing;
 
   final LiveAudioCapture _capture;
   final AudioJoiner _joiner;
@@ -246,7 +238,7 @@ class _LiveSound {
     try {
       return await _resolveProcessing();
     } catch (_) {
-      return _defaultSoundProcessing();
+      return defaultVoiceProcessing();
     }
   }
 
@@ -669,7 +661,7 @@ class CameraVideoRecorder extends _CameraPackageVideoRecorder
     super.chainRunner = runVoiceChainInIsolate,
     Future<AudioInput> Function()? resolveInput,
     super.resolveProcessing,
-  }) : _resolveInput = resolveInput ?? _systemDefaultSoundInput,
+  }) : _resolveInput = resolveInput ?? systemDefaultAudioInput,
        super(temporaryDirectory: temporaryDirectory ?? getTemporaryDirectory);
 
   final Future<AudioInput> Function() _resolveInput;
@@ -680,7 +672,7 @@ class CameraVideoRecorder extends _CameraPackageVideoRecorder
     try {
       return await _resolveInput();
     } catch (_) {
-      return _systemDefaultSoundInput();
+      return systemDefaultAudioInput();
     }
   }
 
