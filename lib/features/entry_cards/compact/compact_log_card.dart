@@ -637,6 +637,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
       container: true,
       button: true,
       label: _playLabel,
+      onTap: onPlay,
       child: GestureDetector(
         key: compactLogPlayKey,
         behavior: HitTestBehavior.opaque,
@@ -668,6 +669,7 @@ class _CardPlayToggle extends StatelessWidget {
       container: true,
       button: true,
       label: _playLabel,
+      onTap: onTap,
       child: GestureDetector(
         key: compactLogPlayKey,
         behavior: HitTestBehavior.opaque,

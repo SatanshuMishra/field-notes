@@ -139,6 +139,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
   String? _selectedId;
   bool _autoplay = false;
   Duration? _startAt;
+  ({String entryId, LogViewerPlace place})? _selectedPlace;
   int _playRequests = 0;
 
   bool get _sheet => widget.layout == ShellLayout.bottomBar;
@@ -284,13 +285,34 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     if (!mounted) {
       return;
     }
+    final LogViewerPlace? place =
+        entry.id == _selectedId && _selectedPlace?.entryId == entry.id
+        ? _selectedPlace?.place
+        : null;
+    if (place != null && place.playing) {
+      return;
+    }
     playbackFocus.silence();
     setState(() {
       _selectedId = entry.id;
       _autoplay = true;
-      _startAt = null;
+      _startAt = _resumePoint(entry, place);
       _playRequests += 1;
     });
+  }
+
+  Duration? _resumePoint(Entry entry, LogViewerPlace? place) {
+    final int? durationMs = entry.durationMs;
+    if (place == null ||
+        place.position <= Duration.zero ||
+        (durationMs != null && place.position.inMilliseconds >= durationMs)) {
+      return null;
+    }
+    return place.position;
+  }
+
+  void _onPanePlace(String entryId, LogViewerPlace place) {
+    _selectedPlace = (entryId: entryId, place: place);
   }
 
   void _clearSelection() {
@@ -557,6 +579,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
         resolver: resolver,
         autoplay: _autoplay,
         startAt: _startAt,
+        onPlace: (LogViewerPlace place) => _onPanePlace(selected.id, place),
         onDelete: _delete,
         onStep: _stepTo,
         onClose: _clearSelection,

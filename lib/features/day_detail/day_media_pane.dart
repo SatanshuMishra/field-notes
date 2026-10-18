@@ -57,6 +57,7 @@ class DayMediaPane extends ConsumerStatefulWidget {
     required this.onClose,
     this.autoplay = false,
     this.startAt,
+    this.onPlace,
     this.onCoveredChanged,
     this.onFullScreenClosed,
   });
@@ -72,6 +73,7 @@ class DayMediaPane extends ConsumerStatefulWidget {
   final VoidCallback onClose;
   final bool autoplay;
   final Duration? startAt;
+  final ValueChanged<LogViewerPlace>? onPlace;
   final ValueChanged<bool>? onCoveredChanged;
   final DayMediaFullScreenClosed? onFullScreenClosed;
 
@@ -89,7 +91,10 @@ class _DayMediaPaneState extends ConsumerState<DayMediaPane> {
     _place = (position: widget.startAt ?? Duration.zero, playing: false);
   }
 
-  void _onPlace(LogViewerPlace place) => _place = place;
+  void _onPlace(LogViewerPlace place) {
+    _place = place;
+    widget.onPlace?.call(place);
+  }
 
   void _openFullScreen() => unawaited(_showFullScreen());
 
@@ -221,6 +226,7 @@ class _FullScreenButton extends StatelessWidget {
       child: Semantics(
         button: true,
         label: dayMediaPaneFullScreenLabel,
+        onTap: _press,
         child: GestureDetector(
           key: dayMediaPaneFullScreenKey,
           behavior: HitTestBehavior.opaque,

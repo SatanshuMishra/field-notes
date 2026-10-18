@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -205,6 +206,11 @@ Finder _card(String id) => find.byWidgetPredicate(
 Finder _inCard(String id, Finder matching) =>
     find.descendant(of: _card(id), matching: matching);
 
+void _pressBySemantics(WidgetTester tester, Finder finder) {
+  final SemanticsNode node = tester.getSemantics(finder);
+  node.owner!.performAction(node.id, SemanticsAction.tap);
+}
+
 void main() {
   testWidgets('full screen keeps the position', (WidgetTester tester) async {
     final _Players players = await _openDay(tester, entries: <Entry>[_voice()]);
@@ -299,4 +305,65 @@ void main() {
     },
     variant: _mac,
   );
+
+  testWidgets('screen readers can press the card play and full screen', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final _Players players = await _openDay(tester, entries: <Entry>[_voice()]);
+    final Finder play = _inCard('voice-1', find.byKey(compactLogPlayKey));
+    expect(
+      tester
+          .getSemantics(play)
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isTrue,
+    );
+
+    _pressBySemantics(tester, play);
+    await tester.pumpAndSettle();
+    expect(players.voice, hasLength(1));
+    expect(players.voice.single.playCalls, 1);
+
+    final Finder fullScreen = _inPane(find.byKey(dayMediaPaneFullScreenKey));
+    expect(
+      tester
+          .getSemantics(fullScreen)
+          .getSemanticsData()
+          .hasAction(SemanticsAction.tap),
+      isTrue,
+    );
+    _pressBySemantics(tester, fullScreen);
+    await tester.pumpAndSettle();
+    expect(find.byType(LogViewerPanel), findsOneWidget);
+    semantics.dispose();
+  }, variant: _mac);
+
+  testWidgets('card play on the open log keeps its place', (
+    WidgetTester tester,
+  ) async {
+    final _Players players = await _openDay(tester, entries: <Entry>[_voice()]);
+    final Finder play = _inCard('voice-1', find.byKey(compactLogPlayKey));
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+    final _TrackingAudioPlayer pane = players.voice.single;
+    pane.emitPosition(const Duration(seconds: 30));
+    await tester.pump();
+
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+    expect(players.voice, hasLength(1));
+    expect(pane.pauseCalls, 0);
+    expect(pane.state, AudioPlaybackState.playing);
+
+    await pane.pause();
+    await tester.pump();
+    await tester.tap(play);
+    await tester.pumpAndSettle();
+
+    final _TrackingAudioPlayer resumed = players.voice.last;
+    expect(resumed.state, AudioPlaybackState.playing);
+    expect(resumed.seekCalls, contains(const Duration(seconds: 30)));
+    expect(_inPane(find.textContaining('0:30')), findsOneWidget);
+  }, variant: _mac);
 }
