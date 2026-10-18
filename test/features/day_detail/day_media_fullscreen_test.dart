@@ -274,4 +274,29 @@ void main() {
     expect(resumed.playCalls, 0);
     expect(_inPane(find.textContaining('0:42')), findsOneWidget);
   }, variant: _mac);
+
+  testWidgets(
+    'full screen after a late paused report leaves one player playing',
+    (WidgetTester tester) async {
+      final _Players players = await _openDay(
+        tester,
+        entries: <Entry>[_voice()],
+      );
+      await tester.tap(_inCard('voice-1', find.byKey(compactLogPlayKey)));
+      await tester.pumpAndSettle();
+      final _TrackingAudioPlayer pane = players.voice.single;
+      pane.emitState(AudioPlaybackState.paused);
+      pane.emitState(AudioPlaybackState.playing);
+      await tester.pump();
+
+      await tester.tap(_inPane(find.byKey(dayMediaPaneFullScreenKey)));
+      await tester.pumpAndSettle();
+
+      expect(players.voice, hasLength(2));
+      expect(pane.pauseCalls, 1);
+      expect(pane.state, AudioPlaybackState.paused);
+      expect(players.voice.last.state, AudioPlaybackState.playing);
+    },
+    variant: _mac,
+  );
 }
