@@ -136,7 +136,9 @@ class _VoicePlayerViewState extends State<VoicePlayerView> {
       _launch();
     }
     widget.onPlace?.call((
-      position: _playback.position,
+      position: _playback.state == AudioPlaybackState.completed
+          ? Duration.zero
+          : _playback.position,
       playing: _playback.isPlaying,
     ));
     setState(() {});

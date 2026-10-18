@@ -147,7 +147,10 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
     }
     _seekToStart(state);
     _startIfAsked(state);
-    widget.onPlace?.call((position: state.position, playing: state.isPlaying));
+    widget.onPlace?.call((
+      position: state.completed ? Duration.zero : state.position,
+      playing: state.isPlaying,
+    ));
   }
 
   void _seekToStart(VideoControlsState state) {

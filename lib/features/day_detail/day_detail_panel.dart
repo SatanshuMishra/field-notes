@@ -296,16 +296,13 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
     setState(() {
       _selectedId = entry.id;
       _autoplay = true;
-      _startAt = _resumePoint(entry, place);
+      _startAt = _resumePoint(place);
       _playRequests += 1;
     });
   }
 
-  Duration? _resumePoint(Entry entry, LogViewerPlace? place) {
-    final int? durationMs = entry.durationMs;
-    if (place == null ||
-        place.position <= Duration.zero ||
-        (durationMs != null && place.position.inMilliseconds >= durationMs)) {
+  Duration? _resumePoint(LogViewerPlace? place) {
+    if (place == null || place.position <= Duration.zero) {
       return null;
     }
     return place.position;
