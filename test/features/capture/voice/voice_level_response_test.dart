@@ -15,8 +15,9 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:record/record.dart';
+import 'package:record/record.dart' show RecordConfig;
 
+import '../audio/live_audio_test_support.dart';
 import 'voice_test_support.dart';
 
 const Key _frameKey = ValueKey<String>('voice-level-frame');
@@ -24,6 +25,8 @@ const double _silentDbfs = -160;
 const double _loudDbfs = -6;
 const Duration _frame = Duration(milliseconds: 16);
 const int _framesAfterStart = 90;
+const Duration _chunkEvery = Duration(milliseconds: 100);
+const int _chunkSamples = 4800;
 
 class _NoDiskDirectory extends Fake implements Directory {
   @override
@@ -33,52 +36,35 @@ class _NoDiskDirectory extends Fake implements Directory {
   Future<Directory> create({bool recursive = false}) async => this;
 }
 
-class _MicAudioRecorder extends Fake implements AudioRecorder {
-  _MicAudioRecorder(this.dbfs);
+class _SpeakingMicrophone extends FakeMicrophone {
+  _SpeakingMicrophone(this.dbfs);
 
   final double dbfs;
-  StreamController<Amplitude>? _levels;
-  Timer? _ticker;
-
-  Amplitude get _now => Amplitude(current: dbfs, max: dbfs);
+  Timer? _speaking;
 
   @override
-  Future<bool> hasPermission({bool request = true}) async => true;
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async {
+    final Stream<Uint8List> chunks = await super.startStream(config);
+    _speaking?.cancel();
+    _speaking = Timer.periodic(
+      _chunkEvery,
+      (Timer _) => push(pcmAtDbfs(dbfs, samples: _chunkSamples)),
+    );
+    return chunks;
+  }
+
+  void fallQuiet() => _speaking?.cancel();
 
   @override
-  Future<void> start(RecordConfig config, {required String path}) async {}
+  Future<String?> stop() {
+    fallQuiet();
+    return super.stop();
+  }
 
   @override
-  Future<void> pause() async {}
-
-  @override
-  Future<void> resume() async {}
-
-  @override
-  Future<String?> stop() async => null;
-
-  @override
-  Future<void> cancel() async {}
-
-  @override
-  Future<void> dispose() async {}
-
-  @override
-  Future<Amplitude> getAmplitude() async => _now;
-
-  @override
-  Stream<Amplitude> onAmplitudeChanged(Duration interval) {
-    final StreamController<Amplitude> levels = _levels ??=
-        StreamController<Amplitude>.broadcast(
-          onListen: () {
-            _ticker = Timer.periodic(interval, (Timer _) => _levels?.add(_now));
-          },
-          onCancel: () {
-            _ticker?.cancel();
-            _ticker = null;
-          },
-        );
-    return levels.stream;
+  Future<void> cancel() {
+    fallQuiet();
+    return super.cancel();
   }
 }
 
@@ -95,7 +81,7 @@ class _RecorderTrigger extends StatelessWidget {
   }
 }
 
-Widget _app(AudioRecorder mic) {
+Widget _app(FakeMicrophone mic) {
   return RepaintBoundary(
     key: _frameKey,
     child: ProviderScope(
@@ -103,6 +89,8 @@ Widget _app(AudioRecorder mic) {
         voiceRecorderProvider.overrideWith(
           (Ref ref) => RecordVoiceRecorder(
             recorder: mic,
+            encoder: FakeLiveAudio(writesFiles: false),
+            chainRunner: passThroughChain,
             temporaryDirectory: () async => _NoDiskDirectory(),
           ),
         ),
@@ -169,7 +157,8 @@ Future<double> _warmthAroundOrb(WidgetTester tester) async {
 }
 
 Future<double> _recordAndMeasure(WidgetTester tester, double dbfs) async {
-  await tester.pumpWidget(_app(_MicAudioRecorder(dbfs)));
+  final _SpeakingMicrophone mic = _SpeakingMicrophone(dbfs);
+  await tester.pumpWidget(_app(mic));
   await tester.tap(find.text('open'));
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 600));
@@ -182,6 +171,7 @@ Future<double> _recordAndMeasure(WidgetTester tester, double dbfs) async {
     VoiceRecorderPhase.recording,
   );
   final double warmth = await _warmthAroundOrb(tester);
+  mic.fallQuiet();
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump();
   return warmth;

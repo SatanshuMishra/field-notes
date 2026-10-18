@@ -115,6 +115,8 @@ abstract interface class CameraControls {
 abstract interface class VideoRecorder {
   Duration get elapsed;
 
+  Stream<double> get level;
+
   bool get supportsPause;
 
   Future<List<VideoCaptureDevice>> listDevices();

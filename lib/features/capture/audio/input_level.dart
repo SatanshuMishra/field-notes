@@ -78,12 +78,14 @@ class InputLevelMeter extends StatefulWidget {
     required this.volume,
     this.recorderFactory = AudioRecorder.new,
     this.ink = Palette.mediaInk,
+    this.levels,
   });
 
   final AudioInput input;
   final int volume;
   final AudioRecorderFactory recorderFactory;
   final Color ink;
+  final Stream<double>? levels;
 
   @override
   State<InputLevelMeter> createState() => _InputLevelMeterState();
@@ -94,6 +96,8 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   bool _routeCurrent = true;
   AudioRecorder? _recorder;
   StreamSubscription<Uint8List>? _chunks;
+  Stream<double>? _followedTake;
+  StreamSubscription<double>? _takeLevels;
   int _generation = 0;
   double _level = 0;
   bool _unavailable = false;
@@ -114,6 +118,10 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   @override
   void didUpdateWidget(InputLevelMeter oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.levels != widget.levels) {
+      _follow();
+      return;
+    }
     final AudioRecorder? recorder = _recorder;
     if (oldWidget.input != widget.input && recorder != null) {
       unawaited(_restart(recorder));
@@ -124,6 +132,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   void dispose() {
     _lifecycle.dispose();
     _letGo();
+    _stopFollowingTake();
     super.dispose();
   }
 
@@ -142,6 +151,13 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   }
 
   void _follow() {
+    final Stream<double>? take = widget.levels;
+    if (take != null) {
+      _letGo();
+      _followTake(take);
+      return;
+    }
+    _stopFollowingTake();
     if (!_shown) {
       _letGo();
       _level = 0;
@@ -154,6 +170,31 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
     _recorder = recorder;
     _unavailable = false;
     unawaited(_listen(recorder, _generation));
+  }
+
+  void _followTake(Stream<double> take) {
+    if (identical(_followedTake, take)) {
+      return;
+    }
+    _stopFollowingTake();
+    _followedTake = take;
+    _unavailable = false;
+    _takeLevels = take.listen((double level) {
+      if (mounted) {
+        setState(() => _level = level);
+      }
+    });
+  }
+
+  void _stopFollowingTake() {
+    final StreamSubscription<double>? levels = _takeLevels;
+    if (levels == null) {
+      return;
+    }
+    _takeLevels = null;
+    _followedTake = null;
+    _level = 0;
+    unawaited(levels.cancel());
   }
 
   void _letGo() {
@@ -251,6 +292,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
           child: SizedBox(
             height: _segmentHeight,
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 for (int index = 0; index < inputLevelSegments; index++)
                   Expanded(

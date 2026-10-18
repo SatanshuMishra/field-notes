@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:camera/camera.dart' show CameraValue, Optional;
@@ -8,6 +9,8 @@ import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../audio/live_audio_test_support.dart';
 
 const int _cameraId = 7;
 const Key _platformPreviewKey = ValueKey<String>('platform-camera-preview');
@@ -226,18 +229,31 @@ void main() {
       ],
     );
     CameraPlatform.instance = platform;
-    final CameraVideoRecorder recorder = CameraVideoRecorder();
+    final Directory root = Directory.systemTemp.createTempSync(
+      'phone_camera_controls_',
+    );
+    addTearDown(() => root.deleteSync(recursive: true));
+    final FakeLiveAudio liveAudio = FakeLiveAudio();
+    final FakeMicrophone mic = FakeMicrophone();
+    final CameraVideoRecorder recorder = CameraVideoRecorder(
+      temporaryDirectory: () async => root,
+      encoder: liveAudio,
+      audioJoiner: liveAudio,
+      audioRecorderFactory: () => mic,
+      chainRunner: passThroughChain,
+    );
 
     await _openSession(tester, recorder, const Size(400, 844));
-    await recorder.start();
+    await tester.runAsync(recorder.start);
 
     expect(platform.stabilised, <VideoStabilizationMode>[
       VideoStabilizationMode.level1,
       VideoStabilizationMode.level1,
     ]);
+    expect(mic.startStreamConfigs, hasLength(1));
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await recorder.dispose();
+    await tester.runAsync(recorder.dispose);
   });
 
   testWidgets('zoom and focus reach the camera', (WidgetTester tester) async {

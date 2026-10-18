@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:field_notes/features/sound/output_route.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:video_player/video_player.dart' as vp;
 
@@ -29,8 +31,12 @@ VideoPlaybackState videoStateFromValue({
 }
 
 class VideoPlayerEntryPlayer implements EntryVideoPlayer {
-  VideoPlayerEntryPlayer();
+  VideoPlayerEntryPlayer({ValueListenable<double>? volume})
+    : _volume = volume ?? playbackVolume {
+    _volume.addListener(_applyVolume);
+  }
 
+  final ValueListenable<double> _volume;
   vp.VideoPlayerController? _controller;
   final StreamController<VideoPlaybackState> _stateController =
       StreamController<VideoPlaybackState>.broadcast();
@@ -53,6 +59,7 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
     );
     _controller = controller;
     controller.addListener(_onValue);
+    _applyVolume();
     try {
       await controller.initialize();
       _setState(VideoPlaybackState.ready);
@@ -60,6 +67,14 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
       _setState(VideoPlaybackState.error);
       rethrow;
     }
+  }
+
+  void _applyVolume() {
+    final vp.VideoPlayerController? controller = _controller;
+    if (controller == null) {
+      return;
+    }
+    unawaited(controller.setVolume(_volume.value));
   }
 
   void _onValue() {
@@ -158,6 +173,7 @@ class VideoPlayerEntryPlayer implements EntryVideoPlayer {
 
   @override
   Future<void> dispose() async {
+    _volume.removeListener(_applyVolume);
     _controller?.removeListener(_onValue);
     await _controller?.dispose();
     await _stateController.close();

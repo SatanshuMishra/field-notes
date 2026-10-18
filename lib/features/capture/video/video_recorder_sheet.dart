@@ -35,6 +35,13 @@ enum VideoRecorderPhase {
   };
 }
 
+const Set<VideoRecorderPhase> _takingPhases = <VideoRecorderPhase>{
+  VideoRecorderPhase.breathing,
+  VideoRecorderPhase.arming,
+  VideoRecorderPhase.recording,
+  VideoRecorderPhase.paused,
+};
+
 const Key videoCloseKey = ValueKey<String>('video-close');
 const Key videoShutterKey = ValueKey<String>('video-shutter');
 const Key videoDiscardCircleKey = ValueKey<String>('video-discard-circle');
@@ -163,6 +170,7 @@ class VideoRecorderSheet extends StatefulWidget {
     this.capHint = 'Auto-stops at 30:00.',
     this.deniedMessage = cameraPermissionMessage,
     this.onVoiceSettings,
+    this.levels = const Stream<double>.empty(),
   });
 
   final VideoRecorderPhase phase;
@@ -192,6 +200,7 @@ class VideoRecorderSheet extends StatefulWidget {
   final String capHint;
   final String deniedMessage;
   final VoidCallback? onVoiceSettings;
+  final Stream<double> levels;
 
   @override
   State<VideoRecorderSheet> createState() => _VideoRecorderSheetState();
@@ -442,10 +451,12 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
 
   Widget? _trailing(bool sidebar) {
     final bool idle = _phase == VideoRecorderPhase.idle;
+    final bool taking = _takingPhases.contains(_phase);
+    final bool showsInput = idle || taking;
     final bool picker =
         sidebar && idle && widget.cameraOn && widget.devices.length > 1;
     final VideoCaptureDevice? other = sidebar ? null : _otherCamera;
-    if (!idle && !picker && other == null) {
+    if (!showsInput && !picker && other == null) {
       return null;
     }
     return Row(
@@ -482,10 +493,11 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
                   : CameraGlyphKind.cameraOff,
             ),
           ),
-        if (idle)
+        if (showsInput)
           RecorderInputButton(
             androidVideo: Theme.of(context).platform == TargetPlatform.android,
             onVoiceSettings: widget.onVoiceSettings,
+            takeLevels: taking ? widget.levels : null,
           ),
       ],
     );

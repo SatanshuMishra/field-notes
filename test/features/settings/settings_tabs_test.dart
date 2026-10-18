@@ -89,7 +89,13 @@ const Map<String, List<String>> _rowsByTab = <String, List<String>>{
     'Restore with recovery phrase',
   ],
   _remindersSound: <String>['Daily reminder', 'Reminder time', 'Sound effects'],
-  _voice: <String>['Voice Isolation', 'Studio', 'Input device', 'Input volume'],
+  _voice: <String>[
+    'Input profile',
+    'Input device',
+    'Input volume',
+    'Output device',
+    'Output volume',
+  ],
   _data: <String>['Export', 'Reclaim space', 'Delete all', 'Privacy policy'],
   _about: <String>['Satanshu Mishra'],
 };

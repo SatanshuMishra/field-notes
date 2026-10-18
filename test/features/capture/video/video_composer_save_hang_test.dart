@@ -23,6 +23,9 @@ class _HangingStopRecorder implements VideoRecorder {
   Duration get elapsed => Duration.zero;
 
   @override
+  Stream<double> get level => const Stream<double>.empty();
+
+  @override
   bool get supportsPause => false;
 
   @override

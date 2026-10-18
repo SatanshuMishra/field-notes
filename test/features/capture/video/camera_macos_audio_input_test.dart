@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camera_macos/camera_macos.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
@@ -26,6 +27,7 @@ import 'package:record/record.dart'
     show AudioRecorder, InputDevice, RecordConfig;
 
 import '../../settings/support/fake_settings_repository.dart';
+import '../audio/live_audio_test_support.dart';
 import 'video_test_support.dart';
 
 const MethodChannel _cameraChannel = MethodChannel('camera_macos');
@@ -35,6 +37,8 @@ const Duration _fade = Duration(milliseconds: 600);
 const Duration _step = Duration(milliseconds: 50);
 const Duration _frame = Duration(milliseconds: 16);
 const Duration _second = Duration(seconds: 1);
+const Duration _fileWorkWait = Duration(milliseconds: 5);
+const int _fileWorkTurns = 20;
 
 const Map<String, Object?> _cameraDevice = <String, Object?>{
   'deviceType': 0,
@@ -64,11 +68,10 @@ class _NativeCamera {
     for (final MethodCall call in calls) call.method,
   ];
 
-  List<Object?> get initializedAudio => <Object?>[
-    for (final MethodCall call in calls)
-      if (call.method == 'initialize')
-        (call.arguments as Map<Object?, Object?>)['audioDeviceId'],
-  ];
+  int get cameraOpenings => <String>[
+    for (final String method in methods)
+      if (method == 'initialize') method,
+  ].length;
 
   int get recordingsStarted => <String>[
     for (final String method in methods)
@@ -159,8 +162,49 @@ Future<void> _pass(WidgetTester tester, Duration time) async {
   }
 }
 
+class _LiveSound {
+  _LiveSound(this.root);
+
+  final Directory root;
+  final FakeMicrophone mic = FakeMicrophone();
+  final FakeLiveAudio liveAudio = FakeLiveAudio();
+
+  String? get streamedInput => mic.startStreamConfigs.single.device?.id;
+
+  CameraMacosVideoRecorder recorder({
+    CameraMacOSController? controller,
+    Future<bool> Function()? microphonePermission,
+  }) => CameraMacosVideoRecorder(
+    temporaryDirectory: () async => root,
+    controller: controller,
+    microphonePermission: microphonePermission ?? () async => true,
+    encoder: liveAudio,
+    audioJoiner: liveAudio,
+    audioRecorderFactory: () => mic,
+    chainRunner: passThroughChain,
+  );
+}
+
+Future<void> _startTake(WidgetTester tester) async {
+  await tester.tap(find.byKey(videoShutterKey));
+  await tester.pump(const Duration(milliseconds: 100));
+  await tester.tap(find.byKey(videoShutterKey));
+  await tester.pump();
+  for (
+    int turn = 0;
+    turn < _fileWorkTurns &&
+        _sheet(tester).phase != VideoRecorderPhase.recording;
+    turn += 1
+  ) {
+    await tester.runAsync(() => Future<void>.delayed(_fileWorkWait));
+    await tester.pump(_step);
+  }
+  await _pass(tester, _second);
+}
+
 Future<void> _showComposer(
   WidgetTester tester, {
+  required CameraMacosVideoRecorder recorder,
   required FakeSettingsRepository settings,
   required CameraOffVoiceRecorder voice,
   Duration? listDelay,
@@ -169,9 +213,6 @@ Future<void> _showComposer(
   tester.view.physicalSize = const Size(1280, 800);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
-    microphonePermission: () async => true,
-  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: <Override>[
@@ -235,9 +276,13 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _NativeCamera native;
+  late Directory root;
+  late _LiveSound sound;
 
   setUp(() {
     native = _NativeCamera();
+    root = Directory.systemTemp.createTempSync('camera_macos_audio_input_');
+    sound = _LiveSound(root);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_cameraChannel, native.handle);
   });
@@ -245,48 +290,55 @@ void main() {
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_cameraChannel, null);
+    if (root.existsSync()) {
+      root.deleteSync(recursive: true);
+    }
   });
 
   test('a macOS video take records from the chosen microphone', () async {
-    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
+    final CameraMacosVideoRecorder recorder = sound.recorder(
       controller: _suppliedController(),
-      microphonePermission: () async => true,
     );
     const AudioInput input = AudioInput(id: 'b', label: 'CORSAIR HS80 MAX');
 
     recorder.useAudioInput(input.id);
     final CameraMacOSView view = _view(recorder.openSession(_camera));
 
-    expect(view.enableAudio, isTrue);
-    expect(view.audioDeviceId, 'b');
+    expect(view.enableAudio, isFalse);
     expect(view.deviceId, _camera);
 
     await recorder.start();
     expect(native.methods, contains('startRecording'));
-    await recorder.release();
+    expect(sound.streamedInput, 'b');
+    await recorder.dispose();
   });
 
-  test('a macOS video take with no choice records from the system default', () {
-    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
-      microphonePermission: () async => true,
-    );
-    const AudioInput systemDefault = AudioInput(
-      id: null,
-      label: 'System default',
-    );
+  test(
+    'a macOS video take with no choice records from the system default',
+    () async {
+      final CameraMacosVideoRecorder recorder = sound.recorder(
+        controller: _suppliedController(),
+      );
+      const AudioInput systemDefault = AudioInput(
+        id: null,
+        label: 'System default',
+      );
 
-    recorder.useAudioInput(systemDefault.id);
-    final CameraMacOSView view = _view(recorder.openSession(_camera));
+      recorder.useAudioInput(systemDefault.id);
+      final CameraMacOSView view = _view(recorder.openSession(_camera));
+      await recorder.start();
 
-    expect(view.audioDeviceId, isNull);
-    expect(view.enableAudio, isTrue);
-  });
+      expect(view.enableAudio, isFalse);
+      expect(sound.streamedInput, isNull);
+      await recorder.dispose();
+    },
+  );
 
   test(
     'a refused microphone stops a macOS video take before it starts',
     () async {
       Future<bool> Function() check = () async => false;
-      final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
+      final CameraMacosVideoRecorder recorder = sound.recorder(
         controller: _suppliedController(),
         microphonePermission: () => check(),
       );
@@ -305,23 +357,23 @@ void main() {
     },
   );
 
-  test('changing the input while idle reopens the macOS camera view', () {
-    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
-      microphonePermission: () async => true,
+  test('changing the input while idle keeps the macOS camera view and records '
+      'from the new input', () async {
+    final CameraMacosVideoRecorder recorder = sound.recorder(
+      controller: _suppliedController(),
     );
     recorder.useAudioInput('a');
     final Widget? onA = recorder.openSession(_camera);
-    expect(_view(onA).audioDeviceId, 'a');
 
     recorder.useAudioInput('b');
     final Widget? onB = recorder.openSession(_camera);
 
-    expect(onB, isNot(same(onA)));
-    expect(_view(onB).audioDeviceId, 'b');
-    expect(_view(onB).enableAudio, isTrue);
+    expect(onB, same(onA));
+    expect(_view(onB).enableAudio, isFalse);
 
-    recorder.useAudioInput('b');
-    expect(recorder.openSession(_camera), same(onB));
+    await recorder.start();
+    expect(sound.streamedInput, 'b');
+    await recorder.dispose();
   });
 
   testWidgets(
@@ -334,9 +386,7 @@ void main() {
       final StreamController<AppSettings> stored =
           StreamController<AppSettings>.broadcast();
       addTearDown(stored.close);
-      final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
-        microphonePermission: () async => true,
-      );
+      final CameraMacosVideoRecorder recorder = sound.recorder();
 
       await tester.pumpWidget(
         ProviderScope(
@@ -385,25 +435,20 @@ void main() {
             .phase,
         VideoRecorderPhase.idle,
       );
-      expect(
-        tester
-            .widget<CameraMacOSView>(find.byType(CameraMacOSView))
-            .audioDeviceId,
-        'a',
-      );
+      expect(find.byType(CameraMacOSView), findsOneWidget);
 
       await tester.tap(find.byKey(videoCameraKey));
       await tester.pump();
       await _settle(tester);
       expect(find.byType(CameraMacOSView), findsNothing);
-      final int opened = native.initializedAudio.length;
+      final int opened = native.cameraOpenings;
 
       stored.add(_storedInput('b'));
       await tester.pump();
       await _settle(tester);
 
       expect(find.byType(CameraMacOSView), findsNothing);
-      expect(native.initializedAudio, hasLength(opened));
+      expect(native.cameraOpenings, opened);
 
       await tester.tap(find.byKey(videoCameraKey));
       await tester.pump();
@@ -412,9 +457,16 @@ void main() {
       final CameraMacOSView view = tester.widget<CameraMacOSView>(
         find.byType(CameraMacOSView),
       );
-      expect(view.audioDeviceId, 'b');
-      expect(view.enableAudio, isTrue);
-      expect(native.initializedAudio.last, 'b');
+      expect(view.enableAudio, isFalse);
+
+      await _startTake(tester);
+      expect(
+        tester
+            .widget<VideoRecorderSheet>(find.byType(VideoRecorderSheet))
+            .phase,
+        VideoRecorderPhase.recording,
+      );
+      expect(sound.streamedInput, 'b');
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -431,6 +483,7 @@ void main() {
     final CameraOffVoiceRecorder voice = CameraOffVoiceRecorder();
     await _showComposer(
       tester,
+      recorder: sound.recorder(),
       settings: settings,
       voice: voice,
       listDelay: const Duration(milliseconds: 120),
@@ -460,18 +513,14 @@ void main() {
     expect(voice.calls, isEmpty);
     expect(_sheet(tester).phase, VideoRecorderPhase.idle);
     expect(_sheet(tester).cameraOn, isTrue);
-    expect(native.initializedAudio.last, 'b');
     expect(native.recordingsStarted, 0);
 
-    await tester.tap(find.byKey(videoShutterKey));
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.tap(find.byKey(videoShutterKey));
-    await tester.pump();
-    await _pass(tester, _second);
+    await _startTake(tester);
 
     expect(voice.calls, isEmpty);
     expect(_sheet(tester).phase, VideoRecorderPhase.recording);
     expect(native.recordingsStarted, 1);
+    expect(sound.streamedInput, 'b');
 
     await _closeComposer(tester);
   });
@@ -485,6 +534,7 @@ void main() {
       native.destroyDelay = const Duration(milliseconds: 100);
       await _showComposer(
         tester,
+        recorder: sound.recorder(),
         settings: settings,
         voice: CameraOffVoiceRecorder(),
       );
@@ -510,7 +560,6 @@ void main() {
       expect(button, findsOneWidget);
       expect(_sheet(tester).phase, VideoRecorderPhase.idle);
       expect(settings.audioInputIdWrites, <String?>['b']);
-      expect(native.initializedAudio.last, 'b');
 
       await _press(tester, inputDeviceRowKey);
       await tester.tap(find.byKey(inputChoiceKey('a')));
@@ -528,16 +577,12 @@ void main() {
       expect(panel, findsNothing);
       expect(_sheet(tester).phase, VideoRecorderPhase.idle);
       expect(native.recordingsStarted, 0);
-      expect(native.initializedAudio.last, 'a');
 
-      await tester.tap(find.byKey(videoShutterKey));
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(find.byKey(videoShutterKey));
-      await tester.pump();
-      await _pass(tester, _second);
+      await _startTake(tester);
 
       expect(_sheet(tester).phase, VideoRecorderPhase.recording);
       expect(native.recordingsStarted, 1);
+      expect(sound.streamedInput, 'a');
 
       await _closeComposer(tester);
     },
@@ -549,11 +594,12 @@ void main() {
       native.destroyDelay = const Duration(milliseconds: 100);
       await _showComposer(
         tester,
+        recorder: sound.recorder(),
         settings: FakeSettingsRepository(initial: _storedInput('a')),
         voice: CameraOffVoiceRecorder(),
       );
       await _openInputChoices(tester);
-      final int opened = native.initializedAudio.length;
+      final int opened = native.cameraOpenings;
 
       await tester.tap(find.byKey(inputChoiceKey('b')));
       await tester.pump(const Duration(milliseconds: 30));
@@ -562,7 +608,7 @@ void main() {
       await _pass(tester, _second);
 
       expect(find.byType(VideoRecorderSheet), findsNothing);
-      expect(native.initializedAudio, hasLength(opened));
+      expect(native.cameraOpenings, opened);
 
       await _closeComposer(tester);
     },
@@ -574,11 +620,12 @@ void main() {
       native.destroyDelay = const Duration(milliseconds: 100);
       await _showComposer(
         tester,
+        recorder: sound.recorder(),
         settings: FakeSettingsRepository(initial: _storedInput('a')),
         voice: CameraOffVoiceRecorder(),
       );
       await _openInputChoices(tester);
-      final int opened = native.initializedAudio.length;
+      final int opened = native.cameraOpenings;
 
       await tester.tap(find.byKey(inputChoiceKey('b')));
       await tester.pump(const Duration(milliseconds: 30));
@@ -587,7 +634,7 @@ void main() {
       await _pass(tester, _second);
 
       expect(find.byType(VideoRecorderSheet), findsNothing);
-      expect(native.initializedAudio, hasLength(opened));
+      expect(native.cameraOpenings, opened);
 
       await _closeComposer(tester);
     },
@@ -601,12 +648,13 @@ void main() {
       ..destroyDelay = const Duration(milliseconds: 100);
     await _showComposer(
       tester,
+      recorder: sound.recorder(),
       settings: FakeSettingsRepository(initial: _storedInput('a')),
       voice: CameraOffVoiceRecorder(),
     );
     expect(_sheet(tester).phase, VideoRecorderPhase.idle);
     expect(_sheet(tester).selectedDeviceId, _camera);
-    final int opened = native.initializedAudio.length;
+    final int opened = native.cameraOpenings;
 
     _sheet(tester).onDeviceChanged!(_usbCamera);
     await tester.pump(const Duration(milliseconds: 30));
@@ -615,7 +663,7 @@ void main() {
     await _pass(tester, _second);
 
     expect(find.byType(VideoRecorderSheet), findsNothing);
-    expect(native.initializedAudio, hasLength(opened));
+    expect(native.cameraOpenings, opened);
 
     await _closeComposer(tester);
   });

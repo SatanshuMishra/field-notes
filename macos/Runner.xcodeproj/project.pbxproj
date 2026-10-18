@@ -99,7 +99,7 @@
 		F1E1D0012EA0000100000003 /* ImagePasteboardBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePasteboardBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000005 /* FileDropBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDropBridge.swift; sourceTree = "<group>"; };
 		F1E1D0012EA0000100000007 /* SparkleUpdaterBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleUpdaterBridge.swift; sourceTree = "<group>"; };
-		F1E1D0012EA0000100000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCleanBridge.swift; sourceTree = "<group>"; };
+		F1E1D0012EA0000100000009 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveAudioBridge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */

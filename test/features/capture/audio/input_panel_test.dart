@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/media/audio_output.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
@@ -10,6 +8,7 @@ import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +45,12 @@ class _FakeOutput extends AudioOutput {
 
   @override
   Future<String?> defaultOutputName() async => name;
+
+  @override
+  Future<List<AudioOutputDevice>> listOutputs() async => <AudioOutputDevice>[
+    const AudioOutputDevice(id: null, name: 'System output'),
+    if (name != null) AudioOutputDevice(id: 'speakers', name: name!),
+  ];
 
   @override
   Future<void> openSoundSettings() async {
@@ -138,8 +143,8 @@ void main() {
       (inGlass(find.text('Input volume')), inGlass(find.text('100%'))),
       (inGlass(find.byType(InputLevelMeter)), null),
       (
-        inGlass(find.text('Output')),
-        inGlass(find.text('MacBook Pro Speakers')),
+        inGlass(find.text('Output device')),
+        inGlass(find.text('System output')),
       ),
       (inGlass(find.text('Voice settings')), null),
     ];
@@ -180,16 +185,23 @@ void main() {
       output: _FakeOutput('MacBook Pro Speakers'),
     );
 
+    final double volumeTop = tester.getRect(find.byKey(inputVolumeRowKey)).top;
     await tester.tap(find.byKey(inputDeviceRowKey));
     await tester.pumpAndSettle();
-    expect(find.byKey(inputChoiceKey(null)), findsOneWidget);
-    expect(find.byKey(inputChoiceKey('a')), findsOneWidget);
-    expect(find.byKey(inputChoiceKey('b')), findsOneWidget);
+    Finder inDeviceMenu(Key key) => find.descendant(
+      of: find.byKey(inputDeviceMenuKey),
+      matching: find.byKey(key),
+    );
+    expect(inDeviceMenu(inputChoiceKey(null)), findsOneWidget);
+    expect(inDeviceMenu(inputChoiceKey('a')), findsOneWidget);
+    expect(inDeviceMenu(inputChoiceKey('b')), findsOneWidget);
+    expect(tester.getRect(find.byKey(inputVolumeRowKey)).top, volumeTop);
     await tester.tap(find.byKey(inputChoiceKey('b')));
     await tester.pumpAndSettle();
     expect(repository.audioInputIdWrites, <String?>['b']);
     expect(_inRow(inputDeviceRowKey, 'CORSAIR HS80 MAX'), findsOneWidget);
     expect(find.byKey(inputChoiceKey('b')), findsNothing);
+    expect(find.byKey(inputDeviceMenuKey), findsNothing);
 
     await tester.tap(find.byKey(inputDeviceRowKey));
     await tester.pumpAndSettle();
@@ -221,6 +233,42 @@ void main() {
       findsNothing,
     );
     expect(repository.audioInputIdWrites, <String?>['b', null]);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('the device menu follows the arrow keys and Enter', (
+    WidgetTester tester,
+  ) async {
+    final FakeSettingsRepository repository = FakeSettingsRepository();
+    await _show(
+      tester,
+      platform: TargetPlatform.macOS,
+      repository: repository,
+      lister: _Lister(<InputDevice>[_macBook, _corsair]),
+      output: _FakeOutput('MacBook Pro Speakers'),
+    );
+
+    await tester.tap(find.byKey(inputDeviceRowKey));
+    await tester.pumpAndSettle();
+    expect(find.byKey(inputDeviceMenuKey), findsOneWidget);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+    await tester.sendKeyEvent(LogicalKeyboardKey.arrowUp);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+
+    expect(repository.audioInputIdWrites, <String?>['b']);
+    expect(find.byKey(inputDeviceMenuKey), findsNothing);
+    expect(_inRow(inputDeviceRowKey, 'CORSAIR HS80 MAX'), findsOneWidget);
+
+    await tester.tap(find.byKey(inputDeviceRowKey));
+    await tester.pumpAndSettle();
+    await tester.tapAt(const Offset(4, 790));
+    await tester.pumpAndSettle();
+    expect(find.byKey(inputDeviceMenuKey), findsNothing);
+    expect(repository.audioInputIdWrites, <String?>['b']);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 
   testWidgets('the volume slider stores on release', (
@@ -269,11 +317,12 @@ void main() {
     expect(_inRow(inputProfileRowKey, 'Studio'), findsOneWidget);
     expect(repository.inputVolumeWrites, <int>[150]);
 
-    expect(_inRow(audioOutputRowKey, 'Output'), findsOneWidget);
-    expect(_inRow(audioOutputRowKey, 'System output'), findsOneWidget);
-    await tester.tap(find.byKey(audioOutputRowKey));
+    expect(_inRow(outputDeviceRowKey, 'Output device'), findsOneWidget);
+    expect(_inRow(outputDeviceRowKey, 'System output'), findsOneWidget);
+    await tester.tap(find.byKey(outputDeviceRowKey));
     await tester.pumpAndSettle();
-    expect(output.opened, 1);
+    expect(find.byKey(outputDeviceMenuKey), findsOneWidget);
+    expect(output.opened, 0);
   }, variant: TargetPlatformVariant.only(TargetPlatform.windows));
 
   testWidgets(
@@ -329,8 +378,8 @@ void main() {
     expect(find.byKey(inputChoiceKey(null)), findsNothing);
     expect(find.text('MacBook Pro Microphone'), findsNothing);
     expect(find.text('CORSAIR HS80 MAX'), findsNothing);
-    expect(find.text('Output'), findsNothing);
-    expect(find.byKey(audioOutputRowKey), findsNothing);
+    expect(find.text('Output device'), findsNothing);
+    expect(find.byKey(outputDeviceRowKey), findsNothing);
     expect(videoRepository.audioInputIdWrites, isEmpty);
 
     await _show(
@@ -347,7 +396,7 @@ void main() {
     expect(find.byKey(inputChoiceKey(null)), findsOneWidget);
     expect(find.text('MacBook Pro Microphone'), findsOneWidget);
     expect(find.text('CORSAIR HS80 MAX'), findsOneWidget);
-    expect(find.text('Output'), findsNothing);
-    expect(find.byKey(audioOutputRowKey), findsNothing);
+    expect(find.text('Output device'), findsNothing);
+    expect(find.byKey(outputDeviceRowKey), findsNothing);
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }

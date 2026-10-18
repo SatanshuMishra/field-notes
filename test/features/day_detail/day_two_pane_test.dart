@@ -13,10 +13,11 @@ import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/day_detail/day_detail.dart';
+import 'package:field_notes/features/day_detail/day_media_pane.dart';
 import 'package:field_notes/features/day_detail/day_note_pane.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
-    show logViewerBackLabel, logViewerLaterKey;
+    show LogViewerPanel, logViewerBackLabel, logViewerLaterKey;
 import 'package:field_notes/features/log_viewer/note_reading.dart';
 import 'package:field_notes/features/log_viewer/photo_viewer.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
@@ -222,6 +223,9 @@ Finder _pane() => find.byKey(dayNotePaneKey);
 Finder _inPane(Finder matching) =>
     find.descendant(of: _pane(), matching: matching);
 
+Finder _inMediaPane(Finder matching) =>
+    find.descendant(of: find.byKey(dayMediaPaneKey), matching: matching);
+
 Finder _card(String id) => find.byWidgetPredicate(
   (Widget widget) => widget is CompactLogCard && widget.entry.id == id,
 );
@@ -385,16 +389,17 @@ void main() {
     expect(_outlinesOf(tester, 'note-2'), isEmpty);
   }, variant: _mac);
 
-  testWidgets('voice and video open full window over the day', (
+  testWidgets('voice and video open in the right column', (
     WidgetTester tester,
   ) async {
     await _openDay(tester, entries: _media());
 
     await _tapCard(tester, 'voice-1');
 
-    expect(find.byType(VoicePlayerView), findsOneWidget);
-    expect(find.text(logViewerBackLabel), findsOneWidget);
-    expect(find.byType(DayDetailPanel, skipOffstage: false), findsOneWidget);
+    expect(_inMediaPane(find.byType(VoicePlayerView)), findsOneWidget);
+    expect(find.byType(LogViewerPanel), findsNothing);
+    expect(find.text(logViewerBackLabel), findsNothing);
+    expect(_outlinesOf(tester, 'voice-1'), hasLength(1));
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -406,9 +411,10 @@ void main() {
 
     await _tapCard(tester, 'video-1');
 
-    expect(find.byType(VideoViewerView), findsOneWidget);
-    expect(find.text(logViewerBackLabel), findsOneWidget);
-    expect(find.byType(DayDetailPanel, skipOffstage: false), findsOneWidget);
+    expect(_inMediaPane(find.byType(VideoViewerView)), findsOneWidget);
+    expect(find.byType(LogViewerPanel), findsNothing);
+    expect(find.text(logViewerBackLabel), findsNothing);
+    expect(_outlinesOf(tester, 'video-1'), hasLength(1));
 
     await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pumpAndSettle();
@@ -416,6 +422,11 @@ void main() {
     expect(find.byType(VideoViewerView), findsNothing);
     expect(find.byKey(dayDetailPanelKey), findsOneWidget);
     _expectPlaceholder(empty: false);
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DayDetailPanel), findsNothing);
   }, variant: _mac);
 
   testWidgets('Esc unwinds photo, note, day', (WidgetTester tester) async {

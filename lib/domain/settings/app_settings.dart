@@ -25,6 +25,8 @@ class AppSettings {
     this.audioInputId,
     this.inputProfile = InputProfile.studio,
     this.inputVolume = 100,
+    this.audioOutputId,
+    this.outputVolume = 100,
   });
 
   static const AppSettings defaults = AppSettings(
@@ -46,6 +48,8 @@ class AppSettings {
     audioInputId: null,
     inputProfile: InputProfile.studio,
     inputVolume: 100,
+    audioOutputId: null,
+    outputVolume: 100,
   );
 
   final bool reminderEnabled;
@@ -66,6 +70,8 @@ class AppSettings {
   final String? audioInputId;
   final InputProfile inputProfile;
   final int inputVolume;
+  final String? audioOutputId;
+  final int outputVolume;
 
   AppSettings copyWith({
     bool? reminderEnabled,
@@ -87,6 +93,9 @@ class AppSettings {
     bool clearAudioInputId = false,
     InputProfile? inputProfile,
     int? inputVolume,
+    String? audioOutputId,
+    bool clearAudioOutputId = false,
+    int? outputVolume,
   }) {
     return AppSettings(
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
@@ -114,6 +123,10 @@ class AppSettings {
           : (audioInputId ?? this.audioInputId),
       inputProfile: inputProfile ?? this.inputProfile,
       inputVolume: inputVolume ?? this.inputVolume,
+      audioOutputId: clearAudioOutputId
+          ? null
+          : (audioOutputId ?? this.audioOutputId),
+      outputVolume: outputVolume ?? this.outputVolume,
     );
   }
 
@@ -139,7 +152,9 @@ class AppSettings {
           checkForUpdatesAutomatically == other.checkForUpdatesAutomatically &&
           audioInputId == other.audioInputId &&
           inputProfile == other.inputProfile &&
-          inputVolume == other.inputVolume;
+          inputVolume == other.inputVolume &&
+          audioOutputId == other.audioOutputId &&
+          outputVolume == other.outputVolume;
 
   @override
   int get hashCode => Object.hash(
@@ -161,6 +176,8 @@ class AppSettings {
     audioInputId,
     inputProfile,
     inputVolume,
+    audioOutputId,
+    outputVolume,
   );
 
   @override
@@ -178,5 +195,6 @@ class AppSettings {
       'allowMobileDataForMedia: $allowMobileDataForMedia, '
       'checkForUpdatesAutomatically: $checkForUpdatesAutomatically, '
       'audioInputId: $audioInputId, inputProfile: $inputProfile, '
-      'inputVolume: $inputVolume)';
+      'inputVolume: $inputVolume, audioOutputId: $audioOutputId, '
+      'outputVolume: $outputVolume)';
 }

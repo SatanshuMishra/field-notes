@@ -1,0 +1,250 @@
+{
+  "version": 1,
+  "sources": [
+    "pubspec.yaml",
+    "dart_test.yaml",
+    "README.md",
+    "receipts.config.json",
+    ".github/workflows/receipts.yml",
+    ".github/workflows/goldens.yml",
+    ".github/workflows/release.yml",
+    ".github/workflows/relay-image.yml",
+    "test/flutter_test_config.dart",
+    "tool/probe/macos/drive.sh",
+    "tool/probe/android/drive.sh",
+    "integration_test/probe/composer_probe_main.dart",
+    "android/app/build.gradle.kts",
+    "android/build.gradle.kts",
+    "packages/rnnoise/pubspec.yaml",
+    "packages/sync_protocol/pubspec.yaml",
+    "server/Dockerfile",
+    "server/compose.yaml",
+    "server/pubspec.yaml",
+    "third_party/audioplayers_android/android/build.gradle",
+    "third_party/audioplayers_android/pubspec.yaml",
+    "third_party/audioplayers_darwin/darwin/audioplayers_darwin/Package.swift",
+    "third_party/audioplayers_darwin/pubspec.yaml",
+    "third_party/audioplayers_windows/pubspec.yaml",
+    "third_party/camera_macos/macos/camera_macos/Package.swift",
+    "third_party/camera_macos/pubspec.yaml",
+    "third_party/camera_windows/pubspec.yaml",
+    "third_party/flutter_local_notifications_windows/pubspec.yaml",
+    "third_party/just_audio/android/build.gradle.kts",
+    "third_party/just_audio/darwin/just_audio/Package.swift",
+    "third_party/just_audio/pubspec.yaml",
+    "third_party/just_audio_windows/pubspec.yaml",
+    "third_party/video_player_android/android/build.gradle.kts",
+    "third_party/video_player_android/pubspec.yaml",
+    "third_party/video_player_avfoundation/darwin/video_player_avfoundation/Package.swift",
+    "third_party/video_player_avfoundation/pubspec.yaml",
+    "third_party/video_player_win/pubspec.yaml"
+  ],
+  "suite": {
+    "command": "flutter pub get && dart run build_runner build --delete-conflicting-outputs && flutter test",
+    "junit": null,
+    "timeout_minutes": null
+  },
+  "setup": {
+    "command": "flutter pub get && dart run build_runner build --delete-conflicting-outputs"
+  },
+  "build": {
+    "command": "flutter build macos --debug"
+  },
+  "surfaces": [
+    {
+      "name": "Voice recorder",
+      "kind": "device feature",
+      "paths": [
+        "lib/features/capture/voice",
+        "lib/features/capture/audio",
+        "macos/Runner",
+        "windows/runner",
+        "android/app/src/main/kotlin"
+      ],
+      "driver": "VM lab (lab skill): a debug or profile build of the worktree installed in a lab instance, one platform at a time with Windows first, driven through its Dart VM service with the smoke entry point's ext.smoke.* extensions (copy ~/.mitosis/field-notes/voice-and-day-panel/smoke-macos/lib/main_smoke.dart into the build copy and build with -t lib/main_smoke.dart); SMOKE_FAKE_MIC=1 streams recorded speech where the guest has no microphone",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Video recorder",
+      "kind": "device feature",
+      "paths": [
+        "lib/features/capture/video",
+        "packages",
+        "third_party"
+      ],
+      "driver": "VM lab (lab skill) as for the voice recorder; only the Android emulator has a camera, the macOS and Windows guests do not",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Voice and video playback on cards and in the log viewer",
+      "kind": "flow",
+      "paths": [
+        "lib/features/entry_cards",
+        "lib/features/log_viewer",
+        "lib/features/sound",
+        "third_party/just_audio_windows",
+        "third_party/video_player_win",
+        "third_party/audioplayers_windows"
+      ],
+      "driver": "VM lab (lab skill) with the smoke entry point; seed media through ext.smoke.seed; the guests have no sound device, so audible output and output routing are not observable there",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Past-day pop-up and Android day sheet",
+      "kind": "page",
+      "paths": [
+        "lib/features/day_detail",
+        "lib/features/calendar"
+      ],
+      "driver": "VM lab (lab skill) with the smoke entry point: Calendar, a seeded day, its pop-up or sheet, cards, right-column pane, full screen and day arrows",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Settings, Voice section (input and output)",
+      "kind": "page",
+      "paths": [
+        "lib/features/settings",
+        "lib/features/sound",
+        "lib/design/settings_fields",
+        "lib/data/media"
+      ],
+      "driver": "VM lab (lab skill) with the smoke entry point: Settings, Voice; input meter, input and output dropdowns, output volume",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Today screen and text notes",
+      "kind": "page",
+      "paths": [
+        "lib/features/today",
+        "lib/features/notes",
+        "lib/features/note_engine",
+        "lib/features/mood",
+        "lib/features/streak"
+      ],
+      "driver": "flutter_test widget tests on the real widget tree, then the VM lab with a debug build driven through its Dart VM service",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Garden and Meadow",
+      "kind": "page",
+      "paths": [
+        "lib/features/garden",
+        "shaders"
+      ],
+      "driver": "VM lab (lab skill) with meadowKeyProvider pinned for comparable screenshots; GPU timing needs the real Note 10+, which only the owner grants",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Search, reminders, onboarding, data export and updates",
+      "kind": "flow",
+      "paths": [
+        "lib/features/search",
+        "lib/features/reminders",
+        "lib/features/onboarding",
+        "lib/features/data",
+        "lib/features/updates"
+      ],
+      "driver": "flutter_test widget tests on the real widget tree, then the VM lab with a debug build driven through its Dart VM service",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "Device sync relay",
+      "kind": "endpoint group",
+      "paths": [
+        "lib/features/sync",
+        "server"
+      ],
+      "driver": "the server's own tests under server/test; the production relay is never driven",
+      "available": false,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    }
+  ],
+  "credentials": {
+    "file": null,
+    "names": {}
+  },
+  "facts": {
+    "lab_platforms": {
+      "value": "The VM lab (lab command, vm-lab skill) offers windows-golden (Windows 11 Arm64), a macOS golden and an Android emulator golden on this Mac; one instance at a time, Windows first, each released by name and never with lab down --all.",
+      "confirmed": false,
+      "recheck": "lab status and the vm-lab skill"
+    },
+    "lab_guest_devices": {
+      "value": "The Windows and macOS guests have no camera; the Windows guest has no sound device or microphone and cannot decode video on its Basic Display Adapter.",
+      "confirmed": false,
+      "recheck": "Get-PnpDevice in the Windows guest; system_profiler in the macOS guest"
+    },
+    "windows_build_machine": {
+      "value": "Windows builds are made on the owner's PC (ssh winpc) in C:\\Users\\satan\\dev\\fnvd and copied into the lab; test builds are not run on that PC unless the owner says so.",
+      "confirmed": false,
+      "recheck": "ask the owner"
+    },
+    "vm_service_port": {
+      "value": "A profile or debug build started with FLUTTER_ENGINE_SWITCHES=2, FLUTTER_ENGINE_SWITCH_1=vm-service-port=47300 and FLUTTER_ENGINE_SWITCH_2=disable-service-auth-codes exposes its VM service on port 47300.",
+      "confirmed": false,
+      "recheck": "start a build with those switches and connect to ws://127.0.0.1:47300/ws"
+    }
+  },
+  "off_limits": [
+    "Running a test build, or flutter drive, on the owner's phones",
+    "Running test builds on the owner's Windows PC unless the owner says so in that session",
+    "Playing sound through this Mac's speakers, or on the owner's PC while the owner is on a call",
+    "Deploying to or writing to the production sync relay",
+    "Touching the installed Field Notes app or its data on this Mac or the owner's PC",
+    "Releasing lab instances with lab down --all"
+  ],
+  "test_data": "No backend. A fresh install starts empty; seeded installs and integration_test/fixtures supply realistic journals and media, and the smoke entry point seeds through ext.smoke.seed; all test data is disposable."
+}

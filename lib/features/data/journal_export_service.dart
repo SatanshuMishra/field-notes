@@ -49,7 +49,7 @@ class JournalExportService implements ExportService {
         'mediaBlobs': [for (final b in blobs) _mediaBlobJson(b)],
         'settings': {
           for (final s in settings)
-            if (!SettingsKeys.isUpdateRecordKey(s.key)) s.key: s.value,
+            if (SettingsKeys.isExportedKey(s.key)) s.key: s.value,
         },
       };
 

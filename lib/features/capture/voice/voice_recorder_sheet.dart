@@ -227,10 +227,13 @@ class VoiceRecorderSheet extends StatelessWidget {
 
   Widget? _trailing(BuildContext context, bool sidebar) {
     final Widget? hint = sidebar ? _KeyHint(text: _keyHint(context)) : null;
-    if (phase != VoiceRecorderPhase.idle) {
+    if (phase == VoiceRecorderPhase.saving) {
       return hint;
     }
-    final Widget input = RecorderInputButton(onVoiceSettings: onVoiceSettings);
+    final Widget input = RecorderInputButton(
+      onVoiceSettings: onVoiceSettings,
+      takeLevels: phase == VoiceRecorderPhase.idle ? null : levels,
+    );
     if (hint == null) {
       return input;
     }

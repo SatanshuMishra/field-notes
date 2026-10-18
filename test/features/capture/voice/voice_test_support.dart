@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
-import 'package:field_notes/domain/settings/input_profile.dart';
-import 'package:field_notes/features/capture/audio/take_cleanup.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -158,41 +155,3 @@ class FakeCaptureService implements CaptureService {
     return CaptureResult(day: day, entry: entry, photos: const <EntryPhoto>[]);
   }
 }
-
-class FakeTakeCleanup extends TakeCleanup {
-  FakeTakeCleanup({this.rewritten, this.delay = Duration.zero});
-
-  final File? rewritten;
-  final Duration delay;
-  final List<File> takes = <File>[];
-  final List<TakeKind> kinds = <TakeKind>[];
-  final List<InputProfile> profiles = <InputProfile>[];
-  final List<int> volumes = <int>[];
-  final List<File> released = <File>[];
-
-  @override
-  Future<File> clean(
-    File take, {
-    required TakeKind kind,
-    required InputProfile profile,
-    required int volume,
-    required Duration duration,
-  }) async {
-    takes.add(take);
-    kinds.add(kind);
-    profiles.add(profile);
-    volumes.add(volume);
-    if (delay > Duration.zero) {
-      await Future<void>.delayed(delay);
-    }
-    return rewritten ?? take;
-  }
-
-  @override
-  Future<void> release(File cleaned) async {
-    released.add(cleaned);
-  }
-}
-
-Override takeCleanupOverride(TakeCleanup cleanup) =>
-    takeCleanupProvider.overrideWithValue(cleanup);

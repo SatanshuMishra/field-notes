@@ -41,6 +41,8 @@ class FakeSettingsRepository implements SettingsRepository {
   final List<String?> audioInputIdWrites = <String?>[];
   final List<InputProfile> inputProfileWrites = <InputProfile>[];
   final List<int> inputVolumeWrites = <int>[];
+  final List<String?> audioOutputIdWrites = <String?>[];
+  final List<int> outputVolumeWrites = <int>[];
   late AppSettings _latest = initial;
 
   void emit(AppSettings settings) {
@@ -148,6 +150,24 @@ class FakeSettingsRepository implements SettingsRepository {
     _failIfConfigured();
     inputVolumeWrites.add(value);
     emit(_latest.copyWith(inputVolume: value));
+  }
+
+  @override
+  Future<void> setAudioOutputId(String? value) async {
+    _failIfConfigured();
+    audioOutputIdWrites.add(value);
+    emit(
+      value == null
+          ? _latest.copyWith(clearAudioOutputId: true)
+          : _latest.copyWith(audioOutputId: value),
+    );
+  }
+
+  @override
+  Future<void> setOutputVolume(int value) async {
+    _failIfConfigured();
+    outputVolumeWrites.add(value);
+    emit(_latest.copyWith(outputVolume: value.clamp(0, 100)));
   }
 
   @override

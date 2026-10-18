@@ -31,6 +31,9 @@ class _ArmingRecorder implements VideoRecorder {
   Duration get elapsed => Duration.zero;
 
   @override
+  Stream<double> get level => const Stream<double>.empty();
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async =>
       List<VideoCaptureDevice>.of(fakeVideoDevices);
 
@@ -101,6 +104,9 @@ class _HangingReleaseRecorder implements VideoRecorder {
 
   @override
   Duration get elapsed => Duration.zero;
+
+  @override
+  Stream<double> get level => const Stream<double>.empty();
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async =>

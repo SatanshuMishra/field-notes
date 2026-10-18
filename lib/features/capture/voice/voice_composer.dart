@@ -6,8 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
-import 'package:field_notes/domain/settings/app_settings.dart';
-import 'package:field_notes/features/capture/audio/take_cleanup.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
@@ -37,12 +35,6 @@ const String voiceRecorderBarrierLabel = 'Dismiss voice recorder';
 
 const Key voiceDiscardConfirmKey = ValueKey<String>('voice-discard-confirm');
 
-typedef _KeptVoice = ({
-  VoiceRecording recording,
-  CaptureMedia audio,
-  List<double> peaks,
-});
-
 class VoiceComposerConnector extends ConsumerStatefulWidget {
   const VoiceComposerConnector({
     super.key,
@@ -68,7 +60,6 @@ class _VoiceComposerConnectorState
   Timer? _breath;
   bool _pending = false;
   bool _closing = false;
-  String _savingText = voiceSavingStatus;
   VoicePeakSampler? _sampler;
   StreamSubscription<double>? _levelFeed;
   late final RecordingWakeHold _wakeHold;
@@ -266,25 +257,21 @@ class _VoiceComposerConnectorState
     _stopFeedingSampler();
     setState(() {
       _phase = VoiceRecorderPhase.saving;
-      _savingText = voiceSavingStatus;
       _errorMessage = null;
     });
     final VoiceRecorder recorder = _recorder;
-    final TakeCleanup cleanup = ref.read(takeCleanupProvider);
-    final AppSettings settings = takeCleanupSettings(ref);
     final Future<VoiceRecording> stopping = recorder.stop();
-    final Future<_KeptVoice> cleaning = stopping.then(
-      (VoiceRecording recording) =>
-          _clean(recorder, recording, cleanup, settings),
-    );
-    final Future<String> saving = cleaning.then(
-      (_KeptVoice kept) => _capture(recorder, kept, cleanup),
+    final Future<String> saving = stopping.then(
+      (VoiceRecording recording) => _capture(
+        recorder,
+        recording,
+        _sampler?.finish(recorder.elapsed) ?? const <double>[],
+      ),
     );
     saving.ignore();
     String? entryId;
     try {
       await stopping.timeout(widget.saveTimeout);
-      await cleaning;
       entryId = await saving.timeout(widget.saveTimeout);
     } on TimeoutException {
       _failBackTo(previous, voiceSaveTimeoutMessage);
@@ -308,61 +295,28 @@ class _VoiceComposerConnectorState
     );
   }
 
-  Future<_KeptVoice> _clean(
-    VoiceRecorder recorder,
-    VoiceRecording recording,
-    TakeCleanup cleanup,
-    AppSettings settings,
-  ) async {
-    final List<double> peaks =
-        _sampler?.finish(recorder.elapsed) ?? const <double>[];
-    final String? status = takeCleanupStatus(settings);
-    if (status != null && mounted) {
-      setState(() => _savingText = status);
-    }
-    final CaptureMedia audio = await cleanTakeMedia(
-      cleanup,
-      recording.media,
-      kind: TakeKind.voice,
-      settings: settings,
-      durationMs: recording.durationMs,
-    );
-    if (mounted) {
-      setState(() => _savingText = voiceSavingStatus);
-    }
-    return (
-      recording: recording,
-      audio: audio,
-      peaks: identical(audio, recording.media) ? peaks : const <double>[],
-    );
-  }
-
   Future<String> _capture(
     VoiceRecorder recorder,
-    _KeptVoice kept,
-    TakeCleanup cleanup,
+    VoiceRecording recording,
+    List<double> peaks,
   ) async {
+    final CaptureService service = await ref.read(
+      captureServiceProvider.future,
+    );
+    final CaptureResult result = await service.capture(
+      VoiceCaptureRequest(
+        date: widget.date,
+        audio: recording.media,
+        durationMs: recording.durationMs,
+        peaks: peaks,
+      ),
+    );
     try {
-      final CaptureService service = await ref.read(
-        captureServiceProvider.future,
-      );
-      final CaptureResult result = await service.capture(
-        VoiceCaptureRequest(
-          date: widget.date,
-          audio: kept.audio,
-          durationMs: kept.recording.durationMs,
-          peaks: kept.peaks,
-        ),
-      );
-      try {
-        await recorder.releaseSaved(kept.recording);
-      } catch (error, stackTrace) {
-        debugPrint('Voice capture release failed: $error\n$stackTrace');
-      }
-      return result.entry.id;
-    } finally {
-      await releaseCleanedMedia(cleanup, kept.recording.media, kept.audio);
+      await recorder.releaseSaved(recording);
+    } catch (error, stackTrace) {
+      debugPrint('Voice capture release failed: $error\n$stackTrace');
     }
+    return result.entry.id;
   }
 
   void _failBackTo(VoiceRecorderPhase phase, String message) {
@@ -474,7 +428,7 @@ class _VoiceComposerConnectorState
         errorMessage: _errorMessage,
         letGoKey: voiceDiscardConfirmKey,
         levels: _recorder.level,
-        savingText: _savingText,
+        savingText: voiceSavingStatus,
         onVoiceSettings: _openVoiceSettings,
       ),
     );

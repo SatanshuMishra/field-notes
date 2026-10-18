@@ -10,6 +10,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../audio/live_audio_test_support.dart';
+
 const MethodChannel _macosCameraChannel = MethodChannel('camera_macos');
 
 const Map<String, Object?> _macosDevice = <String, Object?>{
@@ -19,8 +21,12 @@ const Map<String, Object?> _macosDevice = <String, Object?>{
   'deviceId': 'built-in-id',
 };
 
-final Uint8List _stillJpegBytes =
-    Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0xD9]);
+final Uint8List _stillJpegBytes = Uint8List.fromList(<int>[
+  0xFF,
+  0xD8,
+  0xFF,
+  0xD9,
+]);
 
 class _NativeMacosCamera {
   _NativeMacosCamera(this.moviePath);
@@ -42,10 +48,7 @@ class _NativeMacosCamera {
       case 'startRecording':
         return <String, Object?>{'error': null};
       case 'takePicture':
-        return <String, Object?>{
-          'imageData': _stillJpegBytes,
-          'error': null,
-        };
+        return <String, Object?>{'imageData': _stillJpegBytes, 'error': null};
       case 'stopRecording':
         File(moviePath).writeAsBytesSync(<int>[0, 0, 0, 24]);
         return <String, Object?>{
@@ -89,15 +92,13 @@ class _FakeAndroidCamera extends CameraPlatform {
     CameraDescription cameraDescription,
     ResolutionPreset? resolutionPreset, {
     bool enableAudio = false,
-  }) async =>
-      7;
+  }) async => 7;
 
   @override
   Future<int> createCameraWithSettings(
     CameraDescription cameraDescription,
     MediaSettings mediaSettings,
-  ) async =>
-      7;
+  ) async => 7;
 
   @override
   Future<void> initializeCamera(
@@ -186,9 +187,15 @@ void main() {
   });
 
   group('videoRecordingFileName', () {
-    test('builds a timestamped video file name with the recording extension', () {
-      expect(videoRecordingFileName(1720000000000), 'video_1720000000000.mp4');
-    });
+    test(
+      'builds a timestamped video file name with the recording extension',
+      () {
+        expect(
+          videoRecordingFileName(1720000000000),
+          'video_1720000000000.mp4',
+        );
+      },
+    );
 
     test('produces distinct names for distinct timestamps', () {
       expect(videoRecordingFileName(1) == videoRecordingFileName(2), isFalse);
@@ -196,9 +203,15 @@ void main() {
   });
 
   group('videoThumbnailFileName', () {
-    test('builds a timestamped thumbnail file name with the jpeg extension', () {
-      expect(videoThumbnailFileName(1720000000000), 'video_thumb_1720000000000.jpg');
-    });
+    test(
+      'builds a timestamped thumbnail file name with the jpeg extension',
+      () {
+        expect(
+          videoThumbnailFileName(1720000000000),
+          'video_thumb_1720000000000.jpg',
+        );
+      },
+    );
 
     test('is distinct from the video file name for the same timestamp', () {
       expect(videoThumbnailFileName(5) == videoRecordingFileName(5), isFalse);
@@ -207,22 +220,28 @@ void main() {
 
   group('resolveVideoThumbnailPath', () {
     test('creates the target directory when it does not exist', () async {
-      final Directory base =
-          await Directory.systemTemp.createTemp('video_thumb_test_');
+      final Directory base = await Directory.systemTemp.createTemp(
+        'video_thumb_test_',
+      );
       addTearDown(() => base.delete(recursive: true));
-      final Directory missing =
-          Directory(p.join(base.path, 'nested', 'caches', 'bundle'));
+      final Directory missing = Directory(
+        p.join(base.path, 'nested', 'caches', 'bundle'),
+      );
       expect(missing.existsSync(), isFalse);
 
-      final String path = await resolveVideoThumbnailPath(missing, 1720000000000);
+      final String path = await resolveVideoThumbnailPath(
+        missing,
+        1720000000000,
+      );
 
       expect(missing.existsSync(), isTrue);
       expect(path, p.join(missing.path, 'video_thumb_1720000000000.jpg'));
     });
 
     test('returns a path inside an already-existing directory', () async {
-      final Directory base =
-          await Directory.systemTemp.createTemp('video_thumb_test_');
+      final Directory base = await Directory.systemTemp.createTemp(
+        'video_thumb_test_',
+      );
       addTearDown(() => base.delete(recursive: true));
 
       final String path = await resolveVideoThumbnailPath(base, 42);
@@ -234,9 +253,13 @@ void main() {
 
   group('releasing and discarding captures', () {
     late Directory temp;
+    late FakeMicrophone mic;
+    late FakeLiveAudio liveAudio;
 
     setUp(() async {
       temp = await Directory.systemTemp.createTemp('video_release_test_');
+      mic = FakeMicrophone();
+      liveAudio = FakeLiveAudio();
     });
 
     tearDown(() => temp.delete(recursive: true));
@@ -255,14 +278,16 @@ void main() {
             .setMockMethodCallHandler(_macosCameraChannel, null);
       });
 
-      testWidgets(
-          'releasing a saved video deletes the movie and thumbnail the '
+      testWidgets('releasing a saved video deletes the movie and thumbnail the '
           'recorder created', (WidgetTester tester) async {
-        final CameraMacosVideoRecorder recorder =
-            CameraMacosVideoRecorder(
-              temporaryDirectory: () async => temp,
-              microphonePermission: () async => true,
-            );
+        final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
+          temporaryDirectory: () async => temp,
+          microphonePermission: () async => true,
+          encoder: liveAudio,
+          audioJoiner: liveAudio,
+          audioRecorderFactory: () => mic,
+          chainRunner: passThroughChain,
+        );
         final File picked = File(p.join(temp.path, 'picked.mp4'))
           ..writeAsBytesSync(<int>[4, 4]);
 
@@ -303,33 +328,41 @@ void main() {
       });
 
       testWidgets(
-          'releasing an earlier video keeps the movie a newer recording is '
-          'writing', (WidgetTester tester) async {
-        final CameraMacosVideoRecorder recorder =
-            CameraMacosVideoRecorder(
-              temporaryDirectory: () async => temp,
-              microphonePermission: () async => true,
-            );
+        'releasing an earlier video saved without its failed sound keeps '
+        'the movie a newer recording is writing',
+        (WidgetTester tester) async {
+          final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
+            temporaryDirectory: () async => temp,
+            microphonePermission: () async => true,
+            encoder: liveAudio,
+            audioJoiner: liveAudio,
+            audioRecorderFactory: () => mic,
+            chainRunner: passThroughChain,
+          );
 
-        await _openMacosSession(tester, recorder);
+          await _openMacosSession(tester, recorder);
 
-        late VideoRecording earlier;
-        await tester.runAsync(() async {
-          await recorder.start();
-          earlier = await recorder.stop();
-          await recorder.start();
-        });
-        final File movie = _captureFile(earlier.media);
-        final File earlierThumbnail = _captureFile(earlier.thumbnail);
+          late VideoRecording earlier;
+          await tester.runAsync(() async {
+            await recorder.start();
+            liveAudio.closeFails = true;
+            earlier = await recorder.stop();
+            liveAudio.closeFails = false;
+            await recorder.start();
+          });
+          final File movie = _captureFile(earlier.media);
+          expect(movie.path, native.moviePath);
+          final File earlierThumbnail = _captureFile(earlier.thumbnail);
 
-        await tester.runAsync(() => recorder.releaseSaved(earlier));
+          await tester.runAsync(() => recorder.releaseSaved(earlier));
 
-        expect(movie.existsSync(), isTrue);
-        expect(earlierThumbnail.existsSync(), isFalse);
+          expect(movie.existsSync(), isTrue);
+          expect(earlierThumbnail.existsSync(), isFalse);
 
-        await recorder.release();
-        await tester.pumpWidget(const SizedBox.shrink());
-      });
+          await recorder.release();
+          await tester.pumpWidget(const SizedBox.shrink());
+        },
+      );
     });
 
     group('on Android', () {
@@ -341,7 +374,13 @@ void main() {
         original = CameraPlatform.instance;
         platform = _FakeAndroidCamera(temp.path);
         CameraPlatform.instance = platform;
-        recorder = CameraVideoRecorder();
+        recorder = CameraVideoRecorder(
+          temporaryDirectory: () async => temp,
+          encoder: liveAudio,
+          audioJoiner: liveAudio,
+          audioRecorderFactory: () => mic,
+          chainRunner: passThroughChain,
+        );
         final List<VideoCaptureDevice> devices = await recorder.listDevices();
         recorder.openSession(devices.single.id);
         await recorder.start();
@@ -359,13 +398,13 @@ void main() {
         expect(File(platform.stoppedTakes.single).existsSync(), isFalse);
       });
 
-      test(
-          'releasing a saved Android video deletes the take and still the '
+      test('releasing a saved Android video deletes the take and still the '
           'recorder created', () async {
         final VideoRecording recording = await recorder.stop();
         final File take = _captureFile(recording.media);
         final File still = _captureFile(recording.thumbnail);
 
+        expect(take.path, liveAudio.joins.single.output);
         expect(take.existsSync(), isTrue);
         expect(still.existsSync(), isTrue);
 

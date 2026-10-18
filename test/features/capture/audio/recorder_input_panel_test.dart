@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/media/audio_output.dart';
+import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
@@ -70,11 +72,21 @@ class _FakeOutput extends AudioOutput {
   Future<void> openSoundSettings() async {}
 }
 
-List<Override> _audioOverrides() => <Override>[
+const Set<VideoRecorderPhase> _videoShowsInput = <VideoRecorderPhase>{
+  VideoRecorderPhase.idle,
+  VideoRecorderPhase.breathing,
+  VideoRecorderPhase.arming,
+  VideoRecorderPhase.recording,
+  VideoRecorderPhase.paused,
+};
+
+List<Override> _audioOverrides({
+  AudioRecorderFactory microphone = _FakeRecorder.new,
+}) => <Override>[
   audioInputListerProvider.overrideWithValue(
     () async => const <InputDevice>[_macBook, _corsair],
   ),
-  inputLevelRecorderProvider.overrideWithValue(_FakeRecorder.new),
+  inputLevelRecorderProvider.overrideWithValue(microphone),
   audioOutputProvider.overrideWithValue(_FakeOutput()),
 ];
 
@@ -92,18 +104,32 @@ void _phoneView(WidgetTester tester) {
   addTearDown(tester.view.reset);
 }
 
+int _litSegments(WidgetTester tester) => <int>[
+  for (int index = 0; index < inputLevelSegments; index++)
+    if ((tester
+                    .widget<DecoratedBox>(
+                      find.byKey(inputLevelSegmentKey(index)),
+                    )
+                    .decoration
+                as BoxDecoration)
+            .color ==
+        Palette.mediaInk)
+      index,
+].length;
+
 Future<void> _pumpSheet(
   WidgetTester tester,
   TargetPlatform platform,
-  Widget sheet,
-) async {
+  Widget sheet, {
+  AudioRecorderFactory microphone = _FakeRecorder.new,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       key: UniqueKey(),
       overrides: <Override>[
         settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         reflectionPromptsOff(),
-        ..._audioOverrides(),
+        ..._audioOverrides(microphone: microphone),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -168,8 +194,10 @@ VoiceRecorderSheet _voiceSheet(
   VoiceRecorderPhase phase, {
   VoidCallback? onStart,
   VoidCallback? onCancel,
+  Stream<double> levels = const Stream<double>.empty(),
 }) => VoiceRecorderSheet(
   phase: phase,
+  levels: levels,
   onStart: onStart ?? () {},
   onStop: () {},
   onCancel: onCancel ?? () {},
@@ -177,8 +205,12 @@ VoiceRecorderSheet _voiceSheet(
   onResume: () {},
 );
 
-VideoRecorderSheet _videoSheet(VideoRecorderPhase phase) => VideoRecorderSheet(
+VideoRecorderSheet _videoSheet(
+  VideoRecorderPhase phase, {
+  Stream<double> levels = const Stream<double>.empty(),
+}) => VideoRecorderSheet(
   phase: phase,
+  levels: levels,
   onStart: () {},
   onStop: () {},
   onLeave: () {},
@@ -303,36 +335,72 @@ void main() {
     variant: TargetPlatformVariant.only(TargetPlatform.android),
   );
 
-  testWidgets('the input button hides once a take begins', (
+  testWidgets('the input button stays through a take and hides while saving', (
     WidgetTester tester,
   ) async {
     _desktopView(tester);
-    for (final VoiceRecorderPhase phase in <VoiceRecorderPhase>[
-      VoiceRecorderPhase.breathing,
-      VoiceRecorderPhase.recording,
-      VoiceRecorderPhase.paused,
-      VoiceRecorderPhase.saving,
-    ]) {
+    for (final VoiceRecorderPhase phase in VoiceRecorderPhase.values) {
       await _pumpSheet(tester, TargetPlatform.macOS, _voiceSheet(phase));
       expect(
         find.byKey(recorderInputKey),
-        findsNothing,
+        phase == VoiceRecorderPhase.saving ? findsNothing : findsOneWidget,
         reason: 'voice ${phase.name}',
       );
     }
-    for (final VideoRecorderPhase phase in <VideoRecorderPhase>[
-      VideoRecorderPhase.breathing,
-      VideoRecorderPhase.recording,
-      VideoRecorderPhase.paused,
-      VideoRecorderPhase.saving,
-    ]) {
+    for (final VideoRecorderPhase phase in VideoRecorderPhase.values) {
       await _pumpSheet(tester, TargetPlatform.macOS, _videoSheet(phase));
       expect(
         find.byKey(recorderInputKey),
-        findsNothing,
+        _videoShowsInput.contains(phase) ? findsOneWidget : findsNothing,
         reason: 'video ${phase.name}',
       );
     }
+    await tester.pumpWidget(const SizedBox.shrink());
+  }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('the input panel meter follows the take while recording', (
+    WidgetTester tester,
+  ) async {
+    _desktopView(tester);
+    final StreamController<double> take = StreamController<double>.broadcast();
+    addTearDown(take.close);
+    int microphonesOpened = 0;
+    final List<(String, Widget)> sheets = <(String, Widget)>[
+      for (final VoiceRecorderPhase phase in <VoiceRecorderPhase>[
+        VoiceRecorderPhase.recording,
+        VoiceRecorderPhase.paused,
+      ])
+        ('voice ${phase.name}', _voiceSheet(phase, levels: take.stream)),
+      for (final VideoRecorderPhase phase in <VideoRecorderPhase>[
+        VideoRecorderPhase.recording,
+        VideoRecorderPhase.paused,
+      ])
+        ('video ${phase.name}', _videoSheet(phase, levels: take.stream)),
+    ];
+    for (final (String name, Widget sheet) in sheets) {
+      await _pumpSheet(
+        tester,
+        TargetPlatform.macOS,
+        sheet,
+        microphone: () {
+          microphonesOpened++;
+          return _FakeRecorder();
+        },
+      );
+      final Finder input = find.byKey(recorderInputKey);
+      expect(input, findsOneWidget, reason: name);
+      await tester.tap(input);
+      await tester.pump();
+      await tester.pump();
+      expect(find.byType(InputPanel), findsOneWidget, reason: name);
+
+      take.add(0.6);
+      await tester.pump();
+      await tester.pump();
+
+      expect(_litSegments(tester), 12, reason: name);
+    }
+    expect(microphonesOpened, 0);
     await tester.pumpWidget(const SizedBox.shrink());
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
 

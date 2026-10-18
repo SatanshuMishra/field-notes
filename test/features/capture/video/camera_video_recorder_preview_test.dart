@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../audio/live_audio_test_support.dart';
 
 const String _deviceName = 'camera-back-0';
 const int _cameraId = 7;
@@ -99,8 +102,7 @@ class _FakeCameraPlatform extends CameraPlatform {
   Future<void> dispose(int cameraId) async {}
 
   @override
-  Widget buildPreview(int cameraId) =>
-      const SizedBox(key: _platformPreviewKey);
+  Widget buildPreview(int cameraId) => const SizedBox(key: _platformPreviewKey);
 }
 
 Future<Widget?> _openSession(
@@ -122,43 +124,64 @@ Future<Widget?> _openSession(
 void main() {
   late CameraPlatform original;
   late _FakeCameraPlatform platform;
+  late Directory root;
+  late FakeMicrophone mic;
+  late FakeLiveAudio liveAudio;
 
   setUp(() {
     original = CameraPlatform.instance;
     platform = _FakeCameraPlatform();
     CameraPlatform.instance = platform;
-    addTearDown(() => CameraPlatform.instance = original);
+    root = Directory.systemTemp.createTempSync('camera_preview_');
+    mic = FakeMicrophone();
+    liveAudio = FakeLiveAudio();
+    addTearDown(() {
+      CameraPlatform.instance = original;
+      root.deleteSync(recursive: true);
+    });
   });
 
-  testWidgets('opening a session initialises the camera before recording starts',
-      (WidgetTester tester) async {
-    final CameraVideoRecorder recorder = CameraVideoRecorder();
+  CameraVideoRecorder newRecorder() => CameraVideoRecorder(
+    temporaryDirectory: () async => root,
+    encoder: liveAudio,
+    audioJoiner: liveAudio,
+    audioRecorderFactory: () => mic,
+    chainRunner: passThroughChain,
+  );
 
-    await _openSession(tester, recorder);
-    await tester.pump();
+  testWidgets(
+    'opening a session initialises the camera before recording starts',
+    (WidgetTester tester) async {
+      final CameraVideoRecorder recorder = newRecorder();
 
-    expect(platform.initializeCalls, 1);
-    expect(platform.startRecordingCalls, 0);
-    expect(find.byKey(_platformPreviewKey), findsOneWidget);
+      await _openSession(tester, recorder);
+      await tester.pump();
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await recorder.dispose();
-  });
+      expect(platform.initializeCalls, 1);
+      expect(platform.startRecordingCalls, 0);
+      expect(find.byKey(_platformPreviewKey), findsOneWidget);
 
-  testWidgets('starting to record reuses the initialised camera',
-      (WidgetTester tester) async {
-    final CameraVideoRecorder recorder = CameraVideoRecorder();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await recorder.dispose();
+    },
+  );
+
+  testWidgets('starting to record reuses the initialised camera', (
+    WidgetTester tester,
+  ) async {
+    final CameraVideoRecorder recorder = newRecorder();
 
     await _openSession(tester, recorder);
 
     expect(platform.createCalls, 1);
 
-    await recorder.start();
+    await tester.runAsync(recorder.start);
 
     expect(platform.createCalls, 1);
     expect(platform.startRecordingCalls, 1);
+    expect(mic.startStreamConfigs, hasLength(1));
 
     await tester.pumpWidget(const SizedBox.shrink());
-    await recorder.dispose();
+    await tester.runAsync(recorder.dispose);
   });
 }
