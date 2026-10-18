@@ -56,6 +56,7 @@ final class VideoControlsState {
     required this.ready,
     required this.canStart,
     required this.isPlaying,
+    required this.completed,
     required this.position,
     required this.total,
     required this.busy,
@@ -68,6 +69,7 @@ final class VideoControlsState {
   final bool ready;
   final bool canStart;
   final bool isPlaying;
+  final bool completed;
   final Duration position;
   final Duration? total;
   final bool busy;
@@ -82,6 +84,7 @@ final class VideoControlsState {
       other.ready == ready &&
       other.canStart == canStart &&
       other.isPlaying == isPlaying &&
+      other.completed == completed &&
       other.position == position &&
       other.total == total &&
       other.busy == busy &&
@@ -95,6 +98,7 @@ final class VideoControlsState {
     ready,
     canStart,
     isPlaying,
+    completed,
     position,
     total,
     busy,
@@ -585,8 +589,7 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   void _syncFocus(VideoPlaybackState state) {
-    if (state == VideoPlaybackState.paused ||
-        state == VideoPlaybackState.completed) {
+    if (state == VideoPlaybackState.completed) {
       _focus.release(this);
     }
   }
@@ -820,6 +823,7 @@ class _VideoBodyState extends State<VideoBody> {
       ready: ready,
       canStart: canStart,
       isPlaying: _isPlaying,
+      completed: _state == VideoPlaybackState.completed,
       position: _shownPosition,
       total: _total,
       busy: _claimDenied,

@@ -98,6 +98,16 @@ class VoicePlayback extends ChangeNotifier {
     unawaited(_seek(stepped(delta), play: false));
   }
 
+  Future<void> seekTo(Duration target, {required bool play}) {
+    final Duration end = total;
+    final Duration clamped = target <= Duration.zero
+        ? Duration.zero
+        : end > Duration.zero && target > end
+        ? end
+        : target;
+    return _seek(clamped, play: play);
+  }
+
   Future<void> toggle() async {
     final EntryAudioPlayer? player = _player;
     if (player == null) {
@@ -245,7 +255,7 @@ class VoicePlayback extends ChangeNotifier {
     if (_disposed) {
       return;
     }
-    if (_endsPlayback(_state, state)) {
+    if (_endsPlayback(state)) {
       _focus.release(this);
     }
     _state = state;
@@ -297,13 +307,11 @@ class VoicePlayback extends ChangeNotifier {
     }
   }
 
-  static bool _endsPlayback(
-    AudioPlaybackState previous,
-    AudioPlaybackState next,
-  ) => switch (next) {
+  static bool _endsPlayback(AudioPlaybackState next) => switch (next) {
     AudioPlaybackState.completed || AudioPlaybackState.error => true,
     AudioPlaybackState.paused ||
-    AudioPlaybackState.idle => previous == AudioPlaybackState.playing,
-    AudioPlaybackState.playing || AudioPlaybackState.loading => false,
+    AudioPlaybackState.idle ||
+    AudioPlaybackState.playing ||
+    AudioPlaybackState.loading => false,
   };
 }

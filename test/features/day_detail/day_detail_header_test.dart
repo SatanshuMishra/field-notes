@@ -82,4 +82,135 @@ void main() {
       expect(tester.getSize(title).width, lessThanOrEqualTo(160 - 2 * 18));
     },
   );
+
+  testWidgets(
+    'the pop-up header ends with Earlier day and Later day chevrons',
+    (WidgetTester tester) async {
+      int earlier = 0;
+      int later = 0;
+      await tester.pumpWidget(
+        dayDetailHarness(
+          SizedBox(
+            width: 371,
+            child: DayDetailHeader(
+              date: '2026-07-19',
+              today: _today,
+              onClose: () {},
+              onEarlier: () => earlier++,
+              onLater: () => later++,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byTooltip('Earlier day'), findsOneWidget);
+      expect(find.byTooltip('Later day'), findsOneWidget);
+      expect(find.bySemanticsLabel('Earlier day'), findsOneWidget);
+      expect(find.bySemanticsLabel('Later day'), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(dayDetailEarlierDayKey)),
+        const Size(34, 34),
+      );
+      expect(
+        tester.getSize(find.byKey(dayDetailLaterDayKey)),
+        const Size(34, 34),
+      );
+      final Rect back = tester.getRect(find.byKey(dayDetailBackKey));
+      final Rect earlierFace = tester.getRect(
+        find.byKey(dayDetailEarlierDayKey),
+      );
+      final Rect laterFace = tester.getRect(find.byKey(dayDetailLaterDayKey));
+      expect(earlierFace.left, greaterThan(back.right));
+      expect(laterFace.left, greaterThan(earlierFace.right));
+      expect(laterFace.top, back.top);
+      expect(earlierFace.top, back.top);
+
+      await tester.tap(find.byTooltip('Earlier day'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Later day'));
+      await tester.pump();
+
+      expect(earlier, 1);
+      expect(later, 1);
+    },
+  );
+
+  testWidgets('the sheet header steps days with the same chevrons', (
+    WidgetTester tester,
+  ) async {
+    int earlier = 0;
+    int later = 0;
+    await tester.pumpWidget(
+      dayDetailHarness(
+        SizedBox(
+          width: 384,
+          child: DayDetailSheetHeader(
+            date: '2026-07-15',
+            today: _today,
+            onEarlier: () => earlier++,
+            onLater: () => later++,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(dayDetailBackKey), findsNothing);
+    expect(find.byTooltip('Earlier day'), findsOneWidget);
+    expect(find.byTooltip('Later day'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Earlier day'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('Later day'));
+    await tester.pump();
+
+    expect(earlier, 1);
+    expect(later, 1);
+  });
+
+  testWidgets('a missing callback disables its chevron', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle handle = tester.ensureSemantics();
+    int earlier = 0;
+    await tester.pumpWidget(
+      dayDetailHarness(
+        SizedBox(
+          width: 371,
+          child: DayDetailHeader(
+            date: '2026-07-23',
+            today: _today,
+            onClose: () {},
+            onEarlier: () => earlier++,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byTooltip('Later day'), findsOneWidget);
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Later day')),
+      isSemantics(
+        label: 'Later day',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: false,
+      ),
+    );
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Earlier day')),
+      isSemantics(
+        label: 'Earlier day',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        hasTapAction: true,
+      ),
+    );
+
+    await tester.tap(find.byTooltip('Later day'));
+    await tester.pump();
+
+    expect(earlier, 0);
+    handle.dispose();
+  });
 }

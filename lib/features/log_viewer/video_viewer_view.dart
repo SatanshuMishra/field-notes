@@ -22,7 +22,7 @@ import 'package:field_notes/features/entry_cards/playback/video_playback.dart';
 import 'package:field_notes/features/entry_cards/playback/video_slots.dart';
 import 'package:field_notes/features/entry_cards/util/duration_format.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart'
-    show LogViewerExit;
+    show LogViewerExit, LogViewerPlace;
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart'
     show
         logViewerBackKey,
@@ -64,6 +64,10 @@ const double _macCapsuleMaxWidth = 780;
 const double _macCapsuleBottom = 24;
 const double _macCapsuleSide = 24;
 
+const double _embeddedPrimary = 44;
+const double _embeddedCapsuleBottom = 16;
+const double _embeddedCapsuleSide = 16;
+
 const Key videoScrubberBarKey = ValueKey<String>('video-scrubber-bar');
 
 final FutureProviderFamily<double?, String> videoAspectProvider = FutureProvider
@@ -87,6 +91,10 @@ class VideoViewerView extends ConsumerStatefulWidget {
     required this.playerFactory,
     required this.slots,
     this.focus,
+    this.embedded = false,
+    this.autoplay = false,
+    this.startAt,
+    this.onPlace,
   });
 
   final LogViewerScene scene;
@@ -94,6 +102,10 @@ class VideoViewerView extends ConsumerStatefulWidget {
   final EntryVideoPlayerFactory playerFactory;
   final VideoSlots slots;
   final PlaybackFocus? focus;
+  final bool embedded;
+  final bool autoplay;
+  final Duration? startAt;
+  final ValueChanged<LogViewerPlace>? onPlace;
 
   @override
   ConsumerState<VideoViewerView> createState() => _VideoViewerViewState();
@@ -101,11 +113,65 @@ class VideoViewerView extends ConsumerStatefulWidget {
 
 class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
   final VideoControlsHandle _handle = VideoControlsHandle();
+  bool _autoplayPending = false;
+  Duration? _startPending;
+
+  @override
+  void initState() {
+    super.initState();
+    _autoplayPending = widget.autoplay;
+    _startPending = widget.startAt;
+    _handle.addListener(_onControls);
+  }
+
+  @override
+  void didUpdateWidget(VideoViewerView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.scene.entry.id != widget.scene.entry.id) {
+      _autoplayPending = false;
+      _startPending = null;
+    }
+  }
 
   @override
   void dispose() {
+    _handle.removeListener(_onControls);
     _handle.dispose();
     super.dispose();
+  }
+
+  void _onControls() {
+    final VideoControlsState? state = _handle.state;
+    if (state == null) {
+      return;
+    }
+    _seekToStart(state);
+    _startIfAsked(state);
+    widget.onPlace?.call((
+      position: state.completed ? Duration.zero : state.position,
+      playing: state.isPlaying,
+    ));
+  }
+
+  void _seekToStart(VideoControlsState state) {
+    final Duration? startAt = _startPending;
+    final ValueChanged<Duration>? seek = state.onSeek;
+    if (startAt == null || !state.ready || seek == null) {
+      return;
+    }
+    _startPending = null;
+    seek(startAt);
+  }
+
+  void _startIfAsked(VideoControlsState state) {
+    final VoidCallback? start = state.onToggle;
+    if (!_autoplayPending || start == null) {
+      return;
+    }
+    _autoplayPending = false;
+    if (!state.isPlaying) {
+      start();
+    }
   }
 
   void _toggle() {
@@ -125,6 +191,12 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
     final LogViewerScene scene = widget.scene;
     final TargetPlatform platform = Theme.of(context).platform;
     final bool sidebar = resolveShellLayout(platform) == ShellLayout.sidebar;
+    if (widget.embedded) {
+      return ViewerKeys(
+        onSpace: _toggle,
+        child: _body(platform, _embeddedControls),
+      );
+    }
     return ViewerKeys(
       onSpace: _toggle,
       onLeft: scene.onEarlier,
@@ -134,19 +206,56 @@ class _VideoViewerViewState extends ConsumerState<VideoViewerView> {
         ground: ViewerGround.media,
         onSwipeNext: scene.onLater,
         onSwipePrevious: scene.onEarlier,
-        child: VideoBody(
-          key: ValueKey<String>(scene.entry.id),
-          entry: scene.entry,
-          resolver: widget.resolver,
-          playerFactory: widget.playerFactory,
-          slots: widget.slots,
-          aspectRatio: _aspectRatio(),
-          handle: _handle,
-          focus: widget.focus,
-          controlModel: resolveVideoControlModel(platform),
-          controls: sidebar ? _macControls : _phoneControls,
-        ),
+        child: _body(platform, sidebar ? _macControls : _phoneControls),
       ),
+    );
+  }
+
+  Widget _body(TargetPlatform platform, VideoControlsBuilder controls) {
+    final LogViewerScene scene = widget.scene;
+    return VideoBody(
+      key: ValueKey<String>(scene.entry.id),
+      entry: scene.entry,
+      resolver: widget.resolver,
+      playerFactory: widget.playerFactory,
+      slots: widget.slots,
+      aspectRatio: _aspectRatio(),
+      handle: _handle,
+      focus: widget.focus,
+      controlModel: resolveVideoControlModel(platform),
+      controls: controls,
+    );
+  }
+
+  Widget _embeddedControls(BuildContext context, VideoControlsState state) {
+    return Stack(
+      children: <Widget>[
+        const Positioned.fill(child: ViewerOverlayShade(top: false)),
+        Positioned(
+          left: _embeddedCapsuleSide,
+          right: _embeddedCapsuleSide,
+          bottom: _embeddedCapsuleBottom,
+          child: Center(
+            child: ViewerCapsule(
+              maxWidth: _macCapsuleMaxWidth,
+              children: <Widget>[
+                ViewerPrimaryButton(
+                  playing: state.isPlaying,
+                  diameter: _embeddedPrimary,
+                  onPressed: state.onToggle,
+                ),
+                const SizedBox(width: _timeGap),
+                _time(context, state.position),
+                const SizedBox(width: _timeGap),
+                Expanded(child: _scrubber(state)),
+                const SizedBox(width: _timeGap),
+                _time(context, state.total),
+                const SizedBox(width: _timeGap),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

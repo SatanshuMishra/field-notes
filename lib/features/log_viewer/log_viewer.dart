@@ -13,6 +13,13 @@ enum LogViewerExit { back, close }
 
 enum LogViewerOutcome { returned, closedAll, deleted }
 
+typedef LogViewerPlace = ({Duration position, bool playing});
+
+typedef LogViewerPositionChanged = void Function(
+  String entryId,
+  Duration position,
+);
+
 const String _barrierLabel = 'Dismiss log viewer';
 
 final Animatable<double> _fade = CurveTween(curve: Motion.entranceCurve);
@@ -23,6 +30,9 @@ Future<LogViewerOutcome> showLogViewer(
   required String entryId,
   required LogViewerExit exit,
   ValueChanged<String>? onReadNote,
+  Duration? startAt,
+  bool autoplay = false,
+  LogViewerPositionChanged? onPosition,
 }) async {
   playbackFocus.silence();
   final bool still = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
@@ -47,6 +57,9 @@ Future<LogViewerOutcome> showLogViewer(
               entryId: entryId,
               exit: exit,
               onReadNote: onReadNote,
+              startAt: startAt,
+              autoplay: autoplay,
+              onPosition: onPosition,
             ),
           );
         },
