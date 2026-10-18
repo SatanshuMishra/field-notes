@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T02:10:59.134Z
+Updated: 2026-10-18T02:13:01.258Z
 Next ids: c1 D3 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs whose
 
 ## Next step
 
-Audio round 2 looped on C1, sound shifted after a failed append (diagnosis fixable, review/round-2/audio.sound-shifted-after-failed-append.diagnosis.json); its fix is at bb275abd (receipts 4c1eb0f9; each native append reports frames taken, Dart holds the rest; Android debug build compiles) and its round-3 suite passes 5313 (review/round-3/audio.suite.txt) and its round-3 code and security reviews run (diff and briefs in review/round-3). Audio is merged into settings at 30428ffb, whose suite runs into review/round-3/settings.suite.txt; settings' slow checks follow it. Day-panel is green at 8f40db6a, its advisory C1 fixed and its 13 slow checks passing alone (review/day-panel.proofs.jsonl); it waits only for the macOS D3x smoke. Settings is green at 94831a4a (P1 fixed; C1 and S1 rejected as not introduced by the fix commits); its slow checks run after audio's fix is merged into it. Then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
+Audio round 2 looped on C1, sound shifted after a failed append (diagnosis fixable, review/round-2/audio.sound-shifted-after-failed-append.diagnosis.json); its fix is at bb275abd (receipts 4c1eb0f9; each native append reports frames taken, Dart holds the rest; Android debug build compiles) and its round-3 suite passes 5313 (review/round-3/audio.suite.txt) its round-3 code review gave one LOW (C1, duplicated byte join in live_audio_capture.dart) and its security review runs (diff, briefs and arrays in review/round-3). Audio is merged into settings at 30428ffb, whose suite runs into review/round-3/settings.suite.txt; settings' slow checks follow it. Day-panel is green at 8f40db6a, its advisory C1 fixed and its 13 slow checks passing alone (review/day-panel.proofs.jsonl); it waits only for the macOS D3x smoke. Settings is green at 94831a4a (P1 fixed; C1 and S1 rejected as not introduced by the fix commits); its slow checks run after audio's fix is merged into it. Then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
 
 Needs: D2.
 
