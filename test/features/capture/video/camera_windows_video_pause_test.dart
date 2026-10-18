@@ -11,10 +11,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../audio/live_audio_test_support.dart';
+
 const String _usbCamera = r'USB Camera <\\?\usb#vid_046d>';
 const Key _platformPreviewKey = ValueKey<String>('windows-platform-preview');
 final RegExp _segmentName = RegExp(r'^video_segment_\d+\.mp4$');
 final RegExp _joinName = RegExp(r'^video_join_\d+\.mp4$');
+final RegExp _keptName = RegExp(r'^video_\d+\.mp4$');
 
 typedef _StopReply = Future<XFile> Function(
   _FakeWindowsCamera camera,
@@ -336,6 +339,8 @@ void main() {
   late CameraPlatform original;
   late _FakeWindowsCamera camera;
   late _FakeJoiner joiner;
+  late FakeMicrophone mic;
+  late FakeLiveAudio liveAudio;
   late _Time time;
 
   setUp(() async {
@@ -345,6 +350,8 @@ void main() {
     camera = _FakeWindowsCamera(root: root.path);
     CameraPlatform.instance = camera;
     joiner = _FakeJoiner();
+    mic = FakeMicrophone();
+    liveAudio = FakeLiveAudio();
     time = _Time();
   });
 
@@ -376,8 +383,19 @@ void main() {
     () => CameraWindowsVideoRecorder(
       temporaryDirectory: () async => temporary,
       joiner: joiner,
+      encoder: liveAudio,
+      audioJoiner: liveAudio,
+      audioRecorderFactory: () => mic,
+      chainRunner: passThroughChain,
     ),
   );
+
+  FakeSoundJoin soundJoinOf(VideoRecording recording) {
+    final String kept = _captureFile(recording.media).path;
+    return liveAudio.joins.singleWhere(
+      (FakeSoundJoin join) => join.output == kept,
+    );
+  }
 
   Future<void> startTake(CameraWindowsVideoRecorder recorder) async {
     time.run(() => recorder.openSession(_usbCamera));
@@ -427,7 +445,10 @@ void main() {
       ]);
       expect(p.dirname(join.output), captures());
       expect(p.basename(join.output), matches(_joinName));
-      expect(_captureFile(recording.media).path, join.output);
+      expect(soundJoinOf(recording).video, join.output);
+      expect(soundJoinOf(recording).audio, liveAudio.soundPath);
+      expect(_captureFile(recording.media).readAsBytesSync(), fakeJoinedBytes);
+      expect(File(join.output).existsSync(), isFalse);
       expect(recording.media.mime, videoRecordingMime);
       expect(recording.durationMs, 5000);
       expect(
@@ -450,7 +471,8 @@ void main() {
     expect(joiner.calls, isEmpty);
     expect(camera.stopPaths, hasLength(1));
     final File movie = _captureFile(recording.media);
-    expect(movie.readAsBytesSync(), camera.stopBytes.single);
+    expect(soundJoinOf(recording).videoBytes, camera.stopBytes.single);
+    expect(p.dirname(soundJoinOf(recording).video), captures());
     expect(p.dirname(movie.path), captures());
     expect(File(camera.stopPaths.single).existsSync(), isFalse);
     expect(recording.durationMs, 2000);
@@ -473,10 +495,7 @@ void main() {
     expect(slow.done, isFalse);
     await time.elapse(const Duration(seconds: 15));
     await time.until(() => slow.done);
-    expect(
-      _captureFile(slow.value.media).readAsBytesSync(),
-      camera.stopBytes.last,
-    );
+    expect(soundJoinOf(slow.value).videoBytes, camera.stopBytes.last);
     expect(joiner.calls, isEmpty);
 
     await startTake(recorder);
@@ -509,10 +528,7 @@ void main() {
 
       expect(joiner.calls, isEmpty);
       expect(recording.durationMs, 5000);
-      expect(
-        _captureFile(recording.media).readAsBytesSync(),
-        camera.stopBytes.last,
-      );
+      expect(soundJoinOf(recording).videoBytes, camera.stopBytes.last);
     },
   );
 
@@ -530,10 +546,7 @@ void main() {
 
       expect(camera.count(firstCamera, 'stop'), 1);
       expect(joiner.calls, isEmpty);
-      expect(
-        _captureFile(first.media).readAsBytesSync(),
-        camera.stopBytes.single,
-      );
+      expect(soundJoinOf(first).videoBytes, camera.stopBytes.single);
       expect(
         _captureFile(first.thumbnail).readAsBytesSync(),
         camera.stillBytes.single,
@@ -595,16 +608,14 @@ void main() {
       final VideoRecording recording = (await time.finish(recorder.stop)).value;
 
       expect(joiner.calls, isEmpty);
-      expect(
-        _captureFile(recording.media).readAsBytesSync(),
-        camera.stopBytes[1],
-      );
+      expect(soundJoinOf(recording).videoBytes, camera.stopBytes[1]);
       expect(recording.durationMs, 7000);
       expect(File(empty).existsSync(), isFalse);
     },
   );
 
-  test('a failed join keeps the segments for a second Keep', () async {
+  test('a failed join keeps the segments for a second Keep, and a failed '
+      'sound join keeps the joined picture for a third', () async {
     final CameraWindowsVideoRecorder recorder = newRecorder();
     joiner.plans.add(
       (List<String> segments, String output) async =>
@@ -628,13 +639,25 @@ void main() {
     }
     expect(camera.count(cameraId, 'stop'), 2);
 
-    final VideoRecording recording = (await time.finish(recorder.stop)).value;
-
+    liveAudio.joinFails = true;
+    expect(
+      (await time.finish(recorder.stop)).error,
+      _keptWith(videoJoinMessage),
+    );
     expect(joiner.calls, hasLength(2));
     final _JoinCall retried = joiner.calls.last;
     expect(retried.segments, failed.segments);
     expect(retried.output, isNot(failed.output));
-    expect(_captureFile(recording.media).path, retried.output);
+    expect(File(retried.output).existsSync(), isTrue);
+    expect(File(liveAudio.soundPath!).existsSync(), isTrue);
+
+    liveAudio.joinFails = false;
+    final VideoRecording recording = (await time.finish(recorder.stop)).value;
+
+    expect(joiner.calls, hasLength(2));
+    expect(liveAudio.joins, hasLength(2));
+    expect(soundJoinOf(recording).video, retried.output);
+    expect(_captureFile(recording.media).readAsBytesSync(), fakeJoinedBytes);
     expect(camera.count(cameraId, 'stop'), 2);
   });
 
@@ -750,7 +773,7 @@ void main() {
       expect(File(hungSegment).existsSync(), isTrue);
       expect(captureFiles(), filesBeforeKeep);
       final VideoRecording kept = (await time.finish(recorder.stop)).value;
-      expect(_captureFile(kept.media).path, hungSegment);
+      expect(soundJoinOf(kept).video, hungSegment);
       expect(camera.count(hungCamera, 'stop') - stopsBeforeKeep, 1);
 
       final String lateSegment = await pausedAndResumed();
@@ -809,7 +832,8 @@ void main() {
       expect((await time.finish(recorder.resume)).error, isNull);
       final VideoRecording saved = (await time.finish(recorder.stop)).value;
       final File savedMovie = _captureFile(saved.media);
-      expect(p.basename(savedMovie.path), matches(_joinName));
+      expect(p.basename(soundJoinOf(saved).video), matches(_joinName));
+      expect(p.basename(savedMovie.path), matches(_keptName));
 
       final File staleSegment = File(p.join(captures(), 'video_segment_1.mp4'))
         ..writeAsBytesSync(const <int>[1]);
@@ -832,7 +856,7 @@ void main() {
       expect(staleJoin.existsSync(), isFalse);
       expect(locked.readAsBytesSync(), const <int>[5]);
       expect(folder.existsSync(), isTrue);
-      expect(savedMovie.readAsBytesSync(), const <int>[7, 7, 7]);
+      expect(savedMovie.readAsBytesSync(), fakeJoinedBytes);
     },
   );
 

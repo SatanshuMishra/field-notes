@@ -9,7 +9,6 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
-import 'package:field_notes/features/capture/audio/take_cleanup.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
@@ -47,10 +46,6 @@ const String videoSavedToastMessage = 'Video saved';
 
 const Key videoDiscardConfirmKey = ValueKey<String>('video-discard-confirm');
 
-typedef _KeptVoice = ({VoiceRecording recording, CaptureMedia audio});
-
-typedef _KeptVideo = ({VideoRecording recording, CaptureMedia video});
-
 class VideoComposerConnector extends ConsumerStatefulWidget {
   const VideoComposerConnector({
     super.key,
@@ -82,7 +77,6 @@ class _VideoComposerConnectorState
   bool _closing = false;
   bool _asking = false;
   bool _cameraOn = true;
-  String _savingHint = videoSavingHint;
   Future<void>? _cameraChange;
   VoiceRecorder? _voiceRecorder;
   Duration _elapsed = Duration.zero;
@@ -586,7 +580,6 @@ class _VideoComposerConnectorState
     _stopTicker();
     setState(() {
       _phase = VideoRecorderPhase.saving;
-      _savingHint = videoSavingHint;
       _asking = false;
       _preview = null;
       _elapsed = _takeElapsed;
@@ -597,53 +590,23 @@ class _VideoComposerConnectorState
     final bool voiceTake = !_cameraOn;
     final Duration stopTimeout =
         widget.saveTimeout + mediaWorkBudget(_elapsed) * 2;
-    final TakeCleanup cleanup = ref.read(takeCleanupProvider);
-    final AppSettings settings = takeCleanupSettings(ref);
     final Future<void> stopping;
-    final Future<void> cleaning;
     final Future<String> saving;
     if (voiceTake) {
       final VoiceRecorder voice = _voice;
       final Future<VoiceRecording> voiceStop = voice.stop();
-      final Future<_KeptVoice> voiceClean = voiceStop.then(
-        (VoiceRecording recording) async => (
-          recording: recording,
-          audio: await _clean(
-            recording.media,
-            TakeKind.voice,
-            recording.durationMs,
-            cleanup,
-            settings,
-          ),
-        ),
-      );
       stopping = voiceStop;
-      cleaning = voiceClean;
-      saving = voiceClean.then(
-        (_KeptVoice kept) => _captureVoice(voice, kept, cleanup),
+      saving = voiceStop.then(
+        (VoiceRecording recording) => _captureVoice(voice, recording),
       );
     } else {
       final Future<VideoRecording> videoStop = _recorder.stop();
-      final Future<_KeptVideo> videoClean = videoStop.then(
-        (VideoRecording recording) async => (
-          recording: recording,
-          video: await _clean(
-            recording.media,
-            TakeKind.video,
-            recording.durationMs,
-            cleanup,
-            settings,
-          ),
-        ),
-      );
       stopping = videoStop;
-      cleaning = videoClean;
-      saving = videoClean.then((_KeptVideo kept) => _capture(kept, cleanup));
+      saving = videoStop.then(_capture);
     }
     saving.ignore();
     try {
       await stopping.timeout(stopTimeout);
-      await cleaning;
       entryId = await saving.timeout(widget.saveTimeout);
     } on TimeoutException {
       _failBackTo(previous, videoSaveTimeoutMessage);
@@ -675,79 +638,46 @@ class _VideoComposerConnectorState
     );
   }
 
-  Future<CaptureMedia> _clean(
-    CaptureMedia media,
-    TakeKind kind,
-    int durationMs,
-    TakeCleanup cleanup,
-    AppSettings settings,
-  ) async {
-    final String? status = takeCleanupStatus(settings);
-    if (status != null && mounted) {
-      setState(() => _savingHint = status);
-    }
-    final CaptureMedia kept = await cleanTakeMedia(
-      cleanup,
-      media,
-      kind: kind,
-      settings: settings,
-      durationMs: durationMs,
-    );
-    if (mounted) {
-      setState(() => _savingHint = videoSavingHint);
-    }
-    return kept;
-  }
-
   Future<String> _captureVoice(
     VoiceRecorder voice,
-    _KeptVoice kept,
-    TakeCleanup cleanup,
+    VoiceRecording recording,
   ) async {
+    final CaptureService service = await ref.read(
+      captureServiceProvider.future,
+    );
+    final CaptureResult result = await service.capture(
+      VoiceCaptureRequest(
+        date: widget.date,
+        audio: recording.media,
+        durationMs: recording.durationMs,
+      ),
+    );
     try {
-      final CaptureService service = await ref.read(
-        captureServiceProvider.future,
-      );
-      final CaptureResult result = await service.capture(
-        VoiceCaptureRequest(
-          date: widget.date,
-          audio: kept.audio,
-          durationMs: kept.recording.durationMs,
-        ),
-      );
-      try {
-        await voice.releaseSaved(kept.recording);
-      } catch (error, stackTrace) {
-        debugPrint('Voice capture release failed: $error\n$stackTrace');
-      }
-      return result.entry.id;
-    } finally {
-      await releaseCleanedMedia(cleanup, kept.recording.media, kept.audio);
+      await voice.releaseSaved(recording);
+    } catch (error, stackTrace) {
+      debugPrint('Voice capture release failed: $error\n$stackTrace');
     }
+    return result.entry.id;
   }
 
-  Future<String> _capture(_KeptVideo kept, TakeCleanup cleanup) async {
+  Future<String> _capture(VideoRecording recording) async {
+    final CaptureService service = await ref.read(
+      captureServiceProvider.future,
+    );
+    final CaptureResult result = await service.capture(
+      VideoCaptureRequest(
+        date: widget.date,
+        video: recording.media,
+        durationMs: recording.durationMs,
+        thumbnail: recording.thumbnail,
+      ),
+    );
     try {
-      final CaptureService service = await ref.read(
-        captureServiceProvider.future,
-      );
-      final CaptureResult result = await service.capture(
-        VideoCaptureRequest(
-          date: widget.date,
-          video: kept.video,
-          durationMs: kept.recording.durationMs,
-          thumbnail: kept.recording.thumbnail,
-        ),
-      );
-      try {
-        await _recorder.releaseSaved(kept.recording);
-      } catch (error, stackTrace) {
-        debugPrint('Video capture release failed: $error\n$stackTrace');
-      }
-      return result.entry.id;
-    } finally {
-      await releaseCleanedMedia(cleanup, kept.recording.media, kept.video);
+      await _recorder.releaseSaved(recording);
+    } catch (error, stackTrace) {
+      debugPrint('Video capture release failed: $error\n$stackTrace');
     }
+    return result.entry.id;
   }
 
   void _failBackTo(VideoRecorderPhase phase, String message) {
@@ -938,7 +868,7 @@ class _VideoComposerConnectorState
         asking: _asking,
         letGoKey: videoDiscardConfirmKey,
         supportsPause: _takeSupportsPause,
-        savingHint: _savingHint,
+        savingHint: videoSavingHint,
         onVoiceSettings: _openVoiceSettings,
       ),
     );

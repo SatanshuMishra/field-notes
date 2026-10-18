@@ -42,6 +42,7 @@ class MainFlutterWindow: NSWindow {
   private var imagePasteboardBridge: ImagePasteboardBridge?
   private var fileDropBridge: FileDropBridge?
   private var sparkleUpdaterBridge: SparkleUpdaterBridge?
+  private var liveAudioBridge: LiveAudioBridge?
   private var stayAwakeActivity: NSObjectProtocol?
   private var appearanceObservation: NSKeyValueObservation?
   private var windowButtonPitch: CGFloat = 0
@@ -67,7 +68,7 @@ class MainFlutterWindow: NSWindow {
     self.registerAudioOutputChannel(flutterViewController.engine.binaryMessenger)
     self.registerStayAwakeChannel(flutterViewController.engine.binaryMessenger)
     self.registerAudioPeaksChannel(flutterViewController.engine.binaryMessenger)
-    AudioCleanBridge.register(flutterViewController.engine.binaryMessenger)
+    self.liveAudioBridge = LiveAudioBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.spellCheckBridge = SpellCheckBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.imagePasteboardBridge = ImagePasteboardBridge(messenger: flutterViewController.engine.binaryMessenger)
     self.fileDropBridge = FileDropBridge(messenger: flutterViewController.engine.binaryMessenger, view: flutterViewController.view)
@@ -140,6 +141,8 @@ class MainFlutterWindow: NSWindow {
       switch call.method {
       case "defaultOutputName":
         result(MainFlutterWindow.defaultOutputName())
+      case "listOutputs":
+        result(MainFlutterWindow.listOutputs())
       case "openSoundSettings":
         MainFlutterWindow.openSoundSettings()
         result(nil)
@@ -379,20 +382,73 @@ class MainFlutterWindow: NSWindow {
     guard deviceStatus == noErr, deviceID != kAudioObjectUnknown else {
       return nil
     }
-    var name = "" as CFString
-    var nameSize = UInt32(MemoryLayout<CFString>.size)
-    var nameAddress = AudioObjectPropertyAddress(
-      mSelector: kAudioObjectPropertyName,
+    return stringProperty(kAudioObjectPropertyName, of: deviceID)
+  }
+
+  private static func listOutputs() -> [[String: String]] {
+    let system = AudioObjectID(kAudioObjectSystemObject)
+    var devicesAddress = AudioObjectPropertyAddress(
+      mSelector: kAudioHardwarePropertyDevices,
       mScope: kAudioObjectPropertyScopeGlobal,
       mElement: kAudioObjectPropertyElementMain
     )
-    let nameStatus = withUnsafeMutablePointer(to: &name) { pointer in
-      AudioObjectGetPropertyData(deviceID, &nameAddress, 0, nil, &nameSize, pointer)
+    var devicesSize: UInt32 = 0
+    let stride = MemoryLayout<AudioObjectID>.stride
+    guard
+      AudioObjectGetPropertyDataSize(system, &devicesAddress, 0, nil, &devicesSize) == noErr,
+      Int(devicesSize) >= stride
+    else {
+      return []
     }
-    guard nameStatus == noErr else {
+    var deviceIDs = [AudioObjectID](
+      repeating: AudioObjectID(kAudioObjectUnknown),
+      count: Int(devicesSize) / stride
+    )
+    guard
+      AudioObjectGetPropertyData(system, &devicesAddress, 0, nil, &devicesSize, &deviceIDs)
+        == noErr
+    else {
+      return []
+    }
+    return deviceIDs.prefix(Int(devicesSize) / stride).compactMap { outputEntry(for: $0) }
+  }
+
+  private static func outputEntry(for deviceID: AudioObjectID) -> [String: String]? {
+    var streamsAddress = AudioObjectPropertyAddress(
+      mSelector: kAudioDevicePropertyStreams,
+      mScope: kAudioObjectPropertyScopeOutput,
+      mElement: kAudioObjectPropertyElementMain
+    )
+    var streamsSize: UInt32 = 0
+    guard
+      AudioObjectGetPropertyDataSize(deviceID, &streamsAddress, 0, nil, &streamsSize) == noErr,
+      streamsSize > 0,
+      let uid = stringProperty(kAudioDevicePropertyDeviceUID, of: deviceID),
+      let name = stringProperty(kAudioObjectPropertyName, of: deviceID)
+    else {
       return nil
     }
-    let text = name as String
+    return ["id": uid, "name": name]
+  }
+
+  private static func stringProperty(
+    _ selector: AudioObjectPropertySelector,
+    of objectID: AudioObjectID
+  ) -> String? {
+    var value = "" as CFString
+    var size = UInt32(MemoryLayout<CFString>.size)
+    var address = AudioObjectPropertyAddress(
+      mSelector: selector,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+    let status = withUnsafeMutablePointer(to: &value) { pointer in
+      AudioObjectGetPropertyData(objectID, &address, 0, nil, &size, pointer)
+    }
+    guard status == noErr else {
+      return nil
+    }
+    let text = value as String
     return text.isEmpty ? nil : text
   }
 

@@ -316,7 +316,7 @@ void main() {
       expect(waiting.map((e) => e.id).toList(), [missing.id, damaged.id]);
       expect(waiting.map((e) => e.peaks).toList(), [null, null]);
 
-      await repo.setVoicePeaks(missing.id, const <double>[]);
+      await repo.setVoicePeaks(missing.id, const <double>[0.3]);
 
       final left = await repo.watchVoiceEntriesWithoutPeaks().first;
 

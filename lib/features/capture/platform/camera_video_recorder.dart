@@ -14,11 +14,19 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' show AudioRecorder;
 
+import 'package:field_notes/data/media/live_audio_channel.dart';
 import 'package:field_notes/data/media/media_work_budget.dart';
 import 'package:field_notes/data/media/video_join.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/input_level.dart'
+    show AudioRecorderFactory;
+import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
 import 'package:field_notes/features/capture/video/audio_input_selectable.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
+import 'package:field_notes/features/capture/voice/record_voice_recorder.dart'
+    show voiceRecordingExtension;
+import 'package:field_notes/features/capture/voice/voice_processing.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart'
     show micPermissionMessage;
 
@@ -27,7 +35,6 @@ const String videoRecordingExtension = 'mp4';
 const String videoThumbnailMime = 'image/jpeg';
 const String videoThumbnailExtension = 'jpg';
 const int videoRecordingBitrate = 4000000;
-const int videoRecordingAudioBitrate = 96000;
 
 String videoRecordingFileName(int nowMs) =>
     'video_$nowMs.$videoRecordingExtension';
@@ -40,12 +47,36 @@ Future<String> resolveVideoThumbnailPath(Directory directory, int nowMs) async {
   return p.join(directory.path, videoThumbnailFileName(nowMs));
 }
 
-VideoRecorder createPlatformVideoRecorder({TargetPlatform? platform}) =>
-    switch (platform ?? defaultTargetPlatform) {
-      TargetPlatform.macOS => CameraMacosVideoRecorder(),
-      TargetPlatform.windows => CameraWindowsVideoRecorder(),
-      _ => CameraVideoRecorder(),
-    };
+typedef VideoSoundProcessing = Future<VoiceProcessing> Function();
+
+VideoRecorder createPlatformVideoRecorder({
+  TargetPlatform? platform,
+  LiveEncoder encoder = const LiveEncoder(),
+  AudioJoiner audioJoiner = const AudioJoiner(),
+  AudioRecorderFactory audioRecorderFactory = AudioRecorder.new,
+  Future<AudioInput> Function()? resolveInput,
+  VideoSoundProcessing? resolveProcessing,
+}) => switch (platform ?? defaultTargetPlatform) {
+  TargetPlatform.macOS => CameraMacosVideoRecorder(
+    encoder: encoder,
+    audioJoiner: audioJoiner,
+    audioRecorderFactory: audioRecorderFactory,
+    resolveProcessing: resolveProcessing,
+  ),
+  TargetPlatform.windows => CameraWindowsVideoRecorder(
+    encoder: encoder,
+    audioJoiner: audioJoiner,
+    audioRecorderFactory: audioRecorderFactory,
+    resolveProcessing: resolveProcessing,
+  ),
+  _ => CameraVideoRecorder(
+    encoder: encoder,
+    audioJoiner: audioJoiner,
+    audioRecorderFactory: audioRecorderFactory,
+    resolveInput: resolveInput,
+    resolveProcessing: resolveProcessing,
+  ),
+};
 
 List<File> _recordingFiles(VideoRecording recording) => <File>[
   for (final CaptureMedia? media in <CaptureMedia?>[
@@ -120,14 +151,265 @@ Future<void> _deleteCaptureFiles(List<File> files) async {
   }
 }
 
+VideoRecording _recordingOf(File movie, File? thumbnail, int durationMs) =>
+    VideoRecording(
+      media: CaptureFile(
+        file: movie,
+        mime: videoRecordingMime,
+        durationMs: durationMs,
+      ),
+      durationMs: durationMs,
+      thumbnail: thumbnail == null
+          ? null
+          : CaptureFile(file: thumbnail, mime: videoThumbnailMime),
+    );
+
+AudioInput _soundInputWithId(String? deviceId) => deviceId == null
+    ? const AudioInput(id: null, label: systemDefaultInputLabel)
+    : AudioInput(id: deviceId, label: deviceId);
+
+Future<void> _requireMicrophone(Future<bool> Function() permission) async {
+  final bool granted;
+  try {
+    granted = await permission();
+  } catch (error) {
+    throw VideoRecorderException(micPermissionMessage, cause: error);
+  }
+  if (!granted) {
+    throw const VideoRecorderException(micPermissionMessage);
+  }
+}
+
+class _CaptureFolder {
+  _CaptureFolder(this._temporaryDirectory);
+
+  final Future<Directory> Function() _temporaryDirectory;
+  int _lastNameMs = 0;
+
+  Future<Directory> get location async =>
+      Directory(p.join((await _temporaryDirectory()).path, _captureFolder));
+
+  Future<String> freshPath(String Function(int nameMs) name) async {
+    final Directory captures = await location;
+    await captures.create(recursive: true);
+    final int now = clock.now().millisecondsSinceEpoch;
+    int nameMs = now > _lastNameMs ? now : _lastNameMs + 1;
+    while (await FileSystemEntity.type(
+          p.join(captures.path, name(nameMs)),
+          followLinks: false,
+        ) !=
+        FileSystemEntityType.notFound) {
+      nameMs += 1;
+    }
+    _lastNameMs = nameMs;
+    return p.join(captures.path, name(nameMs));
+  }
+}
+
+typedef _Picture = ({File movie, File? thumbnail, int durationMs});
+
+class _LiveSound {
+  _LiveSound({
+    required AudioRecorderFactory recorderFactory,
+    required LiveEncoder encoder,
+    required VoiceChainRunner chainRunner,
+    required this._joiner,
+    required VideoSoundProcessing? resolveProcessing,
+    required this._folder,
+  }) : _capture = LiveAudioCapture(
+         recorderFactory: recorderFactory,
+         encoder: encoder,
+         chainRunner: chainRunner,
+       ),
+       _resolveProcessing = resolveProcessing ?? defaultVoiceProcessing;
+
+  final LiveAudioCapture _capture;
+  final AudioJoiner _joiner;
+  final VideoSoundProcessing _resolveProcessing;
+  final _CaptureFolder _folder;
+  LiveAudioTake? _take;
+  _Picture? _pending;
+
+  bool get holdsPicture => _pending != null;
+
+  Future<bool> hasPermission() => _capture.hasPermission();
+
+  Future<VoiceProcessing> _processing() async {
+    try {
+      return await _resolveProcessing();
+    } catch (_) {
+      return defaultVoiceProcessing();
+    }
+  }
+
+  Future<void> arm(AudioInput input) async {
+    if (_capture.running) {
+      await _capture.cancel();
+    }
+    await _dropLeftovers();
+    final VoiceProcessing processing = await _processing();
+    try {
+      await _capture.start(
+        input: input,
+        profile: processing.profile,
+        volume: processing.volume,
+        path: await _folder.freshPath(_soundFileName),
+        armed: true,
+      );
+    } catch (error) {
+      throw VideoRecorderException(videoStartMessage, cause: error);
+    }
+  }
+
+  void beginWriting() => _capture.beginWriting();
+
+  Future<void> pause() async {
+    try {
+      await _capture.pause();
+    } catch (error) {
+      throw VideoRecorderException(videoPauseMessage, cause: error);
+    }
+  }
+
+  Future<void> resume() async {
+    try {
+      await _capture.resume();
+    } catch (error) {
+      throw VideoRecorderException(videoPauseMessage, cause: error);
+    }
+  }
+
+  Future<VideoRecording> keep(Future<_Picture> Function() stopPicture) async {
+    final _Picture picture;
+    try {
+      picture = _pending ?? await stopPicture();
+    } on VideoSegmentsKeptException {
+      await _pauseQuietly();
+      rethrow;
+    }
+    _pending = picture;
+    final LiveAudioTake? sound = await _finished();
+    final File movie = sound == null
+        ? picture.movie
+        : await _join(picture, sound);
+    _pending = null;
+    return _recordingOf(movie, picture.thumbnail, picture.durationMs);
+  }
+
+  Future<File> _join(_Picture picture, LiveAudioTake sound) async {
+    final String output;
+    try {
+      output = await _folder.freshPath(videoRecordingFileName);
+    } catch (error) {
+      throw VideoSegmentsKeptException(videoJoinMessage, cause: error);
+    }
+    final Future<String> joining = Future<String>.sync(
+      () => _joiner.join(
+        video: picture.movie.path,
+        audio: sound.path,
+        output: output,
+      ),
+    );
+    final String joined;
+    try {
+      joined = await joining.timeout(
+        mediaWorkBudget(Duration(milliseconds: picture.durationMs)),
+      );
+    } catch (error) {
+      unawaited(
+        joining
+            .then<void>((String _) {}, onError: (Object _) {})
+            .whenComplete(() => _deleteCaptureFile(output)),
+      );
+      throw VideoSegmentsKeptException(videoJoinMessage, cause: error);
+    }
+    _take = null;
+    await _deleteCaptureFile(picture.movie.path);
+    await _deleteCaptureFile(sound.path);
+    return File(joined);
+  }
+
+  Future<LiveAudioTake?> _finished() async {
+    final LiveAudioTake? done = _take;
+    if (done != null) {
+      return done;
+    }
+    try {
+      final LiveAudioTake take = await _capture.stop();
+      _take = take;
+      return take;
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Live sound could not be finished, keeping the picture alone: '
+        '$error\n$stackTrace',
+      );
+      return null;
+    }
+  }
+
+  Future<void> _pauseQuietly() async {
+    try {
+      await _capture.pause();
+    } catch (error, stackTrace) {
+      debugPrint('Live sound pause failed: $error\n$stackTrace');
+    }
+  }
+
+  Future<void> _dropPending() async {
+    final _Picture? pending = _pending;
+    _pending = null;
+    if (pending != null) {
+      await _deleteCaptureFiles(<File>[pending.movie, ?pending.thumbnail]);
+    }
+  }
+
+  Future<void> _dropLeftovers() async {
+    final LiveAudioTake? take = _take;
+    _take = null;
+    await _deleteCaptureFile(take?.path);
+    await _dropPending();
+  }
+
+  Future<void> discard() async {
+    await _capture.cancel();
+    await _dropLeftovers();
+  }
+
+  Future<void> dispose() async {
+    await discard();
+    await _capture.dispose();
+  }
+}
+
 abstract class _CameraPackageVideoRecorder implements VideoRecorder {
-  _CameraPackageVideoRecorder({this._startTimeoutMessage});
+  _CameraPackageVideoRecorder({
+    this._startTimeoutMessage,
+    required Future<Directory> Function() temporaryDirectory,
+    required LiveEncoder encoder,
+    required AudioJoiner audioJoiner,
+    required AudioRecorderFactory audioRecorderFactory,
+    required VoiceChainRunner chainRunner,
+    required VideoSoundProcessing? resolveProcessing,
+  }) : _folder = _CaptureFolder(temporaryDirectory) {
+    _sound = _LiveSound(
+      recorderFactory: audioRecorderFactory,
+      encoder: encoder,
+      chainRunner: chainRunner,
+      joiner: audioJoiner,
+      resolveProcessing: resolveProcessing,
+      folder: _folder,
+    );
+  }
 
   final String? _startTimeoutMessage;
+  final _CaptureFolder _folder;
+  late final _LiveSound _sound;
   CameraController? _controller;
   _CameraSession? _session;
   final Stopwatch _elapsed = clock.stopwatch();
   _OwnedCaptures _owned = const _OwnedCaptures();
+
+  Future<AudioInput> _soundInput();
 
   List<VideoCaptureDevice> _devicesOf(List<CameraDescription> cameras);
 
@@ -164,20 +446,25 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       throw const VideoRecorderException(videoStartMessage);
     }
     try {
+      await _requireMicrophone(_sound.hasPermission);
+      await _sound.arm(await _soundInput());
       final CameraController controller = await _ready(session);
       if (!identical(_session, session)) {
         throw const VideoRecorderException(videoStartMessage);
       }
       await controller.startVideoRecording();
+      _sound.beginWriting();
       _elapsed
         ..reset()
         ..start();
       await _stabilise(controller);
     } on VideoRecorderException {
       _elapsed.stop();
+      await _sound.discard();
       rethrow;
     } catch (error) {
       _elapsed.stop();
+      await _sound.discard();
       throw VideoRecorderException(videoStartMessage, cause: error);
     }
   }
@@ -197,6 +484,12 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   @override
   Future<VideoRecording> stop() async {
     _elapsed.stop();
+    final VideoRecording recording = await _sound.keep(_stopPicture);
+    _owned = _owned.adopt(recording);
+    return recording;
+  }
+
+  Future<_Picture> _stopPicture() async {
     final int durationMs = _elapsed.elapsedMilliseconds;
     final CameraController? controller = _controller;
     if (controller == null) {
@@ -210,19 +503,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
         File(take.path),
         still,
       );
-      final VideoRecording recording = VideoRecording(
-        media: CaptureFile(
-          file: movie,
-          mime: videoRecordingMime,
-          durationMs: durationMs,
-        ),
-        durationMs: durationMs,
-        thumbnail: thumbnail == null
-            ? null
-            : CaptureFile(file: thumbnail, mime: videoThumbnailMime),
-      );
-      _owned = _owned.adopt(recording);
-      return recording;
+      return (movie: movie, thumbnail: thumbnail, durationMs: durationMs);
     } on VideoRecorderException {
       rethrow;
     } catch (error) {
@@ -254,6 +535,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
     final CameraController? controller = _controller;
     _controller = null;
     _session = null;
+    await _sound.discard();
     if (controller == null) {
       return;
     }
@@ -295,6 +577,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   @override
   Future<void> dispose() async {
     await release();
+    await _sound.dispose();
   }
 
   @override
@@ -335,9 +618,8 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       final CameraController controller = CameraController(
         _selected(cameras, session.deviceId),
         ResolutionPreset.veryHigh,
-        enableAudio: true,
+        enableAudio: false,
         videoBitrate: videoRecordingBitrate,
-        audioBitrate: videoRecordingAudioBitrate,
       );
       _controller = controller;
       _controllerCreated();
@@ -371,7 +653,28 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
 
 class CameraVideoRecorder extends _CameraPackageVideoRecorder
     implements CameraControls {
+  CameraVideoRecorder({
+    Future<Directory> Function()? temporaryDirectory,
+    super.encoder = const LiveEncoder(),
+    super.audioJoiner = const AudioJoiner(),
+    super.audioRecorderFactory = AudioRecorder.new,
+    super.chainRunner = runVoiceChainInIsolate,
+    Future<AudioInput> Function()? resolveInput,
+    super.resolveProcessing,
+  }) : _resolveInput = resolveInput ?? systemDefaultAudioInput,
+       super(temporaryDirectory: temporaryDirectory ?? getTemporaryDirectory);
+
+  final Future<AudioInput> Function() _resolveInput;
   double _zoom = 1;
+
+  @override
+  Future<AudioInput> _soundInput() async {
+    try {
+      return await _resolveInput();
+    } catch (_) {
+      return systemDefaultAudioInput();
+    }
+  }
 
   @override
   bool get supportsPause => true;
@@ -475,6 +778,7 @@ class CameraVideoRecorder extends _CameraPackageVideoRecorder
       throw VideoRecorderException(videoPauseMessage, cause: error);
     }
     _elapsed.stop();
+    await _sound.pause();
   }
 
   @override
@@ -489,6 +793,7 @@ class CameraVideoRecorder extends _CameraPackageVideoRecorder
       throw VideoRecorderException(videoPauseMessage, cause: error);
     }
     _elapsed.start();
+    await _sound.resume();
   }
 
   @override
@@ -507,13 +812,19 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     Future<Directory> Function()? temporaryDirectory,
     VideoJoiner? joiner,
     Future<void> Function(String? endpointId)? setAudioInputDevice,
-  }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
-       _joiner = joiner ?? const VideoJoiner(),
+    super.encoder = const LiveEncoder(),
+    super.audioJoiner = const AudioJoiner(),
+    super.audioRecorderFactory = AudioRecorder.new,
+    super.chainRunner = runVoiceChainInIsolate,
+    super.resolveProcessing,
+  }) : _joiner = joiner ?? const VideoJoiner(),
        _setAudioInputDevice =
            setAudioInputDevice ?? CameraWindows.setAudioInputDevice,
-       super(startTimeoutMessage: videoStartTimeoutMessageWindows);
+       super(
+         startTimeoutMessage: videoStartTimeoutMessageWindows,
+         temporaryDirectory: temporaryDirectory ?? getTemporaryDirectory,
+       );
 
-  final Future<Directory> Function() _temporaryDirectory;
   final VideoJoiner _joiner;
   final Future<void> Function(String? endpointId) _setAudioInputDevice;
   String? _audioDeviceId;
@@ -522,7 +833,6 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
   bool _joinPending = false;
   Duration _dropped = Duration.zero;
   Duration _stretchStart = Duration.zero;
-  int _lastNameMs = 0;
 
   @override
   bool get supportsPause => true;
@@ -534,6 +844,9 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
   void useAudioInput(String? deviceId) {
     _audioDeviceId = deviceId;
   }
+
+  @override
+  Future<AudioInput> _soundInput() async => _soundInputWithId(_audioDeviceId);
 
   @override
   Future<void> _beforeControllerCreated() async {
@@ -573,6 +886,7 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
       throw VideoRecorderException(videoPauseMessage, cause: error);
     }
     _elapsed.stop();
+    await _sound.pause();
     await _keepStretch(File(stretch.path), _elapsed.elapsed - _stretchStart);
   }
 
@@ -591,18 +905,19 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     _joinPending = false;
     _elapsed.start();
     _stretchStart = _elapsed.elapsed;
+    await _sound.resume();
   }
 
   @override
-  Future<VideoRecording> stop() async {
-    _elapsed.stop();
+  Future<_Picture> _stopPicture() async {
     if (!_joinPending) {
       final CameraController? controller = _controller;
       if (controller != null && controller.value.isRecordingVideo) {
         if (_segments.isEmpty) {
-          return _keepOnlyStretch(controller);
+          await _endOnlyStretch(controller);
+        } else {
+          await _endLastStretch(controller);
         }
-        await _endLastStretch(controller);
       } else if (controller != null) {
         await _releaseQuietly(controller);
       }
@@ -615,7 +930,9 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     final File movie = segments.length == 1
         ? segments.single
         : await _join(segments, durationMs);
-    return _keep(movie, _takeThumbnail, durationMs);
+    final File? thumbnail = _takeThumbnail;
+    _clearTake();
+    return (movie: movie, thumbnail: thumbnail, durationMs: durationMs);
   }
 
   @override
@@ -629,7 +946,7 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     }
   }
 
-  Future<VideoRecording> _keepOnlyStretch(CameraController controller) async {
+  Future<void> _endOnlyStretch(CameraController controller) async {
     final File? still = _takeThumbnail == null
         ? await _captureThumbnail(controller)
         : null;
@@ -644,7 +961,8 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
       await _releaseController(controller);
     }
     final (File movie, File? claimedStill) = claimed;
-    return _keep(movie, _takeThumbnail ?? claimedStill, elapsed.inMilliseconds);
+    _segments = <File>[movie];
+    _takeThumbnail ??= claimedStill;
   }
 
   Future<void> _endLastStretch(CameraController controller) async {
@@ -711,7 +1029,7 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
   Future<File> _join(List<File> segments, int durationMs) async {
     final String output;
     try {
-      output = await _capturePath(await _capturesFolder(), _joinFileName);
+      output = await _folder.freshPath(_joinFileName);
     } catch (error) {
       _joinPending = true;
       throw VideoSegmentsKeptException(videoJoinMessage, cause: error);
@@ -739,23 +1057,6 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     return joined;
   }
 
-  VideoRecording _keep(File movie, File? thumbnail, int durationMs) {
-    final VideoRecording recording = VideoRecording(
-      media: CaptureFile(
-        file: movie,
-        mime: videoRecordingMime,
-        durationMs: durationMs,
-      ),
-      durationMs: durationMs,
-      thumbnail: thumbnail == null
-          ? null
-          : CaptureFile(file: thumbnail, mime: videoThumbnailMime),
-    );
-    _owned = _owned.adopt(recording);
-    _clearTake();
-    return recording;
-  }
-
   Future<void> _keepStretch(File file, Duration stretch) async {
     if (await _holdsData(file)) {
       _segments = <File>[..._segments, await _claimSegment(file)];
@@ -779,10 +1080,7 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
   Future<void> _sweepCaptures() async {
     final List<FileSystemEntity> entries;
     try {
-      final Directory captures = Directory(
-        p.join((await _temporaryDirectory()).path, _windowsCaptureFolder),
-      );
-      entries = captures.listSync(followLinks: false);
+      entries = (await _folder.location).listSync(followLinks: false);
     } catch (error) {
       return;
     }
@@ -790,7 +1088,8 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
       final String name = p.basename(entry.path);
       final bool stale =
           name.startsWith(_segmentFilePrefix) ||
-          name.startsWith(_joinFilePrefix);
+          name.startsWith(_joinFilePrefix) ||
+          name.startsWith(_soundFilePrefix);
       if (entry is File && stale && !_owned.holds(entry.path)) {
         try {
           entry.deleteSync();
@@ -801,36 +1100,11 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     }
   }
 
-  Future<Directory> _capturesFolder() async {
-    final Directory captures = Directory(
-      p.join((await _temporaryDirectory()).path, _windowsCaptureFolder),
-    );
-    await captures.create(recursive: true);
-    return captures;
-  }
-
-  Future<String> _capturePath(
-    Directory captures,
-    String Function(int nameMs) name,
-  ) async {
-    final int now = clock.now().millisecondsSinceEpoch;
-    int nameMs = now > _lastNameMs ? now : _lastNameMs + 1;
-    while (await FileSystemEntity.type(
-          p.join(captures.path, name(nameMs)),
-          followLinks: false,
-        ) !=
-        FileSystemEntityType.notFound) {
-      nameMs += 1;
-    }
-    _lastNameMs = nameMs;
-    return p.join(captures.path, name(nameMs));
-  }
-
   Future<File> _claimSegment(File file) async {
     try {
       return await _moveCaptureFile(
         file,
-        await _capturePath(await _capturesFolder(), _segmentFileName),
+        await _folder.freshPath(_segmentFileName),
       );
     } catch (error, stackTrace) {
       debugPrint('Video segment move failed: $error\n$stackTrace');
@@ -842,7 +1116,7 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     try {
       return await _moveCaptureFile(
         still,
-        await _capturePath(await _capturesFolder(), videoThumbnailFileName),
+        await _folder.freshPath(videoThumbnailFileName),
       );
     } catch (error, stackTrace) {
       debugPrint('Video thumbnail move failed: $error\n$stackTrace');
@@ -875,7 +1149,7 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
     try {
       claimedMovie = await _moveCaptureFile(
         movie,
-        await _capturePath(await _capturesFolder(), videoRecordingFileName),
+        await _folder.freshPath(videoRecordingFileName),
       );
     } catch (error) {
       await _deleteCaptureFile(still?.path);
@@ -888,15 +1162,19 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
   }
 }
 
-const String _windowsCaptureFolder = 'captures';
+const String _captureFolder = 'captures';
 const String _segmentFilePrefix = 'video_segment_';
 const String _joinFilePrefix = 'video_join_';
+const String _soundFilePrefix = 'video_sound_';
 
 String _segmentFileName(int nameMs) =>
     '$_segmentFilePrefix$nameMs.$videoRecordingExtension';
 
 String _joinFileName(int nameMs) =>
     '$_joinFilePrefix$nameMs.$videoRecordingExtension';
+
+String _soundFileName(int nameMs) =>
+    '$_soundFilePrefix$nameMs.$voiceRecordingExtension';
 
 Future<File> _moveCaptureFile(File source, String target) async {
   try {
@@ -1026,32 +1304,36 @@ List<VideoCaptureDevice> cameraDeviceLabels(List<CameraDescription> cameras) =>
         ),
     ];
 
-Future<bool> _askRecordForMicrophone() async {
-  final AudioRecorder recorder = AudioRecorder();
-  try {
-    return await recorder.hasPermission();
-  } finally {
-    await recorder.dispose();
-  }
-}
-
 class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   CameraMacosVideoRecorder({
     Future<Directory> Function()? temporaryDirectory,
     CameraMacOSController? controller,
-    Future<bool> Function()? microphonePermission,
+    this._microphonePermission,
+    LiveEncoder encoder = const LiveEncoder(),
+    AudioJoiner audioJoiner = const AudioJoiner(),
+    AudioRecorderFactory audioRecorderFactory = AudioRecorder.new,
+    VoiceChainRunner chainRunner = runVoiceChainInIsolate,
+    VideoSoundProcessing? resolveProcessing,
   }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
-       _suppliedController = controller,
-       _microphonePermission = microphonePermission ?? _askRecordForMicrophone;
+       _suppliedController = controller {
+    _sound = _LiveSound(
+      recorderFactory: audioRecorderFactory,
+      encoder: encoder,
+      chainRunner: chainRunner,
+      joiner: audioJoiner,
+      resolveProcessing: resolveProcessing,
+      folder: _CaptureFolder(_temporaryDirectory),
+    );
+  }
 
   final Future<Directory> Function() _temporaryDirectory;
   final CameraMacOSController? _suppliedController;
-  final Future<bool> Function() _microphonePermission;
+  final Future<bool> Function()? _microphonePermission;
+  late final _LiveSound _sound;
   final Stopwatch _elapsed = clock.stopwatch();
   Completer<CameraMacOSController>? _ready;
   Widget? _preview;
   String? _previewDeviceId;
-  String? _previewAudioDeviceId;
   String? _audioDeviceId;
   CameraMacOSController? _controller;
   bool _destroyRequested = false;
@@ -1070,6 +1352,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       (CameraMacOSController controller) => controller.pauseRecording(),
     );
     _elapsed.stop();
+    await _sound.pause();
   }
 
   @override
@@ -1078,6 +1361,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       (CameraMacOSController controller) => controller.resumeRecording(),
     );
     _elapsed.start();
+    await _sound.resume();
   }
 
   Future<void> _confirm(
@@ -1133,10 +1417,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   @override
   Widget? openSession(String deviceId) {
     final Widget? existing = _preview;
-    final String? audioDeviceId = _audioDeviceId;
-    if (existing != null &&
-        _previewDeviceId == deviceId &&
-        _previewAudioDeviceId == audioDeviceId) {
+    if (existing != null && _previewDeviceId == deviceId) {
       return existing;
     }
     _abandonPendingReady();
@@ -1146,16 +1427,14 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
         Completer<CameraMacOSController>();
     _ready = ready;
     final Widget view = CameraMacOSView(
-      key: ValueKey<(String, String?)>((deviceId, audioDeviceId)),
+      key: ValueKey<String>(deviceId),
       deviceId: deviceId,
-      audioDeviceId: audioDeviceId,
-      enableAudio: true,
+      enableAudio: false,
       cameraMode: CameraMacOSMode.video,
       fit: BoxFit.contain,
       useMovieFileOutput: true,
       movieResolution: PictureResolution.veryHigh,
       videoBitrate: videoRecordingBitrate,
-      audioBitrate: videoRecordingAudioBitrate,
       pictureFormat: PictureFormat.jpg,
       onCameraInizialized: (CameraMacOSController controller) =>
           _onControllerReady(ready, controller),
@@ -1168,7 +1447,6 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     );
     _preview = view;
     _previewDeviceId = deviceId;
-    _previewAudioDeviceId = audioDeviceId;
     final CameraMacOSController? supplied = _suppliedController;
     if (supplied != null) {
       _onControllerReady(ready, supplied);
@@ -1205,23 +1483,31 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
   @override
   Future<void> start() async {
-    await _requireMicrophone();
+    await _requireMicrophone(_microphonePermission ?? _sound.hasPermission);
     final Completer<CameraMacOSController>? ready = _ready;
     if (ready == null) {
       throw const VideoRecorderException(videoStartMessage);
     }
     _aborted = false;
+    try {
+      await _sound.arm(_soundInputWithId(_audioDeviceId));
+      await _startCamera(ready);
+    } catch (_) {
+      _elapsed.stop();
+      await _sound.discard();
+      rethrow;
+    }
+  }
+
+  Future<void> _startCamera(Completer<CameraMacOSController> ready) async {
     final CameraMacOSController controller;
     try {
       controller = await ready.future.timeout(cameraStartTimeout);
     } on TimeoutException {
-      _elapsed.stop();
       throw const VideoRecorderException(videoStartTimeoutMessage);
     } on VideoRecorderException {
-      _elapsed.stop();
       rethrow;
     } catch (error) {
-      _elapsed.stop();
       throw VideoRecorderException(videoStartMessage, cause: error);
     }
     if (_aborted) {
@@ -1229,68 +1515,56 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     }
     _owned = _owned.withoutMovies();
     try {
-      await controller.recordVideo(maxVideoDuration: videoHardCapSeconds);
+      await controller.recordVideo(
+        maxVideoDuration: videoHardCapSeconds,
+        enableAudio: false,
+      );
     } catch (error) {
-      _elapsed.stop();
       throw VideoRecorderException(videoStartMessage, cause: error);
     }
     if (_aborted) {
       throw const VideoRecorderException(videoStartMessage);
     }
+    _sound.beginWriting();
     _controller = controller;
     _elapsed
       ..reset()
       ..start();
   }
 
-  Future<void> _requireMicrophone() async {
-    final bool granted;
-    try {
-      granted = await _microphonePermission();
-    } catch (error) {
-      throw VideoRecorderException(micPermissionMessage, cause: error);
-    }
-    if (!granted) {
-      throw const VideoRecorderException(micPermissionMessage);
-    }
-  }
-
   @override
   Future<VideoRecording> stop() async {
     _elapsed.stop();
+    final VideoRecording recording = await _sound.keep(_stopPicture);
+    _owned = _owned.adopt(recording);
+    return recording;
+  }
+
+  Future<_Picture> _stopPicture() async {
     final int durationMs = _elapsed.elapsedMilliseconds;
     final CameraMacOSController? controller = _controller;
     if (controller == null) {
       throw const VideoRecorderException(videoStopMessage);
     }
+    File? thumbnail;
     try {
-      final CaptureMedia? thumbnail = await _captureThumbnail(controller);
+      thumbnail = await _captureThumbnail(controller);
       final CameraMacOSFile? file = await controller.stopRecording();
       final String? path = file?.url;
       if (path == null || path.isEmpty) {
         throw const VideoRecorderException(videoStopMessage);
       }
-      final VideoRecording recording = VideoRecording(
-        media: CaptureFile(
-          file: File(path),
-          mime: videoRecordingMime,
-          durationMs: durationMs,
-        ),
-        durationMs: durationMs,
-        thumbnail: thumbnail,
-      );
-      _owned = _owned.adopt(recording);
-      return recording;
-    } on VideoRecorderException {
-      rethrow;
+      return (movie: File(path), thumbnail: thumbnail, durationMs: durationMs);
     } catch (error) {
+      await _deleteCaptureFile(thumbnail?.path);
+      if (error is VideoRecorderException) {
+        rethrow;
+      }
       throw VideoRecorderException(videoStopMessage, cause: error);
     }
   }
 
-  Future<CaptureMedia?> _captureThumbnail(
-    CameraMacOSController controller,
-  ) async {
+  Future<File?> _captureThumbnail(CameraMacOSController controller) async {
     try {
       final CameraMacOSFile? still = await controller.takePicture();
       final List<int>? bytes = still?.bytes;
@@ -1304,7 +1578,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       );
       final File file = File(path);
       await file.writeAsBytes(bytes, flush: true);
-      return CaptureFile(file: file, mime: videoThumbnailMime);
+      return file;
     } catch (error, stackTrace) {
       debugPrint('Video thumbnail capture failed: $error\n$stackTrace');
       return null;
@@ -1320,8 +1594,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     _controller = null;
     _preview = null;
     _previewDeviceId = null;
-    _previewAudioDeviceId = null;
     _ready = null;
+    await _sound.discard();
     if (controller == null) {
       return;
     }
@@ -1353,7 +1627,6 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     _controller = null;
     _preview = null;
     _previewDeviceId = null;
-    _previewAudioDeviceId = null;
     if (controller == null) {
       return;
     }
@@ -1378,6 +1651,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   @override
   Future<void> dispose() async {
     await release();
+    await _sound.dispose();
   }
 }
 

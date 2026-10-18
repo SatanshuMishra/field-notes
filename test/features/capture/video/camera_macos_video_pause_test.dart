@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:io';
 
 import 'package:camera_macos/camera_macos.dart';
 import 'package:fake_async/fake_async.dart';
@@ -7,7 +7,11 @@ import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../audio/live_audio_test_support.dart';
+
 const MethodChannel _cameraChannel = MethodChannel('camera_macos');
+const Duration _fileWorkWait = Duration(milliseconds: 5);
+const int _fileWorkTurns = 40;
 
 class _NativeCamera {
   final List<String> methods = <String>[];
@@ -31,16 +35,35 @@ class _NativeCamera {
   }
 }
 
-CameraMacosVideoRecorder _startedRecorder(FakeAsync async) {
-  final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
-    controller: CameraMacOSController(
-      CameraMacOSArguments(size: const Size(1280, 720)),
-    ),
-    microphonePermission: () async => true,
-  );
-  recorder.openSession('built-in-id');
-  unawaited(recorder.start());
-  async.flushMicrotasks();
+Future<CameraMacosVideoRecorder> _startedRecorder(
+  FakeAsync async,
+  Directory root,
+) async {
+  final FakeLiveAudio liveAudio = FakeLiveAudio();
+  final FakeMicrophone mic = FakeMicrophone();
+  late final CameraMacosVideoRecorder recorder;
+  bool started = false;
+  async.run((FakeAsync async) {
+    recorder = CameraMacosVideoRecorder(
+      temporaryDirectory: () async => root,
+      controller: CameraMacOSController(
+        CameraMacOSArguments(size: const Size(1280, 720)),
+      ),
+      microphonePermission: () async => true,
+      encoder: liveAudio,
+      audioJoiner: liveAudio,
+      audioRecorderFactory: () => mic,
+      chainRunner: passThroughChain,
+    );
+    recorder.openSession('built-in-id');
+    recorder.start().then((_) => started = true);
+  });
+  for (int turn = 0; turn < _fileWorkTurns && !started; turn += 1) {
+    await Future<void>.delayed(_fileWorkWait);
+    async.flushMicrotasks();
+  }
+  expect(started, isTrue);
+  expect(mic.startStreamConfigs, hasLength(1));
   return recorder;
 }
 
@@ -48,9 +71,11 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late _NativeCamera native;
+  late Directory root;
 
   setUp(() {
     native = _NativeCamera();
+    root = Directory.systemTemp.createTempSync('camera_macos_video_pause_');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_cameraChannel, native.handle);
   });
@@ -58,13 +83,20 @@ void main() {
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_cameraChannel, null);
+    if (root.existsSync()) {
+      root.deleteSync(recursive: true);
+    }
   });
 
-  test('a macOS take pauses and resumes the movie recording', () {
-    fakeAsync((FakeAsync async) {
-      native.pauseReplies.add(() => true);
-      native.resumeReplies.add(() => true);
-      final CameraMacosVideoRecorder recorder = _startedRecorder(async);
+  test('a macOS take pauses and resumes the movie recording', () async {
+    final FakeAsync async = FakeAsync();
+    native.pauseReplies.add(() => true);
+    native.resumeReplies.add(() => true);
+    final CameraMacosVideoRecorder recorder = await _startedRecorder(
+      async,
+      root,
+    );
+    async.run((FakeAsync async) {
       expect(native.methods, contains('startRecording'));
       expect(recorder.supportsPause, isTrue);
 
@@ -96,18 +128,21 @@ void main() {
     });
   });
 
-  test('a refused macOS pause leaves the take recording', () {
-    fakeAsync((FakeAsync async) {
-      native.pauseReplies
-        ..add(
-          () => throw PlatformException(
-            code: 'PAUSE_FAILED',
-            message: 'The movie output refused to pause',
-          ),
-        )
-        ..add(() => null);
-      final CameraMacosVideoRecorder recorder = _startedRecorder(async);
-
+  test('a refused macOS pause leaves the take recording', () async {
+    final FakeAsync async = FakeAsync();
+    native.pauseReplies
+      ..add(
+        () => throw PlatformException(
+          code: 'PAUSE_FAILED',
+          message: 'The movie output refused to pause',
+        ),
+      )
+      ..add(() => null);
+    final CameraMacosVideoRecorder recorder = await _startedRecorder(
+      async,
+      root,
+    );
+    async.run((FakeAsync async) {
       async.elapse(const Duration(seconds: 1));
 
       Object? firstError;

@@ -61,6 +61,9 @@ class Denoiser {
   final Pointer<Float> _input;
   final Pointer<Float> _output;
   bool _disposed = false;
+  double _voiceProbability = 0;
+
+  double get voiceProbability => _voiceProbability;
 
   Float32List process(Float32List frame) {
     if (frame.length != frameSize) {
@@ -74,7 +77,7 @@ class Denoiser {
       throw StateError('This denoiser has been disposed.');
     }
     _input.asTypedList(frameSize).setAll(0, frame);
-    _rnnoiseProcessFrame(_state, _output, _input);
+    _voiceProbability = _rnnoiseProcessFrame(_state, _output, _input);
     return Float32List.fromList(_output.asTypedList(frameSize));
   }
 

@@ -85,7 +85,7 @@ class _VoicePeaksBackfillState extends ConsumerState<VoicePeaksBackfill> {
     final String? mediaId = entry.mediaId;
     return entry.type == EntryType.voice &&
         !entry.isDeleted &&
-        entry.peaks == null &&
+        (entry.peaks?.isEmpty ?? true) &&
         mediaId != null &&
         mediaId.isNotEmpty;
   }
