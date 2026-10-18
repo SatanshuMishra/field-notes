@@ -317,4 +317,72 @@ void main() {
       'audioplayers_windows does not seek back and resume after the reload',
     );
   });
+
+  test('just_audio_windows sets the output before the source opens', () {
+    final String player = _read('$_justAudioSources/player.hpp');
+
+    final String loadSource = _between(
+      player,
+      'void AudioPlayer::loadSource(',
+      'Playback::MediaPlaybackItem AudioPlayer::createMediaPlaybackItem(',
+    );
+    final int routed = loadSource.indexOf('RouteToPreferredOutput();');
+    final int opened = loadSource.indexOf('mediaPlayer.Source(');
+    expect(routed, isNot(-1), reason: 'a load does not route the player');
+    expect(opened, isNot(-1), reason: 'loadSource sets no source');
+    expect(
+      routed,
+      lessThan(opened),
+      reason: 'the source opens before the output is set',
+    );
+
+    final String route = _between(
+      player,
+      'void RouteToPreferredOutput() {',
+      'void AudioPlayer::HandleMethodCall(',
+    );
+    expect(route, contains('mediaPlayer.AudioDevice(chosen);'));
+    expect(
+      route,
+      isNot(contains('.Completed(')),
+      reason: 'the output is still set from an asynchronous lookup',
+    );
+    _expectMatch(
+      route,
+      r'catch \(winrt::hresult_error const& error\) \{\s*'
+          r'output_pending_ = true;',
+      'a refused output is dropped instead of retried',
+    );
+
+    _expectMatch(
+      player,
+      r'media_opened_token_ = mediaPlayer\.MediaOpened\(\[this\]\(auto, auto\) -> void \{\s*'
+          r'if \(disposed_\) return;\s*'
+          r'if \(output_pending_\.exchange\(false\)\) \{\s*'
+          r'RouteToPreferredOutput\(\);',
+      'a refused output is not set again once the media opens',
+    );
+    _expectMatch(
+      player,
+      r'void ApplyPreferredOutputDevice\(\) \{\s*'
+          r'if \(disposed_\) return;\s*'
+          r'if \(mediaPlayer\.PlaybackSession\(\)\.PlaybackState\(\) == '
+          r'Playback::MediaPlaybackState::Opening\) \{\s*'
+          r'output_pending_ = true;\s*return;\s*\}\s*'
+          r'RouteToPreferredOutput\(\);',
+      'an output change during an open is not deferred to the open',
+    );
+
+    final Iterable<RegExpMatch> completions = RegExp(r'\.Completed\(')
+        .allMatches(player);
+    for (final RegExpMatch completion in completions) {
+      final String after = player.substring(completion.start);
+      final String block = after.substring(0, after.indexOf('});'));
+      expect(
+        block,
+        isNot(contains('AudioDevice(')),
+        reason: 'an asynchronous completion sets the output',
+      );
+    }
+  });
 }
