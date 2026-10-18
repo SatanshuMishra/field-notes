@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T03:19:30.924Z
+Updated: 2026-10-18T03:19:32.522Z
 Next ids: c1 D4 R2 S1
 
 ## Goal
@@ -15,8 +15,9 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs whose
 
 ## Next step
 
-All three MSPs are green with every advisory fixed and their slow checks passing alone: audio at f74029f5 (round 3), settings at 97e4b6f8 (audio merged over green 94831a4a; suite 5342 at 30428ffb), day-panel at 8f40db6a. The smoke tree is rebuilt at 66438b78 (settings 97e4b6f8 merged with day-panel 8f40db6a). Windows smoke passes (review/round-2/settings.smoke-windows.txt: a failed video open no longer crashes; recording and real decode stay unproven, the guest has no camera or GPU decode). macOS smoke passes (review/round-2/day-panel.smoke-macos.txt: full screen leaves one player, a finished log replays from 0:00). The Android smoke runs into review/round-2/settings.smoke-android.txt. Ship is prepared: glossary and ADRs committed on audio at 291a079c and merged into settings at 14daa129; comments saved as review/<msp>.comment.md; promote added nothing. After a passing Android smoke: record the ship boundary, run SHIP=1 run.zsh --resume (no head equals a reviewed green head, so mitosis gates all three), then open the PRs in stack order audio, settings, day-panel.
-Needs: D2.
+Run SHIP=1 ~/.mitosis/field-notes/voice-and-day-panel/run.zsh --resume, read each MSP's title, body, branch and base from its JSON result, then open the pull requests in stack order audio, settings, day-panel with GitHub MCP create_pull_request (draft false), assign each to the signed-in user and post review/<msp>.comment.md on it.
+
+Needs: R1.
 
 ## Decisions in force
 
