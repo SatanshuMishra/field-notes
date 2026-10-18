@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
-Status: parked
-Updated: 2026-10-18T09:30:50.878Z
+Status: done
+Updated: 2026-10-18T09:52:16.617Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
