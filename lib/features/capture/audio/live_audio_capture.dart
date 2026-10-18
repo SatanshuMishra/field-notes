@@ -8,6 +8,7 @@ import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/natural_voice_chain.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:record/record.dart';
 
 const int liveAudioSampleRate = 48000;
@@ -236,19 +237,36 @@ class _ActiveTake {
     required this.recorder,
     required this.chain,
     required this.encoderId,
+    required int volume,
     required this.writing,
-  }) : outputToSkip = chain.delaySamples;
+  }) : outputToSkip = chain.delaySamples,
+       studio = NaturalVoiceChain(profile: InputProfile.studio, volume: volume);
 
   final AudioRecorder recorder;
   final RunningVoiceChain chain;
+  final NaturalVoiceChain studio;
   final int encoderId;
   StreamSubscription<Uint8List>? chunks;
   Future<void> tail = Future<void>.value();
   bool writing;
   bool paused = false;
+  bool chainBroken = false;
+  Uint8List carriedByte = Uint8List(0);
   int outputToSkip;
+  int samplesHeard = 0;
+  int samplesSent = 0;
   int samplesWritten = 0;
-  Object? failure;
+
+  Uint8List wholeSamplesOf(Uint8List chunk) {
+    final Uint8List joined = carriedByte.isEmpty
+        ? chunk
+        : (Uint8List(carriedByte.length + chunk.length)
+            ..setAll(0, carriedByte)
+            ..setAll(carriedByte.length, chunk));
+    final int whole = joined.length - joined.length % _bytesPerSample;
+    carriedByte = Uint8List.fromList(Uint8List.sublistView(joined, whole));
+    return Uint8List.sublistView(joined, 0, whole);
+  }
 }
 
 class LiveAudioCapture {
@@ -316,6 +334,7 @@ class LiveAudioCapture {
       recorder: recorder,
       chain: chain,
       encoderId: encoderId,
+      volume: volume,
       writing: !armed,
     );
     _take = take;
@@ -325,7 +344,9 @@ class LiveAudioCapture {
       );
       take.chunks = chunks.listen(
         (Uint8List chunk) => _receive(take, chunk),
-        onError: (Object error) => take.failure ??= error,
+        onError: (Object error, StackTrace stackTrace) => debugPrint(
+          'Live audio microphone error, still listening: $error\n$stackTrace',
+        ),
       );
     } catch (_) {
       if (identical(_take, take)) {
@@ -360,30 +381,61 @@ class LiveAudioCapture {
   }
 
   void _receive(_ActiveTake take, Uint8List chunk) {
-    if (take.paused || chunk.isEmpty) {
+    final Uint8List whole = take.wholeSamplesOf(chunk);
+    if (take.paused || whole.isEmpty) {
       return;
     }
     final bool writing = take.writing;
-    take.tail = take.tail.then((_) => _process(take, chunk, writing));
+    take.tail = take.tail.then((_) => _process(take, whole, writing));
   }
 
   Future<void> _process(_ActiveTake take, Uint8List chunk, bool writing) async {
-    if (take.failure != null) {
-      return;
+    final Uint8List processed = await _cleaned(take, chunk, writing);
+    if (writing) {
+      take.samplesHeard += chunk.lengthInBytes ~/ _bytesPerSample;
+    }
+    final double? level = inputLevelOf(processed, _meterVolume);
+    if (level != null && !_levels.isClosed) {
+      _levels.add(level);
+    }
+    await _append(take, processed);
+  }
+
+  Future<Uint8List> _cleaned(
+    _ActiveTake take,
+    Uint8List chunk,
+    bool writing,
+  ) async {
+    if (take.chainBroken) {
+      return writing ? take.studio.process(chunk) : Uint8List(0);
     }
     try {
       if (!writing) {
         take.outputToSkip += chunk.lengthInBytes ~/ _bytesPerSample;
       }
-      final Uint8List processed = await take.chain.process(chunk);
-      final double? level = inputLevelOf(processed, _meterVolume);
-      if (level != null && !_levels.isClosed) {
-        _levels.add(level);
-      }
-      await _append(take, processed);
-    } catch (error) {
-      take.failure ??= error;
+      return await take.chain.process(chunk);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Voice chain failed, writing the input at its volume: '
+        '$error\n$stackTrace',
+      );
+      return _afterChainBroke(take, chunk, writing);
     }
+  }
+
+  Uint8List _afterChainBroke(_ActiveTake take, Uint8List chunk, bool writing) {
+    take.chainBroken = true;
+    take.outputToSkip = 0;
+    if (!writing) {
+      return Uint8List(0);
+    }
+    final int lostToTheChain = take.samplesHeard - take.samplesSent;
+    final Uint8List input = take.studio.process(chunk);
+    if (lostToTheChain <= 0) {
+      return input;
+    }
+    return Uint8List(lostToTheChain * _bytesPerSample + input.length)
+      ..setAll(lostToTheChain * _bytesPerSample, input);
   }
 
   Future<void> _append(_ActiveTake take, Uint8List processed) async {
@@ -400,8 +452,31 @@ class LiveAudioCapture {
       skipped * _bytesPerSample,
       samples * _bytesPerSample,
     );
-    await _encoder.append(take.encoderId, kept);
-    take.samplesWritten += samples - skipped;
+    final int count = samples - skipped;
+    take.samplesSent += count;
+    try {
+      await _encoder.append(take.encoderId, kept);
+      take.samplesWritten += count;
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Live audio append failed, $count samples missed: '
+        '$error\n$stackTrace',
+      );
+    }
+  }
+
+  Future<void> _appendRest(_ActiveTake take) async {
+    if (take.chainBroken) {
+      return;
+    }
+    final Uint8List rest;
+    try {
+      rest = await take.chain.flush();
+    } catch (error, stackTrace) {
+      debugPrint('Voice chain flush failed: $error\n$stackTrace');
+      return;
+    }
+    await _append(take, rest);
   }
 
   Future<LiveAudioTake> stop() async {
@@ -410,22 +485,14 @@ class LiveAudioCapture {
       throw StateError('No live audio take is running.');
     }
     try {
-      await take.recorder.stop();
-      await take.chunks?.cancel();
+      await _quietly(take.recorder.stop);
+      await _quietly(() async => take.chunks?.cancel());
       await take.tail;
-      final Object? failure = take.failure;
-      if (failure != null) {
-        throw failure;
-      }
-      await _append(take, await take.chain.flush());
-      final String path = await _encoder.close(take.encoderId);
+      await _appendRest(take);
       return LiveAudioTake(
-        path: path,
+        path: await _closed(take),
         durationMs: _durationOf(take.samplesWritten).inMilliseconds,
       );
-    } catch (_) {
-      await _quietly(() => _encoder.cancel(take.encoderId));
-      rethrow;
     } finally {
       await _quietly(take.chain.close);
       if (identical(_take, take)) {
@@ -433,6 +500,18 @@ class LiveAudioCapture {
       }
     }
   }
+
+  Future<String> _closed(_ActiveTake take) async {
+    try {
+      return await _encoder.close(take.encoderId);
+    } catch (_) {
+      await _discardAfterFailedClose(take);
+      rethrow;
+    }
+  }
+
+  Future<void> _discardAfterFailedClose(_ActiveTake take) =>
+      _quietly(() => _encoder.cancel(take.encoderId));
 
   Future<void> cancel() async {
     _generation += 1;

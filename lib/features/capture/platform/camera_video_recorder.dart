@@ -296,20 +296,15 @@ class _LiveSound {
       rethrow;
     }
     _pending = picture;
-    try {
-      final File movie = await _join(picture);
-      _pending = null;
-      return _recordingOf(movie, picture.thumbnail, picture.durationMs);
-    } on VideoSegmentsKeptException {
-      rethrow;
-    } catch (_) {
-      await _dropPending();
-      rethrow;
-    }
+    final LiveAudioTake? sound = await _finished();
+    final File movie = sound == null
+        ? picture.movie
+        : await _join(picture, sound);
+    _pending = null;
+    return _recordingOf(movie, picture.thumbnail, picture.durationMs);
   }
 
-  Future<File> _join(_Picture picture) async {
-    final LiveAudioTake sound = await _finished();
+  Future<File> _join(_Picture picture, LiveAudioTake sound) async {
     final String output;
     try {
       output = await _folder.freshPath(videoRecordingFileName);
@@ -342,7 +337,7 @@ class _LiveSound {
     return File(joined);
   }
 
-  Future<LiveAudioTake> _finished() async {
+  Future<LiveAudioTake?> _finished() async {
     final LiveAudioTake? done = _take;
     if (done != null) {
       return done;
@@ -351,8 +346,12 @@ class _LiveSound {
       final LiveAudioTake take = await _capture.stop();
       _take = take;
       return take;
-    } catch (error) {
-      throw VideoRecorderException(videoStopMessage, cause: error);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'Live sound could not be finished, keeping the picture alone: '
+        '$error\n$stackTrace',
+      );
+      return null;
     }
   }
 

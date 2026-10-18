@@ -30,6 +30,8 @@ class _Camera extends CameraPlatform {
   int _written = 0;
   final StreamController<CameraInitializedEvent> _initialized =
       StreamController<CameraInitializedEvent>.broadcast();
+  final StreamController<CameraErrorEvent> _errors =
+      StreamController<CameraErrorEvent>.broadcast();
 
   String _write(String extension, List<int> bytes) {
     _written += 1;
@@ -81,8 +83,7 @@ class _Camera extends CameraPlatform {
       _initialized.stream;
 
   @override
-  Stream<CameraErrorEvent> onCameraError(int cameraId) =>
-      const Stream<CameraErrorEvent>.empty();
+  Stream<CameraErrorEvent> onCameraError(int cameraId) => _errors.stream;
 
   @override
   Stream<DeviceOrientationChangedEvent> onDeviceOrientationChanged() =>
