@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: active
-Updated: 2026-10-18T23:23:58.746Z
+Updated: 2026-10-18T23:24:01.291Z
 Next ids: c6 D1 R1 S1
 
 ## Goal
@@ -32,5 +32,8 @@ Record the interphase hand-off boundary, cut the FEATURE branch, write the run h
 ## Where the details live
 
 - Code: lib/data/crypto/key_store.dart
-- Spec: docs/specs/e2e-device-sync.md item 28
+- Spec: docs/specs/mac-keychain-single-item.md (decisions, record, items and repro beside it)
+- ADR: docs/adr/0004-keep-mac-sync-keys-in-one-keychain-item.md
+- Spec to update: docs/specs/e2e-device-sync.md item 28
+- Run home: ~/.mitosis/field-notes/mac-keychain-single-item/
 - Evidence: login keychain service flutter_secure_storage_service, v1.3.0 cdhash 4f82d402 trusted on 2 of 6 items (2026-10-18)
