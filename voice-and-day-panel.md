@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T01:51:10.520Z
+Updated: 2026-10-18T01:52:39.748Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs whose
 
 ## Next step
 
-Audio's round-2 findings (C1 MEDIUM append gap shifts sound ahead of picture, C2 LOW duplicated systemDefaultAudioInput, S1 LOW soundless video saved silently) are with the validator; record and verdict follow. Settings' round-2 code review and security review and day-panel's round-2 code review run; validate each as it returns, then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
+Audio's round-2 findings (C1 MEDIUM append gap shifts sound ahead of picture, C2 LOW duplicated systemDefaultAudioInput, S1 LOW soundless video saved silently) are with the validator; record and verdict follow. Day-panel's one round-2 finding (C1 LOW, card play after a log ends resumes near the end instead of 0:00) is with its validator. Settings' round-2 code review and security review run; validate each as it returns, then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
 
 Needs: D2.
 
