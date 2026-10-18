@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T01:42:14.972Z
+Updated: 2026-10-18T01:43:20.222Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs whose
 
 ## Next step
 
-After the day-panel suite, run the settings suite, then dispatch round 2 reviews (code-reviewer on all three; security-reviewer on audio and settings) with previous_head set to each round-1 head, then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
+Audio's round-2 code and security reviews run from review/round-2/audio.{code,security}-reviewer.md. After the day-panel suite, run the settings suite, then dispatch the remaining round 2 reviews (code-reviewer on settings and day-panel; security-reviewer on settings) with previous_head set to each round-1 head, then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
 
 Needs: D2.
 
