@@ -12,6 +12,7 @@ import 'package:field_notes/features/settings/spell_check_availability.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
 import 'package:field_notes/state/journal_providers.dart';
 import 'package:field_notes/state/repository_providers.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -157,6 +158,35 @@ Future<void> _showRecorderPanel(
 
 Finder _inMenu(Key menu, Finder finder) =>
     find.descendant(of: find.byKey(menu), matching: finder);
+
+Future<void> _showPhoneVoiceSettings(
+  WidgetTester tester,
+  FakeSettingsRepository repository,
+) async {
+  tester.view.physicalSize = const Size(384, 832);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    ProviderScope(
+      key: UniqueKey(),
+      overrides: _settingsOverrides(repository),
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: fieldNotesTheme(platform: TargetPlatform.android),
+        home: Scaffold(
+          backgroundColor: FieldNotesColors.light.page,
+          body: const SettingsScreen(),
+        ),
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+  final Finder voice = find.byKey(settingsTabKey(SettingsTab.voice));
+  await tester.ensureVisible(voice);
+  await tester.pumpAndSettle();
+  await tester.tap(voice);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('settings opens the device menu under the row', (
@@ -306,4 +336,29 @@ void main() {
     expect(repository.inputProfileWrites, isEmpty);
     expect(find.byType(InputLevelMeter), findsOneWidget);
   }, variant: TargetPlatformVariant.only(TargetPlatform.macOS));
+
+  testWidgets('escape closes a menu that lost focus', (
+    WidgetTester tester,
+  ) async {
+    final FakeSettingsRepository repository = FakeSettingsRepository();
+    await _showPhoneVoiceSettings(tester, repository);
+    final Finder row = find.byKey(inputDeviceRowKey);
+    await tester.ensureVisible(row);
+    await tester.pumpAndSettle();
+    final TestGesture touch = await tester.startGesture(
+      tester.getCenter(row),
+      kind: PointerDeviceKind.touch,
+    );
+    await touch.up();
+    await tester.pumpAndSettle();
+    expect(find.byKey(inputDeviceMenuKey), findsOneWidget);
+
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(inputDeviceMenuKey), findsNothing);
+    expect(repository.audioInputIdWrites, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }
