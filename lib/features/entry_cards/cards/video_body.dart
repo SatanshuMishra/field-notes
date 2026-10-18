@@ -585,8 +585,7 @@ class _VideoBodyState extends State<VideoBody> {
   }
 
   void _syncFocus(VideoPlaybackState state) {
-    if (state == VideoPlaybackState.paused ||
-        state == VideoPlaybackState.completed) {
+    if (state == VideoPlaybackState.completed) {
       _focus.release(this);
     }
   }
