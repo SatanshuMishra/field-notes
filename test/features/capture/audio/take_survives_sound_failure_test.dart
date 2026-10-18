@@ -294,6 +294,7 @@ void main() {
         final VoiceRecording take = await recorder.stop();
 
         final File kept = (take.media as CaptureFile).file;
+        expect(mic.startStreamConfigs, hasLength(1));
         expect(kept.path, liveAudio.soundPath);
         expect(kept.existsSync(), isTrue);
         expect(liveAudio.closes, 1);

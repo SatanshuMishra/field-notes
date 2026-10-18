@@ -10,12 +10,16 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../audio/live_audio_test_support.dart';
+
 const String _integratedCamera = r'Integrated Camera <\\?\usb#vid_04f2>';
 const String _usbCamera = r'USB Camera <\\?\usb#vid_046d>';
 const int _cameraId = 3;
 const Key _platformPreviewKey = ValueKey<String>('windows-platform-preview');
 const List<int> _movieBytes = <int>[0, 0, 0, 24];
 const List<int> _stillBytes = <int>[0xFF, 0xD8, 0xFF, 0xD9];
+const Duration _fileWorkWait = Duration(milliseconds: 5);
+const int _fileWorkTurns = 40;
 
 class _FakeWindowsCamera extends CameraPlatform {
   _FakeWindowsCamera({required this.names, required this.root});
@@ -161,10 +165,14 @@ void main() {
 
   late Directory root;
   late CameraPlatform original;
+  late FakeMicrophone mic;
+  late FakeLiveAudio liveAudio;
 
   setUp(() async {
     root = await Directory.systemTemp.createTemp('windows_camera_test_');
     original = CameraPlatform.instance;
+    mic = FakeMicrophone();
+    liveAudio = FakeLiveAudio();
   });
 
   tearDown(() async {
@@ -181,12 +189,29 @@ void main() {
     return camera;
   }
 
+  CameraWindowsVideoRecorder newRecorder(
+    Directory temporary, {
+    Future<void> Function(String? endpointId)? setAudioInputDevice,
+  }) => CameraWindowsVideoRecorder(
+    temporaryDirectory: () async => temporary,
+    setAudioInputDevice: setAudioInputDevice,
+    encoder: liveAudio,
+    audioJoiner: liveAudio,
+    audioRecorderFactory: () => mic,
+    chainRunner: passThroughChain,
+  );
+
+  FakeSoundJoin soundJoinOf(VideoRecording recording) {
+    final String kept = _captureFile(recording.media).path;
+    return liveAudio.joins.singleWhere(
+      (FakeSoundJoin join) => join.output == kept,
+    );
+  }
+
   Future<CameraWindowsVideoRecorder> recordingRecorder(
     Directory temporary,
   ) async {
-    final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
-      temporaryDirectory: () async => temporary,
-    );
+    final CameraWindowsVideoRecorder recorder = newRecorder(temporary);
     final List<VideoCaptureDevice> devices = await recorder.listDevices();
     recorder.openSession(devices.first.id);
     await recorder.start();
@@ -195,9 +220,7 @@ void main() {
 
   test('Windows lists every camera by name and can pause', () async {
     installCamera(const <String>[_integratedCamera, _usbCamera]);
-    final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
-      temporaryDirectory: () async => root,
-    );
+    final CameraWindowsVideoRecorder recorder = newRecorder(root);
 
     expect(await recorder.listDevices(), const <VideoCaptureDevice>[
       VideoCaptureDevice(id: _integratedCamera, label: 'Integrated Camera'),
@@ -206,7 +229,10 @@ void main() {
     expect(recorder.supportsPause, isTrue);
     expect(recorder, isNot(isA<CameraControls>()));
     await expectLater(recorder.pause(), throwsA(isA<VideoRecorderException>()));
-    await expectLater(recorder.resume(), throwsA(isA<VideoRecorderException>()));
+    await expectLater(
+      recorder.resume(),
+      throwsA(isA<VideoRecorderException>()),
+    );
   });
 
   test("Windows moves the finished recording and its still out of the user's "
@@ -228,7 +254,10 @@ void main() {
     expect(p.dirname(still.path), captures);
     expect(p.basename(movie.path), matches(RegExp(r'^video_\d+\.mp4$')));
     expect(p.basename(still.path), matches(RegExp(r'^video_thumb_\d+\.jpg$')));
-    expect(movie.readAsBytesSync(), _movieBytes);
+    expect(movie.readAsBytesSync(), fakeJoinedBytes);
+    expect(soundJoinOf(recording).videoBytes, _movieBytes);
+    expect(p.dirname(soundJoinOf(recording).video), captures);
+    expect(File(soundJoinOf(recording).video).existsSync(), isFalse);
     expect(still.readAsBytesSync(), _stillBytes);
     expect(File(camera.stoppedTakes.single).existsSync(), isFalse);
     expect(File(camera.stills.single).existsSync(), isFalse);
@@ -285,14 +314,14 @@ void main() {
       final File movie = _captureFile(recording.media);
       final Directory captures = Directory(p.join(temporary.path, 'captures'));
 
-      expect(movie.path, camera.stoppedTakes.single);
-      expect(movie.readAsBytesSync(), _movieBytes);
+      expect(soundJoinOf(recording).video, camera.stoppedTakes.single);
+      expect(soundJoinOf(recording).videoBytes, _movieBytes);
       expect(
         captures
             .listSync()
             .map((FileSystemEntity entity) => p.basename(entity.path))
             .where((String name) => name.endsWith('.mp4')),
-        isEmpty,
+        <String>[p.basename(movie.path)],
       );
       expect(p.dirname(_captureFile(recording.thumbnail).path), captures.path);
 
@@ -317,9 +346,7 @@ void main() {
 
   test('two Windows cameras with one name are told apart', () async {
     installCamera(const <String>['Cam <a>', 'Cam <b>']);
-    final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
-      temporaryDirectory: () async => root,
-    );
+    final CameraWindowsVideoRecorder recorder = newRecorder(root);
 
     expect(await recorder.listDevices(), const <VideoCaptureDevice>[
       VideoCaptureDevice(id: 'Cam <a>', label: 'Cam'),
@@ -337,9 +364,7 @@ void main() {
         'Cam <b>',
         'Cam <c>',
       ]);
-      final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
-        temporaryDirectory: () async => root,
-      );
+      final CameraWindowsVideoRecorder recorder = newRecorder(root);
 
       expect(
         (await recorder.listDevices()).map(
@@ -403,8 +428,8 @@ void main() {
     'Windows previews the camera at its own aspect ratio without turning it',
     (WidgetTester tester) async {
       installCamera(const <String>[_integratedCamera]);
-      final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
-        temporaryDirectory: () async => root,
+      final CameraWindowsVideoRecorder recorder = newRecorder(
+        root,
         setAudioInputDevice: (String? endpointId) async {},
       );
       final List<VideoCaptureDevice> devices = await recorder.listDevices();
@@ -439,9 +464,7 @@ void main() {
       final _FakeWindowsCamera camera = installCamera(const <String>[
         _usbCamera,
       ])..holdInitialisation = true;
-      final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
-        temporaryDirectory: () async => root,
-      );
+      final CameraWindowsVideoRecorder recorder = newRecorder(root);
       final List<VideoCaptureDevice> devices = await recorder.listDevices();
       recorder.openSession(devices.single.id);
 
@@ -455,6 +478,15 @@ void main() {
             })
             .whenComplete(() => answered = true),
       );
+      for (
+        int turn = 0;
+        turn < _fileWorkTurns && mic.startStreamConfigs.isEmpty;
+        turn += 1
+      ) {
+        await tester.runAsync(() => Future<void>.delayed(_fileWorkWait));
+        await tester.pump();
+      }
+      expect(mic.startStreamConfigs, hasLength(1));
 
       await tester.pump(cameraStartTimeout - const Duration(seconds: 1));
       expect(answered, isFalse);

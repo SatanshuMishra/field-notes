@@ -9,6 +9,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
+import '../audio/live_audio_test_support.dart';
+
 const MethodChannel _cameraChannel = MethodChannel('camera_macos');
 
 const Map<String, Object?> _builtInDevice = <String, Object?>{
@@ -25,25 +27,36 @@ const Map<String, Object?> _usbDevice = <String, Object?>{
   'deviceId': 'usb-id',
 };
 
-const String _stoppedVideoPath = '/tmp/field_notes_camera_macos_test.mp4';
+const List<int> _movieBytes = <int>[0, 0, 0, 24];
 
 final Uint8List _stillJpegBytes = Uint8List.fromList(<int>[
-  0xFF, 0xD8, 0xFF, 0xDB, 0x00, 0x43, 0x00, 0x08, 0xFF, 0xD9,
+  0xFF,
+  0xD8,
+  0xFF,
+  0xDB,
+  0x00,
+  0x43,
+  0x00,
+  0x08,
+  0xFF,
+  0xD9,
 ]);
 
 class _NativeCameraSpy {
   final List<MethodCall> calls = <MethodCall>[];
   Completer<void>? initGate;
   Map<String, Object?>? takePictureError;
+  String? stoppedMoviePath;
 
   List<String> get methods =>
       calls.map((MethodCall call) => call.method).toList();
 
-  int countOf(String method) =>
-      methods.where((String m) => m == method).length;
+  int countOf(String method) => methods.where((String m) => m == method).length;
 
   Map<Object?, Object?> argumentsOf(String method) {
-    return calls.firstWhere((MethodCall call) => call.method == method).arguments
+    return calls
+            .firstWhere((MethodCall call) => call.method == method)
+            .arguments
         as Map<Object?, Object?>;
   }
 
@@ -71,13 +84,14 @@ class _NativeCameraSpy {
         if (failure != null) {
           return <String, Object?>{'error': failure};
         }
-        return <String, Object?>{
-          'imageData': _stillJpegBytes,
-          'error': null,
-        };
+        return <String, Object?>{'imageData': _stillJpegBytes, 'error': null};
       case 'stopRecording':
+        final String movie = stoppedMoviePath!;
+        File(movie)
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(_movieBytes);
         return <String, Object?>{
-          'url': _stoppedVideoPath,
+          'url': movie,
           'videoData': null,
           'error': null,
         };
@@ -94,10 +108,15 @@ void main() {
 
   late _NativeCameraSpy native;
   late Directory temp;
+  late FakeMicrophone mic;
+  late FakeLiveAudio liveAudio;
 
   setUp(() async {
-    native = _NativeCameraSpy();
     temp = await Directory.systemTemp.createTemp('camera_macos_thumb_');
+    native = _NativeCameraSpy()
+      ..stoppedMoviePath = p.join(temp.path, 'camera', 'take.mp4');
+    mic = FakeMicrophone();
+    liveAudio = FakeLiveAudio();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(_cameraChannel, native.handle);
   });
@@ -108,20 +127,26 @@ void main() {
     await temp.delete(recursive: true);
   });
 
-  test('listDevices maps the enumerated cameras to their ids and names',
-      () async {
-    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
+  test(
+    'listDevices maps the enumerated cameras to their ids and names',
+    () async {
+      final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
-    final List<VideoCaptureDevice> devices = await recorder.listDevices();
+      final List<VideoCaptureDevice> devices = await recorder.listDevices();
 
-    expect(devices, <VideoCaptureDevice>[
-      const VideoCaptureDevice(id: 'built-in-id', label: 'FaceTime HD Camera'),
-      const VideoCaptureDevice(id: 'usb-id', label: 'Logitech StreamCam'),
-    ]);
-  });
+      expect(devices, <VideoCaptureDevice>[
+        const VideoCaptureDevice(
+          id: 'built-in-id',
+          label: 'FaceTime HD Camera',
+        ),
+        const VideoCaptureDevice(id: 'usb-id', label: 'Logitech StreamCam'),
+      ]);
+    },
+  );
 
-  testWidgets('the preview initialises the camera the caller asked for',
-      (WidgetTester tester) async {
+  testWidgets('the preview initialises the camera the caller asked for', (
+    WidgetTester tester,
+  ) async {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
     await tester.pumpWidget(
@@ -136,8 +161,9 @@ void main() {
     await recorder.release();
   });
 
-  testWidgets('the preview initialises the camera in the jpeg still format',
-      (WidgetTester tester) async {
+  testWidgets('the preview initialises the camera in the jpeg still format', (
+    WidgetTester tester,
+  ) async {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
     await tester.pumpWidget(
@@ -151,8 +177,9 @@ void main() {
     await recorder.release();
   });
 
-  testWidgets('releasing the recorder destroys the native capture session',
-      (WidgetTester tester) async {
+  testWidgets('releasing the recorder destroys the native capture session', (
+    WidgetTester tester,
+  ) async {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
     await tester.pumpWidget(
@@ -171,8 +198,9 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('releasing twice destroys the native session only once',
-      (WidgetTester tester) async {
+  testWidgets('releasing twice destroys the native session only once', (
+    WidgetTester tester,
+  ) async {
     final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
 
     await tester.pumpWidget(
@@ -193,66 +221,74 @@ void main() {
   });
 
   testWidgets(
-      'releasing during the init warmup still destroys the session once it '
-      'materialises', (WidgetTester tester) async {
-    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
-    final Completer<void> initGate = Completer<void>();
-    native.initGate = initGate;
+    'releasing during the init warmup still destroys the session once it '
+    'materialises',
+    (WidgetTester tester) async {
+      final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
+      final Completer<void> initGate = Completer<void>();
+      native.initGate = initGate;
 
-    await tester.pumpWidget(
-      MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
-    );
-    await tester.pump();
+      await tester.pumpWidget(
+        MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
+      );
+      await tester.pump();
 
-    expect(native.methods, contains('initialize'));
-    expect(native.countOf('destroy'), 0);
+      expect(native.methods, contains('initialize'));
+      expect(native.countOf('destroy'), 0);
 
-    await recorder.release();
-    expect(native.countOf('destroy'), 0);
+      await recorder.release();
+      expect(native.countOf('destroy'), 0);
 
-    initGate.complete();
-    await tester.pumpAndSettle();
+      initGate.complete();
+      await tester.pumpAndSettle();
 
-    expect(native.countOf('destroy'), 1);
+      expect(native.countOf('destroy'), 1);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   testWidgets(
-      'a controller that arrives after release is not adopted by the next '
-      'session', (WidgetTester tester) async {
-    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
-    final Completer<void> firstInit = Completer<void>();
-    native.initGate = firstInit;
+    'a controller that arrives after release is not adopted by the next '
+    'session',
+    (WidgetTester tester) async {
+      final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder();
+      final Completer<void> firstInit = Completer<void>();
+      native.initGate = firstInit;
 
-    await tester.pumpWidget(
-      MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
+      await tester.pumpWidget(
+        MaterialApp(home: SizedBox(child: recorder.openSession('usb-id'))),
+      );
+      await tester.pump();
+      await recorder.release();
+
+      native.initGate = null;
+      await tester.pumpWidget(
+        MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
+      );
+      await tester.pump();
+
+      firstInit.complete();
+      await tester.pumpAndSettle();
+
+      expect(native.countOf('destroy'), greaterThanOrEqualTo(1));
+
+      await recorder.release();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets('stopping a recording returns a jpeg thumbnail written to disk', (
+    WidgetTester tester,
+  ) async {
+    final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
+      temporaryDirectory: () async => temp,
+      microphonePermission: () async => true,
+      encoder: liveAudio,
+      audioJoiner: liveAudio,
+      audioRecorderFactory: () => mic,
+      chainRunner: passThroughChain,
     );
-    await tester.pump();
-    await recorder.release();
-
-    native.initGate = null;
-    await tester.pumpWidget(
-      MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
-    );
-    await tester.pump();
-
-    firstInit.complete();
-    await tester.pumpAndSettle();
-
-    expect(native.countOf('destroy'), greaterThanOrEqualTo(1));
-
-    await recorder.release();
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
-
-  testWidgets('stopping a recording returns a jpeg thumbnail written to disk',
-      (WidgetTester tester) async {
-    final CameraMacosVideoRecorder recorder =
-        CameraMacosVideoRecorder(
-          temporaryDirectory: () async => temp,
-          microphonePermission: () async => true,
-        );
 
     await tester.pumpWidget(
       MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
@@ -277,42 +313,60 @@ void main() {
 
     expect(native.methods, contains('takePicture'));
     expect(recording.media.mime, videoRecordingMime);
-    expect((recording.media as CaptureFile).file.path, _stoppedVideoPath);
+    final FakeSoundJoin join = liveAudio.joins.single;
+    expect(join.video, native.stoppedMoviePath);
+    expect(join.videoBytes, _movieBytes);
+    expect((recording.media as CaptureFile).file.path, join.output);
 
     await recorder.release();
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('a failed still capture still returns the finished recording',
-      (WidgetTester tester) async {
-    final CameraMacosVideoRecorder recorder =
-        CameraMacosVideoRecorder(
-          temporaryDirectory: () async => temp,
-          microphonePermission: () async => true,
-        );
-    native.takePictureError = <String, Object?>{
-      'code': 'PHOTO_OUTPUT_ERROR',
-      'message': 'imageData is empty or invalid',
-    };
+  testWidgets(
+    'a failed still capture still returns the finished recording when its '
+    'sound fails too',
+    (WidgetTester tester) async {
+      final CameraMacosVideoRecorder recorder = CameraMacosVideoRecorder(
+        temporaryDirectory: () async => temp,
+        microphonePermission: () async => true,
+        encoder: liveAudio,
+        audioJoiner: liveAudio,
+        audioRecorderFactory: () => mic,
+        chainRunner: passThroughChain,
+      );
+      native.takePictureError = <String, Object?>{
+        'code': 'PHOTO_OUTPUT_ERROR',
+        'message': 'imageData is empty or invalid',
+      };
+      liveAudio.closeFails = true;
 
-    await tester.pumpWidget(
-      MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(home: SizedBox(child: recorder.openSession('built-in-id'))),
+      );
+      await tester.pumpAndSettle();
 
-    late VideoRecording recording;
-    await tester.runAsync(() async {
-      await recorder.start();
-      recording = await recorder.stop();
-    });
+      late VideoRecording recording;
+      await tester.runAsync(() async {
+        await recorder.start();
+        recording = await recorder.stop();
+      });
 
-    expect(recording.thumbnail, isNull);
-    expect(native.methods, contains('stopRecording'));
-    expect(recording.media.mime, videoRecordingMime);
-    expect((recording.media as CaptureFile).file.path, _stoppedVideoPath);
-    expect(temp.listSync(), isEmpty);
+      expect(recording.thumbnail, isNull);
+      expect(native.methods, contains('stopRecording'));
+      expect(recording.media.mime, videoRecordingMime);
+      final File movie = (recording.media as CaptureFile).file;
+      expect(movie.path, native.stoppedMoviePath);
+      expect(movie.readAsBytesSync(), _movieBytes);
+      expect(liveAudio.joins, isEmpty);
+      expect(
+        temp
+            .listSync(recursive: true)
+            .where((FileSystemEntity entity) => entity.path.endsWith('.jpg')),
+        isEmpty,
+      );
 
-    await recorder.release();
-    await tester.pumpWidget(const SizedBox.shrink());
-  });
+      await recorder.release();
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 }

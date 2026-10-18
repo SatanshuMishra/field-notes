@@ -67,14 +67,21 @@ class FakeMicrophone extends Fake implements AudioRecorder {
   @override
   Future<String?> stop() async {
     events.add('mic.stop');
-    await _chunks?.close();
+    _endStream();
     return null;
   }
 
   @override
   Future<void> cancel() async {
     events.add('mic.cancel');
-    await _chunks?.close();
+    _endStream();
+  }
+
+  void _endStream() {
+    final StreamController<Uint8List>? chunks = _chunks;
+    if (chunks != null) {
+      unawaited(chunks.close());
+    }
   }
 
   @override
@@ -101,8 +108,10 @@ class FakeLiveAudio extends Fake implements LiveEncoder, AudioJoiner {
     this.appendFails = false,
     this.closeFails = false,
     this.joinFails = false,
+    this.writesFiles = true,
   });
 
+  final bool writesFiles;
   bool appendFails;
   bool closeFails;
   bool joinFails;
@@ -133,9 +142,11 @@ class FakeLiveAudio extends Fake implements LiveEncoder, AudioJoiner {
       channels: channels,
       bitRate: bitRate,
     ));
-    File(path)
-      ..createSync(recursive: true)
-      ..writeAsBytesSync(fakeSoundBytes);
+    if (writesFiles) {
+      File(path)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(fakeSoundBytes);
+    }
     final int id = _firstEncoderId + _paths.length;
     _paths[id] = path;
     return id;
@@ -162,7 +173,7 @@ class FakeLiveAudio extends Fake implements LiveEncoder, AudioJoiner {
   Future<void> cancel(int id) async {
     cancels += 1;
     final String? path = _paths[id];
-    if (path != null && File(path).existsSync()) {
+    if (writesFiles && path != null && File(path).existsSync()) {
       File(path).deleteSync();
     }
   }

@@ -105,7 +105,7 @@ Future<Object?> _nativeMacosCamera(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('android records 1080p at 4 Mbps with 96 kbps audio', () async {
+  test('android records 1080p at 4 Mbps with the camera sound off', () async {
     final CameraPlatform original = CameraPlatform.instance;
     final _SettingsRecordingCamera camera = _SettingsRecordingCamera();
     CameraPlatform.instance = camera;
@@ -120,13 +120,12 @@ void main() {
 
     expect(settings.resolutionPreset, ResolutionPreset.veryHigh);
     expect(settings.videoBitrate, 4000000);
-    expect(settings.audioBitrate, 96000);
-    expect(settings.enableAudio, isTrue);
+    expect(settings.audioBitrate, isNull);
+    expect(settings.enableAudio, isFalse);
   });
 
-  testWidgets('macOS passes 1080p, AAC audio and 4 Mbps to the plugin', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('macOS passes 1080p and 4 Mbps with no camera sound to the '
+      'plugin', (WidgetTester tester) async {
     final List<MethodCall> calls = <MethodCall>[];
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
@@ -153,7 +152,8 @@ void main() {
 
     expect(arguments['useMovieFileOutput'], isTrue);
     expect(arguments['movieResolution'], 'veryHigh');
-    expect(arguments['audioBitrate'], 96000);
+    expect(arguments['enableAudio'], isFalse);
+    expect(arguments['audioBitrate'], isNull);
     expect(arguments['videoBitrate'], 4000000);
   });
 }
