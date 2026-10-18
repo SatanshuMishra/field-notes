@@ -8,7 +8,6 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
-import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
@@ -22,19 +21,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
-import 'package:record/record.dart'
-    show AudioEncoder, AudioRecorder, RecordConfig;
+import 'package:record/record.dart' show AudioEncoder, RecordConfig;
 
+import '../audio/live_audio_test_support.dart';
 import 'video_test_support.dart';
 
-const MethodChannel _liveAudioChannel = MethodChannel('field_notes/live_audio');
 const MethodChannel _cameraMacosChannel = MethodChannel('camera_macos');
 const MethodChannel _videoJoinChannel = MethodChannel('field_notes/video_join');
 
 const String _cameraName = 'cam-0';
 const List<int> _pictureBytes = <int>[0, 0, 0, 24];
-const List<int> _soundBytes = <int>[1, 2, 3];
-const List<int> _joinedBytes = <int>[5, 6, 7, 8];
 const String _clearingStatus = 'Clearing background noise…';
 const String _adjustingStatus = 'Adjusting the volume…';
 const String _openLabel = 'open video';
@@ -44,15 +40,11 @@ class _Bench {
 
   final Directory root;
   final List<String> events = <String>[];
-  final List<MethodCall> liveAudioCalls = <MethodCall>[];
   final List<Map<Object?, Object?>> macosStarts = <Map<Object?, Object?>>[];
   final List<String> pictures = <String>[];
-  late final _FakeMic mic = _FakeMic(events);
+  final FakeLiveAudio liveAudio = FakeLiveAudio();
+  late final FakeMicrophone mic = FakeMicrophone(events: events);
   late final _FakeCamera camera = _FakeCamera(events, this);
-  String? soundPath;
-  Map<Object?, Object?>? joinArguments;
-  List<int>? pictureAtJoin;
-  List<int>? soundAtJoin;
   int _written = 0;
 
   Directory get temporary => Directory(p.join(root.path, 'tmp'));
@@ -64,37 +56,6 @@ class _Bench {
     final String path = p.join(folder.path, 'take_$_written.$extension');
     File(path).writeAsBytesSync(bytes);
     return path;
-  }
-
-  Future<Object?> liveAudio(MethodCall call) async {
-    liveAudioCalls.add(call);
-    final Map<Object?, Object?> arguments =
-        call.arguments as Map<Object?, Object?>;
-    switch (call.method) {
-      case 'openEncoder':
-        final String path = arguments['path']! as String;
-        soundPath = path;
-        File(path).writeAsBytesSync(_soundBytes);
-        return 7;
-      case 'appendPcm':
-        return null;
-      case 'closeEncoder':
-        return soundPath;
-      case 'cancelEncoder':
-        final String? path = soundPath;
-        if (path != null && File(path).existsSync()) {
-          File(path).deleteSync();
-        }
-        return null;
-      case 'joinAudio':
-        joinArguments = arguments;
-        pictureAtJoin = File(arguments['video']! as String).readAsBytesSync();
-        soundAtJoin = File(arguments['audio']! as String).readAsBytesSync();
-        final String output = arguments['output']! as String;
-        File(output).writeAsBytesSync(_joinedBytes);
-        return output;
-    }
-    return null;
   }
 
   Future<Object?> videoJoin(MethodCall call) async {
@@ -128,67 +89,6 @@ class _Bench {
     return null;
   }
 }
-
-class _FakeMic extends Fake implements AudioRecorder {
-  _FakeMic(this.events);
-
-  final List<String> events;
-  RecordConfig? config;
-  StreamController<Uint8List>? _chunks;
-
-  @override
-  Future<bool> hasPermission({bool request = true}) async => true;
-
-  @override
-  Future<Stream<Uint8List>> startStream(RecordConfig config) async {
-    this.config = config;
-    events.add('mic.start');
-    final StreamController<Uint8List> chunks = StreamController<Uint8List>();
-    _chunks = chunks;
-    return chunks.stream;
-  }
-
-  @override
-  Future<void> pause() async => events.add('mic.pause');
-
-  @override
-  Future<void> resume() async => events.add('mic.resume');
-
-  @override
-  Future<String?> stop() async {
-    events.add('mic.stop');
-    await _chunks?.close();
-    return null;
-  }
-
-  @override
-  Future<void> cancel() async {
-    events.add('mic.cancel');
-    await _chunks?.close();
-  }
-
-  @override
-  Future<void> dispose() async {}
-}
-
-class _PassThroughChain implements RunningVoiceChain {
-  @override
-  int get delaySamples => 0;
-
-  @override
-  Future<Uint8List> process(Uint8List pcm16) async => pcm16;
-
-  @override
-  Future<Uint8List> flush() async => Uint8List(0);
-
-  @override
-  Future<void> close() async {}
-}
-
-Future<RunningVoiceChain> _passThrough({
-  required InputProfile profile,
-  required int volume,
-}) async => _PassThroughChain();
 
 class _FakeCamera extends CameraPlatform {
   _FakeCamera(this.events, this.bench);
@@ -312,8 +212,10 @@ _Rig _android(_Bench bench) {
     name: 'CameraVideoRecorder',
     recorder: CameraVideoRecorder(
       temporaryDirectory: () async => bench.temporary,
+      encoder: bench.liveAudio,
+      audioJoiner: bench.liveAudio,
       audioRecorderFactory: () => bench.mic,
-      chainRunner: _passThrough,
+      chainRunner: passThroughChain,
       resolveInput: () async =>
           const AudioInput(id: 'mic-2', label: 'USB microphone'),
     ),
@@ -335,8 +237,10 @@ _Rig _windows(_Bench bench) {
   final CameraWindowsVideoRecorder recorder = CameraWindowsVideoRecorder(
     temporaryDirectory: () async => bench.temporary,
     setAudioInputDevice: (String? endpointId) async {},
+    encoder: bench.liveAudio,
+    audioJoiner: bench.liveAudio,
     audioRecorderFactory: () => bench.mic,
-    chainRunner: _passThrough,
+    chainRunner: passThroughChain,
   )..useAudioInput('ep-2');
   return _Rig(
     name: 'CameraWindowsVideoRecorder',
@@ -361,8 +265,10 @@ _Rig _macos(_Bench bench) {
       CameraMacOSArguments(size: const Size(1280, 720)),
     ),
     microphonePermission: () async => true,
+    encoder: bench.liveAudio,
+    audioJoiner: bench.liveAudio,
     audioRecorderFactory: () => bench.mic,
-    chainRunner: _passThrough,
+    chainRunner: passThroughChain,
   )..useAudioInput('b');
   CameraMacOSView? view;
   return _Rig(
@@ -471,7 +377,6 @@ void main() {
     original = CameraPlatform.instance;
     final TestDefaultBinaryMessenger messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(_liveAudioChannel, bench.liveAudio);
     messenger.setMockMethodCallHandler(_cameraMacosChannel, bench.cameraMacos);
     messenger.setMockMethodCallHandler(_videoJoinChannel, bench.videoJoin);
   });
@@ -480,7 +385,6 @@ void main() {
     CameraPlatform.instance = original;
     final TestDefaultBinaryMessenger messenger =
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMethodCallHandler(_liveAudioChannel, null);
     messenger.setMockMethodCallHandler(_cameraMacosChannel, null);
     messenger.setMockMethodCallHandler(_videoJoinChannel, null);
     if (root.existsSync()) {
@@ -508,23 +412,17 @@ void main() {
 
         expect(rig.cameraSoundOff(), isTrue, reason: rig.name);
         expect(bench.events, <String>['mic.start', 'camera.start']);
-        final RecordConfig config = bench.mic.config!;
+        final RecordConfig config = bench.mic.startStreamConfigs.single;
         expect(config.device?.id, rig.chosenInput);
         expect(config.encoder, AudioEncoder.pcm16bits);
         expect(config.sampleRate, 48000);
         expect(config.numChannels, 1);
-        final MethodCall open = bench.liveAudioCalls.first;
-        expect(open.method, 'openEncoder');
-        final Map<Object?, Object?> arguments =
-            open.arguments as Map<Object?, Object?>;
-        expect(arguments['sampleRate'], 48000);
-        expect(arguments['channels'], 1);
-        expect(arguments['bitRate'], 96000);
-        expect(
-          p.dirname(arguments['path']! as String),
-          p.join(root.path, 'tmp', 'captures'),
-        );
-        expect(p.extension(arguments['path']! as String), '.m4a');
+        final FakeEncoderOpening open = bench.liveAudio.opened.single;
+        expect(open.sampleRate, 48000);
+        expect(open.channels, 1);
+        expect(open.bitRate, 96000);
+        expect(p.dirname(open.path), p.join(root.path, 'tmp', 'captures'));
+        expect(p.extension(open.path), '.m4a');
 
         await rig.recorder.cancel();
       });
@@ -535,25 +433,19 @@ void main() {
 
         final VideoRecording take = await rig.recorder.stop();
 
-        final Map<Object?, Object?> join = bench.joinArguments!;
-        expect(bench.pictureAtJoin, _pictureBytes);
-        expect(bench.soundAtJoin, _soundBytes);
-        expect(join['audio'], bench.soundPath);
+        final FakeSoundJoin join = bench.liveAudio.joins.single;
+        expect(join.videoBytes, _pictureBytes);
+        expect(join.audioBytes, fakeSoundBytes);
+        expect(join.audio, bench.liveAudio.soundPath);
         final File joined = _fileOf(take.media);
-        expect(joined.path, join['output']);
-        expect(joined.readAsBytesSync(), _joinedBytes);
+        expect(joined.path, join.output);
+        expect(joined.readAsBytesSync(), fakeJoinedBytes);
         expect(p.dirname(joined.path), p.join(root.path, 'tmp', 'captures'));
-        expect(File(join['video']! as String).existsSync(), isFalse);
-        expect(File(join['audio']! as String).existsSync(), isFalse);
+        expect(File(join.video).existsSync(), isFalse);
+        expect(File(join.audio).existsSync(), isFalse);
         for (final String picture in bench.pictures) {
           expect(File(picture).existsSync(), isFalse);
         }
-        expect(
-          bench.liveAudioCalls.where(
-            (MethodCall call) => call.method == 'joinAudio',
-          ),
-          hasLength(1),
-        );
 
         await rig.recorder.releaseSaved(take);
       });
@@ -577,7 +469,7 @@ void main() {
           bench.events.where((String event) => event == 'mic.resume'),
           hasLength(1),
         );
-        expect(_fileOf(take.media).readAsBytesSync(), _joinedBytes);
+        expect(_fileOf(take.media).readAsBytesSync(), fakeJoinedBytes);
 
         await rig.recorder.releaseSaved(take);
       });
@@ -589,7 +481,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final File movie = File(p.join(root.path, 'joined.mp4'))
-      ..writeAsBytesSync(_joinedBytes);
+      ..writeAsBytesSync(fakeJoinedBytes);
     final FakeVideoRecorder recorder = FakeVideoRecorder(
       supportsPause: true,
       recording: VideoRecording(

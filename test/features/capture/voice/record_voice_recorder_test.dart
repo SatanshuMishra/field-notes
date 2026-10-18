@@ -91,8 +91,7 @@ File _capturedFile(VoiceRecording recording) =>
 
 void main() {
   group('voice recording format', () {
-    test('records AAC-LC into an m4a container with the mp4 audio mime', () {
-      expect(voiceRecordingEncoder, AudioEncoder.aacLc);
+    test('records into an m4a container with the mp4 audio mime', () {
       expect(voiceRecordingExtension, 'm4a');
       expect(voiceRecordingMime, 'audio/mp4');
     });

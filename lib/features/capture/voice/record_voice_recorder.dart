@@ -3,8 +3,6 @@ import 'dart:io';
 
 import 'package:field_notes/data/media/live_audio_channel.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
-import 'package:field_notes/domain/settings/app_settings.dart';
-import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
 import 'package:flutter/foundation.dart';
@@ -12,13 +10,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import 'voice_processing.dart';
 import 'voice_recorder.dart';
-
-typedef VoiceProcessing = ({InputProfile profile, int volume});
 
 const String voiceRecordingMime = 'audio/mp4';
 const String voiceRecordingExtension = 'm4a';
-const AudioEncoder voiceRecordingEncoder = AudioEncoder.aacLc;
 
 String voiceRecordingFileName(int nowMs) =>
     'voice_$nowMs.$voiceRecordingExtension';
@@ -42,16 +38,8 @@ class RecordVoiceRecorder implements VoiceRecorder {
          chainRunner: chainRunner,
        ),
        _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
-       _resolveInput = resolveInput ?? _systemDefaultInput,
-       _resolveProcessing = resolveProcessing ?? _defaultProcessing;
-
-  static Future<AudioInput> _systemDefaultInput() async =>
-      const AudioInput(id: null, label: systemDefaultInputLabel);
-
-  static Future<VoiceProcessing> _defaultProcessing() async => (
-    profile: AppSettings.defaults.inputProfile,
-    volume: AppSettings.defaults.inputVolume,
-  );
+       _resolveInput = resolveInput ?? systemDefaultAudioInput,
+       _resolveProcessing = resolveProcessing ?? defaultVoiceProcessing;
 
   final LiveAudioCapture _capture;
   final Future<AudioInput> Function() _resolveInput;
@@ -74,7 +62,7 @@ class RecordVoiceRecorder implements VoiceRecorder {
     try {
       return await _resolveInput();
     } catch (_) {
-      return _systemDefaultInput();
+      return systemDefaultAudioInput();
     }
   }
 
@@ -82,7 +70,7 @@ class RecordVoiceRecorder implements VoiceRecorder {
     try {
       return await _resolveProcessing();
     } catch (_) {
-      return _defaultProcessing();
+      return defaultVoiceProcessing();
     }
   }
 

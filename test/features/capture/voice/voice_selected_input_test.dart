@@ -5,17 +5,7 @@ import 'package:field_notes/features/capture/voice/record_voice_recorder.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:record/record.dart';
 
-class _FakeAudioRecorder extends Fake implements AudioRecorder {
-  RecordConfig? startedWith;
-
-  @override
-  Future<void> start(RecordConfig config, {required String path}) async {
-    startedWith = config;
-  }
-
-  @override
-  Future<void> dispose() async {}
-}
+import '../audio/live_audio_test_support.dart';
 
 Future<RecordConfig> _startedConfig(
   Future<AudioInput> Function() resolve,
@@ -24,14 +14,17 @@ Future<RecordConfig> _startedConfig(
     'voice_input_test_',
   );
   addTearDown(() => temp.delete(recursive: true));
-  final _FakeAudioRecorder fake = _FakeAudioRecorder();
+  final FakeMicrophone mic = FakeMicrophone();
   final RecordVoiceRecorder recorder = RecordVoiceRecorder(
-    recorder: fake,
+    recorder: mic,
+    encoder: FakeLiveAudio(),
+    chainRunner: passThroughChain,
     temporaryDirectory: () async => temp,
     resolveInput: resolve,
   );
+  addTearDown(recorder.dispose);
   await recorder.start();
-  return fake.startedWith!;
+  return mic.startStreamConfigs.single;
 }
 
 void main() {
@@ -42,9 +35,9 @@ void main() {
 
     expect(config.device?.id, 'b');
     expect(config.device?.label, 'CORSAIR HS80 MAX');
-    expect(config.encoder, AudioEncoder.aacLc);
+    expect(config.encoder, AudioEncoder.pcm16bits);
+    expect(config.sampleRate, 48000);
     expect(config.numChannels, 1);
-    expect(config.bitRate, 48000);
   });
 
   test('a voice take with no choice records from the system default', () async {
@@ -53,9 +46,9 @@ void main() {
     );
 
     expect(config.device, isNull);
-    expect(config.encoder, AudioEncoder.aacLc);
+    expect(config.encoder, AudioEncoder.pcm16bits);
+    expect(config.sampleRate, 48000);
     expect(config.numChannels, 1);
-    expect(config.bitRate, 48000);
   });
 
   test('a failing resolver records from the system default', () async {
