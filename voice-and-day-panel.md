@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T05:45:31.459Z
+Updated: 2026-10-18T06:06:22.354Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Fix the flat voice visualizer, add live input meters and a microphone dropdown p
 
 ## Where things stand
 
-The owner merged MSP pull requests #320, #321 and #322 into FEATURE branch feat/voice-and-day-panel (d120d9cd). The Windows routing fallback (R2) is fixed as Integration round 1-2 on branch fix/windows-output-routing (worktree trees/output-routing, head 06c32a71), to ship as its own pull request into the FEATURE branch at the owner's request: round 2 verdict green with advisories C1-C3 fixed, suite 5368 pass at 2537e758, native tests pass at 06c32a71. It is pushed and open as ready pull request #323 into the FEATURE branch, assigned to the owner. Both fix commits compile on the real PC; the routing trials there were not run because Discord held the headset microphone throughout (review/round-2/integration.smoke-winpc.txt). The real Windows PC smoke at 66438b78 passed every path but routing, with Escape keys unproven there. Unproven: device-level 40 ms sync, video recording on macOS and Windows (no camera); Android has no Output row and its day sheet card play still plays in the card, as the spec decided. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's Mac input runs hot: their raw Studio take clips to +0.5 dBFS in four short places, upstream of the chain.
+The owner merged #320, #321, #322 and the routing fix #323 into FEATURE branch feat/voice-and-day-panel; lighthouse published its profile there (99a5c6b6). Integration is running lighthouse run 1: the suite on core and FEATURE, and a Windows VM lab pass of the paths in lighthouse/run-1/paths.md; macOS and Android lab passes follow, one at a time. The owner is hand-testing a release build of 99a5c6b6 on their Mac, which shares their real journal. The real Windows PC smoke at 66438b78 passed every path but routing, with Escape keys unproven there. Unproven: device-level 40 ms sync, video recording on macOS and Windows (no camera); Android has no Output row and its day sheet card play still plays in the card, as the spec decided. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's Mac input runs hot: their raw Studio take clips to +0.5 dBFS in four short places, upstream of the chain.
 
 ## Next step
 
