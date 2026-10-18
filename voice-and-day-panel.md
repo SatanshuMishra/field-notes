@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T03:30:01.063Z
+Updated: 2026-10-18T03:30:03.252Z
 Next ids: c1 D4 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ All three MSPs on FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) are 
 
 ## Next step
 
-Run SHIP=1 ~/.mitosis/field-notes/voice-and-day-panel/run.zsh --resume, read each MSP's title, body, branch and base from its JSON result, then open the pull requests in stack order audio, settings, day-panel with GitHub MCP create_pull_request (draft false), assign each to the signed-in user and post review/<msp>.comment.md on it.
+The owner reviews and merges #320, #321 and #322; when they say the MSP pull requests merged, start Integration with pipeline:run (lighthouse tests the FEATURE branch, then the FEATURE pull request opens).
 
 Needs: R1.
 
