@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: active
-Updated: 2026-10-18T23:24:08.214Z
+Updated: 2026-10-18T23:26:15.890Z
 Next ids: c6 D2 R1 S1
 
 ## Goal
@@ -21,7 +21,9 @@ Interphase handed off a full bug spec (unattended; the stored-data change ruled 
 
 ## Next step
 
-Record the interphase hand-off boundary, cut the FEATURE branch, write the run home and run mitosis --plan-only.
+Run the first build: ~/.mitosis/fireplace/mac-keychain-single-item/run.zsh (one lane, MSP mac-keychain), then review round 1.
+
+Needs: D1.
 
 ## Decisions in force
 
