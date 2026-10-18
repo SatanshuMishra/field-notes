@@ -1,7 +1,7 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T02:53:23.190Z
-Next ids: c1 D3 R2 S1
+Updated: 2026-10-18T03:19:30.924Z
+Next ids: c1 D4 R2 S1
 
 ## Goal
 
@@ -21,6 +21,7 @@ Needs: D2.
 ## Decisions in force
 
 - D2 Attenuation limit default stays 15 dB by the owner's ear pick: naturalVoiceAttenuationLimitDb stays 15; no code change. The three-MSP build of the approved spec continues as decided at hand-off.
+- D3 Ship boundary: ship all three MSPs green: Ship all three MSPs now: SHIP=1 run.zsh --resume with no --proven-head (no current head equals a reviewed green head, so mitosis gates all three), then ready pull requests in stack order audio, settings, day-panel.
 
 ## Open risks
 
