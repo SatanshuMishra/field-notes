@@ -27,6 +27,14 @@ abstract final class SettingsKeys {
   static const String updateLastAvailable = 'update_last_available';
   static const String updateLastSeenVersion = 'update_last_seen_version';
 
+  static const Set<String> deviceIdentifierKeys = <String>{
+    audioInputId,
+    audioOutputId,
+  };
+
   static bool isUpdateRecordKey(String key) =>
       key.startsWith(updateRecordPrefix);
+
+  static bool isExportedKey(String key) =>
+      !isUpdateRecordKey(key) && !deviceIdentifierKeys.contains(key);
 }
