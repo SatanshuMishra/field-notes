@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T02:18:19.601Z
+Updated: 2026-10-18T02:19:23.082Z
 Next ids: c1 D3 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs whose
 
 ## Next step
 
-All three MSPs are green with every advisory fixed and their slow checks passing alone: audio at f74029f5 (round 3), settings at 97e4b6f8 (audio merged over green 94831a4a; suite 5342 at 30428ffb), day-panel at 8f40db6a. Next, smoke the round-1 broken paths on a fresh smoke tree merging settings 97e4b6f8 and day-panel 8f40db6a, in the lab one platform at a time: Windows first (settings U3, opening a video no longer crashes; build on winpc only, run in the windows-golden guest), then macOS (day-panel U1, full screen from a playing video leaves one player), then Android (settings U4, Escape closes a touch-opened dropdown). Then Ship.
+All three MSPs are green with every advisory fixed and their slow checks passing alone: audio at f74029f5 (round 3), settings at 97e4b6f8 (audio merged over green 94831a4a; suite 5342 at 30428ffb), day-panel at 8f40db6a. The smoke tree is rebuilt at 66438b78 (settings 97e4b6f8 merged with day-panel 8f40db6a). The Windows smoke of settings U3 (opening a video no longer crashes; built on winpc only, run in the lab guest) runs into review/round-2/settings.smoke-windows.txt; then macOS (day-panel U1, full screen from a playing video leaves one player), then Android (settings U4, Escape closes a touch-opened dropdown). Then Ship.
 
 Needs: D2.
 
