@@ -163,7 +163,8 @@ class LiveAudioChannel {
                 val reply = try {
                     work()
                 } catch (error: Exception) {
-                    main.post { result.error(ENCODE_FAILED, error.message ?: ENCODE_FAILED_MESSAGE, null) }
+                    val taken = (error as? AppendFailure)?.framesTaken
+                    main.post { result.error(ENCODE_FAILED, error.message ?: ENCODE_FAILED_MESSAGE, taken) }
                     return@execute
                 }
                 main.post { result.success(reply) }
@@ -187,30 +188,35 @@ class LiveAudioChannel {
             if (pcm.size % frameBytes != 0) {
                 throw IllegalArgumentException("The PCM ends inside a frame")
             }
-            var offset = 0
-            var idleTries = 0
-            while (offset < pcm.size) {
-                val inputIndex = aac.dequeueInputBuffer(TIMEOUT_US)
-                if (inputIndex >= 0) {
-                    val input = aac.getInputBuffer(inputIndex) ?: throw IllegalStateException("No input buffer")
-                    input.clear()
-                    val room = input.remaining() / frameBytes * frameBytes
-                    if (room == 0) {
-                        throw IllegalStateException("The encoder input buffer holds no frame")
+            val start = framesQueued
+            try {
+                var offset = 0
+                var idleTries = 0
+                while (offset < pcm.size) {
+                    val inputIndex = aac.dequeueInputBuffer(TIMEOUT_US)
+                    if (inputIndex >= 0) {
+                        val input = aac.getInputBuffer(inputIndex) ?: throw IllegalStateException("No input buffer")
+                        input.clear()
+                        val room = input.remaining() / frameBytes * frameBytes
+                        if (room == 0) {
+                            throw IllegalStateException("The encoder input buffer holds no frame")
+                        }
+                        val size = minOf(room, pcm.size - offset)
+                        input.put(pcm, offset, size)
+                        aac.queueInputBuffer(inputIndex, 0, size, presentationTimeUs(), 0)
+                        framesQueued += size / frameBytes
+                        offset += size
+                        idleTries = 0
+                    } else {
+                        idleTries += 1
+                        if (idleTries > MAX_IDLE_TRIES) {
+                            throw IllegalStateException("The encoder stopped taking audio")
+                        }
                     }
-                    val size = minOf(room, pcm.size - offset)
-                    input.put(pcm, offset, size)
-                    aac.queueInputBuffer(inputIndex, 0, size, presentationTimeUs(), 0)
-                    framesQueued += size / frameBytes
-                    offset += size
-                    idleTries = 0
-                } else {
-                    idleTries += 1
-                    if (idleTries > MAX_IDLE_TRIES) {
-                        throw IllegalStateException("The encoder stopped taking audio")
-                    }
+                    drain(aac, false)
                 }
-                drain(aac, false)
+            } catch (error: Exception) {
+                throw AppendFailure(framesQueued - start, error)
             }
         }
 
@@ -314,6 +320,8 @@ class LiveAudioChannel {
             muxerStarted = false
         }
     }
+
+    private class AppendFailure(val framesTaken: Long, cause: Exception) : Exception(cause.message, cause)
 
     private class Join(
         private val video: String,

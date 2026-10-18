@@ -16,6 +16,14 @@ class LiveAudioException implements Exception {
 
   String get message => 'Live audio $method failed';
 
+  int get framesTaken {
+    final Object? failure = cause;
+    final Object? details = failure is PlatformException
+        ? failure.details
+        : null;
+    return details is int ? details : 0;
+  }
+
   @override
   String toString() => 'LiveAudioException: $message ($cause)';
 }

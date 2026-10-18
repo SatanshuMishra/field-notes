@@ -20,6 +20,7 @@ const int _meterVolume = 100;
 const String _flushRequest = 'flush';
 const String _closeRequest = 'close';
 const Duration _chainCloseWait = Duration(seconds: 1);
+const int _mostSamplesHeldForTheEncoder = liveAudioSampleRate;
 
 abstract interface class RunningVoiceChain {
   int get delaySamples;
@@ -251,6 +252,8 @@ class _ActiveTake {
   bool writing;
   bool paused = false;
   bool chainBroken = false;
+  bool encoderGivenUp = false;
+  Uint8List untaken = Uint8List(0);
   Uint8List carriedByte = Uint8List(0);
   int outputToSkip;
   int samplesHeard = 0;
@@ -445,21 +448,47 @@ class LiveAudioCapture {
         : samples;
     take.outputToSkip -= skipped;
     if (skipped == samples) {
-      return;
+      return _send(take, Uint8List(0));
     }
     final Uint8List kept = Uint8List.sublistView(
       processed,
       skipped * _bytesPerSample,
       samples * _bytesPerSample,
     );
-    final int count = samples - skipped;
-    take.samplesSent += count;
+    take.samplesSent += samples - skipped;
+    await _send(take, kept);
+  }
+
+  Future<void> _send(_ActiveTake take, Uint8List kept) async {
+    if (take.encoderGivenUp) {
+      return;
+    }
+    final Uint8List batch = take.untaken.isEmpty
+        ? kept
+        : (Uint8List(take.untaken.length + kept.length)
+            ..setAll(0, take.untaken)
+            ..setAll(take.untaken.length, kept));
+    if (batch.isEmpty) {
+      return;
+    }
+    final int count = batch.lengthInBytes ~/ _bytesPerSample;
     try {
-      await _encoder.append(take.encoderId, kept);
+      await _encoder.append(take.encoderId, batch);
       take.samplesWritten += count;
+      take.untaken = Uint8List(0);
     } catch (error, stackTrace) {
+      final int taken = error is LiveAudioException
+          ? error.framesTaken.clamp(0, count)
+          : 0;
+      take.samplesWritten += taken;
+      take.untaken = Uint8List.fromList(
+        Uint8List.sublistView(batch, taken * _bytesPerSample),
+      );
+      take.encoderGivenUp =
+          take.untaken.lengthInBytes ~/ _bytesPerSample >
+          _mostSamplesHeldForTheEncoder;
       debugPrint(
-        'Live audio append failed, $count samples missed: '
+        'Live audio append failed, ${count - taken} samples held: '
         '$error\n$stackTrace',
       );
     }
@@ -489,6 +518,7 @@ class LiveAudioCapture {
       await _quietly(() async => take.chunks?.cancel());
       await take.tail;
       await _appendRest(take);
+      await _send(take, Uint8List(0));
       return LiveAudioTake(
         path: await _closed(take),
         durationMs: _durationOf(take.samplesWritten).inMilliseconds,
