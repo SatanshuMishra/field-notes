@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T02:14:59.776Z
+Updated: 2026-10-18T02:18:19.601Z
 Next ids: c1 D3 R2 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs whose
 
 ## Next step
 
-Audio round 2 looped on C1, sound shifted after a failed append (diagnosis fixable, review/round-2/audio.sound-shifted-after-failed-append.diagnosis.json); its fix is at bb275abd (receipts 4c1eb0f9; each native append reports frames taken, Dart holds the rest; Android debug build compiles) and its round-3 suite passes 5313 (review/round-3/audio.suite.txt) its round-3 reviews gave one LOW (C1, duplicated byte join in live_audio_capture.dart; security none), now with the validator (diff, briefs and arrays in review/round-3). Settings at 30428ffb passes its suite (5342) and its 11 slow checks alone. Day-panel is green at 8f40db6a, its advisory C1 fixed and its 13 slow checks passing alone (review/day-panel.proofs.jsonl); it waits only for the macOS D3x smoke. Settings is green at 94831a4a (P1 fixed; C1 and S1 rejected as not introduced by the fix commits); its slow checks run after audio's fix is merged into it. Then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
+All three MSPs are green with every advisory fixed and their slow checks passing alone: audio at f74029f5 (round 3), settings at 97e4b6f8 (audio merged over green 94831a4a; suite 5342 at 30428ffb), day-panel at 8f40db6a. Next, smoke the round-1 broken paths on a fresh smoke tree merging settings 97e4b6f8 and day-panel 8f40db6a, in the lab one platform at a time: Windows first (settings U3, opening a video no longer crashes; build on winpc only, run in the windows-golden guest), then macOS (day-panel U1, full screen from a playing video leaves one player), then Android (settings U4, Escape closes a touch-opened dropdown). Then Ship.
 
 Needs: D2.
 
