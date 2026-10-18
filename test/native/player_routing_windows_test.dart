@@ -68,8 +68,9 @@ void main() {
         '  field_notes_output_route::RegisterChannel(\n'
         '      registrar->messenger(), "field_notes/output_route/just_audio_windows",\n'
         '      []() {\n'
+        '        StartPreferredOutputLookup();\n'
         '        for (auto& player : players_) {\n'
-        '          player->ApplyPreferredOutputDevice();\n'
+        '          player->RouteToPreferredOutput();\n'
         '        }\n'
         '      });\n',
       ),
@@ -82,53 +83,56 @@ void main() {
     );
     expect(
       justAudioConstructor,
-      contains('    ApplyPreferredOutputDevice();\n  }\n'),
-      reason: 'a new just_audio_windows MediaPlayer is not routed',
+      contains('    StartPreferredOutputLookup();\n  }\n'),
+      reason:
+          'a new just_audio_windows player does not start the device lookup',
     );
-    final String justAudioApply = _between(
+    final String justAudioLookup = _between(
       justAudioPlayer,
-      'void ApplyPreferredOutputDevice() {',
-      'void AudioPlayer::HandleMethodCall(',
+      'inline DeviceInformation LookUpRenderDevice(',
+      'struct OutputDeviceLookup {',
     );
     _expectMatch(
-      justAudioApply,
-      r'if \(!requested \|\| requested->empty\(\)\) \{\s*try \{\s*'
-          r'player\.AudioDevice\(nullptr\);',
-      'a null id does not restore the system output',
-    );
-    _expectMatch(
-      justAudioApply,
-      r'winrt::Windows::Devices::Enumeration::DeviceInformation::FindAllAsync\(\s*'
-          r'winrt::Windows::Media::Devices::MediaDevice::GetAudioRenderSelector\(\)\s*\)',
+      justAudioLookup,
+      r'DeviceInformation::FindAllAsync\(\s*'
+          r'winrt::Windows::Media::Devices::MediaDevice::GetAudioRenderSelector\(\)\s*'
+          r'\)\.get\(\);',
       'just_audio_windows does not list the render devices',
     );
     expect(
-      justAudioApply,
+      justAudioLookup,
       contains(
-        'const std::wstring endpoint = ToLowerWide(std::wstring(winrt::to_hstring(*requested)));',
+        'const std::wstring endpoint = ToLowerWide(std::wstring(winrt::to_hstring(requested)));',
       ),
     );
     expect(
-      justAudioApply,
+      justAudioLookup,
       contains(
         'if (ToLowerWide(std::wstring(device.Id())).find(endpoint) != std::wstring::npos) {',
       ),
       reason: 'the device whose id contains the endpoint id is not chosen',
     );
     expect(
-      justAudioApply,
-      contains(
-        'winrt::Windows::Devices::Enumeration::DeviceInformation chosen{ nullptr };',
-      ),
+      justAudioLookup,
+      contains('  return DeviceInformation{ nullptr };\n}'),
       reason: 'an unmatched endpoint does not fall back to the system output',
     );
-    expect(justAudioApply, contains('player.AudioDevice(chosen);'));
-    expect(
-      justAudioApply,
-      contains(
-        'if (field_notes_output_route::PreferredOutputDeviceId() != requested) return;',
-      ),
-      reason: 'a stale device lookup can override a newer choice',
+    final String justAudioPreferred = _between(
+      justAudioPlayer,
+      'inline std::shared_future<DeviceInformation> StartPreferredOutputLookup() {',
+      'inline bool SameOutputDevice(',
+    );
+    _expectMatch(
+      justAudioPreferred,
+      r'\(!requested \|\| requested->empty\(\)\)\s*\?\s*SystemOutputDevice\(\)\s*'
+          r': LookUpRenderDeviceInBackground\(\*requested\)',
+      'a null id does not restore the system output',
+    );
+    _expectMatch(
+      justAudioPlayer,
+      r'inline bool LookupIsReusable\([^)]*\) \{\s*'
+          r'if \(!lookup\.device\.valid\(\) \|\| lookup\.requested != requested\) return false;',
+      'a lookup for an older choice can route a newer one',
     );
     _expectMatch(
       justAudioPlayer,
@@ -316,5 +320,92 @@ void main() {
           r'if \(_resumePlaying\) \{\s*m_mediaEngineWrapper->Resume\(\);',
       'audioplayers_windows does not seek back and resume after the reload',
     );
+  });
+
+  test('just_audio_windows sets the output before the source opens', () {
+    final String player = _read('$_justAudioSources/player.hpp');
+
+    final String loadSource = _between(
+      player,
+      'void AudioPlayer::loadSource(',
+      'Playback::MediaPlaybackItem AudioPlayer::createMediaPlaybackItem(',
+    );
+    final int routed = loadSource.indexOf('RouteToPreferredOutput();');
+    final int opened = loadSource.indexOf('mediaPlayer.Source(');
+    expect(routed, isNot(-1), reason: 'a load does not route the player');
+    expect(opened, isNot(-1), reason: 'loadSource sets no source');
+    expect(
+      routed,
+      lessThan(opened),
+      reason: 'the source opens before the output is set',
+    );
+
+    final String route = _between(
+      player,
+      'void RouteToPreferredOutput() {',
+      'void AudioPlayer::HandleMethodCall(',
+    );
+    expect(route, contains('mediaPlayer.AudioDevice(chosen);'));
+    expect(
+      route,
+      isNot(contains('.Completed(')),
+      reason: 'the output is still set from an asynchronous lookup',
+    );
+    _expectMatch(
+      route,
+      r'output_pending_ = true;\s*'
+          r'const std::shared_future<DeviceInformation> lookup = StartPreferredOutputLookup\(\);\s*'
+          r'if \(!LookupFinished\(lookup\)\) \{\s*'
+          r'RouteOnceLookupFinishes\(lookup\);\s*return;\s*\}\s*'
+          r'if \(SourceIsOpening\(\)\) return;\s*'
+          r'if \(!output_pending_\.exchange\(false\)\) return;',
+      'the route is not marked pending before the open is checked, or waits on the lookup',
+    );
+    _expectMatch(
+      route,
+      r'if \(SetChosenOutput\(chosen\)\) return;\s*'
+          r'output_pending_ = true;\s*'
+          r'if \(SourceIsOpening\(\)\) return;\s*'
+          r'if \(output_pending_\.exchange\(false\) && !SetChosenOutput\(chosen\)\) \{\s*'
+          r'output_pending_ = true;',
+      'a refused output is dropped instead of retried',
+    );
+    _expectMatch(
+      route,
+      r'void RouteOnceLookupFinishes\([^)]*\) \{\s*'
+          r'std::thread\(\[this, lifetime = lifetime_, lookup\]\(\) \{\s*'
+          r'lookup\.wait\(\);\s*'
+          r'std::lock_guard<std::recursive_mutex> lock\(lifetime->mutex\);\s*'
+          r'if \(lifetime->alive\) \{\s*RouteToPreferredOutput\(\);',
+      'a route waiting on the lookup can outlive its player',
+    );
+
+    _expectMatch(
+      player,
+      r'media_opened_token_ = mediaPlayer\.MediaOpened\(\[this, lifetime = lifetime_\]\(auto, auto\) -> void \{\s*'
+          r'std::lock_guard<std::recursive_mutex> lock\(lifetime->mutex\);\s*'
+          r'if \(!lifetime->alive\) return;\s*'
+          r'if \(output_pending_\.exchange\(false\)\) \{\s*'
+          r'RouteToPreferredOutput\(\);',
+      'a refused output is not set again once the media opens',
+    );
+    _expectMatch(
+      player,
+      r'inline std::shared_future<DeviceInformation> LookUpRenderDeviceInBackground\([^)]*\) \{\s*'
+          r'std::promise<DeviceInformation> found;',
+      'replacing an unfinished lookup can block on its future',
+    );
+
+    final Iterable<RegExpMatch> completions = RegExp(r'\.Completed\(')
+        .allMatches(player);
+    for (final RegExpMatch completion in completions) {
+      final String after = player.substring(completion.start);
+      final String block = after.substring(0, after.indexOf('});'));
+      expect(
+        block,
+        isNot(contains('AudioDevice(')),
+        reason: 'an asynchronous completion sets the output',
+      );
+    }
   });
 }

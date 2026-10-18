@@ -64,8 +64,9 @@ void JustAudioWindowsPlugin::RegisterWithRegistrar(
   field_notes_output_route::RegisterChannel(
       registrar->messenger(), "field_notes/output_route/just_audio_windows",
       []() {
+        StartPreferredOutputLookup();
         for (auto& player : players_) {
-          player->ApplyPreferredOutputDevice();
+          player->RouteToPreferredOutput();
         }
       });
 
