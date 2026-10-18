@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T06:21:39.749Z
+Updated: 2026-10-18T06:21:40.632Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -15,7 +15,7 @@ The owner merged #320, #321, #322 and the routing fix #323 into FEATURE branch f
 
 ## Next step
 
-Finish lighthouse run 1 (suite, Windows then macOS then Android lab passes, spend, findings.json, verdict); on green open the FEATURE pull request to main and release the run.
+Finish lighthouse run 1 (Windows then macOS then Android lab passes, spend, findings.json, verdict); on green open the FEATURE pull request to main and release the run.
 
 ## Decisions in force
 
