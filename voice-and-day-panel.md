@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T01:50:52.293Z
+Updated: 2026-10-18T01:51:10.520Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -45,3 +45,4 @@ Needs: D2.
 - Round-1 findings, readable records, candidates and validator briefs per MSP: review/round-1/<msp>.findings.json, <msp>.md, <msp>.candidates.md, briefs/<msp>.validator.md
 - Diagnosis briefs per MSP and kind: review/round-1/briefs/<msp>.<kind slug>.diagnosis.md; diagnoses: review/round-1/<msp>.<kind slug>.diagnosis.json
 - Audio fix-pass brief: handoff/audio-fix-round-1.md
+- Round-2 diffs, suites, briefs, reviewer arrays, findings and candidates per MSP: review/round-2/
