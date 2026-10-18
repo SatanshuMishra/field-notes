@@ -261,16 +261,18 @@ class _ActiveTake {
   int samplesWritten = 0;
 
   Uint8List wholeSamplesOf(Uint8List chunk) {
-    final Uint8List joined = carriedByte.isEmpty
-        ? chunk
-        : (Uint8List(carriedByte.length + chunk.length)
-            ..setAll(0, carriedByte)
-            ..setAll(carriedByte.length, chunk));
+    final Uint8List joined = _joined(carriedByte, chunk);
     final int whole = joined.length - joined.length % _bytesPerSample;
     carriedByte = Uint8List.fromList(Uint8List.sublistView(joined, whole));
     return Uint8List.sublistView(joined, 0, whole);
   }
 }
+
+Uint8List _joined(Uint8List head, Uint8List tail) => head.isEmpty
+    ? tail
+    : (Uint8List(head.length + tail.length)
+        ..setAll(0, head)
+        ..setAll(head.length, tail));
 
 class LiveAudioCapture {
   LiveAudioCapture({
@@ -463,11 +465,7 @@ class LiveAudioCapture {
     if (take.encoderGivenUp) {
       return;
     }
-    final Uint8List batch = take.untaken.isEmpty
-        ? kept
-        : (Uint8List(take.untaken.length + kept.length)
-            ..setAll(0, take.untaken)
-            ..setAll(take.untaken.length, kept));
+    final Uint8List batch = _joined(take.untaken, kept);
     if (batch.isEmpty) {
       return;
     }
