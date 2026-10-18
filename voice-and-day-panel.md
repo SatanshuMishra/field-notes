@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T03:30:03.252Z
+Updated: 2026-10-18T03:30:06.127Z
 Next ids: c1 D4 R2 S1
 
 ## Goal
@@ -15,9 +15,7 @@ All three MSPs on FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) are 
 
 ## Next step
 
-The owner reviews and merges #320, #321 and #322; when they say the MSP pull requests merged, start Integration with pipeline:run (lighthouse tests the FEATURE branch, then the FEATURE pull request opens).
-
-Needs: R1.
+The owner starts Integration by saying the MSP pull requests merged (#320 audio, #321 settings, #322 day-panel); then resume this thread, run pipeline:run Integration: lighthouse tests feat/voice-and-day-panel and the FEATURE pull request opens.
 
 ## Decisions in force
 
