@@ -314,4 +314,22 @@ void main() {
     expect(channel, isNot(contains('createDecoderByType')));
     expect(channel, isNot(contains('PcmDecoder')));
   });
+  test('a failed append reports the frames the encoder already took', () {
+    final String channel = _read(_liveAudio);
+
+    final String append = _block(channel, 'fun append(pcm: ByteArray)');
+    expect(append, contains('val start = framesQueued'));
+    expect(
+      append,
+      contains('throw AppendFailure(framesQueued - start, error)'),
+    );
+    expect(
+      channel,
+      contains('private class AppendFailure(val framesTaken: Long'),
+    );
+
+    final String run = _block(channel, 'fun run(main: Handler');
+    expect(run, contains('(error as? AppendFailure)?.framesTaken'));
+    expect(run, isNot(contains('ENCODE_FAILED_MESSAGE, null)')));
+  });
 }
