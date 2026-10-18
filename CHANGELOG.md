@@ -6,6 +6,27 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-18
+
+### New
+
+- Choose which speakers or headphones Field Notes plays through, and set its output volume, in Settings > Voice. On macOS and Windows you can also change the output from the recorder's Input panel.
+- In the past-day pop-up on macOS and Windows, voice and video logs now open in the right-hand column. Tap a card to open it paused, or its play button to start playing, then go full screen when you want more room.
+- Arrows in the past-day pop-up, and in the day sheet on Android, move to the day before or after without closing it.
+
+### Improved
+
+- Background noise is now removed while you record, so a Voice Isolation recording appears as soon as you keep it, with nothing left to process.
+- Voice Isolation now keeps a little of the room under your voice, softens hard "s" sounds, brings quiet and loud recordings to an even level, and keeps loud moments from distorting.
+- The input level meter moves with your voice in Settings and in the recorder, including while you record.
+- Microphone and input profile choices open as a menu under their row instead of a list that pushes the page down.
+- On Android, recordings use a microphone source that skips the phone's own noise reduction and volume adjustment.
+
+### Fixed
+
+- Voice Isolation recordings show their waveform again instead of a flat line, including ones saved before this update.
+- The prompt in the past-day pop-up's empty right-hand column is now centred.
+
 ## [1.2.0] - 2026-10-15
 
 ### New
