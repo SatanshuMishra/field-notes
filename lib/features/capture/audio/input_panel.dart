@@ -54,6 +54,7 @@ const double _rowRadius = 10;
 const double _glyphSize = 18;
 const double _glyphGap = 6;
 const double _mutedAlpha = 0.68;
+const double _heldDuringTakeOpacity = 0.4;
 const double _trackAlpha = 0.24;
 const double _overlayAlpha = 0.12;
 const double _meterGap = 6;
@@ -120,10 +121,12 @@ class RecorderInputButton extends StatefulWidget {
     super.key,
     this.androidVideo = false,
     this.onVoiceSettings,
+    this.takeLevels,
   });
 
   final bool androidVideo;
   final VoidCallback? onVoiceSettings;
+  final Stream<double>? takeLevels;
 
   @override
   State<RecorderInputButton> createState() => _RecorderInputButtonState();
@@ -224,6 +227,7 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
                   ),
                   child: InputPanel(
                     androidVideo: widget.androidVideo,
+                    takeLevels: widget.takeLevels,
                     tapRegionGroupId: _tapGroup,
                     onVoiceSettings: widget.onVoiceSettings == null
                         ? null
@@ -266,11 +270,13 @@ class InputPanel extends ConsumerWidget {
     this.androidVideo = false,
     this.onVoiceSettings,
     this.tapRegionGroupId,
+    this.takeLevels,
   });
 
   final bool androidVideo;
   final VoidCallback? onVoiceSettings;
   final Object? tapRegionGroupId;
+  final Stream<double>? takeLevels;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -288,21 +294,33 @@ class InputPanel extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                InputDeviceRow(
-                  androidVideo: androidVideo,
-                  ink: Palette.mediaInk,
-                  tone: GlassTone.media,
-                  tapRegionGroupId: tapRegionGroupId,
+                _HeldDuringTake(
+                  held: takeLevels != null,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      InputDeviceRow(
+                        androidVideo: androidVideo,
+                        ink: Palette.mediaInk,
+                        tone: GlassTone.media,
+                        tapRegionGroupId: tapRegionGroupId,
+                      ),
+                      InputProfileRow(
+                        ink: Palette.mediaInk,
+                        tone: GlassTone.media,
+                        tapRegionGroupId: tapRegionGroupId,
+                      ),
+                      const InputVolumeRow(ink: Palette.mediaInk),
+                    ],
+                  ),
                 ),
-                InputProfileRow(
-                  ink: Palette.mediaInk,
-                  tone: GlassTone.media,
-                  tapRegionGroupId: tapRegionGroupId,
-                ),
-                const InputVolumeRow(ink: Palette.mediaInk),
-                const Padding(
+                Padding(
                   padding: _meterPadding,
-                  child: InputLevelRow(ink: Palette.mediaInk),
+                  child: InputLevelRow(
+                    ink: Palette.mediaInk,
+                    takeLevels: takeLevels,
+                  ),
                 ),
                 if (desktop)
                   OutputDeviceRow(
@@ -326,10 +344,30 @@ class InputPanel extends ConsumerWidget {
   }
 }
 
+class _HeldDuringTake extends StatelessWidget {
+  const _HeldDuringTake({required this.held, required this.child});
+
+  final bool held;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!held) {
+      return child;
+    }
+    return ExcludeFocus(
+      child: IgnorePointer(
+        child: Opacity(opacity: _heldDuringTakeOpacity, child: child),
+      ),
+    );
+  }
+}
+
 class InputLevelRow extends ConsumerWidget {
-  const InputLevelRow({super.key, this.ink});
+  const InputLevelRow({super.key, this.ink, this.takeLevels});
 
   final Color? ink;
+  final Stream<double>? takeLevels;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -355,6 +393,7 @@ class InputLevelRow extends ConsumerWidget {
           volume: _settingsOf(ref).inputVolume,
           recorderFactory: ref.watch(inputLevelRecorderProvider),
           ink: ink,
+          levels: takeLevels,
         ),
       ],
     );

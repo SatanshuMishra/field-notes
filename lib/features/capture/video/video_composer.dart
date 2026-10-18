@@ -870,6 +870,7 @@ class _VideoComposerConnectorState
         supportsPause: _takeSupportsPause,
         savingHint: videoSavingHint,
         onVoiceSettings: _openVoiceSettings,
+        levels: _cameraOn ? _recorder.level : _voice.level,
       ),
     );
   }

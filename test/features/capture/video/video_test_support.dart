@@ -96,6 +96,9 @@ class FakeVideoRecorder implements VideoRecorder, CameraControls {
   Duration get elapsed => elapsedValue;
 
   @override
+  Stream<double> get level => const Stream<double>.empty();
+
+  @override
   double zoom = 1;
 
   final List<Offset> focusPoints = <Offset>[];
@@ -236,6 +239,9 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
 
   @override
   Duration get elapsed => Duration.zero;
+
+  @override
+  Stream<double> get level => const Stream<double>.empty();
 
   @override
   bool get supportsPause => false;

@@ -232,6 +232,8 @@ class _LiveSound {
 
   bool get holdsPicture => _pending != null;
 
+  Stream<double> get level => _capture.level;
+
   Future<bool> hasPermission() => _capture.hasPermission();
 
   Future<VoiceProcessing> _processing() async {
@@ -427,6 +429,9 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
 
   @override
   Duration get elapsed => _elapsed.elapsed;
+
+  @override
+  Stream<double> get level => _sound.level;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
@@ -1342,6 +1347,9 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
   @override
   Duration get elapsed => _elapsed.elapsed;
+
+  @override
+  Stream<double> get level => _sound.level;
 
   @override
   bool get supportsPause => true;

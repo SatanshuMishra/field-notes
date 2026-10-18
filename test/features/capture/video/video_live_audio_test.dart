@@ -303,6 +303,9 @@ class _ViewCapturingRecorder implements VideoRecorder {
   Duration get elapsed => _inner.elapsed;
 
   @override
+  Stream<double> get level => _inner.level;
+
+  @override
   bool get supportsPause => _inner.supportsPause;
 
   @override
