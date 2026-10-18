@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T04:41:10.644Z
+Updated: 2026-10-18T04:41:11.275Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -16,8 +16,6 @@ All three MSPs on FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) are 
 ## Next step
 
 The owner decides whether to fix the Windows output routing fallback (R2) on #321 before merging; otherwise the owner starts Integration by saying the MSP pull requests merged (#320, #321, #322).
-
-Needs: R1, R2.
 
 ## Decisions in force
 
