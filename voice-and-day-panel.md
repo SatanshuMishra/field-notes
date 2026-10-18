@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T05:42:04.169Z
+Updated: 2026-10-18T05:42:09.017Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -15,7 +15,7 @@ The owner merged MSP pull requests #320, #321 and #322 into FEATURE branch feat/
 
 ## Next step
 
-When the owner is off calls, rerun the PC routing trials R1-R6 at 06c32a71 (brief as in review/round-2/integration.smoke-winpc.txt); the owner merges #323; Integration (lighthouse on the FEATURE branch) starts when the owner says it merged.
+When the owner is off calls, rerun the PC routing trials R1-R6 at 06c32a71; the owner merges #323; Integration (lighthouse on feat/voice-and-day-panel) starts when the owner says it merged.
 
 ## Decisions in force
 
