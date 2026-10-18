@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T04:41:06.121Z
+Updated: 2026-10-18T04:41:10.644Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Fix the flat voice visualizer, add live input meters and a microphone dropdown p
 
 ## Where things stand
 
-All three MSPs on FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) are review-green with every advisory fixed and every slow check passing: audio (mitosis/audio, 291a079c), settings stacked on audio (mitosis/settings, 14daa129) and day-panel (mitosis/day-panel, 8f40db6a). Lab smoke passes on Windows, macOS and Android at the local merge 66438b78. Ready pull requests are open, assigned to the owner and carry their assumptions comments: audio #320 on the FEATURE branch, settings #321 on mitosis/audio, day-panel #322 on the FEATURE branch. The ship gate left 12 slow checks inconclusive (4 audio video_live_audio, 8 settings dropdown and speaker tests); each passes run alone at code-identical heads. Unproven: device-level 40 ms sync, macOS A3 (no guest camera), Windows playback and video recording (no guest sound device, camera or video decode); Android has no Output row and its day sheet card play still plays in the card, as the spec decided. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's Mac input runs hot: their raw Studio take clips to +0.5 dBFS in four short places, upstream of the chain.
+All three MSPs on FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) are review-green with every advisory fixed and every slow check passing: audio (mitosis/audio, 291a079c), settings stacked on audio (mitosis/settings, 14daa129) and day-panel (mitosis/day-panel, 8f40db6a). Lab smoke passes on Windows, macOS and Android at the local merge 66438b78. Ready pull requests are open, assigned to the owner and carry their assumptions comments: audio #320 on the FEATURE branch, settings #321 on mitosis/audio, day-panel #322 on the FEATURE branch. The ship gate left 12 slow checks inconclusive (4 audio video_live_audio, 8 settings dropdown and speaker tests); each passes run alone at code-identical heads. The real Windows PC smoke at 66438b78 passes every path but S3 routing (R2), with Escape keys unproven there. Unproven: device-level 40 ms sync, video recording on macOS and Windows (no camera); Android has no Output row and its day sheet card play still plays in the card, as the spec decided. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's Mac input runs hot: their raw Studio take clips to +0.5 dBFS in four short places, upstream of the chain.
 
 ## Next step
 
