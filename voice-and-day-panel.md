@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T02:01:22.268Z
+Updated: 2026-10-18T02:01:57.125Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs whose
 
 ## Next step
 
-Audio round 2 verdict is diagnose (review/round-2/audio.verdict.json): P1 to P3 fixed, C1 confirmed (a failed append drops samples with no silence, so sound runs ahead of picture), C2 and S1 rejected; its diagnosis runs into review/round-2/audio.sound-shifted-after-failed-append.diagnosis.json, then a fix pass on audio and a re-merge into settings. Day-panel is green at 8f40db6a, its advisory C1 fixed and its 13 slow checks passing alone (review/day-panel.proofs.jsonl); it waits only for the macOS D3x smoke. Settings' round-2 findings (C1 MEDIUM, Escape on an unfocused dropdown also closes the panel behind and arrows move the slider behind; S1 LOW, unlocked m_loadCallback and m_rerouteWhenLoaded in the Windows player) are with its validator; then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
+Audio round 2 verdict is diagnose (review/round-2/audio.verdict.json): P1 to P3 fixed, C1 confirmed (a failed append drops samples with no silence, so sound runs ahead of picture), C2 and S1 rejected; its diagnosis runs into review/round-2/audio.sound-shifted-after-failed-append.diagnosis.json, then a fix pass on audio and a re-merge into settings. Day-panel is green at 8f40db6a, its advisory C1 fixed and its 13 slow checks passing alone (review/day-panel.proofs.jsonl); it waits only for the macOS D3x smoke. Settings is green at 94831a4a (P1 fixed; C1 and S1 rejected as not introduced by the fix commits); its slow checks run after audio's fix is merged into it. Then smoke the broken paths in the lab, Windows first (settings U3 build on winpc only), then macOS D3x, then Android S2.
 
 Needs: D2.
 
