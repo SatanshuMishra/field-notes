@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T08:00:53.322Z
+Updated: 2026-10-18T08:11:53.774Z
 Next ids: c1 D4 R3 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Fix the flat voice visualizer, add live input meters and a microphone dropdown p
 
 ## Where things stand
 
-The owner merged #320, #321, #322 and the routing fix #323 into FEATURE branch feat/voice-and-day-panel; lighthouse published its profile there (99a5c6b6). Lighthouse run 1 (released) gave verdict failures: suite 5368 pass on FEATURE; across Windows, macOS and Android lab passes 44 paths passed, 9 unproven (no sound device or camera, Android-only or owner's ear), and N6 failed on all three: the recorder's input panel and meter exist only while idle (unchanged from core), so no meter moves while recording. Keep on a 3-minute voice take shows the log with its waveform in 213 ms on macOS and 244 ms on Android. N6 is Integration round 3 finding U2 (verdict diagnose), worktree ~/.mitosis/runs/field-notes/voice-and-day-panel/integration at 99a5c6b6; its diagnosis is running. The owner is hand-testing a release build of 99a5c6b6 on their Mac, which shares their real journal. Unproven: device-level 40 ms sync, video Keep within 1 s on a spec device (the emulator showed 1.5 s for 45 s of video), output routing on the real PC. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's Mac input runs hot: their raw Studio take clips to +0.5 dBFS in four short places, upstream of the chain.
+The owner merged #320, #321, #322 and the routing fix #323 into FEATURE branch feat/voice-and-day-panel; lighthouse published its profile there (99a5c6b6). Lighthouse run 1 (released) gave verdict failures: suite 5368 pass on FEATURE; across Windows, macOS and Android lab passes 44 paths passed, 9 unproven (no sound device or camera, Android-only or owner's ear), and N6 failed on all three: the recorder's input panel and meter exist only while idle (unchanged from core), so no meter moves while recording. Keep on a 3-minute voice take shows the log with its waveform in 213 ms on macOS and 244 ms on Android. N6 is Integration round 3 finding U2, diagnosed fixable; its fix is written, uncommitted, in worktree ~/.mitosis/runs/field-notes/voice-and-day-panel/integration (Input button kept through a take, the panel meter fed by the take's cleaned level, device, profile and volume rows held inactive during a take), with receipt tests passing and the full suite running. The owner is hand-testing a release build of 99a5c6b6 on their Mac, which shares their real journal. Unproven: device-level 40 ms sync, video Keep within 1 s on a spec device (the emulator showed 1.5 s for 45 s of video), output routing on the real PC. The owner's checkout keeps uncommitted docs/prototype and tool/probe/macos/drive.sh changes that no Step touches. The owner's Mac input runs hot: their raw Studio take clips to +0.5 dBFS in four short places, upstream of the chain.
 
 ## Next step
 
