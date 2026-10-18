@@ -1,6 +1,6 @@
 # voice-and-day-panel: Voice meter, settings, day pop-up panel, voice clarity and faster denoise
 Status: parked
-Updated: 2026-10-18T01:31:47.588Z
+Updated: 2026-10-18T01:32:07.275Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ FEATURE branch feat/voice-and-day-panel (cut at cb2428e9) holds three MSPs in th
 
 ## Next step
 
-Finish and commit the settings fix pass, record day-panel's diagnosis and fix it, take audio's fix report, merge audio into settings again, then run round 2 reviews with previous_head set and smoke only on broken paths, in the lab, Windows first.
+When the audio agent reports, check its commits and suite, merge mitosis/audio into mitosis/settings, rerun the day-panel and settings suites one at a time, then run round 2 reviews with previous_head set and smoke only on broken paths, in the lab, Windows first.
 
 Needs: D2.
 
