@@ -435,7 +435,7 @@ class LiveAudioCapture {
     try {
       await take.opened.future;
     } catch (_) {
-      _close(take);
+      _stopWatching(take);
       if (identical(_take, take)) {
         _take = null;
       }
@@ -486,7 +486,7 @@ class LiveAudioCapture {
     take.opened.complete();
   }
 
-  void _close(_ActiveTake take) {
+  void _stopWatching(_ActiveTake take) {
     take.closing = true;
     take.watchdog?.cancel();
     take.settling?.cancel();
@@ -891,7 +891,7 @@ class LiveAudioCapture {
       throw StateError('No live audio take is running.');
     }
     final Duration keptAt = take.paused ? take.pausedAt : _clock();
-    _close(take);
+    _stopWatching(take);
     try {
       await _release(take, take.recorder.stop);
       await _quietly(() async => take.chunks?.cancel());
@@ -905,7 +905,7 @@ class LiveAudioCapture {
       await _appendRest(take);
       await _send(take, Uint8List(0));
       return LiveAudioTake(
-        path: await _closed(take),
+        path: await _closeEncoder(take),
         durationMs: _durationOf(take.samplesWritten).inMilliseconds,
       );
     } finally {
@@ -942,7 +942,7 @@ class LiveAudioCapture {
     return true;
   }
 
-  Future<String> _closed(_ActiveTake take) async {
+  Future<String> _closeEncoder(_ActiveTake take) async {
     try {
       return await _encoder.close(take.encoderId);
     } catch (_) {
@@ -962,7 +962,7 @@ class LiveAudioCapture {
       return;
     }
     _take = null;
-    _close(take);
+    _stopWatching(take);
     take.paused = true;
     await _release(take, take.recorder.cancel);
     await _quietly(() async => take.chunks?.cancel());
