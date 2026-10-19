@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T13:38:48.289Z
+Updated: 2026-10-19T13:39:46.863Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camera (round 3, 2d0091ff) are green and wait for ship; each green MSP is merged up the stack. hearing-and-ring is green again at round 3 (32ff2edc): its input panel rows and drop-down choices are now one named node each on Android, fixing a split that hid their names there. button-consistency's round 2 at adcefe11 is at diagnose: blockers C1 (small tap target: settings text field padding shows the text cursor but ignores clicks) and U1 (failing test: the Android rows), advisory C2 (three pass-through hover wrappers), P1 fixed; one diagnosis per kind is running. The same wrapper split remains in its meadow_tabs.dart and settings_segmented.dart (use Pressable's inMutuallyExclusiveGroup). android_dump_rules_test fails now and then under machine load and is not a finding. Smoke: Windows is unproven while the owner's PC is offline on Tailscale; the Android camera-off notice passes. The Mac repro app is built in harness/repro-tree from 32ff2edc; its built-in microphone run waits on two macOS system dialogs (privacy and app-launch checks) only the owner can answer.
+Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camera (round 3, 2d0091ff) are green and wait for ship; each green MSP is merged up the stack. hearing-and-ring is green again at round 3 (32ff2edc): its input panel rows and drop-down choices are now one named node each on Android, fixing a split that hid their names there. button-consistency's round 2 at adcefe11 is at diagnose: blockers C1 (small tap target: settings text field padding shows the text cursor but ignores clicks) and U1 (failing test: the Android rows), advisory C2 (three pass-through hover wrappers), P1 fixed; the failing-test diagnosis is recorded fixable (merge hearing-and-ring, move the radio flag into Pressable at settings_segmented.dart, meadow_tabs.dart and meadow_glass_popover.dart, add a guard test that no Semantics wraps a Pressable; selecting check in review/checks/button-r2); the small-tap-target diagnosis is running. android_dump_rules_test fails now and then under machine load and is not a finding. Smoke: Windows is unproven while the owner's PC is offline on Tailscale; the Android camera-off notice passes. The Mac repro app is built in harness/repro-tree from 32ff2edc; its built-in microphone run waits on two macOS system dialogs (privacy and app-launch checks) only the owner can answer.
 
 ## Next step
 
