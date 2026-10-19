@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T03:10:09.249Z
+Updated: 2026-10-19T03:10:11.094Z
 Next ids: c5 D1 R2 S1
 
 ## Goal
@@ -32,6 +32,6 @@ Wait for the owner's answers to the interview's intent round (goal, why, success
 
 ## Where the details live
 
-- Spec folder: docs/specs/mac-video-audio-and-recorder-ui.* (decisions, record, guard).
+- Spec folder: docs/specs/mac-video-audio-and-recorder-ui.* (decisions, record, guard, and the reproduction tests in .repro.dart, destined for test/features/capture/video/mac_video_sound_repro_test.dart).
 - Owner's evidence takes: the three 2026-10-18 .mp4 blobs under the app container's Documents/media/blobs (52/, 17/, 92/).
 - Mac recorder: lib/features/capture/platform/camera_video_recorder.dart; sound capture lib/features/capture/audio/live_audio_capture.dart; native join macos/Runner/LiveAudioBridge.swift; camera plugin third_party/camera_macos.
