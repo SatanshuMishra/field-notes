@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T22:41:01.963Z
+Updated: 2026-10-19T22:54:07.675Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-recorder-ui. Integration is in lighthouse run 1 (results in the run home's lighthouse/run-1): the profile now records the vendored record_macos and was published to FEATURE as 9304737b; the suite passed on core 9eb6c237 and FEATURE (flaky only: a tooling test failing on main too and one timing test that passed on rerun); Windows lab paths: 7 of 8 passed; path 5 failed (a voice take whose microphone stalls saves 3 to 4 s short of the elapsed time, against spec 5.1). The Android video paths are being driven. Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
+The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-recorder-ui. Integration is in lighthouse run 1 (results in the run home's lighthouse/run-1): the profile now records the vendored record_macos and was published to FEATURE as 9304737b; the suite passed on core 9eb6c237 and FEATURE (flaky only: a tooling test failing on main too and one timing test that passed on rerun); Windows lab paths: 7 of 8 passed; path 5 failed (a voice take whose microphone stalls saves 3 to 4 s short of the elapsed time, against spec 5.1). On this Mac the stall does not reproduce: the capture logic, the real voice chain, the lab's own fake platform and a loaded UI thread all save the full length, so the suspect is the lab fake skipping timer ticks on a starved UI thread. The Android video paths are being driven. Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
 
 ## Next step
 
