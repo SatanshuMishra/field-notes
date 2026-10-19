@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T11:56:34.100Z
+Updated: 2026-10-19T12:02:53.166Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Pipeline stage 3. mic-recovery is green (round 2) with its advisories fixed at 2
 
 ## Next step
 
-As each round 1 reviewer returns, collect hearing-and-ring's and button-consistency's findings (reviewers' arrays plus a U finding per suite failure that passes on the base and an M finding for button-consistency's inconclusive gate), then candidates, validator, record and verdict. The Android lab smoke run on button-consistency's head is running (briefs in review/round-1/briefs/); the Mac hardware check follows it after confirming the owner is not on a call; Windows smoke is unproven until the owner's PC is back on Tailscale to build. All round 1 reviewers have returned; both validators are running on the candidates files. hearing-and-ring's code reviewer found the voice recorder never re-arms on an input change (C1 HIGH), cannotHear survives close() and gates camera-off video takes (C2), the level meter's 500 ms quiet timer churns slow-opening mics (C3), the stale dropdown test (C4) and focus rings around icon plus caption (C5). button-consistency's found the 5.14 taps (C1, also A1 and S1), toggles losing their switch role because Pressable always sets button (C2 HIGH, fix lands in hearing-and-ring's pressable.dart), text fields reading as buttons (C3), the stale tests (C4) and 61 hand-written hover overlays (C5). Probe tests sit in review/checks/hearing-r1 and button-r1.
+As each round 1 reviewer returns, collect hearing-and-ring's and button-consistency's findings (reviewers' arrays plus a U finding per suite failure that passes on the base and an M finding for button-consistency's inconclusive gate), then candidates, validator, record and verdict. The Android lab smoke run on button-consistency's head is running (briefs in review/round-1/briefs/); the Mac hardware check follows it after confirming the owner is not on a call; Windows smoke is unproven until the owner's PC is back on Tailscale to build. Round 1 verdicts are recorded and both MSPs are at diagnose. hearing-and-ring blockers: C1, C2, C3 and U1 (advisory C5; C4 rejected). button-consistency blockers: C1, U1-U16 and M1 (advisories C2, C3 and C5; A1 and S1 rejected as repeats of C1; C4 rejected). Seven Opus diagnoses are running, one per kind (verdict.json in review/round-1 lists the kinds); the fix pass starts once each is recorded with pipeline diagnosis and the verdict is re-run. hearing-and-ring's code reviewer found the voice recorder never re-arms on an input change (C1 HIGH), cannotHear survives close() and gates camera-off video takes (C2), the level meter's 500 ms quiet timer churns slow-opening mics (C3), the stale dropdown test (C4) and focus rings around icon plus caption (C5). button-consistency's found the 5.14 taps (C1, also A1 and S1), toggles losing their switch role because Pressable always sets button (C2 HIGH, fix lands in hearing-and-ring's pressable.dart), text fields reading as buttons (C3), the stale tests (C4) and 61 hand-written hover overlays (C5). Probe tests sit in review/checks/hearing-r1 and button-r1.
 
 Needs: D2, R1.
 
