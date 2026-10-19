@@ -1,5 +1,6 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/plural.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
@@ -287,24 +288,12 @@ class MeadowBackLink extends StatelessWidget {
         ],
       ),
     );
-    return Semantics(
-      button: true,
+    return Pressable(
       label: meadowBackLabel,
-      onTap: onPressed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: onPressed,
-          child: FocusRing(
-            onPressed: onPressed,
-            surface: FocusRingSurface.dark,
-            borderRadius: _linkRadius,
-            child: ExcludeSemantics(child: face),
-          ),
-        ),
-      ),
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      borderRadius: _linkRadius,
+      child: face,
     );
   }
 }

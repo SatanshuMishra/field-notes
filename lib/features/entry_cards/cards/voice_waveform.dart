@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 const double voiceWaveformBarWidth = 3;
@@ -11,6 +12,9 @@ const double voiceWaveformTargetHeight = 48;
 const int voiceWaveformMinBars = 8;
 
 const double _barRadius = 2;
+const BorderRadius _seekHoverRadius = BorderRadius.all(
+  Radius.circular(_barRadius),
+);
 const double _midThreshold = 0.62;
 const double _minHeight = 0.07;
 const double _highestWeight = 0.65;
@@ -25,6 +29,8 @@ const Radius _playheadRadius = Radius.circular(1);
 
 const Duration _colourShift = Duration(milliseconds: 150);
 const Curve _colourCurve = Curves.ease;
+
+const String voiceWaveformSeekLabel = 'Playback position';
 
 const Key voiceWaveformPlayheadKey = ValueKey<String>('voice-wave-playhead');
 
@@ -70,7 +76,7 @@ double _barValue(List<double> peaks, int index, int count) {
 bool voiceWaveformBarPlayed(int index, int count, double progress) =>
     (index + 0.5) / count <= progress;
 
-class VoiceWaveform extends StatelessWidget {
+class VoiceWaveform extends StatefulWidget {
   const VoiceWaveform({
     super.key,
     required this.peaks,
@@ -85,7 +91,24 @@ class VoiceWaveform extends StatelessWidget {
   final ValueChanged<double>? onSeek;
 
   @override
+  State<VoiceWaveform> createState() => _VoiceWaveformState();
+}
+
+class _VoiceWaveformState extends State<VoiceWaveform> {
+  final FocusNode _pressFocus = FocusNode(
+    debugLabel: 'voice waveform press',
+    skipTraversal: true,
+  );
+
+  @override
+  void dispose() {
+    _pressFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final double progress = widget.progress;
     final double shown = progress.isNaN ? 0 : progress.clamp(0.0, 1.0);
     return SizedBox(
       height: voiceWaveformTargetHeight,
@@ -96,35 +119,33 @@ class VoiceWaveform extends StatelessWidget {
               : voiceWaveformMinBars *
                         (voiceWaveformBarWidth + voiceWaveformBarGap) -
                     voiceWaveformBarGap;
-          final ValueChanged<double>? seek = onSeek;
-          return MouseRegion(
-            cursor: seek == null ? MouseCursor.defer : SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              excludeFromSemantics: true,
-              onTapUp: seek == null
+          final ValueChanged<double>? seek = widget.onSeek;
+          return ExcludeSemantics(
+            child: Pressable(
+              label: voiceWaveformSeekLabel,
+              onPressedAt: seek == null
                   ? null
-                  : (TapUpDetails details) =>
-                        seek(_fractionAt(details.localPosition.dx, width)),
-              child: ExcludeSemantics(
-                child: SizedBox(
-                  width: width,
-                  height: voiceWaveformTargetHeight,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    alignment: Alignment.center,
-                    children: <Widget>[
-                      RepaintBoundary(
-                        child: _Bars(
-                          peaks: peaks,
-                          width: width,
-                          active: active,
-                          progress: shown,
-                        ),
+                  : (Offset localPosition) =>
+                        seek(_fractionAt(localPosition.dx, width)),
+              borderRadius: _seekHoverRadius,
+              focusNode: _pressFocus,
+              child: SizedBox(
+                width: width,
+                height: voiceWaveformTargetHeight,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    RepaintBoundary(
+                      child: _Bars(
+                        peaks: widget.peaks,
+                        width: width,
+                        active: widget.active,
+                        progress: shown,
                       ),
-                      if (active) _playhead(context, width * shown),
-                    ],
-                  ),
+                    ),
+                    if (widget.active) _playhead(context, width * shown),
+                  ],
                 ),
               ),
             ),

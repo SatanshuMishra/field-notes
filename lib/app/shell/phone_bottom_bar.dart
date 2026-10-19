@@ -2,6 +2,8 @@ import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 
@@ -100,11 +102,14 @@ class PhoneBottomBar extends StatelessWidget {
     };
   }
 
+  FocusRingSurface get _surface =>
+      overScene ? FocusRingSurface.dark : FocusRingSurface.light;
+
   Widget _tab(BuildContext context, ShellDestination destination) {
     final bool isSelected = destination == selected;
     final Color ink = _inkFor(context, isSelected: isSelected);
     final NavGlyph? glyph = destination.glyph;
-    final Widget art = SizedBox(
+    Widget art(bool hovered) => SizedBox(
       height: _cellHeight,
       width: double.infinity,
       child: DecoratedBox(
@@ -112,55 +117,55 @@ class PhoneBottomBar extends StatelessWidget {
           color: isSelected ? tone.pillFor(Theme.of(context).brightness) : null,
           borderRadius: _cellRadius,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            if (glyph == null)
-              Icon(destination.icon, size: _iconSize, color: ink)
-            else
-              NavIcon(glyph: glyph, color: ink, size: _iconSize),
-            const SizedBox(height: _labelGap),
-            Flexible(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  destination.label,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.visible,
-                  style: context.textStyles.caption11Sans.copyWith(
-                    inherit: false,
-                    fontSize: _labelSize,
-                    fontWeight: FontWeight.w600,
-                    color: ink,
+        child: HoverFill(
+          hovered: hovered,
+          surface: _surface,
+          borderRadius: _cellRadius,
+          position: DecorationPosition.background,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              if (glyph == null)
+                Icon(destination.icon, size: _iconSize, color: ink)
+              else
+                NavIcon(glyph: glyph, color: ink, size: _iconSize),
+              const SizedBox(height: _labelGap),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    destination.label,
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.visible,
+                    style: context.textStyles.caption11Sans.copyWith(
+                      inherit: false,
+                      fontSize: _labelSize,
+                      fontWeight: FontWeight.w600,
+                      color: ink,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
     final ValueChanged<ShellDestination>? onSelect = this.onSelect;
     if (onSelect == null) {
-      return ExcludeSemantics(child: _slot(art));
+      return ExcludeSemantics(child: _slot(art(false)));
     }
-    return Semantics(
-      button: true,
-      selected: isSelected,
+    return Pressable(
+      key: ValueKey<String>('tab-${destination.name}'),
       label: destination.label,
-      child: GestureDetector(
-        key: ValueKey<String>('tab-${destination.name}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: () => onSelect(destination),
-        child: _slot(
-          FocusRing(
-            onPressed: () => onSelect(destination),
-            borderRadius: _cellRadius,
-            child: ExcludeSemantics(child: art),
-          ),
-        ),
-      ),
+      selected: isSelected,
+      onPressed: () => onSelect(destination),
+      borderRadius: _cellRadius,
+      surface: _surface,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => _slot(art(hovered)),
     );
   }
 
@@ -172,7 +177,7 @@ class PhoneBottomBar extends StatelessWidget {
   }
 
   Widget _capture(BuildContext context) {
-    final Widget circle = SizedBox.square(
+    Widget circle(bool hovered) => SizedBox.square(
       dimension: _captureExtent,
       child: DecoratedBox(
         decoration: BoxDecoration(
@@ -181,18 +186,24 @@ class PhoneBottomBar extends StatelessWidget {
           border: context.shadows.outline,
           boxShadow: _captureShadow,
         ),
-        child: const CustomPaint(
-          painter: GlassHighlightPainter(
-            color: _captureHighlight,
-            borderRadius: _captureRadius,
-            insets: EdgeInsets.all(Shapes.outlineWidth),
-          ),
-          child: Center(
-            child: NavIcon(
-              glyph: NavGlyph.plus,
-              color: Palette.onAccent,
-              size: _plusSize,
-              strokeWidth: _plusStroke,
+        child: HoverFill(
+          hovered: hovered,
+          surface: FocusRingSurface.dark,
+          borderRadius: _captureRadius,
+          position: DecorationPosition.background,
+          child: const CustomPaint(
+            painter: GlassHighlightPainter(
+              color: _captureHighlight,
+              borderRadius: _captureRadius,
+              insets: EdgeInsets.all(Shapes.outlineWidth),
+            ),
+            child: Center(
+              child: NavIcon(
+                glyph: NavGlyph.plus,
+                color: Palette.onAccent,
+                size: _plusSize,
+                strokeWidth: _plusStroke,
+              ),
             ),
           ),
         ),
@@ -200,23 +211,18 @@ class PhoneBottomBar extends StatelessWidget {
     );
     final VoidCallback? onCapture = this.onCapture;
     if (onCapture == null) {
-      return ExcludeSemantics(child: Center(child: circle));
+      return ExcludeSemantics(child: Center(child: circle(false)));
     }
-    return Semantics(
-      button: true,
+    return Pressable(
+      key: const ValueKey<String>('capture-button'),
       label: 'New entry',
-      child: GestureDetector(
-        key: const ValueKey<String>('capture-button'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onCapture,
-        child: Center(
-          child: FocusRing(
-            onPressed: onCapture,
-            borderRadius: _captureRadius,
-            child: circle,
-          ),
-        ),
-      ),
+      onPressed: onCapture,
+      borderRadius: _captureRadius,
+      surface: _surface,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) =>
+          Center(child: circle(hovered)),
     );
   }
 }

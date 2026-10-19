@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -225,46 +226,32 @@ class _StepControl extends StatelessWidget {
       overflow: TextOverflow.ellipsis,
       style: context.textStyles.captureLabelSans.copyWith(color: colors.ink),
     );
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
       label: label,
-      onTap: step,
-      child: FocusRing(
-        enabled: enabled,
-        onPressed: step,
-        borderRadius: _stepBorderRadius,
-        child: ExcludeSemantics(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: step,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minWidth: target, minHeight: target),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: _footerVerticalPadding,
-                ),
-                child: Opacity(
-                  opacity: enabled ? 1 : _absentStepOpacity,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: pointsBack
-                        ? MainAxisAlignment.start
-                        : MainAxisAlignment.end,
-                    children: pointsBack
-                        ? <Widget>[
-                            glyph,
-                            const SizedBox(width: _stepGlyphGap),
-                            Flexible(child: text),
-                          ]
-                        : <Widget>[
-                            Flexible(child: text),
-                            const SizedBox(width: _stepGlyphGap),
-                            glyph,
-                          ],
-                  ),
-                ),
-              ),
+      onPressed: step,
+      borderRadius: _stepBorderRadius,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minWidth: target, minHeight: target),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: _footerVerticalPadding),
+          child: Opacity(
+            opacity: enabled ? 1 : _absentStepOpacity,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: pointsBack
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.end,
+              children: pointsBack
+                  ? <Widget>[
+                      glyph,
+                      const SizedBox(width: _stepGlyphGap),
+                      Flexible(child: text),
+                    ]
+                  : <Widget>[
+                      Flexible(child: text),
+                      const SizedBox(width: _stepGlyphGap),
+                      glyph,
+                    ],
             ),
           ),
         ),

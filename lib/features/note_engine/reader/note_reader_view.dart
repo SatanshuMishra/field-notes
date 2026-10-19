@@ -56,6 +56,7 @@ class _NoteReaderViewState extends State<NoteReaderView> {
   FocusNode? _focusNode;
   NoteSelection? _selection;
   int _pressOffset = 0;
+  bool _overTarget = false;
 
   @override
   void initState() {
@@ -153,6 +154,24 @@ class _NoteReaderViewState extends State<NoteReaderView> {
       return index < 0 ? null : index;
     }
     return null;
+  }
+
+  bool _targetAt(Offset global, PointerDeviceKind kind) =>
+      (widget.onToggleTask != null && _checkboxAt(global, kind) != null) ||
+      (widget.onOpenPhoto != null && _photoAt(global, kind) != null);
+
+  void _setOverTarget(bool over) {
+    if (over != _overTarget) {
+      setState(() => _overTarget = over);
+    }
+  }
+
+  void _handleHover(PointerHoverEvent event) {
+    _setOverTarget(_targetAt(event.position, event.kind));
+  }
+
+  void _handleHoverExit(PointerExitEvent event) {
+    _setOverTarget(false);
   }
 
   NoteSelection _wordAt(int offset) {
@@ -324,33 +343,40 @@ class _NoteReaderViewState extends State<NoteReaderView> {
     if (onToggleTask == null && onOpenPhoto == null) {
       return view;
     }
-    return RawGestureDetector(
-      gestures: <Type, GestureRecognizerFactory>{
-        if (onToggleTask != null)
-          _CheckboxTapRecognizer:
-              GestureRecognizerFactoryWithHandlers<_CheckboxTapRecognizer>(
-                () => _CheckboxTapRecognizer(
-                  checkboxAt: _checkboxAt,
-                  debugOwner: this,
+    return MouseRegion(
+      hitTestBehavior: HitTestBehavior.deferToChild,
+      cursor: _overTarget ? SystemMouseCursors.click : MouseCursor.defer,
+      onHover: _handleHover,
+      onExit: _handleHoverExit,
+      child: RawGestureDetector(
+        gestures: <Type, GestureRecognizerFactory>{
+          if (onToggleTask != null)
+            _CheckboxTapRecognizer:
+                GestureRecognizerFactoryWithHandlers<_CheckboxTapRecognizer>(
+                  () => _CheckboxTapRecognizer(
+                    checkboxAt: _checkboxAt,
+                    debugOwner: this,
+                  ),
+                  (_CheckboxTapRecognizer recognizer) {
+                    recognizer
+                      ..checkboxAt = _checkboxAt
+                      ..onToggle = onToggleTask;
+                  },
                 ),
-                (_CheckboxTapRecognizer recognizer) {
-                  recognizer
-                    ..checkboxAt = _checkboxAt
-                    ..onToggle = onToggleTask;
-                },
-              ),
-        if (onOpenPhoto != null)
-          _PhotoTapRecognizer:
-              GestureRecognizerFactoryWithHandlers<_PhotoTapRecognizer>(
-                () => _PhotoTapRecognizer(photoAt: _photoAt, debugOwner: this),
-                (_PhotoTapRecognizer recognizer) {
-                  recognizer
-                    ..photoAt = _photoAt
-                    ..onOpen = onOpenPhoto;
-                },
-              ),
-      },
-      child: view,
+          if (onOpenPhoto != null)
+            _PhotoTapRecognizer:
+                GestureRecognizerFactoryWithHandlers<_PhotoTapRecognizer>(
+                  () =>
+                      _PhotoTapRecognizer(photoAt: _photoAt, debugOwner: this),
+                  (_PhotoTapRecognizer recognizer) {
+                    recognizer
+                      ..photoAt = _photoAt
+                      ..onOpen = onOpenPhoto;
+                  },
+                ),
+        },
+        child: view,
+      ),
     );
   }
 

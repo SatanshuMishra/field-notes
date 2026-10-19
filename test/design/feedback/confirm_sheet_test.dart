@@ -5,6 +5,8 @@ import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/face_boxes.dart';
+
 const Size _phone = Size(384, 832);
 const Size _desktop = Size(1280, 800);
 const double _statusBar = 34;
@@ -68,7 +70,7 @@ Future<List<bool>> _open(WidgetTester tester, TargetPlatform platform) async {
 
 BoxDecoration _decorationOf(WidgetTester tester, Key key) {
   final DecoratedBox box = tester.widget<DecoratedBox>(
-    find.descendant(of: find.byKey(key), matching: find.byType(DecoratedBox)),
+    find.descendant(of: find.byKey(key), matching: faceBoxes()),
   );
   return box.decoration as BoxDecoration;
 }
@@ -167,7 +169,7 @@ void main() {
     expect(find.byKey(phoneSheetGrabberKey), findsNothing);
     final Rect panel = tester.getRect(
       find
-          .ancestor(of: find.text(_title), matching: find.byType(DecoratedBox))
+          .ancestor(of: find.text(_title), matching: faceBoxes())
           .first,
     );
     expect(panel.center.dx, closeTo(_desktop.width / 2, 0.5));

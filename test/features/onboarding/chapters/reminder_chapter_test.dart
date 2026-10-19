@@ -408,6 +408,7 @@ void _expectChoices(
       ),
       ShellLayout.bottomBar => isSemantics(
         label: option.label,
+        isButton: false,
         hasCheckedState: true,
         isChecked: on,
         isInMutuallyExclusiveGroup: true,

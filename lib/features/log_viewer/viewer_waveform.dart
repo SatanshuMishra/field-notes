@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/entry_cards/cards/voice_waveform.dart';
 import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
@@ -11,6 +13,9 @@ const String _positionLabel = 'Playback position';
 const double _barWidth = 4;
 const double _barGap = 3;
 const double _barRadius = 2;
+const BorderRadius _seekHoverRadius = BorderRadius.all(
+  Radius.circular(_barRadius),
+);
 const double _tallBar = 0.62;
 const double _unplayedAlpha = 0.28;
 const double _tallUnplayedAlpha = 0.46;
@@ -19,7 +24,7 @@ const double _playheadWidth = 2;
 const double _playheadReach = 6;
 const Radius _playheadRadius = Radius.circular(_playheadWidth / 2);
 
-class ViewerWaveform extends StatelessWidget {
+class ViewerWaveform extends StatefulWidget {
   const ViewerWaveform({
     super.key,
     required this.peaks,
@@ -46,19 +51,37 @@ class ViewerWaveform extends StatelessWidget {
   final VoidCallback? onDecrease;
 
   @override
+  State<ViewerWaveform> createState() => _ViewerWaveformState();
+}
+
+class _ViewerWaveformState extends State<ViewerWaveform> {
+  final FocusNode _pressFocus = FocusNode(
+    debugLabel: 'viewer waveform press',
+    skipTraversal: true,
+  );
+
+  @override
+  void dispose() {
+    _pressFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final double progress = widget.progress;
+    final double height = widget.height;
     final double shown = progress.isNaN ? 0 : progress.clamp(0.0, 1.0);
-    final ValueChanged<double>? seek = onSeek;
+    final ValueChanged<double>? seek = widget.onSeek;
     return Semantics(
       container: true,
       slider: true,
       enabled: seek != null,
       label: _positionLabel,
-      value: semanticValue,
-      increasedValue: increasedValue,
-      decreasedValue: decreasedValue,
-      onIncrease: onIncrease,
-      onDecrease: onDecrease,
+      value: widget.semanticValue,
+      increasedValue: widget.increasedValue,
+      decreasedValue: widget.decreasedValue,
+      onIncrease: widget.onIncrease,
+      onDecrease: widget.onDecrease,
       child: NoSwipe(
         child: SizedBox(
           height: height,
@@ -67,33 +90,36 @@ class ViewerWaveform extends StatelessWidget {
               final double width = constraints.hasBoundedWidth
                   ? constraints.maxWidth
                   : voiceWaveformMinBars * (_barWidth + _barGap) - _barGap;
-              return MouseRegion(
-                cursor: seek == null
-                    ? MouseCursor.defer
-                    : SystemMouseCursors.click,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  excludeFromSemantics: true,
-                  onTapUp: seek == null
+              return ExcludeSemantics(
+                child: Pressable(
+                  label: _positionLabel,
+                  onPressedAt: seek == null
                       ? null
-                      : (TapUpDetails details) =>
-                            seek(_fractionAt(details.localPosition.dx, width)),
-                  onHorizontalDragStart: seek == null
-                      ? null
-                      : (DragStartDetails details) =>
-                            seek(_fractionAt(details.localPosition.dx, width)),
-                  onHorizontalDragUpdate: seek == null
-                      ? null
-                      : (DragUpdateDetails details) =>
-                            seek(_fractionAt(details.localPosition.dx, width)),
-                  child: ExcludeSemantics(
+                      : (Offset localPosition) =>
+                            seek(_fractionAt(localPosition.dx, width)),
+                  surface: FocusRingSurface.dark,
+                  borderRadius: _seekHoverRadius,
+                  focusNode: _pressFocus,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    excludeFromSemantics: true,
+                    onHorizontalDragStart: seek == null
+                        ? null
+                        : (DragStartDetails details) => seek(
+                            _fractionAt(details.localPosition.dx, width),
+                          ),
+                    onHorizontalDragUpdate: seek == null
+                        ? null
+                        : (DragUpdateDetails details) => seek(
+                            _fractionAt(details.localPosition.dx, width),
+                          ),
                     child: RepaintBoundary(
                       child: CustomPaint(
                         size: Size(width, height),
                         painter: _WaveformPainter(
-                          peaks: peaks,
+                          peaks: widget.peaks,
                           progress: shown,
-                          active: active,
+                          active: widget.active,
                         ),
                       ),
                     ),

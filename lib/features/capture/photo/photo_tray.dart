@@ -1,4 +1,5 @@
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
@@ -179,27 +180,23 @@ class _PhotoTrayTile extends StatelessWidget {
         Positioned(
           top: 2,
           right: 2,
-          child: Semantics(
-            button: true,
+          child: Pressable(
             label: 'Remove photo ${index + 1}',
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onRemove,
-              child: FocusRing(
-                onPressed: onRemove,
-                borderRadius: _removeRadius,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: context.colors.cardBright,
-                    border: context.shadows.outline,
-                    borderRadius: _removeRadius,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: ExcludeSemantics(
-                      child: Text('×', style: context.textStyles.buttonSans),
-                    ),
-                  ),
+            onPressed: onRemove,
+            borderRadius: _removeRadius,
+            paintsHover: false,
+            builder: (BuildContext context, bool hovered) => HoverFill(
+              hovered: hovered,
+              borderRadius: _removeRadius,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: context.colors.cardBright,
+                  border: context.shadows.outline,
+                  borderRadius: _removeRadius,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Text('×', style: context.textStyles.buttonSans),
                 ),
               ),
             ),

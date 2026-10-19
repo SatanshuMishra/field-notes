@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -78,7 +80,6 @@ const double _cameraStroke = 2;
 const double _plusGap = 7;
 const double _hintsGap = 12;
 const double _busyOpacity = 0.5;
-const double _focusBorderWidth = 3;
 
 class ComposerFooter extends StatefulWidget {
   const ComposerFooter({
@@ -103,7 +104,6 @@ class ComposerFooter extends StatefulWidget {
 class _ComposerFooterState extends State<ComposerFooter> {
   final FocusNode _addFocus = FocusNode(debugLabel: composerAddPhotoLabel);
   bool _busy = false;
-  bool _addFocused = false;
 
   @override
   void dispose() {
@@ -164,12 +164,6 @@ class _ComposerFooterState extends State<ComposerFooter> {
     }
   }
 
-  void _onAddFocusHighlight(bool focused) {
-    if (mounted && focused != _addFocused) {
-      setState(() => _addFocused = focused);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (widget.compact) {
@@ -204,74 +198,54 @@ class _ComposerFooterState extends State<ComposerFooter> {
     final FieldNotesColors colors = context.colors;
     final FieldNotesShadows shadows = context.shadows;
     final bool enabled = !_busy;
-    return FocusableActionDetector(
+    return Pressable(
+      key: composerAddPhotoKey,
+      label: composerAddPhotoLabel,
+      hint: composerAddPhotoHint,
+      onPressed: enabled ? () => unawaited(_add()) : null,
       focusNode: _addFocus,
-      enabled: enabled,
-      onShowFocusHighlight: _onAddFocusHighlight,
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (ActivateIntent intent) {
-            unawaited(_add());
-            return null;
-          },
-        ),
-      },
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: composerAddPhotoLabel,
-        hint: composerAddPhotoHint,
-        child: GestureDetector(
-          key: composerAddPhotoKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: enabled ? () => unawaited(_add()) : null,
-          child: ExcludeSemantics(
-            child: SizedBox(
-              height: widget.compact ? formatBarHeight : composerFooterHeight,
-              child: Center(
-                child: DecoratedBox(
-                  key: _addFocused ? focusRingKey : null,
-                  decoration: BoxDecoration(
-                    color: Palette.coral,
-                    border: _addFocused
-                        ? Border.fromBorderSide(
-                            BorderSide(
-                              color: colors.ink,
-                              width: _focusBorderWidth,
-                            ),
-                          )
-                        : shadows.outline,
-                    borderRadius: Shapes.buttonBorderRadius,
-                    boxShadow: shadows.control,
+      borderRadius: Shapes.buttonBorderRadius,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        height: widget.compact ? formatBarHeight : composerFooterHeight,
+        child: Center(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Palette.coral,
+              border: shadows.outline,
+              borderRadius: Shapes.buttonBorderRadius,
+              boxShadow: shadows.control,
+            ),
+            child: HoverFill(
+              hovered: hovered,
+              surface: FocusRingSurface.dark,
+              borderRadius: Shapes.buttonBorderRadius,
+              position: DecorationPosition.background,
+              child: Opacity(
+                opacity: enabled ? 1 : _busyOpacity,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _addHorizontalPadding,
+                    vertical: _addVerticalPadding,
                   ),
-                  child: Opacity(
-                    opacity: enabled ? 1 : _busyOpacity,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _addHorizontalPadding,
-                        vertical: _addVerticalPadding,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      SizedBox.square(
+                        dimension: _cameraExtent,
+                        child: CustomPaint(
+                          painter: _CameraPainter(color: colors.ink),
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          SizedBox.square(
-                            dimension: _cameraExtent,
-                            child: CustomPaint(
-                              painter: _CameraPainter(color: colors.ink),
-                            ),
-                          ),
-                          const SizedBox(width: _plusGap),
-                          Text(
-                            enabled
-                                ? composerAddPhotoLabel
-                                : composerAddingLabel,
-                            style: context.textStyles.captureLabelSans.copyWith(
-                              color: Palette.onAccent,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: _plusGap),
+                      Text(
+                        enabled ? composerAddPhotoLabel : composerAddingLabel,
+                        style: context.textStyles.captureLabelSans.copyWith(
+                          color: Palette.onAccent,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ),

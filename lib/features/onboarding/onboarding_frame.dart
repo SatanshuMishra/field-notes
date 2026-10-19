@@ -6,6 +6,9 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/petal_drift.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -25,7 +28,7 @@ import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -38,6 +41,7 @@ const String onboardingSkipToSetupLabel = 'Skip to setup';
 const String onboardingSkipLabel = 'Skip';
 const String onboardingBackLabel = 'Back';
 const String onboardingBackTooltip = 'Back (←)';
+const String onboardingProgressLabel = 'Chapters';
 
 const String onboardingSwipeOnLabel = 'swipe to continue';
 const String onboardingSwipeLastLabel = 'swipe to start journaling';
@@ -666,6 +670,9 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
             _Region.skip,
             child: _PhoneSkip(
               ink: look.dark || look.meadow ? _cream : context.colors.ink,
+              hoverSurface: look.dark || look.meadow
+                  ? FocusRingSurface.dark
+                  : FocusRingSurface.light,
               onPressed: _controller.skipToSetup,
             ),
           ),
@@ -1293,32 +1300,22 @@ class _PhoneBack extends StatelessWidget {
       maintainSize: true,
       maintainAnimation: true,
       maintainState: true,
-      child: Semantics(
+      child: Pressable(
         key: onboardingBackKey,
-        button: true,
         label: onboardingBackLabel,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: FocusRing(
-            onPressed: onPressed,
-            borderRadius: round,
-            surface: look.cream
-                ? FocusRingSurface.dark
-                : FocusRingSurface.light,
-            child: SizedBox.square(
-              dimension: _phoneBack,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: look.meadow ? _cream.withValues(alpha: 0.14) : null,
-                  border: border,
-                ),
-                child: Center(
-                  child: ExcludeSemantics(child: _Chevron(color: ink)),
-                ),
-              ),
+        onPressed: onPressed,
+        surface: look.cream ? FocusRingSurface.dark : FocusRingSurface.light,
+        shape: HoverShape.circle,
+        borderRadius: round,
+        child: SizedBox.square(
+          dimension: _phoneBack,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: look.meadow ? _cream.withValues(alpha: 0.14) : null,
+              border: border,
             ),
+            child: Center(child: _Chevron(color: ink)),
           ),
         ),
       ),
@@ -1340,30 +1337,26 @@ class _GlassBack extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const BorderRadius round = BorderRadius.all(Radius.circular(_macBack / 2));
-    return Semantics(
+    return Pressable(
       key: onboardingBackKey,
-      button: true,
       label: onboardingBackLabel,
-      child: Tooltip(
-        message: onboardingBackTooltip,
-        excludeFromSemantics: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: Center(
-            child: FocusRing(
-              onPressed: onPressed,
-              borderRadius: round,
-              child: GlassSurface(
-                tone: tone,
-                borderRadius: round,
-                child: SizedBox.square(
-                  dimension: _macBack,
-                  child: Center(
-                    child: ExcludeSemantics(child: _Chevron(color: ink)),
-                  ),
-                ),
-              ),
+      tooltip: onboardingBackTooltip,
+      onPressed: onPressed,
+      shape: HoverShape.circle,
+      borderRadius: round,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Center(
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: round,
+          surface: FocusRingSurface.dark,
+          shape: HoverShape.circle,
+          child: GlassSurface(
+            tone: tone,
+            borderRadius: round,
+            child: SizedBox.square(
+              dimension: _macBack,
+              child: Center(child: _Chevron(color: ink)),
             ),
           ),
         ),
@@ -1407,47 +1400,50 @@ class _GlassToggle extends StatelessWidget {
 }
 
 class _PhoneSkip extends StatelessWidget {
-  const _PhoneSkip({required this.ink, required this.onPressed});
+  const _PhoneSkip({
+    required this.ink,
+    required this.hoverSurface,
+    required this.onPressed,
+  });
 
   final Color ink;
+  final FocusRingSurface hoverSurface;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
+    const BorderRadius radius = BorderRadius.all(
+      Radius.circular(_phoneSkipHeight / 2),
+    );
+    return Pressable(
       key: onboardingSkipKey,
-      button: true,
       label: onboardingSkipLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          borderRadius: const BorderRadius.all(
-            Radius.circular(_phoneSkipHeight / 2),
+      onPressed: onPressed,
+      shape: HoverShape.pill,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: radius,
+        surface: hoverSurface,
+        shape: HoverShape.pill,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _phoneSkipHeight,
+            minHeight: _phoneSkipHeight,
           ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _phoneSkipHeight,
-              minHeight: _phoneSkipHeight,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _phoneSkipPadding,
-              ),
-              child: Center(
-                widthFactor: 1,
-                child: ExcludeSemantics(
-                  child: Text(
-                    onboardingSkipLabel,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: TypographyTokens.sans,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: ink.withValues(alpha: ink.a * _phoneSkipAlpha),
-                    ),
-                  ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _phoneSkipPadding),
+            child: Center(
+              widthFactor: 1,
+              child: Text(
+                onboardingSkipLabel,
+                maxLines: 1,
+                style: TextStyle(
+                  fontFamily: TypographyTokens.sans,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: ink.withValues(alpha: ink.a * _phoneSkipAlpha),
                 ),
               ),
             ),
@@ -1472,45 +1468,42 @@ class _GlassSkip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const BorderRadius radius = BorderRadius.all(Radius.circular(_pillRadius));
-    return Semantics(
+    return Pressable(
       key: onboardingSkipKey,
-      button: true,
       label: onboardingSkipToSetupLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _target,
-            minHeight: _target,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: FocusRing(
-              onPressed: onPressed,
+      onPressed: onPressed,
+      shape: HoverShape.pill,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _target,
+          minHeight: _target,
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: HoverFill(
+            hovered: hovered,
+            borderRadius: radius,
+            surface: FocusRingSurface.dark,
+            shape: HoverShape.pill,
+            child: GlassSurface(
+              tone: tone,
               borderRadius: radius,
-              child: GlassSurface(
-                tone: tone,
-                borderRadius: radius,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _macSkipPadding,
-                ),
-                child: SizedBox(
-                  height: _macSkipHeight,
-                  child: Center(
-                    widthFactor: 1,
-                    child: ExcludeSemantics(
-                      child: Text(
-                        onboardingSkipToSetupLabel,
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontFamily: TypographyTokens.sans,
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: ink,
-                        ),
-                      ),
+              padding: const EdgeInsets.symmetric(horizontal: _macSkipPadding),
+              child: SizedBox(
+                height: _macSkipHeight,
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(
+                    onboardingSkipToSetupLabel,
+                    maxLines: 1,
+                    style: TextStyle(
+                      fontFamily: TypographyTokens.sans,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: ink,
                     ),
                   ),
                 ),
@@ -1525,7 +1518,7 @@ class _GlassSkip extends StatelessWidget {
 
 enum _MarkState { past, current, later }
 
-class _ProgressPill extends StatelessWidget {
+class _ProgressPill extends StatefulWidget {
   const _ProgressPill({
     super.key,
     required this.layout,
@@ -1541,11 +1534,35 @@ class _ProgressPill extends StatelessWidget {
   final _Look look;
   final ValueChanged<OnboardingChapter> onOpen;
 
+  @override
+  State<_ProgressPill> createState() => _ProgressPillState();
+}
+
+class _ProgressPillState extends State<_ProgressPill> {
+  final FocusNode _pillFocus = FocusNode(
+    debugLabel: 'onboarding progress',
+    skipTraversal: true,
+  );
+
+  bool _hovered = false;
+
+  @override
+  void dispose() {
+    _pillFocus.dispose();
+    super.dispose();
+  }
+
+  void _hover(bool hovered) {
+    if (hovered != _hovered) {
+      setState(() => _hovered = hovered);
+    }
+  }
+
   _MarkState _stateOf(OnboardingChapter chapter) {
-    if (chapter.index < current.index) {
+    if (chapter.index < widget.current.index) {
       return _MarkState.past;
     }
-    return chapter == current ? _MarkState.current : _MarkState.later;
+    return chapter == widget.current ? _MarkState.current : _MarkState.later;
   }
 
   void _openNearest(_MarkMetrics metrics, Offset local) {
@@ -1555,13 +1572,13 @@ class _ProgressPill extends StatelessWidget {
             .clamp(0, metrics.count - 1);
     final OnboardingChapter chapter = OnboardingChapter.values[index];
     if (_stateOf(chapter) == _MarkState.past) {
-      onOpen(chapter);
+      widget.onOpen(chapter);
     }
   }
 
   Widget _pill(_MarkMetrics metrics, Color later, {required bool marks}) {
     return GlassSurface(
-      tone: look.glass,
+      tone: widget.look.glass,
       borderRadius: const BorderRadius.all(Radius.circular(_pillRadius)),
       padding: metrics.padding,
       child: Row(
@@ -1575,14 +1592,14 @@ class _ProgressPill extends StatelessWidget {
                 ? _ProgressMark(
                     chapter: chapter,
                     state: _stateOf(chapter),
-                    mood: _markMood(chapter, mood),
+                    mood: _markMood(chapter, widget.mood),
                     metrics: metrics,
                     later: later,
-                    onOpen: () => onOpen(chapter),
+                    onOpen: () => widget.onOpen(chapter),
                   )
                 : _MarkArt(
                     state: _stateOf(chapter),
-                    mood: _markMood(chapter, mood),
+                    mood: _markMood(chapter, widget.mood),
                     metrics: metrics,
                     later: later,
                   ),
@@ -1594,50 +1611,91 @@ class _ProgressPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final _MarkMetrics metrics = _marksFor(layout);
-    final Color later = look.dark
+    final _MarkMetrics metrics = _marksFor(widget.layout);
+    final Color later = widget.look.dark
         ? _cream.withValues(alpha: 0.45)
         : context.colors.ink.withValues(alpha: 0.28);
-    if (layout == ShellLayout.bottomBar) {
+    if (widget.layout == ShellLayout.bottomBar) {
       return _pill(metrics, later, marks: true);
     }
-    return SizedBox(
-      width: metrics.pillWidth + 2 * metrics.overhang,
-      height: _target,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTapUp: (TapUpDetails details) =>
-            _openNearest(metrics, details.localPosition),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            Positioned(
-              left: metrics.overhang,
-              top: (_target - metrics.pillHeight) / 2,
-              width: metrics.pillWidth,
-              height: metrics.pillHeight,
-              child: ExcludeSemantics(
-                child: _pill(metrics, later, marks: false),
-              ),
-            ),
-            for (final OnboardingChapter chapter in OnboardingChapter.values)
+    const BorderRadius round = BorderRadius.all(Radius.circular(_pillRadius));
+    return Semantics(
+      container: true,
+      button: true,
+      enabled: false,
+      label: onboardingProgressLabel,
+      child: MouseRegion(
+        onEnter: (PointerEnterEvent event) => _hover(true),
+        onExit: (PointerExitEvent event) => _hover(false),
+        child: SizedBox(
+          width: metrics.pillWidth + 2 * metrics.overhang,
+          height: _target,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
               Positioned(
-                left: metrics.centreOf(chapter.index) - _target / 2,
-                top: 0,
-                width: _target,
-                height: _target,
-                child: _MarkTarget(
-                  chapter: chapter,
-                  state: _stateOf(chapter),
-                  metrics: metrics,
-                  onOpen: () => onOpen(chapter),
+                left: metrics.overhang,
+                top: (_target - metrics.pillHeight) / 2,
+                width: metrics.pillWidth,
+                height: metrics.pillHeight,
+                child: ExcludeSemantics(
+                  child: HoverFill(
+                    hovered: _hovered,
+                    borderRadius: round,
+                    surface: FocusRingSurface.dark,
+                    shape: HoverShape.pill,
+                    child: _pill(metrics, later, marks: false),
+                  ),
                 ),
               ),
-          ],
+              Positioned.fill(
+                child: ExcludeSemantics(
+                  child: Pressable(
+                    label: onboardingProgressLabel,
+                    focusNode: _pillFocus,
+                    onPressedAt: (Offset local) => _openNearest(metrics, local),
+                    borderRadius: round,
+                    shape: HoverShape.pill,
+                    paintsHover: false,
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
+              for (final OnboardingChapter chapter in OnboardingChapter.values)
+                Positioned(
+                  left: metrics.centreOf(chapter.index) - _target / 2,
+                  top: 0,
+                  width: _target,
+                  height: _target,
+                  child: _HitThrough(
+                    child: _MarkTarget(
+                      chapter: chapter,
+                      state: _stateOf(chapter),
+                      metrics: metrics,
+                      onOpen: () => widget.onOpen(chapter),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class _HitThrough extends SingleChildRenderObjectWidget {
+  const _HitThrough({required Widget super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderHitThrough();
+}
+
+class _RenderHitThrough extends RenderProxyBox {
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    super.hitTest(result, position: position);
+    return false;
   }
 }
 
@@ -1755,32 +1813,33 @@ class _ProgressMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool past = state == _MarkState.past;
     final Widget slot = _MarkArt(
       state: state,
       mood: mood,
       metrics: metrics,
       later: later,
     );
-    return Semantics(
-      container: true,
-      button: past ? true : null,
-      selected: state == _MarkState.current ? true : null,
+    if (state != _MarkState.past) {
+      return Semantics(
+        container: true,
+        selected: state == _MarkState.current ? true : null,
+        label: chapter.progressName,
+        child: slot,
+      );
+    }
+    final BorderRadius round = BorderRadius.all(
+      Radius.circular(metrics.slotHeight / 2),
+    );
+    return Pressable(
       label: chapter.progressName,
-      onTap: past ? onOpen : null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: past ? onOpen : null,
-        child: past
-            ? FocusRing(
-                onPressed: onOpen,
-                borderRadius: BorderRadius.all(
-                  Radius.circular(metrics.slotHeight / 2),
-                ),
-                child: slot,
-              )
-            : slot,
+      onPressed: onOpen,
+      borderRadius: round,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: round,
+        surface: FocusRingSurface.dark,
+        child: slot,
       ),
     );
   }

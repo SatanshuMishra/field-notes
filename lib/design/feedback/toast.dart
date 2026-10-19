@@ -8,6 +8,7 @@ import 'package:flutter/scheduler.dart';
 import '../../domain/platform/desktop_platform.dart';
 import '../focus/focus_ring.dart';
 import '../glass/glass.dart';
+import '../interaction/pressable.dart';
 import '../motion/motion_tokens.dart';
 import '../tokens/tokens.dart';
 import '../widgets/icon_sticker_button.dart';
@@ -198,36 +199,27 @@ class _ToastActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
       label: action.semanticLabel ?? action.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: action.onPressed,
-        child: FocusRing(
-          onPressed: action.onPressed,
-          surface: focusSurface,
-          borderRadius: _actionRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: toastActionMinTarget,
-              minHeight: toastActionMinTarget,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: _actionHorizontalPadding,
-              ),
-              child: Center(
-                widthFactor: 1,
-                child: ExcludeSemantics(
-                  child: Text(
-                    action.label,
-                    style: context.textStyles.bodySans.copyWith(
-                      color: color ?? context.colors.coralLink,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+      onPressed: action.onPressed,
+      surface: focusSurface,
+      borderRadius: _actionRadius,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: toastActionMinTarget,
+          minHeight: toastActionMinTarget,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: _actionHorizontalPadding,
+          ),
+          child: Center(
+            widthFactor: 1,
+            child: Text(
+              action.label,
+              style: context.textStyles.bodySans.copyWith(
+                color: color ?? context.colors.coralLink,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),

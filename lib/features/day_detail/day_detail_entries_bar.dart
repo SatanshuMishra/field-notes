@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 const Key dayDetailAddNoteKey = ValueKey<String>('day-detail-add-note');
@@ -54,54 +56,52 @@ class DayDetailEntriesBar extends StatelessWidget {
 
   Widget _addNoteButton(BuildContext context) {
     final FieldNotesShadows shadows = context.shadows;
-    return Semantics(
-      button: true,
-      enabled: onAddNote != null,
-      child: GestureDetector(
-        key: dayDetailAddNoteKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onAddNote,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: FocusRing(
-              enabled: onAddNote != null,
-              onPressed: onAddNote,
-              borderRadius: Shapes.buttonBorderRadius,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: _buttonHorizontalPadding,
-                  vertical: _buttonVerticalPadding,
-                ),
-                decoration: BoxDecoration(
-                  color: Palette.coral,
-                  border: shadows.outline,
-                  borderRadius: Shapes.buttonBorderRadius,
-                  boxShadow: shadows.control,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    const SizedBox.square(
-                      dimension: _plusExtent,
-                      child: CustomPaint(painter: _PlusPainter()),
+    return Pressable(
+      key: dayDetailAddNoteKey,
+      label: addNoteLabel,
+      onPressed: onAddNote,
+      borderRadius: Shapes.buttonBorderRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _minTapTarget,
+          minHeight: _minTapTarget,
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: Shapes.buttonBorderRadius,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Palette.coral,
+                border: shadows.outline,
+                borderRadius: Shapes.buttonBorderRadius,
+                boxShadow: shadows.control,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _buttonHorizontalPadding,
+                vertical: _buttonVerticalPadding,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox.square(
+                    dimension: _plusExtent,
+                    child: CustomPaint(painter: _PlusPainter()),
+                  ),
+                  const SizedBox(width: _plusGap),
+                  Text(
+                    addNoteLabel,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: context.textStyles.captureLabelSans.copyWith(
+                      color: Palette.onAccent,
                     ),
-                    const SizedBox(width: _plusGap),
-                    Text(
-                      addNoteLabel,
-                      maxLines: 1,
-                      softWrap: false,
-                      style: context.textStyles.captureLabelSans.copyWith(
-                        color: Palette.onAccent,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

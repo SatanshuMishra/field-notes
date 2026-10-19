@@ -6,6 +6,7 @@ import 'package:field_notes/features/garden/scene/meadow_view.dart';
 import 'package:field_notes/features/garden/widgets/meadow_ribbon.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -288,6 +289,10 @@ void main() {
     await mouse.moveTo(tester.getCenter(_month('Jun')));
     await tester.pumpAndSettle();
     expect(calls, <MeadowRange?>[_june]);
+    expect(
+      RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+      SystemMouseCursors.basic,
+    );
     expect(_tint(tester, 'Jun'), _highlightTint);
     expect(_tint(tester, 'May'), isNot(_highlightTint));
 

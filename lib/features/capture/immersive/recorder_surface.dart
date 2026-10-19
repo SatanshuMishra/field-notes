@@ -7,6 +7,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/app/shell/windows_caption_buttons.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 
@@ -267,26 +268,15 @@ class _Stage extends StatelessWidget {
         ),
       );
     }
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
+      key: surface.leaveKey,
       label: recorderLeaveLabel,
-      child: GestureDetector(
-        key: surface.leaveKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onLeave,
-        child: FocusRing(
-          enabled: enabled,
-          onPressed: onLeave,
-          surface: FocusRingSurface.dark,
-          borderRadius: _leaveRadius,
-          child: Opacity(
-            opacity: enabled ? 1.0 : _disabledOpacity,
-            child: ExcludeSemantics(
-              child: sidebar ? _leaveText() : _leaveGlyph(),
-            ),
-          ),
-        ),
+      onPressed: onLeave,
+      surface: FocusRingSurface.dark,
+      borderRadius: _leaveRadius,
+      child: Opacity(
+        opacity: enabled ? 1.0 : _disabledOpacity,
+        child: sidebar ? _leaveText() : _leaveGlyph(),
       ),
     );
   }

@@ -1,11 +1,12 @@
 import 'dart:ui' as ui;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 
 const Color meadowCream = Color.fromRGBO(251, 243, 228, 1);
@@ -185,50 +186,33 @@ class MeadowGlassButton extends StatelessWidget {
       castsShadow: !grouped,
       child: Center(widthFactor: width == null ? 1 : null, child: child),
     );
-    final Widget face = SizedBox(
-      width: width,
-      height: meadowPhoneControlHeight,
-      child: grouped
-          ? _MeadowDockGlass(
-              shadow: GlassShadowPainter(
-                shadows: GlassTone.scene
-                    .colorsFor(Theme.of(context).brightness)
-                    .shadows,
-                borderRadius: radius,
-              ),
-              child: glass,
-            )
-          : glass,
-    );
-    final String? hint = tooltip;
-    return Semantics(
-      button: true,
-      enabled: onPressed != null,
-      selected: selected,
+    return Pressable(
       label: label,
+      onPressed: onPressed,
+      tooltip: tooltip,
+      selected: selected,
       value: value,
-      onTap: onPressed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: onPressed,
-          child: FocusRing(
-            onPressed: onPressed,
-            enabled: onPressed != null,
-            surface: FocusRingSurface.dark,
-            borderRadius: radius,
-            child: ExcludeSemantics(
-              child: hint == null
-                  ? face
-                  : Tooltip(
-                      message: hint,
-                      excludeFromSemantics: true,
-                      child: face,
-                    ),
-            ),
-          ),
+      surface: FocusRingSurface.dark,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        width: width,
+        height: meadowPhoneControlHeight,
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
+          hovered: hovered,
+          borderRadius: radius,
+          child: grouped
+              ? _MeadowDockGlass(
+                  shadow: GlassShadowPainter(
+                    shadows: GlassTone.scene
+                        .colorsFor(Theme.of(context).brightness)
+                        .shadows,
+                    borderRadius: radius,
+                  ),
+                  child: glass,
+                )
+              : glass,
         ),
       ),
     );
@@ -463,91 +447,47 @@ class MeadowTimeRow extends StatelessWidget {
       opacity: 0.72,
       weight: FontWeight.w500,
     );
-    return Semantics(
-      button: true,
-      selected: selected,
+    return Pressable(
       inMutuallyExclusiveGroup: true,
       label: '$label, $sub',
-      onTap: onPressed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: onPressed,
-          child: FocusRing(
-            onPressed: onPressed,
-            surface: FocusRingSurface.dark,
-            placement: FocusRingPlacement.edge,
-            borderRadius: radius,
-            child: _HoverFill(
-              selected: selected,
-              radius: radius,
-              child: SizedBox(
-                height: compact ? meadowPhoneControlHeight : 36,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 12),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                          style: name,
-                        ),
-                      ),
-                      Text(sub, maxLines: 1, softWrap: false, style: note),
-                    ],
+      selected: selected,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      placement: FocusRingPlacement.edge,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: selected
+              ? meadowRowSelected
+              : meadowGlassWhite(hovered ? 0.1 : 0),
+          borderRadius: radius,
+        ),
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
+          hovered: hovered,
+          borderRadius: radius,
+          child: SizedBox(
+            height: compact ? meadowPhoneControlHeight : 36,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 12),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: name,
+                    ),
                   ),
-                ),
+                  Text(sub, maxLines: 1, softWrap: false, style: note),
+                ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _HoverFill extends StatefulWidget {
-  const _HoverFill({
-    required this.selected,
-    required this.radius,
-    required this.child,
-  });
-
-  final bool selected;
-  final BorderRadius radius;
-  final Widget child;
-
-  @override
-  State<_HoverFill> createState() => _HoverFillState();
-}
-
-class _HoverFillState extends State<_HoverFill> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Color fill = widget.selected
-        ? meadowRowSelected
-        : _hovered
-        ? meadowGlassWhite(0.1)
-        : meadowGlassWhite(0);
-    return MouseRegion(
-      onEnter: (PointerEnterEvent event) => _hover(true),
-      onExit: (PointerExitEvent event) => _hover(false),
-      child: DecoratedBox(
-        decoration: BoxDecoration(color: fill, borderRadius: widget.radius),
-        child: ExcludeSemantics(child: widget.child),
       ),
     );
   }

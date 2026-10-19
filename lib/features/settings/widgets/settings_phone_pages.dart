@@ -1,8 +1,10 @@
 import 'package:field_notes/data/sync/engine/sync_status.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
@@ -180,61 +182,50 @@ class _SectionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
+    return Pressable(
+      includeFocusSemantics: false,
       key: settingsTabKey(tab),
-      button: true,
-      enabled: true,
       label: tab.label,
       hint: summary,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          includeFocusSemantics: false,
-          borderRadius: Shapes.buttonBorderRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: settingsSectionRowMinHeight,
-            ),
-            child: Row(
-              children: <Widget>[
-                _SectionTile(tab: tab),
-                const SizedBox(width: _tileGap),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        tab.label,
-                        style: context.textStyles.labelSans.copyWith(
-                          fontSize: _rowLabelSize,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: _summaryGap),
-                      Text(
-                        summary,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textStyles.captionSans,
-                      ),
-                    ],
+      onPressed: onPressed,
+      borderRadius: Shapes.buttonBorderRadius,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: settingsSectionRowMinHeight,
+        ),
+        child: Row(
+          children: <Widget>[
+            _SectionTile(tab: tab),
+            const SizedBox(width: _tileGap),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    tab.label,
+                    style: context.textStyles.labelSans.copyWith(
+                      fontSize: _rowLabelSize,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(width: _chevronGap),
-                if (marked) ...<Widget>[
-                  _Mark(markKey: settingsSectionMarkKey(tab)),
-                  const SizedBox(width: _chevronGap),
+                  const SizedBox(height: _summaryGap),
+                  Text(
+                    summary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.textStyles.captionSans,
+                  ),
                 ],
-                ChevronGlyph(pointsBack: false, color: colors.muted),
-              ],
+              ),
             ),
-          ),
+            const SizedBox(width: _chevronGap),
+            if (marked) ...<Widget>[
+              _Mark(markKey: settingsSectionMarkKey(tab)),
+              const SizedBox(width: _chevronGap),
+            ],
+            ChevronGlyph(pointsBack: false, color: colors.muted),
+          ],
         ),
       ),
     );
@@ -279,103 +270,91 @@ class _UpdateBanner extends StatelessWidget {
       Radius.circular(_bannerRadius),
     );
     final String title = bannerTitle(version);
-    return Semantics(
-      button: true,
-      enabled: true,
+    return Pressable(
+      includeFocusSemantics: false,
       label: title,
       hint: bannerSubtitle,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          includeFocusSemantics: false,
-          borderRadius: radius,
-          child: Container(
-            key: settingsUpdateBannerKey,
-            constraints: const BoxConstraints(
-              minHeight: settingsUpdateBannerMinHeight,
-            ),
-            padding: _bannerPadding,
-            decoration: BoxDecoration(
-              color: colors.cardBright,
-              border: Border.all(
-                color: colors.line,
-                width: Shapes.outlineWidth,
+      onPressed: onPressed,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: radius,
+        child: Container(
+          key: settingsUpdateBannerKey,
+          constraints: const BoxConstraints(
+            minHeight: settingsUpdateBannerMinHeight,
+          ),
+          padding: _bannerPadding,
+          decoration: BoxDecoration(
+            color: colors.cardBright,
+            border: Border.all(color: colors.line, width: Shapes.outlineWidth),
+            borderRadius: radius,
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Palette.coral.withValues(alpha: _bannerShadowOpacity),
+                offset: const Offset(_bannerShadowOffset, _bannerShadowOffset),
               ),
-              borderRadius: radius,
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Palette.coral.withValues(alpha: _bannerShadowOpacity),
-                  offset: const Offset(
-                    _bannerShadowOffset,
-                    _bannerShadowOffset,
+            ],
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                key: settingsUpdateBannerTileKey,
+                width: settingsUpdateBannerTileSize,
+                height: settingsUpdateBannerTileSize,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Palette.coral.withValues(
+                    alpha: _bannerTileFillOpacity,
                   ),
-                ),
-              ],
-            ),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  key: settingsUpdateBannerTileKey,
-                  width: settingsUpdateBannerTileSize,
-                  height: settingsUpdateBannerTileSize,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
+                  border: Border.all(
                     color: Palette.coral.withValues(
-                      alpha: _bannerTileFillOpacity,
+                      alpha: _bannerTileBorderOpacity,
                     ),
-                    border: Border.all(
-                      color: Palette.coral.withValues(
-                        alpha: _bannerTileBorderOpacity,
-                      ),
-                      width: Shapes.outlineWidth,
-                    ),
-                    borderRadius: const BorderRadius.all(
-                      Radius.circular(_tileRadius),
-                    ),
+                    width: Shapes.outlineWidth,
                   ),
-                  child: SettingsIcon(
-                    SettingsGlyph.download,
-                    size: settingsUpdateBannerIconSize,
-                    color: colors.accentInk,
+                  borderRadius: const BorderRadius.all(
+                    Radius.circular(_tileRadius),
                   ),
                 ),
-                const SizedBox(width: _tileGap),
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textStyles.labelSans.copyWith(
-                          fontSize: _bannerTitleSize,
-                          fontWeight: FontWeight.w600,
-                          color: colors.ink,
-                        ),
-                      ),
-                      const SizedBox(height: _summaryGap),
-                      Text(
-                        bannerSubtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textStyles.captionSans.copyWith(
-                          color: colors.muted,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: SettingsIcon(
+                  SettingsGlyph.download,
+                  size: settingsUpdateBannerIconSize,
+                  color: colors.accentInk,
                 ),
-                const SizedBox(width: _chevronGap),
-                ChevronGlyph(pointsBack: false, color: colors.muted),
-              ],
-            ),
+              ),
+              const SizedBox(width: _tileGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.labelSans.copyWith(
+                        fontSize: _bannerTitleSize,
+                        fontWeight: FontWeight.w600,
+                        color: colors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: _summaryGap),
+                    Text(
+                      bannerSubtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.captionSans.copyWith(
+                        color: colors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: _chevronGap),
+              ChevronGlyph(pointsBack: false, color: colors.muted),
+            ],
           ),
         ),
       ),
@@ -471,35 +450,31 @@ class SettingsBackPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
-      button: true,
-      enabled: true,
+    return Pressable(
+      includeFocusSemantics: false,
       label: settingsBackLabel(label),
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          includeFocusSemantics: false,
+      onPressed: onPressed,
+      shape: HoverShape.pill,
+      borderRadius: _pillRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        shape: HoverShape.pill,
+        borderRadius: _pillRadius,
+        child: GlassSurface(
+          tone: GlassTone.paper,
           borderRadius: _pillRadius,
-          child: GlassSurface(
-            tone: GlassTone.paper,
-            borderRadius: _pillRadius,
-            grouped: true,
-            padding: _pillPadding,
-            child: SizedBox(
-              height: settingsBackPillHeight,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  ChevronGlyph(pointsBack: true, color: colors.ink),
-                  const SizedBox(width: _pillChevronGap),
-                  Text(label, maxLines: 1, style: context.textStyles.labelSans),
-                ],
-              ),
+          grouped: true,
+          padding: _pillPadding,
+          child: SizedBox(
+            height: settingsBackPillHeight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ChevronGlyph(pointsBack: true, color: colors.ink),
+                const SizedBox(width: _pillChevronGap),
+                Text(label, maxLines: 1, style: context.textStyles.labelSans),
+              ],
             ),
           ),
         ),

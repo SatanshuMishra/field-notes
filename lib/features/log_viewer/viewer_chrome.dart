@@ -12,6 +12,8 @@ import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -394,44 +396,36 @@ class ViewerPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final VoidCallback? onPressed = this.onPressed;
     final bool enabled = onPressed != null;
     final BorderRadius round = BorderRadius.circular(diameter / 2);
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
       label: playing ? _pauseLabel : _playLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: SizedBox.square(
-          dimension: math.max(_tapTarget, diameter),
-          child: Center(
-            child: FocusRing(
-              enabled: enabled,
-              onPressed: onPressed,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      borderRadius: round,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: math.max(_tapTarget, diameter),
+        child: Center(
+          child: Opacity(
+            opacity: enabled ? 1 : _disabledOpacity,
+            child: HoverFill(
+              hovered: hovered,
               surface: FocusRingSurface.dark,
               borderRadius: round,
-              child: Opacity(
-                opacity: enabled ? 1 : _disabledOpacity,
-                child: ExcludeSemantics(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Palette.coral,
-                      shape: BoxShape.circle,
-                      border: context.shadows.outline,
-                    ),
-                    child: SizedBox.square(
-                      dimension: diameter,
-                      child: Center(
-                        child: PlayPauseGlyph(
-                          playing: playing,
-                          color: Palette.onAccent,
-                          size: diameter * _primaryGlyphShare,
-                        ),
-                      ),
-                    ),
-                  ),
+              child: Container(
+                width: diameter,
+                height: diameter,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Palette.coral,
+                  shape: BoxShape.circle,
+                  border: context.shadows.outline,
+                ),
+                child: PlayPauseGlyph(
+                  playing: playing,
+                  color: Palette.onAccent,
+                  size: diameter * _primaryGlyphShare,
                 ),
               ),
             ),
@@ -644,47 +638,43 @@ class _ExitPill extends StatelessWidget {
             color: Palette.mediaInk,
             size: _exitGlyphSize,
           );
-    return Semantics(
-      button: true,
-      enabled: true,
+    return Pressable(
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _tapTarget,
-            minHeight: _tapTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: FocusRing(
-              onPressed: onPressed,
-              surface: FocusRingSurface.dark,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      borderRadius: _exitPillRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _tapTarget,
+          minHeight: _tapTarget,
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: _exitPillRadius,
+            child: GlassSurface(
+              tone: GlassTone.media,
               borderRadius: _exitPillRadius,
-              child: ExcludeSemantics(
-                child: GlassSurface(
-                  tone: GlassTone.media,
-                  borderRadius: _exitPillRadius,
-                  padding: _exitPillPadding,
-                  child: SizedBox(
-                    height: _exitPillHeight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        glyph,
-                        const SizedBox(width: _exitGap),
-                        Text(
-                          label,
-                          maxLines: 1,
-                          style: context.textStyles.labelSans.copyWith(
-                            color: Palette.mediaInk,
-                          ),
-                        ),
-                      ],
+              padding: _exitPillPadding,
+              child: SizedBox(
+                height: _exitPillHeight,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    glyph,
+                    const SizedBox(width: _exitGap),
+                    Text(
+                      label,
+                      maxLines: 1,
+                      style: context.textStyles.labelSans.copyWith(
+                        color: Palette.mediaInk,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ),
@@ -716,6 +706,7 @@ class _HoverDeleteState extends State<_HoverDelete> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (PointerEnterEvent _) => _hover(true),
       onExit: (PointerExitEvent _) => _hover(false),
       child: ViewerGlassCircle(

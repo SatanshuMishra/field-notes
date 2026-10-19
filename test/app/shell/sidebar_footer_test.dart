@@ -6,6 +6,7 @@ import 'package:field_notes/app/shell/sidebar_shell.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 
+import '../../support/face_boxes.dart';
 import '../app_harness.dart';
 
 const ValueKey<String> _settingsKey = ValueKey<String>('settings-button');
@@ -29,7 +30,7 @@ SidebarShell _shell({
 Color? _fillOf(WidgetTester tester, Key key) {
   final DecoratedBox box = tester.widget<DecoratedBox>(
     find
-        .descendant(of: find.byKey(key), matching: find.byType(DecoratedBox))
+        .descendant(of: find.byKey(key), matching: faceBoxes())
         .first,
   );
   final Decoration decoration = box.decoration;

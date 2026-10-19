@@ -1,13 +1,12 @@
 import 'dart:ui' as ui;
 
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/updates/updates.dart';
 import 'package:field_notes/features/updates/ui/update_notes_surface.dart';
 import 'package:field_notes/features/updates/update_providers.dart';
 import 'package:field_notes/features/updates/update_wording.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,43 +29,25 @@ const BorderRadius _chipRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusControl),
 );
 
-class UpdateRailChip extends ConsumerStatefulWidget {
+class UpdateRailChip extends ConsumerWidget {
   const UpdateRailChip({super.key, required this.collapsed});
 
   final bool collapsed;
 
   @override
-  ConsumerState<UpdateRailChip> createState() => _UpdateRailChipState();
-}
-
-class _UpdateRailChipState extends ConsumerState<UpdateRailChip> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  void _open() {
-    showUpdateNotes(context, ref, newVersion: true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final ReleaseInfo? release = ref.watch(updateNoticeProvider);
     if (release == null) {
       return const SizedBox.shrink();
     }
     final FieldNotesColors colors = context.colors;
     final String version = release.version.toString();
-    final bool collapsed = widget.collapsed;
     final Widget icon = SettingsIcon(
       SettingsGlyph.download,
       size: updateRailChipIconSize,
       color: colors.accentInk,
     );
-    final Widget face = CustomPaint(
+    Widget face(bool hovered) => CustomPaint(
       key: updateRailChipKey,
       painter: _DashedChipBorder(
         color: Palette.coral.withValues(alpha: updateRailChipBorderOpacity),
@@ -74,7 +55,7 @@ class _UpdateRailChipState extends ConsumerState<UpdateRailChip> {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: Palette.coral.withValues(
-            alpha: _hovered
+            alpha: hovered
                 ? updateRailChipHoverOpacity
                 : updateRailChipFillOpacity,
           ),
@@ -124,32 +105,14 @@ class _UpdateRailChipState extends ConsumerState<UpdateRailChip> {
               ),
       ),
     );
-    final Widget chip = Tooltip(
-      message: railTooltip(version),
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        enabled: true,
-        label: railSemanticsLabel(version),
-        excludeSemantics: true,
-        onTap: _open,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (PointerEnterEvent _) => _hover(true),
-          onExit: (PointerExitEvent _) => _hover(false),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            excludeFromSemantics: true,
-            onTap: _open,
-            child: FocusRing(
-              onPressed: _open,
-              includeFocusSemantics: false,
-              borderRadius: _chipRadius,
-              child: face,
-            ),
-          ),
-        ),
-      ),
+    final Widget chip = Pressable(
+      includeFocusSemantics: false,
+      label: railSemanticsLabel(version),
+      tooltip: railTooltip(version),
+      onPressed: () => showUpdateNotes(context, ref, newVersion: true),
+      borderRadius: _chipRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => face(hovered),
     );
     return collapsed ? Center(child: chip) : chip;
   }

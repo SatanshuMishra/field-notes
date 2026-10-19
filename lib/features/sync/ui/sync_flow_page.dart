@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/system_bars.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:flutter/material.dart';
@@ -202,33 +204,31 @@ class _SyncFlowPageClose extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
+    return Pressable(
       key: syncFlowPageCloseKey,
-      button: true,
       label: syncFlowCloseLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          borderRadius: _closeRadius,
-          child: SizedBox.square(
-            dimension: _closeExtent,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.cardLight,
-                border: Border.all(
-                  color: colors.line,
-                  width: _closeBorderWidth,
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: IconStickerGlyphIcon(
-                  glyph: IconStickerGlyph.close,
-                  color: colors.ink,
-                  size: _closeGlyph,
-                ),
+      onPressed: onPressed,
+      shape: HoverShape.circle,
+      borderRadius: _closeRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: _closeExtent,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.cardLight,
+            border: Border.all(color: colors.line, width: _closeBorderWidth),
+            shape: BoxShape.circle,
+          ),
+          child: HoverFill(
+            hovered: hovered,
+            shape: HoverShape.circle,
+            borderRadius: _closeRadius,
+            position: DecorationPosition.background,
+            child: Center(
+              child: IconStickerGlyphIcon(
+                glyph: IconStickerGlyph.close,
+                color: colors.ink,
+                size: _closeGlyph,
               ),
             ),
           ),

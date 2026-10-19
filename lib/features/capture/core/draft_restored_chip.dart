@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 const String draftRestoredLabel = 'Draft restored';
@@ -89,34 +91,25 @@ class DraftRestoredChip extends StatelessWidget {
 
   Widget _discardButton(TextStyle discardStyle) {
     return TextFieldTapRegion(
-      child: Semantics(
-        container: true,
-        button: true,
-        enabled: onDiscard != null,
+      child: Pressable(
+        key: draftRestoredDiscardKey,
         label: draftRestoredDiscardLabel,
-        child: GestureDetector(
-          key: draftRestoredDiscardKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onDiscard,
-          child: FocusRing(
-            enabled: onDiscard != null,
-            onPressed: onDiscard,
-            borderRadius: _discardFocusRadius,
-            placement: FocusRingPlacement.edge,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: _discardTarget),
-              child: Padding(
-                padding: const EdgeInsetsDirectional.only(
-                  start: _chipGap,
-                  end: _chipHorizontalPadding,
-                ),
-                child: Center(
-                  widthFactor: 1,
-                  child: Opacity(
-                    opacity: 0,
-                    child: Text(draftRestoredDiscardLabel, style: discardStyle),
-                  ),
-                ),
+        onPressed: onDiscard,
+        shape: HoverShape.pill,
+        borderRadius: _discardFocusRadius,
+        placement: FocusRingPlacement.edge,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: _discardTarget),
+          child: Padding(
+            padding: const EdgeInsetsDirectional.only(
+              start: _chipGap,
+              end: _chipHorizontalPadding,
+            ),
+            child: Center(
+              widthFactor: 1,
+              child: Opacity(
+                opacity: 0,
+                child: Text(draftRestoredDiscardLabel, style: discardStyle),
               ),
             ),
           ),

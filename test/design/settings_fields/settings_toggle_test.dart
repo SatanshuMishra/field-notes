@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
+import '../../support/face_boxes.dart';
 import 'settings_harness.dart';
 
 Color _trackColor(WidgetTester tester) {
@@ -11,7 +12,7 @@ Color _trackColor(WidgetTester tester) {
       .widgetList<DecoratedBox>(
         find.descendant(
           of: find.byType(SettingsToggle),
-          matching: find.byType(DecoratedBox),
+          matching: faceBoxes(),
         ),
       )
       .first;

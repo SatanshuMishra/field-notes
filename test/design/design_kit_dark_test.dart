@@ -8,6 +8,7 @@ import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
+import '../support/face_boxes.dart';
 import '../support/theme_harness.dart';
 
 const Color _coral = Color(0xFFB8566A);
@@ -27,9 +28,7 @@ Future<void> _pumpDark(WidgetTester tester, Widget child) =>
     pumpThemed(tester, Center(child: child), brightness: Brightness.dark);
 
 List<BoxDecoration> _decorationsIn(WidgetTester tester, Finder owner) => tester
-    .widgetList<DecoratedBox>(
-      find.descendant(of: owner, matching: find.byType(DecoratedBox)),
-    )
+    .widgetList<DecoratedBox>(find.descendant(of: owner, matching: faceBoxes()))
     .map((DecoratedBox box) => box.decoration as BoxDecoration)
     .toList();
 
@@ -38,9 +37,7 @@ Color _borderColour(BoxDecoration decoration) =>
 
 Color? _fillBehind(WidgetTester tester, String label) {
   final DecoratedBox box = tester.widget<DecoratedBox>(
-    find
-        .ancestor(of: find.text(label), matching: find.byType(DecoratedBox))
-        .first,
+    find.ancestor(of: find.text(label), matching: faceBoxes()).first,
   );
   return (box.decoration as BoxDecoration).color;
 }

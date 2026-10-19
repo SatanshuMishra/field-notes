@@ -9,6 +9,8 @@ import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
+import '../../support/face_boxes.dart';
+
 const Size _desktopWindow = Size(1140, 726);
 const Size _phoneView = Size(384, 832);
 
@@ -75,7 +77,7 @@ List<Rect> _rects(Finder finder) => finder.evaluate().map((Element element) {
 }).toList();
 
 Finder _decorations(Key key) =>
-    find.descendant(of: find.byKey(key), matching: find.byType(DecoratedBox));
+    find.descendant(of: find.byKey(key), matching: faceBoxes());
 
 List<BoxDecoration> _decorationsOf(WidgetTester tester, Key key) => tester
     .widgetList<DecoratedBox>(_decorations(key))

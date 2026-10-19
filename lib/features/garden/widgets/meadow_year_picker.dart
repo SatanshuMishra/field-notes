@@ -1,5 +1,6 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/plural.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
@@ -87,6 +88,8 @@ class _YearRow extends StatelessWidget {
     final BorderRadius radius = BorderRadius.all(
       Radius.circular(compact ? 14 : 12),
     );
+    final String meta = _metaOf(year, current: current);
+    final String title = _titleOf(year, current: current);
     final Widget body = Padding(
       padding: compact
           ? const EdgeInsets.fromLTRB(12, 11, 12, 12)
@@ -112,7 +115,7 @@ class _YearRow extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _metaOf(year, current: current),
+                  meta,
                   textAlign: TextAlign.right,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -126,7 +129,7 @@ class _YearRow extends StatelessWidget {
                 ? const EdgeInsets.only(top: 3, bottom: 7)
                 : const EdgeInsets.only(top: 2, bottom: 6),
             child: Text(
-              _titleOf(year, current: current),
+              title,
               style: TextStyle(
                 fontFamily: TypographyTokens.serif,
                 fontSize: compact ? 14 : 13,
@@ -153,33 +156,22 @@ class _YearRow extends StatelessWidget {
     return MergeSemantics(
       child: Padding(
         padding: const EdgeInsets.only(top: 2),
-        child: Semantics(
-          button: true,
-          selected: open,
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onPressed,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: _minTapTarget),
-                child: FocusRing(
-                  onPressed: onPressed,
-                  surface: FocusRingSurface.dark,
-                  borderRadius: radius,
-                  placement: FocusRingPlacement.edge,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: meadowGlassWhite(open ? 0.16 : 0),
-                      border: open
-                          ? Border.all(color: meadowGlassWhite(0.35))
-                          : null,
-                      borderRadius: radius,
-                    ),
-                    child: body,
-                  ),
-                ),
-              ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _minTapTarget),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: meadowGlassWhite(open ? 0.16 : 0),
+              border: open ? Border.all(color: meadowGlassWhite(0.35)) : null,
+              borderRadius: radius,
+            ),
+            child: Pressable(
+              label: '${year.year}\n$meta\n$title',
+              selected: open,
+              onPressed: onPressed,
+              surface: FocusRingSurface.dark,
+              placement: FocusRingPlacement.edge,
+              borderRadius: radius,
+              child: body,
             ),
           ),
         ),

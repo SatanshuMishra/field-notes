@@ -3,7 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 enum ChevronDirection { previous, next, down }
@@ -38,45 +39,39 @@ class CalendarChevronButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget face = FocusRing(
+    final Widget pressable = Pressable(
+      label: semanticLabel,
       onPressed: onPressed,
       borderRadius: _chevronRadius,
-      child: DecoratedBox(
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
         decoration: BoxDecoration(
           color: context.colors.cardWarm,
           border: context.shadows.outline,
           borderRadius: _chevronRadius,
           boxShadow: context.shadows.chip,
         ),
-        child: SizedBox.square(
-          dimension: size,
-          child: Center(
-            child: CalendarChevronGlyph(direction: direction, size: glyphSize),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: _chevronRadius,
+          position: DecorationPosition.background,
+          child: SizedBox.square(
+            dimension: size,
+            child: Center(
+              child: CalendarChevronGlyph(
+                direction: direction,
+                size: glyphSize,
+              ),
+            ),
           ),
         ),
       ),
     );
     return switch (reach) {
-      final EdgeInsets reach => CalendarTapArea(
-        reach: reach,
-        child: _pressable(face),
-      ),
-      null => _pressable(CalendarTapSlot(alignment: alignment, child: face)),
+      final EdgeInsets reach => CalendarTapArea(reach: reach, child: pressable),
+      null => CalendarTapSlot(alignment: alignment, child: pressable),
     };
   }
-
-  Widget _pressable(Widget child) => Semantics(
-    button: true,
-    label: semanticLabel,
-    child: MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: child,
-      ),
-    ),
-  );
 }
 
 class CalendarChevronGlyph extends StatelessWidget {
@@ -129,10 +124,8 @@ class CalendarTapSlot extends SingleChildRenderObjectWidget {
 }
 
 class _RenderCalendarTapSlot extends RenderShiftedBox {
-  _RenderCalendarTapSlot({
-    required this._alignment,
-    required this._margin,
-  }) : super(null);
+  _RenderCalendarTapSlot({required this._alignment, required this._margin})
+    : super(null);
 
   Alignment _alignment;
   EdgeInsets _margin;
@@ -229,6 +222,31 @@ class _RenderCalendarTapSlot extends RenderShiftedBox {
     );
     (child.parentData! as BoxParentData).offset = spare - slot.topLeft;
   }
+
+  @override
+  void describeSemanticsConfiguration(SemanticsConfiguration config) {
+    super.describeSemanticsConfiguration(config);
+    config.isSemanticBoundary = true;
+  }
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final RenderBox? child = this.child;
+    if (child == null) {
+      return false;
+    }
+    final Rect face = (child.parentData! as BoxParentData).offset & child.size;
+    if (face.contains(position)) {
+      return super.hitTestChildren(result, position: position);
+    }
+    final Offset center = face.center;
+    return result.addWithRawTransform(
+      transform: MatrixUtils.forceToPoint(center),
+      position: center,
+      hitTest: (BoxHitTestResult result, Offset position) =>
+          super.hitTestChildren(result, position: position),
+    );
+  }
 }
 
 class CalendarTapArea extends SingleChildRenderObjectWidget {
@@ -270,12 +288,7 @@ class _RenderCalendarTapArea extends RenderProxyBox {
       _reach.top,
       _reach.bottom,
     );
-    return Rect.fromLTRB(
-      -left,
-      -top,
-      size.width + right,
-      size.height + bottom,
-    );
+    return Rect.fromLTRB(-left, -top, size.width + right, size.height + bottom);
   }
 
   static (double, double) _grow(double extent, double before, double after) {
@@ -333,18 +346,21 @@ class _ChevronPainter extends CustomPainter {
     final double arm = size.shortestSide * 0.33;
     final double half = arm / 2;
     final Path path = switch (direction) {
-      ChevronDirection.previous => Path()
-        ..moveTo(cx + half, cy - arm)
-        ..lineTo(cx - half, cy)
-        ..lineTo(cx + half, cy + arm),
-      ChevronDirection.next => Path()
-        ..moveTo(cx - half, cy - arm)
-        ..lineTo(cx + half, cy)
-        ..lineTo(cx - half, cy + arm),
-      ChevronDirection.down => Path()
-        ..moveTo(cx - arm, cy - half)
-        ..lineTo(cx, cy + half)
-        ..lineTo(cx + arm, cy - half),
+      ChevronDirection.previous =>
+        Path()
+          ..moveTo(cx + half, cy - arm)
+          ..lineTo(cx - half, cy)
+          ..lineTo(cx + half, cy + arm),
+      ChevronDirection.next =>
+        Path()
+          ..moveTo(cx - half, cy - arm)
+          ..lineTo(cx + half, cy)
+          ..lineTo(cx - half, cy + arm),
+      ChevronDirection.down =>
+        Path()
+          ..moveTo(cx - arm, cy - half)
+          ..lineTo(cx, cy + half)
+          ..lineTo(cx + arm, cy - half),
     };
     canvas.drawPath(path, paint);
   }

@@ -7,6 +7,7 @@ import 'package:field_notes/features/garden/widgets/meadow_landmarks.dart';
 import 'package:field_notes/features/garden/widgets/meadow_tabs.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -355,6 +356,10 @@ void main() {
       await mouse.moveTo(tester.getCenter(find.text('The old spruce')));
       await tester.pumpAndSettle();
       expect(calls.last, const MeadowRange(first: 0, last: 19, key: 'l0'));
+      expect(
+        RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+        SystemMouseCursors.basic,
+      );
       expect(_border(tester, 'The old spruce'), _coral);
       expect(
         _border(tester, 'Mist in the hollow'),

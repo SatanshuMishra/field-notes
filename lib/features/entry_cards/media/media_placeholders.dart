@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
+
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/widgets.dart';
 
@@ -8,7 +11,6 @@ const double _retryTarget = 48;
 const double _retryChipHeight = 32;
 const String retryMediaLabel = 'Try again';
 const ValueKey<String> retryMediaKey = ValueKey<String>('media-retry');
-const double _retryFocusWidth = 3;
 
 class CorruptMediaPlaceholder extends StatelessWidget {
   const CorruptMediaPlaceholder({
@@ -56,73 +58,39 @@ class CorruptMediaPlaceholder extends StatelessWidget {
   }
 }
 
-class _MediaRetryButton extends StatefulWidget {
+class _MediaRetryButton extends StatelessWidget {
   const _MediaRetryButton({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
-  State<_MediaRetryButton> createState() => _MediaRetryButtonState();
-}
-
-class _MediaRetryButtonState extends State<_MediaRetryButton> {
-  bool _focused = false;
-
-  void _onFocusHighlight(bool focused) {
-    if (!mounted || focused == _focused) {
-      return;
-    }
-    setState(() => _focused = focused);
-  }
-
-  Object? _activate(Intent intent) {
-    widget.onTap();
-    return null;
-  }
-
-  @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return FocusableActionDetector(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: _activate),
-      },
-      onShowFocusHighlight: _onFocusHighlight,
-      child: Semantics(
-        container: true,
-        button: true,
-        enabled: true,
-        label: retryMediaLabel,
-        child: GestureDetector(
-          key: retryMediaKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          child: SizedBox(
-            height: _retryTarget,
-            child: Center(
-              child: Container(
-                key: _focused ? focusRingKey : null,
-                height: _retryChipHeight,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colors.cardBright,
-                  border: _focused
-                      ? Border.fromBorderSide(
-                          BorderSide(
-                            color: colors.ink,
-                            width: _retryFocusWidth,
-                          ),
-                        )
-                      : context.shadows.outline,
-                  borderRadius: Shapes.buttonBorderRadius,
-                ),
-                child: Center(
-                  child: ExcludeSemantics(
-                    child: Text(
-                      retryMediaLabel,
-                      style: context.textStyles.captionSans,
-                    ),
-                  ),
+    return Pressable(
+      label: retryMediaLabel,
+      onPressed: onTap,
+      borderRadius: Shapes.buttonBorderRadius,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        key: retryMediaKey,
+        height: _retryTarget,
+        child: Center(
+          child: HoverFill(
+            hovered: hovered,
+            borderRadius: Shapes.buttonBorderRadius,
+            child: Container(
+              height: _retryChipHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: colors.cardBright,
+                border: context.shadows.outline,
+                borderRadius: Shapes.buttonBorderRadius,
+              ),
+              child: Center(
+                child: Text(
+                  retryMediaLabel,
+                  style: context.textStyles.captionSans,
                 ),
               ),
             ),

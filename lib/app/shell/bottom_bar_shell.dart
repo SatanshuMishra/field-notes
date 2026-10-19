@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/features/streak/streak.dart';
 
 import '../../design/tokens/tokens.dart';
@@ -300,31 +301,22 @@ class _BottomBarShellState extends State<BottomBarShell> {
   }
 
   Widget _gear(Color ink) {
-    void open() => widget.onSelect(ShellDestination.settings);
-    return Semantics(
-      button: true,
+    return Pressable(
+      key: const ValueKey<String>('gear-button'),
       label: settingsSemanticLabel(badged: widget.settingsBadge),
-      child: GestureDetector(
-        key: const ValueKey<String>('gear-button'),
-        behavior: HitTestBehavior.opaque,
-        onTap: open,
-        child: SizedBox.square(
-          dimension: phoneHeaderGearExtent,
-          child: FocusRing(
-            onPressed: open,
-            borderRadius: _gearRadius,
-            placement: FocusRingPlacement.edge,
-            child: Center(
-              child: SettingsBadged(
-                badged: widget.settingsBadge,
-                child: ExcludeSemantics(
-                  child: Icon(
-                    Icons.settings_outlined,
-                    size: _gearIconSize,
-                    color: ink,
-                  ),
-                ),
-              ),
+      onPressed: () => widget.onSelect(ShellDestination.settings),
+      borderRadius: _gearRadius,
+      surface: _overScene ? FocusRingSurface.dark : FocusRingSurface.light,
+      placement: FocusRingPlacement.edge,
+      child: SizedBox.square(
+        dimension: phoneHeaderGearExtent,
+        child: Center(
+          child: SettingsBadged(
+            badged: widget.settingsBadge,
+            child: Icon(
+              Icons.settings_outlined,
+              size: _gearIconSize,
+              color: ink,
             ),
           ),
         ),

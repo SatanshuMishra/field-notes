@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -91,6 +93,47 @@ void main() {
       final EditableText after =
           tester.widget<EditableText>(find.byType(EditableText));
       expect(after.focusNode.hasFocus, isTrue);
+    });
+
+    testWidgets('gains focus when clicked in its padding',
+        (WidgetTester tester) async {
+      final TextEditingController controller = TextEditingController();
+      addTearDown(controller.dispose);
+
+      await tester.pumpWidget(
+        settingsHarness(
+          SizedBox(
+            width: 260,
+            child: SettingsTextField(controller: controller),
+          ),
+        ),
+      );
+
+      final TestGesture mouse =
+          await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await mouse.addPointer(location: Offset.zero);
+      addTearDown(mouse.removePointer);
+      final Rect field = tester.getRect(find.byType(SettingsTextField));
+      for (final Offset inset in const <Offset>[
+        Offset(4, 4),
+        Offset(130, 3),
+        Offset(6, 20),
+      ]) {
+        FocusManager.instance.primaryFocus?.unfocus();
+        await tester.pump();
+        await mouse.moveTo(field.topLeft + inset);
+        await tester.pump();
+        expect(
+          RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(1),
+          SystemMouseCursors.text,
+        );
+        await mouse.down(field.topLeft + inset);
+        await mouse.up();
+        await tester.pump();
+        final EditableText editable =
+            tester.widget<EditableText>(find.byType(EditableText));
+        expect(editable.focusNode.hasFocus, isTrue, reason: 'click at $inset');
+      }
     });
 
     testWidgets('cannot gain focus via tap when disabled',

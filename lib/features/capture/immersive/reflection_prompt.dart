@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/state/settings_providers.dart';
 
@@ -400,40 +401,29 @@ class _ReflectionPromptState extends ConsumerState<ReflectionPrompt> {
   }
 
   Widget _shuffleButton(bool sidebar) {
-    return Semantics(
-      button: true,
+    return Pressable(
+      key: reflectionShuffleKey,
       label: reflectionShuffleLabel,
-      child: GestureDetector(
-        key: reflectionShuffleKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: _shuffle,
-        child: FocusRing(
-          onPressed: _shuffle,
-          surface: FocusRingSurface.dark,
-          borderRadius: _shuffleRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _shuffleBand,
-              minHeight: _shuffleBand,
-            ),
-            child: Center(
-              widthFactor: 1,
-              child: Padding(
-                padding: _shufflePadding,
-                child: ExcludeSemantics(
-                  child: Text(
-                    reflectionShuffleLabel,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: TypographyTokens.sans,
-                      fontSize: sidebar
-                          ? _sidebarShuffleSize
-                          : _bottomBarShuffleSize,
-                      fontWeight: FontWeight.w500,
-                      color: _shuffleInk,
-                    ),
-                  ),
-                ),
+      onPressed: _shuffle,
+      surface: FocusRingSurface.dark,
+      borderRadius: _shuffleRadius,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _shuffleBand,
+          minHeight: _shuffleBand,
+        ),
+        child: Center(
+          widthFactor: 1,
+          child: Padding(
+            padding: _shufflePadding,
+            child: Text(
+              reflectionShuffleLabel,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: TypographyTokens.sans,
+                fontSize: sidebar ? _sidebarShuffleSize : _bottomBarShuffleSize,
+                fontWeight: FontWeight.w500,
+                color: _shuffleInk,
               ),
             ),
           ),

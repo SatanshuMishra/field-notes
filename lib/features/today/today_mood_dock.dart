@@ -2,6 +2,9 @@ import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -139,79 +142,93 @@ class _MoodDockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final Mood? current = mood;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      excludeFromSemantics: true,
-      onTap: onOpen,
-      child: ConstrainedBox(
+    final String title = current == null
+        ? todayMoodDockPrompt
+        : 'Feeling ${current.label}';
+    final String subtitle = current == null
+        ? todayMoodDockPromptHint
+        : "${current.flower.label} · today's bloom";
+    return Pressable(
+      label: '$title\n$subtitle',
+      onPressed: onOpen,
+      borderRadius: _cardRadius,
+      paintsHover: false,
+      excludeSemantics: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: todayMoodDockHeight),
-        child: GlassSurface(
-          tone: GlassTone.paper,
+        child: HoverFill(
+          hovered: hovered,
+          surface: FocusRingSurface.light,
+          shape: HoverShape.rounded,
           borderRadius: _cardRadius,
-          padding: current == null ? _promptPadding : _moodPadding,
-          child: Row(
-            children: <Widget>[
-              if (current != null) ...<Widget>[
-                ExcludeSemantics(
-                  child: FlowerBloom.forMood(current, size: _flowerSize),
+          child: GlassSurface(
+            tone: GlassTone.paper,
+            borderRadius: _cardRadius,
+            padding: current == null ? _promptPadding : _moodPadding,
+            child: Row(
+              children: <Widget>[
+                if (current != null) ...<Widget>[
+                  ExcludeSemantics(
+                    child: FlowerBloom.forMood(current, size: _flowerSize),
+                  ),
+                  const SizedBox(width: _gap),
+                ],
+                Expanded(
+                  child: ExcludeSemantics(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: _titleStyle.copyWith(color: colors.ink),
+                        ),
+                        Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: (current == null ? _hintStyle : _bloomStyle)
+                              .copyWith(color: colors.muted),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
                 const SizedBox(width: _gap),
-              ],
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      current == null
-                          ? todayMoodDockPrompt
-                          : 'Feeling ${current.label}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: _titleStyle.copyWith(color: colors.ink),
-                    ),
-                    Text(
-                      current == null
-                          ? todayMoodDockPromptHint
-                          : "${current.flower.label} · today's bloom",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: (current == null ? _hintStyle : _bloomStyle)
-                          .copyWith(color: colors.muted),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: _gap),
-              current == null
-                  ? _DockButton(
-                      label: todayMoodDockChooseLabel,
-                      padding: _choosePadding,
-                      decoration: BoxDecoration(
-                        color: Palette.coral,
-                        border: Border.all(
-                          color: colors.line,
-                          width: _buttonBorderWidth,
-                        ),
-                        borderRadius: _buttonRadius,
-                      ),
-                      foreground: Palette.onAccent,
-                      onPressed: onOpen,
-                    )
-                  : _DockButton(
-                      label: todayMoodDockChangeLabel,
-                      padding: _changePadding,
-                      decoration: BoxDecoration(
-                        border: Border.all(
+                current == null
+                    ? _DockButton(
+                        label: todayMoodDockChooseLabel,
+                        padding: _choosePadding,
+                        decoration: BoxDecoration(
                           color: Palette.coral,
-                          width: _buttonBorderWidth,
+                          border: Border.all(
+                            color: colors.line,
+                            width: _buttonBorderWidth,
+                          ),
+                          borderRadius: _buttonRadius,
                         ),
-                        borderRadius: _buttonRadius,
+                        foreground: Palette.onAccent,
+                        hoverSurface: FocusRingSurface.dark,
+                        onPressed: onOpen,
+                      )
+                    : _DockButton(
+                        label: todayMoodDockChangeLabel,
+                        padding: _changePadding,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Palette.coral,
+                            width: _buttonBorderWidth,
+                          ),
+                          borderRadius: _buttonRadius,
+                        ),
+                        foreground: colors.accentInk,
+                        hoverSurface: FocusRingSurface.light,
+                        onPressed: onOpen,
                       ),
-                      foreground: colors.accentInk,
-                      onPressed: onOpen,
-                    ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -225,6 +242,7 @@ class _DockButton extends StatelessWidget {
     required this.padding,
     required this.decoration,
     required this.foreground,
+    required this.hoverSurface,
     required this.onPressed,
   });
 
@@ -232,40 +250,38 @@ class _DockButton extends StatelessWidget {
   final EdgeInsets padding;
   final BoxDecoration decoration;
   final Color foreground;
+  final FocusRingSurface hoverSurface;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
+      includeFocusSemantics: false,
       label: label,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: SizedBox(
-          height: todayMoodDockButtonHitHeight,
-          child: Center(
-            widthFactor: 1,
-            child: FocusRing(
-              onPressed: onPressed,
-              includeFocusSemantics: false,
-              borderRadius: _buttonRadius,
-              child: SizedBox(
-                height: todayMoodDockButtonHeight,
-                child: DecoratedBox(
-                  decoration: decoration,
-                  child: Padding(
-                    padding: padding,
-                    child: Center(
-                      widthFactor: 1,
-                      child: ExcludeSemantics(
-                        child: Text(
-                          label,
-                          style: _buttonStyle.copyWith(color: foreground),
-                        ),
-                      ),
+      onPressed: onPressed,
+      shape: HoverShape.pill,
+      borderRadius: _buttonRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        height: todayMoodDockButtonHitHeight,
+        child: Center(
+          widthFactor: 1,
+          child: SizedBox(
+            height: todayMoodDockButtonHeight,
+            child: DecoratedBox(
+              decoration: decoration,
+              child: HoverFill(
+                hovered: hovered,
+                surface: hoverSurface,
+                shape: HoverShape.pill,
+                borderRadius: _buttonRadius,
+                child: Padding(
+                  padding: padding,
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      label,
+                      style: _buttonStyle.copyWith(color: foreground),
                     ),
                   ),
                 ),

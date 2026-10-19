@@ -3,6 +3,8 @@ import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/relay_address.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -393,43 +395,40 @@ class SyncFlowButton extends StatelessWidget {
         : action.primary
         ? Palette.coral
         : colors.cardLight;
-    return Semantics(
+    return Pressable(
       key: action.key,
-      button: true,
-      enabled: onPressed != null,
       label: action.label,
-      child: Opacity(
+      onPressed: onPressed,
+      borderRadius: _flowButtonRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
         opacity: onPressed == null ? 0.5 : 1,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: onPressed == null,
-          onTap: onPressed,
-          child: SizedBox(
-            height: _flowButtonHeight,
-            child: FocusRing(
-              enabled: onPressed != null,
-              onPressed: onPressed,
+        child: SizedBox(
+          height: _flowButtonHeight,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: background,
+              border: Border.all(
+                color: colors.line,
+                width: _flowButtonBorderWidth,
+              ),
               borderRadius: _flowButtonRadius,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: background,
-                  border: Border.all(
-                    color: colors.line,
-                    width: _flowButtonBorderWidth,
-                  ),
-                  borderRadius: _flowButtonRadius,
-                  boxShadow: emphasis ? context.shadows.emphasis : null,
-                ),
-                child: Center(
-                  child: ExcludeSemantics(
-                    child: Text(
-                      action.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: _flowButtonStyle.copyWith(
-                        color: emphasis ? Palette.onAccent : colors.ink,
-                      ),
-                    ),
+              boxShadow: emphasis ? context.shadows.emphasis : null,
+            ),
+            child: HoverFill(
+              hovered: hovered,
+              surface: emphasis
+                  ? FocusRingSurface.dark
+                  : FocusRingSurface.light,
+              borderRadius: _flowButtonRadius,
+              position: DecorationPosition.background,
+              child: Center(
+                child: Text(
+                  action.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: _flowButtonStyle.copyWith(
+                    color: emphasis ? Palette.onAccent : colors.ink,
                   ),
                 ),
               ),

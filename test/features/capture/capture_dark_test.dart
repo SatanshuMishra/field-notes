@@ -1,3 +1,4 @@
+import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -210,14 +211,14 @@ void main() {
       await tester.pumpAndSettle();
 
       final Finder menuItem = find.descendant(
-        of: find.byType(PopupMenuItem<String>),
+        of: find.byType(AnchoredDropdown<String>),
         matching: find.text(fakeVideoDevices.last.label),
       );
       expect(
         tester.widget<Text>(menuItem).style,
-        FieldNotesTextStyles(FieldNotesColors.dark).bodySans,
+        FieldNotesTextStyles(FieldNotesColors.dark).bodySans
+            .copyWith(color: const Color(0xFFF3E6D1)),
       );
-      expect(_textColour(tester, menuItem), _ink);
 
       for (final Brightness brightness in Brightness.values) {
         await pumpThemed(

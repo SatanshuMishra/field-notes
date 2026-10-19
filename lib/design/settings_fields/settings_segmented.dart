@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -84,27 +84,20 @@ class SettingsSegmented<T> extends StatelessWidget {
   }
 
   Widget _reachable({
+    required String label,
     required bool selected,
     required VoidCallback? choose,
     required BorderRadius borderRadius,
     required Widget face,
   }) {
     return _SegmentReach(
-      child: Semantics(
-        button: true,
-        selected: selected,
+      child: Pressable(
         inMutuallyExclusiveGroup: true,
-        enabled: enabled,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: choose,
-          child: FocusRing(
-            enabled: choose != null,
-            onPressed: choose,
-            borderRadius: borderRadius,
-            child: face,
-          ),
-        ),
+        label: label,
+        selected: selected,
+        onPressed: choose,
+        borderRadius: borderRadius,
+        child: face,
       ),
     );
   }
@@ -113,6 +106,7 @@ class SettingsSegmented<T> extends StatelessWidget {
     final FieldNotesShadows shadows = context.shadows;
     final bool selected = segment.value == value;
     return _reachable(
+      label: segment.label,
       selected: selected,
       choose: enabled ? () => _choose(segment.value) : null,
       borderRadius: Shapes.buttonBorderRadius,
@@ -139,6 +133,7 @@ class SettingsSegmented<T> extends StatelessWidget {
   Widget _sidebarTile(BuildContext context, SettingsSegment<T> segment) {
     final bool selected = segment.value == value;
     return _reachable(
+      label: segment.label,
       selected: selected,
       choose: enabled ? () => _choose(segment.value) : null,
       borderRadius: _sidebarSegmentRadius,
@@ -299,6 +294,8 @@ class _RenderSegmentReach extends RenderProxyBox {
   @override
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
     super.describeSemanticsConfiguration(config);
-    config.isSemanticBoundary = true;
+    config
+      ..isSemanticBoundary = true
+      ..isMergingSemanticsOfDescendants = true;
   }
 }

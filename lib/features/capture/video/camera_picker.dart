@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/glass/glass_surface.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 
 import 'camera_selection.dart';
 import 'video_recorder.dart';
@@ -40,12 +44,7 @@ class CameraPicker extends StatefulWidget {
 }
 
 class _CameraPickerState extends State<CameraPicker> {
-  final GlobalKey<PopupMenuButtonState<String>> _menuKey =
-      GlobalKey<PopupMenuButtonState<String>>();
-
   bool get _canOpen => widget.enabled && widget.onChanged != null;
-
-  void _openMenu() => _menuKey.currentState?.showButtonMenu();
 
   @override
   Widget build(BuildContext context) {
@@ -61,57 +60,47 @@ class _CameraPickerState extends State<CameraPicker> {
     );
     return Opacity(
       opacity: widget.enabled ? 1.0 : _disabledOpacity,
-      child: Semantics(
-        container: true,
-        button: true,
-        enabled: _canOpen,
-        label: widget.label,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: _canOpen ? _openMenu : null,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _minTapTarget,
-              minHeight: _minTapTarget,
+      child: AnchoredDropdown<String>(
+        tone: GlassTone.media,
+        ink: _pickerInk,
+        widensToFitChoices: true,
+        choices: <AnchoredDropdownChoice<String>>[
+          for (final VideoCaptureDevice device in widget.devices)
+            AnchoredDropdownChoice<String>(
+              value: device.id,
+              label: device.label,
             ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: FocusRing(
-                enabled: _canOpen,
-                onPressed: _openMenu,
-                surface: FocusRingSurface.dark,
-                borderRadius: _pickerRadius,
-                includeFocusSemantics: false,
-                child: Material(
-                  type: MaterialType.transparency,
-                  child: ExcludeFocus(
-                    child: PopupMenuButton<String>(
-                      key: _menuKey,
-                      enabled: _canOpen,
-                      initialValue: resolved,
-                      onSelected: widget.onChanged,
-                      itemBuilder: (BuildContext context) =>
-                          <PopupMenuEntry<String>>[
-                            for (final VideoCaptureDevice device
-                                in widget.devices)
-                              PopupMenuItem<String>(
-                                value: device.id,
-                                child: Text(
-                                  device.label,
-                                  style: context.textStyles.bodySans,
-                                ),
-                              ),
-                          ],
+        ],
+        current: resolved,
+        onSelected: (String id) => widget.onChanged?.call(id),
+        builder: (BuildContext context, bool open, VoidCallback toggle) =>
+            Pressable(
+              includeFocusSemantics: false,
+              label: widget.label,
+              onPressed: _canOpen ? toggle : null,
+              borderRadius: _pickerRadius,
+              surface: FocusRingSurface.dark,
+              paintsHover: false,
+              ringsFace: true,
+              builder: (BuildContext context, bool hovered) => ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: _minTapTarget,
+                  minHeight: _minTapTarget,
+                ),
+                child: Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: FocusRingFace(
+                    child: HoverFill(
+                      hovered: hovered,
+                      surface: FocusRingSurface.dark,
+                      borderRadius: _pickerRadius,
                       child: _face(current.label),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ),
       ),
     );
   }

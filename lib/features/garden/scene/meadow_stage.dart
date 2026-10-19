@@ -11,6 +11,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/theme_context.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/model/garden_motion.dart';
@@ -37,6 +38,7 @@ import 'package:field_notes/features/garden/sky/sky_scene.dart';
 
 const String meadowLoadingMessage = 'Growing your meadow…';
 const String meadowStageHint = 'Drag to look around · tap a flower';
+const String meadowFlowerTapLabel = "Show a flower's day";
 
 const Duration meadowFocusPanDuration = Duration(milliseconds: 600);
 const Cubic meadowFocusPanCurve = Cubic(0.33, 0, 0.2, 1);
@@ -185,6 +187,7 @@ class MeadowStageState extends State<MeadowStage>
   double _dragFrom = 0;
   double _dragTravel = 0;
   bool _dragging = false;
+  bool _overFlower = false;
   double? _pressX;
   double _pressTravel = 0;
   _Hit? _hit;
@@ -929,11 +932,12 @@ class MeadowStageState extends State<MeadowStage>
     return viewport;
   }
 
-  void _setHit(_Hit? hit) {
-    if (hit == _hit) {
+  void _point({required bool overFlower, required _Hit? hit}) {
+    if (overFlower == _overFlower && hit == _hit) {
       return;
     }
     setState(() {
+      _overFlower = overFlower;
       _hit = hit;
     });
   }
@@ -952,16 +956,15 @@ class MeadowStageState extends State<MeadowStage>
   }
 
   void _hover(PointerHoverEvent event) {
-    if (widget.compact || _dragging) {
+    if (_dragging) {
       return;
     }
-    _setHit(_hitAt(event.localPosition));
+    final _Hit? hit = _hitAt(event.localPosition);
+    _point(overFlower: hit != null, hit: widget.compact ? _hit : hit);
   }
 
   void _exit(PointerExitEvent event) {
-    if (!widget.compact) {
-      _setHit(null);
-    }
+    _point(overFlower: false, hit: widget.compact ? _hit : null);
   }
 
   void _pressed(PointerDownEvent event) {
@@ -980,13 +983,13 @@ class MeadowStageState extends State<MeadowStage>
     );
   }
 
-  void _tapped(TapUpDetails details) {
+  void _tapped(Offset localPosition) {
     if (!widget.compact || _pressTravel > _dragSlop) {
       return;
     }
     setState(() {
       _hintDismissed = true;
-      _hit = _hitAt(details.localPosition);
+      _hit = _hitAt(localPosition);
     });
   }
 
@@ -1093,6 +1096,7 @@ class MeadowStageState extends State<MeadowStage>
       setState(() {
         _pan = pan;
         _hit = null;
+        _overFlower = false;
         _hintDismissed = true;
       });
     }
@@ -1154,6 +1158,40 @@ class MeadowStageState extends State<MeadowStage>
     final _SceneImages? leaving = _leaving;
     final bool full = widget.mode == MeadowSceneMode.full;
     final double? lift = widget.overlayBottom;
+    final Widget painted = MouseRegion(
+      cursor: _overFlower
+          ? SystemMouseCursors.click
+          : widget.compact
+          ? SystemMouseCursors.basic
+          : MouseCursor.defer,
+      child: FadeTransition(
+        opacity: _fade,
+        child: RepaintBoundary(
+          child: ListenableBuilder(
+            listenable: _frame,
+            builder: (BuildContext context, Widget? child) {
+              final Widget shown = CustomPaint(
+                size: box,
+                painter: _painter(scene, viewport, hit),
+              );
+              if (leaving == null) {
+                return shown;
+              }
+              return Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  CustomPaint(
+                    size: box,
+                    painter: _painter(leaving, viewport, hit),
+                  ),
+                  FadeTransition(opacity: _sharpen, child: shown),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
     return MouseRegion(
       onHover: _hover,
       onExit: _exit,
@@ -1167,33 +1205,17 @@ class MeadowStageState extends State<MeadowStage>
             child: Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                FadeTransition(
-                  opacity: _fade,
-                  child: RepaintBoundary(
-                    child: ListenableBuilder(
-                      listenable: _frame,
-                      builder: (BuildContext context, Widget? child) {
-                        final Widget shown = CustomPaint(
-                          size: box,
-                          painter: _painter(scene, viewport, hit),
-                        );
-                        if (leaving == null) {
-                          return shown;
-                        }
-                        return Stack(
-                          fit: StackFit.expand,
-                          children: <Widget>[
-                            CustomPaint(
-                              size: box,
-                              painter: _painter(leaving, viewport, hit),
-                            ),
-                            FadeTransition(opacity: _sharpen, child: shown),
-                          ],
-                        );
-                      },
+                if (widget.compact)
+                  ExcludeFocus(
+                    child: Pressable(
+                      label: meadowFlowerTapLabel,
+                      onPressedAt: _tapped,
+                      paintsHover: false,
+                      child: painted,
                     ),
-                  ),
-                ),
+                  )
+                else
+                  painted,
                 if (hit != null) _tooltip(hit, geometry, viewport, full),
                 if (widget.compact && !_hintDismissed)
                   Positioned(
@@ -1223,16 +1245,6 @@ class MeadowStageState extends State<MeadowStage>
       context,
     );
     return <Type, GestureRecognizerFactory>{
-      if (widget.compact)
-        TapGestureRecognizer:
-            GestureRecognizerFactoryWithHandlers<TapGestureRecognizer>(
-              () => TapGestureRecognizer(debugOwner: this),
-              (TapGestureRecognizer recognizer) {
-                recognizer
-                  ..onTapUp = _tapped
-                  ..gestureSettings = settings;
-              },
-            ),
       if (widget.covers)
         HorizontalDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<

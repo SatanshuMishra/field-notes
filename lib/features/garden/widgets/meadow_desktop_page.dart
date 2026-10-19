@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/features/garden/model/meadow_time_of_day.dart';
 import 'package:field_notes/features/garden/widgets/garden_header.dart';
 import 'package:field_notes/features/garden/widgets/garden_view.dart';
@@ -400,7 +402,7 @@ class _Divider extends StatelessWidget {
   }
 }
 
-class _DockRound extends StatefulWidget {
+class _DockRound extends StatelessWidget {
   const _DockRound({
     super.key,
     required this.label,
@@ -417,58 +419,35 @@ class _DockRound extends StatefulWidget {
   final Widget child;
 
   @override
-  State<_DockRound> createState() => _DockRoundState();
-}
-
-class _DockRoundState extends State<_DockRound> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final double fill = widget.selected
-        ? 0.2
-        : _hovered
-        ? 0.14
-        : 0;
-    return Semantics(
-      button: true,
-      selected: widget.selected,
-      label: widget.label,
-      onTap: widget.onPressed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (PointerEnterEvent event) => _hover(true),
-        onExit: (PointerExitEvent event) => _hover(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: widget.onPressed,
-          child: FocusRing(
-            onPressed: widget.onPressed,
-            surface: FocusRingSurface.dark,
-            borderRadius: _roundRadius,
-            child: ExcludeSemantics(
-              child: Tooltip(
-                message: widget.tooltip,
-                excludeFromSemantics: true,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: meadowGlassWhite(fill),
-                    borderRadius: _roundRadius,
-                  ),
-                  child: SizedBox.square(
-                    dimension: _roundExtent,
-                    child: Center(child: widget.child),
-                  ),
-                ),
-              ),
-            ),
+    return Pressable(
+      label: label,
+      tooltip: tooltip,
+      selected: selected,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: _roundRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: meadowGlassWhite(
+            selected
+                ? 0.2
+                : hovered
+                ? 0.14
+                : 0,
+          ),
+          borderRadius: _roundRadius,
+        ),
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
+          hovered: hovered,
+          borderRadius: _roundRadius,
+          shape: HoverShape.circle,
+          child: SizedBox.square(
+            dimension: _roundExtent,
+            child: Center(child: child),
           ),
         ),
       ),
