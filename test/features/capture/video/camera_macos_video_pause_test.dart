@@ -35,10 +35,25 @@ class _NativeCamera {
   }
 }
 
+void _sendMovieStart(FakeAsync async) {
+  async.run((FakeAsync _) {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
+          _cameraChannel.name,
+          _cameraChannel.codec.encodeMethodCall(
+            const MethodCall('onVideoRecordingStarted'),
+          ),
+          (ByteData? _) {},
+        );
+  });
+  async.flushMicrotasks();
+}
+
 Future<CameraMacosVideoRecorder> _startedRecorder(
   FakeAsync async,
-  Directory root,
-) async {
+  Directory root, {
+  bool movieBegins = true,
+}) async {
   final FakeLiveAudio liveAudio = FakeLiveAudio();
   final FakeMicrophone mic = FakeMicrophone();
   late final CameraMacosVideoRecorder recorder;
@@ -64,6 +79,9 @@ Future<CameraMacosVideoRecorder> _startedRecorder(
   }
   expect(started, isTrue);
   expect(mic.startStreamConfigs, hasLength(1));
+  if (movieBegins) {
+    _sendMovieStart(async);
+  }
   return recorder;
 }
 
@@ -176,6 +194,58 @@ void main() {
         native.methods.where((String method) => method == 'pauseRecording'),
         hasLength(2),
       );
+    });
+  });
+
+  test(
+    'a macOS take paused before the movie starts keeps its clock still until '
+    'resumed',
+    () async {
+      final FakeAsync async = FakeAsync();
+      native.pauseReplies.add(() => true);
+      native.resumeReplies.add(() => true);
+      final CameraMacosVideoRecorder recorder = await _startedRecorder(
+        async,
+        root,
+        movieBegins: false,
+      );
+      async.run((FakeAsync async) {
+        recorder.pause();
+        async.flushMicrotasks();
+      });
+      _sendMovieStart(async);
+      async.run((FakeAsync async) {
+        async.elapse(const Duration(seconds: 1));
+        expect(recorder.elapsed, Duration.zero);
+
+        recorder.resume();
+        async.flushMicrotasks();
+        async.elapse(const Duration(milliseconds: 300));
+        expect(recorder.elapsed, const Duration(milliseconds: 300));
+      });
+    },
+  );
+
+  test('a macOS take paused before the movie starts keeps its clock still past '
+      'the movie-start fallback', () async {
+    final FakeAsync async = FakeAsync();
+    native.pauseReplies.add(() => true);
+    native.resumeReplies.add(() => true);
+    final CameraMacosVideoRecorder recorder = await _startedRecorder(
+      async,
+      root,
+      movieBegins: false,
+    );
+    async.run((FakeAsync async) {
+      recorder.pause();
+      async.flushMicrotasks();
+      async.elapse(movieStartTimeout + const Duration(seconds: 1));
+      expect(recorder.elapsed, Duration.zero);
+
+      recorder.resume();
+      async.flushMicrotasks();
+      async.elapse(const Duration(milliseconds: 300));
+      expect(recorder.elapsed, const Duration(milliseconds: 300));
     });
   });
 }
