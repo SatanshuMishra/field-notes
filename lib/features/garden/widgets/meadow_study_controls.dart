@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year_replay.dart';
@@ -420,7 +421,8 @@ class _PhoneReplayButton extends StatelessWidget {
             width: Shapes.outlineWidth,
           ),
         ),
-        child: MeadowHoverFill(
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
           hovered: hovered,
           borderRadius: radius,
           child: SizedBox(

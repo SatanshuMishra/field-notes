@@ -156,7 +156,7 @@ class _MoodDockCard extends StatelessWidget {
       excludeSemantics: false,
       builder: (BuildContext context, bool hovered) => ConstrainedBox(
         constraints: const BoxConstraints(minHeight: todayMoodDockHeight),
-        child: _HoverTint(
+        child: HoverFill(
           hovered: hovered,
           surface: FocusRingSurface.light,
           shape: HoverShape.rounded,
@@ -236,33 +236,6 @@ class _MoodDockCard extends StatelessWidget {
   }
 }
 
-class _HoverTint extends StatelessWidget {
-  const _HoverTint({
-    required this.hovered,
-    required this.surface,
-    required this.shape,
-    required this.borderRadius,
-    required this.child,
-  });
-
-  final bool hovered;
-  final FocusRingSurface surface;
-  final HoverShape shape;
-  final BorderRadius borderRadius;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return HoverFill(
-      hovered: hovered,
-      surface: surface,
-      shape: shape,
-      borderRadius: borderRadius,
-      child: child,
-    );
-  }
-}
-
 class _DockButton extends StatelessWidget {
   const _DockButton({
     required this.label,
@@ -297,7 +270,7 @@ class _DockButton extends StatelessWidget {
             height: todayMoodDockButtonHeight,
             child: DecoratedBox(
               decoration: decoration,
-              child: _HoverTint(
+              child: HoverFill(
                 hovered: hovered,
                 surface: hoverSurface,
                 shape: HoverShape.pill,

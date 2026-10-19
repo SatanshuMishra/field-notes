@@ -124,7 +124,7 @@ class _MoodChangePill extends StatelessWidget {
         child: _MinTapTarget(
           child: DecoratedBox(
             decoration: _changePillDecoration,
-            child: _HoverTint(
+            child: HoverFill(
               hovered: hovered,
               shape: HoverShape.pill,
               borderRadius: _pillRadius,
@@ -136,30 +136,6 @@ class _MoodChangePill extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _HoverTint extends StatelessWidget {
-  const _HoverTint({
-    required this.hovered,
-    required this.shape,
-    required this.borderRadius,
-    required this.child,
-  });
-
-  final bool hovered;
-  final HoverShape shape;
-  final BorderRadius borderRadius;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return HoverFill(
-      hovered: hovered,
-      shape: shape,
-      borderRadius: borderRadius,
-      child: child,
     );
   }
 }
@@ -303,7 +279,7 @@ class _ChangeMoodButton extends StatelessWidget {
         child: _MinTapTarget(
           child: DecoratedBox(
             decoration: _changeMoodButtonDecoration(colors),
-            child: _HoverTint(
+            child: HoverFill(
               hovered: hovered,
               shape: HoverShape.pill,
               borderRadius: _changeMoodButtonRadius,
@@ -362,7 +338,7 @@ class _MoodPrompt extends StatelessWidget {
   Widget _face(BuildContext context, String hint, {required bool hovered}) {
     final FieldNotesColors colors = context.colors;
     final FieldNotesTextStyles textStyles = context.textStyles;
-    return _HoverTint(
+    return HoverFill(
       hovered: hovered,
       shape: HoverShape.rounded,
       borderRadius: _promptRadius,

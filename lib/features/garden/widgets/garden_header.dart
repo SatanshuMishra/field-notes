@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -196,7 +197,8 @@ class MeadowDockPill extends StatelessWidget {
                 )
               : null,
         ),
-        child: MeadowHoverFill(
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
           hovered: hovered,
           borderRadius: _pillRadius,
           shape: HoverShape.pill,

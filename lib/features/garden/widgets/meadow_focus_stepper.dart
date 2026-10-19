@@ -2,6 +2,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
@@ -222,7 +223,8 @@ class _RoundButton extends StatelessWidget {
             color: meadowGlassWhite(hovered ? 0.14 : 0),
             borderRadius: radius,
           ),
-          child: MeadowHoverFill(
+          child: HoverFill(
+            surface: FocusRingSurface.dark,
             hovered: hovered,
             borderRadius: radius,
             shape: HoverShape.circle,

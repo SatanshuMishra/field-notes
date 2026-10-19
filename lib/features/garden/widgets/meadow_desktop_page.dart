@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/features/garden/model/meadow_time_of_day.dart';
@@ -439,7 +440,8 @@ class _DockRound extends StatelessWidget {
           ),
           borderRadius: _roundRadius,
         ),
-        child: MeadowHoverFill(
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
           hovered: hovered,
           borderRadius: _roundRadius,
           shape: HoverShape.circle,
