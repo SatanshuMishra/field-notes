@@ -1,5 +1,5 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/widgets.dart';
 
@@ -72,18 +72,11 @@ class StickerButton extends StatelessWidget {
             borderRadius: style.borderRadius,
             boxShadow: style.shadow,
           ),
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      style.hoverSurface,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: style.borderRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: style.hoverSurface,
+            borderRadius: style.borderRadius,
+            position: DecorationPosition.background,
             child: Padding(
               padding: style.padding,
               child: Row(

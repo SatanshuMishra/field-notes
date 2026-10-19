@@ -12,7 +12,7 @@ import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -409,30 +409,24 @@ class ViewerPrimaryButton extends StatelessWidget {
         child: Center(
           child: Opacity(
             opacity: enabled ? 1 : _disabledOpacity,
-            child: Container(
-              width: diameter,
-              height: diameter,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Palette.coral,
-                shape: BoxShape.circle,
-                border: context.shadows.outline,
-              ),
-              foregroundDecoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(
-                        context,
-                        FocusRingSurface.dark,
-                        HoverShape.rounded,
-                      )
-                    : null,
-                shape: HoverShape.rounded,
-                borderRadius: round,
-              ),
-              child: PlayPauseGlyph(
-                playing: playing,
-                color: Palette.onAccent,
-                size: diameter * _primaryGlyphShare,
+            child: HoverFill(
+              hovered: hovered,
+              surface: FocusRingSurface.dark,
+              borderRadius: round,
+              child: Container(
+                width: diameter,
+                height: diameter,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Palette.coral,
+                  shape: BoxShape.circle,
+                  border: context.shadows.outline,
+                ),
+                child: PlayPauseGlyph(
+                  playing: playing,
+                  color: Palette.onAccent,
+                  size: diameter * _primaryGlyphShare,
+                ),
               ),
             ),
           ),
@@ -658,19 +652,10 @@ class _ExitPill extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
-          child: DecoratedBox(
-            position: DecorationPosition.foreground,
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.dark,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: _exitPillRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: _exitPillRadius,
             child: GlassSurface(
               tone: GlassTone.media,
               borderRadius: _exitPillRadius,

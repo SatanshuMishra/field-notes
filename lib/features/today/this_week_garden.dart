@@ -1,7 +1,6 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -169,19 +168,9 @@ class _WeekCell extends ConsumerWidget {
       onPressed: openCalendar,
       borderRadius: _cellBorderRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(
-                  context,
-                  FocusRingSurface.light,
-                  HoverShape.rounded,
-                )
-              : null,
-          shape: HoverShape.rounded,
-          borderRadius: _cellBorderRadius,
-        ),
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: _cellBorderRadius,
         child: _tile(context, mood),
       ),
     );

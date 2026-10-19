@@ -6,6 +6,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/petal_drift.dart';
@@ -1345,7 +1346,7 @@ class _GlassBack extends StatelessWidget {
       borderRadius: round,
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => Center(
-        child: OnboardingHoverFill(
+        child: HoverFill(
           hovered: hovered,
           borderRadius: round,
           surface: FocusRingSurface.dark,
@@ -1421,7 +1422,7 @@ class _PhoneSkip extends StatelessWidget {
       shape: HoverShape.pill,
       borderRadius: radius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: radius,
         surface: hoverSurface,
@@ -1482,7 +1483,7 @@ class _GlassSkip extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
-          child: OnboardingHoverFill(
+          child: HoverFill(
             hovered: hovered,
             borderRadius: radius,
             surface: FocusRingSurface.dark,
@@ -1638,7 +1639,7 @@ class _ProgressPillState extends State<_ProgressPill> {
                 width: metrics.pillWidth,
                 height: metrics.pillHeight,
                 child: ExcludeSemantics(
-                  child: OnboardingHoverFill(
+                  child: HoverFill(
                     hovered: _hovered,
                     borderRadius: round,
                     surface: FocusRingSurface.dark,
@@ -1834,7 +1835,7 @@ class _ProgressMark extends StatelessWidget {
       onPressed: onOpen,
       borderRadius: round,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: round,
         surface: FocusRingSurface.dark,

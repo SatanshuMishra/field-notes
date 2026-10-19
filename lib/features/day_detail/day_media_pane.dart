@@ -4,7 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -231,29 +231,23 @@ class _FullScreenButton extends StatelessWidget {
       builder: (BuildContext context, bool hovered) => SizedBox.square(
         dimension: _fullScreenTarget,
         child: Center(
-          child: Container(
-            width: _fullScreenFace,
-            height: _fullScreenFace,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: Palette.toolbarInk,
-              borderRadius: _fullScreenRadius,
-              boxShadow: Shadows.toastLift,
-            ),
-            foregroundDecoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.dark,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: _fullScreenRadius,
-            ),
-            child: const CustomPaint(
-              size: Size.square(_fullScreenGlyph),
-              painter: _FullScreenGlyphPainter(color: Palette.onAccent),
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: _fullScreenRadius,
+            child: Container(
+              width: _fullScreenFace,
+              height: _fullScreenFace,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: Palette.toolbarInk,
+                borderRadius: _fullScreenRadius,
+                boxShadow: Shadows.toastLift,
+              ),
+              child: const CustomPaint(
+                size: Size.square(_fullScreenGlyph),
+                painter: _FullScreenGlyphPainter(color: Palette.onAccent),
+              ),
             ),
           ),
         ),

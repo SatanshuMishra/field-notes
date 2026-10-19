@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
@@ -70,45 +70,39 @@ class DayDetailEntriesBar extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Palette.coral,
-              border: shadows.outline,
-              borderRadius: Shapes.buttonBorderRadius,
-              boxShadow: shadows.control,
-            ),
-            foregroundDecoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.dark,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: Shapes.buttonBorderRadius,
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: _buttonHorizontalPadding,
-              vertical: _buttonVerticalPadding,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                const SizedBox.square(
-                  dimension: _plusExtent,
-                  child: CustomPaint(painter: _PlusPainter()),
-                ),
-                const SizedBox(width: _plusGap),
-                Text(
-                  addNoteLabel,
-                  maxLines: 1,
-                  softWrap: false,
-                  style: context.textStyles.captureLabelSans.copyWith(
-                    color: Palette.onAccent,
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: Shapes.buttonBorderRadius,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Palette.coral,
+                border: shadows.outline,
+                borderRadius: Shapes.buttonBorderRadius,
+                boxShadow: shadows.control,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: _buttonHorizontalPadding,
+                vertical: _buttonVerticalPadding,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SizedBox.square(
+                    dimension: _plusExtent,
+                    child: CustomPaint(painter: _PlusPainter()),
                   ),
-                ),
-              ],
+                  const SizedBox(width: _plusGap),
+                  Text(
+                    addNoteLabel,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: context.textStyles.captureLabelSans.copyWith(
+                      color: Palette.onAccent,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

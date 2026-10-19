@@ -1,8 +1,8 @@
 import 'package:field_notes/data/sync/engine/sync_status.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -277,90 +277,85 @@ class _UpdateBanner extends StatelessWidget {
       onPressed: onPressed,
       borderRadius: radius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => Container(
-        key: settingsUpdateBannerKey,
-        constraints: const BoxConstraints(
-          minHeight: settingsUpdateBannerMinHeight,
-        ),
-        padding: _bannerPadding,
-        decoration: BoxDecoration(
-          color: colors.cardBright,
-          border: Border.all(color: colors.line, width: Shapes.outlineWidth),
-          borderRadius: radius,
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Palette.coral.withValues(alpha: _bannerShadowOpacity),
-              offset: const Offset(_bannerShadowOffset, _bannerShadowOffset),
-            ),
-          ],
-        ),
-        foregroundDecoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(
-                  context,
-                  FocusRingSurface.light,
-                  HoverShape.rounded,
-                )
-              : null,
-          shape: HoverShape.rounded,
-          borderRadius: radius,
-        ),
-        child: Row(
-          children: <Widget>[
-            Container(
-              key: settingsUpdateBannerTileKey,
-              width: settingsUpdateBannerTileSize,
-              height: settingsUpdateBannerTileSize,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Palette.coral.withValues(alpha: _bannerTileFillOpacity),
-                border: Border.all(
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: radius,
+        child: Container(
+          key: settingsUpdateBannerKey,
+          constraints: const BoxConstraints(
+            minHeight: settingsUpdateBannerMinHeight,
+          ),
+          padding: _bannerPadding,
+          decoration: BoxDecoration(
+            color: colors.cardBright,
+            border: Border.all(color: colors.line, width: Shapes.outlineWidth),
+            borderRadius: radius,
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Palette.coral.withValues(alpha: _bannerShadowOpacity),
+                offset: const Offset(_bannerShadowOffset, _bannerShadowOffset),
+              ),
+            ],
+          ),
+          child: Row(
+            children: <Widget>[
+              Container(
+                key: settingsUpdateBannerTileKey,
+                width: settingsUpdateBannerTileSize,
+                height: settingsUpdateBannerTileSize,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
                   color: Palette.coral.withValues(
-                    alpha: _bannerTileBorderOpacity,
+                    alpha: _bannerTileFillOpacity,
                   ),
-                  width: Shapes.outlineWidth,
-                ),
-                borderRadius: const BorderRadius.all(
-                  Radius.circular(_tileRadius),
-                ),
-              ),
-              child: SettingsIcon(
-                SettingsGlyph.download,
-                size: settingsUpdateBannerIconSize,
-                color: colors.accentInk,
-              ),
-            ),
-            const SizedBox(width: _tileGap),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textStyles.labelSans.copyWith(
-                      fontSize: _bannerTitleSize,
-                      fontWeight: FontWeight.w600,
-                      color: colors.ink,
+                  border: Border.all(
+                    color: Palette.coral.withValues(
+                      alpha: _bannerTileBorderOpacity,
                     ),
+                    width: Shapes.outlineWidth,
                   ),
-                  const SizedBox(height: _summaryGap),
-                  Text(
-                    bannerSubtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textStyles.captionSans.copyWith(
-                      color: colors.muted,
-                    ),
+                  borderRadius: const BorderRadius.all(
+                    Radius.circular(_tileRadius),
                   ),
-                ],
+                ),
+                child: SettingsIcon(
+                  SettingsGlyph.download,
+                  size: settingsUpdateBannerIconSize,
+                  color: colors.accentInk,
+                ),
               ),
-            ),
-            const SizedBox(width: _chevronGap),
-            ChevronGlyph(pointsBack: false, color: colors.muted),
-          ],
+              const SizedBox(width: _tileGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.labelSans.copyWith(
+                        fontSize: _bannerTitleSize,
+                        fontWeight: FontWeight.w600,
+                        color: colors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: _summaryGap),
+                    Text(
+                      bannerSubtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.captionSans.copyWith(
+                        color: colors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: _chevronGap),
+              ChevronGlyph(pointsBack: false, color: colors.muted),
+            ],
+          ),
         ),
       ),
     );
@@ -462,15 +457,10 @@ class SettingsBackPill extends StatelessWidget {
       shape: HoverShape.pill,
       borderRadius: _pillRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(context, FocusRingSurface.light, HoverShape.pill)
-              : null,
-          shape: HoverShape.pill,
-          borderRadius: _pillRadius,
-        ),
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        shape: HoverShape.pill,
+        borderRadius: _pillRadius,
         child: GlassSurface(
           tone: GlassTone.paper,
           borderRadius: _pillRadius,

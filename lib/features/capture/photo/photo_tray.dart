@@ -1,5 +1,4 @@
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -186,19 +185,9 @@ class _PhotoTrayTile extends StatelessWidget {
             onPressed: onRemove,
             borderRadius: _removeRadius,
             paintsHover: false,
-            builder: (BuildContext context, bool hovered) => DecoratedBox(
-              position: DecorationPosition.foreground,
-              decoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(
-                        context,
-                        FocusRingSurface.light,
-                        HoverShape.rounded,
-                      )
-                    : null,
-                shape: HoverShape.rounded,
-                borderRadius: _removeRadius,
-              ),
+            builder: (BuildContext context, bool hovered) => HoverFill(
+              hovered: hovered,
+              borderRadius: _removeRadius,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: context.colors.cardBright,

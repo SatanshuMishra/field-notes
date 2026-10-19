@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -966,13 +966,7 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
             enabled: onTap != null,
             marked: marked,
             focused: false,
-            hover: hovered
-                ? HoverStyle.of(
-                    context,
-                    FocusRingSurface.dark,
-                    HoverShape.rounded,
-                  )
-                : null,
+            hovered: hovered,
           ),
         ),
       ),
@@ -995,7 +989,7 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
             enabled: false,
             marked: true,
             focused: _focused,
-            hover: null,
+            hovered: false,
           ),
         ),
       ),
@@ -1006,7 +1000,7 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
     required bool enabled,
     required bool marked,
     required bool focused,
-    required Color? hover,
+    required bool hovered,
   }) {
     return ConstrainedBox(
       key: widget.controlKey,
@@ -1028,12 +1022,11 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
               : null,
           borderRadius: _controlRadius,
         ),
-        child: DecoratedBox(
-          decoration: HoverStyle.decoration(
-            color: hover,
-            shape: HoverShape.rounded,
-            borderRadius: _controlRadius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          surface: FocusRingSurface.dark,
+          borderRadius: _controlRadius,
+          position: DecorationPosition.background,
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: photoToolbarControlPadding,

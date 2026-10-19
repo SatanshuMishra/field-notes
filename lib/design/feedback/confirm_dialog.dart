@@ -1,6 +1,6 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
@@ -272,14 +272,11 @@ class _HoverVeil extends StatelessWidget {
         foreground.computeLuminance() > _lightForegroundLuminance
         ? FocusRingSurface.dark
         : FocusRingSurface.light;
-    return DecoratedBox(
-      decoration: HoverStyle.decoration(
-        color: hovered
-            ? HoverStyle.of(context, surface, HoverShape.rounded)
-            : null,
-        shape: HoverShape.rounded,
-        borderRadius: borderRadius,
-      ),
+    return HoverFill(
+      hovered: hovered,
+      surface: surface,
+      borderRadius: borderRadius,
+      position: DecorationPosition.background,
       child: child,
     );
   }

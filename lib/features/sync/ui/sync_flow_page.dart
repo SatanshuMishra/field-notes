@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/system_bars.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -219,18 +219,11 @@ class _SyncFlowPageClose extends StatelessWidget {
             border: Border.all(color: colors.line, width: _closeBorderWidth),
             shape: BoxShape.circle,
           ),
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.circle,
-                    )
-                  : null,
-              shape: HoverShape.circle,
-              borderRadius: _closeRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            shape: HoverShape.circle,
+            borderRadius: _closeRadius,
+            position: DecorationPosition.background,
             child: Center(
               child: IconStickerGlyphIcon(
                 glyph: IconStickerGlyph.close,

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/widgets.dart';
@@ -611,19 +612,10 @@ class _CompactLogCardState extends State<CompactLogCard> {
       builder: (BuildContext context, bool hovered) => SizedBox.square(
         dimension: math.max(disc, _posterPlayTarget),
         child: Center(
-          child: DecoratedBox(
-            position: DecorationPosition.foreground,
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.circle,
-                    )
-                  : null,
-              shape: HoverShape.circle,
-              borderRadius: round,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            shape: HoverShape.circle,
+            borderRadius: round,
             child: face,
           ),
         ),
@@ -650,31 +642,26 @@ class _CardPlayToggle extends StatelessWidget {
         dimension: _playToggleTarget,
         child: Align(
           alignment: AlignmentDirectional.centerStart,
-          child: Container(
-            width: _playToggleSize,
-            height: _playToggleSize,
-            decoration: BoxDecoration(
-              color: Palette.coral,
-              shape: BoxShape.circle,
-              border: context.shadows.outline,
-            ),
-            foregroundDecoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.dark,
-                      HoverShape.circle,
-                    )
-                  : null,
-              shape: HoverShape.circle,
-              borderRadius: _playToggleRadius,
-            ),
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.only(left: _playToggleGlyphOffset),
-                child: PlayPauseGlyph(
-                  playing: false,
-                  color: FieldNotesColors.light.cardBright,
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            shape: HoverShape.circle,
+            borderRadius: _playToggleRadius,
+            child: Container(
+              width: _playToggleSize,
+              height: _playToggleSize,
+              decoration: BoxDecoration(
+                color: Palette.coral,
+                shape: BoxShape.circle,
+                border: context.shadows.outline,
+              ),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: _playToggleGlyphOffset),
+                  child: PlayPauseGlyph(
+                    playing: false,
+                    color: FieldNotesColors.light.cardBright,
+                  ),
                 ),
               ),
             ),

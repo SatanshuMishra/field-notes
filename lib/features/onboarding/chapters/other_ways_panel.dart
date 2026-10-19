@@ -2,12 +2,12 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/waveform_bob.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:flutter/widgets.dart';
 
 const String _kicker = 'a moment';
@@ -275,7 +275,7 @@ class _Block extends StatelessWidget {
       onPressed: onTap,
       borderRadius: radius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: radius,
         surface: FocusRingSurface.dark,

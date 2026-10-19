@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -429,18 +429,10 @@ class PhoneCalendarButton extends StatelessWidget {
           borderRadius: _radius,
           boxShadow: context.shadows.chip,
         ),
-        child: DecoratedBox(
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(
-                    context,
-                    FocusRingSurface.light,
-                    HoverShape.rounded,
-                  )
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: _radius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: _radius,
+          position: DecorationPosition.background,
           child: SizedBox(
             width: width,
             height: height,
@@ -707,19 +699,10 @@ class _ThisMonthPill extends StatelessWidget {
         ),
         child: SizedBox(
           height: phoneThisMonthHeight,
-          child: DecoratedBox(
-            position: DecorationPosition.foreground,
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.pill,
-                    )
-                  : null,
-              shape: HoverShape.pill,
-              borderRadius: _radius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            shape: HoverShape.pill,
+            borderRadius: _radius,
             child: GlassSurface(
               tone: GlassTone.paper,
               borderRadius: _radius,

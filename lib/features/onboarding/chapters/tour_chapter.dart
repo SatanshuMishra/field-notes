@@ -7,13 +7,13 @@ import 'package:field_notes/design/feedback/empty_state.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/icons/flame_icon.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' show Icons;
@@ -534,7 +534,7 @@ class _LineTarget extends StatelessWidget {
         paintsHover: false,
         builder: (BuildContext context, bool hovered) => MouseRegion(
           onEnter: (PointerEnterEvent event) => onHighlight(),
-          child: OnboardingHoverFill(
+          child: HoverFill(
             hovered: hovered,
             borderRadius: borderRadius,
             child: child,

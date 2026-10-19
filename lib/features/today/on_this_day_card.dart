@@ -1,6 +1,5 @@
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -152,19 +151,9 @@ class OnThisDayCard extends StatelessWidget {
       padding: EdgeInsets.zero,
       child: ClipRRect(
         borderRadius: _cardRadius,
-        child: DecoratedBox(
-          position: DecorationPosition.foreground,
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(
-                    context,
-                    FocusRingSurface.light,
-                    HoverShape.rounded,
-                  )
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: _cardRadius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: _cardRadius,
           child: child,
         ),
       ),

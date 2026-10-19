@@ -3,7 +3,7 @@ import 'package:field_notes/data/links/link_opener.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -966,18 +966,11 @@ class _PhoneButton extends StatelessWidget {
           borderRadius: radius,
           boxShadow: primary ? shadows.emphasis : null,
         ),
-        child: DecoratedBox(
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(
-                    context,
-                    primary ? FocusRingSurface.dark : FocusRingSurface.light,
-                    HoverShape.rounded,
-                  )
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: radius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          surface: primary ? FocusRingSurface.dark : FocusRingSurface.light,
+          borderRadius: radius,
+          position: DecorationPosition.background,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: _phoneButtonGap),
             child: Center(
@@ -1078,18 +1071,10 @@ class _PhoneLinkButton extends StatelessWidget {
           border: Border.all(color: colors.line, width: Shapes.outlineWidth),
           borderRadius: radius,
         ),
-        child: DecoratedBox(
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(
-                    context,
-                    FocusRingSurface.light,
-                    HoverShape.rounded,
-                  )
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: radius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: radius,
+          position: DecorationPosition.background,
           child: Center(
             child: Text(
               label,

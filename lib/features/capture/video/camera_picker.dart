@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/anchored_dropdown.dart';
@@ -74,7 +74,7 @@ class _CameraPickerState extends State<CameraPicker> {
         onSelected: (String id) => widget.onChanged?.call(id),
         builder: (BuildContext context, bool open, VoidCallback toggle) =>
             Pressable(
-      includeFocusSemantics: false,
+              includeFocusSemantics: false,
               label: widget.label,
               onPressed: _canOpen ? toggle : null,
               borderRadius: _pickerRadius,
@@ -90,19 +90,10 @@ class _CameraPickerState extends State<CameraPicker> {
                   widthFactor: 1,
                   heightFactor: 1,
                   child: FocusRingFace(
-                    child: DecoratedBox(
-                      position: DecorationPosition.foreground,
-                      decoration: HoverStyle.decoration(
-                        color: hovered
-                            ? HoverStyle.of(
-                                context,
-                                FocusRingSurface.dark,
-                                HoverShape.rounded,
-                              )
-                            : null,
-                        shape: HoverShape.rounded,
-                        borderRadius: _pickerRadius,
-                      ),
+                    child: HoverFill(
+                      hovered: hovered,
+                      surface: FocusRingSurface.dark,
+                      borderRadius: _pickerRadius,
                       child: _face(current.label),
                     ),
                   ),

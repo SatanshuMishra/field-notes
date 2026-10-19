@@ -1,5 +1,6 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
@@ -135,12 +136,12 @@ class _ActionPill extends StatelessWidget {
                 decoration: decoration,
                 child: tone == SettingsActionTone.neutral
                     ? text
-                    : DecoratedBox(
-                        decoration: HoverStyle.decoration(
-                          color: hoverFill,
-                          shape: HoverShape.pill,
-                          borderRadius: _pillRadius,
-                        ),
+                    : HoverFill(
+                        hovered: hovered,
+                        surface: hoverSurface,
+                        shape: HoverShape.pill,
+                        borderRadius: _pillRadius,
+                        position: DecorationPosition.background,
                         child: text,
                       ),
               ),

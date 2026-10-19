@@ -3,8 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
@@ -52,18 +51,10 @@ class CalendarChevronButton extends StatelessWidget {
           borderRadius: _chevronRadius,
           boxShadow: context.shadows.chip,
         ),
-        child: DecoratedBox(
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(
-                    context,
-                    FocusRingSurface.light,
-                    HoverShape.rounded,
-                  )
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: _chevronRadius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: _chevronRadius,
+          position: DecorationPosition.background,
           child: SizedBox.square(
             dimension: size,
             child: Center(

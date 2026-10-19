@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
@@ -221,18 +221,11 @@ class _MonthTile extends StatelessWidget {
 
   Widget _face(BuildContext context, bool hovered) {
     final FieldNotesColors colors = context.colors;
-    final Widget text = DecoratedBox(
-      decoration: HoverStyle.decoration(
-        color: hovered
-            ? HoverStyle.of(
-                context,
-                isDisplayed ? FocusRingSurface.dark : FocusRingSurface.light,
-                HoverShape.rounded,
-              )
-            : null,
-        shape: HoverShape.rounded,
-        borderRadius: _monthBorderRadius,
-      ),
+    final Widget text = HoverFill(
+      hovered: hovered,
+      surface: isDisplayed ? FocusRingSurface.dark : FocusRingSurface.light,
+      borderRadius: _monthBorderRadius,
+      position: DecorationPosition.background,
       child: Padding(
         padding: const EdgeInsets.all(8),
         child: Text(

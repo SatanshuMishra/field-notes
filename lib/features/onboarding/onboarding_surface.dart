@@ -1,6 +1,6 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/widgets.dart';
@@ -161,7 +161,7 @@ class OnboardingPrimaryButton extends StatelessWidget {
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: OnboardingHoverFill(
+            child: HoverFill(
               hovered: hovered,
               borderRadius: borderRadius,
               surface: FocusRingSurface.dark,
@@ -212,36 +212,6 @@ class OnboardingTextButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class OnboardingHoverFill extends StatelessWidget {
-  const OnboardingHoverFill({
-    super.key,
-    required this.hovered,
-    required this.borderRadius,
-    required this.child,
-    this.surface = FocusRingSurface.light,
-    this.shape = HoverShape.rounded,
-  });
-
-  final bool hovered;
-  final BorderRadius borderRadius;
-  final FocusRingSurface surface;
-  final HoverShape shape;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: HoverStyle.decoration(
-        color: hovered ? HoverStyle.of(context, surface, shape) : null,
-        shape: shape,
-        borderRadius: borderRadius,
-      ),
-      child: child,
     );
   }
 }

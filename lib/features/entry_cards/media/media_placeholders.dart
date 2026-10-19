@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 
 import '../../../design/tokens/tokens.dart';
@@ -76,29 +76,22 @@ class _MediaRetryButton extends StatelessWidget {
         key: retryMediaKey,
         height: _retryTarget,
         child: Center(
-          child: Container(
-            height: _retryChipHeight,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: colors.cardBright,
-              border: context.shadows.outline,
-              borderRadius: Shapes.buttonBorderRadius,
-            ),
-            foregroundDecoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: Shapes.buttonBorderRadius,
-            ),
-            child: Center(
-              child: Text(
-                retryMediaLabel,
-                style: context.textStyles.captionSans,
+          child: HoverFill(
+            hovered: hovered,
+            borderRadius: Shapes.buttonBorderRadius,
+            child: Container(
+              height: _retryChipHeight,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: colors.cardBright,
+                border: context.shadows.outline,
+                borderRadius: Shapes.buttonBorderRadius,
+              ),
+              child: Center(
+                child: Text(
+                  retryMediaLabel,
+                  style: context.textStyles.captionSans,
+                ),
               ),
             ),
           ),

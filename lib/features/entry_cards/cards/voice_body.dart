@@ -1,4 +1,5 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
@@ -164,31 +165,26 @@ class _PlayToggle extends StatelessWidget {
           alignment: AlignmentDirectional.centerStart,
           child: Opacity(
             opacity: enabled ? 1.0 : 0.5,
-            child: Container(
-              width: _toggleSize,
-              height: _toggleSize,
-              decoration: BoxDecoration(
-                color: Palette.coral,
-                shape: BoxShape.circle,
-                border: context.shadows.outline,
-              ),
-              foregroundDecoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(
-                        context,
-                        FocusRingSurface.dark,
-                        HoverShape.circle,
-                      )
-                    : null,
-                shape: HoverShape.circle,
-                borderRadius: _toggleRadius,
-              ),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.only(left: _toggleGlyphOffset),
-                  child: PlayPauseGlyph(
-                    playing: isPlaying,
-                    color: FieldNotesColors.light.cardBright,
+            child: HoverFill(
+              hovered: hovered,
+              surface: FocusRingSurface.dark,
+              shape: HoverShape.circle,
+              borderRadius: _toggleRadius,
+              child: Container(
+                width: _toggleSize,
+                height: _toggleSize,
+                decoration: BoxDecoration(
+                  color: Palette.coral,
+                  shape: BoxShape.circle,
+                  border: context.shadows.outline,
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: _toggleGlyphOffset),
+                    child: PlayPauseGlyph(
+                      playing: isPlaying,
+                      color: FieldNotesColors.light.cardBright,
+                    ),
                   ),
                 ),
               ),

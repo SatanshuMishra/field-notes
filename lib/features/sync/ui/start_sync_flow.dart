@@ -3,7 +3,7 @@ import 'package:field_notes/data/sync/enrolment/enrolment_service.dart';
 import 'package:field_notes/data/sync/relay_address.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -415,20 +415,13 @@ class SyncFlowButton extends StatelessWidget {
               borderRadius: _flowButtonRadius,
               boxShadow: emphasis ? context.shadows.emphasis : null,
             ),
-            child: DecoratedBox(
-              decoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(
-                        context,
-                        emphasis
-                            ? FocusRingSurface.dark
-                            : FocusRingSurface.light,
-                        HoverShape.rounded,
-                      )
-                    : null,
-                shape: HoverShape.rounded,
-                borderRadius: _flowButtonRadius,
-              ),
+            child: HoverFill(
+              hovered: hovered,
+              surface: emphasis
+                  ? FocusRingSurface.dark
+                  : FocusRingSurface.light,
+              borderRadius: _flowButtonRadius,
+              position: DecorationPosition.background,
               child: Center(
                 child: Text(
                   action.label,

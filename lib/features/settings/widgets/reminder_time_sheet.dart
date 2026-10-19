@@ -1,6 +1,5 @@
 import 'package:field_notes/design/feedback/feedback.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -217,18 +216,10 @@ class _StepperButton extends StatelessWidget {
             border: Border.all(color: colors.line, width: _stepperBorderWidth),
             borderRadius: _stepperRadius,
           ),
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: _stepperRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            borderRadius: _stepperRadius,
+            position: DecorationPosition.background,
             child: Center(
               child: Icon(
                 up ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,

@@ -1,5 +1,6 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
@@ -108,14 +109,12 @@ class SettingsToggle extends StatelessWidget {
                   border: outline,
                   borderRadius: metrics.trackRadius,
                 ),
-                child: DecoratedBox(
-                  decoration: HoverStyle.decoration(
-                    color: hovered
-                        ? HoverStyle.of(context, hoverSurface, HoverShape.pill)
-                        : null,
-                    shape: HoverShape.pill,
-                    borderRadius: metrics.trackRadius,
-                  ),
+                child: HoverFill(
+                  hovered: hovered,
+                  surface: hoverSurface,
+                  shape: HoverShape.pill,
+                  borderRadius: metrics.trackRadius,
+                  position: DecorationPosition.background,
                   child: Padding(
                     padding: EdgeInsets.all(metrics.inset),
                     child: AnimatedAlign(

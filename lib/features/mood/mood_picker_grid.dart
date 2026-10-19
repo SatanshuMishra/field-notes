@@ -2,8 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -134,19 +133,9 @@ class _MoodTile extends StatelessWidget {
           borderRadius: _tileRadius,
           boxShadow: isSelected ? Shadows.tileSelected : null,
         ),
-        child: DecoratedBox(
-          position: DecorationPosition.foreground,
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(
-                    context,
-                    FocusRingSurface.light,
-                    HoverShape.rounded,
-                  )
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: _tileRadius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: _tileRadius,
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: isSheet

@@ -3,13 +3,13 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -504,7 +504,7 @@ class _ThemeCard extends StatelessWidget {
       onPressed: onPressed,
       borderRadius: _cardRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: _cardRadius,
         child: AnimatedContainer(
@@ -949,7 +949,7 @@ class _ThemeRow extends StatelessWidget {
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: BorderRadius.zero,
         child: AnimatedContainer(

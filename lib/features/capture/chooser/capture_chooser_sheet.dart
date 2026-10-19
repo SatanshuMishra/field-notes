@@ -3,7 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -168,62 +168,56 @@ class _CaptureOptionRow extends StatelessWidget {
       onPressed: select,
       borderRadius: _rowRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => Container(
-        decoration: BoxDecoration(
-          color: _isPrimary ? Palette.coral : colors.cardWarm,
-          border: Border.all(color: colors.line, width: _rowBorderWidth),
-          borderRadius: _rowRadius,
-          boxShadow: _isPrimary ? context.shadows.emphasis : null,
-        ),
-        foregroundDecoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(
-                  context,
-                  _isPrimary ? FocusRingSurface.dark : FocusRingSurface.light,
-                  HoverShape.rounded,
-                )
-              : null,
-          shape: HoverShape.rounded,
-          borderRadius: _rowRadius,
-        ),
-        padding: const EdgeInsets.symmetric(
-          vertical: _rowPaddingVertical,
-          horizontal: _rowPaddingHorizontal,
-        ),
-        child: Row(
-          children: <Widget>[
-            CaptureIcon(
-              glyph: _glyphFor(option.type),
-              color: foreground,
-              size: _rowIconSize,
-            ),
-            const SizedBox(width: _rowIconGap),
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    option.label,
-                    style: textStyles.labelSans.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: foreground,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: _isPrimary
-                        ? textStyles.caption10Sans.copyWith(
-                            color: Palette.onAccent.withValues(
-                              alpha: _rowPrimarySubtitleOpacity,
-                            ),
-                          )
-                        : textStyles.caption10Sans,
-                  ),
-                ],
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        surface: _isPrimary ? FocusRingSurface.dark : FocusRingSurface.light,
+        borderRadius: _rowRadius,
+        child: Container(
+          decoration: BoxDecoration(
+            color: _isPrimary ? Palette.coral : colors.cardWarm,
+            border: Border.all(color: colors.line, width: _rowBorderWidth),
+            borderRadius: _rowRadius,
+            boxShadow: _isPrimary ? context.shadows.emphasis : null,
+          ),
+          padding: const EdgeInsets.symmetric(
+            vertical: _rowPaddingVertical,
+            horizontal: _rowPaddingHorizontal,
+          ),
+          child: Row(
+            children: <Widget>[
+              CaptureIcon(
+                glyph: _glyphFor(option.type),
+                color: foreground,
+                size: _rowIconSize,
               ),
-            ),
-          ],
+              const SizedBox(width: _rowIconGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      option.label,
+                      style: textStyles.labelSans.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: foreground,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: _isPrimary
+                          ? textStyles.caption10Sans.copyWith(
+                              color: Palette.onAccent.withValues(
+                                alpha: _rowPrimarySubtitleOpacity,
+                              ),
+                            )
+                          : textStyles.caption10Sans,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -10,7 +11,6 @@ import 'package:field_notes/domain/settings/week_start.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -531,7 +531,7 @@ class _WeekButton extends StatelessWidget {
       onPressed: onPressed,
       borderRadius: _choiceRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: _choiceRadius,
         surface: selected ? FocusRingSurface.dark : FocusRingSurface.light,
@@ -647,7 +647,7 @@ class _ChoiceRow extends StatelessWidget {
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: BorderRadius.zero,
         child: AnimatedContainer(

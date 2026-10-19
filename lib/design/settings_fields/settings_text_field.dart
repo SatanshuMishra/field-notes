@@ -1,8 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-import '../focus/focus_ring.dart';
-import '../interaction/hover_style.dart';
+import '../interaction/hover_fill.dart';
 import '../tokens/tokens.dart';
 
 class SettingsTextField extends StatefulWidget {
@@ -136,18 +135,10 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
             border: Border.all(color: borderColor, width: Shapes.outlineWidth),
             borderRadius: Shapes.buttonBorderRadius,
           ),
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: widget.enabled && _hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: Shapes.buttonBorderRadius,
-            ),
+          child: HoverFill(
+            hovered: widget.enabled && _hovered,
+            borderRadius: Shapes.buttonBorderRadius,
+            position: DecorationPosition.background,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               child: MergeSemantics(

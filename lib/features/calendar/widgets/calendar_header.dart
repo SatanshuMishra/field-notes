@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
@@ -291,18 +291,11 @@ class _ThisWeekButton extends StatelessWidget {
             borderRadius: _thisWeekRadius,
             boxShadow: context.shadows.control,
           ),
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.dark,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: _thisWeekRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: _thisWeekRadius,
+            position: DecorationPosition.background,
             child: Padding(
               padding: _thisWeekPadding,
               child: Row(

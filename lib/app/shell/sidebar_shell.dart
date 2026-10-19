@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/features/streak/streak.dart';
@@ -513,20 +513,13 @@ class _SidebarShellState extends State<SidebarShell> {
             borderRadius: _navItemRadius,
             boxShadow: isSelected ? shadows.emphasis : null,
           ),
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      isSelected
-                          ? FocusRingSurface.dark
-                          : FocusRingSurface.light,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: _navItemRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: isSelected
+                ? FocusRingSurface.dark
+                : FocusRingSurface.light,
+            borderRadius: _navItemRadius,
+            position: DecorationPosition.background,
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: collapsed ? 0 : _railPaddingHorizontal,

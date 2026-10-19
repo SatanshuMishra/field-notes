@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -230,14 +231,12 @@ class _PanelButton extends StatelessWidget {
         _pillRadius;
     Widget face(BuildContext context, bool hovered) => DecoratedBox(
       decoration: decoration,
-      child: DecoratedBox(
-        decoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(context, FocusRingSurface.dark, HoverShape.pill)
-              : null,
-          shape: HoverShape.pill,
-          borderRadius: radius,
-        ),
+      child: HoverFill(
+        hovered: hovered,
+        surface: FocusRingSurface.dark,
+        shape: HoverShape.pill,
+        borderRadius: radius,
+        position: DecorationPosition.background,
         child: Padding(
           padding: compact ? EdgeInsets.zero : padding,
           child: SizedBox(

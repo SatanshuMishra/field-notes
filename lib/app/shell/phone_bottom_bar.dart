@@ -2,7 +2,7 @@ import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
@@ -117,14 +117,11 @@ class PhoneBottomBar extends StatelessWidget {
           color: isSelected ? tone.pillFor(Theme.of(context).brightness) : null,
           borderRadius: _cellRadius,
         ),
-        child: DecoratedBox(
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(context, _surface, HoverShape.rounded)
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: _cellRadius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          surface: _surface,
+          borderRadius: _cellRadius,
+          position: DecorationPosition.background,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -189,18 +186,11 @@ class PhoneBottomBar extends StatelessWidget {
           border: context.shadows.outline,
           boxShadow: _captureShadow,
         ),
-        child: DecoratedBox(
-          decoration: HoverStyle.decoration(
-            color: hovered
-                ? HoverStyle.of(
-                    context,
-                    FocusRingSurface.dark,
-                    HoverShape.rounded,
-                  )
-                : null,
-            shape: HoverShape.rounded,
-            borderRadius: _captureRadius,
-          ),
+        child: HoverFill(
+          hovered: hovered,
+          surface: FocusRingSurface.dark,
+          borderRadius: _captureRadius,
+          position: DecorationPosition.background,
           child: const CustomPaint(
             painter: GlassHighlightPainter(
               color: _captureHighlight,

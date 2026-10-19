@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -23,7 +24,6 @@ import 'package:field_notes/features/garden/widgets/meadow_study_controls.dart'
 import 'package:field_notes/features/onboarding/chapters/sample_year.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -799,7 +799,7 @@ class _ReplayButton extends StatelessWidget {
         child: Center(
           widthFactor: 1,
           heightFactor: 1,
-          child: OnboardingHoverFill(
+          child: HoverFill(
             hovered: hovered,
             borderRadius: radius,
             surface: FocusRingSurface.dark,
@@ -860,7 +860,7 @@ class _ReplayButton extends StatelessWidget {
       shape: HoverShape.circle,
       borderRadius: round,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: round,
         surface: FocusRingSurface.dark,

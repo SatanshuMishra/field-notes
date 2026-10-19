@@ -2,13 +2,13 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/onboarding/chapters/garden_scene.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -381,11 +381,7 @@ class _MoodTile extends StatelessWidget {
       paintsHover: false,
       builder: (BuildContext context, bool hovered) => SizedBox(
         height: metrics.tileHeight,
-        child: OnboardingHoverFill(
-          hovered: hovered,
-          borderRadius: radius,
-          child: face,
-        ),
+        child: HoverFill(hovered: hovered, borderRadius: radius, child: face),
       ),
     );
   }

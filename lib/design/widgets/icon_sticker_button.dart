@@ -1,5 +1,5 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/widgets.dart';
 
@@ -112,14 +112,11 @@ class IconStickerButton extends StatelessWidget {
             border: context.shadows.outline,
             borderRadius: _buttonRadius,
           ),
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(context, _faceSurface, HoverShape.rounded)
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: _buttonRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: _faceSurface,
+            borderRadius: _buttonRadius,
+            position: DecorationPosition.background,
             child: Center(
               child: IconStickerGlyphIcon(glyph: glyph, color: glyphColor),
             ),

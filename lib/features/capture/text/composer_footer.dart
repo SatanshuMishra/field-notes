@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -217,18 +217,11 @@ class _ComposerFooterState extends State<ComposerFooter> {
               borderRadius: Shapes.buttonBorderRadius,
               boxShadow: shadows.control,
             ),
-            child: DecoratedBox(
-              decoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(
-                        context,
-                        FocusRingSurface.dark,
-                        HoverShape.rounded,
-                      )
-                    : null,
-                shape: HoverShape.rounded,
-                borderRadius: Shapes.buttonBorderRadius,
-              ),
+            child: HoverFill(
+              hovered: hovered,
+              surface: FocusRingSurface.dark,
+              borderRadius: Shapes.buttonBorderRadius,
+              position: DecorationPosition.background,
               child: Opacity(
                 opacity: enabled ? 1 : _busyOpacity,
                 child: Padding(

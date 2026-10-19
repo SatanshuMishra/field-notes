@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 
@@ -49,19 +50,11 @@ class GlassCircleButton extends StatelessWidget {
         child: Center(
           child: Opacity(
             opacity: enabled ? 1 : _disabledOpacity,
-            child: DecoratedBox(
-              position: DecorationPosition.foreground,
-              decoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(
-                        context,
-                        FocusRingSurface.dark,
-                        HoverShape.circle,
-                      )
-                    : null,
-                shape: HoverShape.circle,
-                borderRadius: round,
-              ),
+            child: HoverFill(
+              hovered: hovered,
+              surface: FocusRingSurface.dark,
+              shape: HoverShape.circle,
+              borderRadius: round,
               child: GlassSurface(
                 tone: tone,
                 tint: tint,

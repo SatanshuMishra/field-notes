@@ -2,8 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -63,19 +62,19 @@ class CalendarDayCell extends StatelessWidget {
               ? _CellMetrics.compact
               : _CellMetrics.regular;
           final BorderRadius radius = BorderRadius.circular(metrics.radius);
-          Widget faceWith(Color? hover) {
+          Widget faceWith(bool hovered) {
             final Widget face = cell.isInMonth
                 ? _InMonthFace(
                     dayOfMonth: cell.dayOfMonth,
                     day: day,
                     isToday: isToday,
                     metrics: metrics,
-                    hover: hover,
+                    hovered: hovered,
                   )
                 : _NumberOnly(
                     dayOfMonth: cell.dayOfMonth,
                     metrics: metrics,
-                    hover: hover,
+                    hovered: hovered,
                   );
             return dimming == null
                 ? face
@@ -87,7 +86,7 @@ class CalendarDayCell extends StatelessWidget {
             return Semantics(
               label: semanticLabel,
               excludeSemantics: true,
-              child: faceWith(null),
+              child: faceWith(false),
             );
           }
           return Pressable(
@@ -95,15 +94,7 @@ class CalendarDayCell extends StatelessWidget {
             onPressed: onTap,
             borderRadius: radius,
             paintsHover: false,
-            builder: (BuildContext context, bool hovered) => faceWith(
-              hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.rounded,
-                    )
-                  : null,
-            ),
+            builder: (BuildContext context, bool hovered) => faceWith(hovered),
           );
         },
       ),
@@ -149,23 +140,24 @@ class _InMonthFace extends StatelessWidget {
     required this.day,
     required this.isToday,
     required this.metrics,
-    required this.hover,
+    required this.hovered,
   });
 
   final int dayOfMonth;
   final Day? day;
   final bool isToday;
   final _CellMetrics metrics;
-  final Color? hover;
+  final bool hovered;
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final Mood? mood = day?.mood;
     final BorderRadius radius = BorderRadius.circular(metrics.radius);
-    final Widget content = _HoverFill(
-      color: hover,
+    final Widget content = HoverFill(
+      hovered: hovered,
       borderRadius: radius,
+      position: DecorationPosition.background,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
@@ -227,18 +219,19 @@ class _NumberOnly extends StatelessWidget {
   const _NumberOnly({
     required this.dayOfMonth,
     required this.metrics,
-    required this.hover,
+    required this.hovered,
   });
 
   final int dayOfMonth;
   final _CellMetrics metrics;
-  final Color? hover;
+  final bool hovered;
 
   @override
   Widget build(BuildContext context) {
-    return _HoverFill(
-      color: hover,
+    return HoverFill(
+      hovered: hovered,
       borderRadius: BorderRadius.circular(metrics.radius),
+      position: DecorationPosition.background,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
@@ -249,30 +242,6 @@ class _NumberOnly extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _HoverFill extends StatelessWidget {
-  const _HoverFill({
-    required this.color,
-    required this.borderRadius,
-    required this.child,
-  });
-
-  final Color? color;
-  final BorderRadius borderRadius;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: HoverStyle.decoration(
-        color: color,
-        shape: HoverShape.rounded,
-        borderRadius: borderRadius,
-      ),
-      child: child,
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 import 'package:flutter/material.dart';
@@ -165,14 +165,11 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
         border: widget.border ?? context.shadows.outline,
         borderRadius: radius,
       ),
-      child: DecoratedBox(
-        decoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(context, widget.focusSurface, HoverShape.rounded)
-              : null,
-          shape: HoverShape.rounded,
-          borderRadius: radius,
-        ),
+      child: HoverFill(
+        hovered: hovered,
+        surface: widget.focusSurface,
+        borderRadius: radius,
+        position: DecorationPosition.background,
         child: Padding(
           padding: sheet
               ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)

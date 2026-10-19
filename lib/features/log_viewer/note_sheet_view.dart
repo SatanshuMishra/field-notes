@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -171,48 +171,43 @@ class _BackButton extends StatelessWidget {
       onPressed: onPressed,
       borderRadius: _buttonRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => Container(
-        height: _buttonHeight,
-        padding: const EdgeInsets.symmetric(horizontal: _backHorizontalPadding),
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: colors.cardWarm,
-          border: shadows.outline,
-          borderRadius: _buttonRadius,
-          boxShadow: shadows.chip,
-        ),
-        foregroundDecoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(
-                  context,
-                  FocusRingSurface.light,
-                  HoverShape.rounded,
-                )
-              : null,
-          shape: HoverShape.rounded,
-          borderRadius: _buttonRadius,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            ChevronGlyph(
-              pointsBack: true,
-              color: colors.ink,
-              size: _backGlyphSize,
-            ),
-            const SizedBox(width: _backGlyphGap),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: context.textStyles.captureLabelSans.copyWith(
-                  fontSize: _labelSize,
-                  color: colors.ink,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: _buttonRadius,
+        child: Container(
+          height: _buttonHeight,
+          padding: const EdgeInsets.symmetric(
+            horizontal: _backHorizontalPadding,
+          ),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.cardWarm,
+            border: shadows.outline,
+            borderRadius: _buttonRadius,
+            boxShadow: shadows.chip,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ChevronGlyph(
+                pointsBack: true,
+                color: colors.ink,
+                size: _backGlyphSize,
+              ),
+              const SizedBox(width: _backGlyphGap),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.textStyles.captureLabelSans.copyWith(
+                    fontSize: _labelSize,
+                    color: colors.ink,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -239,30 +234,24 @@ class _ActionSquare extends StatelessWidget {
       surface: FocusRingSurface.dark,
       borderRadius: _buttonRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => Container(
-        width: _buttonHeight,
-        height: _buttonHeight,
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(
-          color: Palette.toolbarInk,
-          borderRadius: _buttonRadius,
-          boxShadow: Shadows.toastLift,
-        ),
-        foregroundDecoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(
-                  context,
-                  FocusRingSurface.dark,
-                  HoverShape.rounded,
-                )
-              : null,
-          shape: HoverShape.rounded,
-          borderRadius: _buttonRadius,
-        ),
-        child: IconStickerGlyphIcon(
-          glyph: glyph,
-          color: Palette.onAccent,
-          size: _actionGlyphSize,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        surface: FocusRingSurface.dark,
+        borderRadius: _buttonRadius,
+        child: Container(
+          width: _buttonHeight,
+          height: _buttonHeight,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: Palette.toolbarInk,
+            borderRadius: _buttonRadius,
+            boxShadow: Shadows.toastLift,
+          ),
+          child: IconStickerGlyphIcon(
+            glyph: glyph,
+            color: Palette.onAccent,
+            size: _actionGlyphSize,
+          ),
         ),
       ),
     );

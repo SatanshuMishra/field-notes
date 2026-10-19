@@ -1,6 +1,5 @@
 import 'package:field_notes/design/flowers/flowers.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -39,19 +38,9 @@ class SearchDayTile extends StatelessWidget {
       onPressed: onTap,
       borderRadius: Shapes.cardBorderRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(
-                  context,
-                  FocusRingSurface.light,
-                  HoverShape.rounded,
-                )
-              : null,
-          shape: HoverShape.rounded,
-          borderRadius: Shapes.cardBorderRadius,
-        ),
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: Shapes.cardBorderRadius,
         child: StickerCard(
           child: Row(
             children: <Widget>[

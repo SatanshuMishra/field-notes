@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
@@ -192,18 +192,11 @@ class _MonthCell extends StatelessWidget {
 
   Widget _face(BuildContext context, bool hovered) {
     final FieldNotesColors colors = context.colors;
-    final Widget label = DecoratedBox(
-      decoration: HoverStyle.decoration(
-        color: hovered
-            ? HoverStyle.of(
-                context,
-                isDisplayed ? FocusRingSurface.dark : FocusRingSurface.light,
-                HoverShape.rounded,
-              )
-            : null,
-        shape: HoverShape.rounded,
-        borderRadius: _cellRadius,
-      ),
+    final Widget label = HoverFill(
+      hovered: hovered,
+      surface: isDisplayed ? FocusRingSurface.dark : FocusRingSurface.light,
+      borderRadius: _cellRadius,
+      position: DecorationPosition.background,
       child: SizedBox(
         height: monthYearCellHeight,
         child: Center(

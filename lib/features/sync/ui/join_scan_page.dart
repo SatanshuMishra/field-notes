@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/system_bars.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -357,15 +358,11 @@ class _TypeWordsPill extends StatelessWidget {
       shape: HoverShape.pill,
       borderRadius: _pillRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => DecoratedBox(
-        position: DecorationPosition.foreground,
-        decoration: HoverStyle.decoration(
-          color: hovered
-              ? HoverStyle.of(context, FocusRingSurface.dark, HoverShape.pill)
-              : null,
-          shape: HoverShape.pill,
-          borderRadius: _pillRadius,
-        ),
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        surface: FocusRingSurface.dark,
+        shape: HoverShape.pill,
+        borderRadius: _pillRadius,
         child: GlassSurface(
           tone: GlassTone.media,
           borderRadius: _pillRadius,

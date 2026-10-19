@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
@@ -323,15 +323,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
           child: Center(
             widthFactor: 1,
             heightFactor: 1,
-            child: DecoratedBox(
-              position: DecorationPosition.foreground,
-              decoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(context, hoverSurface, HoverShape.rounded)
-                    : null,
-                shape: HoverShape.rounded,
-                borderRadius: focusRadius,
-              ),
+            child: HoverFill(
+              hovered: hovered,
+              surface: hoverSurface,
+              borderRadius: focusRadius,
               child: child,
             ),
           ),

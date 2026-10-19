@@ -1,7 +1,6 @@
 import 'package:flutter/widgets.dart';
 
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -244,33 +243,26 @@ class _ChevronButton extends StatelessWidget {
           heightFactor: 1,
           child: Opacity(
             opacity: enabled ? 1 : _disabledStepOpacity,
-            child: Container(
-              key: faceKey,
-              width: _backExtent,
-              height: _backExtent,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: colors.cardWarm,
-                border: context.shadows.outline,
-                borderRadius: _backBorderRadius,
-              ),
-              foregroundDecoration: HoverStyle.decoration(
-                color: hovered
-                    ? HoverStyle.of(
-                        context,
-                        FocusRingSurface.light,
-                        HoverShape.rounded,
-                      )
-                    : null,
-                shape: HoverShape.rounded,
-                borderRadius: _backBorderRadius,
-              ),
-              child: SizedBox.square(
-                dimension: _chevronExtent,
-                child: CustomPaint(
-                  painter: _ChevronPainter(
-                    color: colors.ink,
-                    direction: direction,
+            child: HoverFill(
+              hovered: hovered,
+              borderRadius: _backBorderRadius,
+              child: Container(
+                key: faceKey,
+                width: _backExtent,
+                height: _backExtent,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: colors.cardWarm,
+                  border: context.shadows.outline,
+                  borderRadius: _backBorderRadius,
+                ),
+                child: SizedBox.square(
+                  dimension: _chevronExtent,
+                  child: CustomPaint(
+                    painter: _ChevronPainter(
+                      color: colors.ink,
+                      direction: direction,
+                    ),
                   ),
                 ),
               ),

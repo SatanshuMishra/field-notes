@@ -1,5 +1,4 @@
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
@@ -46,18 +45,10 @@ class SettingsTimeField extends StatelessWidget {
                 border: context.shadows.outline,
                 borderRadius: Shapes.buttonBorderRadius,
               ),
-              child: DecoratedBox(
-                decoration: HoverStyle.decoration(
-                  color: hovered
-                      ? HoverStyle.of(
-                          context,
-                          FocusRingSurface.light,
-                          HoverShape.rounded,
-                        )
-                      : null,
-                  shape: HoverShape.rounded,
-                  borderRadius: Shapes.buttonBorderRadius,
-                ),
+              child: HoverFill(
+                hovered: hovered,
+                borderRadius: Shapes.buttonBorderRadius,
+                position: DecorationPosition.background,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,

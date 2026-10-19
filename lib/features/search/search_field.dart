@@ -1,5 +1,4 @@
-import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
@@ -234,18 +233,10 @@ class _ClearButton extends StatelessWidget {
       builder: (BuildContext context, bool hovered) => SizedBox.square(
         dimension: kMinInteractiveDimension,
         child: Center(
-          child: DecoratedBox(
-            decoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.light,
-                      HoverShape.rounded,
-                    )
-                  : null,
-              shape: HoverShape.rounded,
-              borderRadius: faceRadius,
-            ),
+          child: HoverFill(
+            hovered: hovered,
+            borderRadius: faceRadius,
+            position: DecorationPosition.background,
             child: SizedBox.square(
               key: searchClearFaceKey,
               dimension: faceExtent,

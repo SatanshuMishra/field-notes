@@ -5,6 +5,7 @@ import 'package:flutter/rendering.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
@@ -236,13 +237,11 @@ class MeadowHoverFill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: HoverStyle.decoration(
-        color: hovered ? HoverStyle.of(context, surface, shape) : null,
-        shape: shape,
-        borderRadius: borderRadius,
-      ),
+    return HoverFill(
+      hovered: hovered,
+      surface: surface,
+      shape: shape,
+      borderRadius: borderRadius,
       child: child,
     );
   }

@@ -5,6 +5,7 @@ import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -12,7 +13,6 @@ import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/reminder_time.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
-import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/onboarding/reminder_choice.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
 import 'package:field_notes/features/reminders/notifications_off_notice.dart';
@@ -617,7 +617,7 @@ class _ChoiceButton extends StatelessWidget {
       onPressed: onPressed,
       borderRadius: _choiceRadius,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: _choiceRadius,
         surface: selected ? FocusRingSurface.dark : FocusRingSurface.light,
@@ -739,7 +739,7 @@ class _ChoiceRow extends StatelessWidget {
       onPressed: onPressed,
       placement: FocusRingPlacement.edge,
       paintsHover: false,
-      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+      builder: (BuildContext context, bool hovered) => HoverFill(
         hovered: hovered,
         borderRadius: BorderRadius.zero,
         child: AnimatedContainer(
