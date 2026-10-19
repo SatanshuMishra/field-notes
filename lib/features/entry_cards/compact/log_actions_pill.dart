@@ -330,13 +330,17 @@ class _LogActionButtonState extends State<_LogActionButton> {
 class LogActionsReveal extends StatefulWidget {
   const LogActionsReveal({
     super.key,
-    required this.child,
+    required this.builder,
+    required this.onOpen,
     this.onEdit,
     required this.onDelete,
     this.semanticIndex,
+    this.borderRadius = BorderRadius.zero,
   });
 
-  final Widget child;
+  final PressableBuilder builder;
+  final VoidCallback onOpen;
+  final BorderRadius borderRadius;
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
   final int? semanticIndex;
@@ -347,6 +351,7 @@ class LogActionsReveal extends StatefulWidget {
 
 class _LogActionsRevealState extends State<LogActionsReveal>
     with SingleTickerProviderStateMixin {
+  final FocusNode _cardFocus = FocusNode(debugLabel: 'log card');
   static final ValueNotifier<_LogActionsRevealState?> _shown =
       ValueNotifier<_LogActionsRevealState?>(null);
 
@@ -389,8 +394,15 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   @override
   void initState() {
     super.initState();
+    _cardFocus.addListener(_onCardFocus);
     _shown.addListener(_onShownChanged);
     _reveal.addStatusListener(_onRevealStatus);
+  }
+
+  void _onCardFocus() {
+    if (_cardFocus.hasFocus != _focusInside) {
+      _onFocusChange(_cardFocus.hasFocus);
+    }
   }
 
   @override
@@ -411,6 +423,9 @@ class _LogActionsRevealState extends State<LogActionsReveal>
 
   @override
   void dispose() {
+    _cardFocus
+      ..removeListener(_onCardFocus)
+      ..dispose();
     _scroll?.removeListener(_onScrolled);
     _shown.removeListener(_onShownChanged);
     if (_shown.value == this) {
@@ -674,17 +689,21 @@ class _LogActionsRevealState extends State<LogActionsReveal>
               onEnter: _onCardEnter,
               onHover: _onCardMove,
               onExit: _onCardExit,
-              child: Focus(
-                canRequestFocus: true,
-                onFocusChange: _onFocusChange,
-                child: Semantics(
+              child: Pressable(
+                label: '',
+                focusNode: _cardFocus,
+                onPressed: widget.onOpen,
+                paintsHover: false,
+                excludeSemantics: false,
+                borderRadius: widget.borderRadius,
+                builder: (BuildContext context, bool hovered) => Semantics(
                   onLongPress: _onLongPress,
                   customSemanticsActions: _semanticActions(),
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     excludeFromSemantics: true,
                     onLongPress: _onLongPress,
-                    child: widget.child,
+                    child: widget.builder(context, hovered),
                   ),
                 ),
               ),

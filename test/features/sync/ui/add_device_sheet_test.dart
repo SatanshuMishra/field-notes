@@ -38,6 +38,7 @@ import 'package:sync_protocol/sync_protocol.dart'
         SyncMessage,
         deviceCertificateBytes;
 
+import '../../../support/face_boxes.dart';
 import '../../../support/sync_overrides.dart';
 
 const Size _phone = Size(384, 832);
@@ -421,7 +422,7 @@ Future<PairingCode> _expectMacPanel(
   final BoxDecoration face =
       tester
               .widget<DecoratedBox>(
-                find.descendant(of: done, matching: find.byType(DecoratedBox)),
+                find.descendant(of: done, matching: faceBoxes()),
               )
               .decoration
           as BoxDecoration;

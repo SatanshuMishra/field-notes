@@ -777,6 +777,7 @@ class _CloseButton extends StatelessWidget {
       Radius.circular(updateNotesCloseSize / 2),
     );
     return Pressable(
+      includeFocusSemantics: false,
       key: updateNotesCloseKey,
       label: closeLabel,
       tooltip: closeTooltip,
@@ -821,6 +822,7 @@ class _SheetButton extends StatelessWidget {
       Radius.circular(_phoneButtonRadius),
     );
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       onPressed: onPressed,
       borderRadius: radius,

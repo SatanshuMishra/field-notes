@@ -132,6 +132,7 @@ class SettingsFieldRow extends StatelessWidget {
       return Semantics(container: true, child: row);
     }
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       value: semanticsValue,
       hint: description,

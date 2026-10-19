@@ -115,6 +115,7 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
         : _sidebarMinTapTarget;
     final String? semanticLabel = widget.semanticLabel;
     Widget trigger(VoidCallback open) => Pressable(
+      includeFocusSemantics: false,
       label: semanticLabel ?? current.label,
       value: semanticLabel == null ? null : current.label,
       onPressed: _canOpen ? open : null,
@@ -257,6 +258,7 @@ class _SettingsSelectSheetRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       selected: selected,
       autofocus: autofocus,

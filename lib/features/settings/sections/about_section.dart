@@ -953,6 +953,7 @@ class _PhoneButton extends StatelessWidget {
       ),
     );
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       onPressed: onPressed,
       borderRadius: radius,
@@ -1014,6 +1015,7 @@ class _PhoneNavRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       hint: description,
       onPressed: onPressed,
@@ -1064,6 +1066,7 @@ class _PhoneLinkButton extends StatelessWidget {
       Radius.circular(_phoneButtonRadius),
     );
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       onPressed: onPressed,
       borderRadius: radius,

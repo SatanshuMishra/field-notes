@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/face_boxes.dart';
+
 void main() {
   testWidgets('the back chip keeps its painted position', (
     WidgetTester tester,
@@ -29,12 +31,7 @@ void main() {
     );
     final Rect bounds = tester.getRect(find.byKey(header));
     final Rect chip = tester.getRect(
-      find
-          .descendant(
-            of: find.byKey(header),
-            matching: find.byType(DecoratedBox),
-          )
-          .first,
+      find.descendant(of: find.byKey(header), matching: faceBoxes()).first,
     );
     expect(bounds.height, 73.5);
     expect(chip.topLeft - bounds.topLeft, const Offset(18, 19));

@@ -106,6 +106,7 @@ class UpdateRailChip extends ConsumerWidget {
       ),
     );
     final Widget chip = Pressable(
+      includeFocusSemantics: false,
       label: railSemanticsLabel(version),
       tooltip: railTooltip(version),
       onPressed: () => showUpdateNotes(context, ref, newVersion: true),

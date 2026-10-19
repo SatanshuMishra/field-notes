@@ -284,6 +284,7 @@ class _DockButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       onPressed: onPressed,
       shape: HoverShape.pill,

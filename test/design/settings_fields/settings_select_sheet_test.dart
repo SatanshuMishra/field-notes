@@ -1,5 +1,6 @@
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/settings/sections/journal_section.dart';
@@ -109,14 +110,29 @@ void main() {
       final FakeSettingsRepository desktopRepository = FakeSettingsRepository();
       await _pumpJournal(tester, TargetPlatform.macOS, desktopRepository);
 
-      expect(find.byType(PopupMenuButton<WeekStart>), findsOneWidget);
+      expect(find.byType(AnchoredDropdown<WeekStart>), findsOneWidget);
       await tester.tap(find.byType(SettingsSelect<WeekStart>));
       await tester.pumpAndSettle();
 
       expect(_sheet, findsNothing);
-      expect(find.byType(PopupMenuItem<WeekStart>), findsNWidgets(3));
+      for (final String day in <String>['Sunday', 'Monday', 'Saturday']) {
+        expect(
+          find.descendant(
+            of: find.byType(AnchoredDropdown<WeekStart>),
+            matching: find.text(day),
+          ),
+          findsWidgets,
+        );
+      }
 
-      await tester.tap(find.widgetWithText(PopupMenuItem<WeekStart>, 'Sunday'));
+      await tester.tap(
+        find
+            .descendant(
+              of: find.byType(AnchoredDropdown<WeekStart>),
+              matching: find.text('Sunday'),
+            )
+            .last,
+      );
       await tester.pumpAndSettle();
 
       expect(desktopRepository.weekStartWrites, <WeekStart>[WeekStart.sunday]);

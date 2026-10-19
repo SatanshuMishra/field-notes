@@ -183,6 +183,7 @@ class _SectionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return Pressable(
+      includeFocusSemantics: false,
       key: settingsTabKey(tab),
       label: tab.label,
       hint: summary,
@@ -270,6 +271,7 @@ class _UpdateBanner extends StatelessWidget {
     );
     final String title = bannerTitle(version);
     return Pressable(
+      includeFocusSemantics: false,
       label: title,
       hint: bannerSubtitle,
       onPressed: onPressed,
@@ -454,6 +456,7 @@ class SettingsBackPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return Pressable(
+      includeFocusSemantics: false,
       label: settingsBackLabel(label),
       onPressed: onPressed,
       shape: HoverShape.pill,

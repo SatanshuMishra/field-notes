@@ -169,7 +169,7 @@ Future<void> _expectRows(
     expect(_hoverFill(row), findsOneWidget, reason: row.label);
     expect(
       tester.getSemantics(row.control),
-      isSemantics(label: row.label, isButton: true),
+      _readsAsControl(row.label),
       reason: row.label,
     );
 
@@ -597,3 +597,8 @@ void main() {
     semantics.dispose();
   });
 }
+
+Matcher _readsAsControl(String label) => anyOf(
+  isSemantics(label: label, isButton: true),
+  isSemantics(label: label, isButton: false, hasToggledState: true),
+);

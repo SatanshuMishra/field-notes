@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
@@ -253,26 +252,18 @@ class CompactLogCard extends StatefulWidget {
 }
 
 class _CompactLogCardState extends State<CompactLogCard> {
-  bool _hovered = false;
-
-  void _onHover(bool hovered) {
-    if (mounted && hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final _DensityStyle style = _styleFor(widget.density, colors);
     final LogPreview preview = logPreviewOf(widget.entry);
     final double tilt = style.tilts ? _tiltDegrees(widget.entry.id) : 0;
-    final Widget sticker = _CardFocusRing(
-      rotationDegrees: tilt,
+    Widget lifted(bool hovered) => Transform.translate(
+      offset: Offset(0, hovered && style.risesOnHover ? -_hoverRise : 0),
       child: StickerCard(
         surface: colors.cardWarm,
         borderRadius: _cardRadius,
-        shadow: _hovered ? style.hoverShadow : style.restShadow,
+        shadow: hovered ? style.hoverShadow : style.restShadow,
         padding: style.padding,
         rotationDegrees: tilt,
         child: Column(
@@ -286,39 +277,13 @@ class _CompactLogCardState extends State<CompactLogCard> {
         ),
       ),
     );
-    final Widget lifted = Transform.translate(
-      offset: Offset(0, _hovered && style.risesOnHover ? -_hoverRise : 0),
-      child: sticker,
-    );
-    return Actions(
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (ActivateIntent intent) {
-            widget.onOpen();
-            return null;
-          },
-        ),
-      },
-      child: LogActionsReveal(
-        onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
-        onDelete: widget.onDelete,
-        semanticIndex: widget.semanticIndex,
-        child: Semantics(
-          button: true,
-          onTap: widget.onOpen,
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            onEnter: (PointerEnterEvent event) => _onHover(true),
-            onExit: (PointerExitEvent event) => _onHover(false),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              excludeFromSemantics: true,
-              onTap: widget.onOpen,
-              child: lifted,
-            ),
-          ),
-        ),
-      ),
+    return LogActionsReveal(
+      onOpen: widget.onOpen,
+      onEdit: widget.entry.type == EntryType.text ? widget.onEdit : null,
+      onDelete: widget.onDelete,
+      semanticIndex: widget.semanticIndex,
+      borderRadius: _cardRadius,
+      builder: (BuildContext context, bool hovered) => lifted(hovered),
     );
   }
 
@@ -716,71 +681,6 @@ class _CardPlayToggle extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _CardFocusRing extends StatefulWidget {
-  const _CardFocusRing({required this.rotationDegrees, required this.child});
-
-  final double rotationDegrees;
-  final Widget child;
-
-  @override
-  State<_CardFocusRing> createState() => _CardFocusRingState();
-}
-
-class _CardFocusRingState extends State<_CardFocusRing> {
-  @override
-  void initState() {
-    super.initState();
-    FocusManager.instance.addHighlightModeListener(_onHighlightModeChanged);
-  }
-
-  @override
-  void dispose() {
-    FocusManager.instance.removeHighlightModeListener(_onHighlightModeChanged);
-    super.dispose();
-  }
-
-  void _onHighlightModeChanged(FocusHighlightMode mode) {
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  bool _showsRing(BuildContext context) {
-    final FocusNode? focus = Focus.maybeOf(context);
-    return focus != null &&
-        focus.hasPrimaryFocus &&
-        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.passthrough,
-      children: <Widget>[
-        widget.child,
-        if (_showsRing(context))
-          Positioned.fill(
-            child: IgnorePointer(
-              key: focusRingKey,
-              child: Transform.rotate(
-                angle: widget.rotationDegrees * math.pi / 180,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: context.colors.ink,
-                      width: FocusRingSurface.light.width,
-                    ),
-                    borderRadius: _cardRadius,
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
     );
   }
 }

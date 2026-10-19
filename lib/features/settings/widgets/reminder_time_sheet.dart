@@ -203,6 +203,7 @@ class _StepperButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return Pressable(
+      includeFocusSemantics: false,
       label: label,
       onPressed: onPressed,
       borderRadius: _stepperRadius,
