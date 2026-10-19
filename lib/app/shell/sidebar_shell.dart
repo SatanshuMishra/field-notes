@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:field_notes/features/updates/update_wording.dart';
@@ -495,62 +497,68 @@ class _SidebarShellState extends State<SidebarShell> {
         ? Palette.onAccent
         : context.colors.inkSoft;
     final NavGlyph? glyph = d.glyph;
-    void select() => widget.onSelect(d);
-    final Widget item = Semantics(
-      button: true,
-      selected: isSelected,
+    final Widget item = Pressable(
+      key: ValueKey<String>('rail-${d.name}'),
       label: d.label,
-      child: GestureDetector(
-        key: ValueKey<String>('rail-${d.name}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: select,
-        child: FocusRing(
-          onPressed: select,
-          borderRadius: _navItemRadius,
-          child: ExcludeSemantics(
-            child: SizedBox(
-              height: _navItemHeight,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: isSelected ? Palette.coral : null,
-                  border: isSelected ? shadows.outline : null,
-                  borderRadius: _navItemRadius,
-                  boxShadow: isSelected ? shadows.emphasis : null,
-                ),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: collapsed ? 0 : _railPaddingHorizontal,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: collapsed
-                        ? MainAxisAlignment.center
-                        : MainAxisAlignment.start,
-                    children: <Widget>[
-                      if (glyph == null)
-                        Icon(d.icon, size: _navIconSize, color: foreground)
-                      else
-                        NavIcon(
-                          glyph: glyph,
+      selected: isSelected,
+      onPressed: () => widget.onSelect(d),
+      borderRadius: _navItemRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        height: _navItemHeight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: isSelected ? Palette.coral : null,
+            border: isSelected ? shadows.outline : null,
+            borderRadius: _navItemRadius,
+            boxShadow: isSelected ? shadows.emphasis : null,
+          ),
+          child: DecoratedBox(
+            decoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      isSelected
+                          ? FocusRingSurface.dark
+                          : FocusRingSurface.light,
+                      HoverShape.rounded,
+                    )
+                  : null,
+              shape: HoverShape.rounded,
+              borderRadius: _navItemRadius,
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: collapsed ? 0 : _railPaddingHorizontal,
+              ),
+              child: Row(
+                mainAxisAlignment: collapsed
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
+                children: <Widget>[
+                  if (glyph == null)
+                    Icon(d.icon, size: _navIconSize, color: foreground)
+                  else
+                    NavIcon(
+                      glyph: glyph,
+                      color: foreground,
+                      size: _navIconSize,
+                    ),
+                  if (!collapsed) ...<Widget>[
+                    const SizedBox(width: _navLabelGap),
+                    Flexible(
+                      child: Text(
+                        d.label,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.textStyles.navLabelSans.copyWith(
                           color: foreground,
-                          size: _navIconSize,
                         ),
-                      if (!collapsed) ...<Widget>[
-                        const SizedBox(width: _navLabelGap),
-                        Flexible(
-                          child: Text(
-                            d.label,
-                            maxLines: 1,
-                            softWrap: false,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.textStyles.navLabelSans.copyWith(
-                              color: foreground,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
@@ -568,77 +576,49 @@ class _ToggleSidebarIntent extends Intent {
   const _ToggleSidebarIntent();
 }
 
-class _SidebarToggle extends StatefulWidget {
+class _SidebarToggle extends StatelessWidget {
   const _SidebarToggle({required this.collapsed, required this.onPressed});
 
   final bool collapsed;
   final VoidCallback onPressed;
 
   @override
-  State<_SidebarToggle> createState() => _SidebarToggleState();
-}
-
-class _SidebarToggleState extends State<_SidebarToggle> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final bool collapsed = widget.collapsed;
     final TargetPlatform platform = Theme.of(context).platform;
     final String label = collapsed
         ? sidebarExpandLabel(platform)
         : sidebarCollapseLabel(platform);
-    final Color fill = _hovered
-        ? colors.ink08
-        : collapsed
-        ? colors.cardWarm
-        : Colors.transparent;
     return Tooltip(
       message: label,
       excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
+      child: Pressable(
+        key: sidebarToggleKey,
         label: label,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          onEnter: (PointerEnterEvent _) => _hover(true),
-          onExit: (PointerExitEvent _) => _hover(false),
-          child: GestureDetector(
-            key: sidebarToggleKey,
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onPressed,
-            child: FocusRing(
-              onPressed: widget.onPressed,
-              borderRadius: _toggleRadius,
-              child: ExcludeSemantics(
-                child: SizedBox.square(
-                  dimension: _toggleExtent,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: fill,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: collapsed ? colors.ink25 : Colors.transparent,
-                        width: _toggleEdgeWidth,
-                      ),
-                    ),
-                    child: Center(
-                      child: CustomPaint(
-                        size: const Size.square(_toggleIconExtent),
-                        painter: SidebarChevronPainter(
-                          pointsBack: !collapsed,
-                          color: colors.mutedDeep,
-                        ),
-                      ),
-                    ),
-                  ),
+        onPressed: onPressed,
+        borderRadius: _toggleRadius,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => SizedBox.square(
+          dimension: _toggleExtent,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: hovered
+                  ? colors.ink08
+                  : collapsed
+                  ? colors.cardWarm
+                  : Colors.transparent,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: collapsed ? colors.ink25 : Colors.transparent,
+                width: _toggleEdgeWidth,
+              ),
+            ),
+            child: Center(
+              child: CustomPaint(
+                size: const Size.square(_toggleIconExtent),
+                painter: SidebarChevronPainter(
+                  pointsBack: !collapsed,
+                  color: colors.mutedDeep,
                 ),
               ),
             ),

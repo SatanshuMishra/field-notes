@@ -1,14 +1,13 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/app/shell/window_chrome.dart';
 import 'package:field_notes/design/feedback/toast.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -72,8 +71,6 @@ class AppearanceToggle extends ConsumerStatefulWidget {
 }
 
 class _AppearanceToggleState extends ConsumerState<AppearanceToggle> {
-  bool _hovered = false;
-
   Brightness get _showing => appearanceShowing(
     ref.read(appearanceProvider),
     MediaQuery.platformBrightnessOf(context),
@@ -89,12 +86,6 @@ class _AppearanceToggleState extends ConsumerState<AppearanceToggle> {
         .setAppearance(next);
     if (result case SettingsWriteFailed(:final String message) when mounted) {
       showTransientToast(context, message, glyph: IconStickerGlyph.close);
-    }
-  }
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
     }
   }
 
@@ -117,53 +108,38 @@ class _AppearanceToggleState extends ConsumerState<AppearanceToggle> {
         ? appearanceToggleLightLabel
         : appearanceToggleDarkLabel;
     final Color ink = widget.ink ?? colors.ink;
-    return Semantics(
-      button: true,
-      label: label,
-      child: Tooltip(
-        message: label,
-        excludeFromSemantics: true,
-        child: GestureDetector(
-          key: appearanceToggleKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: _toggle,
-          child: SizedBox(
-            width: kMinInteractiveDimension,
-            height: metrics.targetHeight,
-            child: Center(
-              child: FocusRing(
-                onPressed: _toggle,
-                borderRadius: metrics.radius,
-                child: MouseRegion(
-                  onEnter: (PointerEnterEvent _) => _hover(true),
-                  onExit: (PointerExitEvent _) => _hover(false),
-                  child: ExcludeSemantics(
+    return Tooltip(
+      message: label,
+      excludeFromSemantics: true,
+      child: Pressable(
+        key: appearanceToggleKey,
+        label: label,
+        onPressed: _toggle,
+        borderRadius: metrics.radius,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => SizedBox(
+          width: kMinInteractiveDimension,
+          height: metrics.targetHeight,
+          child: Center(
+            child: SizedBox.square(
+              dimension: metrics.face,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: hovered
+                      ? ink.withValues(alpha: _hoverWashAlpha)
+                      : null,
+                  borderRadius: metrics.radius,
+                ),
+                child: Center(
+                  child: Opacity(
+                    opacity: hovered ? 1 : metrics.restOpacity,
                     child: SizedBox.square(
-                      dimension: metrics.face,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: _hovered
-                              ? ink.withValues(alpha: _hoverWashAlpha)
-                              : null,
-                          borderRadius: metrics.radius,
-                        ),
-                        child: Center(
-                          child: Opacity(
-                            opacity: _hovered ? 1 : metrics.restOpacity,
-                            child: SizedBox.square(
-                              dimension: metrics.icon,
-                              child: CustomPaint(
-                                key: dark
-                                    ? appearanceToggleSunKey
-                                    : appearanceToggleMoonKey,
-                                painter: _ModeGlyphPainter(
-                                  sun: dark,
-                                  color: ink,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      dimension: metrics.icon,
+                      child: CustomPaint(
+                        key: dark
+                            ? appearanceToggleSunKey
+                            : appearanceToggleMoonKey,
+                        painter: _ModeGlyphPainter(sun: dark, color: ink),
                       ),
                     ),
                   ),
