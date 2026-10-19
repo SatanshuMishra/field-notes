@@ -1083,6 +1083,8 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     }
     
     private var latestVideoFrameWrittenTimeStamp: CMTime!
+    private var latestFrameCapturedAt: CMTime = .invalid
+    private let longestFirstFrameAgeMs: Double = 1000
     private var latestAudioFrameWrittenTimeStamp: CMTime!
     
     var canWrite: Bool {
@@ -1100,6 +1102,7 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         i += 1
         
         if !isBufferAudio {
+            latestFrameCapturedAt = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
             latestBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
             registry.textureFrameAvailable(textureId)
         }
@@ -1151,8 +1154,33 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     
     public func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
         DispatchQueue.main.async {
-            self.outputChannel?.invokeMethod("onVideoRecordingStarted", arguments: nil)
+            self.outputChannel?.invokeMethod(
+                "onVideoRecordingStarted",
+                arguments: ["firstFrameAgeMs": self.firstFrameAgeMs(of: output)]
+            )
         }
+    }
+
+    private func firstFrameAgeMs(of output: AVCaptureFileOutput) -> Double {
+        guard latestFrameCapturedAt.isNumeric else {
+            return 0
+        }
+        let hostClock = CMClockGetHostTimeClock()
+        let latestOnHost = CMSyncConvertTime(latestFrameCapturedAt, from: captureClock(), to: hostClock)
+        let recorded = output.recordedDuration
+        let firstFrame = recorded.isNumeric ? latestOnHost - recorded : latestOnHost
+        let ageMs = CMTimeGetSeconds(CMClockGetTime(hostClock) - firstFrame) * 1000
+        guard ageMs.isFinite else {
+            return 0
+        }
+        return min(max(ageMs, 0), longestFirstFrameAgeMs)
+    }
+
+    private func captureClock() -> CMClock {
+        if #available(macOS 12.3, *), let clock = captureSession?.synchronizationClock {
+            return clock
+        }
+        return CMClockGetHostTimeClock()
     }
 
     // MOVIE FILE OUTPUT MODE

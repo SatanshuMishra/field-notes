@@ -70,7 +70,7 @@ abstract class CameraMacOSPlatform extends PlatformInterface {
     throw UnimplementedError("");
   }
 
-  Stream<void> get videoRecordingStarted {
+  Stream<Duration> get videoRecordingStarted {
     throw UnimplementedError("");
   }
 
