@@ -1,5 +1,7 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:flutter/material.dart';
@@ -200,36 +202,37 @@ class _StepperButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
-      button: true,
+    return Pressable(
       label: label,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          includeFocusSemantics: false,
-          borderRadius: _stepperRadius,
-          child: SizedBox(
-            width: reminderTimeStepperWidth,
-            height: reminderTimeStepperHeight,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.cardLight,
-                border: Border.all(
-                  color: colors.line,
-                  width: _stepperBorderWidth,
-                ),
-                borderRadius: _stepperRadius,
-              ),
-              child: Center(
-                child: Icon(
-                  up ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  size: _caretSize,
-                  color: colors.ink,
-                ),
+      onPressed: onPressed,
+      borderRadius: _stepperRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        width: reminderTimeStepperWidth,
+        height: reminderTimeStepperHeight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.cardLight,
+            border: Border.all(color: colors.line, width: _stepperBorderWidth),
+            borderRadius: _stepperRadius,
+          ),
+          child: DecoratedBox(
+            decoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.light,
+                      HoverShape.rounded,
+                    )
+                  : null,
+              shape: HoverShape.rounded,
+              borderRadius: _stepperRadius,
+            ),
+            child: Center(
+              child: Icon(
+                up ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                size: _caretSize,
+                color: colors.ink,
               ),
             ),
           ),

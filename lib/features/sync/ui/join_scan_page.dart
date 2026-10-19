@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/system_bars.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -321,11 +323,12 @@ class _CancelControl extends StatelessWidget {
           onPressed: onCancel,
         ),
         const SizedBox(height: _cancelLabelGap),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: onCancel,
-          child: ExcludeSemantics(
+        ExcludeSemantics(
+          child: Pressable(
+            label: syncCancelLabel,
+            onPressed: onCancel,
+            surface: FocusRingSurface.dark,
+            borderRadius: Shapes.buttonBorderRadius,
             child: Text(
               syncCancelLabel,
               style: context.textStyles.captureLabelSans.copyWith(
@@ -346,47 +349,50 @@ class _TypeWordsPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
+    return Pressable(
       key: typeWordsInsteadKey,
-      button: true,
       label: typeWordsInsteadLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          surface: FocusRingSurface.dark,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.pill,
+      borderRadius: _pillRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: HoverStyle.decoration(
+          color: hovered
+              ? HoverStyle.of(context, FocusRingSurface.dark, HoverShape.pill)
+              : null,
+          shape: HoverShape.pill,
           borderRadius: _pillRadius,
-          child: ExcludeSemantics(
-            child: GlassSurface(
-              tone: GlassTone.media,
-              borderRadius: _pillRadius,
-              child: SizedBox(
-                height: joinScanControlExtent,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: _pillPadding),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      const IconStickerGlyphIcon(
-                        glyph: IconStickerGlyph.edit,
-                        color: Palette.mediaInk,
-                        size: _pillGlyph,
-                      ),
-                      const SizedBox(width: _pillGlyphGap),
-                      Flexible(
-                        child: Text(
-                          typeWordsInsteadLabel,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: context.textStyles.buttonSans.copyWith(
-                            color: Palette.mediaInk,
-                          ),
-                        ),
-                      ),
-                    ],
+        ),
+        child: GlassSurface(
+          tone: GlassTone.media,
+          borderRadius: _pillRadius,
+          child: SizedBox(
+            height: joinScanControlExtent,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: _pillPadding),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const IconStickerGlyphIcon(
+                    glyph: IconStickerGlyph.edit,
+                    color: Palette.mediaInk,
+                    size: _pillGlyph,
                   ),
-                ),
+                  const SizedBox(width: _pillGlyphGap),
+                  Flexible(
+                    child: Text(
+                      typeWordsInsteadLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.textStyles.buttonSans.copyWith(
+                        color: Palette.mediaInk,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

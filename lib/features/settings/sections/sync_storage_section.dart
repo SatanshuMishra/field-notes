@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:field_notes/data/sync/devices/device_service.dart';
 import 'package:field_notes/data/sync/engine/sync_status.dart';
 import 'package:field_notes/data/sync/erase/device_unlink_service.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -548,50 +548,38 @@ class SyncActionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
-      button: true,
-      enabled: true,
+    return Pressable(
       label: label,
       hint: description,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          includeFocusSemantics: false,
-          borderRadius: Shapes.buttonBorderRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _actionRowMinHeight),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(label, style: context.textStyles.labelSans),
-                      const SizedBox(height: 2),
-                      Text(
-                        description,
-                        style: context.textStyles.captionSans.copyWith(
-                          color: colors.muted,
-                        ),
-                      ),
-                    ],
+      onPressed: onPressed,
+      borderRadius: Shapes.buttonBorderRadius,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _actionRowMinHeight),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(label, style: context.textStyles.labelSans),
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: context.textStyles.captionSans.copyWith(
+                      color: colors.muted,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Icon(
-                  Icons.chevron_right,
-                  size: _actionChevronSize,
-                  color: colors.muted,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.chevron_right,
+              size: _actionChevronSize,
+              color: colors.muted,
+            ),
+          ],
         ),
       ),
     );
