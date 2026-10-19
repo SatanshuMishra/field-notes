@@ -16,16 +16,22 @@ import '../voice/voice_test_support.dart' show FakeVoiceRecorder;
 
 const MethodChannel cameraMacosChannel = MethodChannel('camera_macos');
 
-Future<void> sendMacMovieStart() => TestDefaultBinaryMessengerBinding
-    .instance
-    .defaultBinaryMessenger
-    .handlePlatformMessage(
-      cameraMacosChannel.name,
-      cameraMacosChannel.codec.encodeMethodCall(
-        const MethodCall('onVideoRecordingStarted'),
-      ),
-      (ByteData? _) {},
-    );
+Future<void> sendMacMovieStart({Duration? firstFrameAge}) =>
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage(
+          cameraMacosChannel.name,
+          cameraMacosChannel.codec.encodeMethodCall(
+            MethodCall(
+              'onVideoRecordingStarted',
+              firstFrameAge == null
+                  ? null
+                  : <String, Object?>{
+                      'firstFrameAgeMs': firstFrameAge.inMilliseconds,
+                    },
+            ),
+          ),
+          (ByteData? _) {},
+        );
 
 Widget videoHarness(Widget child) {
   return MaterialApp(

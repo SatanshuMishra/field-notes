@@ -33,6 +33,7 @@ const Duration _gapLongerThan = Duration(milliseconds: 500);
 const Duration _timerRanLateBy = Duration(milliseconds: 50);
 const Duration _afterStallGrace = Duration(milliseconds: 100);
 const Duration _releaseWithin = Duration(seconds: 2);
+const Duration _longestPictureLead = Duration(seconds: 1);
 const double _fullScale = 32768;
 const double _digitalSilenceDbfs = -70;
 const String _microphoneStopped = 'microphone stopped';
@@ -608,7 +609,7 @@ class LiveAudioCapture {
     _reopen(take);
   }
 
-  void beginWriting() {
+  void beginWriting({Duration pictureStartedAgo = Duration.zero}) {
     final _ActiveTake? take = _take;
     if (take == null || take.writing) {
       return;
@@ -619,6 +620,14 @@ class LiveAudioCapture {
       ..trimPending = true
       ..writingFrom = now
       ..lastWrittenAt = now;
+    if (pictureStartedAgo > Duration.zero) {
+      _queueSilence(
+        take,
+        pictureStartedAgo > _longestPictureLead
+            ? _longestPictureLead
+            : pictureStartedAgo,
+      );
+    }
   }
 
   Future<void> pause() async {

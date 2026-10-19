@@ -368,7 +368,8 @@ class _LiveSound {
     return _capture.running;
   }
 
-  void beginWriting() => _capture.beginWriting();
+  void beginWriting({Duration pictureStartedAgo = Duration.zero}) =>
+      _capture.beginWriting(pictureStartedAgo: pictureStartedAgo);
 
   Future<void> pause() async {
     try {
@@ -1666,7 +1667,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
   void _listenForMovieStart(CameraMacOSController controller) {
     _stopWaitingForMovieStart();
-    _movieStart = controller.videoRecordingStarted.listen((_) => _movieBegan());
+    _movieStart = controller.videoRecordingStarted.listen(_movieBegan);
   }
 
   void _waitForMovieStart() {
@@ -1682,12 +1683,12 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     });
   }
 
-  void _movieBegan() {
+  void _movieBegan([Duration firstFrameAge = Duration.zero]) {
     if (_movieStart == null) {
       return;
     }
     _stopWaitingForMovieStart();
-    _sound.beginWriting();
+    _sound.beginWriting(pictureStartedAgo: firstFrameAge);
     _movieBegun = true;
     _elapsed.reset();
     _runClockWhileFilming();
