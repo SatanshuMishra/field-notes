@@ -6,6 +6,13 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-18
+
+### Fixed
+
+- On macOS, Field Notes no longer asks to use your keychain every time you open it. After an update it asks once; choose Always Allow and it will not ask again until the next update.
+- The first time you open this version on macOS, you may be asked a few times while Field Notes gathers its saved sync keys into one place. Choose Always Allow each time.
+
 ## [1.3.0] - 2026-10-18
 
 ### New
