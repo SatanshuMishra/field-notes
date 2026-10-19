@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -111,33 +113,58 @@ class _MoodChangePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isEnabled = onTap != null;
-    return Semantics(
-      button: isEnabled,
-      enabled: isEnabled,
+    return Pressable(
       label: label,
-      child: Opacity(
+      onPressed: onTap,
+      shape: HoverShape.pill,
+      borderRadius: _pillRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
         opacity: isEnabled ? 1.0 : 0.5,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: _MinTapTarget(
-            child: FocusRing(
-              enabled: isEnabled,
-              onPressed: onTap,
+        child: _MinTapTarget(
+          child: DecoratedBox(
+            decoration: _changePillDecoration,
+            child: _HoverTint(
+              hovered: hovered,
+              shape: HoverShape.pill,
               borderRadius: _pillRadius,
-              child: DecoratedBox(
-                decoration: _changePillDecoration,
-                child: Padding(
-                  padding: _moodPillPadding,
-                  child: ExcludeSemantics(
-                    child: Text(label, style: context.textStyles.caption11Sans),
-                  ),
-                ),
+              child: Padding(
+                padding: _moodPillPadding,
+                child: Text(label, style: context.textStyles.caption11Sans),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HoverTint extends StatelessWidget {
+  const _HoverTint({
+    required this.hovered,
+    required this.shape,
+    required this.borderRadius,
+    required this.child,
+  });
+
+  final bool hovered;
+  final HoverShape shape;
+  final BorderRadius borderRadius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: HoverStyle.decoration(
+        color: hovered
+            ? HoverStyle.of(context, FocusRingSurface.light, shape)
+            : null,
+        shape: shape,
+        borderRadius: borderRadius,
+      ),
+      child: child,
     );
   }
 }
@@ -270,32 +297,28 @@ class _ChangeMoodButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final bool isEnabled = onTap != null;
-    return Semantics(
-      button: isEnabled,
-      enabled: isEnabled,
+    return Pressable(
       label: label,
-      child: Opacity(
+      onPressed: onTap,
+      shape: HoverShape.pill,
+      borderRadius: _changeMoodButtonRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
         opacity: isEnabled ? 1.0 : 0.5,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: _MinTapTarget(
-            child: FocusRing(
-              enabled: isEnabled,
-              onPressed: onTap,
+        child: _MinTapTarget(
+          child: DecoratedBox(
+            decoration: _changeMoodButtonDecoration(colors),
+            child: _HoverTint(
+              hovered: hovered,
+              shape: HoverShape.pill,
               borderRadius: _changeMoodButtonRadius,
-              child: DecoratedBox(
-                decoration: _changeMoodButtonDecoration(colors),
-                child: Padding(
-                  padding: _changeMoodButtonPadding,
-                  child: ExcludeSemantics(
-                    child: Text(
-                      label,
-                      style: context.textStyles.caption11Sans.copyWith(
-                        fontSize: 12,
-                        color: colors.ink,
-                      ),
-                    ),
+              child: Padding(
+                padding: _changeMoodButtonPadding,
+                child: Text(
+                  label,
+                  style: context.textStyles.caption11Sans.copyWith(
+                    fontSize: 12,
+                    color: colors.ink,
                   ),
                 ),
               ),
@@ -323,57 +346,62 @@ class _MoodPrompt extends StatelessWidget {
     final String hint = isToday
         ? "tap to plant today's bloom"
         : "tap to plant this day's bloom";
+    final String label = '$text\n$hint';
+    final VoidCallback? tap = onTap;
+    if (tap == null) {
+      return Semantics(
+        label: label,
+        child: ExcludeSemantics(child: _face(context, hint, hovered: false)),
+      );
+    }
+    return Pressable(
+      label: label,
+      onPressed: tap,
+      borderRadius: _promptRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) =>
+          _face(context, hint, hovered: hovered),
+    );
+  }
+
+  Widget _face(BuildContext context, String hint, {required bool hovered}) {
     final FieldNotesColors colors = context.colors;
     final FieldNotesTextStyles textStyles = context.textStyles;
-    return Semantics(
-      button: onTap != null,
-      label: '$text\n$hint',
-      onTap: onTap,
-      child: FocusRing(
-        enabled: onTap != null,
-        onPressed: onTap,
-        borderRadius: _promptRadius,
-        child: ExcludeSemantics(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: CustomPaint(
-              painter: MoodPromptBorderPainter(
-                color: colors.line,
-                fill: colors.cardWarm,
-                shadows: context.shadows.heroSoft,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 16,
+    return _HoverTint(
+      hovered: hovered,
+      shape: HoverShape.rounded,
+      borderRadius: _promptRadius,
+      child: CustomPaint(
+        painter: MoodPromptBorderPainter(
+          color: colors.line,
+          fill: colors.cardWarm,
+          shadows: context.shadows.heroSoft,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Row(
+            children: <Widget>[
+              const Opacity(
+                opacity: _promptBloomOpacity,
+                child: FlowerBloom(
+                  kind: FlowerKind.peony,
+                  size: _promptBloomSize,
                 ),
-                child: Row(
+              ),
+              const SizedBox(width: _moodBannerGap),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Opacity(
-                      opacity: _promptBloomOpacity,
-                      child: FlowerBloom(
-                        kind: FlowerKind.peony,
-                        size: _promptBloomSize,
-                      ),
-                    ),
-                    const SizedBox(width: _moodBannerGap),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(text, style: textStyles.bannerSerif),
-                          Text(hint, style: textStyles.promptAccent),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: _moodBannerGap),
-                    const _MoodChoosePill(label: 'choose'),
+                    Text(text, style: textStyles.bannerSerif),
+                    Text(hint, style: textStyles.promptAccent),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(width: _moodBannerGap),
+              const _MoodChoosePill(label: 'choose'),
+            ],
           ),
         ),
       ),

@@ -1,5 +1,7 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -23,12 +25,16 @@ const String onThisDayPhotoUnavailableLabel = 'Photo unavailable';
 const double _titleGap = 9;
 const double _bandHeight = 82;
 const double _metaGap = 1;
-const BorderRadius _cardRadius =
-    BorderRadius.all(Radius.circular(Shapes.radiusPill));
-const BorderRadius _bandRadius =
-    BorderRadius.vertical(top: Radius.circular(Shapes.radiusPill));
-const EdgeInsets _cardInsets =
-    EdgeInsets.symmetric(vertical: 9, horizontal: 11);
+const BorderRadius _cardRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusPill),
+);
+const BorderRadius _bandRadius = BorderRadius.vertical(
+  top: Radius.circular(Shapes.radiusPill),
+);
+const EdgeInsets _cardInsets = EdgeInsets.symmetric(
+  vertical: 9,
+  horizontal: 11,
+);
 
 String _bandCaption(int yearsAgo) => 'memory · ${yearsAgoLabel(yearsAgo)}';
 
@@ -139,12 +145,29 @@ class OnThisDayCard extends StatelessWidget {
     VoidCallback? onOpen,
     String? label,
   }) {
-    final Widget card = StickerCard(
+    Widget card({bool hovered = false}) => StickerCard(
       surface: context.colors.cardWarm,
       borderRadius: _cardRadius,
       shadow: context.shadows.cardDefault,
       padding: EdgeInsets.zero,
-      child: ClipRRect(borderRadius: _cardRadius, child: child),
+      child: ClipRRect(
+        borderRadius: _cardRadius,
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: HoverStyle.decoration(
+            color: hovered
+                ? HoverStyle.of(
+                    context,
+                    FocusRingSurface.light,
+                    HoverShape.rounded,
+                  )
+                : null,
+            shape: HoverShape.rounded,
+            borderRadius: _cardRadius,
+          ),
+          child: child,
+        ),
+      ),
     );
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -153,25 +176,15 @@ class OnThisDayCard extends StatelessWidget {
         Text(title, style: context.textStyles.sectionHeaderAccent),
         const SizedBox(height: _titleGap),
         if (onOpen == null)
-          card
+          card()
         else
-          Semantics(
-            button: true,
-            label: label,
-            onTap: onOpen,
-            child: FocusRing(
-              onPressed: onOpen,
-              borderRadius: _cardRadius,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  excludeFromSemantics: true,
-                  onTap: onOpen,
-                  child: ExcludeSemantics(child: card),
-                ),
-              ),
-            ),
+          Pressable(
+            label: label ?? title,
+            onPressed: onOpen,
+            borderRadius: _cardRadius,
+            paintsHover: false,
+            builder: (BuildContext context, bool hovered) =>
+                card(hovered: hovered),
           ),
       ],
     );
@@ -183,8 +196,9 @@ class OnThisDayRailCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final AsyncValue<OnThisDayMemory?> memoryAsync =
-        ref.watch(onThisDayMemoryProvider);
+    final AsyncValue<OnThisDayMemory?> memoryAsync = ref.watch(
+      onThisDayMemoryProvider,
+    );
     if (memoryAsync.hasError) {
       return OnThisDayCard._shell(
         context,
@@ -209,7 +223,7 @@ class OnThisDayRailCard extends ConsumerWidget {
     }
     final List<Entry> entries =
         ref.watch(entriesForDayProvider(memory.day.id)).value ??
-            const <Entry>[];
+        const <Entry>[];
     return OnThisDayCard(
       memory: memory,
       preview: firstTextPreview(entries),

@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 
@@ -57,11 +59,14 @@ class MoodPickerGrid extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        for (int start = 0; start < moodOrder.length; start += _columns)
-          ...<Widget>[
-            if (start > 0) SizedBox(height: _runSpacing),
-            _buildRow(start),
-          ],
+        for (
+          int start = 0;
+          start < moodOrder.length;
+          start += _columns
+        ) ...<Widget>[
+          if (start > 0) SizedBox(height: _runSpacing),
+          _buildRow(start),
+        ],
       ],
     );
   }
@@ -113,64 +118,66 @@ class _MoodTile extends StatelessWidget {
     final bool isSheet = layout == ShellLayout.bottomBar;
     final FieldNotesColors colors = context.colors;
     final FieldNotesTextStyles textStyles = context.textStyles;
-    return Semantics(
-      button: true,
-      selected: isSelected,
+    return Pressable(
       label: mood.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: FocusRing(
-          onPressed: onTap,
+      selected: isSelected,
+      onPressed: onTap,
+      borderRadius: _tileRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: isSelected ? colors.cardLight : colors.cardBright,
+          border: Border.all(
+            color: isSelected ? Palette.coral : colors.ink20,
+            width: isSelected ? _tileBorderWidth : Shapes.outlineWidth,
+          ),
           borderRadius: _tileRadius,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: isSelected ? colors.cardLight : colors.cardBright,
-              border: Border.all(
-                color: isSelected ? Palette.coral : colors.ink20,
-                width: isSelected ? _tileBorderWidth : Shapes.outlineWidth,
-              ),
-              borderRadius: _tileRadius,
-              boxShadow: isSelected ? Shadows.tileSelected : null,
+          boxShadow: isSelected ? Shadows.tileSelected : null,
+        ),
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: HoverStyle.decoration(
+            color: hovered
+                ? HoverStyle.of(
+                    context,
+                    FocusRingSurface.light,
+                    HoverShape.rounded,
+                  )
+                : null,
+            shape: HoverShape.rounded,
+            borderRadius: _tileRadius,
+          ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: isSheet
+                  ? _sheetTilePaddingHorizontal
+                  : _tilePaddingHorizontal,
+              vertical: isSheet
+                  ? _sheetTilePaddingVertical
+                  : _tilePaddingVertical,
             ),
-            child: ExcludeSemantics(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSheet
-                      ? _sheetTilePaddingHorizontal
-                      : _tilePaddingHorizontal,
-                  vertical: isSheet
-                      ? _sheetTilePaddingVertical
-                      : _tilePaddingVertical,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                FlowerBloom.forMood(mood, size: flowerSize),
+                SizedBox(height: isSheet ? _sheetTileLabelGap : _tileLabelGap),
+                Text(
+                  mood.label,
+                  style: isSheet
+                      ? textStyles.caption9Sans.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colors.ink,
+                        )
+                      : textStyles.caption11Sans.copyWith(color: colors.ink),
+                  textAlign: TextAlign.center,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    FlowerBloom.forMood(mood, size: flowerSize),
-                    SizedBox(
-                      height: isSheet ? _sheetTileLabelGap : _tileLabelGap,
-                    ),
-                    Text(
-                      mood.label,
-                      style: isSheet
-                          ? textStyles.caption9Sans.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: colors.ink,
-                            )
-                          : textStyles.caption11Sans.copyWith(
-                              color: colors.ink,
-                            ),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (!isSheet)
-                      Text(
-                        mood.flower.label,
-                        style: textStyles.caption9Sans,
-                        textAlign: TextAlign.center,
-                      ),
-                  ],
-                ),
-              ),
+                if (!isSheet)
+                  Text(
+                    mood.flower.label,
+                    style: textStyles.caption9Sans,
+                    textAlign: TextAlign.center,
+                  ),
+              ],
             ),
           ),
         ),
