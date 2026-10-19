@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T19:55:43.141Z
+Updated: 2026-10-19T19:55:47.223Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Shipped: four stacked pull requests are open and assigned to the owner, ready for review: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency, each based on the one before. Unproven: the Windows smoke (owner's PC offline on Tailscale), the Settings segmented Android read (the lab cannot read that page on main either), and the real-Mac check of c1 and c2. On the built-in microphone at 32ff2edc, three takes from two fresh launches each hold sound throughout and start with the picture, but each sound track ends 118 to 165 ms before the picture; a clap take shows the sound starting late against the first frame, so it plays 70 to 95 ms ahead of the picture (R2). The HS80 mode-switch path, the original failure, is untested on hardware (headset not connected). Measurements are in harness/runs/r2-builtin-measure.txt and clap-1-measure.txt. On Android the input panel rows carry their current value in the value field rather than the name, as main's Settings rows do; whether TalkBack reads it is unverified.
+Shipped: four stacked pull requests are open and assigned to the owner, ready for review: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency, each based on the one before. At the owner's request #330 now aligns sound on the camera's and microphone's native capture times (2d054cc9, merged up as b507333e and 39a5947f, not yet pushed): clap take 9 on the built-in microphone puts the sound 40 to 55 ms behind the picture, steady, with lengths 3 ms apart (harness/runs/clap-9-measure.txt); the old estimate missed the movie's first frame by 100 ms. Round 4 is in progress: suites at 2d054cc9 and 39a5947f are clean after one-at-a-time reruns, code review and the Windows lab smoke (PC back online) are running. Unproven: the Settings segmented Android read (the lab cannot read that page on main either) and the Windows and Android mirror of the native-timestamp alignment (Q11). The HS80 mode-switch path, the original failure, is untested on hardware (headset not connected). Measurements are in harness/runs/r2-builtin-measure.txt and clap-1-measure.txt. On Android the input panel rows carry their current value in the value field rather than the name, as main's Settings rows do; whether TalkBack reads it is unverified.
 
 ## Next step
 
