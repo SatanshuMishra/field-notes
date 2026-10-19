@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/features/capture/audio/recorder_input_ring.dart';
+import 'package:field_notes/features/capture/immersive/recorder_glass_button.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,7 +26,7 @@ Future<void> _hear(
 
 void main() {
   testWidgets(
-    "the microphone button's ring grows with the level and hides at silence",
+    "the microphone button's ring grows with the level inside the button, never over the picture, and hides at silence",
     (WidgetTester tester) async {
       final StreamController<double> levels =
           StreamController<double>.broadcast();
@@ -59,14 +60,20 @@ void main() {
 
       final Rect button = tester.getRect(find.byKey(recorderInputKey));
       final Rect ring = tester.getRect(find.byKey(recorderInputRingKey));
-      expect(ring, button.inflate(recorderInputRingReach));
+      expect(
+        button.contains(ring.topLeft) &&
+            ring.right <= button.right &&
+            ring.bottom <= button.bottom,
+        isTrue,
+        reason: 'ring drawn at $ring, outside the button at $button',
+      );
       expect(
         full.outerRadius(ring.size),
-        lessThanOrEqualTo(button.shortestSide / 2 + recorderInputRingReach),
+        lessThanOrEqualTo(button.shortestSide / 2),
       );
       expect(
         full.innerRadius(ring.size),
-        greaterThanOrEqualTo(button.shortestSide / 2),
+        greaterThanOrEqualTo(recorderGlassButtonFace / 2),
       );
 
       await tester.pump(recorderInputRingSilence);
