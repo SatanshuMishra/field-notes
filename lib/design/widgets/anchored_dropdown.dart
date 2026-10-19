@@ -59,6 +59,7 @@ class AnchoredDropdown<T> extends StatefulWidget {
     this.menuKey,
     this.tone = GlassTone.paper,
     this.ink,
+    this.widensToFitChoices = false,
   });
 
   final List<AnchoredDropdownChoice<T>> choices;
@@ -70,6 +71,7 @@ class AnchoredDropdown<T> extends StatefulWidget {
   final Key? menuKey;
   final GlassTone tone;
   final Color? ink;
+  final bool widensToFitChoices;
 
   @override
   State<AnchoredDropdown<T>> createState() => _AnchoredDropdownState<T>();
@@ -222,6 +224,20 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
               _screenMargin -
               MediaQuery.paddingOf(context).bottom;
     final bool rtl = Directionality.of(context) == TextDirection.rtl;
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+    final double roomAfterStartEdge = anchor == null
+        ? screenWidth
+        : screenWidth - anchor.left - _screenMargin;
+    final double roomBeforeEndEdge = anchor == null
+        ? screenWidth
+        : anchor.right - _screenMargin;
+    final bool growsRightward = widget.widensToFitChoices
+        ? roomAfterStartEdge >= roomBeforeEndEdge
+        : !rtl;
+    final double widestMenu = math.max(
+      0,
+      growsRightward ? roomAfterStartEdge : roomBeforeEndEdge,
+    );
     final Color ink = widget.ink ?? context.colors.ink;
     final FocusRingSurface surface = widget.tone == GlassTone.media
         ? FocusRingSurface.dark
@@ -263,16 +279,24 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
         onKeyEvent: _onKey,
         child: SizedBox(
           key: widget.menuKey,
-          width: anchor?.width,
+          width: widget.widensToFitChoices ? null : anchor?.width,
           child: ConstrainedBox(
             constraints: BoxConstraints(
+              minWidth: widget.widensToFitChoices
+                  ? math.min(anchor?.width ?? 0, widestMenu)
+                  : 0,
+              maxWidth: widget.widensToFitChoices
+                  ? widestMenu
+                  : double.infinity,
               maxHeight: math.max(_minimumMenuHeight, below),
             ),
-            child: GlassSurface(
-              tone: widget.tone,
-              borderRadius: BorderRadius.circular(_menuRadius),
-              padding: _menuPadding,
-              child: list,
+            child: _fittedToChoices(
+              GlassSurface(
+                tone: widget.tone,
+                borderRadius: BorderRadius.circular(_menuRadius),
+                padding: _menuPadding,
+                child: list,
+              ),
             ),
           ),
         ),
@@ -283,8 +307,10 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
       alignment: Alignment.topLeft,
       child: CompositedTransformFollower(
         link: _link,
-        targetAnchor: rtl ? Alignment.bottomRight : Alignment.bottomLeft,
-        followerAnchor: rtl ? Alignment.topRight : Alignment.topLeft,
+        targetAnchor: growsRightward
+            ? Alignment.bottomLeft
+            : Alignment.bottomRight,
+        followerAnchor: growsRightward ? Alignment.topLeft : Alignment.topRight,
         offset: const Offset(0, anchoredDropdownGap),
         child: outerGroup == null
             ? menu
@@ -292,6 +318,9 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
       ),
     );
   }
+
+  Widget _fittedToChoices(Widget menu) =>
+      widget.widensToFitChoices ? IntrinsicWidth(child: menu) : menu;
 
   @override
   Widget build(BuildContext context) {

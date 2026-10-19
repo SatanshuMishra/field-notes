@@ -147,6 +147,7 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
       ],
       current: widget.value,
       onSelected: _pick,
+      widensToFitChoices: true,
       builder: (BuildContext context, bool open, VoidCallback toggle) =>
           trigger(toggle),
     );
