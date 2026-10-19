@@ -63,6 +63,7 @@ class _CameraPickerState extends State<CameraPicker> {
       child: AnchoredDropdown<String>(
         tone: GlassTone.media,
         ink: _pickerInk,
+        widensToFitChoices: true,
         choices: <AnchoredDropdownChoice<String>>[
           for (final VideoCaptureDevice device in widget.devices)
             AnchoredDropdownChoice<String>(
