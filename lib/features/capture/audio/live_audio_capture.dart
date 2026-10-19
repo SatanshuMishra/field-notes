@@ -58,6 +58,15 @@ typedef VoiceChainRunner = Future<RunningVoiceChain> Function({
   required int volume,
 });
 
+class PictureStart {
+  const PictureStart({this.ago = Duration.zero, this.capturedAtNs});
+
+  final Duration ago;
+  final int? capturedAtNs;
+
+  Duration get lead => ago > _longestPictureLead ? _longestPictureLead : ago;
+}
+
 class LiveAudioTake {
   const LiveAudioTake({required this.path, required this.durationMs});
 
@@ -281,6 +290,7 @@ class _ActiveTake {
   }) : outputToSkip = chain.delaySamples,
        studio = NaturalVoiceChain(profile: InputProfile.studio, volume: volume),
        attemptAt = now,
+       pictureStartedAt = now,
        lastChunkAt = now,
        writingFrom = now,
        lastWrittenAt = now;
@@ -313,6 +323,7 @@ class _ActiveTake {
   Duration lastChunkAt;
   Duration? quietSince;
   Duration writingFrom;
+  Duration pictureStartedAt;
   Duration lastWrittenAt;
   Uint8List untaken = Uint8List(0);
   Uint8List carriedByte = Uint8List(0);
@@ -597,6 +608,7 @@ class LiveAudioCapture {
       ..latestCaptured = <String, CapturedAudio>{}
       ..startedThisAttempt = <String>{}
       ..attemptAt = _clock();
+    _placeTrimOnTheClock(take);
     unawaited(_quietly(() async => listening?.cancel()));
     unawaited(_quietly(dropped.cancel));
     unawaited(_quietly(dropped.dispose));
@@ -605,6 +617,17 @@ class LiveAudioCapture {
     _recorder = fresh;
     unawaited(_open(take, fresh, take.attempt));
     _watch(take);
+  }
+
+  void _placeTrimOnTheClock(_ActiveTake take) {
+    if (!take.trimPending || take.writeFromSample == null) {
+      return;
+    }
+    take
+      ..trimPending = false
+      ..writeFromSample = null
+      ..gapFrom ??= take.pictureStartedAt
+      ..lastWrittenAt = take.pictureStartedAt;
   }
 
   void _failed(
@@ -629,10 +652,7 @@ class LiveAudioCapture {
     _reopen(take);
   }
 
-  void beginWriting({
-    Duration pictureStartedAgo = Duration.zero,
-    int? pictureCapturedAtNs,
-  }) {
+  void beginWriting({PictureStart picture = const PictureStart()}) {
     final _ActiveTake? take = _take;
     if (take == null || take.writing) {
       return;
@@ -642,18 +662,14 @@ class LiveAudioCapture {
       ..writing = true
       ..trimPending = true
       ..writingFrom = now
+      ..pictureStartedAt = now - picture.lead
       ..lastWrittenAt = now
-      ..writeFromSample = _sampleCapturedAt(take, pictureCapturedAtNs);
+      ..writeFromSample = _sampleCapturedAt(take, picture.capturedAtNs);
     if (take.writeFromSample != null) {
       return;
     }
-    if (pictureStartedAgo > Duration.zero) {
-      _queueSilence(
-        take,
-        pictureStartedAgo > _longestPictureLead
-            ? _longestPictureLead
-            : pictureStartedAgo,
-      );
+    if (picture.lead > Duration.zero) {
+      _queueSilence(take, picture.lead);
     }
   }
 
@@ -756,10 +772,12 @@ class LiveAudioCapture {
         : now - take.lastWrittenAt > _gapLongerThan;
     if (take.gapFrom == null && chunksStopped) {
       take.gapFrom = take.lastWrittenAt;
-      _armSettling(take, now);
     }
     take.lastWrittenAt = now;
     if (take.gapFrom != null) {
+      if (take.afterGap.isEmpty) {
+        _armSettling(take, now);
+      }
       take.afterGap = <Uint8List>[...take.afterGap, kept];
       return;
     }

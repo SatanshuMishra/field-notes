@@ -372,13 +372,8 @@ class _LiveSound {
     return _capture.running;
   }
 
-  void beginWriting({
-    Duration pictureStartedAgo = Duration.zero,
-    int? pictureCapturedAtNs,
-  }) => _capture.beginWriting(
-    pictureStartedAgo: pictureStartedAgo,
-    pictureCapturedAtNs: pictureCapturedAtNs,
-  );
+  void beginWriting({PictureStart picture = const PictureStart()}) =>
+      _capture.beginWriting(picture: picture);
 
   Future<void> pause() async {
     try {
@@ -1703,8 +1698,10 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     }
     _stopWaitingForMovieStart();
     _sound.beginWriting(
-      pictureStartedAgo: movieStart.firstFrameAge,
-      pictureCapturedAtNs: movieStart.firstFrameCapturedAtNs,
+      picture: PictureStart(
+        ago: movieStart.firstFrameAge,
+        capturedAtNs: movieStart.firstFrameCapturedAtNs,
+      ),
     );
     _movieBegun = true;
     _elapsed.reset();
