@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T13:31:59.187Z
+Updated: 2026-10-19T13:33:35.009Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camera (round 3, 2d0091ff) are green and wait for ship; each green MSP is merged up the stack. hearing-and-ring is in round 3 at 32ff2edc (suite clean): after its green round 2, the Android lab showed its input panel rows and drop-down choices nameless on Android (named on main), because a Semantics wrapper around Pressable splits each row into an empty outer node and a named inner one; both are fixed with receipts, and its round 3 code reviewer is running. button-consistency's round 2 at adcefe11 is at diagnose: blockers C1 (small tap target: settings text field padding shows the text cursor but ignores clicks) and U1 (failing test: the Android rows), advisory C2 (three pass-through hover wrappers), P1 fixed; one diagnosis per kind is running. The same wrapper split remains in its meadow_tabs.dart and settings_segmented.dart (use Pressable's inMutuallyExclusiveGroup). android_dump_rules_test fails now and then under machine load and is not a finding. Smoke: Windows is unproven while the owner's PC is offline on Tailscale; the Android camera-off notice passes. The Mac repro app is built in harness/repro-tree from 32ff2edc; its built-in microphone run waits on two macOS system dialogs (privacy and app-launch checks) only the owner can answer.
+Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camera (round 3, 2d0091ff) are green and wait for ship; each green MSP is merged up the stack. hearing-and-ring is green again at round 3 (32ff2edc): its input panel rows and drop-down choices are now one named node each on Android, fixing a split that hid their names there. button-consistency's round 2 at adcefe11 is at diagnose: blockers C1 (small tap target: settings text field padding shows the text cursor but ignores clicks) and U1 (failing test: the Android rows), advisory C2 (three pass-through hover wrappers), P1 fixed; one diagnosis per kind is running. The same wrapper split remains in its meadow_tabs.dart and settings_segmented.dart (use Pressable's inMutuallyExclusiveGroup). android_dump_rules_test fails now and then under machine load and is not a finding. Smoke: Windows is unproven while the owner's PC is offline on Tailscale; the Android camera-off notice passes. The Mac repro app is built in harness/repro-tree from 32ff2edc; its built-in microphone run waits on two macOS system dialogs (privacy and app-launch checks) only the owner can answer.
 
 ## Next step
 
-Record each button-consistency diagnosis, re-run its verdict, merge hearing-and-ring into it, fix C1, C2, U1 and the two remaining wrapper sites, then round 3 with an Android rerun of the input panel and drop-down names. Record hearing-and-ring's round 3 review when it returns. Read the Mac runs once the owner answers the dialogs, then ship.
+Record each button-consistency diagnosis, re-run its verdict, merge hearing-and-ring into it, fix C1, C2, U1 and the two remaining wrapper sites, then round 3 with an Android rerun of the input panel and drop-down names. Read the Mac runs once the owner answers the dialogs, then ship.
 
 Needs: D2, R1.
 
