@@ -895,17 +895,16 @@ class _PanelRow extends StatelessWidget {
         child: Semantics(button: false, expanded: expanded, child: content),
       );
     }
-    return MergeSemantics(
+    return Pressable(
+      label: title,
+      value: shown,
+      onPressed: tap,
+      borderRadius: BorderRadius.circular(_rowRadius),
+      surface: surface,
+      excludeSemantics: false,
       child: Semantics(
         expanded: expanded,
-        child: Pressable(
-          label: title,
-          value: shown,
-          onPressed: tap,
-          borderRadius: BorderRadius.circular(_rowRadius),
-          surface: surface,
-          child: content,
-        ),
+        child: ExcludeSemantics(child: content),
       ),
     );
   }

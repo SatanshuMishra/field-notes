@@ -114,13 +114,15 @@ void main() {
       expect(firstFills.single.borderRadius, _rowRadius);
       expect(_paintedFills(tester, _secondRowKey), isEmpty);
 
-      expect(
-        tester.getSemantics(
-          find.descendant(
-            of: find.byKey(_firstRowKey),
-            matching: find.text(_firstLabel),
-          ),
+      final SemanticsNode firstRow = tester.getSemantics(
+        find.descendant(
+          of: find.byKey(_firstRowKey),
+          matching: find.text(_firstLabel),
         ),
+      );
+      expect(firstRow.childrenCount, 0);
+      expect(
+        firstRow,
         isSemantics(
           label: _firstLabel,
           isButton: true,
@@ -132,13 +134,15 @@ void main() {
           isInMutuallyExclusiveGroup: true,
         ),
       );
-      expect(
-        tester.getSemantics(
-          find.descendant(
-            of: find.byKey(_secondRowKey),
-            matching: find.text(_secondLabel),
-          ),
+      final SemanticsNode secondRow = tester.getSemantics(
+        find.descendant(
+          of: find.byKey(_secondRowKey),
+          matching: find.text(_secondLabel),
         ),
+      );
+      expect(secondRow.childrenCount, 0);
+      expect(
+        secondRow,
         isSemantics(
           label: _secondLabel,
           isButton: true,
