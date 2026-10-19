@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: parked
-Updated: 2026-10-19T03:30:54.264Z
+Updated: 2026-10-19T03:30:59.453Z
 Next ids: c6 D4 R2 S3
 
 ## Goal
@@ -21,9 +21,9 @@ Integration done: final lighthouse run 2 gave verdict unproven with no failures 
 
 ## Next step
 
-The user starts Clean-up by saying the FEATURE pull request merged: resume the thread, Sync, run pipeline clean for slug mac-keychain-single-item, then close the thread.
+The user starts Clean-up by saying the FEATURE pull request merged: resume the thread, Sync, run pipeline clean --repo /Users/satanshumishra/Documents/DevLabs/fireplace --slug mac-keychain-single-item, then close the thread.
 
-Needs: R1.
+Needs: D3, R1.
 
 ## Decisions in force
 
