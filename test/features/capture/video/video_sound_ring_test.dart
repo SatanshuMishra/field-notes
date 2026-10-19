@@ -52,7 +52,7 @@ void _expectRingOnInputButtonOnly(WidgetTester tester) {
   );
   final Rect button = tester.getRect(find.byKey(recorderInputKey));
   final Rect drawn = tester.getRect(ring);
-  expect(drawn, button.inflate(recorderInputRingReach));
+  expect(drawn, button);
   expect(drawn.left, greaterThan(_screen.width / 2));
   expect(drawn.bottom, lessThan(_screen.height / 2));
   expect(drawn.right, lessThanOrEqualTo(_screen.width));

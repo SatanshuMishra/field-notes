@@ -7,8 +7,8 @@ import 'package:flutter/widgets.dart';
 
 const Key recorderInputRingKey = ValueKey<String>('recorder-input-ring');
 
-const double recorderInputRingReach = 8;
-const double recorderInputRingMaxSpread = 6;
+const double recorderInputRingReach = 4;
+const double recorderInputRingMaxSpread = 4;
 const double recorderInputRingMinOpacity = 0.35;
 const double recorderInputRingMaxOpacity = 0.85;
 const double recorderInputRingFloor = 0.02;
@@ -105,13 +105,8 @@ class _RecorderInputRingState extends State<RecorderInputRing>
     _stepping = MediaQuery.disableAnimationsOf(context);
     final Color highlight = context.colors.accentBright;
     return Stack(
-      clipBehavior: Clip.none,
       children: <Widget>[
-        Positioned(
-          left: -recorderInputRingReach,
-          top: -recorderInputRingReach,
-          right: -recorderInputRingReach,
-          bottom: -recorderInputRingReach,
+        Positioned.fill(
           child: IgnorePointer(
             child: ExcludeSemantics(
               child: AnimatedBuilder(
