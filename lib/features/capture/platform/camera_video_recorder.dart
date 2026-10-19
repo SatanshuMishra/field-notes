@@ -14,6 +14,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart' show AudioRecorder;
 
+import 'package:field_notes/data/media/captured_audio.dart';
 import 'package:field_notes/data/media/live_audio_channel.dart';
 import 'package:field_notes/data/media/media_work_budget.dart';
 import 'package:field_notes/data/media/video_join.dart';
@@ -63,6 +64,7 @@ VideoRecorder createPlatformVideoRecorder({
     audioJoiner: audioJoiner,
     audioRecorderFactory: audioRecorderFactory,
     resolveProcessing: resolveProcessing,
+    microphoneCaptureTimes: macMicrophoneCaptureTimes,
   ),
   TargetPlatform.windows => CameraWindowsVideoRecorder(
     encoder: encoder,
@@ -217,11 +219,13 @@ class _LiveSound {
     required this._joiner,
     required VideoSoundProcessing? resolveProcessing,
     required this._folder,
+    Stream<CapturedAudio> captureTimes = const Stream<CapturedAudio>.empty(),
     Duration Function()? clock,
   }) : _capture = LiveAudioCapture(
          recorderFactory: recorderFactory,
          encoder: encoder,
          chainRunner: chainRunner,
+         captureTimes: captureTimes,
          clock: clock,
        ),
        _resolveProcessing = resolveProcessing ?? defaultVoiceProcessing;
@@ -368,8 +372,13 @@ class _LiveSound {
     return _capture.running;
   }
 
-  void beginWriting({Duration pictureStartedAgo = Duration.zero}) =>
-      _capture.beginWriting(pictureStartedAgo: pictureStartedAgo);
+  void beginWriting({
+    Duration pictureStartedAgo = Duration.zero,
+    int? pictureCapturedAtNs,
+  }) => _capture.beginWriting(
+    pictureStartedAgo: pictureStartedAgo,
+    pictureCapturedAtNs: pictureCapturedAtNs,
+  );
 
   Future<void> pause() async {
     try {
@@ -1450,6 +1459,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     AudioRecorderFactory audioRecorderFactory = AudioRecorder.new,
     VoiceChainRunner chainRunner = runVoiceChainInIsolate,
     VideoSoundProcessing? resolveProcessing,
+    Stream<CapturedAudio> microphoneCaptureTimes =
+        const Stream<CapturedAudio>.empty(),
     Duration Function()? clock,
   }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
        _suppliedController = controller {
@@ -1460,6 +1471,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       joiner: audioJoiner,
       resolveProcessing: resolveProcessing,
       folder: _CaptureFolder(_temporaryDirectory),
+      captureTimes: microphoneCaptureTimes,
       clock: clock,
     );
   }
@@ -1683,12 +1695,17 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     });
   }
 
-  void _movieBegan([Duration firstFrameAge = Duration.zero]) {
+  void _movieBegan([
+    CameraMacOSMovieStart movieStart = const CameraMacOSMovieStart(),
+  ]) {
     if (_movieStart == null) {
       return;
     }
     _stopWaitingForMovieStart();
-    _sound.beginWriting(pictureStartedAgo: firstFrameAge);
+    _sound.beginWriting(
+      pictureStartedAgo: movieStart.firstFrameAge,
+      pictureCapturedAtNs: movieStart.firstFrameCapturedAtNs,
+    );
     _movieBegun = true;
     _elapsed.reset();
     _runClockWhileFilming();
