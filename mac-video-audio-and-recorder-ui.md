@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T05:55:42.686Z
+Updated: 2026-10-19T05:55:45.204Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Pipeline stage 2, resuming the first build. mic-recovery is committed and gated;
 
 ## Next step
 
-When mic-recovery's validator returns, save review/round-1/mic-recovery.verdicts.json, record to the ledger, diagnose and fix confirmed blockers and advisories on mitosis/mic-recovery, then merge that branch into the stacked MSPs; when the resume (build-1-resume.out) ends, read its last JSON line and review each MSP it commits.
+As each diagnosis returns, save it as review/round-1/mic-recovery.<kind slug>.diagnosis.json and record it with pipeline diagnosis; then rerun pipeline verdict, fix each fixable kind with a receipt test plus the advisories on mitosis/mic-recovery, merge that branch into the stacked MSPs and start mic-recovery round 2; when the resume (build-1-resume.out) ends, read its last JSON line and review each MSP it commits.
 
 Needs: D2, R1.
 
