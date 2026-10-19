@@ -1,7 +1,7 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: parked
-Updated: 2026-10-19T03:09:35.427Z
-Next ids: c6 D3 R2 S2
+Updated: 2026-10-19T03:30:54.264Z
+Next ids: c6 D4 R2 S3
 
 ## Goal
 
@@ -17,17 +17,17 @@ On macOS the ad-hoc signed app asks for login-keychain access once per stored it
 
 ## Where things stand
 
-Integration: lighthouse run 1 gave verdict unproven with no failures (suite passed on both builds apart from the flaky android_dump_rules_test, which also fails on main; the four keychain paths and the Device sync relay neighbour are unproven). The final run 2 (--final, --previous run-1) is running its suite; its profile publish committed ea48a097 to fix/mac-keychain-single-item.
+Integration done: final lighthouse run 2 gave verdict unproven with no failures (four keychain paths and the Device sync relay neighbour unproven; android_dump_rules_test flaky, also on main). FEATURE pull request SatanshuMishra/field-notes#327 (fix/mac-keychain-single-item into main) is open, ready, assigned to the owner, awaiting their merge.
 
 ## Next step
 
-When run 2's suite lands, write run-2/findings.json with the five retest paths under their exact names (unproven), run lighthouse verdict, lighthouse pr --final, open the FEATURE pull request into main, then lighthouse release and park the thread for Clean-up.
+The user starts Clean-up by saying the FEATURE pull request merged: resume the thread, Sync, run pipeline clean for slug mac-keychain-single-item, then close the thread.
 
-Needs: D2, R1.
+Needs: R1.
 
 ## Decisions in force
 
-- D2 Ship: push MSP mac-keychain and open its pull request: Ship: mitosis gates the new head, pushes mitosis/mac-keychain, and the pull request opens against fix/mac-keychain-single-item, assigned to the owner.
+- D3 Integration: the FEATURE pull request #327 opens ready for review with verdict unproven, and only the owner merges it.
 
 ## Open risks
 
@@ -36,6 +36,7 @@ Needs: D2, R1.
 ## Settled, do not reopen
 
 - S1 Review round 1 rejected C1, S1 to S4 (no way back after the move, a planted bundle item, the plugin's delete-then-add write, cross-instance lost updates) as contradicting the spec's decisions; C2 and C3 were fixed.
+- S2 The MSP shipped as SatanshuMishra/field-notes#326 into fix/mac-keychain-single-item and is merged.
 
 ## Where the details live
 
