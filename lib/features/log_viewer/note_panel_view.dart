@@ -5,6 +5,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -236,50 +238,56 @@ class _ExitPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final FieldNotesShadows shadows = context.shadows;
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            child: FocusRing(
-              onPressed: onPressed,
+    return Pressable(
+      label: label,
+      onPressed: onPressed,
+      borderRadius: _exitPillBorderRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _minTapTarget,
+          minHeight: _minTapTarget,
+        ),
+        child: Center(
+          child: Container(
+            height: _exitPillHeight,
+            padding: const EdgeInsets.only(
+              left: _exitPillStartPadding,
+              right: _exitPillEndPadding,
+            ),
+            decoration: BoxDecoration(
+              color: colors.cardWarm,
+              border: shadows.outline,
               borderRadius: _exitPillBorderRadius,
-              child: Container(
-                height: _exitPillHeight,
-                padding: const EdgeInsets.only(
-                  left: _exitPillStartPadding,
-                  right: _exitPillEndPadding,
+              boxShadow: shadows.chip,
+            ),
+            foregroundDecoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.light,
+                      HoverShape.rounded,
+                    )
+                  : null,
+              shape: HoverShape.rounded,
+              borderRadius: _exitPillBorderRadius,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ChevronGlyph(
+                  pointsBack: true,
+                  color: colors.ink,
+                  size: _exitGlyphSize,
                 ),
-                decoration: BoxDecoration(
-                  color: colors.cardWarm,
-                  border: shadows.outline,
-                  borderRadius: _exitPillBorderRadius,
-                  boxShadow: shadows.chip,
+                const SizedBox(width: _exitGlyphGap),
+                Text(
+                  label,
+                  style: context.textStyles.captureLabelSans.copyWith(
+                    color: colors.ink,
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    ChevronGlyph(
-                      pointsBack: true,
-                      color: colors.ink,
-                      size: _exitGlyphSize,
-                    ),
-                    const SizedBox(width: _exitGlyphGap),
-                    Text(
-                      label,
-                      style: context.textStyles.captureLabelSans.copyWith(
-                        color: colors.ink,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
           ),
         ),

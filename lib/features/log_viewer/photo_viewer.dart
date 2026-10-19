@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/dialog_host.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/motion.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
@@ -17,6 +19,7 @@ import 'package:field_notes/features/log_viewer/viewer_chrome.dart';
 const String photoViewerPreviousLabel = 'Previous';
 const String photoViewerBackLabel = 'Back to note';
 const String photoViewerNextLabel = 'Next';
+const String photoViewerSurfaceLabel = 'Show or hide photo controls';
 
 const String _barrierLabel = 'Dismiss photo viewer';
 const String _photoLabel = 'Photo';
@@ -122,6 +125,16 @@ class _PhotoViewerState extends State<PhotoViewer> {
   late int _index = _clamped(widget.initialIndex);
   bool _overlaysHidden = false;
   bool _controlFocused = false;
+  final FocusNode _surfaceFocus = FocusNode(
+    debugLabel: 'photo surface',
+    skipTraversal: true,
+  );
+
+  @override
+  void dispose() {
+    _surfaceFocus.dispose();
+    super.dispose();
+  }
 
   int get _count => widget.photos.length;
 
@@ -199,6 +212,7 @@ class _PhotoViewerState extends State<PhotoViewer> {
     final NotePhoto photo = _photo;
     final String caption = photo.caption.trim();
     return Semantics(
+      container: true,
       image: true,
       label: caption.isEmpty ? _photoLabel : caption,
       child: ExcludeSemantics(
@@ -220,10 +234,13 @@ class _PhotoViewerState extends State<PhotoViewer> {
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: _toggleOverlays,
+        Pressable(
+          label: photoViewerSurfaceLabel,
+          onPressed: _overlaysPinned ? null : _toggleOverlays,
+          surface: FocusRingSurface.dark,
+          paintsHover: false,
+          excludeSemantics: false,
+          focusNode: _surfaceFocus,
           child: _picture(),
         ),
         AnimatedOpacity(
