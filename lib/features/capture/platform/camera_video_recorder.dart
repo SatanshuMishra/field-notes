@@ -216,10 +216,12 @@ class _LiveSound {
     required this._joiner,
     required VideoSoundProcessing? resolveProcessing,
     required this._folder,
+    Duration Function()? clock,
   }) : _capture = LiveAudioCapture(
          recorderFactory: recorderFactory,
          encoder: encoder,
          chainRunner: chainRunner,
+         clock: clock,
        ),
        _resolveProcessing = resolveProcessing ?? defaultVoiceProcessing;
 
@@ -1319,6 +1321,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     AudioRecorderFactory audioRecorderFactory = AudioRecorder.new,
     VoiceChainRunner chainRunner = runVoiceChainInIsolate,
     VideoSoundProcessing? resolveProcessing,
+    Duration Function()? clock,
   }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
        _suppliedController = controller {
     _sound = _LiveSound(
@@ -1328,6 +1331,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       joiner: audioJoiner,
       resolveProcessing: resolveProcessing,
       folder: _CaptureFolder(_temporaryDirectory),
+      clock: clock,
     );
   }
 
@@ -1341,6 +1345,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   String? _previewDeviceId;
   String? _audioDeviceId;
   CameraMacOSController? _controller;
+  StreamSubscription<void>? _movieStart;
+  Timer? _movieStartWait;
   bool _destroyRequested = false;
   bool _aborted = false;
   _OwnedCaptures _owned = const _OwnedCaptures();
@@ -1501,9 +1507,49 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       await _sound.arm(_soundInputWithId(_audioDeviceId));
       await _startCamera(ready);
     } catch (_) {
+      _stopWaitingForMovieStart();
       _elapsed.stop();
       await _sound.discard();
       rethrow;
+    }
+  }
+
+  void _listenForMovieStart(CameraMacOSController controller) {
+    _stopWaitingForMovieStart();
+    _movieStart = controller.videoRecordingStarted.listen((_) => _movieBegan());
+  }
+
+  void _waitForMovieStart() {
+    if (_movieStart == null) {
+      return;
+    }
+    _movieStartWait = Timer(movieStartTimeout, () {
+      debugPrint(
+        'The camera never reported the movie start within '
+        '${movieStartTimeout.inMilliseconds} ms; writing sound from now',
+      );
+      _movieBegan();
+    });
+  }
+
+  void _movieBegan() {
+    if (_movieStart == null) {
+      return;
+    }
+    _stopWaitingForMovieStart();
+    _sound.beginWriting();
+    _elapsed
+      ..reset()
+      ..start();
+  }
+
+  void _stopWaitingForMovieStart() {
+    final StreamSubscription<void>? movieStart = _movieStart;
+    _movieStart = null;
+    _movieStartWait?.cancel();
+    _movieStartWait = null;
+    if (movieStart != null) {
+      unawaited(movieStart.cancel());
     }
   }
 
@@ -1522,6 +1568,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       throw const VideoRecorderException(videoStartMessage);
     }
     _owned = _owned.withoutMovies();
+    _listenForMovieStart(controller);
     try {
       await controller.recordVideo(
         maxVideoDuration: videoHardCapSeconds,
@@ -1533,15 +1580,13 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     if (_aborted) {
       throw const VideoRecorderException(videoStartMessage);
     }
-    _sound.beginWriting();
     _controller = controller;
-    _elapsed
-      ..reset()
-      ..start();
+    _waitForMovieStart();
   }
 
   @override
   Future<VideoRecording> stop() async {
+    _stopWaitingForMovieStart();
     _elapsed.stop();
     final VideoRecording recording = await _sound.keep(_stopPicture);
     _owned = _owned.adopt(recording);
@@ -1595,6 +1640,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
   @override
   Future<void> cancel() async {
+    _stopWaitingForMovieStart();
     _elapsed.stop();
     _aborted = true;
     _destroyRequested = true;
@@ -1629,6 +1675,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
   @override
   Future<void> release() async {
+    _stopWaitingForMovieStart();
     _elapsed.stop();
     _destroyRequested = true;
     final CameraMacOSController? controller = _controller;
@@ -1665,4 +1712,5 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
 const double videoHardCapSeconds = 30 * 60;
 const Duration cameraStartTimeout = Duration(seconds: 12);
+const Duration movieStartTimeout = Duration(seconds: 2);
 const String _cameraPermissionRefusal = 'Permission not granted';

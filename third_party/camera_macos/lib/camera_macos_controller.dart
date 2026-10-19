@@ -39,6 +39,9 @@ class CameraMacOSController {
     );
   }
 
+  Stream<void> get videoRecordingStarted =>
+      _platformInstance.videoRecordingStarted;
+
   /// Call this method to stop video recording and collect the video data.
   Future<CameraMacOSFile?> stopRecording() {
     return _platformInstance.stopVideoRecording();
