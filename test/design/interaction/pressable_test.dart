@@ -250,4 +250,141 @@ void main() {
       semantics.dispose();
     },
   );
+
+  testWidgets('a toggle reads as a switch, not a button', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      Pressable(
+        key: _rowKey,
+        label: 'Camera',
+        toggled: true,
+        onPressed: () {},
+        child: _face(),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byKey(_rowKey)),
+      isSemantics(
+        label: 'Camera',
+        isButton: false,
+        hasToggledState: true,
+        isToggled: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        isFocusable: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('a choice in a group reads as a radio, not a button', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      Pressable(
+        key: _rowKey,
+        label: 'Dark',
+        checked: true,
+        inMutuallyExclusiveGroup: true,
+        onPressed: () {},
+        child: _face(),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byKey(_rowKey)),
+      isSemantics(
+        label: 'Dark',
+        isButton: false,
+        hasCheckedState: true,
+        isChecked: true,
+        isInMutuallyExclusiveGroup: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        isFocusable: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+      ),
+    );
+    semantics.dispose();
+  });
+
+  testWidgets('a control that rings its face outlines only the face', (
+    WidgetTester tester,
+  ) async {
+    const Key faceKey = ValueKey<String>('face');
+    final FocusNode focusNode = FocusNode(debugLabel: 'side control');
+    addTearDown(focusNode.dispose);
+    await _pump(
+      tester,
+      Pressable(
+        key: _rowKey,
+        label: 'Camera',
+        focusNode: focusNode,
+        onPressed: () {},
+        ringsFace: true,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const FocusRingFace(
+              key: faceKey,
+              child: SizedBox.square(dimension: 52),
+            ),
+            SizedBox.fromSize(size: _controlSize),
+          ],
+        ),
+      ),
+    );
+    FocusManager.instance.highlightStrategy =
+        FocusHighlightStrategy.alwaysTraditional;
+    addTearDown(
+      () => FocusManager.instance.highlightStrategy =
+          FocusHighlightStrategy.automatic,
+    );
+
+    focusNode.requestFocus();
+    await tester.pump();
+
+    final Finder ring = find.byKey(focusRingKey);
+    expect(ring, findsOneWidget);
+    expect(tester.getRect(ring), tester.getRect(find.byKey(faceKey)));
+  });
+
+  testWidgets('a control can keep its focus out of the semantics tree', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await _pump(
+      tester,
+      Pressable(
+        key: _rowKey,
+        label: 'Website',
+        includeFocusSemantics: false,
+        onPressed: () {},
+        child: _face(),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byKey(_rowKey)),
+      isSemantics(
+        label: 'Website',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: true,
+        isFocusable: false,
+        hasTapAction: true,
+        hasFocusAction: false,
+      ),
+    );
+    semantics.dispose();
+  });
 }

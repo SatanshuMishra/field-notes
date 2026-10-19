@@ -626,49 +626,52 @@ class _ActionButton extends StatelessWidget {
         color: ink,
       ),
     );
-    Widget face(BuildContext context, bool hovered) => DecoratedBox(
-      position: DecorationPosition.foreground,
-      decoration: _hoverVeil(
-        context,
-        hovered: hovered,
-        shape: HoverShape.pill,
-        borderRadius: _actionRadius,
-      ),
+    Widget face(BuildContext context, bool hovered) => FocusRingFace(
+      borderRadius: _actionRadius,
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: fill,
+        position: DecorationPosition.foreground,
+        decoration: _hoverVeil(
+          context,
+          hovered: hovered,
+          shape: HoverShape.pill,
           borderRadius: _actionRadius,
-          boxShadow: fill == null
-              ? null
-              : const <BoxShadow>[
-                  BoxShadow(
-                    color: _keepShadow,
-                    offset: _keepShadowOffset,
-                    blurRadius: _keepShadowBlur,
-                    spreadRadius: _keepShadowSpread,
-                  ),
-                ],
         ),
-        child: SizedBox(
-          height: height,
-          child: Padding(
-            padding: padding,
-            child: Center(
-              widthFactor: expand ? null : 1,
-              heightFactor: height == null ? 1 : null,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (glyph != null) ...<Widget>[
-                    IconStickerGlyphIcon(
-                      glyph: glyph,
-                      color: ink,
-                      size: _keepGlyph,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: _actionRadius,
+            boxShadow: fill == null
+                ? null
+                : const <BoxShadow>[
+                    BoxShadow(
+                      color: _keepShadow,
+                      offset: _keepShadowOffset,
+                      blurRadius: _keepShadowBlur,
+                      spreadRadius: _keepShadowSpread,
                     ),
-                    SizedBox(width: glyphGap),
                   ],
-                  if (expand) Flexible(child: text) else text,
-                ],
+          ),
+          child: SizedBox(
+            height: height,
+            child: Padding(
+              padding: padding,
+              child: Center(
+                widthFactor: expand ? null : 1,
+                heightFactor: height == null ? 1 : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (glyph != null) ...<Widget>[
+                      IconStickerGlyphIcon(
+                        glyph: glyph,
+                        color: ink,
+                        size: _keepGlyph,
+                      ),
+                      SizedBox(width: glyphGap),
+                    ],
+                    if (expand) Flexible(child: text) else text,
+                  ],
+                ),
               ),
             ),
           ),
@@ -683,6 +686,7 @@ class _ActionButton extends StatelessWidget {
       shape: HoverShape.pill,
       borderRadius: _actionRadius,
       paintsHover: false,
+      ringsFace: true,
       builder: (BuildContext context, bool hovered) => ConstrainedBox(
         constraints: const BoxConstraints(
           minWidth: _minTapTarget,

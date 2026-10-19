@@ -13,6 +13,7 @@ const String inputLevelUnavailable = 'Microphone unavailable';
 const int inputLevelSegments = 20;
 const int inputLevelSampleRate = 48000;
 const Duration inputLevelQuietReopen = Duration(milliseconds: 500);
+const Duration inputLevelOpenWithin = Duration(seconds: 2);
 
 const double _fullScale = 32768;
 const double _segmentHeight = 8;
@@ -215,9 +216,9 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
 
   bool _current(int generation) => mounted && generation == _generation;
 
-  void _expectChunk(int generation) {
+  void _expectChunk(int generation, {Duration within = inputLevelQuietReopen}) {
     _quiet?.cancel();
-    _quiet = Timer(inputLevelQuietReopen, () => _reopenQuiet(generation));
+    _quiet = Timer(within, () => _reopenQuiet(generation));
   }
 
   void _reopenQuiet(int generation) {
@@ -232,7 +233,6 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   }
 
   Future<void> _listen(AudioRecorder recorder, int generation) async {
-    _expectChunk(generation);
     final Stream<Uint8List> chunks;
     try {
       if (!await recorder.hasPermission()) {
@@ -242,6 +242,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
       if (!_current(generation)) {
         return;
       }
+      _expectChunk(generation, within: inputLevelOpenWithin);
       chunks = await recorder.startStream(inputLevelConfig(widget.input));
     } catch (_) {
       _markUnavailable(generation);

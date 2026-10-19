@@ -831,26 +831,29 @@ class _SideControl extends StatelessWidget {
       shape: HoverShape.circle,
       borderRadius: radius,
       paintsHover: false,
+      ringsFace: true,
       builder: (BuildContext context, bool hovered) => Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Container(
-            width: diameter,
-            height: diameter,
-            alignment: Alignment.center,
-            decoration: decoration,
-            foregroundDecoration: HoverStyle.decoration(
-              color: hovered
-                  ? HoverStyle.of(
-                      context,
-                      FocusRingSurface.dark,
-                      HoverShape.circle,
-                    )
-                  : null,
-              shape: HoverShape.circle,
-              borderRadius: radius,
+          FocusRingFace(
+            child: Container(
+              width: diameter,
+              height: diameter,
+              alignment: Alignment.center,
+              decoration: decoration,
+              foregroundDecoration: HoverStyle.decoration(
+                color: hovered
+                    ? HoverStyle.of(
+                        context,
+                        FocusRingSurface.dark,
+                        HoverShape.circle,
+                      )
+                    : null,
+                shape: HoverShape.circle,
+                borderRadius: radius,
+              ),
+              child: glyph,
             ),
-            child: glyph,
           ),
           const SizedBox(height: _sideCaptionGap),
           Text(label, maxLines: 1, softWrap: false, style: caption),
