@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/voice/record_voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,6 +11,7 @@ import '../audio/live_audio_test_support.dart';
 const Duration _chunkEvery = Duration(milliseconds: 100);
 const Duration _poll = Duration(milliseconds: 10);
 const Duration _rearmWait = Duration(seconds: 1);
+const Duration _cannotHearWait = Duration(seconds: 4);
 const int _samplesPerChunk = 4800;
 const AudioInput _systemDefault = AudioInput(id: null, label: 'System default');
 const AudioInput _usbMicrophone = AudioInput(
@@ -53,6 +55,14 @@ Future<void> _speakFor(FakeMicrophone microphone, int chunks) async {
 Future<void> _waitForStreams(FakeMicrophone microphone, int streams) async {
   final Stopwatch waited = Stopwatch()..start();
   while (microphone.streamsOpened < streams && waited.elapsed < _rearmWait) {
+    await Future<void>.delayed(_poll);
+  }
+}
+
+Future<void> _waitUntilCannotHear(RecordVoiceRecorder recorder) async {
+  final Stopwatch waited = Stopwatch()..start();
+  while (recorder.hearingNow != MicrophoneHearing.cannotHear &&
+      waited.elapsed < _cannotHearWait) {
     await Future<void>.delayed(_poll);
   }
 }
@@ -146,5 +156,37 @@ void main() {
 
     expect(voice.microphone.startStreamConfigs, hasLength(1));
     expect(voice.sound.samplesAppended, greaterThan(0));
+  });
+
+  test(
+    'a voice recorder closed while it cannot hear no longer reports it',
+    () async {
+      final _WarmVoice voice = await _warmVoice();
+
+      await voice.recorder.open();
+      await _waitUntilCannotHear(voice.recorder);
+      expect(voice.recorder.hearingNow, MicrophoneHearing.cannotHear);
+
+      await voice.recorder.close();
+
+      expect(voice.recorder.hearingNow, isNot(MicrophoneHearing.cannotHear));
+    },
+  );
+
+  test('an open voice recorder that cannot hear moves to an input chosen after '
+      'opening', () async {
+    AudioInput chosen = _systemDefault;
+    final _WarmVoice voice = await _warmVoice(resolveInput: () async => chosen);
+
+    await voice.recorder.open();
+    await _waitUntilCannotHear(voice.recorder);
+    expect(voice.recorder.hearingNow, MicrophoneHearing.cannotHear);
+
+    chosen = _usbMicrophone;
+    await voice.recorder.open();
+
+    expect(voice.microphone.startStreamConfigs.last.device?.id, 'usb-mic');
+    expect(voice.recorder.hearingNow, isNot(MicrophoneHearing.cannotHear));
+    await voice.recorder.close();
   });
 }

@@ -52,11 +52,50 @@ class _FakeRecorder extends Fake implements AudioRecorder {
   }
 }
 
+class _SlowHeadsetRecorder extends _FakeRecorder {
+  _SlowHeadsetRecorder(this.firstChunkAfter);
+
+  final Duration firstChunkAfter;
+  final List<Timer> _beats = <Timer>[];
+
+  @override
+  Future<Stream<Uint8List>> startStream(RecordConfig config) async {
+    final StreamController<Uint8List> stream = StreamController<Uint8List>();
+    streams.add(stream);
+    _beats.add(
+      Timer(firstChunkAfter, () {
+        _beats.add(
+          Timer.periodic(const Duration(milliseconds: 100), (Timer _) {
+            if (!stream.isClosed) {
+              stream.add(_speech());
+            }
+          }),
+        );
+      }),
+    );
+    return stream.stream;
+  }
+
+  @override
+  Future<String?> stop() async {
+    for (final Timer beat in _beats) {
+      beat.cancel();
+    }
+    return super.stop();
+  }
+}
+
 class _Recorders {
   final List<_FakeRecorder> made = <_FakeRecorder>[];
 
   AudioRecorder make() {
     final _FakeRecorder recorder = _FakeRecorder();
+    made.add(recorder);
+    return recorder;
+  }
+
+  AudioRecorder makeSlowHeadset(Duration firstChunkAfter) {
+    final _FakeRecorder recorder = _SlowHeadsetRecorder(firstChunkAfter);
     made.add(recorder);
     return recorder;
   }
@@ -80,6 +119,33 @@ int _lit(WidgetTester tester) => <int>[
         Palette.mediaInk.toARGB32())
       index,
 ].length;
+
+Future<void> _showMeter(
+  WidgetTester tester,
+  AudioRecorder Function() recorderFactory,
+) async {
+  tester.view.physicalSize = const Size(1280, 800);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      theme: fieldNotesTheme(platform: TargetPlatform.macOS),
+      home: Scaffold(
+        backgroundColor: Palette.mediaGround,
+        body: Center(
+          child: SizedBox(
+            width: 240,
+            child: InputLevelMeter(
+              input: _corsair,
+              volume: 100,
+              recorderFactory: recorderFactory,
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
 void main() {
   testWidgets('the level meter reopens a microphone that goes quiet', (
@@ -137,5 +203,41 @@ void main() {
     }
     expect(recorders.startStreams, opened);
     expect(_lit(tester), greaterThan(0));
+  });
+
+  testWidgets(
+    'a headset whose first chunk arrives 1.5 s after opening is opened once '
+    'and shows its level',
+    (WidgetTester tester) async {
+      final _Recorders recorders = _Recorders();
+      await _showMeter(
+        tester,
+        () => recorders.makeSlowHeadset(const Duration(milliseconds: 1500)),
+      );
+      for (int beat = 0; beat < 30; beat++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(recorders.startStreams, 1);
+      expect(_lit(tester), greaterThan(0));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(seconds: 1));
+    },
+  );
+
+  testWidgets('a microphone that never delivers is reopened after 2 s', (
+    WidgetTester tester,
+  ) async {
+    final _Recorders recorders = _Recorders();
+    await _showMeter(tester, recorders.make);
+    await tester.pump();
+    expect(recorders.startStreams, 1);
+
+    await tester.pump(const Duration(milliseconds: 1900));
+    expect(recorders.startStreams, 1);
+    await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump();
+
+    expect(recorders.startStreams, 2);
   });
 }
