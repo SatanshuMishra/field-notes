@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T03:51:19.699Z
+Updated: 2026-10-19T03:51:22.027Z
 Next ids: c5 D1 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Interphase bug pathway grounding, before the interview. Causes found: (a) macOS 
 
 ## Next step
 
-Wait for the owner's answers to frontier round 2 (mic recovery, unrecoverable mic, sync design, Windows and Android scope, hover sweep scope, sound indicator form, test seams, pre-mortem, out of scope), save them to the decisions file and the record, then read back.
+Write the seams, criteria and Steps to the record (the app-wide tap-target inventory is being gathered by an Explore agent), check it with check_record --complete, then hold the read-back with AskUserQuestion.
 
 ## Decisions in force
 
