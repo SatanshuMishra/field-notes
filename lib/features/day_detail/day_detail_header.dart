@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart' show Tooltip;
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
@@ -226,53 +227,50 @@ class _ChevronButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final VoidCallback? press = onPressed;
-    final bool enabled = press != null;
-    return Tooltip(
-      message: label,
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: label,
-        onTap: press,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: press,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _minTapTarget,
-              minHeight: _minTapTarget,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: Opacity(
-                opacity: enabled ? 1 : _disabledStepOpacity,
-                child: FocusRing(
-                  onPressed: press,
-                  enabled: enabled,
-                  borderRadius: _backBorderRadius,
-                  child: Container(
-                    key: faceKey,
-                    width: _backExtent,
-                    height: _backExtent,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: colors.cardWarm,
-                      border: context.shadows.outline,
-                      borderRadius: _backBorderRadius,
-                    ),
-                    child: SizedBox.square(
-                      dimension: _chevronExtent,
-                      child: CustomPaint(
-                        painter: _ChevronPainter(
-                          color: colors.ink,
-                          direction: direction,
-                        ),
-                      ),
-                    ),
+    final bool enabled = onPressed != null;
+    return Pressable(
+      label: label,
+      tooltip: label,
+      onPressed: onPressed,
+      borderRadius: _backBorderRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _minTapTarget,
+          minHeight: _minTapTarget,
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: Opacity(
+            opacity: enabled ? 1 : _disabledStepOpacity,
+            child: Container(
+              key: faceKey,
+              width: _backExtent,
+              height: _backExtent,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: colors.cardWarm,
+                border: context.shadows.outline,
+                borderRadius: _backBorderRadius,
+              ),
+              foregroundDecoration: HoverStyle.decoration(
+                color: hovered
+                    ? HoverStyle.of(
+                        context,
+                        FocusRingSurface.light,
+                        HoverShape.rounded,
+                      )
+                    : null,
+                shape: HoverShape.rounded,
+                borderRadius: _backBorderRadius,
+              ),
+              child: SizedBox.square(
+                dimension: _chevronExtent,
+                child: CustomPaint(
+                  painter: _ChevronPainter(
+                    color: colors.ink,
+                    direction: direction,
                   ),
                 ),
               ),

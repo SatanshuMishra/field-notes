@@ -11,6 +11,8 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -645,6 +647,7 @@ class _DayDetailPanelState extends ConsumerState<DayDetailPanel> {
             fill: Palette.coral,
             labelColor: Palette.onAccent,
             shadow: context.shadows.emphasis,
+            hoverSurface: FocusRingSurface.dark,
             leading: const NavIcon(
               glyph: NavGlyph.plus,
               color: Palette.onAccent,
@@ -912,38 +915,38 @@ class _SheetEntryAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
       label: label,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: SizedBox.square(
-          dimension: _sheetActionTarget,
-          child: Center(
-            child: FocusRing(
-              onPressed: onPressed,
+      onPressed: onPressed,
+      borderRadius: _sheetActionRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: _sheetActionTarget,
+        child: Center(
+          child: Container(
+            width: _sheetActionExtent,
+            height: _sheetActionExtent,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: fill,
+              border: Border.all(color: edge, width: _sheetActionBorderWidth),
               borderRadius: _sheetActionRadius,
-              child: Container(
-                width: _sheetActionExtent,
-                height: _sheetActionExtent,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: fill,
-                  border: Border.all(
-                    color: edge,
-                    width: _sheetActionBorderWidth,
-                  ),
-                  borderRadius: _sheetActionRadius,
-                ),
-                child: IconStickerGlyphIcon(
-                  glyph: glyph,
-                  color: glyphColor,
-                  size: _sheetActionGlyph,
-                ),
-              ),
+            ),
+            foregroundDecoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.light,
+                      HoverShape.rounded,
+                    )
+                  : null,
+              shape: HoverShape.rounded,
+              borderRadius: _sheetActionRadius,
+            ),
+            child: IconStickerGlyphIcon(
+              glyph: glyph,
+              color: glyphColor,
+              size: _sheetActionGlyph,
             ),
           ),
         ),
@@ -962,6 +965,7 @@ class _SheetFooterButton extends StatelessWidget {
     this.leading,
     this.shadow,
     this.horizontalPadding = 0,
+    this.hoverSurface = FocusRingSurface.light,
   });
 
   final String label;
@@ -971,49 +975,52 @@ class _SheetFooterButton extends StatelessWidget {
   final Widget? leading;
   final List<BoxShadow>? shadow;
   final double horizontalPadding;
+  final FocusRingSurface hoverSurface;
 
   @override
   Widget build(BuildContext context) {
     final Widget? glyph = leading;
-    return Semantics(
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
+    return Pressable(
+      label: label,
+      onPressed: onPressed,
+      borderRadius: _sheetFooterRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Container(
+        height: _sheetFooterButtonHeight,
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: fill,
+          border: context.shadows.outline,
           borderRadius: _sheetFooterRadius,
-          child: Container(
-            height: _sheetFooterButtonHeight,
-            padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: fill,
-              border: context.shadows.outline,
-              borderRadius: _sheetFooterRadius,
-              boxShadow: shadow,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                if (glyph != null) ...<Widget>[
-                  glyph,
-                  const SizedBox(width: _sheetPlusGap),
-                ],
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.textStyles.captureLabelSans.copyWith(
-                      fontSize: _sheetFooterLabelSize,
-                      color: labelColor,
-                    ),
-                  ),
+          boxShadow: shadow,
+        ),
+        foregroundDecoration: HoverStyle.decoration(
+          color: hovered
+              ? HoverStyle.of(context, hoverSurface, HoverShape.rounded)
+              : null,
+          shape: HoverShape.rounded,
+          borderRadius: _sheetFooterRadius,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (glyph != null) ...<Widget>[
+              glyph,
+              const SizedBox(width: _sheetPlusGap),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.textStyles.captureLabelSans.copyWith(
+                  fontSize: _sheetFooterLabelSize,
+                  color: labelColor,
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

@@ -1,5 +1,7 @@
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -32,47 +34,53 @@ class SearchDayTile extends StatelessWidget {
     ].join(', ');
     final FieldNotesTextStyles textStyles = context.textStyles;
 
-    return Semantics(
-      button: true,
+    return Pressable(
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: FocusRing(
-          onPressed: onTap,
+      onPressed: onTap,
+      borderRadius: Shapes.cardBorderRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: HoverStyle.decoration(
+          color: hovered
+              ? HoverStyle.of(
+                  context,
+                  FocusRingSurface.light,
+                  HoverShape.rounded,
+                )
+              : null,
+          shape: HoverShape.rounded,
           borderRadius: Shapes.cardBorderRadius,
-          child: ExcludeSemantics(
-            child: StickerCard(
-              child: Row(
-                children: <Widget>[
-                  _SearchDayFlower(mood: view.mood),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Text(
-                          title,
-                          style: textStyles.dateSerif,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          previewText,
-                          style: textStyles.bodySans,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+        ),
+        child: StickerCard(
+          child: Row(
+            children: <Widget>[
+              _SearchDayFlower(mood: view.mood),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      style: textStyles.dateSerif,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(countLabel, style: textStyles.captionSans),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      previewText,
+                      style: textStyles.bodySans,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
               ),
-            ),
+              const SizedBox(width: 12),
+              Text(countLabel, style: textStyles.captionSans),
+            ],
           ),
         ),
       ),

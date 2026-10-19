@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -23,7 +24,6 @@ const double _pillRise = 15;
 const double _pillInset = 12;
 const double _hiddenDrop = 4;
 const double _glyphExtent = 14;
-const double _focusRingWidth = 2;
 const double _defaultButtonExtent = 28;
 const double _tapTarget = 48;
 const Duration _revealDuration = Duration(milliseconds: 140);
@@ -259,16 +259,31 @@ class _LogActionButton extends StatefulWidget {
 }
 
 class _LogActionButtonState extends State<_LogActionButton> {
-  bool _hovered = false;
+  final FocusNode _focusNode = FocusNode(debugLabel: 'log action');
   bool _focused = false;
 
-  void _onHoverHighlight(bool hovered) {
-    if (mounted && hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(_onFocusShift);
+    FocusManager.instance.addHighlightModeListener(_onHighlightMode);
   }
 
-  void _onFocusHighlight(bool focused) {
+  @override
+  void dispose() {
+    FocusManager.instance.removeHighlightModeListener(_onHighlightMode);
+    _focusNode
+      ..removeListener(_onFocusShift)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _onHighlightMode(FocusHighlightMode mode) => _onFocusShift();
+
+  void _onFocusShift() {
+    final bool focused =
+        _focusNode.hasFocus &&
+        FocusManager.instance.highlightMode == FocusHighlightMode.traditional;
     if (mounted && focused != _focused) {
       setState(() => _focused = focused);
     }
@@ -276,70 +291,37 @@ class _LogActionButtonState extends State<_LogActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    return FocusableActionDetector(
-      mouseCursor: SystemMouseCursors.click,
-      onShowHoverHighlight: _onHoverHighlight,
-      onShowFocusHighlight: _onFocusHighlight,
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (ActivateIntent intent) {
-            widget.onPressed();
-            return null;
-          },
-        ),
-      },
-      child: Semantics(
-        button: true,
-        label: widget.label,
-        onTap: widget.onPressed,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: widget.onPressed,
-          child: ExcludeSemantics(
-            child: Padding(
-              padding: widget.margin,
-              child: SizedBox.square(
-                dimension: widget.extent,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: _hovered || _focused ? widget.hoverColor : null,
-                        borderRadius: _buttonRadius,
-                      ),
-                    ),
-                    if (_focused) const _LogActionFocusRing(key: focusRingKey),
-                    Center(
-                      child: IconStickerGlyphIcon(
-                        glyph: widget.glyph,
-                        color: Palette.onAccent,
-                        size: _glyphExtent,
-                      ),
-                    ),
-                  ],
+    return Pressable(
+      label: widget.label,
+      onPressed: widget.onPressed,
+      focusNode: _focusNode,
+      surface: FocusRingSurface.dark,
+      placement: FocusRingPlacement.edge,
+      borderRadius: _buttonRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Padding(
+        padding: widget.margin,
+        child: SizedBox.square(
+          dimension: widget.extent,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: hovered || _focused ? widget.hoverColor : null,
+                  borderRadius: _buttonRadius,
                 ),
               ),
-            ),
+              Center(
+                child: IconStickerGlyphIcon(
+                  glyph: widget.glyph,
+                  color: Palette.onAccent,
+                  size: _glyphExtent,
+                ),
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LogActionFocusRing extends StatelessWidget {
-  const _LogActionFocusRing({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border.fromBorderSide(
-          BorderSide(color: Palette.toolbarLabel, width: _focusRingWidth),
-        ),
-        borderRadius: _buttonRadius,
       ),
     );
   }

@@ -1,10 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart' show Tooltip;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart'
@@ -220,39 +221,39 @@ class _FullScreenButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: dayMediaPaneFullScreenLabel,
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        label: dayMediaPaneFullScreenLabel,
-        onTap: _press,
-        child: GestureDetector(
-          key: dayMediaPaneFullScreenKey,
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: _press,
-          child: SizedBox.square(
-            dimension: _fullScreenTarget,
-            child: Center(
-              child: FocusRing(
-                onPressed: _press,
-                borderRadius: _fullScreenRadius,
-                child: Container(
-                  width: _fullScreenFace,
-                  height: _fullScreenFace,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Palette.toolbarInk,
-                    borderRadius: _fullScreenRadius,
-                    boxShadow: Shadows.toastLift,
-                  ),
-                  child: const CustomPaint(
-                    size: Size.square(_fullScreenGlyph),
-                    painter: _FullScreenGlyphPainter(color: Palette.onAccent),
-                  ),
-                ),
-              ),
+    return Pressable(
+      key: dayMediaPaneFullScreenKey,
+      label: dayMediaPaneFullScreenLabel,
+      tooltip: dayMediaPaneFullScreenLabel,
+      onPressed: _press,
+      borderRadius: _fullScreenRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: _fullScreenTarget,
+        child: Center(
+          child: Container(
+            width: _fullScreenFace,
+            height: _fullScreenFace,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: Palette.toolbarInk,
+              borderRadius: _fullScreenRadius,
+              boxShadow: Shadows.toastLift,
+            ),
+            foregroundDecoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.dark,
+                      HoverShape.rounded,
+                    )
+                  : null,
+              shape: HoverShape.rounded,
+              borderRadius: _fullScreenRadius,
+            ),
+            child: const CustomPaint(
+              size: Size.square(_fullScreenGlyph),
+              painter: _FullScreenGlyphPainter(color: Palette.onAccent),
             ),
           ),
         ),

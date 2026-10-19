@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
@@ -633,24 +635,31 @@ class _CompactLogCardState extends State<CompactLogCard> {
     if (onPlay == null) {
       return face;
     }
-    return Semantics(
-      container: true,
-      button: true,
+    final BorderRadius round = BorderRadius.circular(disc / 2);
+    return Pressable(
+      key: compactLogPlayKey,
       label: _playLabel,
-      onTap: onPlay,
-      child: GestureDetector(
-        key: compactLogPlayKey,
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPlay,
-        child: SizedBox.square(
-          dimension: math.max(disc, _posterPlayTarget),
-          child: Center(
-            child: FocusRing(
-              onPressed: onPlay,
-              borderRadius: BorderRadius.circular(disc / 2),
-              child: face,
+      onPressed: onPlay,
+      shape: HoverShape.circle,
+      borderRadius: round,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: math.max(disc, _posterPlayTarget),
+        child: Center(
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.light,
+                      HoverShape.circle,
+                    )
+                  : null,
+              shape: HoverShape.circle,
+              borderRadius: round,
             ),
+            child: face,
           ),
         ),
       ),
@@ -665,41 +674,42 @@ class _CardPlayToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
+    return Pressable(
+      key: compactLogPlayKey,
       label: _playLabel,
-      onTap: onTap,
-      child: GestureDetector(
-        key: compactLogPlayKey,
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: _playToggleTarget,
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: FocusRing(
-              onPressed: onTap,
+      onPressed: onTap,
+      shape: HoverShape.circle,
+      borderRadius: _playToggleRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: _playToggleTarget,
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Container(
+            width: _playToggleSize,
+            height: _playToggleSize,
+            decoration: BoxDecoration(
+              color: Palette.coral,
+              shape: BoxShape.circle,
+              border: context.shadows.outline,
+            ),
+            foregroundDecoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.dark,
+                      HoverShape.circle,
+                    )
+                  : null,
+              shape: HoverShape.circle,
               borderRadius: _playToggleRadius,
-              child: Container(
-                width: _playToggleSize,
-                height: _playToggleSize,
-                decoration: BoxDecoration(
-                  color: Palette.coral,
-                  shape: BoxShape.circle,
-                  border: context.shadows.outline,
-                ),
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(
-                      left: _playToggleGlyphOffset,
-                    ),
-                    child: PlayPauseGlyph(
-                      playing: false,
-                      color: FieldNotesColors.light.cardBright,
-                    ),
-                  ),
+            ),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(left: _playToggleGlyphOffset),
+                child: PlayPauseGlyph(
+                  playing: false,
+                  color: FieldNotesColors.light.cardBright,
                 ),
               ),
             ),
