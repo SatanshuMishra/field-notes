@@ -633,15 +633,18 @@ class LiveAudioCapture {
       _queue(take, whole, writing: false);
       return;
     }
+    final bool firstSinceWritingBegan = take.trimPending;
     final Uint8List kept = _afterWritingBegan(take, whole, now);
     if (kept.isEmpty) {
       return;
     }
-    if (now - take.lastWrittenAt > _gapLongerThan) {
-      _queueSilence(
-        take,
-        now - _durationOf(_samplesOf(kept)) - take.lastWrittenAt,
-      );
+    final Duration gap =
+        now - _durationOf(_samplesOf(kept)) - take.lastWrittenAt;
+    final bool chunksStopped = firstSinceWritingBegan
+        ? gap > _gapLongerThan
+        : now - take.lastWrittenAt > _gapLongerThan;
+    if (chunksStopped) {
+      _queueSilence(take, gap);
     }
     _queue(take, kept, writing: true);
     take.lastWrittenAt = now;
