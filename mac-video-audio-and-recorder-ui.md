@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T04:17:49.468Z
+Updated: 2026-10-19T04:24:34.199Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Interphase bug pathway grounding, before the interview. Causes found: (a) macOS 
 
 ## Next step
 
-Run pipeline feature-branch for slug mac-video-audio-and-recorder-ui (type fix), write the run home at ~/.mitosis/field-notes/mac-video-audio-and-recorder-ui (CHARTER.md, worker-rules.txt, dispatch.zsh, run.zsh, items.json, graph.json), run --plan-only, then start the first build.
+First mitosis build is running in the background from ~/.mitosis/field-notes/mac-video-audio-and-recorder-ui/run.zsh (output build-1.out); when it ends, read its last JSON line, resume any MSP not committed once, then start Stage 3 review round 1 for all four MSPs. Steps were re-cut before the build so no file crosses MSPs (voice-warm-microphone and sweep-recorder-sheets added; shared-pressable and move-anchored-dropdown moved to hearing-and-ring); plan-only shows 4 MSPs stacked mic-recovery > video-starts-like-a-camera > hearing-and-ring > button-consistency.
 
 Needs: D1, R1.
 
