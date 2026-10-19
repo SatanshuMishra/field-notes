@@ -40,6 +40,8 @@ class FakeMicrophone extends Fake implements AudioRecorder {
   final List<String> events;
   final bool granted;
   final List<RecordConfig> startStreamConfigs = <RecordConfig>[];
+  bool hang = false;
+  int streamsOpened = 0;
   StreamController<Uint8List>? _chunks;
 
   void push(Uint8List chunk) => _chunks?.add(chunk);
@@ -53,6 +55,11 @@ class FakeMicrophone extends Fake implements AudioRecorder {
   Future<Stream<Uint8List>> startStream(RecordConfig config) async {
     startStreamConfigs.add(config);
     events.add('mic.start');
+    if (hang) {
+      hang = false;
+      return Completer<Stream<Uint8List>>().future;
+    }
+    streamsOpened += 1;
     final StreamController<Uint8List> chunks = StreamController<Uint8List>();
     _chunks = chunks;
     return chunks.stream;

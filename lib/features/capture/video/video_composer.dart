@@ -700,6 +700,10 @@ class _VideoComposerConnectorState
       await _cancelVoice(_voice);
       return;
     }
+    await _cancelVideo();
+  }
+
+  Future<void> _cancelVideo() async {
     try {
       await _recorder.cancel();
     } catch (error, stackTrace) {
@@ -819,21 +823,29 @@ class _VideoComposerConnectorState
     }
   }
 
+  Future<void> _endUnkeptTake() async {
+    final bool takeRunning =
+        _phase == VideoRecorderPhase.recording ||
+        _phase == VideoRecorderPhase.paused ||
+        _phase == VideoRecorderPhase.arming;
+    if (_closing || !takeRunning) {
+      return;
+    }
+    final VoiceRecorder? voice = _voiceRecorder;
+    if (_cameraOn) {
+      await _cancelVideo();
+    } else if (voice != null) {
+      await _cancelVoice(voice);
+    }
+  }
+
   @override
   void dispose() {
     _cancelBreath();
     _cancelTimers();
     _stopTicker();
-    final VoiceRecorder? voice = _voiceRecorder;
-    if (voice != null &&
-        !_closing &&
-        !_cameraOn &&
-        (_phase == VideoRecorderPhase.recording ||
-            _phase == VideoRecorderPhase.paused)) {
-      unawaited(_cancelVoice(voice));
-    }
     _wakeHold.dispose();
-    unawaited(_release());
+    unawaited(_endUnkeptTake().whenComplete(_release));
     super.dispose();
   }
 
