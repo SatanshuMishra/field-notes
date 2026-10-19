@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: parked
-Updated: 2026-10-19T00:06:56.022Z
+Updated: 2026-10-19T02:48:08.311Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -17,11 +17,11 @@ On macOS the ad-hoc signed app asks for login-keychain access once per stored it
 
 ## Where things stand
 
-Shipped: PR #326 (mitosis/mac-keychain at 3da3bb99 into FEATURE branch fix/mac-keychain-single-item) is open and waits for the owner's review and merge. Review round 1 was green.
+Integration: PR #326 merged into FEATURE branch fix/mac-keychain-single-item; pipeline integration-ready reports ready.
 
 ## Next step
 
-When the owner says PR #326 merged, start Integration: resume this thread, Sync, run pipeline integration-ready, then lighthouse:test on fix/mac-keychain-single-item against main.
+Run lighthouse:test run 1 with --core main --feature fix/mac-keychain-single-item --spec docs/specs/mac-keychain-single-item.md --results ~/.mitosis/fireplace/mac-keychain-single-item/lighthouse/run-1.
 
 Needs: D2, R1.
 
