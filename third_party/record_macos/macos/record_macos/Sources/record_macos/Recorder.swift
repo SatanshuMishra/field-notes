@@ -14,12 +14,20 @@ class Recorder {
 
   private var m_delegate: AudioRecordingDelegate?
   private var m_configChangedChannel: FlutterMethodChannel?
+  private let m_capturedAudioReporter: CapturedAudioReporter?
 
-  init(queue: DispatchQueue, stateEventHandler: StateStreamHandler, recordEventHandler: RecordStreamHandler, configChangedChannel: FlutterMethodChannel? = nil) {
+  init(
+    queue: DispatchQueue,
+    stateEventHandler: StateStreamHandler,
+    recordEventHandler: RecordStreamHandler,
+    configChangedChannel: FlutterMethodChannel? = nil,
+    capturedAudioReporter: CapturedAudioReporter? = nil
+  ) {
     m_queue = queue
     m_stateEventHandler = stateEventHandler
     m_recordEventHandler = recordEventHandler
     m_configChangedChannel = configChangedChannel
+    m_capturedAudioReporter = capturedAudioReporter
   }
 
   // MARK: - All methods below are called on m_queue (via withRecorder in the plugin)
@@ -57,6 +65,7 @@ class Recorder {
     let delegate = RecorderStreamDelegate(
       queue: m_queue,
       keepStart: keepStart,
+      onCaptured: { [weak self] captured in self?.m_capturedAudioReporter?.report(captured) },
       onRecord: { [weak self] in self?.updateState(.record) },
       onPause:  { [weak self] in self?.updateState(.pause)  },
       onStop:   { [weak self] in self?.updateState(.stop)   }

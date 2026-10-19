@@ -1153,27 +1153,49 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     }
     
     public func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
+        reportMovieStart(firstFrameOnHost: estimatedFirstFrameOnHost(of: output))
+    }
+
+    @available(macOS 15.2, *)
+    public func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, startPTS: CMTime, from connections: [AVCaptureConnection]) {
+        reportMovieStart(firstFrameOnHost: onHostClock(startPTS))
+    }
+
+    private func reportMovieStart(firstFrameOnHost: CMTime) {
         DispatchQueue.main.async {
             self.outputChannel?.invokeMethod(
                 "onVideoRecordingStarted",
-                arguments: ["firstFrameAgeMs": self.firstFrameAgeMs(of: output)]
+                arguments: self.movieStartArguments(firstFrameOnHost: firstFrameOnHost)
             )
         }
     }
 
-    private func firstFrameAgeMs(of output: AVCaptureFileOutput) -> Double {
+    private func estimatedFirstFrameOnHost(of output: AVCaptureFileOutput) -> CMTime {
         guard latestFrameCapturedAt.isNumeric else {
-            return 0
+            return .invalid
         }
-        let hostClock = CMClockGetHostTimeClock()
-        let latestOnHost = CMSyncConvertTime(latestFrameCapturedAt, from: captureClock(), to: hostClock)
+        let latestOnHost = onHostClock(latestFrameCapturedAt)
         let recorded = output.recordedDuration
-        let firstFrame = recorded.isNumeric ? latestOnHost - recorded : latestOnHost
-        let ageMs = CMTimeGetSeconds(CMClockGetTime(hostClock) - firstFrame) * 1000
-        guard ageMs.isFinite else {
-            return 0
+        return recorded.isNumeric ? latestOnHost - recorded : latestOnHost
+    }
+
+    private func onHostClock(_ captureTime: CMTime) -> CMTime {
+        CMSyncConvertTime(captureTime, from: captureClock(), to: CMClockGetHostTimeClock())
+    }
+
+    private func movieStartArguments(firstFrameOnHost: CMTime) -> [String: Any] {
+        guard firstFrameOnHost.isNumeric else {
+            return [:]
         }
-        return min(max(ageMs, 0), longestFirstFrameAgeMs)
+        let ageMs = CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()) - firstFrameOnHost) * 1000
+        guard ageMs.isFinite else {
+            return [:]
+        }
+        let capturedAt = CMTimeConvertScale(firstFrameOnHost, timescale: 1_000_000_000, method: .roundHalfAwayFromZero)
+        return [
+            "firstFrameAgeMs": min(max(ageMs, 0), longestFirstFrameAgeMs),
+            "firstFrameCapturedAtNs": capturedAt.value,
+        ]
     }
 
     private func captureClock() -> CMClock {

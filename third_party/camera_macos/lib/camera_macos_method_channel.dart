@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:camera_macos/camera_macos_arguments.dart';
 import 'package:camera_macos/camera_macos_device.dart';
 import 'package:camera_macos/camera_macos_file.dart';
+import 'package:camera_macos/camera_macos_movie_start.dart';
 import 'package:camera_macos/exceptions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -23,11 +24,12 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
 
   Map<String, Function?> registeredCallbacks = {};
 
-  late final StreamController<Duration> _videoRecordingStarted =
-      StreamController<Duration>.broadcast(onListen: _listenForCalls);
+  late final StreamController<CameraMacOSMovieStart> _videoRecordingStarted =
+      StreamController<CameraMacOSMovieStart>.broadcast(onListen: _listenForCalls);
 
   @override
-  Stream<Duration> get videoRecordingStarted => _videoRecordingStarted.stream;
+  Stream<CameraMacOSMovieStart> get videoRecordingStarted =>
+      _videoRecordingStarted.stream;
 
   void _listenForCalls() {
     if (!methodCallHandlerSet) {
@@ -274,7 +276,7 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
   Future<void> _genericMethodCallHandler(MethodCall call) async {
     switch (call.method) {
       case "onVideoRecordingStarted":
-        _videoRecordingStarted.add(_firstFrameAgeOf(call.arguments));
+        _videoRecordingStarted.add(CameraMacOSMovieStart.fromArguments(call.arguments));
         break;
       case "onVideoRecordingFinished":
         isRecording = false;
@@ -397,12 +399,4 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
       },
     );
   }
-}
-
-Duration _firstFrameAgeOf(Object? arguments) {
-  final Object? milliseconds =
-      arguments is Map ? arguments['firstFrameAgeMs'] : null;
-  return milliseconds is num
-      ? Duration(microseconds: (milliseconds * 1000).round())
-      : Duration.zero;
 }

@@ -33,3 +33,33 @@ public class RecordStreamHandler: NSObject, FlutterStreamHandler {
     return nil
   }
 }
+
+struct CapturedAudio {
+  let firstFrame: Int64
+  let frames: Int
+  let capturedAtNs: Int64
+}
+
+typealias CapturedAudioReport = (CapturedAudio) -> ()
+
+class CapturedAudioReporter {
+  static let channelName = "com.llfbandit.record/streamClock"
+
+  private let m_channel: FlutterMethodChannel
+  private let m_recorderId: String
+
+  init(channel: FlutterMethodChannel, recorderId: String) {
+    m_channel = channel
+    m_recorderId = recorderId
+  }
+
+  func report(_ captured: CapturedAudio) {
+    let arguments: [String: Any] = [
+      "recorderId": m_recorderId,
+      "firstFrame": captured.firstFrame,
+      "frames": captured.frames,
+      "capturedAtNs": captured.capturedAtNs,
+    ]
+    DispatchQueue.main.async { self.m_channel.invokeMethod("captured", arguments: arguments) }
+  }
+}

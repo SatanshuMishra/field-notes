@@ -45,11 +45,10 @@ class AudioStreamProcessor {
 
   /// Converts, tracks amplitude, and encodes one tap buffer.
   /// Returns `nil` on unrecoverable conversion error (caller should stop recording).
-  /// Returns `[]` when the encoder is buffering (e.g. AAC waiting for a full frame).
-  func process(buffer: AVAudioPCMBuffer) -> [Data]? {
+  func process(buffer: AVAudioPCMBuffer) -> (data: [Data], frames: Int)? {
     guard let converted = convertBuffer(buffer) else { return nil }
     updateAmplitude(converted)
-    return m_encoder.encode(buffer: converted)
+    return (m_encoder.encode(buffer: converted), Int(converted.frameLength))
   }
 
   func getAmplitude() -> Float { m_amplitude }
