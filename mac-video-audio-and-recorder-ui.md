@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T06:19:59.653Z
+Updated: 2026-10-19T06:21:04.130Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Pipeline stage 3, mic-recovery review round 2 starting. Round 1's three diagnoses were all fixable and the fix pass is committed on mitosis/mic-recovery (baddf499..4bc29001), each blocker with a receipt test that failed first: C1 a take kept while paused now ends where the pause began; C3 the watchdog ignores a check that ran late and gaps are judged only after a stall's queued chunks drain (the selecting check finds 5 instances before, 0 after); U1-U2 both composers end an unkept take on dispose (an I4 assumption line, since hearing-and-ring owns those files later); advisories C4 (_stopWatching, _closeEncoder), S1 and S4 (one configure routine in RecorderStreamDelegate.swift that always holds to the chosen input, so a dropped headset leaves the take lost and warned instead of silently recording the built-in mic). Capture and accessibility tests 1256/1256, analyze clean, macOS debug build passes. Round 1 verdict after diagnoses: loop. mic-recovery is merged into hearing-and-ring; the merge into video-starts-like-a-camera waits for its Lane 3 (warm-microphone, still running in the resume). Known gap outside the class: a dead stretch just before a pause is dropped if the take is resumed rather than kept. Smoke runs happen once on the top of the stack after all four MSPs build. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it, so a take saves under a second of sound; (b) camera_macos replies "started" before the movie begins, so every take holds about 1.05 s of sound recorded before the picture.
+Pipeline stage 3. mic-recovery is in review round 2: its round 1 fix pass (C1, C3, U1, U2 and advisories C4, S1, S4) is committed at 4bc29001, and the full suite at that head is running before the reviewers start. mic-recovery is merged into hearing-and-ring; its merge into video-starts-like-a-camera waits for that MSP's Lane 3 (warm-microphone), still running in the resume. Known gap outside the fixed classes: a dead stretch just before a pause is dropped if the take is resumed rather than kept. Smoke runs happen once on the top of the stack after all four MSPs build. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it, so a take saves under a second of sound; (b) camera_macos replies "started" before the movie begins, so every take holds about 1.05 s of sound recorded before the picture.
 
 ## Next step
 
