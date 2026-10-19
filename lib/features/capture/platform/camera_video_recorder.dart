@@ -1471,6 +1471,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   Timer? _movieStartWait;
   bool _destroyRequested = false;
   bool _aborted = false;
+  bool _movieBegun = false;
+  bool _paused = false;
   _OwnedCaptures _owned = const _OwnedCaptures();
 
   @override
@@ -1506,6 +1508,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     await _confirm(
       (CameraMacOSController controller) => controller.pauseRecording(),
     );
+    _paused = true;
     _elapsed.stop();
     await _sound.pause();
   }
@@ -1515,7 +1518,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     await _confirm(
       (CameraMacOSController controller) => controller.resumeRecording(),
     );
-    _elapsed.start();
+    _paused = false;
+    _runClockWhileFilming();
     await _sound.resume();
   }
 
@@ -1646,6 +1650,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       throw const VideoRecorderException(videoStartMessage);
     }
     _aborted = false;
+    _movieBegun = false;
+    _paused = false;
     try {
       await _sound.ensureArmed(_soundInputWithId(_audioDeviceId));
       await _startCamera(ready);
@@ -1681,9 +1687,15 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     }
     _stopWaitingForMovieStart();
     _sound.beginWriting();
-    _elapsed
-      ..reset()
-      ..start();
+    _movieBegun = true;
+    _elapsed.reset();
+    _runClockWhileFilming();
+  }
+
+  void _runClockWhileFilming() {
+    if (_movieBegun && !_paused) {
+      _elapsed.start();
+    }
   }
 
   void _stopWaitingForMovieStart() {
