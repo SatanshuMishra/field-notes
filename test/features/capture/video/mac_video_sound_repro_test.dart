@@ -8,8 +8,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import '../audio/live_audio_test_support.dart';
+import 'video_test_support.dart' show cameraMacosChannel, sendMacMovieStart;
 
-const MethodChannel _cameraMacosChannel = MethodChannel('camera_macos');
 const String _cameraName = 'cam-0';
 const List<int> _pictureBytes = <int>[0, 0, 0, 24];
 const int _sampleRate = 48000;
@@ -75,17 +75,6 @@ Duration _soundWritten(FakeLiveAudio liveAudio) => Duration(
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
-Future<void> _movieBegan() => TestDefaultBinaryMessengerBinding
-    .instance
-    .defaultBinaryMessenger
-    .handlePlatformMessage(
-      _cameraMacosChannel.name,
-      _cameraMacosChannel.codec.encodeMethodCall(
-        const MethodCall('onVideoRecordingStarted'),
-      ),
-      (ByteData? _) {},
-    );
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -96,12 +85,12 @@ void main() {
     root = Directory.systemTemp.createTempSync('mac_video_sound_repro_');
     bench = _MacBench(root);
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_cameraMacosChannel, bench.cameraMacos);
+        .setMockMethodCallHandler(cameraMacosChannel, bench.cameraMacos);
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_cameraMacosChannel, null);
+        .setMockMethodCallHandler(cameraMacosChannel, null);
     if (root.existsSync()) {
       root.deleteSync(recursive: true);
     }
@@ -111,7 +100,7 @@ void main() {
       'for the whole picture', () async {
     final VideoRecorder recorder = bench.recorder();
     await recorder.start();
-    await _movieBegan();
+    await sendMacMovieStart();
     bench.mic.push(silentPcm(_firstChunkSamples));
     await _settle();
 
@@ -142,7 +131,7 @@ void main() {
       bench.mic.push(silentPcm(_sampleRate));
       await _settle();
 
-      await _movieBegan();
+      await sendMacMovieStart();
       bench.skip(const Duration(seconds: 2));
       bench.mic.push(silentPcm(_sampleRate * 2));
       await _settle();

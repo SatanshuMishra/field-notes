@@ -280,6 +280,19 @@ class _LiveSound {
     }
   }
 
+  Future<void> warmQuietly({
+    required Future<AudioInput> Function() input,
+    required Future<bool> Function() permission,
+  }) async {
+    try {
+      await warm(input: input, permission: permission);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'The microphone did not open with the preview: $error\n$stackTrace',
+      );
+    }
+  }
+
   Future<void> ensureArmed(AudioInput input) async {
     final int epoch = ++_epoch;
     _takeArming = true;
@@ -541,15 +554,8 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   @override
   MicrophoneHearing get hearingNow => _sound.hearingNow;
 
-  Future<void> _warmMicrophone() async {
-    try {
-      await _sound.warm(input: _soundInput, permission: _sound.hasPermission);
-    } catch (error, stackTrace) {
-      debugPrint(
-        'The microphone did not open with the preview: $error\n$stackTrace',
-      );
-    }
-  }
+  Future<void> _warmMicrophone() =>
+      _sound.warmQuietly(input: _soundInput, permission: _sound.hasPermission);
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
@@ -1471,6 +1477,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   Timer? _movieStartWait;
   bool _destroyRequested = false;
   bool _aborted = false;
+  bool _movieBegun = false;
+  bool _paused = false;
   _OwnedCaptures _owned = const _OwnedCaptures();
 
   @override
@@ -1488,24 +1496,17 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   @override
   bool get supportsPause => true;
 
-  Future<void> _warmMicrophone() async {
-    try {
-      await _sound.warm(
-        input: () async => _soundInputWithId(_audioDeviceId),
-        permission: _microphonePermission ?? _sound.hasPermission,
-      );
-    } catch (error, stackTrace) {
-      debugPrint(
-        'The microphone did not open with the preview: $error\n$stackTrace',
-      );
-    }
-  }
+  Future<void> _warmMicrophone() => _sound.warmQuietly(
+    input: () async => _soundInputWithId(_audioDeviceId),
+    permission: _microphonePermission ?? _sound.hasPermission,
+  );
 
   @override
   Future<void> pause() async {
     await _confirm(
       (CameraMacOSController controller) => controller.pauseRecording(),
     );
+    _paused = true;
     _elapsed.stop();
     await _sound.pause();
   }
@@ -1515,7 +1516,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     await _confirm(
       (CameraMacOSController controller) => controller.resumeRecording(),
     );
-    _elapsed.start();
+    _paused = false;
+    _runClockWhileFilming();
     await _sound.resume();
   }
 
@@ -1646,6 +1648,11 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       throw const VideoRecorderException(videoStartMessage);
     }
     _aborted = false;
+    _movieBegun = false;
+    _paused = false;
+    _elapsed
+      ..stop()
+      ..reset();
     try {
       await _sound.ensureArmed(_soundInputWithId(_audioDeviceId));
       await _startCamera(ready);
@@ -1681,9 +1688,15 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     }
     _stopWaitingForMovieStart();
     _sound.beginWriting();
-    _elapsed
-      ..reset()
-      ..start();
+    _movieBegun = true;
+    _elapsed.reset();
+    _runClockWhileFilming();
+  }
+
+  void _runClockWhileFilming() {
+    if (_movieBegun && !_paused) {
+      _elapsed.start();
+    }
   }
 
   void _stopWaitingForMovieStart() {
