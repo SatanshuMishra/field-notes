@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T17:25:05.348Z
+Updated: 2026-10-19T17:25:07.856Z
 Next ids: c5 D4 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Shipped: four stacked pull requests are open and assigned to the owner, ready fo
 
 ## Next step
 
-The owner starts Integration by saying the MSP pull requests merged; before that, once the owner answers the two macOS dialogs, read harness/runs/r2-builtin-*.out and measure each take with ffprobe (audio stream present, audio and video starts and durations within 60 ms) to prove c1 and c2.
+The owner starts Integration by saying the MSP pull requests merged; before that, with the owner at the Mac, record a take in field_notes_repro during which the owner claps on camera, and measure the frame where the hands meet against the sound onset to settle c2; repeat with the HS80 connected to settle c1.
 
 Needs: D2, D3, R1.
 
