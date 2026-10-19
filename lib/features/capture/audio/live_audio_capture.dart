@@ -12,6 +12,7 @@ import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/audio/natural_voice_chain.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:record/record.dart';
 
 const int liveAudioSampleRate = 48000;
@@ -29,7 +30,7 @@ const Duration _openWithin = Duration(seconds: 2);
 const Duration _silentFor = Duration(seconds: 2);
 const Duration _lostAfter = Duration(milliseconds: 500);
 const Duration _gapLongerThan = Duration(milliseconds: 500);
-const Duration _watchdogRanLateBy = Duration(milliseconds: 50);
+const Duration _timerRanLateBy = Duration(milliseconds: 50);
 const Duration _afterStallGrace = Duration(milliseconds: 100);
 const Duration _releaseWithin = Duration(seconds: 2);
 const double _fullScale = 32768;
@@ -249,6 +250,21 @@ RecordConfig liveAudioRecordConfig(AudioInput input) {
   );
 }
 
+class _DueTimer {
+  Timer? _timer;
+  Duration _dueAt = Duration.zero;
+
+  void start(Duration now, Duration wait, void Function() fire) {
+    _timer?.cancel();
+    _dueAt = now + wait;
+    _timer = Timer(wait, fire);
+  }
+
+  bool ranLate(Duration now) => now - _dueAt > _timerRanLateBy;
+
+  void cancel() => _timer?.cancel();
+}
+
 class _ActiveTake {
   _ActiveTake({
     required this.recorder,
@@ -272,10 +288,9 @@ class _ActiveTake {
   final RecordConfig config;
   final Completer<void> opened = Completer<void>();
   StreamSubscription<Uint8List>? chunks;
-  Timer? watchdog;
-  Duration watchdogDueAt = Duration.zero;
-  Timer? settling;
-  Duration settlingDueAt = Duration.zero;
+  final _DueTimer watchdog = _DueTimer();
+  final _DueTimer settling = _DueTimer();
+  bool reopenFailureLogged = false;
   Duration? gapFrom;
   List<Uint8List> afterGap = <Uint8List>[];
   Future<void> tail = Future<void>.value();
@@ -329,6 +344,12 @@ bool _isDigitalSilence(Uint8List pcm) {
   }
   return true;
 }
+
+String _reasonOf(Object error) => switch (error) {
+  PlatformException(:final String code, :final String? message) =>
+    '$code: $message',
+  _ => '${error.runtimeType}',
+};
 
 bool _saysMicrophoneStopped(Object error) =>
     '$error'.contains(_microphoneStopped);
@@ -458,7 +479,10 @@ class LiveAudioCapture {
         take.opened.completeError(error, stackTrace);
         return;
       }
-      debugPrint('Live audio microphone reopen failed: $error\n$stackTrace');
+      if (!take.reopenFailureLogged) {
+        take.reopenFailureLogged = true;
+        debugPrint('Live audio microphone reopen failed: ${_reasonOf(error)}');
+      }
       return;
     }
     if (attempt != take.attempt || take.closing) {
@@ -488,26 +512,25 @@ class LiveAudioCapture {
 
   void _stopWatching(_ActiveTake take) {
     take.closing = true;
-    take.watchdog?.cancel();
-    take.settling?.cancel();
+    take.watchdog.cancel();
+    take.settling.cancel();
     if (!take.opened.isCompleted) {
       take.opened.complete();
     }
   }
 
   void _watch(_ActiveTake take) {
-    take.watchdog?.cancel();
+    take.watchdog.cancel();
     if (take.closing || take.paused) {
       return;
     }
     final Duration now = _clock();
     final Duration wait = _dueAt(take) - now;
-    _arm(take, wait.isNegative ? Duration.zero : wait, now);
-  }
-
-  void _arm(_ActiveTake take, Duration wait, Duration now) {
-    take.watchdogDueAt = now + wait;
-    take.watchdog = Timer(wait, () => _check(take));
+    take.watchdog.start(
+      now,
+      wait.isNegative ? Duration.zero : wait,
+      () => _check(take),
+    );
   }
 
   Duration _dueAt(_ActiveTake take) {
@@ -523,8 +546,8 @@ class LiveAudioCapture {
       return;
     }
     final Duration now = _clock();
-    if (now - take.watchdogDueAt > _watchdogRanLateBy) {
-      _arm(take, _afterStallGrace, now);
+    if (take.watchdog.ranLate(now)) {
+      take.watchdog.start(now, _afterStallGrace, () => _check(take));
       return;
     }
     if (now < _dueAt(take)) {
@@ -607,7 +630,7 @@ class LiveAudioCapture {
       take.pausedAt = _clock();
     }
     take.paused = true;
-    take.watchdog?.cancel();
+    take.watchdog.cancel();
     _settleGap(take);
     if (take.streamOpen) {
       await take.recorder.pause();
@@ -677,10 +700,9 @@ class LiveAudioCapture {
   }
 
   void _armSettling(_ActiveTake take, Duration now) {
-    take.settlingDueAt = now + _afterStallGrace;
-    take.settling = Timer(_afterStallGrace, () {
+    take.settling.start(now, _afterStallGrace, () {
       final Duration ranAt = _clock();
-      if (ranAt - take.settlingDueAt > _watchdogRanLateBy) {
+      if (take.settling.ranLate(ranAt)) {
         _armSettling(take, ranAt);
         return;
       }
@@ -689,7 +711,7 @@ class LiveAudioCapture {
   }
 
   void _settleGap(_ActiveTake take) {
-    take.settling?.cancel();
+    take.settling.cancel();
     final Duration? gapFrom = take.gapFrom;
     if (gapFrom == null) {
       return;
