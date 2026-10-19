@@ -11,6 +11,7 @@ const Duration _chunkEvery = Duration(milliseconds: 100);
 const int _samplesPerChunk = 4800;
 const Duration _step = Duration(milliseconds: 10);
 const Duration _reopenWithin = Duration(milliseconds: 600);
+const Duration _lostAfterStall = Duration(milliseconds: 500);
 
 int _samplesIn(Duration span) =>
     span.inMicroseconds * liveAudioSampleRate ~/ Duration.microsecondsPerSecond;
@@ -85,23 +86,28 @@ void main() {
   for (final ({
         String name,
         Duration aheadBy,
-        Duration timersRunFor,
+        bool watchdogRunsFirst,
         int heldChunks,
       })
       stall
       in <
-        ({String name, Duration aheadBy, Duration timersRunFor, int heldChunks})
+        ({
+          String name,
+          Duration aheadBy,
+          bool watchdogRunsFirst,
+          int heldChunks,
+        })
       >[
         (
           name: 'the held chunks arrive first',
           aheadBy: const Duration(milliseconds: 800),
-          timersRunFor: Duration.zero,
+          watchdogRunsFirst: false,
           heldChunks: 8,
         ),
         (
           name: 'the watchdog runs late first',
           aheadBy: const Duration(milliseconds: 800),
-          timersRunFor: const Duration(milliseconds: 500),
+          watchdogRunsFirst: true,
           heldChunks: 13,
         ),
       ]) {
@@ -143,7 +149,17 @@ void main() {
 
           speak(10, onTime: true);
           ahead = stall.aheadBy;
-          async.elapse(stall.timersRunFor);
+          final Duration stallEnds = async.elapsed + _lostAfterStall;
+          bool watchdogRan() =>
+              microphones.length > 1 ||
+              async.pendingTimers.any(
+                (FakeTimer timer) => timer.duration < _chunkEvery * 2,
+              );
+          while (stall.watchdogRunsFirst &&
+              !watchdogRan() &&
+              async.elapsed < stallEnds) {
+            async.elapse(_step);
+          }
           speak(stall.heldChunks, onTime: false);
           speak(10, onTime: true);
 
