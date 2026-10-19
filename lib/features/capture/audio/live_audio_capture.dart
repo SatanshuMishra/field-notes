@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:clock/clock.dart';
+import 'package:field_notes/data/media/captured_audio.dart';
 import 'package:field_notes/data/media/live_audio_channel.dart';
 import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
@@ -33,6 +34,9 @@ const Duration _gapLongerThan = Duration(milliseconds: 500);
 const Duration _timerRanLateBy = Duration(milliseconds: 50);
 const Duration _afterStallGrace = Duration(milliseconds: 100);
 const Duration _releaseWithin = Duration(seconds: 2);
+const Duration _longestPictureLead = Duration(seconds: 1);
+const int _mostSamplesInFlight = liveAudioSampleRate;
+const int _nanosecondsPerSecond = 1000000000;
 const double _fullScale = 32768;
 const double _digitalSilenceDbfs = -70;
 const String _microphoneStopped = 'microphone stopped';
@@ -53,6 +57,15 @@ typedef VoiceChainRunner = Future<RunningVoiceChain> Function({
   required InputProfile profile,
   required int volume,
 });
+
+class PictureStart {
+  const PictureStart({this.ago = Duration.zero, this.capturedAtNs});
+
+  final Duration ago;
+  final int? capturedAtNs;
+
+  Duration get lead => ago > _longestPictureLead ? _longestPictureLead : ago;
+}
 
 class LiveAudioTake {
   const LiveAudioTake({required this.path, required this.durationMs});
@@ -277,6 +290,7 @@ class _ActiveTake {
   }) : outputToSkip = chain.delaySamples,
        studio = NaturalVoiceChain(profile: InputProfile.studio, volume: volume),
        attemptAt = now,
+       pictureStartedAt = now,
        lastChunkAt = now,
        writingFrom = now,
        lastWrittenAt = now;
@@ -288,6 +302,7 @@ class _ActiveTake {
   final RecordConfig config;
   final Completer<void> opened = Completer<void>();
   StreamSubscription<Uint8List>? chunks;
+  StreamSubscription<CapturedAudio>? captureTimes;
   final _DueTimer watchdog = _DueTimer();
   final _DueTimer settling = _DueTimer();
   bool reopenFailureLogged = false;
@@ -308,6 +323,7 @@ class _ActiveTake {
   Duration lastChunkAt;
   Duration? quietSince;
   Duration writingFrom;
+  Duration pictureStartedAt;
   Duration lastWrittenAt;
   Uint8List untaken = Uint8List(0);
   Uint8List carriedByte = Uint8List(0);
@@ -315,6 +331,10 @@ class _ActiveTake {
   int samplesHeard = 0;
   int samplesSent = 0;
   int samplesWritten = 0;
+  int samplesReceived = 0;
+  int? writeFromSample;
+  Map<String, CapturedAudio> latestCaptured = <String, CapturedAudio>{};
+  Set<String> startedThisAttempt = <String>{};
 
   Uint8List wholeSamplesOf(Uint8List chunk) {
     final Uint8List joined = _joined(carriedByte, chunk);
@@ -334,6 +354,9 @@ int _samplesIn(Duration span) =>
     span.inMicroseconds * liveAudioSampleRate ~/ Duration.microsecondsPerSecond;
 
 int _samplesOf(Uint8List pcm) => pcm.lengthInBytes ~/ _bytesPerSample;
+
+int _samplesBetween(int fromNs, int toNs) =>
+    ((toNs - fromNs) * liveAudioSampleRate / _nanosecondsPerSecond).round();
 
 bool _isDigitalSilence(Uint8List pcm) {
   final ByteData samples = ByteData.sublistView(pcm);
@@ -364,12 +387,14 @@ class LiveAudioCapture {
     this._recorderFactory = AudioRecorder.new,
     this._encoder = const LiveEncoder(),
     this._chainRunner = runVoiceChainInIsolate,
+    this._captureTimes = const Stream<CapturedAudio>.empty(),
     Duration Function()? clock,
   }) : _clock = clock ?? _stopwatchClock();
 
   final AudioRecorderFactory _recorderFactory;
   final LiveEncoder _encoder;
   final VoiceChainRunner _chainRunner;
+  final Stream<CapturedAudio> _captureTimes;
   final Duration Function() _clock;
   final StreamController<double> _levels = StreamController<double>.broadcast();
   late final Stream<double> _levelStream = _levels.stream;
@@ -450,6 +475,9 @@ class LiveAudioCapture {
       now: _clock(),
     );
     _take = take;
+    take.captureTimes = _captureTimes.listen(
+      (CapturedAudio captured) => _noteCaptured(take, captured),
+    );
     _hear(MicrophoneHearing.opening);
     _watch(take);
     unawaited(_open(take, recorder, take.attempt));
@@ -512,6 +540,7 @@ class LiveAudioCapture {
 
   void _stopWatching(_ActiveTake take) {
     take.closing = true;
+    unawaited(_quietly(() async => take.captureTimes?.cancel()));
     take.watchdog.cancel();
     take.settling.cancel();
     if (!take.opened.isCompleted) {
@@ -575,7 +604,11 @@ class LiveAudioCapture {
       ..heardSinceAttempt = false
       ..quietSince = null
       ..carriedByte = Uint8List(0)
+      ..samplesReceived = 0
+      ..latestCaptured = <String, CapturedAudio>{}
+      ..startedThisAttempt = <String>{}
       ..attemptAt = _clock();
+    _placeTrimOnTheClock(take);
     unawaited(_quietly(() async => listening?.cancel()));
     unawaited(_quietly(dropped.cancel));
     unawaited(_quietly(dropped.dispose));
@@ -584,6 +617,17 @@ class LiveAudioCapture {
     _recorder = fresh;
     unawaited(_open(take, fresh, take.attempt));
     _watch(take);
+  }
+
+  void _placeTrimOnTheClock(_ActiveTake take) {
+    if (!take.trimPending || take.writeFromSample == null) {
+      return;
+    }
+    take
+      ..trimPending = false
+      ..writeFromSample = null
+      ..gapFrom ??= take.pictureStartedAt
+      ..lastWrittenAt = take.pictureStartedAt;
   }
 
   void _failed(
@@ -608,7 +652,7 @@ class LiveAudioCapture {
     _reopen(take);
   }
 
-  void beginWriting() {
+  void beginWriting({PictureStart picture = const PictureStart()}) {
     final _ActiveTake? take = _take;
     if (take == null || take.writing) {
       return;
@@ -618,7 +662,45 @@ class LiveAudioCapture {
       ..writing = true
       ..trimPending = true
       ..writingFrom = now
-      ..lastWrittenAt = now;
+      ..pictureStartedAt = now - picture.lead
+      ..lastWrittenAt = now
+      ..writeFromSample = _sampleCapturedAt(take, picture.capturedAtNs);
+    if (take.writeFromSample != null) {
+      return;
+    }
+    if (picture.lead > Duration.zero) {
+      _queueSilence(take, picture.lead);
+    }
+  }
+
+  int? _sampleCapturedAt(_ActiveTake take, int? capturedAtNs) {
+    final CapturedAudio? own = capturedAtNs == null ? null : _ownCapture(take);
+    if (own == null || capturedAtNs == null) {
+      return null;
+    }
+    return own.firstSample + _samplesBetween(own.capturedAtNs, capturedAtNs);
+  }
+
+  CapturedAudio? _ownCapture(_ActiveTake take) {
+    final List<CapturedAudio> matching = <CapturedAudio>[
+      for (final String recorderId in take.startedThisAttempt)
+        if (take.latestCaptured[recorderId] case final CapturedAudio latest
+            when (latest.endSample - take.samplesReceived).abs() <=
+                _mostSamplesInFlight)
+          latest,
+    ];
+    return matching.length == 1 ? matching.single : null;
+  }
+
+  void _noteCaptured(_ActiveTake take, CapturedAudio captured) {
+    take
+      ..latestCaptured = <String, CapturedAudio>{
+        ...take.latestCaptured,
+        captured.recorderId: captured,
+      }
+      ..startedThisAttempt = captured.firstSample == 0
+          ? <String>{...take.startedThisAttempt, captured.recorderId}
+          : take.startedThisAttempt;
   }
 
   Future<void> pause() async {
@@ -661,6 +743,7 @@ class LiveAudioCapture {
       return;
     }
     final Uint8List whole = take.wholeSamplesOf(chunk);
+    take.samplesReceived += _samplesOf(whole);
     if (take.paused || whole.isEmpty) {
       return;
     }
@@ -689,10 +772,12 @@ class LiveAudioCapture {
         : now - take.lastWrittenAt > _gapLongerThan;
     if (take.gapFrom == null && chunksStopped) {
       take.gapFrom = take.lastWrittenAt;
-      _armSettling(take, now);
     }
     take.lastWrittenAt = now;
     if (take.gapFrom != null) {
+      if (take.afterGap.isEmpty) {
+        _armSettling(take, now);
+      }
       take.afterGap = <Uint8List>[...take.afterGap, kept];
       return;
     }
@@ -752,6 +837,10 @@ class LiveAudioCapture {
     if (!take.trimPending) {
       return pcm;
     }
+    final int? writeFrom = take.writeFromSample;
+    if (writeFrom != null) {
+      return _fromCapturedSample(take, pcm, writeFrom);
+    }
     take.trimPending = false;
     final int samples = _samplesOf(pcm);
     final int kept = _samplesIn(now - take.writingFrom).clamp(0, samples);
@@ -763,9 +852,36 @@ class LiveAudioCapture {
     return Uint8List.sublistView(pcm, splitAt);
   }
 
-  void _queueSilence(_ActiveTake take, Duration span) {
+  Uint8List _fromCapturedSample(
+    _ActiveTake take,
+    Uint8List pcm,
+    int writeFrom,
+  ) {
+    final int last = take.samplesReceived;
+    final int first = last - _samplesOf(pcm);
+    if (writeFrom >= last) {
+      _queue(take, pcm, writing: false);
+      return Uint8List(0);
+    }
+    take.trimPending = false;
+    if (writeFrom <= first) {
+      _queueSilentSamples(
+        take,
+        math.min(first - writeFrom, _samplesIn(_longestPictureLead)),
+      );
+      return pcm;
+    }
+    final int splitAt = (writeFrom - first) * _bytesPerSample;
+    _queue(take, Uint8List.sublistView(pcm, 0, splitAt), writing: false);
+    return Uint8List.sublistView(pcm, splitAt);
+  }
+
+  void _queueSilence(_ActiveTake take, Duration span) =>
+      _queueSilentSamples(take, _samplesIn(span));
+
+  void _queueSilentSamples(_ActiveTake take, int silentSamples) {
     for (
-      int left = _samplesIn(span);
+      int left = silentSamples;
       left > 0;
       left -= _mostSilenceSamplesAtOnce
     ) {

@@ -21,6 +21,9 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
   private let m_bus = 0
   private let m_queue: DispatchQueue
   private let m_keepStart: () -> Bool
+  private let m_onCaptured: CapturedAudioReport
+  private var m_framesSent: Int64 = 0
+  private var m_inputLatencyNs: Int64 = 0
   private var m_onRecord: () -> ()
   private var m_onPause:  () -> ()
   private var m_onStop:   () -> ()
@@ -28,18 +31,21 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
   init(
     queue: DispatchQueue,
     keepStart: @escaping () -> Bool = { true },
+    onCaptured: @escaping CapturedAudioReport = { _ in },
     onRecord: @escaping () -> (),
     onPause:  @escaping () -> (),
     onStop:   @escaping () -> ()
   ) {
     m_queue = queue
     m_keepStart = keepStart
+    m_onCaptured = onCaptured
     m_onRecord = onRecord
     m_onPause  = onPause
     m_onStop   = onStop
   }
 
   func start(config: RecordConfig, recordEventHandler: RecordStreamHandler) throws {
+    m_framesSent = 0
     let engine = AVAudioEngine()
     let processor = try configure(engine: engine, config: config, recordEventHandler: recordEventHandler)
 
@@ -139,8 +145,8 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
       onBus: m_bus,
       bufferSize: AVAudioFrameCount(config.streamBufferSize ?? 1024),
       format: format
-    ) { [weak self] buffer, _ in
-      self?.handleTap(buffer: buffer, recordEventHandler: recordEventHandler)
+    ) { [weak self] buffer, when in
+      self?.handleTap(buffer: buffer, when: when, recordEventHandler: recordEventHandler)
     }
   }
 
@@ -225,6 +231,7 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
         details: "Input has no format."
       )
     }
+    m_inputLatencyNs = nanoseconds(ofFrames: getInputLatencyFrames(device: config.device), sampleRate: srcFormat.sampleRate)
     let processor = try AudioStreamProcessor(config: config, srcFormat: srcFormat)
 
     installTap(engine: engine, config: config, format: srcFormat, recordEventHandler: recordEventHandler)
@@ -246,12 +253,12 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
     DispatchQueue.main.async { sink(error) }
   }
 
-  private func handleTap(buffer: AVAudioPCMBuffer, recordEventHandler: RecordStreamHandler) {
+  private func handleTap(buffer: AVAudioPCMBuffer, when: AVAudioTime, recordEventHandler: RecordStreamHandler) {
     let processor = m_lock.withLock { m_isPaused ? nil : m_processor }
 
     guard let processor else { return }
 
-    guard let dataList = processor.process(buffer: buffer) else {
+    guard let processed = processor.process(buffer: buffer) else {
       let failed = m_lock.withLock { () -> AudioStreamProcessor? in
         guard m_processor === processor else { return nil }
         m_processor = nil
@@ -266,10 +273,30 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
       return
     }
 
+    let firstFrame = m_framesSent
+    m_framesSent += Int64(processed.frames)
+
     guard let sink = recordEventHandler.eventSink else { return }
-    for data in dataList {
+    if let capturedAtNs = capturedAtNs(of: when) {
+      m_onCaptured(CapturedAudio(firstFrame: firstFrame, frames: processed.frames, capturedAtNs: capturedAtNs))
+    }
+    for data in processed.data {
       DispatchQueue.main.async { sink(FlutterStandardTypedData(bytes: data)) }
     }
+  }
+
+  private func capturedAtNs(of when: AVAudioTime) -> Int64? {
+    guard when.isHostTimeValid else { return nil }
+    let reachedHost = CMTimeConvertScale(
+      CMClockMakeHostTimeFromSystemUnits(when.hostTime),
+      timescale: 1_000_000_000,
+      method: .roundHalfAwayFromZero
+    )
+    return reachedHost.value - m_inputLatencyNs
+  }
+
+  private func nanoseconds(ofFrames frames: Int64, sampleRate: Double) -> Int64 {
+    Int64((Double(frames) / sampleRate * 1_000_000_000).rounded())
   }
 
   private func setVoiceProcessing(echoCancel: Bool, autoGain: Bool, audioEngine: AVAudioEngine) throws {

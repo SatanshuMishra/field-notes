@@ -1,5 +1,6 @@
 import 'package:camera_macos/camera_macos_arguments.dart';
 import 'package:camera_macos/camera_macos_file.dart';
+import 'package:camera_macos/camera_macos_movie_start.dart';
 import 'package:camera_macos/camera_macos_method_channel.dart';
 import 'package:camera_macos/camera_macos_platform_interface.dart';
 import 'package:camera_macos/exceptions.dart';
@@ -38,6 +39,9 @@ class CameraMacOSController {
       onVideoRecordingFinished: onVideoRecordingFinished,
     );
   }
+
+  Stream<CameraMacOSMovieStart> get videoRecordingStarted =>
+      _platformInstance.videoRecordingStarted;
 
   /// Call this method to stop video recording and collect the video data.
   Future<CameraMacOSFile?> stopRecording() {

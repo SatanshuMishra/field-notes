@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:camera_macos/camera_macos_arguments.dart';
 import 'package:camera_macos/camera_macos_device.dart';
 import 'package:camera_macos/camera_macos_file.dart';
+import 'package:camera_macos/camera_macos_movie_start.dart';
 import 'package:camera_macos/exceptions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +23,20 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
   bool isDestroyed = false;
 
   Map<String, Function?> registeredCallbacks = {};
+
+  late final StreamController<CameraMacOSMovieStart> _videoRecordingStarted =
+      StreamController<CameraMacOSMovieStart>.broadcast(onListen: _listenForCalls);
+
+  @override
+  Stream<CameraMacOSMovieStart> get videoRecordingStarted =>
+      _videoRecordingStarted.stream;
+
+  void _listenForCalls() {
+    if (!methodCallHandlerSet) {
+      methodChannel.setMethodCallHandler(_genericMethodCallHandler);
+      methodCallHandlerSet = true;
+    }
+  }
 
   bool get isStreamingImageData => events != null && !events!.isPaused;
 
@@ -185,10 +200,7 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
     try {
       registeredCallbacks["onVideoRecordingFinished"] =
           onVideoRecordingFinished;
-      if (!methodCallHandlerSet) {
-        methodChannel.setMethodCallHandler(_genericMethodCallHandler);
-        methodCallHandlerSet = true;
-      }
+      _listenForCalls();
       final Map<String, dynamic>? result =
           await methodChannel.invokeMapMethod<String, dynamic>(
         'startRecording',
@@ -263,6 +275,9 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
 
   Future<void> _genericMethodCallHandler(MethodCall call) async {
     switch (call.method) {
+      case "onVideoRecordingStarted":
+        _videoRecordingStarted.add(CameraMacOSMovieStart.fromArguments(call.arguments));
+        break;
       case "onVideoRecordingFinished":
         isRecording = false;
         if (registeredCallbacks["onVideoRecordingFinished"] != null) {

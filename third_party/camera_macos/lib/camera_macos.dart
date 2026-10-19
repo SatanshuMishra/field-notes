@@ -7,3 +7,4 @@ export 'package:camera_macos/camera_macos_device.dart';
 export 'package:camera_macos/camera_macos_platform_interface.dart';
 export 'package:camera_macos/exceptions.dart';
 export 'package:camera_macos/camera_macos_arguments.dart';
+export 'package:camera_macos/camera_macos_movie_start.dart';

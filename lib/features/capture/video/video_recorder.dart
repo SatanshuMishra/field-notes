@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 
 const String cameraPermissionMessage =
     'Field Notes needs camera and microphone access to record video. Turn them '
@@ -116,6 +117,10 @@ abstract interface class VideoRecorder {
   Duration get elapsed;
 
   Stream<double> get level;
+
+  Stream<MicrophoneHearing> get hearing;
+
+  MicrophoneHearing get hearingNow;
 
   bool get supportsPause;
 

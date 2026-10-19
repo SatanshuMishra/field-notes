@@ -428,7 +428,16 @@ class TrackCopy {
 
   LONGLONG PendingTime() const { return pending_time_; }
 
+  LONGLONG WrittenEnd() const { return written_end_; }
+
   bool WritePending() {
+    LONGLONG duration = 0;
+    if (FAILED(pending_->GetSampleDuration(&duration))) {
+      duration = 0;
+    }
+    if (pending_time_ + duration > written_end_) {
+      written_end_ = pending_time_ + duration;
+    }
     const HRESULT written =
         writer_->WriteSample(writer_stream_, pending_.Get());
     pending_.Reset();
@@ -442,6 +451,7 @@ class TrackCopy {
   DWORD writer_stream_;
   ComPtr<IMFSample> pending_;
   LONGLONG pending_time_ = 0;
+  LONGLONG written_end_ = 0;
   bool ended_ = false;
 };
 
@@ -451,6 +461,10 @@ bool CopyInterleaved(TrackCopy& picture, TrackCopy& sound) {
       return false;
     }
     if (picture.Done() && sound.Done()) {
+      return true;
+    }
+    if (picture.Done() && picture.WrittenEnd() > 0 &&
+        sound.PendingTime() >= picture.WrittenEnd()) {
       return true;
     }
     const bool picture_first =

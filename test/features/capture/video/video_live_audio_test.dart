@@ -8,6 +8,7 @@ import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
@@ -306,6 +307,12 @@ class _ViewCapturingRecorder implements VideoRecorder {
   Stream<double> get level => _inner.level;
 
   @override
+  Stream<MicrophoneHearing> get hearing => _inner.hearing;
+
+  @override
+  MicrophoneHearing get hearingNow => _inner.hearingNow;
+
+  @override
   bool get supportsPause => _inner.supportsPause;
 
   @override
@@ -439,7 +446,7 @@ void main() {
         final FakeSoundJoin join = bench.liveAudio.joins.single;
         expect(join.videoBytes, _pictureBytes);
         expect(join.audioBytes, fakeSoundBytes);
-        expect(join.audio, bench.liveAudio.soundPath);
+        expect(join.audio, bench.liveAudio.opened.first.path);
         final File joined = _fileOf(take.media);
         expect(joined.path, join.output);
         expect(joined.readAsBytesSync(), fakeJoinedBytes);
