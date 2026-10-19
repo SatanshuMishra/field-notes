@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T13:33:35.009Z
+Updated: 2026-10-19T13:38:48.289Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
