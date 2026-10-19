@@ -71,6 +71,7 @@ class _VoiceComposerConnectorState
     super.initState();
     _recorder = ref.read(voiceRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
+    unawaited(_recorder.open().catchError((Object _) {}));
   }
 
   @override
@@ -88,6 +89,7 @@ class _VoiceComposerConnectorState
     if (!_closing && _phase.isTaking) {
       unawaited(_recorder.cancel().catchError((Object _) {}));
     }
+    unawaited(_recorder.close().catchError((Object _) {}));
     super.dispose();
   }
 

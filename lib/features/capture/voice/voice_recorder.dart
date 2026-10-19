@@ -1,4 +1,5 @@
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 
 const String micPermissionMessage =
     'Field Notes needs microphone access to record. Turn it on in your system '
@@ -34,7 +35,15 @@ abstract interface class VoiceRecorder {
 
   Stream<double> get level;
 
+  Stream<MicrophoneHearing> get hearing;
+
+  MicrophoneHearing get hearingNow;
+
   Future<bool> hasPermission();
+
+  Future<void> open();
+
+  Future<void> close();
 
   Future<void> start();
 

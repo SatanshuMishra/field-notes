@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/voice/voice_composer.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
@@ -24,7 +25,20 @@ class _HangingStopRecorder implements VoiceRecorder {
   Stream<double> get level => const Stream<double>.empty();
 
   @override
+  Stream<MicrophoneHearing> get hearing =>
+      const Stream<MicrophoneHearing>.empty();
+
+  @override
+  MicrophoneHearing get hearingNow => MicrophoneHearing.hearing;
+
+  @override
   Future<bool> hasPermission() async => true;
+
+  @override
+  Future<void> open() async {}
+
+  @override
+  Future<void> close() async {}
 
   @override
   Future<void> start() async {}
