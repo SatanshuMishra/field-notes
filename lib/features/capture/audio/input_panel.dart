@@ -12,6 +12,8 @@ import 'package:field_notes/features/capture/audio/anchored_dropdown.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/microphone_glyph.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/audio/recorder_input_ring.dart';
 import 'package:field_notes/features/capture/immersive/recorder_glass_button.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -122,11 +124,15 @@ class RecorderInputButton extends StatefulWidget {
     this.androidVideo = false,
     this.onVoiceSettings,
     this.takeLevels,
+    this.ringLevels,
+    this.ringHearing = MicrophoneHearing.hearing,
   });
 
   final bool androidVideo;
   final VoidCallback? onVoiceSettings;
   final Stream<double>? takeLevels;
+  final Stream<double>? ringLevels;
+  final MicrophoneHearing ringHearing;
 
   @override
   State<RecorderInputButton> createState() => _RecorderInputButtonState();
@@ -244,6 +250,13 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget button = RecorderGlassButton(
+      key: recorderInputKey,
+      label: recorderInputLabel,
+      glyph: const MicrophoneGlyph(),
+      onPressed: _toggle,
+    );
+    final Stream<double>? ringLevels = widget.ringLevels;
     return TapRegion(
       groupId: _tapGroup,
       onTapOutside: (PointerDownEvent event) => _close(),
@@ -252,12 +265,13 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
         child: OverlayPortal(
           controller: _portal,
           overlayChildBuilder: _panel,
-          child: RecorderGlassButton(
-            key: recorderInputKey,
-            label: recorderInputLabel,
-            glyph: const MicrophoneGlyph(),
-            onPressed: _toggle,
-          ),
+          child: ringLevels == null
+              ? button
+              : RecorderInputRing(
+                  levels: ringLevels,
+                  hearing: widget.ringHearing,
+                  child: button,
+                ),
         ),
       ),
     );

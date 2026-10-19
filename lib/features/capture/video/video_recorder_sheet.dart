@@ -505,6 +505,8 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
             androidVideo: Theme.of(context).platform == TargetPlatform.android,
             onVoiceSettings: widget.onVoiceSettings,
             takeLevels: taking ? widget.levels : null,
+            ringLevels: widget.cameraOn ? widget.levels : null,
+            ringHearing: widget.hearing,
           ),
       ],
     );
