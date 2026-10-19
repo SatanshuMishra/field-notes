@@ -91,15 +91,13 @@ class SettingsSegmented<T> extends StatelessWidget {
     required Widget face,
   }) {
     return _SegmentReach(
-      child: Semantics(
+      child: Pressable(
         inMutuallyExclusiveGroup: true,
-        child: Pressable(
-          label: label,
-          selected: selected,
-          onPressed: choose,
-          borderRadius: borderRadius,
-          child: face,
-        ),
+        label: label,
+        selected: selected,
+        onPressed: choose,
+        borderRadius: borderRadius,
+        child: face,
       ),
     );
   }

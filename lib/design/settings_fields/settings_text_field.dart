@@ -129,28 +129,34 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
         cursor: widget.enabled ? SystemMouseCursors.text : MouseCursor.defer,
         onEnter: (PointerEnterEvent _) => _hover(true),
         onExit: (PointerExitEvent _) => _hover(false),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: colors.cardBright,
-            border: Border.all(color: borderColor, width: Shapes.outlineWidth),
-            borderRadius: Shapes.buttonBorderRadius,
-          ),
-          child: HoverFill(
-            hovered: widget.enabled && _hovered,
-            borderRadius: Shapes.buttonBorderRadius,
-            position: DecorationPosition.background,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: MergeSemantics(
-                child: Semantics(
-                  label: widget.semanticLabel ?? widget.hintText,
-                  hint: widget.semanticLabel == null ? null : widget.hintText,
-                  enabled: widget.enabled ? null : false,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    excludeFromSemantics: !widget.enabled,
-                    onTapDown: _handleTapDown,
-                    onTapUp: _handleTapUp,
+        child: MergeSemantics(
+          child: Semantics(
+            label: widget.semanticLabel ?? widget.hintText,
+            hint: widget.semanticLabel == null ? null : widget.hintText,
+            enabled: widget.enabled ? null : false,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              excludeFromSemantics: !widget.enabled,
+              onTapDown: _handleTapDown,
+              onTapUp: _handleTapUp,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: colors.cardBright,
+                  border: Border.all(
+                    color: borderColor,
+                    width: Shapes.outlineWidth,
+                  ),
+                  borderRadius: Shapes.buttonBorderRadius,
+                ),
+                child: HoverFill(
+                  hovered: widget.enabled && _hovered,
+                  borderRadius: Shapes.buttonBorderRadius,
+                  position: DecorationPosition.background,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
                     child: Stack(
                       alignment: Alignment.centerLeft,
                       children: <Widget>[

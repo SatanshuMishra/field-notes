@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
-import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
 import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_landmarks.dart';
 import 'package:field_notes/features/garden/widgets/meadow_ribbon.dart';
@@ -205,38 +205,33 @@ class _TabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     return _TabReach(
-      child: Semantics(
+      child: Pressable(
         inMutuallyExclusiveGroup: true,
-        child: Pressable(
-          label: label,
-          selected: selected,
-          onPressed: onPressed,
-          borderRadius: _tabRadius,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: selected ? Palette.coral : _clear,
-              borderRadius: _tabRadius,
-              boxShadow: selected
-                  ? <BoxShadow>[
-                      BoxShadow(
-                        color: colors.shadow,
-                        offset: const Offset(1, 1),
-                      ),
-                    ]
-                  : const <BoxShadow>[],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-              child: Text(
-                label,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: context.textStyles.captureLabelSans.copyWith(
-                  color: selected ? Palette.onAccent : colors.inkSoft,
-                  fontSize: 12,
-                ),
+        label: label,
+        selected: selected,
+        onPressed: onPressed,
+        borderRadius: _tabRadius,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: selected ? Palette.coral : _clear,
+            borderRadius: _tabRadius,
+            boxShadow: selected
+                ? <BoxShadow>[
+                    BoxShadow(color: colors.shadow, offset: const Offset(1, 1)),
+                  ]
+                : const <BoxShadow>[],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: context.textStyles.captureLabelSans.copyWith(
+                color: selected ? Palette.onAccent : colors.inkSoft,
+                fontSize: 12,
               ),
             ),
           ),
@@ -271,7 +266,7 @@ class _CloseButton extends StatelessWidget {
           color: hovered ? colors.ink08 : _clear,
           borderRadius: radius,
         ),
-        child: MeadowHoverFill(
+        child: HoverFill(
           hovered: hovered,
           borderRadius: radius,
           surface: FocusRingSurface.light,

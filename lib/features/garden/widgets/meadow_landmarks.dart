@@ -4,11 +4,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
-import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
 
 const double _minColumn = 190;
 const double _sidebarGap = 10;
@@ -314,7 +314,7 @@ class _LandmarkCard extends StatelessWidget {
           child: FocusRing(
             onPressed: press,
             borderRadius: _cardRadius,
-            child: face,
+            child: MouseRegion(cursor: SystemMouseCursors.basic, child: face),
           ),
         ),
       );
@@ -333,7 +333,7 @@ class _LandmarkCard extends StatelessWidget {
         onPressed: press,
         borderRadius: _cardRadius,
         paintsHover: false,
-        builder: (BuildContext context, bool hovered) => MeadowHoverFill(
+        builder: (BuildContext context, bool hovered) => HoverFill(
           hovered: hovered,
           borderRadius: _cardRadius,
           surface: FocusRingSurface.light,

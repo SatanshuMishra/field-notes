@@ -359,7 +359,7 @@ class _MonthButton extends StatelessWidget {
           child: FocusRing(
             onPressed: press,
             borderRadius: _monthRadius,
-            child: face,
+            child: MouseRegion(cursor: SystemMouseCursors.basic, child: face),
           ),
         ),
       );

@@ -6,7 +6,6 @@ import 'package:flutter/rendering.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
 import 'package:field_notes/design/interaction/hover_fill.dart';
-import 'package:field_notes/design/interaction/hover_style.dart';
 import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 
@@ -199,7 +198,8 @@ class MeadowGlassButton extends StatelessWidget {
       builder: (BuildContext context, bool hovered) => SizedBox(
         width: width,
         height: meadowPhoneControlHeight,
-        child: MeadowHoverFill(
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
           hovered: hovered,
           borderRadius: radius,
           child: grouped
@@ -215,34 +215,6 @@ class MeadowGlassButton extends StatelessWidget {
               : glass,
         ),
       ),
-    );
-  }
-}
-
-class MeadowHoverFill extends StatelessWidget {
-  const MeadowHoverFill({
-    super.key,
-    required this.hovered,
-    required this.borderRadius,
-    required this.child,
-    this.surface = FocusRingSurface.dark,
-    this.shape = HoverShape.rounded,
-  });
-
-  final bool hovered;
-  final BorderRadius borderRadius;
-  final FocusRingSurface surface;
-  final HoverShape shape;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return HoverFill(
-      hovered: hovered,
-      surface: surface,
-      shape: shape,
-      borderRadius: borderRadius,
-      child: child,
     );
   }
 }
@@ -475,46 +447,43 @@ class MeadowTimeRow extends StatelessWidget {
       opacity: 0.72,
       weight: FontWeight.w500,
     );
-    return MergeSemantics(
-      child: Semantics(
-        inMutuallyExclusiveGroup: true,
-        child: Pressable(
-          label: '$label, $sub',
-          selected: selected,
-          onPressed: onPressed,
-          surface: FocusRingSurface.dark,
-          placement: FocusRingPlacement.edge,
+    return Pressable(
+      inMutuallyExclusiveGroup: true,
+      label: '$label, $sub',
+      selected: selected,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      placement: FocusRingPlacement.edge,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: selected
+              ? meadowRowSelected
+              : meadowGlassWhite(hovered ? 0.1 : 0),
           borderRadius: radius,
-          paintsHover: false,
-          builder: (BuildContext context, bool hovered) => DecoratedBox(
-            decoration: BoxDecoration(
-              color: selected
-                  ? meadowRowSelected
-                  : meadowGlassWhite(hovered ? 0.1 : 0),
-              borderRadius: radius,
-            ),
-            child: MeadowHoverFill(
-              hovered: hovered,
-              borderRadius: radius,
-              child: SizedBox(
-                height: compact ? meadowPhoneControlHeight : 36,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 12),
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          label,
-                          maxLines: 1,
-                          softWrap: false,
-                          overflow: TextOverflow.ellipsis,
-                          style: name,
-                        ),
-                      ),
-                      Text(sub, maxLines: 1, softWrap: false, style: note),
-                    ],
+        ),
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
+          hovered: hovered,
+          borderRadius: radius,
+          child: SizedBox(
+            height: compact ? meadowPhoneControlHeight : 36,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 12),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: name,
+                    ),
                   ),
-                ),
+                  Text(sub, maxLines: 1, softWrap: false, style: note),
+                ],
               ),
             ),
           ),
