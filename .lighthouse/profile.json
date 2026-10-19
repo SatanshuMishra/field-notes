@@ -218,8 +218,8 @@
   },
   "facts": {
     "lab_platforms": {
-      "value": "The VM lab (lab command, vm-lab skill) offers windows-golden (Windows 11 Arm64), a macOS golden and an Android emulator golden on this Mac; one instance at a time, Windows first, each released by name and never with lab down --all.",
-      "confirmed": false,
+      "value": "macos, windows, android-phone, android-tablet, ipad (lab status 2026-10-18)",
+      "confirmed": true,
       "recheck": "lab status and the vm-lab skill"
     },
     "lab_guest_devices": {
@@ -228,13 +228,13 @@
       "recheck": "Get-PnpDevice in the Windows guest; system_profiler in the macOS guest"
     },
     "windows_build_machine": {
-      "value": "Windows builds are made on the owner's PC (ssh winpc) in C:\\Users\\satan\\dev\\fnvd and copied into the lab; test builds are not run on that PC unless the owner says so.",
-      "confirmed": false,
+      "value": "winpc (owner's Windows 11 PC over SSH, build-only; app tests run in the VM lab)",
+      "confirmed": true,
       "recheck": "ask the owner"
     },
     "vm_service_port": {
-      "value": "A profile or debug build started with FLUTTER_ENGINE_SWITCHES=2, FLUTTER_ENGINE_SWITCH_1=vm-service-port=47300 and FLUTTER_ENGINE_SWITCH_2=disable-service-auth-codes exposes its VM service on port 47300.",
-      "confirmed": false,
+      "value": 47300,
+      "confirmed": true,
       "recheck": "start a build with those switches and connect to ws://127.0.0.1:47300/ws"
     }
   },
