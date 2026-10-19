@@ -22,6 +22,7 @@ import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart'
     show AudioRecorderFactory;
 import 'package:field_notes/features/capture/audio/live_audio_capture.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/video/audio_input_selectable.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/voice/record_voice_recorder.dart'
@@ -216,10 +217,12 @@ class _LiveSound {
     required this._joiner,
     required VideoSoundProcessing? resolveProcessing,
     required this._folder,
+    Duration Function()? clock,
   }) : _capture = LiveAudioCapture(
          recorderFactory: recorderFactory,
          encoder: encoder,
          chainRunner: chainRunner,
+         clock: clock,
        ),
        _resolveProcessing = resolveProcessing ?? defaultVoiceProcessing;
 
@@ -229,12 +232,83 @@ class _LiveSound {
   final _CaptureFolder _folder;
   LiveAudioTake? _take;
   _Picture? _pending;
+  AudioInput? _armedOn;
+  String? _armedPath;
+  bool _inTake = false;
+  bool _everArmed = false;
+  bool _takeArming = false;
+  int _epoch = 0;
+  Future<bool>? _warmOpening;
 
   bool get holdsPicture => _pending != null;
 
   Stream<double> get level => _capture.level;
 
+  Stream<MicrophoneHearing> get hearing => _capture.hearing;
+
+  MicrophoneHearing get hearingNow => _capture.hearingNow;
+
   Future<bool> hasPermission() => _capture.hasPermission();
+
+  bool holdsSound(String path) => _capture.running && _armedPath == path;
+
+  bool get _busy => _inTake || _takeArming;
+
+  bool _armedIdleOn(AudioInput input) =>
+      _capture.running && !_inTake && _armedOn == input;
+
+  Future<void> warm({
+    required Future<AudioInput> Function() input,
+    required Future<bool> Function() permission,
+  }) async {
+    final int epoch = _epoch;
+    if (_busy || !await permission()) {
+      return;
+    }
+    final AudioInput chosen = await input();
+    if (epoch != _epoch || _busy || _armedIdleOn(chosen)) {
+      return;
+    }
+    final Future<bool> opening = _arm(chosen, epoch);
+    _warmOpening = opening;
+    try {
+      await opening;
+    } finally {
+      if (identical(_warmOpening, opening)) {
+        _warmOpening = null;
+      }
+    }
+  }
+
+  Future<void> ensureArmed(AudioInput input) async {
+    final int epoch = ++_epoch;
+    _takeArming = true;
+    try {
+      if (_inTake) {
+        await _capture.cancel();
+        await _dropLeftovers();
+      }
+      final Future<bool>? opening = _warmOpening;
+      if (opening != null && _armedIdleOn(input)) {
+        await opening
+            .timeout(_warmOpenWait, onTimeout: () => false)
+            .then<void>((bool _) {}, onError: (Object _) {});
+      }
+      if (!_armedIdleOn(input) && !await _arm(input, epoch)) {
+        throw const VideoRecorderException(videoStartMessage);
+      }
+      _inTake = true;
+    } finally {
+      _takeArming = false;
+    }
+  }
+
+  void closeMicrophone() {
+    _epoch += 1;
+    if (!_busy && _everArmed) {
+      unawaited(_capture.cancel());
+    }
+  }
 
   Future<VoiceProcessing> _processing() async {
     try {
@@ -244,23 +318,41 @@ class _LiveSound {
     }
   }
 
-  Future<void> arm(AudioInput input) async {
+  Future<bool> _arm(AudioInput input, int epoch) async {
+    final VoiceProcessing processing = await _processing();
+    final String path;
+    try {
+      path = await _folder.freshPath(_soundFileName);
+    } catch (error) {
+      throw VideoRecorderException(videoStartMessage, cause: error);
+    }
+    if (epoch != _epoch) {
+      return false;
+    }
+    if (_armedIdleOn(input)) {
+      return true;
+    }
     if (_capture.running) {
       await _capture.cancel();
+      if (epoch != _epoch) {
+        return false;
+      }
     }
-    await _dropLeftovers();
-    final VoiceProcessing processing = await _processing();
+    _armedOn = input;
+    _armedPath = path;
+    _everArmed = true;
     try {
       await _capture.start(
         input: input,
         profile: processing.profile,
         volume: processing.volume,
-        path: await _folder.freshPath(_soundFileName),
+        path: path,
         armed: true,
       );
     } catch (error) {
       throw VideoRecorderException(videoStartMessage, cause: error);
     }
+    return _capture.running;
   }
 
   void beginWriting() => _capture.beginWriting();
@@ -295,6 +387,7 @@ class _LiveSound {
         ? picture.movie
         : await _join(picture, sound);
     _pending = null;
+    _inTake = false;
     return _recordingOf(movie, picture.thumbnail, picture.durationMs);
   }
 
@@ -368,18 +461,27 @@ class _LiveSound {
   Future<void> _dropLeftovers() async {
     final LiveAudioTake? take = _take;
     _take = null;
+    _inTake = false;
     await _deleteCaptureFile(take?.path);
     await _dropPending();
   }
 
   Future<void> discard() async {
-    await _capture.cancel();
+    _epoch += 1;
+    if (_everArmed) {
+      await _capture.cancel();
+    }
     await _dropLeftovers();
   }
 
   Future<void> dispose() async {
     await discard();
-    await _capture.dispose();
+    final Future<void> disposing = _capture.dispose();
+    if (_everArmed) {
+      await disposing;
+    } else {
+      unawaited(disposing);
+    }
   }
 }
 
@@ -434,6 +536,22 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   Stream<double> get level => _sound.level;
 
   @override
+  Stream<MicrophoneHearing> get hearing => _sound.hearing;
+
+  @override
+  MicrophoneHearing get hearingNow => _sound.hearingNow;
+
+  Future<void> _warmMicrophone() async {
+    try {
+      await _sound.warm(input: _soundInput, permission: _sound.hasPermission);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'The microphone did not open with the preview: $error\n$stackTrace',
+      );
+    }
+  }
+
+  @override
   Future<List<VideoCaptureDevice>> listDevices() async {
     final List<CameraDescription> cameras;
     try {
@@ -452,7 +570,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
     }
     try {
       await _requireMicrophone(_sound.hasPermission);
-      await _sound.arm(await _soundInput());
+      await _sound.ensureArmed(await _soundInput());
       final CameraController controller = await _ready(session);
       if (!identical(_session, session)) {
         throw const VideoRecorderException(videoStartMessage);
@@ -569,6 +687,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
     final CameraController? controller = _controller;
     _controller = null;
     _session = null;
+    _sound.closeMicrophone();
     if (controller == null) {
       return;
     }
@@ -589,6 +708,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   Widget? openSession(String deviceId) {
     final _CameraSession? existing = _session;
     if (existing != null && existing.deviceId == deviceId) {
+      unawaited(_warmMicrophone());
       return existing.preview;
     }
     final Completer<CameraController> ready = Completer<CameraController>();
@@ -603,6 +723,7 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
       ),
     );
     _session = session;
+    unawaited(_warmMicrophone());
     unawaited(_initialise(session, ready));
     return session.preview;
   }
@@ -1095,7 +1216,10 @@ class CameraWindowsVideoRecorder extends _CameraPackageVideoRecorder
           name.startsWith(_segmentFilePrefix) ||
           name.startsWith(_joinFilePrefix) ||
           name.startsWith(_soundFilePrefix);
-      if (entry is File && stale && !_owned.holds(entry.path)) {
+      if (entry is File &&
+          stale &&
+          !_owned.holds(entry.path) &&
+          !_sound.holdsSound(entry.path)) {
         try {
           entry.deleteSync();
         } catch (error, stackTrace) {
@@ -1319,6 +1443,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     AudioRecorderFactory audioRecorderFactory = AudioRecorder.new,
     VoiceChainRunner chainRunner = runVoiceChainInIsolate,
     VideoSoundProcessing? resolveProcessing,
+    Duration Function()? clock,
   }) : _temporaryDirectory = temporaryDirectory ?? getTemporaryDirectory,
        _suppliedController = controller {
     _sound = _LiveSound(
@@ -1328,6 +1453,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       joiner: audioJoiner,
       resolveProcessing: resolveProcessing,
       folder: _CaptureFolder(_temporaryDirectory),
+      clock: clock,
     );
   }
 
@@ -1341,6 +1467,8 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   String? _previewDeviceId;
   String? _audioDeviceId;
   CameraMacOSController? _controller;
+  StreamSubscription<void>? _movieStart;
+  Timer? _movieStartWait;
   bool _destroyRequested = false;
   bool _aborted = false;
   _OwnedCaptures _owned = const _OwnedCaptures();
@@ -1352,7 +1480,26 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   Stream<double> get level => _sound.level;
 
   @override
+  Stream<MicrophoneHearing> get hearing => _sound.hearing;
+
+  @override
+  MicrophoneHearing get hearingNow => _sound.hearingNow;
+
+  @override
   bool get supportsPause => true;
+
+  Future<void> _warmMicrophone() async {
+    try {
+      await _sound.warm(
+        input: () async => _soundInputWithId(_audioDeviceId),
+        permission: _microphonePermission ?? _sound.hasPermission,
+      );
+    } catch (error, stackTrace) {
+      debugPrint(
+        'The microphone did not open with the preview: $error\n$stackTrace',
+      );
+    }
+  }
 
   @override
   Future<void> pause() async {
@@ -1426,6 +1573,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   Widget? openSession(String deviceId) {
     final Widget? existing = _preview;
     if (existing != null && _previewDeviceId == deviceId) {
+      unawaited(_warmMicrophone());
       return existing;
     }
     _abandonPendingReady();
@@ -1455,6 +1603,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     );
     _preview = view;
     _previewDeviceId = deviceId;
+    unawaited(_warmMicrophone());
     final CameraMacOSController? supplied = _suppliedController;
     if (supplied != null) {
       _onControllerReady(ready, supplied);
@@ -1498,12 +1647,52 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     }
     _aborted = false;
     try {
-      await _sound.arm(_soundInputWithId(_audioDeviceId));
+      await _sound.ensureArmed(_soundInputWithId(_audioDeviceId));
       await _startCamera(ready);
     } catch (_) {
+      _stopWaitingForMovieStart();
       _elapsed.stop();
       await _sound.discard();
       rethrow;
+    }
+  }
+
+  void _listenForMovieStart(CameraMacOSController controller) {
+    _stopWaitingForMovieStart();
+    _movieStart = controller.videoRecordingStarted.listen((_) => _movieBegan());
+  }
+
+  void _waitForMovieStart() {
+    if (_movieStart == null) {
+      return;
+    }
+    _movieStartWait = Timer(movieStartTimeout, () {
+      debugPrint(
+        'The camera never reported the movie start within '
+        '${movieStartTimeout.inMilliseconds} ms; writing sound from now',
+      );
+      _movieBegan();
+    });
+  }
+
+  void _movieBegan() {
+    if (_movieStart == null) {
+      return;
+    }
+    _stopWaitingForMovieStart();
+    _sound.beginWriting();
+    _elapsed
+      ..reset()
+      ..start();
+  }
+
+  void _stopWaitingForMovieStart() {
+    final StreamSubscription<void>? movieStart = _movieStart;
+    _movieStart = null;
+    _movieStartWait?.cancel();
+    _movieStartWait = null;
+    if (movieStart != null) {
+      unawaited(movieStart.cancel());
     }
   }
 
@@ -1522,6 +1711,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
       throw const VideoRecorderException(videoStartMessage);
     }
     _owned = _owned.withoutMovies();
+    _listenForMovieStart(controller);
     try {
       await controller.recordVideo(
         maxVideoDuration: videoHardCapSeconds,
@@ -1533,18 +1723,19 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     if (_aborted) {
       throw const VideoRecorderException(videoStartMessage);
     }
-    _sound.beginWriting();
     _controller = controller;
-    _elapsed
-      ..reset()
-      ..start();
+    _waitForMovieStart();
   }
 
   @override
   Future<VideoRecording> stop() async {
+    _stopWaitingForMovieStart();
     _elapsed.stop();
     final VideoRecording recording = await _sound.keep(_stopPicture);
     _owned = _owned.adopt(recording);
+    if (_preview != null) {
+      unawaited(_warmMicrophone());
+    }
     return recording;
   }
 
@@ -1595,6 +1786,7 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
   @override
   Future<void> cancel() async {
+    _stopWaitingForMovieStart();
     _elapsed.stop();
     _aborted = true;
     _destroyRequested = true;
@@ -1629,12 +1821,14 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
   @override
   Future<void> release() async {
+    _stopWaitingForMovieStart();
     _elapsed.stop();
     _destroyRequested = true;
     final CameraMacOSController? controller = _controller;
     _controller = null;
     _preview = null;
     _previewDeviceId = null;
+    _sound.closeMicrophone();
     if (controller == null) {
       return;
     }
@@ -1665,4 +1859,6 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
 
 const double videoHardCapSeconds = 30 * 60;
 const Duration cameraStartTimeout = Duration(seconds: 12);
+const Duration movieStartTimeout = Duration(seconds: 2);
+const Duration _warmOpenWait = Duration(seconds: 3);
 const String _cameraPermissionRefusal = 'Permission not granted';

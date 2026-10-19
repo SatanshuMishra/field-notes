@@ -1149,6 +1149,12 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         }
     }
     
+    public func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
+        DispatchQueue.main.async {
+            self.outputChannel?.invokeMethod("onVideoRecordingStarted", arguments: nil)
+        }
+    }
+
     // MOVIE FILE OUTPUT MODE
     public func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
         self.isRecording = false

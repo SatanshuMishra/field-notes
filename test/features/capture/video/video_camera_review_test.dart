@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
@@ -32,6 +33,13 @@ class _ArmingRecorder implements VideoRecorder {
 
   @override
   Stream<double> get level => const Stream<double>.empty();
+
+  @override
+  Stream<MicrophoneHearing> get hearing =>
+      const Stream<MicrophoneHearing>.empty();
+
+  @override
+  MicrophoneHearing get hearingNow => MicrophoneHearing.hearing;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async =>
@@ -107,6 +115,13 @@ class _HangingReleaseRecorder implements VideoRecorder {
 
   @override
   Stream<double> get level => const Stream<double>.empty();
+
+  @override
+  Stream<MicrophoneHearing> get hearing =>
+      const Stream<MicrophoneHearing>.empty();
+
+  @override
+  MicrophoneHearing get hearingNow => MicrophoneHearing.hearing;
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async =>

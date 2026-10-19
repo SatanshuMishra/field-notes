@@ -23,6 +23,19 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
 
   Map<String, Function?> registeredCallbacks = {};
 
+  late final StreamController<void> _videoRecordingStarted =
+      StreamController<void>.broadcast(onListen: _listenForCalls);
+
+  @override
+  Stream<void> get videoRecordingStarted => _videoRecordingStarted.stream;
+
+  void _listenForCalls() {
+    if (!methodCallHandlerSet) {
+      methodChannel.setMethodCallHandler(_genericMethodCallHandler);
+      methodCallHandlerSet = true;
+    }
+  }
+
   bool get isStreamingImageData => events != null && !events!.isPaused;
 
   /// Call this method to discover all camera devices.
@@ -185,10 +198,7 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
     try {
       registeredCallbacks["onVideoRecordingFinished"] =
           onVideoRecordingFinished;
-      if (!methodCallHandlerSet) {
-        methodChannel.setMethodCallHandler(_genericMethodCallHandler);
-        methodCallHandlerSet = true;
-      }
+      _listenForCalls();
       final Map<String, dynamic>? result =
           await methodChannel.invokeMapMethod<String, dynamic>(
         'startRecording',
@@ -263,6 +273,9 @@ class MethodChannelCameraMacOS extends CameraMacOSPlatform {
 
   Future<void> _genericMethodCallHandler(MethodCall call) async {
     switch (call.method) {
+      case "onVideoRecordingStarted":
+        _videoRecordingStarted.add(null);
+        break;
       case "onVideoRecordingFinished":
         isRecording = false;
         if (registeredCallbacks["onVideoRecordingFinished"] != null) {

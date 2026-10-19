@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -97,6 +98,21 @@ class FakeVideoRecorder implements VideoRecorder, CameraControls {
 
   @override
   Stream<double> get level => const Stream<double>.empty();
+
+  final StreamController<MicrophoneHearing> _hearing =
+      StreamController<MicrophoneHearing>.broadcast();
+  MicrophoneHearing _hearingNow = MicrophoneHearing.hearing;
+
+  @override
+  Stream<MicrophoneHearing> get hearing => _hearing.stream;
+
+  @override
+  MicrophoneHearing get hearingNow => _hearingNow;
+
+  void hear(MicrophoneHearing next) {
+    _hearingNow = next;
+    _hearing.add(next);
+  }
 
   @override
   double zoom = 1;
@@ -242,6 +258,13 @@ class DeferredReadyVideoRecorder implements VideoRecorder {
 
   @override
   Stream<double> get level => const Stream<double>.empty();
+
+  @override
+  Stream<MicrophoneHearing> get hearing =>
+      const Stream<MicrophoneHearing>.empty();
+
+  @override
+  MicrophoneHearing get hearingNow => MicrophoneHearing.hearing;
 
   @override
   bool get supportsPause => false;
