@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T17:32:06.728Z
+Updated: 2026-10-19T19:55:35.093Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Shipped: four stacked pull requests are open and assigned to the owner, ready for review: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency, each based on the one before. Unproven: the Windows smoke (owner's PC offline on Tailscale), the Settings segmented Android read (the lab cannot read that page on main either), and the real-Mac check of c1 and c2. On the built-in microphone at 32ff2edc, three takes from two fresh launches each hold sound throughout and start with the picture, but each sound track ends 118 to 165 ms before the picture; the picture stops before the sound, so either the movie runs past the stop or the sound starts about 150 ms after the first frame, and only a clap or flash-and-beep take can tell which. The HS80 mode-switch path, the original failure, is untested on hardware (headset not connected). Measurements are in harness/runs/r2-builtin-measure.txt. On Android the input panel rows carry their current value in the value field rather than the name, as main's Settings rows do; whether TalkBack reads it is unverified.
+Shipped: four stacked pull requests are open and assigned to the owner, ready for review: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency, each based on the one before. Unproven: the Windows smoke (owner's PC offline on Tailscale), the Settings segmented Android read (the lab cannot read that page on main either), and the real-Mac check of c1 and c2. On the built-in microphone at 32ff2edc, three takes from two fresh launches each hold sound throughout and start with the picture, but each sound track ends 118 to 165 ms before the picture; a clap take shows the sound starting late against the first frame, so it plays 70 to 95 ms ahead of the picture (R2). The HS80 mode-switch path, the original failure, is untested on hardware (headset not connected). Measurements are in harness/runs/r2-builtin-measure.txt and clap-1-measure.txt. On Android the input panel rows carry their current value in the value field rather than the name, as main's Settings rows do; whether TalkBack reads it is unverified.
 
 ## Next step
 
