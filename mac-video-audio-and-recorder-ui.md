@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T22:54:08.374Z
+Updated: 2026-10-19T22:54:08.971Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -41,5 +41,7 @@ Needs: R1.
 - Owner's evidence takes: the three 2026-10-18 .mp4 blobs under the app container's Documents/media/blobs (52/, 17/, 92/).
 - Mac recorder: lib/features/capture/platform/camera_video_recorder.dart; sound capture lib/features/capture/audio/live_audio_capture.dart; native join macos/Runner/LiveAudioBridge.swift; camera plugin third_party/camera_macos.
 - Run home ~/.mitosis/field-notes/mac-video-audio-and-recorder-ui: charter, run.zsh, rounds.md, review/ (assumption files, obligations, per-round diffs and suites), handoff/ (notes for resumed Lanes), build outputs, base-tree/ (detached worktree at 9eb6c237 for checking failures against main), and harness/ (real-hardware repro app for the 5.9 Mac check). Run dir ~/.mitosis/runs/field-notes/mac-video-audio-and-recorder-ui.
-- review/checks/ in the run home: the diagnoses' selecting checks and repro tests.
+- review/checks/ in the run home: the diagnoses' selecting checks and repro tests; stall-probes/ holds the passing stalled-take probes.
+- Integration worktree ~/.mitosis/runs/field-notes/mac-video-audio-and-recorder-ui/integration on fix/mac-video-audio-and-recorder-ui.
+- lighthouse/run-1/work/windows-stall-diagnostic.brief.md in the run home: the Windows stall diagnostic brief.
 - suite-tree/ and suite-hearing/ in the run home: detached worktrees for review suites away from mitosis's live worktrees, one per concurrent run.
