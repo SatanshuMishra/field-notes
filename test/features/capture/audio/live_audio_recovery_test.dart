@@ -81,4 +81,89 @@ void main() {
       async.flushMicrotasks();
     });
   });
+
+  for (final ({
+        String name,
+        Duration aheadBy,
+        Duration timersRunFor,
+        int heldChunks,
+      })
+      stall
+      in <
+        ({String name, Duration aheadBy, Duration timersRunFor, int heldChunks})
+      >[
+        (
+          name: 'the held chunks arrive first',
+          aheadBy: const Duration(milliseconds: 800),
+          timersRunFor: Duration.zero,
+          heldChunks: 8,
+        ),
+        (
+          name: 'the watchdog runs late first',
+          aheadBy: const Duration(milliseconds: 800),
+          timersRunFor: const Duration(milliseconds: 500),
+          heldChunks: 13,
+        ),
+      ]) {
+    test(
+      'a UI stall keeps every real sample in place and the microphone open when ${stall.name}',
+      () {
+        fakeAsync((FakeAsync async) {
+          Duration ahead = Duration.zero;
+          final List<FakeMicrophone> microphones = <FakeMicrophone>[];
+          final FakeLiveAudio sound = FakeLiveAudio(writesFiles: false);
+          final LiveAudioCapture capture = LiveAudioCapture(
+            recorderFactory: () {
+              final FakeMicrophone microphone = FakeMicrophone();
+              microphones.add(microphone);
+              return microphone;
+            },
+            encoder: sound,
+            chainRunner: passThroughChain,
+            clock: () => async.elapsed + ahead,
+          );
+          capture.start(
+            input: const AudioInput(id: null, label: 'System default'),
+            profile: InputProfile.studio,
+            volume: 100,
+            path: 'take.m4a',
+          );
+          async.flushMicrotasks();
+          int pushed = 0;
+          void speak(int chunks, {required bool onTime}) {
+            for (int chunk = 0; chunk < chunks; chunk += 1) {
+              if (onTime) {
+                async.elapse(_chunkEvery);
+              }
+              microphones.last.push(pcmAtDbfs(-20, samples: _samplesPerChunk));
+              pushed += _samplesPerChunk;
+              async.flushMicrotasks();
+            }
+          }
+
+          speak(10, onTime: true);
+          ahead = stall.aheadBy;
+          async.elapse(stall.timersRunFor);
+          speak(stall.heldChunks, onTime: false);
+          speak(10, onTime: true);
+
+          LiveAudioTake? take;
+          capture.stop().then((LiveAudioTake kept) => take = kept);
+          async.flushMicrotasks();
+
+          expect(microphones, hasLength(1));
+          expect(
+            (sound.samplesAppended - pushed).abs(),
+            lessThanOrEqualTo(_samplesPerChunk),
+          );
+          expect(
+            (take!.durationMs - pushed * 1000 ~/ liveAudioSampleRate).abs(),
+            lessThanOrEqualTo(_chunkEvery.inMilliseconds),
+          );
+          capture.dispose();
+          async.flushMicrotasks();
+        });
+      },
+    );
+  }
 }
