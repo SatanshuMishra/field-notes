@@ -208,3 +208,39 @@ func getAudioDeviceIDFromUID(uid: String) -> AudioDeviceID? {
   
   return nil
 }
+
+func getInputLatencyFrames(device: Device?) -> Int64 {
+  guard let deviceID = resolveInputDeviceID(device: device) else { return 0 }
+  let deviceFrames = [kAudioDevicePropertyLatency, kAudioDevicePropertySafetyOffset]
+    .map { readInputFrames(objectID: deviceID, selector: $0, scope: kAudioObjectPropertyScopeInput) }
+    .reduce(0, +)
+  let streamFrames = firstInputStream(deviceID: deviceID).map {
+    readInputFrames(objectID: $0, selector: kAudioStreamPropertyLatency, scope: kAudioObjectPropertyScopeGlobal)
+  } ?? 0
+  return deviceFrames + streamFrames
+}
+
+private func readInputFrames(
+  objectID: AudioObjectID,
+  selector: AudioObjectPropertySelector,
+  scope: AudioObjectPropertyScope
+) -> Int64 {
+  var addr = AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
+  var frames: UInt32 = 0
+  var size = UInt32(MemoryLayout<UInt32>.size)
+  guard AudioObjectGetPropertyData(objectID, &addr, 0, nil, &size, &frames) == noErr else { return 0 }
+  return Int64(frames)
+}
+
+private func firstInputStream(deviceID: AudioDeviceID) -> AudioStreamID? {
+  var addr = AudioObjectPropertyAddress(
+    mSelector: kAudioDevicePropertyStreams,
+    mScope: kAudioObjectPropertyScopeInput,
+    mElement: kAudioObjectPropertyElementMain
+  )
+  var size: UInt32 = 0
+  guard AudioObjectGetPropertyDataSize(deviceID, &addr, 0, nil, &size) == noErr, size > 0 else { return nil }
+  var streams = [AudioStreamID](repeating: 0, count: Int(size) / MemoryLayout<AudioStreamID>.size)
+  guard AudioObjectGetPropertyData(deviceID, &addr, 0, nil, &size, &streams) == noErr else { return nil }
+  return streams.first
+}

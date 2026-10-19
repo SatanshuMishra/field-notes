@@ -18,11 +18,13 @@ public class RecordMacOsPlugin: NSObject, FlutterPlugin {
   private static let streamStartTimeout = DispatchTimeInterval.seconds(2)
 
   private var m_binaryMessenger: FlutterBinaryMessenger
+  private let m_streamClockChannel: FlutterMethodChannel
   private let m_registryQueue = DispatchQueue(label: "com.record.pluginQueue", qos: .userInitiated)
   private var m_recorders = [String: RecorderEntry]()
 
   init(binaryMessenger: FlutterBinaryMessenger) {
     self.m_binaryMessenger = binaryMessenger
+    self.m_streamClockChannel = FlutterMethodChannel(name: CapturedAudioReporter.channelName, binaryMessenger: binaryMessenger)
   }
 
   public func detachFromEngine(for registrar: FlutterPluginRegistrar) {
@@ -100,7 +102,13 @@ public class RecordMacOsPlugin: NSObject, FlutterPlugin {
 
     let configChangedChannel = FlutterMethodChannel(name: "com.llfbandit.record/configChanged/\(recorderId)", binaryMessenger: m_binaryMessenger)
     let queue = DispatchQueue(label: "com.record.recorderQueue.\(recorderId)", qos: .userInitiated)
-    let recorder = Recorder(queue: queue, stateEventHandler: stateEventHandler, recordEventHandler: recordEventHandler, configChangedChannel: configChangedChannel)
+    let recorder = Recorder(
+      queue: queue,
+      stateEventHandler: stateEventHandler,
+      recordEventHandler: recordEventHandler,
+      configChangedChannel: configChangedChannel,
+      capturedAudioReporter: CapturedAudioReporter(channel: m_streamClockChannel, recorderId: recorderId)
+    )
     let entry = RecorderEntry(recorder: recorder, queue: queue)
 
     let replaced = m_registryQueue.sync { () -> RecorderEntry? in
