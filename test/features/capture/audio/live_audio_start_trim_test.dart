@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:fake_async/fake_async.dart';
 import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
@@ -8,6 +10,7 @@ import 'live_audio_test_support.dart';
 
 const int _samplesPerChunk = 4800;
 const int _samplesIn40Ms = 1920;
+const int _samplesIn90Ms = 4320;
 
 void main() {
   test('a chunk that straddles the start of writing keeps only the samples after it', () {
@@ -50,6 +53,55 @@ void main() {
       expect(take, isNotNull);
 
       expect(sound.samplesAppended, _samplesIn40Ms);
+      capture.dispose();
+      async.flushMicrotasks();
+    });
+  });
+
+  test('a take whose picture started before writing began opens with that '
+      'much silence', () {
+    fakeAsync((FakeAsync async) {
+      final FakeMicrophone microphone = FakeMicrophone();
+      final FakeLiveAudio sound = FakeLiveAudio(writesFiles: false);
+      final LiveAudioCapture capture = LiveAudioCapture(
+        recorderFactory: () => microphone,
+        encoder: sound,
+        chainRunner: passThroughChain,
+        clock: () => async.elapsed,
+      );
+      capture.start(
+        input: const AudioInput(id: null, label: 'System default'),
+        profile: InputProfile.studio,
+        volume: 100,
+        path: 'take.m4a',
+        armed: true,
+      );
+      async.flushMicrotasks();
+
+      async.elapse(const Duration(milliseconds: 100));
+      microphone.push(pcmAtDbfs(-20, samples: _samplesPerChunk));
+      async.flushMicrotasks();
+
+      capture.beginWriting(pictureStartedAgo: const Duration(milliseconds: 90));
+      async.elapse(const Duration(milliseconds: 40));
+      microphone.push(pcmAtDbfs(-20, samples: _samplesPerChunk));
+      async.flushMicrotasks();
+
+      LiveAudioTake? take;
+      capture.stop().then((LiveAudioTake kept) => take = kept);
+      async.flushMicrotasks();
+      expect(take, isNotNull);
+
+      final List<int> written = <int>[
+        for (final pcm in sound.appended)
+          for (int offset = 0; offset + 1 < pcm.length; offset += 2)
+            pcm.buffer
+                .asByteData(pcm.offsetInBytes)
+                .getInt16(offset, Endian.little),
+      ];
+      expect(written.length, _samplesIn90Ms + _samplesIn40Ms);
+      expect(written.take(_samplesIn90Ms).every((int s) => s == 0), isTrue);
+      expect(written[_samplesIn90Ms], isNot(0));
       capture.dispose();
       async.flushMicrotasks();
     });
