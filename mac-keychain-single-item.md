@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: parked
-Updated: 2026-10-19T02:48:08.311Z
+Updated: 2026-10-19T02:49:06.345Z
 Next ids: c6 D3 R2 S2
 
 ## Goal
@@ -17,11 +17,11 @@ On macOS the ad-hoc signed app asks for login-keychain access once per stored it
 
 ## Where things stand
 
-Integration: PR #326 merged into FEATURE branch fix/mac-keychain-single-item; pipeline integration-ready reports ready.
+Integration: PR #326 merged into FEATURE branch fix/mac-keychain-single-item. Lighthouse run 1 is in progress at ~/.mitosis/fireplace/mac-keychain-single-item/lighthouse/run-1: worktrees made, profile check passed (nothing to publish), lighthouse suite running on both builds. The new keychain paths will be unproven: no profile surface reaches the Mac login keychain without a person typing the password, and the lab facts are unconfirmed.
 
 ## Next step
 
-Run lighthouse:test run 1 with --core main --feature fix/mac-keychain-single-item --spec docs/specs/mac-keychain-single-item.md --results ~/.mitosis/fireplace/mac-keychain-single-item/lighthouse/run-1.
+When the suite JSON lands, write run-1/findings.json (new paths unproven, the Device sync relay neighbour unproven), run lighthouse verdict, then on unproven rerun lighthouse:test with --final and --previous run-1 into run-2 so the FEATURE pull request opens.
 
 Needs: D2, R1.
 
