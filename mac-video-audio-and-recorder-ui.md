@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T20:30:15.358Z
+Updated: 2026-10-19T20:44:21.090Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Four stacked pull requests are open and assigned to the owner: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency. #330 now aligns sound on the camera's and microphone's native capture times: on the built-in microphone the sound trails the picture by 40 to 55 ms, steady, lengths 3 ms apart. Unpushed heads: video-starts-like-a-camera ddba45cc (round 4's C1, a reopened microphone saving a silent take, and C3 fixed), hearing-and-ring abe36a0e, button-consistency aad6adab (round 4's U1 fixed: the Windows smoke found the desktop settings select menu clipping its choices; its class is with a diagnosis agent). Round 5 suites are running at ddba45cc and aad6adab, and the Windows lab smoke reruns path 5 at aad6adab. Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
+Four stacked pull requests are open and assigned to the owner: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency. #330 now aligns sound on the camera's and microphone's native capture times: on the built-in microphone the sound trails the picture by 40 to 55 ms, steady, lengths 3 ms apart. Unpushed heads: video-starts-like-a-camera ddba45cc (round 4's C1, a reopened microphone saving a silent take, fixed; round 5 suite and code review clean, validator judging C1), hearing-and-ring 18275bcd (AnchoredDropdown can widen its menu to fit its choices; round 4 suite running), button-consistency ee6be4cf (round 4's U1, menus clipping their choices, fixed for the settings select and the camera picker; Windows smoke path 5 passes; round 5 suite queued). Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
 
 ## Next step
 
