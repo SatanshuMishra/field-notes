@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
 Status: active
-Updated: 2026-10-19T00:04:55.883Z
+Updated: 2026-10-19T00:04:56.899Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -21,9 +21,9 @@ MSP mac-keychain is built and committed on mitosis/mac-keychain at ea0ae420 (bas
 
 ## Next step
 
-Collect the three reviewers' JSON arrays into review/round-1/mac-keychain.findings.json, then run pipeline candidates, the validator if needed, record and verdict.
+Run SHIP=1 ~/.mitosis/fireplace/mac-keychain-single-item/run.zsh --resume, then open the pull request with create_pull_request from mitosis's title and body and assign it to the owner.
 
-Needs: D1.
+Needs: D2.
 
 ## Decisions in force
 
