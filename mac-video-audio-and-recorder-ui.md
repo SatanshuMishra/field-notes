@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T21:50:28.324Z
+Updated: 2026-10-19T21:50:29.401Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -20,7 +20,7 @@ The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-re
 
 ## Next step
 
-The owner merges #329, #330, #331 and #332 in stack order, then says the MSP pull requests merged; that starts Integration (lighthouse test of the FEATURE branch fix/mac-video-audio-and-recorder-ui, then the FEATURE pull request).
+Finish lighthouse run 1: read the suite result, the Windows lab paths (lighthouse/run-1/work/windows-paths.json), drive the Android video paths, write findings.json, run lighthouse verdict, and on green open the FEATURE pull request through lighthouse pr.
 
 Needs: R1.
 
