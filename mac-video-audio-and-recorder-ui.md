@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T20:11:12.722Z
+Updated: 2026-10-19T20:20:31.858Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Four stacked pull requests are open and assigned to the owner: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency. #330 now aligns sound on the camera's and microphone's native capture times (2d054cc9, merged up as b507333e and 39a5947f, not pushed): on the built-in microphone the sound trails the picture by 40 to 55 ms, steady, lengths 3 ms apart. Round 4: suites at 2d054cc9 and 39a5947f clean after one-at-a-time reruns; code review of 2d054cc9 reported C1 HIGH (a microphone reopened between beginWriting and its first chunk keeps the old attempt's sample target, so the take saves silent) and two LOW; the validator confirmed C1, kept C3 (data clumps) as advisory and rejected C2, and C1's class is with a diagnosis agent before the fix; the suite at b507333e passed (5452 app, 178 relay); the Windows lab smoke at 39a5947f is running. Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
+Four stacked pull requests are open and assigned to the owner: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency. #330 now aligns sound on the camera's and microphone's native capture times (head ddba45cc, merged up as abe36a0e and 1b256203, not pushed): on the built-in microphone the sound trails the picture by 40 to 55 ms, steady, lengths 3 ms apart. Round 4: suites at 2d054cc9 and 39a5947f clean after one-at-a-time reruns; code review of 2d054cc9 reported C1 HIGH (a microphone reopened between beginWriting and its first chunk keeps the old attempt's sample target, so the take saves silent) and two LOW; the validator confirmed C1, kept C3 (data clumps) as advisory and rejected C2, and C1's class is with a diagnosis agent before the fix; the suite at b507333e passed (5452 app, 178 relay); the Windows lab smoke at 39a5947f is running. Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
 
 ## Next step
 
