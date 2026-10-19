@@ -1,7 +1,7 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T03:51:22.027Z
-Next ids: c5 D1 R2 S1
+Updated: 2026-10-19T04:17:47.847Z
+Next ids: c5 D2 R2 S1
 
 ## Goal
 
@@ -23,6 +23,8 @@ Interphase bug pathway grounding, before the interview. Causes found: (a) macOS 
 Write the seams, criteria and Steps to the record (the app-wide tap-target inventory is being gathered by an Explore agent), check it with check_record --complete, then hold the read-back with AskUserQuestion.
 
 ## Decisions in force
+
+- D1 Interphase hand-off: build the approved spec as four pull requests: Hand off to mitosis: MSPs mic-recovery, video-starts-like-a-camera, hearing-and-ring and button-consistency on a fix FEATURE branch cut from origin/main 9eb6c237; ADRs 0005 and 0006 and the glossary term Hearing ship with the first pull request.
 
 ## Open risks
 
