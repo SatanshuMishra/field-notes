@@ -1,8 +1,9 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
 import 'package:field_notes/features/today/today_date.dart';
@@ -112,7 +113,7 @@ class GardenSkyClock extends StatelessWidget {
 
 enum MeadowPlayGlyph { play, pause }
 
-class MeadowDockPill extends StatefulWidget {
+class MeadowDockPill extends StatelessWidget {
   const MeadowDockPill({
     super.key,
     required this.label,
@@ -137,100 +138,69 @@ class MeadowDockPill extends StatefulWidget {
   final double fontSize;
 
   @override
-  State<MeadowDockPill> createState() => _MeadowDockPillState();
-}
-
-class _MeadowDockPillState extends State<MeadowDockPill> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bool filled = widget.filled;
     final Color ink = filled ? Palette.onAccent : meadowCream;
-    final MeadowPlayGlyph? glyph = widget.glyph;
-    final Color fill = filled
-        ? Palette.coral
-        : meadowGlassWhite(_hovered ? 0.12 : 0);
-    final Widget face = DecoratedBox(
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: _pillRadius,
-        border: filled
-            ? Border.all(color: context.colors.line, width: Shapes.outlineWidth)
-            : null,
-      ),
-      child: SizedBox(
-        height: meadowDockPillHeight,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 13),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              if (glyph != null) ...<Widget>[
-                CustomPaint(
-                  size: const Size.square(12),
-                  painter: MeadowPlayGlyphPainter(glyph: glyph, color: ink),
-                ),
-                const SizedBox(width: _glyphGap),
-              ],
-              Text(
-                widget.text ?? widget.label,
-                maxLines: 1,
-                softWrap: false,
-                style: meadowSans(widget.fontSize).copyWith(color: ink),
+    final MeadowPlayGlyph? glyph = this.glyph;
+    final Widget content = SizedBox(
+      height: meadowDockPillHeight,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 13),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (glyph != null) ...<Widget>[
+              CustomPaint(
+                size: const Size.square(12),
+                painter: MeadowPlayGlyphPainter(glyph: glyph, color: ink),
               ),
-              if (widget.caret) ...<Widget>[
-                const SizedBox(width: _glyphGap),
-                CustomPaint(
-                  size: const Size.square(12),
-                  painter: MeadowStrokePainter(
-                    path: meadowCaretUp,
-                    color: ink,
-                    stroke: 2.4,
-                  ),
-                ),
-              ],
+              const SizedBox(width: _glyphGap),
             ],
-          ),
+            Text(
+              text ?? label,
+              maxLines: 1,
+              softWrap: false,
+              style: meadowSans(fontSize).copyWith(color: ink),
+            ),
+            if (caret) ...<Widget>[
+              const SizedBox(width: _glyphGap),
+              CustomPaint(
+                size: const Size.square(12),
+                painter: MeadowStrokePainter(
+                  path: meadowCaretUp,
+                  color: ink,
+                  stroke: 2.4,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
-    final String? tip = widget.tooltip;
-    return Semantics(
-      button: true,
-      enabled: widget.onPressed != null,
-      label: widget.label,
-      value: widget.semanticValue,
-      onTap: widget.onPressed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (PointerEnterEvent event) => _hover(true),
-        onExit: (PointerExitEvent event) => _hover(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: widget.onPressed,
-          child: FocusRing(
-            onPressed: widget.onPressed,
-            enabled: widget.onPressed != null,
-            surface: FocusRingSurface.dark,
-            borderRadius: _pillRadius,
-            child: ExcludeSemantics(
-              child: tip == null
-                  ? face
-                  : Tooltip(
-                      message: tip,
-                      excludeFromSemantics: true,
-                      child: face,
-                    ),
-            ),
-          ),
+    return Pressable(
+      label: label,
+      value: semanticValue,
+      tooltip: tooltip,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.pill,
+      borderRadius: _pillRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: filled ? Palette.coral : meadowGlassWhite(hovered ? 0.12 : 0),
+          borderRadius: _pillRadius,
+          border: filled
+              ? Border.all(
+                  color: context.colors.line,
+                  width: Shapes.outlineWidth,
+                )
+              : null,
+        ),
+        child: MeadowHoverFill(
+          hovered: hovered,
+          borderRadius: _pillRadius,
+          shape: HoverShape.pill,
+          child: content,
         ),
       ),
     );

@@ -2,6 +2,8 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/typography.dart';
 import 'package:field_notes/features/garden/model/meadow_focus.dart';
 import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
@@ -184,7 +186,7 @@ class _MeadowFocusStepperState extends State<MeadowFocusStepper> {
   }
 }
 
-class _RoundButton extends StatefulWidget {
+class _RoundButton extends StatelessWidget {
   const _RoundButton({
     super.key,
     required this.extent,
@@ -203,65 +205,31 @@ class _RoundButton extends StatefulWidget {
   final VoidCallback onPressed;
 
   @override
-  State<_RoundButton> createState() => _RoundButtonState();
-}
-
-class _RoundButtonState extends State<_RoundButton> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final bool enabled = widget.enabled;
-    final VoidCallback? press = enabled ? widget.onPressed : null;
-    final BorderRadius radius = BorderRadius.circular(widget.extent / 2);
-    final Widget face = Opacity(
-      opacity: enabled ? 1 : _disabledOpacity,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: meadowGlassWhite(enabled && _hovered ? 0.14 : 0),
-          borderRadius: radius,
-        ),
-        child: SizedBox.square(
-          dimension: widget.extent,
-          child: Center(
-            child: MeadowGlyph(
-              path: widget.path,
-              size: widget.glyph,
-              stroke: 2.4,
-            ),
-          ),
-        ),
-      ),
-    );
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: widget.label,
-      onTap: press,
-      child: MouseRegion(
-        cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-        onEnter: (PointerEnterEvent event) => _hover(true),
-        onExit: (PointerExitEvent event) => _hover(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: press,
-          child: FocusRing(
-            onPressed: press,
-            enabled: enabled,
-            surface: FocusRingSurface.dark,
+    final BorderRadius radius = BorderRadius.circular(extent / 2);
+    return Pressable(
+      label: label,
+      tooltip: label,
+      onPressed: enabled ? onPressed : null,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
+        opacity: enabled ? 1 : _disabledOpacity,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: meadowGlassWhite(hovered ? 0.14 : 0),
             borderRadius: radius,
-            child: ExcludeSemantics(
-              child: Tooltip(
-                message: widget.label,
-                excludeFromSemantics: true,
-                child: face,
+          ),
+          child: MeadowHoverFill(
+            hovered: hovered,
+            borderRadius: radius,
+            shape: HoverShape.circle,
+            child: SizedBox.square(
+              dimension: extent,
+              child: Center(
+                child: MeadowGlyph(path: path, size: glyph, stroke: 2.4),
               ),
             ),
           ),

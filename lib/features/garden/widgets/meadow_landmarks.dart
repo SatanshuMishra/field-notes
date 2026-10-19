@@ -4,9 +4,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
+import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
 
 const double _minColumn = 190;
 const double _sidebarGap = 10;
@@ -294,26 +296,48 @@ class _LandmarkCard extends StatelessWidget {
     }
     void toggle() => onHighlight(highlighted ? null : range);
     final VoidCallback press = onFocus ?? toggle;
-    return Semantics(
-      container: true,
-      button: true,
-      selected: highlighted,
-      onTap: press,
-      child: MouseRegion(
-        cursor: onFocus == null ? MouseCursor.defer : SystemMouseCursors.click,
-        onEnter: compact
-            ? null
-            : (PointerEnterEvent event) => onHighlight(range),
-        onExit: compact ? null : (PointerExitEvent event) => onHighlight(null),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: compact || onFocus != null ? press : null,
+    final void Function(PointerEnterEvent)? enter = compact
+        ? null
+        : (PointerEnterEvent event) => onHighlight(range);
+    final void Function(PointerExitEvent)? exit = compact
+        ? null
+        : (PointerExitEvent event) => onHighlight(null);
+    if (!compact && onFocus == null) {
+      return Semantics(
+        container: true,
+        button: true,
+        selected: highlighted,
+        onTap: press,
+        child: MouseRegion(
+          onEnter: enter,
+          onExit: exit,
           child: FocusRing(
             onPressed: press,
             borderRadius: _cardRadius,
             child: face,
           ),
+        ),
+      );
+    }
+    return MouseRegion(
+      onEnter: enter,
+      onExit: exit,
+      child: Pressable(
+        label: <String>[
+          landmark.kicker,
+          landmark.title,
+          landmark.text,
+          meadowRangeLabel(year, range.first, range.last),
+        ].join('\n'),
+        selected: highlighted,
+        onPressed: press,
+        borderRadius: _cardRadius,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => MeadowHoverFill(
+          hovered: hovered,
+          borderRadius: _cardRadius,
+          surface: FocusRingSurface.light,
+          child: face,
         ),
       ),
     );

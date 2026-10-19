@@ -1,13 +1,14 @@
 import 'dart:math' as math;
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
 import 'package:field_notes/features/garden/scene/meadow_view.dart';
+import 'package:field_notes/features/garden/widgets/meadow_glass_popover.dart';
 import 'package:field_notes/features/garden/widgets/meadow_header.dart';
 import 'package:field_notes/features/garden/widgets/meadow_landmarks.dart';
 import 'package:field_notes/features/garden/widgets/meadow_ribbon.dart';
@@ -205,46 +206,36 @@ class _TabButton extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     return _TabReach(
       child: Semantics(
-        button: true,
-        selected: selected,
         inMutuallyExclusiveGroup: true,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
-            child: FocusRing(
-              onPressed: onPressed,
+        child: Pressable(
+          label: label,
+          selected: selected,
+          onPressed: onPressed,
+          borderRadius: _tabRadius,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: selected ? Palette.coral : _clear,
               borderRadius: _tabRadius,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: selected ? Palette.coral : _clear,
-                  borderRadius: _tabRadius,
-                  boxShadow: selected
-                      ? <BoxShadow>[
-                          BoxShadow(
-                            color: colors.shadow,
-                            offset: const Offset(1, 1),
-                          ),
-                        ]
-                      : const <BoxShadow>[],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 10,
-                  ),
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: context.textStyles.captureLabelSans.copyWith(
-                      color: selected ? Palette.onAccent : colors.inkSoft,
-                      fontSize: 12,
-                    ),
-                  ),
+              boxShadow: selected
+                  ? <BoxShadow>[
+                      BoxShadow(
+                        color: colors.shadow,
+                        offset: const Offset(1, 1),
+                      ),
+                    ]
+                  : const <BoxShadow>[],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              child: Text(
+                label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: context.textStyles.captureLabelSans.copyWith(
+                  color: selected ? Palette.onAccent : colors.inkSoft,
+                  fontSize: 12,
                 ),
               ),
             ),
@@ -255,74 +246,44 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-class _CloseButton extends StatefulWidget {
+class _CloseButton extends StatelessWidget {
   const _CloseButton({required this.compact, required this.onPressed});
 
   final bool compact;
   final VoidCallback onPressed;
 
   @override
-  State<_CloseButton> createState() => _CloseButtonState();
-}
-
-class _CloseButtonState extends State<_CloseButton> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final bool compact = widget.compact;
     final double extent = compact ? 44 : 34;
     final BorderRadius radius = BorderRadius.all(
       Radius.circular(compact ? 12 : 10),
     );
-    final Widget face = DecoratedBox(
-      decoration: BoxDecoration(
-        color: _hovered ? colors.ink08 : _clear,
-        borderRadius: radius,
-      ),
-      child: SizedBox.square(
-        dimension: extent,
-        child: Center(
-          child: MeadowGlyph(
-            path: meadowCross,
-            size: compact ? 16 : 14,
-            color: colors.ink,
-            stroke: 2.4,
-          ),
-        ),
-      ),
-    );
-    return Semantics(
+    return Pressable(
       key: meadowDetailsCloseKey,
-      button: true,
       label: meadowDetailsCloseLabel,
-      onTap: widget.onPressed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (PointerEnterEvent event) => _hover(true),
-        onExit: (PointerExitEvent event) => _hover(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: widget.onPressed,
-          child: FocusRing(
-            onPressed: widget.onPressed,
-            borderRadius: radius,
-            child: ExcludeSemantics(
-              child: compact
-                  ? face
-                  : Tooltip(
-                      message: meadowDetailsCloseTooltip,
-                      excludeFromSemantics: true,
-                      child: face,
-                    ),
+      tooltip: compact ? null : meadowDetailsCloseTooltip,
+      onPressed: onPressed,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: hovered ? colors.ink08 : _clear,
+          borderRadius: radius,
+        ),
+        child: MeadowHoverFill(
+          hovered: hovered,
+          borderRadius: radius,
+          surface: FocusRingSurface.light,
+          child: SizedBox.square(
+            dimension: extent,
+            child: Center(
+              child: MeadowGlyph(
+                path: meadowCross,
+                size: compact ? 16 : 14,
+                color: colors.ink,
+                stroke: 2.4,
+              ),
             ),
           ),
         ),
@@ -492,6 +453,8 @@ class _RenderTabReach extends RenderProxyBox {
   @override
   void describeSemanticsConfiguration(SemanticsConfiguration config) {
     super.describeSemanticsConfiguration(config);
-    config.isSemanticBoundary = true;
+    config
+      ..isSemanticBoundary = true
+      ..isMergingSemanticsOfDescendants = true;
   }
 }

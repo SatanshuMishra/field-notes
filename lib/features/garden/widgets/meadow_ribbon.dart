@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/domain/mood/mood.dart';
@@ -339,28 +340,39 @@ class _MonthButton extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(
-      container: true,
-      button: true,
-      selected: highlighted,
-      label: month.summary,
-      onTap: press,
-      child: MouseRegion(
-        cursor: focus == null ? MouseCursor.defer : SystemMouseCursors.click,
-        onEnter: compact
-            ? null
-            : (PointerEnterEvent event) => onHighlight(range),
-        onExit: compact ? null : (PointerExitEvent event) => onHighlight(null),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: compact || focus != null ? press : null,
+    final void Function(PointerEnterEvent)? enter = compact
+        ? null
+        : (PointerEnterEvent event) => onHighlight(range);
+    final void Function(PointerExitEvent)? exit = compact
+        ? null
+        : (PointerExitEvent event) => onHighlight(null);
+    if (!compact && focus == null) {
+      return Semantics(
+        container: true,
+        button: true,
+        selected: highlighted,
+        label: month.summary,
+        onTap: press,
+        child: MouseRegion(
+          onEnter: enter,
+          onExit: exit,
           child: FocusRing(
             onPressed: press,
             borderRadius: _monthRadius,
             child: face,
           ),
         ),
+      );
+    }
+    return MouseRegion(
+      onEnter: enter,
+      onExit: exit,
+      child: Pressable(
+        label: month.summary,
+        selected: highlighted,
+        onPressed: press,
+        borderRadius: _monthRadius,
+        child: face,
       ),
     );
   }
