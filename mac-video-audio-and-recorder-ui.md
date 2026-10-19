@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T11:22:13.804Z
+Updated: 2026-10-19T11:22:15.906Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Pipeline stage 3. mic-recovery is green (round 2) with its advisories fixed at 2
 
 ## Next step
 
-When the second resume (build-1-resume-2.out) ends, read its last JSON line and start round 1 for hearing-and-ring and button-consistency.
+When the third resume (build-1-resume-3.out) ends, read its last JSON line, record lane assumptions, dispatch hearing-and-ring's round 1 reviewers on its finished suite, and start button-consistency's round 1 (diff, obligations, suite in suite-tree).
 
 Needs: D2, R1.
 
