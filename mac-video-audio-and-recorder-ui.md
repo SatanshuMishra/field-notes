@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T23:28:51.049Z
+Updated: 2026-10-19T23:29:37.451Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -44,4 +44,6 @@ Needs: R1.
 - review/checks/ in the run home: the diagnoses' selecting checks and repro tests; stall-probes/ holds the passing stalled-take probes.
 - Integration worktree ~/.mitosis/runs/field-notes/mac-video-audio-and-recorder-ui/integration on fix/mac-video-audio-and-recorder-ui.
 - lighthouse/run-1/work/windows-stall-diagnostic.brief.md in the run home: the Windows stall diagnostic brief.
+- lighthouse/run-2/work/android-paths.brief.md in the run home: the Android brief for run 2, to dispatch once the Windows lab is released.
+- review/integration.assumptions.txt in the run home: assumptions the Integration fixes made.
 - suite-tree/ and suite-hearing/ in the run home: detached worktrees for review suites away from mitosis's live worktrees, one per concurrent run.
