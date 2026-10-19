@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T13:21:52.004Z
+Updated: 2026-10-19T13:21:56.036Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camer
 
 ## Next step
 
-When the suite lands, dispatch button-consistency's round 2 code reviewer, security reviewer and conformance auditor (5.14) with the rendered briefs, then findings, candidates, validator, record and verdict. Add a U finding for the Android input panel rows only if they are unnamed on the new head and named on main. Then the Mac 5.9 check on the built-in microphone, then ship.
+Record button-consistency's round 2 verdicts and verdict, merge hearing-and-ring into it, fix the confirmed findings and the two remaining wrapper sites, then round 3 with an Android rerun of the input panel and drop-down names. Dispatch hearing-and-ring's round 3 code reviewer when its suite lands. Run the Mac 5.9 check when the repro app builds, then ship.
 
 Needs: D2, R1.
 
