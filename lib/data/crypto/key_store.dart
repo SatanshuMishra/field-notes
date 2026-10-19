@@ -109,6 +109,98 @@ final class MemorySecureValues implements SecureValues {
   }
 }
 
+final class BundledSecureValues implements SecureValues {
+  BundledSecureValues(this._inner, {required List<String> legacyKeys})
+    : _legacyKeys = List<String>.unmodifiable(legacyKeys);
+
+  static const String bundleKey = 'field_notes.sync.bundle';
+
+  static const FormatException _unreadable = FormatException(
+    'Unreadable key bundle',
+  );
+
+  final SecureValues _inner;
+  final List<String> _legacyKeys;
+  Future<void> _previous = Future<void>.value();
+
+  @override
+  Future<String?> read(String key) => _inTurn(() async => (await _load())[key]);
+
+  @override
+  Future<void> write(String key, String value) => _inTurn(() async {
+    final Map<String, String> values = await _load();
+    await _store(<String, String>{...values, key: value});
+  });
+
+  @override
+  Future<void> delete(String key) => _inTurn(() async {
+    final Map<String, String> values = await _load();
+    await _store(<String, String>{
+      for (final MapEntry<String, String> entry in values.entries)
+        if (entry.key != key) entry.key: entry.value,
+    });
+  });
+
+  Future<T> _inTurn<T>(Future<T> Function() operation) {
+    final Future<T> result = _previous.then((_) => operation());
+    _previous = result.then<void>((_) {}, onError: (Object _) {});
+    return result;
+  }
+
+  Future<Map<String, String>> _load() async {
+    final String? stored = await _inner.read(bundleKey);
+    if (stored != null) {
+      return _parse(stored);
+    }
+    final Map<String, String> found = await _readLegacy();
+    if (found.isEmpty) {
+      return found;
+    }
+    await _store(found);
+    for (final String key in found.keys) {
+      await _deleteLegacy(key);
+    }
+    return found;
+  }
+
+  Future<Map<String, String>> _readLegacy() async {
+    Map<String, String> found = const <String, String>{};
+    for (final String key in _legacyKeys) {
+      final String? value = await _inner.read(key);
+      if (value != null) {
+        found = <String, String>{...found, key: value};
+      }
+    }
+    return found;
+  }
+
+  Future<void> _deleteLegacy(String key) => _inner
+      .delete(key)
+      .catchError(
+        (Object _) {},
+        test: (Object error) => error is KeyAccessException,
+      );
+
+  Future<void> _store(Map<String, String> values) =>
+      _inner.write(bundleKey, jsonEncode(values));
+
+  static Map<String, String> _parse(String stored) {
+    final Map<String, Object?> decoded;
+    try {
+      decoded = decodeJsonObject(stored);
+    } on FormatException {
+      throw _unreadable;
+    }
+    return Map<String, String>.unmodifiable(<String, String>{
+      for (final MapEntry<String, Object?> entry in decoded.entries)
+        entry.key: switch (entry.value) {
+          final String text => text,
+          _ => throw _unreadable,
+        },
+    });
+  }
+}
+
 final class UploadPass {
   UploadPass({required this.token, required DateTime expiresAt})
     : expiresAt = expiresAt.toUtc();
