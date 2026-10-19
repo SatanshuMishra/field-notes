@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T11:49:42.389Z
+Updated: 2026-10-19T11:51:41.037Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Pipeline stage 3. mic-recovery is green (round 2) with its advisories fixed at 2
 
 ## Next step
 
-As each round 1 reviewer returns, collect hearing-and-ring's and button-consistency's findings (reviewers' arrays plus a U finding per suite failure that passes on the base and an M finding for button-consistency's inconclusive gate), then candidates, validator, record and verdict. The Windows lab smoke run on button-consistency's head is running (brief in review/round-1/briefs/smoke-windows.txt); Android follows it, then the Mac hardware check after confirming the owner is not on a call. Returned so far: hearing-and-ring's auditor (all seven criteria met) and button-consistency's auditor (5.14 not met: the camera picker and compact log card taps).
+As each round 1 reviewer returns, collect hearing-and-ring's and button-consistency's findings (reviewers' arrays plus a U finding per suite failure that passes on the base and an M finding for button-consistency's inconclusive gate), then candidates, validator, record and verdict. The Android lab smoke run on button-consistency's head is running (briefs in review/round-1/briefs/); the Mac hardware check follows it after confirming the owner is not on a call; Windows smoke is unproven until the owner's PC is back on Tailscale to build. Returned so far: hearing-and-ring's auditor (all seven criteria met), button-consistency's auditor (A1, 5.14 not met: the camera picker and compact log card taps) and its security reviewer (S1, the same two taps; threats T1-T12 appended to its obligations). Both code reviewers are still running.
 
 Needs: D2, R1.
 
