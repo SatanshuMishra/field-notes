@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T13:22:04.398Z
+Updated: 2026-10-19T13:31:59.187Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camera (round 3, 2d0091ff) are green and wait for ship; each green MSP is merged up the stack. hearing-and-ring is in round 3 at 32ff2edc: after its green round 2, the Android lab showed its input panel rows and drop-down choices nameless on Android (named on main), because a Semantics wrapper around Pressable splits each row into an empty outer node and a named inner one; both are fixed with receipts, its suite is running in suite-hearing and its code-review brief is rendered in review/round-3/briefs. button-consistency is in round 2 at adcefe11: suite clean, conformance 5.12-5.14 met, findings C1 (settings text field padding shows the text cursor but ignores clicks), C2 (three pass-through hover wrappers) and U1 (the Android rows); the validator is running. The same wrapper split remains in button-consistency's meadow_tabs.dart and settings_segmented.dart (use Pressable's inMutuallyExclusiveGroup). android_dump_rules_test fails now and then under machine load and is not a finding. Smoke: Windows is unproven while the owner's PC is offline on Tailscale; the Android camera-off notice passes; the Mac repro app is building in harness/repro-tree from 32ff2edc for the built-in microphone check (a rebuilt ad-hoc app may raise a microphone prompt only the owner can answer). Known gap outside the fixed classes: a dead stretch just before a pause is dropped if the take is resumed rather than kept. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it; (b) camera_macos replies "started" about 1.05 s before the movie begins.
+Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camera (round 3, 2d0091ff) are green and wait for ship; each green MSP is merged up the stack. hearing-and-ring is in round 3 at 32ff2edc (suite clean): after its green round 2, the Android lab showed its input panel rows and drop-down choices nameless on Android (named on main), because a Semantics wrapper around Pressable splits each row into an empty outer node and a named inner one; both are fixed with receipts, and its round 3 code reviewer is running. button-consistency's round 2 at adcefe11 is at diagnose: blockers C1 (small tap target: settings text field padding shows the text cursor but ignores clicks) and U1 (failing test: the Android rows), advisory C2 (three pass-through hover wrappers), P1 fixed; one diagnosis per kind is running. The same wrapper split remains in its meadow_tabs.dart and settings_segmented.dart (use Pressable's inMutuallyExclusiveGroup). android_dump_rules_test fails now and then under machine load and is not a finding. Smoke: Windows is unproven while the owner's PC is offline on Tailscale; the Android camera-off notice passes. The Mac repro app is built in harness/repro-tree from 32ff2edc; its built-in microphone run waits on two macOS system dialogs (privacy and app-launch checks) only the owner can answer.
 
 ## Next step
 
-Record button-consistency's round 2 verdicts and verdict, merge hearing-and-ring into it, fix the confirmed findings and the two remaining wrapper sites, then round 3 with an Android rerun of the input panel and drop-down names. Dispatch hearing-and-ring's round 3 code reviewer when its suite lands. Run the Mac 5.9 check when the repro app builds, then ship.
+Record each button-consistency diagnosis, re-run its verdict, merge hearing-and-ring into it, fix C1, C2, U1 and the two remaining wrapper sites, then round 3 with an Android rerun of the input panel and drop-down names. Record hearing-and-ring's round 3 review when it returns. Read the Mac runs once the owner answers the dialogs, then ship.
 
 Needs: D2, R1.
 
