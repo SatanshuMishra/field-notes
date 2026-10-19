@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera_macos/camera_macos.dart';
 import 'package:field_notes/features/capture/platform/camera_video_recorder.dart';
@@ -16,6 +17,8 @@ const int _sampleRate = 48000;
 const int _firstChunkSamples = 3040;
 const Duration _quietMicrophoneTake = Duration(milliseconds: 1500);
 const Duration _soundAllowedShortOfPicture = Duration(milliseconds: 500);
+const Duration _firstFrameAge = Duration(milliseconds: 90);
+const int _firstFrameAgeSamples = 4320;
 
 class _MacBench {
   _MacBench(this.root);
@@ -74,6 +77,20 @@ Duration _soundWritten(FakeLiveAudio liveAudio) => Duration(
 );
 
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
+
+int _leadingSilentSamples(FakeLiveAudio liveAudio) {
+  int silent = 0;
+  for (final Uint8List pcm in liveAudio.appended) {
+    final ByteData samples = ByteData.sublistView(pcm);
+    for (int offset = 0; offset + 1 < pcm.lengthInBytes; offset += 2) {
+      if (samples.getInt16(offset, Endian.little) != 0) {
+        return silent;
+      }
+      silent += 1;
+    }
+  }
+  return silent;
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -148,4 +165,29 @@ void main() {
       await recorder.releaseSaved(take);
     },
   );
+
+  test('sound lines up with the first frame the camera captured before it '
+      'reported the movie start', () async {
+    final VideoRecorder recorder = bench.recorder();
+    await recorder.start();
+    await sendMacMovieStart(firstFrameAge: _firstFrameAge);
+    bench.skip(const Duration(seconds: 1));
+    bench.mic.push(pcmAtDbfs(-20, samples: _sampleRate));
+    await _settle();
+    final VideoRecording take = await recorder.stop();
+
+    expect(
+      _leadingSilentSamples(bench.liveAudio),
+      _firstFrameAgeSamples,
+      reason:
+          'the sound starts where the camera reported the movie, after its '
+          'first frame, so the sound plays ahead of the picture',
+    );
+    expect(
+      _soundWritten(bench.liveAudio),
+      const Duration(seconds: 1) + _firstFrameAge,
+    );
+
+    await recorder.releaseSaved(take);
+  });
 }
