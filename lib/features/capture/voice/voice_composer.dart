@@ -64,11 +64,12 @@ class _VoiceComposerConnectorState
   StreamSubscription<double>? _levelFeed;
   late final RecordingWakeHold _wakeHold;
 
-  VoiceRecorder get _recorder => ref.read(voiceRecorderProvider);
+  late final VoiceRecorder _recorder;
 
   @override
   void initState() {
     super.initState();
+    _recorder = ref.read(voiceRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
   }
 
@@ -84,6 +85,9 @@ class _VoiceComposerConnectorState
     _cancelBreath();
     _stopFeedingSampler();
     _wakeHold.dispose();
+    if (!_closing && _phase.isTaking) {
+      unawaited(_recorder.cancel().catchError((Object _) {}));
+    }
     super.dispose();
   }
 
