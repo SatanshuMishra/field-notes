@@ -8,6 +8,7 @@ import 'package:field_notes/features/capture/voice/record_voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_composer.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_provider.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
+import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
@@ -17,6 +18,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:record/record.dart' show RecordConfig;
 
+import '../../settings/support/fake_settings_repository.dart';
 import '../audio/live_audio_test_support.dart';
 import 'voice_test_support.dart';
 
@@ -94,6 +96,7 @@ Widget _app(FakeMicrophone mic) {
             temporaryDirectory: () async => _NoDiskDirectory(),
           ),
         ),
+        settingsRepositoryProvider.overrideWithValue(FakeSettingsRepository()),
         captureServiceProvider.overrideWith((Ref ref) => FakeCaptureService()),
         reflectionPromptsEnabledProvider.overrideWithValue(false),
       ],

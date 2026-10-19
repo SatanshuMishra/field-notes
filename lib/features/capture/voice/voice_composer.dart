@@ -17,6 +17,7 @@ import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 
+import 'follows_chosen_input.dart';
 import 'voice_peak_sampler.dart';
 import 'voice_recorder.dart';
 import 'voice_recorder_provider.dart';
@@ -74,10 +75,12 @@ class _VoiceComposerConnectorState
     super.initState();
     _recorder = ref.read(voiceRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
-    ref.listenManual<AsyncValue<AppSettings>>(
-      appSettingsProvider,
-      _onSettingsChanged,
-    );
+    if (_recorder is FollowsChosenInput) {
+      ref.listenManual<AsyncValue<AppSettings>>(
+        appSettingsProvider,
+        _onSettingsChanged,
+      );
+    }
     unawaited(_recorder.open().catchError((Object _) {}));
   }
 
@@ -87,14 +90,19 @@ class _VoiceComposerConnectorState
   ) {
     final AppSettings? before = previous?.value;
     final AppSettings? after = next.value;
-    if (before == null ||
+    final FollowsChosenInput? recorder = switch (_recorder) {
+      final FollowsChosenInput follower => follower,
+      _ => null,
+    };
+    if (recorder == null ||
+        before == null ||
         after == null ||
         before.audioInputId == after.audioInputId ||
         _closing ||
         _phase != VoiceRecorderPhase.idle) {
       return;
     }
-    unawaited(_recorder.open().catchError((Object _) {}));
+    unawaited(recorder.followChosenInput().catchError((Object _) {}));
   }
 
   @override

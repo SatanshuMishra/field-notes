@@ -189,4 +189,34 @@ void main() {
     expect(voice.recorder.hearingNow, isNot(MicrophoneHearing.cannotHear));
     await voice.recorder.close();
   });
+
+  test(
+    'an open voice recorder follows a newly chosen input when told to',
+    () async {
+      AudioInput chosen = _systemDefault;
+      final _WarmVoice voice = await _warmVoice(
+        resolveInput: () async => chosen,
+      );
+      await voice.recorder.open();
+
+      chosen = _usbMicrophone;
+      await voice.recorder.followChosenInput();
+
+      expect(voice.microphone.startStreamConfigs.last.device?.id, 'usb-mic');
+      await voice.recorder.close();
+    },
+  );
+
+  test('a closed voice recorder stays closed when told to follow', () async {
+    AudioInput chosen = _systemDefault;
+    final _WarmVoice voice = await _warmVoice(resolveInput: () async => chosen);
+    await voice.recorder.open();
+    await voice.recorder.close();
+    final int opened = voice.microphone.streamsOpened;
+
+    chosen = _usbMicrophone;
+    await voice.recorder.followChosenInput();
+
+    expect(voice.microphone.streamsOpened, opened);
+  });
 }

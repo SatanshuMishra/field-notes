@@ -11,6 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
 
+import 'follows_chosen_input.dart';
 import 'voice_processing.dart';
 import 'voice_recorder.dart';
 
@@ -25,7 +26,7 @@ Future<String> resolveVoiceRecordingPath(Directory directory, int nowMs) async {
   return p.join(directory.path, voiceRecordingFileName(nowMs));
 }
 
-class RecordVoiceRecorder implements VoiceRecorder {
+class RecordVoiceRecorder implements VoiceRecorder, FollowsChosenInput {
   RecordVoiceRecorder({
     AudioRecorder? recorder,
     LiveEncoder encoder = const LiveEncoder(),
@@ -106,6 +107,14 @@ class RecordVoiceRecorder implements VoiceRecorder {
       return;
     }
     await _armWhileOpen();
+  }
+
+  @override
+  Future<void> followChosenInput() async {
+    if (!_wantOpen || _inTake) {
+      return;
+    }
+    await open();
   }
 
   Future<void> _letGoOfAnotherInput(int epoch) async {

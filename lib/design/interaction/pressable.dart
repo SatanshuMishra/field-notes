@@ -28,11 +28,15 @@ class Pressable extends StatefulWidget {
     this.hint,
     this.selected,
     this.toggled,
+    this.checked,
+    this.inMutuallyExclusiveGroup,
     this.excludeSemantics = true,
     this.focusNode,
     this.autofocus = false,
     this.placement = FocusRingPlacement.outside,
     this.behavior = HitTestBehavior.opaque,
+    this.ringsFace = false,
+    this.includeFocusSemantics = true,
   }) : assert(
          (child == null) != (builder == null),
          'Give exactly one of child and builder.',
@@ -52,13 +56,19 @@ class Pressable extends StatefulWidget {
   final String? hint;
   final bool? selected;
   final bool? toggled;
+  final bool? checked;
+  final bool? inMutuallyExclusiveGroup;
   final bool excludeSemantics;
   final FocusNode? focusNode;
   final bool autofocus;
   final FocusRingPlacement placement;
   final HitTestBehavior behavior;
+  final bool ringsFace;
+  final bool includeFocusSemantics;
 
   bool get enabled => onPressed != null || onPressedAt != null;
+
+  bool get readsAsButton => toggled == null && checked == null;
 
   @override
   State<Pressable> createState() => _PressableState();
@@ -125,6 +135,8 @@ class _PressableState extends State<Pressable> {
               ? _circleRingRadius
               : widget.borderRadius,
           placement: widget.placement,
+          paintsRing: !widget.ringsFace,
+          includeFocusSemantics: widget.includeFocusSemantics,
           child: face,
         ),
       ),
@@ -132,13 +144,15 @@ class _PressableState extends State<Pressable> {
     final String? tooltip = widget.tooltip;
     return Semantics(
       container: true,
-      button: true,
+      button: widget.readsAsButton,
       enabled: enabled,
       label: widget.label,
       value: widget.value,
       hint: widget.hint,
       selected: widget.selected,
       toggled: widget.toggled,
+      checked: widget.checked,
+      inMutuallyExclusiveGroup: widget.inMutuallyExclusiveGroup,
       onTap: enabled ? _pressAtCentre : null,
       child: tooltip == null
           ? pressable
