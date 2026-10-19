@@ -274,6 +274,7 @@ class _ActiveTake {
   Future<void> tail = Future<void>.value();
   bool writing;
   bool paused = false;
+  Duration pausedAt = Duration.zero;
   bool closing = false;
   bool chainBroken = false;
   bool encoderGivenUp = false;
@@ -586,6 +587,9 @@ class LiveAudioCapture {
     if (take == null) {
       return;
     }
+    if (!take.paused) {
+      take.pausedAt = _clock();
+    }
     take.paused = true;
     take.watchdog?.cancel();
     if (take.streamOpen) {
@@ -829,7 +833,7 @@ class LiveAudioCapture {
     if (take == null) {
       throw StateError('No live audio take is running.');
     }
-    final Duration keptAt = _clock();
+    final Duration keptAt = take.paused ? take.pausedAt : _clock();
     _close(take);
     try {
       await _release(take, take.recorder.stop);
