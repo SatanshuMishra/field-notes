@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T20:28:16.016Z
+Updated: 2026-10-19T20:28:18.256Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Four stacked pull requests are open and assigned to the owner: #329 mic-recovery
 
 ## Next step
 
-Finish round 4: read the code-reviewer's verdict on 2d054cc9, the hearing-and-ring suite at b507333e and the Windows lab smoke at 39a5947f; fix any confirmed finding on the branch, then push video-starts-like-a-camera, hearing-and-ring and button-consistency to update #330 to #332 and report the unproven items (HS80 path, Q11 mirroring of the sync fix, Android Settings segmented read).
+Run round 5 on video-starts-like-a-camera at ddba45cc and button-consistency at aad6adab (suites, code review, validator, verdict, Windows smoke of path 5 at aad6adab); once green, push video-starts-like-a-camera, hearing-and-ring and button-consistency to update #330 to #332 and report the unproven items (HS80 path, Q11 mirroring of the sync fix, Android Settings segmented read).
 
 Needs: D3, R1.
 
