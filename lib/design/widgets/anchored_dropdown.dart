@@ -337,71 +337,62 @@ class _DropdownChoiceTile extends StatelessWidget {
     final BorderRadius radius = BorderRadius.circular(_choiceRadius);
     return Padding(
       padding: _choiceInset,
-      child: MergeSemantics(
-        child: Semantics(
+      child: MouseRegion(
+        onEnter: (PointerEnterEvent _) => onHover(),
+        child: Pressable(
           inMutuallyExclusiveGroup: true,
-          child: MouseRegion(
-            onEnter: (PointerEnterEvent _) => onHover(),
-            child: Pressable(
-              label: description == null ? label : '$label\n$description',
-              selected: chosen,
-              onPressed: onTap,
+          label: description == null ? label : '$label\n$description',
+          selected: chosen,
+          onPressed: onTap,
+          borderRadius: radius,
+          surface: surface,
+          paintsHover: false,
+          builder: (BuildContext context, bool _) => DecoratedBox(
+            decoration: BoxDecoration(
+              color: highlighted
+                  ? ink.withValues(alpha: _highlightAlpha)
+                  : Colors.transparent,
               borderRadius: radius,
-              surface: surface,
-              paintsHover: false,
-              builder: (BuildContext context, bool _) => DecoratedBox(
-                decoration: BoxDecoration(
-                  color: highlighted
-                      ? ink.withValues(alpha: _highlightAlpha)
-                      : Colors.transparent,
-                  borderRadius: radius,
-                ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(
-                    minHeight: _choiceMinHeight,
-                  ),
-                  child: Padding(
-                    padding: _choicePadding,
-                    child: Row(
-                      children: <Widget>[
-                        SizedBox.square(
-                          dimension: _checkSize,
-                          child: chosen
-                              ? Icon(Icons.check, size: _checkSize, color: ink)
-                              : null,
-                        ),
-                        const SizedBox(width: _checkGap),
-                        Expanded(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Text(
-                                label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: context.textStyles.bodySans.copyWith(
-                                  color: ink,
-                                ),
-                              ),
-                              if (description != null) ...<Widget>[
-                                const SizedBox(height: _descriptionGap),
-                                Text(
-                                  description,
-                                  style: context.textStyles.captionSans
-                                      .copyWith(
-                                        color: ink.withValues(
-                                          alpha: _mutedAlpha,
-                                        ),
-                                      ),
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                      ],
+            ),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: _choiceMinHeight),
+              child: Padding(
+                padding: _choicePadding,
+                child: Row(
+                  children: <Widget>[
+                    SizedBox.square(
+                      dimension: _checkSize,
+                      child: chosen
+                          ? Icon(Icons.check, size: _checkSize, color: ink)
+                          : null,
                     ),
-                  ),
+                    const SizedBox(width: _checkGap),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.bodySans.copyWith(
+                              color: ink,
+                            ),
+                          ),
+                          if (description != null) ...<Widget>[
+                            const SizedBox(height: _descriptionGap),
+                            Text(
+                              description,
+                              style: context.textStyles.captionSans.copyWith(
+                                color: ink.withValues(alpha: _mutedAlpha),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
