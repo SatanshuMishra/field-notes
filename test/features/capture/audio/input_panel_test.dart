@@ -8,6 +8,7 @@ import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
@@ -74,6 +75,7 @@ Future<void> _show(
   required _FakeOutput output,
   bool phone = false,
   bool androidVideo = false,
+  VoidCallback? onVoiceSettings,
 }) async {
   tester.view.physicalSize = phone
       ? const Size(384, 832)
@@ -100,7 +102,10 @@ Future<void> _show(
           body: SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
-              child: InputPanel(androidVideo: androidVideo),
+              child: InputPanel(
+                androidVideo: androidVideo,
+                onVoiceSettings: onVoiceSettings,
+              ),
             ),
           ),
         ),
@@ -398,5 +403,64 @@ void main() {
     expect(find.text('CORSAIR HS80 MAX'), findsOneWidget);
     expect(find.text('Output device'), findsNothing);
     expect(find.byKey(outputDeviceRowKey), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('each panel row is one named control that reads its open state', (
+    WidgetTester tester,
+  ) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await _show(
+      tester,
+      platform: TargetPlatform.android,
+      repository: FakeSettingsRepository(
+        initial: AppSettings.defaults.copyWith(
+          inputProfile: InputProfile.studio,
+          inputVolume: 100,
+        ),
+      ),
+      lister: _Lister(<InputDevice>[_macBook, _corsair]),
+      output: _FakeOutput('Speakers'),
+      phone: true,
+      onVoiceSettings: () {},
+    );
+
+    final List<(Key, Matcher)> rows = <(Key, Matcher)>[
+      (
+        inputDeviceRowKey,
+        isSemantics(
+          label: 'Input device',
+          value: 'System default',
+          isButton: true,
+          hasExpandedState: true,
+          isExpanded: false,
+          hasTapAction: true,
+        ),
+      ),
+      (
+        inputProfileRowKey,
+        isSemantics(
+          label: 'Input profile',
+          value: 'Studio',
+          isButton: true,
+          hasExpandedState: true,
+          isExpanded: false,
+          hasTapAction: true,
+        ),
+      ),
+      (
+        voiceSettingsRowKey,
+        isSemantics(
+          label: 'Voice settings',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      ),
+    ];
+    for (final (Key key, Matcher reads) in rows) {
+      final SemanticsNode row = tester.getSemantics(find.byKey(key));
+      expect(row, reads);
+      expect(row.childrenCount, 0, reason: '$key splits into nested nodes');
+    }
+    semantics.dispose();
   }, variant: TargetPlatformVariant.only(TargetPlatform.android));
 }
