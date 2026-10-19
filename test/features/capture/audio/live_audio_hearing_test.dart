@@ -97,4 +97,73 @@ void main() {
       async.flushMicrotasks();
     });
   });
+
+  test('a capture cancelled while it cannot hear reads as opening again', () {
+    fakeAsync((FakeAsync async) {
+      final List<FakeMicrophone> microphones = <FakeMicrophone>[];
+      final LiveAudioCapture capture = _capture(
+        async,
+        FakeLiveAudio(writesFiles: false),
+        microphones,
+      );
+      capture.start(
+        input: const AudioInput(id: null, label: 'System default'),
+        profile: InputProfile.studio,
+        volume: 100,
+        path: 'take.m4a',
+        armed: true,
+      );
+      async.flushMicrotasks();
+      _sendSilenceFor2Seconds(async, microphones);
+      expect(capture.hearingNow, MicrophoneHearing.cannotHear);
+
+      capture.cancel();
+      async.flushMicrotasks();
+
+      expect(capture.running, isFalse);
+      expect(capture.hearingNow, MicrophoneHearing.opening);
+      capture.dispose();
+      async.flushMicrotasks();
+    });
+  });
+
+  test('a take stopped while it cannot hear reads as opening again', () {
+    fakeAsync((FakeAsync async) {
+      final List<FakeMicrophone> microphones = <FakeMicrophone>[];
+      final LiveAudioCapture capture = _capture(
+        async,
+        FakeLiveAudio(writesFiles: false),
+        microphones,
+      );
+      capture.start(
+        input: const AudioInput(id: null, label: 'System default'),
+        profile: InputProfile.studio,
+        volume: 100,
+        path: 'take.m4a',
+      );
+      async.flushMicrotasks();
+      _sendSilenceFor2Seconds(async, microphones);
+      expect(capture.hearingNow, MicrophoneHearing.cannotHear);
+
+      capture.stop();
+      async.elapse(const Duration(seconds: 3));
+
+      expect(capture.running, isFalse);
+      expect(capture.hearingNow, MicrophoneHearing.opening);
+      capture.dispose();
+      async.flushMicrotasks();
+    });
+  });
+}
+
+void _sendSilenceFor2Seconds(
+  FakeAsync async,
+  List<FakeMicrophone> microphones,
+) {
+  const int chunksPast2Seconds = 21;
+  for (int chunk = 0; chunk < chunksPast2Seconds; chunk += 1) {
+    async.elapse(_chunkEvery);
+    microphones.last.push(silentPcm(_samplesPerChunk));
+    async.flushMicrotasks();
+  }
 }

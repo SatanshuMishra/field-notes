@@ -1,5 +1,6 @@
 import 'package:field_notes/app/theme/app_theme.dart';
 import 'package:field_notes/data/media/audio_output.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/settings/settings.dart';
@@ -208,7 +209,10 @@ void main() {
       (tester.getRect(menu).top - tester.getRect(row).bottom).abs(),
       lessThanOrEqualTo(8),
     );
-    expect(_inMenu(inputDeviceMenuKey, find.byType(InkWell)), findsNWidgets(3));
+    expect(
+      _inMenu(inputDeviceMenuKey, find.byType(Pressable)),
+      findsNWidgets(3),
+    );
     expect(
       _inMenu(inputDeviceMenuKey, find.text('System default')),
       findsOneWidget,

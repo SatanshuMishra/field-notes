@@ -12,6 +12,8 @@ const String inputLevelLabel = 'Input level';
 const String inputLevelUnavailable = 'Microphone unavailable';
 const int inputLevelSegments = 20;
 const int inputLevelSampleRate = 48000;
+const Duration inputLevelQuietReopen = Duration(milliseconds: 500);
+const Duration inputLevelOpenWithin = Duration(seconds: 2);
 
 const double _fullScale = 32768;
 const double _segmentHeight = 8;
@@ -96,6 +98,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   bool _routeCurrent = true;
   AudioRecorder? _recorder;
   StreamSubscription<Uint8List>? _chunks;
+  Timer? _quiet;
   Stream<double>? _followedTake;
   StreamSubscription<double>? _takeLevels;
   int _generation = 0;
@@ -198,6 +201,8 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
   }
 
   void _letGo() {
+    _quiet?.cancel();
+    _quiet = null;
     final AudioRecorder? recorder = _recorder;
     if (recorder == null) {
       return;
@@ -211,6 +216,22 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
 
   bool _current(int generation) => mounted && generation == _generation;
 
+  void _expectChunk(int generation, {Duration within = inputLevelQuietReopen}) {
+    _quiet?.cancel();
+    _quiet = Timer(within, () => _reopenQuiet(generation));
+  }
+
+  void _reopenQuiet(int generation) {
+    if (!_current(generation) || _recorder == null) {
+      return;
+    }
+    _letGo();
+    if (_level != 0) {
+      setState(() => _level = 0);
+    }
+    _follow();
+  }
+
   Future<void> _listen(AudioRecorder recorder, int generation) async {
     final Stream<Uint8List> chunks;
     try {
@@ -221,6 +242,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
       if (!_current(generation)) {
         return;
       }
+      _expectChunk(generation, within: inputLevelOpenWithin);
       chunks = await recorder.startStream(inputLevelConfig(widget.input));
     } catch (_) {
       _markUnavailable(generation);
@@ -234,6 +256,7 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
       volume: () => widget.volume,
       onLevel: (double level) {
         if (_current(generation)) {
+          _expectChunk(generation);
           setState(() => _level = level);
         }
       },
@@ -259,6 +282,8 @@ class _InputLevelMeterState extends State<InputLevelMeter> {
     if (!_current(generation)) {
       return;
     }
+    _quiet?.cancel();
+    _quiet = null;
     setState(() {
       _level = 0;
       _unavailable = true;

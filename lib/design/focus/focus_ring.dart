@@ -40,6 +40,7 @@ class FocusRing extends StatefulWidget {
     this.borderRadius = BorderRadius.zero,
     this.includeFocusSemantics = true,
     this.placement = FocusRingPlacement.outside,
+    this.paintsRing = true,
   });
 
   final VoidCallback? onPressed;
@@ -51,6 +52,7 @@ class FocusRing extends StatefulWidget {
   final BorderRadius borderRadius;
   final bool includeFocusSemantics;
   final FocusRingPlacement placement;
+  final bool paintsRing;
 
   double get reach =>
       placement == FocusRingPlacement.outside ? 2 + surface.width : 0;
@@ -99,27 +101,77 @@ class _FocusRingState extends State<FocusRing> {
       includeFocusSemantics: widget.includeFocusSemantics,
       shortcuts: _activators,
       actions: widget.onPressed == null ? null : _actions,
+      mouseCursor: widget.enabled && widget.onPressed != null
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
       onShowFocusHighlight: _handleShowFocusHighlight,
-      child: Stack(
-        alignment: Alignment.topLeft,
-        fit: StackFit.passthrough,
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          widget.child,
-          if (_highlighted && widget.enabled)
-            Positioned.fill(
-              child: CustomPaint(
-                key: focusRingKey,
-                painter: _FocusRingPainter(
-                  color: widget.surface.colorIn(context.colors),
-                  width: widget.surface.width,
-                  borderRadius: widget.borderRadius,
-                  outset: widget.reach,
-                ),
+      child: _FocusRingScope(
+        highlighted: _highlighted && widget.enabled,
+        surface: widget.surface,
+        borderRadius: widget.borderRadius,
+        outset: widget.reach,
+        child: widget.paintsRing
+            ? FocusRingFace(child: widget.child)
+            : widget.child,
+      ),
+    );
+  }
+}
+
+class _FocusRingScope extends InheritedWidget {
+  const _FocusRingScope({
+    required this.highlighted,
+    required this.surface,
+    required this.borderRadius,
+    required this.outset,
+    required super.child,
+  });
+
+  final bool highlighted;
+  final FocusRingSurface surface;
+  final BorderRadius borderRadius;
+  final double outset;
+
+  @override
+  bool updateShouldNotify(_FocusRingScope oldWidget) =>
+      oldWidget.highlighted != highlighted ||
+      oldWidget.surface != surface ||
+      oldWidget.borderRadius != borderRadius ||
+      oldWidget.outset != outset;
+}
+
+class FocusRingFace extends StatelessWidget {
+  const FocusRingFace({super.key, required this.child, this.borderRadius});
+
+  final Widget child;
+  final BorderRadius? borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    final _FocusRingScope? scope = context
+        .dependOnInheritedWidgetOfExactType<_FocusRingScope>();
+    if (scope == null) {
+      return child;
+    }
+    return Stack(
+      alignment: Alignment.topLeft,
+      fit: StackFit.passthrough,
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        child,
+        if (scope.highlighted)
+          Positioned.fill(
+            child: CustomPaint(
+              key: focusRingKey,
+              painter: _FocusRingPainter(
+                color: scope.surface.colorIn(context.colors),
+                width: scope.surface.width,
+                borderRadius: borderRadius ?? scope.borderRadius,
+                outset: scope.outset,
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

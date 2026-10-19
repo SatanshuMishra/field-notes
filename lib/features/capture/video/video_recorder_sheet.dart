@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'camera_gestures.dart';
@@ -171,6 +175,7 @@ class VideoRecorderSheet extends StatefulWidget {
     this.deniedMessage = cameraPermissionMessage,
     this.onVoiceSettings,
     this.levels = const Stream<double>.empty(),
+    this.hearing = MicrophoneHearing.hearing,
   });
 
   final VideoRecorderPhase phase;
@@ -201,6 +206,7 @@ class VideoRecorderSheet extends StatefulWidget {
   final String deniedMessage;
   final VoidCallback? onVoiceSettings;
   final Stream<double> levels;
+  final MicrophoneHearing hearing;
 
   @override
   State<VideoRecorderSheet> createState() => _VideoRecorderSheetState();
@@ -218,6 +224,9 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   bool get _isSaving => _phase == VideoRecorderPhase.saving;
   bool get _isDenied => _phase == VideoRecorderPhase.denied;
   bool get _canPause => widget.supportsPause && widget.onPause != null;
+  bool get _cannotHear =>
+      _phase == VideoRecorderPhase.idle &&
+      widget.hearing == MicrophoneHearing.cannotHear;
 
   bool get _showsCameraOff =>
       !widget.cameraOn &&
@@ -263,7 +272,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   }
 
   RecorderPrimaryVerb? get _shutterVerb {
-    if (_isSaving || _isGettingReady || _isAsking) {
+    if (_isSaving || _isGettingReady || _isAsking || _cannotHear) {
       return null;
     }
     if (_isRecording) {
@@ -498,6 +507,8 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
             androidVideo: Theme.of(context).platform == TargetPlatform.android,
             onVoiceSettings: widget.onVoiceSettings,
             takeLevels: taking ? widget.levels : null,
+            ringLevels: widget.cameraOn ? widget.levels : null,
+            ringHearing: widget.hearing,
           ),
       ],
     );
@@ -532,6 +543,13 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         ?line,
+        if (line != null)
+          SoundLostWarning(
+            key: soundLostWarningKey,
+            hearing: widget.hearing,
+            taking: _isRecording,
+          ),
+        if (_cannotHear) const CannotHearNotice(),
         if (nudge != null) _note(nudge),
         if (capHint) _note(widget.capHint),
         if (error != null)
@@ -708,34 +726,26 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   Widget _shutter(bool sidebar) {
     final VoidCallback? tap = _shutterTap;
     final double size = sidebar ? _sidebarShutter : _bottomBarShutter;
-    return Semantics(
-      button: true,
-      enabled: tap != null,
+    return Pressable(
+      key: videoShutterKey,
       label: _shutterLabel,
-      child: GestureDetector(
-        key: videoShutterKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: tap,
-        child: FocusRing(
-          enabled: tap != null,
-          onPressed: tap,
-          surface: FocusRingSurface.dark,
-          borderRadius: BorderRadius.all(Radius.circular(size / 2)),
-          child: Opacity(
-            opacity: _shutterOpacity(tap),
-            child: Container(
-              width: size,
-              height: size,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.fromBorderSide(
-                  BorderSide(color: _shutterRing, width: _shutterRingWidth),
-                ),
-              ),
-              child: _shutterCore(sidebar),
+      onPressed: tap,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: BorderRadius.all(Radius.circular(size / 2)),
+      child: Opacity(
+        opacity: _shutterOpacity(tap),
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.fromBorderSide(
+              BorderSide(color: _shutterRing, width: _shutterRingWidth),
             ),
           ),
+          child: _shutterCore(sidebar),
         ),
       ),
     );
@@ -812,35 +822,42 @@ class _SideControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
+    final BorderRadius radius = BorderRadius.all(Radius.circular(diameter / 2));
+    return Pressable(
+      key: controlKey,
       label: label,
-      child: GestureDetector(
-        key: controlKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            FocusRing(
-              onPressed: onTap,
-              surface: FocusRingSurface.dark,
-              borderRadius: BorderRadius.all(Radius.circular(diameter / 2)),
-              child: Container(
-                width: diameter,
-                height: diameter,
-                alignment: Alignment.center,
-                decoration: decoration,
-                child: glyph,
+      onPressed: onTap,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: radius,
+      paintsHover: false,
+      ringsFace: true,
+      builder: (BuildContext context, bool hovered) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          FocusRingFace(
+            child: Container(
+              width: diameter,
+              height: diameter,
+              alignment: Alignment.center,
+              decoration: decoration,
+              foregroundDecoration: HoverStyle.decoration(
+                color: hovered
+                    ? HoverStyle.of(
+                        context,
+                        FocusRingSurface.dark,
+                        HoverShape.circle,
+                      )
+                    : null,
+                shape: HoverShape.circle,
+                borderRadius: radius,
               ),
+              child: glyph,
             ),
-            const SizedBox(height: _sideCaptionGap),
-            ExcludeSemantics(
-              child: Text(label, maxLines: 1, softWrap: false, style: caption),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: _sideCaptionGap),
+          Text(label, maxLines: 1, softWrap: false, style: caption),
+        ],
       ),
     );
   }

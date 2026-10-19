@@ -2,16 +2,20 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:field_notes/data/media/audio_output.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/domain/settings/settings_repository.dart';
-import 'package:field_notes/features/capture/audio/anchored_dropdown.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/microphone_glyph.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
+import 'package:field_notes/features/capture/audio/recorder_input_ring.dart';
 import 'package:field_notes/features/capture/immersive/recorder_glass_button.dart';
 import 'package:field_notes/state/repository_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -113,6 +117,9 @@ typedef DropdownRowBuilder = Widget Function(
   VoidCallback toggle,
 );
 
+FocusRingSurface _surfaceOn(GlassTone tone) =>
+    tone == GlassTone.media ? FocusRingSurface.dark : FocusRingSurface.light;
+
 Widget _dropdownGlyph(bool open) =>
     _Glyph(open ? Icons.expand_less : Icons.expand_more);
 
@@ -122,11 +129,15 @@ class RecorderInputButton extends StatefulWidget {
     this.androidVideo = false,
     this.onVoiceSettings,
     this.takeLevels,
+    this.ringLevels,
+    this.ringHearing = MicrophoneHearing.hearing,
   });
 
   final bool androidVideo;
   final VoidCallback? onVoiceSettings;
   final Stream<double>? takeLevels;
+  final Stream<double>? ringLevels;
+  final MicrophoneHearing ringHearing;
 
   @override
   State<RecorderInputButton> createState() => _RecorderInputButtonState();
@@ -244,6 +255,13 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
 
   @override
   Widget build(BuildContext context) {
+    final Widget button = RecorderGlassButton(
+      key: recorderInputKey,
+      label: recorderInputLabel,
+      glyph: const MicrophoneGlyph(),
+      onPressed: _toggle,
+    );
+    final Stream<double>? ringLevels = widget.ringLevels;
     return TapRegion(
       groupId: _tapGroup,
       onTapOutside: (PointerDownEvent event) => _close(),
@@ -252,12 +270,13 @@ class _RecorderInputButtonState extends State<RecorderInputButton> {
         child: OverlayPortal(
           controller: _portal,
           overlayChildBuilder: _panel,
-          child: RecorderGlassButton(
-            key: recorderInputKey,
-            label: recorderInputLabel,
-            glyph: const MicrophoneGlyph(),
-            onPressed: _toggle,
-          ),
+          child: ringLevels == null
+              ? button
+              : RecorderInputRing(
+                  levels: ringLevels,
+                  hearing: widget.ringHearing,
+                  child: button,
+                ),
         ),
       ),
     );
@@ -302,6 +321,7 @@ class InputPanel extends ConsumerWidget {
                     children: <Widget>[
                       InputDeviceRow(
                         androidVideo: androidVideo,
+                        heldDuringTake: takeLevels != null,
                         ink: Palette.mediaInk,
                         tone: GlassTone.media,
                         tapRegionGroupId: tapRegionGroupId,
@@ -332,6 +352,7 @@ class InputPanel extends ConsumerWidget {
                   key: voiceSettingsRowKey,
                   title: voiceSettingsLabel,
                   ink: Palette.mediaInk,
+                  surface: FocusRingSurface.dark,
                   trailing: const _Glyph(Icons.chevron_right),
                   onTap: onVoiceSettings,
                 ),
@@ -407,12 +428,14 @@ class InputDeviceRow extends ConsumerStatefulWidget {
     this.ink,
     this.tone = GlassTone.paper,
     this.tapRegionGroupId,
+    this.heldDuringTake = false,
   });
 
   final bool androidVideo;
   final Color? ink;
   final GlassTone tone;
   final Object? tapRegionGroupId;
+  final bool heldDuringTake;
 
   @override
   ConsumerState<InputDeviceRow> createState() => _InputDeviceRowState();
@@ -469,6 +492,17 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
     final AudioInput? resolved = inputs == null
         ? null
         : resolveAudioInput(inputs, storedId);
+    if (widget.heldDuringTake) {
+      return _PanelRow(
+        key: inputDeviceRowKey,
+        title: inputDeviceTitle,
+        value:
+            resolved?.label ??
+            ref.watch(selectedAudioInputProvider).value?.label ??
+            (storedId == null ? systemDefaultInputLabel : ''),
+        ink: ink,
+      );
+    }
     final String label =
         resolved?.label ?? (storedId == null ? systemDefaultInputLabel : '');
     return AnchoredDropdown<AudioInput>(
@@ -494,6 +528,7 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
             title: inputDeviceTitle,
             value: label,
             ink: ink,
+            surface: _surfaceOn(widget.tone),
             trailing: _dropdownGlyph(open),
             expanded: open,
             onTap: toggle,
@@ -562,6 +597,7 @@ class InputProfileRow extends ConsumerWidget {
               title: inputProfileTitle,
               value: current.label,
               ink: ink,
+              surface: _surfaceOn(tone),
               trailing: _dropdownGlyph(open),
               expanded: open,
               onTap: toggle,
@@ -632,6 +668,7 @@ class OutputDeviceRow extends ConsumerWidget {
             title: outputDeviceTitle,
             value: label,
             ink: ink,
+            surface: _surfaceOn(tone),
             trailing: _dropdownGlyph(open),
             expanded: open,
             onTap: toggle,
@@ -800,10 +837,12 @@ class _PanelRow extends StatelessWidget {
     this.trailing,
     this.expanded,
     this.onTap,
+    this.surface = FocusRingSurface.light,
   });
 
   final String title;
   final Color ink;
+  final FocusRingSurface surface;
   final String? value;
   final Widget? trailing;
   final bool? expanded;
@@ -851,17 +890,21 @@ class _PanelRow extends StatelessWidget {
       ),
     );
     final VoidCallback? tap = onTap;
-    return MergeSemantics(
+    if (tap == null) {
+      return MergeSemantics(
+        child: Semantics(button: false, expanded: expanded, child: content),
+      );
+    }
+    return Pressable(
+      label: title,
+      value: shown,
+      onPressed: tap,
+      borderRadius: BorderRadius.circular(_rowRadius),
+      surface: surface,
+      excludeSemantics: false,
       child: Semantics(
-        button: tap != null,
         expanded: expanded,
-        child: tap == null
-            ? content
-            : InkWell(
-                onTap: tap,
-                borderRadius: BorderRadius.circular(_rowRadius),
-                child: content,
-              ),
+        child: ExcludeSemantics(child: content),
       ),
     );
   }

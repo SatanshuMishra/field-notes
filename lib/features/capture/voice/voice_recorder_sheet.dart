@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 enum VoiceRecorderPhase {
@@ -112,6 +116,17 @@ const double _disabledActionOpacity = 0.5;
 
 void _ignore() {}
 
+Decoration _hoverVeil(
+  BuildContext context, {
+  required bool hovered,
+  required HoverShape shape,
+  required BorderRadius borderRadius,
+}) => HoverStyle.decoration(
+  color: hovered ? HoverStyle.of(context, FocusRingSurface.dark, shape) : null,
+  shape: shape,
+  borderRadius: borderRadius,
+);
+
 class VoiceRecorderSheet extends StatelessWidget {
   const VoiceRecorderSheet({
     super.key,
@@ -132,6 +147,7 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.levels = const Stream<double>.empty(),
     this.savingText = voiceSavingStatus,
     this.onVoiceSettings,
+    this.hearing = MicrophoneHearing.hearing,
   });
 
   final VoiceRecorderPhase phase;
@@ -151,13 +167,18 @@ class VoiceRecorderSheet extends StatelessWidget {
   final Stream<double> levels;
   final String savingText;
   final VoidCallback? onVoiceSettings;
+  final MicrophoneHearing hearing;
 
   bool get _saving => phase == VoiceRecorderPhase.saving;
 
   bool get _canKeep => phase.isTaking && !asking;
 
+  bool get _cannotHear =>
+      phase == VoiceRecorderPhase.idle &&
+      hearing == MicrophoneHearing.cannotHear;
+
   RecorderPrimaryVerb? get _orbVerb {
-    if (asking) {
+    if (asking || _cannotHear) {
       return null;
     }
     return switch (phase) {
@@ -258,6 +279,12 @@ class VoiceRecorderSheet extends StatelessWidget {
           savingText: savingText,
           inline: false,
         ),
+        SoundLostWarning(
+          key: soundLostWarningKey,
+          hearing: hearing,
+          taking: phase == VoiceRecorderPhase.recording,
+        ),
+        if (_cannotHear) const CannotHearNotice(),
         if (errorMessage != null)
           Padding(
             padding: const EdgeInsets.only(top: _errorGap),
@@ -422,66 +449,67 @@ class _Orb extends StatelessWidget {
     final bool enabled = onTap != null;
     final double diameter = sidebar ? voiceSidebarOrb : voiceBottomBarOrb;
     final double glyph = sidebar ? _sidebarOrbGlyph : _bottomBarOrbGlyph;
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    final BorderRadius radius = BorderRadius.all(Radius.circular(diameter / 2));
+    return Pressable(
+      key: voiceRecordButtonKey,
       label: _label,
       hint: sidebar && enabled ? voiceOrbShortcutHint : null,
-      child: GestureDetector(
-        key: voiceRecordButtonKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: FocusRing(
-          enabled: enabled,
-          onPressed: onTap,
-          surface: FocusRingSurface.dark,
-          borderRadius: BorderRadius.all(Radius.circular(diameter / 2)),
-          child: AnimatedOpacity(
-            opacity: _opacity,
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : _orbFade,
-            curve: Curves.ease,
-            child: SizedBox.square(
-              dimension: diameter,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    center: _orbHighlight,
-                    radius: _orbGradientRadius,
-                    colors: <Color>[
-                      context.colors.accentBright,
-                      Palette.coral,
-                      context.colors.accentDeep,
-                    ],
-                    stops: _orbStops,
-                  ),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: _orbShadow,
-                      offset: _orbShadowOffset,
-                      blurRadius: _orbShadowBlur,
-                      spreadRadius: _orbShadowSpread,
-                    ),
-                    BoxShadow(color: _orbEdge, spreadRadius: _orbEdgeWidth),
+      onPressed: onTap,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => AnimatedOpacity(
+        opacity: _opacity,
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : _orbFade,
+        curve: Curves.ease,
+        child: SizedBox.square(
+          dimension: diameter,
+          child: DecoratedBox(
+            position: DecorationPosition.foreground,
+            decoration: _hoverVeil(
+              context,
+              hovered: hovered,
+              shape: HoverShape.circle,
+              borderRadius: radius,
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  center: _orbHighlight,
+                  radius: _orbGradientRadius,
+                  colors: <Color>[
+                    context.colors.accentBright,
+                    Palette.coral,
+                    context.colors.accentDeep,
                   ],
+                  stops: _orbStops,
                 ),
-                child: Center(
-                  child: ExcludeSemantics(
-                    child: phase == VoiceRecorderPhase.recording
-                        ? IconStickerGlyphIcon(
-                            glyph: IconStickerGlyph.pause,
-                            color: _orbGlyphInk,
-                            size: glyph,
-                          )
-                        : CaptureIcon(
-                            glyph: CaptureGlyph.mic,
-                            color: _orbGlyphInk,
-                            size: glyph,
-                          ),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: _orbShadow,
+                    offset: _orbShadowOffset,
+                    blurRadius: _orbShadowBlur,
+                    spreadRadius: _orbShadowSpread,
                   ),
-                ),
+                  BoxShadow(color: _orbEdge, spreadRadius: _orbEdgeWidth),
+                ],
+              ),
+              child: Center(
+                child: phase == VoiceRecorderPhase.recording
+                    ? IconStickerGlyphIcon(
+                        glyph: IconStickerGlyph.pause,
+                        color: _orbGlyphInk,
+                        size: glyph,
+                      )
+                    : CaptureIcon(
+                        glyph: CaptureGlyph.mic,
+                        color: _orbGlyphInk,
+                        size: glyph,
+                      ),
               ),
             ),
           ),
@@ -598,74 +626,78 @@ class _ActionButton extends StatelessWidget {
         color: ink,
       ),
     );
-    final Widget face = DecoratedBox(
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: _actionRadius,
-        boxShadow: fill == null
-            ? null
-            : const <BoxShadow>[
-                BoxShadow(
-                  color: _keepShadow,
-                  offset: _keepShadowOffset,
-                  blurRadius: _keepShadowBlur,
-                  spreadRadius: _keepShadowSpread,
-                ),
-              ],
-      ),
-      child: SizedBox(
-        height: height,
-        child: Padding(
-          padding: padding,
-          child: Center(
-            widthFactor: expand ? null : 1,
-            heightFactor: height == null ? 1 : null,
-            child: ExcludeSemantics(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  if (glyph != null) ...<Widget>[
-                    IconStickerGlyphIcon(
-                      glyph: glyph,
-                      color: ink,
-                      size: _keepGlyph,
+    Widget face(BuildContext context, bool hovered) => FocusRingFace(
+      borderRadius: _actionRadius,
+      child: DecoratedBox(
+        position: DecorationPosition.foreground,
+        decoration: _hoverVeil(
+          context,
+          hovered: hovered,
+          shape: HoverShape.pill,
+          borderRadius: _actionRadius,
+        ),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: _actionRadius,
+            boxShadow: fill == null
+                ? null
+                : const <BoxShadow>[
+                    BoxShadow(
+                      color: _keepShadow,
+                      offset: _keepShadowOffset,
+                      blurRadius: _keepShadowBlur,
+                      spreadRadius: _keepShadowSpread,
                     ),
-                    SizedBox(width: glyphGap),
                   ],
-                  if (expand) Flexible(child: text) else text,
-                ],
+          ),
+          child: SizedBox(
+            height: height,
+            child: Padding(
+              padding: padding,
+              child: Center(
+                widthFactor: expand ? null : 1,
+                heightFactor: height == null ? 1 : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (glyph != null) ...<Widget>[
+                      IconStickerGlyphIcon(
+                        glyph: glyph,
+                        color: ink,
+                        size: _keepGlyph,
+                      ),
+                      SizedBox(width: glyphGap),
+                    ],
+                    if (expand) Flexible(child: text) else text,
+                  ],
+                ),
               ),
             ),
           ),
         ),
       ),
     );
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
       label: label,
       hint: enabled ? hint : null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            widthFactor: expand ? null : 1,
-            heightFactor: 1,
-            child: FocusRing(
-              enabled: enabled,
-              onPressed: onPressed,
-              surface: FocusRingSurface.dark,
-              borderRadius: _actionRadius,
-              child: Opacity(
-                opacity: enabled ? 1 : _disabledActionOpacity,
-                child: face,
-              ),
-            ),
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.pill,
+      borderRadius: _actionRadius,
+      paintsHover: false,
+      ringsFace: true,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _minTapTarget,
+          minHeight: _minTapTarget,
+        ),
+        child: Center(
+          widthFactor: expand ? null : 1,
+          heightFactor: 1,
+          child: Opacity(
+            opacity: enabled ? 1 : _disabledActionOpacity,
+            child: face(context, hovered),
           ),
         ),
       ),
