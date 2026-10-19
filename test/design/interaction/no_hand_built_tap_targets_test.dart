@@ -118,6 +118,12 @@ const List<_AllowedSite> _allowedSites = <_AllowedSite>[
     'swallow',
   ),
   _AllowedSite(
+    'lib/design/settings_fields/settings_text_field.dart',
+    'GestureDetector',
+    'text-selection',
+    needle: '_handleTapDown',
+  ),
+  _AllowedSite(
     'lib/features/capture/text/editor/photo_caption_field.dart',
     'GestureDetector',
     'focus',

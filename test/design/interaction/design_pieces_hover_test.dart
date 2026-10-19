@@ -472,16 +472,16 @@ void main() {
       expect(_hoverFill(textFieldRow), findsNothing);
       await mouse.moveTo(tester.getTopLeft(textField) + const Offset(4, 4));
       await tester.pump();
-      expect(_cursor(), SystemMouseCursors.click);
+      expect(_cursor(), SystemMouseCursors.text);
       expect(_hoverFill(textFieldRow), findsOneWidget);
       await mouse.moveTo(tester.getCenter(find.byType(EditableText)));
       await tester.pump();
       expect(_cursor(), SystemMouseCursors.text);
       expect(
         tester.getSemantics(
-          find.descendant(of: textField, matching: find.byType(Pressable)),
+          find.descendant(of: textField, matching: find.byType(EditableText)),
         ),
-        isSemantics(label: 'Device name', isTextField: true),
+        isSemantics(label: 'Device name', isTextField: true, isButton: false),
       );
 
       await mouse.moveTo(tester.getCenter(find.byKey(_selectKey)));
