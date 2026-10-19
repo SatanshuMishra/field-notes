@@ -1,6 +1,6 @@
 # mac-keychain-single-item: Mac keychain prompts: store the six sync values in one keychain item
-Status: parked
-Updated: 2026-10-19T03:30:59.453Z
+Status: done
+Updated: 2026-10-19T03:40:10.481Z
 Next ids: c6 D4 R2 S3
 
 ## Goal
