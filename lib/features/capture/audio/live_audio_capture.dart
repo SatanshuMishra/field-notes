@@ -29,6 +29,8 @@ const Duration _openWithin = Duration(seconds: 2);
 const Duration _silentFor = Duration(seconds: 2);
 const Duration _lostAfter = Duration(milliseconds: 500);
 const Duration _gapLongerThan = Duration(milliseconds: 500);
+const Duration _watchdogRanLateBy = Duration(milliseconds: 50);
+const Duration _afterStallGrace = Duration(milliseconds: 100);
 const Duration _releaseWithin = Duration(seconds: 2);
 const double _fullScale = 32768;
 const double _digitalSilenceDbfs = -70;
@@ -271,6 +273,11 @@ class _ActiveTake {
   final Completer<void> opened = Completer<void>();
   StreamSubscription<Uint8List>? chunks;
   Timer? watchdog;
+  Duration watchdogDueAt = Duration.zero;
+  Timer? settling;
+  Duration settlingDueAt = Duration.zero;
+  Duration? gapFrom;
+  List<Uint8List> afterGap = <Uint8List>[];
   Future<void> tail = Future<void>.value();
   bool writing;
   bool paused = false;
@@ -482,6 +489,7 @@ class LiveAudioCapture {
   void _close(_ActiveTake take) {
     take.closing = true;
     take.watchdog?.cancel();
+    take.settling?.cancel();
     if (!take.opened.isCompleted) {
       take.opened.complete();
     }
@@ -492,11 +500,14 @@ class LiveAudioCapture {
     if (take.closing || take.paused) {
       return;
     }
-    final Duration wait = _dueAt(take) - _clock();
-    take.watchdog = Timer(
-      wait.isNegative ? Duration.zero : wait,
-      () => _check(take),
-    );
+    final Duration now = _clock();
+    final Duration wait = _dueAt(take) - now;
+    _arm(take, wait.isNegative ? Duration.zero : wait, now);
+  }
+
+  void _arm(_ActiveTake take, Duration wait, Duration now) {
+    take.watchdogDueAt = now + wait;
+    take.watchdog = Timer(wait, () => _check(take));
   }
 
   Duration _dueAt(_ActiveTake take) {
@@ -511,7 +522,12 @@ class LiveAudioCapture {
     if (take.closing || take.paused) {
       return;
     }
-    if (_clock() < _dueAt(take)) {
+    final Duration now = _clock();
+    if (now - take.watchdogDueAt > _watchdogRanLateBy) {
+      _arm(take, _afterStallGrace, now);
+      return;
+    }
+    if (now < _dueAt(take)) {
       _watch(take);
       return;
     }
@@ -592,6 +608,7 @@ class LiveAudioCapture {
     }
     take.paused = true;
     take.watchdog?.cancel();
+    _settleGap(take);
     if (take.streamOpen) {
       await take.recorder.pause();
     }
@@ -647,11 +664,51 @@ class LiveAudioCapture {
     final bool chunksStopped = firstSinceWritingBegan
         ? gap > _gapLongerThan
         : now - take.lastWrittenAt > _gapLongerThan;
-    if (chunksStopped) {
-      _queueSilence(take, gap);
+    if (take.gapFrom == null && chunksStopped) {
+      take.gapFrom = take.lastWrittenAt;
+      _armSettling(take, now);
+    }
+    take.lastWrittenAt = now;
+    if (take.gapFrom != null) {
+      take.afterGap = <Uint8List>[...take.afterGap, kept];
+      return;
     }
     _queue(take, kept, writing: true);
-    take.lastWrittenAt = now;
+  }
+
+  void _armSettling(_ActiveTake take, Duration now) {
+    take.settlingDueAt = now + _afterStallGrace;
+    take.settling = Timer(_afterStallGrace, () {
+      final Duration ranAt = _clock();
+      if (ranAt - take.settlingDueAt > _watchdogRanLateBy) {
+        _armSettling(take, ranAt);
+        return;
+      }
+      _settleGap(take);
+    });
+  }
+
+  void _settleGap(_ActiveTake take) {
+    take.settling?.cancel();
+    final Duration? gapFrom = take.gapFrom;
+    if (gapFrom == null) {
+      return;
+    }
+    final int heldSamples = take.afterGap.fold(
+      0,
+      (int sum, Uint8List pcm) => sum + _samplesOf(pcm),
+    );
+    final Duration silence =
+        take.lastWrittenAt - _durationOf(heldSamples) - gapFrom;
+    if (silence > Duration.zero) {
+      _queueSilence(take, silence);
+    }
+    for (final Uint8List pcm in take.afterGap) {
+      _queue(take, pcm, writing: true);
+    }
+    take
+      ..afterGap = <Uint8List>[]
+      ..gapFrom = null;
   }
 
   void _hearChunk(_ActiveTake take, Uint8List pcm, Duration now) {
@@ -838,6 +895,8 @@ class LiveAudioCapture {
     try {
       await _release(take, take.recorder.stop);
       await _quietly(() async => take.chunks?.cancel());
+      await take.tail;
+      _settleGap(take);
       await take.tail;
       if (take.writing && keptAt - take.lastWrittenAt > _gapLongerThan) {
         _queueSilence(take, keptAt - take.lastWrittenAt);
