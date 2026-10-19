@@ -1650,6 +1650,9 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
     _aborted = false;
     _movieBegun = false;
     _paused = false;
+    _elapsed
+      ..stop()
+      ..reset();
     try {
       await _sound.ensureArmed(_soundInputWithId(_audioDeviceId));
       await _startCamera(ready);
