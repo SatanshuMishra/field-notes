@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 
@@ -136,9 +138,11 @@ class CalendarMonthPicker extends StatelessWidget {
                   for (int row = 0; row < _monthRows; row++)
                     Row(
                       children: <Widget>[
-                        for (int column = 0;
-                            column < _monthColumns;
-                            column++) ...<Widget>[
+                        for (
+                          int column = 0;
+                          column < _monthColumns;
+                          column++
+                        ) ...<Widget>[
                           if (column > 0) const SizedBox(width: _monthGap),
                           Expanded(
                             child: _monthTile(
@@ -173,6 +177,7 @@ class CalendarMonthPicker extends StatelessWidget {
   Widget _monthTile(MonthRef month, {required EdgeInsets margin}) {
     return _MonthTile(
       label: monthAbbreviation(month.month),
+      semanticLabel: '${monthName(month.month)} ${month.year}',
       isDisplayed: month == displayedMonth,
       isCurrent: month == currentMonth,
       margin: margin,
@@ -184,6 +189,7 @@ class CalendarMonthPicker extends StatelessWidget {
 class _MonthTile extends StatelessWidget {
   const _MonthTile({
     required this.label,
+    required this.semanticLabel,
     required this.isDisplayed,
     required this.isCurrent,
     required this.margin,
@@ -191,6 +197,7 @@ class _MonthTile extends StatelessWidget {
   });
 
   final String label;
+  final String semanticLabel;
   final bool isDisplayed;
   final bool isCurrent;
   final EdgeInsets margin;
@@ -198,22 +205,49 @@ class _MonthTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return CalendarTapSlot(
+      margin: margin,
+      child: Pressable(
+        label: semanticLabel,
+        selected: isDisplayed,
+        onPressed: onPressed,
+        borderRadius: _monthBorderRadius,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) =>
+            _face(context, hovered),
+      ),
+    );
+  }
+
+  Widget _face(BuildContext context, bool hovered) {
     final FieldNotesColors colors = context.colors;
-    final Widget text = Padding(
-      padding: const EdgeInsets.all(8),
-      child: Text(
-        label,
-        textAlign: TextAlign.center,
-        style: _monthStyle.copyWith(
-          color: isDisplayed
-              ? Palette.onAccent
-              : (isCurrent ? colors.accentInk : colors.ink),
+    final Widget text = DecoratedBox(
+      decoration: HoverStyle.decoration(
+        color: hovered
+            ? HoverStyle.of(
+                context,
+                isDisplayed ? FocusRingSurface.dark : FocusRingSurface.light,
+                HoverShape.rounded,
+              )
+            : null,
+        shape: HoverShape.rounded,
+        borderRadius: _monthBorderRadius,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: _monthStyle.copyWith(
+            color: isDisplayed
+                ? Palette.onAccent
+                : (isCurrent ? colors.accentInk : colors.ink),
+          ),
         ),
       ),
     );
-    final Widget face;
     if (isDisplayed) {
-      face = DecoratedBox(
+      return DecoratedBox(
         decoration: BoxDecoration(
           color: Palette.coral,
           border: context.shadows.outline,
@@ -222,36 +256,17 @@ class _MonthTile extends StatelessWidget {
         ),
         child: text,
       );
-    } else if (isCurrent) {
-      face = CustomPaint(
+    }
+    if (isCurrent) {
+      return CustomPaint(
         foregroundPainter: const DashedBorderPainter(
           color: Palette.coral,
           radius: _monthRadius,
         ),
         child: text,
       );
-    } else {
-      face = text;
     }
-    return Semantics(
-      button: true,
-      selected: isDisplayed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: CalendarTapSlot(
-            margin: margin,
-            child: FocusRing(
-              onPressed: onPressed,
-              borderRadius: _monthBorderRadius,
-              child: face,
-            ),
-          ),
-        ),
-      ),
-    );
+    return text;
   }
 }
 
@@ -263,27 +278,15 @@ class _PickerAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: CalendarTapSlot(
-            margin: const EdgeInsets.only(
-              top: _actionGap,
-              bottom: _pickerPadding,
-            ),
-            child: FocusRing(
-              onPressed: onPressed,
-              borderRadius: _actionRadius,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: Text(label, style: context.textStyles.caption11Sans),
-              ),
-            ),
-          ),
+    return CalendarTapSlot(
+      margin: const EdgeInsets.only(top: _actionGap, bottom: _pickerPadding),
+      child: Pressable(
+        label: label,
+        onPressed: onPressed,
+        borderRadius: _actionRadius,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          child: Text(label, style: context.textStyles.caption11Sans),
         ),
       ),
     );

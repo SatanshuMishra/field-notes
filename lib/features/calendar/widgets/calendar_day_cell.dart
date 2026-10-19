@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 
@@ -60,30 +62,47 @@ class CalendarDayCell extends StatelessWidget {
                   constraints.maxHeight < _compactHeightBelow
               ? _CellMetrics.compact
               : _CellMetrics.regular;
-          final Widget face = cell.isInMonth
-              ? _InMonthFace(
-                  dayOfMonth: cell.dayOfMonth,
-                  day: day,
-                  isToday: isToday,
-                  metrics: metrics,
-                )
-              : _NumberOnly(dayOfMonth: cell.dayOfMonth, metrics: metrics);
-          return FocusRing(
-            enabled: onTap != null,
-            onPressed: onTap,
-            borderRadius: BorderRadius.circular(metrics.radius),
-            child: Semantics(
-              button: onTap != null,
+          final BorderRadius radius = BorderRadius.circular(metrics.radius);
+          Widget faceWith(Color? hover) {
+            final Widget face = cell.isInMonth
+                ? _InMonthFace(
+                    dayOfMonth: cell.dayOfMonth,
+                    day: day,
+                    isToday: isToday,
+                    metrics: metrics,
+                    hover: hover,
+                  )
+                : _NumberOnly(
+                    dayOfMonth: cell.dayOfMonth,
+                    metrics: metrics,
+                    hover: hover,
+                  );
+            return dimming == null
+                ? face
+                : Opacity(opacity: dimming, child: face);
+          }
+
+          final VoidCallback? onTap = this.onTap;
+          if (onTap == null) {
+            return Semantics(
               label: semanticLabel,
-              onTap: onTap,
               excludeSemantics: true,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onTap,
-                child: dimming == null
-                    ? face
-                    : Opacity(opacity: dimming, child: face),
-              ),
+              child: faceWith(null),
+            );
+          }
+          return Pressable(
+            label: semanticLabel,
+            onPressed: onTap,
+            borderRadius: radius,
+            paintsHover: false,
+            builder: (BuildContext context, bool hovered) => faceWith(
+              hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.light,
+                      HoverShape.rounded,
+                    )
+                  : null,
             ),
           );
         },
@@ -130,31 +149,37 @@ class _InMonthFace extends StatelessWidget {
     required this.day,
     required this.isToday,
     required this.metrics,
+    required this.hover,
   });
 
   final int dayOfMonth;
   final Day? day;
   final bool isToday;
   final _CellMetrics metrics;
+  final Color? hover;
 
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final Mood? mood = day?.mood;
     final BorderRadius radius = BorderRadius.circular(metrics.radius);
-    final Widget content = Stack(
-      fit: StackFit.expand,
-      children: <Widget>[
-        if (mood != null)
-          Center(child: FlowerBloom.forMood(mood, size: metrics.flowerSize))
-        else if (day != null)
-          const _ActivityDot(key: calendarActivityDotKey),
-        _DayNumber(
-          dayOfMonth: dayOfMonth,
-          color: isToday ? colors.accentInk : colors.mutedDeep,
-          metrics: metrics,
-        ),
-      ],
+    final Widget content = _HoverFill(
+      color: hover,
+      borderRadius: radius,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          if (mood != null)
+            Center(child: FlowerBloom.forMood(mood, size: metrics.flowerSize))
+          else if (day != null)
+            const _ActivityDot(key: calendarActivityDotKey),
+          _DayNumber(
+            dayOfMonth: dayOfMonth,
+            color: isToday ? colors.accentInk : colors.mutedDeep,
+            metrics: metrics,
+          ),
+        ],
+      ),
     );
     if (isToday) {
       return DecoratedBox(
@@ -199,22 +224,55 @@ class _InMonthFace extends StatelessWidget {
 }
 
 class _NumberOnly extends StatelessWidget {
-  const _NumberOnly({required this.dayOfMonth, required this.metrics});
+  const _NumberOnly({
+    required this.dayOfMonth,
+    required this.metrics,
+    required this.hover,
+  });
 
   final int dayOfMonth;
   final _CellMetrics metrics;
+  final Color? hover;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: StackFit.expand,
-      children: <Widget>[
-        _DayNumber(
-          dayOfMonth: dayOfMonth,
-          color: context.colors.mutedDeep,
-          metrics: metrics,
-        ),
-      ],
+    return _HoverFill(
+      color: hover,
+      borderRadius: BorderRadius.circular(metrics.radius),
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          _DayNumber(
+            dayOfMonth: dayOfMonth,
+            color: context.colors.mutedDeep,
+            metrics: metrics,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HoverFill extends StatelessWidget {
+  const _HoverFill({
+    required this.color,
+    required this.borderRadius,
+    required this.child,
+  });
+
+  final Color? color;
+  final BorderRadius borderRadius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: HoverStyle.decoration(
+        color: color,
+        shape: HoverShape.rounded,
+        borderRadius: borderRadius,
+      ),
+      child: child,
     );
   }
 }
