@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T23:08:18.692Z
+Updated: 2026-10-19T23:27:09.688Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-recorder-ui. Lighthouse run 1 (core 9eb6c237, FEATURE 9304737b, profile now recording the vendored record_macos) gave verdict failures: suite passed (flaky only), and two paths failed, recorded as integration round 1 findings U1 and U2 (verdict diagnose, kind failing test). U1: on the Windows lab a voice take whose microphone stalls saves 3 to 4 s short (spec 5.1); on this Mac the capture logic, real voice chain, the lab's fake platform and a loaded UI thread all save the full length, so the lab fake skipping timer ticks is suspected. U2: on Android the sound ring paints 6 dp outside the 48 dp button, over the camera picture (spec 5.8); an uncommitted fix in the integration worktree keeps the ring inside the button, and its receipt check failed before the fix and passes after. The diagnosis agent is running. Android camera picker is unproven (no picker in the phone layout). Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
+The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-recorder-ui. Lighthouse run 1 (core 9eb6c237, FEATURE 9304737b, profile now recording the vendored record_macos) gave verdict failures: suite passed (flaky only), and two paths failed, recorded as integration round 1 findings U1 and U2 (verdict diagnose, kind failing test). U1: on the Windows lab a voice take whose microphone stalls saves 3 to 4 s short (spec 5.1); on this Mac the capture logic, real voice chain, the lab's fake platform and a loaded UI thread all save the full length, so the lab fake skipping timer ticks is suspected. The diagnosis (fixable, verdict loop) traces U1 to the lab fake under-delivering when Dart skips missed periodic ticks, so U1 is retested with a clock-paced fake and no app change. U2 (the sound ring painting outside the 48 dp button and over the Android camera picture, spec 5.8) is fixed on the integration worktree's FEATURE branch: the ring draws in the band between the 40 dp face and the button edge; the receipt failed before and passes after, the selecting check lists nothing, test/features/capture and test/design pass 1146. Android camera picker is unproven (no picker in the phone layout). Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
 
 ## Next step
 
