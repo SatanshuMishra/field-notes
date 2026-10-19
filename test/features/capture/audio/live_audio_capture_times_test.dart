@@ -93,7 +93,9 @@ void main() {
       take.hearChunk(1);
 
       take.capture.beginWriting(
-        pictureCapturedAtNs: _firstChunkCapturedAtNs + 2 * _chunkNs + 30000000,
+        picture: PictureStart(
+          capturedAtNs: _firstChunkCapturedAtNs + 2 * _chunkNs + 30000000,
+        ),
       );
       async.elapse(const Duration(milliseconds: 10));
       take.hearChunk(2);
@@ -114,8 +116,10 @@ void main() {
       take.hearChunk(1);
 
       take.capture.beginWriting(
-        pictureStartedAgo: const Duration(milliseconds: 90),
-        pictureCapturedAtNs: _firstChunkCapturedAtNs + _chunkNs + 50000000,
+        picture: PictureStart(
+          ago: const Duration(milliseconds: 90),
+          capturedAtNs: _firstChunkCapturedAtNs + _chunkNs + 50000000,
+        ),
       );
       async.elapse(const Duration(milliseconds: 10));
       take.hearChunk(2);
@@ -137,8 +141,10 @@ void main() {
       take.hearChunk(1, recorders: twoStreams);
 
       take.capture.beginWriting(
-        pictureStartedAgo: const Duration(milliseconds: 90),
-        pictureCapturedAtNs: _firstChunkCapturedAtNs + _chunkNs + 50000000,
+        picture: PictureStart(
+          ago: const Duration(milliseconds: 90),
+          capturedAtNs: _firstChunkCapturedAtNs + _chunkNs + 50000000,
+        ),
       );
       async.elapse(const Duration(milliseconds: 10));
       take.hearChunk(2, recorders: twoStreams);

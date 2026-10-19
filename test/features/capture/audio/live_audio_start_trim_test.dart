@@ -82,7 +82,9 @@ void main() {
       microphone.push(pcmAtDbfs(-20, samples: _samplesPerChunk));
       async.flushMicrotasks();
 
-      capture.beginWriting(pictureStartedAgo: const Duration(milliseconds: 90));
+      capture.beginWriting(
+        picture: PictureStart(ago: const Duration(milliseconds: 90)),
+      );
       async.elapse(const Duration(milliseconds: 40));
       microphone.push(pcmAtDbfs(-20, samples: _samplesPerChunk));
       async.flushMicrotasks();

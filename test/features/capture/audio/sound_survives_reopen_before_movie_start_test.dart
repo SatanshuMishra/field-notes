@@ -66,8 +66,10 @@ void main() {
         async.elapse(Duration(milliseconds: callAfterMs));
         final Duration pictureStartedAt = async.elapsed;
         capture.beginWriting(
-          pictureCapturedAtNs:
-              _firstCapturedAtNs + _previewChunks * _chunkNs + 30000000,
+          picture: PictureStart(
+            capturedAtNs:
+                _firstCapturedAtNs + _previewChunks * _chunkNs + 30000000,
+          ),
         );
 
         async.elapse(Duration(milliseconds: 600 - callAfterMs));
