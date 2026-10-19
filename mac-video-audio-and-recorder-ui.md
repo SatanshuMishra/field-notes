@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T08:31:33.259Z
+Updated: 2026-10-19T08:46:46.455Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Pipeline stage 3. mic-recovery is green (round 2) with its advisories fixed at 2dd055e0 and no slow checks left; it waits for ship. It is merged into video-starts-like-a-camera and hearing-and-ring. video-starts-like-a-camera has its round 1 fixes committed at 8c5d0ff0 (C2: the Mac clock runs only once the movie has begun and the take is not paused; U1/U2: the pause tests' fake camera sends the movie start; advisory C4: one guarded warm-up), capture and accessibility tests pass, and its round 2 suite runs in the detached worktree suite-tree in the run home; it is not yet merged into hearing-and-ring, whose tree the running resume uses. hearing-and-ring's Lane 6 (hearing-notices) failed because the edit guard locked one pump in its own new test; a second resume re-dispatches it from handoff/hearing-and-ring-lane-6.md, and Lanes 7-9 plus all 12 button-consistency Lanes wait on it. Known gap outside the fixed classes: a dead stretch just before a pause is dropped if the take is resumed rather than kept. Smoke runs happen once on the top of the stack after all four MSPs build. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it, so a take saves under a second of sound; (b) camera_macos replies "started" before the movie begins, so every take holds about 1.05 s of sound recorded before the picture.
+Pipeline stage 3. mic-recovery is green (round 2) with its advisories fixed at 2dd055e0 and no slow checks left; it waits for ship. It is merged into video-starts-like-a-camera and hearing-and-ring. video-starts-like-a-camera has its round 1 fixes committed at 8c5d0ff0 (C2: the Mac clock runs only once the movie has begun and the take is not paused; U1/U2: the pause tests' fake camera sends the movie start; advisory C4: one guarded warm-up), its round 2 suite passes apart from the known-flaky android_dump_rules_test (passes alone at the head and on main), and the round 2 code-reviewer is running; it is not yet merged into hearing-and-ring, whose tree the running resume uses. hearing-and-ring's Lane 6 (hearing-notices) failed because the edit guard locked one pump in its own new test; a second resume re-dispatches it from handoff/hearing-and-ring-lane-6.md, and Lanes 7-9 plus all 12 button-consistency Lanes wait on it. Known gap outside the fixed classes: a dead stretch just before a pause is dropped if the take is resumed rather than kept. Smoke runs happen once on the top of the stack after all four MSPs build. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it, so a take saves under a second of sound; (b) camera_macos replies "started" before the movie begins, so every take holds about 1.05 s of sound recorded before the picture.
 
 ## Next step
 
