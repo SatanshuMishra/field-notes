@@ -1,6 +1,7 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:flutter/gestures.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
@@ -15,7 +16,6 @@ const EdgeInsets _pillPadding = EdgeInsets.symmetric(
 );
 const double _pillFontSize = 12;
 const double _pillMinTapTarget = 24;
-const double _neutralHoverOpacity = 0.08;
 
 enum SettingsActionTone { neutral, primary, danger }
 
@@ -53,7 +53,7 @@ class SettingsActionButton extends StatelessWidget {
   }
 }
 
-class _ActionPill extends StatefulWidget {
+class _ActionPill extends StatelessWidget {
   const _ActionPill({
     required this.label,
     required this.onPressed,
@@ -65,57 +65,56 @@ class _ActionPill extends StatefulWidget {
   final SettingsActionTone tone;
 
   @override
-  State<_ActionPill> createState() => _ActionPillState();
-}
-
-class _ActionPillState extends State<_ActionPill> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final FieldNotesShadows shadows = context.shadows;
-    final VoidCallback? onPressed = widget.onPressed;
     final bool enabled = onPressed != null;
-    final BoxDecoration decoration = switch (widget.tone) {
-      SettingsActionTone.neutral => BoxDecoration(
-        color: enabled && _hovered
-            ? Palette.coral.withValues(alpha: _neutralHoverOpacity)
-            : null,
-        border: Border.all(color: Palette.coral, width: Shapes.outlineWidth),
-        borderRadius: _pillRadius,
-      ),
-      SettingsActionTone.primary => BoxDecoration(
-        color: Palette.coral,
-        border: shadows.outline,
-        borderRadius: _pillRadius,
-        boxShadow: shadows.control,
-      ),
-      SettingsActionTone.danger => BoxDecoration(
-        color: Palette.danger,
-        border: shadows.outline,
-        borderRadius: _pillRadius,
-        boxShadow: shadows.control,
-      ),
+    final FocusRingSurface hoverSurface = switch (tone) {
+      SettingsActionTone.neutral => FocusRingSurface.light,
+      SettingsActionTone.primary ||
+      SettingsActionTone.danger => FocusRingSurface.dark,
     };
-    final Color foreground = switch (widget.tone) {
+    final Color foreground = switch (tone) {
       SettingsActionTone.neutral => colors.accentInk,
       SettingsActionTone.primary => Palette.onAccent,
       SettingsActionTone.danger => Palette.onAccent,
     };
-    final Widget face = DecoratedBox(
-      decoration: decoration,
-      child: Padding(
-        padding: _pillPadding,
-        child: ExcludeSemantics(
+    return Pressable(
+      label: label,
+      onPressed: onPressed,
+      shape: HoverShape.pill,
+      borderRadius: _pillRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) {
+        final Color? hoverFill = hovered
+            ? HoverStyle.of(context, hoverSurface, HoverShape.pill)
+            : null;
+        final BoxDecoration decoration = switch (tone) {
+          SettingsActionTone.neutral => BoxDecoration(
+            color: hoverFill,
+            border: Border.all(
+              color: Palette.coral,
+              width: Shapes.outlineWidth,
+            ),
+            borderRadius: _pillRadius,
+          ),
+          SettingsActionTone.primary => BoxDecoration(
+            color: Palette.coral,
+            border: shadows.outline,
+            borderRadius: _pillRadius,
+            boxShadow: shadows.control,
+          ),
+          SettingsActionTone.danger => BoxDecoration(
+            color: Palette.danger,
+            border: shadows.outline,
+            borderRadius: _pillRadius,
+            boxShadow: shadows.control,
+          ),
+        };
+        final Widget text = Padding(
+          padding: _pillPadding,
           child: Text(
-            widget.label,
+            label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: context.textStyles.labelSans.copyWith(
@@ -124,38 +123,31 @@ class _ActionPillState extends State<_ActionPill> {
               color: foreground,
             ),
           ),
-        ),
-      ),
-    );
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: widget.label,
-      child: Opacity(
-        opacity: enabled ? 1.0 : 0.5,
-        child: MouseRegion(
-          cursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-          onEnter: (PointerEnterEvent _) => _hover(true),
-          onExit: (PointerExitEvent _) => _hover(false),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: _pillMinTapTarget),
-              child: Center(
-                widthFactor: 1,
-                heightFactor: 1,
-                child: FocusRing(
-                  enabled: enabled,
-                  onPressed: onPressed,
-                  borderRadius: _pillRadius,
-                  child: face,
-                ),
+        );
+        return Opacity(
+          opacity: enabled ? 1.0 : 0.5,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: _pillMinTapTarget),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: DecoratedBox(
+                decoration: decoration,
+                child: tone == SettingsActionTone.neutral
+                    ? text
+                    : DecoratedBox(
+                        decoration: HoverStyle.decoration(
+                          color: hoverFill,
+                          shape: HoverShape.pill,
+                          borderRadius: _pillRadius,
+                        ),
+                        child: text,
+                      ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

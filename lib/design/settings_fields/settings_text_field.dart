@@ -1,7 +1,19 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import '../focus/focus_ring.dart';
+import '../interaction/hover_style.dart';
+import '../interaction/pressable.dart';
 import '../tokens/tokens.dart';
+
+class _TypingKeepsItsKeys extends Action<ActivateIntent> {
+  @override
+  bool isEnabled(ActivateIntent intent) => false;
+
+  @override
+  Object? invoke(ActivateIntent intent) => null;
+}
 
 class SettingsTextField extends StatefulWidget {
   const SettingsTextField({
@@ -42,6 +54,14 @@ class SettingsTextField extends StatefulWidget {
 class _SettingsTextFieldState extends State<SettingsTextField> {
   final GlobalKey<EditableTextState> _editableTextKey =
       GlobalKey<EditableTextState>();
+  final GlobalKey _pressableKey = GlobalKey();
+  final FocusNode _pressFocusNode = FocusNode(
+    debugLabel: 'settings text field press',
+    skipTraversal: true,
+  );
+  final Map<Type, Action<Intent>> _typingActions = <Type, Action<Intent>>{
+    ActivateIntent: _TypingKeepsItsKeys(),
+  };
   FocusNode? _ownedFocusNode;
   bool _focused = false;
 
@@ -88,26 +108,25 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
   void dispose() {
     _focusNode.removeListener(_handleFocusChange);
     _ownedFocusNode?.dispose();
+    _pressFocusNode.dispose();
     super.dispose();
   }
 
-  void _handleTapDown(TapDownDetails details) {
-    if (!widget.enabled) {
+  void _handlePressAt(Offset localPosition) {
+    final RenderObject? field = _pressableKey.currentContext
+        ?.findRenderObject();
+    final RenderEditable? editable =
+        _editableTextKey.currentState?.renderEditable;
+    if (field is! RenderBox || editable == null) {
       return;
     }
-    _editableTextKey.currentState?.renderEditable.handleTapDown(details);
-  }
-
-  void _handleTapUp(TapUpDetails details) {
-    if (!widget.enabled) {
-      return;
-    }
+    editable.handleTapDown(
+      TapDownDetails(globalPosition: field.localToGlobal(localPosition)),
+    );
     if (!_focusNode.hasFocus) {
       _focusNode.requestFocus();
     }
-    _editableTextKey.currentState?.renderEditable.selectPosition(
-      cause: SelectionChangedCause.tap,
-    );
+    editable.selectPosition(cause: SelectionChangedCause.tap);
   }
 
   @override
@@ -115,72 +134,94 @@ class _SettingsTextFieldState extends State<SettingsTextField> {
     final FieldNotesColors colors = context.colors;
     final FieldNotesTextStyles textStyles = context.textStyles;
     final Color borderColor = _focused ? Palette.coral : colors.line;
+    final String? semanticLabel = widget.semanticLabel;
     return Opacity(
       opacity: widget.enabled ? 1.0 : 0.5,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.cardBright,
-          border: Border.all(color: borderColor, width: Shapes.outlineWidth),
+      child: MergeSemantics(
+        child: Pressable(
+          key: _pressableKey,
+          label: semanticLabel ?? widget.hintText ?? '',
+          hint: semanticLabel == null ? null : widget.hintText,
+          onPressedAt: widget.enabled ? _handlePressAt : null,
+          focusNode: _pressFocusNode,
           borderRadius: Shapes.buttonBorderRadius,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: MergeSemantics(
-            child: Semantics(
-              label: widget.semanticLabel ?? widget.hintText,
-              hint: widget.semanticLabel == null ? null : widget.hintText,
-              enabled: widget.enabled ? null : false,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                excludeFromSemantics: !widget.enabled,
-                onTapDown: _handleTapDown,
-                onTapUp: _handleTapUp,
-                child: Stack(
-                  alignment: Alignment.centerLeft,
-                  children: <Widget>[
-                    if (widget.hintText != null)
-                      ExcludeSemantics(
-                        child: IgnorePointer(
-                          child: ValueListenableBuilder<TextEditingValue>(
-                            valueListenable: widget.controller,
-                            builder:
-                                (
-                                  BuildContext context,
-                                  TextEditingValue value,
-                                  _,
-                                ) {
-                                  if (value.text.isNotEmpty) {
-                                    return const SizedBox.shrink();
-                                  }
-                                  return Text(
-                                    widget.hintText!,
-                                    style: textStyles.bodySans.copyWith(
-                                      color: colors.placeholder,
-                                    ),
-                                  );
-                                },
+          excludeSemantics: false,
+          paintsHover: false,
+          builder: (BuildContext context, bool hovered) => DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.cardBright,
+              border: Border.all(
+                color: borderColor,
+                width: Shapes.outlineWidth,
+              ),
+              borderRadius: Shapes.buttonBorderRadius,
+            ),
+            child: DecoratedBox(
+              decoration: HoverStyle.decoration(
+                color: hovered
+                    ? HoverStyle.of(
+                        context,
+                        FocusRingSurface.light,
+                        HoverShape.rounded,
+                      )
+                    : null,
+                shape: HoverShape.rounded,
+                borderRadius: Shapes.buttonBorderRadius,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                child: Actions(
+                  actions: _typingActions,
+                  child: Stack(
+                    alignment: Alignment.centerLeft,
+                    children: <Widget>[
+                      if (widget.hintText != null)
+                        ExcludeSemantics(
+                          child: IgnorePointer(
+                            child: ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: widget.controller,
+                              builder:
+                                  (
+                                    BuildContext context,
+                                    TextEditingValue value,
+                                    _,
+                                  ) {
+                                    if (value.text.isNotEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return Text(
+                                      widget.hintText!,
+                                      style: textStyles.bodySans.copyWith(
+                                        color: colors.placeholder,
+                                      ),
+                                    );
+                                  },
+                            ),
                           ),
                         ),
+                      EditableText(
+                        key: _editableTextKey,
+                        controller: widget.controller,
+                        focusNode: _focusNode,
+                        readOnly: !widget.enabled,
+                        obscureText: widget.obscureText,
+                        keyboardType: widget.keyboardType ?? TextInputType.text,
+                        textInputAction: widget.textInputAction,
+                        autocorrect: widget.autocorrect,
+                        enableSuggestions: widget.enableSuggestions,
+                        enableIMEPersonalizedLearning:
+                            widget.enableIMEPersonalizedLearning,
+                        style: textStyles.bodySans,
+                        cursorColor: colors.accentInk,
+                        backgroundCursorColor: colors.muted,
+                        onChanged: widget.onChanged,
+                        onSubmitted: widget.onSubmitted,
                       ),
-                    EditableText(
-                      key: _editableTextKey,
-                      controller: widget.controller,
-                      focusNode: _focusNode,
-                      readOnly: !widget.enabled,
-                      obscureText: widget.obscureText,
-                      keyboardType: widget.keyboardType ?? TextInputType.text,
-                      textInputAction: widget.textInputAction,
-                      autocorrect: widget.autocorrect,
-                      enableSuggestions: widget.enableSuggestions,
-                      enableIMEPersonalizedLearning:
-                          widget.enableIMEPersonalizedLearning,
-                      style: textStyles.bodySans,
-                      cursorColor: colors.accentInk,
-                      backgroundCursorColor: colors.muted,
-                      onChanged: widget.onChanged,
-                      onSubmitted: widget.onSubmitted,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

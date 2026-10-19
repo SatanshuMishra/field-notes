@@ -4,6 +4,8 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 
 const double _tapTarget = 48;
 const double _disabledOpacity = 0.5;
@@ -32,38 +34,42 @@ class GlassCircleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final VoidCallback? onPressed = this.onPressed;
     final bool enabled = onPressed != null;
     final BorderRadius round = BorderRadius.circular(face / 2);
-    return Semantics(
-      button: toggled == null,
-      toggled: toggled,
-      enabled: enabled,
+    return Pressable(
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: SizedBox.square(
-          dimension: math.max(_tapTarget, face),
-          child: Center(
-            child: FocusRing(
-              enabled: enabled,
-              onPressed: onPressed,
-              surface: FocusRingSurface.dark,
-              borderRadius: round,
-              child: Opacity(
-                opacity: enabled ? 1 : _disabledOpacity,
-                child: ExcludeSemantics(
-                  child: GlassSurface(
-                    tone: tone,
-                    tint: tint,
-                    grouped: grouped,
-                    borderRadius: round,
-                    child: SizedBox.square(
-                      dimension: face,
-                      child: Center(child: glyph),
-                    ),
-                  ),
+      toggled: toggled,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: round,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: math.max(_tapTarget, face),
+        child: Center(
+          child: Opacity(
+            opacity: enabled ? 1 : _disabledOpacity,
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: HoverStyle.decoration(
+                color: hovered
+                    ? HoverStyle.of(
+                        context,
+                        FocusRingSurface.dark,
+                        HoverShape.circle,
+                      )
+                    : null,
+                shape: HoverShape.circle,
+                borderRadius: round,
+              ),
+              child: GlassSurface(
+                tone: tone,
+                tint: tint,
+                grouped: grouped,
+                borderRadius: round,
+                child: SizedBox.square(
+                  dimension: face,
+                  child: Center(child: glyph),
                 ),
               ),
             ),

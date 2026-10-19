@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../feedback/dialog_host.dart';
 import '../focus/focus_ring.dart';
+import '../interaction/pressable.dart';
 import '../tokens/tokens.dart';
 
 const Color phoneSheetBarrierColor = Color(0x572A241D);
@@ -132,6 +134,7 @@ class _PhoneSheetState extends State<PhoneSheet>
 
   double _travel = 0;
   Offset _tapOrigin = Offset.zero;
+  bool _wobbled = false;
 
   void _onDragStart(DragStartDetails details) {
     _travel = 0;
@@ -165,12 +168,17 @@ class _PhoneSheetState extends State<PhoneSheet>
     }
   }
 
-  void _onGrabberTapDown(TapDownDetails details) {
-    _tapOrigin = details.globalPosition;
+  void _onGrabberPointerDown(PointerDownEvent event) {
+    _tapOrigin = event.position;
   }
 
-  void _onGrabberTapUp(TapUpDetails details) {
-    if ((details.globalPosition - _tapOrigin).distance < phoneSheetTapSlop) {
+  void _onGrabberPointerUp(PointerUpEvent event) {
+    _wobbled = (event.position - _tapOrigin).distance >= phoneSheetTapSlop;
+    scheduleMicrotask(() => _wobbled = false);
+  }
+
+  void _onGrabberPressed() {
+    if (!_wobbled) {
       _toggle();
     }
   }
@@ -305,27 +313,21 @@ class _PhoneSheetState extends State<PhoneSheet>
   }
 
   Widget _grabberToggle() {
-    return Semantics(
-      container: true,
-      button: true,
-      label: widget.expanded ? phoneSheetShrinkLabel : phoneSheetExpandLabel,
-      onTap: _toggle,
-      child: FocusRing(
-        onPressed: _toggle,
+    return Listener(
+      onPointerDown: _onGrabberPointerDown,
+      onPointerUp: _onGrabberPointerUp,
+      child: Pressable(
+        key: phoneSheetGrabberToggleKey,
+        label: widget.expanded ? phoneSheetShrinkLabel : phoneSheetExpandLabel,
+        onPressed: _onGrabberPressed,
         placement: FocusRingPlacement.edge,
         borderRadius: const BorderRadius.all(
           Radius.circular(phoneSheetDragArea / 2),
         ),
-        child: GestureDetector(
-          key: phoneSheetGrabberToggleKey,
-          behavior: HitTestBehavior.translucent,
-          excludeFromSemantics: true,
-          onTapDown: _onGrabberTapDown,
-          onTapUp: _onGrabberTapUp,
-          child: const SizedBox(
-            width: phoneSheetGrabberTargetWidth,
-            height: phoneSheetDragArea,
-          ),
+        behavior: HitTestBehavior.translucent,
+        child: const SizedBox(
+          width: phoneSheetGrabberTargetWidth,
+          height: phoneSheetDragArea,
         ),
       ),
     );

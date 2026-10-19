@@ -1,4 +1,6 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
@@ -55,58 +57,61 @@ class StickerButton extends StatelessWidget {
       context.colors,
       shadows,
     );
-    final Widget face = DecoratedBox(
-      decoration: BoxDecoration(
-        color: style.background,
-        border: shadows.outline,
-        borderRadius: style.borderRadius,
-        boxShadow: style.shadow,
-      ),
-      child: Padding(
-        padding: style.padding,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (icon != null) ...<Widget>[
-              icon!,
-              const SizedBox(width: _iconGap),
-            ],
-            Flexible(
-              child: ExcludeSemantics(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: (labelStyle ?? context.textStyles.buttonSans).copyWith(
-                    color: style.foreground,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-    final Widget ringed = FocusRing(
-      enabled: isEnabled,
-      autofocus: autofocus,
+    return Pressable(
+      label: label,
       onPressed: onPressed,
+      autofocus: autofocus,
       surface: focusSurface,
       borderRadius: style.borderRadius,
-      child: face,
-    );
-    return Semantics(
-      button: true,
-      enabled: isEnabled,
-      label: label,
-      child: Opacity(
-        opacity: isEnabled ? 1.0 : 0.5,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: padTapTarget ? _paddedTapTarget(ringed) : ringed,
-        ),
-      ),
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) {
+        final Widget face = DecoratedBox(
+          decoration: BoxDecoration(
+            color: style.background,
+            border: shadows.outline,
+            borderRadius: style.borderRadius,
+            boxShadow: style.shadow,
+          ),
+          child: DecoratedBox(
+            decoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      style.hoverSurface,
+                      HoverShape.rounded,
+                    )
+                  : null,
+              shape: HoverShape.rounded,
+              borderRadius: style.borderRadius,
+            ),
+            child: Padding(
+              padding: style.padding,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (icon != null) ...<Widget>[
+                    icon!,
+                    const SizedBox(width: _iconGap),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: (labelStyle ?? context.textStyles.buttonSans)
+                          .copyWith(color: style.foreground),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        return Opacity(
+          opacity: isEnabled ? 1.0 : 0.5,
+          child: padTapTarget ? _paddedTapTarget(face) : face,
+        );
+      },
     );
   }
 
@@ -128,6 +133,7 @@ class _StickerButtonStyle {
     required this.borderRadius,
     required this.padding,
     required this.shadow,
+    required this.hoverSurface,
   });
 
   final Color background;
@@ -135,6 +141,7 @@ class _StickerButtonStyle {
   final BorderRadius borderRadius;
   final EdgeInsets padding;
   final List<BoxShadow>? shadow;
+  final FocusRingSurface hoverSurface;
 
   static _StickerButtonStyle of(
     StickerButtonVariant variant,
@@ -149,6 +156,7 @@ class _StickerButtonStyle {
           borderRadius: _controlBorderRadius,
           padding: _capturePadding,
           shadow: shadows.emphasis,
+          hoverSurface: FocusRingSurface.dark,
         );
       case StickerButtonVariant.secondary:
         return _StickerButtonStyle(
@@ -157,6 +165,7 @@ class _StickerButtonStyle {
           borderRadius: _controlBorderRadius,
           padding: _capturePadding,
           shadow: null,
+          hoverSurface: FocusRingSurface.light,
         );
       case StickerButtonVariant.danger:
         return _StickerButtonStyle(
@@ -165,6 +174,7 @@ class _StickerButtonStyle {
           borderRadius: Shapes.buttonBorderRadius,
           padding: _confirmPadding,
           shadow: shadows.control,
+          hoverSurface: FocusRingSurface.dark,
         );
     }
   }
