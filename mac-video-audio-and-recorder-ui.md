@@ -1,7 +1,7 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T17:32:06.616Z
-Next ids: c5 D4 R2 S1
+Updated: 2026-10-19T17:32:06.728Z
+Next ids: c5 D4 R3 S1
 
 ## Goal
 
@@ -20,9 +20,9 @@ Shipped: four stacked pull requests are open and assigned to the owner, ready fo
 
 ## Next step
 
-The owner starts Integration by saying the MSP pull requests merged; before that, with the owner at the Mac, record a take in field_notes_repro during which the owner claps on camera, and measure the frame where the hands meet against the sound onset to settle c2; repeat with the HS80 connected to settle c1.
+The owner decides whether the remaining 70 to 95 ms sound-ahead offset is fixed on #330 before merge (align the sound to the movie's first frame time rather than the start callback) or in a follow-up; then the HS80 clap take settles c1.
 
-Needs: D2, D3, R1.
+Needs: D3, R1.
 
 ## Decisions in force
 
@@ -32,6 +32,7 @@ Needs: D2, D3, R1.
 ## Open risks
 
 - R1 The lab macOS guest has no microphone or camera, so the silent take and the lag can only be proven end to end on real Mac hardware. Bears on c1.
+- R2 On the owner's Mac (built-in microphone and camera, 32ff2edc) a clap take puts the sound 70 to 95 ms ahead of the picture, steady across the take, and the sound track 140 ms short; spec 5.9 and I3's 60 ms bar are missed, so #330 does not yet meet it (harness/runs/clap-1-measure.txt). Bears on c2.
 
 ## Settled, do not reopen
 
