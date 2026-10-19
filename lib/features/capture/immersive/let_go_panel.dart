@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 const String letGoTitle = 'Let this one go?';
@@ -226,16 +228,23 @@ class _PanelButton extends StatelessWidget {
     final BorderRadius radius =
         decoration.borderRadius?.resolve(Directionality.of(context)) ??
         _pillRadius;
-    final Widget face = DecoratedBox(
+    Widget face(BuildContext context, bool hovered) => DecoratedBox(
       decoration: decoration,
-      child: Padding(
-        padding: compact ? EdgeInsets.zero : padding,
-        child: SizedBox(
-          height: compact ? _minTapTarget : null,
-          child: Center(
-            widthFactor: compact ? null : 1,
-            heightFactor: compact ? null : 1,
-            child: ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: HoverStyle.decoration(
+          color: hovered
+              ? HoverStyle.of(context, FocusRingSurface.dark, HoverShape.pill)
+              : null,
+          shape: HoverShape.pill,
+          borderRadius: radius,
+        ),
+        child: Padding(
+          padding: compact ? EdgeInsets.zero : padding,
+          child: SizedBox(
+            height: compact ? _minTapTarget : null,
+            child: Center(
+              widthFactor: compact ? null : 1,
+              heightFactor: compact ? null : 1,
               child: Text(
                 label,
                 maxLines: 1,
@@ -252,28 +261,23 @@ class _PanelButton extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(
-      button: true,
+    return Pressable(
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _minTapTarget,
-            minHeight: _minTapTarget,
-          ),
-          child: Center(
-            widthFactor: compact ? null : 1,
-            heightFactor: 1,
-            child: FocusRing(
-              onPressed: onPressed,
-              focusNode: focusNode,
-              surface: FocusRingSurface.dark,
-              borderRadius: radius,
-              child: face,
-            ),
-          ),
+      onPressed: onPressed,
+      focusNode: focusNode,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.pill,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _minTapTarget,
+          minHeight: _minTapTarget,
+        ),
+        child: Center(
+          widthFactor: compact ? null : 1,
+          heightFactor: 1,
+          child: face(context, hovered),
         ),
       ),
     );

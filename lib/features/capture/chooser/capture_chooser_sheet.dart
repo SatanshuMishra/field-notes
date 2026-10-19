@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -160,66 +162,70 @@ class _CaptureOptionRow extends StatelessWidget {
     final VoidCallback? select = isAvailable
         ? () => onSelected(option.type)
         : null;
-    final Widget detector = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: select,
-      child: FocusRing(
-        enabled: isAvailable,
-        includeFocusSemantics: isAvailable,
-        onPressed: select,
-        borderRadius: _rowRadius,
-        child: Container(
-          decoration: BoxDecoration(
-            color: _isPrimary ? Palette.coral : colors.cardWarm,
-            border: Border.all(color: colors.line, width: _rowBorderWidth),
-            borderRadius: _rowRadius,
-            boxShadow: _isPrimary ? context.shadows.emphasis : null,
-          ),
-          padding: const EdgeInsets.symmetric(
-            vertical: _rowPaddingVertical,
-            horizontal: _rowPaddingHorizontal,
-          ),
-          child: Row(
-            children: <Widget>[
-              CaptureIcon(
-                glyph: _glyphFor(option.type),
-                color: foreground,
-                size: _rowIconSize,
-              ),
-              const SizedBox(width: _rowIconGap),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      option.label,
-                      style: textStyles.labelSans.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: foreground,
-                      ),
+    final String subtitle = isAvailable ? option.description : unavailableLabel;
+    return Pressable(
+      label: '${option.label}\n$subtitle',
+      onPressed: select,
+      borderRadius: _rowRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Container(
+        decoration: BoxDecoration(
+          color: _isPrimary ? Palette.coral : colors.cardWarm,
+          border: Border.all(color: colors.line, width: _rowBorderWidth),
+          borderRadius: _rowRadius,
+          boxShadow: _isPrimary ? context.shadows.emphasis : null,
+        ),
+        foregroundDecoration: HoverStyle.decoration(
+          color: hovered
+              ? HoverStyle.of(
+                  context,
+                  _isPrimary ? FocusRingSurface.dark : FocusRingSurface.light,
+                  HoverShape.rounded,
+                )
+              : null,
+          shape: HoverShape.rounded,
+          borderRadius: _rowRadius,
+        ),
+        padding: const EdgeInsets.symmetric(
+          vertical: _rowPaddingVertical,
+          horizontal: _rowPaddingHorizontal,
+        ),
+        child: Row(
+          children: <Widget>[
+            CaptureIcon(
+              glyph: _glyphFor(option.type),
+              color: foreground,
+              size: _rowIconSize,
+            ),
+            const SizedBox(width: _rowIconGap),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    option.label,
+                    style: textStyles.labelSans.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: foreground,
                     ),
-                    Text(
-                      isAvailable ? option.description : unavailableLabel,
-                      style: _isPrimary
-                          ? textStyles.caption10Sans.copyWith(
-                              color: Palette.onAccent.withValues(
-                                alpha: _rowPrimarySubtitleOpacity,
-                              ),
-                            )
-                          : textStyles.caption10Sans,
-                    ),
-                  ],
-                ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: _isPrimary
+                        ? textStyles.caption10Sans.copyWith(
+                            color: Palette.onAccent.withValues(
+                              alpha: _rowPrimarySubtitleOpacity,
+                            ),
+                          )
+                        : textStyles.caption10Sans,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
-    if (!isAvailable) {
-      return detector;
-    }
-    return Semantics(container: true, button: true, child: detector);
   }
 }

@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/format_icons.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart'
     show tablesEnabled;
@@ -270,27 +271,15 @@ class _FormatButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool enabled = onTap != null;
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: FocusRing(
-          enabled: enabled,
-          onPressed: onTap,
-          borderRadius: _focusRadius,
-          placement: FocusRingPlacement.edge,
-          child: SizedBox.square(
-            dimension: _buttonExtent,
-            child: Center(
-              child: Opacity(
-                opacity: enabled ? 1 : _disabledOpacity,
-                child: icon,
-              ),
-            ),
-          ),
+      onPressed: onTap,
+      borderRadius: _focusRadius,
+      placement: FocusRingPlacement.edge,
+      child: SizedBox.square(
+        dimension: _buttonExtent,
+        child: Center(
+          child: Opacity(opacity: enabled ? 1 : _disabledOpacity, child: icon),
         ),
       ),
     );
@@ -416,35 +405,23 @@ class _MoreFormatsState extends State<_MoreFormats> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       for (final _MoreItem item in _moreItems)
-                        Semantics(
-                          container: true,
-                          button: true,
+                        Pressable(
+                          key: item.key,
                           label: item.label,
-                          child: GestureDetector(
-                            key: item.key,
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => _choose(item.format),
-                            child: FocusRing(
-                              onPressed: () => _choose(item.format),
-                              surface: FocusRingSurface.dark,
-                              borderRadius: _focusRadius,
-                              child: SizedBox(
-                                height: _menuItemHeight,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: _menuItemPadding,
-                                  ),
-                                  child: Align(
-                                    alignment: AlignmentDirectional.centerStart,
-                                    child: ExcludeSemantics(
-                                      child: Text(
-                                        item.label,
-                                        style: overlayContext
-                                            .textStyles
-                                            .toolbarSans,
-                                      ),
-                                    ),
-                                  ),
+                          onPressed: () => _choose(item.format),
+                          surface: FocusRingSurface.dark,
+                          borderRadius: _focusRadius,
+                          child: SizedBox(
+                            height: _menuItemHeight,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: _menuItemPadding,
+                              ),
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: Text(
+                                  item.label,
+                                  style: overlayContext.textStyles.toolbarSans,
                                 ),
                               ),
                             ),

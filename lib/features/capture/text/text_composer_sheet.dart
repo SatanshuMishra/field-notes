@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -300,32 +302,37 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
   }
 
   Widget _headerAction({
+    required String label,
     required VoidCallback? onTap,
     required BorderRadius focusRadius,
+    required FocusRingSurface hoverSurface,
     required Widget child,
   }) {
     return TextFieldTapRegion(
-      child: Semantics(
-        container: true,
-        button: true,
-        enabled: onTap != null,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: kMinInteractiveDimension,
-              minHeight: kMinInteractiveDimension,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: FocusRing(
-                enabled: onTap != null,
-                onPressed: onTap,
+      child: Pressable(
+        label: label,
+        onPressed: onTap,
+        borderRadius: focusRadius,
+        placement: FocusRingPlacement.edge,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: kMinInteractiveDimension,
+            minHeight: kMinInteractiveDimension,
+          ),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: DecoratedBox(
+              position: DecorationPosition.foreground,
+              decoration: HoverStyle.decoration(
+                color: hovered
+                    ? HoverStyle.of(context, hoverSurface, HoverShape.rounded)
+                    : null,
+                shape: HoverShape.rounded,
                 borderRadius: focusRadius,
-                child: child,
               ),
+              child: child,
             ),
           ),
         ),
@@ -338,8 +345,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
     final FieldNotesShadows shadows = context.shadows;
     final bool back = widget.exit == ComposerExit.back;
     return _headerAction(
+      label: back ? 'Back' : 'Cancel',
       onTap: widget.isSaving ? null : widget.onCancel,
       focusRadius: _exitPillBorderRadius,
+      hoverSurface: FocusRingSurface.light,
       child: Container(
         key: composerCloseKey,
         height: _onPhone(context) ? _phoneHeaderButtonHeight : _exitPillHeight,
@@ -423,8 +432,10 @@ class _TextComposerSheetState extends State<TextComposerSheet> {
       ),
     );
     return _headerAction(
+      label: widget.isSaving ? widget.savingLabel : widget.saveLabel,
       onTap: enabled ? () => _handleSaveTap(context) : null,
       focusRadius: radius,
+      hoverSurface: FocusRingSurface.dark,
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
         child: DecoratedBox(
