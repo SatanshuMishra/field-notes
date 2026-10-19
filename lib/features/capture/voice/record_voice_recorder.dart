@@ -101,7 +101,24 @@ class RecordVoiceRecorder implements VoiceRecorder {
     if (epoch != _epoch) {
       return;
     }
+    await _letGoOfAnotherInput(epoch);
+    if (epoch != _epoch) {
+      return;
+    }
     await _armWhileOpen();
+  }
+
+  Future<void> _letGoOfAnotherInput(int epoch) async {
+    final AudioInput? armedInput = _armedFor?.input;
+    if (!_armedIdle || armedInput == null) {
+      return;
+    }
+    final AudioInput chosen = await _resolveInputOrDefault();
+    if (epoch != _epoch || !_armedIdle || chosen == armedInput) {
+      return;
+    }
+    _armedFor = null;
+    await _capture.cancel();
   }
 
   Future<void> _armWhileOpen() {

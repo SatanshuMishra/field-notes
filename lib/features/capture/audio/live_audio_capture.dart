@@ -934,6 +934,7 @@ class LiveAudioCapture {
       await _quietly(take.chain.close);
       if (identical(_take, take)) {
         _take = null;
+        _hear(MicrophoneHearing.opening);
       }
     }
   }
@@ -984,6 +985,7 @@ class LiveAudioCapture {
       return;
     }
     _take = null;
+    _hear(MicrophoneHearing.opening);
     _stopWatching(take);
     take.paused = true;
     await _release(take, take.recorder.cancel);

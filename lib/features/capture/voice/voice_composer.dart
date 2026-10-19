@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
@@ -12,6 +13,7 @@ import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 
@@ -72,6 +74,26 @@ class _VoiceComposerConnectorState
     super.initState();
     _recorder = ref.read(voiceRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
+    ref.listenManual<AsyncValue<AppSettings>>(
+      appSettingsProvider,
+      _onSettingsChanged,
+    );
+    unawaited(_recorder.open().catchError((Object _) {}));
+  }
+
+  void _onSettingsChanged(
+    AsyncValue<AppSettings>? previous,
+    AsyncValue<AppSettings> next,
+  ) {
+    final AppSettings? before = previous?.value;
+    final AppSettings? after = next.value;
+    if (before == null ||
+        after == null ||
+        before.audioInputId == after.audioInputId ||
+        _closing ||
+        _phase != VoiceRecorderPhase.idle) {
+      return;
+    }
     unawaited(_recorder.open().catchError((Object _) {}));
   }
 
