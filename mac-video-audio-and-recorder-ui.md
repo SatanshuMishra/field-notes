@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T04:24:56.563Z
+Updated: 2026-10-19T04:25:28.578Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Interphase bug pathway grounding, before the interview. Causes found: (a) macOS AVAudioEngine stops itself on an IO unit configuration change ("iounit configuration changed > stopping the engine", 8 ms after the first take's engine start) and record_macos 2.1.1 never restarts it or reports it, so LiveAudioCapture saves the take with 0.063 s of sound; (b) vendored camera_macos replies "started" to startRecording before AVCaptureMovieFileOutput begins (no didStartRecordingTo), and Dart begins writing sound on that reply, so both later takes hold about 1.0 s more sound than picture. Both causes have a reproduction that fails on main. Intent round approved (I1-I5). A throwaway repro app (bundle dev.satanshumishra.fieldNotes.repro) on this Mac's built-in mic reproduced the lag on real hardware: two 8 s takes held 7.99 s of sound against 7.07 s and 7.00 s of picture; neither went silent and no engine stop was logged. With the HS80 connected later, the silent take reproduced on real hardware: a take reopened the mic 1 s after the previous one closed it, as the headset began leaving HFP; the headset flipped tsco, tacl, tsco and the engine logged "stopping the engine" 0.75 s in, saving 0.685 s of sound under 7.0 s of picture. One other run hung forever in recorder.start after "Error setting device on iounit, err = 'nope'". All 9 headset takes held about 1.05 s more sound than picture. Round 2 answered: start blocked with a can't-hear-you notice, normal-camera behaviour (mic opens with the preview), ring indicator, app-wide sweep, Windows and Android in scope.
+Pipeline stage 2: the first mitosis build of 23 Steps in four stacked MSPs is running; plan-only passed with no lane cycles. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it, so a take saves under a second of sound; (b) camera_macos replies "started" before the movie begins, so every take holds about 1.05 s of sound recorded before the picture.
 
 ## Next step
 
