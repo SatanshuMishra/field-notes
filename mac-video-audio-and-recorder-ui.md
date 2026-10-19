@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T14:05:57.088Z
+Updated: 2026-10-19T14:05:58.270Z
 Next ids: c5 D4 R2 S1
 
 ## Goal
@@ -20,9 +20,9 @@ Pipeline stage 3. mic-recovery (round 2, 2dd055e0) and video-starts-like-a-camer
 
 ## Next step
 
-When the validator returns, record button-consistency's round 3 verdicts and run the verdict. Read the Mac runs once the owner answers the dialogs, then ship.
+Run SHIP=1 run.zsh --resume with the three proven heads, open the four pull requests in stack order through the GitHub MCP, assign them, post each saved review comment, then park the thread for Integration.
 
-Needs: D2, R1.
+Needs: D2, D3, R1.
 
 ## Decisions in force
 
