@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T22:54:07.675Z
+Updated: 2026-10-19T22:54:08.374Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -20,7 +20,7 @@ The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-re
 
 ## Next step
 
-Finish lighthouse run 1: collect the Android paths (lighthouse/run-1/work/android-paths.json), write findings.json, run lighthouse verdict; then fix the stalled-take shortfall in the integration worktree with a receipt test and run lighthouse run 2.
+Finish lighthouse run 1: collect the Android paths (lighthouse/run-1/work/android-paths.json), write findings.json, run lighthouse verdict and record the integration finding; then run the Windows stall diagnostic (fake pacing by tick versus by clock, with sent-sample counts) to tell a fake artefact from an app defect, fix in the integration worktree only if the app lost sound, and run lighthouse run 2.
 
 Needs: R1.
 
