@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -221,33 +223,39 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
               MediaQuery.paddingOf(context).bottom;
     final bool rtl = Directionality.of(context) == TextDirection.rtl;
     final Color ink = widget.ink ?? context.colors.ink;
+    final FocusRingSurface surface = widget.tone == GlassTone.media
+        ? FocusRingSurface.dark
+        : FocusRingSurface.light;
     final Widget list = Material(
       type: MaterialType.transparency,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            for (int index = 0; index < choices.length; index++)
-              _DropdownChoiceTile(
-                key: choices[index].key,
-                label: choices[index].label,
-                description: choices[index].description,
-                chosen: choices[index].value == widget.current,
-                highlighted: index == _highlighted,
-                ink: ink,
-                onHover: () {
-                  if (_highlighted != index) {
-                    setState(() => _highlighted = index);
-                  }
-                },
-                onTap: () => _pick(choices[index]),
-              ),
-          ],
+      child: ExcludeFocus(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (int index = 0; index < choices.length; index++)
+                _DropdownChoiceTile(
+                  key: choices[index].key,
+                  label: choices[index].label,
+                  description: choices[index].description,
+                  chosen: choices[index].value == widget.current,
+                  highlighted: index == _highlighted,
+                  ink: ink,
+                  surface: surface,
+                  onHover: () {
+                    if (_highlighted != index) {
+                      setState(() => _highlighted = index);
+                    }
+                  },
+                  onTap: () => _pick(choices[index]),
+                ),
+            ],
+          ),
         ),
       ),
     );
-    final Widget surface = TapRegion(
+    final Widget menu = TapRegion(
       groupId: _ownGroup,
       onTapOutside: (PointerDownEvent event) => _close(),
       child: Focus(
@@ -279,8 +287,8 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
         followerAnchor: rtl ? Alignment.topRight : Alignment.topLeft,
         offset: const Offset(0, anchoredDropdownGap),
         child: outerGroup == null
-            ? surface
-            : TapRegion(groupId: outerGroup, child: surface),
+            ? menu
+            : TapRegion(groupId: outerGroup, child: menu),
       ),
     );
   }
@@ -309,6 +317,7 @@ class _DropdownChoiceTile extends StatelessWidget {
     required this.chosen,
     required this.highlighted,
     required this.ink,
+    required this.surface,
     required this.onHover,
     required this.onTap,
   });
@@ -318,6 +327,7 @@ class _DropdownChoiceTile extends StatelessWidget {
   final bool chosen;
   final bool highlighted;
   final Color ink;
+  final FocusRingSurface surface;
   final VoidCallback onHover;
   final VoidCallback onTap;
 
@@ -329,70 +339,68 @@ class _DropdownChoiceTile extends StatelessWidget {
       padding: _choiceInset,
       child: MergeSemantics(
         child: Semantics(
-          button: true,
-          selected: chosen,
           inMutuallyExclusiveGroup: true,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: highlighted
-                  ? ink.withValues(alpha: _highlightAlpha)
-                  : Colors.transparent,
+          child: MouseRegion(
+            onEnter: (PointerEnterEvent _) => onHover(),
+            child: Pressable(
+              label: description == null ? label : '$label\n$description',
+              selected: chosen,
+              onPressed: onTap,
               borderRadius: radius,
-            ),
-            child: InkWell(
-              canRequestFocus: false,
-              borderRadius: radius,
-              onHover: (bool hovering) {
-                if (hovering) {
-                  onHover();
-                }
-              },
-              onTap: onTap,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: _choiceMinHeight),
-                child: Padding(
-                  padding: _choicePadding,
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox.square(
-                        dimension: _checkSize,
-                        child: chosen
-                            ? ExcludeSemantics(
-                                child: Icon(
-                                  Icons.check,
-                                  size: _checkSize,
+              surface: surface,
+              paintsHover: false,
+              builder: (BuildContext context, bool _) => DecoratedBox(
+                decoration: BoxDecoration(
+                  color: highlighted
+                      ? ink.withValues(alpha: _highlightAlpha)
+                      : Colors.transparent,
+                  borderRadius: radius,
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minHeight: _choiceMinHeight,
+                  ),
+                  child: Padding(
+                    padding: _choicePadding,
+                    child: Row(
+                      children: <Widget>[
+                        SizedBox.square(
+                          dimension: _checkSize,
+                          child: chosen
+                              ? Icon(Icons.check, size: _checkSize, color: ink)
+                              : null,
+                        ),
+                        const SizedBox(width: _checkGap),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Text(
+                                label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.textStyles.bodySans.copyWith(
                                   color: ink,
                                 ),
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: _checkGap),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Text(
-                              label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.textStyles.bodySans.copyWith(
-                                color: ink,
                               ),
-                            ),
-                            if (description != null) ...<Widget>[
-                              const SizedBox(height: _descriptionGap),
-                              Text(
-                                description,
-                                style: context.textStyles.captionSans.copyWith(
-                                  color: ink.withValues(alpha: _mutedAlpha),
+                              if (description != null) ...<Widget>[
+                                const SizedBox(height: _descriptionGap),
+                                Text(
+                                  description,
+                                  style: context.textStyles.captionSans
+                                      .copyWith(
+                                        color: ink.withValues(
+                                          alpha: _mutedAlpha,
+                                        ),
+                                      ),
                                 ),
-                              ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

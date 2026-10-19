@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:field_notes/data/media/audio_output.dart';
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
+import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 import 'package:field_notes/domain/platform/desktop_platform.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/settings/input_profile.dart';
 import 'package:field_notes/domain/settings/settings_repository.dart';
-import 'package:field_notes/features/capture/audio/anchored_dropdown.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
 import 'package:field_notes/features/capture/audio/input_level.dart';
 import 'package:field_notes/features/capture/audio/microphone_glyph.dart';
@@ -114,6 +116,9 @@ typedef DropdownRowBuilder = Widget Function(
   bool open,
   VoidCallback toggle,
 );
+
+FocusRingSurface _surfaceOn(GlassTone tone) =>
+    tone == GlassTone.media ? FocusRingSurface.dark : FocusRingSurface.light;
 
 Widget _dropdownGlyph(bool open) =>
     _Glyph(open ? Icons.expand_less : Icons.expand_more);
@@ -347,6 +352,7 @@ class InputPanel extends ConsumerWidget {
                   key: voiceSettingsRowKey,
                   title: voiceSettingsLabel,
                   ink: Palette.mediaInk,
+                  surface: FocusRingSurface.dark,
                   trailing: const _Glyph(Icons.chevron_right),
                   onTap: onVoiceSettings,
                 ),
@@ -522,6 +528,7 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
             title: inputDeviceTitle,
             value: label,
             ink: ink,
+            surface: _surfaceOn(widget.tone),
             trailing: _dropdownGlyph(open),
             expanded: open,
             onTap: toggle,
@@ -590,6 +597,7 @@ class InputProfileRow extends ConsumerWidget {
               title: inputProfileTitle,
               value: current.label,
               ink: ink,
+              surface: _surfaceOn(tone),
               trailing: _dropdownGlyph(open),
               expanded: open,
               onTap: toggle,
@@ -660,6 +668,7 @@ class OutputDeviceRow extends ConsumerWidget {
             title: outputDeviceTitle,
             value: label,
             ink: ink,
+            surface: _surfaceOn(tone),
             trailing: _dropdownGlyph(open),
             expanded: open,
             onTap: toggle,
@@ -828,10 +837,12 @@ class _PanelRow extends StatelessWidget {
     this.trailing,
     this.expanded,
     this.onTap,
+    this.surface = FocusRingSurface.light,
   });
 
   final String title;
   final Color ink;
+  final FocusRingSurface surface;
   final String? value;
   final Widget? trailing;
   final bool? expanded;
@@ -879,17 +890,22 @@ class _PanelRow extends StatelessWidget {
       ),
     );
     final VoidCallback? tap = onTap;
+    if (tap == null) {
+      return MergeSemantics(
+        child: Semantics(button: false, expanded: expanded, child: content),
+      );
+    }
     return MergeSemantics(
       child: Semantics(
-        button: tap != null,
         expanded: expanded,
-        child: tap == null
-            ? content
-            : InkWell(
-                onTap: tap,
-                borderRadius: BorderRadius.circular(_rowRadius),
-                child: content,
-              ),
+        child: Pressable(
+          label: title,
+          value: shown,
+          onPressed: tap,
+          borderRadius: BorderRadius.circular(_rowRadius),
+          surface: surface,
+          child: content,
+        ),
       ),
     );
   }
