@@ -48,7 +48,7 @@ final class KeyStoreProvider
   }
 }
 
-String _$keyStoreHash() => r'35e0c4a3cee8b5765160bf3630047e3c228c8df4';
+String _$keyStoreHash() => r'5e8c5c9aa8711ebf05566241219a986252ac0414';
 
 @ProviderFor(networkMonitor)
 final networkMonitorProvider = NetworkMonitorProvider._();

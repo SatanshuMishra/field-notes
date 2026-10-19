@@ -41,14 +41,14 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'sync_providers.g.dart';
 
 @Riverpod(keepAlive: true)
-KeyStore keyStore(Ref ref) => defaultTargetPlatform == TargetPlatform.macOS
-    ? KeyStore(
-        BundledSecureValues(
-          CachedSecureValues(const PlatformSecureValues()),
-          legacyKeys: KeyStore.allKeys,
-        ),
-      )
-    : KeyStore(CachedSecureValues(const PlatformSecureValues()));
+KeyStore keyStore(Ref ref) {
+  final SecureValues cached = CachedSecureValues(const PlatformSecureValues());
+  return KeyStore(
+    defaultTargetPlatform == TargetPlatform.macOS
+        ? BundledSecureValues(cached, legacyKeys: KeyStore.allKeys)
+        : cached,
+  );
+}
 
 @Riverpod(keepAlive: true)
 NetworkMonitor networkMonitor(Ref ref) => ConnectivityNetworkMonitor();
