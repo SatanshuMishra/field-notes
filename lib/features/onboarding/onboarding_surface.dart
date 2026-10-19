@@ -1,11 +1,16 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/widgets.dart';
 
 const double _minTapTarget = 48;
 const double _disabledOpacity = 0.45;
 const double _trailingGap = 8;
+const BorderRadius _textButtonRadius = BorderRadius.all(
+  Radius.circular(Shapes.radiusXs),
+);
 
 const TextStyle _primaryLabel = TextStyle(
   fontFamily: TypographyTokens.sans,
@@ -139,31 +144,28 @@ class OnboardingPrimaryButton extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
       label: label,
-      child: Opacity(
+      onPressed: onPressed,
+      autofocus: autofocus,
+      focusNode: focusNode,
+      borderRadius: borderRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: _minTapTarget,
-              minHeight: _minTapTarget,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: FocusRing(
-                enabled: enabled,
-                autofocus: autofocus,
-                focusNode: focusNode,
-                onPressed: onPressed,
-                borderRadius: borderRadius,
-                child: face,
-              ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
+          ),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: OnboardingHoverFill(
+              hovered: hovered,
+              borderRadius: borderRadius,
+              surface: FocusRingSurface.dark,
+              child: face,
             ),
           ),
         ),
@@ -189,40 +191,57 @@ class OnboardingTextButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool enabled = onPressed != null;
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
       label: semanticLabel ?? label,
+      onPressed: onPressed,
+      borderRadius: _textButtonRadius,
       child: Opacity(
         opacity: enabled ? 1 : _disabledOpacity,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: FocusRing(
-            enabled: enabled,
-            onPressed: onPressed,
-            borderRadius: const BorderRadius.all(
-              Radius.circular(Shapes.radiusXs),
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                minWidth: _minTapTarget,
-                minHeight: _minTapTarget,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Center(
-                  widthFactor: 1,
-                  heightFactor: 1,
-                  child: ExcludeSemantics(
-                    child: Text(label, maxLines: 1, style: style),
-                  ),
-                ),
-              ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minWidth: _minTapTarget,
+            minHeight: _minTapTarget,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: Text(label, maxLines: 1, style: style),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class OnboardingHoverFill extends StatelessWidget {
+  const OnboardingHoverFill({
+    super.key,
+    required this.hovered,
+    required this.borderRadius,
+    required this.child,
+    this.surface = FocusRingSurface.light,
+    this.shape = HoverShape.rounded,
+  });
+
+  final bool hovered;
+  final BorderRadius borderRadius;
+  final FocusRingSurface surface;
+  final HoverShape shape;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: HoverStyle.decoration(
+        color: hovered ? HoverStyle.of(context, surface, shape) : null,
+        shape: shape,
+        borderRadius: borderRadius,
+      ),
+      child: child,
     );
   }
 }

@@ -3,11 +3,13 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/settings.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/settings/settings_controller.dart';
 import 'package:field_notes/features/settings/settings_providers.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -496,81 +498,79 @@ class _ThemeCard extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final String label = _label(appearance);
     final String caption = _sidebarCaption(appearance);
-    return Semantics(
-      button: true,
-      selected: selected,
+    return Pressable(
       label: '$label, $caption',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          borderRadius: _cardRadius,
-          child: AnimatedContainer(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : _selectFade,
-            padding: _cardPadding,
-            decoration: BoxDecoration(
-              color: selected ? colors.cardLight : colors.cardWarm,
-              borderRadius: _cardRadius,
-              border: Border.all(
-                color: selected ? Palette.coral : colors.ink22,
-                width: _cardOutline,
-              ),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: selected ? colors.shadow : colors.shadow.withAlpha(0),
-                  offset: _cardShadowOffset,
-                ),
-              ],
+      selected: selected,
+      onPressed: onPressed,
+      borderRadius: _cardRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+        hovered: hovered,
+        borderRadius: _cardRadius,
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : _selectFade,
+          padding: _cardPadding,
+          decoration: BoxDecoration(
+            color: selected ? colors.cardLight : colors.cardWarm,
+            borderRadius: _cardRadius,
+            border: Border.all(
+              color: selected ? Palette.coral : colors.ink22,
+              width: _cardOutline,
             ),
-            child: ExcludeSemantics(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  _Miniature(look: _MiniatureLook.of(appearance)),
-                  const SizedBox(height: _cardInnerGap),
-                  Padding(
-                    padding: _cardLabelPadding,
-                    child: Row(
-                      children: <Widget>[
-                        _ModeIcon(
-                          appearance: appearance,
-                          color: colors.ink,
-                          size: _cardIcon,
-                        ),
-                        const SizedBox(width: _cardLabelGap),
-                        Flexible(
-                          child: Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: TypographyTokens.sans,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: selected ? colors.accentInk : colors.ink,
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          caption,
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: selected ? colors.shadow : colors.shadow.withAlpha(0),
+                offset: _cardShadowOffset,
+              ),
+            ],
+          ),
+          child: ExcludeSemantics(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _Miniature(look: _MiniatureLook.of(appearance)),
+                const SizedBox(height: _cardInnerGap),
+                Padding(
+                  padding: _cardLabelPadding,
+                  child: Row(
+                    children: <Widget>[
+                      _ModeIcon(
+                        appearance: appearance,
+                        color: colors.ink,
+                        size: _cardIcon,
+                      ),
+                      const SizedBox(width: _cardLabelGap),
+                      Flexible(
+                        child: Text(
+                          label,
                           maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontFamily: TypographyTokens.sans,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: colors.muted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: selected ? colors.accentInk : colors.ink,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const Spacer(),
+                      Text(
+                        caption,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.sans,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: colors.muted,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -942,74 +942,80 @@ class _ThemeRow extends StatelessWidget {
     final bool still = MediaQuery.disableAnimationsOf(context);
     final String label = _label(appearance);
     final String caption = _rowCaption(appearance);
-    return Semantics(
-      checked: selected,
-      inMutuallyExclusiveGroup: true,
-      label: '$label, ${caption.replaceAll(' · ', ', ')}',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
+    return MergeSemantics(
+      child: Semantics(
+        checked: selected,
+        inMutuallyExclusiveGroup: true,
+        child: Pressable(
+          label: '$label, ${caption.replaceAll(' · ', ', ')}',
           onPressed: onPressed,
           placement: FocusRingPlacement.edge,
-          child: AnimatedContainer(
-            duration: still ? Duration.zero : _selectFade,
-            constraints: const BoxConstraints(minHeight: _rowHeight),
-            padding: _rowPadding,
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: selected
-                  ? colors.cardLight
-                  : colors.cardLight.withAlpha(0),
-              border: last
-                  ? null
-                  : Border(
-                      bottom: BorderSide(color: colors.ink12, width: _rowRule),
-                    ),
-            ),
-            child: ExcludeSemantics(
-              child: Row(
-                children: <Widget>[
-                  _ModeIcon(
-                    appearance: appearance,
-                    color: colors.ink,
-                    size: _rowIcon,
-                  ),
-                  const SizedBox(width: _rowGap),
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? colors.accentInk : colors.ink,
-                          ),
+          paintsHover: false,
+          builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+            hovered: hovered,
+            borderRadius: BorderRadius.zero,
+            child: AnimatedContainer(
+              duration: still ? Duration.zero : _selectFade,
+              constraints: const BoxConstraints(minHeight: _rowHeight),
+              padding: _rowPadding,
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: selected
+                    ? colors.cardLight
+                    : colors.cardLight.withAlpha(0),
+                border: last
+                    ? null
+                    : Border(
+                        bottom: BorderSide(
+                          color: colors.ink12,
+                          width: _rowRule,
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          caption,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: colors.muted,
-                          ),
-                        ),
-                      ],
+                      ),
+              ),
+              child: ExcludeSemantics(
+                child: Row(
+                  children: <Widget>[
+                    _ModeIcon(
+                      appearance: appearance,
+                      color: colors.ink,
+                      size: _rowIcon,
                     ),
-                  ),
-                  const SizedBox(width: _rowGap),
-                  _Radio(selected: selected, still: still),
-                ],
+                    const SizedBox(width: _rowGap),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: TypographyTokens.sans,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: selected ? colors.accentInk : colors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: 1),
+                          Text(
+                            caption,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: TypographyTokens.sans,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: colors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: _rowGap),
+                    _Radio(selected: selected, still: still),
+                  ],
+                ),
               ),
             ),
           ),

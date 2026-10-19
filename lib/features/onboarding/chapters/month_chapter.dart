@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
@@ -1363,25 +1363,26 @@ class _LookAhead extends StatelessWidget {
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 excludeFromSemantics: true,
-                onTapDown: (TapDownDetails details) =>
-                    _seek(details.localPosition.dx, width),
                 onHorizontalDragStart: (DragStartDetails details) =>
                     _seek(details.localPosition.dx, width),
                 onHorizontalDragUpdate: (DragUpdateDetails details) =>
                     _seek(details.localPosition.dx, width),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: reach),
-                  child: FocusRing(
-                    onPressed: null,
+                child: ExcludeSemantics(
+                  child: Pressable(
+                    label: label,
+                    onPressedAt: (Offset at) => _seek(at.dx, width),
                     borderRadius: _sliderFocusRadius,
-                    child: SizedBox(
-                      key: monthSliderKey,
-                      width: width,
-                      height: height,
-                      child: CustomPaint(
-                        painter: _TrackPainter(
-                          fraction: plan.fill,
-                          track: colors.ink16,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(vertical: reach),
+                      child: SizedBox(
+                        key: monthSliderKey,
+                        width: width,
+                        height: height,
+                        child: CustomPaint(
+                          painter: _TrackPainter(
+                            fraction: plan.fill,
+                            track: colors.ink16,
+                          ),
                         ),
                       ),
                     ),

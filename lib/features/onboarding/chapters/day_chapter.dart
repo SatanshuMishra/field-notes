@@ -2,12 +2,13 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/onboarding/chapters/garden_scene.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -371,22 +372,19 @@ class _MoodTile extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(
+    return Pressable(
       key: dayMoodKey(mood),
-      container: true,
-      button: true,
-      selected: selected,
       label: mood.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: FocusRing(
-          onPressed: onTap,
+      selected: selected,
+      onPressed: onTap,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        height: metrics.tileHeight,
+        child: OnboardingHoverFill(
+          hovered: hovered,
           borderRadius: radius,
-          child: SizedBox(
-            height: metrics.tileHeight,
-            child: ExcludeSemantics(child: face),
-          ),
+          child: face,
         ),
       ),
     );

@@ -3,12 +3,14 @@ import 'dart:math' as math;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/week_start.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -523,49 +525,48 @@ class _WeekButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
-      button: true,
-      selected: selected,
+    return Pressable(
       label: start.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          borderRadius: _choiceRadius,
-          child: AnimatedContainer(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : _selectFade,
-            constraints: const BoxConstraints(
-              minWidth: _target,
-              minHeight: _target,
+      selected: selected,
+      onPressed: onPressed,
+      borderRadius: _choiceRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+        hovered: hovered,
+        borderRadius: _choiceRadius,
+        surface: selected ? FocusRingSurface.dark : FocusRingSurface.light,
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : _selectFade,
+          constraints: const BoxConstraints(
+            minWidth: _target,
+            minHeight: _target,
+          ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: _sidebarButtonPadding,
+          ),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? Palette.coral : colors.cardWarm,
+            borderRadius: _choiceRadius,
+            border: Border.all(
+              color: selected ? colors.line : colors.ink30,
+              width: _outline,
             ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: _sidebarButtonPadding,
-            ),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? Palette.coral : colors.cardWarm,
-              borderRadius: _choiceRadius,
-              border: Border.all(
-                color: selected ? colors.line : colors.ink30,
-                width: _outline,
-              ),
-              boxShadow: selected
-                  ? context.shadows.emphasis
-                  : const <BoxShadow>[],
-            ),
-            child: ExcludeSemantics(
-              child: Text(
-                start.label,
-                maxLines: 1,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.sans,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: selected ? Palette.onAccent : colors.ink,
-                ),
+            boxShadow: selected
+                ? context.shadows.emphasis
+                : const <BoxShadow>[],
+          ),
+          child: ExcludeSemantics(
+            child: Text(
+              start.label,
+              maxLines: 1,
+              style: TextStyle(
+                fontFamily: TypographyTokens.sans,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: selected ? Palette.onAccent : colors.ink,
               ),
             ),
           ),
@@ -639,68 +640,74 @@ class _ChoiceRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final bool still = MediaQuery.disableAnimationsOf(context);
-    return Semantics(
-      checked: selected,
-      inMutuallyExclusiveGroup: true,
-      label: '${start.label}, $caption',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
+    return MergeSemantics(
+      child: Semantics(
+        checked: selected,
+        inMutuallyExclusiveGroup: true,
+        child: Pressable(
+          label: '${start.label}, $caption',
           onPressed: onPressed,
           placement: FocusRingPlacement.edge,
-          child: AnimatedContainer(
-            duration: still ? Duration.zero : _selectFade,
-            constraints: const BoxConstraints(minHeight: _rowHeight),
-            padding: _rowPadding,
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: selected
-                  ? colors.cardLight
-                  : colors.cardLight.withAlpha(0),
-              border: last
-                  ? null
-                  : Border(
-                      bottom: BorderSide(color: colors.ink12, width: _rowRule),
-                    ),
-            ),
-            child: ExcludeSemantics(
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          start.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: selected ? colors.accentInk : colors.ink,
-                          ),
+          paintsHover: false,
+          builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+            hovered: hovered,
+            borderRadius: BorderRadius.zero,
+            child: AnimatedContainer(
+              duration: still ? Duration.zero : _selectFade,
+              constraints: const BoxConstraints(minHeight: _rowHeight),
+              padding: _rowPadding,
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: selected
+                    ? colors.cardLight
+                    : colors.cardLight.withAlpha(0),
+                border: last
+                    ? null
+                    : Border(
+                        bottom: BorderSide(
+                          color: colors.ink12,
+                          width: _rowRule,
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          caption,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: colors.muted,
+                      ),
+              ),
+              child: ExcludeSemantics(
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            start.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: TypographyTokens.sans,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: selected ? colors.accentInk : colors.ink,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 1),
+                          Text(
+                            caption,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: TypographyTokens.sans,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: colors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: _rowGap),
-                  _Radio(selected: selected, still: still),
-                ],
+                    const SizedBox(width: _rowGap),
+                    _Radio(selected: selected, still: still),
+                  ],
+                ),
               ),
             ),
           ),

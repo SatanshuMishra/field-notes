@@ -5,14 +5,15 @@ import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/empty_state.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/flame_icon.dart';
 import 'package:field_notes/design/icons/nav_icons.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/dashed_divider.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/flower_kind.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/streak/streak.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart' show Icons;
@@ -516,30 +517,27 @@ class _LineTarget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      selected: highlighted,
-      label: label,
-      child: Focus(
-        canRequestFocus: false,
-        skipTraversal: true,
-        includeSemantics: false,
-        onFocusChange: (bool focused) {
-          if (focused) {
-            onHighlight();
-          }
-        },
-        child: MouseRegion(
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      includeSemantics: false,
+      onFocusChange: (bool focused) {
+        if (focused) {
+          onHighlight();
+        }
+      },
+      child: Pressable(
+        label: label,
+        selected: highlighted,
+        onPressed: onHighlight,
+        borderRadius: borderRadius,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => MouseRegion(
           onEnter: (PointerEnterEvent event) => onHighlight(),
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            excludeFromSemantics: true,
-            onTap: onHighlight,
-            child: FocusRing(
-              onPressed: null,
-              borderRadius: borderRadius,
-              child: ExcludeSemantics(child: child),
-            ),
+          child: OnboardingHoverFill(
+            hovered: hovered,
+            borderRadius: borderRadius,
+            child: child,
           ),
         ),
       ),

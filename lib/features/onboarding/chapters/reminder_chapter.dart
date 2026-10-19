@@ -5,12 +5,14 @@ import 'package:field_notes/design/feedback/toast.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/domain/settings/reminder_time.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/onboarding_surface.dart';
 import 'package:field_notes/features/onboarding/reminder_choice.dart';
 import 'package:field_notes/features/reminders/local_notifications_reminder_scheduler.dart';
 import 'package:field_notes/features/reminders/notifications_off_notice.dart';
@@ -609,64 +611,63 @@ class _ChoiceButton extends StatelessWidget {
     final FieldNotesColors colors = context.colors;
     final String clock = _clock(context, choice);
     final String caption = _sidebarCaption(choice);
-    return Semantics(
-      button: true,
-      selected: selected,
+    return Pressable(
       label: '$clock, $caption',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          borderRadius: _choiceRadius,
-          child: AnimatedContainer(
-            duration: MediaQuery.disableAnimationsOf(context)
-                ? Duration.zero
-                : _selectFade,
-            width: _sidebarChoiceWidth,
-            constraints: const BoxConstraints(minHeight: _sidebarChoiceHeight),
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: selected ? Palette.coral : colors.cardWarm,
-              borderRadius: _choiceRadius,
-              border: Border.all(
-                color: selected ? colors.line : colors.ink30,
-                width: _outline,
-              ),
-              boxShadow: selected
-                  ? context.shadows.emphasis
-                  : const <BoxShadow>[],
+      selected: selected,
+      onPressed: onPressed,
+      borderRadius: _choiceRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+        hovered: hovered,
+        borderRadius: _choiceRadius,
+        surface: selected ? FocusRingSurface.dark : FocusRingSurface.light,
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : _selectFade,
+          width: _sidebarChoiceWidth,
+          constraints: const BoxConstraints(minHeight: _sidebarChoiceHeight),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? Palette.coral : colors.cardWarm,
+            borderRadius: _choiceRadius,
+            border: Border.all(
+              color: selected ? colors.line : colors.ink30,
+              width: _outline,
             ),
-            child: ExcludeSemantics(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(
-                    clock,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: TypographyTokens.sans,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      fontFeatures: _tabular,
-                      color: selected ? Palette.onAccent : colors.ink,
-                    ),
+            boxShadow: selected
+                ? context.shadows.emphasis
+                : const <BoxShadow>[],
+          ),
+          child: ExcludeSemantics(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  clock,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontFamily: TypographyTokens.sans,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    fontFeatures: _tabular,
+                    color: selected ? Palette.onAccent : colors.ink,
                   ),
-                  const SizedBox(height: 1),
-                  Text(
-                    caption,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: TypographyTokens.sans,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w500,
-                      color: selected
-                          ? Palette.onAccent.withValues(alpha: _onAccentCaption)
-                          : colors.muted,
-                    ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  caption,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontFamily: TypographyTokens.sans,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
+                    color: selected
+                        ? Palette.onAccent.withValues(alpha: _onAccentCaption)
+                        : colors.muted,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -731,69 +732,75 @@ class _ChoiceRow extends StatelessWidget {
     final bool still = MediaQuery.disableAnimationsOf(context);
     final String label = _rowLabel(context, choice);
     final String caption = _rowCaption(choice);
-    return Semantics(
-      checked: selected,
-      inMutuallyExclusiveGroup: true,
-      label: '$label, ${caption.replaceAll(' · ', ', ')}',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
+    return MergeSemantics(
+      child: Semantics(
+        checked: selected,
+        inMutuallyExclusiveGroup: true,
+        child: Pressable(
+          label: '$label, ${caption.replaceAll(' · ', ', ')}',
           onPressed: onPressed,
           placement: FocusRingPlacement.edge,
-          child: AnimatedContainer(
-            duration: still ? Duration.zero : _selectFade,
-            constraints: const BoxConstraints(minHeight: _rowHeight),
-            padding: _rowPadding,
-            alignment: Alignment.centerLeft,
-            decoration: BoxDecoration(
-              color: selected
-                  ? colors.cardLight
-                  : colors.cardLight.withAlpha(0),
-              border: last
-                  ? null
-                  : Border(
-                      bottom: BorderSide(color: colors.ink12, width: _rowRule),
-                    ),
-            ),
-            child: ExcludeSemantics(
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            fontFeatures: _tabular,
-                            color: selected ? colors.accentInk : colors.ink,
-                          ),
+          paintsHover: false,
+          builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+            hovered: hovered,
+            borderRadius: BorderRadius.zero,
+            child: AnimatedContainer(
+              duration: still ? Duration.zero : _selectFade,
+              constraints: const BoxConstraints(minHeight: _rowHeight),
+              padding: _rowPadding,
+              alignment: Alignment.centerLeft,
+              decoration: BoxDecoration(
+                color: selected
+                    ? colors.cardLight
+                    : colors.cardLight.withAlpha(0),
+                border: last
+                    ? null
+                    : Border(
+                        bottom: BorderSide(
+                          color: colors.ink12,
+                          width: _rowRule,
                         ),
-                        const SizedBox(height: 1),
-                        Text(
-                          caption,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: colors.muted,
+                      ),
+              ),
+              child: ExcludeSemantics(
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: TypographyTokens.sans,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: _tabular,
+                              color: selected ? colors.accentInk : colors.ink,
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 1),
+                          Text(
+                            caption,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontFamily: TypographyTokens.sans,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w500,
+                              color: colors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: _rowGap),
-                  _Radio(selected: selected, still: still),
-                ],
+                    const SizedBox(width: _rowGap),
+                    _Radio(selected: selected, still: still),
+                  ],
+                ),
               ),
             ),
           ),
