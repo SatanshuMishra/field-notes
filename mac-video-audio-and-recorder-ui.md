@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T14:05:58.270Z
+Updated: 2026-10-19T14:06:23.047Z
 Next ids: c5 D4 R2 S1
 
 ## Goal
@@ -11,8 +11,8 @@ Video logs on macOS record audio on every take, including the first of a session
 
 - [ ] c1 The first video recording after app launch on macOS contains audio
 - [ ] c2 Audio and video in a macOS video recording stay in sync for the whole take
-- [ ] c3 The camera selector drop-down matches the voice input drop-down and every recorder button has a matching hover shape, hover state and accessible label
-- [ ] c4 The video recorder shows a subtle live audio level indicator that does not cover the video
+- [x] c3 The camera selector drop-down matches the voice input drop-down and every recorder button has a matching hover shape, hover state and accessible label evidence: camera_picker_dropdown_test, anchored_dropdown_hover_test, recorder_sheet_hover_cursor_test, pressable_test and the per-area hover sweep tests pass in the full suite at button-consistency 4c71a629 (5464 app tests), review green at round 3, and the Android lab read names the input panel rows, drop-down choices and Meadow tabs
+- [x] c4 The video recorder shows a subtle live audio level indicator that does not cover the video evidence: video_sound_ring_test ('the video recorder shows the sound ring while its microphone hears') and recorder_input_ring_test pass in the full suite at hearing-and-ring 32ff2edc, review green at round 3
 
 ## Where things stand
 
