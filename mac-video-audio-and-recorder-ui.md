@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T14:06:35.306Z
+Updated: 2026-10-19T14:10:56.402Z
 Next ids: c5 D4 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Pipeline ship. All four MSPs are green: mic-recovery (round 2), video-starts-like-a-camera, hearing-and-ring and button-consistency (round 3 each); no advisory is open. mic-recovery carries the glossary term Hearing and ADRs 0005 and 0006 at 8a3162bd. The ship run is pushing the branches; the pull requests open next. Unproven for the report: the Windows smoke (owner's PC offline on Tailscale), the Settings segmented Android read (the lab cannot read that page on main either), and the real-Mac check of c1 and c2, whose built-in microphone run in harness/ waits on two macOS system dialogs only the owner can answer. On Android the input panel rows carry their current value in the value field rather than the name, as main's Settings rows do; whether TalkBack reads it is unverified.
+Shipped: four stacked pull requests are open and assigned to the owner, ready for review: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency, each based on the one before. Unproven: the Windows smoke (owner's PC offline on Tailscale), the Settings segmented Android read (the lab cannot read that page on main either), and the real-Mac check of c1 and c2, whose built-in microphone run in harness/ waits on two macOS system dialogs only the owner can answer. On Android the input panel rows carry their current value in the value field rather than the name, as main's Settings rows do; whether TalkBack reads it is unverified.
 
 ## Next step
 
