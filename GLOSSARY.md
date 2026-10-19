@@ -16,6 +16,10 @@ _Avoid_: Session, clip
 The act that saves a take as a log.
 _Avoid_: Save, finish
 
+**Hearing**:
+Whether an open recorder is receiving sound from the microphone: opening, hearing, can't hear (nothing arrives, or only digital silence) or lost (sound stopped mid-take and is being reopened). A take cannot start while the recorder can't hear.
+_Avoid_: Mic status, signal
+
 **Input profile**:
 How the microphone is treated while recording: Voice Isolation or Studio.
 _Avoid_: Mode, preset
