@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T05:20:39.769Z
+Updated: 2026-10-19T05:20:42.141Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Pipeline stage 2, resuming the first build. mic-recovery is committed and gated;
 
 ## Next step
 
-First mitosis build is running in the background from ~/.mitosis/field-notes/mac-video-audio-and-recorder-ui/run.zsh (output build-1.out); when it ends, read its last JSON line, resume any MSP not committed once, then start Stage 3 review round 1 for all four MSPs.
+When the resume (output build-1-resume.out) ends, read its last JSON line; when mic-recovery's suite (review/round-1/mic-recovery.suite.txt) ends, dispatch its code, conformance and security reviewers; review each further MSP as it commits.
 
 Needs: D2, R1.
 
