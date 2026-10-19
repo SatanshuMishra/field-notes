@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T03:10:15.887Z
+Updated: 2026-10-19T03:32:48.241Z
 Next ids: c5 D1 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Interphase bug pathway grounding, before the interview. Causes found: (a) macOS AVAudioEngine stops itself on an IO unit configuration change ("iounit configuration changed > stopping the engine", 8 ms after the first take's engine start) and record_macos 2.1.1 never restarts it or reports it, so LiveAudioCapture saves the take with 0.063 s of sound; (b) vendored camera_macos replies "started" to startRecording before AVCaptureMovieFileOutput begins (no didStartRecordingTo), and Dart begins writing sound on that reply, so both later takes hold about 1.0 s more sound than picture. Both causes have a reproduction that fails on main. The interview's intent round (goal, why, success, four-part split, access to this Mac's camera and microphone) is with the owner; the button inventory for the hover sweep is still running.
+Interphase bug pathway grounding, before the interview. Causes found: (a) macOS AVAudioEngine stops itself on an IO unit configuration change ("iounit configuration changed > stopping the engine", 8 ms after the first take's engine start) and record_macos 2.1.1 never restarts it or reports it, so LiveAudioCapture saves the take with 0.063 s of sound; (b) vendored camera_macos replies "started" to startRecording before AVCaptureMovieFileOutput begins (no didStartRecordingTo), and Dart begins writing sound on that reply, so both later takes hold about 1.0 s more sound than picture. Both causes have a reproduction that fails on main. Intent round approved (I1-I5). A throwaway repro app (bundle dev.satanshumishra.fieldNotes.repro) on this Mac's built-in mic reproduced the lag on real hardware: two 8 s takes held 7.99 s of sound against 7.07 s and 7.00 s of picture; neither went silent and no engine stop was logged. The HS80 headset was unavailable, so the silent take rests on the 2026-10-18 log evidence and the failing Dart test.
 
 ## Next step
 
