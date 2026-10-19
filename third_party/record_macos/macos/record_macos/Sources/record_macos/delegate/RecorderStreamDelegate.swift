@@ -41,24 +41,7 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
 
   func start(config: RecordConfig, recordEventHandler: RecordStreamHandler) throws {
     let engine = AVAudioEngine()
-
-    try selectInputDevice(config: config, engine: engine, required: false)
-
-    try setVoiceProcessing(echoCancel: config.echoCancel, autoGain: config.autoGain, audioEngine: engine)
-
-    let srcFormat = engine.inputNode.inputFormat(forBus: 0)
-    let processor = try AudioStreamProcessor(config: config, srcFormat: srcFormat)
-
-    installTap(engine: engine, config: config, format: srcFormat, recordEventHandler: recordEventHandler)
-
-    engine.prepare()
-    do {
-      try engine.start()
-    } catch {
-      engine.inputNode.removeTap(onBus: m_bus)
-      processor.dispose()
-      throw error
-    }
+    let processor = try configure(engine: engine, config: config, recordEventHandler: recordEventHandler)
 
     guard m_keepStart() else {
       engine.inputNode.removeTap(onBus: m_bus)
@@ -128,10 +111,9 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
 
   func dispose() { _ = stop() }
 
-  private func selectInputDevice(config: RecordConfig, engine: AVAudioEngine, required: Bool) throws {
+  private func selectInputDevice(config: RecordConfig, engine: AVAudioEngine) throws {
     guard let deviceId = config.device?.id else { return }
     guard let inputDeviceId = getAudioDeviceIDFromUID(uid: deviceId) else {
-      guard required else { return }
       throw RecorderError.error(
         message: "Failed to start recording",
         details: "Input device not found: \(deviceId)"
@@ -218,7 +200,22 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
     engine.inputNode.removeTap(onBus: m_bus)
     engine.stop()
 
-    try selectInputDevice(config: config, engine: engine, required: true)
+    let processor = try configure(engine: engine, config: config, recordEventHandler: recordEventHandler)
+
+    let replaced = m_lock.withLock { () -> AudioStreamProcessor? in
+      let previous = m_processor
+      m_processor = processor
+      return previous
+    }
+    replaced?.dispose()
+  }
+
+  private func configure(
+    engine: AVAudioEngine,
+    config: RecordConfig,
+    recordEventHandler: RecordStreamHandler
+  ) throws -> AudioStreamProcessor {
+    try selectInputDevice(config: config, engine: engine)
     try setVoiceProcessing(echoCancel: config.echoCancel, autoGain: config.autoGain, audioEngine: engine)
 
     let srcFormat = engine.inputNode.inputFormat(forBus: 0)
@@ -240,13 +237,7 @@ class RecorderStreamDelegate: NSObject, AudioRecordingStreamDelegate {
       processor.dispose()
       throw error
     }
-
-    let replaced = m_lock.withLock { () -> AudioStreamProcessor? in
-      let previous = m_processor
-      m_processor = processor
-      return previous
-    }
-    replaced?.dispose()
+    return processor
   }
 
   private func reportStopped(recordEventHandler: RecordStreamHandler) {
