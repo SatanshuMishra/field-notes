@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T02:58:17.474Z
+Updated: 2026-10-19T03:07:03.647Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Not started.
+Interphase bug pathway grounding, before the interview. Causes found: (a) macOS AVAudioEngine stops itself on an IO unit configuration change ("iounit configuration changed > stopping the engine", 8 ms after the first take's engine start) and record_macos 2.1.1 never restarts it or reports it, so LiveAudioCapture saves the take with 0.063 s of sound; (b) vendored camera_macos replies "started" to startRecording before AVCaptureMovieFileOutput begins (no didStartRecordingTo), and Dart begins writing sound on that reply, so both later takes hold about 1.0 s more sound than picture. The lab macOS guest has no microphone and no camera.
 
 ## Next step
 
-Run the full-lane interphase bug pathway (Interview me first) on the three reports, after the lighthouse readiness gate.
+Write the deterministic Dart reproduction of (a) and (b), then ask the owner the interview round, including access to a real Mac camera and microphone for reproduction.
 
 ## Decisions in force
 
@@ -29,3 +29,7 @@ Run the full-lane interphase bug pathway (Interview me first) on the three repor
 ## Settled, do not reopen
 
 ## Where the details live
+
+- Spec folder: docs/specs/mac-video-audio-and-recorder-ui.* (decisions, record, guard).
+- Owner's evidence takes: the three 2026-10-18 .mp4 blobs under the app container's Documents/media/blobs (52/, 17/, 92/).
+- Mac recorder: lib/features/capture/platform/camera_video_recorder.dart; sound capture lib/features/capture/audio/live_audio_capture.dart; native join macos/Runner/LiveAudioBridge.swift; camera plugin third_party/camera_macos.
