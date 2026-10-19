@@ -75,6 +75,11 @@ const List<String> _fixed130 = <String>[
   'The prompt in the past-day pop-up\'s empty right-hand column is now centred.',
 ];
 
+const List<String> _fixed131 = <String>[
+  'On macOS, Field Notes no longer asks to use your keychain every time you open it. After an update it asks once; choose Always Allow and it will not ask again until the next update.',
+  'The first time you open this version on macOS, you may be asked a few times while Field Notes gathers its saved sync keys into one place. Choose Always Allow each time.',
+];
+
 const String _plainEnglishRule =
     'Write the entries in plain English for the people who use Field Notes: say clearly what they will notice, and leave out technical detail such as frame rates, graphics memory figures or the names of the app\'s internal parts.';
 
@@ -300,12 +305,6 @@ void main() {
     expect(unreleased, isNonNegative);
     expect(release, greaterThan(unreleased));
     expect(previous, greaterThan(release));
-    expect(
-      lines
-          .sublist(unreleased + 1, release)
-          .every((String line) => line.isEmpty),
-      isTrue,
-    );
 
     final ProcessResult result = Process.runSync('bash', <String>[
       'tool/release/changelog_section.sh',
@@ -339,6 +338,53 @@ void main() {
     expect(section.notes.groups[0].items, _new130);
     expect(section.notes.groups[1].items, _improved130);
     expect(section.notes.groups[2].items, _fixed130);
+  });
+
+  test('the release job finds the dated 1.3.1 notes in the changelog', () {
+    final List<String> lines = _changelog().split('\n');
+    final List<String> headings = lines
+        .where((String line) => line.startsWith('## [1.3.1]'))
+        .toList();
+    expect(headings, <String>['## [1.3.1] - 2026-10-18']);
+    final int unreleased = lines.indexOf('## [Unreleased]');
+    final int release = lines.indexOf('## [1.3.1] - 2026-10-18');
+    final int previous = lines.indexOf('## [1.3.0] - 2026-10-18');
+    expect(unreleased, isNonNegative);
+    expect(release, greaterThan(unreleased));
+    expect(previous, greaterThan(release));
+    expect(
+      lines
+          .sublist(unreleased + 1, release)
+          .every((String line) => line.isEmpty),
+      isTrue,
+    );
+
+    final ProcessResult result = Process.runSync('bash', <String>[
+      'tool/release/changelog_section.sh',
+      '1.3.1',
+      'CHANGELOG.md',
+    ]);
+    expect(result.exitCode, 0);
+    expect(
+      result.stdout,
+      '### Fixed\n\n'
+      '${_fixed131.map((String entry) => '- $entry\n').join()}',
+    );
+  });
+
+  test('Field Notes 1.3.1 finds its own release notes', () {
+    final ChangelogSection? section = changelogSection(
+      _changelog(),
+      AppVersion.tryParse('1.3.1')!,
+    );
+    expect(section, isNotNull);
+    expect(section!.date, DateTime(2026, 10, 18));
+    expect(section.notes.intro, isEmpty);
+    expect(
+      section.notes.groups.map((ReleaseNoteGroup group) => group.title),
+      <String>['Fixed'],
+    );
+    expect(section.notes.groups[0].items, _fixed131);
   });
 
   test('the changelog asks for entries in plain English for the people who use Field Notes', () {
