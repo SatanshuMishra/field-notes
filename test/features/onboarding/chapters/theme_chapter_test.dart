@@ -251,6 +251,7 @@ void _expectSelected(
       ),
       ShellLayout.bottomBar => isSemantics(
         label: option.semantics,
+        isButton: false,
         hasCheckedState: true,
         isChecked: on,
         isInMutuallyExclusiveGroup: true,

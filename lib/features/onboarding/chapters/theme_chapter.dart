@@ -942,81 +942,72 @@ class _ThemeRow extends StatelessWidget {
     final bool still = MediaQuery.disableAnimationsOf(context);
     final String label = _label(appearance);
     final String caption = _rowCaption(appearance);
-    return MergeSemantics(
-      child: Semantics(
-        checked: selected,
-        inMutuallyExclusiveGroup: true,
-        child: Pressable(
-          label: '$label, ${caption.replaceAll(' · ', ', ')}',
-          onPressed: onPressed,
-          placement: FocusRingPlacement.edge,
-          paintsHover: false,
-          builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
-            hovered: hovered,
-            borderRadius: BorderRadius.zero,
-            child: AnimatedContainer(
-              duration: still ? Duration.zero : _selectFade,
-              constraints: const BoxConstraints(minHeight: _rowHeight),
-              padding: _rowPadding,
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: selected
-                    ? colors.cardLight
-                    : colors.cardLight.withAlpha(0),
-                border: last
-                    ? null
-                    : Border(
-                        bottom: BorderSide(
-                          color: colors.ink12,
-                          width: _rowRule,
+    return Pressable(
+      checked: selected,
+      inMutuallyExclusiveGroup: true,
+      label: '$label, ${caption.replaceAll(' · ', ', ')}',
+      onPressed: onPressed,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+        hovered: hovered,
+        borderRadius: BorderRadius.zero,
+        child: AnimatedContainer(
+          duration: still ? Duration.zero : _selectFade,
+          constraints: const BoxConstraints(minHeight: _rowHeight),
+          padding: _rowPadding,
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(
+            color: selected ? colors.cardLight : colors.cardLight.withAlpha(0),
+            border: last
+                ? null
+                : Border(
+                    bottom: BorderSide(color: colors.ink12, width: _rowRule),
+                  ),
+          ),
+          child: ExcludeSemantics(
+            child: Row(
+              children: <Widget>[
+                _ModeIcon(
+                  appearance: appearance,
+                  color: colors.ink,
+                  size: _rowIcon,
+                ),
+                const SizedBox(width: _rowGap),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.sans,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: selected ? colors.accentInk : colors.ink,
                         ),
                       ),
-              ),
-              child: ExcludeSemantics(
-                child: Row(
-                  children: <Widget>[
-                    _ModeIcon(
-                      appearance: appearance,
-                      color: colors.ink,
-                      size: _rowIcon,
-                    ),
-                    const SizedBox(width: _rowGap),
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: TypographyTokens.sans,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: selected ? colors.accentInk : colors.ink,
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            caption,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: TypographyTokens.sans,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: colors.muted,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 1),
+                      Text(
+                        caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.sans,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: colors.muted,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: _rowGap),
-                    _Radio(selected: selected, still: still),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: _rowGap),
+                _Radio(selected: selected, still: still),
+              ],
             ),
           ),
         ),

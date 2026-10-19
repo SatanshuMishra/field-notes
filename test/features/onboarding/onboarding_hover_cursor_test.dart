@@ -1,3 +1,5 @@
+import 'dart:ui' show CheckedState;
+
 import 'package:field_notes/app/app.dart';
 import 'package:field_notes/app/shell/app_shell.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
@@ -45,7 +47,7 @@ final int _lightRow = _ink.withValues(alpha: 0.06).toARGB32();
 final int _lightPill = _coral.withValues(alpha: 0.08).toARGB32();
 final int _dark = _white.withValues(alpha: 0.12).toARGB32();
 
-enum _Role { button, slider }
+enum _Role { button, slider, radio }
 
 enum _Shape { circle, rounded }
 
@@ -128,10 +130,16 @@ Future<void> _expectRows(
         )
         .getSemanticsData();
     expect(semantics.label, row.label, reason: row.name);
+    final SemanticsFlags flags = semantics.flagsCollection;
     expect(
-      row.role == _Role.button
-          ? semantics.flagsCollection.isButton
-          : semantics.flagsCollection.isSlider,
+      switch (row.role) {
+        _Role.button => flags.isButton,
+        _Role.slider => flags.isSlider,
+        _Role.radio =>
+          flags.isChecked != CheckedState.none &&
+              flags.isInMutuallyExclusiveGroup &&
+              !flags.isButton,
+      },
       isTrue,
       reason: row.name,
     );
@@ -538,6 +546,7 @@ Future<void> _phoneRows(WidgetTester tester, TestGesture mouse) async {
         _lightRow,
         _Shape.rounded,
         0,
+        _Role.radio,
       ),
     ]);
 
@@ -550,6 +559,7 @@ Future<void> _phoneRows(WidgetTester tester, TestGesture mouse) async {
         _lightRow,
         _Shape.rounded,
         0,
+        _Role.radio,
       ),
     ]);
 
@@ -562,6 +572,7 @@ Future<void> _phoneRows(WidgetTester tester, TestGesture mouse) async {
         _lightRow,
         _Shape.rounded,
         0,
+        _Role.radio,
       ),
     ]);
 

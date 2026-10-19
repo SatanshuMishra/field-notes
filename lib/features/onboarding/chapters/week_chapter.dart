@@ -640,75 +640,66 @@ class _ChoiceRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final bool still = MediaQuery.disableAnimationsOf(context);
-    return MergeSemantics(
-      child: Semantics(
-        checked: selected,
-        inMutuallyExclusiveGroup: true,
-        child: Pressable(
-          label: '${start.label}, $caption',
-          onPressed: onPressed,
-          placement: FocusRingPlacement.edge,
-          paintsHover: false,
-          builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
-            hovered: hovered,
-            borderRadius: BorderRadius.zero,
-            child: AnimatedContainer(
-              duration: still ? Duration.zero : _selectFade,
-              constraints: const BoxConstraints(minHeight: _rowHeight),
-              padding: _rowPadding,
-              alignment: Alignment.centerLeft,
-              decoration: BoxDecoration(
-                color: selected
-                    ? colors.cardLight
-                    : colors.cardLight.withAlpha(0),
-                border: last
-                    ? null
-                    : Border(
-                        bottom: BorderSide(
-                          color: colors.ink12,
-                          width: _rowRule,
+    return Pressable(
+      checked: selected,
+      inMutuallyExclusiveGroup: true,
+      label: '${start.label}, $caption',
+      onPressed: onPressed,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => OnboardingHoverFill(
+        hovered: hovered,
+        borderRadius: BorderRadius.zero,
+        child: AnimatedContainer(
+          duration: still ? Duration.zero : _selectFade,
+          constraints: const BoxConstraints(minHeight: _rowHeight),
+          padding: _rowPadding,
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(
+            color: selected ? colors.cardLight : colors.cardLight.withAlpha(0),
+            border: last
+                ? null
+                : Border(
+                    bottom: BorderSide(color: colors.ink12, width: _rowRule),
+                  ),
+          ),
+          child: ExcludeSemantics(
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        start.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.sans,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: selected ? colors.accentInk : colors.ink,
                         ),
                       ),
-              ),
-              child: ExcludeSemantics(
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            start.label,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: TypographyTokens.sans,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: selected ? colors.accentInk : colors.ink,
-                            ),
-                          ),
-                          const SizedBox(height: 1),
-                          Text(
-                            caption,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: TypographyTokens.sans,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w500,
-                              color: colors.muted,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 1),
+                      Text(
+                        caption,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.sans,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w500,
+                          color: colors.muted,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: _rowGap),
-                    _Radio(selected: selected, still: still),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: _rowGap),
+                _Radio(selected: selected, still: still),
+              ],
             ),
           ),
         ),
