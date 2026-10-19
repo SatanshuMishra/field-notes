@@ -280,6 +280,19 @@ class _LiveSound {
     }
   }
 
+  Future<void> warmQuietly({
+    required Future<AudioInput> Function() input,
+    required Future<bool> Function() permission,
+  }) async {
+    try {
+      await warm(input: input, permission: permission);
+    } catch (error, stackTrace) {
+      debugPrint(
+        'The microphone did not open with the preview: $error\n$stackTrace',
+      );
+    }
+  }
+
   Future<void> ensureArmed(AudioInput input) async {
     final int epoch = ++_epoch;
     _takeArming = true;
@@ -541,15 +554,8 @@ abstract class _CameraPackageVideoRecorder implements VideoRecorder {
   @override
   MicrophoneHearing get hearingNow => _sound.hearingNow;
 
-  Future<void> _warmMicrophone() async {
-    try {
-      await _sound.warm(input: _soundInput, permission: _sound.hasPermission);
-    } catch (error, stackTrace) {
-      debugPrint(
-        'The microphone did not open with the preview: $error\n$stackTrace',
-      );
-    }
-  }
+  Future<void> _warmMicrophone() =>
+      _sound.warmQuietly(input: _soundInput, permission: _sound.hasPermission);
 
   @override
   Future<List<VideoCaptureDevice>> listDevices() async {
@@ -1490,18 +1496,10 @@ class CameraMacosVideoRecorder implements VideoRecorder, AudioInputSelectable {
   @override
   bool get supportsPause => true;
 
-  Future<void> _warmMicrophone() async {
-    try {
-      await _sound.warm(
-        input: () async => _soundInputWithId(_audioDeviceId),
-        permission: _microphonePermission ?? _sound.hasPermission,
-      );
-    } catch (error, stackTrace) {
-      debugPrint(
-        'The microphone did not open with the preview: $error\n$stackTrace',
-      );
-    }
-  }
+  Future<void> _warmMicrophone() => _sound.warmQuietly(
+    input: () async => _soundInputWithId(_audioDeviceId),
+    permission: _microphonePermission ?? _sound.hasPermission,
+  );
 
   @override
   Future<void> pause() async {
