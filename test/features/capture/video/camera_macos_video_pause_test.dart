@@ -8,8 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../audio/live_audio_test_support.dart';
+import 'video_test_support.dart' show cameraMacosChannel, sendMacMovieStart;
 
-const MethodChannel _cameraChannel = MethodChannel('camera_macos');
 const Duration _fileWorkWait = Duration(milliseconds: 5);
 const int _fileWorkTurns = 40;
 
@@ -36,16 +36,7 @@ class _NativeCamera {
 }
 
 void _sendMovieStart(FakeAsync async) {
-  async.run((FakeAsync _) {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(
-          _cameraChannel.name,
-          _cameraChannel.codec.encodeMethodCall(
-            const MethodCall('onVideoRecordingStarted'),
-          ),
-          (ByteData? _) {},
-        );
-  });
+  async.run((FakeAsync _) => sendMacMovieStart());
   async.flushMicrotasks();
 }
 
@@ -95,12 +86,12 @@ void main() {
     native = _NativeCamera();
     root = Directory.systemTemp.createTempSync('camera_macos_video_pause_');
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_cameraChannel, native.handle);
+        .setMockMethodCallHandler(cameraMacosChannel, native.handle);
   });
 
   tearDown(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_cameraChannel, null);
+        .setMockMethodCallHandler(cameraMacosChannel, null);
     if (root.existsSync()) {
       root.deleteSync(recursive: true);
     }
