@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -724,34 +726,26 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   Widget _shutter(bool sidebar) {
     final VoidCallback? tap = _shutterTap;
     final double size = sidebar ? _sidebarShutter : _bottomBarShutter;
-    return Semantics(
-      button: true,
-      enabled: tap != null,
+    return Pressable(
+      key: videoShutterKey,
       label: _shutterLabel,
-      child: GestureDetector(
-        key: videoShutterKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: tap,
-        child: FocusRing(
-          enabled: tap != null,
-          onPressed: tap,
-          surface: FocusRingSurface.dark,
-          borderRadius: BorderRadius.all(Radius.circular(size / 2)),
-          child: Opacity(
-            opacity: _shutterOpacity(tap),
-            child: Container(
-              width: size,
-              height: size,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.fromBorderSide(
-                  BorderSide(color: _shutterRing, width: _shutterRingWidth),
-                ),
-              ),
-              child: _shutterCore(sidebar),
+      onPressed: tap,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: BorderRadius.all(Radius.circular(size / 2)),
+      child: Opacity(
+        opacity: _shutterOpacity(tap),
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.fromBorderSide(
+              BorderSide(color: _shutterRing, width: _shutterRingWidth),
             ),
           ),
+          child: _shutterCore(sidebar),
         ),
       ),
     );
@@ -828,35 +822,39 @@ class _SideControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
+    final BorderRadius radius = BorderRadius.all(Radius.circular(diameter / 2));
+    return Pressable(
+      key: controlKey,
       label: label,
-      child: GestureDetector(
-        key: controlKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            FocusRing(
-              onPressed: onTap,
-              surface: FocusRingSurface.dark,
-              borderRadius: BorderRadius.all(Radius.circular(diameter / 2)),
-              child: Container(
-                width: diameter,
-                height: diameter,
-                alignment: Alignment.center,
-                decoration: decoration,
-                child: glyph,
-              ),
+      onPressed: onTap,
+      surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+            width: diameter,
+            height: diameter,
+            alignment: Alignment.center,
+            decoration: decoration,
+            foregroundDecoration: HoverStyle.decoration(
+              color: hovered
+                  ? HoverStyle.of(
+                      context,
+                      FocusRingSurface.dark,
+                      HoverShape.circle,
+                    )
+                  : null,
+              shape: HoverShape.circle,
+              borderRadius: radius,
             ),
-            const SizedBox(height: _sideCaptionGap),
-            ExcludeSemantics(
-              child: Text(label, maxLines: 1, softWrap: false, style: caption),
-            ),
-          ],
-        ),
+            child: glyph,
+          ),
+          const SizedBox(height: _sideCaptionGap),
+          Text(label, maxLines: 1, softWrap: false, style: caption),
+        ],
       ),
     );
   }
