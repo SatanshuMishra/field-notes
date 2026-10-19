@@ -7,11 +7,25 @@ import 'package:field_notes/features/capture/video/video_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/state/settings_providers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../voice/voice_test_support.dart' show FakeVoiceRecorder;
+
+const MethodChannel cameraMacosChannel = MethodChannel('camera_macos');
+
+Future<void> sendMacMovieStart() => TestDefaultBinaryMessengerBinding
+    .instance
+    .defaultBinaryMessenger
+    .handlePlatformMessage(
+      cameraMacosChannel.name,
+      cameraMacosChannel.codec.encodeMethodCall(
+        const MethodCall('onVideoRecordingStarted'),
+      ),
+      (ByteData? _) {},
+    );
 
 Widget videoHarness(Widget child) {
   return MaterialApp(

@@ -13,8 +13,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 
 import '../audio/live_audio_test_support.dart';
+import 'video_test_support.dart' show cameraMacosChannel, sendMacMovieStart;
 
-const MethodChannel _cameraMacosChannel = MethodChannel('camera_macos');
 const String _cameraName = 'cam-0';
 const List<int> _pictureBytes = <int>[0, 0, 0, 24];
 const int _sampleRate = 48000;
@@ -207,17 +207,6 @@ Future<void> _untilMicrophoneOpens(_Bench bench) async {
   await _settle();
 }
 
-Future<void> _movieBegan() => TestDefaultBinaryMessengerBinding
-    .instance
-    .defaultBinaryMessenger
-    .handlePlatformMessage(
-      _cameraMacosChannel.name,
-      _cameraMacosChannel.codec.encodeMethodCall(
-        const MethodCall('onVideoRecordingStarted'),
-      ),
-      (ByteData? _) {},
-    );
-
 Future<void> _speak(_Bench bench, int chunks) async {
   for (int chunk = 0; chunk < chunks; chunk += 1) {
     bench.advance(_chunk);
@@ -248,13 +237,13 @@ void main() {
     bench = _Bench(root);
     original = CameraPlatform.instance;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_cameraMacosChannel, bench.cameraMacos);
+        .setMockMethodCallHandler(cameraMacosChannel, bench.cameraMacos);
   });
 
   tearDown(() {
     CameraPlatform.instance = original;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(_cameraMacosChannel, null);
+        .setMockMethodCallHandler(cameraMacosChannel, null);
     if (root.existsSync()) {
       root.deleteSync(recursive: true);
     }
@@ -273,7 +262,7 @@ void main() {
     );
 
     await recorder.start();
-    await _movieBegan();
+    await sendMacMovieStart();
     await _speak(bench, 2);
 
     expect(
@@ -356,7 +345,7 @@ void main() {
     final int opensBeforeTake = bench.microphoneOpens;
 
     await recorder.start();
-    await _movieBegan();
+    await sendMacMovieStart();
     await _speak(bench, _chunksInTake);
     final VideoRecording take = await recorder.stop();
 
