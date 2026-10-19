@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T06:48:32.204Z
+Updated: 2026-10-19T07:42:28.705Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Pipeline stage 3. mic-recovery is green (round 2) with its advisories fixed at 2dd055e0 and no slow checks left; it waits for ship. It is merged into hearing-and-ring; its merge into video-starts-like-a-camera waits for that MSP's Lane 3 (warm-microphone), still running in the resume. Known gap outside the fixed classes: a dead stretch just before a pause is dropped if the take is resumed rather than kept. Smoke runs happen once on the top of the stack after all four MSPs build. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it, so a take saves under a second of sound; (b) camera_macos replies "started" before the movie begins, so every take holds about 1.05 s of sound recorded before the picture.
+Pipeline stage 3. mic-recovery is green (round 2) with its advisories fixed at 2dd055e0 and no slow checks left; it waits for ship. It is merged into video-starts-like-a-camera and hearing-and-ring. video-starts-like-a-camera has all three Lanes landed and is in review round 1 ahead of mitosis's end-of-run gate; its full suite is running. The resume is building hearing-and-ring (Lane 6 of six) and has not started button-consistency's 12 Lanes. Known gap outside the fixed classes: a dead stretch just before a pause is dropped if the take is resumed rather than kept. Smoke runs happen once on the top of the stack after all four MSPs build. Root causes, both reproduced on real hardware: (a) macOS AVAudioEngine stops itself when a Bluetooth headset (HS80) switches HFP/A2DP as the mic reopens, and record_macos 2.1.1 neither restarts nor reports it, so a take saves under a second of sound; (b) camera_macos replies "started" before the movie begins, so every take holds about 1.05 s of sound recorded before the picture.
 
 ## Next step
 
