@@ -1,7 +1,7 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: active
-Updated: 2026-10-19T03:07:03.647Z
-Next ids: c5 D1 R1 S1
+Updated: 2026-10-19T03:09:44.707Z
+Next ids: c5 D1 R2 S1
 
 ## Goal
 
@@ -20,11 +20,13 @@ Interphase bug pathway grounding, before the interview. Causes found: (a) macOS 
 
 ## Next step
 
-Write the deterministic Dart reproduction of (a) and (b), then ask the owner the interview round, including access to a real Mac camera and microphone for reproduction.
+Wait for the owner's answers to the interview's intent round (goal, why, success, split, and access to this Mac's camera and microphone), write them to docs/specs/mac-video-audio-and-recorder-ui.decisions.md, then ask the frontier round using the button inventory from the Explore agent.
 
 ## Decisions in force
 
 ## Open risks
+
+- R1 The lab macOS guest has no microphone or camera, so the silent take and the lag can only be proven end to end on real Mac hardware. Bears on c1.
 
 ## Settled, do not reopen
 
