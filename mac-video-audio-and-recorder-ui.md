@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T21:10:48.337Z
+Updated: 2026-10-19T21:50:28.324Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-Four stacked pull requests are open and assigned to the owner: #329 mic-recovery (base fix/mac-video-audio-and-recorder-ui), #330 video-starts-like-a-camera, #331 hearing-and-ring, #332 button-consistency. All four are green and pushed: #329 at 8a3162bd, #330 at ddba45cc (sound aligned on the camera's and microphone's native capture times), #331 at 18275bcd, #332 at ee6be4cf. They wait for the owner to merge them in stack order. Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
+The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-recorder-ui. Integration is in lighthouse run 1 (results in the run home's lighthouse/run-1): the profile now records the vendored record_macos and was published to FEATURE as 9304737b; the suite runs on core 9eb6c237 and FEATURE; the Windows lab paths are being driven, then the Android ones. Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
 
 ## Next step
 
