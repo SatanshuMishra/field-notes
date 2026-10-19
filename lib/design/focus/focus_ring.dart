@@ -99,6 +99,9 @@ class _FocusRingState extends State<FocusRing> {
       includeFocusSemantics: widget.includeFocusSemantics,
       shortcuts: _activators,
       actions: widget.onPressed == null ? null : _actions,
+      mouseCursor: widget.enabled && widget.onPressed != null
+          ? SystemMouseCursors.click
+          : MouseCursor.defer,
       onShowFocusHighlight: _handleShowFocusHighlight,
       child: Stack(
         alignment: Alignment.topLeft,
