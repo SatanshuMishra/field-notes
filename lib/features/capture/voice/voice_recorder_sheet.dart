@@ -6,7 +6,9 @@ import 'package:field_notes/design/icons/capture_icons.dart';
 import 'package:field_notes/design/keyboard/shortcut_modifier.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
+import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 enum VoiceRecorderPhase {
@@ -132,6 +134,7 @@ class VoiceRecorderSheet extends StatelessWidget {
     this.levels = const Stream<double>.empty(),
     this.savingText = voiceSavingStatus,
     this.onVoiceSettings,
+    this.hearing = MicrophoneHearing.hearing,
   });
 
   final VoiceRecorderPhase phase;
@@ -151,13 +154,18 @@ class VoiceRecorderSheet extends StatelessWidget {
   final Stream<double> levels;
   final String savingText;
   final VoidCallback? onVoiceSettings;
+  final MicrophoneHearing hearing;
 
   bool get _saving => phase == VoiceRecorderPhase.saving;
 
   bool get _canKeep => phase.isTaking && !asking;
 
+  bool get _cannotHear =>
+      phase == VoiceRecorderPhase.idle &&
+      hearing == MicrophoneHearing.cannotHear;
+
   RecorderPrimaryVerb? get _orbVerb {
-    if (asking) {
+    if (asking || _cannotHear) {
       return null;
     }
     return switch (phase) {
@@ -258,6 +266,12 @@ class VoiceRecorderSheet extends StatelessWidget {
           savingText: savingText,
           inline: false,
         ),
+        SoundLostWarning(
+          key: soundLostWarningKey,
+          hearing: hearing,
+          taking: phase == VoiceRecorderPhase.recording,
+        ),
+        if (_cannotHear) const CannotHearNotice(),
         if (errorMessage != null)
           Padding(
             padding: const EdgeInsets.only(top: _errorGap),

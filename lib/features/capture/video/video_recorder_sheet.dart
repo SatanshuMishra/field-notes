@@ -5,7 +5,9 @@ import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
+import 'package:field_notes/features/capture/audio/cannot_hear_notice.dart';
 import 'package:field_notes/features/capture/audio/input_panel.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 
 import 'camera_gestures.dart';
@@ -171,6 +173,7 @@ class VideoRecorderSheet extends StatefulWidget {
     this.deniedMessage = cameraPermissionMessage,
     this.onVoiceSettings,
     this.levels = const Stream<double>.empty(),
+    this.hearing = MicrophoneHearing.hearing,
   });
 
   final VideoRecorderPhase phase;
@@ -201,6 +204,7 @@ class VideoRecorderSheet extends StatefulWidget {
   final String deniedMessage;
   final VoidCallback? onVoiceSettings;
   final Stream<double> levels;
+  final MicrophoneHearing hearing;
 
   @override
   State<VideoRecorderSheet> createState() => _VideoRecorderSheetState();
@@ -218,6 +222,9 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   bool get _isSaving => _phase == VideoRecorderPhase.saving;
   bool get _isDenied => _phase == VideoRecorderPhase.denied;
   bool get _canPause => widget.supportsPause && widget.onPause != null;
+  bool get _cannotHear =>
+      _phase == VideoRecorderPhase.idle &&
+      widget.hearing == MicrophoneHearing.cannotHear;
 
   bool get _showsCameraOff =>
       !widget.cameraOn &&
@@ -263,7 +270,7 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
   }
 
   RecorderPrimaryVerb? get _shutterVerb {
-    if (_isSaving || _isGettingReady || _isAsking) {
+    if (_isSaving || _isGettingReady || _isAsking || _cannotHear) {
       return null;
     }
     if (_isRecording) {
@@ -532,6 +539,13 @@ class _VideoRecorderSheetState extends State<VideoRecorderSheet> {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         ?line,
+        if (line != null)
+          SoundLostWarning(
+            key: soundLostWarningKey,
+            hearing: widget.hearing,
+            taking: _isRecording,
+          ),
+        if (_cannotHear) const CannotHearNotice(),
         if (nudge != null) _note(nudge),
         if (capHint) _note(widget.capHint),
         if (error != null)

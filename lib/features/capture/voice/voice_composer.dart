@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
@@ -418,25 +419,36 @@ class _VoiceComposerConnectorState
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: _onPopInvoked,
-      child: VoiceRecorderSheet(
-        phase: _phase,
-        asking: _asking,
-        onStart: _start,
-        onStop: _stop,
-        onCancel: _leave,
-        onPause: _pause,
-        onResume: _resume,
-        onDiscard: _askToLetGo,
-        onDismiss: _escape,
-        onKeepGoing: _keepGoing,
-        onLetGo: _letGo,
-        elapsed: _elapsed,
-        errorMessage: _errorMessage,
-        letGoKey: voiceDiscardConfirmKey,
-        levels: _recorder.level,
-        savingText: voiceSavingStatus,
-        onVoiceSettings: _openVoiceSettings,
+      child: StreamBuilder<MicrophoneHearing>(
+        stream: _recorder.hearing,
+        builder: _sheet,
       ),
+    );
+  }
+
+  Widget _sheet(
+    BuildContext context,
+    AsyncSnapshot<MicrophoneHearing> snapshot,
+  ) {
+    return VoiceRecorderSheet(
+      phase: _phase,
+      asking: _asking,
+      onStart: _start,
+      onStop: _stop,
+      onCancel: _leave,
+      onPause: _pause,
+      onResume: _resume,
+      onDiscard: _askToLetGo,
+      onDismiss: _escape,
+      onKeepGoing: _keepGoing,
+      onLetGo: _letGo,
+      elapsed: _elapsed,
+      errorMessage: _errorMessage,
+      letGoKey: voiceDiscardConfirmKey,
+      levels: _recorder.level,
+      savingText: voiceSavingStatus,
+      onVoiceSettings: _openVoiceSettings,
+      hearing: _recorder.hearingNow,
     );
   }
 }

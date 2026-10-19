@@ -302,6 +302,7 @@ class InputPanel extends ConsumerWidget {
                     children: <Widget>[
                       InputDeviceRow(
                         androidVideo: androidVideo,
+                        heldDuringTake: takeLevels != null,
                         ink: Palette.mediaInk,
                         tone: GlassTone.media,
                         tapRegionGroupId: tapRegionGroupId,
@@ -407,12 +408,14 @@ class InputDeviceRow extends ConsumerStatefulWidget {
     this.ink,
     this.tone = GlassTone.paper,
     this.tapRegionGroupId,
+    this.heldDuringTake = false,
   });
 
   final bool androidVideo;
   final Color? ink;
   final GlassTone tone;
   final Object? tapRegionGroupId;
+  final bool heldDuringTake;
 
   @override
   ConsumerState<InputDeviceRow> createState() => _InputDeviceRowState();
@@ -469,6 +472,17 @@ class _InputDeviceRowState extends ConsumerState<InputDeviceRow> {
     final AudioInput? resolved = inputs == null
         ? null
         : resolveAudioInput(inputs, storedId);
+    if (widget.heldDuringTake) {
+      return _PanelRow(
+        key: inputDeviceRowKey,
+        title: inputDeviceTitle,
+        value:
+            resolved?.label ??
+            ref.watch(selectedAudioInputProvider).value?.label ??
+            (storedId == null ? systemDefaultInputLabel : ''),
+        ink: ink,
+      );
+    }
     final String label =
         resolved?.label ?? (storedId == null ? systemDefaultInputLabel : '');
     return AnchoredDropdown<AudioInput>(
