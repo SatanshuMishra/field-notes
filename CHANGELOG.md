@@ -6,6 +6,26 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-19
+
+### New
+
+- While you record a video, a soft ring around the microphone button grows as Field Notes hears you, so you can see your sound is being picked up. It stays inside the button and never covers the picture.
+- If Field Notes can't hear your microphone when you press record, the recording doesn't start and a message asks you to check your input, so you don't end up with a silent recording.
+
+### Improved
+
+- The camera picker in the video recorder opens the same rounded menu as the microphone picker, wide enough to show each camera's full name.
+- Buttons in the recorders, pop-ups and Settings now share the same rounded highlight and pointer when you hover over them, and screen readers name each one.
+- Menus in Settings widen to show every choice in full and stay inside the window.
+
+### Fixed
+
+- On macOS, sound and picture in video recordings now stay in step for the whole recording.
+- On macOS, a video recording no longer loses its sound when the microphone takes a moment to start, which could leave the first recording after opening Field Notes silent.
+- While you record, the Input row keeps showing your microphone instead of going blank.
+- If the microphone stops partway through a recording, Field Notes now says so and reopens it.
+
 ## [1.3.1] - 2026-10-18
 
 ### Fixed
