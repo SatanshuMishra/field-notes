@@ -4,6 +4,7 @@ import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/bloom_part.dart';
 import 'package:field_notes/design/flowers/bloom_part_painter.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/onboarding/chapters/garden_scene.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
@@ -340,42 +341,36 @@ class _OpeningChapterState extends ConsumerState<OpeningChapter>
         metrics.headingTop +
         (metrics.insetHeading ? MediaQuery.paddingOf(context).top : 0);
     final Widget heading = _heading(metrics, colors, planted: planted);
-    return SizedBox.expand(
-      child: Semantics(
-        container: true,
-        button: planted ? null : true,
-        label: planted ? null : _plantLabel,
-        onTap: planted ? null : _plant,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: planted ? null : _plant,
-          child: FocusRing(
-            enabled: !planted,
-            onPressed: planted ? null : _plant,
-            placement: FocusRingPlacement.edge,
-            child: Stack(
-              fit: StackFit.expand,
-              children: <Widget>[
-                Positioned(
-                  left: metrics.hintSide,
-                  right: metrics.hintSide,
-                  bottom: metrics.hintBottom,
-                  child: _hint(metrics, colors),
-                ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: top,
-                  child: planted
-                      ? OnboardingSwipeLayer(child: heading)
-                      : heading,
-                ),
-              ],
-            ),
-          ),
+    final Widget scene = Stack(
+      fit: StackFit.expand,
+      children: <Widget>[
+        Positioned(
+          left: metrics.hintSide,
+          right: metrics.hintSide,
+          bottom: metrics.hintBottom,
+          child: _hint(metrics, colors),
         ),
-      ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: top,
+          child: planted ? OnboardingSwipeLayer(child: heading) : heading,
+        ),
+      ],
+    );
+    return SizedBox.expand(
+      child: planted
+          ? Semantics(
+              container: true,
+              child: Listener(behavior: HitTestBehavior.opaque, child: scene),
+            )
+          : Pressable(
+              label: _plantLabel,
+              onPressed: _plant,
+              placement: FocusRingPlacement.edge,
+              excludeSemantics: false,
+              child: scene,
+            ),
     );
   }
 

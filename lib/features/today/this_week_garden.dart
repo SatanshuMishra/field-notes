@@ -1,6 +1,7 @@
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -160,22 +161,17 @@ class _WeekCell extends ConsumerWidget {
           .select(ShellDestination.calendar);
     }
 
-    return Semantics(
-      button: true,
-      onTap: openCalendar,
+    return Pressable(
       label: mood == null
           ? '${cell.weekdayLabel}, no mood'
           : '${cell.weekdayLabel}, ${mood.label}',
-      child: FocusRing(
-        onPressed: openCalendar,
+      onPressed: openCalendar,
+      borderRadius: _cellBorderRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
         borderRadius: _cellBorderRadius,
-        child: ExcludeSemantics(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: openCalendar,
-            child: _tile(context, mood),
-          ),
-        ),
+        child: _tile(context, mood),
       ),
     );
   }

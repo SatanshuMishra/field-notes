@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/capabilities.dart';
@@ -56,7 +57,6 @@ const double _groupGap = 5;
 const double _ruleHeight = 17;
 const double _glyphExtent = 14;
 const double _disabledOpacity = 0.4;
-const double _focusRingWidth = 2;
 const double _fadeExtent = 24;
 const BorderRadius _controlRadius = BorderRadius.all(
   Radius.circular(Shapes.radiusXs + 1),
@@ -229,9 +229,8 @@ class TableToolbar extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.all(_barPadding),
             child: ScrollConfiguration(
-              behavior: ScrollConfiguration.of(
-                context,
-              ).copyWith(scrollbars: false),
+              behavior: ScrollConfiguration.of(context)
+                  .copyWith(scrollbars: false),
               child: ToolbarScrollFade(
                 color: Palette.toolbarInk,
                 startKey: tableToolbarFadeStartKey,
@@ -509,7 +508,7 @@ class _TableGlyphPainter extends CustomPainter {
       oldDelegate.glyph != glyph || oldDelegate.color != color;
 }
 
-class _TableToolbarControl extends StatefulWidget {
+class _TableToolbarControl extends StatelessWidget {
   const _TableToolbarControl({
     required this.controlKey,
     required this.label,
@@ -527,76 +526,38 @@ class _TableToolbarControl extends StatefulWidget {
   final bool? selected;
 
   @override
-  State<_TableToolbarControl> createState() => _TableToolbarControlState();
-}
-
-class _TableToolbarControlState extends State<_TableToolbarControl> {
-  bool _focused = false;
-
-  void _onFocusHighlight(bool focused) {
-    if (mounted && focused != _focused) {
-      setState(() => _focused = focused);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final VoidCallback? onTap = widget.onTap;
     final bool enabled = onTap != null;
-    final bool marked = widget.selected ?? false;
-    return FocusableActionDetector(
-      enabled: enabled,
-      mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-      onShowFocusHighlight: _onFocusHighlight,
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (ActivateIntent intent) {
-            onTap?.call();
-            return null;
-          },
-        ),
-      },
+    final bool? selected = this.selected;
+    return Pressable(
+      label: label,
+      onPressed: onTap,
+      selected: selected,
+      surface: FocusRingSurface.dark,
+      borderRadius: _controlRadius,
+      placement: FocusRingPlacement.edge,
+      excludeSemantics: false,
       child: Semantics(
-        button: true,
-        enabled: enabled,
-        selected: widget.selected,
-        inMutuallyExclusiveGroup: widget.selected != null,
-        label: widget.label,
-        child: GestureDetector(
-          key: widget.controlKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: ExcludeSemantics(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: widget.target,
-                minHeight: widget.target,
+        key: controlKey,
+        inMutuallyExclusiveGroup: selected != null,
+        child: ExcludeSemantics(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: target, minHeight: target),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: selected ?? false ? Palette.coral : null,
+                borderRadius: _controlRadius,
               ),
-              child: DecoratedBox(
-                key: _focused ? focusRingKey : null,
-                decoration: BoxDecoration(
-                  color: marked ? Palette.coral : null,
-                  border: _focused
-                      ? const Border.fromBorderSide(
-                          BorderSide(
-                            color: Palette.toolbarLabel,
-                            width: _focusRingWidth,
-                          ),
-                        )
-                      : null,
-                  borderRadius: _controlRadius,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: _controlPadding,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: _controlPadding,
-                  ),
-                  child: Center(
-                    widthFactor: 1,
-                    heightFactor: 1,
-                    child: Opacity(
-                      opacity: enabled ? 1 : _disabledOpacity,
-                      child: widget.child,
-                    ),
+                child: Center(
+                  widthFactor: 1,
+                  heightFactor: 1,
+                  child: Opacity(
+                    opacity: enabled ? 1 : _disabledOpacity,
+                    child: child,
                   ),
                 ),
               ),

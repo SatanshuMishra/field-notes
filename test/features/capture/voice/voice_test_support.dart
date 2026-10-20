@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder.dart';
 import 'package:field_notes/features/capture/voice/voice_recorder_sheet.dart';
 import 'package:field_notes/state/settings_providers.dart';
@@ -52,9 +53,20 @@ class FakeVoiceRecorder implements VoiceRecorder {
 
   final StreamController<double> levels = StreamController<double>.broadcast();
 
+  final StreamController<MicrophoneHearing> hearings =
+      StreamController<MicrophoneHearing>.broadcast();
+
   @override
   Stream<double> get level => levels.stream;
 
+  @override
+  Stream<MicrophoneHearing> get hearing => hearings.stream;
+
+  @override
+  MicrophoneHearing hearingNow = MicrophoneHearing.hearing;
+
+  int openCalls = 0;
+  int closeCalls = 0;
   int startCalls = 0;
   int pauseCalls = 0;
   int resumeCalls = 0;
@@ -66,6 +78,16 @@ class FakeVoiceRecorder implements VoiceRecorder {
 
   @override
   Future<bool> hasPermission() async => permission;
+
+  @override
+  Future<void> open() async {
+    openCalls++;
+  }
+
+  @override
+  Future<void> close() async {
+    closeCalls++;
+  }
 
   @override
   Future<void> start() async {

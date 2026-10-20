@@ -1,3 +1,4 @@
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart';
 import 'package:field_notes/features/note_engine/commands/table_commands.dart';
 import 'package:field_notes/features/note_engine/document/editor_state.dart';
@@ -279,7 +280,16 @@ void main() {
         tester.getSemantics(find.byKey(key)),
         isSemantics(hasEnabledState: true, isEnabled: false),
       );
-      expect(tester.widget<GestureDetector>(find.byKey(key)).onTap, isNull);
+      expect(
+        tester
+            .widget<Pressable>(
+              find
+                  .ancestor(of: find.byKey(key), matching: find.byType(Pressable))
+                  .first,
+            )
+            .onPressed,
+        isNull,
+      );
       await _hold(tester, key, const Duration(milliseconds: 110));
     }
     expect(harness.dispatched, isEmpty);

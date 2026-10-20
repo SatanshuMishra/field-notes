@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/models/models.dart';
 
@@ -413,37 +415,28 @@ class PhoneCalendarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: label,
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        label: label,
-        value: value,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
-            child: FocusRing(
-              onPressed: onPressed,
-              borderRadius: _radius,
-              child: ExcludeSemantics(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: fill,
-                    border: context.shadows.outline,
-                    borderRadius: _radius,
-                    boxShadow: context.shadows.chip,
-                  ),
-                  child: SizedBox(
-                    width: width,
-                    height: height,
-                    child: Center(child: child),
-                  ),
-                ),
-              ),
-            ),
+    return Pressable(
+      label: label,
+      value: value,
+      tooltip: label,
+      onPressed: onPressed,
+      borderRadius: _radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: fill,
+          border: context.shadows.outline,
+          borderRadius: _radius,
+          boxShadow: context.shadows.chip,
+        ),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: _radius,
+          position: DecorationPosition.background,
+          child: SizedBox(
+            width: width,
+            height: height,
+            child: Center(child: child),
           ),
         ),
       ),
@@ -577,27 +570,25 @@ class _PhoneDayCell extends StatelessWidget {
         ],
       ),
     );
+    final Widget centred = Center(
+      child: isFuture
+          ? Opacity(opacity: phoneMonthFutureOpacity, child: face)
+          : face,
+    );
     final VoidCallback? onTap = this.onTap;
-    return FocusRing(
-      enabled: onTap != null,
+    if (onTap == null) {
+      return Semantics(
+        container: true,
+        label: _semanticLabel,
+        excludeSemantics: true,
+        child: centred,
+      );
+    }
+    return Pressable(
+      label: _semanticLabel,
       onPressed: onTap,
       borderRadius: const BorderRadius.all(Radius.circular(_cellRadius)),
-      child: Semantics(
-        container: true,
-        button: onTap != null,
-        label: _semanticLabel,
-        onTap: onTap,
-        excludeSemantics: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: Center(
-            child: isFuture
-                ? Opacity(opacity: phoneMonthFutureOpacity, child: face)
-                : face,
-          ),
-        ),
-      ),
+      child: centred,
     );
   }
 
@@ -688,51 +679,50 @@ class _ThisMonthPill extends StatelessWidget {
     Radius.circular(_thisMonthRadius),
   );
 
+  static const BorderRadius _hitRadius = BorderRadius.all(
+    Radius.circular(phoneThisMonthHitHeight / 2),
+  );
+
   @override
   Widget build(BuildContext context) {
     final Color ink = context.colors.accentInkStrong;
-    return Semantics(
-      button: true,
+    return Pressable(
+      key: phoneThisMonthKey,
       label: phoneThisMonthLabel,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          key: phoneThisMonthKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              vertical: (phoneThisMonthHitHeight - phoneThisMonthHeight) / 2,
-            ),
-            child: FocusRing(
-              onPressed: onPressed,
+      onPressed: onPressed,
+      borderRadius: _hitRadius,
+      shape: HoverShape.pill,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: (phoneThisMonthHitHeight - phoneThisMonthHeight) / 2,
+        ),
+        child: SizedBox(
+          height: phoneThisMonthHeight,
+          child: HoverFill(
+            hovered: hovered,
+            shape: HoverShape.pill,
+            borderRadius: _radius,
+            child: GlassSurface(
+              tone: GlassTone.paper,
               borderRadius: _radius,
-              child: ExcludeSemantics(
-                child: SizedBox(
-                  height: phoneThisMonthHeight,
-                  child: GlassSurface(
-                    tone: GlassTone.paper,
-                    borderRadius: _radius,
-                    padding: _thisMonthPadding,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        CalendarChevronGlyph(
-                          direction: pointsBack
-                              ? ChevronDirection.previous
-                              : ChevronDirection.next,
-                          size: _thisMonthChevron,
-                          color: ink,
-                        ),
-                        const SizedBox(width: _thisMonthGap),
-                        Text(
-                          phoneThisMonthLabel,
-                          style: _thisMonthStyle.copyWith(color: ink),
-                        ),
-                      ],
-                    ),
+              padding: _thisMonthPadding,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  CalendarChevronGlyph(
+                    direction: pointsBack
+                        ? ChevronDirection.previous
+                        : ChevronDirection.next,
+                    size: _thisMonthChevron,
+                    color: ink,
                   ),
-                ),
+                  const SizedBox(width: _thisMonthGap),
+                  Text(
+                    phoneThisMonthLabel,
+                    style: _thisMonthStyle.copyWith(color: ink),
+                  ),
+                ],
               ),
             ),
           ),

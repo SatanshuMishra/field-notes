@@ -1,5 +1,7 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
@@ -32,6 +34,7 @@ const BorderRadius phoneSheetButtonRadius = BorderRadius.all(
   Radius.circular(14),
 );
 const double _phoneSheetButtonBorderWidth = 1.5;
+const double _lightForegroundLuminance = 0.5;
 
 const List<BoxShadow> _panelShadow = <BoxShadow>[
   BoxShadow(
@@ -213,42 +216,68 @@ class PhoneSheetButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
       label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: SizedBox(
-          height: phoneSheetButtonHeight,
-          child: FocusRing(
-            autofocus: autofocus,
-            onPressed: onPressed,
+      onPressed: onPressed,
+      autofocus: autofocus,
+      borderRadius: phoneSheetButtonRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        height: phoneSheetButtonHeight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: background,
+            border: Border.all(
+              color: context.colors.line,
+              width: _phoneSheetButtonBorderWidth,
+            ),
             borderRadius: phoneSheetButtonRadius,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: background,
-                border: Border.all(
-                  color: context.colors.line,
-                  width: _phoneSheetButtonBorderWidth,
-                ),
-                borderRadius: phoneSheetButtonRadius,
-                boxShadow: shadows,
-              ),
-              child: Center(
-                child: ExcludeSemantics(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _phoneSheetButtonStyle.copyWith(color: foreground),
-                  ),
-                ),
+            boxShadow: shadows,
+          ),
+          child: _HoverVeil(
+            hovered: hovered,
+            foreground: foreground,
+            borderRadius: phoneSheetButtonRadius,
+            child: Center(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _phoneSheetButtonStyle.copyWith(color: foreground),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _HoverVeil extends StatelessWidget {
+  const _HoverVeil({
+    required this.hovered,
+    required this.foreground,
+    required this.borderRadius,
+    required this.child,
+  });
+
+  final bool hovered;
+  final Color foreground;
+  final BorderRadius borderRadius;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final FocusRingSurface surface =
+        foreground.computeLuminance() > _lightForegroundLuminance
+        ? FocusRingSurface.dark
+        : FocusRingSurface.light;
+    return HoverFill(
+      hovered: hovered,
+      surface: surface,
+      borderRadius: borderRadius,
+      position: DecorationPosition.background,
+      child: child,
     );
   }
 }
@@ -349,50 +378,47 @@ class _ConfirmDialogButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
+      key: buttonKey,
       label: label,
-      child: GestureDetector(
-        key: buttonKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: _buttonMinTarget,
-            minHeight: _buttonMinTarget,
-          ),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: FocusRing(
-              autofocus: autofocus,
-              onPressed: onTap,
+      onPressed: onTap,
+      autofocus: autofocus,
+      borderRadius: _buttonRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _buttonMinTarget,
+          minHeight: _buttonMinTarget,
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: background,
+              border: Border.all(
+                color: context.colors.line,
+                width: _buttonBorderWidth,
+              ),
               borderRadius: _buttonRadius,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: background,
-                  border: Border.all(
-                    color: context.colors.line,
-                    width: _buttonBorderWidth,
-                  ),
-                  borderRadius: _buttonRadius,
-                  boxShadow: boxShadow,
+              boxShadow: boxShadow,
+            ),
+            child: _HoverVeil(
+              hovered: hovered,
+              foreground: foreground,
+              borderRadius: _buttonRadius,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 9,
+                  horizontal: 16,
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 9,
-                    horizontal: 16,
-                  ),
-                  child: ExcludeSemantics(
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontFamily: TypographyTokens.sans,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: foreground,
-                      ),
-                    ),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: TypographyTokens.sans,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: foreground,
                   ),
                 ),
               ),

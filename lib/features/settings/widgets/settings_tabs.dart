@@ -1,7 +1,8 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 
 enum SettingsTab {
@@ -66,7 +67,6 @@ const double settingsTabEntryMinHeight = 44;
 const double settingsTabEntryGap = 6;
 const double settingsTabIconSize = 18;
 const double settingsTabSelectedOpacity = 0.11;
-const double settingsTabHoverOpacity = 0.06;
 const double settingsTabSeparatorOpacity = 0.14;
 const double settingsTabMarkSize = 8;
 const double settingsTabMarkRing = 3;
@@ -151,7 +151,7 @@ class _Separator extends StatelessWidget {
   }
 }
 
-class _TabEntry extends StatefulWidget {
+class _TabEntry extends StatelessWidget {
   const _TabEntry({
     required this.tab,
     required this.selected,
@@ -165,99 +165,75 @@ class _TabEntry extends StatefulWidget {
   final VoidCallback onPressed;
 
   @override
-  State<_TabEntry> createState() => _TabEntryState();
-}
-
-class _TabEntryState extends State<_TabEntry> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    final SettingsTab tab = widget.tab;
-    final bool selected = widget.selected;
-    final Color? fill = selected
-        ? Palette.coral.withValues(alpha: settingsTabSelectedOpacity)
-        : _hovered
-        ? colors.ink.withValues(alpha: settingsTabHoverOpacity)
-        : null;
-    return Semantics(
+    return Pressable(
       key: settingsTabKey(tab),
-      button: true,
-      selected: selected,
       label: tab.label,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (PointerEnterEvent _) => _hover(true),
-        onExit: (PointerExitEvent _) => _hover(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onPressed,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: _hitInset),
-            child: FocusRing(
-              onPressed: widget.onPressed,
-              borderRadius: _entryRadius,
-              child: ExcludeSemantics(
-                child: Container(
-                  key: settingsTabFaceKey(tab),
-                  constraints: const BoxConstraints(
-                    minHeight: settingsTabEntryMinHeight,
-                  ),
-                  padding: _entryPadding,
-                  decoration: BoxDecoration(
-                    color: fill,
-                    borderRadius: _entryRadius,
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      SettingsIcon(
-                        tab.glyph,
-                        size: settingsTabIconSize,
-                        color: selected ? colors.accentInk : colors.ink,
-                      ),
-                      const SizedBox(width: _iconGap),
-                      Expanded(
-                        child: Text(
-                          tab.label,
-                          style: context.textStyles.labelSans.copyWith(
-                            fontSize: _labelSize,
-                            fontWeight: FontWeight.w600,
-                            color: colors.ink,
-                          ),
-                        ),
-                      ),
-                      if (widget.marked) ...<Widget>[
-                        const SizedBox(width: _iconGap),
-                        Container(
-                          key: settingsTabMarkKey(tab),
-                          width: settingsTabMarkSize,
-                          height: settingsTabMarkSize,
-                          decoration: BoxDecoration(
-                            color: Palette.coral,
-                            shape: BoxShape.circle,
-                            boxShadow: <BoxShadow>[
-                              BoxShadow(
-                                color: Palette.coral.withValues(
-                                  alpha: settingsTabMarkRingOpacity,
-                                ),
-                                spreadRadius: settingsTabMarkRing,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
+      selected: selected,
+      onPressed: onPressed,
+      borderRadius: _entryRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: _hitInset),
+        child: Container(
+          key: settingsTabFaceKey(tab),
+          constraints: const BoxConstraints(
+            minHeight: settingsTabEntryMinHeight,
+          ),
+          padding: _entryPadding,
+          decoration: HoverStyle.decoration(
+            color: selected
+                ? Palette.coral.withValues(alpha: settingsTabSelectedOpacity)
+                : hovered
+                ? HoverStyle.of(
+                    context,
+                    FocusRingSurface.light,
+                    HoverShape.rounded,
+                  )
+                : null,
+            shape: HoverShape.rounded,
+            borderRadius: _entryRadius,
+          ),
+          child: Row(
+            children: <Widget>[
+              SettingsIcon(
+                tab.glyph,
+                size: settingsTabIconSize,
+                color: selected ? colors.accentInk : colors.ink,
+              ),
+              const SizedBox(width: _iconGap),
+              Expanded(
+                child: Text(
+                  tab.label,
+                  style: context.textStyles.labelSans.copyWith(
+                    fontSize: _labelSize,
+                    fontWeight: FontWeight.w600,
+                    color: colors.ink,
                   ),
                 ),
               ),
-            ),
+              if (marked) ...<Widget>[
+                const SizedBox(width: _iconGap),
+                Container(
+                  key: settingsTabMarkKey(tab),
+                  width: settingsTabMarkSize,
+                  height: settingsTabMarkSize,
+                  decoration: BoxDecoration(
+                    color: Palette.coral,
+                    shape: BoxShape.circle,
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: Palette.coral.withValues(
+                          alpha: settingsTabMarkRingOpacity,
+                        ),
+                        spreadRadius: settingsTabMarkRing,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

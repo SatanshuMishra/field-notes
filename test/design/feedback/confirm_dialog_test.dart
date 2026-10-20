@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/face_boxes.dart';
+
 final TargetPlatformVariant _bothPlatforms = TargetPlatformVariant(
   <TargetPlatform>{TargetPlatform.android, TargetPlatform.macOS},
 );
@@ -109,7 +111,7 @@ void main() {
     final DecoratedBox dangerBox = tester.widget<DecoratedBox>(
       find.descendant(
         of: find.byKey(confirmDialogConfirmKey),
-        matching: find.byType(DecoratedBox),
+        matching: faceBoxes(),
       ),
     );
     expect((dangerBox.decoration as BoxDecoration).color, Palette.danger);
@@ -124,7 +126,7 @@ void main() {
     final DecoratedBox coralBox = tester.widget<DecoratedBox>(
       find.descendant(
         of: find.byKey(confirmDialogConfirmKey),
-        matching: find.byType(DecoratedBox),
+        matching: faceBoxes(),
       ),
     );
     expect((coralBox.decoration as BoxDecoration).color, Palette.coral);

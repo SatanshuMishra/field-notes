@@ -203,6 +203,7 @@ void _expectChoices(
           tester.getSemantics(control),
           isSemantics(
             label: '${start.label}, $caption',
+            isButton: false,
             hasCheckedState: true,
             isChecked: on,
             isInMutuallyExclusiveGroup: true,

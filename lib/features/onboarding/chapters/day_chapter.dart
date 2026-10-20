@@ -2,7 +2,8 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/flowers/flower_bloom.dart';
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/domain/mood/mood.dart';
 import 'package:field_notes/features/onboarding/chapters/garden_scene.dart';
@@ -371,23 +372,16 @@ class _MoodTile extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(
+    return Pressable(
       key: dayMoodKey(mood),
-      container: true,
-      button: true,
-      selected: selected,
       label: mood.label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: FocusRing(
-          onPressed: onTap,
-          borderRadius: radius,
-          child: SizedBox(
-            height: metrics.tileHeight,
-            child: ExcludeSemantics(child: face),
-          ),
-        ),
+      selected: selected,
+      onPressed: onTap,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox(
+        height: metrics.tileHeight,
+        child: HoverFill(hovered: hovered, borderRadius: radius, child: face),
       ),
     );
   }

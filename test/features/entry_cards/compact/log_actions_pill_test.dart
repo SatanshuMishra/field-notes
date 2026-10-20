@@ -36,20 +36,22 @@ Widget _harness({
           const SizedBox(key: _outsideKey, height: 60),
           Center(
             child: LogActionsReveal(
+              onOpen: () {},
               key: _revealAKey,
               onEdit: onEdit,
               onDelete: onDelete,
-              child: _card(_cardAKey),
+              builder: (BuildContext context, bool hovered) => _card(_cardAKey),
             ),
           ),
           if (second) ...<Widget>[
             const SizedBox(height: 60),
             Center(
               child: LogActionsReveal(
+                onOpen: () {},
                 key: _revealBKey,
                 onEdit: onEdit,
                 onDelete: onDelete,
-                child: _card(_cardBKey),
+                builder: (BuildContext context, bool hovered) => _card(_cardBKey),
               ),
             ),
           ],

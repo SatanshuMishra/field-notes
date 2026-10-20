@@ -1,4 +1,7 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/features/entry_cards/playback/playback_focus.dart';
 import 'package:field_notes/features/entry_cards/playback/voice_playback.dart';
 import 'package:flutter/widgets.dart';
@@ -25,7 +28,6 @@ const BorderRadius _toggleRadius = BorderRadius.all(
 const double _labelGap = 12;
 const double _labelMinWidth = 62;
 const Duration _seekStep = Duration(seconds: 5);
-const String _positionLabel = 'Playback position';
 
 class VoiceBody extends StatefulWidget {
   const VoiceBody({
@@ -109,7 +111,7 @@ class _VoiceBodyState extends State<VoiceBody> {
             container: true,
             slider: true,
             enabled: ready,
-            label: _positionLabel,
+            label: voiceWaveformSeekLabel,
             value: _positionPhrase(playback.position),
             increasedValue: _positionPhrase(playback.stepped(_seekStep)),
             decreasedValue: _positionPhrase(playback.stepped(-_seekStep)),
@@ -149,40 +151,39 @@ class _PlayToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
-      enabled: onTap != null,
+    final bool enabled = onTap != null;
+    return Pressable(
+      key: const ValueKey<String>('voice-play-toggle'),
       label: isPlaying ? 'Pause' : 'Play',
-      child: GestureDetector(
-        key: const ValueKey<String>('voice-play-toggle'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: _toggleTarget,
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: Opacity(
-              opacity: onTap == null ? 0.5 : 1.0,
-              child: FocusRing(
-                enabled: onTap != null,
-                onPressed: onTap,
-                borderRadius: _toggleRadius,
-                child: Container(
-                  width: _toggleSize,
-                  height: _toggleSize,
-                  decoration: BoxDecoration(
-                    color: Palette.coral,
-                    shape: BoxShape.circle,
-                    border: context.shadows.outline,
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: _toggleGlyphOffset),
-                      child: PlayPauseGlyph(
-                        playing: isPlaying,
-                        color: FieldNotesColors.light.cardBright,
-                      ),
+      onPressed: onTap,
+      shape: HoverShape.circle,
+      borderRadius: _toggleRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: _toggleTarget,
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Opacity(
+            opacity: enabled ? 1.0 : 0.5,
+            child: HoverFill(
+              hovered: hovered,
+              surface: FocusRingSurface.dark,
+              shape: HoverShape.circle,
+              borderRadius: _toggleRadius,
+              child: Container(
+                width: _toggleSize,
+                height: _toggleSize,
+                decoration: BoxDecoration(
+                  color: Palette.coral,
+                  shape: BoxShape.circle,
+                  border: context.shadows.outline,
+                ),
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: _toggleGlyphOffset),
+                    child: PlayPauseGlyph(
+                      playing: isPlaying,
+                      color: FieldNotesColors.light.cardBright,
                     ),
                   ),
                 ),

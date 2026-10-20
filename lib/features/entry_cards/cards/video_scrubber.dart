@@ -2,6 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../util/duration_format.dart';
@@ -16,6 +17,10 @@ const double _shadowBlur = 3;
 const Offset _shadowOffset = Offset(0, 1);
 const double _focusGap = 2;
 const Duration scrubberKeyboardStep = Duration(seconds: 5);
+const String videoScrubberLabel = 'Video position';
+const BorderRadius _scrubberHoverRadius = BorderRadius.all(
+  Radius.circular(_trackRadius),
+);
 
 Duration clampPlaybackPosition(Duration value, Duration total) {
   if (value < Duration.zero) {
@@ -72,6 +77,16 @@ class VideoScrubber extends StatefulWidget {
 class _VideoScrubberState extends State<VideoScrubber> {
   bool _focused = false;
   Duration? _dragPosition;
+  final FocusNode _pressFocus = FocusNode(
+    debugLabel: 'video scrubber press',
+    skipTraversal: true,
+  );
+
+  @override
+  void dispose() {
+    _pressFocus.dispose();
+    super.dispose();
+  }
 
   @override
   void didUpdateWidget(VideoScrubber oldWidget) {
@@ -202,7 +217,7 @@ class _VideoScrubberState extends State<VideoScrubber> {
         container: true,
         slider: true,
         enabled: enabled,
-        label: 'Video position',
+        label: videoScrubberLabel,
         value: _label(_position),
         increasedValue: _label(
           total == null
@@ -219,34 +234,42 @@ class _VideoScrubberState extends State<VideoScrubber> {
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             final double width = constraints.maxWidth;
-            return GestureDetector(
-              key: const ValueKey<String>('video-scrub-bar'),
-              behavior: HitTestBehavior.opaque,
-              onTapDown: enabled
-                  ? (TapDownDetails details) =>
-                        _seekToOffset(details.localPosition.dx, width)
-                  : null,
-              onHorizontalDragStart: enabled
-                  ? (DragStartDetails details) =>
-                        _previewOffset(details.localPosition.dx, width)
-                  : null,
-              onHorizontalDragUpdate: enabled
-                  ? (DragUpdateDetails details) =>
-                        _previewOffset(details.localPosition.dx, width)
-                  : null,
-              onHorizontalDragEnd: enabled
-                  ? (DragEndDetails details) => _endDrag()
-                  : null,
-              onHorizontalDragCancel: enabled ? _endDrag : null,
-              child: Opacity(
-                opacity: enabled ? 1.0 : 0.5,
-                child: SizedBox(
-                  height: scrubberHeight,
-                  child: CustomPaint(
-                    key: _focused ? focusRingKey : null,
-                    painter: _ScrubberPainter(
-                      fraction: _fraction,
-                      focused: _focused,
+            return ExcludeSemantics(
+              child: Pressable(
+                key: const ValueKey<String>('video-scrub-bar'),
+                label: videoScrubberLabel,
+                onPressedAt: enabled
+                    ? (Offset localPosition) =>
+                          _seekToOffset(localPosition.dx, width)
+                    : null,
+                surface: FocusRingSurface.dark,
+                borderRadius: _scrubberHoverRadius,
+                focusNode: _pressFocus,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragStart: enabled
+                      ? (DragStartDetails details) =>
+                            _previewOffset(details.localPosition.dx, width)
+                      : null,
+                  onHorizontalDragUpdate: enabled
+                      ? (DragUpdateDetails details) =>
+                            _previewOffset(details.localPosition.dx, width)
+                      : null,
+                  onHorizontalDragEnd: enabled
+                      ? (DragEndDetails details) => _endDrag()
+                      : null,
+                  onHorizontalDragCancel: enabled ? _endDrag : null,
+                  child: Opacity(
+                    opacity: enabled ? 1.0 : 0.5,
+                    child: SizedBox(
+                      height: scrubberHeight,
+                      child: CustomPaint(
+                        key: _focused ? focusRingKey : null,
+                        painter: _ScrubberPainter(
+                          fraction: _fraction,
+                          focused: _focused,
+                        ),
+                      ),
                     ),
                   ),
                 ),

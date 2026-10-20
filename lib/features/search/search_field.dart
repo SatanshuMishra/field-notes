@@ -1,4 +1,5 @@
-import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -223,36 +224,26 @@ class _ClearButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: _clearName,
-      excludeFromSemantics: true,
-      child: Semantics(
-        container: true,
-        button: true,
-        label: _clearName,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: onPressed,
+    return Pressable(
+      label: _clearName,
+      tooltip: _clearName,
+      onPressed: onPressed,
+      borderRadius: faceRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: kMinInteractiveDimension,
+        child: Center(
+          child: HoverFill(
+            hovered: hovered,
+            borderRadius: faceRadius,
+            position: DecorationPosition.background,
             child: SizedBox.square(
-              dimension: kMinInteractiveDimension,
-              child: Center(
-                child: FocusRing(
-                  onPressed: onPressed,
-                  borderRadius: faceRadius,
-                  child: SizedBox.square(
-                    key: searchClearFaceKey,
-                    dimension: faceExtent,
-                    child: ExcludeSemantics(
-                      child: Icon(
-                        Icons.close,
-                        size: iconSize,
-                        color: context.colors.mutedDeep,
-                      ),
-                    ),
-                  ),
-                ),
+              key: searchClearFaceKey,
+              dimension: faceExtent,
+              child: Icon(
+                Icons.close,
+                size: iconSize,
+                color: context.colors.mutedDeep,
               ),
             ),
           ),

@@ -52,9 +52,11 @@ void main() {
         home: Material(
           child: Center(
             child: LogActionsReveal(
+              onOpen: () {},
               onEdit: () => edits++,
               onDelete: () => deletes++,
-              child: const SizedBox(width: 200, height: 100),
+              builder: (BuildContext context, bool hovered) =>
+                  const SizedBox(width: 200, height: 100),
             ),
           ),
         ),

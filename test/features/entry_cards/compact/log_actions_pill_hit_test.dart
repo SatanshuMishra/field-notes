@@ -20,14 +20,16 @@ Future<List<String>> _pumpCards(WidgetTester tester) async {
               ),
               const SizedBox(height: 12),
               LogActionsReveal(
+                onOpen: () {},
                 onEdit: () => taps.add('edit'),
                 onDelete: () => taps.add('delete'),
-                child: GestureDetector(
-                  key: _cardKey,
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => taps.add('card'),
-                  child: const SizedBox(width: 371, height: 139),
-                ),
+                builder: (BuildContext context, bool hovered) =>
+                    GestureDetector(
+                      key: _cardKey,
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => taps.add('card'),
+                      child: const SizedBox(width: 371, height: 139),
+                    ),
               ),
             ],
           ),

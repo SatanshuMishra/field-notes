@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/icon_sticker_button.dart';
 import 'package:field_notes/domain/notes/markdown/markdown.dart'
@@ -502,9 +504,8 @@ class _PhotoToolbarState extends State<PhotoToolbar> {
                 child: Padding(
                   padding: const EdgeInsets.all(photoToolbarPadding),
                   child: ScrollConfiguration(
-                    behavior: ScrollConfiguration.of(
-                      context,
-                    ).copyWith(scrollbars: false),
+                    behavior: ScrollConfiguration.of(context)
+                        .copyWith(scrollbars: false),
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: FocusTraversalGroup(
@@ -943,65 +944,99 @@ class _PhotoToolbarControlState extends State<_PhotoToolbarControl> {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? onTap = widget.onTap;
-    final bool enabled = onTap != null;
     final bool marked = widget.selected ?? false;
-    return FocusableActionDetector(
-      enabled: enabled || marked,
+    if (onTap == null && marked) {
+      return _markedOnly();
+    }
+    return Pressable(
+      label: widget.label,
+      hint: widget.hint,
+      selected: widget.selected,
+      onPressed: onTap,
       focusNode: widget.focusNode,
-      mouseCursor: enabled ? SystemMouseCursors.click : MouseCursor.defer,
-      onShowFocusHighlight: _onFocusHighlight,
-      actions: <Type, Action<Intent>>{
-        ActivateIntent: CallbackAction<ActivateIntent>(
-          onInvoke: (ActivateIntent intent) {
-            onTap?.call();
-            return null;
-          },
+      surface: FocusRingSurface.dark,
+      borderRadius: _controlRadius,
+      placement: FocusRingPlacement.edge,
+      paintsHover: false,
+      excludeSemantics: false,
+      builder: (BuildContext context, bool hovered) => Semantics(
+        inMutuallyExclusiveGroup: widget.selected != null,
+        child: ExcludeSemantics(
+          child: _face(
+            enabled: onTap != null,
+            marked: marked,
+            focused: false,
+            hovered: hovered,
+          ),
         ),
-      },
+      ),
+    );
+  }
+
+  Widget _markedOnly() {
+    return FocusableActionDetector(
+      focusNode: widget.focusNode,
+      onShowFocusHighlight: _onFocusHighlight,
       child: Semantics(
         button: true,
-        enabled: enabled,
+        enabled: false,
         selected: widget.selected,
-        inMutuallyExclusiveGroup: widget.selected != null,
+        inMutuallyExclusiveGroup: true,
         label: widget.label,
         hint: widget.hint,
-        child: GestureDetector(
-          key: widget.controlKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: ExcludeSemantics(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: widget.target,
-                minHeight: widget.target,
-              ),
-              child: DecoratedBox(
-                key: _focused ? focusRingKey : null,
-                decoration: BoxDecoration(
-                  color: marked ? Palette.coral : null,
-                  border: _focused
-                      ? const Border.fromBorderSide(
-                          BorderSide(
-                            color: Palette.toolbarLabel,
-                            width: _focusRingWidth,
-                          ),
-                        )
-                      : null,
-                  borderRadius: _controlRadius,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: photoToolbarControlPadding,
+        child: ExcludeSemantics(
+          child: _face(
+            enabled: false,
+            marked: true,
+            focused: _focused,
+            hovered: false,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _face({
+    required bool enabled,
+    required bool marked,
+    required bool focused,
+    required bool hovered,
+  }) {
+    return ConstrainedBox(
+      key: widget.controlKey,
+      constraints: BoxConstraints(
+        minWidth: widget.target,
+        minHeight: widget.target,
+      ),
+      child: DecoratedBox(
+        key: focused ? focusRingKey : null,
+        decoration: BoxDecoration(
+          color: marked ? Palette.coral : null,
+          border: focused
+              ? const Border.fromBorderSide(
+                  BorderSide(
+                    color: Palette.toolbarLabel,
+                    width: _focusRingWidth,
                   ),
-                  child: Center(
-                    widthFactor: 1,
-                    heightFactor: 1,
-                    child: Opacity(
-                      opacity: enabled || marked ? 1 : _disabledOpacity,
-                      child: widget.child,
-                    ),
-                  ),
-                ),
+                )
+              : null,
+          borderRadius: _controlRadius,
+        ),
+        child: HoverFill(
+          hovered: hovered,
+          surface: FocusRingSurface.dark,
+          borderRadius: _controlRadius,
+          position: DecorationPosition.background,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: photoToolbarControlPadding,
+            ),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: Opacity(
+                opacity: enabled || marked ? 1 : _disabledOpacity,
+                child: widget.child,
               ),
             ),
           ),

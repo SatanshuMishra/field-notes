@@ -5,15 +5,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:field_notes/app/shell/shell_destination.dart';
 import 'package:field_notes/domain/models/models.dart';
+import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/settings/widgets/settings_tabs.dart';
+import 'package:field_notes/state/settings_providers.dart';
 import 'package:field_notes/state/settings_section_request.dart';
 import 'package:field_notes/state/shell_navigation.dart';
 
+import 'follows_chosen_input.dart';
 import 'voice_peak_sampler.dart';
 import 'voice_recorder.dart';
 import 'voice_recorder_provider.dart';
@@ -64,12 +68,41 @@ class _VoiceComposerConnectorState
   StreamSubscription<double>? _levelFeed;
   late final RecordingWakeHold _wakeHold;
 
-  VoiceRecorder get _recorder => ref.read(voiceRecorderProvider);
+  late final VoiceRecorder _recorder;
 
   @override
   void initState() {
     super.initState();
+    _recorder = ref.read(voiceRecorderProvider);
     _wakeHold = RecordingWakeHold(ref.read(stayAwakeProvider));
+    if (_recorder is FollowsChosenInput) {
+      ref.listenManual<AsyncValue<AppSettings>>(
+        appSettingsProvider,
+        _onSettingsChanged,
+      );
+    }
+    unawaited(_recorder.open().catchError((Object _) {}));
+  }
+
+  void _onSettingsChanged(
+    AsyncValue<AppSettings>? previous,
+    AsyncValue<AppSettings> next,
+  ) {
+    final AppSettings? before = previous?.value;
+    final AppSettings? after = next.value;
+    final FollowsChosenInput? recorder = switch (_recorder) {
+      final FollowsChosenInput follower => follower,
+      _ => null,
+    };
+    if (recorder == null ||
+        before == null ||
+        after == null ||
+        before.audioInputId == after.audioInputId ||
+        _closing ||
+        _phase != VoiceRecorderPhase.idle) {
+      return;
+    }
+    unawaited(recorder.followChosenInput().catchError((Object _) {}));
   }
 
   @override
@@ -84,6 +117,10 @@ class _VoiceComposerConnectorState
     _cancelBreath();
     _stopFeedingSampler();
     _wakeHold.dispose();
+    if (!_closing && _phase.isTaking) {
+      unawaited(_recorder.cancel().catchError((Object _) {}));
+    }
+    unawaited(_recorder.close().catchError((Object _) {}));
     super.dispose();
   }
 
@@ -412,25 +449,36 @@ class _VoiceComposerConnectorState
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: _onPopInvoked,
-      child: VoiceRecorderSheet(
-        phase: _phase,
-        asking: _asking,
-        onStart: _start,
-        onStop: _stop,
-        onCancel: _leave,
-        onPause: _pause,
-        onResume: _resume,
-        onDiscard: _askToLetGo,
-        onDismiss: _escape,
-        onKeepGoing: _keepGoing,
-        onLetGo: _letGo,
-        elapsed: _elapsed,
-        errorMessage: _errorMessage,
-        letGoKey: voiceDiscardConfirmKey,
-        levels: _recorder.level,
-        savingText: voiceSavingStatus,
-        onVoiceSettings: _openVoiceSettings,
+      child: StreamBuilder<MicrophoneHearing>(
+        stream: _recorder.hearing,
+        builder: _sheet,
       ),
+    );
+  }
+
+  Widget _sheet(
+    BuildContext context,
+    AsyncSnapshot<MicrophoneHearing> snapshot,
+  ) {
+    return VoiceRecorderSheet(
+      phase: _phase,
+      asking: _asking,
+      onStart: _start,
+      onStop: _stop,
+      onCancel: _leave,
+      onPause: _pause,
+      onResume: _resume,
+      onDiscard: _askToLetGo,
+      onDismiss: _escape,
+      onKeepGoing: _keepGoing,
+      onLetGo: _letGo,
+      elapsed: _elapsed,
+      errorMessage: _errorMessage,
+      letGoKey: voiceDiscardConfirmKey,
+      levels: _recorder.level,
+      savingText: voiceSavingStatus,
+      onVoiceSettings: _openVoiceSettings,
+      hearing: _recorder.hearingNow,
     );
   }
 }

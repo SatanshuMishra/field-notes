@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/capture_icons.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -160,13 +162,15 @@ class _CaptureOptionRow extends StatelessWidget {
     final VoidCallback? select = isAvailable
         ? () => onSelected(option.type)
         : null;
-    final Widget detector = GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: select,
-      child: FocusRing(
-        enabled: isAvailable,
-        includeFocusSemantics: isAvailable,
-        onPressed: select,
+    final String subtitle = isAvailable ? option.description : unavailableLabel;
+    return Pressable(
+      label: '${option.label}\n$subtitle',
+      onPressed: select,
+      borderRadius: _rowRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        surface: _isPrimary ? FocusRingSurface.dark : FocusRingSurface.light,
         borderRadius: _rowRadius,
         child: Container(
           decoration: BoxDecoration(
@@ -200,7 +204,7 @@ class _CaptureOptionRow extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      isAvailable ? option.description : unavailableLabel,
+                      subtitle,
                       style: _isPrimary
                           ? textStyles.caption10Sans.copyWith(
                               color: Palette.onAccent.withValues(
@@ -217,9 +221,5 @@ class _CaptureOptionRow extends StatelessWidget {
         ),
       ),
     );
-    if (!isAvailable) {
-      return detector;
-    }
-    return Semantics(container: true, button: true, child: detector);
   }
 }

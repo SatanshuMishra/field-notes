@@ -343,7 +343,7 @@ class LiveAudioChannel {
                 muxer = writer
                 degrees?.let { writer.setOrientationHint(it) }
                 val videoCopy = SampleCopy(picture, writer, writer.addTrack(videoFormat), videoFormat)
-                val audioCopy = SampleCopy(sound, writer, writer.addTrack(audioFormat), audioFormat)
+                val audioCopy = SampleCopy(sound, writer, writer.addTrack(audioFormat), audioFormat, durationUs(videoFormat))
                 writer.start()
                 started = true
                 while (!videoCopy.done || !audioCopy.done) {
@@ -386,6 +386,11 @@ class LiveAudioChannel {
             return extractor.getTrackFormat(track)
         }
 
+        private fun durationUs(format: MediaFormat): Long {
+            val duration = if (format.containsKey(MediaFormat.KEY_DURATION)) format.getLong(MediaFormat.KEY_DURATION) else 0L
+            return if (duration > 0) duration else Long.MAX_VALUE
+        }
+
         private fun rotation(format: MediaFormat): Int? {
             if (!format.containsKey(MediaFormat.KEY_ROTATION)) {
                 return null
@@ -403,10 +408,11 @@ class LiveAudioChannel {
         private val muxer: MediaMuxer,
         private val track: Int,
         format: MediaFormat,
+        private val endUs: Long = Long.MAX_VALUE,
     ) {
         private val buffer = ByteBuffer.allocateDirect(sampleBytes(format))
         private val info = MediaCodec.BufferInfo()
-        var done = extractor.sampleTime < 0
+        var done = extractor.sampleTime < 0 || extractor.sampleTime >= endUs
             private set
         val nextTimeUs: Long
             get() = extractor.sampleTime
@@ -420,7 +426,7 @@ class LiveAudioChannel {
             }
             info.set(0, size, extractor.sampleTime, bufferFlags(extractor.sampleFlags))
             muxer.writeSampleData(track, buffer, info)
-            done = !extractor.advance()
+            done = !extractor.advance() || extractor.sampleTime >= endUs
         }
 
         private fun bufferFlags(sampleFlags: Int): Int {

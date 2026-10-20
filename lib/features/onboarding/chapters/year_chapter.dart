@@ -4,6 +4,9 @@ import 'dart:ui' as ui;
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/calendar/model/calendar_month.dart';
 import 'package:field_notes/features/garden/model/meadow_year.dart';
@@ -774,46 +777,45 @@ class _ReplayButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
-      label: meadowReplayLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: switch (layout) {
-          ShellLayout.sidebar => _sidebarFace(),
-          ShellLayout.bottomBar => _bottomBarFace(),
-        },
-      ),
-    );
+    return switch (layout) {
+      ShellLayout.sidebar => _sidebarFace(),
+      ShellLayout.bottomBar => _bottomBarFace(),
+    };
   }
 
   Widget _sidebarFace() {
     const BorderRadius radius = BorderRadius.all(Radius.circular(11));
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minWidth: _target, minHeight: _target),
-      child: Center(
-        widthFactor: 1,
-        heightFactor: 1,
-        child: FocusRing(
-          onPressed: onPressed,
-          surface: FocusRingSurface.dark,
-          borderRadius: radius,
-          child: ClipRRect(
+    return Pressable(
+      label: meadowReplayLabel,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => ConstrainedBox(
+        constraints: const BoxConstraints(
+          minWidth: _target,
+          minHeight: _target,
+        ),
+        child: Center(
+          widthFactor: 1,
+          heightFactor: 1,
+          child: HoverFill(
+            hovered: hovered,
             borderRadius: radius,
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(
-                sigmaX: _buttonBlurSigma,
-                sigmaY: _buttonBlurSigma,
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: _glassFill,
-                  border: Border.all(color: _buttonEdge, width: _glassBorder),
-                  borderRadius: radius,
+            surface: FocusRingSurface.dark,
+            child: ClipRRect(
+              borderRadius: radius,
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(
+                  sigmaX: _buttonBlurSigma,
+                  sigmaY: _buttonBlurSigma,
                 ),
-                child: ExcludeSemantics(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: _glassFill,
+                    border: Border.all(color: _buttonEdge, width: _glassBorder),
+                    borderRadius: radius,
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 13 + _glassBorder,
@@ -851,16 +853,23 @@ class _ReplayButton extends StatelessWidget {
     const BorderRadius round = BorderRadius.all(
       Radius.circular(_phoneReplay / 2),
     );
-    return FocusRing(
+    return Pressable(
+      label: meadowReplayLabel,
       onPressed: onPressed,
       surface: FocusRingSurface.dark,
+      shape: HoverShape.circle,
       borderRadius: round,
-      child: const GlassSurface(
-        tone: GlassTone.scene,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
         borderRadius: round,
-        child: SizedBox.square(
-          dimension: _phoneReplay,
-          child: ExcludeSemantics(
+        surface: FocusRingSurface.dark,
+        shape: HoverShape.circle,
+        child: const GlassSurface(
+          tone: GlassTone.scene,
+          borderRadius: round,
+          child: SizedBox.square(
+            dimension: _phoneReplay,
             child: Center(child: _ReplayGlyph(size: _phoneReplayGlyph)),
           ),
         ),
@@ -1014,25 +1023,26 @@ class _YearSlider extends StatelessWidget {
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 excludeFromSemantics: true,
-                onTapDown: (TapDownDetails details) =>
-                    _seek(details.localPosition.dx, width),
                 onHorizontalDragStart: (DragStartDetails details) =>
                     _seek(details.localPosition.dx, width),
                 onHorizontalDragUpdate: (DragUpdateDetails details) =>
                     _seek(details.localPosition.dx, width),
-                child: Padding(
-                  padding: reach,
-                  child: FocusRing(
-                    onPressed: null,
+                child: ExcludeSemantics(
+                  child: Pressable(
+                    label: yearSliderLabel,
+                    onPressedAt: (Offset at) => _seek(at.dx, width),
                     surface: FocusRingSurface.dark,
                     borderRadius: _sliderFocusRadius,
-                    child: SizedBox(
-                      key: yearSliderKey,
-                      width: width,
-                      height: height,
-                      child: CustomPaint(
-                        painter: _TrackPainter(
-                          fraction: current / sampleYearDays,
+                    child: Padding(
+                      padding: reach,
+                      child: SizedBox(
+                        key: yearSliderKey,
+                        width: width,
+                        height: height,
+                        child: CustomPaint(
+                          painter: _TrackPainter(
+                            fraction: current / sampleYearDays,
+                          ),
                         ),
                       ),
                     ),

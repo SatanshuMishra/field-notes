@@ -1,3 +1,4 @@
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/features/entry_cards/compact/compact_log_card.dart';
 import 'package:field_notes/features/entry_cards/compact/log_actions_pill.dart';
@@ -110,9 +111,11 @@ void main() {
     await tester.pumpWidget(
       _list(scroll, <Widget>[
         LogActionsReveal(
+          onOpen: () {},
           onEdit: () {},
           onDelete: () {},
-          child: const SizedBox(key: _cardKey, height: 400),
+          builder: (BuildContext context, bool hovered) =>
+              const SizedBox(key: _cardKey, height: 400),
         ),
         const SizedBox(height: 400),
       ]),
@@ -153,9 +156,11 @@ void main() {
       _list(scroll, <Widget>[
         const SizedBox(height: 300),
         LogActionsReveal(
+          onOpen: () {},
           onEdit: () {},
           onDelete: () {},
-          child: const SizedBox(key: _cardKey, height: 100),
+          builder: (BuildContext context, bool hovered) =>
+              const SizedBox(key: _cardKey, height: 100),
         ),
         const SizedBox(height: 800),
       ]),
@@ -202,9 +207,11 @@ void main() {
             children: <Widget>[
               const SizedBox(height: 50),
               LogActionsReveal(
+                onOpen: () {},
                 onEdit: () {},
                 onDelete: () {},
-                child: const SizedBox(key: _cardKey, height: 300),
+                builder: (BuildContext context, bool hovered) =>
+                    const SizedBox(key: _cardKey, height: 300),
               ),
               const SizedBox(height: 600),
             ],
@@ -269,10 +276,20 @@ void main() {
     ]) {
       final List<SemanticsNode> path = readingPathTo(tester, label)!;
       final Rect button = globalSemanticsRect(tester, path.last);
-      final SemanticsNode card = path.lastWhere(
-        (SemanticsNode node) =>
-            node.getSemanticsData().hasAction(SemanticsAction.longPress),
-      );
+      bool holdsLongPress(SemanticsNode node) {
+        bool found = node.getSemanticsData().hasAction(
+          SemanticsAction.longPress,
+        );
+        node.visitChildren((SemanticsNode child) {
+          found =
+              found ||
+              child.getSemanticsData().hasAction(SemanticsAction.longPress);
+          return !found;
+        });
+        return found;
+      }
+
+      final SemanticsNode card = path.lastWhere(holdsLongPress);
       expect(
         frameCovers(globalSemanticsRect(tester, card), button),
         isTrue,
@@ -290,9 +307,11 @@ void main() {
       _list(scroll, <Widget>[
         const SizedBox(height: 15),
         LogActionsReveal(
+          onOpen: () {},
           onEdit: () {},
           onDelete: () {},
-          child: const SizedBox(key: _cardKey, height: 400),
+          builder: (BuildContext context, bool hovered) =>
+              const SizedBox(key: _cardKey, height: 400),
         ),
         const SizedBox(height: 800),
       ]),
@@ -328,9 +347,11 @@ void main() {
       _list(scroll, <Widget>[
         const SizedBox(height: 15),
         LogActionsReveal(
+          onOpen: () {},
           onEdit: () {},
           onDelete: () {},
-          child: const SizedBox(key: _cardKey, height: 400),
+          builder: (BuildContext context, bool hovered) =>
+              const SizedBox(key: _cardKey, height: 400),
         ),
         const SizedBox(height: 800),
       ]),
@@ -346,7 +367,7 @@ void main() {
       tester.element(
         find.descendant(
           of: find.byKey(logActionsEditKey),
-          matching: find.byType(GestureDetector),
+          matching: find.byKey(pressableHoverFillKey),
         ),
       ),
     ).requestFocus();

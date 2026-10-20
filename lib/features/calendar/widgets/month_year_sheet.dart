@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 import '../model/calendar_month.dart';
@@ -178,64 +180,65 @@ class _MonthCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Pressable(
+      label: '${monthName(month.month)} ${month.year}',
+      selected: isDisplayed,
+      onPressed: onPressed,
+      borderRadius: _cellRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => _face(context, hovered),
+    );
+  }
+
+  Widget _face(BuildContext context, bool hovered) {
     final FieldNotesColors colors = context.colors;
-    final Widget label = SizedBox(
-      height: monthYearCellHeight,
-      child: Center(
-        child: Text(
-          monthAbbreviation(month.month),
-          style: _monthStyle.copyWith(
-            color: isDisplayed
-                ? Palette.onAccent
-                : (isCurrent ? colors.accentInk : colors.ink),
+    final Widget label = HoverFill(
+      hovered: hovered,
+      surface: isDisplayed ? FocusRingSurface.dark : FocusRingSurface.light,
+      borderRadius: _cellRadius,
+      position: DecorationPosition.background,
+      child: SizedBox(
+        height: monthYearCellHeight,
+        child: Center(
+          child: Text(
+            monthAbbreviation(month.month),
+            style: _monthStyle.copyWith(
+              color: isDisplayed
+                  ? Palette.onAccent
+                  : (isCurrent ? colors.accentInk : colors.ink),
+            ),
           ),
         ),
       ),
     );
-    final Widget face = isDisplayed
-        ? DecoratedBox(
-            decoration: BoxDecoration(
-              color: Palette.coral,
-              border: context.shadows.outline,
-              borderRadius: _cellRadius,
-              boxShadow: context.shadows.control,
-            ),
-            child: label,
-          )
-        : DecoratedBox(
-            decoration: BoxDecoration(
-              color: colors.cardLight,
-              border: isCurrent
-                  ? null
-                  : Border.all(color: colors.ink18, width: Shapes.outlineWidth),
-              borderRadius: _cellRadius,
-            ),
-            child: isCurrent
-                ? CustomPaint(
-                    foregroundPainter: const DashedBorderPainter(
-                      color: Palette.coral,
-                      radius: monthYearCellRadius,
-                    ),
-                    child: label,
-                  )
-                : label,
-          );
-    return Semantics(
-      button: true,
-      selected: isDisplayed,
-      label: '${monthName(month.month)} ${month.year}',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: FocusRing(
-            onPressed: onPressed,
-            borderRadius: _cellRadius,
-            child: ExcludeSemantics(child: face),
-          ),
+    if (isDisplayed) {
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: Palette.coral,
+          border: context.shadows.outline,
+          borderRadius: _cellRadius,
+          boxShadow: context.shadows.control,
         ),
+        child: label,
+      );
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.cardLight,
+        border: isCurrent
+            ? null
+            : Border.all(color: colors.ink18, width: Shapes.outlineWidth),
+        borderRadius: _cellRadius,
       ),
+      child: isCurrent
+          ? CustomPaint(
+              foregroundPainter: const DashedBorderPainter(
+                color: Palette.coral,
+                radius: monthYearCellRadius,
+              ),
+              child: label,
+            )
+          : label,
     );
   }
 }
@@ -247,36 +250,22 @@ class MonthYearBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
+      key: monthYearBackKey,
       label: monthYearBackLabel,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          key: monthYearBackKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: FocusRing(
-            onPressed: onPressed,
-            borderRadius: _backRadius,
-            child: ExcludeSemantics(
-              child: CustomPaint(
-                foregroundPainter: const DashedBorderPainter(
-                  color: Palette.coral,
-                  radius: phoneMonthControlRadius,
-                ),
-                child: SizedBox(
-                  height: phoneMonthControlHeight,
-                  child: Center(
-                    child: Text(
-                      monthYearBackLabel,
-                      style: _backStyle.copyWith(
-                        color: context.colors.accentInkStrong,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+      onPressed: onPressed,
+      borderRadius: _backRadius,
+      child: CustomPaint(
+        foregroundPainter: const DashedBorderPainter(
+          color: Palette.coral,
+          radius: phoneMonthControlRadius,
+        ),
+        child: SizedBox(
+          height: phoneMonthControlHeight,
+          child: Center(
+            child: Text(
+              monthYearBackLabel,
+              style: _backStyle.copyWith(color: context.colors.accentInkStrong),
             ),
           ),
         ),

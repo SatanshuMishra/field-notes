@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/motion/waveform_bob.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/onboarding/chapters/moment_chapter.dart';
@@ -267,78 +269,75 @@ class _Block extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     const BorderRadius radius = BorderRadius.all(Radius.circular(_blockRadius));
-    return Semantics(
-      button: true,
+    return Pressable(
       label: title,
       hint: body,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: FocusRing(
-          onPressed: onTap,
-          borderRadius: radius,
-          child: Container(
-            clipBehavior: Clip.antiAlias,
-            padding: _blockPadding,
-            decoration: BoxDecoration(
-              color: fill,
-              border: Border.all(color: colors.line, width: _blockBorder),
-              borderRadius: radius,
-              boxShadow: <BoxShadow>[
-                BoxShadow(color: colors.shadow, offset: _blockShadow),
-              ],
-            ),
-            child: ExcludeSemantics(
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          kicker,
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.accent,
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: ink.kicker.withValues(
-                              alpha: ink.kickerAlpha,
-                            ),
-                          ),
+      onPressed: onTap,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => HoverFill(
+        hovered: hovered,
+        borderRadius: radius,
+        surface: FocusRingSurface.dark,
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          padding: _blockPadding,
+          decoration: BoxDecoration(
+            color: fill,
+            border: Border.all(color: colors.line, width: _blockBorder),
+            borderRadius: radius,
+            boxShadow: <BoxShadow>[
+              BoxShadow(color: colors.shadow, offset: _blockShadow),
+            ],
+          ),
+          child: ExcludeSemantics(
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        kicker,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.accent,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: ink.kicker.withValues(alpha: ink.kickerAlpha),
                         ),
-                        Text(
-                          title,
-                          maxLines: 2,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.serif,
-                            fontSize: 23,
-                            fontWeight: FontWeight.w500,
-                            height: 1.05,
-                            color: ink.title,
-                          ),
+                      ),
+                      Text(
+                        title,
+                        maxLines: 2,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.serif,
+                          fontSize: 23,
+                          fontWeight: FontWeight.w500,
+                          height: 1.05,
+                          color: ink.title,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          body,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontFamily: TypographyTokens.sans,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            height: 1.4,
-                            color: ink.body.withValues(alpha: ink.bodyAlpha),
-                          ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        body,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: TypographyTokens.sans,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                          color: ink.body.withValues(alpha: ink.bodyAlpha),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: _artGap),
-                  art,
-                ],
-              ),
+                ),
+                const SizedBox(width: _artGap),
+                art,
+              ],
             ),
           ),
         ),

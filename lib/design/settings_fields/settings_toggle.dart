@@ -1,8 +1,13 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
+
+const String settingsToggleFallbackLabel = 'Switch';
 
 const Duration _knobTravel = Duration(milliseconds: 150);
 
@@ -56,13 +61,13 @@ class SettingsToggle extends StatelessWidget {
     required this.value,
     required this.onChanged,
     this.enabled = true,
-    this.semanticLabel,
+    this.semanticLabel = settingsToggleFallbackLabel,
   });
 
   final bool value;
   final ValueChanged<bool>? onChanged;
   final bool enabled;
-  final String? semanticLabel;
+  final String semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -75,59 +80,60 @@ class SettingsToggle extends StatelessWidget {
       ShellLayout.sidebar => _ToggleMetrics.sidebar,
       ShellLayout.bottomBar => _ToggleMetrics.phone,
     };
-    return Semantics(
-      container: true,
-      excludeSemantics: true,
+    final FocusRingSurface hoverSurface = value
+        ? FocusRingSurface.dark
+        : FocusRingSurface.light;
+    return Pressable(
       label: semanticLabel,
       toggled: value,
-      enabled: enabled,
-      onTap: toggle,
-      child: Opacity(
+      onPressed: toggle,
+      borderRadius: metrics.trackRadius,
+      shape: HoverShape.pill,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
         opacity: enabled ? 1.0 : 0.5,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: toggle,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: metrics.minTargetWidth,
-              minHeight: metrics.minTargetHeight,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: FocusRing(
-                enabled: toggle != null,
-                onPressed: toggle,
-                borderRadius: metrics.trackRadius,
-                child: SizedBox(
-                  width: metrics.trackWidth,
-                  height: metrics.trackHeight,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: value ? Palette.coral : colors.panelTop,
-                      border: outline,
-                      borderRadius: metrics.trackRadius,
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(metrics.inset),
-                      child: AnimatedAlign(
-                        duration: _knobTravel,
-                        alignment: value
-                            ? Alignment.centerRight
-                            : Alignment.centerLeft,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: colors.cardBright,
-                            border: Border.all(
-                              color: colors.line,
-                              width: metrics.knobBorder,
-                            ),
-                            shape: BoxShape.circle,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: metrics.minTargetWidth,
+            minHeight: metrics.minTargetHeight,
+          ),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: SizedBox(
+              width: metrics.trackWidth,
+              height: metrics.trackHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: value ? Palette.coral : colors.panelTop,
+                  border: outline,
+                  borderRadius: metrics.trackRadius,
+                ),
+                child: HoverFill(
+                  hovered: hovered,
+                  surface: hoverSurface,
+                  shape: HoverShape.pill,
+                  borderRadius: metrics.trackRadius,
+                  position: DecorationPosition.background,
+                  child: Padding(
+                    padding: EdgeInsets.all(metrics.inset),
+                    child: AnimatedAlign(
+                      duration: _knobTravel,
+                      alignment: value
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: colors.cardBright,
+                          border: Border.all(
+                            color: colors.line,
+                            width: metrics.knobBorder,
                           ),
-                          child: SizedBox(
-                            width: metrics.knob,
-                            height: metrics.knob,
-                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: SizedBox(
+                          width: metrics.knob,
+                          height: metrics.knob,
                         ),
                       ),
                     ),

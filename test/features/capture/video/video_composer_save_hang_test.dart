@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/immersive/immersive.dart';
 import 'package:field_notes/features/capture/video/video_composer.dart';
@@ -24,6 +25,13 @@ class _HangingStopRecorder implements VideoRecorder {
 
   @override
   Stream<double> get level => const Stream<double>.empty();
+
+  @override
+  Stream<MicrophoneHearing> get hearing =>
+      const Stream<MicrophoneHearing>.empty();
+
+  @override
+  MicrophoneHearing get hearingNow => MicrophoneHearing.hearing;
 
   @override
   bool get supportsPause => false;

@@ -460,7 +460,12 @@ final class LiveAudioBridge {
     }
     pictureReader.add(videoOutput)
 
+    let pictureRange = videoTrack.timeRange
+    let trimsSound = pictureRange.duration.isNumeric && pictureRange.duration > .zero
     let soundReader = try AVAssetReader(asset: soundAsset)
+    if trimsSound {
+      soundReader.timeRange = CMTimeRange(start: .zero, duration: pictureRange.duration)
+    }
     let audioOutput = AVAssetReaderTrackOutput(track: audioTrack, outputSettings: nil)
     audioOutput.alwaysCopiesSampleData = false
     guard soundReader.canAdd(audioOutput) else {
@@ -523,6 +528,9 @@ final class LiveAudioBridge {
       throw failed.error ?? LiveAudioFailure.unreadable("A track could not be read.")
     }
 
+    if trimsSound {
+      writer.endSession(atSourceTime: pictureRange.end)
+    }
     let finished = DispatchSemaphore(value: 0)
     writer.finishWriting {
       finished.signal()

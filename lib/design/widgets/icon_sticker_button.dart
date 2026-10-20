@@ -1,4 +1,6 @@
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/widgets.dart';
 
 import '../tokens/tokens.dart';
@@ -69,6 +71,8 @@ const Radius _editEndCap = Radius.circular(2.1);
 
 const Radius _trashCorner = Radius.circular(1);
 
+const double _lightGlyphLuminance = 0.5;
+
 class IconStickerButton extends StatelessWidget {
   const IconStickerButton({
     super.key,
@@ -87,29 +91,34 @@ class IconStickerButton extends StatelessWidget {
   final VoidCallback onPressed;
   final bool? selected;
 
+  FocusRingSurface get _faceSurface =>
+      glyphColor.computeLuminance() > _lightGlyphLuminance
+      ? FocusRingSurface.dark
+      : FocusRingSurface.light;
+
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
+    return Pressable(
       label: semanticLabel,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          borderRadius: _buttonRadius,
-          child: SizedBox.square(
-            dimension: _buttonExtent,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: background,
-                border: context.shadows.outline,
-                borderRadius: _buttonRadius,
-              ),
-              child: Center(
-                child: IconStickerGlyphIcon(glyph: glyph, color: glyphColor),
-              ),
+      selected: selected,
+      onPressed: onPressed,
+      borderRadius: _buttonRadius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => SizedBox.square(
+        dimension: _buttonExtent,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: background,
+            border: context.shadows.outline,
+            borderRadius: _buttonRadius,
+          ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: _faceSurface,
+            borderRadius: _buttonRadius,
+            position: DecorationPosition.background,
+            child: Center(
+              child: IconStickerGlyphIcon(glyph: glyph, color: glyphColor),
             ),
           ),
         ),

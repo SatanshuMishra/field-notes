@@ -5,13 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 
+import '../../support/face_boxes.dart';
 import 'widget_harness.dart';
 
 BoxDecoration _buttonDecoration(WidgetTester tester) {
   final DecoratedBox box = tester.widget<DecoratedBox>(
     find.descendant(
       of: find.byType(StickerButton),
-      matching: find.byType(DecoratedBox),
+      matching: faceBoxes(),
     ),
   );
   return box.decoration as BoxDecoration;

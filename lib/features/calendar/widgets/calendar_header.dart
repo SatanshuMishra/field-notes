@@ -1,6 +1,8 @@
 import 'package:flutter/widgets.dart';
 
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 
 import '../model/calendar_month.dart';
@@ -217,7 +219,7 @@ class CalendarHeader extends StatelessWidget {
   }
 }
 
-class _TitleButton extends StatefulWidget {
+class _TitleButton extends StatelessWidget {
   const _TitleButton({
     super.key,
     required this.title,
@@ -230,63 +232,32 @@ class _TitleButton extends StatefulWidget {
   final FocusNode? focusNode;
 
   @override
-  State<_TitleButton> createState() => _TitleButtonState();
-}
-
-class _TitleButtonState extends State<_TitleButton> {
-  bool _hovered = false;
-
-  void _setHovered(bool hovered) {
-    if (_hovered != hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
+    return Pressable(
       label: 'Jump to a month',
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => _setHovered(true),
-        onExit: (_) => _setHovered(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: widget.onPressed,
-          child: FocusRing(
-            enabled: widget.onPressed != null,
-            onPressed: widget.onPressed,
-            focusNode: widget.focusNode,
-            borderRadius: _titleRadius,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: _hovered ? context.colors.ink08 : null,
-                borderRadius: _titleRadius,
-              ),
-              child: Padding(
-                padding: _titlePadding,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    Flexible(
-                      child: Text(
-                        widget.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.textStyles.displaySerif,
-                      ),
-                    ),
-                    const SizedBox(width: _titleCaretGap),
-                    const CalendarChevronGlyph(
-                      direction: ChevronDirection.down,
-                      size: _titleCaretSize,
-                    ),
-                  ],
-                ),
+      value: title,
+      onPressed: onPressed,
+      focusNode: focusNode,
+      borderRadius: _titleRadius,
+      child: Padding(
+        padding: _titlePadding,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Flexible(
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: context.textStyles.displaySerif,
               ),
             ),
-          ),
+            const SizedBox(width: _titleCaretGap),
+            const CalendarChevronGlyph(
+              direction: ChevronDirection.down,
+              size: _titleCaretSize,
+            ),
+          ],
         ),
       ),
     );
@@ -305,42 +276,40 @@ class _ThisWeekButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onPressed,
-          child: CalendarTapSlot(
-            alignment: Alignment.bottomCenter,
-            child: FocusRing(
-              onPressed: onPressed,
-              borderRadius: _thisWeekRadius,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Palette.coral,
-                  border: context.shadows.outline,
-                  borderRadius: _thisWeekRadius,
-                  boxShadow: context.shadows.control,
-                ),
-                child: Padding(
-                  padding: _thisWeekPadding,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      SizedBox.square(
-                        dimension: _thisWeekArrowSize,
-                        child: CustomPaint(
-                          painter: _ArrowPainter(pointsBack: pointsBack),
-                        ),
-                      ),
-                      const SizedBox(width: _thisWeekArrowGap),
-                      const Text('This week', style: _thisWeekStyle),
-                    ],
+    return CalendarTapSlot(
+      alignment: Alignment.bottomCenter,
+      child: Pressable(
+        label: 'This week',
+        onPressed: onPressed,
+        borderRadius: _thisWeekRadius,
+        surface: FocusRingSurface.light,
+        paintsHover: false,
+        builder: (BuildContext context, bool hovered) => DecoratedBox(
+          decoration: BoxDecoration(
+            color: Palette.coral,
+            border: context.shadows.outline,
+            borderRadius: _thisWeekRadius,
+            boxShadow: context.shadows.control,
+          ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: FocusRingSurface.dark,
+            borderRadius: _thisWeekRadius,
+            position: DecorationPosition.background,
+            child: Padding(
+              padding: _thisWeekPadding,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  SizedBox.square(
+                    dimension: _thisWeekArrowSize,
+                    child: CustomPaint(
+                      painter: _ArrowPainter(pointsBack: pointsBack),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: _thisWeekArrowGap),
+                  const Text('This week', style: _thisWeekStyle),
+                ],
               ),
             ),
           ),

@@ -3,6 +3,8 @@ import 'package:field_notes/data/links/link_opener.dart';
 import 'package:field_notes/design/flowers/flowers.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/chevron_glyph.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/settings_fields/settings_fields.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
@@ -938,7 +940,6 @@ class _PhoneButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
     final FieldNotesShadows shadows = context.shadows;
-    final bool enabled = onPressed != null;
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(_phoneButtonRadius),
     );
@@ -951,44 +952,39 @@ class _PhoneButton extends StatelessWidget {
         color: primary ? Palette.onAccent : colors.ink,
       ),
     );
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
+      includeFocusSemantics: false,
       label: label,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          enabled: enabled,
-          onPressed: onPressed,
-          includeFocusSemantics: false,
+      onPressed: onPressed,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: primary ? Palette.coral : colors.cardBright,
+          border: Border.all(color: colors.line, width: Shapes.outlineWidth),
           borderRadius: radius,
-          child: Container(
-            height: height,
-            alignment: Alignment.center,
+          boxShadow: primary ? shadows.emphasis : null,
+        ),
+        child: HoverFill(
+          hovered: hovered,
+          surface: primary ? FocusRingSurface.dark : FocusRingSurface.light,
+          borderRadius: radius,
+          position: DecorationPosition.background,
+          child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: _phoneButtonGap),
-            decoration: BoxDecoration(
-              color: primary ? Palette.coral : colors.cardBright,
-              border: Border.all(
-                color: colors.line,
-                width: Shapes.outlineWidth,
-              ),
-              borderRadius: radius,
-              boxShadow: primary ? shadows.emphasis : null,
+            child: Center(
+              child: pulsing
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const _PulsingDot(size: _phonePulseDot),
+                        const SizedBox(width: _pulseGap),
+                        Flexible(child: text),
+                      ],
+                    )
+                  : text,
             ),
-            child: pulsing
-                ? Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const _PulsingDot(size: _phonePulseDot),
-                      const SizedBox(width: _pulseGap),
-                      Flexible(child: text),
-                    ],
-                  )
-                : text,
           ),
         ),
       ),
@@ -1011,50 +1007,39 @@ class _PhoneNavRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
-      button: true,
-      enabled: true,
+    return Pressable(
+      includeFocusSemantics: false,
       label: label,
       hint: description,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          includeFocusSemantics: false,
-          borderRadius: Shapes.buttonBorderRadius,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: aboutPhoneReleaseNotesHeight,
+      onPressed: onPressed,
+      borderRadius: Shapes.buttonBorderRadius,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: aboutPhoneReleaseNotesHeight,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(label, style: context.textStyles.labelSans),
+                  if (description.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: _phoneNavDescriptionGap),
+                    Text(
+                      description,
+                      style: context.textStyles.captionSans.copyWith(
+                        color: colors.muted,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(label, style: context.textStyles.labelSans),
-                      if (description.isNotEmpty) ...<Widget>[
-                        const SizedBox(height: _phoneNavDescriptionGap),
-                        Text(
-                          description,
-                          style: context.textStyles.captionSans.copyWith(
-                            color: colors.muted,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(width: _phoneNavGap),
-                ChevronGlyph(pointsBack: false, color: colors.muted),
-              ],
-            ),
-          ),
+            const SizedBox(width: _phoneNavGap),
+            ChevronGlyph(pointsBack: false, color: colors.muted),
+          ],
         ),
       ),
     );
@@ -1073,31 +1058,24 @@ class _PhoneLinkButton extends StatelessWidget {
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(_phoneButtonRadius),
     );
-    return Semantics(
-      button: true,
-      enabled: true,
+    return Pressable(
+      includeFocusSemantics: false,
       label: label,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          includeFocusSemantics: false,
+      onPressed: onPressed,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Container(
+        height: aboutPhoneLinkButtonHeight,
+        decoration: BoxDecoration(
+          color: colors.cardBright,
+          border: Border.all(color: colors.line, width: Shapes.outlineWidth),
           borderRadius: radius,
-          child: Container(
-            height: aboutPhoneLinkButtonHeight,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: colors.cardBright,
-              border: Border.all(
-                color: colors.line,
-                width: Shapes.outlineWidth,
-              ),
-              borderRadius: radius,
-            ),
+        ),
+        child: HoverFill(
+          hovered: hovered,
+          borderRadius: radius,
+          position: DecorationPosition.background,
+          child: Center(
             child: Text(
               label,
               maxLines: 1,

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
-import 'package:flutter/gestures.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
@@ -16,7 +16,6 @@ const double _leadingGap = 8;
 const double _markerHang = 16;
 const double _markerDrop = 7;
 const double _belowGap = 8;
-const double _hoverOpacity = 0.06;
 
 class SettingsFieldRow extends StatelessWidget {
   const SettingsFieldRow({
@@ -132,14 +131,19 @@ class SettingsFieldRow extends StatelessWidget {
     if (onPressed == null) {
       return Semantics(container: true, child: row);
     }
-    return _PressableRow(
+    return Pressable(
+      includeFocusSemantics: false,
       label: label,
       value: semanticsValue,
-      expanded: expanded,
       hint: description,
       onPressed: onPressed,
-      hoverFill: sidebar,
-      child: row,
+      placement: FocusRingPlacement.edge,
+      borderRadius: Shapes.buttonBorderRadius,
+      excludeSemantics: false,
+      child: Semantics(
+        expanded: expanded,
+        child: ExcludeSemantics(child: row),
+      ),
     );
   }
 
@@ -172,78 +176,5 @@ class SettingsFieldRow extends StatelessWidget {
     final double height = painter.preferredLineHeight;
     painter.dispose();
     return height;
-  }
-}
-
-class _PressableRow extends StatefulWidget {
-  const _PressableRow({
-    required this.label,
-    required this.value,
-    required this.expanded,
-    required this.hint,
-    required this.onPressed,
-    required this.hoverFill,
-    required this.child,
-  });
-
-  final String label;
-  final String? value;
-  final bool? expanded;
-  final String? hint;
-  final VoidCallback onPressed;
-  final bool hoverFill;
-  final Widget child;
-
-  @override
-  State<_PressableRow> createState() => _PressableRowState();
-}
-
-class _PressableRowState extends State<_PressableRow> {
-  bool _hovered = false;
-
-  void _hover(bool hovered) {
-    if (hovered != _hovered) {
-      setState(() => _hovered = hovered);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bool filled = widget.hoverFill && _hovered;
-    return Semantics(
-      container: true,
-      excludeSemantics: true,
-      button: true,
-      label: widget.label,
-      value: widget.value,
-      expanded: widget.expanded,
-      hint: widget.hint,
-      onTap: widget.onPressed,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (PointerEnterEvent _) => _hover(true),
-        onExit: (PointerExitEvent _) => _hover(false),
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: widget.onPressed,
-          child: FocusRing(
-            onPressed: widget.onPressed,
-            includeFocusSemantics: false,
-            placement: FocusRingPlacement.edge,
-            borderRadius: Shapes.buttonBorderRadius,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: filled
-                    ? context.colors.ink.withValues(alpha: _hoverOpacity)
-                    : null,
-                borderRadius: Shapes.buttonBorderRadius,
-              ),
-              child: widget.child,
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

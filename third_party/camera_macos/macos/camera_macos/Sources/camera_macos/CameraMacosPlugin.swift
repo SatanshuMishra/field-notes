@@ -1083,6 +1083,8 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
     }
     
     private var latestVideoFrameWrittenTimeStamp: CMTime!
+    private var latestFrameCapturedAt: CMTime = .invalid
+    private let longestFirstFrameAgeMs: Double = 1000
     private var latestAudioFrameWrittenTimeStamp: CMTime!
     
     var canWrite: Bool {
@@ -1100,6 +1102,7 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         i += 1
         
         if !isBufferAudio {
+            latestFrameCapturedAt = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
             latestBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
             registry.textureFrameAvailable(textureId)
         }
@@ -1149,6 +1152,59 @@ public class CameraMacosPlugin: NSObject, FlutterPlugin, FlutterTexture, AVCaptu
         }
     }
     
+    public func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
+        reportMovieStart(firstFrameOnHost: estimatedFirstFrameOnHost(of: output))
+    }
+
+    @available(macOS 15.2, *)
+    public func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, startPTS: CMTime, from connections: [AVCaptureConnection]) {
+        reportMovieStart(firstFrameOnHost: onHostClock(startPTS))
+    }
+
+    private func reportMovieStart(firstFrameOnHost: CMTime) {
+        DispatchQueue.main.async {
+            self.outputChannel?.invokeMethod(
+                "onVideoRecordingStarted",
+                arguments: self.movieStartArguments(firstFrameOnHost: firstFrameOnHost)
+            )
+        }
+    }
+
+    private func estimatedFirstFrameOnHost(of output: AVCaptureFileOutput) -> CMTime {
+        guard latestFrameCapturedAt.isNumeric else {
+            return .invalid
+        }
+        let latestOnHost = onHostClock(latestFrameCapturedAt)
+        let recorded = output.recordedDuration
+        return recorded.isNumeric ? latestOnHost - recorded : latestOnHost
+    }
+
+    private func onHostClock(_ captureTime: CMTime) -> CMTime {
+        CMSyncConvertTime(captureTime, from: captureClock(), to: CMClockGetHostTimeClock())
+    }
+
+    private func movieStartArguments(firstFrameOnHost: CMTime) -> [String: Any] {
+        guard firstFrameOnHost.isNumeric else {
+            return [:]
+        }
+        let ageMs = CMTimeGetSeconds(CMClockGetTime(CMClockGetHostTimeClock()) - firstFrameOnHost) * 1000
+        guard ageMs.isFinite else {
+            return [:]
+        }
+        let capturedAt = CMTimeConvertScale(firstFrameOnHost, timescale: 1_000_000_000, method: .roundHalfAwayFromZero)
+        return [
+            "firstFrameAgeMs": min(max(ageMs, 0), longestFirstFrameAgeMs),
+            "firstFrameCapturedAtNs": capturedAt.value,
+        ]
+    }
+
+    private func captureClock() -> CMClock {
+        if #available(macOS 12.3, *), let clock = captureSession?.synchronizationClock {
+            return clock
+        }
+        return CMClockGetHostTimeClock()
+    }
+
     // MOVIE FILE OUTPUT MODE
     public func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
         self.isRecording = false

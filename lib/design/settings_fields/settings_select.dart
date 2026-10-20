@@ -1,5 +1,8 @@
 import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
+import 'package:field_notes/design/widgets/anchored_dropdown.dart';
 import 'package:flutter/material.dart';
 
 import '../tokens/tokens.dart';
@@ -52,6 +55,7 @@ class SettingsSelect<T> extends StatefulWidget {
     this.foreground,
     this.border,
     this.focusSurface = FocusRingSurface.light,
+    this.semanticLabel,
   });
 
   final List<SettingsSelectOption<T>> options;
@@ -62,27 +66,17 @@ class SettingsSelect<T> extends StatefulWidget {
   final Color? foreground;
   final Border? border;
   final FocusRingSurface focusSurface;
+  final String? semanticLabel;
 
   @override
   State<SettingsSelect<T>> createState() => _SettingsSelectState<T>();
 }
 
 class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
-  final GlobalKey<PopupMenuButtonState<T>> _menuKey =
-      GlobalKey<PopupMenuButtonState<T>>();
-
   bool get _canOpen => widget.enabled && widget.onChanged != null;
 
   bool get _usesSheet =>
       resolveShellLayout(Theme.of(context).platform) == ShellLayout.bottomBar;
-
-  void _open() {
-    if (_usesSheet) {
-      _openSheet();
-      return;
-    }
-    _menuKey.currentState?.showButtonMenu();
-  }
 
   Future<void> _openSheet() async {
     final SettingsSelectOption<T>? picked =
@@ -101,6 +95,12 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
     widget.onChanged?.call(picked.value);
   }
 
+  void _pick(T value) {
+    if (_canOpen) {
+      widget.onChanged?.call(value);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final SettingsSelectOption<T> current = widget.options.firstWhere(
@@ -113,92 +113,91 @@ class _SettingsSelectState<T> extends State<SettingsSelect<T>> {
     final double minTapTarget = sheet
         ? kMinInteractiveDimension
         : _sidebarMinTapTarget;
-    final Widget field = DecoratedBox(
+    final String? semanticLabel = widget.semanticLabel;
+    Widget trigger(VoidCallback open) => Pressable(
+      includeFocusSemantics: false,
+      label: semanticLabel ?? current.label,
+      value: semanticLabel == null ? null : current.label,
+      onPressed: _canOpen ? open : null,
+      surface: widget.focusSurface,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
+        opacity: widget.enabled ? 1.0 : 0.5,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minWidth: minTapTarget,
+            minHeight: minTapTarget,
+          ),
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: _field(context, current, sheet, radius, hovered),
+          ),
+        ),
+      ),
+    );
+    if (sheet) {
+      return trigger(_openSheet);
+    }
+    return AnchoredDropdown<T>(
+      choices: <AnchoredDropdownChoice<T>>[
+        for (final SettingsSelectOption<T> option in widget.options)
+          AnchoredDropdownChoice<T>(value: option.value, label: option.label),
+      ],
+      current: widget.value,
+      onSelected: _pick,
+      widensToFitChoices: true,
+      builder: (BuildContext context, bool open, VoidCallback toggle) =>
+          trigger(toggle),
+    );
+  }
+
+  Widget _field(
+    BuildContext context,
+    SettingsSelectOption<T> current,
+    bool sheet,
+    BorderRadius radius,
+    bool hovered,
+  ) {
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: widget.surface ?? context.colors.cardBright,
         border: widget.border ?? context.shadows.outline,
         borderRadius: radius,
       ),
-      child: Padding(
-        padding: sheet
-            ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
-            : _sidebarFieldPadding,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Flexible(
-              child: Text(
-                current.label,
-                overflow: TextOverflow.ellipsis,
-                style: sheet
-                    ? context.textStyles.bodySans.copyWith(
-                        color: widget.foreground,
-                      )
-                    : _sidebarValueStyle.copyWith(
-                        color: widget.foreground ?? context.colors.ink,
-                      ),
-              ),
-            ),
-            SizedBox(width: sheet ? 8 : _sidebarChevronGap),
-            Icon(
-              Icons.expand_more,
-              size: sheet ? 18 : _sidebarChevronSize,
-              color: widget.foreground ?? context.colors.ink,
-            ),
-          ],
-        ),
-      ),
-    );
-    return Opacity(
-      opacity: widget.enabled ? 1.0 : 0.5,
-      child: Semantics(
-        container: true,
-        button: true,
-        enabled: _canOpen,
-        onTap: sheet && _canOpen ? _open : null,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: _canOpen ? _open : null,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minWidth: minTapTarget,
-              minHeight: minTapTarget,
-            ),
-            child: Center(
-              widthFactor: 1,
-              heightFactor: 1,
-              child: FocusRing(
-                enabled: _canOpen,
-                onPressed: _open,
-                surface: widget.focusSurface,
-                borderRadius: radius,
-                includeFocusSemantics: false,
-                child: sheet
-                    ? field
-                    : ExcludeFocus(
-                        child: PopupMenuButton<T>(
-                          key: _menuKey,
-                          enabled: _canOpen,
-                          initialValue: widget.value,
-                          onSelected: widget.onChanged,
-                          itemBuilder: (BuildContext context) =>
-                              <PopupMenuEntry<T>>[
-                                for (final SettingsSelectOption<T> option
-                                    in widget.options)
-                                  PopupMenuItem<T>(
-                                    value: option.value,
-                                    child: Text(
-                                      option.label,
-                                      style: context.textStyles.bodySans,
-                                    ),
-                                  ),
-                              ],
-                          child: field,
+      child: HoverFill(
+        hovered: hovered,
+        surface: widget.focusSurface,
+        borderRadius: radius,
+        position: DecorationPosition.background,
+        child: Padding(
+          padding: sheet
+              ? const EdgeInsets.symmetric(horizontal: 12, vertical: 10)
+              : _sidebarFieldPadding,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Flexible(
+                child: Text(
+                  current.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: sheet
+                      ? context.textStyles.bodySans.copyWith(
+                          color: widget.foreground,
+                        )
+                      : _sidebarValueStyle.copyWith(
+                          color: widget.foreground ?? context.colors.ink,
                         ),
-                      ),
+                ),
               ),
-            ),
+              SizedBox(width: sheet ? 8 : _sidebarChevronGap),
+              Icon(
+                Icons.expand_more,
+                size: sheet ? 18 : _sidebarChevronSize,
+                color: widget.foreground ?? context.colors.ink,
+              ),
+            ],
           ),
         ),
       ),
@@ -256,22 +255,18 @@ class _SettingsSelectSheetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final FieldNotesColors colors = context.colors;
-    return Semantics(
-      button: true,
-      selected: selected,
-      inMutuallyExclusiveGroup: true,
+    return Pressable(
+      includeFocusSemantics: false,
       label: label,
-      onTap: onTap,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onTap,
-        child: FocusRing(
-          autofocus: autofocus,
-          onPressed: onTap,
-          includeFocusSemantics: false,
-          placement: FocusRingPlacement.edge,
-          borderRadius: _sheetRowRadius,
+      selected: selected,
+      autofocus: autofocus,
+      onPressed: onTap,
+      placement: FocusRingPlacement.edge,
+      borderRadius: _sheetRowRadius,
+      excludeSemantics: false,
+      child: Semantics(
+        inMutuallyExclusiveGroup: true,
+        child: ExcludeSemantics(
           child: SizedBox(
             height: settingsSelectSheetRowHeight,
             child: Padding(
@@ -279,13 +274,11 @@ class _SettingsSelectSheetRow extends StatelessWidget {
               child: Row(
                 children: <Widget>[
                   Expanded(
-                    child: ExcludeSemantics(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _sheetRowStyle.copyWith(color: colors.ink),
-                      ),
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _sheetRowStyle.copyWith(color: colors.ink),
                     ),
                   ),
                   if (selected) ...<Widget>[

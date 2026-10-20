@@ -9,6 +9,7 @@ import 'package:field_notes/domain/models/models.dart';
 import 'package:field_notes/domain/services/capture_service.dart';
 import 'package:field_notes/domain/settings/app_settings.dart';
 import 'package:field_notes/features/capture/audio/audio_inputs.dart';
+import 'package:field_notes/features/capture/audio/microphone_hearing.dart';
 import 'package:field_notes/features/capture/core/capture_providers.dart';
 import 'package:field_notes/features/capture/core/capture_route.dart';
 import 'package:field_notes/features/capture/core/recording_wake_hold.dart';
@@ -700,6 +701,10 @@ class _VideoComposerConnectorState
       await _cancelVoice(_voice);
       return;
     }
+    await _cancelVideo();
+  }
+
+  Future<void> _cancelVideo() async {
     try {
       await _recorder.cancel();
     } catch (error, stackTrace) {
@@ -819,21 +824,29 @@ class _VideoComposerConnectorState
     }
   }
 
+  Future<void> _endUnkeptTake() async {
+    final bool takeRunning =
+        _phase == VideoRecorderPhase.recording ||
+        _phase == VideoRecorderPhase.paused ||
+        _phase == VideoRecorderPhase.arming;
+    if (_closing || !takeRunning) {
+      return;
+    }
+    final VoiceRecorder? voice = _voiceRecorder;
+    if (_cameraOn) {
+      await _cancelVideo();
+    } else if (voice != null) {
+      await _cancelVoice(voice);
+    }
+  }
+
   @override
   void dispose() {
     _cancelBreath();
     _cancelTimers();
     _stopTicker();
-    final VoiceRecorder? voice = _voiceRecorder;
-    if (voice != null &&
-        !_closing &&
-        !_cameraOn &&
-        (_phase == VideoRecorderPhase.recording ||
-            _phase == VideoRecorderPhase.paused)) {
-      unawaited(_cancelVoice(voice));
-    }
     _wakeHold.dispose();
-    unawaited(_release());
+    unawaited(_endUnkeptTake().whenComplete(_release));
     super.dispose();
   }
 
@@ -842,36 +855,47 @@ class _VideoComposerConnectorState
     return PopScope<Object?>(
       canPop: false,
       onPopInvokedWithResult: _onPopInvoked,
-      child: VideoRecorderSheet(
-        phase: _phase,
-        preview: _preview,
-        devices: _devices,
-        selectedDeviceId: _deviceId,
-        onDeviceChanged: _selectDevice,
-        cameraOn: _cameraOn,
-        onCameraChanged: _setCamera,
-        controls: switch (_recorder) {
-          final CameraControls controls => controls,
-          _ => null,
-        },
-        elapsed: _elapsed,
-        nudgeMessage: _nudgeMessage,
-        errorMessage: _errorMessage,
-        deniedMessage: _deniedMessage ?? cameraPermissionMessage,
-        onStart: _start,
-        onStop: _stop,
-        onLeave: _leave,
-        onPause: _pause,
-        onResume: _resume,
-        onKeepGoing: _keepGoing,
-        onLetGo: _letGo,
-        asking: _asking,
-        letGoKey: videoDiscardConfirmKey,
-        supportsPause: _takeSupportsPause,
-        savingHint: videoSavingHint,
-        onVoiceSettings: _openVoiceSettings,
-        levels: _cameraOn ? _recorder.level : _voice.level,
+      child: StreamBuilder<MicrophoneHearing>(
+        stream: _cameraOn ? _recorder.hearing : _voice.hearing,
+        builder: _sheet,
       ),
+    );
+  }
+
+  Widget _sheet(
+    BuildContext context,
+    AsyncSnapshot<MicrophoneHearing> snapshot,
+  ) {
+    return VideoRecorderSheet(
+      phase: _phase,
+      preview: _preview,
+      devices: _devices,
+      selectedDeviceId: _deviceId,
+      onDeviceChanged: _selectDevice,
+      cameraOn: _cameraOn,
+      onCameraChanged: _setCamera,
+      controls: switch (_recorder) {
+        final CameraControls controls => controls,
+        _ => null,
+      },
+      elapsed: _elapsed,
+      nudgeMessage: _nudgeMessage,
+      errorMessage: _errorMessage,
+      deniedMessage: _deniedMessage ?? cameraPermissionMessage,
+      onStart: _start,
+      onStop: _stop,
+      onLeave: _leave,
+      onPause: _pause,
+      onResume: _resume,
+      onKeepGoing: _keepGoing,
+      onLetGo: _letGo,
+      asking: _asking,
+      letGoKey: videoDiscardConfirmKey,
+      supportsPause: _takeSupportsPause,
+      savingHint: videoSavingHint,
+      onVoiceSettings: _openVoiceSettings,
+      levels: _cameraOn ? _recorder.level : _voice.level,
+      hearing: _cameraOn ? _recorder.hearingNow : _voice.hearingNow,
     );
   }
 }

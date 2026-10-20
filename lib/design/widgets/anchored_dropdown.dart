@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
+import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/glass/glass_surface.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -57,6 +59,7 @@ class AnchoredDropdown<T> extends StatefulWidget {
     this.menuKey,
     this.tone = GlassTone.paper,
     this.ink,
+    this.widensToFitChoices = false,
   });
 
   final List<AnchoredDropdownChoice<T>> choices;
@@ -68,6 +71,7 @@ class AnchoredDropdown<T> extends StatefulWidget {
   final Key? menuKey;
   final GlassTone tone;
   final Color? ink;
+  final bool widensToFitChoices;
 
   @override
   State<AnchoredDropdown<T>> createState() => _AnchoredDropdownState<T>();
@@ -220,34 +224,54 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
               _screenMargin -
               MediaQuery.paddingOf(context).bottom;
     final bool rtl = Directionality.of(context) == TextDirection.rtl;
+    final double screenWidth = MediaQuery.sizeOf(context).width;
+    final double roomAfterStartEdge = anchor == null
+        ? screenWidth
+        : screenWidth - anchor.left - _screenMargin;
+    final double roomBeforeEndEdge = anchor == null
+        ? screenWidth
+        : anchor.right - _screenMargin;
+    final bool growsRightward = widget.widensToFitChoices
+        ? roomAfterStartEdge >= roomBeforeEndEdge
+        : !rtl;
+    final double widestMenu = math.max(
+      0,
+      growsRightward ? roomAfterStartEdge : roomBeforeEndEdge,
+    );
     final Color ink = widget.ink ?? context.colors.ink;
+    final FocusRingSurface surface = widget.tone == GlassTone.media
+        ? FocusRingSurface.dark
+        : FocusRingSurface.light;
     final Widget list = Material(
       type: MaterialType.transparency,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            for (int index = 0; index < choices.length; index++)
-              _DropdownChoiceTile(
-                key: choices[index].key,
-                label: choices[index].label,
-                description: choices[index].description,
-                chosen: choices[index].value == widget.current,
-                highlighted: index == _highlighted,
-                ink: ink,
-                onHover: () {
-                  if (_highlighted != index) {
-                    setState(() => _highlighted = index);
-                  }
-                },
-                onTap: () => _pick(choices[index]),
-              ),
-          ],
+      child: ExcludeFocus(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (int index = 0; index < choices.length; index++)
+                _DropdownChoiceTile(
+                  key: choices[index].key,
+                  label: choices[index].label,
+                  description: choices[index].description,
+                  chosen: choices[index].value == widget.current,
+                  highlighted: index == _highlighted,
+                  ink: ink,
+                  surface: surface,
+                  onHover: () {
+                    if (_highlighted != index) {
+                      setState(() => _highlighted = index);
+                    }
+                  },
+                  onTap: () => _pick(choices[index]),
+                ),
+            ],
+          ),
         ),
       ),
     );
-    final Widget surface = TapRegion(
+    final Widget menu = TapRegion(
       groupId: _ownGroup,
       onTapOutside: (PointerDownEvent event) => _close(),
       child: Focus(
@@ -255,16 +279,24 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
         onKeyEvent: _onKey,
         child: SizedBox(
           key: widget.menuKey,
-          width: anchor?.width,
+          width: widget.widensToFitChoices ? null : anchor?.width,
           child: ConstrainedBox(
             constraints: BoxConstraints(
+              minWidth: widget.widensToFitChoices
+                  ? math.min(anchor?.width ?? 0, widestMenu)
+                  : 0,
+              maxWidth: widget.widensToFitChoices
+                  ? widestMenu
+                  : double.infinity,
               maxHeight: math.max(_minimumMenuHeight, below),
             ),
-            child: GlassSurface(
-              tone: widget.tone,
-              borderRadius: BorderRadius.circular(_menuRadius),
-              padding: _menuPadding,
-              child: list,
+            child: _fittedToChoices(
+              GlassSurface(
+                tone: widget.tone,
+                borderRadius: BorderRadius.circular(_menuRadius),
+                padding: _menuPadding,
+                child: list,
+              ),
             ),
           ),
         ),
@@ -275,15 +307,20 @@ class _AnchoredDropdownState<T> extends State<AnchoredDropdown<T>> {
       alignment: Alignment.topLeft,
       child: CompositedTransformFollower(
         link: _link,
-        targetAnchor: rtl ? Alignment.bottomRight : Alignment.bottomLeft,
-        followerAnchor: rtl ? Alignment.topRight : Alignment.topLeft,
+        targetAnchor: growsRightward
+            ? Alignment.bottomLeft
+            : Alignment.bottomRight,
+        followerAnchor: growsRightward ? Alignment.topLeft : Alignment.topRight,
         offset: const Offset(0, anchoredDropdownGap),
         child: outerGroup == null
-            ? surface
-            : TapRegion(groupId: outerGroup, child: surface),
+            ? menu
+            : TapRegion(groupId: outerGroup, child: menu),
       ),
     );
   }
+
+  Widget _fittedToChoices(Widget menu) =>
+      widget.widensToFitChoices ? IntrinsicWidth(child: menu) : menu;
 
   @override
   Widget build(BuildContext context) {
@@ -309,6 +346,7 @@ class _DropdownChoiceTile extends StatelessWidget {
     required this.chosen,
     required this.highlighted,
     required this.ink,
+    required this.surface,
     required this.onHover,
     required this.onTap,
   });
@@ -318,6 +356,7 @@ class _DropdownChoiceTile extends StatelessWidget {
   final bool chosen;
   final bool highlighted;
   final Color ink;
+  final FocusRingSurface surface;
   final VoidCallback onHover;
   final VoidCallback onTap;
 
@@ -327,73 +366,62 @@ class _DropdownChoiceTile extends StatelessWidget {
     final BorderRadius radius = BorderRadius.circular(_choiceRadius);
     return Padding(
       padding: _choiceInset,
-      child: MergeSemantics(
-        child: Semantics(
-          button: true,
-          selected: chosen,
+      child: MouseRegion(
+        onEnter: (PointerEnterEvent _) => onHover(),
+        child: Pressable(
           inMutuallyExclusiveGroup: true,
-          child: DecoratedBox(
+          label: description == null ? label : '$label\n$description',
+          selected: chosen,
+          onPressed: onTap,
+          borderRadius: radius,
+          surface: surface,
+          paintsHover: false,
+          builder: (BuildContext context, bool _) => DecoratedBox(
             decoration: BoxDecoration(
               color: highlighted
                   ? ink.withValues(alpha: _highlightAlpha)
                   : Colors.transparent,
               borderRadius: radius,
             ),
-            child: InkWell(
-              canRequestFocus: false,
-              borderRadius: radius,
-              onHover: (bool hovering) {
-                if (hovering) {
-                  onHover();
-                }
-              },
-              onTap: onTap,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: _choiceMinHeight),
-                child: Padding(
-                  padding: _choicePadding,
-                  child: Row(
-                    children: <Widget>[
-                      SizedBox.square(
-                        dimension: _checkSize,
-                        child: chosen
-                            ? ExcludeSemantics(
-                                child: Icon(
-                                  Icons.check,
-                                  size: _checkSize,
-                                  color: ink,
-                                ),
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: _checkGap),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: _choiceMinHeight),
+              child: Padding(
+                padding: _choicePadding,
+                child: Row(
+                  children: <Widget>[
+                    SizedBox.square(
+                      dimension: _checkSize,
+                      child: chosen
+                          ? Icon(Icons.check, size: _checkSize, color: ink)
+                          : null,
+                    ),
+                    const SizedBox(width: _checkGap),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.textStyles.bodySans.copyWith(
+                              color: ink,
+                            ),
+                          ),
+                          if (description != null) ...<Widget>[
+                            const SizedBox(height: _descriptionGap),
                             Text(
-                              label,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.textStyles.bodySans.copyWith(
-                                color: ink,
+                              description,
+                              style: context.textStyles.captionSans.copyWith(
+                                color: ink.withValues(alpha: _mutedAlpha),
                               ),
                             ),
-                            if (description != null) ...<Widget>[
-                              const SizedBox(height: _descriptionGap),
-                              Text(
-                                description,
-                                style: context.textStyles.captionSans.copyWith(
-                                  color: ink.withValues(alpha: _mutedAlpha),
-                                ),
-                              ),
-                            ],
                           ],
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

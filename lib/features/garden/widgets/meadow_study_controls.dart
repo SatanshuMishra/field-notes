@@ -7,6 +7,8 @@ import 'package:flutter/services.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/format/clock_format.dart';
 import 'package:field_notes/design/glass/glass.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/features/garden/model/meadow_year_replay.dart';
 import 'package:field_notes/features/garden/sky/sky_time.dart';
@@ -403,59 +405,53 @@ class _PhoneReplayButton extends StatelessWidget {
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(meadowPhoneDockRadius),
     );
-    return Semantics(
+    return Pressable(
       key: meadowReplayKey,
-      button: true,
       label: label,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          onPressed: onPressed,
-          surface: FocusRingSurface.dark,
+      onPressed: onPressed,
+      surface: FocusRingSurface.dark,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: Palette.coral,
           borderRadius: radius,
-          child: ExcludeSemantics(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Palette.coral,
-                borderRadius: radius,
-                border: Border.all(
-                  color: context.colors.line,
-                  width: Shapes.outlineWidth,
-                ),
-              ),
-              child: SizedBox(
-                height: meadowPhoneControlHeight,
-                child: LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints constraints) {
-                    final TextStyle style = meadowSans(13)
-                        .copyWith(color: Palette.onAccent);
-                    final double room = constraints.maxWidth - _replayPadding;
-                    final String shown =
-                        _measureText(context, label, style) <= room
-                        ? label
-                        : _shortReplay(label);
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: _replayPadding / 2,
+          border: Border.all(
+            color: context.colors.line,
+            width: Shapes.outlineWidth,
+          ),
+        ),
+        child: HoverFill(
+          surface: FocusRingSurface.dark,
+          hovered: hovered,
+          borderRadius: radius,
+          child: SizedBox(
+            height: meadowPhoneControlHeight,
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                final TextStyle style = meadowSans(13)
+                    .copyWith(color: Palette.onAccent);
+                final double room = constraints.maxWidth - _replayPadding;
+                final String shown = _measureText(context, label, style) <= room
+                    ? label
+                    : _shortReplay(label);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: _replayPadding / 2,
+                  ),
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        shown,
+                        maxLines: 1,
+                        softWrap: false,
+                        style: style,
                       ),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            shown,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: style,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),
@@ -486,7 +482,18 @@ const Map<ShortcutActivator, Intent> _sliderShortcuts =
       SingleActivator(LogicalKeyboardKey.end): _EdgeIntent(true),
     };
 
-class _MeadowSlider extends StatelessWidget {
+final Set<LogicalKeyboardKey> _activationKeys = <LogicalKeyboardKey>{
+  LogicalKeyboardKey.enter,
+  LogicalKeyboardKey.numpadEnter,
+  LogicalKeyboardKey.space,
+};
+
+KeyEventResult _leaveActivationKeys(FocusNode node, KeyEvent event) =>
+    _activationKeys.contains(event.logicalKey)
+    ? KeyEventResult.skipRemainingHandlers
+    : KeyEventResult.ignored;
+
+class _MeadowSlider extends StatefulWidget {
   const _MeadowSlider({
     super.key,
     required this.label,
@@ -508,19 +515,39 @@ class _MeadowSlider extends StatelessWidget {
   final String Function(int value) describe;
   final ValueChanged<int> onChanged;
 
-  int get _current => value.clamp(min, max);
+  @override
+  State<_MeadowSlider> createState() => _MeadowSliderState();
+}
 
-  double get _fraction => max <= min ? 0 : (_current - min) / (max - min);
+class _MeadowSliderState extends State<_MeadowSlider> {
+  late final FocusNode _focus = FocusNode(onKeyEvent: _leaveActivationKeys)
+    ..addListener(_focusChanged);
 
-  double get _handle => compact ? _phoneHandleRadius : _deskHandleRadius;
+  @override
+  void dispose() {
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _focusChanged() => setState(() {});
+
+  int get _current => widget.value.clamp(widget.min, widget.max);
+
+  double get _fraction => widget.max <= widget.min
+      ? 0
+      : (_current - widget.min) / (widget.max - widget.min);
+
+  double get _handle => widget.compact ? _phoneHandleRadius : _deskHandleRadius;
 
   void _set(int next) {
-    final int snapped = (min + ((next - min) / step).round() * step).clamp(
-      min,
-      max,
-    );
-    if (snapped != value) {
-      onChanged(snapped);
+    final int min = widget.min;
+    final int snapped =
+        (min + ((next - min) / widget.step).round() * widget.step).clamp(
+          min,
+          widget.max,
+        );
+    if (snapped != widget.value) {
+      widget.onChanged(snapped);
     }
   }
 
@@ -530,14 +557,16 @@ class _MeadowSlider extends StatelessWidget {
       return;
     }
     final double fraction = ((dx - _handle) / span).clamp(0.0, 1.0);
-    _set(min + ((max - min) * fraction).round());
+    _set(widget.min + ((widget.max - widget.min) * fraction).round());
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool compact = widget.compact;
     final int current = _current;
-    final int up = math.min(max, current + step);
-    final int down = math.max(min, current - step);
+    final int step = widget.step;
+    final int up = math.min(widget.max, current + step);
+    final int down = math.max(widget.min, current - step);
     return Shortcuts(
       shortcuts: _sliderShortcuts,
       child: Actions(
@@ -550,7 +579,7 @@ class _MeadowSlider extends StatelessWidget {
           ),
           _EdgeIntent: CallbackAction<_EdgeIntent>(
             onInvoke: (_EdgeIntent intent) {
-              _set(intent.toEnd ? max : min);
+              _set(intent.toEnd ? widget.max : widget.min);
               return null;
             },
           ),
@@ -558,10 +587,12 @@ class _MeadowSlider extends StatelessWidget {
         child: Semantics(
           container: true,
           slider: true,
-          label: label,
-          value: describe(current),
-          increasedValue: describe(up),
-          decreasedValue: describe(down),
+          focusable: true,
+          focused: _focus.hasFocus,
+          label: widget.label,
+          value: widget.describe(current),
+          increasedValue: widget.describe(up),
+          decreasedValue: widget.describe(down),
           onIncrease: () => _set(up),
           onDecrease: () => _set(down),
           child: LayoutBuilder(
@@ -569,27 +600,29 @@ class _MeadowSlider extends StatelessWidget {
               final double width = constraints.maxWidth;
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTapDown: (TapDownDetails details) =>
-                    _seek(details.localPosition.dx, width),
                 onHorizontalDragStart: (DragStartDetails details) =>
                     _seek(details.localPosition.dx, width),
                 onHorizontalDragUpdate: (DragUpdateDetails details) =>
                     _seek(details.localPosition.dx, width),
-                child: FocusRing(
-                  onPressed: null,
-                  surface: FocusRingSurface.dark,
-                  borderRadius: _sliderFocusRadius,
-                  child: SizedBox(
-                    height: compact ? _phoneSliderReach : _deskTrack,
-                    width: width,
-                    child: Center(
-                      child: SizedBox(
-                        height: compact ? _phoneTrack : _deskTrack,
-                        width: width,
-                        child: CustomPaint(
-                          painter: _SliderPainter(
-                            fraction: _fraction,
-                            handleRadius: _handle,
+                child: ExcludeSemantics(
+                  child: Pressable(
+                    label: widget.label,
+                    focusNode: _focus,
+                    onPressedAt: (Offset at) => _seek(at.dx, width),
+                    surface: FocusRingSurface.dark,
+                    borderRadius: _sliderFocusRadius,
+                    child: SizedBox(
+                      height: compact ? _phoneSliderReach : _deskTrack,
+                      width: width,
+                      child: Center(
+                        child: SizedBox(
+                          height: compact ? _phoneTrack : _deskTrack,
+                          width: width,
+                          child: CustomPaint(
+                            painter: _SliderPainter(
+                              fraction: _fraction,
+                              handleRadius: _handle,
+                            ),
                           ),
                         ),
                       ),

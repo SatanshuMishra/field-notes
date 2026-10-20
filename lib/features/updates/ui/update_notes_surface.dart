@@ -6,6 +6,9 @@ import 'package:field_notes/data/updates/changelog_parser.dart';
 import 'package:field_notes/design/feedback/dialog_host.dart';
 import 'package:field_notes/design/focus/focus_ring.dart';
 import 'package:field_notes/design/icons/settings_icons.dart';
+import 'package:field_notes/design/interaction/hover_fill.dart';
+import 'package:field_notes/design/interaction/hover_style.dart';
+import 'package:field_notes/design/interaction/pressable.dart';
 import 'package:field_notes/design/tokens/tokens.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/updates/updates.dart';
@@ -774,36 +777,22 @@ class _CloseButton extends StatelessWidget {
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(updateNotesCloseSize / 2),
     );
-    return Tooltip(
-      message: closeTooltip,
-      excludeFromSemantics: true,
-      child: Semantics(
-        button: true,
-        enabled: enabled,
-        label: closeLabel,
-        excludeSemantics: true,
-        onTap: onPressed,
-        child: GestureDetector(
-          key: updateNotesCloseKey,
-          behavior: HitTestBehavior.opaque,
-          excludeFromSemantics: true,
-          onTap: onPressed,
-          child: FocusRing(
-            enabled: enabled,
-            onPressed: onPressed,
-            includeFocusSemantics: false,
-            borderRadius: radius,
-            child: SizedBox.square(
-              dimension: updateNotesCloseSize,
-              child: Opacity(
-                opacity: enabled ? 1 : 0.5,
-                child: Icon(
-                  Icons.close_rounded,
-                  size: _closeIcon,
-                  color: context.colors.mutedDeep,
-                ),
-              ),
-            ),
+    return Pressable(
+      includeFocusSemantics: false,
+      key: updateNotesCloseKey,
+      label: closeLabel,
+      tooltip: closeTooltip,
+      onPressed: onPressed,
+      shape: HoverShape.circle,
+      borderRadius: radius,
+      child: SizedBox.square(
+        dimension: updateNotesCloseSize,
+        child: Opacity(
+          opacity: enabled ? 1 : 0.5,
+          child: Icon(
+            Icons.close_rounded,
+            size: _closeIcon,
+            color: context.colors.mutedDeep,
           ),
         ),
       ),
@@ -833,35 +822,28 @@ class _SheetButton extends StatelessWidget {
     const BorderRadius radius = BorderRadius.all(
       Radius.circular(_phoneButtonRadius),
     );
-    return Semantics(
-      button: true,
-      enabled: enabled,
+    return Pressable(
+      includeFocusSemantics: false,
       label: label,
-      excludeSemantics: true,
-      onTap: onPressed,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        excludeFromSemantics: true,
-        onTap: onPressed,
-        child: FocusRing(
-          enabled: enabled,
-          onPressed: onPressed,
-          includeFocusSemantics: false,
-          borderRadius: radius,
-          child: Opacity(
-            opacity: enabled ? 1 : 0.5,
-            child: Container(
-              height: height,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: primary ? Palette.coral : colors.cardBright,
-                border: Border.all(
-                  color: colors.line,
-                  width: Shapes.outlineWidth,
-                ),
-                borderRadius: radius,
-                boxShadow: primary ? shadows.emphasis : null,
-              ),
+      onPressed: onPressed,
+      borderRadius: radius,
+      paintsHover: false,
+      builder: (BuildContext context, bool hovered) => Opacity(
+        opacity: enabled ? 1 : 0.5,
+        child: Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: primary ? Palette.coral : colors.cardBright,
+            border: Border.all(color: colors.line, width: Shapes.outlineWidth),
+            borderRadius: radius,
+            boxShadow: primary ? shadows.emphasis : null,
+          ),
+          child: HoverFill(
+            hovered: hovered,
+            surface: primary ? FocusRingSurface.dark : FocusRingSurface.light,
+            borderRadius: radius,
+            position: DecorationPosition.background,
+            child: Center(
               child: Text(
                 label,
                 maxLines: 1,

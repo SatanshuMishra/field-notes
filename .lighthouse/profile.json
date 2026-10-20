@@ -33,6 +33,8 @@
     "third_party/just_audio/darwin/just_audio/Package.swift",
     "third_party/just_audio/pubspec.yaml",
     "third_party/just_audio_windows/pubspec.yaml",
+    "third_party/record_macos/macos/record_macos/Package.swift",
+    "third_party/record_macos/pubspec.yaml",
     "third_party/video_player_android/android/build.gradle.kts",
     "third_party/video_player_android/pubspec.yaml",
     "third_party/video_player_avfoundation/darwin/video_player_avfoundation/Package.swift",
@@ -57,6 +59,7 @@
       "paths": [
         "lib/features/capture/voice",
         "lib/features/capture/audio",
+        "third_party/record_macos",
         "macos/Runner",
         "windows/runner",
         "android/app/src/main/kotlin"
@@ -223,8 +226,8 @@
       "recheck": "lab status and the vm-lab skill"
     },
     "lab_guest_devices": {
-      "value": "The Windows and macOS guests have no camera; the Windows guest has no sound device or microphone and cannot decode video on its Basic Display Adapter.",
-      "confirmed": false,
+      "value": "macOS guest: Apple Virtual Sound Device output only, no microphone, no camera (system_profiler 2026-10-18)",
+      "confirmed": true,
       "recheck": "Get-PnpDevice in the Windows guest; system_profiler in the macOS guest"
     },
     "windows_build_machine": {

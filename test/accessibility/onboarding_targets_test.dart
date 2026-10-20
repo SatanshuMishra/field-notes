@@ -51,7 +51,9 @@ Finder _tapHandler(Finder control) => find
     .descendant(
       of: control,
       matching: find.byWidgetPredicate(
-        (Widget widget) => widget is GestureDetector && widget.onTap != null,
+        (Widget widget) =>
+            widget is GestureDetector &&
+            (widget.onTap != null || widget.onTapUp != null),
       ),
       matchRoot: true,
     )
