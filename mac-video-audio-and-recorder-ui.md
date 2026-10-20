@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-20T00:47:46.962Z
+Updated: 2026-10-20T00:47:51.525Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -20,9 +20,7 @@ The owner merged the FEATURE pull request SatanshuMishra/field-notes#333 into ma
 
 ## Next step
 
-The owner starts Clean-up by saying the FEATURE pull request SatanshuMishra/field-notes#333 merged.
-
-Needs: R1.
+Delete only the symlink ~/.mitosis/runs/fireplace/mac-video-audio-and-recorder-ui (not its target), run pipeline clean --repo <root> --slug mac-video-audio-and-recorder-ui again, then close the thread when it keeps nothing.
 
 ## Decisions in force
 
