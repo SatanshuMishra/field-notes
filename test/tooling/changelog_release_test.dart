@@ -80,6 +80,24 @@ const List<String> _fixed131 = <String>[
   'The first time you open this version on macOS, you may be asked a few times while Field Notes gathers its saved sync keys into one place. Choose Always Allow each time.',
 ];
 
+const List<String> _new140 = <String>[
+  'While you record a video, a soft ring around the microphone button grows as Field Notes hears you, so you can see your sound is being picked up. It stays inside the button and never covers the picture.',
+  'If Field Notes can\'t hear your microphone when you press record, the recording doesn\'t start and a message asks you to check your input, so you don\'t end up with a silent recording.',
+];
+
+const List<String> _improved140 = <String>[
+  'The camera picker in the video recorder opens the same rounded menu as the microphone picker, wide enough to show each camera\'s full name.',
+  'Buttons in the recorders, pop-ups and Settings now share the same rounded highlight and pointer when you hover over them, and screen readers name each one.',
+  'Menus in Settings widen to show every choice in full and stay inside the window.',
+];
+
+const List<String> _fixed140 = <String>[
+  'On macOS, sound and picture in video recordings now stay in step for the whole recording.',
+  'On macOS, a video recording no longer loses its sound when the microphone takes a moment to start, which could leave the first recording after opening Field Notes silent.',
+  'While you record, the Input row keeps showing your microphone instead of going blank.',
+  'If the microphone stops partway through a recording, Field Notes now says so and reopens it.',
+];
+
 const String _plainEnglishRule =
     'Write the entries in plain English for the people who use Field Notes: say clearly what they will notice, and leave out technical detail such as frame rates, graphics memory figures or the names of the app\'s internal parts.';
 
@@ -352,12 +370,6 @@ void main() {
     expect(unreleased, isNonNegative);
     expect(release, greaterThan(unreleased));
     expect(previous, greaterThan(release));
-    expect(
-      lines
-          .sublist(unreleased + 1, release)
-          .every((String line) => line.isEmpty),
-      isTrue,
-    );
 
     final ProcessResult result = Process.runSync('bash', <String>[
       'tool/release/changelog_section.sh',
@@ -385,6 +397,59 @@ void main() {
       <String>['Fixed'],
     );
     expect(section.notes.groups[0].items, _fixed131);
+  });
+
+  test('the release job finds the dated 1.4.0 notes in the changelog', () {
+    final List<String> lines = _changelog().split('\n');
+    final List<String> headings = lines
+        .where((String line) => line.startsWith('## [1.4.0]'))
+        .toList();
+    expect(headings, <String>['## [1.4.0] - 2026-10-19']);
+    final int unreleased = lines.indexOf('## [Unreleased]');
+    final int release = lines.indexOf('## [1.4.0] - 2026-10-19');
+    final int previous = lines.indexOf('## [1.3.1] - 2026-10-18');
+    expect(unreleased, isNonNegative);
+    expect(release, greaterThan(unreleased));
+    expect(previous, greaterThan(release));
+    expect(
+      lines
+          .sublist(unreleased + 1, release)
+          .every((String line) => line.isEmpty),
+      isTrue,
+    );
+
+    final ProcessResult result = Process.runSync('bash', <String>[
+      'tool/release/changelog_section.sh',
+      '1.4.0',
+      'CHANGELOG.md',
+    ]);
+    expect(result.exitCode, 0);
+    expect(
+      result.stdout,
+      '### New\n\n'
+      '${_new140.map((String entry) => '- $entry\n').join()}'
+      '\n### Improved\n\n'
+      '${_improved140.map((String entry) => '- $entry\n').join()}'
+      '\n### Fixed\n\n'
+      '${_fixed140.map((String entry) => '- $entry\n').join()}',
+    );
+  });
+
+  test('Field Notes 1.4.0 finds its own release notes', () {
+    final ChangelogSection? section = changelogSection(
+      _changelog(),
+      AppVersion.tryParse('1.4.0')!,
+    );
+    expect(section, isNotNull);
+    expect(section!.date, DateTime(2026, 10, 19));
+    expect(section.notes.intro, isEmpty);
+    expect(
+      section.notes.groups.map((ReleaseNoteGroup group) => group.title),
+      <String>['New', 'Improved', 'Fixed'],
+    );
+    expect(section.notes.groups[0].items, _new140);
+    expect(section.notes.groups[1].items, _improved140);
+    expect(section.notes.groups[2].items, _fixed140);
   });
 
   test('the changelog asks for entries in plain English for the people who use Field Notes', () {
