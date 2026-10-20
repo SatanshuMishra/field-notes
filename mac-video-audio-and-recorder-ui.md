@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-20T00:35:29.054Z
+Updated: 2026-10-20T00:42:18.541Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-recorder-ui. Integration is on lighthouse run 2 (FEATURE ef4508c2, core 9eb6c237): verdict failures with one failure, U1, now integration round 2 (verdict diagnose, diagnosis agent running). U1: a Windows-lab voice take with a 12 s microphone stall saves about 1.3 s short by the lab driver's lagging clock, even with a clock-paced fake; the fake's own stamps show the saved speech complete and the stall overfilled, and on this Mac every probe saves the full length. U2 (the sound ring outside the button and over the Android picture, spec 5.8) is fixed on FEATURE and passed on the Android phone. The suite passed (flaky only). The camera picker is unreachable on Android (the sidebar layout is chosen by desktop platform, not width). Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
+The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-recorder-ui. Integration ended at lighthouse run 2 (FEATURE ef4508c2, core 9eb6c237, verdict failures with U1 only): at the owner's request the round 2 diagnosis was stopped and the FEATURE pull request SatanshuMishra/field-notes#333 opened, ready for review, naming U1 unresolved. Both lighthouse runs are released. U1: a Windows-lab voice take with a 12 s microphone stall saves about 1.3 s short by the lab driver's lagging clock, even with a clock-paced fake; the fake's own stamps show the saved speech complete and the stall overfilled, and on this Mac every probe saves the full length. U2 (the sound ring outside the button and over the Android picture, spec 5.8) is fixed on FEATURE and passed on the Android phone. The suite passed (flaky only). The camera picker is unreachable on Android (the sidebar layout is chosen by desktop platform, not width). Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
 
 ## Next step
 
