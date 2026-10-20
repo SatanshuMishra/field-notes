@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-20T01:16:01.941Z
+Updated: 2026-10-20T01:16:05.332Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Where things stand
 
-The owner merged the FEATURE pull request SatanshuMishra/field-notes#333 into main (73447bb5) with U1 unresolved. Clean-up is stopped: `pipeline clean` removed the run's local branches, then crashed refusing to delete the legacy symlink ~/.mitosis/runs/fireplace/mac-video-audio-and-recorder-ui, leaving the run folder, three worktrees and the five docs/specs/mac-video-audio-and-recorder-ui.* files. U1: a Windows-lab voice take with a 12 s microphone stall saves about 1.3 s short by the lab driver's lagging clock, even with a clock-paced fake; the fake's own stamps show the saved speech complete and the stall overfilled, and on this Mac every probe saves the full length. U2 (the sound ring outside the button and over the Android picture, spec 5.8) is fixed on FEATURE and passed on the Android phone. The suite passed (flaky only). The camera picker is unreachable on Android (the sidebar layout is chosen by desktop platform, not width). Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
+The FEATURE pull request SatanshuMishra/field-notes#333 merged with U1 unresolved and shipped in Field Notes 1.4.0. Clean-up is done: `pipeline clean` removed the run's branches and the docs/specs/mac-video-audio-and-recorder-ui.* files and kept nothing; the run home and run dir under ~/.mitosis/field-notes and ~/.mitosis/runs/field-notes, with three detached worktrees, sit outside the paths it cleans. U1: a Windows-lab voice take with a 12 s microphone stall saves about 1.3 s short by the lab driver's lagging clock, even with a clock-paced fake; the fake's own stamps show the saved speech complete and the stall overfilled, and on this Mac every probe saves the full length. U2 (the sound ring outside the button and over the Android picture, spec 5.8) is fixed on FEATURE and passed on the Android phone. The suite passed (flaky only). The camera picker is unreachable on Android (the sidebar layout is chosen by desktop platform, not width). Unproven: the HS80 mode-switch path (the original failure), the Windows and Android mirror of the native-timestamp alignment (Q11), the Settings segmented Android read (unreadable on main too), and whether TalkBack reads the Android input rows' value field.
 
 ## Next step
 
