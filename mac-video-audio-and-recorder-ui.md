@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-19T23:29:37.451Z
+Updated: 2026-10-20T00:12:00.139Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -20,7 +20,7 @@ The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-re
 
 ## Next step
 
-Finish lighthouse run 2 (lighthouse/run-2, FEATURE ef4508c2, --previous lighthouse/run-1, profile unchanged): the suite and the Windows voice paths (U1 with a clock-paced fake) are running; then drive U2 and the camera picker on the Android lab (the tablet's wide layout holds the picker), write findings.json and run lighthouse verdict; on green, lighthouse opens the FEATURE pull request.
+Finish lighthouse run 2 (lighthouse/run-2, FEATURE ef4508c2, --previous lighthouse/run-1, profile unchanged): the suite and the Android paths (U2 ring on the phone, camera picker on the tablet) are running; Windows voice paths 2 to 4 passed and path 1 (U1) failed again at about 1.3 s short on 12 s stalls by the driver's lagging clock, though the fake's own stamps show the saved speech complete and the stall overfilled; then write findings.json, run lighthouse verdict, and record and diagnose what fails.
 
 Needs: R1.
 
