@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-20T00:42:18.541Z
+Updated: 2026-10-20T00:42:26.409Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -20,7 +20,7 @@ The owner merged #329 to #332 into the FEATURE branch fix/mac-video-audio-and-re
 
 ## Next step
 
-Record the round 2 diagnosis (review/round-2/integration.failing-test.diagnosis.json) and act on its class: fix with a receipt and run lighthouse run 3, or, when blocked, run lighthouse run 3 with --final so the FEATURE pull request opens naming U1 unresolved.
+The owner starts Clean-up by saying the FEATURE pull request SatanshuMishra/field-notes#333 merged.
 
 Needs: R1.
 
