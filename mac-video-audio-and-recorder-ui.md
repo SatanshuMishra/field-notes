@@ -1,6 +1,6 @@
 # mac-video-audio-and-recorder-ui: Mac video recording audio: missing first take, audio lag, recorder UI consistency
 Status: parked
-Updated: 2026-10-20T00:47:51.525Z
+Updated: 2026-10-20T01:16:01.941Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -9,7 +9,7 @@ Video logs on macOS record audio on every take, including the first of a session
 
 ## Done when
 
-- [ ] c1 The first video recording after app launch on macOS contains audio
+- [x] c1 The first video recording after app launch on macOS contains audio evidence: mac_video_sound_repro_test ('a take whose microphone goes quiet after its first chunk keeps sound for the whole picture') passes on main 4f9aa3a6, shipped in v1.4.0; a first take on real Mac hardware after launch is unproven (R1)
 - [x] c2 Audio and video in a macOS video recording stay in sync for the whole take evidence: clap take 9 on the MacBook camera and built-in microphone (harness/runs/clap-9-measure.txt): four claps across a 12.9 s take, sound trailing the picture by 40 to 55 ms each time with no drift, picture and sound lengths 3 ms apart, within spec 5.9; video-starts-like-a-camera green at round 5 (ddba45cc, suite 5421 app and 178 relay tests pass); the HS80 headset path is unproven
 - [x] c3 The camera selector drop-down matches the voice input drop-down and every recorder button has a matching hover shape, hover state and accessible label evidence: camera_picker_dropdown_test, anchored_dropdown_hover_test, recorder_sheet_hover_cursor_test, pressable_test and the per-area hover sweep tests pass in the full suite at button-consistency 4c71a629 (5464 app tests), review green at round 3, and the Android lab read names the input panel rows, drop-down choices and Meadow tabs
 - [x] c4 The video recorder shows a subtle live audio level indicator that does not cover the video evidence: video_sound_ring_test ('the video recorder shows the sound ring while its microphone hears') and recorder_input_ring_test pass in the full suite at hearing-and-ring 32ff2edc, review green at round 3
