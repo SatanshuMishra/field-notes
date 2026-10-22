@@ -1,7 +1,7 @@
 # fix-mac-mic-reopen-crash: Fix the macOS microphone reopen crashes (1.4.0 build 43)
 Status: active
-Updated: 2026-10-22T05:35:33.480Z
-Next ids: c5 D1 R1 S1
+Updated: 2026-10-22T05:40:23.045Z
+Next ids: c5 D1 R3 S1
 
 ## Goal
 
@@ -20,11 +20,14 @@ interphase:bug grounding, slug mac-mic-reopen-crash; spec files started in docs/
 
 ## Next step
 
-Finish grounding (reproduction test, scout findings), then ask the interphase intent round and get the read-back approved.
+Wait for the owner's answer to the interphase intent round (I1 goal, I2 why, I3 success, pathway and split), save it to docs/specs/mac-mic-reopen-crash.decisions.md, then ask the first frontier round.
 
 ## Decisions in force
 
 ## Open risks
+
+- R1 The macOS lab VM runs with --no-audio, so no real-engine test can run there until the golden image gets an input device. Bears on c4.
+- R2 Apple says Cocoa is not exception-safe, so catching the installTap exception only buys a clean failure; the engine must be discarded, never reused. Bears on c2.
 
 ## Settled, do not reopen
 
