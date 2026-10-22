@@ -1,6 +1,6 @@
 # fix-mac-mic-reopen-crash: Fix the macOS microphone reopen crashes (1.4.0 build 43)
 Status: active
-Updated: 2026-10-22T05:35:30.773Z
+Updated: 2026-10-22T05:35:33.480Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -33,3 +33,5 @@ Finish grounding (reproduction test, scout findings), then ask the interphase in
 - Crash sites: third_party/record_macos/macos/record_macos/Sources/record_macos/delegate/RecorderStreamDelegate.swift (configure, installTap, stop)
 - Per-recorder queue: third_party/record_macos/macos/record_macos/Sources/record_macos/RecordMacOsPlugin.swift:104
 - Watchdog reopen: lib/features/capture/audio/live_audio_capture.dart (_reopen, _openWithin, _lostAfter)
+- Spec files: docs/specs/mac-mic-reopen-crash.{decisions.md,record.json}
+- Earlier decisions: docs/adr/0005 (own queue per recorder, 2 s native start bound), docs/adr/0006 (microphone opens with the recorder)
