@@ -1,6 +1,6 @@
 # fix-mac-mic-reopen-crash: Fix the macOS microphone reopen crashes (1.4.0 build 43)
 Status: active
-Updated: 2026-10-22T05:33:01.600Z
+Updated: 2026-10-22T05:35:30.773Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Stop Field Notes on macOS from crashing (SIGABRT in installTap, SIGSEGV use-afte
 
 ## Where things stand
 
-Not started.
+interphase:bug grounding, slug mac-mic-reopen-crash; spec files started in docs/specs. Owner asked for an architectural fix, not a patch: every feature (take, level meter, input list) opens its own recorder and native engine on one microphone, and nothing owns the device. A scout is researching Apple's guidance on engine ownership.
 
 ## Next step
 
-Run the interphase:bug interview (full lane) for the macOS microphone reopen crashes and get the read-back approved.
+Finish grounding (reproduction test, scout findings), then ask the interphase intent round and get the read-back approved.
 
 ## Decisions in force
 
