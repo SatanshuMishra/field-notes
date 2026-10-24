@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T01:29:28.704Z
+Updated: 2026-10-24T01:29:30.702Z
 Next ids: c5 D1 R3 S1
 
 ## Goal
@@ -35,7 +35,7 @@ Pipeline stage 2: sync the checkout, run pipeline feature-branch, write the run 
 
 - Cause traced 2026-10-23: 5 overlapping pockets in lib/features/garden/scene/meadow_plants.dart _pockets, drawn in lib/features/garden/render/meadow_stage_painter.dart _paintPocket at 0.92*fogP (lib/features/garden/scene/meadow_palette.dart:220); heaviest/brightest in lib/features/garden/model/meadow_year.dart pick extremes regardless of sign
 - Run home: ~/.mitosis/fireplace/meadow-ground-fog/
-- Interphase files: docs/specs/meadow-ground-fog.decisions.md, .record.json, .guard.json (guard snapshot)
+- Interphase files: docs/specs/meadow-ground-fog.md (spec), .decisions.md, .record.json, .items.json; glossary terms Heaviest stretch, Brightest stretch and Mist in GLOSSARY.md (uncommitted, ship with the pull request)
 - Earlier meadow decisions: docs/specs/meadow.md (item 7 gates mist and butterflies on 6 mood days in 16) and docs/specs/meadow.decisions.md
 - Prototype mist reference: docs/prototype/Meadow Scene.dc.html (pockets, --fogP)
 - Mock-up kit: scratchpad mock/ (patched prototype copy taking URL params v=before|a|b, h hour, y year, pm/pd/pn peaks; headless Chrome renders; stack.py builds the comparison strips)
