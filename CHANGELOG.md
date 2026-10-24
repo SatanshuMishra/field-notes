@@ -6,6 +6,16 @@ Write the entries in plain English for the people who use Field Notes: say clear
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-23
+
+### Improved
+
+- The mist over your heaviest stretch in the Meadow now lies low around the flowers' stems, so you can see the flowers of those days at noon, at dawn and at night. A milder stretch gets lighter mist.
+
+### Fixed
+
+- The Meadow no longer shows mist or a "Mist in the hollow" card for a stretch that wasn't heavy, or a "Butterflies" card for a stretch that wasn't bright.
+
 ## [1.4.0] - 2026-10-19
 
 ### New
