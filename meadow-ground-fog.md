@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T01:31:51.448Z
+Updated: 2026-10-24T01:46:10.129Z
 Next ids: c5 D2 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. The first mitosis build is running in the background: year-gates and mist-shape in parallel, then mist-strength. Spec criterion 5.4 is unproven until the lab review.
+Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. The first mitosis build is running in the background in the MSP worktree ~/.mitosis/runs/fireplace/meadow-ground-fog/trees/meadow-ground-fog (branch mitosis/meadow-ground-fog): year-gates and mist-shape Workers are editing and testing, mist-strength waits for both. Spec criterion 5.4 is unproven until the lab review.
 
 ## Next step
 
