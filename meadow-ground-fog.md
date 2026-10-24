@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T04:46:32.567Z
+Updated: 2026-10-24T04:49:45.726Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Integration: SatanshuMishra/field-notes#335 merged into feat/meadow-ground-fog (
 
 ## Next step
 
-When the lab session writes lighthouse/run-1/lab-report.json, write lighthouse/run-1/findings.json from suite.json, the lab report and the onboarding probe, then run lighthouse verdict; on green open the FEATURE pull request into main.
+When the lab session writes lighthouse/run-1/lab-report.json, write lighthouse/run-1/findings.json from suite.json, the lab report and the onboarding probe, then run lighthouse spend and lighthouse verdict; on green open the FEATURE pull request into main from lighthouse pr's title and body, then run lighthouse release, name any untracked path that appeared in the owner's checkout since the run began (the before-list is lh-untracked-before.txt in the session scratchpad), and park the thread for Clean-up.
 
 ## Decisions in force
 
