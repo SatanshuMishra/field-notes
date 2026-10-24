@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T04:01:44.657Z
+Updated: 2026-10-24T04:04:34.989Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Integration: SatanshuMishra/field-notes#335 merged into feat/meadow-ground-fog (origin at 0f7cf7a5), and pipeline integration-ready reports ready; lighthouse run 1 tests the FEATURE branch against main, with results in lighthouse/run-1. Unproven: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
+Integration: SatanshuMishra/field-notes#335 merged into feat/meadow-ground-fog (origin at 0f7cf7a5), and pipeline integration-ready reports ready; lighthouse run 1 tests the FEATURE branch against main, with results in lighthouse/run-1: both suites are running, and five paths are planned (heavy-year blooms through mist, good year without mist, a zero-average stretch without cards, the Meadow animating with fireflies, and onboarding's sample meadow), the first four for a headless macOS lab session briefed in lighthouse/run-1/lab-brief.md. Unproven: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
 
 ## Next step
 
