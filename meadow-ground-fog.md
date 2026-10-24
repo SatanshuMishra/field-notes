@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T02:48:09.146Z
+Updated: 2026-10-24T02:48:11.200Z
 Next ids: c5 D2 R5 S1
 
 ## Goal
@@ -30,7 +30,7 @@ When the Windows smoke run reports (it was told to start a fresh windows instanc
 
 - R1 The app's mist is an exact port of the prototype's (same 5 pockets, geometry and fogP), and the earlier meadow spec made the prototype the look reference; this change departs from it on purpose (intent Q4).
 - R3 Round 1 code-review finding C1 (MEDIUM, not yet validated): the sign gates compare the floating-point window mean with exactly 0, so a window whose valences cancel (happy, happy, tired, tired, sad, anxious gives -9.25e-18) still counts as heaviest; this undercuts c2's evidence until fixed. Bears on c2.
-- R4 The lab releases every instance this session holds whenever a turn ends, so a background smoke agent's instance disappears between turns; each smoke agent must start its instance inside its own run and expect to restart it.
+- R4 The lab releases every instance this session holds whenever a turn ends, which killed two Windows lab instances mid-run; smoke runs therefore go to a headless claude -p session that holds its own instance.
 
 ## Settled, do not reopen
 
