@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T06:20:38.056Z
+Updated: 2026-10-24T06:20:43.555Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -9,7 +9,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Done when
 
-- [ ] c1 Combined mist-pocket peak opacity is capped per time of day and blooms stay readable at night, dawn and noon in owner-approved lab screenshots with meadowKeyProvider pinned
+- [x] c1 Combined mist-pocket peak opacity is capped per time of day and blooms stay readable at night, dawn and noon in owner-approved lab screenshots with meadowKeyProvider pinned evidence: the owner approved the mist's look as shipped in release 1.4.1 on their own install ("the mist looks right"), with no peak raised; the per-time-of-day cap is fogP times MeadowWindow.mistStrength, and the lab screenshots with meadowKeyProvider pinned are in the lighthouse run-1 evidence
 - [x] c2 No mist pockets or heaviest-stretch landmark when the heaviest window's mean valence is zero or above, and no butterfly brightest-stretch bias when the brightest window's mean is zero or below evidence: criterion 5.1's three tests (meadow_year_test sign gates, meadow_landmarks_test both cards) pass in the round 1 full suite at 91683e62, and the conformance audit judged 5.1 MET
 - [x] c3 No frame-time regression on the Note10+ floor check evidence: Note10+ floor check, Meadow at midnight with the pinned meadow and a heavy stretch drawing mist, 3 runs of 30 s per build in balanced order with the GPU at full speed: median frame time 18.54 ms at 4f9aa3a6 vs 18.58 ms at 19b691c3 (+0.04), 95th percentile 21.34 vs 21.17 ms (-0.17), both within the 0.5 ms limit; results in ~/.mitosis/field-notes/meadow-fog-floor/floor.log
 - [x] c4 Pull requests opened through the pipeline, never merged evidence: SatanshuMishra/field-notes#335 opened ready for review through the pipeline (mitosis title and body, GitHub MCP), base feat/meadow-ground-fog, assigned to the owner, not merged
@@ -20,14 +20,12 @@ The change is in release 1.4.1 (tag v1.4.1 on 19b691c3, changelog in SatanshuMis
 
 ## Next step
 
-When the owner approves the mist's look in release 1.4.1 or names peaks to raise (within 0.15 each), tick c1 or make that tuning as a direct-lane change in lib/features/garden/scene/meadow_palette.dart's fogP, then close the thread.
+Nothing left: the thread closes as done.
 
 ## Decisions in force
 
 ## Open risks
 
-- R1 The app's mist is an exact port of the prototype's (same 5 pockets, geometry and fogP), and the earlier meadow spec made the prototype the look reference; this change departs from it on purpose (intent Q4).
-- R4 The lab releases every instance this session holds whenever a turn ends, which killed two Windows lab instances mid-run; smoke runs therefore go to a headless claude -p session that holds its own instance.
 
 ## Settled, do not reopen
 
