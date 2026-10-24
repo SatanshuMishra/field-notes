@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T05:13:43.088Z
+Updated: 2026-10-24T05:27:22.428Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -16,16 +16,13 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Integration done: lighthouse run 1 is green on feat/meadow-ground-fog at 0f7cf7a5, with one path unproven (whether the heavy-stretch mist is still clearly visible, the owner's call under spec 5.4). The FEATURE pull request SatanshuMishra/field-notes#336 into main is open, ready for review and assigned to the owner. Unproven: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
+The change is on main at 0130ad65 (SatanshuMishra/field-notes#335 and #336 merged), and pipeline clean removed the run's worktree, branches, run folders and spec files. Two criteria stay open: c1 needs the owner's approval of the mist's look (in the lab VM it is a faint low haze at noon and midnight; each time of day's peak may rise by up to 0.15), and c3 needs the Note10+ floor check, with the phone not connected. Windows was never run (winpc offline).
 
 ## Next step
 
-The owner reviews and merges SatanshuMishra/field-notes#336 (judging the lab screenshots in lighthouse/run-1/evidence for spec 5.4) and starts Clean-up by saying the FEATURE pull request merged; Clean-up then runs pipeline clean and closes the thread.
+When the owner approves the mist's look or names peaks to raise (within 0.15 each), tick c1 or make that tuning as a direct-lane change in lib/features/garden/scene/meadow_palette.dart's fogP; when the Note10+ is connected, run the floor check (median and 95th-percentile frame time over 3 runs of 30 seconds on the Meadow at night with the pinned meadow, against the commit before 0f7cf7a5) for c3, then close the thread.
 
 ## Decisions in force
-
-- D1 Interphase hand-off: build the approved spec as one MSP of three Steps: Build now from the handed-off spec, one MSP meadow-ground-fog, one pull request; criterion 5.4 stays unproven until the lab review.
-- D2 Ship boundary: open the MSP pull request from the green head: Ship now from proven head b9583f85, listing the Windows smoke, the Android landmarks path, criterion 5.4 and the Note10+ check as unproven in the report.
 
 ## Open risks
 
@@ -37,10 +34,9 @@ The owner reviews and merges SatanshuMishra/field-notes#336 (judging the lab scr
 ## Where the details live
 
 - Cause traced 2026-10-23: 5 overlapping pockets in lib/features/garden/scene/meadow_plants.dart _pockets, drawn in lib/features/garden/render/meadow_stage_painter.dart _paintPocket at 0.92*fogP (lib/features/garden/scene/meadow_palette.dart:220); heaviest/brightest in lib/features/garden/model/meadow_year.dart pick extremes regardless of sign
-- Run home: ~/.mitosis/fireplace/meadow-ground-fog/ (CHARTER.md, worker-rules.txt, dispatch.zsh, run.zsh, suite.zsh, smoke-brief.md, rounds.md, items.json, graph.json, build-1.out, review/); mitosis run dir ~/.mitosis/runs/fireplace/meadow-ground-fog; accept.zsh copied to ~/.mitosis/fireplace/, whose findings.jsonl and do-not-flag.md link to the field-notes copies
-- Interphase files: docs/specs/meadow-ground-fog.md (spec), .decisions.md, .record.json, .items.json; glossary terms Heaviest stretch, Brightest stretch and Mist in GLOSSARY.md
+- Run report: ~/.mitosis/fireplace/reports/meadow-ground-fog.json (stage times, waits, lead time); the run's findings ledger is ~/.mitosis/fireplace/findings.jsonl
+- Glossary terms Heaviest stretch, Brightest stretch and Mist in GLOSSARY.md; the mist strength rule is MeadowWindow.mistStrength in lib/features/garden/model/meadow_year.dart
 - Earlier meadow decisions: docs/specs/meadow.md (item 7 gates mist and butterflies on 6 mood days in 16) and docs/specs/meadow.decisions.md
 - Prototype mist reference: docs/prototype/Meadow Scene.dc.html (pockets, --fogP)
 - Mock-up kit: scratchpad mock/ (patched prototype copy taking URL params v=before|a|b, h hour, y year, pm/pd/pn peaks; headless Chrome renders; stack.py builds the comparison strips)
-- Review records: review/round-<n>/meadow-ground-fog.md (each round's findings and outcomes), review/meadow-ground-fog.comment.md (the pull request comment)
-- Lighthouse run 1: lighthouse/run-1/ (findings.json, verdict.json, report.md, lab-report.json, and evidence/ with the core and feature lab screenshots)
+- Pull requests: SatanshuMishra/field-notes#335 (the change, with its review notes) and #336 (the integration, listing what lighthouse verified and what stayed unproven)
