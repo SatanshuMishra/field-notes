@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T03:38:26.029Z
+Updated: 2026-10-24T03:38:27.987Z
 Next ids: c5 D2 R5 S1
 
 ## Goal
@@ -29,7 +29,7 @@ When the round 2 suite finishes, run code-reviewer on round 2's scope (the C1 re
 ## Open risks
 
 - R1 The app's mist is an exact port of the prototype's (same 5 pockets, geometry and fogP), and the earlier meadow spec made the prototype the look reference; this change departs from it on purpose (intent Q4).
-- R3 Round 1 finding C1 (MEDIUM, confirmed): the sign gates compared the floating-point window mean with exactly 0, so moods that cancel still counted as heaviest; fixed at b9583f85 with receipt 3f260155, pending round 2 review. Bears on c2.
+- R3 The C1 fix (integer-hundredths mood scores in meadow_year.dart) awaits the round 2 review. Bears on c2.
 - R4 The lab releases every instance this session holds whenever a turn ends, which killed two Windows lab instances mid-run; smoke runs therefore go to a headless claude -p session that holds its own instance.
 
 ## Settled, do not reopen
