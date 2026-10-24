@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T06:01:13.047Z
+Updated: 2026-10-24T06:01:17.990Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-The change is on main at 0130ad65 (SatanshuMishra/field-notes#335 and #336 merged), and pipeline clean removed the run's worktree, branches, run folders and spec files. Two criteria stay open: c1 needs the owner's approval of the mist's look (in the lab VM it is a faint low haze at noon and midnight; each time of day's peak may rise by up to 0.15), and c3 needs the Note10+ floor check, with the phone not connected. Windows was never run (winpc offline).
+The change ships in release 1.4.1 (tag v1.4.1 on 19b691c3, changelog in SatanshuMishra/field-notes#337). Only c1 stays open: the owner's approval of the mist's look, which in the lab VM is a faint low haze at noon and midnight; each time of day's peak may rise by up to 0.15. Windows was never run (winpc offline).
 
 ## Next step
 
