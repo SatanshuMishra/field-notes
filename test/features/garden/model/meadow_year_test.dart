@@ -328,6 +328,35 @@ void main() {
     expect(tired.brightest, isNull);
   });
 
+  test('a stretch whose moods average exactly zero is neither heaviest nor brightest', () {
+    MeadowYear balanced(List<Mood> moods) => _pastYear(2025, <Day>[
+      for (int i = 0; i < moods.length; i++)
+        dayOf(_dateAt(2025, i * 3), mood: moods[i]),
+    ]);
+
+    final MeadowYear leaningLow = balanced(const <Mood>[
+      Mood.happy,
+      Mood.happy,
+      Mood.tired,
+      Mood.tired,
+      Mood.sad,
+      Mood.anxious,
+    ]);
+    expect(leaningLow.heaviest, isNull);
+    expect(leaningLow.brightest, isNull);
+
+    final MeadowYear leaningHigh = balanced(const <Mood>[
+      Mood.happy,
+      Mood.grateful,
+      Mood.calm,
+      Mood.angry,
+      Mood.anxious,
+      Mood.angry,
+    ]);
+    expect(leaningHigh.heaviest, isNull);
+    expect(leaningHigh.brightest, isNull);
+  });
+
   test('the weather phrase follows the share of heavy days', () {
     MeadowYear withHeavy(int heavyDays, int lightDays, {int sprouts = 0}) {
       final int total = heavyDays + lightDays;
