@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T03:21:17.833Z
+Updated: 2026-10-24T03:34:45.798Z
 Next ids: c5 D2 R5 S1
 
 ## Goal
@@ -16,11 +16,11 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. MSP meadow-ground-fog is committed on mitosis/meadow-ground-fog at 91683e62 in worktree ~/.mitosis/runs/fireplace/meadow-ground-fog/trees/meadow-ground-fog. Review round 1 is under way: the full suite passes at the head (5488 app and 178 package tests, analysis clean, review/round-1/meadow-ground-fog.suite.txt); the conformance audit found nothing (review/round-1/conformance-auditor.json); code-reviewer found C1 MEDIUM and C2 LOW (review/round-1/code-reviewer.json); the Windows smoke run is stopped with no screenshots because winpc went offline after its builds (the lab copies were released), so Windows is unproven until winpc returns; the macOS smoke run passed 3 of 3 paths (review/round-1/meadow-ground-fog.smoke-macos.txt; shots/macos/compare-heavy.png sent to the owner; the new mist is faint at noon and midnight, an owner call within the ±0.15 tuning); the Android smoke run is running as a headless claude -p session on android-phone (review/round-1/smoke-android.session.log), with 7 of 8 screenshots in shots/android/. Spec criterion 5.4 is unproven until the lab review; the Note10+ is not connected.
+Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. Review round 1 at 91683e62 ended with verdict loop: C1 MEDIUM (the sign gates compared a floating-point mean with 0) was confirmed and diagnosed fixable, and C2 LOW (unnamed strength literals in the painter) was confirmed as advisory. Both are fixed on mitosis/meadow-ground-fog: receipt test 3f260155 failed at 91683e62, and fix b9583f85 stores mood scores as whole hundredths, averages a stretch with integer sums (the receipt passes, the diagnosis's selecting check finds nothing), and names the strength as MeadowWindow.mistStrength; the garden and onboarding tests pass (333). Round 1 smoke: macOS 3 of 3 pass, Android 2 pass with the landmarks path unproven, Windows unproven (winpc offline). Review round 2 has started: its diff is review/round-2/meadow-ground-fog.diff and the full suite is running at b9583f85. Spec criterion 5.4 is unproven until the lab review; the Note10+ is not connected.
 
 ## Next step
 
-When the Windows smoke run reports (it was told to start a fresh windows instance), dispatch the macOS smoke run, then Android; then collect review/round-1/meadow-ground-fog.findings.json from code-reviewer.json (C1, C2), conformance-auditor.json (empty) and any broken smoke paths, and run pipeline candidates and the validator.
+When the round 2 suite finishes, run code-reviewer on round 2's scope (the C1 receipt, the obligations the fix touched, the selecting check's other instances, code one hop away), then pipeline candidates, the validator if candidates are listed, pipeline record and pipeline verdict; on green run rerun-plan's slow checks, then ship.
 
 ## Decisions in force
 
@@ -29,7 +29,7 @@ When the Windows smoke run reports (it was told to start a fresh windows instanc
 ## Open risks
 
 - R1 The app's mist is an exact port of the prototype's (same 5 pockets, geometry and fogP), and the earlier meadow spec made the prototype the look reference; this change departs from it on purpose (intent Q4).
-- R3 Round 1 code-review finding C1 (MEDIUM, not yet validated): the sign gates compare the floating-point window mean with exactly 0, so a window whose valences cancel (happy, happy, tired, tired, sad, anxious gives -9.25e-18) still counts as heaviest; this undercuts c2's evidence until fixed. Bears on c2.
+- R3 Round 1 finding C1 (MEDIUM, confirmed): the sign gates compared the floating-point window mean with exactly 0, so moods that cancel still counted as heaviest; fixed at b9583f85 with receipt 3f260155, pending round 2 review. Bears on c2.
 - R4 The lab releases every instance this session holds whenever a turn ends, which killed two Windows lab instances mid-run; smoke runs therefore go to a headless claude -p session that holds its own instance.
 
 ## Settled, do not reopen
