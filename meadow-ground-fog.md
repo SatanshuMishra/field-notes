@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T00:11:38.081Z
+Updated: 2026-10-24T00:28:05.981Z
 Next ids: c5 D1 R3 S1
 
 ## Goal
@@ -16,11 +16,11 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, interphase feature pathway (standard size), slug meadow-ground-fog. Lighthouse readiness has nothing open; receipts.config.json is already committed. The interphase intent round (Q1 goal, Q2 why, Q3 success, Q4 look reference) is waiting for the owner's answer.
+Full lane, interphase feature pathway (standard size), slug meadow-ground-fog. Lighthouse readiness has nothing open; receipts.config.json is already committed. Intent I1 to I4 is approved and saved. Frontier round 1 (Q1 shape A/B/C, Q2 peaks night 0.9 / dawn 0.85 / noon 0.7, Q3 heaviness scaling 60% to 100% at mean −0.6, Q4 sign gates, Q5 no firefly light, Q6 four seams, Q7 ±0.15 tuning in the lab, Q8 out of scope) was asked with prototype mock-ups and is waiting for the owner's answer.
 
 ## Next step
 
-Save the owner's intent answers as I1 to I4 in docs/specs/meadow-ground-fog.decisions.md, then build prototype-based mock-ups of the fog options (a copy of docs/prototype in the scratchpad, rendered in the built-in browser at night, dawn and noon) and ask the first frontier round with them.
+Save each round 1 answer as a line in docs/specs/meadow-ground-fog.decisions.md, write the agreed seams, criteria and Steps to docs/specs/meadow-ground-fog.record.json, run check_record.py, then ask the next frontier round or hold the read-back.
 
 ## Decisions in force
 
