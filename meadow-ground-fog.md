@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T01:31:19.232Z
+Updated: 2026-10-24T01:31:23.547Z
 Next ids: c5 D2 R3 S1
 
 ## Goal
@@ -20,7 +20,9 @@ Full lane, slug meadow-ground-fog, MSP meadow-ground-fog. The owner approved the
 
 ## Next step
 
-Pipeline stage 2: sync the checkout, run pipeline feature-branch, write the run home files, record the interphase hand-off boundary, then mitosis --plan-only.
+Run the first build with ~/.mitosis/fireplace/meadow-ground-fog/run.zsh in the background (output to build-1.out), read its last stdout JSON line, write lane Assumption notes to review/meadow-ground-fog.assumptions.txt, then start review round 1.
+
+Needs: D1, R2.
 
 ## Decisions in force
 
