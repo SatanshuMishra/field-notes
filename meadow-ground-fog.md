@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T02:07:58.709Z
+Updated: 2026-10-24T02:18:50.854Z
 Next ids: c5 D2 R3 S1
 
 ## Goal
@@ -16,11 +16,11 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. MSP meadow-ground-fog is committed on mitosis/meadow-ground-fog at 91683e62 in worktree ~/.mitosis/runs/fireplace/meadow-ground-fog/trees/meadow-ground-fog. Review round 1 is under way: diff, obligations, proofs and both reviewer briefs are in review/; the full suite is running at the head. Spec criterion 5.4 is unproven until the lab review; the Note10+ is not connected.
+Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. MSP meadow-ground-fog is committed on mitosis/meadow-ground-fog at 91683e62 in worktree ~/.mitosis/runs/fireplace/meadow-ground-fog/trees/meadow-ground-fog. Review round 1 is under way: the full suite passes at the head (5488 app and 178 package tests, analysis clean, review/round-1/meadow-ground-fog.suite.txt); code-reviewer, conformance-auditor and the Windows lab smoke run are running in the background. Spec criterion 5.4 is unproven until the lab review; the Note10+ is not connected.
 
 ## Next step
 
-When the suite finishes, dispatch code-reviewer and conformance-auditor with the rendered briefs in review/round-1/, then the lab smoke runs one platform at a time (Windows, macOS, Android) from smoke-brief.md.
+When the Windows smoke run reports, dispatch the macOS smoke run, then Android, each from smoke-brief.md with its platform notes; when both reviewers report, collect review/round-1/meadow-ground-fog.findings.json and run pipeline candidates.
 
 Needs: D1.
 
