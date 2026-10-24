@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T00:28:08.648Z
+Updated: 2026-10-24T00:31:41.928Z
 Next ids: c5 D1 R3 S1
 
 ## Goal
@@ -16,11 +16,11 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, interphase feature pathway (standard size), slug meadow-ground-fog. Lighthouse readiness has nothing open; receipts.config.json is already committed. Intent I1 to I4 is approved and saved. Frontier round 1 (Q1 shape A/B/C, Q2 peaks night 0.9 / dawn 0.85 / noon 0.7, Q3 heaviness scaling 60% to 100% at mean −0.6, Q4 sign gates, Q5 no firefly light, Q6 four seams, Q7 ±0.15 tuning in the lab, Q8 out of scope) was asked with prototype mock-ups and is waiting for the owner's answer.
+Full lane, interphase feature pathway (standard size), slug meadow-ground-fog. Lighthouse readiness has nothing open; receipts.config.json is already committed. Intent I1 to I4 and round 1 are saved in the decisions file (shape B, peaks night 0.9 / dawn 0.85 / noon 0.7, strength 60% to 100% by stretch mean, sign gates, four seams, ±0.15 lab tuning). The four seams are in the record and the meadow glossary terms are written. Round 2 (Q1 one pull request, Q2 painter pass rules: at most 0.5 mist cover at bloom heads and densest point within 0.05 of peak × strength, Q3 Note10+ rule: median and p95 over 3 runs of 30 s at most 0.5 ms worse than main) is waiting for the owner's answer.
 
 ## Next step
 
-Save each round 1 answer as a line in docs/specs/meadow-ground-fog.decisions.md, write the agreed seams, criteria and Steps to docs/specs/meadow-ground-fog.record.json, run check_record.py, then ask the next frontier round or hold the read-back.
+Save the round 2 answers to the decisions file, then write criteria 5.1 to 5.4 and Steps year-gates, mist-shape (after nothing) and mist-strength (after mist-shape) to the record, run check_record.py --complete, and hold the read-back.
 
 ## Decisions in force
 
