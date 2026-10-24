@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T01:31:23.547Z
+Updated: 2026-10-24T01:31:46.615Z
 Next ids: c5 D2 R3 S1
 
 ## Goal
@@ -16,11 +16,11 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, slug meadow-ground-fog, MSP meadow-ground-fog. The owner approved the read-back; the run is autonomous to the pull request. Interphase is handed off: the spec passed its checks and one spec review (five fixes applied: sprouts left out of flower-height, whole-world viewport for the pixel test, patch draws found by difference, head limit sampled across the drift, goldens regenerated with TZ=America/Edmonton). No ADR was warranted. Three Steps: year-gates, mist-shape, then mist-strength. Criterion 5.4 is unproven until the lab review.
+Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. The first mitosis build is running in the background: year-gates and mist-shape in parallel, then mist-strength. Spec criterion 5.4 is unproven until the lab review.
 
 ## Next step
 
-Run the first build with ~/.mitosis/fireplace/meadow-ground-fog/run.zsh in the background (output to build-1.out), read its last stdout JSON line, write lane Assumption notes to review/meadow-ground-fog.assumptions.txt, then start review round 1.
+When the build finishes, read the last JSON line of build-1.out in the run home, write each lane's Assumption notes to review/meadow-ground-fog.assumptions.txt, then start review round 1.
 
 Needs: D1, R2.
 
