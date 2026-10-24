@@ -68,6 +68,22 @@ Map<int, List<Object>> _byDay(MeadowPlants plants) => <int, List<Object>>{
     plant.dayIndex: _signature(plant),
 };
 
+double _meanBase(List<MeadowPlant> plants) =>
+    plants.map((MeadowPlant plant) => plant.y).reduce((a, b) => a + b) /
+    plants.length;
+
+double _flowerHeight(List<MeadowPlant> plants) {
+  final List<double> heights = <double>[
+    for (final MeadowPlant plant in plants)
+      if (plant.mood != null)
+        plant.y -
+            plant.heads
+                .map((Offset head) => head.dy)
+                .reduce((double a, double b) => a < b ? a : b),
+  ];
+  return heights.reduce((double a, double b) => a + b) / heights.length;
+}
+
 void main() {
   final int seed = meadowSeed(90210, _leapYear);
 
@@ -212,33 +228,32 @@ void main() {
     expect(afterAdding[184], isNotNull);
   });
 
-  test('mist pockets and firefly homes follow the heaviest stretch', () {
+  test("mist patches lie low around the heaviest stretch's stems", () {
     final MeadowYear heavy = _meadowYear(
       _days(
         List<int>.generate(366, (int i) => i),
-        mood: (int i) => i >= 200 && i < 216 ? Mood.sad : Mood.happy,
+        mood: (int i) => i >= 200 && i <= 215 ? Mood.sad : Mood.happy,
       ),
     );
     final MeadowPlants misty = _plantsFor(seed, heavy);
-    expect(heavy.heaviest, isNotNull);
     expect(misty.pockets, hasLength(5));
     final List<MeadowPlant> hollow = misty.plants
         .where(
-          (MeadowPlant plant) =>
-              plant.dayIndex >= heavy.heaviest!.first &&
-              plant.dayIndex <= heavy.heaviest!.last,
+          (MeadowPlant plant) => plant.dayIndex >= 200 && plant.dayIndex <= 215,
         )
         .toList();
-    final double meanY =
-        hollow.map((MeadowPlant plant) => plant.y).reduce((a, b) => a + b) /
-        hollow.length;
+    final double base = _meanBase(hollow);
+    final double flowerHeight = _flowerHeight(hollow);
     for (final MeadowMistPocket pocket in misty.pockets) {
-      expect(pocket.y, lessThan(meanY));
-      expect(pocket.height / pocket.width, inInclusiveRange(0.2, 0.28));
+      expect(
+        pocket.y,
+        inInclusiveRange(base + 0.1 * flowerHeight, base + 0.3 * flowerHeight),
+      );
+      expect(pocket.height / flowerHeight, inInclusiveRange(3.23, 3.57));
       expect(pocket.period, inInclusiveRange(26, 44));
       expect(pocket.phase, inInclusiveRange(0, 30));
     }
-    expect(misty.fireflyHomes, hasLength(5 * 4 + 14));
+    expect(misty.fireflyHomes, hasLength(34));
     expect(
       misty.fireflyHomes.where((MeadowFireflyHome home) => home.sync),
       hasLength(20),
@@ -265,6 +280,43 @@ void main() {
           Offset(home.x, home.y),
       ],
     );
+  });
+
+  test('sprouts in the heaviest stretch do not shrink its mist', () {
+    const List<int> sadDays = <int>[200, 202, 204, 206, 208, 210, 212, 214];
+    const List<int> sproutDays = <int>[201, 203, 205, 207, 209, 211, 213, 215];
+    final MeadowYear sprouting = _meadowYear(
+      _days(<int>[
+        for (int i = 0; i < 366; i++)
+          if (i < 200 || i > 215 || sadDays.contains(i)) i,
+      ], mood: (int i) => sadDays.contains(i) ? Mood.sad : Mood.happy),
+      entries: <String, int>{for (final int day in sproutDays) _dateOf(day): 1},
+    );
+    final MeadowPlants misty = _plantsFor(seed, sprouting);
+    final MeadowWindow? heaviest = sprouting.heaviest;
+    expect(heaviest, isNotNull);
+    final List<MeadowPlant> stretch = misty.plants
+        .where(
+          (MeadowPlant plant) =>
+              plant.dayIndex >= heaviest!.first &&
+              plant.dayIndex <= heaviest.last,
+        )
+        .toList();
+    expect(stretch.where((MeadowPlant plant) => plant.isSprout), hasLength(8));
+    expect(misty.pockets, hasLength(5));
+    final List<MeadowPlant> blooms = stretch
+        .where((MeadowPlant plant) => plant.mood != null)
+        .toList();
+    expect(blooms, hasLength(8));
+    final double base = _meanBase(stretch);
+    final double flowerHeight = _flowerHeight(blooms);
+    for (final MeadowMistPocket pocket in misty.pockets) {
+      expect(
+        pocket.y,
+        inInclusiveRange(base + 0.1 * flowerHeight, base + 0.3 * flowerHeight),
+      );
+      expect(pocket.height / flowerHeight, inInclusiveRange(3.23, 3.57));
+    }
   });
 
   test('plants cross to the main isolate unchanged', () async {
