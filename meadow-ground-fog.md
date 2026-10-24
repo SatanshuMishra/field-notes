@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T05:13:40.001Z
+Updated: 2026-10-24T05:13:43.088Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Integration done: lighthouse run 1 is green on feat/meadow-ground-fog at 0f7cf7a
 
 ## Next step
 
-When the lab session writes lighthouse/run-1/lab-report.json, write lighthouse/run-1/findings.json from suite.json, the lab report and the onboarding probe, then run lighthouse spend and lighthouse verdict; on green open the FEATURE pull request into main from lighthouse pr's title and body, then run lighthouse release, name any untracked path that appeared in the owner's checkout since the run began (the before-list is lh-untracked-before.txt in the session scratchpad), and park the thread for Clean-up.
+The owner reviews and merges SatanshuMishra/field-notes#336 (judging the lab screenshots in lighthouse/run-1/evidence for spec 5.4) and starts Clean-up by saying the FEATURE pull request merged; Clean-up then runs pipeline clean and closes the thread.
 
 ## Decisions in force
 
