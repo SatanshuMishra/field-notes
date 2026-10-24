@@ -266,7 +266,7 @@ void main() {
       sixMoods.heaviest,
       const MeadowWindow(first: 0, last: 15, mean: -0.75),
     );
-    expect(sixMoods.brightest, sixMoods.heaviest);
+    expect(sixMoods.brightest, isNull);
 
     final MeadowYear spread = _pastYear(2025, <Day>[
       ..._moodDays(2025, _span(0, 6), Mood.happy),
@@ -304,6 +304,68 @@ void main() {
     expect(beforeToday.limit, 5);
     expect(beforeToday.heaviest, isNull);
     expect(beforeToday.brightest, isNull);
+  });
+
+  test('a stretch counts as heaviest only below zero and as brightest only above zero', () {
+    const List<int> moodDays = <int>[0, 3, 6, 9, 12, 15];
+
+    final MeadowYear sad = _pastYear(2025, _moodDays(2025, moodDays, Mood.sad));
+    expect(sad.heaviest, const MeadowWindow(first: 0, last: 15, mean: -0.75));
+    expect(sad.brightest, isNull);
+
+    final MeadowYear calm = _pastYear(
+      2025,
+      _moodDays(2025, moodDays, Mood.calm),
+    );
+    expect(calm.brightest, const MeadowWindow(first: 0, last: 15, mean: 0.28));
+    expect(calm.heaviest, isNull);
+
+    final MeadowYear tired = _pastYear(
+      2025,
+      _moodDays(2025, moodDays, Mood.tired),
+    );
+    expect(tired.heaviest, const MeadowWindow(first: 0, last: 15, mean: -0.25));
+    expect(tired.brightest, isNull);
+  });
+
+  test('a heavier stretch makes thicker mist, full from a mean of -0.6', () {
+    MeadowWindow stretch(double mean) =>
+        MeadowWindow(first: 0, last: 15, mean: mean);
+
+    expect(stretch(-0.75).mistStrength, 1);
+    expect(stretch(-0.6).mistStrength, 1);
+    expect(stretch(-0.3).mistStrength, closeTo(0.8, 1e-12));
+    expect(stretch(-0.25).mistStrength, closeTo(0.7667, 1e-4));
+    expect(stretch(0).mistStrength, 0.6);
+  });
+
+  test('a stretch whose moods average exactly zero is neither heaviest nor brightest', () {
+    MeadowYear balanced(List<Mood> moods) => _pastYear(2025, <Day>[
+      for (int i = 0; i < moods.length; i++)
+        dayOf(_dateAt(2025, i * 3), mood: moods[i]),
+    ]);
+
+    final MeadowYear leaningLow = balanced(const <Mood>[
+      Mood.happy,
+      Mood.happy,
+      Mood.tired,
+      Mood.tired,
+      Mood.sad,
+      Mood.anxious,
+    ]);
+    expect(leaningLow.heaviest, isNull);
+    expect(leaningLow.brightest, isNull);
+
+    final MeadowYear leaningHigh = balanced(const <Mood>[
+      Mood.happy,
+      Mood.grateful,
+      Mood.calm,
+      Mood.angry,
+      Mood.anxious,
+      Mood.angry,
+    ]);
+    expect(leaningHigh.heaviest, isNull);
+    expect(leaningHigh.brightest, isNull);
   });
 
   test('the weather phrase follows the share of heavy days', () {

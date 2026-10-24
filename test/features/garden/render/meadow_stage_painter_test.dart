@@ -23,6 +23,8 @@ import 'package:field_notes/features/garden/sky/sky_scene.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/garden_harness.dart';
+import '../support/meadow_pixels.dart';
+import '../support/meadow_stage_harness.dart';
 
 const int _leapYear = 2028;
 const int _meadowKey = 20280229;
@@ -34,6 +36,11 @@ const int _drawBudget = 400;
 const int _atlasBudget = 80;
 const double _step = 1 / 60;
 const double _settle = 40;
+const Size _wholeWorld = Size(1400, 640);
+const int _stretchFirst = 200;
+const int _stretchLast = 215;
+const int _coverFloor = 24;
+const List<double> _driftTimes = <double>[0, 6, 12, 18, 24, 30, 36, 42];
 const Set<String> _atlasCalls = <String>{'drawAtlas', 'drawRawAtlas'};
 const Set<String> _imageAndGradientDraws = <String>{
   'drawRect',
@@ -399,6 +406,275 @@ class _Poses {
   final List<MeadowFireflyPose> fireflies;
 }
 
+MeadowYear _stretchYear(Mood stretch) => MeadowYear.build(
+  days: <Day>[
+    for (int i = 0; i < 366; i++)
+      dayOf(
+        _dateOf(i),
+        mood: i >= _stretchFirst && i <= _stretchLast ? stretch : Mood.happy,
+      ),
+  ],
+  entryCounts: <String, int>{
+    for (int i = 0; i < 366; i++) _dateOf(i): 1 + i % 4,
+  },
+  year: _leapYear,
+  today: DateTime(_leapYear + 1, 3, 1),
+);
+
+MeadowPalette _withoutTint(MeadowPalette palette) => MeadowPalette(
+  skyTop: palette.skyTop,
+  skyMiddle: palette.skyMiddle,
+  skyHorizon: palette.skyHorizon,
+  warmGlowColour: palette.warmGlowColour,
+  warmGlowCentre: palette.warmGlowCentre,
+  sunColour: palette.sunColour,
+  sunPosition: palette.sunPosition,
+  moonPosition: palette.moonPosition,
+  moonOpacity: palette.moonOpacity,
+  moonGlowColour: palette.moonGlowColour,
+  moonShadeOffset: palette.moonShadeOffset,
+  moonShadeColour: palette.moonShadeColour,
+  starsOpacity: palette.starsOpacity,
+  milkyOpacity: palette.milkyOpacity,
+  raysOpacity: 0,
+  raysGlowAlpha: palette.raysGlowAlpha,
+  m0: palette.m0,
+  m0b: palette.m0b,
+  m1t: palette.m1t,
+  m1b: palette.m1b,
+  m1d: palette.m1d,
+  r1: palette.r1,
+  r2: palette.r2,
+  rS: palette.rS,
+  rL: palette.rL,
+  scr: palette.scr,
+  fo1: palette.fo1,
+  fo2: palette.fo2,
+  fo3: palette.fo3,
+  wf: palette.wf,
+  wfHi: palette.wfHi,
+  snow: palette.snow,
+  lit: palette.lit,
+  shade: palette.shade,
+  litL: palette.litL,
+  litR: palette.litR,
+  shL: palette.shL,
+  shR: palette.shR,
+  fog: palette.fog,
+  fogV: palette.fogV,
+  fogL: palette.fogL,
+  fogP: palette.fogP,
+  hz: palette.hz,
+  lk1: palette.lk1,
+  lk2: palette.lk2,
+  lkHi: palette.lkHi,
+  st2: palette.st2,
+  wDeep: palette.wDeep,
+  wSh: palette.wSh,
+  flowC: palette.flowC,
+  flowO: palette.flowO,
+  glintC: palette.glintC,
+  glintO: palette.glintO,
+  glintX: palette.glintX,
+  cloudTop: palette.cloudTop,
+  cloudBottom: palette.cloudBottom,
+  overlayColour: palette.overlayColour,
+  overlayAlpha: 0,
+  overlayCentreAlpha: 0,
+  overlayCentre: palette.overlayCentre,
+  dayLife: palette.dayLife,
+  fireflies: palette.fireflies,
+  captionColour: palette.captionColour,
+);
+
+class _MistScene {
+  _MistScene._({
+    required this.year,
+    required this.terrain,
+    required this.plants,
+    required this.layers,
+    required this.atlas,
+    required this.creatures,
+    required this.rays,
+    required this.viewport,
+  });
+
+  factory _MistScene.build(MeadowYear year) {
+    final int seed = meadowSeed(_meadowKey, _leapYear);
+    final MeadowTerrain terrain = buildMeadowTerrain(seed: seed, year: year);
+    final MeadowPlants plants = buildMeadowPlants(
+      seed: seed,
+      year: year,
+      terrain: terrain,
+    );
+    final List<MeadowGrassBand> grass = buildMeadowGrass(
+      seed: seed,
+      terrain: terrain,
+    );
+    final MeadowViewport viewport = MeadowViewport.resolve(
+      box: _wholeWorld,
+      cover: false,
+      focusX: terrain.sky.focusX,
+    );
+    final double density = viewport.scale;
+    final MeadowPalette noon = MeadowPalette.from(
+      sky: meadowNoon,
+      morning: false,
+      heavyShare: year.heavyShare,
+    );
+    final MeadowLayers layers =
+        MeadowLayers(
+            terrain: terrain,
+            grass: grass,
+            density: MeadowLayers.fitDensity(
+              terrain: terrain,
+              grass: grass,
+              density: density,
+              maxBytes: meadowLayerBudget,
+            ),
+          )
+          ..recolour(noon)
+          ..buildAll();
+    return _MistScene._(
+      year: year,
+      terrain: terrain,
+      plants: plants,
+      layers: layers,
+      atlas: MeadowPlantAtlas(plants, density: density)..buildAll(),
+      creatures: MeadowCreatureArt.build(density: density),
+      rays: MeadowRays(noon)..buildAll(),
+      viewport: viewport,
+    );
+  }
+
+  final MeadowYear year;
+  final MeadowTerrain terrain;
+  final MeadowPlants plants;
+  final MeadowLayers layers;
+  final MeadowPlantAtlas atlas;
+  final MeadowCreatureArt creatures;
+  final MeadowRays rays;
+  final MeadowViewport viewport;
+
+  MeadowStagePainter painter({
+    required MeadowPalette palette,
+    required MeadowWindow? heaviest,
+    required bool animate,
+    required double time,
+  }) {
+    layers
+      ..recolour(palette)
+      ..buildAll();
+    rays.recolour(palette);
+    return MeadowStagePainter(
+      layers: layers,
+      layersRevision: layers.revision,
+      atlas: atlas,
+      creatures: creatures,
+      rays: rays,
+      raysRevision: rays.revision,
+      terrain: terrain,
+      plants: plants,
+      heaviest: heaviest,
+      palette: palette,
+      viewport: viewport,
+      time: time,
+      animate: animate,
+      growthPoint: year.limit,
+      mode: MeadowSceneMode.page,
+    );
+  }
+
+  _RecordingCanvas record({
+    required MeadowPalette palette,
+    required MeadowWindow? heaviest,
+  }) {
+    final _RecordingCanvas canvas = _RecordingCanvas();
+    painter(
+      palette: palette,
+      heaviest: heaviest,
+      animate: true,
+      time: 12,
+    ).paint(canvas, _wholeWorld);
+    return canvas;
+  }
+
+  Future<Uint8List> render({
+    required MeadowPalette palette,
+    required MeadowWindow? heaviest,
+    required bool animate,
+    required double time,
+  }) async {
+    final PictureRecorder recorder = PictureRecorder();
+    painter(
+      palette: palette,
+      heaviest: heaviest,
+      animate: animate,
+      time: time,
+    ).paint(Canvas(recorder), _wholeWorld);
+    final Picture picture = recorder.endRecording();
+    final Image image = picture.toImageSync(
+      _wholeWorld.width.toInt(),
+      _wholeWorld.height.toInt(),
+    );
+    picture.dispose();
+    final Uint8List pixels = await rgbaOf(image);
+    image.dispose();
+    return pixels;
+  }
+
+  void dispose() {
+    layers.dispose();
+    atlas.dispose();
+    creatures.dispose();
+    rays.dispose();
+  }
+}
+
+(Rect, int) _rectKey(_Call call) => (
+  call.arguments[0]! as Rect,
+  (call.arguments[1]! as Paint).color.toARGB32(),
+);
+
+List<_Call> _patchDraws(_RecordingCanvas misted, _RecordingCanvas clear) {
+  final List<(Rect, int)> unmatched = <(Rect, int)>[
+    for (final _Call call in clear.named(const <String>{'drawRect'}))
+      _rectKey(call),
+  ];
+  return <_Call>[
+    for (final _Call call in misted.named(const <String>{'drawRect'}))
+      if (!unmatched.remove(_rectKey(call))) call,
+  ];
+}
+
+double? _coverAt(Uint8List misted, Uint8List clear, Color fog, int x, int y) {
+  if (x < 0 ||
+      y < 0 ||
+      x >= _wholeWorld.width.toInt() ||
+      y >= _wholeWorld.height.toInt()) {
+    return null;
+  }
+  final int index = (y * _wholeWorld.width.toInt() + x) * 4;
+  final List<double> fogChannels = <double>[
+    fog.r * 255,
+    fog.g * 255,
+    fog.b * 255,
+  ];
+  int channel = 0;
+  double reach = -1;
+  for (int c = 0; c < 3; c++) {
+    final double distance = (fogChannels[c] - clear[index + c]).abs();
+    if (distance > reach) {
+      reach = distance;
+      channel = c;
+    }
+  }
+  if (reach < _coverFloor) {
+    return null;
+  }
+  return (misted[index + channel] - clear[index + channel]).abs() / reach;
+}
+
 void main() {
   late _Scene scene;
 
@@ -592,4 +868,192 @@ void main() {
       isNotEmpty,
     );
   });
+
+  test("the mist's patches stack to the peak times the stretch's strength", () {
+    expect(meadowNoon.night, closeTo(0, 0.002));
+    expect(meadowMidnight.night, closeTo(1, 0.002));
+    for (final (Mood mood, double mean, List<(SkyScene, double, double)> rows)
+        in <(Mood, double, List<(SkyScene, double, double)>)>[
+          (
+            Mood.sad,
+            -0.75,
+            <(SkyScene, double, double)>[
+              (meadowNoon, 0.2140, 0.700),
+              (meadowMidnight, 0.3690, 0.900),
+            ],
+          ),
+          (
+            Mood.tired,
+            -0.25,
+            <(SkyScene, double, double)>[
+              (meadowNoon, 0.1426, 0.537),
+              (meadowMidnight, 0.2088, 0.690),
+            ],
+          ),
+        ]) {
+      final _MistScene mist = _MistScene.build(_stretchYear(mood));
+      addTearDown(mist.dispose);
+      final MeadowWindow heaviest = mist.year.heaviest!;
+      expect(heaviest.first, _stretchFirst);
+      expect(heaviest.last, _stretchLast);
+      expect(heaviest.mean, closeTo(mean, 1e-9));
+      expect(mist.year.limit, greaterThan(_stretchLast));
+      for (final (SkyScene sky, double opacity, double stacked) in rows) {
+        final MeadowPalette palette = MeadowPalette.from(
+          sky: sky,
+          morning: false,
+          heavyShare: mist.year.heavyShare,
+        );
+        final List<_Call> patches = _patchDraws(
+          mist.record(palette: palette, heaviest: heaviest),
+          mist.record(palette: palette, heaviest: null),
+        );
+        final String reason = '$mood at night ${sky.night}';
+        expect(patches, hasLength(5), reason: reason);
+        for (final _Call patch in patches) {
+          final double effective =
+              (patch.arguments[1]! as Paint).color.a * palette.fog.a;
+          expect(effective, closeTo(opacity, 0.002), reason: reason);
+          expect(
+            1 - math.pow(1 - effective, 5),
+            closeTo(stacked, 0.002),
+            reason: reason,
+          );
+        }
+      }
+    }
+  });
+
+  test(
+    'blooms stay readable under the mist and the mist stays visible',
+    () async {
+      final _MistScene mist = _MistScene.build(_stretchYear(Mood.sad));
+      addTearDown(mist.dispose);
+      final MeadowWindow heaviest = mist.year.heaviest!;
+      expect(heaviest.first, _stretchFirst);
+      expect(heaviest.last, _stretchLast);
+      expect(heaviest.mean, lessThanOrEqualTo(-0.6));
+      final SkyScene dawn = skySceneAt(
+        DateTime.utc(2025, 6, 30, 11, 25),
+        _latitude,
+        _longitude,
+      );
+      expect(dawn.sunAltitude, inInclusiveRange(0, 2));
+      final List<(int, int)> heads = <(int, int)>[
+        for (final MeadowPlant plant in mist.plants.plants)
+          if (!plant.hidden &&
+              plant.dayIndex >= _stretchFirst &&
+              plant.dayIndex <= _stretchLast)
+            for (final Offset head in plant.heads)
+              (
+                mist.viewport.toLocal(head).dx.floor(),
+                mist.viewport.toLocal(head).dy.floor(),
+              ),
+      ];
+      expect(heads, isNotEmpty);
+      expect(mist.plants.pockets, hasLength(5));
+      final List<Rect> patches = <Rect>[
+        for (final MeadowMistPocket pocket in mist.plants.pockets)
+          Rect.fromPoints(
+            mist.viewport.toLocal(pocket.bounds.topLeft),
+            mist.viewport.toLocal(pocket.bounds.bottomRight),
+          ),
+      ];
+      final Rect around = patches.reduce(
+        (Rect a, Rect b) => a.expandToInclude(b),
+      );
+
+      void expectReadableHeads(
+        Uint8List misted,
+        Uint8List clear,
+        Color fog,
+        String reason,
+      ) {
+        int measured = 0;
+        for (final (int x, int y) in heads) {
+          final double? cover = _coverAt(misted, clear, fog, x, y);
+          if (cover == null) {
+            continue;
+          }
+          measured++;
+          expect(
+            cover,
+            lessThanOrEqualTo(0.5),
+            reason: '$reason head ($x, $y)',
+          );
+        }
+        expect(measured, greaterThan(0), reason: reason);
+      }
+
+      for (final (String name, SkyScene sky, bool morning)
+          in <(String, SkyScene, bool)>[
+            ('noon', meadowNoon, false),
+            ('dawn', dawn, true),
+            ('midnight', meadowMidnight, false),
+          ]) {
+        final MeadowPalette palette = _withoutTint(
+          MeadowPalette.from(
+            sky: sky,
+            morning: morning,
+            heavyShare: mist.year.heavyShare,
+          ),
+        );
+        final Uint8List stillMisted = await mist.render(
+          palette: palette,
+          heaviest: heaviest,
+          animate: false,
+          time: 0,
+        );
+        final Uint8List stillClear = await mist.render(
+          palette: palette,
+          heaviest: null,
+          animate: false,
+          time: 0,
+        );
+        expectReadableHeads(
+          stillMisted,
+          stillClear,
+          palette.fog,
+          '$name still',
+        );
+        double densest = 0;
+        for (int y = around.top.floor(); y < around.bottom.ceil(); y++) {
+          for (int x = around.left.floor(); x < around.right.ceil(); x++) {
+            final Offset centre = Offset(x + 0.5, y + 0.5);
+            if (!patches.any((Rect patch) => patch.contains(centre))) {
+              continue;
+            }
+            final double? cover = _coverAt(
+              stillMisted,
+              stillClear,
+              palette.fog,
+              x,
+              y,
+            );
+            if (cover != null && cover > densest) {
+              densest = cover;
+            }
+          }
+        }
+        expect(densest, greaterThanOrEqualTo(0.5 * palette.fogP), reason: name);
+        expect(densest, lessThanOrEqualTo(palette.fogP + 0.05), reason: name);
+        for (final double time in _driftTimes) {
+          final Uint8List misted = await mist.render(
+            palette: palette,
+            heaviest: heaviest,
+            animate: true,
+            time: time,
+          );
+          final Uint8List clear = await mist.render(
+            palette: palette,
+            heaviest: null,
+            animate: true,
+            time: time,
+          );
+          expectReadableHeads(misted, clear, palette.fog, '$name at $time s');
+        }
+      }
+    },
+    timeout: const Timeout(Duration(minutes: 5)),
+  );
 }

@@ -217,7 +217,7 @@ class MeadowPalette {
       fog: const _Rgb(246, 242, 232).mix(horizon, 0.4).colour(0.92),
       fogV: _unit(fogBase * (0.5 + 0.9 * dawn + 0.35 * night)),
       fogL: _unit(fogBase * (0.2 + 1.1 * dawn + 0.4 * night)),
-      fogP: _unit((0.4 + 0.45 * heavyShare) * (0.6 + 0.7 * dawn + 0.5 * night)),
+      fogP: _unit(0.7 + 0.15 * dawn + 0.2 * night),
       hz: const _Rgb(234, 232, 216).mix(horizon, 0.35).colour(0.9),
       lk1: const _Rgb(118, 192, 190).mix(lakeSky, 0.32).colour(),
       lk2: const _Rgb(62, 150, 156).mix(top, 0.12).colour(),
