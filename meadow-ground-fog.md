@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T01:10:33.379Z
+Updated: 2026-10-24T01:29:28.704Z
 Next ids: c5 D1 R3 S1
 
 ## Goal
@@ -16,11 +16,11 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, interphase feature pathway (standard size), slug meadow-ground-fog. Lighthouse readiness has nothing open; receipts.config.json is already committed. Intent I1 to I4 and round 1 are saved in the decisions file (shape B, peaks night 0.9 / dawn 0.85 / noon 0.7, strength 60% to 100% by stretch mean, sign gates, four seams, ±0.15 lab tuning). The four seams are in the record and the meadow glossary terms are written. Round 2 is saved (one pull request; at most 0.5 mist cover at bloom heads; Note10+ median and p95 over 3 runs of 30 s at most 0.5 ms worse than main). Round 3 is saved (stacking proved at the drawing level within 0.002; pixel densest point between half the peak and the peak + 0.05). Criteria 5.1 to 5.4 and Steps year-gates, mist-shape and mist-strength (after both; owns the seven page goldens) are in the record, and check_record --complete passes. The Phase 7 read-back is with the owner.
+Full lane, slug meadow-ground-fog, MSP meadow-ground-fog. The owner approved the read-back; the run is autonomous to the pull request. Interphase is handed off: the spec passed its checks and one spec review (five fixes applied: sprouts left out of flower-height, whole-world viewport for the pixel test, patch draws found by difference, head limit sampled across the drift, goldens regenerated with TZ=America/Edmonton). No ADR was warranted. Three Steps: year-gates, mist-shape, then mist-strength. Criterion 5.4 is unproven until the lab review.
 
 ## Next step
 
-On the owner's approval of the read-back, write the spec (Phase 8), run the checks and one spec-reviewer (Phase 9), hand off (Phase 10), then start pipeline stage 2 with pipeline feature-branch.
+Pipeline stage 2: sync the checkout, run pipeline feature-branch, write the run home files, record the interphase hand-off boundary, then mitosis --plan-only.
 
 ## Decisions in force
 
