@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T03:52:00.494Z
+Updated: 2026-10-24T03:52:05.575Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -20,7 +20,9 @@ Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut f
 
 ## Next step
 
-When the round 2 suite finishes, run code-reviewer on round 2's scope (the C1 receipt, the obligations the fix touched, the selecting check's other instances, code one hop away), then pipeline candidates, the validator if candidates are listed, pipeline record and pipeline verdict; on green run rerun-plan's slow checks, then ship.
+Run SHIP=1 ~/.mitosis/fireplace/meadow-ground-fog/run.zsh --resume --proven-head meadow-ground-fog=b9583f8597060e3d7c3309da018b0a7bbd662cc3, then open the pull request from mitosis's title, body, branch and base, assign it to the owner and post review/meadow-ground-fog.comment.md.
+
+Needs: D2.
 
 ## Decisions in force
 
@@ -30,7 +32,6 @@ When the round 2 suite finishes, run code-reviewer on round 2's scope (the C1 re
 ## Open risks
 
 - R1 The app's mist is an exact port of the prototype's (same 5 pockets, geometry and fogP), and the earlier meadow spec made the prototype the look reference; this change departs from it on purpose (intent Q4).
-- R3 The C1 fix (integer-hundredths mood scores in meadow_year.dart) awaits the round 2 review. Bears on c2.
 - R4 The lab releases every instance this session holds whenever a turn ends, which killed two Windows lab instances mid-run; smoke runs therefore go to a headless claude -p session that holds its own instance.
 
 ## Settled, do not reopen
