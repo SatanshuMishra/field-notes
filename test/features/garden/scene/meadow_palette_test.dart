@@ -69,6 +69,45 @@ SkyScene _sky({
   );
 }
 
+SkyScene _noonSky() => _sky(
+  a: 40,
+  sunX: 700,
+  moonX: 300,
+  moonUp: false,
+  moonAltitude: -20,
+  fraction: 0.5,
+  phase: 0.25,
+  top: <int>[190, 210, 222],
+  middle: <int>[224, 228, 218],
+  horizon: <int>[238, 232, 210],
+);
+
+SkyScene _dawnSky() => _sky(
+  a: 1,
+  sunX: 500,
+  moonX: 900,
+  moonUp: true,
+  moonAltitude: 30,
+  fraction: 0.4,
+  phase: 0.8,
+  top: <int>[129, 140, 175],
+  middle: <int>[215, 179, 158],
+  horizon: <int>[240, 177, 132],
+);
+
+SkyScene _midnightSky() => _sky(
+  a: -30,
+  sunX: 1300,
+  moonX: 650,
+  moonUp: true,
+  moonAltitude: 45,
+  fraction: 0.95,
+  phase: 0.45,
+  top: <int>[12, 16, 34],
+  middle: <int>[22, 28, 56],
+  horizon: <int>[38, 44, 76],
+);
+
 void _expectRgb(Color colour, List<int> expected, [double? alpha]) {
   expect(colour.r * 255, closeTo(expected[0], 1));
   expect(colour.g * 255, closeTo(expected[1], 1));
@@ -81,18 +120,7 @@ void _expectRgb(Color colour, List<int> expected, [double? alpha]) {
 void main() {
   test('the palette matches the prototype at noon, dawn and midnight', () {
     final MeadowPalette noon = MeadowPalette.from(
-      sky: _sky(
-        a: 40,
-        sunX: 700,
-        moonX: 300,
-        moonUp: false,
-        moonAltitude: -20,
-        fraction: 0.5,
-        phase: 0.25,
-        top: <int>[190, 210, 222],
-        middle: <int>[224, 228, 218],
-        horizon: <int>[238, 232, 210],
-      ),
+      sky: _noonSky(),
       morning: false,
       heavyShare: 0.3,
     );
@@ -107,7 +135,7 @@ void main() {
     _expectRgb(noon.fog, <int>[243, 238, 223], 0.92);
     expect(noon.fogV, closeTo(0.240, 0.002));
     expect(noon.fogL, closeTo(0.096, 0.002));
-    expect(noon.fogP, closeTo(0.321, 0.002));
+    expect(noon.fogP, closeTo(0.700, 0.002));
     _expectRgb(noon.lk1, <int>[155, 204, 197]);
     _expectRgb(noon.lk2, <int>[77, 157, 164]);
     _expectRgb(noon.st2, <int>[73, 146, 157]);
@@ -126,18 +154,7 @@ void main() {
     _expectRgb(noon.captionColour, <int>[60, 48, 36], 0.72);
 
     final MeadowPalette dawn = MeadowPalette.from(
-      sky: _sky(
-        a: 1,
-        sunX: 500,
-        moonX: 900,
-        moonUp: true,
-        moonAltitude: 30,
-        fraction: 0.4,
-        phase: 0.8,
-        top: <int>[129, 140, 175],
-        middle: <int>[215, 179, 158],
-        horizon: <int>[240, 177, 132],
-      ),
+      sky: _dawnSky(),
       morning: true,
       heavyShare: 0.5,
     );
@@ -152,7 +169,7 @@ void main() {
     _expectRgb(dawn.fog, <int>[243, 216, 192], 0.92);
     expect(dawn.fogV, closeTo(0.857, 0.002));
     expect(dawn.fogL, closeTo(0.800, 0.002));
-    expect(dawn.fogP, closeTo(0.839, 0.002));
+    expect(dawn.fogP, closeTo(0.867, 0.002));
     _expectRgb(dawn.lk1, <int>[154, 187, 175]);
     _expectRgb(dawn.lk2, <int>[70, 149, 158]);
     _expectRgb(dawn.st2, <int>[65, 137, 150]);
@@ -173,18 +190,7 @@ void main() {
     _expectRgb(dawn.captionColour, <int>[60, 48, 36], 0.72);
 
     final MeadowPalette midnight = MeadowPalette.from(
-      sky: _sky(
-        a: -30,
-        sunX: 1300,
-        moonX: 650,
-        moonUp: true,
-        moonAltitude: 45,
-        fraction: 0.95,
-        phase: 0.45,
-        top: <int>[12, 16, 34],
-        middle: <int>[22, 28, 56],
-        horizon: <int>[38, 44, 76],
-      ),
+      sky: _midnightSky(),
       morning: false,
       heavyShare: 0.2,
     );
@@ -199,7 +205,7 @@ void main() {
     _expectRgb(midnight.fog, <int>[163, 163, 170], 0.92);
     expect(midnight.fogV, closeTo(0.357, 0.002));
     expect(midnight.fogL, closeTo(0.252, 0.002));
-    expect(midnight.fogP, closeTo(0.539, 0.002));
+    expect(midnight.fogP, closeTo(0.900, 0.002));
     _expectRgb(midnight.lk1, <int>[90, 143, 151]);
     _expectRgb(midnight.lk2, <int>[56, 134, 141]);
     _expectRgb(midnight.st2, <int>[48, 119, 130]);
@@ -222,24 +228,29 @@ void main() {
     _expectRgb(midnight.captionColour, <int>[236, 230, 214], 0.85);
 
     expect(
-      MeadowPalette.from(
-        sky: _sky(
-          a: -30,
-          sunX: 1300,
-          moonX: 650,
-          moonUp: true,
-          moonAltitude: 45,
-          fraction: 0.95,
-          phase: 0.45,
-          top: <int>[12, 16, 34],
-          middle: <int>[22, 28, 56],
-          horizon: <int>[38, 44, 76],
-        ),
-        morning: false,
-        heavyShare: 0.2,
-      ),
+      MeadowPalette.from(sky: _midnightSky(), morning: false, heavyShare: 0.2),
       midnight,
     );
     expect(midnight == noon, isFalse);
+  });
+
+  test("the mist's peak follows the time of day and not the heavy share", () {
+    for (final (SkyScene sky, bool morning, double heavyShare, double peak)
+        in <(SkyScene, bool, double, double)>[
+          (_noonSky(), false, 0.3, 0.700),
+          (_dawnSky(), true, 0.5, 0.867),
+          (_midnightSky(), false, 0.2, 0.900),
+          (_noonSky(), false, 0.9, 0.700),
+        ]) {
+      expect(
+        MeadowPalette.from(
+          sky: sky,
+          morning: morning,
+          heavyShare: heavyShare,
+        ).fogP,
+        closeTo(peak, 0.002),
+        reason: 'altitude ${sky.sunAltitude}, heavy share $heavyShare',
+      );
+    }
   });
 }

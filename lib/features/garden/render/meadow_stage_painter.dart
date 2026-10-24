@@ -607,7 +607,10 @@ class MeadowStagePainter extends CustomPainter {
     if (window == null || growthPoint <= window.first) {
       return;
     }
-    final double opacity = palette.fogP * _revealOpacity(window.first);
+    final double target = palette.fogP * window.mistStrength;
+    final double each =
+        1 - math.pow(1 - target, 1 / plants.pockets.length).toDouble();
+    final double opacity = each / palette.fog.a * _revealOpacity(window.first);
     if (opacity <= _faint) {
       return;
     }

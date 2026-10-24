@@ -243,7 +243,7 @@ void main() {
       compact: false,
     );
     expect(find.text('The old spruce'), findsNothing);
-    expect(find.text('Mist in the hollow'), findsOneWidget);
+    expect(find.text('Mist in the hollow'), findsNothing);
     expect(find.text('Butterflies'), findsOneWidget);
     expect(find.text('Clear skies'), findsOneWidget);
     expect(
@@ -287,6 +287,37 @@ void main() {
       expect(tester.getTopLeft(find.text(title)).dy, greaterThan(previous));
       previous = tester.getTopLeft(find.text(title)).dy;
     }
+  });
+
+  testWidgets('a year without a heavy stretch shows butterflies but no mist', (
+    WidgetTester tester,
+  ) async {
+    await _pumpLandmarks(
+      tester,
+      _thisYear(<Day>[
+        ..._days(2026, _through(1, 6), Mood.happy),
+        ..._days(2026, <int>[8], Mood.sad),
+      ]),
+      compact: false,
+    );
+    expect(find.text('Butterflies'), findsOneWidget);
+    expect(find.text('brightest stretch'), findsOneWidget);
+    expect(find.text('Mist in the hollow'), findsNothing);
+    expect(find.text('heaviest stretch'), findsNothing);
+  });
+
+  testWidgets('a year without a bright stretch shows mist but no butterflies', (
+    WidgetTester tester,
+  ) async {
+    await _pumpLandmarks(
+      tester,
+      _thisYear(_days(2026, _through(1, 10), Mood.sad)),
+      compact: false,
+    );
+    expect(find.text('Mist in the hollow'), findsOneWidget);
+    expect(find.text('heaviest stretch'), findsOneWidget);
+    expect(find.text('Butterflies'), findsNothing);
+    expect(find.text('brightest stretch'), findsNothing);
   });
 
   testWidgets(

@@ -313,16 +313,23 @@ List<MeadowMistPocket> _pockets(
   final double spread = inside
       .map((MeadowPlant plant) => (plant.x - meanX).abs())
       .reduce(math.max);
+  final List<double> bloomHeights = <double>[
+    for (final MeadowPlant plant in inside)
+      if (!plant.isSprout)
+        plant.y - plant.heads.map((Offset head) => head.dy).reduce(math.min),
+  ];
+  final double flowerHeight =
+      bloomHeights.reduce((double a, double b) => a + b) / bloomHeights.length;
   return List<MeadowMistPocket>.unmodifiable(
     List<MeadowMistPocket>.generate(_pocketCount, (int i) {
       final double width =
           random.between(240, 360) * (meanScale / meadowNearScale) +
           140 +
           spread * 0.6;
-      final double height = width * random.between(0.2, 0.28);
+      final double height = flowerHeight * 3.4 * random.between(0.95, 1.05);
       final double x =
           meanX + random.between(-0.4, 0.4) * math.max(width, spread);
-      final double y = meanY - height * random.between(0.25, 0.7);
+      final double y = meanY + flowerHeight * random.between(0.1, 0.3);
       final double period = random.between(26, 44);
       final double phase = random.between(0, 30);
       return MeadowMistPocket(
