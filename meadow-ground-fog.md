@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T03:52:05.575Z
+Updated: 2026-10-24T03:52:22.010Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6); the run is autonomous to the pull request. mitosis/meadow-ground-fog is at b9583f85, which fixes round 1's C1 blocker (receipt 3f260155) and C2 advisory. Review round 2 is under way: the full suite is running at b9583f85, and the code-reviewer brief is rendered (review/round-2/brief.code-reviewer.md). Unproven so far: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
+Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6); the run is autonomous to the pull request. Review is green at b9583f85 (round 2: no findings, C1 fixed, suite and slow checks pass), and mitosis/meadow-ground-fog carries the glossary commit f85ab835 on top. The mitosis ship run is in progress (output in ship.out). Unproven: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
 
 ## Next step
 
