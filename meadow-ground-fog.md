@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T00:28:05.981Z
+Updated: 2026-10-24T00:28:08.648Z
 Next ids: c5 D1 R3 S1
 
 ## Goal
@@ -38,3 +38,4 @@ Save each round 1 answer as a line in docs/specs/meadow-ground-fog.decisions.md,
 - Interphase files: docs/specs/meadow-ground-fog.decisions.md, .record.json, .guard.json (guard snapshot)
 - Earlier meadow decisions: docs/specs/meadow.md (item 7 gates mist and butterflies on 6 mood days in 16) and docs/specs/meadow.decisions.md
 - Prototype mist reference: docs/prototype/Meadow Scene.dc.html (pockets, --fogP)
+- Mock-up kit: scratchpad mock/ (patched prototype copy taking URL params v=before|a|b, h hour, y year, pm/pd/pn peaks; headless Chrome renders; stack.py builds the comparison strips)
