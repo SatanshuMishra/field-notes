@@ -1,7 +1,7 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T02:19:39.903Z
-Next ids: c5 D2 R3 S1
+Updated: 2026-10-24T02:23:24.964Z
+Next ids: c5 D2 R5 S1
 
 ## Goal
 
@@ -20,9 +20,7 @@ Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut f
 
 ## Next step
 
-When the Windows smoke run reports, dispatch the macOS smoke run, then Android, each from smoke-brief.md with its platform notes; when both reviewers report, collect review/round-1/meadow-ground-fog.findings.json and run pipeline candidates.
-
-Needs: D1.
+When the Windows smoke run reports (it was told to start a fresh windows instance), dispatch the macOS smoke run, then Android; then collect review/round-1/meadow-ground-fog.findings.json from code-reviewer.json (C1, C2), conformance-auditor.json (empty) and any broken smoke paths, and run pipeline candidates and the validator.
 
 ## Decisions in force
 
@@ -31,6 +29,8 @@ Needs: D1.
 ## Open risks
 
 - R1 The app's mist is an exact port of the prototype's (same 5 pockets, geometry and fogP), and the earlier meadow spec made the prototype the look reference; this change departs from it on purpose (intent Q4).
+- R3 Round 1 code-review finding C1 (MEDIUM, not yet validated): the sign gates compare the floating-point window mean with exactly 0, so a window whose valences cancel (happy, happy, tired, tired, sad, anxious gives -9.25e-18) still counts as heaviest; this undercuts c2's evidence until fixed. Bears on c2.
+- R4 The lab releases every instance this session holds whenever a turn ends, so a background smoke agent's instance disappears between turns; each smoke agent must start its instance inside its own run and expect to restart it.
 
 ## Settled, do not reopen
 
