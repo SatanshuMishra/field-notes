@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T04:49:45.726Z
+Updated: 2026-10-24T05:08:30.894Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Integration: SatanshuMishra/field-notes#335 merged into feat/meadow-ground-fog (origin at 0f7cf7a5), and pipeline integration-ready reports ready; lighthouse run 1 tests the FEATURE branch against main, with results in lighthouse/run-1. Its suite passed on feature (main's one failure is a timing test, caret_geometry_test, unrelated), and the onboarding neighbour probe passed on both builds (evidence/onboarding-<build>.txt). A headless macOS lab session is driving the other four paths (heavy-year blooms through mist, good year without mist, a zero-average stretch without cards, the Meadow animating with fireflies), briefed in lab-brief.md and logging to lab-session.log, on instance macos-1; both apps are built and the six heavy-year screenshots are in evidence/. Unproven: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
+Integration: SatanshuMishra/field-notes#335 merged into feat/meadow-ground-fog (origin at 0f7cf7a5), and pipeline integration-ready reports ready; lighthouse run 1 tests the FEATURE branch against main, with results in lighthouse/run-1. Its suite passed on feature (main's one failure is a timing test, caret_geometry_test, unrelated), and the onboarding neighbour probe passed on both builds (evidence/onboarding-<build>.txt). A headless macOS lab session is driving the other four paths (heavy-year blooms through mist, good year without mist, a zero-average stretch without cards, the Meadow animating with fireflies), briefed in lab-brief.md and logging to lab-session.log, on instance macos-1; 15 of its 18 screenshots are in evidence/, only the fireflies pairs remain, and the zero-average landmarks shots show main with both stretch cards and feature with neither. Unproven: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
 
 ## Next step
 
