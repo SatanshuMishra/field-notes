@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T05:13:37.663Z
+Updated: 2026-10-24T05:13:40.001Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -43,3 +43,4 @@ When the lab session writes lighthouse/run-1/lab-report.json, write lighthouse/r
 - Prototype mist reference: docs/prototype/Meadow Scene.dc.html (pockets, --fogP)
 - Mock-up kit: scratchpad mock/ (patched prototype copy taking URL params v=before|a|b, h hour, y year, pm/pd/pn peaks; headless Chrome renders; stack.py builds the comparison strips)
 - Review records: review/round-<n>/meadow-ground-fog.md (each round's findings and outcomes), review/meadow-ground-fog.comment.md (the pull request comment)
+- Lighthouse run 1: lighthouse/run-1/ (findings.json, verdict.json, report.md, lab-report.json, and evidence/ with the core and feature lab screenshots)
