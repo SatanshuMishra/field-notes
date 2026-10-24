@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T05:27:24.628Z
+Updated: 2026-10-24T06:01:13.047Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -11,7 +11,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 - [ ] c1 Combined mist-pocket peak opacity is capped per time of day and blooms stay readable at night, dawn and noon in owner-approved lab screenshots with meadowKeyProvider pinned
 - [x] c2 No mist pockets or heaviest-stretch landmark when the heaviest window's mean valence is zero or above, and no butterfly brightest-stretch bias when the brightest window's mean is zero or below evidence: criterion 5.1's three tests (meadow_year_test sign gates, meadow_landmarks_test both cards) pass in the round 1 full suite at 91683e62, and the conformance audit judged 5.1 MET
-- [ ] c3 No frame-time regression on the Note10+ floor check
+- [x] c3 No frame-time regression on the Note10+ floor check evidence: Note10+ floor check, Meadow at midnight with the pinned meadow and a heavy stretch drawing mist, 3 runs of 30 s per build in balanced order with the GPU at full speed: median frame time 18.54 ms at 4f9aa3a6 vs 18.58 ms at 19b691c3 (+0.04), 95th percentile 21.34 vs 21.17 ms (-0.17), both within the 0.5 ms limit; results in ~/.mitosis/field-notes/meadow-fog-floor/floor.log
 - [x] c4 Pull requests opened through the pipeline, never merged evidence: SatanshuMishra/field-notes#335 opened ready for review through the pipeline (mitosis title and body, GitHub MCP), base feat/meadow-ground-fog, assigned to the owner, not merged
 
 ## Where things stand
@@ -20,7 +20,7 @@ The change is on main at 0130ad65 (SatanshuMishra/field-notes#335 and #336 merge
 
 ## Next step
 
-When the owner approves the mist's look or names peaks to raise (within 0.15 each), tick c1 or make that tuning as a direct-lane change in lib/features/garden/scene/meadow_palette.dart's fogP; when the Note10+ is connected, run the floor check (median and 95th-percentile frame time over 3 runs of 30 seconds on the Meadow at night with the pinned meadow, against the commit before 0f7cf7a5) for c3, then close the thread.
+When the owner approves the mist's look in release 1.4.1 or names peaks to raise (within 0.15 each), tick c1 or make that tuning as a direct-lane change in lib/features/garden/scene/meadow_palette.dart's fogP, then close the thread.
 
 ## Decisions in force
 
