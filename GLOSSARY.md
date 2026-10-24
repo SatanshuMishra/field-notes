@@ -55,3 +55,17 @@ _Avoid_: Day modal, day dialog
 **Day sheet**:
 The phone form of the day pop-up, a single column sliding up from the bottom.
 _Avoid_: Bottom sheet (for this view)
+
+## Meadow
+
+**Heaviest stretch**:
+The 16-day window of a year, holding at least 6 days with a mood, whose average mood is the lowest of the year; it counts only when that average is below zero.
+_Avoid_: hard stretch, heaviest window
+
+**Brightest stretch**:
+The 16-day window of a year, holding at least 6 days with a mood, whose average mood is the highest of the year; it counts only when that average is above zero.
+_Avoid_: bright window
+
+**Mist**:
+The low fog the Meadow lays over the heaviest stretch's flowers, lying around their stems with the blooms rising out of it.
+_Avoid_: fog pocket, hollow fog
