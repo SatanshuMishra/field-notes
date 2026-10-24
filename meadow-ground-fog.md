@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T02:18:50.854Z
+Updated: 2026-10-24T02:19:35.516Z
 Next ids: c5 D2 R3 S1
 
 ## Goal
@@ -10,7 +10,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 ## Done when
 
 - [ ] c1 Combined mist-pocket peak opacity is capped per time of day and blooms stay readable at night, dawn and noon in owner-approved lab screenshots with meadowKeyProvider pinned
-- [ ] c2 No mist pockets or heaviest-stretch landmark when the heaviest window's mean valence is zero or above, and no butterfly brightest-stretch bias when the brightest window's mean is zero or below
+- [x] c2 No mist pockets or heaviest-stretch landmark when the heaviest window's mean valence is zero or above, and no butterfly brightest-stretch bias when the brightest window's mean is zero or below evidence: criterion 5.1's three tests (meadow_year_test sign gates, meadow_landmarks_test both cards) pass in the round 1 full suite at 91683e62, and the conformance audit judged 5.1 MET
 - [ ] c3 No frame-time regression on the Note10+ floor check
 - [ ] c4 Pull requests opened through the pipeline, never merged
 
