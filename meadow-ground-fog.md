@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T03:02:52.382Z
+Updated: 2026-10-24T03:21:17.833Z
 Next ids: c5 D2 R5 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. MSP meadow-ground-fog is committed on mitosis/meadow-ground-fog at 91683e62 in worktree ~/.mitosis/runs/fireplace/meadow-ground-fog/trees/meadow-ground-fog. Review round 1 is under way: the full suite passes at the head (5488 app and 178 package tests, analysis clean, review/round-1/meadow-ground-fog.suite.txt); the conformance audit found nothing (review/round-1/conformance-auditor.json); code-reviewer found C1 MEDIUM and C2 LOW (review/round-1/code-reviewer.json); the Windows smoke run is stopped with no screenshots because winpc went offline after its builds (the lab copies were released), so Windows is unproven until winpc returns; the macOS smoke run passed 3 of 3 paths (review/round-1/meadow-ground-fog.smoke-macos.txt; shots/macos/compare-heavy.png sent to the owner; the new mist is faint at noon and midnight, an owner call within the ±0.15 tuning); the Android smoke run is running as a headless claude -p session (review/round-1/smoke-android.session.log). Spec criterion 5.4 is unproven until the lab review; the Note10+ is not connected.
+Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. MSP meadow-ground-fog is committed on mitosis/meadow-ground-fog at 91683e62 in worktree ~/.mitosis/runs/fireplace/meadow-ground-fog/trees/meadow-ground-fog. Review round 1 is under way: the full suite passes at the head (5488 app and 178 package tests, analysis clean, review/round-1/meadow-ground-fog.suite.txt); the conformance audit found nothing (review/round-1/conformance-auditor.json); code-reviewer found C1 MEDIUM and C2 LOW (review/round-1/code-reviewer.json); the Windows smoke run is stopped with no screenshots because winpc went offline after its builds (the lab copies were released), so Windows is unproven until winpc returns; the macOS smoke run passed 3 of 3 paths (review/round-1/meadow-ground-fog.smoke-macos.txt; shots/macos/compare-heavy.png sent to the owner; the new mist is faint at noon and midnight, an owner call within the ±0.15 tuning); the Android smoke run is running as a headless claude -p session on android-phone (review/round-1/smoke-android.session.log), with 7 of 8 screenshots in shots/android/. Spec criterion 5.4 is unproven until the lab review; the Note10+ is not connected.
 
 ## Next step
 
