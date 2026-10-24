@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T00:35:50.248Z
+Updated: 2026-10-24T00:35:52.114Z
 Next ids: c5 D1 R3 S1
 
 ## Goal
@@ -27,7 +27,7 @@ Save the round 3 answer, then write criteria 5.1 to 5.4 and Steps year-gates, mi
 ## Open risks
 
 - R1 The app's mist is an exact port of the prototype's (same 5 pockets, geometry and fogP), and the earlier meadow spec made the prototype the look reference; this change departs from it on purpose (intent Q4).
-- R2 Existing tests pin today's behaviour and will change: meadow_year_test expects brightest == heaviest for one window; meadow_plants_test expects pocket.y < meanY and a height/width of 0.2 to 0.28; meadow_palette_test pins fogP values.
+- R2 Existing tests pin today's behaviour and will change: meadow_year_test expects brightest == heaviest for one window; meadow_plants_test expects pocket.y < meanY and a height/width of 0.2 to 0.28; meadow_palette_test pins fogP values; meadow_landmarks_test expects a mist card for a year of happy days with one sad day; the seven page goldens in test/features/garden/goldens show the mist.
 
 ## Settled, do not reopen
 
