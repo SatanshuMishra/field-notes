@@ -32,18 +32,25 @@ const int _heavyPercent = 45;
 const int _changeablePercent = 25;
 const String _rangeSeparator = ' – ';
 
-double meadowValence(Mood mood) => switch (mood) {
-  Mood.happy => 0.85,
-  Mood.love => 0.8,
-  Mood.warm => 0.7,
-  Mood.grateful => 0.62,
-  Mood.hopeful => 0.45,
-  Mood.calm => 0.28,
-  Mood.tired => -0.25,
-  Mood.anxious => -0.45,
-  Mood.angry => -0.65,
-  Mood.sad => -0.75,
+const int _valenceScale = 100;
+const double _faintestMist = 0.6;
+const double _thickestMistMean = -0.6;
+
+int meadowValenceHundredths(Mood mood) => switch (mood) {
+  Mood.happy => 85,
+  Mood.love => 80,
+  Mood.warm => 70,
+  Mood.grateful => 62,
+  Mood.hopeful => 45,
+  Mood.calm => 28,
+  Mood.tired => -25,
+  Mood.anxious => -45,
+  Mood.angry => -65,
+  Mood.sad => -75,
 };
+
+double meadowValence(Mood mood) =>
+    meadowValenceHundredths(mood) / _valenceScale;
 
 class MeadowDay {
   MeadowDay({
@@ -122,6 +129,10 @@ class MeadowWindow {
   final int first;
   final int last;
   final double mean;
+
+  double get mistStrength =>
+      _faintestMist +
+      (1 - _faintestMist) * math.min(1.0, mean / _thickestMistMean);
 
   @override
   bool operator ==(Object other) =>
@@ -420,18 +431,18 @@ List<MeadowWindow> _windows(List<MeadowDay?> grid) => <MeadowWindow>[
 ];
 
 MeadowWindow? _windowAt(List<MeadowDay?> grid, int first) {
-  final List<double> valences = <double>[
+  final List<int> hundredths = <int>[
     for (final MeadowDay? day in grid.sublist(first, first + _windowDays))
-      if (day != null && day.mood != null) day.valence,
+      if (day?.mood case final Mood mood) meadowValenceHundredths(mood),
   ];
-  if (valences.length < _windowMoodDays) {
+  if (hundredths.length < _windowMoodDays) {
     return null;
   }
-  final double sum = valences.fold(0, (double a, double b) => a + b);
+  final int total = hundredths.fold(0, (int a, int b) => a + b);
   return MeadowWindow(
     first: first,
     last: first + _windowDays - 1,
-    mean: sum / valences.length,
+    mean: total / (_valenceScale * hundredths.length),
   );
 }
 

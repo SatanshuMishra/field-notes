@@ -328,6 +328,17 @@ void main() {
     expect(tired.brightest, isNull);
   });
 
+  test('a heavier stretch makes thicker mist, full from a mean of -0.6', () {
+    MeadowWindow stretch(double mean) =>
+        MeadowWindow(first: 0, last: 15, mean: mean);
+
+    expect(stretch(-0.75).mistStrength, 1);
+    expect(stretch(-0.6).mistStrength, 1);
+    expect(stretch(-0.3).mistStrength, closeTo(0.8, 1e-12));
+    expect(stretch(-0.25).mistStrength, closeTo(0.7667, 1e-4));
+    expect(stretch(0).mistStrength, 0.6);
+  });
+
   test('a stretch whose moods average exactly zero is neither heaviest nor brightest', () {
     MeadowYear balanced(List<Mood> moods) => _pastYear(2025, <Day>[
       for (int i = 0; i < moods.length; i++)
