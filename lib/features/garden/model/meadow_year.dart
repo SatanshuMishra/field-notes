@@ -261,8 +261,16 @@ class MeadowYear {
         ),
       ),
       longestRun: _longestRun(grid),
-      heaviest: _extreme(windows, (double a, double b) => a < b),
-      brightest: _extreme(windows, (double a, double b) => a > b),
+      heaviest: _extreme(
+        windows,
+        (double a, double b) => a < b,
+        counts: (double mean) => mean < 0,
+      ),
+      brightest: _extreme(
+        windows,
+        (double a, double b) => a > b,
+        counts: (double mean) => mean > 0,
+      ),
       heavyShare: heavy / math.max(1, grown.length),
       weeks: List<Mood?>.unmodifiable(
         List<Mood?>.generate(_weekCount, (int week) {
@@ -429,15 +437,16 @@ MeadowWindow? _windowAt(List<MeadowDay?> grid, int first) {
 
 MeadowWindow? _extreme(
   List<MeadowWindow> windows,
-  bool Function(double candidate, double best) beats,
-) {
+  bool Function(double candidate, double best) beats, {
+  required bool Function(double mean) counts,
+}) {
   MeadowWindow? best;
   for (final MeadowWindow window in windows) {
     if (best == null || beats(window.mean, best.mean)) {
       best = window;
     }
   }
-  return best;
+  return best != null && counts(best.mean) ? best : null;
 }
 
 List<Mood> _topMoods(List<MeadowDay?> days, int count) {

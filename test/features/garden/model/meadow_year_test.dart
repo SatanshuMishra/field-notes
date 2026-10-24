@@ -266,7 +266,7 @@ void main() {
       sixMoods.heaviest,
       const MeadowWindow(first: 0, last: 15, mean: -0.75),
     );
-    expect(sixMoods.brightest, sixMoods.heaviest);
+    expect(sixMoods.brightest, isNull);
 
     final MeadowYear spread = _pastYear(2025, <Day>[
       ..._moodDays(2025, _span(0, 6), Mood.happy),
@@ -304,6 +304,28 @@ void main() {
     expect(beforeToday.limit, 5);
     expect(beforeToday.heaviest, isNull);
     expect(beforeToday.brightest, isNull);
+  });
+
+  test('a stretch counts as heaviest only below zero and as brightest only above zero', () {
+    const List<int> moodDays = <int>[0, 3, 6, 9, 12, 15];
+
+    final MeadowYear sad = _pastYear(2025, _moodDays(2025, moodDays, Mood.sad));
+    expect(sad.heaviest, const MeadowWindow(first: 0, last: 15, mean: -0.75));
+    expect(sad.brightest, isNull);
+
+    final MeadowYear calm = _pastYear(
+      2025,
+      _moodDays(2025, moodDays, Mood.calm),
+    );
+    expect(calm.brightest, const MeadowWindow(first: 0, last: 15, mean: 0.28));
+    expect(calm.heaviest, isNull);
+
+    final MeadowYear tired = _pastYear(
+      2025,
+      _moodDays(2025, moodDays, Mood.tired),
+    );
+    expect(tired.heaviest, const MeadowWindow(first: 0, last: 15, mean: -0.25));
+    expect(tired.brightest, isNull);
   });
 
   test('the weather phrase follows the share of heavy days', () {
