@@ -1,7 +1,7 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T01:29:30.702Z
-Next ids: c5 D1 R3 S1
+Updated: 2026-10-24T01:31:19.232Z
+Next ids: c5 D2 R3 S1
 
 ## Goal
 
@@ -23,6 +23,8 @@ Full lane, slug meadow-ground-fog, MSP meadow-ground-fog. The owner approved the
 Pipeline stage 2: sync the checkout, run pipeline feature-branch, write the run home files, record the interphase hand-off boundary, then mitosis --plan-only.
 
 ## Decisions in force
+
+- D1 Interphase hand-off: build the approved spec as one MSP of three Steps: Build now from the handed-off spec, one MSP meadow-ground-fog, one pull request; criterion 5.4 stays unproven until the lab review.
 
 ## Open risks
 
