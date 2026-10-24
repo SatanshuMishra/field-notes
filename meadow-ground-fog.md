@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T03:34:45.798Z
+Updated: 2026-10-24T03:38:26.029Z
 Next ids: c5 D2 R5 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The Meadow's "Mist in the hollow" mist pockets stop hiding the flowers they sit 
 
 ## Where things stand
 
-Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6). The run is autonomous to the pull request. Review round 1 at 91683e62 ended with verdict loop: C1 MEDIUM (the sign gates compared a floating-point mean with 0) was confirmed and diagnosed fixable, and C2 LOW (unnamed strength literals in the painter) was confirmed as advisory. Both are fixed on mitosis/meadow-ground-fog: receipt test 3f260155 failed at 91683e62, and fix b9583f85 stores mood scores as whole hundredths, averages a stretch with integer sums (the receipt passes, the diagnosis's selecting check finds nothing), and names the strength as MeadowWindow.mistStrength; the garden and onboarding tests pass (333). Round 1 smoke: macOS 3 of 3 pass, Android 2 pass with the landmarks path unproven, Windows unproven (winpc offline). Review round 2 has started: its diff is review/round-2/meadow-ground-fog.diff and the full suite is running at b9583f85. Spec criterion 5.4 is unproven until the lab review; the Note10+ is not connected.
+Full lane, MSP meadow-ground-fog on FEATURE branch feat/meadow-ground-fog (cut from main at 4f9aa3a6); the run is autonomous to the pull request. mitosis/meadow-ground-fog is at b9583f85, which fixes round 1's C1 blocker (receipt 3f260155) and C2 advisory. Review round 2 is under way: the full suite is running at b9583f85, and the code-reviewer brief is rendered (review/round-2/brief.code-reviewer.md). Unproven so far: Windows smoke (winpc offline), the Android landmarks path, spec criterion 5.4 (the owner's lab review), and the Note10+ check (not connected).
 
 ## Next step
 
