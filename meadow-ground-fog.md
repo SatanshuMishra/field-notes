@@ -1,7 +1,7 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: active
-Updated: 2026-10-24T03:38:30.621Z
-Next ids: c5 D2 R5 S1
+Updated: 2026-10-24T03:52:00.494Z
+Next ids: c5 D3 R5 S1
 
 ## Goal
 
@@ -25,6 +25,7 @@ When the round 2 suite finishes, run code-reviewer on round 2's scope (the C1 re
 ## Decisions in force
 
 - D1 Interphase hand-off: build the approved spec as one MSP of three Steps: Build now from the handed-off spec, one MSP meadow-ground-fog, one pull request; criterion 5.4 stays unproven until the lab review.
+- D2 Ship boundary: open the MSP pull request from the green head: Ship now from proven head b9583f85, listing the Windows smoke, the Android landmarks path, criterion 5.4 and the Note10+ check as unproven in the report.
 
 ## Open risks
 
