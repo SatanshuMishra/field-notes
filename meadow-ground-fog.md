@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
 Status: parked
-Updated: 2026-10-24T04:04:34.989Z
+Updated: 2026-10-24T04:04:37.193Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Integration: SatanshuMishra/field-notes#335 merged into feat/meadow-ground-fog (
 
 ## Next step
 
-The owner reviews SatanshuMishra/field-notes#335 (including the lab screenshots for criterion 5.4) and starts Integration by saying the MSP pull request merged; Integration then has lighthouse test feat/meadow-ground-fog and opens the FEATURE pull request into main.
+When lighthouse suite finishes (lighthouse/run-1/suite.json), launch the headless lab session on lighthouse/run-1/lab-brief.md, probe onboarding with its widget tests on both builds, write findings.json and run lighthouse verdict; on green open the FEATURE pull request into main.
 
 ## Decisions in force
 
