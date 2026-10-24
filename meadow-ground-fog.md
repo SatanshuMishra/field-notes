@@ -1,6 +1,6 @@
 # meadow-ground-fog: Turn the meadow's mist pockets into low ground fog that keeps flowers visible
-Status: active
-Updated: 2026-10-24T03:54:08.080Z
+Status: parked
+Updated: 2026-10-24T03:54:09.401Z
 Next ids: c5 D3 R5 S1
 
 ## Goal
@@ -20,9 +20,7 @@ Shipped: SatanshuMishra/field-notes#335 (mitosis/meadow-ground-fog at f85ab835 i
 
 ## Next step
 
-Run SHIP=1 ~/.mitosis/fireplace/meadow-ground-fog/run.zsh --resume --proven-head meadow-ground-fog=b9583f8597060e3d7c3309da018b0a7bbd662cc3, then open the pull request from mitosis's title, body, branch and base, assign it to the owner and post review/meadow-ground-fog.comment.md.
-
-Needs: D2.
+The owner reviews SatanshuMishra/field-notes#335 (including the lab screenshots for criterion 5.4) and starts Integration by saying the MSP pull request merged; Integration then has lighthouse test feat/meadow-ground-fog and opens the FEATURE pull request into main.
 
 ## Decisions in force
 
