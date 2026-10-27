@@ -102,9 +102,8 @@ const double _phoneSkipHeight = 44;
 const double _phoneSkipRight = 8;
 const double _phoneSkipPadding = 12;
 const double _phoneSkipAlpha = 0.8;
-const double _phoneToggle = 44;
-const double _phoneToggleTop = 2;
-const double _phoneToggleLeft = 8;
+const double _phoneToggle = _target;
+const double _phoneToggleLeft = 6;
 const double _toastWidth = 270;
 const double _toastLift = 86;
 const double _toastRadius = 18;
@@ -700,10 +699,10 @@ class _OnboardingFrameState extends ConsumerState<OnboardingFrame> {
           ),
         ),
       Positioned(
-        top: status + _phoneToggleTop - (_target - _phoneToggle) / 2,
-        left: _phoneToggleLeft - (_target - _phoneToggle) / 2,
-        width: _target,
-        height: _target,
+        top: status,
+        left: _phoneToggleLeft,
+        width: _phoneToggle,
+        height: _phoneToggle,
         child: _InOrder(
           _Region.toggle,
           child: _GlassToggle(

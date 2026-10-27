@@ -24,6 +24,7 @@ import 'package:field_notes/features/garden/widgets/meadow_study_controls.dart'
 import 'package:field_notes/features/onboarding/chapters/sample_year.dart';
 import 'package:field_notes/features/onboarding/onboarding_controller.dart';
 import 'package:field_notes/features/onboarding/onboarding_frame.dart';
+import 'package:field_notes/features/onboarding/label_and_value.dart';
 import 'package:field_notes/features/onboarding/onboarding_swipe.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -54,7 +55,6 @@ const int _skyDay = 23;
 const Color _glassFill = Color.fromRGBO(28, 22, 16, 0.5);
 const Color _boxEdge = Color.fromRGBO(251, 243, 228, 0.35);
 const Color _buttonEdge = Color.fromRGBO(251, 243, 228, 0.55);
-const Color _daysInk = Color.fromRGBO(251, 243, 228, 0.8);
 const Color _trackRest = Color.fromRGBO(251, 243, 228, 0.35);
 const Color _trackFill = Color(0xFFF2C14E);
 const Color _shadeTop = Color.fromRGBO(20, 14, 8, 1);
@@ -70,6 +70,7 @@ const double _buttonBlurSigma = 3;
 const double _boxMaxWidth = 460;
 const double _rowGap = 20;
 const double _stackGap = 8;
+const double _plateInset = 4;
 const double _captionLift = 8;
 const double _thumbRadius = 8;
 const double _trackHeight = 4;
@@ -384,48 +385,68 @@ class _Heading extends StatelessWidget {
         ),
       ],
     );
+    final EdgeInsets plate = EdgeInsets.symmetric(
+      horizontal: metrics.boxPadding.left,
+      vertical: _plateInset,
+    );
+    final EdgeInsets around = metrics.headingPadding;
     final Widget heading = Padding(
-      padding:
-          metrics.headingPadding +
-          EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: centred
-            ? CrossAxisAlignment.center
-            : CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            _kicker,
-            textAlign: metrics.headingAlign,
-            style: TextStyle(
-              fontFamily: TypographyTokens.accent,
-              fontSize: metrics.kickerSize,
-              fontWeight: FontWeight.w600,
-              color: context.colors.accentTint,
-              shadows: <Shadow>[
-                Shadow(
-                  color: _textShadow.withValues(alpha: 0.4),
-                  offset: const Offset(0, 1),
-                  blurRadius: 10,
+      padding: EdgeInsets.fromLTRB(
+        math.max(0, around.left - plate.left),
+        math.max(0, around.top - plate.top) + MediaQuery.paddingOf(context).top,
+        math.max(0, around.right - plate.right),
+        0,
+      ),
+      child: Align(
+        alignment: centred ? Alignment.topCenter : Alignment.topLeft,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Palette.mediaScrim,
+            borderRadius: BorderRadius.all(Radius.circular(metrics.boxRadius)),
+          ),
+          child: Padding(
+            padding: plate,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: centred
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  _kicker,
+                  textAlign: metrics.headingAlign,
+                  style: TextStyle(
+                    fontFamily: TypographyTokens.accent,
+                    fontSize: metrics.kickerSize,
+                    fontWeight: FontWeight.w600,
+                    color: context.colors.accentTint,
+                    shadows: <Shadow>[
+                      Shadow(
+                        color: _textShadow.withValues(alpha: 0.4),
+                        offset: const Offset(0, 1),
+                        blurRadius: 10,
+                      ),
+                    ],
+                  ),
+                ),
+                Semantics(
+                  header: true,
+                  child: metrics.balanced
+                      ? _BalancedTitle(
+                          text: _title,
+                          style: titleStyle,
+                          align: metrics.headingAlign,
+                        )
+                      : Text(
+                          _title,
+                          textAlign: metrics.headingAlign,
+                          style: titleStyle,
+                        ),
                 ),
               ],
             ),
           ),
-          Semantics(
-            header: true,
-            child: metrics.balanced
-                ? _BalancedTitle(
-                    text: _title,
-                    style: titleStyle,
-                    align: metrics.headingAlign,
-                  )
-                : Text(
-                    _title,
-                    textAlign: metrics.headingAlign,
-                    style: titleStyle,
-                  ),
-          ),
-        ],
+        ),
       ),
     );
     return Semantics(container: true, child: heading);
@@ -544,35 +565,22 @@ class _Controls extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         ExcludeSemantics(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: <Widget>[
-              Expanded(
-                child: Text(
-                  yearMonthLabel(day),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: TypographyTokens.accent,
-                    fontSize: metrics.monthSize,
-                    fontWeight: FontWeight.w700,
-                    height: 1,
-                    color: FieldNotesColors.light.composerPaper,
-                  ),
-                ),
-              ),
-              Text(
-                yearDaysLabel(day),
-                maxLines: 1,
-                style: TextStyle(
-                  fontFamily: TypographyTokens.sans,
-                  fontSize: metrics.daysSize,
-                  fontWeight: FontWeight.w600,
-                  color: _daysInk,
-                ),
-              ),
-            ],
+          child: LabelAndValue(
+            label: yearMonthLabel(day),
+            labelStyle: TextStyle(
+              fontFamily: TypographyTokens.accent,
+              fontSize: metrics.monthSize,
+              fontWeight: FontWeight.w700,
+              height: 1,
+              color: FieldNotesColors.light.composerPaper,
+            ),
+            value: yearDaysLabel(day),
+            valueStyle: TextStyle(
+              fontFamily: TypographyTokens.sans,
+              fontSize: metrics.daysSize,
+              fontWeight: FontWeight.w600,
+              color: FieldNotesColors.light.composerPaper,
+            ),
           ),
         ),
         _YearSlider(
