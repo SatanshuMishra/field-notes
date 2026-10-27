@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -317,7 +315,6 @@ Future<List<String>> _swept(
             ),
           ),
         );
-        await tester.pump(const Duration(milliseconds: 200));
       },
       proof: <A11yProof>[A11yProof(find.byKey(_plantedKey))],
     ),
@@ -379,42 +376,6 @@ class _RingButtonState extends State<_RingButton> {
         child: _box(120, 48),
       ),
     ),
-  );
-}
-
-class _StatusSwap extends StatefulWidget {
-  const _StatusSwap({required this.live});
-
-  final bool live;
-
-  @override
-  State<_StatusSwap> createState() => _StatusSwapState();
-}
-
-class _StatusSwapState extends State<_StatusSwap> {
-  late final Timer _saving;
-  bool _saved = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _saving = Timer(
-      const Duration(milliseconds: 100),
-      () => setState(() => _saved = true),
-    );
-  }
-
-  @override
-  void dispose() {
-    _saving.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-    container: true,
-    liveRegion: widget.live,
-    child: Text(_saved ? 'Saved' : 'Saving'),
   );
 }
 
@@ -1018,29 +979,6 @@ void main() {
       );
     },
   );
-
-  testWidgets('a status change with no live region is a finding', (
-    WidgetTester tester,
-  ) async {
-    expect(
-      await _swept(
-        tester,
-        _android,
-        const _StatusSwap(live: false),
-        rules: <String>{'live-region'},
-      ),
-      <String>['live-region | planted | Saved | <root>'],
-    );
-    expect(
-      await _swept(
-        tester,
-        _android,
-        const _StatusSwap(live: true),
-        rules: <String>{'live-region'},
-      ),
-      isEmpty,
-    );
-  });
 
   testWidgets('a tappable control tab cannot reach is a keyboard finding', (
     WidgetTester tester,

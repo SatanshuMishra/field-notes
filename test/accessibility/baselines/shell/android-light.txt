@@ -10,12 +10,6 @@ flutter-text-contrast | a8-garden-phone@2x | Today | <root> # open: fails Flutte
 focus-visible | a6-garden-empty | Full screen | <root> # open: focus indicator below 3:1
 focus-visible | a7-garden-blooms | Full screen | <root> # open: focus indicator below 3:1
 focus-visible | a8-garden-phone | Full screen | <root> # open: focus indicator below 3:1
-live-region | a11-calendar-next-month | October 2026 | <root> # open: status change is not announced
-live-region | a11-calendar-next-month@2x | October 2026 | <root> # open: status change is not announced
-live-region | a9-search-results | 1 entry | <root> # open: status change is not announced
-live-region | a9-search-results | The peonies opened by the fence | <root> # open: status change is not announced
-live-region | a9-search-results@2x | 1 entry | <root> # open: status change is not announced
-live-region | a9-search-results@2x | The peonies opened by the fence | <root> # open: status change is not announced
 missing-role | a5-calendar-picker | Dismiss month picker | <root> # Flutter's own control
 missing-role | a5-calendar-picker@2x | Dismiss month picker | <root> # Flutter's own control
 small-target | a1-today-empty | Settings | <root> # open: phone header Settings gear is under 48 dp

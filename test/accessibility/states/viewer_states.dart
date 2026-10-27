@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:field_notes/app/shell/shell_layout.dart';
 import 'package:field_notes/design/feedback/feedback.dart';
 import 'package:field_notes/design/widgets/widgets.dart';
 import 'package:field_notes/domain/models/models.dart';
@@ -18,6 +19,7 @@ import 'package:field_notes/features/day_detail/show_day_detail.dart';
 import 'package:field_notes/features/entry_cards/entry_cards.dart';
 import 'package:field_notes/features/log_viewer/log_viewer.dart';
 import 'package:field_notes/features/log_viewer/log_viewer_panel.dart';
+import 'package:field_notes/features/log_viewer/note_panel_view.dart';
 import 'package:field_notes/features/log_viewer/video_viewer_view.dart';
 import 'package:field_notes/features/log_viewer/viewer_waveform.dart';
 import 'package:field_notes/features/log_viewer/voice_player_view.dart';
@@ -360,35 +362,170 @@ final Finder _daySheet = find.descendant(
   matching: find.byType(PhoneSheet),
 );
 
+final Finder _notePanel = _inViewer(find.byType(NotePanelView));
+
+final Finder _dayPanel = find.descendant(
+  of: find.byType(DayDetailPanel),
+  matching: find.byKey(dayDetailListPaneKey),
+);
+
+final Finder _desktopMoodPicker = find.descendant(
+  of: find.byType(DialogHost),
+  matching: find.byWidgetPredicate(
+    (Widget widget) =>
+        widget is MoodPickerSheet && widget.layout == ShellLayout.sidebar,
+  ),
+);
+
+Finder _confirmIn(Type host) => find.descendant(
+  of: find.byType(host),
+  matching: find.byKey(confirmDialogConfirmKey),
+);
+
 Future<void> _tapText(WidgetTester tester, String text) async {
   await tester.tap(find.text(text));
   await tester.pumpAndSettle();
 }
 
-final List<A11yState> viewerStates = <A11yState>[
-  A11yState(
-    id: 'd1-viewer-todos',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) =>
-        _openViewer(tester, variant, entry: _note(_todoNote)),
-    proof: <A11yProof>[A11yProof(_logSheet)],
-    stateful: const <A11yStatefulControl>[
-      A11yStatefulControl.label(_firstTodo, A11yStateKind.checked),
-      A11yStatefulControl.label(_secondTodo, A11yStateKind.checked),
-    ],
-  ),
-  A11yState(
-    id: 'd2-viewer-photo',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) => _openViewer(
+const List<A11yStatefulControl> _todoChecks = <A11yStatefulControl>[
+  A11yStatefulControl.label(_firstTodo, A11yStateKind.checked),
+  A11yStatefulControl.label(_secondTodo, A11yStateKind.checked),
+];
+
+Future<void> _pumpTodos(WidgetTester tester, A11yVariant variant) =>
+    _openViewer(tester, variant, entry: _note(_todoNote));
+
+Future<void> _pumpPhoto(WidgetTester tester, A11yVariant variant) =>
+    _openViewer(
       tester,
       variant,
       entry: _note('A harbour morning.\n${photoLine(photoIdA)}'),
       resolver: FakeNoteMediaResolver(<String, ResolvedMedia>{
         prefixOf(photoIdA): availablePhoto(photoIdA),
       }),
+    );
+
+Future<void> _pumpReaderMenu(WidgetTester tester, A11yVariant variant) async {
+  await _openViewer(tester, variant, entry: _note(_plainNote));
+  await _longPressText(tester, _plainNote.indexOf('harbour') + 2);
+}
+
+Future<void> _pumpTaskToast(WidgetTester tester, A11yVariant variant) =>
+    _openViewer(tester, variant, entry: _note(_todoNote));
+
+Future<void> _tickSecondTask(WidgetTester tester, A11yVariant variant) =>
+    _tickTask(tester, 2);
+
+Future<void> _pumpDayWithEntries(WidgetTester tester, A11yVariant variant) =>
+    _openDay(tester, variant, <Entry>[
+      _entry(
+        id: 'entry-1',
+        type: EntryType.text,
+        createdAt: DateTime(2026, 9, 17, 9, 30),
+        textContent: 'a good day',
+      ),
+      _entry(
+        id: 'entry-2',
+        type: EntryType.text,
+        createdAt: DateTime(2026, 9, 17, 14, 30),
+        textContent: 'and a walk',
+      ),
+    ]);
+
+Future<void> _pumpDayEmpty(WidgetTester tester, A11yVariant variant) =>
+    _openDay(tester, variant, const <Entry>[]);
+
+Future<void> _pumpMoodPicker(WidgetTester tester, A11yVariant variant) async {
+  await _pumpDock(tester, variant);
+  await _tapText(tester, todayMoodDockChooseLabel);
+}
+
+Future<void> _pumpChangeMood(WidgetTester tester, A11yVariant variant) async {
+  await _pumpDock(tester, variant, mood: Mood.calm);
+  await _tapText(tester, todayMoodDockChangeLabel);
+  await _tapText(tester, 'Happy');
+}
+
+Future<void> _pumpDeleteEntry(WidgetTester tester, A11yVariant variant) async {
+  await _openViewer(tester, variant, entry: _note(_plainNote));
+  await tester.tap(find.byKey(logActionsDeleteKey));
+  await tester.pumpAndSettle();
+}
+
+Future<void> _pumpMiddleEntry(WidgetTester tester, A11yVariant variant) =>
+    _openViewerAmong(
+      tester,
+      variant,
+      entries: <Entry>[
+        _entry(
+          id: 'n1',
+          type: EntryType.text,
+          createdAt: DateTime(2026, 9, 18, 8),
+          textContent: 'First light.',
+        ),
+        _entry(
+          id: 'n2',
+          type: EntryType.text,
+          createdAt: DateTime(2026, 9, 18, 9),
+          textContent: 'The fog lifted.',
+        ),
+        _entry(
+          id: 'n3',
+          type: EntryType.text,
+          createdAt: DateTime(2026, 9, 18, 10),
+          textContent: 'Ferry at ten.',
+        ),
+      ],
+      entryId: 'n2',
+    );
+
+Future<void> _pumpDayPastMood(WidgetTester tester, A11yVariant variant) =>
+    _openDay(
+      tester,
+      variant,
+      <Entry>[
+        _entry(
+          id: 'entry-1',
+          type: EntryType.text,
+          createdAt: DateTime(2026, 9, 17, 9, 30),
+          textContent: 'a good day',
+        ),
+      ],
+      day: const Day(
+        id: 'day-1',
+        date: _pastDay,
+        mood: Mood.grateful,
+        createdAt: 0,
+        updatedAt: 0,
+      ),
+    );
+
+final List<A11yState> viewerStates = <A11yState>[
+  ...a11yInBothLayouts(
+    id: 'd1-viewer-todos',
+    desktopId: 'd1-viewer-todos-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpTodos,
+      proof: <A11yProof>[A11yProof(_logSheet)],
+      stateful: _todoChecks,
     ),
-    proof: <A11yProof>[A11yProof(_logSheet)],
+    desktop: A11yLayoutHalf(
+      pump: _pumpTodos,
+      proof: <A11yProof>[A11yProof(_notePanel)],
+      stateful: _todoChecks,
+    ),
+  ),
+  ...a11yInBothLayouts(
+    id: 'd2-viewer-photo',
+    desktopId: 'd2-viewer-photo-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpPhoto,
+      proof: <A11yProof>[A11yProof(_logSheet)],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpPhoto,
+      proof: <A11yProof>[A11yProof(_notePanel)],
+    ),
   ),
   A11yState(
     id: 'd3-viewer-voice',
@@ -438,56 +575,67 @@ final List<A11yState> viewerStates = <A11yState>[
       A11yProof(find.byType(VideoBody)),
     ],
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd5-reader-menu',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _openViewer(tester, variant, entry: _note(_plainNote));
-      await _longPressText(tester, _plainNote.indexOf('harbour') + 2);
-    },
-    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('Copy'))],
+    desktopId: 'd5-reader-menu-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpReaderMenu,
+      proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('Copy'))],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpReaderMenu,
+      proof: <A11yProof>[A11yProof(_notePanel), A11yProof(find.text('Copy'))],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd6-task-toast',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _openViewer(tester, variant, entry: _note(_todoNote));
-      await _tickTask(tester, 2);
-    },
-    proof: <A11yProof>[
-      A11yProof(_logSheet),
-      A11yProof(find.text('Task ticked')),
-    ],
+    desktopId: 'd6-task-toast-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpTaskToast,
+      act: _tickSecondTask,
+      proof: <A11yProof>[
+        A11yProof(_logSheet),
+        A11yProof(find.text('Task ticked')),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpTaskToast,
+      act: _tickSecondTask,
+      proof: <A11yProof>[
+        A11yProof(_notePanel),
+        A11yProof(find.text('Task ticked')),
+      ],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd7-day-with-entries',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) =>
-        _openDay(tester, variant, <Entry>[
-          _entry(
-            id: 'entry-1',
-            type: EntryType.text,
-            createdAt: DateTime(2026, 9, 17, 9, 30),
-            textContent: 'a good day',
-          ),
-          _entry(
-            id: 'entry-2',
-            type: EntryType.text,
-            createdAt: DateTime(2026, 9, 17, 14, 30),
-            textContent: 'and a walk',
-          ),
-        ]),
-    proof: <A11yProof>[A11yProof(_daySheet)],
+    desktopId: 'd7-day-with-entries-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpDayWithEntries,
+      proof: <A11yProof>[A11yProof(_daySheet)],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpDayWithEntries,
+      proof: <A11yProof>[A11yProof(_dayPanel)],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd8-day-empty',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) =>
-        _openDay(tester, variant, const <Entry>[]),
-    proof: <A11yProof>[
-      A11yProof(_daySheet),
-      A11yProof(find.text(dayDetailEmptyMessage)),
-    ],
+    desktopId: 'd8-day-empty-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpDayEmpty,
+      proof: <A11yProof>[
+        A11yProof(_daySheet),
+        A11yProof(find.text(dayDetailEmptyMessage)),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpDayEmpty,
+      proof: <A11yProof>[
+        A11yProof(_dayPanel),
+        A11yProof(find.text(dayDetailEmptyMessage)),
+      ],
+    ),
   ),
   A11yState(
     id: 'd9-mood-prompt-today',
@@ -506,22 +654,28 @@ final List<A11yState> viewerStates = <A11yState>[
     ),
     proof: <A11yProof>[A11yProof(find.text("tap to plant this day's bloom"))],
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd11-mood-picker',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _pumpDock(tester, variant);
-      await _tapText(tester, todayMoodDockChooseLabel);
-    },
-    proof: <A11yProof>[
-      A11yProof(
-        find.descendant(
-          of: find.byType(MoodPickerSheet),
-          matching: find.byType(PhoneSheet),
+    desktopId: 'd11-mood-picker-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpMoodPicker,
+      proof: <A11yProof>[
+        A11yProof(
+          find.descendant(
+            of: find.byType(MoodPickerSheet),
+            matching: find.byType(PhoneSheet),
+          ),
         ),
-      ),
-      A11yProof(find.text('Grateful')),
-    ],
+        A11yProof(find.text('Grateful')),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpMoodPicker,
+      proof: <A11yProof>[
+        A11yProof(_desktopMoodPicker),
+        A11yProof(find.text('Grateful')),
+      ],
+    ),
   ),
   A11yState(
     id: 'd12-mood-set',
@@ -532,96 +686,68 @@ final List<A11yState> viewerStates = <A11yState>[
       A11yProof(find.text(todayMoodDockChangeLabel)),
     ],
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd13-change-mood-dialog',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _pumpDock(tester, variant, mood: Mood.calm);
-      await _tapText(tester, todayMoodDockChangeLabel);
-      await _tapText(tester, 'Happy');
-    },
-    proof: <A11yProof>[
-      A11yProof(
-        find.descendant(
-          of: find.byType(PhoneSheet),
-          matching: find.byKey(confirmDialogConfirmKey),
+    desktopId: 'd13-change-mood-dialog-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpChangeMood,
+      proof: <A11yProof>[
+        A11yProof(_confirmIn(PhoneSheet)),
+        A11yProof(find.text('Change mood')),
+      ],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpChangeMood,
+      proof: <A11yProof>[
+        A11yProof(
+          find.descendant(
+            of: find.byType(StickerCard),
+            matching: find.widgetWithText(StickerButton, 'Change mood'),
+          ),
         ),
-      ),
-      A11yProof(find.text('Change mood')),
-    ],
+      ],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd14-delete-entry-dialog',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) async {
-      await _openViewer(tester, variant, entry: _note(_plainNote));
-      await tester.tap(find.byKey(logActionsDeleteKey));
-      await tester.pumpAndSettle();
-    },
-    proof: <A11yProof>[
-      A11yProof(
-        find.descendant(
-          of: find.byType(PhoneSheet),
-          matching: find.byKey(confirmDialogConfirmKey),
-        ),
-      ),
-    ],
+    desktopId: 'd14-delete-entry-dialog-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpDeleteEntry,
+      proof: <A11yProof>[A11yProof(_confirmIn(PhoneSheet))],
+    ),
+    desktop: A11yLayoutHalf(
+      pump: _pumpDeleteEntry,
+      proof: <A11yProof>[A11yProof(_confirmIn(DialogHost))],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd15-viewer-middle-entry',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) => _openViewerAmong(
-      tester,
-      variant,
-      entries: <Entry>[
-        _entry(
-          id: 'n1',
-          type: EntryType.text,
-          createdAt: DateTime(2026, 9, 18, 8),
-          textContent: 'First light.',
-        ),
-        _entry(
-          id: 'n2',
-          type: EntryType.text,
-          createdAt: DateTime(2026, 9, 18, 9),
-          textContent: 'The fog lifted.',
-        ),
-        _entry(
-          id: 'n3',
-          type: EntryType.text,
-          createdAt: DateTime(2026, 9, 18, 10),
-          textContent: 'Ferry at ten.',
-        ),
-      ],
-      entryId: 'n2',
+    desktopId: 'd15-viewer-middle-entry-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpMiddleEntry,
+      proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('2 of 3'))],
     ),
-    proof: <A11yProof>[A11yProof(_logSheet), A11yProof(find.text('2 of 3'))],
+    desktop: A11yLayoutHalf(
+      pump: _pumpMiddleEntry,
+      proof: <A11yProof>[A11yProof(_notePanel), A11yProof(find.text('2 of 3'))],
+    ),
   ),
-  A11yState(
+  ...a11yInBothLayouts(
     id: 'd16-day-past-mood',
-    platforms: const <TargetPlatform>{TargetPlatform.android},
-    pump: (WidgetTester tester, A11yVariant variant) => _openDay(
-      tester,
-      variant,
-      <Entry>[
-        _entry(
-          id: 'entry-1',
-          type: EntryType.text,
-          createdAt: DateTime(2026, 9, 17, 9, 30),
-          textContent: 'a good day',
-        ),
+    desktopId: 'd16-day-past-mood-sidebar',
+    phone: A11yLayoutHalf(
+      pump: _pumpDayPastMood,
+      proof: <A11yProof>[
+        A11yProof(_daySheet),
+        A11yProof(find.byType(DayMoodCard)),
       ],
-      day: const Day(
-        id: 'day-1',
-        date: _pastDay,
-        mood: Mood.grateful,
-        createdAt: 0,
-        updatedAt: 0,
-      ),
     ),
-    proof: <A11yProof>[
-      A11yProof(_daySheet),
-      A11yProof(find.byType(DayMoodCard)),
-    ],
+    desktop: A11yLayoutHalf(
+      pump: _pumpDayPastMood,
+      proof: <A11yProof>[
+        A11yProof(_dayPanel),
+        A11yProof(find.byType(DayMoodCard)),
+      ],
+    ),
   ),
 ];

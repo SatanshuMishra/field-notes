@@ -12,6 +12,7 @@ import 'states/shell_states.dart';
 import 'states/sync_states.dart';
 import 'states/updates_states.dart';
 import 'states/viewer_states.dart';
+import 'support/a11y_rules.dart';
 import 'support/a11y_state.dart';
 
 List<String> _ids(List<A11yState> states) => <String>[
@@ -74,16 +75,26 @@ final Set<int> _darkSheetColours = <int>{
   FieldNotesColors.dark.composerPaper.toARGB32(),
 };
 
+Map<String, List<A11yState>> get _statesByArea => <String, List<A11yState>>{
+  'shell': shellStates,
+  'settings': settingsStates,
+  'capture': captureStates,
+  'viewer': viewerStates,
+  'immersive': immersiveStates,
+  'onboarding': onboardingStates,
+  'media': mediaStates,
+  'sync': syncStates,
+  'updates': updatesStates,
+};
+
+List<String> _surfacesMissingDesktop() => <String>[
+  for (final MapEntry<String, List<A11yState>> area in _statesByArea.entries)
+    for (final String surface in a11ySurfacesOffDesktop(area.value))
+      '${area.key} $surface',
+];
+
 List<A11yState> get _everyState => <A11yState>[
-  ...shellStates,
-  ...settingsStates,
-  ...captureStates,
-  ...viewerStates,
-  ...immersiveStates,
-  ...onboardingStates,
-  ...mediaStates,
-  ...syncStates,
-  ...updatesStates,
+  for (final List<A11yState> states in _statesByArea.values) ...states,
 ];
 
 List<int> _sheetColours(WidgetTester tester) => <int>[
@@ -110,13 +121,19 @@ void main() {
       'a2-today-feed',
       'a3-card-actions',
       'a4-calendar-month',
+      'a4-calendar-month-sidebar',
       'a5-calendar-picker',
+      'a5-calendar-picker-sidebar',
       'a6-garden-empty',
       'a7-garden-blooms',
       'a8-garden-phone',
+      'a8-garden-sidebar',
       'a9-search-results',
+      'a9-search-results-sidebar',
       'a10-search-no-match',
+      'a10-search-no-match-sidebar',
       'a11-calendar-next-month',
+      'a11-calendar-next-month-sidebar',
       'a12-calendar-empty',
       'a13-search-empty',
       'a14-meadow-empty',
@@ -143,15 +160,19 @@ void main() {
     ]);
     expect(_ids(captureStates), <String>[
       'c1-chooser',
+      'c1-chooser-sidebar',
       'c2-composer-new',
+      'c2-composer-new-sidebar',
       'c3-composer-keyboard',
       'c4-more-formats',
       'c5-edit-note',
+      'c5-edit-note-sidebar',
       'c6-photo-selected',
       'c7-photo-caption',
       'c8-table-toolbar',
       'c9-selection-menu',
       'c10-discard-dialog',
+      'c10-discard-dialog-sidebar',
       'c11-draft-chip',
       'c12-voice-idle',
       'c13-voice-recording',
@@ -164,21 +185,32 @@ void main() {
     ]);
     expect(_ids(viewerStates), <String>[
       'd1-viewer-todos',
+      'd1-viewer-todos-sidebar',
       'd2-viewer-photo',
+      'd2-viewer-photo-sidebar',
       'd3-viewer-voice',
       'd4-viewer-video',
       'd5-reader-menu',
+      'd5-reader-menu-sidebar',
       'd6-task-toast',
+      'd6-task-toast-sidebar',
       'd7-day-with-entries',
+      'd7-day-with-entries-sidebar',
       'd8-day-empty',
+      'd8-day-empty-sidebar',
       'd9-mood-prompt-today',
       'd10-mood-prompt-past',
       'd11-mood-picker',
+      'd11-mood-picker-sidebar',
       'd12-mood-set',
       'd13-change-mood-dialog',
+      'd13-change-mood-dialog-sidebar',
       'd14-delete-entry-dialog',
+      'd14-delete-entry-dialog-sidebar',
       'd15-viewer-middle-entry',
+      'd15-viewer-middle-entry-sidebar',
       'd16-day-past-mood',
+      'd16-day-past-mood-sidebar',
     ]);
     expect(_ids(mediaStates), <String>[
       'm1-video-download-black-poster',
@@ -205,6 +237,44 @@ void main() {
       'u3-update-greeting',
       'u4-update-error-offline',
     ]);
+  });
+
+  test(
+    "every state's surface runs on macos and windows with the sidebar layout",
+    () {
+      final List<String> missing = _surfacesMissingDesktop();
+      expect(
+        missing,
+        isEmpty,
+        reason:
+            'these surfaces never run on macos and windows:\n'
+            '${missing.join('\n')}',
+      );
+    },
+  );
+
+  test('a sweep area refuses a surface that never runs on desktop', () {
+    expect(
+      () => a11ySweepArea(
+        area: 'probe',
+        groupName: 'probe',
+        states: <A11yState>[
+          A11yState(
+            id: 'z1-probe',
+            pump: (WidgetTester tester, A11yVariant variant) async {},
+            proof: const <A11yProof>[],
+            platforms: a11yPhonePlatforms,
+          ),
+        ],
+      ),
+      throwsA(
+        isA<ArgumentError>().having(
+          (ArgumentError error) => error.invalidValue,
+          'invalidValue',
+          <String>['probe (z1-probe)'],
+        ),
+      ),
+    );
   });
 
   test('the state library holds every named main-path surface', () {
@@ -244,7 +314,13 @@ void main() {
         for (final A11yState state in shellStates)
           if (state.stateful.isNotEmpty) state.id,
       ],
-      <String>['a1-today-empty', 'a5-calendar-picker', 'a8-garden-phone'],
+      <String>[
+        'a1-today-empty',
+        'a5-calendar-picker',
+        'a5-calendar-picker-sidebar',
+        'a8-garden-phone',
+        'a8-garden-sidebar',
+      ],
     );
     expect(
       captureStates
@@ -253,4 +329,33 @@ void main() {
       isEmpty,
     );
   });
+
+  for (final (List<A11yState> states, String id, TargetPlatform platform)
+      in <(List<A11yState>, String, TargetPlatform)>[
+        (shellStates, 'a15-today-empty-sidebar', TargetPlatform.macOS),
+        (shellStates, 'a9-search-results', TargetPlatform.android),
+        (shellStates, 'a10-search-no-match', TargetPlatform.android),
+        (onboardingStates, 'o11-moment-saved-sidebar', TargetPlatform.macOS),
+        (captureStates, 'c13-voice-recording', TargetPlatform.macOS),
+      ]) {
+    testWidgets(
+      'the sweep leaves status announcements to the contact sheets on $id',
+      (WidgetTester tester) async {
+        final A11yStateResult result = await runA11yState(
+          tester,
+          states.singleWhere((A11yState state) => state.id == id),
+          variant: A11yVariant(platform: platform),
+          checks: A11yChecks.full,
+        );
+        expect(a11yRuleDescriptions.keys, isNot(contains('live-region')));
+        expect(switch (result) {
+          A11yLoaded(:final List<A11yFinding> findings) => <String>[
+            for (final A11yFinding finding in findings)
+              if (finding.rule == 'live-region') finding.label,
+          ],
+          A11yNotLoaded(:final String message) => throw TestFailure(message),
+        }, isEmpty);
+      },
+    );
+  }
 }

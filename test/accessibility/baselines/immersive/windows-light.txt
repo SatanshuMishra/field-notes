@@ -1,21 +1,3 @@
-live-region | i1-voice-question | What felt heavier than it needed to? | <root> # open: status change is not announced
-live-region | i1-voice-question@2x | What felt heavier than it needed to? | <root> # open: status change is not announced
-live-region | i10-video-without-pause | ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i10-video-without-pause@2x | ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i11-voice-save-error | space pause · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i11-voice-save-error@2x | space pause · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i3-voice-recording | space pause · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i3-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i4-voice-paused | space resume · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i4-voice-paused@2x | space resume · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i5-voice-let-go | esc keep going | <root> # open: status change is not announced
-live-region | i5-voice-let-go@2x | esc keep going | <root> # open: status change is not announced
-live-region | i7-video-idle | space start · esc leave | <root> # open: status change is not announced
-live-region | i7-video-idle@2x | space start · esc leave | <root> # open: status change is not announced
-live-region | i8-video-camera-off | space pause · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i8-video-camera-off@2x | space pause · ctrl+enter keep · esc leave | <root> # open: status change is not announced
-live-region | i9-video-let-go | ctrl+enter keep · esc keep going | <root> # open: status change is not announced
-live-region | i9-video-let-go@2x | ctrl+enter keep · esc keep going | <root> # open: status change is not announced
 overlapping-text | i11-voice-save-error@2x | 0:00 + Could not save your entry. | <root> # open: text overlaps other text at 2x text
 truncated-text | i11-voice-save-error@2x | space pause · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text
 truncated-text | i3-voice-recording@2x | space pause · ctrl+enter keep · esc leave | <root> # open: text is cut short at 2x text

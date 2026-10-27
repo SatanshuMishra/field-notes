@@ -34,8 +34,6 @@ final class A11yWindow {
 
   final Size physicalSize;
   final double devicePixelRatio;
-
-  Size get logicalSize => physicalSize / devicePixelRatio;
 }
 
 const A11yWindow a11yPhoneWindow = A11yWindow(

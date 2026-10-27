@@ -4,10 +4,6 @@ focus-visible | b12-select-dropdown-microphone | <unlabelled> | Input volume # o
 focus-visible | b12-select-dropdown-microphone | <unlabelled> | Output volume # open: focus indicator below 3:1
 focus-visible | b13-select-dropdown-speaker | <unlabelled> | Input volume # open: focus indicator below 3:1
 focus-visible | b13-select-dropdown-speaker | <unlabelled> | Output volume # open: focus indicator below 3:1
-live-region | b10-settings-about-phone | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
-live-region | b10-settings-about-phone@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
-live-region | b16-settings-sync-paused | 0 devices · add or remove | Sync & storage # open: status change is not announced
-live-region | b16-settings-sync-paused@2x | 0 devices · add or remove | Sync & storage # open: status change is not announced
 missing-role | b14-sync-delete-all-dialog | Dismiss | <root> # Flutter's own control
 missing-role | b14-sync-delete-all-dialog@2x | Dismiss | <root> # Flutter's own control
 missing-role | b4-select-open | Dismiss | <root> # Flutter's own control

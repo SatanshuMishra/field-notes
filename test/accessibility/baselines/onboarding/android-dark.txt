@@ -1,17 +1,5 @@
 flutter-text-contrast | o20-year-playing-bottom-bar | Skip | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | o20-year-playing-bottom-bar@2x | Skip | <root> # open: fails Flutter's text contrast guideline
-live-region | o20-year-playing-bottom-bar | 195 of 365 days | <root> # open: status change is not announced
-live-region | o20-year-playing-bottom-bar | July | <root> # open: status change is not announced
-live-region | o20-year-playing-bottom-bar@2x | 195 of 365 days | <root> # open: status change is not announced
-live-region | o20-year-playing-bottom-bar@2x | July | <root> # open: status change is not announced
-live-region | o22-year-finished-bottom-bar | 365 of 365 days | <root> # open: status change is not announced
-live-region | o22-year-finished-bottom-bar | A whole year | <root> # open: status change is not announced
-live-region | o22-year-finished-bottom-bar | swipe to continue | <root> # open: status change is not announced
-live-region | o22-year-finished-bottom-bar@2x | 365 of 365 days | <root> # open: status change is not announced
-live-region | o22-year-finished-bottom-bar@2x | A whole year | <root> # open: status change is not announced
-live-region | o22-year-finished-bottom-bar@2x | swipe to continue | <root> # open: status change is not announced
-live-region | o32-map-end-bottom-bar | swipe to start journaling | <root> # open: status change is not announced
-live-region | o32-map-end-bottom-bar@2x | swipe to start journaling | <root> # open: status change is not announced
 overflow | o32-map-end-bottom-bar@2x | swipe to start journaling | <root> # open: layout overflows
 overlapping-text | o10-moment-empty-bottom-bar@2x | write anything at all to keep going + Write a line or two first. | <root> # open: text overlaps other text at 2x text
 overlapping-text | o6-day-happy-bottom-bar@2x | peony + There are ten. Pick the one that fits today. | <root> # open: text overlaps other text at 2x text

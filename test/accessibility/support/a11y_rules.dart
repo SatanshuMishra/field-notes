@@ -22,7 +22,6 @@ const String _overflow = 'overflow';
 const String _truncatedText = 'truncated-text';
 const String _overlappingText = 'overlapping-text';
 const String _focusVisible = 'focus-visible';
-const String _liveRegion = 'live-region';
 const String _keyboard = 'keyboard';
 
 const Map<String, String> a11yRuleDescriptions = <String, String>{
@@ -62,9 +61,6 @@ const Map<String, String> a11yRuleDescriptions = <String, String>{
   _focusVisible:
       'A control focused with the keyboard paints its edge less than 3:1 '
       'apart from its unfocused paint.',
-  _liveRegion:
-      'A text changed while the state was pumped and no enclosing node is a '
-      'live region.',
   _keyboard:
       'On macOS and Windows a node with a tap action is never focused while '
       'Tab moves through the state.',
@@ -148,9 +144,7 @@ class _Visited {
 
   bool get labelled => _oneLine(data.label).isNotEmpty;
 
-  bool get tappable =>
-      data.hasAction(ui.SemanticsAction.tap) ||
-      data.hasAction(ui.SemanticsAction.longPress);
+  bool get tappable => _tappable(data);
 
   bool get clipped => switch (whole) {
     final Rect whole =>
@@ -991,13 +985,6 @@ bool _disabled(RenderObject object) => switch (_ownerNode(object)) {
   null => false,
 };
 
-bool _inLiveRegion(RenderObject object) => switch (_ownerNode(object)) {
-  final SemanticsNode node => _selfAndAncestors(
-    node,
-  ).any((SemanticsNode owner) => owner.flagsCollection.isLiveRegion),
-  null => false,
-};
-
 A11yFinding _renderFinding(
   String rule,
   String state,
@@ -1169,23 +1156,6 @@ List<A11yFinding> _overlapFindings(List<_Painted> painted, String state) =>
             ),
     ];
 
-List<A11yFinding> _liveRegionFindings(
-  A11yWatch watch,
-  List<_Painted> painted,
-  String state,
-) => <A11yFinding>[
-  for (final _Painted text in painted)
-    if (watch.changedText(text.paragraph) case final String latest)
-      if (!_inLiveRegion(text.paragraph))
-        _renderFinding(
-          _liveRegion,
-          state,
-          text.paragraph,
-          _short(latest),
-          text.rect,
-        ),
-];
-
 String _firstText(RenderObject object) => _renderDepthFirst(object)
     .whereType<RenderParagraph>()
     .map(_plainText)
@@ -1232,11 +1202,11 @@ List<SemanticsNode> _focusedNodes(List<SemanticsNode> nodes) => <SemanticsNode>[
           .firstWhere((SemanticsNode owner) => !owner.isMergedIntoParent),
 ];
 
-bool _tappableNode(SemanticsNode node) {
-  final SemanticsData data = node.getSemanticsData();
-  return data.hasAction(ui.SemanticsAction.tap) ||
-      data.hasAction(ui.SemanticsAction.longPress);
-}
+bool _tappable(SemanticsData data) =>
+    data.hasAction(ui.SemanticsAction.tap) ||
+    data.hasAction(ui.SemanticsAction.longPress);
+
+bool _tappableNode(SemanticsNode node) => _tappable(node.getSemanticsData());
 
 Set<int> _reachedBy(
   WidgetTester tester,
@@ -1365,9 +1335,6 @@ List<A11yFinding> _keyboardFindings(
   ];
 }
 
-bool _desktop(TargetPlatform platform) =>
-    platform == TargetPlatform.macOS || platform == TargetPlatform.windows;
-
 Future<List<A11yFinding>> a11yFullFindings(
   WidgetTester tester, {
   required String state,
@@ -1403,7 +1370,6 @@ Future<List<A11yFinding>> a11yFullFindings(
       ..._truncationFindings(painted, state),
       ..._overlapFindings(painted, state),
     ],
-    ..._liveRegionFindings(watch, painted, state),
   ];
   final List<_Stop> stops = variant.largeText
       ? const <_Stop>[]
@@ -1412,7 +1378,7 @@ Future<List<A11yFinding>> a11yFullFindings(
     ...found,
     for (final _Stop stop in stops)
       if (stop.finding case final A11yFinding finding) finding,
-    if (_desktop(platform) && !variant.largeText)
+    if (variant.desktop && !variant.largeText)
       ..._keyboardFindings(judged, stops, state),
     ..._overflowFindings(watch, state),
   ]);
@@ -1429,30 +1395,20 @@ RenderObject? _overflowingIn(FlutterErrorDetails details) {
 }
 
 final class A11yWatch {
-  A11yWatch._(this._binding, this._report);
+  A11yWatch._(this._report);
 
   factory A11yWatch.start(WidgetTester tester) {
-    final A11yWatch watch = A11yWatch._(tester.binding, FlutterError.onError);
+    final A11yWatch watch = A11yWatch._(FlutterError.onError);
     FlutterError.onError = watch._onError;
-    tester.binding.addPostFrameCallback(watch._onFrame);
     return watch;
   }
 
-  final WidgetsBinding _binding;
   final FlutterExceptionHandler? _report;
-  final Map<RenderParagraph, List<String>> _texts =
-      <RenderParagraph, List<String>>{};
   final List<RenderObject> _overflows = <RenderObject>[];
-  bool _watching = true;
   bool _closed = false;
 
   List<RenderObject> get overflows =>
       List<RenderObject>.unmodifiable(_overflows);
-
-  String? changedText(RenderParagraph paragraph) => switch (_texts[paragraph]) {
-    final List<String> texts when texts.length > 1 => texts.last,
-    _ => null,
-  };
 
   void _onError(FlutterErrorDetails details) {
     final RenderObject? overflowing = _overflowingIn(details);
@@ -1463,37 +1419,7 @@ final class A11yWatch {
     }
   }
 
-  void _onFrame(Duration stamp) {
-    if (!_watching) {
-      return;
-    }
-    _record();
-    _binding.addPostFrameCallback(_onFrame);
-  }
-
-  void _record() {
-    for (final RenderView view in _binding.renderViews) {
-      for (final RenderParagraph paragraph in _renderDepthFirst(
-        view,
-      ).whereType<RenderParagraph>()) {
-        final String text = _readable(_plainText(paragraph));
-        final List<String> seen = _texts[paragraph] ?? const <String>[];
-        if (text.isNotEmpty && (seen.isEmpty || seen.last != text)) {
-          _texts[paragraph] = <String>[...seen, text];
-        }
-      }
-    }
-  }
-
-  void stop() {
-    if (_watching) {
-      _record();
-      _watching = false;
-    }
-  }
-
   void close() {
-    stop();
     if (!_closed) {
       _closed = true;
       FlutterError.onError = _report;

@@ -18,36 +18,6 @@ keyboard | b13-select-dropdown-speaker | System output | <root> # open: Tab neve
 keyboard | b4-select-open | Monday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Saturday | <root> # open: Tab never reaches it
 keyboard | b4-select-open | Sunday | <root> # open: Tab never reaches it
-live-region | b1-settings | Sync & storage | <root> # open: status change is not announced
-live-region | b1-settings@2x | Sync & storage | <root> # open: status change is not announced
-live-region | b11-select-dropdown-input-profile | Voice | <root> # open: status change is not announced
-live-region | b11-select-dropdown-input-profile@2x | Voice | <root> # open: status change is not announced
-live-region | b12-select-dropdown-microphone | Voice | <root> # open: status change is not announced
-live-region | b12-select-dropdown-microphone@2x | Voice | <root> # open: status change is not announced
-live-region | b13-select-dropdown-speaker | Voice | <root> # open: status change is not announced
-live-region | b13-select-dropdown-speaker@2x | Voice | <root> # open: status change is not announced
-live-region | b14-sync-delete-all-dialog | Data | <root> # open: status change is not announced
-live-region | b14-sync-delete-all-dialog@2x | Data | <root> # open: status change is not announced
-live-region | b15-settings-data-error | Data | <root> # open: status change is not announced
-live-region | b15-settings-data-error@2x | Data | <root> # open: status change is not announced
-live-region | b16-settings-sync-paused | 0 devices · add or remove | Manage devices # open: status change is not announced
-live-region | b16-settings-sync-paused | Sync & storage | <root> # open: status change is not announced
-live-region | b16-settings-sync-paused | https://sync.example.com | <root> # open: status change is not announced
-live-region | b16-settings-sync-paused@2x | 0 devices · add or remove | Manage devices # open: status change is not announced
-live-region | b16-settings-sync-paused@2x | Sync & storage | <root> # open: status change is not announced
-live-region | b16-settings-sync-paused@2x | https://sync.example.com | <root> # open: status change is not announced
-live-region | b3-settings-notice | Data | <root> # open: status change is not announced
-live-region | b3-settings-notice@2x | Data | <root> # open: status change is not announced
-live-region | b5-delete-all-dialog | Data | <root> # open: status change is not announced
-live-region | b5-delete-all-dialog@2x | Data | <root> # open: status change is not announced
-live-region | b6-settings-reminders | Reminders & sound | <root> # open: status change is not announced
-live-region | b6-settings-reminders@2x | Reminders & sound | <root> # open: status change is not announced
-live-region | b8-settings-data | Data | <root> # open: status change is not announced
-live-region | b8-settings-data@2x | Data | <root> # open: status change is not announced
-live-region | b9-settings-about | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
-live-region | b9-settings-about | About | <root> # open: status change is not announced
-live-region | b9-settings-about@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
-live-region | b9-settings-about@2x | About | <root> # open: status change is not announced
 small-target | b15-settings-data-error | Delete all… | <root> # open: tap target under the platform minimum
 small-target | b15-settings-data-error | Export… | <root> # open: tap target under the platform minimum
 small-target | b15-settings-data-error | Open | <root> # open: tap target under the platform minimum

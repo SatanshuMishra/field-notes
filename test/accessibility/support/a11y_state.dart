@@ -55,15 +55,22 @@ final class A11yPump {
     },
   );
 
-  Future<void> call(WidgetTester tester, [A11yVariant? variant]) async {
+  Future<void> call(WidgetTester tester, [A11yVariant? variant]) {
     final A11yVariant chosen = variant ?? defaultVariant;
-    final TargetPlatform? previous = debugDefaultTargetPlatformOverride;
-    debugDefaultTargetPlatformOverride = chosen.platform;
-    try {
-      await _body(tester, chosen);
-    } finally {
-      debugDefaultTargetPlatformOverride = previous;
-    }
+    return _onPlatform(chosen.platform, () => _body(tester, chosen));
+  }
+}
+
+Future<T> _onPlatform<T>(
+  TargetPlatform platform,
+  Future<T> Function() body,
+) async {
+  final TargetPlatform? previous = debugDefaultTargetPlatformOverride;
+  debugDefaultTargetPlatformOverride = platform;
+  try {
+    return await body();
+  } finally {
+    debugDefaultTargetPlatformOverride = previous;
   }
 }
 
@@ -72,10 +79,11 @@ class A11yState {
     required this.id,
     required A11yPumpBody pump,
     required this.proof,
+    A11yPumpBody? act,
     this.stateful = const <A11yStatefulControl>[],
     this.platforms = a11yPlatforms,
   }) : assert(platforms.isNotEmpty && platforms.every(a11yPlatforms.contains)),
-       pump = A11yPump(pump, platforms);
+       pump = A11yPump(_reachThenAct(pump, act), platforms);
 
   final String id;
   final A11yPump pump;
@@ -84,6 +92,80 @@ class A11yState {
   final Set<TargetPlatform> platforms;
 
   bool runsIn(A11yVariant variant) => platforms.contains(variant.platform);
+}
+
+A11yPumpBody _reachThenAct(A11yPumpBody reach, A11yPumpBody? act) =>
+    (WidgetTester tester, A11yVariant variant) async {
+      await reach(tester, variant);
+      await act?.call(tester, variant);
+    };
+
+const Set<TargetPlatform> a11yPhonePlatforms = <TargetPlatform>{
+  TargetPlatform.android,
+};
+
+const Set<TargetPlatform> a11yDesktopPlatforms = <TargetPlatform>{
+  TargetPlatform.macOS,
+  TargetPlatform.windows,
+};
+
+final class A11yLayoutHalf {
+  const A11yLayoutHalf({
+    required this.pump,
+    required this.proof,
+    this.act,
+    this.stateful = const <A11yStatefulControl>[],
+  });
+
+  final A11yPumpBody pump;
+  final List<A11yProof> proof;
+  final A11yPumpBody? act;
+  final List<A11yStatefulControl> stateful;
+
+  A11yState _stateOn(String id, Set<TargetPlatform> platforms) => A11yState(
+    id: id,
+    pump: pump,
+    proof: proof,
+    act: act,
+    stateful: stateful,
+    platforms: platforms,
+  );
+}
+
+List<A11yState> a11yInBothLayouts({
+  required String id,
+  required A11yLayoutHalf phone,
+  required A11yLayoutHalf desktop,
+  String? desktopId,
+}) => <A11yState>[
+  phone._stateOn(id, a11yPhonePlatforms),
+  desktop._stateOn(desktopId ?? id, a11yDesktopPlatforms),
+];
+
+const Set<String> a11yPhoneOnlySurfaces = <String>{'composer-keyboard'};
+
+final RegExp _areaNumber = RegExp(r'^[a-z]+\d+-');
+final RegExp _layoutWord = RegExp(r'-(sidebar|bottom-bar|phone)$');
+
+String a11ySurfaceOf(String id) =>
+    id.replaceFirst(_areaNumber, '').replaceFirst(_layoutWord, '');
+
+List<String> a11ySurfacesOffDesktop(List<A11yState> states) {
+  final Map<String, List<A11yState>> surfaces = <String, List<A11yState>>{};
+  for (final A11yState state in states) {
+    surfaces
+        .putIfAbsent(a11ySurfaceOf(state.id), () => <A11yState>[])
+        .add(state);
+  }
+  return <String>[
+    for (final MapEntry<String, List<A11yState>> surface in surfaces.entries)
+      if (!a11yPhoneOnlySurfaces.contains(surface.key) &&
+          !<TargetPlatform>{
+            for (final A11yState state in surface.value) ...state.platforms,
+          }.containsAll(a11yDesktopPlatforms))
+        '${surface.key} '
+            '(${surface.value.map((A11yState state) => state.id).join(', ')})',
+  ];
 }
 
 sealed class A11yStateResult {
@@ -150,7 +232,6 @@ Future<A11yStateResult> _loadAndCheck(
   } catch (error) {
     return A11yNotLoaded('${state.id} did not load: pumping threw $error');
   }
-  watch?.stop();
   if (tester.takeException() case final Object error) {
     return A11yNotLoaded('${state.id} did not load: pumping threw $error');
   }
@@ -189,18 +270,18 @@ Future<A11yStateResult> runA11yState(
     );
   }
   final SemanticsHandle handle = tester.ensureSemantics();
-  final TargetPlatform? previous = debugDefaultTargetPlatformOverride;
   _useVariantEnvironment(tester, chosen);
-  debugDefaultTargetPlatformOverride = chosen.platform;
   final A11yWatch? watch = switch (checks) {
     A11yChecks.full => A11yWatch.start(tester),
     A11yChecks.semantic => null,
   };
   try {
-    return await _loadAndCheck(tester, state, chosen, checks, watch);
+    return await _onPlatform(
+      chosen.platform,
+      () => _loadAndCheck(tester, state, chosen, checks, watch),
+    );
   } finally {
     watch?.close();
-    debugDefaultTargetPlatformOverride = previous;
     handle.dispose();
   }
 }
@@ -222,6 +303,14 @@ void a11ySweepArea({
       keys,
       'states',
       'state ids must be unique on each platform',
+    );
+  }
+  final List<String> offDesktop = a11ySurfacesOffDesktop(states);
+  if (offDesktop.isNotEmpty) {
+    throw ArgumentError.value(
+      offDesktop,
+      'states',
+      'every surface must run on macos and windows with the sidebar layout',
     );
   }
   final bool write = writeBaseline ?? a11yWriteBaseline;
