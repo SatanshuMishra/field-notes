@@ -1,9 +1,5 @@
 flutter-text-contrast | u3-update-greeting | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | u3-update-greeting@2x | field notes — a journal of days | <root> # open: fails Flutter's text contrast guideline
-live-region | u2-update-notes-installed | Field Notes 1.4.2 | <root> # open: status change is not announced
-live-region | u2-update-notes-installed@2x | Field Notes 1.4.2 | <root> # open: status change is not announced
-live-region | u4-update-error-offline | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
-live-region | u4-update-error-offline@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
 missing-role | u1-update-notes-new | Close | <root> # open: tappable node has no role
 missing-role | u1-update-notes-new@2x | Close | <root> # open: tappable node has no role
 missing-role | u2-update-notes-installed | Close | <root> # open: tappable node has no role

@@ -1485,6 +1485,11 @@ final class A11yWatch {
     }
   }
 
+  void watchTextFromHere() {
+    _texts.clear();
+    _record();
+  }
+
   void stop() {
     if (_watching) {
       _record();

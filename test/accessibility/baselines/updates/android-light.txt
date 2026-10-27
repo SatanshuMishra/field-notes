@@ -18,10 +18,6 @@ flutter-text-contrast | u4-update-error-offline | Couldn’t check for updates. 
 flutter-text-contrast | u4-update-error-offline | © 2026 Satanshu Mishra · Licensed under the Apache License 2.0 | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | u4-update-error-offline@2x | Couldn’t check for updates. Check your connection and try again. | <root> # open: fails Flutter's text contrast guideline
 flutter-text-contrast | u4-update-error-offline@2x | author | <root> # open: fails Flutter's text contrast guideline
-live-region | u2-update-notes-installed | Field Notes 1.4.2 | <root> # open: status change is not announced
-live-region | u2-update-notes-installed@2x | Field Notes 1.4.2 | <root> # open: status change is not announced
-live-region | u4-update-error-offline | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
-live-region | u4-update-error-offline@2x | A journal of days · Version 1.4.2 | Field Notes, a journal of days, version 1.4.2 # open: status change is not announced
 missing-role | u1-update-notes-new | Dismiss | <root> # Flutter's own control
 missing-role | u1-update-notes-new@2x | Dismiss | <root> # Flutter's own control
 missing-role | u2-update-notes-installed | Dismiss | <root> # Flutter's own control

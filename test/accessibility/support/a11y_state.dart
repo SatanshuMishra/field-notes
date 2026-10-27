@@ -145,6 +145,7 @@ Future<A11yStateResult> _loadAndCheck(
   try {
     await state.pump(tester, variant);
     if (watch != null) {
+      watch.watchTextFromHere();
       await _settle(tester);
     }
   } catch (error) {

@@ -90,18 +90,10 @@ keyboard | o7-day-calm-sidebar | Minimize | <root> # open: Tab never reaches it
 keyboard | o9-moment-empty-sidebar | Close | <root> # open: Tab never reaches it
 keyboard | o9-moment-empty-sidebar | Maximize | <root> # open: Tab never reaches it
 keyboard | o9-moment-empty-sidebar | Minimize | <root> # open: Tab never reaches it
-live-region | o11-moment-saved-sidebar | saved to today ✓ | <root> # open: status change is not announced
-live-region | o11-moment-saved-sidebar@2x | saved to today ✓ | <root> # open: status change is not announced
 live-region | o19-year-playing-sidebar | 195 of 365 days | <root> # open: status change is not announced
 live-region | o19-year-playing-sidebar | July | <root> # open: status change is not announced
 live-region | o19-year-playing-sidebar@2x | 195 of 365 days | <root> # open: status change is not announced
 live-region | o19-year-playing-sidebar@2x | July | <root> # open: status change is not announced
-live-region | o21-year-finished-sidebar | 365 of 365 days | <root> # open: status change is not announced
-live-region | o21-year-finished-sidebar | A whole year | <root> # open: status change is not announced
-live-region | o21-year-finished-sidebar@2x | 365 of 365 days | <root> # open: status change is not announced
-live-region | o21-year-finished-sidebar@2x | A whole year | <root> # open: status change is not announced
-live-region | o31-map-end-sidebar | Start journaling | <root> # open: status change is not announced
-live-region | o31-map-end-sidebar@2x | Start journaling | <root> # open: status change is not announced
 overflow | o31-map-end-sidebar@2x | field / notes | one last thing / Here's where everything lives. # open: layout overflows
 overflow | o33-map-replay-sidebar@2x | field / notes | one last thing / Here's where everything lives. # open: layout overflows
 overlapping-text | o31-map-end-sidebar@2x | 4 days + 5 | one last thing / Here's where everything lives. # open: text overlaps other text at 2x text
