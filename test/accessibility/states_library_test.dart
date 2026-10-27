@@ -94,15 +94,7 @@ List<String> _surfacesMissingDesktop() => <String>[
 ];
 
 List<A11yState> get _everyState => <A11yState>[
-  ...shellStates,
-  ...settingsStates,
-  ...captureStates,
-  ...viewerStates,
-  ...immersiveStates,
-  ...onboardingStates,
-  ...mediaStates,
-  ...syncStates,
-  ...updatesStates,
+  for (final List<A11yState> states in _statesByArea.values) ...states,
 ];
 
 List<int> _sheetColours(WidgetTester tester) => <int>[
