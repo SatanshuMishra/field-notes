@@ -464,6 +464,42 @@ void main() {
   );
 
   testWidgets(
+    'the phone sync delete sheet shows Delete everywhere in full at 2x text',
+    _resettingPlatform((WidgetTester tester) async {
+      await _pumpOn(
+        tester,
+        TargetPlatform.android,
+        ProviderScope(
+          overrides: syncOnOverrides(
+            status: SyncedStatus(DateTime.now().toUtc()),
+          ),
+          child: _app(
+            TargetPlatform.android,
+            _opener('Open', (BuildContext context) async {
+              await confirmDeleteAll(context);
+            }),
+            textScaler: const TextScaler.linear(2),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+      final RenderParagraph label = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.byKey(deleteEverywhereKey),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(
+        label.size.height,
+        greaterThanOrEqualTo(
+          label.getDryLayout(BoxConstraints(maxWidth: label.size.width)).height,
+        ),
+      );
+    }),
+  );
+
+  testWidgets(
     'the danger look reads on media surfaces',
     _resettingPlatform((WidgetTester tester) async {
       for (final Brightness brightness in Brightness.values) {
