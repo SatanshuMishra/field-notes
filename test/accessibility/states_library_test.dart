@@ -350,4 +350,33 @@ void main() {
       }, contains('saved to today ✓'));
     },
   );
+
+  for (final (List<A11yState> states, String id, TargetPlatform platform)
+      in <(List<A11yState>, String, TargetPlatform)>[
+        (shellStates, 'a15-today-empty-sidebar', TargetPlatform.macOS),
+        (shellStates, 'a9-search-results', TargetPlatform.android),
+        (shellStates, 'a10-search-no-match', TargetPlatform.android),
+        (onboardingStates, 'o11-moment-saved-sidebar', TargetPlatform.macOS),
+        (captureStates, 'c13-voice-recording', TargetPlatform.macOS),
+      ]) {
+    testWidgets(
+      'the sweep leaves status announcements to the contact sheets on $id',
+      (WidgetTester tester) async {
+        final A11yStateResult result = await runA11yState(
+          tester,
+          states.singleWhere((A11yState state) => state.id == id),
+          variant: A11yVariant(platform: platform),
+          checks: A11yChecks.full,
+        );
+        expect(a11yRuleDescriptions.keys, isNot(contains('live-region')));
+        expect(switch (result) {
+          A11yLoaded(:final List<A11yFinding> findings) => <String>[
+            for (final A11yFinding finding in findings)
+              if (finding.rule == 'live-region') finding.label,
+          ],
+          A11yNotLoaded(:final String message) => throw TestFailure(message),
+        }, isEmpty);
+      },
+    );
+  }
 }
