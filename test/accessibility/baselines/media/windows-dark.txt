@@ -1,3 +1,0 @@
-flutter-text-contrast | m6-video-error | Can't play this video | <root> # open: fails Flutter's text contrast guideline
-flutter-text-contrast | m6-video-error@2x | Can't play this video | <root> # open: fails Flutter's text contrast guideline
-truncated-text | m6-video-error@2x | Try again | Can't play this video # open: truncated-text

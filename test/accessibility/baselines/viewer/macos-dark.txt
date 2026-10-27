@@ -2,7 +2,6 @@ keyboard | d11-mood-picker-sidebar | Dismiss mood picker | <root> # Flutter's ow
 keyboard | d13-change-mood-dialog-sidebar | Dismiss | <root> # Flutter's own control
 keyboard | d14-delete-entry-dialog-sidebar | Dismiss | <root> # Flutter's own control
 keyboard | d16-day-past-mood-sidebar | Dismiss day detail | <root> # Flutter's own control
-keyboard | d7-day-with-entries-sidebar | 2:30 PM · afternoon · note | a day in the garden / Thursday, September 17 / Choose a log to read it here. / Logs open on this side. # open: keyboard
 keyboard | d7-day-with-entries-sidebar | Dismiss day detail | <root> # Flutter's own control
 keyboard | d8-day-empty-sidebar | Dismiss day detail | <root> # Flutter's own control
 missing-role | d11-mood-picker-sidebar | Dismiss mood picker | <root> # Flutter's own control

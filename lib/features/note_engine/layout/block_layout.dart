@@ -15,6 +15,7 @@ const double noteColumnEm = 45;
 const double noteTouchCheckboxTarget = 48;
 const double _macCheckboxTarget = 28;
 const double _windowsCheckboxTarget = 40;
+const double _checkboxTargetSeparation = 0.01;
 
 double noteCheckboxTarget(TargetPlatform platform) => switch (platform) {
   TargetPlatform.macOS => _macCheckboxTarget,
@@ -1363,7 +1364,8 @@ bool _holdsCheckbox(VisibleText visible, TextRange visibleRange) =>
     );
 
 double _checkboxClearance(double em) =>
-    noteCheckboxTarget(defaultTargetPlatform) -
+    noteCheckboxTarget(defaultTargetPlatform) +
+    _checkboxTargetSeparation -
     (NoteTypography.body.height ?? 1) * em;
 
 TextRange _visibleRangeOf(

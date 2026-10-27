@@ -316,7 +316,7 @@ class _CompactLogCardState extends State<CompactLogCard> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            _typeChip(type),
+            LogActionsCorner(child: _typeChip(type)),
           ],
         );
       case CompactLogDensity.day:

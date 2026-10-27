@@ -39,13 +39,11 @@ const int _mouseDevice = 1;
 
 const Color _ink = Color(0xFF4A3B2E);
 const Color _white = Color(0xFFFFFFFF);
-const Color _danger = Color(0xFFC0392B);
 const Color _mediaGround = Color(0xFF15110D);
 
 final int _lightRow = _ink.withValues(alpha: 0.06).toARGB32();
 final int _dark = _white.withValues(alpha: 0.12).toARGB32();
-final int _pillEdit = _white.withValues(alpha: 0.14).toARGB32();
-final int _pillDelete = _danger.withValues(alpha: 0.6).toARGB32();
+final int _pillAction = _white.withValues(alpha: 0.14).toARGB32();
 
 const Size _desktop = Size(1440, 900);
 const Size _phone = Size(384, 832);
@@ -529,14 +527,14 @@ void main() {
         _Row(
           'Edit note',
           find.byKey(logActionsEditKey),
-          _pillEdit,
+          _pillAction,
           _Shape.rounded,
           radius: 7,
         ),
         _Row(
           'Delete entry',
           find.byKey(logActionsDeleteKey),
-          _pillDelete,
+          _pillAction,
           _Shape.rounded,
           radius: 7,
         ),

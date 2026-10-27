@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../design/tokens/tokens.dart';
 import '../../../design/widgets/icon_sticker_button.dart';
+import '../../../design/widgets/sticker_button.dart';
 
 const Key logActionsPillKey = ValueKey<String>('log-actions-pill');
 const Key logActionsEditKey = ValueKey<String>('log-actions-edit');
@@ -27,6 +28,8 @@ const double _glyphExtent = 14;
 const double _defaultButtonExtent = 28;
 const double _tapTarget = 48;
 const Duration _revealDuration = Duration(milliseconds: 140);
+
+final Color _actionHoverFill = Palette.onAccent.withValues(alpha: 0.14);
 
 const BorderRadius _pillRadius = BorderRadius.all(Radius.circular(10));
 const BorderRadius _buttonRadius = BorderRadius.all(Radius.circular(7));
@@ -65,6 +68,10 @@ class LogActionsPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? edit = onEdit;
+    final Color dangerInk = StickerButtonVariant.danger.inkOn(
+      StickerGround.media,
+      context.colors,
+    );
     final _PillGeometry geometry = _PillGeometry(
       buttonExtent: buttonExtent,
       paired: edit != null,
@@ -94,7 +101,7 @@ class LogActionsPill extends StatelessWidget {
                   key: logActionsEditKey,
                   glyph: IconStickerGlyph.edit,
                   label: logActionsEditLabel,
-                  hoverColor: Palette.onAccent.withValues(alpha: 0.14),
+                  glyphColor: Palette.onAccent,
                   extent: buttonExtent,
                   margin: geometry.leadingMargin,
                   onPressed: edit,
@@ -103,7 +110,7 @@ class LogActionsPill extends StatelessWidget {
                 key: logActionsDeleteKey,
                 glyph: IconStickerGlyph.trash,
                 label: logActionsDeleteLabel,
-                hoverColor: Palette.danger.withValues(alpha: 0.6),
+                glyphColor: dangerInk,
                 extent: buttonExtent,
                 margin: geometry.trailingMargin,
                 onPressed: onDelete,
@@ -241,7 +248,7 @@ class _LogActionButton extends StatefulWidget {
     super.key,
     required this.glyph,
     required this.label,
-    required this.hoverColor,
+    required this.glyphColor,
     required this.extent,
     required this.margin,
     required this.onPressed,
@@ -249,7 +256,7 @@ class _LogActionButton extends StatefulWidget {
 
   final IconStickerGlyph glyph;
   final String label;
-  final Color hoverColor;
+  final Color glyphColor;
   final double extent;
   final EdgeInsetsGeometry margin;
   final VoidCallback onPressed;
@@ -308,14 +315,14 @@ class _LogActionButtonState extends State<_LogActionButton> {
             children: <Widget>[
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: hovered || _focused ? widget.hoverColor : null,
+                  color: hovered || _focused ? _actionHoverFill : null,
                   borderRadius: _buttonRadius,
                 ),
               ),
               Center(
                 child: IconStickerGlyphIcon(
                   glyph: widget.glyph,
-                  color: Palette.onAccent,
+                  color: widget.glyphColor,
                   size: _glyphExtent,
                 ),
               ),
@@ -325,6 +332,35 @@ class _LogActionButtonState extends State<_LogActionButton> {
       ),
     );
   }
+}
+
+class LogActionsCorner extends StatelessWidget {
+  const LogActionsCorner({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool covered =
+        context.dependOnInheritedWidgetOfExactType<_LogActionsShown>()?.shown ??
+        false;
+    return AnimatedOpacity(
+      opacity: covered ? 0 : 1,
+      duration: _revealDuration,
+      alwaysIncludeSemantics: true,
+      child: child,
+    );
+  }
+}
+
+class _LogActionsShown extends InheritedWidget {
+  const _LogActionsShown({required this.shown, required super.child});
+
+  final bool shown;
+
+  @override
+  bool updateShouldNotify(_LogActionsShown oldWidget) =>
+      shown != oldWidget.shown;
 }
 
 class LogActionsReveal extends StatefulWidget {
@@ -555,7 +591,15 @@ class _LogActionsRevealState extends State<LogActionsReveal>
     _update(() => _pillHovered = hovered);
   }
 
+  bool get _focusMovedElsewhere => switch (FocusManager.instance.primaryFocus) {
+    final FocusNode now => now is! FocusScopeNode,
+    null => false,
+  };
+
   void _onFocusChange(bool focused) {
+    if (!focused && !_focusMovedElsewhere) {
+      return;
+    }
     _update(() {
       _focusInside = focused;
       if (focused) {
@@ -566,6 +610,9 @@ class _LogActionsRevealState extends State<LogActionsReveal>
   }
 
   void _onPillFocusChange(bool focused) {
+    if (!focused && !_focusMovedElsewhere) {
+      return;
+    }
     _update(() => _focusInPill = focused);
   }
 
@@ -703,7 +750,10 @@ class _LogActionsRevealState extends State<LogActionsReveal>
                     behavior: HitTestBehavior.opaque,
                     excludeFromSemantics: true,
                     onLongPress: _onLongPress,
-                    child: widget.builder(context, hovered),
+                    child: _LogActionsShown(
+                      shown: _visible,
+                      child: widget.builder(context, hovered),
+                    ),
                   ),
                 ),
               ),
