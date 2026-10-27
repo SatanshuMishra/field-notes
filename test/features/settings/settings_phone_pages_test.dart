@@ -195,8 +195,8 @@ void _expectSummaries(WidgetTester tester, Map<SettingsTab, String> summaries) {
     final Finder summary = _inside(_row(entry.key), find.text(entry.value));
     expect(summary, findsOneWidget, reason: entry.value);
     final Text text = _text(tester, summary);
-    expect(text.maxLines, 1, reason: entry.value);
-    expect(text.overflow, TextOverflow.ellipsis, reason: entry.value);
+    expect(text.maxLines, isNull, reason: entry.value);
+    expect(text.overflow, isNot(TextOverflow.ellipsis), reason: entry.value);
     expect(text.style?.fontFamily, TypographyTokens.sans, reason: entry.value);
   }
 }
