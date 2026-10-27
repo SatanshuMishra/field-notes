@@ -10,4 +10,3 @@ missing-role | s5-change-server | Dismiss | <root> # Flutter's own control
 missing-role | s5-change-server@2x | Dismiss | <root> # Flutter's own control
 missing-role | s7-sync-error-unreachable | Dismiss | <root> # Flutter's own control
 missing-role | s7-sync-error-unreachable@2x | Dismiss | <root> # Flutter's own control
-truncated-text | s2-sync-join@2x | Type the 8 words instead | <root> # open: link text is cut short at 2x (sync/ui/join_scan_page.dart)

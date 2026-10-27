@@ -1,4 +1,0 @@
-small-target | u1-update-notes-new | Close | Field Notes 2.4.0 # open: close button is 36 by 36, under Windows 40 (updates/ui/update_notes_surface.dart)
-small-target | u1-update-notes-new@2x | Close | Field Notes 2.4.0 # open: close button is 36 by 36, under Windows 40 (updates/ui/update_notes_surface.dart)
-small-target | u2-update-notes-installed | Close | Field Notes 1.4.2 # open: close button is 36 by 36, under Windows 40 (updates/ui/update_notes_surface.dart)
-small-target | u2-update-notes-installed@2x | Close | Field Notes 1.4.2 # open: close button is 36 by 36, under Windows 40 (updates/ui/update_notes_surface.dart)
